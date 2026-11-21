@@ -8,7 +8,14 @@
  */
 
 import { apiErrorFromResponse, transportFetch } from "./api-error";
-import type { MandateSequence } from "./traeger-sepa-api";
+import { knownEnum } from "./contract/known-enum";
+import type {
+  SEPAMandateImport,
+  SEPAMandateImportEntry,
+  SEPAMandateImportMapping,
+  SEPAMandateImportRow,
+} from "./contract/traeger-sepa-mandates.generated";
+import { type MandateSequence, knownMandateSequence } from "./traeger-sepa-api";
 import { readJson, traegerRequest } from "./traeger-api";
 
 const IMPORTS_PATH = "/api/traeger/sepa-mandates/imports";
@@ -16,36 +23,55 @@ const IMPORTS_PATH = "/api/traeger/sepa-mandates/imports";
 /** Largest file the backend reads, in bytes. */
 export const MAX_IMPORT_FILE_BYTES = 2 * 1024 * 1024;
 
-export type ImportField =
-  | "reference"
-  | "signed_on"
-  | "iban"
-  | "bic"
-  | "account_holder"
-  | "payer"
-  | "creditor_id"
-  | "sequence"
-  | "last_collected_on"
-  | "debtor_number";
+// Go does not register these sets; the contract types them as string.
+const IMPORT_FIELD_VALUES = [
+  "reference",
+  "signed_on",
+  "iban",
+  "bic",
+  "account_holder",
+  "payer",
+  "creditor_id",
+  "sequence",
+  "last_collected_on",
+  "debtor_number",
+] as const;
+const PAYER_KEY_VALUES = ["email", "contract_id", "debtor_number"] as const;
+const IMPORT_ROW_STATUS_VALUES = [
+  "ready",
+  "clarify",
+  "duplicate",
+  "same_mandate",
+  "conflict",
+  "invalid",
+  "imported",
+] as const;
+const DEBTOR_NUMBER_STATUS_VALUES = [
+  "new",
+  "same",
+  "siblings_differ",
+  "differs",
+  "invalid",
+  "no_family",
+  // Only when the Träger keeps the number per child (#7007).
+  "no_child",
+  "rows_differ",
+] as const;
+
+export type ImportField = (typeof IMPORT_FIELD_VALUES)[number];
 
 /** debtor_number: the number moto keeps, per child or per payer (#7009). */
-export type PayerKey = "email" | "contract_id" | "debtor_number";
+export type PayerKey = (typeof PAYER_KEY_VALUES)[number];
 
-export type ImportRowStatus =
-  | "ready"
-  | "clarify"
-  | "duplicate"
-  | "same_mandate"
-  | "conflict"
-  | "invalid"
-  | "imported";
+export type ImportRowStatus = (typeof IMPORT_ROW_STATUS_VALUES)[number];
 
 /** Header of the column each field comes from; "" leaves it unmapped. */
 type ImportColumns = Readonly<Record<ImportField, string>>;
 
 export interface ImportMapping {
   readonly columns: ImportColumns;
-  readonly payerKey: PayerKey;
+  /** null: a key this build does not know; the office picks one. */
+  readonly payerKey: PayerKey | null;
   /** The office says every mandate of the file is given to its creditor ID. */
   readonly creditorFromTraeger: boolean;
   /** The creditor ID the office saw when it confirmed; "" without confirmation. */
@@ -53,13 +79,15 @@ export interface ImportMapping {
 }
 
 export interface ImportProblem {
-  readonly field: ImportField;
+  /** undefined: a field this build does not know. */
+  readonly field: ImportField | undefined;
   readonly code: string;
 }
 
 export interface ImportRow {
   readonly line: number;
-  readonly status: ImportRowStatus;
+  /** undefined: a status this build does not know. */
+  readonly status: ImportRowStatus | undefined;
   readonly reference: string;
   readonly signedOn: string | null;
   readonly ibanMasked: string;
@@ -84,16 +112,7 @@ export interface ImportRow {
 }
 
 /** What the import does with the debtor number of a row (#4693). */
-type DebtorNumberStatus =
-  | "new"
-  | "same"
-  | "siblings_differ"
-  | "differs"
-  | "invalid"
-  | "no_family"
-  // Only when the Träger keeps the number per child (#7007).
-  | "no_child"
-  | "rows_differ";
+type DebtorNumberStatus = (typeof DEBTOR_NUMBER_STATUS_VALUES)[number];
 
 type ImportCounts = Readonly<
   Record<ImportRowStatus, number> & {
@@ -136,110 +155,77 @@ export interface ImportRequest {
   readonly fingerprint?: string;
 }
 
-interface BackendMapping {
-  columns: Record<ImportField, string>;
-  payer_key: PayerKey;
-  creditor_from_traeger: boolean;
-  confirmed_creditor_id?: string;
-}
-
-interface BackendRow {
-  line: number;
-  status: ImportRowStatus;
-  reference: string;
-  signed_on: string | null;
-  iban_masked: string;
-  bic: string;
-  account_holder: string;
-  contract_id?: string;
-  payer_first_name: string;
-  payer_last_name: string;
-  sequence: MandateSequence | "";
-  last_collected_on: string | null;
-  mandate_id?: string;
-  problems: ImportProblem[] | null;
-  hints: string[] | null;
-  debtor_number?: string;
-  debtor_number_status?: DebtorNumberStatus;
-  same_mandate_line?: number;
-}
-
-interface BackendResult {
-  encoding: string;
-  delimiter: string;
-  headers: string[] | null;
-  mapping: BackendMapping;
-  unmapped: ImportField[] | null;
-  creditor_id: string;
-  fingerprint?: string;
-  applied: boolean;
-  counts: Record<ImportRowStatus, number> & {
-    debtor_numbers?: number;
-    debtor_conflicts?: number;
-    without_mandate?: number;
-  };
-  rows: BackendRow[] | null;
-}
-
-interface BackendLogEntry {
-  file: string;
-  account_id: string | null;
-  imported_at: string;
-  mandates: number;
-}
-
-function toBackendMapping(mapping: ImportMapping): BackendMapping {
+// payer_key "" lets the backend refuse a mapping without a key.
+function toBackendMapping(mapping: ImportMapping): SEPAMandateImportMapping {
   return {
     columns: { ...mapping.columns },
-    payer_key: mapping.payerKey,
+    payer_key: mapping.payerKey ?? "",
     creditor_from_traeger: mapping.creditorFromTraeger,
     confirmed_creditor_id: mapping.confirmedCreditorId,
   };
 }
 
-function mapRow(row: BackendRow): ImportRow {
+function knownFields(fields: readonly string[] | null): ImportField[] {
+  return (fields ?? []).flatMap((field) => {
+    const known = knownEnum(IMPORT_FIELD_VALUES, field);
+    return known ? [known] : [];
+  });
+}
+
+function mapRow(row: SEPAMandateImportRow): ImportRow {
   return {
     line: row.line,
-    status: row.status,
+    status: knownEnum(IMPORT_ROW_STATUS_VALUES, row.status),
     reference: row.reference,
     signedOn: row.signed_on,
     ibanMasked: row.iban_masked,
     bic: row.bic,
     accountHolder: row.account_holder,
-    contractId: row.contract_id ? String(row.contract_id) : null,
+    contractId: row.contract_id || null,
     payerFirstName: row.payer_first_name,
     payerLastName: row.payer_last_name,
-    sequence: row.sequence,
+    sequence: knownMandateSequence(row.sequence) ?? "",
     lastCollectedOn: row.last_collected_on,
-    mandateId: row.mandate_id ? String(row.mandate_id) : null,
-    problems: row.problems ?? [],
+    mandateId: row.mandate_id || null,
+    problems: (row.problems ?? []).map((problem) => ({
+      field: knownEnum(IMPORT_FIELD_VALUES, problem.field),
+      code: problem.code,
+    })),
     hints: row.hints ?? [],
     debtorNumber: row.debtor_number ?? "",
-    debtorNumberStatus: row.debtor_number_status ?? "",
+    debtorNumberStatus:
+      knownEnum(DEBTOR_NUMBER_STATUS_VALUES, row.debtor_number_status) ?? "",
     sameMandateLine: row.same_mandate_line ?? null,
   };
 }
 
-function mapImportResult(result: BackendResult): ImportResult {
+function mapImportResult(result: SEPAMandateImport): ImportResult {
+  const { counts } = result;
   return {
     encoding: result.encoding,
     delimiter: result.delimiter,
     headers: result.headers ?? [],
     mapping: {
       columns: result.mapping.columns,
-      payerKey: result.mapping.payer_key,
+      payerKey: knownEnum(PAYER_KEY_VALUES, result.mapping.payer_key) ?? null,
       creditorFromTraeger: result.mapping.creditor_from_traeger,
-      confirmedCreditorId: result.mapping.confirmed_creditor_id ?? "",
+      confirmedCreditorId: result.mapping.confirmed_creditor_id,
     },
-    unmapped: result.unmapped ?? [],
+    unmapped: knownFields(result.unmapped),
     creditorId: result.creditor_id,
     fingerprint: result.fingerprint ?? "",
     applied: result.applied,
     counts: {
-      ...result.counts,
-      debtorNumbers: result.counts.debtor_numbers ?? 0,
-      debtorConflicts: result.counts.debtor_conflicts ?? 0,
-      withoutMandate: result.counts.without_mandate ?? 0,
+      ready: counts.ready,
+      clarify: counts.clarify,
+      duplicate: counts.duplicate,
+      same_mandate: counts.same_mandate,
+      conflict: counts.conflict,
+      invalid: counts.invalid,
+      imported: counts.imported,
+      debtorNumbers: counts.debtor_numbers,
+      debtorConflicts: counts.debtor_conflicts,
+      withoutMandate: counts.without_mandate,
     },
     rows: (result.rows ?? []).map(mapRow),
   };
@@ -273,7 +259,7 @@ async function postImport(
     );
   }
   const data = await readJson(response);
-  return mapImportResult((data as { data: BackendResult }).data);
+  return mapImportResult((data as { data: SEPAMandateImport }).data);
 }
 
 /** Reads the file and answers every row; stores nothing. */
@@ -290,10 +276,10 @@ export function applySepaImport(request: ImportRequest): Promise<ImportResult> {
 
 /** The imports of the Träger, newest first. */
 export async function fetchSepaImportLog(): Promise<ImportLogEntry[]> {
-  const entries = await traegerRequest<BackendLogEntry[] | null>(IMPORTS_PATH);
-  return (entries ?? []).map((entry) => ({
+  const entries = await traegerRequest<SEPAMandateImportEntry[]>(IMPORTS_PATH);
+  return entries.map((entry) => ({
     file: entry.file,
-    accountId: entry.account_id === null ? null : String(entry.account_id),
+    accountId: entry.account_id,
     importedAt: entry.imported_at,
     mandates: entry.mandates,
   }));

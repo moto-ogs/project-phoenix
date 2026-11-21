@@ -89,7 +89,7 @@ export const PAYER_KEY_LABELS: Record<PayerKey, string> = {
   debtor_number: "Debitorennummer",
 };
 
-export const IMPORT_STATUS: Record<
+const IMPORT_STATUS: Record<
   ImportRowStatus,
   { readonly label: string; readonly tone: StatusBadgeTone }
 > = {
@@ -101,6 +101,14 @@ export const IMPORT_STATUS: Record<
   invalid: { label: "Fehlerhaft", tone: "red" },
   imported: { label: "Übernommen", tone: "green" },
 };
+
+/** The badge of a row; a status this build does not know shows „–“. */
+export function importStatusBadge(status: ImportRowStatus | undefined): {
+  readonly label: string;
+  readonly tone: StatusBadgeTone;
+} {
+  return status ? IMPORT_STATUS[status] : { label: "–", tone: "gray" };
+}
 
 const DELIMITER_LABELS: Record<string, string> = {
   ";": "Semikolon",
@@ -125,12 +133,12 @@ const DATE_FIELDS: ReadonlySet<ImportField> = new Set([
 
 /** Ein Satz je Problem, ohne den Wert aus der Datei. */
 export function importProblemText(problem: ImportProblem): string {
-  const field = IMPORT_FIELD_LABELS[problem.field];
+  const field = problem.field ? IMPORT_FIELD_LABELS[problem.field] : "Ein Feld";
   switch (problem.code) {
     case "missing":
       return `${field} fehlt.`;
     case "invalid":
-      if (DATE_FIELDS.has(problem.field)) {
+      if (problem.field && DATE_FIELDS.has(problem.field)) {
         return `${field}: Das Datum stimmt nicht. Bitte als TT.MM.JJJJ.`;
       }
       return `${field} stimmt nicht.`;
