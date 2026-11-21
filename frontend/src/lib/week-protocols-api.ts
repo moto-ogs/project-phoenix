@@ -4,6 +4,11 @@
 // selbst ab. Wer welches Protokoll sieht, entscheidet das Backend.
 
 import { apiErrorFromResponse } from "./api-error";
+import { knownEnum } from "./contract/known-enum";
+import type {
+  weekProtocolDayResponse,
+  weekProtocolResponse,
+} from "./contract/week-protocols.generated";
 import { sessionFetch } from "./session-cache";
 
 export type WeekProtocolStatus = "collecting" | "draft" | "closed";
@@ -66,73 +71,42 @@ export interface WeekProtocol {
   days: WeekProtocolDay[];
 }
 
-interface BackendDay {
-  date: string;
-  captured: boolean;
-  kind?: WeekProtocolDayKind;
-  present: number;
-  sick: number;
-  excused: number;
-  class_trip: number;
-  absent: number;
-  missing: {
-    student_id: string;
-    name: string;
-    reason: string;
-    label: string;
-  }[];
-  blocks: {
-    title: string;
-    start_time: string;
-    end_time: string;
-    status: string;
-    cancel_reason?: string;
-  }[];
-  notices: { title: string; body?: string }[];
-  note: string;
-}
+const DAY_KINDS: readonly WeekProtocolDayKind[] = [
+  "care",
+  "holiday",
+  "closing",
+];
+const STATUSES: readonly WeekProtocolStatus[] = [
+  "collecting",
+  "draft",
+  "closed",
+];
+const SCOPES: readonly WeekProtocol["scope"][] = ["group", "school"];
 
-interface BackendWeekProtocol {
-  id: string;
-  scope: "group" | "school";
-  group_id?: string;
-  group_name: string;
-  week_start: string;
-  week_end: string;
-  status: WeekProtocolStatus;
-  draft_from: string;
-  auto_close_on: string;
-  week_note: string;
-  closed_at?: string;
-  closed_by_name?: string;
-  closed_automatically: boolean;
-  days?: BackendDay[];
-}
-
-function mapDay(day: BackendDay): WeekProtocolDay {
+function mapDay(day: weekProtocolDayResponse): WeekProtocolDay {
   return {
     date: day.date,
     captured: day.captured,
-    kind: day.kind ?? null,
+    kind: knownEnum(DAY_KINDS, day.kind) ?? null,
     present: day.present,
     sick: day.sick,
     excused: day.excused,
     classTrip: day.class_trip,
     absent: day.absent,
-    missing: day.missing.map((child) => ({
+    missing: (day.missing ?? []).map((child) => ({
       studentId: child.student_id,
       name: child.name,
       reason: child.reason,
       label: child.label,
     })),
-    blocks: day.blocks.map((block) => ({
+    blocks: (day.blocks ?? []).map((block) => ({
       title: block.title,
       startTime: block.start_time,
       endTime: block.end_time,
       status: block.status,
       cancelReason: block.cancel_reason ?? "",
     })),
-    notices: day.notices.map((notice) => ({
+    notices: (day.notices ?? []).map((notice) => ({
       title: notice.title,
       body: notice.body ?? "",
     })),
@@ -140,15 +114,16 @@ function mapDay(day: BackendDay): WeekProtocolDay {
   };
 }
 
-function mapWeekProtocol(data: BackendWeekProtocol): WeekProtocol {
+function mapWeekProtocol(data: weekProtocolResponse): WeekProtocol {
   return {
     id: data.id,
-    scope: data.scope,
+    scope: knownEnum(SCOPES, data.scope) ?? "group",
     groupId: data.group_id ?? null,
     groupName: data.group_name,
     weekStart: data.week_start,
     weekEnd: data.week_end,
-    status: data.status,
+    // An unknown state is read-only: it never offers editing.
+    status: knownEnum(STATUSES, data.status) ?? "closed",
     draftFrom: data.draft_from,
     autoCloseOn: data.auto_close_on,
     weekNote: data.week_note,
@@ -172,7 +147,7 @@ async function protocolOf(
   if (!response.ok) {
     throw await apiErrorFromResponse(response, fallback);
   }
-  const json = (await response.json()) as { data: BackendWeekProtocol };
+  const json = (await response.json()) as { data: weekProtocolResponse };
   return mapWeekProtocol(json.data);
 }
 
@@ -198,7 +173,7 @@ class WeekProtocolsService {
         "Die Wochenprotokolle konnten nicht geladen werden.",
       );
     }
-    const json = (await response.json()) as { data: BackendWeekProtocol[] };
+    const json = (await response.json()) as { data: weekProtocolResponse[] };
     return json.data.map(mapWeekProtocol);
   }
 

@@ -204,7 +204,6 @@ function deferred<T>() {
 function makePeriod(overrides: Partial<CalendarPeriod> = {}): CalendarPeriod {
   return {
     id: "5",
-    tenantId: "1",
     name: "Original",
     periodType: "school_year",
     startDate: "2026-08-01",
