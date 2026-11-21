@@ -140,17 +140,15 @@ type DayNotice struct {
 
 // DayAppointment is today's date of a calendar appointment of the caller
 // (#7663). Title and Location are the organizer's own text, as the date
-// takes place today; PreviousLocation is the series' location when today's
-// date moved elsewhere. The new time travels in the entry's StartsAt and
+// takes place today. The new time travels in the entry's StartsAt and
 // EndsAt.
 type DayAppointment struct {
-	ID               int64         `json:"id,string"`
-	OccurrenceDate   calendar.Date `json:"occurrence_date"`
-	Title            string        `json:"title"`
-	Location         *string       `json:"location"`
-	PreviousLocation *string       `json:"previous_location"`
-	LocationChanged  bool          `json:"location_changed"`
-	TimeChanged      bool          `json:"time_changed"`
+	ID              int64         `json:"id,string"`
+	OccurrenceDate  calendar.Date `json:"occurrence_date"`
+	Title           string        `json:"title"`
+	Location        *string       `json:"location"`
+	LocationChanged bool          `json:"location_changed"`
+	TimeChanged     bool          `json:"time_changed"`
 }
 
 // SourceEntry is what a source port returns: an entry without its section,

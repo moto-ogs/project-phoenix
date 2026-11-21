@@ -1032,7 +1032,7 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
           "Neue Änderungen stehen oben. Längere Änderungen stehen kurz darunter, zum Beispiel mit `seit 3.11.`.",
           "Am Handy zeigt `Schule` nur die ersten 3 Einträge. Den Rest zeigt `Alle anzeigen`.",
           // Termine aus dem eigenen Kalender (#7663), api/day_changes_appointments.go.
-          "Unter `Betrifft dich` stehen auch deine Termine aus `Mein Kalender`, die heute ausfallen oder an einem anderen Ort oder zu einer anderen Zeit sind.",
+          "Unter `Betrifft dich` stehen auch deine Termine aus `Mein Kalender`. Du siehst dort, welcher Termin heute ausfällt. Du siehst auch, welcher Termin heute woanders oder zu einer anderen Zeit ist.",
           "Was heute schon vorbei ist, steht eingeklappt am Ende, zum Beispiel `2 erledigt`.",
           // Hinweise der Leitung in „Heute anders" (#7667), components/home/day-notice-row.tsx.
           "Einen Hinweis der Leitung, den du noch bestätigen sollst, siehst du ganz oben. Wähle `Zur Kenntnis nehmen`. Danach steht er unter `Schule`.",

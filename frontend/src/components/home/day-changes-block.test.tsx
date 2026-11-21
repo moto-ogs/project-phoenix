@@ -546,7 +546,6 @@ describe("Termine aus dem eigenen Kalender (#7663)", () => {
         occurrenceDate: "2026-09-09",
         title,
         location: "Raum 1",
-        previousLocation: null,
         locationChanged: false,
         timeChanged: false,
         ...extra,
@@ -560,7 +559,6 @@ describe("Termine aus dem eigenen Kalender (#7663)", () => {
         appointment("appointment_cancelled", "Teamsitzung"),
         appointment("appointment_changed", "AG-Treffen", {
           location: "Raum 12",
-          previousLocation: "Raum 1",
           locationChanged: true,
         }),
         appointment("appointment_changed", "Planung", {

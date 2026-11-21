@@ -109,7 +109,6 @@ export interface DayAppointment {
   occurrence_date: string | null;
   title: string;
   location: string | null;
-  previous_location: string | null;
   location_changed: boolean;
   time_changed: boolean;
 }
@@ -119,7 +118,6 @@ export const DayAppointmentSchema: z.ZodType<DayAppointment, unknown> = object<D
   occurrence_date: nullable(calendarDate),
   title: str,
   location: nullable(str),
-  previous_location: nullable(str),
   location_changed: bool,
   time_changed: bool,
 });

@@ -81,11 +81,12 @@ func (c DayChangesTestCalendar) Create(ctx context.Context, value DayChangesTest
 // DayChangesTestException is what happens to an appointment: the whole
 // appointment is cancelled (Whole), one date of its series is cancelled
 // (Cancel), or one date moves to Location and, with a positive StartHour,
-// to other hours.
+// to other hours, and with MoveTo to another day.
 type DayChangesTestException struct {
 	Whole, Cancel      bool
 	Location           string
 	StartHour, EndHour int
+	MoveTo             calendar.Date
 }
 
 // Except writes the exception of the appointment on day through the
@@ -103,6 +104,10 @@ func (c DayChangesTestCalendar) Except(ctx context.Context, appointmentID int64,
 	override := &appointments.AppointmentOccurrenceOverride{AppointmentID: appointmentID, OccurrenceDate: appointments.Date(day.String())}
 	if change.Location != "" {
 		override.Location = &change.Location
+	}
+	if change.MoveTo != "" {
+		moved := appointments.Date(change.MoveTo.String())
+		override.StartDate, override.EndDate = &moved, &moved
 	}
 	if change.StartHour > 0 {
 		start, end := clockAt(change.StartHour), clockAt(change.EndHour)

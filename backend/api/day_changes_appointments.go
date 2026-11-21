@@ -42,9 +42,11 @@ type dayChangesAppointments struct {
 }
 
 // AppointmentChanges reads today's appointments of the caller in at most
-// three statements: the appointments, the overrides of today's dates (only
-// with a series among them) and the recurrence rules (only for a cancelled
-// series, whose today the rule decides).
+// three statements besides the caller's staff record (which the Personal
+// source has resolved already; the request memoizes it): the appointments,
+// the overrides of the dates that may reach today, and the recurrence rules
+// only of a cancelled series, whose today the rule decides. A date moved onto
+// today from another day is not read; no calendar write moves a date yet.
 func (s dayChangesAppointments) AppointmentChanges(ctx context.Context, day calendar.Date) ([]daychangesview.SourceEntry, error) {
 	if !securityruntime.HasPermission(permissions.CalendarOwn, sessiontoken.PermissionsFromCtx(ctx)) {
 		// The account has no own calendar: no entries, not a failure.
@@ -72,7 +74,7 @@ func (s dayChangesAppointments) AppointmentChanges(ctx context.Context, day cale
 	}
 	entries := []daychangesview.SourceEntry{}
 	for _, appointment := range visible {
-		if entry, ok := appointmentChange(appointment, overrides[appointment.ID], rules, today, day); ok {
+		if entry, ok := appointmentChange(appointment, overrides[appointment.ID], rules, today); ok {
 			entries = append(entries, entry)
 		}
 	}
@@ -137,17 +139,21 @@ func overlapsDay(appointment *appointments.Appointment, day appointments.Date) b
 
 // appointmentChange reports today's exception of one appointment, if any.
 // An override exists only for a date of a series: cancelling a single date
-// checks the date, and editing the series drops its overrides.
-func appointmentChange(appointment *appointments.Appointment, overrides []*appointments.AppointmentOccurrenceOverride, rules map[int64]*appointments.RecurrenceRule, today appointments.Date, day calendar.Date) (daychangesview.SourceEntry, bool) {
+// checks the date, and editing the series drops its overrides. Overrides that
+// change nothing are skipped, so another date of an overlapping series still
+// counts.
+func appointmentChange(appointment *appointments.Appointment, overrides []*appointments.AppointmentOccurrenceOverride, rules map[int64]*appointments.RecurrenceRule, today appointments.Date) (daychangesview.SourceEntry, bool) {
 	length := appointment.StartDate.DaysUntil(appointment.EndDate)
 	for _, override := range overrides {
 		if override.OccurrenceDate.AddDays(length).Before(today) {
 			continue
 		}
 		if appointment.CancelledAt != nil || override.Cancelled {
-			return appointmentEntry(daychangesview.KindAppointmentCancelled, appointment, override, override.OccurrenceDate, day), true
+			return appointmentEntry(daychangesview.KindAppointmentCancelled, appointment, override, today), true
 		}
-		return changedAppointmentEntry(appointment, override, day)
+		if entry, ok := changedAppointmentEntry(appointment, override, today); ok {
+			return entry, true
+		}
 	}
 	if appointment.CancelledAt == nil {
 		return daychangesview.SourceEntry{}, false
@@ -156,7 +162,7 @@ func appointmentChange(appointment *appointments.Appointment, overrides []*appoi
 	if !ok {
 		return daychangesview.SourceEntry{}, false
 	}
-	return appointmentEntry(daychangesview.KindAppointmentCancelled, appointment, nil, occurrence, day), true
+	return appointmentEntry(daychangesview.KindAppointmentCancelled, appointment, &appointments.AppointmentOccurrenceOverride{OccurrenceDate: occurrence}, today), true
 }
 
 // cancelledOccurrence is the date of a cancelled appointment that reaches
@@ -176,87 +182,55 @@ func cancelledOccurrence(appointment *appointments.Appointment, rule *appointmen
 }
 
 // changedAppointmentEntry reports a date that takes place elsewhere or at
-// another time. An override that repeats the series changes nothing, and one
-// that moves the date away from today is not today's.
-func changedAppointmentEntry(appointment *appointments.Appointment, override *appointments.AppointmentOccurrenceOverride, day calendar.Date) (daychangesview.SourceEntry, bool) {
-	start, end := occurrenceDays(appointment, override, override.OccurrenceDate)
-	today := appointments.Date(day.String())
-	if start.After(today) || end.Before(today) {
-		return daychangesview.SourceEntry{}, false
+// another time. A date moved away from today does not take place today and
+// reads as cancelled; an override that repeats the series changes nothing.
+func changedAppointmentEntry(appointment *appointments.Appointment, override *appointments.AppointmentOccurrenceOverride, today appointments.Date) (daychangesview.SourceEntry, bool) {
+	planned := appointments.EffectiveOccurrence(appointment, override.OccurrenceDate, nil)
+	effective := appointments.EffectiveOccurrence(appointment, override.OccurrenceDate, override)
+	if !overlapsDay(effective, today) {
+		return appointmentEntry(daychangesview.KindAppointmentCancelled, appointment, &appointments.AppointmentOccurrenceOverride{OccurrenceDate: override.OccurrenceDate}, today), true
 	}
-	locationChanged := override.Location != nil && strings.TrimSpace(*override.Location) != strings.TrimSpace(dayChangesText(appointment.Location))
-	timeChanged := start != override.OccurrenceDate ||
-		end != override.OccurrenceDate.AddDays(appointment.StartDate.DaysUntil(appointment.EndDate)) ||
-		(override.AllDay != nil && *override.AllDay != appointment.AllDay) ||
-		(override.StartTime != nil && !calendar.SameClockTime(*override.StartTime, appointment.StartTime)) ||
-		(override.EndTime != nil && !calendar.SameClockTime(*override.EndTime, appointment.EndTime))
+	locationChanged := strings.TrimSpace(dayChangesText(effective.Location)) != strings.TrimSpace(dayChangesText(planned.Location))
+	timeChanged := effective.StartDate != planned.StartDate || effective.EndDate != planned.EndDate ||
+		effective.AllDay != planned.AllDay ||
+		!calendar.SameClockTime(effective.StartTime, planned.StartTime) || !calendar.SameClockTime(effective.EndTime, planned.EndTime)
 	if !locationChanged && !timeChanged {
 		return daychangesview.SourceEntry{}, false
 	}
-	entry := appointmentEntry(daychangesview.KindAppointmentChanged, appointment, override, override.OccurrenceDate, day)
+	entry := appointmentEntry(daychangesview.KindAppointmentChanged, appointment, override, today)
 	entry.Appointment.LocationChanged = locationChanged
 	entry.Appointment.TimeChanged = timeChanged
-	if locationChanged {
-		entry.Appointment.PreviousLocation = appointment.Location
-	}
 	return entry, true
 }
 
-// occurrenceDays are the first and last day of a date of the appointment,
-// with the override's days where it sets them.
-func occurrenceDays(appointment *appointments.Appointment, override *appointments.AppointmentOccurrenceOverride, occurrence appointments.Date) (start, end appointments.Date) {
-	start = occurrence
-	end = occurrence.AddDays(appointment.StartDate.DaysUntil(appointment.EndDate))
-	if override != nil && override.StartDate != nil {
-		start = *override.StartDate
+// appointmentEntry builds the entry of a date as it takes place
+// (EffectiveOccurrence): title and location, the time as instants of a
+// single-day date with a time of day, "seit" and "bis" for a date over
+// several days. The days are the owner's YYYY-MM-DD text.
+func appointmentEntry(kind daychangesview.Kind, appointment *appointments.Appointment, override *appointments.AppointmentOccurrenceOverride, today appointments.Date) daychangesview.SourceEntry {
+	effective := appointments.EffectiveOccurrence(appointment, override.OccurrenceDate, override)
+	if override.Cancelled || kind == daychangesview.KindAppointmentCancelled {
+		// A cancelled date shows what was planned.
+		effective = appointments.EffectiveOccurrence(appointment, override.OccurrenceDate, nil)
 	}
-	if override != nil && override.EndDate != nil {
-		end = *override.EndDate
-	}
-	return start, end
-}
-
-// appointmentEntry builds the entry of today's date: title and location as
-// the date takes place, the time as instants of a single-day date with a
-// time of day, "seit" and "bis" for a date over several days.
-func appointmentEntry(kind daychangesview.Kind, appointment *appointments.Appointment, override *appointments.AppointmentOccurrenceOverride, occurrence appointments.Date, day calendar.Date) daychangesview.SourceEntry {
-	occurrenceDate, _ := calendar.ParseDate(occurrence.String())
-	view := &daychangesview.DayAppointment{
-		ID: appointment.ID, OccurrenceDate: occurrenceDate, Title: appointment.Title, Location: appointment.Location,
-	}
-	allDay, startClock, endClock := appointment.AllDay, appointment.StartTime, appointment.EndTime
-	if override != nil {
-		if override.Title != nil {
-			view.Title = *override.Title
-		}
-		if override.Location != nil {
-			view.Location = override.Location
-		}
-		if override.AllDay != nil {
-			allDay = *override.AllDay
-		}
-		if override.StartTime != nil {
-			startClock = *override.StartTime
-		}
-		if override.EndTime != nil {
-			endClock = *override.EndTime
-		}
-	}
+	day := calendar.Date(today.String())
+	first, last := calendar.Date(effective.StartDate.String()), calendar.Date(effective.EndDate.String())
 	entry := daychangesview.SourceEntry{
-		Kind: kind, Involved: true, Appointment: view,
+		Kind: kind, Involved: true,
+		Appointment: &daychangesview.DayAppointment{
+			ID: appointment.ID, OccurrenceDate: calendar.Date(override.OccurrenceDate.String()),
+			Title: effective.Title, Location: effective.Location,
+		},
 		Link: &daychangesview.Link{Target: daychangesview.LinkCalendar},
 	}
-	start, end := occurrenceDays(appointment, override, occurrence)
-	first, _ := calendar.ParseDate(start.String())
-	last, _ := calendar.ParseDate(end.String())
 	if first.Before(day) {
 		entry.Since = &first
 	}
 	if last.After(day) {
 		entry.Until = &last
 	}
-	if !allDay && first == day && last == day {
-		startsAt, endsAt := wallClockOn(day, startClock), wallClockOn(day, endClock)
+	if !effective.AllDay && first == day && last == day {
+		startsAt, endsAt := wallClockOn(day, effective.StartTime), wallClockOn(day, effective.EndTime)
 		entry.StartsAt, entry.EndsAt = &startsAt, &endsAt
 	}
 	return entry
@@ -268,6 +242,7 @@ func wallClockOn(day calendar.Date, clock time.Time) time.Time {
 	return time.Date(midnight.Year(), midnight.Month(), midnight.Day(), clock.Hour(), clock.Minute(), 0, 0, midnight.Location())
 }
 
+// dayChangesText reads an optional text, empty when unset.
 func dayChangesText(value *string) string {
 	if value == nil {
 		return ""

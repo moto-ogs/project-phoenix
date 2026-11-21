@@ -12,7 +12,7 @@ import (
 )
 
 // appointmentLines renders the appointment entries as "section kind title
-// @location [was old] [ort] [zeit] [HH:MM-HH:MM] ->link".
+// @location [ort] [zeit] [HH:MM-HH:MM] ->link".
 func appointmentLines(t *testing.T, body string) []string {
 	t.Helper()
 	var envelope struct {
@@ -24,11 +24,10 @@ func appointmentLines(t *testing.T, body string) []string {
 				StartsAt    *string `json:"starts_at"`
 				EndsAt      *string `json:"ends_at"`
 				Appointment *struct {
-					Title            string  `json:"title"`
-					Location         *string `json:"location"`
-					PreviousLocation *string `json:"previous_location"`
-					LocationChanged  bool    `json:"location_changed"`
-					TimeChanged      bool    `json:"time_changed"`
+					Title           string  `json:"title"`
+					Location        *string `json:"location"`
+					LocationChanged bool    `json:"location_changed"`
+					TimeChanged     bool    `json:"time_changed"`
 				} `json:"appointment"`
 				Link *struct {
 					Target string `json:"target"`
@@ -46,9 +45,6 @@ func appointmentLines(t *testing.T, body string) []string {
 		line := entry.Section + " " + entry.Kind + " " + value.Title
 		if value.Location != nil {
 			line += " @" + *value.Location
-		}
-		if value.PreviousLocation != nil {
-			line += " war " + *value.PreviousLocation
 		}
 		if value.LocationChanged {
 			line += " ort"
@@ -105,6 +101,9 @@ func TestDayChangesAppointmentSource(t *testing.T) {
 	require.NoError(t, writes.Except(ctx, series, day, api.DayChangesTestException{Whole: true}))
 	same := create(api.DayChangesTestAppointment{Title: "Planung", Location: "Büro", Day: week, StartHour: 11, EndHour: 12, Weekly: true})
 	require.NoError(t, writes.Except(ctx, same, day, api.DayChangesTestException{Location: "Büro"}))
+	// Today's date moves to tomorrow: it does not take place today.
+	moved := create(api.DayChangesTestAppointment{Title: "Elternrunde", Location: "Mensa", Day: week, StartHour: 9, EndHour: 10, Weekly: true})
+	require.NoError(t, writes.Except(ctx, moved, day, api.DayChangesTestException{MoveTo: day.AddDays(1)}))
 
 	t.Run("other school", func(t *testing.T) {
 		foreignSchool := testpkg.OwnTenant(t)
@@ -121,7 +120,8 @@ func TestDayChangesAppointmentSource(t *testing.T) {
 		"you appointment_cancelled Elternabend @Aula 18:00-20:00 ->calendar",
 		"you appointment_cancelled Sprechstunde @Raum 3 12:00-13:00 ->calendar",
 		"you appointment_cancelled Teamsitzung @Büro 08:00-09:00 ->calendar",
-		"you appointment_changed AG-Treffen @Raum 12 war Raum 1 ort zeit 15:00-16:00 ->calendar",
+		"you appointment_changed AG-Treffen @Raum 12 ort zeit 15:00-16:00 ->calendar",
+		"you appointment_cancelled Elternrunde @Mensa 09:00-10:00 ->calendar",
 	}
 
 	t.Run("organizer sees today's exceptions of the own appointments", func(t *testing.T) {

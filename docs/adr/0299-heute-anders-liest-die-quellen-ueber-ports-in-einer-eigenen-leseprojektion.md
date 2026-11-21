@@ -212,9 +212,14 @@ Projektion nutzt „change“.
   heutige Termin einer Serie hat einen anderen Ort oder eine andere Zeit).
   Die Rücknahme einer Absage hat keinen eigenen Zustand: Es gibt keinen
   Schreibweg dafür, und ein Termin ohne Ausnahme erscheint nicht.
-- Die Quelle liest höchstens drei Statements: die Termine, die Ausnahmen der
-  Tage, die heute erreichen können, und die Regeln nur abgesagter Serien.
-  Ohne `calendar:own` liest sie nichts.
+- Die Quelle liest neben dem Personaldatensatz der Sitzung, den die Anfrage
+  schon für die Quelle Personal kennt, höchstens drei Statements: die Termine,
+  die Ausnahmen der Tage, die heute erreichen können, und die Regeln nur
+  abgesagter Serien. Ohne `calendar:own` liest sie nichts.
+- Ein heutiger Termin, der auf einen anderen Tag verlegt ist, findet heute
+  nicht statt und erscheint als abgesagt. Ein Termin, der von einem anderen
+  Tag auf heute verlegt ist, wird nicht gelesen. Beides kann heute noch kein
+  Schreibweg des Kalenders erzeugen; es gibt nur die Absage.
 - Ein Live-Signal gibt es noch nicht. Eine neue After-Commit-Stelle müsste das
   schrumpfende Register `durable_side_effect_notices.json` erweitern; das
   entscheidet #7693. Bis dahin wird die Übersicht beim Fokus, bei erneuter

@@ -45906,13 +45906,6 @@
           }
         },
         {
-          "name": "previous_location",
-          "schema": {
-            "kind": "string",
-            "nullable": true
-          }
-        },
-        {
           "name": "location_changed",
           "schema": {
             "kind": "bool"

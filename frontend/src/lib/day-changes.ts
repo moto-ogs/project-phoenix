@@ -45,8 +45,6 @@ export interface DayChangeAppointment {
   readonly title: string;
   /** Der Ort, an dem der Termin heute stattfindet. */
   readonly location: string | null;
-  /** Der gewohnte Ort, wenn der Termin heute woanders ist. */
-  readonly previousLocation: string | null;
   readonly locationChanged: boolean;
   readonly timeChanged: boolean;
 }
@@ -106,7 +104,6 @@ function mapAppointment(
     occurrenceDate: appointment.occurrence_date,
     title: appointment.title,
     location: appointment.location,
-    previousLocation: appointment.previous_location,
     locationChanged: appointment.location_changed,
     timeChanged: appointment.time_changed,
   };
