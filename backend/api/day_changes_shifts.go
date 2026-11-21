@@ -103,16 +103,14 @@ func (b *staffEntryBuilder) shift(shift workforce.StaffShift, window dayShifts) 
 func (w dayShifts) changeKind(shift workforce.StaffShift) (daychangesview.Kind, bool, bool) {
 	day := w.day.String()
 	if shift.Date != day {
-		if shift.SeriesOccurrenceDate == day && !shift.Cancelled {
+		if shift.SeriesOccurrenceDate == day && !absenceCancelled(shift) {
 			return daychangesview.KindShiftCancelled, false, true
 		}
 		return "", false, false
 	}
 	switch {
 	case shift.Cancelled:
-		absenceCancelled := shift.SickAbsenceID != nil ||
-			(shift.ChangeReason != nil && workforce.IsAbsenceShiftChangeReason(*shift.ChangeReason))
-		return daychangesview.KindShiftCancelled, true, !absenceCancelled
+		return daychangesview.KindShiftCancelled, true, !absenceCancelled(shift)
 	case shift.OriginShiftID != nil:
 		return daychangesview.KindShiftReplacement, true, true
 	case shift.SeriesID == nil:
@@ -128,6 +126,11 @@ func (w dayShifts) changeKind(shift workforce.StaffShift) (daychangesview.Kind, 
 	}
 }
 
+func absenceCancelled(shift workforce.StaffShift) bool {
+	return shift.SickAbsenceID != nil ||
+		(shift.ChangeReason != nil && workforce.IsAbsenceShiftChangeReason(*shift.ChangeReason))
+}
+
 // movedShift reports a series occurrence that lies on another day than its
 // recurrence slot.
 func movedShift(shift workforce.StaffShift) bool {
@@ -139,10 +142,10 @@ func (b *staffEntryBuilder) shiftLink(staffID int64, self bool) *daychangesview.
 	case self && b.viewer.ownAbsences:
 		// time_tracking:own opens the own time tracking and the own Dienstplan.
 		return &daychangesview.Link{Target: daychangesview.LinkOwnShiftPlan}
-	case self || !b.viewer.shiftPlan:
-		return nil
-	default:
+	case b.viewer.shiftPlan:
 		return &daychangesview.Link{Target: daychangesview.LinkShiftPlan, StaffID: &staffID}
+	default:
+		return nil
 	}
 }
 

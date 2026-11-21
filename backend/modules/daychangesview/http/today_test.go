@@ -282,7 +282,9 @@ func TestDayChangesShiftSource(t *testing.T) {
 	testpkg.CreateTestStaffShiftChange(t, db, same.ID, day, testpkg.StaffShiftChange{Series: &doraSeries, Detached: true})
 	moved := testpkg.CreateTestStaff(t, db, "Fritz", "Verschoben")
 	fritzSeries := testpkg.CreateTestStaffShiftSeries(t, db, moved.ID, day)
-	testpkg.CreateTestStaffShiftChange(t, db, moved.ID, day.AddDays(1), testpkg.StaffShiftChange{Series: &fritzSeries, Slot: &day, Detached: true})
+	testpkg.CreateTestStaffShiftChange(t, db, moved.ID, day.AddDays(1), testpkg.StaffShiftChange{
+		Series: &fritzSeries, Slot: &day, Detached: true, Cancelled: true, ChangeReason: &talk,
+	})
 	colleague, colleagueAccount := testpkg.CreateTestStaffWithAccount(t, db, "Ben", "Kollege")
 	cancelled := testpkg.CreateTestStaffShiftChange(t, db, colleague.ID, day, testpkg.StaffShiftChange{Cancelled: true, ChangeReason: &talk, StartHHMM: "12:00", EndHHMM: "16:00"})
 	cover := testpkg.CreateTestStaff(t, db, "Tom", "Hilfe")
@@ -366,6 +368,19 @@ func TestDayChangesShiftSourceIncludesMoveToADistantDay(t *testing.T) {
 	overview, _ := read(t, newRouter(t, db, day), leadAccount.ID, tenantID, "time_tracking:manage")
 	assert.Equal(t, []string{
 		"school shift_cancelled Fritz Verschoben/on_duty ->shift_plan",
+	}, summary(overview.Entries))
+}
+
+func TestDayChangesShiftSourceManagerLinksOwnShiftWithoutOwnPermission(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	tenantID := testpkg.Tenant(t)
+	staff, account := testpkg.CreateTestStaffWithAccount(t, db, "Lea", "Leitung")
+	testpkg.CreateTestStaffShiftChange(t, db, staff.ID, day, testpkg.StaffShiftChange{Cancelled: true})
+
+	overview, _ := read(t, newRouter(t, db, day), account.ID, tenantID, "time_tracking:manage")
+	assert.Equal(t, []string{
+		"you shift_cancelled Lea Leitung/on_duty(du) 08:00-16:00 ->shift_plan",
 	}, summary(overview.Entries))
 }
 
