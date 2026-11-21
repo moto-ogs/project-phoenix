@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The file of one holiday registration (#6691): everything the family
@@ -87,7 +88,7 @@ func holidayRegistrationRecordDocument(period capability.HolidayPeriod, record c
 	}
 	records = append(records, holidayRecordDeclaration(detail))
 	return lists.RecordDocument{
-		Title:       "Ferienanmeldung Nr. " + strconv.FormatInt(detail.ID, 10),
+		Title:       "Ferienanmeldung Nr. " + strconv.FormatInt(detail.ID.Int64(), 10),
 		Subtitle:    lists.SanitizeUserText(period.Name),
 		GeneratedAt: names.generatedAt, Footer: holidayRecordFooter, Records: records,
 	}
@@ -158,7 +159,7 @@ func holidayRecordChild(record capability.HolidayRegistrationRecord, index int, 
 	detail, child := record.Detail, record.Detail.Children[index]
 	school := "Feriengast"
 	if child.HomeSchoolID != nil {
-		school = names.school(*child.HomeSchoolID)
+		school = names.school((*child.HomeSchoolID).Int64())
 	} else if child.GuestSchoolName != "" {
 		school = "Feriengast (" + child.GuestSchoolName + ")"
 	}
@@ -166,21 +167,21 @@ func holidayRecordChild(record capability.HolidayRegistrationRecord, index int, 
 		field("Geburtsdatum", child.BirthDate.Format(holidayRecordDate)),
 		field("Schule", school),
 	}
-	fields = append(fields, holidayRecordAnswers(detail.Form, true, false, holidayChildAnswers(detail.ChildCustomData, child.ID))...)
-	fields = append(fields, holidayRecordChildCriteria(detail, child.ID)...)
+	fields = append(fields, holidayRecordAnswers(detail.Form, true, false, holidayChildAnswers(detail.ChildCustomData, child.ID.Int64()))...)
+	fields = append(fields, holidayRecordChildCriteria(detail, child.ID.Int64())...)
 	weeks := make([]lists.Field, len(child.Bookings))
 	for i, booking := range child.Bookings {
 		booked := booking.TimeModelName + " (" + holidayPlacementLabels[booking.Placement] + ")"
 		if booking.Lunch {
 			booked += ", mit Mittagessen"
 		}
-		weeks[i] = field(holidayExportWeek(booking)+", "+names.school(booking.HostSchoolID), booked)
+		weeks[i] = field(holidayExportWeek(booking)+", "+names.school(booking.HostSchoolID.Int64()), booked)
 	}
 	out := lists.Record{
 		Title: lists.SanitizeUserText("Kind: " + child.FirstName + " " + child.LastName), Fields: fields,
 		Subs: []lists.SubRecord{{Title: "Gebuchte Wochen", Fields: weeks}},
 	}
-	if health := holidayRecordChildHealth(record, child.ID); len(health) > 0 {
+	if health := holidayRecordChildHealth(record, child.ID.Int64()); len(health) > 0 {
 		out.Subs = append(out.Subs, lists.SubRecord{Title: "Gesundheitsangaben", Fields: health})
 	}
 	return out
@@ -188,7 +189,7 @@ func holidayRecordChild(record capability.HolidayRegistrationRecord, index int, 
 
 func holidayChildAnswers(children []capability.HolidayChildAnswers, childID int64) capability.HolidayAnswers {
 	for _, child := range children {
-		if child.ChildID == childID {
+		if child.ChildID == ident.ID(childID) {
 			return child.CustomData
 		}
 	}
@@ -203,7 +204,7 @@ func holidayRecordChildHealth(record capability.HolidayRegistrationRecord, child
 		return fields
 	}
 	for _, health := range record.Health.Children {
-		if health.ChildID != childID {
+		if health.ChildID != ident.ID(childID) {
 			continue
 		}
 		fields = optional(fields, "Allergien", health.Allergies)
@@ -246,7 +247,7 @@ func holidayRecordFamilyCriteria(detail capability.HolidayRegistrationDetail) li
 func holidayRecordChildCriteria(detail capability.HolidayRegistrationDetail, childID int64) []lists.Field {
 	fields := []lists.Field{}
 	for _, criterion := range detail.Criteria {
-		if criterion.ChildID != nil && *criterion.ChildID == childID {
+		if criterion.ChildID != nil && *criterion.ChildID == ident.ID(childID) {
 			fields = append(fields, holidayCriterionField(criterion))
 		}
 	}

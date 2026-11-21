@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The allocation by criteria in the review of a registration (#4700): a new
@@ -30,7 +31,7 @@ func (h *HolidayRegistrationReview) refusePendingAllocation(ctx context.Context,
 	if period.AllocationMode != enrollment.HolidayAllocationCriteria {
 		return nil
 	}
-	read, _, err := h.store.ReadHolidayReview(ctx, organizationID, period.ID, registrationID)
+	read, _, err := h.store.ReadHolidayReview(ctx, organizationID, period.ID.Int64(), registrationID)
 	if err != nil {
 		return fmt.Errorf("enrollment: read holiday registration: %w", err)
 	}
@@ -59,7 +60,7 @@ func (h *HolidayRegistrationReview) detailCriteria(ctx context.Context, organiza
 	if err != nil {
 		return nil, fmt.Errorf("enrollment: read holiday criteria: %w", err)
 	}
-	answers, err := h.store.ReadHolidayCriterionAnswers(ctx, organizationID, period.ID, detail.ID)
+	answers, err := h.store.ReadHolidayCriterionAnswers(ctx, organizationID, period.ID.Int64(), detail.ID.Int64())
 	if err != nil {
 		return nil, fmt.Errorf("enrollment: read holiday criterion answers: %w", err)
 	}
@@ -72,7 +73,7 @@ func (h *HolidayRegistrationReview) detailCriteria(ctx context.Context, organiza
 			continue
 		}
 		for _, child := range detail.Children {
-			add(criterion, &child.ID)
+			add(criterion, (*int64)(&child.ID))
 		}
 	}
 	return criteria, nil
@@ -84,10 +85,10 @@ func (h *HolidayRegistrationReview) detailCriteria(ctx context.Context, organiza
 func holidayRegistrationCriterion(criterion enrollment.HolidayCriterion, childID *int64, answers []enrollment.HolidayCriterionAnswer) enrollment.HolidayRegistrationCriterion {
 	entry := enrollment.HolidayRegistrationCriterion{
 		CriterionID: criterion.ID, Name: criterion.Name, Question: criterion.Question, Scope: criterion.Scope,
-		ChildID: childID, Stated: enrollment.HolidayCriterionUnknown,
+		ChildID: (*ident.ID)(childID), Stated: enrollment.HolidayCriterionUnknown,
 	}
 	index := slices.IndexFunc(answers, func(answer enrollment.HolidayCriterionAnswer) bool {
-		return answer.CriterionID == criterion.ID && sameHolidayChild(answer.ChildID, childID)
+		return ident.ID(answer.CriterionID) == criterion.ID && sameHolidayChild(answer.ChildID, childID)
 	})
 	if index < 0 {
 		return entry

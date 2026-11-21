@@ -6,7 +6,7 @@ import {
   calendarDate,
   fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   multipart,
   nullable,
   object,
@@ -102,7 +102,7 @@ export interface HolidayRegistrationTimeModel {
 }
 
 export const HolidayRegistrationTimeModelSchema: z.ZodType<HolidayRegistrationTimeModel, unknown> = object<HolidayRegistrationTimeModel>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   starts_at: str,
   ends_at: str,
@@ -125,7 +125,7 @@ export interface HolidayRegistrationWeek {
 }
 
 export const HolidayRegistrationWeekSchema: z.ZodType<HolidayRegistrationWeek, unknown> = object<HolidayRegistrationWeek>({
-  id: int64StringOrNumber,
+  id: int64String,
   starts_on: nullable(calendarDate),
   ends_on: nullable(calendarDate),
   host_school_name: str,
@@ -146,7 +146,7 @@ export interface HolidayCriterionQuestion {
 }
 
 export const HolidayCriterionQuestionSchema: z.ZodType<HolidayCriterionQuestion, unknown> = object<HolidayCriterionQuestion>({
-  id: int64StringOrNumber,
+  id: int64String,
   question: str,
   scope: str,
 });
@@ -158,7 +158,7 @@ export interface HolidayRegistrationSchool {
 }
 
 export const HolidayRegistrationSchoolSchema: z.ZodType<HolidayRegistrationSchool, unknown> = object<HolidayRegistrationSchool>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
 });
 
@@ -220,8 +220,8 @@ export const PublicHolidayRegistrationOfferResponseSchema: z.ZodType<PublicHolid
 
 /** Go: enrollmenthttp.holidayBookingRequest */
 export interface holidayBookingRequest {
-  week_id?: number;
-  time_model_id?: number;
+  week_id?: string;
+  time_model_id?: string;
   days?: (string | null)[] | null;
   lunch?: boolean;
 }
@@ -231,7 +231,7 @@ export interface holidayChildRequest {
   first_name?: string;
   last_name?: string;
   birth_date?: string | null;
-  home_school_id?: number;
+  home_school_id?: string;
   guest_school_name?: string;
   allergies?: string;
   medication?: string;
@@ -277,7 +277,7 @@ export interface HolidayReceiptPlacement {
 
 export const HolidayReceiptPlacementSchema: z.ZodType<HolidayReceiptPlacement, unknown> = object<HolidayReceiptPlacement>({
   child_position: safeInt,
-  week_id: int64StringOrNumber,
+  week_id: int64String,
   placement: str,
 });
 
@@ -291,7 +291,7 @@ export interface HolidayRegistrationSubmitResponse {
 }
 
 export const HolidayRegistrationSubmitResponseSchema: z.ZodType<HolidayRegistrationSubmitResponse, unknown> = object<HolidayRegistrationSubmitResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   submitted_at: instant,
   placements: nullable(arr(HolidayReceiptPlacementSchema)),
   status_token: str,

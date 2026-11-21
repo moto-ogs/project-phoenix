@@ -171,7 +171,7 @@ func (rs *Resource) createPhase(w http.ResponseWriter, r *http.Request) {
 		renderCatalogError(w, r, err)
 		return
 	}
-	rs.respondPhase(w, r, actor, phase.ID, http.StatusCreated)
+	rs.respondPhase(w, r, actor, phase.ID.Int64(), http.StatusCreated)
 }
 
 func (rs *Resource) updatePhase(w http.ResponseWriter, r *http.Request) {

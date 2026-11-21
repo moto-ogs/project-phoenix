@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Children of the hosting school itself in the weeks it hosts (#6678, ADR
@@ -170,9 +171,9 @@ func (s *HolidayGuestStore) ListHomeSchoolBookings(ctx context.Context, schoolID
 			days = []calendar.Date{}
 		}
 		bookings[i] = enrollment.HolidayHomeSchoolBooking{
-			ChildID: row.ChildID, FirstName: row.FirstName, LastName: row.LastName, BirthDate: row.BirthDate,
-			WeekID: row.WeekID, PeriodName: row.PeriodName, StartsOn: row.StartsOn, EndsOn: row.EndsOn,
-			HostSchoolID: row.HostSchoolID, TimeModelName: row.TimeModelName,
+			ChildID: ident.ID(row.ChildID), FirstName: row.FirstName, LastName: row.LastName, BirthDate: row.BirthDate,
+			WeekID: ident.ID(row.WeekID), PeriodName: row.PeriodName, StartsOn: row.StartsOn, EndsOn: row.EndsOn,
+			HostSchoolID: ident.ID(row.HostSchoolID), TimeModelName: row.TimeModelName,
 			TimeModelStarts: row.TimeModelStarts, TimeModelEnds: row.TimeModelEnds, Days: days, Lunch: row.Lunch,
 		}
 	}

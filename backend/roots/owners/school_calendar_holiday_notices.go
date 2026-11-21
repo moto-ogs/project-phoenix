@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -32,7 +33,7 @@ func (n traegerClosingDayHolidayNotices) NotifyHolidayBookings(ctx context.Conte
 		TraegerClosingDayID: day.ClosingDayID, Deleted: day.Deleted,
 	}
 	if day.Previous != nil {
-		closure.Previous = &enrollment.HolidayClosureSpan{SchoolIDs: day.Previous.SchoolIDs, StartsOn: day.Previous.StartDate, EndsOn: day.Previous.EndDate}
+		closure.Previous = &enrollment.HolidayClosureSpan{SchoolIDs: ident.IDs(day.Previous.SchoolIDs), StartsOn: day.Previous.StartDate, EndsOn: day.Previous.EndDate}
 	}
 	notice, err := n.closures.NotifyHolidayClosure(ctx, organizationID, closure, day.HolidayBookingsToken)
 	if err != nil {

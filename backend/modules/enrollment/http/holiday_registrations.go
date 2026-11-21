@@ -70,8 +70,8 @@ func (rs *HolidayRegistrationResource) Router() chi.Router {
 
 // HolidayRegistrationSchool is a school of the Träger a child may attend.
 type HolidayRegistrationSchool struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	ID   common.ID `json:"id"`
+	Name string    `json:"name"`
 }
 
 // HolidayRegistrationTimeModel is a bookable care time of a week with its
@@ -79,16 +79,16 @@ type HolidayRegistrationSchool struct {
 // writes for this booking in the summary (#4664); sibling and exemption
 // rules apply only there.
 type HolidayRegistrationTimeModel struct {
-	ID         int64  `json:"id"`
-	Name       string `json:"name"`
-	StartsAt   string `json:"starts_at"`
-	EndsAt     string `json:"ends_at"`
-	PriceCents int    `json:"price_cents"`
+	ID         common.ID `json:"id"`
+	Name       string    `json:"name"`
+	StartsAt   string    `json:"starts_at"`
+	EndsAt     string    `json:"ends_at"`
+	PriceCents int       `json:"price_cents"`
 }
 
 // HolidayRegistrationWeek is a bookable week with the name of its host school.
 type HolidayRegistrationWeek struct {
-	ID             int64                          `json:"id"`
+	ID             common.ID                      `json:"id"`
 	StartsOn       calendar.Date                  `json:"starts_on"`
 	EndsOn         calendar.Date                  `json:"ends_on"`
 	HostSchoolName string                         `json:"host_school_name"`
@@ -164,8 +164,8 @@ type holidayAddressRequest struct {
 }
 
 type holidayBookingRequest struct {
-	WeekID      int64           `json:"week_id"`
-	TimeModelID int64           `json:"time_model_id"`
+	WeekID      common.ID       `json:"week_id"`
+	TimeModelID common.ID       `json:"time_model_id"`
 	Days        []calendar.Date `json:"days"`
 	// Lunch books lunch on the care days of the booking (#5631).
 	Lunch bool `json:"lunch"`
@@ -175,7 +175,7 @@ type holidayChildRequest struct {
 	FirstName       string                    `json:"first_name"`
 	LastName        string                    `json:"last_name"`
 	BirthDate       calendar.Date             `json:"birth_date"`
-	HomeSchoolID    int64                     `json:"home_school_id"`
+	HomeSchoolID    common.ID                 `json:"home_school_id"`
 	GuestSchoolName string                    `json:"guest_school_name"`
 	Allergies       string                    `json:"allergies"`
 	Medication      string                    `json:"medication"`
@@ -249,7 +249,7 @@ func (req *HolidayRegistrationRequest) input() capability.HolidayRegistrationInp
 		}
 		children[i] = capability.HolidayChildInput{
 			FirstName: child.FirstName, LastName: child.LastName, BirthDate: child.BirthDate,
-			HomeSchoolID: child.HomeSchoolID, GuestSchoolName: child.GuestSchoolName, Allergies: child.Allergies,
+			HomeSchoolID: child.HomeSchoolID.Int64(), GuestSchoolName: child.GuestSchoolName, Allergies: child.Allergies,
 			Medication: child.Medication, HealthNotes: child.HealthNotes, Bookings: bookings, CustomData: child.CustomData,
 			WishProof: child.WishProof,
 			Criteria:  child.Criteria,
@@ -291,7 +291,7 @@ func holidayContacts(contacts []holidayContactRequest) []capability.HolidayConta
 // HolidayRegistrationReceiptResponse confirms a stored registration without
 // repeating its personal data.
 type HolidayRegistrationReceiptResponse struct {
-	ID          int64     `json:"id"`
+	ID          common.ID `json:"id"`
 	SubmittedAt time.Time `json:"submitted_at"`
 	// Placements say for every booking whether the child got a place or is
 	// on the waiting list (#4699), by the child's position in the form.
@@ -368,7 +368,7 @@ func holidayOfferResponse(link capability.HolidayRegistrationLink, offer capabil
 	names := map[int64]string{}
 	schools := make([]HolidayRegistrationSchool, 0, len(link.Traeger.Schools))
 	for _, school := range link.Traeger.Schools {
-		names[school.ID] = school.Name
+		names[school.ID.Int64()] = school.Name
 		schools = append(schools, HolidayRegistrationSchool(school))
 	}
 	weeks := make([]HolidayRegistrationWeek, 0, len(offer.Weeks))
@@ -382,10 +382,10 @@ func holidayOfferResponse(link capability.HolidayRegistrationLink, offer capabil
 		careDays, fullDays := []calendar.Date{}, []calendar.Date{}
 		if week.BookingUnit == capability.HolidayBookingUnitDay {
 			careDays = append(careDays, week.CareDays...)
-			fullDays = append(fullDays, offer.FullDays[week.ID]...)
+			fullDays = append(fullDays, offer.FullDays[week.ID.Int64()]...)
 		}
 		weeks = append(weeks, HolidayRegistrationWeek{
-			ID: week.ID, StartsOn: week.StartsOn, EndsOn: week.EndsOn, HostSchoolName: names[week.HostSchoolID], TimeModels: models,
+			ID: week.ID, StartsOn: week.StartsOn, EndsOn: week.EndsOn, HostSchoolName: names[week.HostSchoolID.Int64()], TimeModels: models,
 			BookingUnit: week.BookingUnit, CareDays: careDays, FullDays: fullDays,
 			NoCareDays:      noCareDaysOrEmpty(week.NoCareDays),
 			LunchPriceCents: week.LunchPriceCents, LunchDays: week.LunchDays,

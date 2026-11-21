@@ -17,6 +17,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment/internal/adapters/postgres"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -721,7 +722,7 @@ func TestTraegerMoveExcludesIndependentSchoolClosures(t *testing.T) {
 			w := newPlacesWeek(t, db, "Träger genauer Änderungsumfang")
 			school := hostSchoolOf(t, db, w.week)
 			mail := &capturedMails{outcomes: map[string]string{}}
-			directory := closureTraeger{schools: []enrollment.HolidaySchool{{ID: school}}}
+			directory := closureTraeger{schools: []enrollment.HolidaySchool{{ID: ident.ID(school)}}}
 			closures := compose.NewHolidayClosures(closureCalendar(nil), closureCalendar(nil), directory, mail, closureKeyBytes, closureKeyed, func() time.Time { return closureToday.BerlinMidnight().Add(10 * time.Hour) })
 			monday, friday := calendar.NewDate(2027, 7, 5), calendar.NewDate(2027, 7, 9)
 			closure := enrollment.HolidayClosure{SchoolIDs: []int64{school}, StartsOn: monday, EndsOn: monday, Reason: "Träger-Schließtag"}
@@ -737,7 +738,7 @@ func TestTraegerMoveExcludesIndependentSchoolClosures(t *testing.T) {
 			}
 			days := closureCalendar{{Date: unrelated, Kind: enrollment.HolidayNoCareClosingDay, Name: "Unbestätigter Schul-Schließtag"}}
 			closures = compose.NewHolidayClosures(days, days, directory, mail, closureKeyBytes, closureKeyed, func() time.Time { return closureToday.BerlinMidnight().Add(10 * time.Hour) })
-			closure.Previous = &enrollment.HolidayClosureSpan{SchoolIDs: []int64{school}, StartsOn: monday, EndsOn: monday}
+			closure.Previous = &enrollment.HolidayClosureSpan{SchoolIDs: []ident.ID{ident.ID(school)}, StartsOn: monday, EndsOn: monday}
 			closure.StartsOn, closure.EndsOn = friday, friday
 			if movedSchool {
 				closure.SchoolIDs = []int64{testpkg.CreateTestSchoolInOrganization(t, db, w.organization, "Neue Schule")}

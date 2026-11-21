@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment/internal/adapters/postgres"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -61,7 +62,7 @@ func TestHolidayAllocationStatementsKeepTheirTraegerBeneathRLS(t *testing.T) {
 		assert.Empty(t, recordCriteria, "A exports no criterion of B, including answered ones")
 
 		require.NoError(t, store.WriteHolidayCriteria(ctx, own.organization, []enrollment.HolidayCriterionInput{
-			{ID: criterion, Name: "Übernommen", Question: "Von A?", Scope: enrollment.HolidayCriterionChild, Active: false},
+			{ID: ident.ID(criterion), Name: "Übernommen", Question: "Von A?", Scope: enrollment.HolidayCriterionChild, Active: false},
 		}, 0))
 		require.NoError(t, store.WriteHolidayCriteria(ctx, own.organization, nil, 0), "an empty list archives A's criteria only")
 

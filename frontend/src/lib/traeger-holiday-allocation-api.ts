@@ -102,7 +102,7 @@ export async function saveHolidayCriteria(
       method: "PUT",
       body: {
         criteria: criteria.map((criterion) => ({
-          id: criterion.id ? Number(criterion.id) : 0,
+          id: criterion.id ? criterion.id : "0",
           name: criterion.name,
           question: criterion.question,
           scope: criterion.scope,
@@ -317,7 +317,7 @@ export async function decideHolidayAllocation(
       method: "POST",
       body: {
         decisions: decisions.map((decision) => ({
-          booking_id: Number(decision.bookingId),
+          booking_id: decision.bookingId,
           placement: decision.placement,
           proposal: decision.proposal,
           reason: decision.reason,

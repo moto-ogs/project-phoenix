@@ -10,6 +10,7 @@ import (
 	"time"
 
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/go-chi/render"
 
@@ -123,7 +124,7 @@ type AdminRequestChild struct {
 	Status           string     `json:"status"`
 	StatusReason     *string    `json:"status_reason,omitempty"`
 	ReviewedAt       *time.Time `json:"reviewed_at,omitempty"`
-	ReviewedBy       *int64     `json:"reviewed_by,omitempty"`
+	ReviewedBy       *common.ID `json:"reviewed_by,omitempty"`
 	ActivationMode   string     `json:"activation_mode"`
 	CreatedStudentID string     `json:"created_student_id,omitempty"`
 	// MatchedStudentID is the enrolled child the approval renews instead of
@@ -231,7 +232,7 @@ func toAdminRequestSummary(s *RequestSummary) AdminRequestSummary {
 			Status:            c.Status,
 			StatusReason:      c.StatusReason,
 			ReviewedAt:        c.ReviewedAt,
-			ReviewedBy:        c.ReviewedBy,
+			ReviewedBy:        (*ident.ID)(c.ReviewedBy),
 			ActivationMode:    c.ActivationMode,
 			CreatedStudentID:  optionalInt64String(c.CreatedStudentID),
 			MatchedStudentID:  optionalInt64String(c.MatchedStudentID),
@@ -738,7 +739,7 @@ func newAdminRequestChild(child *capability.RequestChild) AdminRequestChild {
 		Status:            child.Status,
 		StatusReason:      child.StatusReason,
 		ReviewedAt:        child.ReviewedAt,
-		ReviewedBy:        child.ReviewedBy,
+		ReviewedBy:        (*ident.ID)(child.ReviewedBy),
 		ActivationMode:    child.ActivationMode,
 		CreatedStudentID:  optionalInt64String(child.CreatedStudentID),
 		MatchedStudentID:  optionalInt64String(child.MatchedStudentID),
