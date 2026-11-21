@@ -851,6 +851,7 @@ describe("TimeTrackingService", () => {
             expires_on: "2027-03-31",
             expired_days: 0,
             booking_days: 0,
+            kept_by_traeger: false,
             carried_in: {
               year: 2025,
               remaining_days: 1,
