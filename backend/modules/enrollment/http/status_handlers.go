@@ -188,7 +188,7 @@ func (rs *Resource) getStatus(w http.ResponseWriter, r *http.Request) {
 		statusErr   error
 	)
 	err := withinAdmin(r.Context(), func(adminCtx context.Context) error {
-		view, invalidLink, statusErr = rs.loadPublicStatusView(adminCtx, token, wantsProofPDF(r))
+		view, invalidLink, statusErr = rs.loadPublicStatusView(adminCtx, token, wantsStatusProofPDF(r))
 		return statusErr
 	})
 	if err != nil {
@@ -199,7 +199,7 @@ func (rs *Resource) getStatus(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInternalServerWrap("failed to load enrollment status", err))
 		return
 	}
-	if wantsProofPDF(r) {
+	if wantsStatusProofPDF(r) {
 		rs.writeStatusSignatureProof(w, r, view)
 		return
 	}

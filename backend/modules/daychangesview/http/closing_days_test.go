@@ -65,15 +65,6 @@ func closingLines(t *testing.T, body string) []string {
 	return lines
 }
 
-func statusOf(overview wireOverview, source string) string {
-	for _, status := range overview.Sources {
-		if status.Source == source {
-			return status.Status
-		}
-	}
-	return ""
-}
-
 func insertTraegerClosingDay(t *testing.T, db *testpkg.DB, organizationID int64, start, end, reason string, schoolIDs ...int64) {
 	t.Helper()
 	_, err := db.ExecContext(context.Background(), `INSERT INTO schedule.traeger_closing_days (organization_id, start_date, end_date, reason, school_ids)
@@ -144,7 +135,7 @@ func TestDayChangesClosingDaySource(t *testing.T) {
 
 	t.Run("lead sees the school's and the Träger's closing days first, with the link", func(t *testing.T) {
 		overview, body := read(t, router, leadAccount.ID, tenantID, "vacation:approve", "schedules:manage")
-		assert.Equal(t, "loaded", statusOf(overview, "closing_days"))
+		assert.Equal(t, "loaded", sourceStatus(overview, "closing_days"))
 		assert.Equal(t, []string{
 			"school Brückentag traeger seit 2026-09-08 ->calendar_periods",
 			"school Pädagogische Tage bis 2026-09-11 ->calendar_periods",
@@ -157,7 +148,7 @@ func TestDayChangesClosingDaySource(t *testing.T) {
 
 	t.Run("care staff that records time sees them without the planning page", func(t *testing.T) {
 		overview, body := read(t, router, carerAccount.ID, tenantID, "time_tracking:own")
-		assert.Equal(t, "loaded", statusOf(overview, "closing_days"))
+		assert.Equal(t, "loaded", sourceStatus(overview, "closing_days"))
 		assert.Equal(t, []string{
 			"school Brückentag traeger seit 2026-09-08",
 			"school Pädagogische Tage bis 2026-09-11",
@@ -175,7 +166,7 @@ func TestDayChangesClosingDaySource(t *testing.T) {
 	t.Run("account without a read of the closing days gets none and no failure", func(t *testing.T) {
 		overview, body := read(t, router, plainAccount.ID, tenantID)
 		assert.Empty(t, closingLines(t, body))
-		assert.Equal(t, "loaded", statusOf(overview, "closing_days"))
+		assert.Equal(t, "loaded", sourceStatus(overview, "closing_days"))
 	})
 
 	t.Run("the day before shows that day's closing days only", func(t *testing.T) {

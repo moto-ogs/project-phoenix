@@ -262,6 +262,7 @@ export const nodeLogicTestFiles = [
   "src/lib/student-time-status.test.ts",
   "src/lib/student-wire.test.ts",
   "src/lib/contract/catalog-proxy.files.server.test.ts",
+  "src/lib/contract/catalog-proxy.public.server.test.ts",
   "src/lib/contract/client.server.test.ts",
   "src/lib/contract/students.contract.test.ts",
   "src/lib/substitution-api.test.ts",

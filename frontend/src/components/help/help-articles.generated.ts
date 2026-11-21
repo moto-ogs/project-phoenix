@@ -1021,13 +1021,20 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
         // Baustein „Heute anders" (#7659), components/home/day-changes-block.tsx.
         title: "Was heute anders ist",
         description:
-          "Ganz oben auf der `Startseite` steht die Karte `Heute anders`. Sie zeigt, wer heute fehlt, wer vertritt und ob die OGS heute geschlossen ist.",
+          "Ganz oben auf der `Startseite` steht die Karte `Heute anders`. Sie zeigt, wer heute fehlt, wer vertritt und ob die OGS heute geschlossen ist. Dazu kommen die Hinweise der Leitung für heute.",
         ordered: false,
         steps: [
           "Unter `Betrifft dich` steht, was dich selbst angeht: deine Gruppen, deine Vertretungen und ob du selbst heute fehlst.",
           "Unter `Schule` steht der Rest der Schule.",
           // Schließtage (#7664): oben unter „Schule“, auch die des Trägers.
           "Ist die OGS heute geschlossen, steht das ganz oben unter `Schule`. Das gilt auch, wenn der Träger den Tag geschlossen hat.",
+          // Darstellung über den Tag (#7660). Die Zeilen mit Uhrzeit und das
+          // eingeklappte „erledigt“ beschreibt erst die erste Quelle mit
+          // Uhrzeit (Termine, #7662/#7663), vorher gibt es sie nicht.
+          "Neue Änderungen stehen oben. Längere Änderungen stehen kurz darunter, zum Beispiel mit `seit 3.11.`.",
+          "Am Handy zeigt `Schule` nur die ersten 3 Einträge. Den Rest zeigt `Alle anzeigen`.",
+          // Hinweise der Leitung in „Heute anders" (#7667), components/home/day-notice-row.tsx.
+          "Einen Hinweis der Leitung, den du noch bestätigen sollst, siehst du ganz oben. Wähle `Zur Kenntnis nehmen`. Danach steht er unter `Schule`.",
           "Tippe auf einen Eintrag, um die passende Seite zu öffnen.",
           "Steht dort `Heute läuft alles wie geplant.`, gibt es heute nichts Besonderes.",
           "Die Karte zeigt nie, warum jemand fehlt.",
@@ -8812,6 +8819,7 @@ export const staffNoticesTopic = function staffNoticesTopic(): HelpTopic {
       "Der Hinweis steht an seinen Tagen unter `Heute` für die gewählte Gruppe. Bei `Alle` und `Nur Betreuung` steht er außerdem sofort bei den Benachrichtigungen der Betreuung.",
     notes: [
       "Mit `Kenntnisnahme verlangen` siehst du später, wer den Hinweis bestätigt hat.",
+      "Das Team sieht den Hinweis an seinen Tagen auch auf der `Startseite` in `Heute anders`. Dort kann es ihn gleich mit `Zur Kenntnis nehmen` bestätigen.",
       "`Nur Lehrkräfte` erreicht die Lehrkräfte in moto schule. Unter `Für wen` steht das auch im Fenster.",
       "Du selbst bekommst zu deinem eigenen Hinweis keine Benachrichtigung. Ein Hinweis, der schon vorbei ist, auch nicht.",
       "Speicherst du einen Hinweis ohne Haken bei `Aktiv`, kommt die Benachrichtigung erst, wenn du den Haken setzt.",

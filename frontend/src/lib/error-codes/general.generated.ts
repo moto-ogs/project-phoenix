@@ -7,6 +7,7 @@ export const codes = [
   "general.route_not_found",
   "general.server",
   "general.unavailable",
+  "general.write_answer_unreadable",
 ] as const;
 
 export const classes = {
@@ -17,6 +18,7 @@ export const classes = {
   "general.route_not_found": "business_rejection",
   "general.server": "server",
   "general.unavailable": "unavailable",
+  "general.write_answer_unreadable": "business_rejection",
 } as const;
 
 export const parameters = {
@@ -27,4 +29,5 @@ export const parameters = {
   "general.route_not_found": [],
   "general.server": [],
   "general.unavailable": [],
+  "general.write_answer_unreadable": [],
 } as const;

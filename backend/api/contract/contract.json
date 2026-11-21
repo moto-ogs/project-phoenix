@@ -13878,6 +13878,21 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/enrollment/{tenantSlug}/uploads",
+      "portals": [
+        "public"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "UploadReceipt"
+      },
+      "max_body_bytes": 10551296,
+      "multipart": true,
+      "too_large_code": "enrollment.upload_invalid",
+      "public_upload": "the public enrollment form takes proofs before any account exists; the backend limits attempts per IP and school"
+    },
+    {
+      "method": "POST",
       "pattern": "/api/files/folders",
       "portals": [
         "tenant"
@@ -17404,6 +17419,20 @@
     },
     {
       "method": "POST",
+      "pattern": "/parent/enrollments/{tenantSlug}/uploads",
+      "portals": [
+        "parent"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "UploadReceipt"
+      },
+      "max_body_bytes": 10551296,
+      "multipart": true,
+      "too_large_code": "enrollment.upload_invalid"
+    },
+    {
+      "method": "POST",
       "pattern": "/parent/me/calendar/feed/rotate",
       "portals": [
         "parent"
@@ -19253,6 +19282,21 @@
         "ref": "HolidayRegistrationSubmitResponse"
       },
       "max_body_bytes": 2097152
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/holiday-registrations/{token}/uploads",
+      "portals": [
+        "public"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "UploadReceipt"
+      },
+      "max_body_bytes": 10551296,
+      "multipart": true,
+      "too_large_code": "enrollment.upload_invalid",
+      "public_upload": "the published link of a holiday period takes proofs of benefits; the backend limits attempts per IP and Träger"
     },
     {
       "method": "POST",
@@ -22679,7 +22723,8 @@
         "group_substitution",
         "group_substitution_count",
         "staff_absent",
-        "staff_absent_count"
+        "staff_absent_count",
+        "staff_notice"
       ]
     },
     {
@@ -22690,7 +22735,8 @@
         "own_absences",
         "staff_absences",
         "staff_list",
-        "staff_member"
+        "staff_member",
+        "staff_notices"
       ]
     },
     {
@@ -22705,6 +22751,13 @@
         "parent_note",
         "phone",
         "student_note"
+      ]
+    },
+    {
+      "name": "NoticePriority",
+      "values": [
+        "important",
+        "info"
       ]
     },
     {
@@ -22748,6 +22801,7 @@
       "name": "Source",
       "values": [
         "closing_days",
+        "notices",
         "staff"
       ]
     },
@@ -46014,6 +46068,49 @@
       ]
     },
     {
+      "name": "DayNotice",
+      "go_type": "daychangesview.DayNotice",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "priority",
+          "schema": {
+            "kind": "enum",
+            "ref": "NoticePriority"
+          }
+        },
+        {
+          "name": "requires_acknowledgement",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "acknowledged",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "DayReport",
       "go_type": "classday.DayReport",
       "fields": [
@@ -48558,6 +48655,20 @@
           }
         },
         {
+          "name": "starts_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "ends_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
           "name": "people",
           "schema": {
             "kind": "array",
@@ -48589,6 +48700,14 @@
           "schema": {
             "kind": "int",
             "nullable": true
+          }
+        },
+        {
+          "name": "notice",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "DayNotice"
           }
         },
         {
@@ -99204,6 +99323,36 @@
               "kind": "ref",
               "ref": "CompanionEntry"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "UploadReceipt",
+      "go_type": "enrollmenthttp.UploadReceipt",
+      "fields": [
+        {
+          "name": "token",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "filename",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "size_bytes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "content_type",
+          "schema": {
+            "kind": "string"
           }
         }
       ]

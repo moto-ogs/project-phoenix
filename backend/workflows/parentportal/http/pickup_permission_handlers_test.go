@@ -124,8 +124,8 @@ func pickupProofRequest(path string) *http.Request {
 	return req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, route))
 }
 
-// The PDF has a path of its own (#2352); the JSON path without ?format
-// answers JSON.
+// The PDF has a path of its own (#2352); the JSON path answers JSON, also
+// with the former ?format=pdf (#7644).
 func TestPickupRequestProofPDFHasItsOwnPath(t *testing.T) {
 	t.Parallel()
 	rs := &Resource{ParentService: &fakeParentService{pickupProof: pickupProofFixture(true)}, Reports: &capturingProofRenderer{}, Now: enrollmentTestNow}
@@ -138,7 +138,7 @@ func TestPickupRequestProofPDFHasItsOwnPath(t *testing.T) {
 	assert.Equal(t, "no-store", w.Header().Get("Cache-Control"))
 
 	w = httptest.NewRecorder()
-	rs.pickupRequestProof(w, pickupProofRequest("/me/children/7/pickup-requests/12/proof"))
+	rs.pickupRequestProof(w, pickupProofRequest("/me/children/7/pickup-requests/12/proof?format=pdf"))
 	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 	assert.Contains(t, w.Header().Get("Content-Type"), "application/json")
 }

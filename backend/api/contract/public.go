@@ -21,7 +21,7 @@ const PublicPortal = "public"
 func publicRoutesStandApart(routes []Route) error {
 	for _, route := range routes {
 		public := slices.Contains(route.Portals, PublicPortal)
-		if err := publicFileMarker(route, public); err != nil {
+		if err := publicMarkers(route, public); err != nil {
 			return err
 		}
 		if !public {
@@ -35,10 +35,6 @@ func publicRoutesStandApart(routes []Route) error {
 			return fmt.Errorf("%s: a public write needs MaxBodyBytes", where)
 		case route.NoRetryAfterRenewal != "":
 			return fmt.Errorf("%s: a public route has no session to renew; drop NoRetryAfterRenewal", where)
-		case route.Multipart:
-			return fmt.Errorf("%s: the session-free proxy path takes no upload; a public upload keeps its route file", where)
-		case route.File && route.PublicFile == "":
-			return fmt.Errorf("%s: the session-free proxy path answers JSON only; a public file needs PublicFile, the reason its link alone may open it", where)
 		}
 		for _, other := range routes {
 			if other.Method == route.Method && !slices.Contains(other.Portals, PublicPortal) && patternsOverlap(route.Pattern, other.Pattern) {
@@ -62,6 +58,30 @@ func publicFileMarker(route Route, public bool) error {
 		return fmt.Errorf("%s: PublicFile marks a file of the portal %q only", where, PublicPortal)
 	case route.Request != nil || route.MaxBodyBytes != 0:
 		return fmt.Errorf("%s: a public file reads no request body", where)
+	}
+	return nil
+}
+
+// publicMarkers checks both markers that open a route of the portal public:
+// a public upload or file needs its own, and neither sits anywhere else.
+func publicMarkers(route Route, public bool) error {
+	where := route.Key()
+	switch {
+	case public && route.Multipart && route.PublicUpload == "":
+		return fmt.Errorf("%s: the session-free proxy path takes no upload; a public upload needs PublicUpload, the reason it may arrive without a session", where)
+	case public && route.File && route.PublicFile == "":
+		return fmt.Errorf("%s: the session-free proxy path answers JSON only; a public file needs PublicFile, the reason its link alone may open it", where)
+	}
+	if err := publicFileMarker(route, public); err != nil {
+		return err
+	}
+	return publicUploadMarker(route, public)
+}
+
+// publicUploadMarker keeps PublicUpload on one upload of the portal public.
+func publicUploadMarker(route Route, public bool) error {
+	if route.PublicUpload != "" && (!public || !route.Multipart) {
+		return fmt.Errorf("%s: PublicUpload marks a multipart upload of the portal %q only", route.Key(), PublicPortal)
 	}
 	return nil
 }

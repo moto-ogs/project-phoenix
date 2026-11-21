@@ -10,7 +10,6 @@ import (
 
 	messaging "github.com/moto-ogs/project-phoenix/modules/communication/http/parentmessages"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,8 +24,7 @@ func (staffWithoutGroups) MyGroupIDs(context.Context) ([]int64, error)   { retur
 // confirms it for the team, and sets which conversations the counter counts.
 func TestStaffInboxCountsMarksAndConfirmsConversations(t *testing.T) {
 	t.Parallel()
-	resource, chain := messagingFixture(t, owners.StaffStudentReads{Caller: staffWithoutGroups{}})
-	router := testpkg.MountedQueryBudgetRouter("/api/messages", resource)
+	router, chain := messagingFixture(t, owners.StaffStudentReads{Caller: staffWithoutGroups{}})
 	sender, colleague := staffToken(t, "Ina", "admin:*"), staffToken(t, "Kai", "admin:*")
 	send := func(token, method, path, payload string, out any) {
 		t.Helper()

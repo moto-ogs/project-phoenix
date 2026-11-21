@@ -4,6 +4,7 @@ import {
   arr,
   bool,
   calendarDate,
+  instant,
   int64String,
   nullable,
   object,
@@ -14,11 +15,14 @@ import {
   type OpenEnum,
 } from "./runtime";
 
-export const KIND_VALUES = ["closing_day", "group_substitution", "group_substitution_count", "staff_absent", "staff_absent_count"] as const;
+export const KIND_VALUES = ["closing_day", "group_substitution", "group_substitution_count", "staff_absent", "staff_absent_count", "staff_notice"] as const;
 export type Kind = (typeof KIND_VALUES)[number];
 
-export const LINK_TARGET_VALUES = ["calendar_periods", "group_handovers", "own_absences", "staff_absences", "staff_list", "staff_member"] as const;
+export const LINK_TARGET_VALUES = ["calendar_periods", "group_handovers", "own_absences", "staff_absences", "staff_list", "staff_member", "staff_notices"] as const;
 export type LinkTarget = (typeof LINK_TARGET_VALUES)[number];
+
+export const NOTICE_PRIORITY_VALUES = ["important", "info"] as const;
+export type NoticePriority = (typeof NOTICE_PRIORITY_VALUES)[number];
 
 export const PERSON_ROLE_VALUES = ["absent", "replaced", "substitute"] as const;
 export type PersonRole = (typeof PERSON_ROLE_VALUES)[number];
@@ -26,7 +30,7 @@ export type PersonRole = (typeof PERSON_ROLE_VALUES)[number];
 export const SECTION_VALUES = ["school", "you"] as const;
 export type Section = (typeof SECTION_VALUES)[number];
 
-export const SOURCE_VALUES = ["closing_days", "staff"] as const;
+export const SOURCE_VALUES = ["closing_days", "notices", "staff"] as const;
 export type Source = (typeof SOURCE_VALUES)[number];
 
 export const SOURCE_STATE_VALUES = ["failed", "loaded"] as const;
@@ -80,6 +84,25 @@ export const LinkSchema: z.ZodType<Link, unknown> = object<Link>({
   staff_id: optional(int64String),
 });
 
+/** Go: daychangesview.DayNotice */
+export interface DayNotice {
+  id: string;
+  title: string;
+  body: string;
+  priority: OpenEnum<NoticePriority>;
+  requires_acknowledgement: boolean;
+  acknowledged: boolean;
+}
+
+export const DayNoticeSchema: z.ZodType<DayNotice, unknown> = object<DayNotice>({
+  id: int64String,
+  title: str,
+  body: str,
+  priority: str,
+  requires_acknowledgement: bool,
+  acknowledged: bool,
+});
+
 /** Go: daychangesview.DayClosing */
 export interface DayClosing {
   name: string;
@@ -99,10 +122,13 @@ export interface Entry {
   half_day: boolean;
   since: string | null;
   until: string | null;
+  starts_at: string | null;
+  ends_at: string | null;
   people: Person[] | null;
   group: Group | null;
   link: Link | null;
   count: number | null;
+  notice: DayNotice | null;
   closing: DayClosing | null;
 }
 
@@ -113,10 +139,13 @@ export const EntrySchema: z.ZodType<Entry, unknown> = object<Entry>({
   half_day: bool,
   since: nullable(calendarDate),
   until: nullable(calendarDate),
+  starts_at: nullable(instant),
+  ends_at: nullable(instant),
   people: nullable(arr(PersonSchema)),
   group: nullable(GroupSchema),
   link: nullable(LinkSchema),
   count: nullable(safeInt),
+  notice: nullable(DayNoticeSchema),
   closing: nullable(DayClosingSchema),
 });
 

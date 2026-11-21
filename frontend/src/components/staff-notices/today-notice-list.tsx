@@ -81,9 +81,12 @@ export function TodayNoticeList({
       return;
     }
     setPending(null);
-    // The leadership's list of who confirmed it.
+    // The leadership's list and its acknowledgement counts must refresh too.
     const acknowledgements = staffNoticeKeys.acknowledgements(notice.id);
-    void invalidate((key) => key === acknowledgements);
+    void invalidate(
+      (key) =>
+        key === acknowledgements || key.startsWith(staffNoticeKeys.all("")),
+    );
     await afterAcknowledge.refresh();
     window.dispatchEvent(new Event(STAFF_NOTICES_REFRESH_EVENT));
   };

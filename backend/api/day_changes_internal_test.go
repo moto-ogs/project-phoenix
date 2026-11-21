@@ -58,6 +58,8 @@ func TestDayChangesInvisibleAccountSkipsUnavailableWorkforce(t *testing.T) {
 			Caller:    invisibleDayChangesCaller{},
 			Workforce: workforceSource,
 		}},
+		// Without users:read the notice source answers before reading.
+		Notices: dayChangesNotices{},
 		Closing: dayChangesClosingDays{},
 	})
 	require.NoError(t, err)
@@ -66,6 +68,7 @@ func TestDayChangesInvisibleAccountSkipsUnavailableWorkforce(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []daychangesview.SourceStatus{
 		{Source: daychangesview.SourceStaff, Status: daychangesview.SourceLoaded},
+		{Source: daychangesview.SourceNotices, Status: daychangesview.SourceLoaded},
 		{Source: daychangesview.SourceClosingDays, Status: daychangesview.SourceLoaded},
 	}, overview.Sources)
 	assert.Empty(t, overview.Entries)
