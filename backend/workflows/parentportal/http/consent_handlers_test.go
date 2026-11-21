@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -145,15 +146,27 @@ func TestGrantPhotoConsentDistinguishesBusyDisabledAndLookupFailure(t *testing.T
 // has not allowed it, and the relationship refusal.
 func TestRoomHistoryStopRoutesAnswerTheStateAndTheirRefusals(t *testing.T) {
 	t.Parallel()
+	serve := func(rs *Resource, method string) *httptest.ResponseRecorder {
+		router := chi.NewRouter()
+		router.Route("/parent", rs.mountChildStatusRoutes)
+		req := withClaims(httptest.NewRequest(method, "/parent/me/children/42/room-history-stop", nil), 1234)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		return w
+	}
 	since := time.Date(2026, time.November, 21, 9, 0, 0, 0, time.UTC)
 	fake := &fakeParentService{roomHistoryStop: parentService.ChildRoomHistoryStop{Offered: true, Stopped: true, StoppedAt: &since, CanChange: true}}
 	rs := &Resource{ParentService: fake}
-	w := httptest.NewRecorder()
-	rs.stopRoomHistory(w, parentRequestWithStudentID(http.MethodPut, "/children/42/room-history-stop", "", "42"))
-	require.Equal(t, http.StatusOK, w.Code)
-	assert.Equal(t, int64(42), fake.gotConsentStudent)
-	assert.Contains(t, w.Body.String(), `"stopped":true`)
-	assert.Contains(t, w.Body.String(), `"can_change":true`)
+	for _, method := range []string{http.MethodGet, http.MethodPut, http.MethodDelete} {
+		t.Run(method, func(t *testing.T) {
+			w := serve(rs, method)
+			require.Equal(t, http.StatusOK, w.Code)
+			assert.Equal(t, int64(1234), fake.gotConsentAccount)
+			assert.Equal(t, int64(42), fake.gotConsentStudent)
+			assert.Contains(t, w.Body.String(), `"stopped":true`)
+			assert.Contains(t, w.Body.String(), `"can_change":true`)
+		})
+	}
 
 	for _, tc := range []struct {
 		err  error
@@ -163,8 +176,7 @@ func TestRoomHistoryStopRoutesAnswerTheStateAndTheirRefusals(t *testing.T) {
 		{parentService.ErrGuardianPermissionDenied, "care.guardian_permission_denied"},
 	} {
 		refused := &Resource{ParentService: &fakeParentService{roomHistoryStopErr: tc.err}}
-		w := httptest.NewRecorder()
-		refused.resumeRoomHistory(w, parentRequestWithStudentID(http.MethodDelete, "/children/42/room-history-stop", "", "42"))
+		w := serve(refused, http.MethodDelete)
 		assert.Equal(t, http.StatusForbidden, w.Code, tc.code)
 		assert.Contains(t, w.Body.String(), `"code":"`+tc.code+`"`)
 	}
