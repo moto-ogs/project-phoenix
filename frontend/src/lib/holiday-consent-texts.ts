@@ -2,6 +2,8 @@
 // (#5626), shared by the parents' form and the Träger portal. Its own
 // module, so the Träger pages do not pull in the parents' API client.
 
+import type { HolidayConsentTexts as WireHolidayConsentTexts } from "./contract/shared.generated";
+
 /** Days the consent texts before version 4 promise: three months (#6691). */
 const HOLIDAY_LEGACY_RETENTION_DAYS = 92;
 
@@ -30,20 +32,9 @@ export interface HolidayConsentTexts {
   readonly declarationName: string;
 }
 
-/** The consent texts as the backend sends them. */
-export interface BackendConsentTexts {
-  version: number;
-  retention_days?: number;
-  privacy_consent: string;
-  health_consent: string;
-  binding_confirmed: string;
-  custody_confirmed: string;
-  declaration_name: string;
-}
-
 /** Maps the consent texts of the backend; missing texts stay empty. */
 export function consentTextsFromBackend(
-  texts: BackendConsentTexts | null | undefined,
+  texts: WireHolidayConsentTexts | null | undefined,
 ): HolidayConsentTexts {
   return {
     version: texts?.version ?? 0,

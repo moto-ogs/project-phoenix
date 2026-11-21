@@ -913,7 +913,7 @@ export function quoteBookings(
   return bookedWeeks(child, offer).map((booking) => ({
     week_id: Number(booking.weekId),
     time_model_id: Number(booking.timeModelId),
-    ...(booking.days.length > 0 ? { days: booking.days } : {}),
+    ...(booking.days.length > 0 ? { days: [...booking.days] } : {}),
     ...(booking.lunch ? { lunch: true } : {}),
   }));
 }

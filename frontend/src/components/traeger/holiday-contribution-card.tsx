@@ -76,7 +76,7 @@ export function HolidayContributionCard({
       <ContributionRulesLink
         canManageBillingSettings={canManageBillingSettings}
         kinds={contribution.children.flatMap((child) =>
-          child.lines.map((line) => line.kind),
+          child.lines.flatMap((line) => (line.kind ? [line.kind] : [])),
         )}
       />
     </SectionCard>

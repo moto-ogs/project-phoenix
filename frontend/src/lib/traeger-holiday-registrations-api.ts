@@ -20,8 +20,8 @@ import {
 import { apiErrorFromBody, transportFetch } from "./api-error";
 import type { MailOutcome } from "./email-delivery-status";
 import { filenameFromDisposition } from "./file-download";
+import type { HolidayConsentTexts as WireHolidayConsentTexts } from "./contract/shared.generated";
 import {
-  type BackendConsentTexts,
   consentTextsFromBackend,
   type HolidayConsentTexts,
 } from "./holiday-consent-texts";
@@ -464,7 +464,7 @@ interface BackendDetail extends BackendSummary {
   custody_confirmed_at?: string | null;
   declaration_name?: string | null;
   consent_version?: number | null;
-  consent_texts?: BackendConsentTexts | null;
+  consent_texts?: WireHolidayConsentTexts | null;
   benefits_proofs?:
     | {
         id: number;
