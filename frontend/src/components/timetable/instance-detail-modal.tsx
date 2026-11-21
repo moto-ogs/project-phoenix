@@ -96,6 +96,7 @@ import {
   getGermanWeekdayLong,
   getStatusLabel,
 } from "~/lib/timetable-helpers";
+import { labelOf } from "~/lib/label-of";
 import { instanceStatusTone, type TimetableTone } from "./timetable-colors";
 import {
   attendanceStaffTone,
@@ -320,14 +321,15 @@ function SeriesRosterMaintenance({
 }
 
 interface InstanceStatusBadgeProps {
-  status: InstanceStatus;
+  /** undefined: a status this build does not know. */
+  status: InstanceStatus | undefined;
 }
 
 function InstanceStatusBadge({ status }: InstanceStatusBadgeProps) {
   return (
     <StatusBadge
       label={getStatusLabel(status)}
-      tone={instanceStatusTone[status]}
+      tone={labelOf(instanceStatusTone, status, "gray")}
       compact
     />
   );
@@ -344,6 +346,8 @@ function attendanceLabel(
       return "Anwesend";
     case "absent":
       return plannedContext ? "Abgemeldet" : "Fehlt";
+    case undefined:
+      return "–";
   }
 }
 
@@ -380,6 +384,7 @@ function attendanceTone(status: InstanceStudentSummary["status"]): ListRowTone {
     case "absent":
       return "danger";
     case "expected":
+    case undefined:
       return "muted";
   }
 }
@@ -541,7 +546,7 @@ function InstanceStudentsSection({
   students,
 }: Readonly<{
   groupedStudents: Record<
-    InstanceStudentSummary["status"] | "notScheduled",
+    NonNullable<InstanceStudentSummary["status"]> | "notScheduled",
     InstanceStudentSummary[]
   >;
   handleAttendancePatch: (
@@ -1438,7 +1443,7 @@ function StudentGroup({
   pendingStudentId: string | null;
   pending: boolean;
   onAttendancePatch?: InstanceDetailModalProps["onAttendancePatch"];
-  instanceStatus: InstanceStatus;
+  instanceStatus: InstanceStatus | undefined;
   handleAttendancePatch: (
     studentId: string,
     body: AttendancePatchBody,
