@@ -43,36 +43,58 @@ func (s dayChangesStaff) addBlocks(ctx context.Context, builder *staffEntryBuild
 	return nil
 }
 
-// block adds one block's cover or, without one, its absent supervisors. An
-// absence that a sick report or an absence of the day set is no entry of its
-// own: the day's absence is. Its cover still is.
-func (b *staffEntryBuilder) block(change timetable.BlockStaffChange, absentToday map[int64]bool) {
-	var substitutes, replaced, missing []int64
-	ownBlock := false
+// blockStaff sorts a block's staff rows: who covers, whom they replace,
+// and who misses the block alone. An absence that a sick report or an
+// absence of the day set misses nothing of its own: the day's absence is the
+// entry. Its cover still is.
+type blockStaff struct {
+	substitutes, replaced, missing []int64
+	// own: the caller is on the block (eigener Termin).
+	own bool
+}
+
+func sortBlockStaff(change timetable.BlockStaffChange, selfID int64, absentToday map[int64]bool) blockStaff {
+	var staff blockStaff
 	for _, row := range change.Staff {
-		ownBlock = ownBlock || (b.viewer.selfID != 0 && row.StaffID == b.viewer.selfID)
+		staff.own = staff.own || (selfID != 0 && row.StaffID == selfID)
 		switch {
 		case row.Substitute:
-			substitutes = append(substitutes, row.StaffID)
+			staff.substitutes = append(staff.substitutes, row.StaffID)
 		case row.Absent:
-			replaced = append(replaced, row.StaffID)
+			staff.replaced = append(staff.replaced, row.StaffID)
 			if !row.SickReport && !absentToday[row.StaffID] {
-				missing = append(missing, row.StaffID)
+				staff.missing = append(staff.missing, row.StaffID)
 			}
 		}
 	}
-	people := blockPeople(substitutes, replaced, b.viewer.selfID)
-	kind := daychangesview.KindBlockSubstitution
-	if len(substitutes) == 0 {
-		kind, people = daychangesview.KindBlockStaffAbsent, blockPeople(nil, missing, b.viewer.selfID)
-		if len(missing) == 0 {
-			return
-		}
-		for i := range people {
-			people[i].Role = daychangesview.RoleAbsent
-		}
+	return staff
+}
+
+// entry names the block's change: its cover or, without one, who misses
+// it. ok is false for a block whose only absences are the day's.
+func (staff blockStaff) entry(selfID int64) (kind daychangesview.Kind, people []daychangesview.Person, ok bool) {
+	if len(staff.substitutes) > 0 {
+		return daychangesview.KindBlockSubstitution, blockPeople(staff.substitutes, staff.replaced, selfID), true
 	}
-	involved := ownBlock
+	if len(staff.missing) == 0 {
+		return "", nil, false
+	}
+	people = blockPeople(nil, staff.missing, selfID)
+	for i := range people {
+		people[i].Role = daychangesview.RoleAbsent
+	}
+	return daychangesview.KindBlockStaffAbsent, people, true
+}
+
+// block adds one block's change if the Personal rule lets the caller see
+// it: its own block, its team named on it, or the lead.
+func (b *staffEntryBuilder) block(change timetable.BlockStaffChange, absentToday map[int64]bool) {
+	staff := sortBlockStaff(change, b.viewer.selfID, absentToday)
+	kind, people, ok := staff.entry(b.viewer.selfID)
+	if !ok {
+		return
+	}
+	involved := staff.own
 	for _, person := range people {
 		involved = involved || b.viewer.team[person.StaffID]
 	}
