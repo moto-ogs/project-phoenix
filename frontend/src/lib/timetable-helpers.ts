@@ -625,6 +625,7 @@ export function mapInstance(raw: WireInstance): EnrichedInstance {
     planningTrackColor: raw.planning_track_color,
     planningTrackSortOrder: raw.planning_track_sort_order,
     listKind: knownEnum(LIST_KIND_VALUES, raw.list_kind),
+    rawListKind: raw.list_kind,
     activityType: knownEnum(ACTIVITY_TYPE_VALUES, raw.activity_type),
     roomId: raw.room_id,
     roomName: raw.room_name,

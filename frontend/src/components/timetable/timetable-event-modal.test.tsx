@@ -11,6 +11,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactElement, ReactNode } from "react";
 import { SWRConfig } from "~/lib/swr/testing";
 import { setTestClock } from "~/test/clock";
+import { buildEnrichedInstance } from "~/test/fixtures/timetable";
+import { mapInstance } from "~/lib/timetable-helpers";
 
 function SwrProviders({ children }: { readonly children: ReactNode }) {
   return (
@@ -4286,6 +4288,68 @@ describe("TimetableEventModal", () => {
       instance: savedInstance,
     });
   });
+
+  it.each([undefined, "7"])(
+    "preserves an unknown list kind on a title-only edit (series %s)",
+    async (activityGroupId) => {
+      renderModal({
+        initialInstance: mapInstance(
+          buildEnrichedInstance({
+            id: "42",
+            date: savedInstance.date,
+            room_id: "3",
+            activity_group_id: activityGroupId,
+            list_kind: "sport",
+          }),
+        ),
+      });
+      if (activityGroupId) {
+        fireEvent.click(
+          await screen.findByRole("button", { name: /Nur diese Woche/ }),
+        );
+      }
+
+      const title = await screen.findByLabelText("Titel");
+      fireEvent.change(title, { target: { value: "Neuer Titel" } });
+      await clickSave();
+
+      await waitFor(() =>
+        expect(mockUpdate).toHaveBeenCalledWith(
+          "42",
+          expect.objectContaining({ title: "Neuer Titel", list_kind: "sport" }),
+        ),
+      );
+    },
+  );
+
+  it.each([
+    { label: "Mensa", expected: "mensa" },
+    { label: "Keine", expected: undefined },
+  ])(
+    "replaces an unknown list kind with $label when explicitly selected",
+    async ({ label, expected }) => {
+      renderModal({
+        initialInstance: mapInstance(
+          buildEnrichedInstance({
+            id: "42",
+            date: savedInstance.date,
+            room_id: "3",
+            list_kind: "sport",
+          }),
+        ),
+      });
+
+      await chooseFromSelect(await screen.findByLabelText("Listenart"), label);
+      await clickSave();
+
+      await waitFor(() =>
+        expect(mockUpdate).toHaveBeenCalledWith(
+          "42",
+          expect.objectContaining({ list_kind: expected }),
+        ),
+      );
+    },
+  );
 
   it("does not expose recurrence fields before a series scope is chosen", async () => {
     renderModal({

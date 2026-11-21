@@ -1672,6 +1672,12 @@ export function useEventForm({
     }
   };
 
+  // The picker only knows this build's values. Preserve a newer backend's
+  // classification on unrelated edits, but honor an explicit pick or clear.
+  const instanceListKind = listKindTouched.current
+    ? form.listKind
+    : (initialInstance?.rawListKind ?? form.listKind);
+
   const instanceBody = (roomId: number, activityGroupId?: string) =>
     ({
       date: form.date,
@@ -1681,7 +1687,8 @@ export function useEventForm({
       room_id: String(roomId),
       notes: form.notes.trim() || undefined,
       // Ein Dienst hat keine Kinder und gehört in keine Tagesliste (#3822).
-      list_kind: form.type === "duty" ? undefined : form.listKind || undefined,
+      list_kind:
+        form.type === "duty" ? undefined : instanceListKind || undefined,
       activity_group_id: activityGroupId || undefined,
       staff_ids: [...staffIDsForSave],
       student_ids: form.type === "duty" ? [] : [...studentIDsForSave],

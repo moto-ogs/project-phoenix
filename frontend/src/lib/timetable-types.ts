@@ -168,6 +168,8 @@ export interface EnrichedInstance {
   planningTrackColor?: string;
   planningTrackSortOrder?: number;
   listKind?: TimetableListKind;
+  /** Original wire value, preserved on edits until the list kind is changed. */
+  rawListKind?: string;
   /** undefined: a block type this build does not know. */
   activityType: ActivityType | undefined;
   roomId: string;
@@ -1014,7 +1016,8 @@ export interface CreateInstanceBody {
   description?: string;
   notes?: string;
   activity_group_id?: string;
-  list_kind?: TimetableListKind;
+  /** May echo a stored value from a newer backend unchanged. */
+  list_kind?: string;
   staff_ids?: string[];
   student_ids?: string[];
   /** Manual Personalbedarf override (#1839); null/omitted = derive. */
