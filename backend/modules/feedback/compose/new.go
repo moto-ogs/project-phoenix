@@ -27,11 +27,7 @@ type Dependencies struct {
 		FeedbackEnabled(context.Context) (bool, error)
 		FeedbackRetentionDays(context.Context) (int, error)
 	}
-	// Stops tells whether a child's mood capture is stopped (#3844); a rating
-	// for such a child is refused. Required: without it no rating is taken.
-	Stops interface {
-		MoodCaptureStopped(ctx context.Context, studentID int64) (bool, error)
-	}
+	Stops   ports.StudentStops // #3844: a stopped child's rating is refused
 	Today   func() feedback.Date
 	Observe func(Observation)
 }
@@ -43,8 +39,7 @@ func New(dependencies Dependencies) (feedback.Capability, error) {
 	store := postgres.New(postgres.NewDatabase(tenant.TransactionFromContext, tenant.TenantFromContext))
 	today := application.NewCurrentDate(dependencies.Today)
 	observe := ports.Observer(dependencies.Observe)
-	service := application.New(store, dependencies.Settings, dependencies.Stops, TransactionFunc(tenant.NewTransactionRunner().RunInTx), observe, today)
-	return service, nil
+	return application.New(store, dependencies.Settings, dependencies.Stops, TransactionFunc(tenant.NewTransactionRunner().RunInTx), observe, today), nil
 }
 
 // PastFeedback is one rating the demo seed's history writer records, on the

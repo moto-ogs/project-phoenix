@@ -76,24 +76,3 @@ type transaction struct{ application.Transaction }
 func (transaction) Run(ctx context.Context, fn func(context.Context) error) error {
 	return tenant.NewTransactionRunner().RunInTx(ctx, fn)
 }
-
-// NewRoomHistoryStops builds the per-child room history stop (#3844) over a
-// composed owner. Audit receives each effective change in the command's
-// transaction.
-func NewRoomHistoryStops(owner studentpresence.Owner, audit studentpresence.RoomHistoryStopAudit) (studentpresence.RoomHistoryStops, error) {
-	service, ok := owner.(*application.Service)
-	if !ok || audit == nil {
-		return nil, errors.New("student presence room history stops: a composed owner and the audit are required")
-	}
-	return application.NewRoomHistoryStopsOf(service, audit), nil
-}
-
-// NewRoomHistoryStopReads builds the read side of the per-child stop over a
-// composed owner, for the owners that take no mood of a stopped child.
-func NewRoomHistoryStopReads(owner studentpresence.Owner) (studentpresence.RoomHistoryStopReads, error) {
-	service, ok := owner.(*application.Service)
-	if !ok {
-		return nil, errors.New("student presence room history stop reads: a composed owner is required")
-	}
-	return application.NewRoomHistoryStopReadsOf(service), nil
-}

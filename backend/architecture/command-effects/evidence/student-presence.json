@@ -10177,6 +10177,22 @@
       "target_owner": "audit-platform"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.MoodCaptureStopped",
+      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopOwner.MoodCaptureStopped",
+      "source_owner": "student-presence",
+      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RoomHistoryStoppedSince",
+      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopOwner.RoomHistoryStoppedSince",
+      "source_owner": "student-presence",
+      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.RoomHistoryStopReads.MoodCaptureStopped",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopReads.MoodCaptureStopped",
@@ -10185,7 +10201,23 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopOwner.MoodCaptureStopped",
+      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopReads.MoodCaptureStopped",
+      "source_owner": "student-presence",
+      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.RoomHistoryStopReads.RoomHistoryStoppedSince",
+      "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopReads.RoomHistoryStoppedSince",
+      "source_owner": "student-presence",
+      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopOwner.RoomHistoryStoppedSince",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopReads.RoomHistoryStoppedSince",
       "source_owner": "student-presence",

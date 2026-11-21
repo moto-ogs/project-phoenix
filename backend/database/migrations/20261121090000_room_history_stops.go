@@ -106,37 +106,19 @@ var roomHistoryStopsErasureLines = map[string]string{
 		"v_counts := v_counts || jsonb_build_object('active.room_history_stops', v_count);\n",
 }
 
-// roomHistoryStopsDemoErasureLines are the lines the repeatable demo
-// visitor erasure carries for the stops; the down takes them out too.
-const roomHistoryStopsDemoErasureLines = `					-- The per-child stops of room history and mood (#3844).
-					DELETE FROM active.room_history_stops
-					WHERE tenant_id = ANY (hidden_schools);
-`
+// roomHistoryStopsDemoErasureLines is the statement the repeatable demo
+// visitor erasure carries for the stops (behind the attendance retention
+// marks of the hidden schools); the down takes it out too.
+const roomHistoryStopsDemoErasureLines = ` DELETE FROM active.room_history_stops WHERE tenant_id = ANY (hidden_schools);`
 
 // roomHistoryStopsDown drops the stops and their triggers and takes the
 // table out of the installed school erasure, pointing its preflight back at
 // the fingerprint before it.
 func roomHistoryStopsDown(ctx context.Context, db *bun.DB) error {
 	return db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
-		restored := make([]string, 0, len(roomHistoryStopsErasureLines))
-		for function, line := range roomHistoryStopsErasureLines {
-			var definition string
-			if err := tx.NewRaw(`SELECT pg_get_functiondef(?::regprocedure)`, function).Scan(ctx, &definition); err != nil {
-				return fmt.Errorf("read %s: %w", function, err)
-			}
-			if strings.Count(definition, line) != 1 {
-				continue // an older erasure is installed; it never knew the stops
-			}
-			definition = strings.Replace(definition, line, "", 1)
-			definition = strings.Replace(definition, "'"+roomHistoryStopsFingerprint+"'", "'"+deviceLifecycleEventsFingerprint+"'", 1)
-			restored = append(restored, definition)
-		}
-		var demo string
-		if err := tx.NewRaw(`SELECT pg_get_functiondef('platform.erase_closed_demo_visitors()'::regprocedure)`).Scan(ctx, &demo); err != nil {
-			return fmt.Errorf("read the demo visitor erasure: %w", err)
-		}
-		if strings.Count(demo, roomHistoryStopsDemoErasureLines) == 1 {
-			restored = append(restored, strings.Replace(demo, roomHistoryStopsDemoErasureLines, "", 1))
+		restored, err := roomHistoryStopsErasureWithout(ctx, tx)
+		if err != nil {
+			return err
 		}
 		if err := installDerivedSchoolErasureFunctions(ctx, tx, restored); err != nil {
 			return fmt.Errorf("take the room history stops out of the school erasure: %w", err)
@@ -150,4 +132,28 @@ DROP TABLE IF EXISTS active.room_history_stops;`); err != nil {
 		}
 		return nil
 	})
+}
+
+// roomHistoryStopsErasureWithout returns the installed school and demo
+// erasure functions that name the stops, each without them. An older
+// erasure that never knew the stops is left as it is.
+func roomHistoryStopsErasureWithout(ctx context.Context, tx bun.Tx) ([]string, error) {
+	lines := map[string]string{"platform.erase_closed_demo_visitors()": roomHistoryStopsDemoErasureLines}
+	for function, line := range roomHistoryStopsErasureLines {
+		lines[function] = line
+	}
+	restored := make([]string, 0, len(lines))
+	for function, line := range lines {
+		var definition string
+		if err := tx.NewRaw(`SELECT pg_get_functiondef(?::regprocedure)`, function).Scan(ctx, &definition); err != nil {
+			return nil, fmt.Errorf("read %s: %w", function, err)
+		}
+		if strings.Count(definition, line) != 1 {
+			continue
+		}
+		definition = strings.Replace(definition, line, "", 1)
+		definition = strings.Replace(definition, "'"+roomHistoryStopsFingerprint+"'", "'"+deviceLifecycleEventsFingerprint+"'", 1)
+		restored = append(restored, definition)
+	}
+	return restored, nil
 }

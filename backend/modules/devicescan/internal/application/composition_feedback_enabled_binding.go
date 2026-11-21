@@ -17,6 +17,9 @@ type ScanSettings interface {
 	PerStudentCheckoutEnabled(ctx context.Context) (bool, error)
 	PerStudentCheckoutDeltaMinutes(ctx context.Context) (int, error)
 	DailyCheckoutFromAllRoomsEnabled(ctx context.Context) (bool, error)
+	// MoodCaptureStopped tells whether a child's mood capture is stopped
+	// (#3844); the root binds it to Student Presence's per-child stop.
+	MoodCaptureStopped(ctx context.Context, studentID int64) (bool, error)
 }
 
 func FeedbackEnabledBinding(ctx context.Context, source ScanSettings) (bool, error) {
@@ -24,27 +27,6 @@ func FeedbackEnabledBinding(ctx context.Context, source ScanSettings) (bool, err
 		return false, ErrSettingsNotConfigured
 	}
 	return source.FeedbackEnabled(ctx)
-}
-
-// MoodCaptureStops tells whether a child's mood capture is stopped (#3844).
-type MoodCaptureStops interface {
-	MoodCaptureStopped(ctx context.Context, studentID int64) (bool, error)
-}
-
-// FeedbackEnabledForBinding offers the mood prompt only when the school takes
-// feedback and the child is not stopped. A stop that cannot be read, or no
-// stop wiring, offers no prompt rather than omitting the flag, which the kiosk
-// reads as on; the submission itself refuses such a child on its own.
-func FeedbackEnabledForBinding(ctx context.Context, source ScanSettings, stops MoodCaptureStops, studentID int64) (bool, error) {
-	enabled, err := FeedbackEnabledBinding(ctx, source)
-	if err != nil || !enabled {
-		return enabled, err
-	}
-	if stops == nil {
-		return false, nil
-	}
-	stopped, err := stops.MoodCaptureStopped(ctx, studentID)
-	return err == nil && !stopped, nil
 }
 
 func CapacityDetailsDisclosedBinding(ctx context.Context, source ScanSettings, kind ports.CapacityKind) (bool, error) {

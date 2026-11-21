@@ -125,7 +125,7 @@ func (s *Service) confirmDailyCheckout(ctx context.Context, device *devicescan.P
 		Message: message,
 		Student: devicescan.AttendanceStudent{ID: student.ID, FirstName: person.FirstName, LastName: person.LastName},
 	}
-	if enabled, err := s.settings.FeedbackEnabledFor(ctx, student.ID); err == nil {
+	if enabled, err := s.feedbackEnabledFor(ctx, student.ID); err == nil {
 		result.FeedbackEnabled = &enabled
 	}
 	return result, nil

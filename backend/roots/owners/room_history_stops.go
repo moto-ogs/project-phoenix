@@ -2,6 +2,7 @@ package owners
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -14,23 +15,33 @@ import (
 // NewRoomHistoryStopReads composes the read side of the per-child stop of
 // room history and mood (#3844) that Feedback and the device scan consult.
 func NewRoomHistoryStopReads(db transactionruntime.Database) (studentpresence.RoomHistoryStopReads, error) {
+	return roomHistoryStopOwner(db)
+}
+
+// roomHistoryStopOwner composes the narrow Student Presence owner the stop
+// runs over; it needs none of the session attendance ports.
+func roomHistoryStopOwner(db transactionruntime.Database) (studentpresence.RoomHistoryStopOwner, error) {
 	owner, err := presenceCompose.New(presenceCompose.Dependencies{DB: db.Pool(), Observe: presenceCompose.FailureLogger()})
 	if err != nil {
 		return nil, err
 	}
-	return presenceCompose.NewRoomHistoryStopReads(owner)
+	stops, ok := owner.(studentpresence.RoomHistoryStopOwner)
+	if !ok {
+		return nil, errors.New("student presence: the owner carries no room history stop")
+	}
+	return stops, nil
 }
 
 // NewRoomHistoryStops composes the per-child stop with its audit: each
 // effective change goes to the child's change history, the visits a stop
 // deletes to the deletion log, both in the command's transaction.
 func NewRoomHistoryStops(db transactionruntime.Database) (studentpresence.RoomHistoryStops, error) {
-	owner, err := presenceCompose.New(presenceCompose.Dependencies{DB: db.Pool(), Observe: presenceCompose.FailureLogger()})
+	owner, err := roomHistoryStopOwner(db)
 	if err != nil {
 		return nil, err
 	}
 	trails := peopleDirectoryAudit(db)
-	return presenceCompose.NewRoomHistoryStops(owner, roomHistoryStopAudit{edits: trails.StudentFieldEdit, deletions: trails.DataDeletion})
+	return owner.RoomHistoryStops(roomHistoryStopAudit{edits: trails.StudentFieldEdit, deletions: trails.DataDeletion}), nil
 }
 
 // roomHistoryStopAudit writes a stop change into the Audit Platform. The

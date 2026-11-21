@@ -37,16 +37,23 @@ func NewRoomHistoryStopReads(store ports.RoomHistoryStopStore, tx ports.Transact
 	return &RoomHistoryStopReads{store: store, tx: tx}
 }
 
-// NewRoomHistoryStopReadsOf reads the stops over the owner's own store and
+var _ studentpresence.RoomHistoryStopOwner = (*Service)(nil)
+
+// RoomHistoryStoppedSince reads the stops over the owner's own store and
 // transaction, so the stop shares the owner's tenant binding.
-func NewRoomHistoryStopReadsOf(owner *Service) *RoomHistoryStopReads {
-	return NewRoomHistoryStopReads(owner.store, owner.tx)
+func (s *Service) RoomHistoryStoppedSince(ctx context.Context, studentIDs []int64) (map[int64]time.Time, error) {
+	return NewRoomHistoryStopReads(s.store, s.tx).RoomHistoryStoppedSince(ctx, studentIDs)
 }
 
-// NewRoomHistoryStopsOf runs the stop over the owner's own store, transaction
-// and clock.
-func NewRoomHistoryStopsOf(owner *Service, audit studentpresence.RoomHistoryStopAudit) *RoomHistoryStops {
-	return NewRoomHistoryStops(owner.store, owner.tx, audit, owner.now)
+// MoodCaptureStopped reports whether the child is stopped.
+func (s *Service) MoodCaptureStopped(ctx context.Context, studentID int64) (bool, error) {
+	return NewRoomHistoryStopReads(s.store, s.tx).MoodCaptureStopped(ctx, studentID)
+}
+
+// RoomHistoryStops runs the stop over the owner's own store, transaction and
+// clock, recording each change through audit.
+func (s *Service) RoomHistoryStops(audit studentpresence.RoomHistoryStopAudit) studentpresence.RoomHistoryStops {
+	return NewRoomHistoryStops(s.store, s.tx, audit, s.now)
 }
 
 func NewRoomHistoryStops(store ports.RoomHistoryStopStore, tx ports.Transaction, audit studentpresence.RoomHistoryStopAudit, now func() time.Time) *RoomHistoryStops {

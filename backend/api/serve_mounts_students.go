@@ -199,10 +199,6 @@ func mountStudentRoutes(
 	if err != nil {
 		return err
 	}
-	roomHistoryStops, err := owners.NewRoomHistoryStops(db)
-	if err != nil {
-		return err
-	}
 	students, careStudents, projectionStudents, presenceStudents, deletionStudents, requestStudents := NewStudentHTTPResources(
 		studentsAPI.ResourceConfig{
 			ActiveEnrollments:      studentActiveEnrollments{enrollments: activities},
@@ -284,10 +280,9 @@ func mountStudentRoutes(
 			Broadcaster:        hub,
 			Logger:             logger.With("handler", "students"),
 			ParentEventEmitter: emitter, PartialAbsences: schedules.PartialAbsences,
-			PeopleDirectory:         persons,
-			Persons:                 peopleCompose.NewStudentRoutePersons(services.Users),
-			PrivacyConsents:         presence,
-			RoomHistoryStops:        roomHistoryStops,
+			PeopleDirectory: persons,
+			Persons:         peopleCompose.NewStudentRoutePersons(services.Users),
+			PrivacyConsents: presence, RoomHistoryStops: owners.MustNewRoomHistoryStops(db),
 			SettingsService:         settings,
 			StudentStatusDayService: statusDays,
 			UserContextService:      caller, Now: now,

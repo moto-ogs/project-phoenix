@@ -134,7 +134,6 @@ func newIoTResource(
 		return nil, err
 	}
 	deviceScan := scanBindings.New(devicescanCompose.Dependencies{Principal: DeviceScanPrincipal,
-		MoodStops:  moodStops,
 		Fleet:      iot.Fleet(),
 		Presence:   presence,
 		Rooms:      facilities,
@@ -147,7 +146,7 @@ func newIoTResource(
 		// A destination chosen at the kiosk runs the phone's open-room
 		// move (#3067).
 		OpenRooms: newDeviceOpenRoomMover(openRoomMove),
-		Settings:  newDeviceScanSettings(settings),
+		Settings:  newDeviceScanSettings(settings, moodStops),
 		Logger:    logger.With("service", "device-scan"), Now: now,
 	})
 	return iotAPI.NewResource(iotAPI.ServiceDependencies{

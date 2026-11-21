@@ -40,6 +40,14 @@ type RoomHistoryStopReads interface {
 	MoodCaptureStopped(ctx context.Context, studentID int64) (bool, error)
 }
 
+// RoomHistoryStopOwner is the composed owner's side of the stop: it reads
+// the stops and builds the commands over its own store with the root's
+// audit binding (#3844). The root reaches it from the composed Owner.
+type RoomHistoryStopOwner interface {
+	RoomHistoryStopReads
+	RoomHistoryStops(RoomHistoryStopAudit) RoomHistoryStops
+}
+
 // RoomHistoryStopActor names who changed a stop, for the change history.
 type RoomHistoryStopActor struct {
 	AccountID int64

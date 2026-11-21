@@ -66,7 +66,6 @@ func NewCheckinWorkflowClockTestModule(db transactionruntime.Database, unit tena
 		return CheckinTestModule{}, err
 	}
 	scan := scanBindings.New(devicescanCompose.Dependencies{Principal: DeviceScanPrincipal,
-		MoodStops:  moodStops,
 		Fleet:      moduleDevices.IoT.Fleet(),
 		Presence:   owners.NewLoggedStudentPresence(db, logger),
 		Rooms:      rooms,
@@ -76,7 +75,7 @@ func NewCheckinWorkflowClockTestModule(db transactionruntime.Database, unit tena
 		Rosters:    rosters,
 		Education:  moduleEducation.Education,
 		Pickups:    module.PickupSchedule,
-		Settings:   newDeviceScanSettings(moduleSettings.Settings),
+		Settings:   newDeviceScanSettings(moduleSettings.Settings, moodStops),
 		Now:        workflowClock,
 		Logger:     logger,
 	})
