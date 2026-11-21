@@ -5,11 +5,24 @@
  * portal's client.
  */
 
-type ContributionLineKind =
-  "base" | "sibling" | "benefits_exemption" | "cost_takeover" | "meal";
+import { knownEnum } from "./contract/known-enum";
+import type { HolidayContribution as WireHolidayContribution } from "./contract/traeger-holiday-quotes.generated";
+
+// Go does not register this set; the contract types it as string. A value
+// this build does not know stays undefined instead of passing as a known one.
+const CONTRIBUTION_LINE_KIND_VALUES = [
+  "base",
+  "sibling",
+  "benefits_exemption",
+  "cost_takeover",
+  "meal",
+] as const;
+
+type ContributionLineKind = (typeof CONTRIBUTION_LINE_KIND_VALUES)[number];
 
 export interface ContributionLine {
-  readonly kind: ContributionLineKind;
+  /** undefined: a line this build does not know; its amount still counts. */
+  readonly kind: ContributionLineKind | undefined;
   /** Negative for a discount. */
   readonly amountCents: number;
   readonly weekStartsOn: string | null;
@@ -90,66 +103,14 @@ interface HolidaySibling {
   readonly children: readonly { readonly id: string; readonly name: string }[];
 }
 
-interface BackendLine {
-  kind: ContributionLineKind;
-  amount_cents: number;
-  week_starts_on: string | null;
-  week_ends_on: string | null;
-  time_model_name: string;
-  child_rank: number | null;
-  discount_basis_points: number | null;
-  discount_cents: number | null;
-  note: string;
-  cost_bearer_name?: string;
-  booked_days?: number | null;
-}
-
-/**
- * An identifier as the backend sends it: a number, or a string where the
- * catalog proxy's contract decoder turned it into one (#2352).
- */
-type WireId = number | string;
-
-/** The identifier as a string, "" for an absent one (0 or null). */
-function presentId(value: WireId | null | undefined): string {
-  return value === undefined || value === null || String(value) === "0"
-    ? ""
-    : String(value);
-}
-
-export interface BackendContribution {
-  children?:
-    | {
-        child_id: WireId;
-        position: number;
-        lines?: BackendLine[] | null;
-        total_cents: number;
-      }[]
-    | null;
-  total_cents: number;
-  exemption_available: boolean;
-  benefits_exemption: boolean;
-  cost_bearer_id?: WireId | null;
-  cost_bearer_name?: string;
-  frozen: boolean;
-  confirmed_at: string | null;
-  invoiced?: boolean;
-  siblings?:
-    | {
-        registration_id: number;
-        status: string;
-        children?:
-          { id: number; first_name: string; last_name: string }[] | null;
-      }[]
-    | null;
-  sibling_debtor_number?: string;
-  siblings_invoiced?: boolean;
-  correction_needed?: boolean;
+/** The identifier as a string, "" for an absent one (Go's 0 or null). */
+function presentId(value: string | null): string {
+  return value === null || value === "0" ? "" : value;
 }
 
 /** Maps a contribution of the backend. */
 export function contributionFromBackend(
-  contribution: BackendContribution,
+  contribution: WireHolidayContribution,
 ): HolidayContribution {
   return {
     children: (contribution.children ?? []).map((child) => ({
@@ -161,7 +122,7 @@ export function contributionFromBackend(
       lines: (child.lines ?? [])
         .filter((line) => line.kind !== "meal" || (line.booked_days ?? 0) > 0)
         .map((line) => ({
-          kind: line.kind,
+          kind: knownEnum(CONTRIBUTION_LINE_KIND_VALUES, line.kind),
           amountCents: line.amount_cents,
           weekStartsOn: line.week_starts_on,
           weekEndsOn: line.week_ends_on,
@@ -170,23 +131,23 @@ export function contributionFromBackend(
           discountBasisPoints: line.discount_basis_points,
           discountCents: line.discount_cents,
           note: line.note,
-          costBearerName: line.cost_bearer_name ?? "",
-          bookedDays: line.booked_days ?? null,
+          costBearerName: line.cost_bearer_name,
+          bookedDays: line.booked_days,
         })),
     })),
     totalCents: contribution.total_cents,
     exemptionAvailable: contribution.exemption_available,
     benefitsExemption: contribution.benefits_exemption,
     costBearerId: presentId(contribution.cost_bearer_id) || null,
-    costBearerName: contribution.cost_bearer_name ?? "",
+    costBearerName: contribution.cost_bearer_name,
     frozen: contribution.frozen,
     confirmedAt: contribution.confirmed_at,
-    invoiced: contribution.invoiced ?? false,
+    invoiced: contribution.invoiced,
     siblings: (contribution.siblings ?? []).map((sibling) => ({
-      registrationId: String(sibling.registration_id),
+      registrationId: sibling.registration_id,
       cancelled: sibling.status === "cancelled",
       children: (sibling.children ?? []).map((child) => ({
-        id: String(child.id),
+        id: child.id,
         name: `${child.first_name} ${child.last_name}`,
       })),
     })),

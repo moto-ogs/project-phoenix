@@ -1,4 +1,5 @@
 import { ApiError } from "./api-error";
+import { schoolSupervisionsApi } from "./school-supervisions-api";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   timetableOperationsApi,
@@ -334,6 +335,31 @@ describe("timetableOperationsApi", () => {
       },
     );
   });
+
+  it.each([
+    ["OGS", timetableOperationsApi, "/api/timetable/operations/instances"],
+    ["school", schoolSupervisionsApi, "/api/school/supervisions"],
+  ])(
+    "keeps confirmed student IDs intact when completing a %s instance",
+    async (_portal, api, base) => {
+      const mockFetch = vi.mocked(globalThis.fetch);
+      mockFetch.mockResolvedValueOnce(jsonResponse({ data: {} }));
+
+      await api.complete("135", ["431", "9007199254740993"]);
+
+      expect(mockFetch).toHaveBeenCalledWith(`${base}/135/complete`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          confirmed_present_student_ids: ["431", "9007199254740993"],
+        }),
+      });
+    },
+  );
 
   it("reopens a recently completed instance", async () => {
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(
