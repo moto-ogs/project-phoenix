@@ -6194,6 +6194,19 @@ export const parentChildDataTopic = function parentChildDataTopic(): HelpTopic {
           "Tippe auf `Jetzt widerrufen`.",
         ],
       },
+      {
+        // #3844: nur, wenn der Träger den Eltern-Stopp eingeschaltet hat.
+        title: "Raumverlauf und Stimmung stoppen",
+        description:
+          "Diese Zeile siehst du nur, wenn deine Schule das erlaubt.",
+        steps: [
+          "Gehe zum Abschnitt `Einwilligungen und Bestätigungen`.",
+          "Tippe bei `Raumverlauf und Stimmung` auf `Stoppen`.",
+          "Tippe auf `Jetzt stoppen`.",
+          "moto löscht sofort, in welchen Räumen dein Kind war. Danach speichert moto keine Räume und keine Stimmung mehr. Die Betreuung sieht weiter, wo dein Kind gerade ist.",
+          "Mit `Wieder speichern` speichert moto ab dann wieder. Gelöschtes kommt nicht zurück.",
+        ],
+      },
     ],
     result:
       "Unter dem Feld steht dann `Beantragte Änderung` mit dem neuen Wert und `In Prüfung`. Bis zur Bestätigung gilt der Wert darüber.",
@@ -9486,6 +9499,21 @@ export const studentSearchTopic = function studentSearchTopic(
           "Wähle unter `Von` und `Bis` den Zeitraum.",
           "Möglich sind nur die sichtbaren Tage bis heute.",
           "Wähle das Format und danach `Herunterladen`.",
+        ],
+      },
+      {
+        // #3844: Stopp je Kind, gesetzt und aufgehoben von der OGS-Verwaltung
+        // (config:manage) im Bereich `Historien`.
+        title: "Raumverlauf und Stimmung für ein Kind stoppen",
+        description: "Das kann nur die OGS-Verwaltung.",
+        steps: [
+          "Öffne beim Kind `Historie`.",
+          "Wähle bei `Historien` den Knopf `Stopp setzen`.",
+          "Gib zur Bestätigung `LÖSCHEN` ein. Wähle dann `Stoppen und löschen`.",
+          "moto löscht den bisherigen Raumverlauf des Kindes sofort.",
+          "Danach speichert moto für das Kind keine Räume und keine Stimmung mehr. Am Tablet fragt moto das Kind nicht nach seiner Stimmung.",
+          "Der aktuelle Raum bleibt für die Betreuung sichtbar. Frühere Stimmungen bleiben bis zum Ende ihrer Frist gespeichert.",
+          "Mit `Stopp aufheben` speichert moto ab jetzt wieder. Gelöschtes kommt nicht zurück.",
         ],
       },
       {
@@ -15005,6 +15033,8 @@ export const traegerSettingsTopic = function traegerSettingsTopic(): HelpTopic {
       "Der eigene Zahlungstext gilt für die Schreiben, die du danach erstellst. Fertige Schreiben bleiben, wie sie sind.",
       "Unter `Ferienbetreuung` legst du bei `Ferienanmeldungen löschen nach (Tagen)` fest, wie lange moto Ferienanmeldungen aufbewahrt. Möglich sind 92 bis 1095 Tage, der Standard ist 365 Tage. Die Frist steht im Einwilligungstext für die Eltern. Eine Änderung gilt nur für Anmeldungen, die danach eingehen.",
       "Unter `Datenschutz` legst du bei `Erziehungsberechtigte ohne Kind aufbewahren (Tage)` fest, wie lange moto Eltern ohne Kind aufbewahrt. Möglich sind 30 bis 365 Tage, der Standard ist 90 Tage. Eine Schule kann einen eigenen Wert eintragen.",
+      // #3844: Eltern-Stopp von Raumverlauf und Stimmung, nur Träger-Ebene.
+      "Unter `Datenschutz` legst du bei `Eltern dürfen Raumverlauf und Stimmung stoppen` fest, ob Eltern das im Elternportal selbst tun dürfen. Der Standard ist aus. Ist es an, löscht ein Stopp den bisherigen Raumverlauf des Kindes. Eine Schule kann hier keinen eigenen Wert eintragen.",
       "Im Bereich `Dashboard` legst du fest, ab wann das Dashboard eine Schule unter `Auffälligkeiten` zeigt: bei zu wenig Personal, bei vielen Krankmeldungen und bei offenen Anmeldungen. 0 schaltet einen Hinweis aus.",
       "Unter `Ferienbetreuung` legst du bei `Ferienbeitrag` auch fest, welches Kind das erste Kind ist und was ein Kostenträger bezahlt. Mehr dazu steht im Artikel `Ferienbeitrag festlegen`.",
     ],
