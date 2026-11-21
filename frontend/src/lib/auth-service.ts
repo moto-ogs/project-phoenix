@@ -10,12 +10,7 @@ import {
   type BackendPermission,
 } from "./auth-helpers";
 import { apiErrorFromText } from "./api-error";
-
-interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-}
+import type { ApiResponse } from "./api-envelope";
 
 type HttpMethod = "GET" | "PUT";
 

@@ -4,6 +4,7 @@
 
 import { authFetch } from "./api-helpers";
 import { shellResourceKeys } from "./swr/shell-keys";
+import type { ApiResponse } from "./api-envelope";
 
 export type ReminderType =
   | "pickup_upcoming"
@@ -38,16 +39,11 @@ export interface RemindersResult {
   next_change_at?: string;
 }
 
-// Proxy route wrapper envelope: { success: true, data: <payload> }.
-interface ProxyResponse {
-  success: boolean;
-  data: RemindersResult;
-}
-
 // Shared SWR key so the page and the header bell badge dedupe to one request.
 export const REMINDERS_SWR_KEY = shellResourceKeys.reminders();
 
 export async function fetchReminders(): Promise<RemindersResult> {
-  const response = await authFetch<ProxyResponse>("/api/reminders");
+  const response =
+    await authFetch<ApiResponse<RemindersResult>>("/api/reminders");
   return response.data;
 }

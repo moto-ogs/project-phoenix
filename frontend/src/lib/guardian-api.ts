@@ -36,15 +36,9 @@ import {
   mapPhoneNumberCreateToBackend,
   mapPhoneNumberUpdateToBackend,
 } from "./guardian-helpers";
+import type { ApiResponse } from "./api-envelope";
 
 const logger = createLogger({ component: "GuardianAPI" });
-
-// API Response Types
-interface ApiResponse<T> {
-  status: string;
-  data?: T;
-  message?: string;
-}
 
 interface PaginatedResponse<T> {
   status: string;

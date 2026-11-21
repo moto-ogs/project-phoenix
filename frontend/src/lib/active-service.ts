@@ -24,13 +24,7 @@ import {
   type BackendSchulhofStatus,
   type TrackingIndicatorsResponse,
 } from "./active-helpers";
-
-// Generic API response interface
-interface ApiResponse<T> {
-  data: T;
-  message?: string;
-  status?: string;
-}
+import type { ApiResponse } from "./api-envelope";
 
 interface TransitAssignSkipped {
   student_id: number | string;

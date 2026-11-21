@@ -117,8 +117,7 @@ describe("parent proxy factories", () => {
       }),
     );
     await expect(parseJson<ApiResponse<unknown[]>>(response)).resolves.toEqual({
-      success: true,
-      message: "Success",
+      status: "success",
       data: [{ id: 1, name: "Child" }],
     });
   });

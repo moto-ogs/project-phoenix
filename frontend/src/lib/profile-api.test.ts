@@ -116,7 +116,7 @@ describe("profile-api", () => {
         ok: true,
         json: () =>
           Promise.resolve({
-            success: true,
+            status: "success",
             message: "Profile fetched",
             data: sampleBackendProfile,
           }),
@@ -183,12 +183,12 @@ describe("profile-api", () => {
       });
     });
 
-    it("throws error when response success is false", async () => {
+    it("throws error when the response status is not success", async () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
         json: () =>
           Promise.resolve({
-            success: false,
+            status: "error",
             message: "Profile not found",
             data: null,
           }),
@@ -202,12 +202,12 @@ describe("profile-api", () => {
       });
     });
 
-    it("throws error when response success is false with no message", async () => {
+    it("throws error when the response status is not success, with no message", async () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
         json: () =>
           Promise.resolve({
-            success: false,
+            status: "error",
             data: null,
           }),
       });
@@ -233,7 +233,7 @@ describe("profile-api", () => {
         ok: true,
         json: () =>
           Promise.resolve({
-            success: true,
+            status: "success",
             message: "Profile updated",
             data: sampleBackendProfile,
           }),
@@ -287,12 +287,12 @@ describe("profile-api", () => {
       });
     });
 
-    it("throws error when response success is false", async () => {
+    it("throws error when the response status is not success", async () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
         json: () =>
           Promise.resolve({
-            success: false,
+            status: "error",
             message: "Validation error",
             data: null,
           }),
@@ -327,7 +327,7 @@ describe("profile-api", () => {
         ok: true,
         json: () =>
           Promise.resolve({
-            success: true,
+            status: "success",
             message: "Avatar uploaded",
             data: sampleBackendProfile,
           }),
@@ -399,12 +399,12 @@ describe("profile-api", () => {
       );
     });
 
-    it("throws error when response success is false", async () => {
+    it("throws error when the response status is not success", async () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
         json: () =>
           Promise.resolve({
-            success: false,
+            status: "error",
             message: "Upload failed",
             data: null,
           }),

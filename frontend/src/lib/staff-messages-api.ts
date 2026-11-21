@@ -6,6 +6,7 @@ import {
   transportFetch,
   wireErrorCode,
 } from "./api-error";
+import type { ApiResponse } from "./api-envelope";
 /**
  * Client for the OGS-internal colleague chat (#2598). Chat model: one
  * continuous conversation between two staff accounts of the same school (no
@@ -120,13 +121,6 @@ export function staffRoleKindLabel(
     default:
       return null;
   }
-}
-
-interface ApiResponse<T> {
-  status?: string;
-  success?: boolean;
-  data?: T;
-  code?: string;
 }
 
 /**

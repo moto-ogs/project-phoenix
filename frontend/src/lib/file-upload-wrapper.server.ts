@@ -7,10 +7,7 @@ import {
   unwrapEnvelope,
 } from "./backend-client.server";
 import type { ErrorCode } from "./error-codes.generated";
-import {
-  readBoundedBody,
-  wrapInApiResponse,
-} from "./route-wrapper-utils.server";
+import { readBoundedBody, successResponse } from "./route-wrapper-utils.server";
 import { tenant } from "./route-wrapper.server";
 
 interface FileUploadOptions {
@@ -178,7 +175,7 @@ export function createFileUploadHandler<T>(
       );
       return result instanceof Response
         ? result
-        : NextResponse.json(wrapInApiResponse(result));
+        : NextResponse.json(successResponse(result));
     } catch (error) {
       if (error instanceof FileValidationError) {
         return fileValidationProblemResponse(error, request);

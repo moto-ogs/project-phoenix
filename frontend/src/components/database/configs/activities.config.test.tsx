@@ -259,7 +259,7 @@ describe("activitiesConfig", () => {
   it("offers the available supervisors by staff id and name", async () => {
     vi.mocked(global.fetch).mockResolvedValueOnce(
       Response.json({
-        success: true,
+        status: "success",
         data: [
           {
             id: "12",

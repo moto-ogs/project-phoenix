@@ -145,8 +145,7 @@ describe("staff-api", () => {
       mockFetch.mockResolvedValue({
         ok: true,
         statusText: "OK",
-        json: () =>
-          Promise.resolve({ success: true, message: "", data: entries }),
+        json: () => Promise.resolve({ status: "success", data: entries }),
       } as Response);
 
       await expect(staffService.getDocumentDirectory()).resolves.toEqual(

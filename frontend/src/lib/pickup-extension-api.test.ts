@@ -6,9 +6,7 @@ import { fetchPickupExtensions } from "./pickup-extension-api";
 // and the GET wrapper puts its own around the result (#3776). An earlier
 // fixture without this envelope hid that the browser always read no tasks.
 function bffResponse(tasks: unknown[]): Response {
-  return new Response(
-    JSON.stringify({ success: true, message: "Success", data: { tasks } }),
-  );
+  return new Response(JSON.stringify({ status: "success", data: { tasks } }));
 }
 
 describe("fetchPickupExtensions", () => {

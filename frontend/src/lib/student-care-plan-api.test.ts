@@ -16,7 +16,7 @@ import {
 /** The route wrapper's answer, or a failure without an envelope. */
 function mockResponse(ok: boolean, data?: unknown): Response {
   return ok
-    ? Response.json({ success: true, data })
+    ? Response.json({ status: "success", data })
     : new Response("", { status: 500 });
 }
 

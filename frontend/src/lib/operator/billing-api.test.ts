@@ -15,7 +15,7 @@ vi.mock("~/lib/file-download", async () => {
 });
 
 function jsonResponse(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify({ success: true, data }), {
+  return new Response(JSON.stringify({ status: "success", data }), {
     status,
     headers: { "Content-Type": "application/json" },
   });
