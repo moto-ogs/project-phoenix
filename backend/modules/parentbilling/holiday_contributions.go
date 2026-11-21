@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The holiday contribution (spec #4611 user stories 29, 61, 63 and 69, #4664,
@@ -312,8 +313,8 @@ type HolidayRegistration struct {
 // HolidayBookingChoice is one week and time model a rebooking gives a
 // child (#4699).
 type HolidayBookingChoice struct {
-	WeekID      int64 `json:"week_id"`
-	TimeModelID int64 `json:"time_model_id"`
+	WeekID      ident.ID `json:"week_id"`
+	TimeModelID ident.ID `json:"time_model_id"`
 	// Days are the days of a week by days (#4701).
 	Days []calendar.Date `json:"days"`
 	// Lunch books lunch on the care days of the booking (#5631).

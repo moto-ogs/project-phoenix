@@ -227,8 +227,8 @@ export interface HolidayChildDebtorNumbersRequest {
 
 /** Go: parentbilling.HolidayBookingChoice */
 export interface HolidayBookingChoice {
-  week_id?: number;
-  time_model_id?: number;
+  week_id?: string;
+  time_model_id?: string;
   days?: (string | null)[] | null;
   lunch?: boolean;
 }

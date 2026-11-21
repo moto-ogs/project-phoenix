@@ -906,9 +906,9 @@
       "reason": "ADR 0123 (#4670): Consumer-port adapter of the post of the confirmation letters; it reads the letterhead text of the session's Träger through the Settings Platform in the caller's Träger transaction for the sender name of the mail."
     },
     {
-      "decision": "0206",
+      "decision": "0302",
       "id": "api/parentBillingPlaceChanges.RebookHolidayChild",
-      "reason": "ADR 0206 (#6555): root binding of Parent Billing's HTTP write port to the holiday-allocation workflow; it translates the booking choices onto Enrollment's input, the workflow result onto the public place change and Enrollment's refusals into Parent Billing's vocabulary. No lock, read or decision."
+      "reason": "ADR 0206 (#6555): root binding of Parent Billing's HTTP write port to the holiday-allocation workflow; it translates the booking choices onto Enrollment's input, the workflow result onto the public place change and Enrollment's refusals into Parent Billing's vocabulary. No lock, read or decision. ADR 0302: converts shared-kernel booking IDs to int64 at the existing boundary; workflow and transaction remain unchanged."
     },
     {
       "decision": "0206",
