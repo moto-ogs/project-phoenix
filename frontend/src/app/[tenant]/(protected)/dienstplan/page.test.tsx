@@ -20,7 +20,7 @@ vi.mock("~/components/staff/dienstplan-view", () => ({
 
 import DienstplanPage from "./page";
 
-const TENANT = { tenantId: 1, slug: "demo" } as TenantInfo;
+const TENANT = { tenantId: "1", slug: "demo" } as TenantInfo;
 
 describe("DienstplanPage", () => {
   beforeEach(() => {

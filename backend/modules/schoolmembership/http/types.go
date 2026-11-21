@@ -2,11 +2,9 @@ package staff
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -16,52 +14,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
-
-// JSONID accepts a JSON number or a decimal string. Person ids are bigints,
-// and the Next.js proxy in front of this endpoint parses and re-serializes
-// the body, which rounds a JSON number past 2^53 into a valid id for a
-// DIFFERENT person (#2222). A string is parsed with strconv, so every digit
-// survives, and anything that is not a plain integer is rejected instead of
-// being coerced to zero.
-type JSONID int64
-
-// Int64 returns the id as the int64 the rest of the code works with.
-func (id JSONID) Int64() int64 { return int64(id) }
-
-func (id *JSONID) UnmarshalJSON(data []byte) error {
-	trimmed := strings.TrimSpace(string(data))
-	if trimmed == "null" {
-		return nil
-	}
-	if strings.HasPrefix(trimmed, `"`) {
-		var raw string
-		if err := json.Unmarshal(data, &raw); err != nil {
-			return err
-		}
-		raw = strings.TrimSpace(raw)
-		if raw == "" {
-			return errors.New("id must not be empty")
-		}
-		parsed, err := strconv.ParseInt(raw, 10, 64)
-		if err != nil {
-			return fmt.Errorf("invalid id %q: %w", raw, err)
-		}
-		*id = JSONID(parsed)
-		return nil
-	}
-	var parsed int64
-	if err := json.Unmarshal(data, &parsed); err != nil {
-		return err
-	}
-	*id = JSONID(parsed)
-	return nil
-}
-
-// MarshalJSON emits a JSON number, so a struct that is decoded and
-// re-encoded keeps the shape every existing consumer expects.
-func (id JSONID) MarshalJSON() ([]byte, error) {
-	return []byte(strconv.FormatInt(int64(id), 10)), nil
-}
 
 // StaffPersonResponse represents a simplified person response.
 type StaffPersonResponse struct {
@@ -90,7 +42,7 @@ type StaffResponse struct {
 	// number it would be rounded past 2^53 by the JSON.parse in the Next.js
 	// proxy, before any mapper could preserve it, and the rounded value is a
 	// valid id for a different person (#2222). The request side takes either
-	// form (JSONID), so no client breaks on this.
+	// form (ident.ID), so no client breaks on this.
 	PersonID        int64                `json:"person_id,string"`
 	StaffNotes      string               `json:"staff_notes,omitempty"`
 	Person          *StaffPersonResponse `json:"person,omitempty"`
@@ -161,8 +113,8 @@ type StaffWithRoleResponse struct {
 
 // StaffRequest represents a staff creation/update request.
 type StaffRequest struct {
-	PersonID   JSONID `json:"person_id"`
-	StaffNotes string `json:"staff_notes,omitempty"`
+	PersonID   ident.ID `json:"person_id"`
+	StaffNotes string   `json:"staff_notes,omitempty"`
 	// Teacher-specific fields for creating a teacher
 	IsTeacher      bool   `json:"is_teacher,omitempty"`
 	Specialization string `json:"specialization,omitempty"`

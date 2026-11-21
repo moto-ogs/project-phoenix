@@ -103,9 +103,8 @@ const publicLinkBodyBytes = 4 << 10
 
 // PublicRouteContracts registers the token-proved links and the school list
 // below /auth as public (#2352): each carries no session, the link or the
-// lookup is the whole permission. The tenant resolve stays unregistered:
-// its two identifiers still travel as JSON numbers, which the contract no
-// longer admits for a new route (ADR 0270).
+// lookup is the whole permission. The tenant resolve joined them with
+// #2342, once its identifiers travel as strings.
 func PublicRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalPublic}
 	return []common.RouteContract{
@@ -114,5 +113,8 @@ func PublicRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/holiday-parent-setups/{token}", Portals: portals, Response: HolidayParentSetupResponse{}},
 		{Method: "POST", Pattern: "/holiday-parent-setups/{token}", Portals: portals, Request: CompleteHolidayParentSetupRequest{}, Response: CompleteHolidayParentSetupResponse{}, MaxBodyBytes: publicLinkBodyBytes},
 		{Method: "GET", Pattern: "/tenants", Portals: portals, Response: []PublicTenantResponse{}},
+		// The school layout and the login resolve the school before a
+		// session exists (#2342).
+		{Method: "GET", Pattern: "/tenant/resolve", Portals: portals, Query: []common.QueryParam{{Name: "slug", Kind: common.QueryString}}, Response: TenantResolveResponse{}},
 	}
 }

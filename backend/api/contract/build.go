@@ -28,14 +28,12 @@ type builder struct {
 	enumByType   map[reflect.Type]string
 	enumByField  map[string]string
 	deprecated   map[string]bool
-	numericIDs   map[string]bool
 	identifiers  map[reflect.Type]string
 	readers      map[reflect.Type]string
 	dates        map[reflect.Type]bool
 	instants     map[reflect.Type]bool
 	used         map[string]bool
 	requestTypes map[string]bool
-	numericWire  map[string]bool
 }
 
 // Build walks the registrations with reflection, following encoding/json.
@@ -44,8 +42,8 @@ func Build(routes []Registration, options Options) (Document, error) {
 	b := &builder{
 		types: map[string]Object{}, names: map[reflect.Type]string{}, enums: map[string]Enum{},
 		enumByType: map[reflect.Type]string{}, enumByField: map[string]string{},
-		deprecated: map[string]bool{}, numericIDs: map[string]bool{}, used: map[string]bool{},
-		requestTypes: map[string]bool{}, numericWire: map[string]bool{}, identifiers: options.Identifiers, readers: options.Readers,
+		deprecated: map[string]bool{}, used: map[string]bool{},
+		requestTypes: map[string]bool{}, identifiers: options.Identifiers, readers: options.Readers,
 		dates: map[reflect.Type]bool{dateType: true}, instants: map[reflect.Type]bool{timeType: true},
 	}
 	for _, t := range options.Dates {
@@ -53,9 +51,6 @@ func Build(routes []Registration, options Options) (Document, error) {
 	}
 	for _, t := range options.Instants {
 		b.instants[t] = true
-	}
-	for _, key := range options.NumericIDs {
-		b.numericIDs[key] = true
 	}
 	for _, rc := range routes {
 		if err := b.registerEnums(rc); err != nil {
@@ -69,7 +64,7 @@ func Build(routes []Registration, options Options) (Document, error) {
 	if err != nil {
 		return Document{}, err
 	}
-	doc := Document{Routes: built, NumericIDs: sortedKeys(b.numericWire)}
+	doc := Document{Routes: built}
 	if err := b.unused(options); err != nil {
 		return Document{}, err
 	}
@@ -275,8 +270,8 @@ func (b *builder) responses(route *Route, rc Registration, options Options) erro
 
 func (b *builder) unused(options Options) error {
 	registers := map[string][]string{
-		"id:": options.NumericIDs, "variants:": options.QueryVariants,
-		"enum:": sortedKeys(b.enumByField), "deprecated:": sortedKeys(b.deprecated),
+		"variants:": options.QueryVariants,
+		"enum:":     sortedKeys(b.enumByField), "deprecated:": sortedKeys(b.deprecated),
 	}
 	for t := range options.Readers {
 		registers["reader:"] = append(registers["reader:"], t.String())
@@ -287,7 +282,7 @@ func (b *builder) unused(options Options) error {
 	for _, t := range options.Instants {
 		registers["instant:"] = append(registers["instant:"], t.String())
 	}
-	labels := map[string]string{"date:": "day type ", "instant:": "instant type ", "id:": "numeric id ", "variants:": "query variant ", "enum:": "enum field ", "deprecated:": "deprecated field ", "reader:": "reader "}
+	labels := map[string]string{"date:": "day type ", "instant:": "instant type ", "variants:": "query variant ", "enum:": "enum field ", "deprecated:": "deprecated field ", "reader:": "reader "}
 	var stale []string
 	for prefix, keys := range registers {
 		for _, key := range keys {
@@ -437,7 +432,6 @@ func (b *builder) wrapped(t reflect.Type, where string) (Schema, error) {
 	if errors.Is(err, errBareInt64) {
 		err = b.numericID(&s, t, sf.Name, false, at)
 	}
-	b.noteNumericWire(s, t, sf.Name)
 	return s, err
 }
 

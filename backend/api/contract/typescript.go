@@ -455,16 +455,10 @@ func sortedKeys[V any](m map[string]V) []string {
 }
 
 // tsType is the type a decoder hands out or, for a request, the type the
-// client sends. An identifier is a string except where Go reads only a JSON
-// number.
+// client sends. An identifier is a string both ways.
 func (w *tsWriter) tsType(s Schema, request bool) string {
 	var t string
 	switch s.Kind {
-	case KindLegacyID:
-		t = "string"
-		if request {
-			t = "number"
-		}
 	case KindString, KindDate, KindInstant, KindClock, KindID, KindLaxID:
 		t = "string"
 	case KindBool:
@@ -514,8 +508,6 @@ func (w *tsWriter) field(s Schema) string {
 		z = helper("num")
 	case KindID:
 		z = helper("int64String")
-	case KindLegacyID, KindLaxID:
-		z = helper("int64StringOrNumber")
 	case KindDate:
 		z = helper("calendarDate")
 	case KindInstant:
@@ -561,8 +553,6 @@ func (w *tsWriter) zod(s Schema) string {
 		z = "z.number()"
 	case KindID:
 		z = helper("int64String")
-	case KindLegacyID, KindLaxID:
-		z = helper("int64StringOrNumber")
 	case KindDate:
 		z = helper("calendarDate")
 	case KindInstant:

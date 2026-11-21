@@ -14,7 +14,6 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -113,42 +112,6 @@ func (rs *Resource) Router() chi.Router {
 	return r
 }
 
-// jsonID accepts a JSON number or a decimal string. A string is parsed with
-// strconv, so digits beyond float64 precision survive, and anything that is
-// not a plain integer is rejected instead of being coerced to zero.
-type jsonID int64
-
-func (id jsonID) Int64() int64 { return int64(id) }
-
-func (id *jsonID) UnmarshalJSON(data []byte) error {
-	trimmed := strings.TrimSpace(string(data))
-	if trimmed == "null" {
-		return nil
-	}
-	if strings.HasPrefix(trimmed, `"`) {
-		var raw string
-		if err := json.Unmarshal(data, &raw); err != nil {
-			return err
-		}
-		raw = strings.TrimSpace(raw)
-		if raw == "" {
-			return errors.New("id must not be empty")
-		}
-		parsed, err := strconv.ParseInt(raw, 10, 64)
-		if err != nil {
-			return fmt.Errorf("invalid id %q: %w", raw, err)
-		}
-		*id = jsonID(parsed)
-		return nil
-	}
-	parsed, err := strconv.ParseInt(trimmed, 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid id %s: %w", trimmed, err)
-	}
-	*id = jsonID(parsed)
-	return nil
-}
-
 // wireDate is a strict YYYY-MM-DD calendar day on the wire; anything else is
 // a decode error, as it was when the contract carried the shared date type.
 type wireDate string
@@ -189,15 +152,15 @@ type assignmentRequest struct {
 }
 
 type groupHandoverRequest struct {
-	GroupID       jsonID `json:"group_id"`
-	TargetStaffID jsonID `json:"target_staff_id"`
-	StartDate     string `json:"start_date,omitempty"`
-	EndDate       string `json:"end_date,omitempty"`
+	GroupID       ident.ID `json:"group_id"`
+	TargetStaffID ident.ID `json:"target_staff_id"`
+	StartDate     string   `json:"start_date,omitempty"`
+	EndDate       string   `json:"end_date,omitempty"`
 }
 
 type additionalSupervisionRequest struct {
-	ActiveGroupID jsonID `json:"active_group_id"`
-	TargetStaffID jsonID `json:"target_staff_id"`
+	ActiveGroupID ident.ID `json:"active_group_id"`
+	TargetStaffID ident.ID `json:"target_staff_id"`
 	// HandOver ends the caller's own supervision once the target joined
 	// (#4763).
 	HandOver bool `json:"hand_over,omitempty"`
@@ -223,7 +186,7 @@ type wholeDaysRequest struct {
 
 type endRequest struct {
 	Type workforce.SubstitutionTargetType `json:"type"`
-	ID   jsonID                           `json:"id"`
+	ID   ident.ID                         `json:"id"`
 }
 
 func (rs *Resource) overview(w http.ResponseWriter, r *http.Request) {
@@ -333,18 +296,17 @@ type SubstitutionEndResponse struct {
 }
 
 // ContractTypes are the bodies of the routes, handed to the root's typed
-// contract: this package may not import the contract types. LaxID is the
-// identifier that takes a JSON number or a decimal string, Day the strict
-// calendar day of the whole-day substitution.
+// contract: this package may not import the contract types. Day is the
+// strict calendar day of the whole-day substitution.
 type ContractTypes struct {
-	Overview, Assignment, AssignmentRequest, End, EndRequest, LaxID, Day any
+	Overview, Assignment, AssignmentRequest, End, EndRequest, Day any
 }
 
 // RouteContractTypes returns the zero values of the route bodies.
 func RouteContractTypes() ContractTypes {
 	return ContractTypes{
 		Overview: workforce.SubstitutionOverviewResult{}, Assignment: SubstitutionAssignmentResponse{}, AssignmentRequest: assignmentRequest{},
-		End: SubstitutionEndResponse{}, EndRequest: endRequest{}, LaxID: jsonID(0), Day: wireDate(""),
+		End: SubstitutionEndResponse{}, EndRequest: endRequest{}, Day: wireDate(""),
 	}
 }
 

@@ -56,10 +56,10 @@ type StammdatenArbeitsvertragPayload struct {
 // StammdatenQualificationPayload is one qualification row received on the
 // wire. IDs accept legacy JSON numbers as well as decimal strings.
 type StammdatenQualificationPayload struct {
-	ID *common.JSONID `json:"id,omitempty"`
+	ID *common.ID `json:"id,omitempty"`
 	// TypeID names the kind of proof (#4808); null is "Sonstiges" with the
 	// free-text name.
-	TypeID     *common.JSONID `json:"type_id"`
+	TypeID     *common.ID     `json:"type_id"`
 	Name       string         `json:"name"`
 	AcquiredOn *calendar.Date `json:"acquired_on"`
 	ExpiresOn  *calendar.Date `json:"expires_on"`

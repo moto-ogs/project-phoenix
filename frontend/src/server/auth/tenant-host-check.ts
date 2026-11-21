@@ -66,7 +66,7 @@ export async function sessionTenantMismatchResponse(
       : null;
   }
 
-  let hostTenantId: number;
+  let hostTenantId: string;
   try {
     hostTenantId = (
       await resolveTenantCached(
@@ -88,7 +88,8 @@ export async function sessionTenantMismatchResponse(
     );
   }
 
-  if (hostTenantId === sessionTenantId) return null;
+  // The session claim is a number, the resolved school a string (#2342).
+  if (hostTenantId === String(sessionTenantId)) return null;
 
   return mismatchResponse(request, {
     session_tenant_id: sessionTenantId,

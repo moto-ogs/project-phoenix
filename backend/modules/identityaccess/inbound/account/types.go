@@ -20,11 +20,11 @@ const errPasswordsNotMatch = "passwords do not match"
 
 // TenantResolveResponse represents the public tenant info returned by resolve
 type TenantResolveResponse struct {
-	TenantID         int64           `json:"tenant_id"`
+	TenantID         common.ID       `json:"tenant_id"`
 	Slug             string          `json:"slug"`
 	Name             string          `json:"name"`
 	Subdomain        string          `json:"subdomain"`
-	OrganizationID   int64           `json:"organization_id"`
+	OrganizationID   common.ID       `json:"organization_id"`
 	OrganizationName string          `json:"organization_name"`
 	Hidden           bool            `json:"hidden"`
 	Settings         json.RawMessage `json:"settings"`
@@ -434,14 +434,14 @@ type UpdateRoleRequest struct {
 // ReplaceRolePermissionsRequest contains the complete target set for a role.
 // An explicit empty array removes every permission; an omitted field is invalid.
 type ReplaceRolePermissionsRequest struct {
-	PermissionIDs []common.JSONID `json:"permission_ids"`
+	PermissionIDs []common.ID `json:"permission_ids"`
 }
 
 func (req *ReplaceRolePermissionsRequest) Bind(_ *http.Request) error {
 	if req.PermissionIDs == nil {
 		return errors.New("permission_ids is required")
 	}
-	seen := make(map[common.JSONID]struct{}, len(req.PermissionIDs))
+	seen := make(map[common.ID]struct{}, len(req.PermissionIDs))
 	for _, permissionID := range req.PermissionIDs {
 		if permissionID.Int64() <= 0 {
 			return errors.New("permission_ids must contain positive IDs")
@@ -458,7 +458,7 @@ func (req *ReplaceRolePermissionsRequest) Bind(_ *http.Request) error {
 // staff role at the current tenant. Every other staff role at this school is
 // removed; guardian access is kept.
 type ReplaceAccountRoleRequest struct {
-	RoleID *common.JSONID `json:"role_id"`
+	RoleID *common.ID `json:"role_id"`
 }
 
 func (req *ReplaceAccountRoleRequest) Bind(_ *http.Request) error {

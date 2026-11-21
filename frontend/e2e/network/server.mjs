@@ -16,11 +16,11 @@ const apiPort = ports.api;
 let switchRequests = 0;
 let logoutRequests = 0;
 const schools = ["school-a", "school-b"].map((subdomain, index) => ({
-  tenant_id: index + 1,
+  tenant_id: String(index + 1),
   slug: subdomain,
   subdomain,
   name: index === 0 ? "School A" : "School B",
-  organization_id: 1,
+  organization_id: "1",
   organization_name: "Fixture",
 }));
 
@@ -98,7 +98,7 @@ const api = createServer(async (req, res) => {
   else if (path === "/auth/tenant/resolve") {
     const slug = url.searchParams.get("slug") ?? "proof-off";
     data = envelope({
-      tenant_id: sharedTenantCookie && slug === "school-b" ? 2 : 1,
+      tenant_id: sharedTenantCookie && slug === "school-b" ? "2" : "1",
       slug,
       subdomain: slug,
       name: sharedTenantCookie
@@ -106,14 +106,41 @@ const api = createServer(async (req, res) => {
           ? "School B"
           : "School A"
         : "Netzwerktest",
-      organization_id: 1,
+      organization_id: "1",
       organization_name: "Fixture",
+      hidden: false,
       settings: {},
+      presence_mode: "detailed",
+      booked_modules: null,
+      parent_messaging_enabled: false,
+      parent_message_card_badge_enabled: false,
+      staff_messaging_enabled: false,
+      display_enabled: false,
+      caldav_enabled: false,
       grade_level_max: 4,
+      care_offerings_enabled: true,
+      attendance_web_enabled: false,
+      attendance_log_enabled: false,
+      group_mode: "fixed_groups",
+      operational_overview_scope: "own",
+      attendance_edit_scope: "own",
+      parent_request_reason_policy: "both",
+      show_timetable_counts: true,
       analytics_enabled: slug === "proof-on",
       analytics_freigabe: false,
+      analytics_recording_sample_percent: 0,
       student_photos_enabled: true,
       timetable_enabled: false,
+      meal_plan_enabled: false,
+      meal_registration_enabled: false,
+      waitlist_enabled: true,
+      early_checkout_note_enabled: false,
+      early_checkout_note_tolerance_minutes: 0,
+      weekend_follows_friday: false,
+      children_without_care_place: false,
+      child_search_only_navigation: false,
+      simple_staff_navigation: false,
+      care_facility_term: "OGS",
     });
   } else if (sharedTenantCookie && portalReads.has(path)) {
     data = envelope([]);
@@ -122,7 +149,7 @@ const api = createServer(async (req, res) => {
     data = envelope({
       entries: [
         {
-          id: 7,
+          id: "7",
           type: "test",
           title: "Hinweis",
           body: "Text",

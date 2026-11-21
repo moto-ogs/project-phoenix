@@ -178,7 +178,7 @@ func participantLimit(maxParticipants *int) int {
 // BatchEnrollmentRequest represents a request for updating enrollments in batch.
 // Each student ID reads a JSON number or a decimal string.
 type BatchEnrollmentRequest struct {
-	StudentIDs []common.JSONID `json:"student_ids"`
+	StudentIDs []common.ID `json:"student_ids"`
 }
 
 // studentIDs returns the requested student IDs as int64s.

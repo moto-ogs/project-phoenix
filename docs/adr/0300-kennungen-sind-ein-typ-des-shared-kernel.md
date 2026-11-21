@@ -109,3 +109,35 @@ Entscheidung:
 Folgen: PyrePortal ist nicht betroffen, weil die IoT-Typen kein `ident.ID`
 tragen. Tests, die Fachtypen direkt mit `encoding/json` kodieren, sehen
 wieder Zahlen; Tests über den Router sehen Strings.
+
+## Nachtrag vom 2026-11-21: Der Vertrag kennt keine Zahl-Kennung mehr
+
+Mit dem letzten Schritt von Phase 2 ist die Liste der numerischen
+Alt-Kennungen leer (1.025 Einträge am Anfang). Der Generator verliert alles,
+was eine Antwort-Kennung als Zahl zuließ:
+
+1. **Kein Register, kein Übergangs-Tag.** `NumericIDs`, die Dateien
+   `numeric_ids_*.go`, die Art `legacy_id` und das Tag `contract:"legacy-id"`
+   entfallen; `numeric_ids` steht nicht mehr in `contract.json`. Ein nacktes
+   `int64` ohne Aussage bleibt ein Fehler des Generators.
+2. **Lockeres Lesen nur in Requests.** Die Art `lax_id` (`ReadsLaxIDs`, ein
+   von der Wurzel benannter Lesetyp) steht nur noch in einem Request; in einer
+   Antwort lehnt der Generator sie ab. `common.JSONID` und die gleichartigen
+   Typen in `schoolmembership/http` und `workforce/http/substitutions` gehen
+   in `common.ID` bzw. `ident.ID` auf, die String und Zahl lesen.
+3. **Strenger Decoder.** Jede Antwort-Kennung decodiert mit `int64String`;
+   `int64StringOrNumber` gibt es im Frontend nicht mehr.
+   `TestAnAnswerIdentifierIsOnlyAString` (`backend/api/contract`) hält das
+   fest.
+4. **`/auth/tenant/resolve` steht im Vertrag** als öffentliche Route.
+   `tenant_id` und `organization_id` reisen als String; das Frontend ruft
+   sie über `/api/auth/tenant/resolve` und den Katalog-Proxy, die
+   Schulkennung der Oberfläche (`TenantInfo.tenantId`) ist ein String. Die
+   Schulkennung im Sitzungstoken bleibt eine Zahl; die Vergleiche wandeln sie
+   in Text.
+
+Der Wächter gegen neue Zahl-Kennungen ist damit der Generator selbst;
+`scripts/check-contract-shrink.mjs` vergleicht nur noch die Routen ohne
+Vertrag. Bewusst gegen „expand, then contract“ in einem Release liegt
+zusätzlich: Ein offener Tab mit altem Bundle ruft `/api/tenant/resolve`, das
+es nicht mehr gibt, bis er neu lädt.

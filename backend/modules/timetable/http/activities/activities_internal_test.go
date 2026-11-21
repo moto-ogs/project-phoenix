@@ -111,7 +111,7 @@ func TestBatchEnrollmentRequest_Fields(t *testing.T) {
 	t.Parallel()
 
 	req := httpadapter.BatchEnrollmentRequest{
-		StudentIDs: []common.JSONID{1, 2, 3},
+		StudentIDs: []common.ID{1, 2, 3},
 	}
 
 	assert.Len(t, req.StudentIDs, 3)
@@ -122,7 +122,7 @@ func TestBatchEnrollmentRequest_EmptyList(t *testing.T) {
 	t.Parallel()
 
 	req := httpadapter.BatchEnrollmentRequest{
-		StudentIDs: []common.JSONID{},
+		StudentIDs: []common.ID{},
 	}
 
 	assert.Empty(t, req.StudentIDs)

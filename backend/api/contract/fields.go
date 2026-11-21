@@ -122,14 +122,10 @@ func (b *builder) field(declaring, root reflect.Type, sf reflect.StructField, na
 	case errors.Is(err, errBareInt64):
 		err = b.numericID(&schema, declaring, sf.Name, slices.Contains(options, "string"), at)
 	}
-	b.noteNumericWire(schema, declaring, sf.Name)
-	if err == nil && format == "legacy-id" {
-		// During an ID migration, Go writes strings but the decoder still
-		// accepts the previous release's numeric answer (ADR 0270).
-		if request || schema.Kind != KindID {
-			return Field{}, fmt.Errorf("%s: the tag contract:%q needs an ID response field", at, format)
-		}
-		schema.Kind, format = KindLegacyID, ""
+	if err == nil && !request && readsLax(schema) {
+		// An answer carries every identifier as a decimal string, and the
+		// generated decoder takes nothing else (ADR 0300).
+		err = fmt.Errorf("%s: an answer sends an identifier as a string; a reader of numbers belongs to a request (ADR 0300)", at)
 	}
 	if err == nil {
 		err = setFormat(&schema, format, at)
@@ -201,25 +197,20 @@ func (b *builder) omission(field *Field, t reflect.Type, options []string) {
 	}
 }
 
-// noteNumericWire records a field that leaves Go as a JSON number
-// identifier, whichever way it got there (the register, a reader, a lax
-// type). A field tagged contract:"legacy-id" already travels as a string.
-func (b *builder) noteNumericWire(schema Schema, declaring reflect.Type, goField string) {
-	for schema.Kind == KindArray && schema.Elem != nil {
+// readsLax tells whether a value, or an element of it, reads an identifier
+// as a number or a string.
+func readsLax(schema Schema) bool {
+	for (schema.Kind == KindArray || schema.Kind == KindMap) && schema.Elem != nil {
 		schema = *schema.Elem
 	}
-	if schema.Kind == KindLegacyID || schema.Kind == KindLaxID {
-		b.numericWire[declaring.String()+"."+goField] = true
-	}
+	return schema.Kind == KindLaxID
 }
 
 // numericID decides a bare int64. With ,string it is an identifier that
-// already travels as a string, and on a type whose own UnmarshalJSON is
-// registered it reads a number or a string. Otherwise it must be on the
-// shrink-only list of numeric identifiers; a count is an int, a new
-// identifier a common.ID.
+// travels as a string, and on a request type whose own UnmarshalJSON is
+// registered it reads a number or a string. A count is an int, an
+// identifier a common.ID (ADR 0270, ADR 0300).
 func (b *builder) numericID(schema *Schema, declaring reflect.Type, goField string, asString bool, at string) error {
-	key := declaring.String() + "." + goField
 	leaf := schema
 	for leaf.Kind == KindArray {
 		leaf = leaf.Elem
@@ -232,9 +223,6 @@ func (b *builder) numericID(schema *Schema, declaring reflect.Type, goField stri
 		leaf.Kind = KindID
 	case b.readers[declaring] == ReadsLaxIDs:
 		leaf.Kind = KindLaxID
-	case b.numericIDs[key]:
-		leaf.Kind = KindLegacyID
-		b.used["id:"+key] = true
 	case strings.HasSuffix(goField, "Cents"):
 		// An amount in whole cent is a number, never an identifier.
 	default:

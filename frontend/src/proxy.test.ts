@@ -1980,7 +1980,7 @@ describe("proxy", () => {
       for (const apiPath of [
         "/api/parent/auth/session",
         "/api/parent/me/children",
-        "/api/tenant/resolve",
+        "/api/auth/tenant/resolve",
         "/api/public/care-contract-signing/abc",
         "/api/public/login-image/a.webp",
         "/api/invitations/accept",

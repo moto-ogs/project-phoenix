@@ -2097,7 +2097,8 @@ describe("SupervisionProvider school switch (#3375)", () => {
         tenantId === null
           ? null
           : {
-              tenantId,
+              // The school of the page names its identifier as a string.
+              tenantId: String(tenantId),
               slug: resolvedTenantSlug,
               subdomain: tenantSubdomain,
             },

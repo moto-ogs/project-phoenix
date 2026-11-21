@@ -48,11 +48,11 @@ export function loginImageSrc(storedPath: string): string {
 export type PresenceMode = "detailed" | "binary";
 
 export interface TenantInfo {
-  tenantId: number;
+  tenantId: string;
   slug: string;
   name: string;
   subdomain: string;
-  organizationId: number;
+  organizationId: string;
   organizationName: string;
   /**
    * The Träger the school portal names next to the school (#4656). Set only
@@ -221,11 +221,11 @@ export type TenantSummary = Pick<
 >;
 
 interface TenantResolveResponse {
-  tenant_id: number;
+  tenant_id: string;
   slug: string;
   name: string;
   subdomain: string;
-  organization_id: number;
+  organization_id: string;
   organization_name: string;
   traeger_name?: string;
   hidden?: boolean;
@@ -361,7 +361,7 @@ export function normalizePresenceMode(raw: unknown): PresenceMode {
  */
 export async function resolveTenant(slug: string): Promise<TenantInfo> {
   const response = await transportFetch(
-    `/api/tenant/resolve?slug=${encodeURIComponent(slug)}`,
+    `/api/auth/tenant/resolve?slug=${encodeURIComponent(slug)}`,
   );
 
   if (!response.ok) {
@@ -477,11 +477,11 @@ export async function listAllTenants(
       const items = json.data ?? [];
       return {
         tenants: items.map((t) => ({
-          tenantId: 0,
+          tenantId: "",
           slug: t.slug,
           name: t.name,
           subdomain: t.subdomain,
-          organizationId: 0,
+          organizationId: "",
           organizationName: t.organization_name,
           hidden: false,
         })),

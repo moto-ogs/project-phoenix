@@ -122,7 +122,7 @@ describe("tenant-api", () => {
       const result = await resolveTenant("demo-school");
 
       expect(global.fetch).toHaveBeenCalledWith(
-        "/api/tenant/resolve?slug=demo-school",
+        "/api/auth/tenant/resolve?slug=demo-school",
         undefined,
       );
       expect(result).toEqual({
@@ -693,11 +693,11 @@ describe("tenant-api", () => {
       expect(result.status).toBe("ok");
       expect(result.tenants).toHaveLength(2);
       expect(result.tenants[0]).toEqual({
-        tenantId: 0,
+        tenantId: "",
         slug: "school-a",
         name: "School A",
         subdomain: "school-a",
-        organizationId: 0,
+        organizationId: "",
         organizationName: "Org Alpha",
         hidden: false,
       });

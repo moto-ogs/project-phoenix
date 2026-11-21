@@ -1821,7 +1821,7 @@ func TestProvisioningResource_ListSystemRoles_Error(t *testing.T) {
 func TestCreateSchoolAccountRequest_Bind_TrimAndLowercaseEmail(t *testing.T) {
 	t.Parallel()
 
-	roleID := common.JSONID(3)
+	roleID := common.ID(3)
 	req := &createSchoolAccountRequest{
 		Email:           "  TEACHER@EXAMPLE.COM  ",
 		FirstName:       "  Ada  ",

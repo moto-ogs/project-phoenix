@@ -80,7 +80,7 @@ function Page({
 }: Readonly<{ fetcher: () => Promise<string>; name?: string }>) {
   return (
     <>
-      <SWRScopeBoundary expectedTenantId={1} />
+      <SWRScopeBoundary expectedTenantId="1" />
       <Reader name={name} fetcher={fetcher} />
     </>
   );
@@ -493,7 +493,7 @@ describe("SWR cache scope (#5006)", () => {
 
   it("stays idle within the render budget", async () => {
     vi.useFakeTimers();
-    await expectIdleRenderBudget(<SWRScopeBoundary expectedTenantId={1} />);
+    await expectIdleRenderBudget(<SWRScopeBoundary expectedTenantId="1" />);
     releaseFakeTimers();
   });
 });

@@ -90,7 +90,7 @@ const OLD = {
 beforeEach(() => {
   vi.mocked(useTenantSafe).mockReturnValue({
     tenantSlug: "demo",
-    tenant: { tenantId: 1, slug: "demo" } as TenantInfo,
+    tenant: { tenantId: "1", slug: "demo" } as TenantInfo,
     routingMode: "subdomain",
   });
   vi.mocked(useBookedModules).mockReturnValue(MODULE_KEYS);

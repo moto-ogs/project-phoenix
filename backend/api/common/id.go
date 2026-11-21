@@ -7,6 +7,4 @@ import "github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 // number beyond 2^53 is rounded by JavaScript to the identifier of a different
 // row, and reads a string or a number. The alias keeps one type, so a Fachtyp
 // that uses ident.ID and an HTTP type that uses common.ID are the same.
-//
-// JSONID keeps rendering a number for the routes that still use it.
 type ID = ident.ID

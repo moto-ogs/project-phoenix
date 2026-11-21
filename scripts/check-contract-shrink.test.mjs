@@ -9,21 +9,18 @@ test("a catalog row is registered by its exact pattern or without the root mount
   assert.deepEqual(unregisteredRows(rows, model), ["POST /api/rows/{id}", "GET /auth/login"]);
 });
 
-test("the debts may shrink and a parameter may be renamed", () => {
+test("the debt may shrink and a parameter may be renamed", () => {
   assert.deepEqual(report({
-    baseIDs: ["a.T.ID", "b.T.ID"], headIDs: ["a.T.ID"],
     baseRows: ["POST /api/rows/{id}", "GET /auth/login"], headRows: ["POST /api/rows/{rowId}"],
   }), []);
 });
 
-test("a new numeric identifier and a new unregistered route fail", () => {
+test("a new unregistered route fails", () => {
   const problems = report({
-    baseIDs: ["a.T.ID"], headIDs: ["a.T.ID", "a.T.NewID"],
     baseRows: ["GET /auth/login"], headRows: ["GET /auth/login", "GET /api/rows/{id}/report"],
   });
-  assert.equal(problems.length, 2);
-  assert.match(problems[0], /New numeric identifiers \(1\):\na\.T\.NewID\n/);
-  assert.match(problems[1], /New backend routes without a contract \(1\):\nGET \/api\/rows\/\{id\}\/report\n/);
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /New backend routes without a contract \(1\):\nGET \/api\/rows\/\{id\}\/report\n/);
 });
 
 test("a route on another router is new, though its path reads the same", () => {

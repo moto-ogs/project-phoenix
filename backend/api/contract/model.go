@@ -6,21 +6,20 @@ import "github.com/moto-ogs/project-phoenix/api/common/contractmodel"
 
 // Kinds of a value on the wire.
 const (
-	KindString   = contractmodel.KindString
-	KindBool     = contractmodel.KindBool
-	KindInt      = contractmodel.KindInt
-	KindNumber   = contractmodel.KindNumber
-	KindID       = contractmodel.KindID
-	KindLegacyID = contractmodel.KindLegacyID
-	KindLaxID    = contractmodel.KindLaxID
-	KindDate     = contractmodel.KindDate
-	KindInstant  = contractmodel.KindInstant
-	KindClock    = contractmodel.KindClock
-	KindEnum     = contractmodel.KindEnum
-	KindArray    = contractmodel.KindArray
-	KindMap      = contractmodel.KindMap
-	KindRef      = contractmodel.KindRef
-	KindJSON     = contractmodel.KindJSON
+	KindString  = contractmodel.KindString
+	KindBool    = contractmodel.KindBool
+	KindInt     = contractmodel.KindInt
+	KindNumber  = contractmodel.KindNumber
+	KindID      = contractmodel.KindID
+	KindLaxID   = contractmodel.KindLaxID
+	KindDate    = contractmodel.KindDate
+	KindInstant = contractmodel.KindInstant
+	KindClock   = contractmodel.KindClock
+	KindEnum    = contractmodel.KindEnum
+	KindArray   = contractmodel.KindArray
+	KindMap     = contractmodel.KindMap
+	KindRef     = contractmodel.KindRef
+	KindJSON    = contractmodel.KindJSON
 )
 
 // The model lives in contractmodel so that the request runtime's test build

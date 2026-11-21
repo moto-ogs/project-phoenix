@@ -22,7 +22,6 @@ import (
 	groupLiveHTTP "github.com/moto-ogs/project-phoenix/modules/grouplive/http"
 	mealplanHTTP "github.com/moto-ogs/project-phoenix/modules/mealplan/http"
 	guardiansHTTP "github.com/moto-ogs/project-phoenix/modules/peopledirectory/http"
-	staffHTTP "github.com/moto-ogs/project-phoenix/modules/schoolmembership/http"
 	classListHTTP "github.com/moto-ogs/project-phoenix/modules/schoolmembership/http/classlistentries"
 	schoolSearchHTTP "github.com/moto-ogs/project-phoenix/modules/schoolsearchview/http"
 	"github.com/moto-ogs/project-phoenix/modules/schoolsetup"
@@ -255,17 +254,12 @@ func ContractDocument() (contract.Document, error) {
 	}
 	substitutions := substitutionsHTTP.RouteContractTypes()
 	options := contract.Legacy(map[reflect.Type]string{
-		reflect.TypeFor[common.ID]():     contract.KindID,
-		reflect.TypeFor[common.JSONID](): contract.KindLaxID,
+		reflect.TypeFor[common.ID](): contract.KindID,
 		// The device management renders its instants in whole seconds.
 		reflect.TypeFor[devicesAPI.WireTime](): contract.KindInstant,
 		// The answers of an enrollment form: an object of the form's own
 		// fields, whatever the school's schema asks for.
 		reflect.TypeFor[enrollmentOwner.FormValues](): contract.KindJSON,
-		// The substitution bodies take an id as a number or a decimal string.
-		reflect.TypeOf(substitutions.LaxID): contract.KindLaxID,
-		// A staff body names its person as a number or a decimal string.
-		reflect.TypeFor[staffHTTP.JSONID](): contract.KindLaxID,
 	})
 	// Both student bodies only refuse retired keys before the plain decode;
 	// CompanionEntry takes its companion id as a number or a decimal string.

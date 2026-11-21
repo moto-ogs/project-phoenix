@@ -9,12 +9,11 @@ import {
   mapStudentEnrollmentsResponse,
   type StudentEnrollmentBody,
 } from "~/lib/activity-helpers";
-import { int64StringOrNumber } from "~/lib/contract/runtime";
+import { int64String } from "~/lib/contract/runtime";
 
 interface StudentListPage {
   data?: Array<{
-    // A JSON number today, a decimal string once Go sends strings (ADR 0270).
-    id: number | string;
+    id: string;
     first_name: string;
     last_name: string;
     school_class?: string;
@@ -32,7 +31,7 @@ const MAX_STUDENT_PAGES = 1_000;
 
 /** The student ID as a decimal string, or null unless it is a positive int64. */
 function studentIdOf(value: unknown): string | null {
-  const parsed = int64StringOrNumber.safeParse(value);
+  const parsed = int64String.safeParse(value);
   if (!parsed.success || parsed.data === "0" || parsed.data.startsWith("-")) {
     return null;
   }

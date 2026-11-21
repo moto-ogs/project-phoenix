@@ -30,7 +30,7 @@ type CreateSchoolInvitationRequest struct {
 	ResetQualifications bool                            `json:"reset_qualifications"`
 	ResetWorkTime       bool                            `json:"reset_work_time"`
 	Email               string                          `json:"email"`
-	RoleID              common.JSONID                   `json:"role_id"`
+	RoleID              common.ID                       `json:"role_id"`
 	FirstName           string                          `json:"first_name"`
 	LastName            string                          `json:"last_name"`
 	Position            string                          `json:"position"`
@@ -54,7 +54,7 @@ func (req *CreateSchoolInvitationRequest) Bind(_ *http.Request) error {
 	return validation.ValidateStruct(req,
 		validation.Field(&req.Email, validation.Required, is.Email),
 		validation.Field(&req.RoleID, validation.Required, validation.By(func(value interface{}) error {
-			roleID, ok := value.(common.JSONID)
+			roleID, ok := value.(common.ID)
 			if !ok || roleID.Int64() <= 0 {
 				return errors.New("role_id is required")
 			}

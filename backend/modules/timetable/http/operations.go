@@ -25,13 +25,13 @@ import (
 )
 
 type spontaneousStartRequest struct {
-	Title           string          `json:"title"`
-	Description     *string         `json:"description,omitempty"`
-	Notes           *string         `json:"notes,omitempty"`
-	RoomID          common.ID       `json:"room_id"`
-	ActivityGroupID *common.ID      `json:"activity_group_id,omitempty"`
-	StaffIDs        []common.JSONID `json:"staff_ids,omitempty"`
-	StudentIDs      []common.ID     `json:"student_ids,omitempty"`
+	Title           string      `json:"title"`
+	Description     *string     `json:"description,omitempty"`
+	Notes           *string     `json:"notes,omitempty"`
+	RoomID          common.ID   `json:"room_id"`
+	ActivityGroupID *common.ID  `json:"activity_group_id,omitempty"`
+	StaffIDs        []common.ID `json:"staff_ids,omitempty"`
+	StudentIDs      []common.ID `json:"student_ids,omitempty"`
 }
 
 func (req *spontaneousStartRequest) Bind(_ *http.Request) error {
@@ -433,7 +433,7 @@ func (rs *Resource) operationsCheckInStudent(w http.ResponseWriter, r *http.Requ
 const maxBulkCheckInStudents = 500
 
 type bulkCheckInRequest struct {
-	StudentIDs []common.JSONID `json:"student_ids"`
+	StudentIDs []common.ID `json:"student_ids"`
 	studentIDs []int64
 }
 

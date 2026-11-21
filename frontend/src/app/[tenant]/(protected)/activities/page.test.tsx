@@ -293,7 +293,7 @@ describe("ActivitiesPage", () => {
   it("does not mount activity data hooks without NFC attendance", () => {
     vi.mocked(useTenantSafe).mockReturnValue({
       tenantSlug: "test-tenant",
-      tenant: { tenantId: 1, slug: "test-tenant" } as TenantInfo,
+      tenant: { tenantId: "1", slug: "test-tenant" } as TenantInfo,
       routingMode: "subdomain",
     });
     vi.mocked(useBookedModules).mockReturnValue(

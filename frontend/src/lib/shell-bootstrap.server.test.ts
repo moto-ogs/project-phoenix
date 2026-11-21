@@ -45,7 +45,7 @@ function session(overrides: Partial<Session["user"]> = {}): Session {
 const ACCESS_TOKEN = "access-token";
 
 const tenant = {
-  tenantId: 1,
+  tenantId: "1",
   slug: "school-a",
   subdomain: "school-a",
   messagingEnabled: true,

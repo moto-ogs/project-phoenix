@@ -409,8 +409,8 @@ for (const portal of portals.slice(1)) {
 }
 
 // The proxy of moto schule beyond a plain read: only the registered query
-// travels, a legacy numeric id leaves as a string, and a write the backend
-// answers with 204 succeeds without data.
+// travels, the identifier stays a string, and a write the backend answers
+// with 204 succeeds without data.
 test("Schule: the catalog proxy forwards a query and a write without data", async ({
   browser,
 }) => {

@@ -14,10 +14,11 @@ export const MODEL_PATH = "backend/api/contract/contract.json";
 const describe = (schema) => schema.elem ? `${schema.kind}<${describe(schema.elem)}>`
   : schema.kind === "ref" ? "object" : schema.kind;
 
-// A reader of the base decodes legacy_id as string or number, so the move to
-// a string identifier is the one kind change that does not break it.
+// A reader of the base decodes legacy_id and lax_id as string or number, and
+// Go reads both from a client, so the move to a string identifier is the one
+// kind change that does not break it (#2342).
 const sameKind = (before, after) => before.kind === after.kind
-  || (before.kind === "legacy_id" && after.kind === "id")
+  || (["legacy_id", "lax_id"].includes(before.kind) && after.kind === "id")
   // Naming the form of a string narrows the type, not the wire.
   || (before.kind === "string" && ["enum", "date", "clock"].includes(after.kind));
 

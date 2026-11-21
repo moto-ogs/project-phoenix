@@ -174,14 +174,14 @@ func (req *inviteSchoolAdminRequest) Bind(_ *http.Request) error {
 }
 
 type createSchoolAccountRequest struct {
-	Email            string         `json:"email"`
-	FirstName        string         `json:"first_name"`
-	LastName         string         `json:"last_name"`
-	Password         string         `json:"password"`
-	ConfirmPassword  string         `json:"confirm_password"`
-	RoleID           *common.JSONID `json:"role_id,omitempty"`
-	Position         string         `json:"position,omitempty"`
-	CaregiverEnabled bool           `json:"caregiver_enabled,omitempty"`
+	Email            string     `json:"email"`
+	FirstName        string     `json:"first_name"`
+	LastName         string     `json:"last_name"`
+	Password         string     `json:"password"`
+	ConfirmPassword  string     `json:"confirm_password"`
+	RoleID           *common.ID `json:"role_id,omitempty"`
+	Position         string     `json:"position,omitempty"`
+	CaregiverEnabled bool       `json:"caregiver_enabled,omitempty"`
 }
 
 type updateCaregiverCapabilityRequest struct {
@@ -484,7 +484,7 @@ func (rs *ProvisioningResource) ListSystemRoles(w http.ResponseWriter, r *http.R
 	common.Respond(w, r, http.StatusOK, roles, "System roles retrieved successfully")
 }
 
-func jsonIDPointer(id *common.JSONID) *int64 {
+func jsonIDPointer(id *common.ID) *int64 {
 	if id == nil {
 		return nil
 	}
