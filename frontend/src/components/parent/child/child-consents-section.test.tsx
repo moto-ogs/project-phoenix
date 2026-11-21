@@ -7,6 +7,7 @@ import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import {
   getChildConsents,
+  getChildRoomHistoryStop,
   grantChildPhotoConsent,
   resumeChildRoomHistory,
   stopChildRoomHistory,
@@ -19,6 +20,7 @@ vi.unmock("swr");
 
 vi.mock("~/lib/parent-api", () => ({
   getChildConsents: vi.fn(),
+  getChildRoomHistoryStop: vi.fn(),
   grantChildPhotoConsent: vi.fn(),
   withdrawChildPhotoConsent: vi.fn(),
   stopChildRoomHistory: vi.fn(),
@@ -29,6 +31,7 @@ const mockedGet = vi.mocked(getChildConsents);
 const mockedGrant = vi.mocked(grantChildPhotoConsent);
 const mockedWithdraw = vi.mocked(withdrawChildPhotoConsent);
 const mockedStop = vi.mocked(stopChildRoomHistory);
+const mockedStopRead = vi.mocked(getChildRoomHistoryStop);
 const mockedResume = vi.mocked(resumeChildRoomHistory);
 
 const granted = [
@@ -74,6 +77,11 @@ function renderSection() {
 beforeEach(() => {
   vi.clearAllMocks();
   mockedGet.mockResolvedValue(granted);
+  mockedStopRead.mockResolvedValue({
+    offered: false,
+    stopped: false,
+    can_change: false,
+  });
 });
 
 describe("ChildConsentsSection", () => {
@@ -322,22 +330,16 @@ describe("ChildConsentsSection", () => {
   // #3844: Raumverlauf und Stimmung, nur wenn der Träger es freigibt.
   it("lässt Eltern Raumverlauf und Stimmung nach Rückfrage stoppen und wieder speichern", async () => {
     const user = userEvent.setup();
-    const recording = {
-      key: "room_history" as const,
-      state: "recording" as const,
-      can_withdraw: true,
-      can_grant: false,
-    };
+    const recording = { offered: true, stopped: false, can_change: true };
     const stopped = {
-      key: "room_history" as const,
-      state: "stopped" as const,
-      changed_at: "2026-11-21T09:00:00Z",
-      can_withdraw: false,
-      can_grant: true,
+      offered: true,
+      stopped: true,
+      stopped_at: "2026-11-21T09:00:00Z",
+      can_change: true,
     };
-    mockedGet.mockResolvedValue([...granted, recording]);
-    mockedStop.mockResolvedValue([...granted, stopped]);
-    mockedResume.mockResolvedValue([...granted, recording]);
+    mockedStopRead.mockResolvedValue(recording);
+    mockedStop.mockResolvedValue(stopped);
+    mockedResume.mockResolvedValue(recording);
     renderSection();
 
     expect(
@@ -375,16 +377,21 @@ describe("ChildConsentsSection", () => {
     await waitFor(() => expect(mockedResume).toHaveBeenCalledWith("42"));
   });
 
+  it("zeigt keine Zeile, solange der Träger den Stopp nicht freigibt", async () => {
+    renderSection();
+
+    expect(await screen.findByText("Foto-Einwilligung")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Raumverlauf und Stimmung"),
+    ).not.toBeInTheDocument();
+  });
+
   it("zeigt Raumverlauf und Stimmung ohne Aktion, wenn das Einwilligungsrecht fehlt", async () => {
-    mockedGet.mockResolvedValue([
-      ...granted,
-      {
-        key: "room_history" as const,
-        state: "recording" as const,
-        can_withdraw: false,
-        can_grant: false,
-      },
-    ]);
+    mockedStopRead.mockResolvedValue({
+      offered: true,
+      stopped: false,
+      can_change: false,
+    });
     renderSection();
 
     expect(

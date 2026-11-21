@@ -1051,11 +1051,8 @@
         "parent"
       ],
       "response": {
-        "kind": "array",
-        "elem": {
-          "kind": "ref",
-          "ref": "ChildConsentResponse"
-        }
+        "kind": "ref",
+        "ref": "ChildRoomHistoryStopResponse"
       }
     },
     {
@@ -8995,6 +8992,17 @@
           "kind": "ref",
           "ref": "ParentRequestEventResponse"
         }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/parent/me/children/{studentId}/room-history-stop",
+      "portals": [
+        "parent"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ChildRoomHistoryStopResponse"
       }
     },
     {
@@ -21478,11 +21486,8 @@
         "parent"
       ],
       "response": {
-        "kind": "array",
-        "elem": {
-          "kind": "ref",
-          "ref": "ChildConsentResponse"
-        }
+        "kind": "ref",
+        "ref": "ChildRoomHistoryStopResponse"
       }
     },
     {
@@ -40375,6 +40380,37 @@
         {
           "name": "without_care_place",
           "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildRoomHistoryStopResponse",
+      "go_type": "parent.ChildRoomHistoryStopResponse",
+      "fields": [
+        {
+          "name": "offered",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "stopped",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "stopped_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "can_change",
           "schema": {
             "kind": "bool"
           }

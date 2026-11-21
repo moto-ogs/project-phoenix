@@ -37,6 +37,7 @@ type (
 	Child                            = care.Child
 	ChildConsent                     = care.ChildConsent
 	RoomHistoryStopRequest           = care.RoomHistoryStopRequest
+	ChildRoomHistoryStop             = care.ChildRoomHistoryStop
 	ChildFeatureFlags                = care.ChildFeatureFlags
 	ChildGuardian                    = care.ChildGuardian
 	ChildMasterData                  = care.ChildMasterData

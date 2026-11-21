@@ -96,10 +96,12 @@ type PortalService interface {
 	GetChildConsents(ctx context.Context, accountID, studentID int64) ([]parentService.ChildConsent, error)
 	WithdrawPhotoConsent(ctx context.Context, accountID, studentID int64) ([]parentService.ChildConsent, error)
 	GrantPhotoConsent(ctx context.Context, accountID, studentID int64) ([]parentService.ChildConsent, error)
-	// StopChildRoomHistory and ResumeChildRoomHistory set and lift the stop of
-	// the child's room history and mood (#3844) when the Träger allows it.
-	StopChildRoomHistory(ctx context.Context, accountID, studentID int64) ([]parentService.ChildConsent, error)
-	ResumeChildRoomHistory(ctx context.Context, accountID, studentID int64) ([]parentService.ChildConsent, error)
+	// The stop of the child's room history and mood (#3844): read with portal
+	// access, set and lifted with the consent permission when the Träger
+	// allows it.
+	GetChildRoomHistoryStop(ctx context.Context, accountID, studentID int64) (parentService.ChildRoomHistoryStop, error)
+	StopChildRoomHistory(ctx context.Context, accountID, studentID int64) (parentService.ChildRoomHistoryStop, error)
+	ResumeChildRoomHistory(ctx context.Context, accountID, studentID int64) (parentService.ChildRoomHistoryStop, error)
 
 	GetProfile(ctx context.Context, accountID int64) (*parentService.Profile, error)
 

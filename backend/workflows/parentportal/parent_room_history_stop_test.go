@@ -30,15 +30,6 @@ func (*roomHistoryStopSwitch) LockParentPickupChangePolicySharedForTenant(contex
 	return nil
 }
 
-func roomHistoryRow(consents []parentService.ChildConsent) (parentService.ChildConsent, bool) {
-	for _, consent := range consents {
-		if consent.Key == "room_history" {
-			return consent, true
-		}
-	}
-	return parentService.ChildConsent{}, false
-}
-
 // TestParentRoomHistoryStopFollowsTheSwitchAndTheRelationship pins the
 // parents' stop of #3844: without the Träger's switch the row is absent and
 // the commands are refused; with it a guardian holding the consent right
@@ -65,21 +56,19 @@ func TestParentRoomHistoryStopFollowsTheSwitchAndTheRelationship(t *testing.T) {
 		return count
 	}
 
-	consents, err := svc.GetChildConsents(ctx, chain.AccountID, chain.StudentID)
+	view, err := svc.GetChildRoomHistoryStop(ctx, chain.AccountID, chain.StudentID)
 	require.NoError(t, err)
-	_, shown := roomHistoryRow(consents)
-	assert.False(t, shown, "without the Träger's switch parents see no stop")
+	assert.False(t, view.Offered, "without the Träger's switch parents see no stop")
 	_, err = svc.StopChildRoomHistory(ctx, chain.AccountID, chain.StudentID)
 	require.ErrorIs(t, err, parentService.ErrRoomHistoryStopDisabled)
 	assert.Equal(t, 1, visits(true), "a refused stop deletes nothing")
 
 	toggle.on.Store(true)
-	consents, err = svc.GetChildConsents(ctx, chain.AccountID, chain.StudentID)
+	view, err = svc.GetChildRoomHistoryStop(ctx, chain.AccountID, chain.StudentID)
 	require.NoError(t, err)
-	row, shown := roomHistoryRow(consents)
-	require.True(t, shown)
-	assert.Equal(t, "recording", row.State)
-	assert.True(t, row.CanWithdraw)
+	assert.True(t, view.Offered)
+	assert.False(t, view.Stopped)
+	assert.True(t, view.CanChange)
 
 	t.Run("ohne Einwilligungsrecht", func(t *testing.T) {
 		limited := testpkg.CreateTestCoGuardianForStudent(t, db, chain.StudentID, "Jonas", "Schneider")
@@ -91,17 +80,18 @@ func TestParentRoomHistoryStopFollowsTheSwitchAndTheRelationship(t *testing.T) {
 			  AND r.tenant_id = ? AND r.student_id = ? AND r.guardian_profile_id = ?
 		`, limited.TenantID, chain.StudentID, limited.GuardianProfileID)
 		require.NoError(t, err)
-		consents, err := svc.GetChildConsents(ctx, limited.AccountID, chain.StudentID)
+		view, err := svc.GetChildRoomHistoryStop(ctx, limited.AccountID, chain.StudentID)
 		require.NoError(t, err)
-		row, shown := roomHistoryRow(consents)
-		require.True(t, shown, "a guardian without the right still sees the state")
-		assert.False(t, row.CanWithdraw)
+		assert.True(t, view.Offered, "a guardian without the right still sees the state")
+		assert.False(t, view.CanChange)
 		_, err = svc.StopChildRoomHistory(ctx, limited.AccountID, chain.StudentID)
 		require.ErrorIs(t, err, parentService.ErrGuardianPermissionDenied)
 	})
 	t.Run("fremde Familie", func(t *testing.T) {
 		stranger := testpkg.CreateTestParentGuardianChain(t, db)
-		_, err := svc.StopChildRoomHistory(ctx, stranger.AccountID, chain.StudentID)
+		_, err := svc.GetChildRoomHistoryStop(ctx, stranger.AccountID, chain.StudentID)
+		require.ErrorIs(t, err, parentService.ErrChildNotLinked, "another family cannot read the stop")
+		_, err = svc.StopChildRoomHistory(ctx, stranger.AccountID, chain.StudentID)
 		require.ErrorIs(t, err, parentService.ErrChildNotLinked)
 	})
 	t.Run("fremde Schule", func(t *testing.T) {
@@ -112,12 +102,10 @@ func TestParentRoomHistoryStopFollowsTheSwitchAndTheRelationship(t *testing.T) {
 	})
 	assert.Equal(t, 1, visits(true), "refused guardians deleted nothing")
 
-	consents, err = svc.StopChildRoomHistory(ctx, chain.AccountID, chain.StudentID)
+	view, err = svc.StopChildRoomHistory(ctx, chain.AccountID, chain.StudentID)
 	require.NoError(t, err)
-	row, _ = roomHistoryRow(consents)
-	assert.Equal(t, "stopped", row.State)
-	assert.True(t, row.CanGrant)
-	assert.NotNil(t, row.ChangedAt)
+	assert.True(t, view.Stopped)
+	assert.NotNil(t, view.StoppedAt)
 	assert.Zero(t, visits(true), "the room history is deleted")
 	assert.Equal(t, 1, visits(false), "the current room stays")
 	var source string
@@ -125,10 +113,9 @@ func TestParentRoomHistoryStopFollowsTheSwitchAndTheRelationship(t *testing.T) {
 		chain.TenantID, chain.StudentID).Scan(testpkg.Ctx(t), &source))
 	assert.Equal(t, "parent_portal", source)
 
-	consents, err = svc.ResumeChildRoomHistory(ctx, chain.AccountID, chain.StudentID)
+	view, err = svc.ResumeChildRoomHistory(ctx, chain.AccountID, chain.StudentID)
 	require.NoError(t, err)
-	row, _ = roomHistoryRow(consents)
-	assert.Equal(t, "recording", row.State)
+	assert.False(t, view.Stopped)
 	var changes int
 	require.NoError(t, db.NewRaw(`SELECT count(*) FROM audit.student_field_edits WHERE tenant_id = ? AND student_id = ? AND field_name = 'room_history_stop' AND edited_by = ?`,
 		chain.TenantID, chain.StudentID, chain.AccountID).Scan(testpkg.Ctx(t), &changes))

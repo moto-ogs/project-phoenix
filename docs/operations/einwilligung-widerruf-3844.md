@@ -205,7 +205,7 @@ lesen darf jede Person mit vollem Zugriff auf das Kind. Wirkung im Code:
   ein, sehen Eltern im Elternportal unter **Einwilligungen und
   Bestätigungen** die Zeile „Raumverlauf und Stimmung“. Setzen und Aufheben
   verlangen das Beziehungsrecht `parent_portal.consent.manage` für genau
-  dieses Kind (`PUT`/`DELETE /parent/me/children/{studentId}/room-history-stop`);
+  dieses Kind (`GET`/`PUT`/`DELETE /parent/me/children/{studentId}/room-history-stop`);
   ohne Schalter antwortet moto mit `care.room_history_stop_disabled`. Der
   Änderungsverlauf nennt den Elternteil, die Löschung trägt die Quelle
   `parent_portal`.

@@ -28,6 +28,10 @@ import (
 type fakeParentService struct {
 	claimedEmails []string
 
+	// The room history stop (#3844).
+	roomHistoryStop    parentService.ChildRoomHistoryStop
+	roomHistoryStopErr error
+
 	sepaView     parentService.SEPAMandateView
 	sepaText     parentService.SEPAMandateText
 	sepaErr      error
@@ -218,6 +222,18 @@ func (f *fakeParentService) GetChildConsents(_ context.Context, accountID, stude
 	f.gotConsentAccount = accountID
 	f.gotConsentStudent = studentID
 	return f.consents, f.consentsErr
+}
+func (f *fakeParentService) GetChildRoomHistoryStop(_ context.Context, accountID, studentID int64) (parentService.ChildRoomHistoryStop, error) {
+	f.gotConsentAccount, f.gotConsentStudent = accountID, studentID
+	return f.roomHistoryStop, f.roomHistoryStopErr
+}
+func (f *fakeParentService) StopChildRoomHistory(_ context.Context, accountID, studentID int64) (parentService.ChildRoomHistoryStop, error) {
+	f.gotConsentAccount, f.gotConsentStudent = accountID, studentID
+	return f.roomHistoryStop, f.roomHistoryStopErr
+}
+func (f *fakeParentService) ResumeChildRoomHistory(_ context.Context, accountID, studentID int64) (parentService.ChildRoomHistoryStop, error) {
+	f.gotConsentAccount, f.gotConsentStudent = accountID, studentID
+	return f.roomHistoryStop, f.roomHistoryStopErr
 }
 func (f *fakeParentService) WithdrawPhotoConsent(_ context.Context, accountID, studentID int64) ([]parentService.ChildConsent, error) {
 	f.gotConsentAccount = accountID

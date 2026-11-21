@@ -689,25 +689,42 @@ export async function grantChildPhotoConsent(
 }
 
 /**
- * Stops the room history and mood of the child (#3844); moto deletes the
- * child's room history. Returns all updated states.
+ * Whether the room history and mood of the child are stopped (#3844).
+ * `offered` is false while the Träger has not let parents stop it;
+ * `can_change` needs the guardian's consent permission.
+ */
+export interface ChildRoomHistoryStop {
+  readonly offered: boolean;
+  readonly stopped: boolean;
+  readonly stopped_at?: string;
+  readonly can_change: boolean;
+}
+
+const roomHistoryStopUrl = (studentId: string) =>
+  `/api/parent/me/children/${encodeURIComponent(studentId)}/room-history-stop`;
+
+/** Reads the stop of the child's room history and mood. */
+export async function getChildRoomHistoryStop(
+  studentId: string,
+): Promise<ChildRoomHistoryStop> {
+  return getJson<ChildRoomHistoryStop>(roomHistoryStopUrl(studentId));
+}
+
+/**
+ * Stops the room history and mood of the child; moto deletes the child's
+ * room history.
  */
 export async function stopChildRoomHistory(
   studentId: string,
-): Promise<ChildConsent[]> {
-  return putJson<ChildConsent[]>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/room-history-stop`,
-    {},
-  );
+): Promise<ChildRoomHistoryStop> {
+  return putJson<ChildRoomHistoryStop>(roomHistoryStopUrl(studentId), {});
 }
 
 /** Lifts the stop; moto records again from now on. */
 export async function resumeChildRoomHistory(
   studentId: string,
-): Promise<ChildConsent[]> {
-  return deleteJson<ChildConsent[]>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/room-history-stop`,
-  );
+): Promise<ChildRoomHistoryStop> {
+  return deleteJson<ChildRoomHistoryStop>(roomHistoryStopUrl(studentId));
 }
 
 const parentConferencesUrl = (studentId: string) =>

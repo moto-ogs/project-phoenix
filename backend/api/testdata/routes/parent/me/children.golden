@@ -27,6 +27,7 @@ GET /parent/me/children/{studentId}/related-accounts
 GET /parent/me/children/{studentId}/request-sharing-options
 GET /parent/me/children/{studentId}/request-sharing/{requestType}/{requestId}
 GET /parent/me/children/{studentId}/requests/{requestType}/{requestId}/events
+GET /parent/me/children/{studentId}/room-history-stop
 GET /parent/me/children/{studentId}/sick-note
 GET /parent/me/children/{studentId}/today
 PATCH /parent/me/children/{studentId}/master-data/{target}/{field}

@@ -139,3 +139,33 @@ func TestGrantPhotoConsentDistinguishesBusyDisabledAndLookupFailure(t *testing.T
 		})
 	}
 }
+
+// TestRoomHistoryStopRoutesAnswerTheStateAndTheirRefusals pins the parents'
+// stop routes of #3844: the state on success, the own code while the Träger
+// has not allowed it, and the relationship refusal.
+func TestRoomHistoryStopRoutesAnswerTheStateAndTheirRefusals(t *testing.T) {
+	t.Parallel()
+	since := time.Date(2026, time.November, 21, 9, 0, 0, 0, time.UTC)
+	fake := &fakeParentService{roomHistoryStop: parentService.ChildRoomHistoryStop{Offered: true, Stopped: true, StoppedAt: &since, CanChange: true}}
+	rs := &Resource{ParentService: fake}
+	w := httptest.NewRecorder()
+	rs.stopRoomHistory(w, parentRequestWithStudentID(http.MethodPut, "/children/42/room-history-stop", "", "42"))
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, int64(42), fake.gotConsentStudent)
+	assert.Contains(t, w.Body.String(), `"stopped":true`)
+	assert.Contains(t, w.Body.String(), `"can_change":true`)
+
+	for _, tc := range []struct {
+		err  error
+		code string
+	}{
+		{parentService.ErrRoomHistoryStopDisabled, "care.room_history_stop_disabled"},
+		{parentService.ErrGuardianPermissionDenied, "care.guardian_permission_denied"},
+	} {
+		refused := &Resource{ParentService: &fakeParentService{roomHistoryStopErr: tc.err}}
+		w := httptest.NewRecorder()
+		refused.resumeRoomHistory(w, parentRequestWithStudentID(http.MethodDelete, "/children/42/room-history-stop", "", "42"))
+		assert.Equal(t, http.StatusForbidden, w.Code, tc.code)
+		assert.Contains(t, w.Body.String(), `"code":"`+tc.code+`"`)
+	}
+}

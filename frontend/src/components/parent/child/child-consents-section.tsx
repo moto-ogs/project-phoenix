@@ -23,12 +23,14 @@ import { parentKeys } from "~/lib/swr/parent-keys";
 import { formatBerlinDate } from "~/lib/date-helpers";
 import {
   getChildConsents,
+  getChildRoomHistoryStop,
   grantChildPhotoConsent,
   resumeChildRoomHistory,
   stopChildRoomHistory,
   withdrawChildPhotoConsent,
   type ChildConsent,
   type ChildConsentState,
+  type ChildRoomHistoryStop,
 } from "~/lib/parent-api";
 import { confirmationsConcept } from "~/lib/concepts/confirmations";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
@@ -37,15 +39,29 @@ import { useCareTermTranslations } from "~/lib/care-facility-term";
 // stoppen/wieder speichern (#3844).
 type ConsentAction = "withdraw" | "grant" | "stop" | "resume";
 
-const consentActionCalls: Record<
-  ConsentAction,
-  (studentId: string) => Promise<ChildConsent[]>
-> = {
+const photoConsentCalls = {
   withdraw: withdrawChildPhotoConsent,
   grant: grantChildPhotoConsent,
+};
+const roomHistoryStopCalls = {
   stop: stopChildRoomHistory,
   resume: resumeChildRoomHistory,
 };
+
+// Die Zeile „Raumverlauf und Stimmung“ (#3844) kommt aus einer eigenen
+// Leseroute, nur wenn der Träger den Stopp für Eltern freigegeben hat.
+function roomHistoryRow(
+  stop: ChildRoomHistoryStop | undefined,
+): ChildConsent | null {
+  if (!stop?.offered) return null;
+  return {
+    key: "room_history",
+    state: stop.stopped ? "stopped" : "recording",
+    changed_at: stop.stopped_at,
+    can_withdraw: stop.can_change && !stop.stopped,
+    can_grant: stop.can_change && stop.stopped,
+  };
+}
 
 // Texte je Aktion: Dialog, Erfolg und Fehlerobjekt.
 const consentActionTexts: Record<
@@ -103,6 +119,11 @@ export function ChildConsentsSection({
     () => getChildConsents(studentId),
     PARENT_RESOURCE_OPTIONS,
   );
+  const stopResource = useSWRAuth(
+    parentKeys.roomHistoryStop(studentId),
+    () => getChildRoomHistoryStop(studentId),
+    PARENT_RESOURCE_OPTIONS,
+  );
   const consents = resource.data ?? null;
   const [pendingAction, setPendingAction] = useState<ConsentAction | null>(
     null,
@@ -116,9 +137,12 @@ export function ChildConsentsSection({
   const latestConfirmRef = useRef<() => void>(() => undefined);
 
   const { error: loadError, failure: loadFailed } = useSwrResourceLoadError(
-    [resource],
+    [resource, stopResource],
     t("errorObjectList"),
-    () => resource.mutate(),
+    () => {
+      void resource.mutate();
+      void stopResource.mutate();
+    },
   );
 
   async function confirmAction() {
@@ -128,8 +152,13 @@ export function ChildConsentsSection({
     setSubmittingAction(true);
     actionErrors.clear();
     try {
-      const updatedConsents = await consentActionCalls[action](studentId);
-      await resource.mutate(updatedConsents, { revalidate: false });
+      if (action === "stop" || action === "resume") {
+        const updatedStop = await roomHistoryStopCalls[action](studentId);
+        await stopResource.mutate(updatedStop, { revalidate: false });
+      } else {
+        const updatedConsents = await photoConsentCalls[action](studentId);
+        await resource.mutate(updatedConsents, { revalidate: false });
+      }
       setPendingAction(null);
       setSuccessfulAction(action);
     } catch (err) {
@@ -151,8 +180,11 @@ export function ChildConsentsSection({
   }
   if (loadFailed) return <LoadErrorAlert error={loadError} />;
 
-  const visibleConsents =
-    consents?.filter((consent) => consent.state !== "not_recorded") ?? [];
+  const roomHistory = roomHistoryRow(stopResource.data);
+  const visibleConsents = [
+    ...(consents?.filter((consent) => consent.state !== "not_recorded") ?? []),
+    ...(roomHistory ? [roomHistory] : []),
+  ];
   if (visibleConsents.length === 0) return null;
 
   const canChangePhotoConsent = visibleConsents.some(

@@ -27,6 +27,7 @@ GET /parent/me/children/{studentId}/related-accounts -> eltern_app  (#4895 Elter
 GET /parent/me/children/{studentId}/request-sharing-options -> eltern_app  (#4895 Elternportal: Eltern-Sitzung und ParentScopeMiddleware)
 GET /parent/me/children/{studentId}/request-sharing/{requestType}/{requestId} -> eltern_app  (#4895 Elternportal: Eltern-Sitzung und ParentScopeMiddleware)
 GET /parent/me/children/{studentId}/requests/{requestType}/{requestId}/events -> eltern_app  (#4895 Elternportal: Eltern-Sitzung und ParentScopeMiddleware)
+GET /parent/me/children/{studentId}/room-history-stop -> eltern_app  (#4895 Elternportal: Eltern-Sitzung und ParentScopeMiddleware)
 GET /parent/me/children/{studentId}/sick-note -> eltern_app  (#4895 Elternportal: Eltern-Sitzung und ParentScopeMiddleware)
 GET /parent/me/children/{studentId}/today -> eltern_app  (#4895 Elternportal: Eltern-Sitzung und ParentScopeMiddleware)
 PATCH /parent/me/children/{studentId}/master-data/{target}/{field} -> eltern_app  (#4895 Elternportal: Eltern-Sitzung und ParentScopeMiddleware)
