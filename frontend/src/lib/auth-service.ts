@@ -6,8 +6,8 @@ import {
   mapPermissionResponse,
   type Role,
   type Permission,
-  type BackendRole,
-  type BackendPermission,
+  type RoleWire,
+  type PermissionWire,
 } from "./auth-helpers";
 import { apiErrorFromText } from "./api-error";
 import type { ApiResponse } from "./api-envelope";
@@ -151,9 +151,9 @@ async function authFetchVoid(
  * Extract permissions from nested response structures.
  * Handles: { data: [] }, { data: { data: [] } }
  */
-function extractNestedPermissions(response: unknown): BackendPermission[] {
+function extractNestedPermissions(response: unknown): PermissionWire[] {
   const data = response as {
-    data?: { data?: BackendPermission[] } | BackendPermission[];
+    data?: { data?: PermissionWire[] } | PermissionWire[];
   };
 
   if (
@@ -177,13 +177,13 @@ function extractNestedPermissions(response: unknown): BackendPermission[] {
  * Extract roles from nested response structures.
  * Handles: [], { data: [] }, { data: { data: [] } }
  */
-function extractNestedRoles(response: unknown): BackendRole[] {
+function extractNestedRoles(response: unknown): RoleWire[] {
   if (Array.isArray(response)) {
-    return response as BackendRole[];
+    return response as RoleWire[];
   }
 
   const data = response as {
-    data?: { data?: BackendRole[] } | BackendRole[];
+    data?: { data?: RoleWire[] } | RoleWire[];
   };
 
   if (
@@ -209,13 +209,13 @@ export const authService = {
     if (filters?.name) params.append("name", filters.name);
     const queryString = params.toString();
     const endpoint = queryString ? `/auth/roles?${queryString}` : "/auth/roles";
-    return authFetchList<BackendRole, Role>(endpoint, mapRoleResponse, {
+    return authFetchList<RoleWire, Role>(endpoint, mapRoleResponse, {
       errorPrefix: "Get roles",
     });
   },
 
   getRolePermissions: async (roleId: string): Promise<Permission[]> =>
-    authFetchList<BackendPermission, Permission>(
+    authFetchList<PermissionWire, Permission>(
       `/auth/roles/${roleId}/permissions`,
       mapPermissionResponse,
       {
@@ -245,7 +245,7 @@ export const authService = {
     const endpoint = queryString
       ? `/auth/permissions?${queryString}`
       : "/auth/permissions";
-    return authFetchList<BackendPermission, Permission>(
+    return authFetchList<PermissionWire, Permission>(
       endpoint,
       mapPermissionResponse,
       { errorPrefix: "Get permissions" },
@@ -267,7 +267,7 @@ export const authService = {
     }),
 
   getAccountRoles: async (accountId: string): Promise<Role[]> =>
-    authFetchList<BackendRole, Role>(
+    authFetchList<RoleWire, Role>(
       `/auth/accounts/${accountId}/roles`,
       mapRoleResponse,
       {
