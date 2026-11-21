@@ -526,6 +526,11 @@
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
+      "decision": "0299",
+      "id": "api/dayChangesMealPlan.MealPlanChanges",
+      "reason": "Owner-edge translation (ADR 0075): turns Meal Plan's change mark of the day into the Essen entry of „Heute anders“ (#7666); no forward."
+    },
+    {
       "decision": "0090",
       "id": "api/emergencySnapshotPersonNames.ByIDs",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."

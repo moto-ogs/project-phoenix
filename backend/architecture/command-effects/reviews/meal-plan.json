@@ -6,7 +6,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
-      "reason": "Platform scope protocol through the shared Meal Plan transaction adapter: joins the ambient school unit or starts one for the validated school. ADR 0190 extracts the existing constructor binding without adding a transaction boundary; ADR 0098 classifies this platform participation. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Platform scope protocol through the shared Meal Plan transaction adapter: joins the ambient school unit or starts one for the validated school. ADR 0190 extracts the existing constructor binding without adding a transaction boundary; ADR 0098 classifies this platform participation. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
@@ -16,7 +16,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.Capability.ListStudentNamesByID (people-directory) through *modules/mealplan/internal/application.BillingMonths.BillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.Capability.ListStudentNamesByID (people-directory) through *modules/mealplan/internal/application.BillingMonths.BillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentNamesByID",
       "target_owner": "people-directory"
@@ -26,7 +26,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.Owner.ListStudentNamesByID (people-directory) through *modules/mealplan/internal/application.BillingMonths.BillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.Owner.ListStudentNamesByID (people-directory) through *modules/mealplan/internal/application.BillingMonths.BillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentNamesByID",
       "target_owner": "people-directory"
@@ -36,7 +36,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through *modules/mealplan/internal/application.BillingMonths.BillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through *modules/mealplan/internal/application.BillingMonths.BillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRostersOnDates",
       "target_owner": "people-directory"
@@ -46,7 +46,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.BillingMonths.BillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.BillingMonths.BillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
       "target_owner": "people-directory"
@@ -56,7 +56,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
-      "reason": "Read-only: the school holiday periods of the month the Mensa-Monatsfreigabe (#4686) leaves out, read in the caller's school transaction; no persistent, lock or scope effect. Re-reviewed #6125 (ADR 0176): the binding evidence now includes the owner composition adapter or owner-internal unit of work this binding enters. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only: the school holiday periods of the month the Mensa-Monatsfreigabe (#4686) leaves out, read in the caller's school transaction; no persistent, lock or scope effect. Re-reviewed #6125 (ADR 0176): the binding evidence now includes the owner composition adapter or owner-internal unit of work this binding enters. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
       "target_owner": "school-calendar"
@@ -66,7 +66,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
-      "reason": "Read-only: the closing days and public holidays of the month the Mensa-Monatsfreigabe (#4686) leaves out, read in the caller's school transaction; no persistent, lock or scope effect. Re-reviewed #6125 (ADR 0176): the binding evidence now includes the owner composition adapter or owner-internal unit of work this binding enters. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only: the closing days and public holidays of the month the Mensa-Monatsfreigabe (#4686) leaves out, read in the caller's school transaction; no persistent, lock or scope effect. Re-reviewed #6125 (ADR 0176): the binding evidence now includes the owner composition adapter or owner-internal unit of work this binding enters. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
       "target_owner": "school-calendar"
@@ -76,7 +76,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
-      "reason": "Value construction: the holiday filter of the school calendar for the month of the Mensa-Monatsfreigabe (#4686); no persistent, lock or scope effect. Re-reviewed #6125 (ADR 0176): the binding evidence now includes the owner composition adapter or owner-internal unit of work this binding enters. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Value construction: the holiday filter of the school calendar for the month of the Mensa-Monatsfreigabe (#4686); no persistent, lock or scope effect. Re-reviewed #6125 (ADR 0176): the binding evidence now includes the owner composition adapter or owner-internal unit of work this binding enters. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
       "target_owner": "school-calendar"
@@ -117,7 +117,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches tenant.TenantFromContext (tenant-runtime) through *modules/mealplan/internal/application.BillingMonths.BillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches tenant.TenantFromContext (tenant-runtime) through *modules/mealplan/internal/application.BillingMonths.BillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -158,7 +158,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
-      "reason": "Platform scope protocol through the shared Meal Plan transaction adapter: joins the ambient school unit or starts one for the validated school. ADR 0190 extracts the existing constructor binding without adding a transaction boundary; ADR 0098 classifies this platform participation. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Platform scope protocol through the shared Meal Plan transaction adapter: joins the ambient school unit or starts one for the validated school. ADR 0190 extracts the existing constructor binding without adding a transaction boundary; ADR 0098 classifies this platform participation. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
@@ -168,7 +168,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.Capability.ListStudentNamesByID (people-directory) through *modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.Capability.ListStudentNamesByID (people-directory) through *modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentNamesByID",
       "target_owner": "people-directory"
@@ -178,7 +178,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.Owner.ListStudentNamesByID (people-directory) through *modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.Owner.ListStudentNamesByID (people-directory) through *modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentNamesByID",
       "target_owner": "people-directory"
@@ -188,7 +188,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through *modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through *modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRostersOnDates",
       "target_owner": "people-directory"
@@ -198,7 +198,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
       "target_owner": "people-directory"
@@ -208,7 +208,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
-      "reason": "Read-only: the school holiday periods of the month the Mensa-Monatsfreigabe (#4686) leaves out, read in the caller's school transaction; no persistent, lock or scope effect. Re-reviewed #6125 (ADR 0176): the binding evidence now includes the owner composition adapter or owner-internal unit of work this binding enters. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only: the school holiday periods of the month the Mensa-Monatsfreigabe (#4686) leaves out, read in the caller's school transaction; no persistent, lock or scope effect. Re-reviewed #6125 (ADR 0176): the binding evidence now includes the owner composition adapter or owner-internal unit of work this binding enters. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
       "target_owner": "school-calendar"
@@ -218,7 +218,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
-      "reason": "Read-only: the closing days and public holidays of the month the Mensa-Monatsfreigabe (#4686) leaves out, read in the caller's school transaction; no persistent, lock or scope effect. Re-reviewed #6125 (ADR 0176): the binding evidence now includes the owner composition adapter or owner-internal unit of work this binding enters. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only: the closing days and public holidays of the month the Mensa-Monatsfreigabe (#4686) leaves out, read in the caller's school transaction; no persistent, lock or scope effect. Re-reviewed #6125 (ADR 0176): the binding evidence now includes the owner composition adapter or owner-internal unit of work this binding enters. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
       "target_owner": "school-calendar"
@@ -228,7 +228,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
-      "reason": "Value construction: the holiday filter of the school calendar for the month of the Mensa-Monatsfreigabe (#4686); no persistent, lock or scope effect. Re-reviewed #6125 (ADR 0176): the binding evidence now includes the owner composition adapter or owner-internal unit of work this binding enters. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Value construction: the holiday filter of the school calendar for the month of the Mensa-Monatsfreigabe (#4686); no persistent, lock or scope effect. Re-reviewed #6125 (ADR 0176): the binding evidence now includes the owner composition adapter or owner-internal unit of work this binding enters. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
       "target_owner": "school-calendar"
@@ -269,7 +269,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches tenant.TenantFromContext (tenant-runtime) through *modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches tenant.TenantFromContext (tenant-runtime) through *modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -321,7 +321,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.CatererOrders",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through *modules/mealplan/internal/application.Service.CatererOrders. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through *modules/mealplan/internal/application.Service.CatererOrders. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRostersOnDates",
       "target_owner": "people-directory"
@@ -331,7 +331,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.CatererOrders",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.Service.CatererOrders. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.Service.CatererOrders. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
       "target_owner": "people-directory"
@@ -392,7 +392,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearDay",
-      "reason": "Read-only: ClearDay reads who has a meal booked on a changed day through modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) to tell the families (#7145), in the caller's school transaction; no persistent, lock or scope effect.",
+      "reason": "Read-only: ClearDay reads who has a meal booked on a changed day through modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) to tell the families (#7145), in the caller's school transaction; no persistent, lock or scope effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
       "target_owner": "people-directory"
@@ -473,7 +473,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationBySchool",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through *modules/mealplan/internal/application.Service.ClearParticipationBySchool. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through *modules/mealplan/internal/application.Service.ClearParticipationBySchool. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRostersOnDates",
       "target_owner": "people-directory"
@@ -483,7 +483,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationBySchool",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.Service.ClearParticipationBySchool. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.Service.ClearParticipationBySchool. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
       "target_owner": "people-directory"
@@ -564,7 +564,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationForDay",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through *modules/mealplan/internal/application.Service.ClearParticipationForDay. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through *modules/mealplan/internal/application.Service.ClearParticipationForDay. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRostersOnDates",
       "target_owner": "people-directory"
@@ -574,7 +574,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationForDay",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.Service.ClearParticipationForDay. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.Service.ClearParticipationForDay. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
       "target_owner": "people-directory"
@@ -656,7 +656,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.DailyList",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.Service.DailyList. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.Service.DailyList. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
       "target_owner": "people-directory"
@@ -737,7 +737,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.Orders",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through *modules/mealplan/internal/application.Service.Orders. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through *modules/mealplan/internal/application.Service.Orders. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRostersOnDates",
       "target_owner": "people-directory"
@@ -747,7 +747,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.Orders",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.Service.Orders. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.Service.Orders. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
       "target_owner": "people-directory"
@@ -921,7 +921,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceDay",
-      "reason": "Read-only: ReplaceDay reads who has a meal booked on a changed day through modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) to tell the families (#7145), in the caller's school transaction; no persistent, lock or scope effect.",
+      "reason": "Read-only: ReplaceDay reads who has a meal booked on a changed day through modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) to tell the families (#7145), in the caller's school transaction; no persistent, lock or scope effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
       "target_owner": "people-directory"
@@ -1002,7 +1002,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceParticipationSchedule",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through *modules/mealplan/internal/application.Service.ReplaceParticipationSchedule. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through *modules/mealplan/internal/application.Service.ReplaceParticipationSchedule. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRostersOnDates",
       "target_owner": "people-directory"
@@ -1012,7 +1012,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceParticipationSchedule",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.Service.ReplaceParticipationSchedule. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.Service.ReplaceParticipationSchedule. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
       "target_owner": "people-directory"
@@ -1093,7 +1093,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceScheduleBySchool",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through *modules/mealplan/internal/application.Service.ReplaceScheduleBySchool. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through *modules/mealplan/internal/application.Service.ReplaceScheduleBySchool. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRostersOnDates",
       "target_owner": "people-directory"
@@ -1103,7 +1103,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceScheduleBySchool",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.Service.ReplaceScheduleBySchool. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.Service.ReplaceScheduleBySchool. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
       "target_owner": "people-directory"
@@ -1184,7 +1184,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationBySchool",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through *modules/mealplan/internal/application.Service.SetParticipationBySchool. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through *modules/mealplan/internal/application.Service.SetParticipationBySchool. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRostersOnDates",
       "target_owner": "people-directory"
@@ -1194,7 +1194,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationBySchool",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.Service.SetParticipationBySchool. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.Service.SetParticipationBySchool. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
       "target_owner": "people-directory"
@@ -1275,7 +1275,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForDay",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through *modules/mealplan/internal/application.Service.SetParticipationForDay. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through *modules/mealplan/internal/application.Service.SetParticipationForDay. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRostersOnDates",
       "target_owner": "people-directory"
@@ -1285,7 +1285,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForDay",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.Service.SetParticipationForDay. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.Service.SetParticipationForDay. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
       "target_owner": "people-directory"
@@ -1346,7 +1346,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForWeek",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through *modules/mealplan/internal/application.Service.SetParticipationForWeek. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through *modules/mealplan/internal/application.Service.SetParticipationForWeek. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRostersOnDates",
       "target_owner": "people-directory"
@@ -1356,7 +1356,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForWeek",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.Service.SetParticipationForWeek. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.Service.SetParticipationForWeek. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
       "target_owner": "people-directory"
@@ -1417,7 +1417,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SettleOrders",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through *modules/mealplan/internal/application.Service.SettleOrders. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through *modules/mealplan/internal/application.Service.SettleOrders. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRostersOnDates",
       "target_owner": "people-directory"
@@ -1427,7 +1427,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SettleOrders",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.Service.SettleOrders. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.Service.SettleOrders. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
       "target_owner": "people-directory"
@@ -1509,7 +1509,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.WeeklyList",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.Service.WeeklyList. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.Service.WeeklyList. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
       "target_owner": "people-directory"
@@ -1647,6 +1647,16 @@
       "target_owner": "people-directory"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/adapters/postgres.MenuChanges.MenuChangedOn",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.MenuChanges.MenuChangedOn",
+      "reason": "Read-only change mark: Meal Plan reads whether today's menu changed for „Heute anders“ (#7666) through tenant.TenantFromContext in the request's tenant transaction. No persistent, lock or scope effect.",
+      "source_owner": "meal-plan",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.ParticipationHistory.RecordParticipationHistory",
       "classification": "query",
       "effect": "query",
@@ -1692,7 +1702,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ClearParticipationBySchool",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through modules/mealplan.Capability.ClearParticipationBySchool. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through modules/mealplan.Capability.ClearParticipationBySchool. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRostersOnDates",
       "target_owner": "people-directory"
@@ -1702,7 +1712,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ClearParticipationBySchool",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through modules/mealplan.Capability.ClearParticipationBySchool. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through modules/mealplan.Capability.ClearParticipationBySchool. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
       "target_owner": "people-directory"
@@ -1783,7 +1793,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ClearParticipationForDay",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through modules/mealplan.Capability.ClearParticipationForDay. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through modules/mealplan.Capability.ClearParticipationForDay. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRostersOnDates",
       "target_owner": "people-directory"
@@ -1793,7 +1803,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ClearParticipationForDay",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through modules/mealplan.Capability.ClearParticipationForDay. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through modules/mealplan.Capability.ClearParticipationForDay. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
       "target_owner": "people-directory"
@@ -1854,7 +1864,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.DailyList",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through modules/mealplan.Capability.DailyList. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through modules/mealplan.Capability.DailyList. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
       "target_owner": "people-directory"
@@ -2048,7 +2058,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ReplaceParticipationSchedule",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through modules/mealplan.Capability.ReplaceParticipationSchedule. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through modules/mealplan.Capability.ReplaceParticipationSchedule. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRostersOnDates",
       "target_owner": "people-directory"
@@ -2058,7 +2068,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ReplaceParticipationSchedule",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through modules/mealplan.Capability.ReplaceParticipationSchedule. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through modules/mealplan.Capability.ReplaceParticipationSchedule. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
       "target_owner": "people-directory"
@@ -2139,7 +2149,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ReplaceScheduleBySchool",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through modules/mealplan.Capability.ReplaceScheduleBySchool. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through modules/mealplan.Capability.ReplaceScheduleBySchool. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRostersOnDates",
       "target_owner": "people-directory"
@@ -2149,7 +2159,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ReplaceScheduleBySchool",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through modules/mealplan.Capability.ReplaceScheduleBySchool. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through modules/mealplan.Capability.ReplaceScheduleBySchool. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
       "target_owner": "people-directory"
@@ -2230,7 +2240,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.SetParticipationBySchool",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through modules/mealplan.Capability.SetParticipationBySchool. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through modules/mealplan.Capability.SetParticipationBySchool. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRostersOnDates",
       "target_owner": "people-directory"
@@ -2240,7 +2250,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.SetParticipationBySchool",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through modules/mealplan.Capability.SetParticipationBySchool. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through modules/mealplan.Capability.SetParticipationBySchool. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
       "target_owner": "people-directory"
@@ -2321,7 +2331,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.SetParticipationForDay",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through modules/mealplan.Capability.SetParticipationForDay. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through modules/mealplan.Capability.SetParticipationForDay. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRostersOnDates",
       "target_owner": "people-directory"
@@ -2331,7 +2341,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.SetParticipationForDay",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through modules/mealplan.Capability.SetParticipationForDay. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through modules/mealplan.Capability.SetParticipationForDay. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
       "target_owner": "people-directory"
@@ -2392,7 +2402,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.SetParticipationForWeek",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through modules/mealplan.Capability.SetParticipationForWeek. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through modules/mealplan.Capability.SetParticipationForWeek. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRostersOnDates",
       "target_owner": "people-directory"
@@ -2402,7 +2412,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.SetParticipationForWeek",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through modules/mealplan.Capability.SetParticipationForWeek. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through modules/mealplan.Capability.SetParticipationForWeek. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
       "target_owner": "people-directory"
@@ -2463,7 +2473,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.WeeklyList",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through modules/mealplan.Capability.WeeklyList. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through modules/mealplan.Capability.WeeklyList. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
       "target_owner": "people-directory"
@@ -2593,7 +2603,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan/internal/ports.Directory.FindCandidatesOnDates",
-      "reason": "Read-only existing People Directory capability: the date-set helper calls the existing tenant-scoped roster range read and applies EnrolledOn without writes; name lookup reads existing student identities. No new transaction, lock, observer approval or mutation. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only existing People Directory capability: the date-set helper calls the existing tenant-scoped roster range read and applies EnrolledOn without writes; name lookup reads existing student identities. No new transaction, lock, observer approval or mutation. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRostersOnDates",
       "target_owner": "people-directory"
@@ -2603,7 +2613,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan/internal/ports.Directory.FindDailyCandidates",
-      "reason": "Read-only newly exposed target: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through modules/mealplan/internal/application.participantDirectory.FindDailyCandidates. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect.",
+      "reason": "Read-only newly exposed target: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through modules/mealplan/internal/application.participantDirectory.FindDailyCandidates. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
       "target_owner": "people-directory"

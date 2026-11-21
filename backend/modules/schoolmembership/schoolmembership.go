@@ -217,8 +217,11 @@ type StaffFilter struct {
 // case-insensitive substring matches; Specialization is a case-insensitive
 // exact match.
 type TeacherFilter struct {
-	IDs                    []int64
-	StaffIDs               []int64
+	IDs      []int64
+	StaffIDs []int64
+	// GroupIDs keeps the teachers assigned to one of the groups, in the same
+	// read (#7666: the team of a group without a second statement).
+	GroupIDs               []int64
 	Specialization         string
 	SpecializationContains string
 	RoleContains           string

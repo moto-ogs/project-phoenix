@@ -321,7 +321,9 @@ func TestModuleReportsPersistenceQueryAndRowCounts(t *testing.T) {
 		Date: mustDate(t, "2026-09-28"), Dishes: []mealplan.Dish{{Dish: "Eintopf"}},
 	}))
 	require.Len(t, observations, 1)
-	assert.EqualValues(t, 2, observations[0].Stats.Queries)
+	// The earlier menu of the day (it decides the change mark, #7666), the
+	// delete and the insert.
+	assert.EqualValues(t, 3, observations[0].Stats.Queries)
 	assert.EqualValues(t, 1, observations[0].Stats.Rows)
 	assert.Positive(t, observations[0].Stats.StatementDuration)
 }

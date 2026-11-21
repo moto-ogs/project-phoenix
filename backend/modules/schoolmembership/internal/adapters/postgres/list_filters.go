@@ -22,7 +22,7 @@ func teacherListQuery(query *bun.SelectQuery, filter schoolmembership.TeacherFil
 	if !filter.IncludeDeleted {
 		query = query.Where(`"teacher".deleted_at IS NULL`)
 	}
-	if matchesNothing(filter.IDs, filter.StaffIDs) {
+	if matchesNothing(filter.IDs, filter.StaffIDs, filter.GroupIDs) {
 		return query, false
 	}
 	if filter.IDs != nil {
@@ -30,6 +30,9 @@ func teacherListQuery(query *bun.SelectQuery, filter schoolmembership.TeacherFil
 	}
 	if filter.StaffIDs != nil {
 		query = query.Where(`"teacher".staff_id IN (?)`, bun.List(filter.StaffIDs))
+	}
+	if filter.GroupIDs != nil {
+		query = query.Where(`EXISTS (SELECT 1 FROM education.group_teacher AS "group_assignment" WHERE "group_assignment".tenant_id = "teacher".tenant_id AND "group_assignment".teacher_id = "teacher".id AND "group_assignment".group_id IN (?))`, bun.List(filter.GroupIDs))
 	}
 	if filter.Specialization != "" {
 		query = query.Where(`LOWER("teacher".specialization) = LOWER(?)`, filter.Specialization)

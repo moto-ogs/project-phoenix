@@ -54,3 +54,9 @@ type Settings = application.Settings
 func NewBoundSettings(mealPlanEnabled, mealRegistrationEnabled func(context.Context) (bool, error), orderingSettings func(context.Context) (OrderingSettings, error)) (*Settings, error) {
 	return application.NewBoundSettings(mealPlanEnabled, mealRegistrationEnabled, orderingSettings)
 }
+
+// NewMenuChanges reads the change mark of a day (#7666) in the caller's
+// tenant transaction; it needs no settings and no other dependency.
+func NewMenuChanges() mealplan.MenuChanges {
+	return postgres.NewMenuChanges(postgres.NewDatabase(tenant.TransactionFromContext, tenant.TenantFromContext))
+}

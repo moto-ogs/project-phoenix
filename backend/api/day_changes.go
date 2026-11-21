@@ -20,7 +20,9 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/daychangesview"
 	dayChangesHTTP "github.com/moto-ogs/project-phoenix/modules/daychangesview/http"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/modules/mealplan"
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
+	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	schoolstructureCompose "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
@@ -40,6 +42,13 @@ type dayChangesCaller interface {
 type dayChangesWorkforce interface {
 	ListStaffAbsences(context.Context, workforce.StaffAbsenceFilter) ([]workforce.StaffAbsence, error)
 	ListGroupSubstitutions(context.Context, workforce.GroupSubstitutionFilter) ([]workforce.GroupSubstitution, error)
+}
+
+// dayChangesTeam is the School Membership read of the teachers of groups:
+// one statement for the team of the caller's groups (#7666 kept the route's
+// query budget with it).
+type dayChangesTeam interface {
+	ListTeachers(context.Context, schoolmembership.TeacherFilter) ([]schoolmembership.Teacher, error)
 }
 
 // dayChangesStaffNames maps staff ids to display names in one read.
@@ -83,13 +92,15 @@ type dayChangesGroups interface {
 type DayChangesSources struct {
 	Caller    dayChangesCaller
 	Workforce dayChangesWorkforce
-	Teachers  owners.GroupTeacherStaff
+	Teachers  dayChangesTeam
 	Names     dayChangesStaffNames
 	Groups    dayChangesGroups
 	// Notices is Timetable's read of the Hinweise der Leitung (#7667).
 	Notices dayChangesNoticeReads
-	Today   func() calendar.Date
-	Logger  *slog.Logger
+	// MealPlan is Meal Plan's change mark of a day (#7666).
+	MealPlan mealplan.MenuChanges
+	Today    func() calendar.Date
+	Logger   *slog.Logger
 }
 
 // NewDayChanges binds the sources to the projection's ports.
@@ -100,11 +111,15 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 	if sources.Notices == nil {
 		return nil, fmt.Errorf("%w: notice source", daychangesview.ErrDependencies)
 	}
+	if sources.MealPlan == nil {
+		return nil, fmt.Errorf("%w: meal plan source", daychangesview.ErrDependencies)
+	}
 	return daychangesview.New(daychangesview.Dependencies{
 		Today:     sources.Today,
 		Isolation: dayChangesSavepoints{},
 		Staff:     dayChangesStaff{sources: sources},
 		Notices:   dayChangesNotices{reads: sources.Notices},
+		MealPlan:  dayChangesMealPlan{reads: sources.MealPlan},
 		Logger:    sources.Logger,
 	})
 }
@@ -253,14 +268,12 @@ func (s dayChangesStaff) addTeam(ctx context.Context, viewer *staffViewer, group
 	for _, id := range groupIDs {
 		viewer.groups[id] = true
 	}
-	teachers, err := s.sources.Teachers.GroupTeacherStaffIDs(ctx, groupIDs)
+	teachers, err := s.sources.Teachers.ListTeachers(ctx, schoolmembership.TeacherFilter{GroupIDs: groupIDs})
 	if err != nil {
 		return fmt.Errorf("resolve group teachers: %w", err)
 	}
-	for _, staffIDs := range teachers {
-		for _, id := range staffIDs {
-			viewer.team[id] = true
-		}
+	for _, teacher := range teachers {
+		viewer.team[teacher.StaffID] = true
 	}
 	return nil
 }

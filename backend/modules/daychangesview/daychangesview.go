@@ -30,6 +30,8 @@ const (
 	SourceStaff Source = "staff"
 	// SourceNotices is Hinweise der Leitung: the notices that apply today.
 	SourceNotices Source = "notices"
+	// SourceMealPlan is Essen: whether today's menu changed (#7666).
+	SourceMealPlan Source = "meal_plan"
 )
 
 // SourceState says whether a source answered. A source the caller lacks the
@@ -57,6 +59,9 @@ const (
 	KindGroupSubstitutionCount Kind = "group_substitution_count"
 	// KindStaffNotice: a Hinweis der Leitung applies today.
 	KindStaffNotice Kind = "staff_notice"
+	// KindMealPlanChanged: today's menu changed after it was published
+	// (#7666). Never the dishes; the meal plan page shows them.
+	KindMealPlanChanged Kind = "meal_plan_changed"
 )
 
 // PersonRole is what a person has to do with an entry.
@@ -84,6 +89,8 @@ const (
 	LinkGroupHandovers LinkTarget = "group_handovers"
 	// LinkStaffNotices is the page of the Hinweise der Leitung.
 	LinkStaffNotices LinkTarget = "staff_notices"
+	// LinkMealPlan is the meal plan page of the week.
+	LinkMealPlan LinkTarget = "meal_plan"
 )
 
 // Person is somebody an entry names. The ID is the staff record.
@@ -202,6 +209,12 @@ type StaffNotices interface {
 	StaffNotices(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
 }
 
+// MealPlanChanges is the Essen port: whether the menu of the day changed,
+// for every staff account of the school (#7666). It carries no dish.
+type MealPlanChanges interface {
+	MealPlanChanges(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
+}
+
 // Isolation runs source reads so that a failure leaves the request's
 // transaction usable (a savepoint). It returns the source's own error
 // unchanged and reports a failure of the isolation itself as fatal.
@@ -222,6 +235,7 @@ type Dependencies struct {
 	Isolation Isolation
 	Staff     StaffChanges
 	Notices   StaffNotices
+	MealPlan  MealPlanChanges
 	Logger    *slog.Logger
 }
 
@@ -247,7 +261,7 @@ type view struct {
 
 // New builds the projection.
 func New(deps Dependencies) (Query, error) {
-	if deps.Today == nil || deps.Isolation == nil || deps.Staff == nil || deps.Notices == nil {
+	if deps.Today == nil || deps.Isolation == nil || deps.Staff == nil || deps.Notices == nil || deps.MealPlan == nil {
 		return nil, ErrDependencies
 	}
 	logger := deps.Logger
@@ -262,6 +276,7 @@ func New(deps Dependencies) (Query, error) {
 		sources: []sourceRead{
 			{source: SourceStaff, read: deps.Staff.StaffChanges},
 			{source: SourceNotices, read: deps.Notices.StaffNotices},
+			{source: SourceMealPlan, read: deps.MealPlan.MealPlanChanges},
 		},
 	}, nil
 }
