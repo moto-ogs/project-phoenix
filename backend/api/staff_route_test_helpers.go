@@ -133,7 +133,7 @@ func NewShiftTypeTestModule(db transactionruntime.Database) (workforce.ShiftType
 		Workforce: workTime, Staff: owners.NewPlanStaffDirectory(owners.MustNewMembershipTestRepositories(db).Staff), CalendarPeriods: calendar.SchoolCalendar(),
 		Instances: timetableCompose.NewTimetableInstanceReads(timetable.ActivityInstance.Reads), InstanceStaff: timetableCompose.NewTimetableInstanceStaffReads(timetable.InstanceStaff),
 		Rooms: facilitiesCompose.NewRoomNameDirectory(rooms.Room), ActivityGroups: timetableCompose.NewTimetableGroupReads(timetable.Timetable),
-		CategoryLinker: linker.SetCategoryShiftTypeLinks, DB: db.Pool(), Logger: slog.Default(), Today: timezone.TodayDate,
+		CategoryLinker: linker.SetCategoryShiftTypeLinks, DB: db.Pool(), LockStaffAssignments: ShiftPlanningTestStaffRowLock(db), Logger: slog.Default(), Today: timezone.TodayDate,
 	})
 	if err != nil {
 		return nil, nil, ShiftTypeTestModule{}, err

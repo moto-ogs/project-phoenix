@@ -43,3 +43,12 @@ func WorkforceStaffAssignmentLock(membership schoolmembership.Query) func(contex
 		return err
 	}
 }
+
+// ShiftPlanningStaffRowLock answers the Dienstplan's batch lock on the staff
+// rows a cancellation writes (#7683): School Membership locks them ascending
+// in one query in the caller's transaction.
+func ShiftPlanningStaffRowLock(membership schoolmembership.StaffAssignmentLockQuery) func(context.Context, []int64) error {
+	return func(ctx context.Context, staffIDs []int64) error {
+		return schoolmembership.LockStaffAssignments(ctx, membership, staffIDs)
+	}
+}

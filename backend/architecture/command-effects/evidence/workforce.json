@@ -7289,6 +7289,14 @@
       "target_owner": "audit-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftPlanning.ApplyCancellation",
+      "binding_digest": "acf566606041c844f10f2600d3ac975a",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffShiftPlanning.ApplyCancellation",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.LockStaffAssignments",
+      "target_owner": "school-membership"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftPlanning.CreateSeries",
       "binding_digest": "a53072dc69cae85fe55cd079e6f5fa29",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffShiftPlanning.CreateSeries",
@@ -16415,6 +16423,14 @@
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DeviationEventRepository.Create",
       "target_owner": "audit-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftService.ApplyCancellation",
+      "binding_digest": "acf566606041c844f10f2600d3ac975a",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.StaffShiftService.ApplyCancellation",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.LockStaffAssignments",
+      "target_owner": "school-membership"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftService.CreateShift",

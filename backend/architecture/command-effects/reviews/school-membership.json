@@ -1968,6 +1968,16 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListStaff",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.StaffAssignmentLockQuery.ListStaff",
+      "reason": "Read-only target already reviewed as query: school-membership reaches tenant.TenantFromContext (tenant-runtime) through modules/schoolmembership.Owner.ListStaff. No persistent, lock or scope effect; attributed to the StaffAssignmentLockQuery port by the Dienstplan staff row batch lock (#7683).",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StaffLookup.ListStaff",
       "classification": "query",
       "effect": "query",
