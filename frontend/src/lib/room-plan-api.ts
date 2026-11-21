@@ -3,22 +3,12 @@
 // `timetableService.getWeek`, weil dessen Abbildung die Planner-Typen und
 // -Helfer mitzieht.
 
+import type { weeklyInstancesResponse } from "~/lib/contract/timetable.generated";
 import { apiErrorFromBody, transportFetch } from "~/lib/api-error";
 import type { RoomPlanBlock } from "~/lib/room-plan";
 
-interface BackendRoomPlanInstance {
-  readonly id: number | string;
-  readonly date: string;
-  readonly start_time: string;
-  readonly end_time: string;
-  readonly title: string;
-  readonly status: string;
-  readonly group_name?: string;
-  readonly cancel_reason?: string | null;
-}
-
 interface RoomPlanEnvelope {
-  readonly data?: { readonly instances?: BackendRoomPlanInstance[] };
+  readonly data: weeklyInstancesResponse;
 }
 
 /** Die Blöcke des Raums von `from` bis `to` (beide inklusive). */
@@ -41,8 +31,8 @@ export async function fetchRoomPlanBlocks(
     );
   }
   const body = (await response.json()) as RoomPlanEnvelope;
-  return (body.data?.instances ?? []).map((raw) => ({
-    id: String(raw.id),
+  return (body.data.instances ?? []).map((raw) => ({
+    id: raw.id,
     date: raw.date,
     startTime: raw.start_time,
     endTime: raw.end_time,
