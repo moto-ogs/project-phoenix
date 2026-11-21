@@ -970,10 +970,13 @@ export function useGlobalSSE(): SSEHookState {
     // staffing_deviation_changed for a reinstatement, a room or a substitute.
     // The children (#7665): a status day, a parent's pickup change and a day
     // departure announce student_updated; a staff Gehzeit or pickup note
-    // pickup_schedule_changed. The burst debounce makes several events one
-    // reload; the reconnect reconcile sets every flag.
+    // pickup_schedule_changed. The classes (#7681): a class trip status
+    // announces student_updated, a day outing and a changed
+    // Unterrichtsschluss arrival_schedule_changed. The burst debounce makes
+    // several events one reload; the reconnect reconcile sets every flag.
     if (
       hasPendingTimetableEvent.current ||
+      hasPendingArrivalScheduleEvent.current ||
       hasPendingGroupAccessEvent.current ||
       hasPendingStaffTimeTrackingEvent.current ||
       hasPendingStudentUpdateEvent.current ||

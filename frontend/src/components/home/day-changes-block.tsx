@@ -395,8 +395,12 @@ function dayChangeKeys(entries: readonly DayChange[]): string[] {
     const people =
       entry.people.map((person) => person.staffId).join(",") ||
       (entry.child?.studentId ?? "");
-    const where = entry.groupName ?? entry.childSummary?.schoolClass ?? "";
-    const base = `${entry.section}:${entry.kind}:${people}:${where}:${entry.startsAt ?? ""}:${entry.activity?.id ?? ""}`;
+    const where =
+      entry.groupName ??
+      entry.childSummary?.schoolClass ??
+      entry.schoolClass?.name ??
+      "";
+    const base = `${entry.section}:${entry.kind}:${people}:${where}:${entry.startsAt ?? ""}:${entry.activity?.id ?? ""}:${entry.schoolClass?.time ?? ""}`;
     const count = (seen.get(base) ?? 0) + 1;
     seen.set(base, count);
     return count === 1 ? base : `${base}#${count}`;

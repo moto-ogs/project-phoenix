@@ -397,6 +397,50 @@ describe("DayChangesBlock", () => {
     ).toHaveAttribute("href", "/schule/calendar-periods");
   });
 
+  it("zeigt Ausflüge und Unterrichtsschluss der Klassen ohne Namen (#7681)", () => {
+    serve({
+      entries: [
+        change({
+          kind: "class_trip",
+          section: "you",
+          schoolClass: { name: "3a", time: null, children: 12 },
+        }),
+        change({
+          kind: "class_trip",
+          section: "school",
+          schoolClass: { name: "4b", time: "13:00", children: 1 },
+        }),
+        change({
+          kind: "class_dismissal_changed",
+          section: "school",
+          schoolClass: { name: "Klasse 2c", time: "11:30", children: 0 },
+        }),
+      ],
+    });
+    render(<DayChangesBlock />);
+
+    const mine = within(screen.getByRole("region", { name: "Betrifft dich" }));
+    expect(rowTexts(mine.getByRole("list"))).toEqual([
+      "12 Kinder aus Klasse 3a sind heute den ganzen Tag unterwegs.",
+    ]);
+    const school = within(screen.getByRole("region", { name: "Schule" }));
+    expect(rowTexts(school.getByRole("list"))).toEqual([
+      "1 Kind aus Klasse 4b ist heute auf Ausflug und kommt um 13:00 Uhr zurück.",
+      "Bei Klasse 2c endet der Unterricht heute um 11:30 Uhr.",
+    ]);
+    expect(school.queryByRole("link")).toBeNull();
+  });
+
+  it("nennt eine ausgefallene Quelle der Klassen", () => {
+    serve({ failedSources: ["classes"] });
+    render(<DayChangesBlock />);
+    expect(
+      screen.getByText(
+        "Änderungen am Unterrichtsschluss der Klassen konnten gerade nicht geladen werden.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("erfasst beim Klick auf einen Eintrag nur seine Art", () => {
     serve({ entries: [absent("Ben Kollege", "you")] });
     render(<DayChangesBlock />);
@@ -779,7 +823,7 @@ describe("DayChangesBlock — Kinder (#7665)", () => {
     render(<DayChangesBlock />);
     expect(
       screen.getByText(
-        "Krankmeldungen und Abholzeiten der Kinder konnten gerade nicht geladen werden.",
+        "Krankmeldungen, Abholzeiten und Ausflüge der Kinder konnten gerade nicht geladen werden.",
       ),
     ).toBeInTheDocument();
     expect(
