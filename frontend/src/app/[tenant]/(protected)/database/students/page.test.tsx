@@ -7,6 +7,7 @@ import {
 } from "@testing-library/react";
 import type { TenantPageSearchRowProps } from "~/components/ui/tenant-page-search-row";
 import type { ReactNode } from "react";
+import type { FormErrorDetail } from "~/components/ui/form-error";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import StudentsPage from "./page";
 import { useSession } from "next-auth/react";
@@ -78,12 +79,13 @@ vi.mock("~/contexts/ToastContext", () => ({
 // Der Fehlerweg selbst hat eigene Tests (use-swr-load-error, form-error-alert);
 // hier zählt, dass die Seite ihn für Kinder und Gruppen nimmt (#2353).
 vi.mock("~/lib/hooks/use-swr-load-error", () => ({
-  useSwrLoadError: (error: unknown, object: string) =>
-    error ? `${object} konnte nicht geladen werden.` : null,
-}));
-vi.mock("~/components/ui/form-error-alert", () => ({
-  LoadErrorAlert: ({ error }: { error: string | null }) =>
-    error ? <p role="alert">{error}</p> : null,
+  useSwrLoadError: (error: unknown, object: string, retry: () => void) =>
+    error
+      ? {
+          message: `${object} konnte nicht geladen werden.`,
+          retry: { label: "Wiederholen", onClick: retry },
+        }
+      : null,
 }));
 
 // Mock UI components
@@ -108,7 +110,7 @@ vi.mock("~/components/database/database-page-layout", async () => {
         actions?: React.ReactNode;
       };
       searchRow?: TenantPageSearchRowProps;
-      error?: string | null;
+      error?: FormErrorDetail | null;
       empty?: {
         title: string;
         description?: string;
@@ -127,7 +129,7 @@ vi.mock("~/components/database/database-page-layout", async () => {
           </div>
         ) : null}
         {/* Fehler und Leerzustand liefert das Geruest, nicht die Seite. */}
-        {error ? <div data-testid="page-error">{error}</div> : null}
+        {error ? <div data-testid="page-error">{error.message}</div> : null}
         {!error && empty ? (
           <div data-testid="page-empty">
             <p>{empty.title}</p>
@@ -532,43 +534,57 @@ describe("StudentsPage", () => {
 
   // #2353: a failed group list is an error above the list, not a school
   // without groups.
-  it("shows a failed group list as an error above the list", async () => {
-    vi.mocked(useSWRAuth).mockImplementation((key: string | null) => {
-      if (key === "database-students-list") {
+  it.each(["populated", "empty", "filtered"] as const)(
+    "keeps group errors and retry visible with a %s student list",
+    async (state) => {
+      const reloadGroups = vi.fn();
+      if (state === "filtered") currentSearch.set("search", "no-match");
+      vi.mocked(useSWRAuth).mockImplementation((key: string | null) => {
+        if (key === "database-students-list") {
+          return {
+            data: state === "empty" ? [] : mockStudents,
+            isLoading: false,
+            error: null,
+            isValidating: false,
+            mutate: vi.fn(),
+          } as ReturnType<typeof useSWRAuth>;
+        }
+        if (key === "database-groups-dropdown") {
+          return {
+            data: undefined,
+            isLoading: false,
+            error: new Error("groups failed"),
+            isValidating: false,
+            mutate: reloadGroups,
+          } as ReturnType<typeof useSWRAuth>;
+        }
         return {
-          data: mockStudents,
+          data: undefined,
           isLoading: false,
           error: null,
           isValidating: false,
           mutate: vi.fn(),
         } as ReturnType<typeof useSWRAuth>;
-      }
-      if (key === "database-groups-dropdown") {
-        return {
-          data: undefined,
-          isLoading: false,
-          error: new Error("groups failed"),
-          isValidating: false,
-          mutate: vi.fn(),
-        } as ReturnType<typeof useSWRAuth>;
-      }
-      return {
-        data: undefined,
-        isLoading: false,
-        error: null,
-        isValidating: false,
-        mutate: vi.fn(),
-      } as ReturnType<typeof useSWRAuth>;
-    });
+      });
 
-    render(<StudentsPage />);
+      render(<StudentsPage />);
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "die Gruppenauswahl konnte nicht geladen werden.",
-    );
-    // The list itself stays usable.
-    expect(screen.getByTestId("students-list")).toBeInTheDocument();
-  });
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "die Gruppenauswahl konnte nicht geladen werden.",
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+      expect(reloadGroups).toHaveBeenCalledTimes(1);
+      if (state === "populated") {
+        expect(screen.getByTestId("students-list")).toBeInTheDocument();
+      } else {
+        expect(screen.getByTestId("page-empty")).toHaveTextContent(
+          state === "empty"
+            ? "Keine Kinder vorhanden"
+            : "Keine Kinder gefunden",
+        );
+      }
+    },
+  );
 
   it("shows empty state when no students exist", async () => {
     vi.mocked(useSWRAuth).mockImplementation((key: string | null) => {

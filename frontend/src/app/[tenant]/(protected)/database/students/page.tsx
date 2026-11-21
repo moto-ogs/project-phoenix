@@ -472,6 +472,9 @@ function StudentsPageContent() {
                   size={48}
                 />
               ),
+              action: groupsLoadError ? (
+                <LoadErrorAlert error={groupsLoadError} />
+              ) : undefined,
             }
           : null
       }
