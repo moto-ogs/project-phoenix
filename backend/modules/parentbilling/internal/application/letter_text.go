@@ -91,10 +91,10 @@ type letterContent struct {
 // its template after the body, so no text of the template leaves it out.
 func confirmationLetter(content letterContent) Letter {
 	document, head := content.document, content.letterhead
-	kind := templateKindOf(document.DocumentKind)
-	filled := templates.Fill(letterTemplate(head.Template, kind), letterValues(content))
+	kind, to := templateKindOf(document.DocumentKind), documentAddressee(document)
+	filled := templates.Fill(letterTemplate(head.Template, kind, to), letterValues(content))
 	payment := paymentText(content)
-	blocks := withTransferCode(letterBlocks(filled.Blocks), payment, transferCodeOf(head, document.Payment,
+	blocks := withTransferCode(letterBlocks(filled.Blocks), payment, transferCodeOf(to, head, document.Payment,
 		document.TotalCents, documentReference(document.Number, document.DebtorNumber, document.DocumentKind)))
 	blocks = withDirectDebitNotice(blocks, payment, document.Payment, document.TotalCents)
 	if kind != templates.KindConfirmation {
@@ -107,7 +107,8 @@ func confirmationLetter(content letterContent) Letter {
 				facts = append(facts, LetterFact{Label: contact.Name, Value: contact.Phone})
 			}
 			blocks = append(blocks, LetterBlock{Heading: "Notfallnummern",
-				Text: "In dringenden Fällen und wenn euer Kind krank ist, erreicht ihr die Betreuung hier:", Facts: facts})
+				Text: to.say("In dringenden Fällen und wenn euer Kind krank ist, erreicht ihr die Betreuung hier:",
+					"In dringenden Fällen und wenn das Kind krank ist, erreichst du die Betreuung hier:"), Facts: facts})
 		}
 	}
 	blocks = append(blocks, legalRemedyBlocks(filled.LegalRemedy)...)
@@ -165,10 +166,16 @@ func legalRemedyBlocks(blocks []templates.Block) []LetterBlock {
 }
 
 // letterTemplate is the Träger's template, or the standard one of kind
-// while the letterhead carries none.
-func letterTemplate(template parentbilling.LetterTemplate, kind templates.Kind) templates.Template {
+// while the letterhead carries none. The standard template speaks to the
+// addressee: to one person in the du-form, greeting them by name (ADR
+// 0294, #7463). A Träger's own template keeps its wording.
+func letterTemplate(template parentbilling.LetterTemplate, kind templates.Kind, to letterAddressee) templates.Template {
 	if strings.TrimSpace(template.Body) == "" {
 		standard := templates.Default(kind)
+		if to.one {
+			standard = templates.DefaultForOne(kind)
+			standard.Salutation = to.salutation
+		}
 		standard.LegalRemedy = template.LegalRemedy
 		return standard
 	}
@@ -187,7 +194,7 @@ func invoiceLayout(template parentbilling.LetterTemplate) templates.InvoiceLayou
 // Träger's template (#5691).
 func letterValues(content letterContent) map[string]templates.Value {
 	document, head := content.document, content.letterhead
-	layout := invoiceLayout(head.Template)
+	layout, to := invoiceLayout(head.Template), documentAddressee(content.document)
 	text := func(value string) templates.Value { return templates.Value{Text: strings.TrimSpace(value)} }
 	values := map[string]templates.Value{
 		"familienname":    text(document.RecipientLastName),
@@ -195,7 +202,7 @@ func letterValues(content letterContent) map[string]templates.Value {
 		"kinder":          text(childNames(document.Children)),
 		"traeger":         text(firstLine(textLines(head.SenderText))),
 		"ansprechperson":  text(head.ContactName),
-		"rueckfragen":     text(questionText(head)),
+		"rueckfragen":     text(questionText(head, to)),
 		"zeitraum":        text(content.run.PeriodName),
 		"rechnungsnummer": text(document.Number),
 		"bescheidnummer":  text(document.Number),
@@ -377,40 +384,43 @@ const (
 // the built-in sentence is the debtor number of the family when the invoice
 // has one (ADR 0121 addendum, #5621), otherwise the invoice number.
 func paymentText(content letterContent) string {
-	if content.document.TotalCents == 0 {
-		if bearer := costBearerName(content.document); bearer != "" {
-			return "Ihr müsst nichts bezahlen. Die Kosten übernimmt: " + bearer + "."
+	document, to := content.document, documentAddressee(content.document)
+	if document.TotalCents == 0 {
+		if bearer := costBearerName(document); bearer != "" {
+			return to.say("Ihr müsst nichts bezahlen.", "Du musst nichts bezahlen.") + " Die Kosten übernimmt: " + bearer + "."
 		}
-		return "Ihr müsst für diese Betreuung nichts bezahlen."
+		return to.say("Ihr müsst für diese Betreuung nichts bezahlen.", "Du musst für diese Betreuung nichts bezahlen.")
 	}
-	due := dueOnOf(content.document.Payment, content.input.PaymentDueOn)
-	reference := "die Rechnungsnummer " + content.document.Number
-	if content.document.DocumentKind == parentbilling.DocumentKindFeeNotice {
+	due := dueOnOf(document.Payment, content.input.PaymentDueOn)
+	// reference names what to pay with, owner its article or possessive.
+	reference, owner := "Rechnungsnummer "+document.Number, "die"
+	if document.DocumentKind == parentbilling.DocumentKindFeeNotice {
 		// A fee notice names its number and Buchungszeichen as such (#4688).
-		reference = "die Bescheidnummer " + content.document.Number
+		reference = "Bescheidnummer " + document.Number
 	}
-	if number := strings.TrimSpace(content.document.DebtorNumber); number != "" {
-		reference = "eure Debitorennummer " + number
-		if content.document.DocumentKind == parentbilling.DocumentKindFeeNotice {
-			reference = "euer Buchungszeichen " + number
+	if number := strings.TrimSpace(document.DebtorNumber); number != "" {
+		reference, owner = "Debitorennummer "+number, to.say("eure", "deine")
+		if document.DocumentKind == parentbilling.DocumentKindFeeNotice {
+			reference, owner = "Buchungszeichen "+number, to.say("euer", "dein")
 		}
 	}
-	if isDirectDebit(content.document.Payment) {
-		return directDebitText(content.document.TotalCents, due, strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(reference, "die "), "eure "), "euer "),
-			paymentMandate(content.document.Payment), content.accountHolder,
-			fullName(content.document.RecipientFirstName, content.document.RecipientLastName),
-			secondLetterRecipient(content.document.RecipientKind, content.document.RecipientSecondName))
+	if isDirectDebit(document.Payment) {
+		return directDebitText(to, document.TotalCents, due, reference,
+			paymentMandate(document.Payment), content.accountHolder,
+			fullName(document.RecipientFirstName, document.RecipientLastName),
+			secondLetterRecipient(document.RecipientKind, document.RecipientSecondName))
 	}
 	if text := strings.TrimSpace(content.letterhead.PaymentText); text != "" {
 		return strings.NewReplacer(
-			placeholderAmount, formatEuro(content.document.TotalCents),
+			placeholderAmount, formatEuro(document.TotalCents),
 			placeholderPaymentDueOn, germanDate(due),
-			placeholderInvoiceNumber, content.document.Number,
-			placeholderDebtorNumber, strings.TrimSpace(content.document.DebtorNumber),
+			placeholderInvoiceNumber, document.Number,
+			placeholderDebtorNumber, strings.TrimSpace(document.DebtorNumber),
 		).Replace(text)
 	}
-	return fmt.Sprintf("Bitte überweist %s bis zum %s auf das Konto unten. Gebt als Verwendungszweck %s an.",
-		formatEuro(content.document.TotalCents), germanDate(due), reference)
+	return fmt.Sprintf(to.say("Bitte überweist %s bis zum %s auf das Konto unten. Gebt als Verwendungszweck %s an.",
+		"Bitte überweise %s bis zum %s auf das Konto unten. Gib als Verwendungszweck %s an."),
+		formatEuro(document.TotalCents), germanDate(due), owner+" "+reference)
 }
 
 // costBearerName is the name of the cost bearer of the first cost takeover
@@ -426,18 +436,19 @@ func costBearerName(document parentbilling.BillingDocument) string {
 	return ""
 }
 
-func questionText(head parentbilling.Letterhead) string {
+// questionText says whom the addressee asks.
+func questionText(head parentbilling.Letterhead, to letterAddressee) string {
 	name := strings.TrimSpace(head.ContactName)
 	ways := nonBlank(head.ContactPhone, head.ContactEmail)
 	switch {
 	case name == "" && len(ways) == 0:
 		return ""
 	case name == "":
-		return "Bei Fragen erreicht ihr uns unter " + strings.Join(ways, " oder ") + "."
+		return to.say("Bei Fragen erreicht ihr uns unter ", "Bei Fragen erreichst du uns unter ") + strings.Join(ways, " oder ") + "."
 	case len(ways) == 0:
-		return "Bei Fragen hilft euch " + name + "."
+		return to.say("Bei Fragen hilft euch ", "Bei Fragen hilft dir ") + name + "."
 	}
-	return "Bei Fragen erreicht ihr " + name + " unter " + strings.Join(ways, " oder ") + "."
+	return to.say("Bei Fragen erreicht ihr ", "Bei Fragen erreichst du ") + name + " unter " + strings.Join(ways, " oder ") + "."
 }
 
 func bankLine(account *parentbilling.LetterheadBankAccount) string {
