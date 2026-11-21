@@ -21,6 +21,10 @@ func (invisibleDayChangesCaller) CurrentStaffID(context.Context) (int64, bool, e
 	return 0, false, nil
 }
 
+func (invisibleDayChangesCaller) MyGroupIDs(context.Context) ([]int64, error) {
+	return nil, errors.New("must not resolve groups for a non-staff account")
+}
+
 func (invisibleDayChangesCaller) MyTeacherGroupIDs(context.Context) ([]int64, error) {
 	return nil, errors.New("must not resolve groups for a non-staff account")
 }
@@ -58,6 +62,7 @@ func TestDayChangesInvisibleAccountSkipsUnavailableWorkforce(t *testing.T) {
 			Caller:    invisibleDayChangesCaller{},
 			Workforce: workforceSource,
 		}},
+		Children: dayChangesChildren{},
 		// Without users:read the notice source answers before reading.
 		Notices: dayChangesNotices{},
 		Closing: dayChangesClosingDays{},
@@ -70,6 +75,7 @@ func TestDayChangesInvisibleAccountSkipsUnavailableWorkforce(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []daychangesview.SourceStatus{
 		{Source: daychangesview.SourceStaff, Status: daychangesview.SourceLoaded},
+		{Source: daychangesview.SourceChildren, Status: daychangesview.SourceLoaded},
 		{Source: daychangesview.SourceNotices, Status: daychangesview.SourceLoaded},
 		{Source: daychangesview.SourceClosingDays, Status: daychangesview.SourceLoaded},
 		{Source: daychangesview.SourceActivities, Status: daychangesview.SourceLoaded},

@@ -1,0 +1,7 @@
+{
+  "scenario": "api.day_changes.today.children",
+  "max": 24,
+  "exact": false,
+  "description": "GET /day-changes/today with the Kinder source (#7665) for care staff with users:read: the Personal source and today's staff notices of api.day_changes.today, plus the day's status days, pickup exceptions, day departures and pickup notes of the school, the children and their names and the group names, each in one batched read inside the source's savepoint. TestDayChangesChildrenQueryBudget compares one with four children per group and kind.",
+  "route": "GET /api/day-changes/today"
+}

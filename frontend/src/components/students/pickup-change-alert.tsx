@@ -17,6 +17,11 @@ const logger = createLogger({ component: "PickupChangeAlert" });
 
 const NO_FRESH_CHANGES: readonly PickupChangeNotice[] = [];
 
+/** One revision of a change: a later edit of the same request is new again. */
+function revisionKey(notice: PickupChangeNotice): string {
+  return `${notice.requestId}@${notice.informedAt}`;
+}
+
 export interface PickupChange {
   readonly date: string;
   /** The time that applies; empty when the regular time applies again. */
@@ -96,21 +101,26 @@ function ChangeLine({
 }
 
 /**
- * Hinweis in der Kinderakte: An einzelnen Tagen gilt eine andere Abholzeit,
- * etwa nach einer freigegebenen Anfrage der Eltern. Er zeigt den aktuellen
- * Stand und verschwindet, wenn die Ausnahme zurückgenommen wird oder der Tag
- * vorbei ist.
+ * Banner in der Kinderakte (#7707): Die Abholzeit hat sich an einzelnen Tagen
+ * geändert, und die Person hat es noch nicht gesehen. Es listet nur diese
+ * Änderungen und lässt sich per X schließen. Der dauerhafte Stand steht in
+ * den Betreuungszeiten, wo jeder geänderte Tag hervorgehoben ist; wer das
+ * Banner schließt, verliert also nichts.
  */
 export function PickupChangeAlert({
   exceptions,
   today,
   fresh = NO_FRESH_CHANGES,
+  onDismiss,
 }: Readonly<{
   exceptions: readonly PickupException[] | undefined;
   today: string;
   fresh?: readonly PickupChangeNotice[];
+  onDismiss?: () => void;
 }>) {
-  const changes = upcomingPickupChanges(exceptions ?? [], today, fresh);
+  const changes = upcomingPickupChanges(exceptions ?? [], today, fresh).filter(
+    (change) => change.isNew,
+  );
   if (changes.length === 0) return null;
   const message =
     changes.length === 1 ? (
@@ -130,6 +140,8 @@ export function PickupChangeAlert({
       title="Abholzeit an einzelnen Tagen geändert"
       message={message}
       announce="off"
+      onDismiss={onDismiss}
+      dismissLabel="Hinweis zur geänderten Abholzeit schließen"
       data-testid="pickup-change-alert"
     />
   );
@@ -164,12 +176,11 @@ export function StudentPickupChanges({
   const confirmed = useRef(new Set<string>());
   useEffect(() => {
     const pending = unreadHere.filter(
-      (notice) =>
-        !confirmed.current.has(`${notice.requestId}@${notice.informedAt}`),
+      (notice) => !confirmed.current.has(revisionKey(notice)),
     );
     if (!loaded || pending.length === 0) return;
     for (const notice of pending) {
-      confirmed.current.add(`${notice.requestId}@${notice.informedAt}`);
+      confirmed.current.add(revisionKey(notice));
     }
     // A started confirmation finishes even if the list or the page changes
     // meanwhile: it names its child and its revisions itself.
@@ -201,17 +212,37 @@ export function StudentPickupChanges({
   }, [loaded, unreadHere, tenantMutate, markRead, studentId]);
   // Unread revisions replace this visit's seen state, even if their pickup
   // refresh fails. A previous withdrawal must not hide a newer approval.
+  // Seen state stays with its child when the record switches children.
   const fresh = useMemo(
     () => [
       ...seen.filter(
         (old) =>
+          old.studentId === studentId &&
           !unreadHere.some((notice) => notice.requestId === old.requestId),
       ),
       ...unreadHere,
     ],
-    [seen, unreadHere],
+    [seen, unreadHere, studentId],
+  );
+  // The X hides the revisions shown at that moment; a newer one brings the
+  // banner back. Reading them was already confirmed on opening the record.
+  const [dismissed, setDismissed] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const undismissed = useMemo(
+    () => fresh.filter((notice) => !dismissed.has(revisionKey(notice))),
+    [fresh, dismissed],
   );
   return (
-    <PickupChangeAlert exceptions={exceptions} today={today} fresh={fresh} />
+    <PickupChangeAlert
+      exceptions={exceptions}
+      today={today}
+      fresh={undismissed}
+      onDismiss={() =>
+        setDismissed(
+          (previous) => new Set([...previous, ...undismissed.map(revisionKey)]),
+        )
+      }
+    />
   );
 }

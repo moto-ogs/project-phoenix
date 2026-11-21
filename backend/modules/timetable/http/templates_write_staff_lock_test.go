@@ -43,7 +43,7 @@ func TestTemplateWritersLockOldAndNewStaffBeforeRows(t *testing.T) {
 			effective := fixedTemplateToday.AddDays(7)
 			if name == "split_occurrence" {
 				inst := testpkg.CreateTestActivityInstance(t, s.db, effective, s.roomID, testpkg.ActivityInstanceOpts{
-					ActivityGroupID: &created.TemplateID, Title: "Old occurrence with removed staff",
+					ActivityGroupID: (*int64)(&created.TemplateID), Title: "Old occurrence with removed staff",
 				})
 				testpkg.CreateTestInstanceStaff(t, s.db, inst.ID, s.staffA, testpkg.InstanceStaffOpts{})
 			}
@@ -99,7 +99,7 @@ func TestTemplateWritersLockOldAndNewStaffBeforeRows(t *testing.T) {
 			require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 			if isSplit {
 				result := decodeTemplateData[splitTemplateResponse](t, w)
-				rows := templateSupervisors(t, s, result.NewTemplateID)
+				rows := templateSupervisors(t, s, result.NewTemplateID.Int64())
 				require.Len(t, rows, 1)
 				require.Equal(t, body["primary_staff_id"], rows[0].StaffID)
 				if name == "split_occurrence" {

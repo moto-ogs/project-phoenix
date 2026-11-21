@@ -10,6 +10,7 @@ import (
 	timetablePorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	"github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // NewCarePlanRows binds the Timetable composition's retained schedule and
@@ -299,6 +300,9 @@ func (r carePlanRecords) DecideCareScheduleRequest(ctx context.Context, decision
 }
 
 func LegacyScheduleID(raw any) (int64, error) {
+	if typed, ok := raw.(ident.ID); ok {
+		raw = typed.Int64()
+	}
 	switch value := raw.(type) {
 	case int64:
 		return value, nil

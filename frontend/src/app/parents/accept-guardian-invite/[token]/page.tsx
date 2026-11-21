@@ -12,7 +12,7 @@ import {
 import { LanguageSwitcher } from "~/components/parent/language-switcher";
 import {
   mapValidation,
-  type BackendGuardianInvitationValidation,
+  type GuardianInvitationValidationBody,
   type GuardianInvitationValidation,
 } from "~/lib/guardian-invitation-api";
 import { loginImageSrc } from "~/lib/tenant-api";
@@ -72,10 +72,9 @@ async function fetchInvitationServer(
       return { invitation: null, failure: await readFailure(response) };
     }
 
-    const raw =
-      (await response.json()) as BackendGuardianInvitationValidation & {
-        data?: BackendGuardianInvitationValidation;
-      };
+    const raw = (await response.json()) as GuardianInvitationValidationBody & {
+      data?: GuardianInvitationValidationBody;
+    };
 
     const payload = raw.data ?? raw;
     if (!payload?.email || !payload?.expires_at) {

@@ -7,16 +7,23 @@ import { ApiError, apiErrorFromResponse, apiErrorFromText } from "./api-error";
 import {
   mapAttendanceHistoryResponse,
   type AttendanceHistory,
-  type BackendAttendanceHistoryResponse,
+  type AttendanceHistoryWire,
 } from "./attendance-history-helpers";
 import { bffJson } from "./bff-fetch";
 import type {
   CareOfferingOptionResponse,
   EnrollmentAnswerFilterResponse,
   NameStudentResponse,
+  PrivacyConsentDefaultsResponse,
+  PrivacyConsentResponse,
   StudentDetailResponse,
   StudentResponse,
+  schoolCheckinBatchRequest,
+  schoolCheckinBatchResponse,
+  schoolCheckinRequest,
+  schoolCheckinResponse,
 } from "./contract/students.generated";
+import { knownEnum } from "./contract/known-enum";
 import { createLogger } from "~/lib/logger";
 import { encodeMultiValueParam } from "./multi-value-param";
 import { sessionFetch } from "./session-cache";
@@ -411,7 +418,7 @@ export async function fetchStudentAttendanceHistory(
   id: string,
 ): Promise<AttendanceHistory> {
   return mapAttendanceHistoryResponse(
-    await bffJson<BackendAttendanceHistoryResponse>(
+    await bffJson<AttendanceHistoryWire>(
       `/api/students/${encodeURIComponent(id)}/attendance-history`,
     ),
   );
@@ -424,27 +431,27 @@ export type SchoolCheckinAction = "in" | "out";
 /** Why a checkout is no departure for the day: the child goes to class (#5656). */
 export type SchoolCheckoutReason = "class";
 
-type SchoolLocation = "Anwesend" | "Schulhof" | "Abwesend" | "Im Unterricht";
+type SchoolCheckinStatus =
+  "checked_in" | "on_yard" | "checked_out" | "not_checked_in";
+
+const SCHOOL_CHECKIN_STATUSES: readonly SchoolCheckinStatus[] = [
+  "checked_in",
+  "on_yard",
+  "checked_out",
+  "not_checked_in",
+];
 
 /** The attendance state after the call, so the UI can update optimistically. */
 interface SchoolCheckinResponse {
   studentId: string;
-  status: "checked_in" | "on_yard" | "checked_out" | "not_checked_in";
+  /** undefined: a status this build does not know. */
+  status: SchoolCheckinStatus | undefined;
   checkInTime?: string;
   checkOutTime?: string;
   yardSince?: string;
-  location: SchoolLocation;
+  /** The presence label Go derives („Anwesend“, „Im Unterricht“, …). */
+  location: string;
   /** false when the student was already in the target state. */
-  changed: boolean;
-}
-
-interface BackendSchoolCheckinResponse {
-  student_id: number | string;
-  status: SchoolCheckinResponse["status"];
-  check_in_time?: string;
-  check_out_time?: string;
-  yard_since?: string;
-  location: SchoolLocation;
   changed: boolean;
 }
 
@@ -464,20 +471,18 @@ export async function schoolCheckinStudent(
   const note = action === "out" ? checkoutNote?.trim() : undefined;
   const reason = action === "out" ? checkoutReason : undefined;
   try {
-    const data = await bffJson<BackendSchoolCheckinResponse>(
+    const body: schoolCheckinRequest = reason
+      ? { action, reason }
+      : note
+        ? { action, note }
+        : { action };
+    const data = await bffJson<schoolCheckinResponse>(
       `/api/students/${encodeURIComponent(studentId)}/school-checkin`,
-      {
-        method: "POST",
-        body: reason
-          ? { action, reason }
-          : note
-            ? { action, note }
-            : { action },
-      },
+      { method: "POST", body },
     );
     return {
-      studentId: String(data.student_id),
-      status: data.status,
+      studentId: data.student_id,
+      status: knownEnum(SCHOOL_CHECKIN_STATUSES, data.status),
       checkInTime: data.check_in_time,
       checkOutTime: data.check_out_time,
       yardSince: data.yard_since,
@@ -501,7 +506,8 @@ interface SchoolCheckinBatchResult {
   ok: boolean;
   /** false when the student was already in the target state (no-op). */
   changed: boolean;
-  location?: "Anwesend" | "Schulhof" | "Abwesend";
+  /** The presence label Go derives; „Im Unterricht“ after a class checkout. */
+  location?: string;
   /** Machine-readable failure code, e.g. "not_found". */
   error?: string;
 }
@@ -509,21 +515,6 @@ interface SchoolCheckinBatchResult {
 export interface SchoolCheckinBatchOutcome {
   action: SchoolCheckinAction;
   results: SchoolCheckinBatchResult[];
-  succeeded: number;
-  failed: number;
-}
-
-interface BackendSchoolCheckinBatchResponse {
-  action: SchoolCheckinAction;
-  results: Array<{
-    // String IDs on this endpoint: they are matched back against the
-    // selection, and a JSON number would corrupt int64 IDs above 2^53-1.
-    student_id: string;
-    ok: boolean;
-    changed: boolean;
-    location?: "Anwesend" | "Schulhof" | "Abwesend";
-    error?: string;
-  }>;
   succeeded: number;
   failed: number;
 }
@@ -564,19 +555,19 @@ export async function schoolCheckinStudentsBatch(
       offset + SCHOOL_CHECKIN_BATCH_CHUNK_SIZE,
     );
     try {
-      const data = await bffJson<BackendSchoolCheckinBatchResponse>(
+      // String IDs on this endpoint: they are matched back against the
+      // selection, and a JSON number would corrupt int64 IDs above 2^53-1.
+      const body: schoolCheckinBatchRequest = checkoutReason
+        ? { action, reason: checkoutReason, student_ids: chunk }
+        : { action, student_ids: chunk };
+      const data = await bffJson<schoolCheckinBatchResponse>(
         "/api/students/school-checkin/batch",
-        {
-          method: "POST",
-          body: checkoutReason
-            ? { action, reason: checkoutReason, student_ids: chunk }
-            : { action, student_ids: chunk },
-        },
+        { method: "POST", body },
       );
       outcome.succeeded += data.succeeded;
       outcome.failed += data.failed;
       outcome.results.push(
-        ...data.results.map((result) => ({
+        ...(data.results ?? []).map((result) => ({
           studentId: result.student_id,
           ok: result.ok,
           changed: result.changed,
@@ -721,12 +712,9 @@ export async function deleteStudentPhoto(studentId: string): Promise<void> {
 
 // ─── Privacy consent ────────────────────────────────────────────────────────
 
-interface BackendConsentPair {
-  accepted: boolean;
-  data_retention_days: number;
-}
-
-function mapConsentPair(consent: BackendConsentPair): PrivacyConsent {
+function mapConsentPair(
+  consent: PrivacyConsentResponse | PrivacyConsentDefaultsResponse,
+): PrivacyConsent {
   return {
     accepted: consent.accepted,
     dataRetentionDays: consent.data_retention_days,
@@ -742,7 +730,7 @@ export async function fetchStudentPrivacyConsent(
   studentId: string,
 ): Promise<PrivacyConsent> {
   return mapConsentPair(
-    await bffJson<BackendConsentPair>(
+    await bffJson<PrivacyConsentResponse>(
       `/api/students/${encodeURIComponent(studentId)}/privacy-consent`,
     ),
   );
@@ -751,6 +739,8 @@ export async function fetchStudentPrivacyConsent(
 /** The consent a new child starts with: the school's defaults. */
 export async function fetchPrivacyConsentDefaults(): Promise<PrivacyConsent> {
   return mapConsentPair(
-    await bffJson<BackendConsentPair>("/api/students/privacy-consent/defaults"),
+    await bffJson<PrivacyConsentDefaultsResponse>(
+      "/api/students/privacy-consent/defaults",
+    ),
   );
 }

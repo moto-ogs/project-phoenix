@@ -55,10 +55,10 @@ describe("userContextService", () => {
     it("returns mapped educational groups on success", async () => {
       const backendData = [
         {
-          id: 1,
+          id: "1",
           name: "Group 1",
-          room_id: 10,
-          room: { id: 10, name: "Raum 101" },
+          room_id: "10",
+          room: { id: "10", name: "Raum 101" },
         },
       ];
 
@@ -128,10 +128,9 @@ describe("userContextService", () => {
     it("returns mapped supervised groups on success", async () => {
       const backendData = [
         {
-          id: 2,
-          name: "Supervised Group",
-          room_id: 20,
-          room: { id: 20, name: "Raum 202" },
+          id: "2",
+          room_id: "20",
+          room: { id: "20", name: "Raum 202" },
         },
       ];
 
@@ -144,7 +143,7 @@ describe("userContextService", () => {
 
       expect(result).toHaveLength(1);
       expect(result[0]?.id).toBe("2");
-      expect(result[0]?.name).toBe("Supervised Group");
+      expect(result[0]?.room?.name).toBe("Raum 202");
     });
 
     it("handles null response data", async () => {
@@ -162,8 +161,8 @@ describe("userContextService", () => {
   describe("getCurrentStaff", () => {
     it("returns mapped staff profile on success", async () => {
       const backendData = {
-        id: 10,
-        person_id: 100,
+        id: "10",
+        person_id: "100",
       };
 
       fetchWithAuthMock.mockResolvedValueOnce({

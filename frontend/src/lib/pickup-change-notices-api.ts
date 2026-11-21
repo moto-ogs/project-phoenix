@@ -4,6 +4,10 @@
 // decision sets it unread again as taken back.
 
 import { bffJson } from "./bff-fetch";
+import type {
+  pickupChangeNoticeResponse as WirePickupChangeNotice,
+  pickupChangeNoticesReadRequest as WirePickupChangeNoticesReadRequest,
+} from "./contract/students.generated";
 
 /** A changed pickup time of a child the reader looks after, not yet seen. */
 export interface PickupChangeNotice {
@@ -25,17 +29,7 @@ export type PickupChangeNoticeRevision = Pick<
   "requestId" | "informedAt"
 >;
 
-interface BackendPickupChangeNotice {
-  request_id: string;
-  student_id: string;
-  student_first_name: string;
-  date: string;
-  pickup_time?: string;
-  withdrawn: boolean;
-  informed_at: string;
-}
-
-function mapNotice(data: BackendPickupChangeNotice): PickupChangeNotice {
+function mapNotice(data: WirePickupChangeNotice): PickupChangeNotice {
   return {
     requestId: data.request_id,
     studentId: data.student_id,
@@ -50,10 +44,10 @@ function mapNotice(data: BackendPickupChangeNotice): PickupChangeNotice {
 export const pickupChangeNoticesService = {
   /** The reader's unseen changes on days from today on, newest first. */
   async list(): Promise<PickupChangeNotice[]> {
-    const notices = await bffJson<BackendPickupChangeNotice[] | null>(
+    const notices = await bffJson<WirePickupChangeNotice[]>(
       "/api/students/pickup-change-notices",
     );
-    return (notices ?? []).map(mapNotice);
+    return notices.map(mapNotice);
   },
 
   /**
@@ -64,7 +58,7 @@ export const pickupChangeNoticesService = {
     studentId: string,
     observed: readonly PickupChangeNoticeRevision[],
   ): Promise<PickupChangeNotice[]> {
-    const notices = await bffJson<BackendPickupChangeNotice[] | null>(
+    const notices = await bffJson<WirePickupChangeNotice[]>(
       `/api/students/${encodeURIComponent(studentId)}/pickup-change-notices/read`,
       {
         method: "POST",
@@ -73,9 +67,9 @@ export const pickupChangeNoticesService = {
             request_id: notice.requestId,
             informed_at: notice.informedAt,
           })),
-        },
+        } satisfies WirePickupChangeNoticesReadRequest,
       },
     );
-    return (notices ?? []).map(mapNotice);
+    return notices.map(mapNotice);
   },
 };

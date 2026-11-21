@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -134,6 +135,9 @@ func (cfg EmailConfig) ensureGuardianStillPermitted(ctx context.Context, row *po
 // through the database arrives as float64 (or json.Number under a decoder that
 // asked for it); one that never left the process keeps its Go type.
 func payloadInt64(raw any) int64 {
+	if typed, ok := raw.(ident.ID); ok {
+		raw = typed.Int64()
+	}
 	switch value := raw.(type) {
 	case int64:
 		return value

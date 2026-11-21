@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/tenant"
@@ -59,8 +60,8 @@ func (rs *Resource) fetchSupervisorsBySpecialization(ctx context.Context, specia
 			supervisors = append(supervisors, ActivitySupervisorResponse{
 				// Available supervisor selections are persisted back as supervisor_ids,
 				// so this identifier must remain the staff ID for safe round-tripping.
-				ID:        staff.ID,
-				StaffID:   teacher.StaffID,
+				ID:        ident.ID(staff.ID),
+				StaffID:   ident.ID(teacher.StaffID),
 				FirstName: staff.Person.FirstName,
 				LastName:  staff.Person.LastName,
 				IsPrimary: false,
@@ -88,8 +89,8 @@ func (rs *Resource) fetchAllSupervisors(ctx context.Context) ([]ActivitySupervis
 
 		supervisors = append(supervisors, ActivitySupervisorResponse{
 			// Keep the public ID aligned with the staff ID expected by activity writes.
-			ID:        staffMember.ID,
-			StaffID:   staffMember.ID,
+			ID:        ident.ID(staffMember.ID),
+			StaffID:   ident.ID(staffMember.ID),
 			FirstName: staffMember.Person.FirstName,
 			LastName:  staffMember.Person.LastName,
 			IsPrimary: false,

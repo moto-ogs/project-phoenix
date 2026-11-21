@@ -33,7 +33,7 @@ describe("schoolCheckinStudent", () => {
   it("maps a successful check-in response from snake_case to camelCase", async () => {
     const backendPayload = {
       data: {
-        student_id: 42,
+        student_id: "42",
         status: "checked_in" as const,
         check_in_time: "2026-04-22T08:00:00Z",
         check_out_time: undefined,
@@ -47,7 +47,7 @@ describe("schoolCheckinStudent", () => {
     const result = await schoolCheckinStudent("42", "in");
 
     expect(result).toEqual({
-      // Backend int64 -> frontend string at the boundary (CLAUDE.md §4).
+      // The catalog proxy delivers the int64 ID as a string (#2353).
       studentId: "42",
       status: "checked_in",
       checkInTime: "2026-04-22T08:00:00Z",

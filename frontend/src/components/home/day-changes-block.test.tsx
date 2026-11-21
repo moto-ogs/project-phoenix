@@ -495,32 +495,6 @@ describe("DayChangesBlock über den Tag (#7660)", () => {
     expect(live).toHaveTextContent("„Heute anders“ hat sich geändert.");
   });
 
-  it("sagt einen geänderten Schließtag einer bestehenden Änderung an", () => {
-    serve({
-      entries: [
-        change({
-          kind: "closing_day",
-          closing: { name: "Brückentag", traeger: false },
-        }),
-      ],
-    });
-    const { rerender } = render(<DayChangesBlock />);
-    const live = document.querySelector('[aria-live="polite"]');
-    expect(live).toHaveTextContent("");
-
-    serve({
-      entries: [
-        change({
-          kind: "closing_day",
-          closing: { name: "Fortbildung", traeger: true },
-        }),
-      ],
-    });
-    rerender(<DayChangesBlock />);
-
-    expect(live).toHaveTextContent("„Heute anders“ hat sich geändert.");
-  });
-
   it("sagt geänderte Titel und Räume einer bestehenden Terminänderung an", () => {
     const activity = (
       title: string,
@@ -581,50 +555,124 @@ describe("Texte der Gruppen-Vertretung", () => {
   });
 });
 
-describe("Schließtage (#7664)", () => {
+describe("DayChangesBlock — Kinder (#7665)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     phone.value = false;
   });
 
-  it("zeigt Schließtage der OGS und des Trägers unter „Schule“ mit Link zum Kalender", () => {
+  const child = (studentId: string, name: string) => ({
+    studentId,
+    name,
+    status: null,
+    pickupTime: null,
+    note: null,
+  });
+
+  it("zeigt Kinder der eigenen Gruppe einzeln und klappt die Zusammenfassung auf", () => {
     serve({
       entries: [
         change({
-          kind: "closing_day",
-          closing: { name: "Brückentag", traeger: true },
-          since: "2026-09-08",
+          kind: "child_absent",
+          section: "you",
+          groupName: "Igel",
+          child: { ...child("11", "Mia Kind"), status: "sick" },
+          link: { target: "student", staffId: null, studentId: "11" },
         }),
         change({
-          kind: "closing_day",
-          closing: { name: "Pädagogische Tage.", traeger: false },
-          until: "2026-09-11",
-          link: { target: "calendar_periods", staffId: null },
+          kind: "child_pickup_changed",
+          section: "you",
+          groupName: "Igel",
+          child: { ...child("12", "Leo Kind"), pickupTime: "14:30" },
+          link: { target: "student", staffId: null, studentId: "12" },
+        }),
+        change({
+          kind: "child_summary",
+          groupName: "Fuchs",
+          childSummary: {
+            schoolClass: "",
+            counts: {
+              sick: 4,
+              excused: 0,
+              pickupChanged: 0,
+              goesAlone: 1,
+              pickupNote: 0,
+            },
+            items: [
+              {
+                kind: "child_goes_alone",
+                child: child("21", "Lou Kind"),
+                link: { target: "student", staffId: null, studentId: "21" },
+              },
+              {
+                kind: "child_absent",
+                child: { ...child("22", "Pia Kind"), status: "sick" },
+                link: { target: "student", staffId: null, studentId: "22" },
+              },
+            ],
+          },
+        }),
+        change({
+          kind: "child_summary",
+          childSummary: {
+            schoolClass: "4c",
+            counts: {
+              sick: 0,
+              excused: 1,
+              pickupChanged: 0,
+              goesAlone: 0,
+              pickupNote: 0,
+            },
+            items: [],
+          },
         }),
       ],
     });
     render(<DayChangesBlock />);
 
-    const school = within(screen.getByRole("region", { name: "Schule" }));
+    const mine = within(screen.getByRole("region", { name: "Betrifft dich" }));
     expect(
-      school.getByText("Der Träger hat die OGS heute geschlossen: Brückentag."),
-    ).toBeInTheDocument();
-    expect(school.getByText("seit 8.9.")).toBeInTheDocument();
+      mine.getByRole("link", { name: "Mia Kind ist heute krank gemeldet." }),
+    ).toHaveAttribute("href", "/schule/students/11");
+    expect(
+      mine.getByRole("link", { name: "Leo Kind geht heute um 14:30 Uhr." }),
+    ).toHaveAttribute("href", "/schule/students/12");
+
+    const school = within(screen.getByRole("region", { name: "Schule" }));
+    expect(school.getByText("4 krank, 1 geht allein")).toBeInTheDocument();
+    expect(school.getByText("1 entschuldigt")).toBeInTheDocument();
+    expect(school.getByRole("button", { name: /Klasse 4c/ })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    const toggle = school.getByRole("button", { name: /Gruppe Fuchs/ });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(school.queryByText(/Lou Kind/)).not.toBeInTheDocument();
+
+    fireEvent.click(toggle);
+
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
     expect(
       school.getByRole("link", {
-        name: /Die OGS ist heute geschlossen: Pädagogische Tage\.\s*bis 11\.9\./,
+        name: "Lou Kind geht heute allein nach Hause.",
       }),
-    ).toHaveAttribute("href", "/schule/calendar-periods");
-    expect(
-      screen.queryByRole("region", { name: "Betrifft dich" }),
-    ).not.toBeInTheDocument();
+    ).toHaveAttribute("href", "/schule/students/21");
+    const sick = school.getByRole("link", {
+      name: "Pia Kind ist heute krank gemeldet.",
+    });
+    fireEvent.click(sick);
+    expect(trackEvent).toHaveBeenCalledWith("day_changes_entry_clicked", {
+      day_change_kind: "child_absent",
+    });
   });
 
-  it("nennt eine ausgefallene Lesung der Schließtage und gibt keine Entwarnung", () => {
-    serve({ failedSources: ["closing_days"] });
+  it("nennt den Ausfall der Kinder-Quelle und gibt keine Entwarnung", () => {
+    serve({ failedSources: ["children"] });
     render(<DayChangesBlock />);
     expect(
-      screen.getByText("Schließtage konnten gerade nicht geladen werden."),
+      screen.getByText(
+        "Krankmeldungen und Abholzeiten der Kinder konnten gerade nicht geladen werden.",
+      ),
     ).toBeInTheDocument();
     expect(
       screen.queryByText("Heute läuft alles wie geplant."),

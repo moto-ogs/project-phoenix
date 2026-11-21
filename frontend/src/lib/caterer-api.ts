@@ -5,45 +5,31 @@
 
 import { authFetch } from "./api-helpers";
 import { apiErrorFromResponse, transportFetch } from "./api-error";
-import type { SchoolsResponse } from "./contract/caterer-schools.generated";
+import { knownEnum } from "./contract/known-enum";
+import type {
+  acceptRequest,
+  PreviewResponse,
+} from "./contract/caterer-invitations.generated";
+import type {
+  OrderChildResponse,
+  SchoolOrdersResponse,
+  SchoolsResponse,
+} from "./contract/caterer-schools.generated";
 import { downloadBlob, filenameFromDisposition } from "./file-download";
 import type { ApiResponse } from "./api-envelope";
 
-interface BackendChild {
-  first_name?: string;
-  last_name?: string;
-  school_class?: string;
-}
+// Go does not register these sets; the contract types them as string. A value
+// this build does not know stays undefined instead of passing as a known one.
+const ORDER_STATUS_VALUES = [
+  "open",
+  "ordered",
+  "confirmed",
+  "unordered",
+] as const;
+const RHYTHM_VALUES = ["daily", "weekly"] as const;
+const DETAIL_VALUES = ["total", "by_class"] as const;
 
-interface BackendOrderDay {
-  date: string;
-  closed: boolean;
-  deadline: string;
-  status: CatererOrderStatus;
-  order_id?: string;
-  confirmed_at?: string;
-  total: number;
-  classes: { school_class: string; count: number }[];
-  children: BackendChild[];
-  changes: {
-    sequence: number;
-    child: BackendChild;
-    delta: number;
-    detected_at: string;
-  }[];
-}
-
-/** Wire shape of GET /caterer/schools/{schoolId}/orders. */
-interface BackendCatererOrders {
-  school: { id: string; name: string };
-  delivery_address: string;
-  format_version: number;
-  rhythm: "daily" | "weekly";
-  detail: "total" | "by_class";
-  days: BackendOrderDay[];
-}
-
-type CatererOrderStatus = "open" | "ordered" | "confirmed" | "unordered";
+type CatererOrderStatus = (typeof ORDER_STATUS_VALUES)[number];
 
 export interface CatererSchool {
   id: string;
@@ -73,7 +59,8 @@ export interface CatererOrderDay {
   date: string;
   closed: boolean;
   deadline: string;
-  status: CatererOrderStatus;
+  /** undefined: a status this build does not know. */
+  status: CatererOrderStatus | undefined;
   orderId: string | null;
   confirmedAt: string | null;
   total: number;
@@ -85,8 +72,10 @@ export interface CatererOrderDay {
 export interface CatererOrders {
   school: CatererSchool;
   deliveryAddress: string;
-  rhythm: "daily" | "weekly";
-  detail: "total" | "by_class";
+  /** undefined: a value this build does not know. */
+  rhythm: (typeof RHYTHM_VALUES)[number] | undefined;
+  /** undefined: a value this build does not know; the list shows the total. */
+  detail: (typeof DETAIL_VALUES)[number] | undefined;
   days: CatererOrderDay[];
 }
 
@@ -100,7 +89,7 @@ export interface CatererInvitationPreview {
   addressTaken: boolean;
 }
 
-function mapChild(child: BackendChild): CatererOrderChild {
+function mapChild(child: OrderChildResponse): CatererOrderChild {
   return {
     firstName: child.first_name ?? "",
     lastName: child.last_name ?? "",
@@ -108,26 +97,26 @@ function mapChild(child: BackendChild): CatererOrderChild {
   };
 }
 
-function mapCatererOrders(data: BackendCatererOrders): CatererOrders {
+function mapCatererOrders(data: SchoolOrdersResponse): CatererOrders {
   return {
     school: data.school,
     deliveryAddress: data.delivery_address,
-    rhythm: data.rhythm,
-    detail: data.detail,
-    days: data.days.map((day) => ({
+    rhythm: knownEnum(RHYTHM_VALUES, data.rhythm),
+    detail: knownEnum(DETAIL_VALUES, data.detail),
+    days: (data.days ?? []).map((day) => ({
       date: day.date,
       closed: day.closed,
       deadline: day.deadline,
-      status: day.status,
+      status: knownEnum(ORDER_STATUS_VALUES, day.status),
       orderId: day.order_id ?? null,
       confirmedAt: day.confirmed_at ?? null,
       total: day.total,
-      classes: day.classes.map((count) => ({
+      classes: (day.classes ?? []).map((count) => ({
         schoolClass: count.school_class,
         count: count.count,
       })),
-      children: day.children.map(mapChild),
-      changes: day.changes.map((change) => ({
+      children: (day.children ?? []).map(mapChild),
+      changes: (day.changes ?? []).map((change) => ({
         sequence: change.sequence,
         child: mapChild(change.child),
         delta: change.delta,
@@ -153,7 +142,7 @@ export async function fetchCatererOrders(
   to: string,
 ): Promise<CatererOrders> {
   const params = new URLSearchParams({ from, to });
-  const response = await authFetch<ApiResponse<BackendCatererOrders>>(
+  const response = await authFetch<ApiResponse<SchoolOrdersResponse>>(
     `/api/caterer/schools/${encodeURIComponent(schoolId)}/orders?${params.toString()}`,
   );
   return mapCatererOrders(response.data);
@@ -177,16 +166,9 @@ export async function fetchCatererInvitation(
   schoolId: string,
   token: string,
 ): Promise<CatererInvitationPreview> {
-  const response = await authFetch<
-    ApiResponse<{
-      email: string;
-      caterer_name: string;
-      school_name: string;
-      expires_at: string;
-      has_caterer_account: boolean;
-      address_taken: boolean;
-    }>
-  >(invitationUrl(schoolId, token));
+  const response = await authFetch<ApiResponse<PreviewResponse>>(
+    invitationUrl(schoolId, token),
+  );
   return {
     email: response.data.email,
     catererName: response.data.caterer_name,
@@ -205,7 +187,10 @@ export async function acceptCatererInvitation(
 ): Promise<void> {
   await authFetch<unknown>(`${invitationUrl(schoolId, token)}/accept`, {
     method: "POST",
-    body: { password, confirm_password: confirmPassword },
+    body: {
+      password,
+      confirm_password: confirmPassword,
+    } satisfies acceptRequest,
   });
 }
 

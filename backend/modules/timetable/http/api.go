@@ -17,6 +17,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/settings"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -236,10 +237,10 @@ func (req *CalendarPeriodRequest) Bind(_ *http.Request) error {
 // period response (WP-B2, QA #1577 H3). One entry is emitted per overlapping
 // active period.
 type PeriodWarning struct {
-	Code                   string   `json:"code"`
-	Message                string   `json:"message"`
-	OverlappingPeriodIDs   []int64  `json:"overlapping_period_ids"`
-	OverlappingPeriodNames []string `json:"overlapping_period_names"`
+	Code                   string      `json:"code"`
+	Message                string      `json:"message"`
+	OverlappingPeriodIDs   []common.ID `json:"overlapping_period_ids"`
+	OverlappingPeriodNames []string    `json:"overlapping_period_names"`
 }
 
 // warningCodeOverlappingActivePeriods is the machine-readable code the
@@ -251,7 +252,7 @@ const germanDateLayout = "02.01.2006"
 
 // CalendarPeriodResponse represents a calendar period in API responses
 type CalendarPeriodResponse struct {
-	ID              int64           `json:"id"`
+	ID              common.ID       `json:"id"`
 	Name            string          `json:"name"`
 	PeriodType      string          `json:"period_type"`
 	StartDate       string          `json:"start_date"`
@@ -278,7 +279,7 @@ type CalendarPeriodResponse struct {
 
 func mapPeriodToResponse(p schoolcalendar.CalendarPeriod) CalendarPeriodResponse {
 	resp := CalendarPeriodResponse{
-		ID:              p.ID,
+		ID:              ident.ID(p.ID),
 		Name:            p.Name,
 		PeriodType:      p.PeriodType,
 		StartDate:       p.StartDate,
@@ -377,7 +378,7 @@ func (rs *Resource) attachOverlapWarnings(ctx context.Context, period schoolcale
 				germanCalendarDate(o.StartDate),
 				germanCalendarDate(o.EndDate),
 			),
-			OverlappingPeriodIDs:   []int64{o.ID},
+			OverlappingPeriodIDs:   []common.ID{common.ID(o.ID)},
 			OverlappingPeriodNames: []string{o.Name},
 		})
 	}
@@ -396,7 +397,7 @@ func (rs *Resource) periodUsageCounts(ctx context.Context) (map[int64]CalendarPe
 }
 
 func applyPeriodUsage(resp *CalendarPeriodResponse, usage map[int64]CalendarPeriodUsageCounts) {
-	if u, ok := usage[resp.ID]; ok {
+	if u, ok := usage[resp.ID.Int64()]; ok {
 		resp.EnrollmentPhaseCount = u.EnrollmentPhases
 		resp.ActivityGroupCount = u.ActivityGroups
 		resp.ScheduleCount = u.Schedules

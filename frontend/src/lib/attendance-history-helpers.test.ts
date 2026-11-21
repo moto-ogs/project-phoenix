@@ -5,11 +5,11 @@ import {
   formatDate,
   formatAttendanceSlotStatus,
   formatDuration,
-  type BackendAttendanceHistoryResponse,
+  type AttendanceHistoryWire,
 } from "./attendance-history-helpers";
 
 describe("mapAttendanceHistoryResponse", () => {
-  const raw: BackendAttendanceHistoryResponse = {
+  const raw: AttendanceHistoryWire = {
     student_id: "42",
     days: [
       {
@@ -18,11 +18,11 @@ describe("mapAttendanceHistoryResponse", () => {
           check_in_time: "2026-04-06T08:00:00Z",
           check_out_time: "2026-04-06T15:30:00Z",
           duration_minutes: 450,
-          checked_in_by: 11,
-          checked_out_by: 11,
+          checked_in_by: "11",
+          checked_out_by: "11",
           checked_in_actor: { kind: "staff", name: "Anna Muster" },
           checked_out_actor: { kind: "device" },
-          device_id: 3,
+          device_id: "3",
           sessions: [
             {
               check_in_time: "2026-04-06T08:00:00Z",
@@ -44,10 +44,11 @@ describe("mapAttendanceHistoryResponse", () => {
             is_unplanned: false,
           },
         ],
+        status_entries: null,
         room_detail_available: true,
         visits: [
           {
-            room_id: 5,
+            room_id: "5",
             room_name: "Gruppenraum A",
             entry_time: "2026-04-06T08:10:00Z",
             exit_time: "2026-04-06T10:30:00Z",
@@ -59,13 +60,14 @@ describe("mapAttendanceHistoryResponse", () => {
         date: "2026-03-20",
         attendance: {
           check_in_time: "2026-03-20T08:00:00Z",
-          check_out_time: null,
-          duration_minutes: null,
-          checked_in_by: 11,
-          device_id: 3,
+          checked_in_by: "11",
+          device_id: "3",
+          sessions: null,
         },
+        status_entries: null,
         room_detail_available: false,
         visits: null,
+        slots: null,
       },
       {
         date: "2026-04-07",
@@ -78,6 +80,7 @@ describe("mapAttendanceHistoryResponse", () => {
             cleared_at: "2026-04-07T16:00:00Z",
           },
         ],
+        slots: null,
         room_detail_available: true,
         visits: [],
       },
@@ -111,8 +114,8 @@ describe("mapAttendanceHistoryResponse", () => {
     expect(day1.attendance!.checkInTime).toBeInstanceOf(Date);
     expect(day1.attendance!.checkOutTime).toBeInstanceOf(Date);
     expect(day1.attendance!.durationMinutes).toBe(450);
-    expect(day1.attendance!.checkedInBy).toBe(11);
-    expect(day1.attendance!.deviceId).toBe(3);
+    expect(day1.attendance!.checkedInBy).toBe("11");
+    expect(day1.attendance!.deviceId).toBe("3");
 
     expect(day1.attendance!.sessions).toHaveLength(1);
     expect(day1.attendance!.sessions[0]!.checkInTime).toBeInstanceOf(Date);
@@ -133,7 +136,7 @@ describe("mapAttendanceHistoryResponse", () => {
 
     expect(day1.visits).toHaveLength(1);
     expect(day1.visits[0]!.roomName).toBe("Gruppenraum A");
-    expect(day1.visits[0]!.roomId).toBe(5);
+    expect(day1.visits[0]!.roomId).toBe("5");
     expect(day1.visits[0]!.entryTime).toBeInstanceOf(Date);
     expect(day1.visits[0]!.exitTime).toBeInstanceOf(Date);
     expect(day1.visits[0]!.durationMinutes).toBe(140);
@@ -223,6 +226,41 @@ describe("formatAttendanceSlotStatus", () => {
   ] as const)("formats %s/%s", (status, substatus, expected) => {
     expect(formatAttendanceSlotStatus(status, substatus)).toBe(expected);
   });
+
+  // The contract sends the status as an open string (#2353): a value this
+  // build does not know shows the empty glyph instead of „Erwartet“.
+  it("shows the empty glyph for an unknown status", () => {
+    const mapped = mapAttendanceHistoryResponse({
+      student_id: "42",
+      days: [
+        {
+          date: "2026-04-07",
+          attendance: null,
+          status_entries: null,
+          room_detail_available: true,
+          visits: null,
+          slots: [
+            {
+              instance_id: "7",
+              instance_status: "archived",
+              title: "Fußball",
+              start_time: "14:00",
+              end_time: "15:00",
+              status: "late",
+              is_unplanned: false,
+            },
+          ],
+        },
+      ],
+      range: { start: "2026-04-01T00:00:00Z", end: "2026-04-30T00:00:00Z" },
+      clamped: false,
+      caps: { attendance_days: 90, room_detail_days: 30 },
+    });
+    const slot = mapped.days[0]!.slots[0]!;
+    expect(slot.status).toBeUndefined();
+    expect(slot.instanceStatus).toBeNull();
+    expect(formatAttendanceSlotStatus(slot.status, slot.substatus)).toBe("–");
+  });
 });
 
 describe("mapAttendanceHistoryResponse checkout note (#3324)", () => {
@@ -235,8 +273,8 @@ describe("mapAttendanceHistoryResponse checkout note (#3324)", () => {
           attendance: {
             check_in_time: "2026-04-07T06:00:00Z",
             check_out_time: "2026-04-07T14:00:00Z",
-            checked_in_by: 11,
-            device_id: 3,
+            checked_in_by: "11",
+            device_id: "3",
             sessions: [
               {
                 check_in_time: "2026-04-07T06:00:00Z",
@@ -249,6 +287,8 @@ describe("mapAttendanceHistoryResponse checkout note (#3324)", () => {
               },
             ],
           },
+          status_entries: null,
+          slots: null,
           room_detail_available: false,
           visits: [],
         },
@@ -257,9 +297,12 @@ describe("mapAttendanceHistoryResponse checkout note (#3324)", () => {
           attendance: {
             check_in_time: "2026-04-08T06:00:00Z",
             check_out_time: "2026-04-08T14:00:00Z",
-            checked_in_by: 11,
-            device_id: 3,
+            checked_in_by: "11",
+            device_id: "3",
+            sessions: null,
           },
+          status_entries: null,
+          slots: null,
           room_detail_available: false,
           visits: [],
         },
@@ -287,8 +330,8 @@ describe("mapAttendanceHistoryResponse class checkout (#5656)", () => {
           attendance: {
             check_in_time: "2026-04-07T06:00:00Z",
             check_out_time: "2026-04-07T14:00:00Z",
-            checked_in_by: 11,
-            device_id: 3,
+            checked_in_by: "11",
+            device_id: "3",
             sessions: [
               {
                 check_in_time: "2026-04-07T06:00:00Z",
@@ -301,6 +344,8 @@ describe("mapAttendanceHistoryResponse class checkout (#5656)", () => {
               },
             ],
           },
+          status_entries: null,
+          slots: null,
           room_detail_available: false,
           visits: [],
         },

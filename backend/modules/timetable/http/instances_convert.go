@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -29,10 +30,10 @@ func (req *convertInstanceToSeriesRequest) Bind(r *http.Request) error {
 }
 
 type convertInstanceToSeriesResponse struct {
-	TemplateID       int64   `json:"template_id"`
-	TimeframeID      int64   `json:"timeframe_id"`
-	ScheduleIDs      []int64 `json:"schedule_ids"`
-	LinkedInstanceID int64   `json:"linked_instance_id"`
+	TemplateID       common.ID   `json:"template_id"`
+	TimeframeID      common.ID   `json:"timeframe_id"`
+	ScheduleIDs      []common.ID `json:"schedule_ids"`
+	LinkedInstanceID common.ID   `json:"linked_instance_id"`
 }
 
 // convertInstanceToSeries handles POST /instances/{id}/convert-to-series.
@@ -60,12 +61,12 @@ func (rs *Resource) convertInstanceToSeries(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	gradeLevelMax, rosterValidFrom, ok := rs.templateWritePreflight(
-		w, r, parsed.req.CalendarPeriodID, parsed.startDate,
+		w, r, (*int64)(parsed.req.CalendarPeriodID), parsed.startDate,
 	)
 	if !ok {
 		return
 	}
-	if !rs.validateSeriesEnd(w, r, parsed.endDate, rosterValidFrom, parsed.req.CalendarPeriodID) {
+	if !rs.validateSeriesEnd(w, r, parsed.endDate, rosterValidFrom, (*int64)(parsed.req.CalendarPeriodID)) {
 		return
 	}
 
@@ -90,10 +91,10 @@ func (rs *Resource) convertInstanceToSeries(w http.ResponseWriter, r *http.Reque
 	}
 
 	common.Respond(w, r, http.StatusCreated, convertInstanceToSeriesResponse{
-		TemplateID:       result.TemplateID,
-		TimeframeID:      result.TimeframeID,
-		ScheduleIDs:      result.ScheduleIDs,
-		LinkedInstanceID: result.LinkedInstanceID,
+		TemplateID:       ident.ID(result.TemplateID),
+		TimeframeID:      ident.ID(result.TimeframeID),
+		ScheduleIDs:      ident.IDs(result.ScheduleIDs),
+		LinkedInstanceID: ident.ID(result.LinkedInstanceID),
 	}, "Instance converted to series")
 }
 

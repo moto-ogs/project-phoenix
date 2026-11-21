@@ -41,6 +41,8 @@ const EXCLUSION_TEXT: Record<
     `${count} ${count === 1 ? "Kind" : "Kinder"} im letzten Jahrgang`,
   not_in_scope: (count) =>
     `${count} ${count === 1 ? "Kind" : "Kinder"} aus anderen Klassen oder Jahrgängen`,
+  other: (count) =>
+    `${count} ${count === 1 ? "Kind" : "Kinder"} aus einem anderen Grund`,
 };
 
 function isChildStatus(value: string | null): value is ChildStatus {

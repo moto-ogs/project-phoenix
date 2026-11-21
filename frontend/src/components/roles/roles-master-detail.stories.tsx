@@ -11,17 +11,7 @@ const roles: Role[] = [
     baseRole: "admin",
     createdAt: "2026-01-01T00:00:00Z",
     updatedAt: "2026-01-01T00:00:00Z",
-    permissions: [
-      {
-        id: "p1",
-        name: "students.read",
-        description: "Schüler lesen",
-        resource: "students",
-        action: "read",
-        createdAt: "2026-01-01T00:00:00Z",
-        updatedAt: "2026-01-01T00:00:00Z",
-      },
-    ],
+    permissionNames: ["students.read"],
   },
   {
     id: "2",
@@ -30,7 +20,7 @@ const roles: Role[] = [
     isSystem: false,
     createdAt: "2026-01-01T00:00:00Z",
     updatedAt: "2026-01-01T00:00:00Z",
-    permissions: [],
+    permissionNames: [],
   },
 ];
 

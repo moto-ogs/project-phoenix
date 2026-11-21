@@ -2751,7 +2751,7 @@ export interface PatchAttendanceRequest {
 
 /** Go: timetablehttp.CompleteOperationRequest */
 export interface CompleteOperationRequest {
-  confirmed_present_student_ids?: number[] | null;
+  confirmed_present_student_ids?: string[] | null;
 }
 
 /** Go: timetable.ScheduledInstance */
@@ -2824,9 +2824,9 @@ export interface startOperationResponse {
 }
 
 export const startOperationResponseSchema: z.ZodType<startOperationResponse, unknown> = object<startOperationResponse>({
-  instance_id: int64StringOrNumber,
+  instance_id: int64String,
   status: str,
-  active_group_id: int64StringOrNumber,
+  active_group_id: int64String,
   warnings: nullable(arr(InstanceConflictWarningSchema)),
 });
 
@@ -2845,7 +2845,7 @@ export interface HomeworkFeedbackResponse {
 }
 
 export const HomeworkFeedbackResponseSchema: z.ZodType<HomeworkFeedbackResponse, unknown> = object<HomeworkFeedbackResponse>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   date: str,
   status: str,
   note: optional(str),

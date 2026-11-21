@@ -159,7 +159,7 @@ func (f *closingFeedFixture) save(t *testing.T, actor closingFeedPerson, method 
 		Data timetablehttp.ClosingDayResponse `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &envelope), rec.Body.String())
-	return envelope.Data.ID
+	return envelope.Data.ID.Int64()
 }
 
 func closingDayBody(from, until, reason string) string {

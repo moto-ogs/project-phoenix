@@ -15,10 +15,13 @@ import {
   type OpenEnum,
 } from "./runtime";
 
-export const KIND_VALUES = ["activity_cancelled", "activity_lead_changed", "activity_reinstated", "activity_room_changed", "closing_day", "group_substitution", "group_substitution_count", "staff_absent", "staff_absent_count", "staff_notice"] as const;
+export const CHILD_STATUS_VALUES = ["excused", "sick"] as const;
+export type ChildStatus = (typeof CHILD_STATUS_VALUES)[number];
+
+export const KIND_VALUES = ["activity_cancelled", "activity_lead_changed", "activity_reinstated", "activity_room_changed", "child_absent", "child_goes_alone", "child_pickup_changed", "child_pickup_note", "child_summary", "closing_day", "group_substitution", "group_substitution_count", "staff_absent", "staff_absent_count", "staff_notice"] as const;
 export type Kind = (typeof KIND_VALUES)[number];
 
-export const LINK_TARGET_VALUES = ["calendar_periods", "day_plan", "group_handovers", "own_absences", "staff_absences", "staff_list", "staff_member", "staff_notices"] as const;
+export const LINK_TARGET_VALUES = ["calendar_periods", "day_plan", "group_handovers", "own_absences", "staff_absences", "staff_list", "staff_member", "staff_notices", "student"] as const;
 export type LinkTarget = (typeof LINK_TARGET_VALUES)[number];
 
 export const NOTICE_PRIORITY_VALUES = ["important", "info"] as const;
@@ -30,7 +33,7 @@ export type PersonRole = (typeof PERSON_ROLE_VALUES)[number];
 export const SECTION_VALUES = ["school", "you"] as const;
 export type Section = (typeof SECTION_VALUES)[number];
 
-export const SOURCE_VALUES = ["activities", "closing_days", "notices", "staff"] as const;
+export const SOURCE_VALUES = ["activities", "children", "closing_days", "notices", "staff"] as const;
 export type Source = (typeof SOURCE_VALUES)[number];
 
 export const SOURCE_STATE_VALUES = ["failed", "loaded"] as const;
@@ -77,11 +80,13 @@ export const GroupSchema: z.ZodType<Group, unknown> = object<Group>({
 export interface Link {
   target: OpenEnum<LinkTarget>;
   staff_id?: string;
+  student_id?: string;
 }
 
 export const LinkSchema: z.ZodType<Link, unknown> = object<Link>({
   target: str,
   staff_id: optional(int64String),
+  student_id: optional(int64String),
 });
 
 /** Go: daychangesview.DayNotice */
@@ -112,6 +117,68 @@ export interface DayClosing {
 export const DayClosingSchema: z.ZodType<DayClosing, unknown> = object<DayClosing>({
   name: str,
   traeger: bool,
+});
+
+/** Go: daychangesview.Child */
+export interface Child {
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  status: OpenEnum<ChildStatus> | null;
+  pickup_time: string | null;
+  note: string | null;
+}
+
+export const ChildSchema: z.ZodType<Child, unknown> = object<Child>({
+  student_id: int64String,
+  first_name: str,
+  last_name: str,
+  status: nullable(str),
+  pickup_time: nullable(str),
+  note: nullable(str),
+});
+
+/** Go: daychangesview.ChildCounts */
+export interface ChildCounts {
+  sick: number;
+  excused: number;
+  pickup_changed: number;
+  goes_alone: number;
+  pickup_note: number;
+}
+
+export const ChildCountsSchema: z.ZodType<ChildCounts, unknown> = object<ChildCounts>({
+  sick: safeInt,
+  excused: safeInt,
+  pickup_changed: safeInt,
+  goes_alone: safeInt,
+  pickup_note: safeInt,
+});
+
+/** Go: daychangesview.ChildItem */
+export interface ChildItem {
+  kind: OpenEnum<Kind>;
+  child: Child;
+  link: Link | null;
+}
+
+export const ChildItemSchema: z.ZodType<ChildItem, unknown> = object<ChildItem>({
+  kind: str,
+  child: ChildSchema,
+  link: nullable(LinkSchema),
+});
+
+/** Go: daychangesview.ChildSummary */
+export interface ChildSummary {
+  school_class: string;
+  counts: ChildCounts;
+  items: ChildItem[] | null;
+}
+
+export const ChildSummarySchema: z.ZodType<ChildSummary, unknown> = object<ChildSummary>({
+  school_class: str,
+  counts: ChildCountsSchema,
+  items: nullable(arr(ChildItemSchema)),
 });
 
 /** Go: daychangesview.BlockActivity */
@@ -152,6 +219,8 @@ export interface Entry {
   count: number | null;
   notice: DayNotice | null;
   closing: DayClosing | null;
+  child: Child | null;
+  child_summary: ChildSummary | null;
   activity: BlockActivity | null;
   room: BlockRoom | null;
   previous_room: BlockRoom | null;
@@ -172,6 +241,8 @@ export const EntrySchema: z.ZodType<Entry, unknown> = object<Entry>({
   count: nullable(safeInt),
   notice: nullable(DayNoticeSchema),
   closing: nullable(DayClosingSchema),
+  child: nullable(ChildSchema),
+  child_summary: nullable(ChildSummarySchema),
   activity: nullable(BlockActivitySchema),
   room: nullable(BlockRoomSchema),
   previous_room: nullable(BlockRoomSchema),

@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // roomQuery and roomCommand name the Facilities halves the adapters embed;
@@ -93,6 +94,9 @@ func (r *Records) FindByName(ctx context.Context, name string) (*facilities.Room
 }
 
 func roomID(value any) (int64, error) {
+	if typed, ok := value.(ident.ID); ok {
+		value = typed.Int64()
+	}
 	switch id := value.(type) {
 	case int64:
 		return id, nil

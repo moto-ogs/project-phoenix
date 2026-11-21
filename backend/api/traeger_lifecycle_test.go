@@ -172,6 +172,8 @@ func TestOperatorRecordsAndWithdrawsTheErasureOrderOfADeactivatedTraeger(t *test
 	}
 
 	assert.Nil(t, f.openOrder(t, path), "no order yet")
+	rec = f.call(t, http.MethodGet, path, nil)
+	assert.Contains(t, rec.Body.String(), `"data":null`, "the contract's nullable answer needs the data member")
 
 	rec = f.call(t, http.MethodPost, path, order)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())

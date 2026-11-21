@@ -13,16 +13,17 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
 type templateScheduleResponse struct {
-	ID               int64  `json:"id"`
-	Weekday          int    `json:"weekday"`
-	StartTime        string `json:"start_time"`
-	EndTime          string `json:"end_time"`
-	WeekPattern      int    `json:"week_pattern"`
-	CalendarPeriodID *int64 `json:"calendar_period_id,omitempty"`
+	ID               common.ID  `json:"id"`
+	Weekday          int        `json:"weekday"`
+	StartTime        string     `json:"start_time"`
+	EndTime          string     `json:"end_time"`
+	WeekPattern      int        `json:"week_pattern"`
+	CalendarPeriodID *common.ID `json:"calendar_period_id,omitempty"`
 	// ValidFrom is the inclusive recurrence start (YYYY-MM-DD) set by a
 	// template split; empty = period start.
 	ValidFrom string `json:"valid_from,omitempty"`
@@ -32,11 +33,11 @@ type templateScheduleResponse struct {
 }
 
 type templateTargetResponse struct {
-	Type               string  `json:"type"`
-	GradeLevel         *int16  `json:"grade_level,omitempty"`
-	SchoolClass        *string `json:"school_class,omitempty"`
-	EducationGroupID   *int64  `json:"education_group_id,omitempty"`
-	EducationGroupName string  `json:"education_group_name,omitempty"`
+	Type               string     `json:"type"`
+	GradeLevel         *int16     `json:"grade_level,omitempty"`
+	SchoolClass        *string    `json:"school_class,omitempty"`
+	EducationGroupID   *common.ID `json:"education_group_id,omitempty"`
+	EducationGroupName string     `json:"education_group_name,omitempty"`
 }
 
 func (rs *Resource) loadTemplates(
@@ -97,27 +98,27 @@ func mapTemplateRows(
 
 func templateResponseFromRow(row templateRow, childrenPerStaffRatio int) templateResponse {
 	return templateResponse{
-		ID:                          row.TemplateID,
+		ID:                          ident.ID(row.TemplateID),
 		Name:                        row.Name,
 		Type:                        row.Type,
-		CategoryID:                  row.CategoryID,
+		CategoryID:                  ident.ID(row.CategoryID),
 		CategoryName:                row.CategoryName,
-		PlanningTrackID:             row.PlanningTrackID,
+		PlanningTrackID:             (*ident.ID)(row.PlanningTrackID),
 		PlanningTrackName:           row.PlanningTrackName,
 		PlanningTrackColor:          row.PlanningTrackColor,
 		PlanningTrackSortOrder:      intPointer(row.PlanningTrackOrder),
-		RoomID:                      row.RoomID,
+		RoomID:                      (*ident.ID)(row.RoomID),
 		RoomName:                    stringValue(row.RoomName),
-		EducationGroupID:            row.EducationGroupID,
+		EducationGroupID:            (*ident.ID)(row.EducationGroupID),
 		EducationGroupName:          stringValue(row.EducationGroupName),
 		IsOpen:                      row.IsOpen,
 		MaxParticipants:             timetable.ParticipantLimitPtr(row.MaxParticipants),
-		CalendarPeriodID:            row.TemplateCalendarPeriodID,
+		CalendarPeriodID:            (*ident.ID)(row.TemplateCalendarPeriodID),
 		TargetGroupType:             row.TargetGroupType,
 		TargetGradeLevel:            row.TargetGradeLevel,
 		TargetSchoolClass:           row.TargetSchoolClass,
 		Targets:                     templateTargetsFromRow(row),
-		SourceCareOfferingIDs:       row.SourceCareOfferingIDs,
+		SourceCareOfferingIDs:       ident.IDs(row.SourceCareOfferingIDs),
 		SourceGradeLevels:           row.SourceGradeLevels,
 		SourceSchoolClasses:         row.SourceSchoolClasses,
 		ListKind:                    row.ListKind,
@@ -132,9 +133,9 @@ func templateResponseFromRow(row templateRow, childrenPerStaffRatio int) templat
 		RequiredStaffCount:          templateRequiredStaffCount(row, childrenPerStaffRatio),
 		AssignedStaffCount:          row.CapacitySupervisorCount,
 		RequiredStaffOverride:       templateRequiredStaffOverride(row.RequiredStaff),
-		StudentIDs:                  row.StudentIDs,
-		StaffIDs:                    row.StaffIDs,
-		PrimaryStaffID:              row.PrimaryStaffID,
+		StudentIDs:                  ident.IDs(row.StudentIDs),
+		StaffIDs:                    ident.IDs(row.StaffIDs),
+		PrimaryStaffID:              (*ident.ID)(row.PrimaryStaffID),
 		Schedules:                   []templateScheduleResponse{},
 		WeekdayAssignments:          []templateWeekdayAssignmentResponse{},
 		ProtectedStudentAssignments: []templateProtectedStudentAssignmentResponse{},
@@ -146,7 +147,7 @@ func templateTargetsFromRow(row templateRow) []templateTargetResponse {
 	for _, target := range row.Targets {
 		targets = append(targets, templateTargetResponse{
 			Type: target.TargetGroupType, GradeLevel: target.TargetGradeLevel,
-			SchoolClass: target.TargetSchoolClass, EducationGroupID: target.EducationGroupID,
+			SchoolClass: target.TargetSchoolClass, EducationGroupID: (*ident.ID)(target.EducationGroupID),
 			EducationGroupName: target.EducationGroupName,
 		})
 	}
@@ -179,12 +180,12 @@ func templateRequiredStaffOverride(n *int64) *int {
 
 func templateScheduleResponseFromRow(row templateRow) templateScheduleResponse {
 	return templateScheduleResponse{
-		ID:               row.ScheduleID,
+		ID:               ident.ID(row.ScheduleID),
 		Weekday:          row.Weekday,
 		StartTime:        stringValue(row.StartTime),
 		EndTime:          stringValue(row.EndTime),
 		WeekPattern:      row.WeekPattern,
-		CalendarPeriodID: row.CalendarPeriodID,
+		CalendarPeriodID: (*ident.ID)(row.CalendarPeriodID),
 		ValidFrom:        stringValue(row.ScheduleValidFrom),
 		ValidUntil:       stringValue(row.ScheduleValidUntil),
 	}
@@ -199,30 +200,30 @@ func stringValue(value *string) string {
 }
 
 type templateResponse struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	ID   common.ID `json:"id"`
+	Name string    `json:"name"`
 	// ResolvedFromTemplateID is set when the requested id belonged to an
 	// already-capped predecessor segment of a split series and this response
 	// carries the living successor instead (#2187). The editor must write to
 	// `id` and pass the clicked occurrence's date as series_roster_from so a
 	// roster change reaches the predecessor's remaining occurrences.
-	ResolvedFromTemplateID *int64 `json:"resolved_from_template_id,omitempty"`
-	Type                   string `json:"type"`
-	CategoryID             int64  `json:"category_id"`
-	CategoryName           string `json:"category_name"`
-	PlanningTrackID        *int64 `json:"planning_track_id,omitempty"`
-	PlanningTrackName      string `json:"planning_track_name,omitempty"`
-	PlanningTrackColor     string `json:"planning_track_color,omitempty"`
-	PlanningTrackSortOrder *int   `json:"planning_track_sort_order,omitempty"`
-	RoomID                 *int64 `json:"room_id,omitempty"`
-	RoomName               string `json:"room_name,omitempty"`
-	EducationGroupID       *int64 `json:"education_group_id,omitempty"`
-	EducationGroupName     string `json:"education_group_name,omitempty"`
-	IsOpen                 bool   `json:"is_open"`
-	MaxParticipants        *int   `json:"max_participants"`
+	ResolvedFromTemplateID *common.ID `json:"resolved_from_template_id,omitempty"`
+	Type                   string     `json:"type"`
+	CategoryID             common.ID  `json:"category_id"`
+	CategoryName           string     `json:"category_name"`
+	PlanningTrackID        *common.ID `json:"planning_track_id,omitempty"`
+	PlanningTrackName      string     `json:"planning_track_name,omitempty"`
+	PlanningTrackColor     string     `json:"planning_track_color,omitempty"`
+	PlanningTrackSortOrder *int       `json:"planning_track_sort_order,omitempty"`
+	RoomID                 *common.ID `json:"room_id,omitempty"`
+	RoomName               string     `json:"room_name,omitempty"`
+	EducationGroupID       *common.ID `json:"education_group_id,omitempty"`
+	EducationGroupName     string     `json:"education_group_name,omitempty"`
+	IsOpen                 bool       `json:"is_open"`
+	MaxParticipants        *int       `json:"max_participants"`
 	// CalendarPeriodID is the template's OWN period pin (distinct from each
 	// schedule's own calendar_period_id in templateScheduleResponse).
-	CalendarPeriodID *int64 `json:"calendar_period_id,omitempty"`
+	CalendarPeriodID *common.ID `json:"calendar_period_id,omitempty"`
 	// Zielgruppe (target-group) fields — see activities.Group's
 	// TargetGroupType* constants ("jahrgang" | "klasse" | "gruppe" |
 	// "angebot" | "none").
@@ -234,8 +235,8 @@ type templateResponse struct {
 	// "angebot" templates whose roster derives from one or more
 	// Betreuungsangebote. Lets the editor prefill the Angebots- and
 	// Jahrgangsauswahl on edit.
-	SourceCareOfferingIDs []int64 `json:"source_care_offering_ids,omitempty"`
-	SourceGradeLevels     []int   `json:"source_grade_levels,omitempty"`
+	SourceCareOfferingIDs []common.ID `json:"source_care_offering_ids,omitempty"`
+	SourceGradeLevels     []int       `json:"source_grade_levels,omitempty"`
 	// SourceSchoolClasses is the Klassenfilter (#2482); mutually exclusive
 	// with SourceGradeLevels.
 	SourceSchoolClasses []string `json:"source_school_classes,omitempty"`
@@ -263,9 +264,9 @@ type templateResponse struct {
 	// RequiredStaffOverride is the raw manual override (#1839), nil when the
 	// template derives its requirement from the Betreuungsschlüssel.
 	RequiredStaffOverride *int                       `json:"required_staff_override,omitempty"`
-	StudentIDs            []int64                    `json:"student_ids"`
-	StaffIDs              []int64                    `json:"staff_ids"`
-	PrimaryStaffID        *int64                     `json:"primary_staff_id,omitempty"`
+	StudentIDs            []common.ID                `json:"student_ids"`
+	StaffIDs              []common.ID                `json:"staff_ids"`
+	PrimaryStaffID        *common.ID                 `json:"primary_staff_id,omitempty"`
 	Schedules             []templateScheduleResponse `json:"schedules"`
 	// WeekdayAssignments lists the per-weekday roster deviations (#2129).
 	// Empty means the series uses one roster on every weekday; when it is

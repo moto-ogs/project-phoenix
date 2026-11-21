@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // toFilter translates the retired filter map into the owner's typed filter.
@@ -94,6 +95,9 @@ func assignTime(target **time.Time, field string, value any) error {
 }
 
 func assignInt64(target **int64, field string, value any) error {
+	if typed, ok := value.(ident.ID); ok {
+		value = typed.Int64()
+	}
 	switch typed := value.(type) {
 	case int64:
 		*target = &typed

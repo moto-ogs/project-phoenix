@@ -36,6 +36,12 @@ func NewDayChangesTestResource(db transactionruntime.Database, unit tenant.UnitO
 	if err != nil {
 		return nil, err
 	}
+	// The Kinder reads take the day as a filter; Care Plan's clock stamps
+	// writes only. A shared clock adds no closure to its effect bindings.
+	carePlan, err := NewClockedCarePlanForTests(db, time.Now)
+	if err != nil {
+		return nil, err
+	}
 	// The operational day of the active graph; its read takes the day.
 	day, _ := NewActiveTestTimetable(db, unit)
 	blocks, err := timetable.BlockDayChangesOf(day.TimetableOperations)
@@ -44,8 +50,8 @@ func NewDayChangesTestResource(db transactionruntime.Database, unit tenant.UnitO
 	}
 	view, err := NewDayChanges(DayChangesSources{
 		Caller: caller, Workforce: owners.MustNewWorkforce(db), Teachers: owners.NewGroupTeacherStaff(membership),
-		Blocks: blocks,
-		Names:  newDayChangesStaffNames(people), Groups: owners.NewSchoolStructureSuiteRepositories(db).Group,
+		CarePlan: carePlan, Students: owners.MustNewPeopleDirectory(db), Blocks: blocks,
+		Names: newDayChangesStaffNames(people), Groups: owners.NewSchoolStructureSuiteRepositories(db).Group,
 		// Without calendar periods every notice applies in every week; the
 		// weekdays and the validity still decide.
 		Notices: timetableCompose.NewStaffNotices(timetableCompose.StaffNoticeDependencies{

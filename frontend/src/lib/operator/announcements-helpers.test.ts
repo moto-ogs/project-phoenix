@@ -1,4 +1,8 @@
 import { describe, it, expect } from "vitest";
+import type {
+  AnnouncementViewDetailResponse as WireAnnouncementViewDetail,
+  OperatorAnnouncementResponse as WireAnnouncement,
+} from "~/lib/contract/operator-announcements.generated";
 import {
   mapAnnouncement,
   mapViewDetail,
@@ -6,13 +10,11 @@ import {
   SEVERITY_LABELS,
   ANNOUNCEMENT_STATUS_LABELS,
   SYSTEM_ROLE_LABELS,
-  type BackendAnnouncement,
-  type BackendAnnouncementViewDetail,
 } from "./announcements-helpers";
 
 describe("mapAnnouncement", () => {
-  const base: BackendAnnouncement = {
-    id: 42,
+  const base: WireAnnouncement = {
+    id: "42",
     title: "Release v2.0",
     content: "Neue Features",
     type: "release",
@@ -22,9 +24,9 @@ describe("mapAnnouncement", () => {
     published_at: "2026-03-01T10:00:00Z",
     expires_at: "2026-04-01T10:00:00Z",
     target_roles: ["admin", "user"],
-    target_org_ids: [5, 10],
-    target_tenant_ids: [12],
-    created_by: 1,
+    target_org_ids: ["5", "10"],
+    target_tenant_ids: ["12"],
+    created_by: "1",
     created_at: "2026-02-28T08:00:00Z",
     updated_at: "2026-02-28T09:00:00Z",
     status: "published",
@@ -52,11 +54,11 @@ describe("mapAnnouncement", () => {
   });
 
   it("handles null/undefined optional fields", () => {
-    const input: BackendAnnouncement = {
+    const input: WireAnnouncement = {
       ...base,
-      version: null,
-      published_at: null,
-      expires_at: null,
+      version: undefined,
+      published_at: undefined,
+      expires_at: undefined,
       target_roles: [],
       target_org_ids: [],
       target_tenant_ids: [],
@@ -88,8 +90,8 @@ describe("mapAnnouncement", () => {
 
 describe("mapViewDetail", () => {
   it("maps backend view detail to frontend format", () => {
-    const input: BackendAnnouncementViewDetail = {
-      user_id: 123,
+    const input: WireAnnouncementViewDetail = {
+      user_id: "123",
       user_name: "Max Mustermann",
       seen_at: "2026-03-15T14:30:00Z",
       shown_at: "2026-03-15T14:30:00Z",
@@ -107,8 +109,8 @@ describe("mapViewDetail", () => {
   });
 
   it("maps dismissed view detail", () => {
-    const input: BackendAnnouncementViewDetail = {
-      user_id: 456,
+    const input: WireAnnouncementViewDetail = {
+      user_id: "456",
       user_name: "Erika Muster",
       seen_at: "2026-03-15T15:00:00Z",
       shown_at: "2026-03-15T15:00:00Z",
@@ -124,7 +126,7 @@ describe("mapViewDetail", () => {
 
   it("preserves a dismissal without a displayed announcement", () => {
     const result = mapViewDetail({
-      user_id: 456,
+      user_id: "456",
       user_name: "Erika Muster",
       seen_at: "2026-03-15T15:01:00Z",
       shown_at: null,
@@ -161,5 +163,35 @@ describe("label constants", () => {
     expect(SYSTEM_ROLE_LABELS.admin).toBe("Verwaltung");
     expect(SYSTEM_ROLE_LABELS.user).toBe("Betreuung");
     expect(SYSTEM_ROLE_LABELS.guardian).toBe("Eltern");
+  });
+});
+
+describe("mapAnnouncement with values this build does not know (#2353)", () => {
+  const announcement: WireAnnouncement = {
+    id: "7",
+    title: "Neu",
+    content: "Text",
+    type: "newsletter",
+    severity: "urgent",
+    active: true,
+    target_roles: ["admin", "caterer"],
+    target_org_ids: null,
+    target_tenant_ids: null,
+    created_by: "1",
+    created_at: "2026-09-01T08:00:00Z",
+    updated_at: "2026-09-01T08:00:00Z",
+    status: "scheduled",
+  };
+
+  it("preserves unknown type and severity values for editing", () => {
+    const result = mapAnnouncement(announcement);
+    expect(result.type).toBe("newsletter");
+    expect(result.severity).toBe("urgent");
+  });
+
+  it("leaves an unknown status unknown and keeps every target role", () => {
+    const result = mapAnnouncement(announcement);
+    expect(result.status).toBeUndefined();
+    expect(result.targetRoles).toEqual(["admin", "caterer"]);
   });
 });

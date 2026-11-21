@@ -8,10 +8,10 @@ import { placementMessage, placementOutcome } from "./use-school-checkin-mode";
 describe("placementOutcome", () => {
   it("counts placed, kept and refused children from the server's answer", () => {
     const outcome = placementOutcome(["1", "2", "3", "9"], {
-      moved: [1, 2],
-      unchanged: [9],
-      skipped: [{ student_id: 3, reason: "not_found" }],
-      checked_in: [1],
+      moved: ["1", "2"],
+      unchanged: ["9"],
+      skipped: [{ student_id: "3", reason: "not_found" }],
+      checked_in: ["1"],
     });
     expect(outcome.succeeded).toBe(3);
     expect(outcome.failed).toBe(1);
