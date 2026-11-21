@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -119,7 +120,7 @@ func assertMoved(t *testing.T, done moveOutcome, studentID int64) {
 	t.Helper()
 	require.NoError(t, done.err, "the bulk move must not lose against the scan")
 	require.NotNil(t, done.result)
-	assert.Equal(t, []int64{studentID}, done.result.Moved)
+	assert.Equal(t, []int64{studentID}, ident.Int64s(done.result.Moved))
 }
 
 // TestBulkMoveAndScanDoNotDeadlock replays the cycle of #5278: the move

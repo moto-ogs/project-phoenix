@@ -189,8 +189,8 @@ export interface StudentResponse {
 }
 
 export const StudentResponseSchema: z.ZodType<StudentResponse, unknown> = object<StudentResponse>({
-  id: int64StringOrNumber,
-  person_id: int64StringOrNumber,
+  id: int64String,
+  person_id: int64String,
   first_name: str,
   last_name: str,
   tag_id: optional(str),
@@ -199,7 +199,7 @@ export const StudentResponseSchema: z.ZodType<StudentResponse, unknown> = object
   current_location: str,
   location_since: optional(instant),
   current_room_color: optional(str),
-  group_id: optional(int64StringOrNumber),
+  group_id: optional(int64String),
   group_name: optional(str),
   address_street: optional(str),
   address_city: optional(str),
@@ -221,7 +221,7 @@ export const StudentResponseSchema: z.ZodType<StudentResponse, unknown> = object
   departure_days: optional(rec(str)),
   allowed_departure_modes: optional(rec(nullable(arr(str)))),
   departure_companion_note: optional(str),
-  companion_student_ids: optional(arr(int64StringOrNumber)),
+  companion_student_ids: optional(arr(int64String)),
   companions_changed: optional(bool),
   bus: bool,
   bus_days: optional(rec(bool)),
@@ -239,7 +239,7 @@ export const StudentResponseSchema: z.ZodType<StudentResponse, unknown> = object
   photo_url: optional(str),
   photo_consent_given: optional(bool),
   photo_consent_given_at: optional(instant),
-  photo_consent_given_by: optional(int64StringOrNumber),
+  photo_consent_given_by: optional(int64String),
   agb_accepted_at: optional(instant),
   data_processing_accepted_at: optional(instant),
   email_contact_accepted_at: optional(instant),
@@ -260,7 +260,7 @@ export interface NameStudentResponse {
 }
 
 export const NameStudentResponseSchema: z.ZodType<NameStudentResponse, unknown> = object<NameStudentResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   first_name: str,
   last_name: str,
 });
@@ -306,14 +306,14 @@ export interface SlimStudentResponse {
 }
 
 export const SlimStudentResponseSchema: z.ZodType<SlimStudentResponse, unknown> = object<SlimStudentResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   first_name: str,
   last_name: str,
   school_class: str,
   current_location: str,
   location_since: optional(instant),
   current_room_color: optional(str),
-  group_id: optional(int64StringOrNumber),
+  group_id: optional(int64String),
   group_name: optional(str),
   sick: bool,
   sick_since: optional(instant),
@@ -338,7 +338,7 @@ export const SlimStudentResponseSchema: z.ZodType<SlimStudentResponse, unknown> 
   arrival_notes: optional(str),
   actual_arrival_time: optional(clockTime),
   actual_pickup_time: optional(clockTime),
-  companion_student_ids: optional(arr(int64StringOrNumber)),
+  companion_student_ids: optional(arr(int64String)),
   photo_url: optional(str),
   photo_consent_given: optional(bool),
   has_full_access: bool,
@@ -377,7 +377,7 @@ export interface CareOfferingOptionResponse {
 }
 
 export const CareOfferingOptionResponseSchema: z.ZodType<CareOfferingOptionResponse, unknown> = object<CareOfferingOptionResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
 });
 
@@ -1285,7 +1285,7 @@ export interface SupervisorContact {
 }
 
 export const SupervisorContactSchema: z.ZodType<SupervisorContact, unknown> = object<SupervisorContact>({
-  id: int64StringOrNumber,
+  id: int64String,
   first_name: str,
   last_name: str,
   email: optional(str),
@@ -1380,8 +1380,8 @@ export interface StudentDetailResponse {
 
 export const StudentDetailResponseSchema: z.ZodType<StudentDetailResponse, unknown> = object<StudentDetailResponse>({
   privacy_consent: optional(StudentPrivacyConsentResponseSchema),
-  id: int64StringOrNumber,
-  person_id: int64StringOrNumber,
+  id: int64String,
+  person_id: int64String,
   first_name: str,
   last_name: str,
   tag_id: optional(str),
@@ -1390,7 +1390,7 @@ export const StudentDetailResponseSchema: z.ZodType<StudentDetailResponse, unkno
   current_location: str,
   location_since: optional(instant),
   current_room_color: optional(str),
-  group_id: optional(int64StringOrNumber),
+  group_id: optional(int64String),
   group_name: optional(str),
   address_street: optional(str),
   address_city: optional(str),
@@ -1412,7 +1412,7 @@ export const StudentDetailResponseSchema: z.ZodType<StudentDetailResponse, unkno
   departure_days: optional(rec(str)),
   allowed_departure_modes: optional(rec(nullable(arr(str)))),
   departure_companion_note: optional(str),
-  companion_student_ids: optional(arr(int64StringOrNumber)),
+  companion_student_ids: optional(arr(int64String)),
   companions_changed: optional(bool),
   bus: bool,
   bus_days: optional(rec(bool)),
@@ -1430,7 +1430,7 @@ export const StudentDetailResponseSchema: z.ZodType<StudentDetailResponse, unkno
   photo_url: optional(str),
   photo_consent_given: optional(bool),
   photo_consent_given_at: optional(instant),
-  photo_consent_given_by: optional(int64StringOrNumber),
+  photo_consent_given_by: optional(int64String),
   agb_accepted_at: optional(instant),
   data_processing_accepted_at: optional(instant),
   email_contact_accepted_at: optional(instant),
@@ -1574,9 +1574,9 @@ export const attendanceDayRecordSchema: z.ZodType<attendanceDayRecord, unknown> 
   check_in_time: instant,
   check_out_time: optional(instant),
   duration_minutes: optional(safeInt),
-  checked_in_by: int64StringOrNumber,
-  checked_out_by: optional(int64StringOrNumber),
-  device_id: int64StringOrNumber,
+  checked_in_by: int64String,
+  checked_out_by: optional(int64String),
+  device_id: int64String,
   checked_in_actor: optional(AttendanceActorResponseSchema),
   checked_out_actor: optional(AttendanceActorResponseSchema),
   sessions: nullable(arr(attendanceSessionRecordSchema)),
@@ -1607,7 +1607,7 @@ export interface attendanceVisitEntry {
 }
 
 export const attendanceVisitEntrySchema: z.ZodType<attendanceVisitEntry, unknown> = object<attendanceVisitEntry>({
-  room_id: optional(int64StringOrNumber),
+  room_id: optional(int64String),
   room_name: optional(str),
   entry_time: instant,
   exit_time: optional(instant),
@@ -2132,8 +2132,8 @@ export interface PrivacyConsentResponse {
 }
 
 export const PrivacyConsentResponseSchema: z.ZodType<PrivacyConsentResponse, unknown> = object<PrivacyConsentResponse>({
-  id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
+  id: int64String,
+  student_id: int64String,
   policy_version: str,
   accepted: bool,
   accepted_at: optional(instant),
@@ -2162,8 +2162,8 @@ export interface StudentStatusDayResponse {
 }
 
 export const StudentStatusDayResponseSchema: z.ZodType<StudentStatusDayResponse, unknown> = object<StudentStatusDayResponse>({
-  id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
+  id: int64String,
+  student_id: int64String,
   date: str,
   status: str,
   label: str,
@@ -2819,7 +2819,7 @@ export const schoolCheckinBatchResponseSchema: z.ZodType<schoolCheckinBatchRespo
 
 /** Go: studentpresencehttp.BulkCreateStudentStatusDaysRequest */
 export interface BulkCreateStudentStatusDaysRequest {
-  student_ids?: number[] | null;
+  student_ids?: string[] | null;
   status?: string;
   from?: string;
   to?: string;
@@ -3181,7 +3181,7 @@ export interface schoolCheckinResponse {
 }
 
 export const schoolCheckinResponseSchema: z.ZodType<schoolCheckinResponse, unknown> = object<schoolCheckinResponse>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   status: str,
   check_in_time: optional(instant),
   check_out_time: optional(instant),

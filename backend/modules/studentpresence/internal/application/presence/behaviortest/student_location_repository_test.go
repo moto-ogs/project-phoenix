@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -196,14 +197,14 @@ func TestGroupRepository_FindByIDs(t *testing.T) {
 
 		// Check group 1
 		if group, ok := result[activeGroup1.ID]; assert.True(t, ok) {
-			assert.Equal(t, room1.ID, group.RoomID)
+			assert.Equal(t, ident.ID(room1.ID), group.RoomID)
 			assert.NotNil(t, group.Room, "Should load Room relation")
 			assert.Contains(t, group.Room.Name, "Lab Room")
 		}
 
 		// Check group 2
 		if group, ok := result[activeGroup2.ID]; assert.True(t, ok) {
-			assert.Equal(t, room2.ID, group.RoomID)
+			assert.Equal(t, ident.ID(room2.ID), group.RoomID)
 			assert.NotNil(t, group.Room, "Should load Room relation")
 			assert.Contains(t, group.Room.Name, "Music Room")
 		}

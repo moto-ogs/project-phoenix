@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	presenceAPI "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/require"
@@ -48,11 +49,11 @@ func TestPresenceGroups20ActiveQueryBudget(t *testing.T) {
 					// The API renders stored instants in the database session zone.
 					require.NoError(t, db.NewSelect().Model(group).WherePK().Scan(testpkg.Ctx(t)))
 					groups = append(groups, group)
-					row := presenceAPI.ActiveGroupResponse{ID: group.ID, GroupID: &activity.ID, RoomID: room.ID, StartTime: group.StartTime.UTC(), IsActive: true, CreatedAt: group.CreatedAt.UTC(), UpdatedAt: group.UpdatedAt.UTC(), Room: &presenceAPI.RoomSimple{ID: room.ID, Name: room.Name}}
+					row := presenceAPI.ActiveGroupResponse{ID: ident.ID(group.ID), GroupID: (*ident.ID)(&activity.ID), RoomID: ident.ID(room.ID), StartTime: group.StartTime.UTC(), IsActive: true, CreatedAt: group.CreatedAt.UTC(), UpdatedAt: group.UpdatedAt.UTC(), Room: &presenceAPI.RoomSimple{ID: ident.ID(room.ID), Name: room.Name}}
 					if key == "supervisors_all" {
 						staff := testpkg.CreateTestStaff(t, db, "Presence20", fmt.Sprintf("Supervisor%d", i))
 						testpkg.CreateTestGroupSupervisor(t, db, staff.ID, group.ID, "supervisor")
-						row.Supervisors = []presenceAPI.GroupSupervisorSimple{{StaffID: staff.ID, Role: "supervisor"}}
+						row.Supervisors = []presenceAPI.GroupSupervisorSimple{{StaffID: ident.ID(staff.ID), Role: "supervisor"}}
 						row.SupervisorCount = 1
 					}
 					expected = append(expected, row)

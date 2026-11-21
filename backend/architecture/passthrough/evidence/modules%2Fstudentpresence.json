@@ -16,7 +16,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (r *SessionRepository) Create(ctx context.Context, group *ActiveGroupRow) error {\n\tif group == nil {\n\t\treturn errors.New(\"group cannot be nil or zero value\")\n\t}\n\tif err := group.Validate(); err != nil {\n\t\treturn err\n\t}\n\trow, err := r.records.RecordGroup(ctx, liveGroup(group))\n\tif err != nil {\n\t\treturn err\n\t}\n\tgroup.ID, group.CreatedAt, group.UpdatedAt, group.TenantID = row.ID, row.CreatedAt, row.UpdatedAt, row.TenantID\n\treturn nil\n}",
+      "evidence": "func (r *SessionRepository) Create(ctx context.Context, group *ActiveGroupRow) error {\n\tif group == nil {\n\t\treturn errors.New(\"group cannot be nil or zero value\")\n\t}\n\tif err := group.Validate(); err != nil {\n\t\treturn err\n\t}\n\trow, err := r.records.RecordGroup(ctx, liveGroup(group))\n\tif err != nil {\n\t\treturn err\n\t}\n\tgroup.ID, group.CreatedAt, group.UpdatedAt, group.TenantID = ident.ID(row.ID), row.CreatedAt, row.UpdatedAt, ident.ID(row.TenantID)\n\treturn nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/studentpresence/internal/adapters/postgres/SessionRepository.Create",
       "owner": "modules/studentpresence"
@@ -51,7 +51,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (r *SessionRepository) Update(ctx context.Context, group *ActiveGroupRow) error {\n\tif group == nil {\n\t\treturn errors.New(\"group cannot be nil or zero value\")\n\t}\n\tif err := group.Validate(); err != nil {\n\t\treturn err\n\t}\n\trow, err := r.records.ReviseGroup(ctx, liveGroup(group))\n\tif err != nil {\n\t\treturn err\n\t}\n\tgroup.CreatedAt, group.UpdatedAt, group.TenantID = row.CreatedAt, row.UpdatedAt, row.TenantID\n\treturn nil\n}",
+      "evidence": "func (r *SessionRepository) Update(ctx context.Context, group *ActiveGroupRow) error {\n\tif group == nil {\n\t\treturn errors.New(\"group cannot be nil or zero value\")\n\t}\n\tif err := group.Validate(); err != nil {\n\t\treturn err\n\t}\n\trow, err := r.records.ReviseGroup(ctx, liveGroup(group))\n\tif err != nil {\n\t\treturn err\n\t}\n\tgroup.CreatedAt, group.UpdatedAt, group.TenantID = row.CreatedAt, row.UpdatedAt, ident.ID(row.TenantID)\n\treturn nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/studentpresence/internal/adapters/postgres/SessionRepository.Update",
       "owner": "modules/studentpresence"
@@ -114,7 +114,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (r *SupervisionRepository) SetEndDate(ctx context.Context, row *ports.GroupSupervisor) (int64, error) {\n\tif row == nil || row.EndDate == nil {\n\t\treturn 0, fmt.Errorf(\"supervision end date is required\")\n\t}\n\treturn r.records.SetSupervisionEnd(ctx, row.ID, row.EndDate.String(), row.UpdatedAt)\n}",
+      "evidence": "func (r *SupervisionRepository) SetEndDate(ctx context.Context, row *ports.GroupSupervisor) (int64, error) {\n\tif row == nil || row.EndDate == nil {\n\t\treturn 0, fmt.Errorf(\"supervision end date is required\")\n\t}\n\treturn r.records.SetSupervisionEnd(ctx, row.ID.Int64(), row.EndDate.String(), row.UpdatedAt)\n}",
       "form": "unclassified-evidence",
       "id": "modules/studentpresence/internal/adapters/postgres/SupervisionRepository.SetEndDate",
       "owner": "modules/studentpresence"
@@ -611,7 +611,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p PresenceOperations) ClaimSupervision(ctx context.Context, groupID, staffID int64, role string) (studentpresence.ClaimedSupervision, error) {\n\trow, err := p.active.ClaimActiveGroup(ctx, groupID, staffID, role)\n\tif err != nil {\n\t\treturn studentpresence.ClaimedSupervision{}, err\n\t}\n\treturn studentpresence.ClaimedSupervision{ID: row.ID, TenantID: row.TenantID, GroupID: row.GroupID, StaffID: row.StaffID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Role: row.Role, StartDate: row.StartDate.String()}, nil\n}",
+      "evidence": "func (p PresenceOperations) ClaimSupervision(ctx context.Context, groupID, staffID int64, role string) (studentpresence.ClaimedSupervision, error) {\n\trow, err := p.active.ClaimActiveGroup(ctx, groupID, staffID, role)\n\tif err != nil {\n\t\treturn studentpresence.ClaimedSupervision{}, err\n\t}\n\treturn studentpresence.ClaimedSupervision{ID: row.ID.Int64(), TenantID: row.TenantID.Int64(), GroupID: row.GroupID.Int64(), StaffID: row.StaffID.Int64(), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Role: row.Role, StartDate: row.StartDate.String()}, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/studentpresence/internal/application/presence/PresenceOperations.ClaimSupervision",
       "owner": "modules/studentpresence"

@@ -22841,7 +22841,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -23960,7 +23960,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -23978,7 +23978,7 @@
         {
           "name": "tenant_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -24009,7 +24009,7 @@
         {
           "name": "group_id",
           "schema": {
-            "kind": "legacy_id",
+            "kind": "id",
             "nullable": true
           }
         },
@@ -24017,13 +24017,13 @@
           "name": "device_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "room_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -24071,20 +24071,20 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "group_id",
           "schema": {
-            "kind": "legacy_id",
+            "kind": "id",
             "nullable": true
           }
         },
         {
           "name": "room_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -32217,7 +32217,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
@@ -36233,7 +36233,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -40559,7 +40559,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
@@ -40570,7 +40570,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         }
@@ -40832,7 +40832,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
@@ -46456,7 +46456,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -52316,7 +52316,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -52334,19 +52334,19 @@
         {
           "name": "tenant_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "staff_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "group_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -52394,7 +52394,7 @@
         {
           "name": "staff_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -63399,7 +63399,7 @@
           "name": "student_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -63491,7 +63491,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -73578,13 +73578,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -77229,7 +77229,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -83295,13 +83295,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "tenant_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -83344,27 +83344,27 @@
         {
           "name": "category_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "planning_track_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "planned_room_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "created_by",
           "schema": {
-            "kind": "legacy_id",
+            "kind": "id",
             "nullable": true
           }
         },
@@ -83378,7 +83378,7 @@
           "name": "education_group_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -83411,7 +83411,7 @@
           "name": "calendar_period_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -83440,7 +83440,7 @@
           "schema": {
             "kind": "array",
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
@@ -83488,13 +83488,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "tenant_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -83539,7 +83539,7 @@
           "name": "shift_type_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -83558,13 +83558,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "tenant_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -83719,13 +83719,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "tenant_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -83802,13 +83802,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "tenant_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -83826,7 +83826,7 @@
         {
           "name": "person_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -83847,7 +83847,7 @@
           "name": "work_time_model_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -83880,13 +83880,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "tenant_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -83931,7 +83931,7 @@
           "name": "account_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         }
       ]
@@ -85143,7 +85143,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -85188,7 +85188,7 @@
           "name": "group_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -85373,7 +85373,7 @@
           "schema": {
             "kind": "array",
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
@@ -89664,13 +89664,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "person_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -89729,7 +89729,7 @@
           "name": "group_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -89905,7 +89905,7 @@
           "schema": {
             "kind": "array",
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
@@ -90034,7 +90034,7 @@
           "name": "photo_consent_given_by",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -90877,7 +90877,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
@@ -90887,7 +90887,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
@@ -90906,14 +90906,14 @@
           "name": "active_group_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "room_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -90922,7 +90922,7 @@
           "schema": {
             "kind": "array",
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         }
@@ -90935,7 +90935,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -91313,13 +91313,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "person_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -91378,7 +91378,7 @@
           "name": "group_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -91554,7 +91554,7 @@
           "schema": {
             "kind": "array",
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
@@ -91683,7 +91683,7 @@
           "name": "photo_consent_given_by",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -91803,13 +91803,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -92694,7 +92694,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -92843,7 +92843,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -92911,19 +92911,19 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "staff_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "active_group_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -93878,7 +93878,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         }
@@ -98313,7 +98313,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
@@ -98331,13 +98331,13 @@
         {
           "name": "active_group_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "room_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         }
       ]
@@ -98349,7 +98349,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -100157,19 +100157,19 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "active_group_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -101557,7 +101557,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
@@ -101565,7 +101565,7 @@
           "name": "active_group_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         }
       ]
@@ -101806,20 +101806,20 @@
         {
           "name": "checked_in_by",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "checked_out_by",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "device_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -102145,7 +102145,7 @@
           "name": "room_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -103938,7 +103938,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
@@ -103946,7 +103946,7 @@
           "name": "target_room_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -103970,7 +103970,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
@@ -103978,7 +103978,7 @@
           "name": "target_active_group_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -104210,7 +104210,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -104228,19 +104228,19 @@
         {
           "name": "tenant_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "staff_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "group_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -109951,7 +109951,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
@@ -109959,7 +109959,7 @@
           "name": "target_active_group_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         }
       ]
@@ -109976,7 +109976,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
@@ -109984,7 +109984,7 @@
           "name": "target_room_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         }
       ]
@@ -114745,7 +114745,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -119683,13 +119683,6 @@
     "careplanhttp.StudentRequest.GroupID",
     "careplanhttp.UpdateStudentRequest.GroupID",
     "careplanhttp.studentDocumentDeletedResponse.StudentID",
-    "classday.AbsenceListChild.StudentID",
-    "classday.DayRow.StudentID",
-    "classday.SupervisionStudentSheet.StudentID",
-    "classdayhttp.ClassHandoverRequest.AbsentStudentIDs",
-    "classdayhttp.ClassHandoverRequest.PresentStudentIDs",
-    "classdayhttp.ClassTripRequest.StudentIDs",
-    "classdayhttp.MorningAttendanceMarkRequest.StudentID",
     "common.TrustedDeviceDTO.ID",
     "communication.AnnouncementStats.AnnouncementID",
     "dataimport.OpeningBalanceImportRow.StaffID",
@@ -119836,8 +119829,6 @@
     "me.ProfileResponse.ID",
     "mealplan.BillingMonthChild.StudentID",
     "notifications.feedEntryResponse.ID",
-    "openroommovehttp.moveStudentsToOpenRoomRequest.StudentIDs",
-    "openroommovehttp.moveStudentsToOpenRoomRequest.TargetRoomID",
     "operator.AccountTenantAccessEntry.OrganizationID",
     "operator.AccountTenantAccessEntry.TenantID",
     "operator.OperatorListItem.ID",
@@ -119929,73 +119920,6 @@
     "peopledirectory.Staff.TenantID",
     "peopledirectory.Staff.WorkTimeModelID",
     "platformannouncements.PlatformAnnouncementResponse.ID",
-    "ports.ActiveGroup.DeviceID",
-    "ports.ActiveGroup.GroupID",
-    "ports.ActiveGroup.ID",
-    "ports.ActiveGroup.RoomID",
-    "ports.ActiveGroup.TenantID",
-    "ports.GroupSupervisor.GroupID",
-    "ports.GroupSupervisor.ID",
-    "ports.GroupSupervisor.StaffID",
-    "ports.GroupSupervisor.TenantID",
-    "ports.SessionActivity.CalendarPeriodID",
-    "ports.SessionActivity.CategoryID",
-    "ports.SessionActivity.CreatedBy",
-    "ports.SessionActivity.EducationGroupID",
-    "ports.SessionActivity.ID",
-    "ports.SessionActivity.PlannedRoomID",
-    "ports.SessionActivity.PlanningTrackID",
-    "ports.SessionActivity.SourceCareOfferingIDs",
-    "ports.SessionActivity.TenantID",
-    "ports.SessionActivityCategory.ID",
-    "ports.SessionActivityCategory.ShiftTypeID",
-    "ports.SessionActivityCategory.TenantID",
-    "ports.SessionDevice.ID",
-    "ports.SessionDevice.TenantID",
-    "ports.SessionStaff.ID",
-    "ports.SessionStaff.PersonID",
-    "ports.SessionStaff.TenantID",
-    "ports.SessionStaff.WorkTimeModelID",
-    "ports.SessionStaffPerson.AccountID",
-    "ports.SessionStaffPerson.ID",
-    "ports.SessionStaffPerson.TenantID",
-    "presence.ActiveGroupResponse.GroupID",
-    "presence.ActiveGroupResponse.ID",
-    "presence.ActiveGroupResponse.RoomID",
-    "presence.GroupSupervisorSimple.StaffID",
-    "presence.RoomSimple.ID",
-    "presence.SupervisorResponse.ActiveGroupID",
-    "presence.SupervisorResponse.ID",
-    "presence.SupervisorResponse.StaffID",
-    "presence.TrackingIndicatorsRequest.StudentIDs",
-    "presence.VisitResponse.ActiveGroupID",
-    "presence.VisitResponse.ID",
-    "presence.VisitResponse.StudentID",
-    "presence.assignTransitStudentsRequest.ActiveGroupID",
-    "presence.assignTransitStudentsRequest.StudentIDs",
-    "presence.checkInStudentsToSessionRequest.StudentIDs",
-    "presence.checkInStudentsToSessionRequest.TargetActiveGroupID",
-    "presence.claimedSupervisionResponse.GroupID",
-    "presence.claimedSupervisionResponse.ID",
-    "presence.claimedSupervisionResponse.StaffID",
-    "presence.claimedSupervisionResponse.TenantID",
-    "presence.moveStudentsToActiveGroupRequest.StudentIDs",
-    "presence.moveStudentsToActiveGroupRequest.TargetActiveGroupID",
-    "presenceprojectionhttp.CareOfferingOptionResponse.ID",
-    "presenceprojectionhttp.NameStudentResponse.ID",
-    "presenceprojectionhttp.SlimStudentResponse.CompanionStudentIDs",
-    "presenceprojectionhttp.SlimStudentResponse.GroupID",
-    "presenceprojectionhttp.SlimStudentResponse.ID",
-    "presenceprojectionhttp.StudentResponse.CompanionStudentIDs",
-    "presenceprojectionhttp.StudentResponse.GroupID",
-    "presenceprojectionhttp.StudentResponse.ID",
-    "presenceprojectionhttp.StudentResponse.PersonID",
-    "presenceprojectionhttp.StudentResponse.PhotoConsentGivenBy",
-    "presenceprojectionhttp.SupervisorContact.ID",
-    "presenceprojectionhttp.attendanceDayRecord.CheckedInBy",
-    "presenceprojectionhttp.attendanceDayRecord.CheckedOutBy",
-    "presenceprojectionhttp.attendanceDayRecord.DeviceID",
-    "presenceprojectionhttp.attendanceVisitEntry.RoomID",
     "schoolstructurehttp.GroupRequest.RoomID",
     "schoolstructurehttp.GroupRequest.TeacherIDs",
     "schoolstructurehttp.GroupResponse.ID",
@@ -120031,24 +119955,6 @@
     "staffshifts.ShiftResponse.ShiftTypeID",
     "staffshifts.ShiftResponse.StaffID",
     "staffshifts.WeeklySummaryResponse.StaffID",
-    "studentpresence.SessionRoom.ID",
-    "studentpresence.SessionRoom.TenantID",
-    "studentpresence.StudentMoveResult.ActiveGroupID",
-    "studentpresence.StudentMoveResult.CheckedIn",
-    "studentpresence.StudentMoveResult.Moved",
-    "studentpresence.StudentMoveResult.RoomID",
-    "studentpresence.StudentMoveResult.Unchanged",
-    "studentpresence.StudentMoveSkipped.StudentID",
-    "studentpresence.StudentStatusDayResponse.ID",
-    "studentpresence.StudentStatusDayResponse.StudentID",
-    "studentpresence.TransitAssignResult.ActiveGroupID",
-    "studentpresence.TransitAssignResult.Assigned",
-    "studentpresence.TransitAssignResult.RoomID",
-    "studentpresence.TransitAssignSkipped.StudentID",
-    "studentpresencehttp.BulkCreateStudentStatusDaysRequest.StudentIDs",
-    "studentpresencehttp.PrivacyConsentResponse.ID",
-    "studentpresencehttp.PrivacyConsentResponse.StudentID",
-    "studentpresencehttp.schoolCheckinResponse.StudentID",
     "substitutions.additionalSupervisionRequest.ActiveGroupID",
     "substitutions.additionalSupervisionRequest.TargetStaffID",
     "substitutions.endRequest.ID",

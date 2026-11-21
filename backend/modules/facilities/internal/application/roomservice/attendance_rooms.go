@@ -5,6 +5,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // AttendanceRoomRecords is the retained room read and lock contract.
@@ -58,7 +59,7 @@ func projectAttendanceRoom(room *facilities.Room) *studentpresence.SessionRoom {
 		return nil
 	}
 	return &studentpresence.SessionRoom{
-		ID: room.ID, TenantID: room.TenantID, CreatedAt: room.CreatedAt, UpdatedAt: room.UpdatedAt,
+		ID: ident.ID(room.ID), TenantID: ident.ID(room.TenantID), CreatedAt: room.CreatedAt, UpdatedAt: room.UpdatedAt,
 		Name: room.Name, Building: room.Building, Floor: room.Floor, Capacity: room.Capacity,
 		Category: room.Category, Color: room.Color, IsSystem: room.IsSystem, IsOpenRoom: room.IsOpenRoom,
 	}

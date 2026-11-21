@@ -20,7 +20,7 @@ func applyEffectiveStatusDaysToResponses(responses []StudentResponse, statusRows
 	}
 
 	for i := range responses {
-		applyEffectiveStatusDays(&responses[i], rowsByStudent[responses[i].ID])
+		applyEffectiveStatusDays(&responses[i], rowsByStudent[responses[i].ID.Int64()])
 	}
 }
 
@@ -39,7 +39,7 @@ func (rs *Resource) applyStatusDaysForDate(ctx context.Context, responses []Stud
 
 	studentIDs := make([]int64, 0, len(responses))
 	for _, response := range responses {
-		studentIDs = append(studentIDs, response.ID)
+		studentIDs = append(studentIDs, response.ID.Int64())
 	}
 	rows, err := rs.StudentStatusDayService.FindSignedOffByStudentIDsAndDate(ctx, studentIDs, calendar.DateFromTime(now))
 	if err != nil {
@@ -54,7 +54,7 @@ func (rs *Resource) applyStatusDaysForDateToResponse(ctx context.Context, respon
 		return nil
 	}
 	date := calendar.DateFromTime(now)
-	rows, err := rs.StudentStatusDayService.FindSignedOffByStudentIDsAndDate(ctx, []int64{response.ID}, date)
+	rows, err := rs.StudentStatusDayService.FindSignedOffByStudentIDsAndDate(ctx, []int64{response.ID.Int64()}, date)
 	if err != nil {
 		return err
 	}

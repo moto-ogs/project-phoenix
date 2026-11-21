@@ -14,6 +14,7 @@ import (
 	departure "github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
 	studentpresence "github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // StudentResponseOpts groups parameters for creating a student response to reduce function parameter count
@@ -52,7 +53,7 @@ func populatePersonAndGroupData(response *StudentResponse, person *peopleModule.
 	}
 
 	if student.GroupID != nil {
-		response.GroupID = *student.GroupID
+		response.GroupID = ident.ID(*student.GroupID)
 	}
 
 	if group != nil {
@@ -208,7 +209,7 @@ func populatePhotoFields(response *StudentResponse, student *peopleModule.Studen
 		response.PhotoConsentGivenAt = student.PhotoConsentGivenAt
 	}
 	if student.PhotoConsentGivenBy != nil {
-		response.PhotoConsentGivenBy = student.PhotoConsentGivenBy
+		response.PhotoConsentGivenBy = (*ident.ID)(student.PhotoConsentGivenBy)
 	}
 }
 
@@ -325,8 +326,8 @@ func newStudentResponseWithOpts(ctx context.Context, opts StudentResponseOpts, s
 	hasFullAccess := opts.HasFullAccess && canReadSensitiveStudentData(ctx)
 	locationOverride := opts.LocationOverride
 	response := StudentResponse{
-		ID:          student.ID,
-		PersonID:    student.PersonID,
+		ID:          ident.ID(student.ID),
+		PersonID:    ident.ID(student.PersonID),
 		SchoolClass: student.SchoolClass,
 		CreatedAt:   student.CreatedAt,
 		UpdatedAt:   student.UpdatedAt,
@@ -382,8 +383,8 @@ func newStudentResponseFromSnapshot(ctx context.Context, student *peopleModule.S
 	hasPhotoAccess := hasFullAccess
 	hasFullAccess = hasFullAccess && canReadSensitiveStudentData(ctx)
 	response := StudentResponse{
-		ID:          student.ID,
-		PersonID:    student.PersonID,
+		ID:          ident.ID(student.ID),
+		PersonID:    ident.ID(student.PersonID),
 		SchoolClass: student.SchoolClass,
 		CreatedAt:   student.CreatedAt,
 		UpdatedAt:   student.UpdatedAt,
@@ -421,7 +422,7 @@ func newStudentResponseFromSnapshot(ctx context.Context, student *peopleModule.S
 // teacherToSupervisorContact converts a group teacher to a supervisor contact.
 func teacherToSupervisorContact(teacher GroupTeacher) *SupervisorContact {
 	return &SupervisorContact{
-		ID:        teacher.ID,
+		ID:        ident.ID(teacher.ID),
 		FirstName: teacher.FirstName,
 		LastName:  teacher.LastName,
 		Email:     teacher.Email,
@@ -444,7 +445,7 @@ func (rs *Resource) enrichWithCareExitFlag(ctx context.Context, responses []Stud
 		if responses[i].CareEndsOn == "" {
 			continue
 		}
-		ids = append(ids, responses[i].ID)
+		ids = append(ids, responses[i].ID.Int64())
 	}
 	if len(ids) == 0 {
 		return nil
@@ -459,7 +460,7 @@ func (rs *Resource) enrichWithCareExitFlag(ctx context.Context, responses []Stud
 		return fmt.Errorf("load recorded care exits: %w", err)
 	}
 	for i := range responses {
-		if recorded[responses[i].ID] {
+		if recorded[responses[i].ID.Int64()] {
 			responses[i].CareExitRecorded = true
 		}
 	}
@@ -474,7 +475,7 @@ func applyPickupTimesFromMap(responses []StudentResponse, pickupTimes map[int64]
 		if !responses[i].HasFullAccess {
 			continue
 		}
-		if ept, ok := pickupTimes[responses[i].ID]; ok {
+		if ept, ok := pickupTimes[responses[i].ID.Int64()]; ok {
 			if ept.PickupTime != nil {
 				formatted := ept.PickupTime.Format("15:04")
 				responses[i].PickupTime = &formatted
@@ -493,7 +494,7 @@ func applyArrivalTimesFromMap(responses []StudentResponse, arrivalTimes map[int6
 		if !responses[i].HasFullAccess {
 			continue
 		}
-		if eat, ok := arrivalTimes[responses[i].ID]; ok {
+		if eat, ok := arrivalTimes[responses[i].ID.Int64()]; ok {
 			if eat.ArrivalTime != nil {
 				formatted := eat.ArrivalTime.Format("15:04")
 				responses[i].ArrivalTime = &formatted
@@ -549,7 +550,7 @@ func applyActualTimesFromSnapshot(response *StudentResponse, snapshot *studentDa
 		return
 	}
 
-	status, ok := snapshot.LocationSnapshot.Attendances[response.ID]
+	status, ok := snapshot.LocationSnapshot.Attendances[response.ID.Int64()]
 	if !ok || status == nil {
 		return
 	}

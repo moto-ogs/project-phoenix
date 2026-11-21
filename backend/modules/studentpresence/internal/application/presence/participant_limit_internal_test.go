@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -51,7 +52,7 @@ func participantLimitService(settings *participantLimitSettings, activities *par
 }
 
 func activitySession(activityID int64) *ports.ActiveGroup {
-	return &ports.ActiveGroup{ID: 70, RoomID: 12, GroupID: &activityID}
+	return &ports.ActiveGroup{ID: 70, RoomID: 12, GroupID: (*ident.ID)(&activityID)}
 }
 
 func TestEnsureActivityParticipantLimit(t *testing.T) {

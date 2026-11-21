@@ -4,6 +4,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	presenceCompose "github.com/moto-ogs/project-phoenix/modules/studentpresence/compose"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -25,7 +26,7 @@ func sessionSupervisors(records studentpresence.SessionRecords) ports.GroupSuper
 // service reads and writes.
 func supervisorOf(row *testpkg.GroupSupervisorRow) *ports.GroupSupervisor {
 	return &ports.GroupSupervisor{
-		ID: row.ID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, TenantID: row.TenantID,
-		StaffID: row.StaffID, GroupID: row.GroupID, Role: row.Role, StartDate: row.StartDate, EndDate: row.EndDate,
+		ID: ident.ID(row.ID), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, TenantID: ident.ID(row.TenantID),
+		StaffID: ident.ID(row.StaffID), GroupID: ident.ID(row.GroupID), Role: row.Role, StartDate: row.StartDate, EndDate: row.EndDate,
 	}
 }

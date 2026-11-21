@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // SupervisionRepository reads and writes the supervision of room sessions
@@ -105,14 +106,14 @@ func (r *SupervisionRepository) AttachStaff(ctx context.Context, rows []*ports.G
 	}
 	ids := make([]int64, 0, len(rows))
 	for _, row := range rows {
-		ids = append(ids, row.StaffID)
+		ids = append(ids, row.StaffID.Int64())
 	}
 	staff, err := r.staff.SupervisionStaff(ctx, ids)
 	if err != nil {
 		return err
 	}
 	for _, row := range rows {
-		if member, found := staff[row.StaffID]; found {
+		if member, found := staff[row.StaffID.Int64()]; found {
 			row.Staff = member
 		}
 	}
@@ -144,7 +145,7 @@ func (r *SupervisionRepository) Create(ctx context.Context, row *ports.GroupSupe
 	if err != nil {
 		return r.errors.WrapRecordError("create", err)
 	}
-	row.ID, row.CreatedAt, row.UpdatedAt, row.TenantID = result.ID, result.CreatedAt, result.UpdatedAt, result.TenantID
+	row.ID, row.CreatedAt, row.UpdatedAt, row.TenantID = ident.ID(result.ID), result.CreatedAt, result.UpdatedAt, ident.ID(result.TenantID)
 	return nil
 }
 
@@ -162,7 +163,7 @@ func (r *SupervisionRepository) Update(ctx context.Context, row *ports.GroupSupe
 	if err != nil {
 		return r.errors.WrapRecordError("update", err)
 	}
-	row.CreatedAt, row.UpdatedAt, row.TenantID = result.CreatedAt, result.UpdatedAt, result.TenantID
+	row.CreatedAt, row.UpdatedAt, row.TenantID = result.CreatedAt, result.UpdatedAt, ident.ID(result.TenantID)
 	return nil
 }
 
@@ -199,7 +200,7 @@ func (r *SupervisionRepository) SetEndDate(ctx context.Context, row *ports.Group
 	if row == nil || row.EndDate == nil {
 		return 0, fmt.Errorf("supervision end date is required")
 	}
-	return r.records.SetSupervisionEnd(ctx, row.ID, row.EndDate.String(), row.UpdatedAt)
+	return r.records.SetSupervisionEnd(ctx, row.ID.Int64(), row.EndDate.String(), row.UpdatedAt)
 }
 
 // GetStaffIDsWithSupervisionToday returns staff IDs who had any supervision
@@ -239,8 +240,8 @@ func groupSupervisors(rows []studentpresence.GroupSupervision) ([]*ports.GroupSu
 			return nil, err
 		}
 		result = append(result, &ports.GroupSupervisor{
-			ID: row.ID, TenantID: row.TenantID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
-			GroupID: row.GroupID, StaffID: row.StaffID, Role: row.Role, StartDate: start, EndDate: end,
+			ID: ident.ID(row.ID), TenantID: ident.ID(row.TenantID), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
+			GroupID: ident.ID(row.GroupID), StaffID: ident.ID(row.StaffID), Role: row.Role, StartDate: start, EndDate: end,
 		})
 	}
 	return result, nil
@@ -248,7 +249,7 @@ func groupSupervisors(rows []studentpresence.GroupSupervision) ([]*ports.GroupSu
 
 func groupSupervision(row *ports.GroupSupervisor) studentpresence.GroupSupervision {
 	return studentpresence.GroupSupervision{
-		ID: row.ID, StaffID: row.StaffID, GroupID: row.GroupID, Role: row.Role,
+		ID: row.ID.Int64(), StaffID: row.StaffID.Int64(), GroupID: row.GroupID.Int64(), Role: row.Role,
 		StartDate: row.StartDate.String(), EndDate: dateString(row.EndDate), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
 	}
 }
