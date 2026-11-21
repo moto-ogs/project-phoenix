@@ -267,6 +267,7 @@ func buildLegalBlocks(texts enrollmentNative.LegalTexts) []enrollmentNative.Lega
 	if texts.EmailContactEnabled && texts.EmailContact != "" {
 		blocks = append(blocks, enrollmentNative.LegalBlock{
 			Key: enrollmentNative.ConsentKeyEmailContact, Kind: "notice", Title: "E-Mail-Kontakt",
+			// sie-anrede-erlaubt (ADR 0294): Standardhinweis, geht wörtlich in Nachweise und gespeicherte Formularvorlagen ein.
 			Label: "Die Schule nutzt Ihre E-Mail-Adresse für Rückfragen und Status-Benachrichtigungen zu dieser Anmeldung.",
 			Text:  texts.EmailContact, Required: false, SortOrder: 40, Source: enrollmentNative.LegalBlockSourceStandard,
 		})

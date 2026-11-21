@@ -95,7 +95,7 @@ if [[ "$*" == *quality.sh* && "\${MUTATE_SOURCE:-}" == 1 ]]; then echo changed >
   symlinkSync(process.execPath, join(root, '.devbox/nix/profile/default/bin/node'));
   write('.devbox/nix/profile/default/bin/go', '#!/bin/bash\nif [[ "$*" == *-json* ]]; then echo \'{"GOVERSION":"go1.27.0","GOWORK":"off"}\'; else echo go1.27.0; fi\n');
   for (const tool of ['gofmt', 'golangci-lint', 'govulncheck']) write(`.devbox/nix/profile/default/bin/${tool}`, '#!/bin/bash\nexit 0\n');
-  for (const file of ['check-agent-context.mjs', 'check-agent-context.test.mjs', 'pre-push.test.mjs', 'check-secrets.test.mjs']) write(`scripts/${file}`, '// fixture\n');
+  for (const file of ['check-agent-context.mjs', 'check-agent-context.test.mjs', 'check-du-form.mjs', 'check-du-form.test.mjs', 'pre-push.test.mjs', 'check-secrets.test.mjs']) write(`scripts/${file}`, '// fixture\n');
   write('scripts/generate-error-codes.mjs', "console.log(`generator ${process.argv.slice(2).join(' ')}`);\nprocess.exit(Number(process.env.FAIL_ERROR_CODES ?? 0));\n");
   write('scripts/generate-error-codes.test.mjs', '// fixture\n');
   write('.devbox/nix/profile/default/bin/pnpm', '#!/bin/bash\necho "pnpm $*"\n');

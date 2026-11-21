@@ -86,6 +86,7 @@ func (c withdrawalContact) details(withPhone bool) string {
 
 // withdrawalNoticeParagraphs is the model notice for a service contract.
 func withdrawalNoticeParagraphs(contact withdrawalContact) []string {
+	// sie-anrede-erlaubt (ADR 0294): gesetzliche Muster-Widerrufsbelehrung (Anlage 1 zu Art. 246a EGBGB), wörtlich.
 	return []string{
 		"Widerrufsrecht: Sie haben das Recht, binnen " + withdrawalDays + " Tagen ohne Angabe von Gründen diesen Vertrag zu widerrufen. " +
 			"Die Widerrufsfrist beträgt " + withdrawalDays + " Tage ab dem Tag des Vertragsabschlusses.",
@@ -129,6 +130,7 @@ func withdrawalBlocks(record ContractRecord, contact withdrawalContact) []Letter
 // addressee and the service filled in.
 func withdrawalForm(service string, contact withdrawalContact) string {
 	return strings.Join([]string{
+		// sie-anrede-erlaubt (ADR 0294): gesetzliches Muster-Widerrufsformular (Anlage 2 zu Art. 246a EGBGB), wörtlich.
 		"(Wenn Sie den Vertrag widerrufen wollen, dann füllen Sie bitte dieses Formular aus und senden Sie es zurück.)",
 		"– An " + contact.details(false) + ":",
 		"– Hiermit widerrufe(n) ich/wir (*) den von mir/uns (*) abgeschlossenen Vertrag über die Erbringung der folgenden Dienstleistung (*): " + service,
