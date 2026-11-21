@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fetchPayrollReport } from "./traeger-staff-exports-api";
 import { fetchStaffRecord, previewStaffLink } from "./traeger-staff-api";
+import { previewStaffImport } from "./traeger-staff-import-api";
 import { fetchStaffProofList } from "./traeger-staff-proofs-api";
 
 function jsonResponse(body: unknown): Response {
@@ -127,5 +129,86 @@ describe("Träger staff clients read the decoded contract (#2353)", () => {
     );
     const list = await fetchStaffProofList();
     expect(list.entries[0]?.status).toBeUndefined();
+  });
+
+  it("keeps a row out for a reason this build does not know", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        encoding: "UTF-8",
+        delimiter: ";",
+        headers: [],
+        mapping: {
+          columns: {
+            personnel_number: "",
+            first_name: "",
+            last_name: "",
+            birthday: "",
+            iban: "",
+            tax_id: "",
+            social_security_number: "",
+          },
+        },
+        unmapped: ["nickname", "last_name"],
+        applied: false,
+        counts: {
+          new: 0,
+          complete: 0,
+          duplicate: 0,
+          conflict: 0,
+          invalid: 1,
+          imported: 0,
+        },
+        rows: [
+          {
+            line: 2,
+            status: "quarantined",
+            personnel_number: "7",
+            first_name: "Mira",
+            last_name: "Sommer",
+            completes: ["nickname", "iban"],
+            problems: [{ field: "nickname", code: "banned" }],
+          },
+        ],
+      }),
+    );
+    const result = await previewStaffImport({
+      file: new File(["x"], "personal.csv"),
+      mapping: null,
+    });
+    expect(result.unmapped).toEqual(["last_name"]);
+    const [row] = result.rows;
+    expect(row?.status).toBeUndefined();
+    expect(row?.completes).toEqual(["iban"]);
+    expect(row?.problems).toEqual([{ field: undefined, code: "other" }]);
+  });
+
+  it("drops a payroll gap of a category this build cannot fill in", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        year: 2027,
+        month: 1,
+        format: "datev_next",
+        contracts: 0,
+        people: 0,
+        schools: 0,
+        line_count: 0,
+        kinds: [],
+        without_number: [],
+        unconfigured: [
+          { category: "bonus", kind: "minijob" },
+          { category: "urlaub", kind: "minijob" },
+        ],
+        missing_client: false,
+        no_wage_type: false,
+        open_schools: [],
+        contract_changes: [],
+        ready: false,
+      }),
+    );
+    const report = await fetchPayrollReport(2027, 1, "datev_lodas");
+    expect(report.format).toBeUndefined();
+    expect(report.unconfigured).toEqual([
+      { category: "urlaub", kind: "minijob" },
+    ]);
   });
 });
