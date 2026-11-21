@@ -8,6 +8,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -55,9 +56,9 @@ func (seedTraegerHolidayDaysStep) Run(_ context.Context, rt *Runtime) error {
 		Data struct {
 			PublicToken string `json:"public_token"`
 			Weeks       []struct {
-				ID         int64 `json:"id"`
+				ID         demoprofile.ID `json:"id"`
 				TimeModels []struct {
-					ID int64 `json:"id"`
+					ID demoprofile.ID `json:"id"`
 				} `json:"time_models"`
 			} `json:"weeks"`
 		} `json:"data"`
@@ -72,7 +73,7 @@ func (seedTraegerHolidayDaysStep) Run(_ context.Context, rt *Runtime) error {
 		return fmt.Errorf("give the days one place each: %w", err)
 	}
 	fmt.Println("  Träger-Büro: Winterferien booked by days, one place a day, at most 3 days per child")
-	return seedHolidayDayRegistrations(rt, auth, envelope.Data.PublicToken, periodID, week.ID, week.TimeModels[0].ID, monday)
+	return seedHolidayDayRegistrations(rt, auth, envelope.Data.PublicToken, periodID, int64(week.ID), int64(week.TimeModels[0].ID), monday)
 }
 
 // seedHolidayDayRegistrations registers the three families and confirms the

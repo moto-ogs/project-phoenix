@@ -3,17 +3,18 @@ package api
 import (
 	"fmt"
 
+	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 type demoPresenceBooking struct {
-	StudentID int64         `json:"student_id"`
-	Date      calendar.Date `json:"date"`
-	Expected  bool          `json:"expected"`
-	NoPlan    bool          `json:"no_plan"`
-	Cancelled bool          `json:"cancelled"`
-	Arrival   *int          `json:"arrival_minute"`
-	Pickup    *int          `json:"pickup_minute"`
+	StudentID demoprofile.ID `json:"student_id"`
+	Date      calendar.Date  `json:"date"`
+	Expected  bool           `json:"expected"`
+	NoPlan    bool           `json:"no_plan"`
+	Cancelled bool           `json:"cancelled"`
+	Arrival   *int           `json:"arrival_minute"`
+	Pickup    *int           `json:"pickup_minute"`
 }
 
 // loadDemoPresenceBookings reads the effective care plan once for the whole
@@ -36,7 +37,7 @@ func loadDemoPresenceBookings(rt *Runtime, input *presenceHistoryInput) error {
 		if input.bookings[booking.Date] == nil {
 			input.bookings[booking.Date] = make(map[int64]demoPresenceBooking)
 		}
-		input.bookings[booking.Date][booking.StudentID] = booking
+		input.bookings[booking.Date][int64(booking.StudentID)] = booking
 	}
 	return nil
 }

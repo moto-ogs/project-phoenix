@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -54,7 +55,7 @@ func seedImportedCareContracts(client *Client, auth AuthRef, school int64) (int,
 	}
 	var templates struct {
 		Data []struct {
-			SchoolID     int64           `json:"school_id"`
+			SchoolID     demoprofile.ID  `json:"school_id"`
 			SchoolName   string          `json:"school_name"`
 			OfferingName string          `json:"offering_name"`
 			Active       bool            `json:"active"`
@@ -68,7 +69,7 @@ func seedImportedCareContracts(client *Client, auth AuthRef, school int64) (int,
 	start := calendar.NewDate(today.Year(), today.Month()+1, 1).Format("02.01.2006")
 	tries := 0
 	for _, offering := range templates.Data {
-		if offering.SchoolID != school || !offering.Active || len(offering.Template) == 0 || string(offering.Template) == "null" {
+		if int64(offering.SchoolID) != school || !offering.Active || len(offering.Template) == 0 || string(offering.Template) == "null" {
 			continue
 		}
 		if tries++; tries > seedImportTries {

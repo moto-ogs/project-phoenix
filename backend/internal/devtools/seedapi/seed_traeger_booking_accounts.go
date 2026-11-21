@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -23,10 +24,10 @@ func seedBookingAccounts(client *Client, auth AuthRef, from calendar.Date) (int,
 	var envelope struct {
 		Data struct {
 			Schools []struct {
-				ID int64 `json:"id"`
+				ID demoprofile.ID `json:"id"`
 			} `json:"schools"`
 			Offerings []struct {
-				CareOfferingID int64 `json:"care_offering_id"`
+				CareOfferingID demoprofile.ID `json:"care_offering_id"`
 			} `json:"offerings"`
 		} `json:"data"`
 	}

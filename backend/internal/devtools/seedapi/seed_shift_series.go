@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 // seedShiftSeriesStep shows Dienstplan series around two weeks of
@@ -30,14 +32,14 @@ const (
 func (seedShiftSeriesStep) Name() string { return "Seeding shift series around the Ferien" }
 
 type seedCalendarPeriod struct {
-	ID              int64   `json:"id"`
-	Name            string  `json:"name"`
-	PeriodType      string  `json:"period_type"`
-	StartDate       string  `json:"start_date"`
-	EndDate         string  `json:"end_date"`
-	WeekCycleLength int     `json:"week_cycle_length"`
-	WeekCycleAnchor *string `json:"week_cycle_anchor"`
-	IsActive        bool    `json:"is_active"`
+	ID              demoprofile.ID `json:"id"`
+	Name            string         `json:"name"`
+	PeriodType      string         `json:"period_type"`
+	StartDate       string         `json:"start_date"`
+	EndDate         string         `json:"end_date"`
+	WeekCycleLength int            `json:"week_cycle_length"`
+	WeekCycleAnchor *string        `json:"week_cycle_anchor"`
+	IsActive        bool           `json:"is_active"`
 }
 
 // seedHerbstferien are the two Ferien weeks the seed plans around: Monday to

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -72,10 +73,10 @@ func seedMealPrices(client *Client, auth AuthRef, month calendar.Date) (int, err
 	var envelope struct {
 		Data struct {
 			Schools []struct {
-				ID int64 `json:"id"`
+				ID demoprofile.ID `json:"id"`
 			} `json:"schools"`
 			Tariffs []struct {
-				SchoolID int64 `json:"school_id"`
+				SchoolID demoprofile.ID `json:"school_id"`
 			} `json:"tariffs"`
 		} `json:"data"`
 	}
@@ -84,11 +85,11 @@ func seedMealPrices(client *Client, auth AuthRef, month calendar.Date) (int, err
 	}
 	priced := map[int64]bool{}
 	for _, tariff := range envelope.Data.Tariffs {
-		priced[tariff.SchoolID] = true
+		priced[int64(tariff.SchoolID)] = true
 	}
 	saved := 0
 	for _, school := range envelope.Data.Schools {
-		if priced[school.ID] {
+		if priced[int64(school.ID)] {
 			continue
 		}
 		if _, err := client.PutWithAuth(auth, "/traeger/care-meal-tariffs/", map[string]any{

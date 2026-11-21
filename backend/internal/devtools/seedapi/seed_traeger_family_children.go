@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -14,14 +15,14 @@ import (
 // placeholder sibling rule counts the family (seedCareReductions).
 
 type seedFamilyChild struct {
-	ContractID int64 `json:"contract_id"`
+	ContractID demoprofile.ID `json:"contract_id"`
 }
 
 type seedFamilyChildrenSet struct {
 	Families []struct {
 		Children []seedFamilyChild `json:"children"`
 		Count    *struct {
-			ID int64 `json:"id"`
+			ID demoprofile.ID `json:"id"`
 		} `json:"count"`
 	} `json:"families"`
 }
@@ -48,7 +49,7 @@ func seedFamilyChildren(client *Client, auth AuthRef, own []int64, month calenda
 		if kept == len(numbers) {
 			break
 		}
-		child := slices.IndexFunc(family.Children, func(child seedFamilyChild) bool { return slices.Contains(own, child.ContractID) })
+		child := slices.IndexFunc(family.Children, func(child seedFamilyChild) bool { return slices.Contains(own, int64(child.ContractID)) })
 		if family.Count != nil || child < 0 {
 			continue
 		}

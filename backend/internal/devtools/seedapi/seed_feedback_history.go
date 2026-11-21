@@ -5,17 +5,18 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // PastFeedback is one past rating of a child (#5029), as the kiosk records
 // one when the child leaves or after lunch.
 type PastFeedback struct {
-	Value           string `json:"value"`
-	Day             string `json:"day"`
-	Time            string `json:"time"`
-	StudentID       int64  `json:"student_id"`
-	IsMensaFeedback bool   `json:"is_mensa_feedback"`
+	Value           string         `json:"value"`
+	Day             string         `json:"day"`
+	Time            string         `json:"time"`
+	StudentID       demoprofile.ID `json:"student_id"`
+	IsMensaFeedback bool           `json:"is_mensa_feedback"`
 }
 
 // FeedbackHistoryWriter records the past ratings of one school. No regular
@@ -58,7 +59,7 @@ func (s seedFeedbackHistoryStep) Run(ctx context.Context, rt *Runtime) error {
 	if len(entries) == 0 {
 		return nil
 	}
-	existing, err := pastFeedbackOf(rt, entries[0].StudentID, from, until)
+	existing, err := pastFeedbackOf(rt, int64(entries[0].StudentID), from, until)
 	if err != nil {
 		return err
 	}
@@ -188,7 +189,7 @@ func PastFeedbackAt(day PastPresenceDay, at time.Time, valueRoll uint32, mensa b
 		Value:           feedbackHistoryValue(valueRoll % 100),
 		Day:             day.Date.String(),
 		Time:            at.In(seedBerlinLocation()).Format("15:04:05"),
-		StudentID:       day.StudentID,
+		StudentID:       demoprofile.ID(day.StudentID),
 		IsMensaFeedback: mensa,
 	}
 }

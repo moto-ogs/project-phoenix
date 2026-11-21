@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 type seedOperationsDemoStep struct{}
@@ -116,7 +118,7 @@ func seedStaffShift(rt *Runtime, today seedDate, staffID int64) error {
 	preparationID := int64(0)
 	for _, shiftType := range shiftTypes {
 		if strings.Contains(shiftType.Name, "Verfügung") {
-			preparationID = shiftType.ID
+			preparationID = int64(shiftType.ID)
 		}
 	}
 	if preparationID == 0 {
@@ -138,8 +140,8 @@ func seedStaffShift(rt *Runtime, today seedDate, staffID int64) error {
 
 // seedShiftType is one default Schichtart as the defaults endpoint returns it.
 type seedShiftType struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	ID   demoprofile.ID `json:"id"`
+	Name string         `json:"name"`
 }
 
 func createDefaultShiftTypes(rt *Runtime) ([]seedShiftType, error) {
@@ -172,15 +174,15 @@ func seedDutyShiftTypes(rt *Runtime) (seedDutyTypes, error) {
 	if err != nil {
 		return seedDutyTypes{}, err
 	}
-	types := seedDutyTypes{care: shiftTypes[0].ID}
+	types := seedDutyTypes{care: int64(shiftTypes[0].ID)}
 	for _, shiftType := range shiftTypes {
 		switch {
 		case strings.HasPrefix(shiftType.Name, "Betreuung"):
-			types.care = shiftType.ID
+			types.care = int64(shiftType.ID)
 		case shiftType.Name == "Frühdienst":
-			types.early = shiftType.ID
+			types.early = int64(shiftType.ID)
 		case shiftType.Name == "Spätdienst":
-			types.late = shiftType.ID
+			types.late = int64(shiftType.ID)
 		}
 	}
 	for _, missing := range []struct {

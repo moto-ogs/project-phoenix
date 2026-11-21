@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"slices"
 	"sort"
+
+	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 const (
@@ -24,11 +26,11 @@ type configureProfileStep struct {
 }
 
 type operatorSeedDevice struct {
-	ID         int64   `json:"id"`
-	DeviceID   string  `json:"device_id"`
-	DeviceType string  `json:"device_type"`
-	Name       *string `json:"name"`
-	Status     string  `json:"status"`
+	ID         demoprofile.ID `json:"id"`
+	DeviceID   string         `json:"device_id"`
+	DeviceType string         `json:"device_type"`
+	Name       *string        `json:"name"`
+	Status     string         `json:"status"`
 }
 
 func (configureProfileStep) Name() string { return "Configuring demo school profile" }
@@ -249,7 +251,7 @@ func findWebManualSeedDevice(devices []operatorSeedDevice) (SeedDevice, error) {
 		if device.ID <= 0 || device.DeviceType != "virtual" || device.Name == nil || *device.Name != webManualDeviceName || device.Status != "active" {
 			return SeedDevice{}, fmt.Errorf("device administration: invalid virtual web device %s", webManualDeviceID)
 		}
-		webDevice = &SeedDevice{ID: device.ID, DeviceID: device.DeviceID, DeviceType: device.DeviceType, Name: *device.Name}
+		webDevice = &SeedDevice{ID: int64(device.ID), DeviceID: device.DeviceID, DeviceType: device.DeviceType, Name: *device.Name}
 	}
 	if webDevice == nil {
 		return SeedDevice{}, fmt.Errorf("device administration: virtual web device %s missing", webManualDeviceID)
@@ -319,11 +321,11 @@ func verifyProfilePlanning(rt *Runtime, expected SeedScheduledActivityState) err
 	var envelope struct {
 		Data struct {
 			Instances []struct {
-				Status     string  `json:"status"`
-				RoomID     int64   `json:"room_id"`
-				StudentIDs []int64 `json:"student_ids"`
+				Status     string           `json:"status"`
+				RoomID     demoprofile.ID   `json:"room_id"`
+				StudentIDs []demoprofile.ID `json:"student_ids"`
 				Staff      []struct {
-					StaffID int64 `json:"staff_id"`
+					StaffID demoprofile.ID `json:"staff_id"`
 				} `json:"staff"`
 			} `json:"instances"`
 		} `json:"data"`
@@ -333,7 +335,7 @@ func verifyProfilePlanning(rt *Runtime, expected SeedScheduledActivityState) err
 	}
 	matching := 0
 	for _, instance := range envelope.Data.Instances {
-		if matchesScheduledActivity(instance.Status, instance.RoomID, instance.StudentIDs, len(instance.Staff), expected) {
+		if matchesScheduledActivity(instance.Status, int64(instance.RoomID), demoprofile.IDs(instance.StudentIDs), len(instance.Staff), expected) {
 			matching++
 		}
 	}

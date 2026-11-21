@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"sort"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 // StaffCredentials stores login credentials for a staff member
@@ -429,14 +431,14 @@ func (s *FixedSeeder) seedRooms(_ context.Context, result *FixedResult) error {
 		var resp struct {
 			Status string `json:"status"`
 			Data   struct {
-				ID int64 `json:"id"`
+				ID demoprofile.ID `json:"id"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(respBody, &resp); err != nil {
 			return fmt.Errorf("failed to parse room response: %w", err)
 		}
 
-		s.roomIDs[room.Name] = resp.Data.ID
+		s.roomIDs[room.Name] = int64(resp.Data.ID)
 		result.RoomCount++
 	}
 
@@ -484,8 +486,8 @@ func (s *FixedSeeder) seedStaff(_ context.Context, result *FixedResult) error {
 		var resp struct {
 			Status string `json:"status"`
 			Data   struct {
-				ID        json.Number `json:"id"`
-				TeacherID int64       `json:"teacher_id,omitempty"`
+				ID        json.Number    `json:"id"`
+				TeacherID demoprofile.ID `json:"teacher_id,omitempty"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -499,7 +501,7 @@ func (s *FixedSeeder) seedStaff(_ context.Context, result *FixedResult) error {
 		s.staffIDs[personKey] = staffID
 		// Store teacher ID if this is a teacher (for group assignment)
 		if resp.Data.TeacherID > 0 {
-			s.teacherIDs[personKey] = resp.Data.TeacherID
+			s.teacherIDs[personKey] = int64(resp.Data.TeacherID)
 		}
 		result.StaffCount++
 	}
@@ -585,14 +587,14 @@ func (s *FixedSeeder) seedGroups(_ context.Context, result *FixedResult) error {
 		var resp struct {
 			Status string `json:"status"`
 			Data   struct {
-				ID int64 `json:"id"`
+				ID demoprofile.ID `json:"id"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(respBody, &resp); err != nil {
 			return fmt.Errorf("failed to parse group response: %w", err)
 		}
 
-		s.groupIDs[class.key] = resp.Data.ID
+		s.groupIDs[class.key] = int64(resp.Data.ID)
 		result.GroupCount++
 	}
 
@@ -704,15 +706,15 @@ func (s *FixedSeeder) seedStudents(_ context.Context, result *FixedResult) error
 		var resp struct {
 			Status string `json:"status"`
 			Data   struct {
-				ID int64 `json:"id"`
+				ID demoprofile.ID `json:"id"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(respBody, &resp); err != nil {
 			return fmt.Errorf("failed to parse student response: %w", err)
 		}
 
-		s.studentIDs[studentKey] = resp.Data.ID
-		s.studentIDByIndex[i] = resp.Data.ID
+		s.studentIDs[studentKey] = int64(resp.Data.ID)
+		s.studentIDByIndex[i] = int64(resp.Data.ID)
 		result.StudentCount++
 	}
 
@@ -790,7 +792,7 @@ func (s *FixedSeeder) getCheckedInStudentIDs() (map[int64]bool, error) {
 	var resp struct {
 		Status string `json:"status"`
 		Data   []struct {
-			StudentID int64 `json:"student_id"`
+			StudentID demoprofile.ID `json:"student_id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -798,7 +800,7 @@ func (s *FixedSeeder) getCheckedInStudentIDs() (map[int64]bool, error) {
 	}
 
 	for _, visit := range resp.Data {
-		checkedIn[visit.StudentID] = true
+		checkedIn[int64(visit.StudentID)] = true
 	}
 
 	return checkedIn, nil
@@ -863,13 +865,13 @@ func (s *FixedSeeder) createDemoGuardian(index int, guardian DemoGuardian) (int6
 	}
 	var resp struct {
 		Data struct {
-			ID int64 `json:"id"`
+			ID demoprofile.ID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(respBody, &resp); err != nil {
 		return 0, fmt.Errorf("failed to parse guardian response: %w", err)
 	}
-	return resp.Data.ID, nil
+	return int64(resp.Data.ID), nil
 }
 
 // demoIBANBLZ is the Bundesbank test Bankleitzahl block used for the demo
@@ -1108,8 +1110,8 @@ func (s *FixedSeeder) fetchCategories(_ context.Context) error {
 	var resp struct {
 		Status string `json:"status"`
 		Data   []struct {
-			ID   int64  `json:"id"`
-			Name string `json:"name"`
+			ID   demoprofile.ID `json:"id"`
+			Name string         `json:"name"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -1118,7 +1120,7 @@ func (s *FixedSeeder) fetchCategories(_ context.Context) error {
 
 	// Build category map
 	for _, cat := range resp.Data {
-		s.categoryIDs[cat.Name] = cat.ID
+		s.categoryIDs[cat.Name] = int64(cat.ID)
 	}
 
 	// For demo, we'll use the first available category for all activities
@@ -1180,15 +1182,15 @@ func (s *FixedSeeder) seedActivities(_ context.Context, result *FixedResult) err
 		var resp struct {
 			Status string `json:"status"`
 			Data   struct {
-				ID int64 `json:"id"`
+				ID demoprofile.ID `json:"id"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(respBody, &resp); err != nil {
 			return fmt.Errorf("failed to parse activity response: %w", err)
 		}
 
-		s.activityIDs[activity.Name] = resp.Data.ID
-		s.activityRoomIDs[resp.Data.ID] = roomID // Store activity → room mapping for runtime seeder
+		s.activityIDs[activity.Name] = int64(resp.Data.ID)
+		s.activityRoomIDs[int64(resp.Data.ID)] = roomID // Store activity → room mapping for runtime seeder
 		result.ActivityCount++
 	}
 
@@ -1284,8 +1286,8 @@ func (s *FixedSeeder) seedDevices(_ context.Context, result *FixedResult) error 
 		var resp struct {
 			Status string `json:"status"`
 			Data   struct {
-				ID     int64  `json:"id"`
-				APIKey string `json:"api_key"`
+				ID     demoprofile.ID `json:"id"`
+				APIKey string         `json:"api_key"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -1421,7 +1423,7 @@ func (s *FixedSeeder) seedStaffAccounts(ctx context.Context, result *FixedResult
 		var account struct {
 			Status string `json:"status"`
 			Data   struct {
-				ID int64 `json:"id"`
+				ID demoprofile.ID `json:"id"`
 				// int64 ids travel as JSON strings on this field.
 				SchoolIdentity *struct {
 					PersonID int64 `json:"person_id,string"`
@@ -1442,15 +1444,15 @@ func (s *FixedSeeder) seedStaffAccounts(ctx context.Context, result *FixedResult
 
 		// Store credentials for summary
 		s.staffCredentials = append(s.staffCredentials, StaffCredentials{
-			AccountID: account.Data.ID,
+			AccountID: int64(account.Data.ID),
 			Email:     email,
 			Password:  password,
 			Name:      personKey,
 			Position:  staff.Position,
 		})
-		s.accountIDs[personKey] = account.Data.ID
+		s.accountIDs[personKey] = int64(account.Data.ID)
 		if i == visitorStaffIndex && s.saveVisitor != nil {
-			if err := s.saveVisitor(ctx, account.Data.ID, 0); err != nil {
+			if err := s.saveVisitor(ctx, int64(account.Data.ID), 0); err != nil {
 				return fmt.Errorf("save visitor caregiver account: %w", err)
 			}
 		}

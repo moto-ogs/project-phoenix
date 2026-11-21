@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -408,13 +409,13 @@ func (s *Seeder) createSeedOrganization(name, slug string) (int64, error) {
 	}
 	var payload struct {
 		Data struct {
-			ID int64 `json:"id"`
+			ID demoprofile.ID `json:"id"`
 		} `json:"data"`
 	}
 	if err := parseJSON(orgResp, &payload); err != nil {
 		return 0, fmt.Errorf("parse organization response: %w", err)
 	}
-	return payload.Data.ID, nil
+	return int64(payload.Data.ID), nil
 }
 
 func (s *Seeder) findSeedOrganization(slug string) (int64, error) {
@@ -424,8 +425,8 @@ func (s *Seeder) findSeedOrganization(slug string) (int64, error) {
 	}
 	var payload struct {
 		Data []struct {
-			ID   int64  `json:"id"`
-			Slug string `json:"slug"`
+			ID   demoprofile.ID `json:"id"`
+			Slug string         `json:"slug"`
 		} `json:"data"`
 	}
 	if err := parseJSON(resp, &payload); err != nil {
@@ -433,7 +434,7 @@ func (s *Seeder) findSeedOrganization(slug string) (int64, error) {
 	}
 	for _, organization := range payload.Data {
 		if organization.Slug == slug {
-			return organization.ID, nil
+			return int64(organization.ID), nil
 		}
 	}
 	return 0, fmt.Errorf("organization %q not found", slug)
@@ -449,11 +450,11 @@ func (s *Seeder) retireAbandonedSchool(subdomain string) error {
 	}
 	var payload struct {
 		Data []struct {
-			ID             int64  `json:"id"`
-			OrganizationID int64  `json:"organization_id"`
-			Name           string `json:"name"`
-			Subdomain      string `json:"subdomain"`
-			Email          string `json:"email"`
+			ID             demoprofile.ID `json:"id"`
+			OrganizationID demoprofile.ID `json:"organization_id"`
+			Name           string         `json:"name"`
+			Subdomain      string         `json:"subdomain"`
+			Email          string         `json:"email"`
 		} `json:"data"`
 	}
 	if err := parseJSON(resp, &payload); err != nil {
@@ -495,14 +496,14 @@ func (s *Seeder) createSeedSchool(organizationID int64, name, slug, subdomain st
 	}
 	var payload struct {
 		Data struct {
-			ID        int64  `json:"id"`
-			Subdomain string `json:"subdomain"`
+			ID        demoprofile.ID `json:"id"`
+			Subdomain string         `json:"subdomain"`
 		} `json:"data"`
 	}
 	if err := parseJSON(schoolResp, &payload); err != nil {
 		return 0, "", fmt.Errorf("parse school response: %w", err)
 	}
-	return payload.Data.ID, payload.Data.Subdomain, nil
+	return int64(payload.Data.ID), payload.Data.Subdomain, nil
 }
 
 // GenerateSeedPassword creates a random password satisfying the account policy.

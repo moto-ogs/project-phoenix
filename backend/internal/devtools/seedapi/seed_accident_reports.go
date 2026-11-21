@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -102,11 +103,11 @@ func postAccidentReport(rt *Runtime, path string, body map[string]any) (int64, e
 	}
 	var envelope struct {
 		Data struct {
-			ID int64 `json:"id"`
+			ID demoprofile.ID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil || envelope.Data.ID <= 0 {
 		return 0, fmt.Errorf("decode accident report %s: %w", path, err)
 	}
-	return envelope.Data.ID, nil
+	return int64(envelope.Data.ID), nil
 }

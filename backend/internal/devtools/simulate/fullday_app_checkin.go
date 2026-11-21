@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+
+	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 // appCheckInCount is how many late children the team checks in through the
@@ -105,9 +107,9 @@ func supervisedSessionOutside(rt *Runtime, skipRoomID int64) (int64, int64, erro
 		return 0, 0, fmt.Errorf("decode running sessions: %w", err)
 	}
 	var sessions []struct {
-		ID              int64 `json:"id"`
-		RoomID          int64 `json:"room_id"`
-		SupervisorCount int   `json:"supervisor_count"`
+		ID              demoprofile.ID `json:"id"`
+		RoomID          demoprofile.ID `json:"room_id"`
+		SupervisorCount int            `json:"supervisor_count"`
 	}
 	// A server without running sessions may answer without a list.
 	if err := json.Unmarshal(envelope.Data, &sessions); err != nil {
@@ -115,16 +117,16 @@ func supervisedSessionOutside(rt *Runtime, skipRoomID int64) (int64, int64, erro
 	}
 	perRoom := map[int64]int{}
 	for _, session := range sessions {
-		perRoom[session.RoomID]++
+		perRoom[int64(session.RoomID)]++
 	}
 	for _, session := range sessions {
-		if session.RoomID == skipRoomID || session.SupervisorCount == 0 || perRoom[session.RoomID] != 1 {
+		if int64(session.RoomID) == skipRoomID || session.SupervisorCount == 0 || perRoom[int64(session.RoomID)] != 1 {
 			continue
 		}
-		if !slices.Contains(rt.Rooms.sessionRooms, session.RoomID) {
+		if !slices.Contains(rt.Rooms.sessionRooms, int64(session.RoomID)) {
 			continue
 		}
-		return session.ID, session.RoomID, nil
+		return int64(session.ID), int64(session.RoomID), nil
 	}
 	return 0, 0, nil
 }

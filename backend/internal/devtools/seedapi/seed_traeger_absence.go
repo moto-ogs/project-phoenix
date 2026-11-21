@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 // The Abwesenheitsarten and Kontingente of the demo Träger (#4710), seeded
@@ -25,8 +27,8 @@ const (
 )
 
 type seedTraegerAbsenceType struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	ID   demoprofile.ID `json:"id"`
+	Name string         `json:"name"`
 }
 
 type seedSchoolAbsenceType struct {
@@ -103,7 +105,7 @@ func seedTraegerAbsenceTypes(client *Client, auth AuthRef) (map[string]int64, er
 	}
 	ids := map[string]int64{}
 	for _, value := range envelope.Data.Types {
-		ids[value.Name] = value.ID
+		ids[value.Name] = int64(value.ID)
 	}
 	if ids[seedTraegerRegeneration] == 0 || ids[seedTraegerConversion] == 0 {
 		return nil, errors.New("the absence types of the Träger are missing after the seed")
@@ -112,13 +114,13 @@ func seedTraegerAbsenceTypes(client *Client, auth AuthRef) (map[string]int64, er
 }
 
 type seedTraegerAbsenceRecord struct {
-	ID          int64  `json:"id"`
-	FirstName   string `json:"first_name"`
-	LastName    string `json:"last_name"`
+	ID          demoprofile.ID `json:"id"`
+	FirstName   string         `json:"first_name"`
+	LastName    string         `json:"last_name"`
 	Employments []struct {
-		SchoolID int64 `json:"school_id"`
-		StaffID  int64 `json:"staff_id"`
-		Active   bool  `json:"active"`
+		SchoolID demoprofile.ID `json:"school_id"`
+		StaffID  demoprofile.ID `json:"staff_id"`
+		Active   bool           `json:"active"`
 	} `json:"employments"`
 }
 
@@ -140,7 +142,7 @@ func seedTraegerStaffRecordsOf(client *Client, auth AuthRef, schoolID int64) ([]
 	var result []seedTraegerAbsenceRecord
 	for _, record := range envelope.Data.Records {
 		for _, employment := range record.Employments {
-			if employment.SchoolID == schoolID && employment.Active {
+			if int64(employment.SchoolID) == schoolID && employment.Active {
 				result = append(result, record)
 				break
 			}
@@ -226,11 +228,11 @@ func seedTraegerConversionBooking(rt *Runtime, records []seedTraegerAbsenceRecor
 		return fmt.Errorf("parse the school's Umwandlungstag: %w", err)
 	}
 	for _, employment := range chosen.Employments {
-		if employment.SchoolID != rt.Bootstrap.SchoolID {
+		if int64(employment.SchoolID) != rt.Bootstrap.SchoolID {
 			continue
 		}
 		day := seedNextWeekday(time.Now().AddDate(0, 0, -21))
-		if err := postStaffAbsence(rt, employment.StaffID, day, "other", "Umwandlung Überstunden", &id); err != nil {
+		if err := postStaffAbsence(rt, int64(employment.StaffID), day, "other", "Umwandlung Überstunden", &id); err != nil {
 			return fmt.Errorf("book an Umwandlungstag: %w", err)
 		}
 	}

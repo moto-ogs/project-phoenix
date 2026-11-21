@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -111,8 +112,8 @@ func seedHolidayClosures(rt *Runtime, auth AuthRef) error {
 	var period struct {
 		Data struct {
 			Weeks []struct {
-				StartsOn     calendar.Date `json:"starts_on"`
-				HostSchoolID int64         `json:"host_school_id"`
+				StartsOn     calendar.Date  `json:"starts_on"`
+				HostSchoolID demoprofile.ID `json:"host_school_id"`
 			} `json:"weeks"`
 		} `json:"data"`
 	}
@@ -124,7 +125,7 @@ func seedHolidayClosures(rt *Runtime, auth AuthRef) error {
 	}
 	week := period.Data.Weeks[0]
 	outing := week.StartsOn.AddDays(2)
-	families, err := seedPlanTraegerClosingDay(rt.Client, auth, outing, outing, "Betriebsausflug", []int64{week.HostSchoolID})
+	families, err := seedPlanTraegerClosingDay(rt.Client, auth, outing, outing, "Betriebsausflug", []int64{int64(week.HostSchoolID)})
 	if err != nil {
 		return fmt.Errorf("plan the closing day in the booked holiday week: %w", err)
 	}
@@ -170,10 +171,10 @@ func seedNotifySchoolHolidayClosures(rt *Runtime) (int, error) {
 		return 0, fmt.Errorf("read the school's holiday closure notices: %w", err)
 	}
 	var notices []struct {
-		ID        int64  `json:"id"`
-		Revision  int64  `json:"revision"`
-		Token     string `json:"token"`
-		CanNotify bool   `json:"can_notify"`
+		ID        demoprofile.ID `json:"id"`
+		Revision  int64          `json:"revision"`
+		Token     string         `json:"token"`
+		CanNotify bool           `json:"can_notify"`
 	}
 	// A stand-in server of the seed tests answers every read with an object;
 	// only a list holds notices.
@@ -202,7 +203,7 @@ func seedBridgeDay(raw []byte) (calendar.Date, []int64, error) {
 	var envelope struct {
 		Data struct {
 			Schools []struct {
-				ID int64 `json:"id"`
+				ID demoprofile.ID `json:"id"`
 			} `json:"schools"`
 			Holidays []struct {
 				Holidays []struct {
@@ -217,7 +218,7 @@ func seedBridgeDay(raw []byte) (calendar.Date, []int64, error) {
 	}
 	schools := make([]int64, 0, len(envelope.Data.Schools))
 	for _, school := range envelope.Data.Schools {
-		schools = append(schools, school.ID)
+		schools = append(schools, int64(school.ID))
 	}
 	for _, region := range envelope.Data.Holidays {
 		for _, holiday := range region.Holidays {

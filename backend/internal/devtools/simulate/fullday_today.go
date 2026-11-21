@@ -7,6 +7,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 // todayPlan is what the school plans for the simulated day, read once at the
@@ -19,19 +21,19 @@ type todayPlan struct {
 
 // dayBlock is the part of a timetable instance the simulation needs.
 type dayBlock struct {
-	ID           int64  `json:"id"`
-	Title        string `json:"title"`
-	StartTime    string `json:"start_time"`
-	EndTime      string `json:"end_time"`
-	Status       string `json:"status"`
-	ActivityType string `json:"activity_type"`
-	Spontaneous  bool   `json:"is_spontaneous"`
-	RoomID       int64  `json:"room_id"`
+	ID           demoprofile.ID `json:"id"`
+	Title        string         `json:"title"`
+	StartTime    string         `json:"start_time"`
+	EndTime      string         `json:"end_time"`
+	Status       string         `json:"status"`
+	ActivityType string         `json:"activity_type"`
+	Spontaneous  bool           `json:"is_spontaneous"`
+	RoomID       demoprofile.ID `json:"room_id"`
 	Staff        []struct {
-		StaffID  int64 `json:"staff_id"`
-		IsAbsent bool  `json:"is_absent"`
+		StaffID  demoprofile.ID `json:"staff_id"`
+		IsAbsent bool           `json:"is_absent"`
 	} `json:"staff"`
-	StudentIDs []int64 `json:"student_ids"`
+	StudentIDs []demoprofile.ID `json:"student_ids"`
 }
 
 // startable reports a planned block with children: no duty, no external
@@ -60,7 +62,7 @@ func (b dayBlock) presentStaff() []int64 {
 	ids := make([]int64, 0, len(b.Staff))
 	for _, staff := range b.Staff {
 		if !staff.IsAbsent {
-			ids = append(ids, staff.StaffID)
+			ids = append(ids, int64(staff.StaffID))
 		}
 	}
 	return ids

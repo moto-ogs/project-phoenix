@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"strconv"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 // The demo day (#3921) keeps a weekday of a demo school plausible at any
@@ -75,25 +77,25 @@ func demoActivities(state *SeedState) []demoActivity {
 
 // demoBlock is one timetable block of today as the instance list returns it.
 type demoBlock struct {
-	ID              int64   `json:"id"`
-	Date            string  `json:"date"`
-	StartTime       string  `json:"start_time"`
-	EndTime         string  `json:"end_time"`
-	Title           string  `json:"title"`
-	Description     *string `json:"description,omitempty"`
-	Notes           *string `json:"notes,omitempty"`
-	Status          string  `json:"status"`
-	IsSpontaneous   bool    `json:"is_spontaneous"`
-	ActivityGroupID *int64  `json:"activity_group_id,omitempty"`
-	ListKind        *string `json:"list_kind,omitempty"`
-	RoomID          int64   `json:"room_id"`
+	ID              demoprofile.ID  `json:"id"`
+	Date            string          `json:"date"`
+	StartTime       string          `json:"start_time"`
+	EndTime         string          `json:"end_time"`
+	Title           string          `json:"title"`
+	Description     *string         `json:"description,omitempty"`
+	Notes           *string         `json:"notes,omitempty"`
+	Status          string          `json:"status"`
+	IsSpontaneous   bool            `json:"is_spontaneous"`
+	ActivityGroupID *demoprofile.ID `json:"activity_group_id,omitempty"`
+	ListKind        *string         `json:"list_kind,omitempty"`
+	RoomID          demoprofile.ID  `json:"room_id"`
 	Staff           []struct {
-		StaffID int64 `json:"staff_id"`
+		StaffID demoprofile.ID `json:"staff_id"`
 	} `json:"staff"`
-	StudentIDs []int64 `json:"student_ids"`
+	StudentIDs []demoprofile.ID `json:"student_ids"`
 	Students   []struct {
-		StudentID int64  `json:"student_id"`
-		Status    string `json:"status"`
+		StudentID demoprofile.ID `json:"student_id"`
+		Status    string         `json:"status"`
 	} `json:"students"`
 }
 
@@ -330,11 +332,11 @@ func (day *demoDay) move(client Client, shift int, studentIDs []int64) error {
 			if !ok {
 				continue
 			}
-			day.pendingBlocks[block.ID] = demoBlockWindow{start: start, end: end}
+			day.pendingBlocks[int64(block.ID)] = demoBlockWindow{start: start, end: end}
 		}
 	}
 	for _, block := range day.blocks {
-		window, ok := day.pendingBlocks[block.ID]
+		window, ok := day.pendingBlocks[int64(block.ID)]
 		if !ok {
 			continue
 		}
@@ -345,7 +347,7 @@ func (day *demoDay) move(client Client, shift int, studentIDs []int64) error {
 			)
 			return fmt.Errorf("move demo block %d: %w", block.ID, err)
 		}
-		delete(day.pendingBlocks, block.ID)
+		delete(day.pendingBlocks, int64(block.ID))
 	}
 	if day.pendingTimes == nil {
 		if err := day.loadTimes(client, studentIDs, time.Time{}); err != nil {
@@ -466,10 +468,10 @@ func (day *demoDay) writeTimeException(client Client, studentID int64, kind stri
 	var envelope struct {
 		Data struct {
 			Exceptions []struct {
-				ID            int64  `json:"id"`
-				ExceptionDate string `json:"exception_date"`
-				Reason        string `json:"reason"`
-				Source        string `json:"source"`
+				ID            demoprofile.ID `json:"id"`
+				ExceptionDate string         `json:"exception_date"`
+				Reason        string         `json:"reason"`
+				Source        string         `json:"source"`
 			} `json:"exceptions"`
 		} `json:"data"`
 	}
@@ -506,10 +508,10 @@ func (day *demoDay) settlePickupTasks(client Client, moved map[int64]string) {
 	var envelope struct {
 		Data struct {
 			Tasks []struct {
-				ID         int64  `json:"id"`
-				StudentID  int64  `json:"student_id"`
-				Date       string `json:"date"`
-				PickupTime string `json:"pickup_time"`
+				ID         demoprofile.ID `json:"id"`
+				StudentID  demoprofile.ID `json:"student_id"`
+				Date       string         `json:"date"`
+				PickupTime string         `json:"pickup_time"`
 			} `json:"tasks"`
 		} `json:"data"`
 	}
@@ -518,7 +520,7 @@ func (day *demoDay) settlePickupTasks(client Client, moved map[int64]string) {
 		return
 	}
 	for _, task := range envelope.Data.Tasks {
-		if task.Date != day.date || minutesOf(&task.PickupTime) != minutesOf(ptr(moved[task.StudentID])) {
+		if task.Date != day.date || minutesOf(&task.PickupTime) != minutesOf(ptr(moved[int64(task.StudentID)])) {
 			continue
 		}
 		path := fmt.Sprintf("/api/timetable/pickup-extensions/%d/resolve", task.ID)
@@ -548,7 +550,7 @@ func (day *demoDay) planActivities(client Client, activities []demoActivity, stu
 		}
 		titled[block.Title] = true
 		if block.ActivityGroupID != nil {
-			planned[*block.ActivityGroupID] = true
+			planned[int64(*block.ActivityGroupID)] = true
 		}
 	}
 	var children []int64
@@ -598,7 +600,7 @@ func (day *demoDay) planActivities(client Client, activities []demoActivity, stu
 // some point between start and end.
 func (day *demoDay) roomTaken(roomID int64, start, end int) bool {
 	for _, block := range day.blocks {
-		if block.IsSpontaneous || block.Status == "cancelled" || block.RoomID != roomID || len(block.StudentIDs) == 0 {
+		if block.IsSpontaneous || block.Status == "cancelled" || int64(block.RoomID) != roomID || len(block.StudentIDs) == 0 {
 			continue
 		}
 		blockStart, blockEnd, ok := blockMinutes(block)
@@ -612,7 +614,7 @@ func (day *demoDay) roomTaken(roomID int64, start, end int) bool {
 func (block demoBlock) updateBody(start, end int) map[string]any {
 	staffIDs := make([]int64, 0, len(block.Staff))
 	for _, staff := range block.Staff {
-		staffIDs = append(staffIDs, staff.StaffID)
+		staffIDs = append(staffIDs, int64(staff.StaffID))
 	}
 	body := map[string]any{
 		"date": block.Date, "start_time": clockOf(start), "end_time": clockOf(end),
@@ -676,7 +678,7 @@ func (day *demoDay) loadTimes(client Client, studentIDs []int64, now time.Time) 
 func (day *demoDay) run(client Client, minute int) bool {
 	changed := false
 	for _, block := range day.blocks {
-		if block.IsSpontaneous || day.failed[block.ID] {
+		if block.IsSpontaneous || day.failed[int64(block.ID)] {
 			continue
 		}
 		start, end, ok := blockMinutes(block)
@@ -687,22 +689,22 @@ func (day *demoDay) run(client Client, minute int) bool {
 		switch {
 		case block.Status == "planned" && end <= minute:
 			err = day.hold(client, block)
-		case block.Status == "planned" && start-demoDayStartLead <= minute && len(block.StudentIDs) == 0 && day.roomTaken(block.RoomID, start, end):
+		case block.Status == "planned" && start-demoDayStartLead <= minute && len(block.StudentIDs) == 0 && day.roomTaken(int64(block.RoomID), start, end):
 			// A block without children (a team meeting) in the room of a block
 			// with children counts as held at once: running, it would take
 			// the room's check-ins, since the kiosk joins the newest session.
 			err = day.hold(client, block)
 		case block.Status == "planned" && start-demoDayStartLead <= minute:
-			err = startBlock(client, block.ID)
+			err = startBlock(client, int64(block.ID))
 		case block.Status == "active" && end <= minute:
-			err = completeBlock(client, block.ID)
+			err = completeBlock(client, int64(block.ID))
 		default:
 			continue
 		}
 		changed = true
 		if err != nil {
 			// A duty is never started (#3822); its refusal lands here too.
-			day.failed[block.ID] = true
+			day.failed[int64(block.ID)] = true
 			slog.Info("demo day: block step refused",
 				"instance_id", block.ID,
 				"error", err,
@@ -715,13 +717,13 @@ func (day *demoDay) run(client Client, minute int) bool {
 // hold runs a block that is already over: the children planned for it are
 // checked in and the block is closed, so it reads as held, not as missed.
 func (day *demoDay) hold(client Client, block demoBlock) error {
-	if err := startBlock(client, block.ID); err != nil {
+	if err := startBlock(client, int64(block.ID)); err != nil {
 		return err
 	}
 	expected := make([]int64, 0, len(block.Students))
 	for _, student := range block.Students {
 		if student.Status == "expected" {
-			expected = append(expected, student.StudentID)
+			expected = append(expected, int64(student.StudentID))
 		}
 	}
 	var checkInErr error
@@ -730,7 +732,7 @@ func (day *demoDay) hold(client Client, block demoBlock) error {
 		_, checkInErr = client.Post(path, map[string]any{"student_ids": expected})
 	}
 	// Close it even after a failed check-in: a past block must not keep running.
-	return errors.Join(checkInErr, completeBlock(client, block.ID))
+	return errors.Join(checkInErr, completeBlock(client, int64(block.ID)))
 }
 
 func startBlock(client Client, id int64) error {
@@ -755,12 +757,12 @@ func (day *demoDay) rooms() ([]int64, map[int64]int64) {
 		if block.IsSpontaneous || block.Status != "active" || block.RoomID == 0 || len(block.StudentIDs) == 0 {
 			continue
 		}
-		if !seen[block.RoomID] {
-			seen[block.RoomID] = true
-			rooms = append(rooms, block.RoomID)
+		if !seen[int64(block.RoomID)] {
+			seen[int64(block.RoomID)] = true
+			rooms = append(rooms, int64(block.RoomID))
 		}
 		for _, studentID := range block.StudentIDs {
-			planned[studentID] = block.RoomID
+			planned[int64(studentID)] = int64(block.RoomID)
 		}
 	}
 	return rooms, planned

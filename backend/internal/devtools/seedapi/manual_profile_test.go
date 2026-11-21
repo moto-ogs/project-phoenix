@@ -7,6 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 func TestVerifyDeviceAdministrationLocked_ExpectsModuleBookingRefusal(t *testing.T) {
@@ -100,11 +102,11 @@ func TestVerifyManualStudentRowsAcceptsAtSchoolBeforeCheckIn(t *testing.T) {
 		{"id": 4, "school_class": "1a", "group_id": 7, "current_location": "Abwesend"}
 	]`)
 	var rows []struct {
-		ID             int64   `json:"id"`
-		SchoolClass    string  `json:"school_class"`
-		GroupID        int64   `json:"group_id"`
-		Location       string  `json:"current_location"`
-		ActualPickupAt *string `json:"actual_pickup_time"`
+		ID             demoprofile.ID `json:"id"`
+		SchoolClass    string         `json:"school_class"`
+		GroupID        demoprofile.ID `json:"group_id"`
+		Location       string         `json:"current_location"`
+		ActualPickupAt *string        `json:"actual_pickup_time"`
 	}
 	require.NoError(t, json.Unmarshal(raw, &rows))
 
@@ -117,11 +119,11 @@ func TestVerifyManualStudentRowsRejectsRoomLocation(t *testing.T) {
 	t.Parallel()
 	raw := []byte(`[{"id": 5, "school_class": "1a", "group_id": 7, "current_location": "Raum 101"}]`)
 	var rows []struct {
-		ID             int64   `json:"id"`
-		SchoolClass    string  `json:"school_class"`
-		GroupID        int64   `json:"group_id"`
-		Location       string  `json:"current_location"`
-		ActualPickupAt *string `json:"actual_pickup_time"`
+		ID             demoprofile.ID `json:"id"`
+		SchoolClass    string         `json:"school_class"`
+		GroupID        demoprofile.ID `json:"group_id"`
+		Location       string         `json:"current_location"`
+		ActualPickupAt *string        `json:"actual_pickup_time"`
 	}
 	require.NoError(t, json.Unmarshal(raw, &rows))
 
@@ -136,11 +138,11 @@ func TestVerifyManualStudentRowsCountsRoomsOnlyWithRoomTracking(t *testing.T) {
 	t.Parallel()
 	raw := []byte(`[{"id": 6, "school_class": "1a", "group_id": 7, "current_location": "Anwesend - Bauraum"}]`)
 	var rows []struct {
-		ID             int64   `json:"id"`
-		SchoolClass    string  `json:"school_class"`
-		GroupID        int64   `json:"group_id"`
-		Location       string  `json:"current_location"`
-		ActualPickupAt *string `json:"actual_pickup_time"`
+		ID             demoprofile.ID `json:"id"`
+		SchoolClass    string         `json:"school_class"`
+		GroupID        demoprofile.ID `json:"group_id"`
+		Location       string         `json:"current_location"`
+		ActualPickupAt *string        `json:"actual_pickup_time"`
 	}
 	require.NoError(t, json.Unmarshal(raw, &rows))
 
@@ -152,11 +154,11 @@ func TestVerifyManualStudentRowsCountsTransitOnlyWithRoomTracking(t *testing.T) 
 	t.Parallel()
 	raw := []byte(`[{"id": 7, "school_class": "1a", "group_id": 7, "current_location": "Unterwegs"}]`)
 	var rows []struct {
-		ID             int64   `json:"id"`
-		SchoolClass    string  `json:"school_class"`
-		GroupID        int64   `json:"group_id"`
-		Location       string  `json:"current_location"`
-		ActualPickupAt *string `json:"actual_pickup_time"`
+		ID             demoprofile.ID `json:"id"`
+		SchoolClass    string         `json:"school_class"`
+		GroupID        demoprofile.ID `json:"group_id"`
+		Location       string         `json:"current_location"`
+		ActualPickupAt *string        `json:"actual_pickup_time"`
 	}
 	require.NoError(t, json.Unmarshal(raw, &rows))
 

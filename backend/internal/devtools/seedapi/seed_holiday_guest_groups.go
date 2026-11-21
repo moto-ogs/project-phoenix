@@ -3,6 +3,8 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 // seedHolidayGuestGroupHint reads the Feriengruppen the group management
@@ -16,15 +18,15 @@ func seedHolidayGuestGroupHint(rt *Runtime, groupID int64) error {
 	}
 	var envelope struct {
 		Data []struct {
-			GroupID int64 `json:"group_id"`
-			Guests  int   `json:"guests"`
+			GroupID demoprofile.ID `json:"group_id"`
+			Guests  int            `json:"guests"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
 		return fmt.Errorf("decode the holiday guest groups: %w", err)
 	}
 	for _, group := range envelope.Data {
-		if group.GroupID == groupID && group.Guests > 0 {
+		if int64(group.GroupID) == groupID && group.Guests > 0 {
 			return nil
 		}
 	}

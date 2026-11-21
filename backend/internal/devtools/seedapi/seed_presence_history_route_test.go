@@ -11,6 +11,8 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 // The public demo's sidecar records the past through the operator route
@@ -61,11 +63,11 @@ func TestOperatorPresenceHistoryWriterPostsChunksAsOperator(t *testing.T) {
 	assert.Equal(t, []int{500, 500, 100}, sizes, "no request exceeds the route's limit")
 	assert.Equal(t, []string{"Bearer operator-token", "Bearer operator-token", "Bearer operator-token"}, auths)
 	assert.Equal(t, date, first.Date)
-	assert.Equal(t, deviceID, first.DeviceID)
+	assert.Equal(t, demoprofile.ID(deviceID), first.DeviceID)
 	assert.True(t, first.CheckIn.Equal(checkIn))
 	require.NotNil(t, first.Visit)
 	visit := *first.Visit
-	assert.Equal(t, [2]int64{50, 90}, [2]int64{visit.ActivityGroupID, visit.RoomID})
+	assert.Equal(t, [2]int64{50, 90}, [2]int64{int64(visit.ActivityGroupID), int64(visit.RoomID)})
 	assert.True(t, visit.SessionStart.Equal(checkIn) && visit.SessionEnd.Equal(checkIn.Add(2*time.Hour)))
 	assert.True(t, visit.Entry.Equal(checkIn.Add(time.Hour)) && visit.Exit.Equal(checkIn.Add(90*time.Minute)))
 }

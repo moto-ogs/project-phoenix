@@ -9,6 +9,8 @@ import (
 	"maps"
 	"slices"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 const (
@@ -235,8 +237,8 @@ func (d *DemoTicker) ensureSessions(ctx context.Context) ([]int64, error) {
 		}
 		var response struct {
 			Data struct {
-				Active bool  `json:"is_active"`
-				RoomID int64 `json:"room_id"`
+				Active bool           `json:"is_active"`
+				RoomID demoprofile.ID `json:"room_id"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(raw, &response); err != nil {
@@ -244,7 +246,7 @@ func (d *DemoTicker) ensureSessions(ctx context.Context) ([]int64, error) {
 		}
 		room := response.Data.RoomID
 		if !response.Data.Active {
-			room = findRoomForActivity(activities[i], state.Rooms)
+			room = demoprofile.ID(findRoomForActivity(activities[i], state.Rooms))
 			if room == 0 {
 				return nil, fmt.Errorf("demo activity %q has no room", activities[i])
 			}
@@ -262,7 +264,7 @@ func (d *DemoTicker) ensureSessions(ctx context.Context) ([]int64, error) {
 		if _, err := client.DevicePost("/api/iot/ping", nil, device.APIKey, state.DevicePIN); err != nil {
 			return nil, fmt.Errorf("keep demo session alive: %w", err)
 		}
-		rooms = append(rooms, room)
+		rooms = append(rooms, int64(room))
 	}
 	return rooms, nil
 }
@@ -333,7 +335,7 @@ func (d *DemoTicker) closeLeftovers(now time.Time) error {
 			if block.IsSpontaneous || block.Status != "active" {
 				continue
 			}
-			if err := completeBlock(d.options.Client, block.ID); err != nil {
+			if err := completeBlock(d.options.Client, int64(block.ID)); err != nil {
 				allClosed = false
 				slog.Info("demo day: leftover block not closed",
 					"instance_id", block.ID,

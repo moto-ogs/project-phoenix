@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+
+	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 func localSeedAccountsEnabled(baseURL string, options SeedOptions) bool {
@@ -28,7 +30,7 @@ func registerSeedStaffAccount(rt *Runtime, body map[string]any) (AccountCredenti
 	}
 	var account struct {
 		Data struct {
-			ID             int64 `json:"id"`
+			ID             demoprofile.ID `json:"id"`
 			SchoolIdentity *struct {
 				StaffID int64 `json:"staff_id,string"`
 			} `json:"school_identity"`
@@ -40,5 +42,5 @@ func registerSeedStaffAccount(rt *Runtime, body map[string]any) (AccountCredenti
 	if account.Data.ID <= 0 || account.Data.SchoolIdentity == nil || account.Data.SchoolIdentity.StaffID <= 0 {
 		return AccountCredentials{}, fmt.Errorf("registered account has no account or staff identity")
 	}
-	return AccountCredentials{AccountID: account.Data.ID, StaffID: account.Data.SchoolIdentity.StaffID}, nil
+	return AccountCredentials{AccountID: int64(account.Data.ID), StaffID: account.Data.SchoolIdentity.StaffID}, nil
 }

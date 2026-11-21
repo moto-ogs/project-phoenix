@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -28,10 +29,10 @@ type seedBillingRunDetail struct {
 	PreviewCents int64  `json:"preview_cents"`
 	Fingerprint  string `json:"fingerprint"`
 	Documents    []struct {
-		RegistrationID int64 `json:"registration_id"`
+		RegistrationID demoprofile.ID `json:"registration_id"`
 		Children       []struct {
-			ChildID    int64 `json:"child_id"`
-			TotalCents int64 `json:"total_cents"`
+			ChildID    demoprofile.ID `json:"child_id"`
+			TotalCents int64          `json:"total_cents"`
 		} `json:"children"`
 	} `json:"documents"`
 }

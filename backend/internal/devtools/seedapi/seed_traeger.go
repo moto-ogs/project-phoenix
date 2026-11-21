@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -162,8 +163,8 @@ func seedHolidayParticipantList(rt *Runtime) (int64, error) {
 	}
 	var envelope struct {
 		Data []struct {
-			ID           int64 `json:"id"`
-			Participants int   `json:"participants"`
+			ID           demoprofile.ID `json:"id"`
+			Participants int            `json:"participants"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
@@ -176,7 +177,7 @@ func seedHolidayParticipantList(rt *Runtime) (int64, error) {
 		return 0, fmt.Errorf("read the holiday participant list: %w", err)
 	}
 	fmt.Printf("  Ausrichtende OGS: participant list with %d confirmed child(ren) read\n", envelope.Data[0].Participants)
-	return envelope.Data[0].ID, nil
+	return int64(envelope.Data[0].ID), nil
 }
 
 // seedHolidayGuests creates the group "Feriengruppe" at the hosting school
@@ -606,9 +607,9 @@ func seedHolidayRegistration(published []byte, homeSchool int64) (string, map[st
 		Data struct {
 			PublicToken string `json:"public_token"`
 			Weeks       []struct {
-				ID         int64 `json:"id"`
+				ID         demoprofile.ID `json:"id"`
 				TimeModels []struct {
-					ID int64 `json:"id"`
+					ID demoprofile.ID `json:"id"`
 				} `json:"time_models"`
 			} `json:"weeks"`
 		} `json:"data"`
@@ -621,7 +622,7 @@ func seedHolidayRegistration(published []byte, homeSchool int64) (string, map[st
 		return "", nil, fmt.Errorf("the published holiday period has no link or no bookable weeks")
 	}
 	booking := func(week, model int) map[string]any {
-		return map[string]any{"week_id": period.Weeks[week].ID, "time_model_id": period.Weeks[week].TimeModels[model].ID}
+		return map[string]any{"week_id": int64(period.Weeks[week].ID), "time_model_id": int64(period.Weeks[week].TimeModels[model].ID)}
 	}
 	withLunch := func(booking map[string]any) map[string]any {
 		booking["lunch"] = true
@@ -708,7 +709,7 @@ func seedTraegerSchoolIDs(client *Client, auth AuthRef) ([]int64, error) {
 	}
 	var envelope struct {
 		Data []struct {
-			ID int64 `json:"id"`
+			ID demoprofile.ID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil || len(envelope.Data) == 0 {
@@ -716,7 +717,7 @@ func seedTraegerSchoolIDs(client *Client, auth AuthRef) ([]int64, error) {
 	}
 	ids := make([]int64, len(envelope.Data))
 	for i, school := range envelope.Data {
-		ids[i] = school.ID
+		ids[i] = int64(school.ID)
 	}
 	return ids, nil
 }
