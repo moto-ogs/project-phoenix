@@ -16,6 +16,7 @@ import { formatDate } from "~/lib/date-helpers";
 import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
 import { fetchCareNoticeLetter } from "~/lib/traeger-care-notices-api";
 import { traegerPath } from "~/lib/traeger-url";
+import { labelOf } from "~/lib/label-of";
 
 export default function TraegerCareNoticePage() {
   const params = useParams<{ id: string; contractId: string }>();
@@ -37,7 +38,7 @@ export default function TraegerCareNoticePage() {
     <TenantPage
       title={
         notice
-          ? `${NOTICE_KIND_LABELS[notice.kind]} ${notice.childFirstName} ${notice.childLastName}`
+          ? `${labelOf(NOTICE_KIND_LABELS, notice.kind, "Bescheid")} ${notice.childFirstName} ${notice.childLastName}`
           : "Bescheid"
       }
       back
