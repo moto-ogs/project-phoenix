@@ -58,6 +58,7 @@ describe("fetchHolidayRegistrationFamily (#4662)", () => {
               last_name: "Schneider",
             },
           ],
+          account_proof: "",
         },
       }),
     );
