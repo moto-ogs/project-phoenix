@@ -9,7 +9,6 @@ import { buildApiError } from "./api-error-response";
 import {
   mapAllowance,
   type AbsenceTypeAllowanceSummary,
-  type BackendAbsenceTypeAllowanceSummary,
 } from "./absence-type-api";
 import type {
   DayProjection,
@@ -87,10 +86,6 @@ export interface UpdateAbsenceRequest {
 
 interface TimeTrackingConfig {
   accountStartDate: string;
-}
-
-interface BackendTimeTrackingConfig {
-  account_start_date?: string;
 }
 
 /**
@@ -182,7 +177,7 @@ class TimeTrackingService {
   }
 
   async getConfig(): Promise<TimeTrackingConfig> {
-    const result = await this.request<BackendTimeTrackingConfig>(
+    const result = await this.request<tt.ConfigResponse>(
       "/config",
       "GET",
       "Failed to get time tracking config",
@@ -445,7 +440,7 @@ class TimeTrackingService {
    * Berlin year when none is given.
    */
   async getOwnAbsenceAllowances(): Promise<OwnAbsenceAllowance[]> {
-    const result = await this.request<BackendOwnAbsenceAllowance[] | null>(
+    const result = await this.request<tt.OwnAllowanceResponse[] | null>(
       "/absence-allowances",
       "GET",
       "Kontingente konnten nicht geladen werden",
@@ -455,10 +450,6 @@ class TimeTrackingService {
       summary: mapAllowance(entry),
     }));
   }
-}
-
-interface BackendOwnAbsenceAllowance extends BackendAbsenceTypeAllowanceSummary {
-  name: string;
 }
 
 /** One school-defined absence type with an allowance and its yearly account. */

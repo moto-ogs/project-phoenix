@@ -4,14 +4,20 @@
 // link reaches the caterer by mail only; the school never sees it.
 
 import { apiErrorFromResponse } from "./api-error";
-import type {
-  EmailAddressMark,
-  MailOutcome,
-  MailProviderBlock,
+import { knownEnum } from "./contract/known-enum";
+import type * as wire from "./contract/meal-caterer.generated";
+import {
+  type EmailAddressMark,
+  knownMailOutcome,
+  knownMailProviderBlock,
+  type MailOutcome,
+  type MailProviderBlock,
 } from "./email-delivery-status";
 import { sessionFetch } from "./session-cache";
 
-type MealCatererInvitationStatus = "open" | "accepted" | "revoked" | "expired";
+const INVITATION_STATUSES = ["open", "accepted", "revoked", "expired"] as const;
+type MealCatererInvitationStatus = (typeof INVITATION_STATUSES)[number];
+const ADDRESS_MARKS: readonly EmailAddressMark[] = ["failed", "complained"];
 
 export interface MealCatererInvitation {
   id: string;
@@ -44,28 +50,6 @@ export interface MealCatererInvitationInput {
   deliveryAddress: string;
 }
 
-interface BackendInvitation {
-  id: string;
-  email: string;
-  caterer_name: string;
-  delivery_address: string;
-  status: MealCatererInvitationStatus;
-  expires_at: string;
-  created_at: string;
-  mail_outcome?: MailOutcome;
-  address_mark?: EmailAddressMark;
-  provider_block?: MailProviderBlock;
-}
-
-interface BackendMealCaterer {
-  supply: {
-    caterer_name: string;
-    delivery_address: string;
-    started_at: string;
-  } | null;
-  invitations: BackendInvitation[];
-}
-
 function unwrap<T>(body: unknown): T {
   if (body && typeof body === "object" && "data" in body) {
     return (body as { data: T }).data;
@@ -73,18 +57,21 @@ function unwrap<T>(body: unknown): T {
   return body as T;
 }
 
-function mapInvitation(invitation: BackendInvitation): MealCatererInvitation {
+function mapInvitation(
+  invitation: wire.InvitationResponse,
+): MealCatererInvitation {
   return {
     id: invitation.id,
     email: invitation.email,
     catererName: invitation.caterer_name,
     deliveryAddress: invitation.delivery_address,
-    status: invitation.status,
+    // An unknown state reads as expired: it offers no action.
+    status: knownEnum(INVITATION_STATUSES, invitation.status) ?? "expired",
     expiresAt: invitation.expires_at,
     createdAt: invitation.created_at,
-    mailOutcome: invitation.mail_outcome,
-    addressMark: invitation.address_mark,
-    providerBlock: invitation.provider_block,
+    mailOutcome: knownMailOutcome(invitation.mail_outcome),
+    addressMark: knownEnum(ADDRESS_MARKS, invitation.address_mark),
+    providerBlock: knownMailProviderBlock(invitation.provider_block),
   };
 }
 
@@ -95,7 +82,7 @@ export async function getMealCaterer(): Promise<MealCaterer> {
   if (!response.ok) {
     throw await apiErrorFromResponse(response, "meal caterer load failed");
   }
-  const data = unwrap<BackendMealCaterer>(await response.json());
+  const data = unwrap<wire.SchoolCatererResponse>(await response.json());
   return {
     supply: data.supply
       ? {
@@ -123,7 +110,7 @@ export async function inviteMealCaterer(
   if (!response.ok) {
     throw await apiErrorFromResponse(response, "meal caterer invite failed");
   }
-  return mapInvitation(unwrap<BackendInvitation>(await response.json()));
+  return mapInvitation(unwrap<wire.InvitationResponse>(await response.json()));
 }
 
 export async function revokeMealCatererInvitation(id: string): Promise<void> {
