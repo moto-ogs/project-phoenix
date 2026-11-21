@@ -70,9 +70,17 @@ func TestDayChangesMealPlanSource(t *testing.T) {
 	})
 
 	t.Run("every staff account sees the short note without the dishes", func(t *testing.T) {
-		for name, perms := range map[string][]string{"care without meals:read": {"users:read"}, "lead": {"admin:*"}, "no permission": nil} {
-			overview, body := read(t, router, carer.ID, tenantID, perms...)
-			assert.Equal(t, []string{"school ->meal_plan"}, mealPlanLines(overview), name)
+		for name, want := range map[string]struct {
+			perms []string
+			line  string
+		}{
+			"care without meals:read": {[]string{"users:read"}, "school"},
+			"no permission":           {nil, "school"},
+			"meals:read":              {[]string{"meals:read"}, "school ->meal_plan"},
+			"lead":                    {[]string{"admin:*"}, "school ->meal_plan"},
+		} {
+			overview, body := read(t, router, carer.ID, tenantID, want.perms...)
+			assert.Equal(t, []string{want.line}, mealPlanLines(overview), name+": the link only where the page shows the menu")
 			for _, dish := range []string{"Gemüseeintopf", "Nudeln"} {
 				assert.NotContains(t, body, dish, name)
 			}
@@ -82,7 +90,7 @@ func TestDayChangesMealPlanSource(t *testing.T) {
 	t.Run("saving the same menu again keeps the change", func(t *testing.T) {
 		require.Equal(t, http.StatusOK, save(kitchen.ID, tenantID, day.String(), `{"dish":"Gemüseeintopf"}`))
 		overview, _ := read(t, router, carer.ID, tenantID)
-		assert.Equal(t, []string{"school ->meal_plan"}, mealPlanLines(overview))
+		assert.Equal(t, []string{"school"}, mealPlanLines(overview))
 		count, _ := rig.Signals()
 		assert.Equal(t, 1, count, "every committed save signals; the reader decides")
 	})

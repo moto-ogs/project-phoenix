@@ -737,7 +737,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s dayChangesMealPlan) MealPlanChanges(ctx context.Context, day calendar.Date) ([]daychangesview.SourceEntry, error) {\n\tchanged, err := s.reads.MenuChangedOn(ctx, mealplan.Date(day.String()))\n\tif err != nil {\n\t\treturn nil, fmt.Errorf(\"read meal plan change: %w\", err)\n\t}\n\tif !changed {\n\t\treturn nil, nil\n\t}\n\treturn []daychangesview.SourceEntry{{Kind: daychangesview.KindMealPlanChanged, Link: \u0026daychangesview.Link{Target: daychangesview.LinkMealPlan}}}, nil\n}",
+      "evidence": "func (s dayChangesMealPlan) MealPlanChanges(ctx context.Context, day calendar.Date) ([]daychangesview.SourceEntry, error) {\n\tchanged, err := s.reads.MenuChangedOn(ctx, mealplan.Date(day.String()))\n\tif err != nil {\n\t\treturn nil, fmt.Errorf(\"read meal plan change: %w\", err)\n\t}\n\tif !changed {\n\t\treturn nil, nil\n\t}\n\tentry := daychangesview.SourceEntry{Kind: daychangesview.KindMealPlanChanged}\n\tif mealPlanAllowed(ctx, mealplanAPI.AccessRead) {\n\t\tentry.Link = \u0026daychangesview.Link{Target: daychangesview.LinkMealPlan}\n\t}\n\treturn []daychangesview.SourceEntry{entry}, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/dayChangesMealPlan.MealPlanChanges",
       "owner": "roots"

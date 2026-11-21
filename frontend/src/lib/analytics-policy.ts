@@ -45,6 +45,7 @@ const DAY_CHANGE_KINDS = [
   "staff_absent",
   "staff_absent_count",
   "staff_notice",
+  "meal_plan_changed",
 ] as const satisfies readonly DayChangeKind[];
 
 /**

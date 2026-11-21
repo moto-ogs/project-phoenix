@@ -992,6 +992,7 @@ describe("useGlobalSSE — Heute anders", () => {
     "group_access_changed",
     "staff_time_tracking_changed",
     "staff_notices_changed",
+    "meal_plan_changed",
   ] as const)("reloads the block on %s", (type) => {
     renderHook(() => useGlobalSSE());
 

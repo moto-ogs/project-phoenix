@@ -77,6 +77,8 @@ const DAY_CHANGE_TEXTS: Readonly<
   group_substitution_count: groupSubstitutionCountText,
   // Der Hinweis der Leitung: sein Titel ist der Satz (#7667).
   staff_notice: (change) => change.notice?.title ?? "",
+  // Nur die Kurzinfo (#7666); was es gibt, steht auf der Seite Speiseplan.
+  meal_plan_changed: () => "Der Speiseplan für heute wurde geändert.",
 };
 
 export function dayChangeText(change: DayChange): string | null {
@@ -120,6 +122,7 @@ export function dayChangeSpan(change: DayChange): string | null {
 const SOURCE_FAILURE_TEXTS: Readonly<Record<string, string>> = {
   staff: "Ausfälle und Vertretungen konnten gerade nicht geladen werden.",
   notices: "Hinweise der Leitung konnten gerade nicht geladen werden.",
+  meal_plan: "Änderungen am Speiseplan konnten gerade nicht geladen werden.",
 };
 
 export function sourceFailureText(source: string): string {
@@ -146,6 +149,8 @@ export function dayChangeHref(change: DayChange): string | null {
       return "/substitutions";
     case "staff_notices":
       return "/tagesinformationen";
+    case "meal_plan":
+      return "/meal-plan";
     default:
       return null;
   }
