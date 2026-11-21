@@ -136,11 +136,17 @@ var errSignatureProofMissing = errors.New("enrollment request has no signature")
 type signatureProofRoute struct{}
 
 // wantsProofPDF reports whether a detail read asks for the signature proof
-// instead of the JSON detail: on the proof's own path, or with ?format=pdf,
-// which stays for callers of the detail path.
+// instead of the JSON detail: only on the proof's own path. The staff detail
+// path answers JSON alone (#7644).
 func wantsProofPDF(r *http.Request) bool {
 	onProofRoute, _ := r.Context().Value(signatureProofRoute{}).(bool)
-	return onProofRoute || r.URL.Query().Get("format") == "pdf"
+	return onProofRoute
+}
+
+// wantsStatusProofPDF is wantsProofPDF for the public status read, where
+// ?format=pdf stays for existing calls (ADR 0270).
+func wantsStatusProofPDF(r *http.Request) bool {
+	return wantsProofPDF(r) || r.URL.Query().Get("format") == "pdf"
 }
 
 // writeAdminSignatureProof answers the staff proof of a signed request.

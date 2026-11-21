@@ -11,6 +11,9 @@ import { NextRequest } from "next/server";
  * - Auth.js' own `auth()` is called outside its route-handler overload;
  * - a portal session helper refuses to run (assertPortalRequestContext).
  * Which import a route uses does not matter; only what it does when called.
+ *
+ * The walk calls each handler with the context Next itself passes, so it
+ * also finds a handler that crashes on every real call (#7563).
  */
 
 const state = vi.hoisted(() => {
@@ -21,6 +24,7 @@ const state = vi.hoisted(() => {
     insideWrapper: new AsyncLocalStorage<true>(),
     route: "",
     findings: new Set<string>(),
+    crashes: new Set<string>(),
   };
 });
 
@@ -83,12 +87,22 @@ const routes = readdirSync(apiDir, { recursive: true, encoding: "utf8" })
   .map((file) => path.dirname(file).split(path.sep).join("/"))
   .sort();
 
-function params(route: string) {
+/**
+ * The context Next 16 hands a route handler
+ * (next/dist/server/route-modules/app-route/module.js): a route file without
+ * a dynamic segment gets `params: undefined`, any other a promise of its
+ * segments. A test that invents `params` for a static route hides a handler
+ * that reads them (#7563, GET /api/auth/tenants answered 500).
+ */
+function routeContext(route: string) {
   const values: Record<string, string | string[]> = {};
   for (const [, catchAll, name] of route.matchAll(/\[(\.\.\.)?([^\]]+)\]/g)) {
     values[name!] = catchAll ? ["1"] : "1";
   }
-  return values;
+  return {
+    params:
+      Object.keys(values).length > 0 ? Promise.resolve(values) : undefined,
+  };
 }
 
 function request(route: string, method: string) {
@@ -110,7 +124,7 @@ async function run(handler: unknown, route: string, method: string) {
     const response = await Promise.race([
       (handler as (r: NextRequest, c: unknown) => Promise<Response>)(
         request(route, method),
-        { params: Promise.resolve(params(route)) },
+        routeContext(route),
       ),
       new Promise<null>((resolve) => {
         timer = setTimeout(() => resolve(null), 2_000);
@@ -119,6 +133,11 @@ async function run(handler: unknown, route: string, method: string) {
     await response?.body?.cancel().catch(() => undefined);
   } catch (error) {
     noteGuard(error);
+    // Next answers an error thrown out of a handler with a bare 500. A
+    // programming error there is a crash on every call, not a refusal.
+    if (error instanceof TypeError || error instanceof ReferenceError) {
+      state.crashes.add(`${route} ${method}: ${error.message}`);
+    }
   } finally {
     clearTimeout(timer);
   }
@@ -126,6 +145,10 @@ async function run(handler: unknown, route: string, method: string) {
 
 describe("session reads of every BFF route", () => {
   beforeAll(() => {
+    // The hosts of the request below; without them most handlers stop at
+    // their configuration and never reach their own code.
+    vi.stubEnv("TENANT_DOMAIN", "localhost");
+    vi.stubEnv("NEXT_PUBLIC_OPERATOR_HOSTNAME", "operator.localhost:3000");
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => Response.json({ status: "success", data: {} })),
@@ -136,6 +159,7 @@ describe("session reads of every BFF route", () => {
   });
   afterAll(() => {
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
     vi.restoreAllMocks();
   });
 
@@ -182,4 +206,11 @@ describe("session reads of every BFF route", () => {
       "A session read outside the portal's wrapper can rotate the refresh token while its cookie never leaves (#1938)",
     ).toEqual([]);
   }, 600_000);
+
+  it("answers every call as Next makes it without a crash", () => {
+    expect(
+      [...state.crashes].sort(),
+      "Next answers a handler that throws with a bare 500 (routeContext says what Next passes)",
+    ).toEqual([]);
+  });
 });

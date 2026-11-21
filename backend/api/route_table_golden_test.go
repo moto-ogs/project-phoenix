@@ -431,6 +431,7 @@ func TestFullProductionRouterGolden(t *testing.T) {
 			t.Run("IoT auth matrix", func(t *testing.T) { checkIoTAuthMatrixGolden(t, api) })
 			t.Run("checkpoint PIN rejections", func(t *testing.T) { checkRuntimeCheckpointPINRejections(t, api) })
 			t.Run("error envelope on every route", func(t *testing.T) { checkErrorEnvelopeOnEveryRoute(t, api) })
+			t.Run("query reads of every handler are registered", func(t *testing.T) { checkHandlerQueryReadsAreRegistered(t, api) })
 			t.Run("IoT error code declarations", checkIoTErrorCodesGolden)
 			t.Run("IoT error reports relay", func(t *testing.T) { checkIoTErrorReportsRelay(t, api, sentryFake, newKiosk) })
 			t.Run("school scope matrix", func(t *testing.T) { checkSchoolScopeMatrix(t, api) })

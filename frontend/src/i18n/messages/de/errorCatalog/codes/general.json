@@ -5,5 +5,6 @@
   "request_too_large": "{object} konnte nicht bearbeitet werden. Bitte lösche im Browser die Cookies dieser Seite. Melde dich danach neu an.",
   "route_not_found": "{object} konnte nicht bearbeitet werden. Es gibt eine neue Version von moto. Bitte lade die Seite neu.",
   "server": "{object} konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
-  "unavailable": "{object} ist gerade nicht erreichbar. Bitte versuche es erneut."
+  "unavailable": "{object} ist gerade nicht erreichbar. Bitte versuche es erneut.",
+  "write_answer_unreadable": "{object} wurde übernommen, konnte aber nicht angezeigt werden. Bitte lade die Seite neu, bevor du es noch einmal versuchst."
 }

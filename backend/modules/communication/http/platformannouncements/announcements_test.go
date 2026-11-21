@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/moto-ogs/project-phoenix/api/common"
 	platformModel "github.com/moto-ogs/project-phoenix/modules/communication"
 	"github.com/moto-ogs/project-phoenix/modules/communication/http/platformannouncements"
 )
@@ -42,9 +43,7 @@ func testRuntime() platformannouncements.Runtime {
 			viewer, _ := r.Context().Value(viewerKey{}).(platformannouncements.Viewer)
 			return viewer
 		},
-		Success: func(w http.ResponseWriter, _ *http.Request, status int, data any, message string) {
-			write(w, status, testEnvelope{Status: "success", Data: data, Message: message})
-		},
+		Success: common.Respond,
 		IDParam: func(w http.ResponseWriter, r *http.Request, param, errMsg string) (int64, bool) {
 			id, err := strconv.ParseInt(chi.URLParam(r, param), 10, 64)
 			if err != nil {
@@ -364,18 +363,17 @@ func TestMarkSeen_SuccessAndErrors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockService := &mockPlatformAnnouncementService{markSeenFn: tt.markSeenFn}
-			resource := platformannouncements.NewAnnouncementsResource(mockService, testRuntime())
+			resource := platformannouncements.NewResource(platformannouncements.ResourceConfig{AnnouncementsService: mockService, Runtime: testRuntime()})
+			router := chi.NewRouter()
+			router.Mount("/api/platform", resource.Router())
 
-			req := httptest.NewRequest(http.MethodPost, "/announcements/"+tt.id+"/seen", nil)
-			rctx := chi.NewRouteContext()
-			rctx.URLParams.Add("id", tt.id)
+			req := httptest.NewRequest(http.MethodPost, "/api/platform/announcements/"+tt.id+"/seen", nil)
 			claims := platformannouncements.Viewer{AccountID: 123}
-			ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
-			ctx = context.WithValue(ctx, viewerKey{}, claims)
+			ctx := context.WithValue(req.Context(), viewerKey{}, claims)
 			req = req.WithContext(ctx)
 			rr := httptest.NewRecorder()
 
-			resource.MarkSeen(rr, req)
+			router.ServeHTTP(rr, req)
 
 			assert.Equal(t, tt.wantStatus, rr.Code)
 			if tt.wantBody != "" {
