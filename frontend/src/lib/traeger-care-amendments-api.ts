@@ -4,10 +4,13 @@
  * and the revocation of a change. Only the page of one invoice loads it.
  */
 
+import type {
+  CareAmendmentRequest,
+  CareRunDetail as WireRunDetail,
+} from "./contract/traeger-care-billing-runs.generated";
 import { traegerRequest } from "./traeger-api";
 import type { PostalAddress } from "./traeger-billing-terms-api";
 import {
-  type BackendRunDetail,
   type CareAmendmentKind,
   type CareRunDetail,
   detailFromBackend,
@@ -44,8 +47,8 @@ export type CareAmendmentInput = {
     }
 );
 
-function amendmentBody(input: CareAmendmentInput): Record<string, unknown> {
-  const body: Record<string, unknown> = {
+function amendmentBody(input: CareAmendmentInput): CareAmendmentRequest {
+  const body: CareAmendmentRequest = {
     contract_id: Number(input.contractId),
     service: input.service,
     kind: input.kind satisfies CareAmendmentKind | "revoke",
@@ -93,7 +96,7 @@ export async function amendCareInvoice(
   input: CareAmendmentInput,
 ): Promise<CareRunDetail> {
   return detailFromBackend(
-    await traegerRequest<BackendRunDetail>(
+    await traegerRequest<WireRunDetail>(
       `/api/traeger/care-billing-runs/${encodeURIComponent(runId)}/amendments`,
       { method: "POST", body: amendmentBody(input) },
     ),
