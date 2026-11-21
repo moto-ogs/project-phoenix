@@ -42,7 +42,7 @@ func TestHolidayPlacesPromotionUpdatesAnInvoicedContribution(t *testing.T) {
 	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(run))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	before := correctedRun(t, f, billing, int64(run.ID)).Documents
-	require.Equal(t, []int64{int64(registration.ID)}, f.setCapacity(t, int64(first.ID), 3).MovedUp)
+	require.Equal(t, []int64{int64(registration.ID)}, testpkg.IDs(f.setCapacity(t, int64(first.ID), 3).MovedUp))
 	contribution := f.cancelledContribution(t, int64(registration.ID))
 	assert.Equal(t, first.TimeModels[0].PriceCents+second.TimeModels[0].PriceCents, contribution.TotalCents)
 	assert.True(t, contribution.CorrectionNeeded, "the new contribution must expose the difference to the issued invoice")
@@ -122,7 +122,7 @@ func TestHolidayPlacesDelayedReplacementKeepsTheFrozenCharge(t *testing.T) {
 	})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, original, f.contributionTotal(t, int64(registration.ID)), "a replacement on the waiting list keeps the frozen charge")
-	require.Equal(t, []int64{int64(registration.ID)}, f.setCapacity(t, int64(second.ID), full+1).MovedUp)
+	require.Equal(t, []int64{int64(registration.ID)}, testpkg.IDs(f.setCapacity(t, int64(second.ID), full+1).MovedUp))
 	assert.Equal(t, original, f.contributionTotal(t, int64(registration.ID)), "promotion must not charge both the original and its replacement")
 	assert.Equal(t, 1, f.mails(t, "holiday_place_granted", int64(registration.ID)))
 	// A later rebooking back through the same lineage also replaces a paid week.

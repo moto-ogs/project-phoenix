@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The confirmation letters of the released runs (#4669, ADR 0121). The
@@ -38,7 +39,7 @@ func (r runLettersRow) letters() parentbilling.BillingLetters {
 	}
 	return parentbilling.BillingLetters{
 		PaymentDueOn: r.PaymentDueOn, Notes: r.Notes, EmergencyContacts: contacts, CreatedAt: r.CreatedAt,
-		CreatedByAccountID: r.CreatedByAccountID, TemplateVersion: r.TemplateVersion,
+		CreatedByAccountID: (*ident.ID)(r.CreatedByAccountID), TemplateVersion: r.TemplateVersion,
 	}
 }
 

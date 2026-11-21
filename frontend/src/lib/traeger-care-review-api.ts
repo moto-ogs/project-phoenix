@@ -82,7 +82,7 @@ export async function excludeCareInvoice(
     await traegerRequest<WireRunDetail>(`${runPath(runId)}/exclusions`, {
       method: "POST",
       body: {
-        contract_id: Number(invoice.contractId),
+        contract_id: invoice.contractId,
         service: invoice.service,
         reason,
       } satisfies CareExclusionRequest,
@@ -99,7 +99,7 @@ export async function includeCareInvoice(
     await traegerRequest<WireRunDetail>(`${runPath(runId)}/inclusions`, {
       method: "POST",
       body: {
-        contract_id: Number(invoice.contractId),
+        contract_id: invoice.contractId,
         service: invoice.service,
       } satisfies CareInclusionRequest,
     }),

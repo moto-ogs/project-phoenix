@@ -1199,7 +1199,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s parentBillingCareSchools) TraegerSchools(ctx context.Context, organizationID int64) ([]parentbilling.CareSchool, error) {\n\tschools, err := s.organizations.ListSchoolsByOrganization(ctx, organizationID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]parentbilling.CareSchool, 0, len(schools))\n\tfor _, school := range schools {\n\t\tif !school.IsDeleted() {\n\t\t\tresult = append(result, parentbilling.CareSchool{ID: school.ID, Name: school.Name})\n\t\t}\n\t}\n\tslices.SortFunc(result, func(a, b parentbilling.CareSchool) int {\n\t\treturn strings.Compare(a.Name, b.Name)\n\t})\n\treturn result, nil\n}",
+      "evidence": "func (s parentBillingCareSchools) TraegerSchools(ctx context.Context, organizationID int64) ([]parentbilling.CareSchool, error) {\n\tschools, err := s.organizations.ListSchoolsByOrganization(ctx, organizationID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]parentbilling.CareSchool, 0, len(schools))\n\tfor _, school := range schools {\n\t\tif !school.IsDeleted() {\n\t\t\tresult = append(result, parentbilling.CareSchool{ID: ident.ID(school.ID), Name: school.Name})\n\t\t}\n\t}\n\tslices.SortFunc(result, func(a, b parentbilling.CareSchool) int {\n\t\treturn strings.Compare(a.Name, b.Name)\n\t})\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/parentBillingCareSchools.TraegerSchools",
       "owner": "roots"
@@ -1269,14 +1269,14 @@
     },
     {
       "build": "production",
-      "evidence": "func (c parentBillingPlaceChanges) RebookHolidayChild(ctx context.Context, reviewer parentbilling.HolidayReviewer, periodID, registrationID, childID int64, bookings []parentbilling.HolidayBookingChoice) (parentbilling.HolidayPlaceChange, error) {\n\tchoices := make([]enrollmentOwner.HolidayBookingInput, len(bookings))\n\tfor i, booking := range bookings {\n\t\tchoices[i] = enrollmentOwner.HolidayBookingInput{WeekID: booking.WeekID, TimeModelID: booking.TimeModelID, Days: booking.Days, Lunch: booking.Lunch}\n\t}\n\tdetail, err := c.workflow.RebookHolidayChild(ctx, enrollmentOwner.HolidayReviewer(reviewer), periodID, registrationID, childID, choices)\n\tif err != nil {\n\t\treturn parentbilling.HolidayPlaceChange{}, parentBillingPlacesError(err)\n\t}\n\treturn parentbilling.HolidayPlaceChange{Registration: detail, RegistrationID: detail.ID, MovedUp: sortedMovedUp(detail.Promotions)}, nil\n}",
+      "evidence": "func (c parentBillingPlaceChanges) RebookHolidayChild(ctx context.Context, reviewer parentbilling.HolidayReviewer, periodID, registrationID, childID int64, bookings []parentbilling.HolidayBookingChoice) (parentbilling.HolidayPlaceChange, error) {\n\tchoices := make([]enrollmentOwner.HolidayBookingInput, len(bookings))\n\tfor i, booking := range bookings {\n\t\tchoices[i] = enrollmentOwner.HolidayBookingInput{WeekID: booking.WeekID.Int64(), TimeModelID: booking.TimeModelID.Int64(), Days: booking.Days, Lunch: booking.Lunch}\n\t}\n\tdetail, err := c.workflow.RebookHolidayChild(ctx, enrollmentOwner.HolidayReviewer(reviewer), periodID, registrationID, childID, choices)\n\tif err != nil {\n\t\treturn parentbilling.HolidayPlaceChange{}, parentBillingPlacesError(err)\n\t}\n\treturn parentbilling.HolidayPlaceChange{Registration: detail, RegistrationID: ident.ID(detail.ID), MovedUp: ident.IDs(sortedMovedUp(detail.Promotions))}, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/parentBillingPlaceChanges.RebookHolidayChild",
       "owner": "roots"
     },
     {
       "build": "production",
-      "evidence": "func (c parentBillingPlaceChanges) SetHolidayWeekCapacity(ctx context.Context, reviewer parentbilling.HolidayReviewer, periodID, weekID int64, capacity *int) (parentbilling.HolidayPlaceChange, error) {\n\tchange, err := c.workflow.SetHolidayWeekCapacity(ctx, enrollmentOwner.HolidayReviewer(reviewer), periodID, weekID, capacity)\n\tif err != nil {\n\t\treturn parentbilling.HolidayPlaceChange{}, parentBillingPlacesError(err)\n\t}\n\treturn parentbilling.HolidayPlaceChange{WeekID: weekID, Capacity: capacity, MovedUp: sortedMovedUp(change.Promotions)}, nil\n}",
+      "evidence": "func (c parentBillingPlaceChanges) SetHolidayWeekCapacity(ctx context.Context, reviewer parentbilling.HolidayReviewer, periodID, weekID int64, capacity *int) (parentbilling.HolidayPlaceChange, error) {\n\tchange, err := c.workflow.SetHolidayWeekCapacity(ctx, enrollmentOwner.HolidayReviewer(reviewer), periodID, weekID, capacity)\n\tif err != nil {\n\t\treturn parentbilling.HolidayPlaceChange{}, parentBillingPlacesError(err)\n\t}\n\treturn parentbilling.HolidayPlaceChange{WeekID: ident.ID(weekID), Capacity: capacity, MovedUp: ident.IDs(sortedMovedUp(change.Promotions))}, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/parentBillingPlaceChanges.SetHolidayWeekCapacity",
       "owner": "roots"

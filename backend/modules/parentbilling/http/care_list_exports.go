@@ -190,7 +190,7 @@ func (rs *CareReductionResource) exportEvidences(w http.ResponseWriter, r *http.
 	}
 	levels := make(map[int64]string, len(set.Levels))
 	for _, level := range set.Levels {
-		levels[level.ID] = level.Name
+		levels[level.ID.Int64()] = level.Name
 	}
 	table := newListTable("Nachweise für Ermäßigungen", "nachweise-ermaessigung", true,
 		column("last_name", "Nachname"), column("first_name", "Vorname"), column("school", "Schule"),
@@ -204,7 +204,7 @@ func (rs *CareReductionResource) exportEvidences(w http.ResponseWriter, r *http.
 		for _, evidence := range contract.Evidences {
 			level, valid := "", "ab "+dateText(evidence.ValidFrom)
 			if evidence.RuleID != nil {
-				level = levels[*evidence.RuleID]
+				level = levels[(*evidence.RuleID).Int64()]
 			}
 			if evidence.ValidUntil != nil {
 				valid = periodText(evidence.ValidFrom, *evidence.ValidUntil)

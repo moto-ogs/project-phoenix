@@ -845,11 +845,11 @@ export async function saveCarePriceList(
     await traegerRequest<WireTariffs>(TARIFFS_PATH, {
       method: "PUT",
       body: {
-        school_id: Number(schoolId),
+        school_id: schoolId,
         valid_from: validFrom,
         free_months: [...freeMonths],
         prices: prices.map((price) => ({
-          care_offering_id: Number(price.careOfferingId),
+          care_offering_id: price.careOfferingId,
           module_name: price.moduleName,
           weekday: price.weekday ?? "",
           days_per_week: price.daysPerWeek ?? null,
@@ -901,7 +901,7 @@ export async function startCareRun(input: CareRunStartInput): Promise<CareRun> {
       method: "POST",
       body: {
         billing_month: input.billingMonth,
-        school_ids: input.schoolIds.map(Number),
+        school_ids: [...input.schoolIds],
         invoice_date: input.invoiceDate,
       } satisfies CareRunRequest,
     }),

@@ -5,6 +5,7 @@ import {
   bool,
   calendarDate,
   instant,
+  int64String,
   int64StringOrNumber,
   noData,
   nullable,
@@ -95,8 +96,8 @@ export interface RetentionInstruction {
 }
 
 export const RetentionInstructionSchema: z.ZodType<RetentionInstruction, unknown> = object<RetentionInstruction>({
-  id: int64StringOrNumber,
-  organization_id: int64StringOrNumber,
+  id: int64String,
+  organization_id: int64String,
   beleg_type: str,
   trigger_event: str,
   period: safeInt,
@@ -125,10 +126,10 @@ export interface RetentionSuspension {
 }
 
 export const RetentionSuspensionSchema: z.ZodType<RetentionSuspension, unknown> = object<RetentionSuspension>({
-  id: int64StringOrNumber,
-  organization_id: int64StringOrNumber,
+  id: int64String,
+  organization_id: int64String,
   beleg_type: str,
-  beleg_id: optional(int64StringOrNumber),
+  beleg_id: optional(int64String),
   reason: str,
   scope: str,
   responsible: str,
@@ -169,7 +170,7 @@ export interface BelegClarificationReview {
 }
 
 export const BelegClarificationReviewSchema: z.ZodType<BelegClarificationReview, unknown> = object<BelegClarificationReview>({
-  id: int64StringOrNumber,
+  id: int64String,
   beleg_type: str,
   reason: str,
   note: str,

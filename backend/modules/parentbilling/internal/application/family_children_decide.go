@@ -154,7 +154,7 @@ func confirmedOfRows(counts []parentbilling.FamilyChildCount, rows []importedChi
 	for i := range counts {
 		if wanted[counts[i].FamilyEmail] && counts[i].ConfirmedChildren != nil {
 			confirmed[counts[i].FamilyEmail] = &counts[i]
-			read = append(read, parentbilling.FamilyChildTarget{ContractID: counts[i].ContractID, CountID: &counts[i].ID})
+			read = append(read, parentbilling.FamilyChildTarget{ContractID: counts[i].ContractID.Int64(), CountID: (*int64)(&counts[i].ID)})
 		}
 	}
 	return confirmed, read

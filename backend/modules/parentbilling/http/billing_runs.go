@@ -90,7 +90,7 @@ func (rs *BillingRunResource) NumberRangeRouter(protectedTraegerRoutes func(chi.
 
 // BillingRunRequest is the body of POST /traeger/billing-runs.
 type BillingRunRequest struct {
-	HolidayPeriodID int64 `json:"holiday_period_id"`
+	HolidayPeriodID common.ID `json:"holiday_period_id"`
 }
 
 // Bind accepts the body; the Owner checks the period.
@@ -100,10 +100,10 @@ func (req *BillingRunRequest) Bind(*http.Request) error { return nil }
 // /traeger/billing-runs/{id}/corrections: the new amount of one child in
 // whole cent and the reason.
 type BillingCorrectionRequest struct {
-	RegistrationID int64  `json:"registration_id"`
-	ChildID        int64  `json:"child_id"`
-	TotalCents     int64  `json:"total_cents"`
-	Reason         string `json:"reason"`
+	RegistrationID common.ID `json:"registration_id"`
+	ChildID        common.ID `json:"child_id"`
+	TotalCents     int64     `json:"total_cents"`
+	Reason         string    `json:"reason"`
 }
 
 // Bind accepts the body; the Owner validates the correction.
@@ -179,7 +179,7 @@ func (rs *BillingRunResource) start(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	run, err := rs.runs.StartHolidayBillingRun(r.Context(), reviewer, req.HolidayPeriodID)
+	run, err := rs.runs.StartHolidayBillingRun(r.Context(), reviewer, req.HolidayPeriodID.Int64())
 	if err != nil {
 		renderBillingError(w, r, err)
 		return

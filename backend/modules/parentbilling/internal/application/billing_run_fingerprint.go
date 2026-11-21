@@ -45,7 +45,7 @@ func holidayPreviewFingerprint(run parentbilling.BillingRun, current preview, do
 		DueDates     []parentbilling.RunDueDate `json:"due_dates"`
 		DocumentKind string                     `json:"document_kind"`
 		LegalRemedy  string                     `json:"legal_remedy"`
-	}{run.ID, documents, current.unbilled, current.dueDates.InPaymentOrder(), documentKind, legalRemedy})
+	}{run.ID.Int64(), documents, current.unbilled, current.dueDates.InPaymentOrder(), documentKind, legalRemedy})
 }
 
 // contentFingerprint is a change detector for a reviewer's own state, not a

@@ -27,7 +27,7 @@ func (s *Store) ReplaceCarePriceLists(ctx context.Context, organizationID, accou
 		keys = append(keys, key{list.SchoolID, list.ValidFrom})
 		heads = append(heads, carePriceListRow{OrganizationID: organizationID, SchoolID: list.SchoolID, ValidFrom: list.ValidFrom, FreeMonths: list.FreeMonths})
 		for _, price := range list.Prices {
-			row := careTariffRow{OrganizationID: organizationID, SchoolID: list.SchoolID, CareOfferingID: price.CareOfferingID,
+			row := careTariffRow{OrganizationID: organizationID, SchoolID: list.SchoolID, CareOfferingID: price.CareOfferingID.Int64(),
 				ModuleName: price.ModuleName, DaysPerWeek: price.DaysPerWeek, ValidFrom: list.ValidFrom, MonthlyCents: price.MonthlyCents,
 				SiblingCents: price.SiblingCents, MealExtra: price.MealExtra, CreatedByAccountID: &accountID}
 			if price.Weekday != "" {

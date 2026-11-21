@@ -5,7 +5,7 @@ import {
   bool,
   calendarDate,
   fileAnswer,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   requestBody,
@@ -52,7 +52,7 @@ export interface BillingFamily {
 }
 
 export const BillingFamilySchema: z.ZodType<BillingFamily, unknown> = object<BillingFamily>({
-  id: int64StringOrNumber,
+  id: int64String,
   recipient_first_name: str,
   recipient_last_name: str,
   recipient_email: str,
@@ -147,15 +147,15 @@ export const BillingFamilyDocumentSchema: z.ZodType<BillingFamilyDocument, unkno
   service: str,
   recipient_kind: str,
   recipient_second_name: str,
-  id: int64StringOrNumber,
-  run_id: int64StringOrNumber,
+  id: int64String,
+  run_id: int64String,
   kind: str,
   number: str,
   issued_on: nullable(calendarDate),
   period_name: str,
   service_from: nullable(calendarDate),
   service_until: nullable(calendarDate),
-  reference_document_id: nullable(int64StringOrNumber),
+  reference_document_id: nullable(int64String),
   reference_number: str,
   reason: str,
   child_names: nullable(arr(str)),
@@ -192,7 +192,7 @@ export interface BillingFamilyDetail {
 }
 
 export const BillingFamilyDetailSchema: z.ZodType<BillingFamilyDetail, unknown> = object<BillingFamilyDetail>({
-  id: int64StringOrNumber,
+  id: int64String,
   recipient_first_name: str,
   recipient_last_name: str,
   recipient_email: str,

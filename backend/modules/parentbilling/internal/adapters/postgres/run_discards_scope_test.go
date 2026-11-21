@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -57,7 +58,7 @@ func TestRunDiscardsKeepTheTraegerBelowRLS(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, parentbilling.RunDiscarded, run.Status)
 		assert.NotNil(t, run.DiscardedAt)
-		assert.Equal(t, []int64{own.school}, run.SchoolIDs, "the schools it closed")
+		assert.Equal(t, []ident.ID{ident.ID(own.school)}, run.SchoolIDs, "the schools it closed")
 		openSchools, err := store.OpenCareRunSchools(ctx, own.organization, calendar.NewDate(2029, 10, 1))
 		require.NoError(t, err)
 		assert.Empty(t, openSchools, "the month is free for a new run")

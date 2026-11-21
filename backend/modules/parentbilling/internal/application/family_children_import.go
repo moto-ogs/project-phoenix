@@ -167,9 +167,9 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 			continue
 		}
 		candidates[owner[i]].decided = append(candidates[owner[i]].decided, row)
-		if count := current(row.family); count != nil && row.confirmed != nil && !seen[count.ID] {
-			seen[count.ID] = true
-			shown = append(shown, parentbilling.FamilyChildTarget{ContractID: count.ContractID, CountID: &count.ID})
+		if count := current(row.family); count != nil && row.confirmed != nil && !seen[count.ID.Int64()] {
+			seen[count.ID.Int64()] = true
+			shown = append(shown, parentbilling.FamilyChildTarget{ContractID: count.ContractID.Int64(), CountID: (*int64)(&count.ID)})
 		}
 	}
 	for i := range candidates {

@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The number patterns and the preview are pure; the run as a whole, its
@@ -91,7 +92,7 @@ func TestPreviewBillsEveryConfirmedFamilyOnceWithItsCorrections(t *testing.T) {
 	require.Len(t, result.documents, 2, "a billed family and a family without a frozen contribution get no draft")
 	assert.Equal(t, 1, result.unbilled, "the family without a frozen contribution is counted")
 	eva, jan := result.documents[0], result.documents[1]
-	assert.Equal(t, int64(11), eva.RegistrationID, "families in the order of their registration")
+	assert.Equal(t, ident.ID(int64(11)), eva.RegistrationID, "families in the order of their registration")
 	require.Len(t, eva.Children, 2, "a child without a booking is not billed")
 	ben := eva.Children[1]
 	assert.Equal(t, "Ben", ben.FirstName)
@@ -124,7 +125,7 @@ func TestPreviewBillsEachChildOnAnInvoiceOfItsOwn(t *testing.T) {
 	booked := func(ids ...int64) parentbilling.HolidayContribution {
 		contribution := parentbilling.HolidayContribution{}
 		for _, id := range ids {
-			contribution.Children = append(contribution.Children, parentbilling.HolidayChildContribution{ChildID: id, TotalCents: 4500,
+			contribution.Children = append(contribution.Children, parentbilling.HolidayChildContribution{ChildID: ident.ID(id), TotalCents: 4500,
 				Lines: []parentbilling.HolidayContributionLine{{Kind: parentbilling.LineBase, AmountCents: 4500, WeekStartsOn: &week, WeekEndsOn: &weekEnd}}})
 		}
 		return contribution
@@ -162,7 +163,7 @@ func TestPreviewBillsEachChildOnAnInvoiceOfItsOwn(t *testing.T) {
 	}
 	var got []drafted
 	for _, document := range result.documents {
-		got = append(got, drafted{document.RegistrationID, document.RegistrationChildID, len(document.Children), document.DebtorNumber,
+		got = append(got, drafted{document.RegistrationID.Int64(), document.RegistrationChildID.Int64(), len(document.Children), document.DebtorNumber,
 			document.ReferenceNumber})
 	}
 	assert.Equal(t, []drafted{

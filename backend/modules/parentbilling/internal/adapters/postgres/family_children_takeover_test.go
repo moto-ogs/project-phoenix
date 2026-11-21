@@ -82,7 +82,7 @@ func TestFamilyChildrenStatementKeepsTheNewerOne(t *testing.T) {
 		require.NoError(t, store.InsertFamilyChildEvents(ctx, own.organization, parentbilling.FamilyChildEvent{
 			Action: parentbilling.FamilyChildEventState, Actor: parentbilling.FamilyChildActorParent,
 			Channel: parentbilling.FamilyChannelLink, Children: count.StatedChildren,
-		}, []parentbilling.FamilyChildTarget{{ContractID: contracts[own.organization], CountID: &count.ID}}))
+		}, []parentbilling.FamilyChildTarget{{ContractID: contracts[own.organization], CountID: (*int64)(&count.ID)}}))
 		var channel string
 		require.NoError(t, tx.NewRaw(`SELECT channel FROM parent_billing.family_child_count_events WHERE organization_id = ? AND care_contract_id = ?`,
 			own.organization, contracts[own.organization]).Scan(ctx, &channel))

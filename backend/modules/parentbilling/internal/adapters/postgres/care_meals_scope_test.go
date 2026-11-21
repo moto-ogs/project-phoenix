@@ -12,6 +12,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -59,7 +60,7 @@ func TestCareMealFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		tariffs, err := store.CareMealTariffs(ctx, own.organization)
 		require.NoError(t, err)
 		require.Len(t, tariffs, 1, "CareMealTariffs")
-		assert.Equal(t, own.school, tariffs[0].SchoolID)
+		assert.Equal(t, ident.ID(own.school), tariffs[0].SchoolID)
 
 		billed, err := store.BilledMealMonths(ctx, own.organization, august, august)
 		require.NoError(t, err)
@@ -75,11 +76,11 @@ func TestCareMealFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		invoices, err := store.CareRunInvoices(ctx, own.organization, own.released)
 		require.NoError(t, err)
 		require.Len(t, invoices, 1)
-		_, history, _, err := store.InvoiceHistory(ctx, own.organization, parentbilling.HistoryCareInvoice, invoices[0].ID)
+		_, history, _, err := store.InvoiceHistory(ctx, own.organization, parentbilling.HistoryCareInvoice, invoices[0].ID.Int64())
 		require.NoError(t, err)
 		require.NotEmpty(t, history)
 		assert.Equal(t, len(invoices[0].Positions)+len(invoices[0].MealPositions), history[0].Positions, "combined invoices count care and Mensa positions")
-		assert.Equal(t, []parentbilling.CareMealPosition{{SchoolID: own.school, StudentID: 9501, MealMonth: august,
+		assert.Equal(t, []parentbilling.CareMealPosition{{SchoolID: ident.ID(own.school), StudentID: 9501, MealMonth: august,
 			Mode: parentbilling.MealModePerMeal, Quantity: 2, UnitCents: 480, AmountCents: 960, ReleaseVersion: 1}}, invoices[0].MealPositions,
 			"CareRunInvoices reads the invoice's own Mensa months")
 

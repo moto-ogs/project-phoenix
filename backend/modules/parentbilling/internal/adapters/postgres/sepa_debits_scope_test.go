@@ -12,6 +12,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -98,12 +99,12 @@ func TestSEPADebitFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		history, err := store.SEPADebitsOfMandate(ctx, own.organization, own.mandate)
 		require.NoError(t, err)
 		require.Len(t, history, 1, "SEPADebitsOfMandate keeps the other Träger's row out")
-		assert.Equal(t, own.debit, history[0].Debit.ID)
+		assert.Equal(t, ident.ID(own.debit), history[0].Debit.ID)
 
 		debits, err := store.SEPADebitsOfRun(ctx, own.organization, parentbilling.DebitRunCare, own.run, true, false)
 		require.NoError(t, err)
 		require.Len(t, debits, 1, "SEPADebitsOfRun")
-		assert.Equal(t, own.debit, debits[0].Debit.ID)
+		assert.Equal(t, ident.ID(own.debit), debits[0].Debit.ID)
 		assert.Equal(t, "DE98ZZZ09999999999", debits[0].CreditorNow, "the creditor now is the Träger's own")
 		assert.Equal(t, []byte{1}, debits[0].IBAN)
 
@@ -113,10 +114,10 @@ func TestSEPADebitFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		require.NoError(t, err)
 		assert.Empty(t, history, "SEPADebitsOfMandate of another Träger's mandate")
 
-		err = store.SubmitSEPADebits(ctx, own.organization, 0, "MOTO-M1-X", []parentbilling.SEPADebit{{ID: other.debit, AmountCents: 7750, CollectOn: calendar.NewDate(2029, 6, 4)}},
+		err = store.SubmitSEPADebits(ctx, own.organization, 0, "MOTO-M1-X", []parentbilling.SEPADebit{{ID: ident.ID(other.debit), AmountCents: 7750, CollectOn: calendar.NewDate(2029, 6, 4)}},
 			map[int64]calendar.Date{other.mandate: calendar.NewDate(2029, 6, 4)})
 		require.ErrorIs(t, err, parentbilling.ErrSEPADebitsChanged, "a debit of another Träger is no pending debit here")
-		require.NoError(t, store.SubmitSEPADebits(ctx, own.organization, 0, "MOTO-M1-A", []parentbilling.SEPADebit{{ID: own.debit, AmountCents: 7750, CollectOn: calendar.NewDate(2029, 6, 4)}},
+		require.NoError(t, store.SubmitSEPADebits(ctx, own.organization, 0, "MOTO-M1-A", []parentbilling.SEPADebit{{ID: ident.ID(own.debit), AmountCents: 7750, CollectOn: calendar.NewDate(2029, 6, 4)}},
 			map[int64]calendar.Date{own.mandate: calendar.NewDate(2029, 6, 4), other.mandate: calendar.NewDate(2029, 6, 4)}))
 
 		var state string
@@ -163,13 +164,13 @@ func TestSEPADebitKeepsWhatTheReleaseWrote(t *testing.T) {
 		_, err = tx.ExecContext(ctx, `UPDATE parent_billing.sepa_debits SET sequence_type = 'RCUR' WHERE id = ?`, seeded.debit)
 		require.NoError(t, err, "a pending FRST turns to RCUR")
 		refused(`UPDATE parent_billing.sepa_debits SET sequence_type = 'FRST' WHERE id = ?`, "only turns from FRST to RCUR")
-		require.NoError(t, store.SubmitSEPADebits(ctx, scope.organization, 0, "MOTO-M1-H", []parentbilling.SEPADebit{{ID: seeded.debit, AmountCents: 7750, CollectOn: calendar.NewDate(2029, 6, 4)}},
+		require.NoError(t, store.SubmitSEPADebits(ctx, scope.organization, 0, "MOTO-M1-H", []parentbilling.SEPADebit{{ID: ident.ID(seeded.debit), AmountCents: 7750, CollectOn: calendar.NewDate(2029, 6, 4)}},
 			map[int64]calendar.Date{seeded.mandate: calendar.NewDate(2029, 6, 4)}))
 		refused(`UPDATE parent_billing.sepa_debits SET submitted_amount_cents = 7000 WHERE id = ?`, "a submitted SEPA debit never changes")
 		refused(`UPDATE parent_billing.sepa_debits SET collect_on = DATE '2029-06-05' WHERE id = ?`, "a submitted SEPA debit never changes")
 		refused(`UPDATE parent_billing.sepa_debits SET status = 'pending', message_id = NULL, submitted_at = NULL WHERE id = ?`,
 			"a submitted SEPA debit never changes")
-		err = store.SubmitSEPADebits(ctx, scope.organization, 0, "MOTO-M1-H2", []parentbilling.SEPADebit{{ID: seeded.debit, AmountCents: 7750, CollectOn: calendar.NewDate(2029, 6, 4)}},
+		err = store.SubmitSEPADebits(ctx, scope.organization, 0, "MOTO-M1-H2", []parentbilling.SEPADebit{{ID: ident.ID(seeded.debit), AmountCents: 7750, CollectOn: calendar.NewDate(2029, 6, 4)}},
 			map[int64]calendar.Date{seeded.mandate: calendar.NewDate(2029, 7, 4)})
 		require.ErrorIs(t, err, parentbilling.ErrSEPADebitsChanged, "a debit is submitted once")
 		var last string
@@ -195,7 +196,7 @@ func TestSEPADebitHistoryKeepsSubmittedTerms(t *testing.T) {
 		seeded := seedDebitScope(t, ctx, tx, scope, school, "DE98ZZZ09999999999", "SJR-TERMS")
 		on := calendar.NewDate(2029, 6, 10)
 		require.NoError(t, store.SubmitSEPADebits(ctx, scope.organization, 0, "MOTO-TERMS",
-			[]parentbilling.SEPADebit{{ID: seeded.debit, AmountCents: 3750, CollectOn: on}}, map[int64]calendar.Date{seeded.mandate: on}))
+			[]parentbilling.SEPADebit{{ID: ident.ID(seeded.debit), AmountCents: 3750, CollectOn: on}}, map[int64]calendar.Date{seeded.mandate: on}))
 		history, err := store.SEPADebitsOfMandate(ctx, scope.organization, seeded.mandate)
 		require.NoError(t, err)
 		require.Len(t, history, 1)

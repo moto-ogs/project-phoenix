@@ -276,7 +276,7 @@ describe("family billing request", () => {
     };
     expect(familyBillingErrors(draft)).toEqual({});
     expect(familyBillingBody(familyBillingInput("42", draft))).toEqual({
-      contract_id: 42,
+      contract_id: "42",
       recipient_kind: "payer",
       second_first_name: "",
       second_last_name: "",

@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // carePriceListRow is the head of a price list with its free months (#6196).
@@ -63,7 +64,7 @@ func (s *Store) CarePriceLists(ctx context.Context, organizationID int64) ([]par
 	heads := []parentbilling.CarePriceListHead{}
 	for _, row := range rows {
 		if row.HeadSchoolID != nil && row.HeadValidFrom != nil {
-			head := parentbilling.CarePriceListHead{SchoolID: *row.HeadSchoolID, ValidFrom: *row.HeadValidFrom, FreeMonths: row.FreeMonths}
+			head := parentbilling.CarePriceListHead{SchoolID: ident.ID(*row.HeadSchoolID), ValidFrom: *row.HeadValidFrom, FreeMonths: row.FreeMonths}
 			if head.FreeMonths == nil {
 				head.FreeMonths = []int{}
 			}
@@ -79,7 +80,7 @@ func (s *Store) CarePriceLists(ctx context.Context, organizationID int64) ([]par
 }
 
 func (r carePriceBookRow) tariff() parentbilling.CareTariff {
-	tariff := parentbilling.CareTariff{ID: *r.ID, SchoolID: *r.SchoolID, CareOfferingID: *r.OfferingID, ModuleName: *r.ModuleName,
+	tariff := parentbilling.CareTariff{ID: ident.ID(*r.ID), SchoolID: ident.ID(*r.SchoolID), CareOfferingID: ident.ID(*r.OfferingID), ModuleName: *r.ModuleName,
 		DaysPerWeek: r.DaysPerWeek, ValidFrom: *r.ValidFrom, MonthlyCents: *r.MonthlyCents, SiblingCents: r.SiblingCents,
 		MealExtra: r.MealExtra != nil && *r.MealExtra}
 	if r.Weekday != nil {

@@ -49,7 +49,7 @@ export type CareAmendmentInput = {
 
 function amendmentBody(input: CareAmendmentInput): CareAmendmentRequest {
   const body: CareAmendmentRequest = {
-    contract_id: Number(input.contractId),
+    contract_id: input.contractId,
     service: input.service,
     kind: input.kind satisfies CareAmendmentKind | "revoke",
     fingerprint: input.fingerprint,
@@ -84,7 +84,7 @@ function amendmentBody(input: CareAmendmentInput): CareAmendmentRequest {
     case "revoke":
       return {
         ...body,
-        revokes_id: Number(input.revokesId),
+        revokes_id: input.revokesId,
         revokes_carried: input.revokesCarried,
       };
   }

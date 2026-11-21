@@ -18,6 +18,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // fakeParentMandateStore keeps the mandates, proofs and trail of one Träger
@@ -50,7 +51,7 @@ func (s *fakeParentMandateStore) SEPAMandates(_ context.Context, _ int64, family
 
 func (s *fakeParentMandateStore) SEPAMandate(_ context.Context, _ int64, id int64, _ bool) (parentbilling.SEPAMandate, error) {
 	for _, mandate := range s.mandates {
-		if mandate.ID == id {
+		if mandate.ID == ident.ID(id) {
 			return mandate, nil
 		}
 	}
@@ -64,19 +65,19 @@ func (s *fakeParentMandateStore) InsertSEPAMandate(_ context.Context, _ int64, _
 		}
 	}
 	stored := mandate.Mandate
-	stored.ID = int64(len(s.mandates) + 1)
+	stored.ID = ident.ID(int64(len(s.mandates) + 1))
 	stored.HolderSealed = mandate.Holder
 	s.mandates = append(s.mandates, stored)
 	if s.sealed == nil {
 		s.sealed = map[int64][]byte{}
 	}
-	s.sealed[stored.ID] = mandate.IBAN
+	s.sealed[stored.ID.Int64()] = mandate.IBAN
 	return stored, nil
 }
 
 func (s *fakeParentMandateStore) RevokeSEPAMandate(_ context.Context, _, _, id int64, revokedOn calendar.Date) (parentbilling.SEPAMandate, error) {
 	for i := range s.mandates {
-		if s.mandates[i].ID == id && s.mandates[i].InForce() {
+		if s.mandates[i].ID == ident.ID(id) && s.mandates[i].InForce() {
 			s.mandates[i].RevokedOn = &revokedOn
 			return s.mandates[i], nil
 		}
@@ -210,8 +211,8 @@ func TestParentMandateGrantStoresTheConfirmedText(t *testing.T) {
 	assert.Equal(t, parentbilling.MandateRecurring, stored.Kind)
 	assert.Equal(t, mandateDay, stored.SignedOn)
 	assert.Equal(t, "DE98ZZZ09999999999", stored.CreditorID)
-	assert.NotContains(t, string(store.sealed[stored.ID]), parentTestIBAN, "the store never sees the plain IBAN")
-	consent := store.consents[stored.ID]
+	assert.NotContains(t, string(store.sealed[stored.ID.Int64()]), parentTestIBAN, "the store never sees the plain IBAN")
+	consent := store.consents[stored.ID.Int64()]
 	assert.Equal(t, text.TextSHA256, consent.TextSHA256)
 	assert.Equal(t, parentbilling.ChannelParentAccount, consent.Channel)
 	assert.True(t, consent.HolderConfirmed)
@@ -338,7 +339,7 @@ func TestParentMandateCreditorAddressLimits(t *testing.T) {
 			_, err = mandates.GrantParentSEPAMandate(ctx, 3, mandateReader, input)
 			require.NoError(t, err)
 			require.Len(t, store.consents, 1)
-			assert.Len(t, []rune(store.consents[store.mandates[0].ID].CreditorAddress), 1000)
+			assert.Len(t, []rune(store.consents[store.mandates[0].ID.Int64()].CreditorAddress), 1000)
 		})
 	}
 }

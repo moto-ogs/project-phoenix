@@ -29,7 +29,7 @@ func runLetterContent(run parentbilling.BillingRun, documents []parentbilling.Bi
 	if document.Kind == parentbilling.DocumentInvoice || document.ReferenceDocumentID == nil {
 		return content
 	}
-	invoice, ok := findDocument(documents, *document.ReferenceDocumentID)
+	invoice, ok := findDocument(documents, (*document.ReferenceDocumentID).Int64())
 	if !ok {
 		return content
 	}

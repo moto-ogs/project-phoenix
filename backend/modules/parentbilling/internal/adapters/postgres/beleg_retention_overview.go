@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // belegDeletionListLimit bounds the deletion log the overview shows.
@@ -112,7 +113,7 @@ func belegClarifications(ctx context.Context, db bun.IDB, organizationID int64, 
 		if row.ReviewID == nil || row.ReviewedOn == nil || row.NextReviewOn == nil || row.ReviewedAt == nil {
 			continue
 		}
-		review := parentbilling.BelegClarificationReview{ID: *row.ReviewID, BelegType: row.BelegType, Reason: row.Reason,
+		review := parentbilling.BelegClarificationReview{ID: ident.ID(*row.ReviewID), BelegType: row.BelegType, Reason: row.Reason,
 			Note: row.Note, Escalated: row.Escalated, ReviewedOn: *row.ReviewedOn, NextReviewOn: *row.NextReviewOn, ReviewedAt: *row.ReviewedAt}
 		if row.EscalationReason != nil {
 			review.EscalationReason = *row.EscalationReason

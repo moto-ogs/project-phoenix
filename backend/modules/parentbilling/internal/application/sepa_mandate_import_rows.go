@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/sepa"
 )
 
@@ -284,7 +285,7 @@ func (c *importCheck) readPayer(candidate *importCandidate, cells []string) {
 		addProblem(row, parentbilling.ImportFieldPayer, problem)
 		return
 	}
-	row.ContractID, row.PayerFirstName, row.PayerLastName = payer.contractID, payer.firstName, payer.lastName
+	row.ContractID, row.PayerFirstName, row.PayerLastName = ident.ID(payer.contractID), payer.firstName, payer.lastName
 	if payer.family == "" {
 		addProblem(row, parentbilling.ImportFieldPayer, parentbilling.ImportProblemFamilyUnknown)
 	}
@@ -432,7 +433,7 @@ func (c *importCheck) classify(candidate *importCandidate) {
 // mandate whose account was not opened counts as different: the import
 // never calls a mandate a duplicate it could not compare.
 func (c *importCheck) accountDiffers(existing parentbilling.SEPAMandate, candidate *importCandidate) string {
-	account, ok := c.accounts[existing.ID]
+	account, ok := c.accounts[existing.ID.Int64()]
 	switch {
 	case !ok || account.iban != candidate.iban:
 		return parentbilling.ImportFieldIBAN

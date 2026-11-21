@@ -3,6 +3,7 @@ package application
 import (
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The last step of the monthly rule chain (#4687, ADR 0169): the cost
@@ -31,7 +32,7 @@ func careCostShareInMonth(shares []parentbilling.CareCostShare, contractID int64
 	var found *parentbilling.CareCostShare
 	for i := range shares {
 		share := &shares[i]
-		if share.ContractID != contractID || share.Kind != kind || share.ValidFrom.After(end) || share.ValidUntil.Before(month) {
+		if share.ContractID != ident.ID(contractID) || share.Kind != kind || share.ValidFrom.After(end) || share.ValidUntil.Before(month) {
 			continue
 		}
 		if found == nil || share.ValidFrom.Before(found.ValidFrom) {
@@ -65,7 +66,7 @@ func (e *careChainEntry) applyCostShares(in careChainInput) {
 	left := contribution
 	shares := []parentbilling.CareInvoiceCostShare{}
 	for _, kind := range parentbilling.CostShareKinds {
-		share := careCostShareInMonth(in.costShares, e.invoice.ContractID, kind, in.month)
+		share := careCostShareInMonth(in.costShares, e.invoice.ContractID.Int64(), kind, in.month)
 		if share == nil || !parentbilling.CostShareCoversCare(share.Scope) {
 			continue
 		}
@@ -95,18 +96,18 @@ func careCostBearerTotals(invoices []parentbilling.CareInvoice, cancelled map[in
 		}
 		counted := map[int64]bool{}
 		for _, share := range invoice.CostShares {
-			i, ok := index[share.CostBearerID]
+			i, ok := index[share.CostBearerID.Int64()]
 			if !ok {
 				i = len(totals)
-				index[share.CostBearerID] = i
+				index[share.CostBearerID.Int64()] = i
 				totals = append(totals, parentbilling.CareCostBearerTotal{CostBearerID: share.CostBearerID, CostBearerName: share.CostBearerName})
 			}
-			if invoice.ID != 0 && cancelled[invoice.ID] {
+			if invoice.ID != 0 && cancelled[invoice.ID.Int64()] {
 				continue
 			}
-			if !counted[share.CostBearerID] {
+			if !counted[share.CostBearerID.Int64()] {
 				totals[i].InvoiceCount++
-				counted[share.CostBearerID] = true
+				counted[share.CostBearerID.Int64()] = true
 			}
 			totals[i].AmountCents += share.AmountCents
 		}

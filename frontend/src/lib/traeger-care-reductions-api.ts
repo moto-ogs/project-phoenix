@@ -107,7 +107,6 @@ const RULES_PATH = "/api/traeger/care-rules";
 const EVIDENCES_PATH = "/api/traeger/care-evidences";
 
 const ids = (values: readonly string[] | null): string[] => [...(values ?? [])];
-const numbers = (values: readonly string[]): number[] => values.map(Number);
 
 /**
  * A rule of a kind this build does not know is left out: the chain editor
@@ -190,9 +189,9 @@ function ruleBody(input: CareRuleInput): CareRuleRequest {
     name: input.name,
     valid_from: input.validFrom,
     valid_until: input.validUntil,
-    school_ids: numbers(input.schoolIds),
-    care_offering_ids: numbers(input.careOfferingIds),
-    count_school_ids: numbers(input.countSchoolIds),
+    school_ids: [...input.schoolIds],
+    care_offering_ids: [...input.careOfferingIds],
+    count_school_ids: [...input.countSchoolIds],
     sibling_from_child: input.siblingFromChild,
     discount_basis_points: input.discountBasisPoints,
     discount_cents: input.discountCents,
@@ -205,9 +204,9 @@ function ruleBody(input: CareRuleInput): CareRuleRequest {
 
 function evidenceBody(input: CareEvidenceInput): CareEvidenceRequest {
   return {
-    contract_id: Number(input.contractId),
+    contract_id: input.contractId,
     kind: input.kind,
-    rule_id: input.ruleId === null ? null : Number(input.ruleId),
+    rule_id: input.ruleId === null ? null : input.ruleId,
     valid_from: input.validFrom,
     valid_until: input.validUntil,
     evidence: input.evidence,
