@@ -49,25 +49,49 @@ func workforceShifts(values []workforceModule.StaffShift) []timetablePorts.Workf
 	}
 	result := make([]timetablePorts.WorkforceShift, 0, len(values))
 	for _, value := range values {
-		result = append(result, timetablePorts.WorkforceShift(value))
+		result = append(result, timetableShift(value))
 	}
 	return result
 }
 
+func workforceShift(value timetablePorts.WorkforceShift) workforceModule.StaffShift {
+	return workforceModule.StaffShift{
+		ID: value.ID, TenantID: value.TenantID, StaffID: value.StaffID, Date: value.Date,
+		StartTime: value.StartTime, EndTime: value.EndTime, BreakMinutes: value.BreakMinutes,
+		ShiftTypeID: value.ShiftTypeID, Notes: value.Notes, SeriesID: value.SeriesID, Detached: value.Detached,
+		SeriesOverride: value.SeriesOverride, SeriesOccurrenceDate: value.SeriesOccurrenceDate,
+		Cancelled: value.Cancelled, ChangeReason: value.ChangeReason, OriginShiftID: value.OriginShiftID,
+		SickAbsenceID: value.SickAbsenceID, CreatedBy: value.CreatedBy, UpdatedBy: value.UpdatedBy,
+		PlannedByTraeger: value.PlannedByTraeger, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
+	}
+}
+
+func timetableShift(value workforceModule.StaffShift) timetablePorts.WorkforceShift {
+	return timetablePorts.WorkforceShift{
+		ID: value.ID, TenantID: value.TenantID, StaffID: value.StaffID, Date: value.Date,
+		StartTime: value.StartTime, EndTime: value.EndTime, BreakMinutes: value.BreakMinutes,
+		ShiftTypeID: value.ShiftTypeID, Notes: value.Notes, SeriesID: value.SeriesID, Detached: value.Detached,
+		SeriesOverride: value.SeriesOverride, SeriesOccurrenceDate: value.SeriesOccurrenceDate,
+		Cancelled: value.Cancelled, ChangeReason: value.ChangeReason, OriginShiftID: value.OriginShiftID,
+		SickAbsenceID: value.SickAbsenceID, CreatedBy: value.CreatedBy, UpdatedBy: value.UpdatedBy,
+		PlannedByTraeger: value.PlannedByTraeger, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
+	}
+}
+
 func (r workforceShiftRecords) CreateStaffShift(ctx context.Context, shift timetablePorts.WorkforceShift) (timetablePorts.WorkforceShift, error) {
-	record := workforceModule.StaffShift(shift)
+	record := workforceShift(shift)
 	created, err := r.capability.CreateStaffShift(ctx, &record)
-	return timetablePorts.WorkforceShift(created), workforceShiftError(err)
+	return timetableShift(created), workforceShiftError(err)
 }
 
 func (r workforceShiftRecords) FindStaffShift(ctx context.Context, id int64) (timetablePorts.WorkforceShift, error) {
 	value, err := r.capability.FindStaffShift(ctx, id)
-	return timetablePorts.WorkforceShift(value), workforceShiftError(err)
+	return timetableShift(value), workforceShiftError(err)
 }
 
 func (r workforceShiftRecords) UpdateStaffShift(ctx context.Context, shift timetablePorts.WorkforceShift) (timetablePorts.WorkforceShift, error) {
-	updated, err := r.capability.UpdateStaffShift(ctx, workforceModule.StaffShift(shift))
-	return timetablePorts.WorkforceShift(updated), workforceShiftError(err)
+	updated, err := r.capability.UpdateStaffShift(ctx, workforceShift(shift))
+	return timetableShift(updated), workforceShiftError(err)
 }
 
 func (r workforceShiftRecords) DeleteStaffShift(ctx context.Context, id int64) error {

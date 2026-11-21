@@ -347,6 +347,34 @@ func TestDayChangesShiftSource(t *testing.T) {
 	})
 }
 
+func TestDayChangesShiftSourceIncludesMoveToADistantDay(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	tenantID := testpkg.Tenant(t)
+	staff, _ := testpkg.CreateTestStaffWithAccount(t, db, "Fritz", "Verschoben")
+	series := testpkg.CreateTestStaffShiftSeries(t, db, staff.ID, day)
+	testpkg.CreateTestStaffShiftChange(t, db, staff.ID, day.AddDays(8), testpkg.StaffShiftChange{Series: &series, Slot: &day, Detached: true})
+	_, leadAccount := testpkg.CreateTestStaffWithAccount(t, db, "Lea", "Leitung")
+
+	overview, _ := read(t, newRouter(t, db, day), leadAccount.ID, tenantID, "time_tracking:manage")
+	assert.Equal(t, []string{
+		"school shift_cancelled Fritz Verschoben/on_duty ->shift_plan",
+	}, summary(overview.Entries))
+}
+
+func TestDayChangesShiftSourceComparesDetachedShiftToTheSeries(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	tenantID := testpkg.Tenant(t)
+	staff := testpkg.CreateTestStaff(t, db, "Dora", "Gleich")
+	series := testpkg.CreateTestStaffShiftSeries(t, db, staff.ID, day)
+	testpkg.CreateTestStaffShiftChange(t, db, staff.ID, day, testpkg.StaffShiftChange{Series: &series, Detached: true})
+	_, leadAccount := testpkg.CreateTestStaffWithAccount(t, db, "Lea", "Leitung")
+
+	overview, _ := read(t, newRouter(t, db, day), leadAccount.ID, tenantID, "time_tracking:manage")
+	assert.Empty(t, overview.Entries, "a detach without a time change is not a day change")
+}
+
 // assertNoShiftReason proves no reason of an absence or a cancellation
 // reaches the answer.
 func assertNoShiftReason(t *testing.T, body string) {

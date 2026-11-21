@@ -16,28 +16,23 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// shiftWindowDays is how far around the day the shifts are read in the same
-// statement: far enough to find a regular occurrence of every weekly series
-// and an occurrence moved away from the day within its week.
-const shiftWindowDays = 7
-
-// dayShifts are the shifts of the window, indexed for the rule.
+// dayShifts are the shifts relevant to the day, indexed for the rule.
 type dayShifts struct {
-	day     calendar.Date
-	byID    map[int64]workforce.StaffShift
-	regular map[int64]workforce.StaffShift
+	day  calendar.Date
+	byID map[int64]workforce.StaffShift
 }
 
-// addShifts reads the shifts of the school around the day in one read and
-// adds those that change the day. The care staff sees its own shifts and the
-// cover of a cancelled own shift; the lead of the Dienstplan sees every one.
-// An account without a staff record and without the Dienstplan reads nothing.
+// addShifts reads the day's shifts and series occurrences moved away from it
+// in one read. The care staff sees its own shifts and the cover of a cancelled
+// own shift; the lead of the Dienstplan sees every one. An account without a
+// staff record and without the Dienstplan reads nothing.
 func (s dayChangesStaff) addShifts(ctx context.Context, builder *staffEntryBuilder, day calendar.Date) error {
 	if !builder.viewer.shiftPlan && builder.viewer.selfID == 0 {
 		return nil
 	}
 	shifts, err := s.sources.Workforce.ListStaffShifts(ctx, workforce.StaffShiftFilter{
-		From: day.AddDays(-shiftWindowDays).String(), To: day.AddDays(shiftWindowDays).String(),
+		From: day.String(), To: day.String(),
+		IncludeSeriesOccurrenceDate: day.String(),
 	})
 	if err != nil {
 		return fmt.Errorf("list staff shifts: %w", err)
@@ -50,14 +45,9 @@ func (s dayChangesStaff) addShifts(ctx context.Context, builder *staffEntryBuild
 }
 
 func indexShifts(day calendar.Date, shifts []workforce.StaffShift) dayShifts {
-	window := dayShifts{day: day, byID: map[int64]workforce.StaffShift{}, regular: map[int64]workforce.StaffShift{}}
+	window := dayShifts{day: day, byID: map[int64]workforce.StaffShift{}}
 	for _, shift := range shifts {
 		window.byID[shift.ID] = shift
-		// An untouched occurrence carries the series' times.
-		if shift.SeriesID != nil && !shift.Detached && !shift.SeriesOverride && !shift.Cancelled &&
-			shift.OriginShiftID == nil && !movedShift(shift) {
-			window.regular[*shift.SeriesID] = shift
-		}
 	}
 	return window
 }
@@ -127,8 +117,8 @@ func (w dayShifts) changeKind(shift workforce.StaffShift) (daychangesview.Kind, 
 	case movedShift(shift):
 		return daychangesview.KindShiftChanged, true, true
 	case shift.Detached || shift.SeriesOverride:
-		regular, found := w.regular[*shift.SeriesID]
-		changed := !found || regular.StartTime != shift.StartTime || regular.EndTime != shift.EndTime
+		changed := shift.SeriesStartTime != "" && shift.SeriesEndTime != "" &&
+			(shift.SeriesStartTime != shift.StartTime || shift.SeriesEndTime != shift.EndTime)
 		return daychangesview.KindShiftChanged, true, changed
 	default:
 		return "", false, false
