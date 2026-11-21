@@ -170,6 +170,28 @@ describe("holiday host api", () => {
     expect(list.questions).toEqual([]);
   });
 
+  it("reads a week without time models or children, which Go sends as null lists", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, {
+        status: "success",
+        data: {
+          week: BACKEND_WEEK,
+          time_models: null,
+          home_schools: null,
+          questions: null,
+          participants: null,
+        },
+      }),
+    );
+
+    const list = await fetchHolidayParticipants("51");
+
+    expect(list.week.id).toBe("51");
+    expect(list.timeModels).toEqual([]);
+    expect(list.homeSchools).toEqual([]);
+    expect(list.participants).toEqual([]);
+  });
+
   it("maps the shared answers and the second guardian of a participant (#5202)", async () => {
     const answers = [
       {
