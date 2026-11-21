@@ -72,10 +72,6 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 		r.With(withTx).Put("/{id}", rs.updateActivity)
 		r.With(withTx).Delete("/{id}", rs.deleteActivity)
 
-		// Legacy schedule reads; schedule writes go through the guarded activity update.
-		r.With(withTx).Get("/{id}/schedules", rs.getActivitySchedules)
-		r.With(withTx).Get(routeScheduleByID, rs.getActivitySchedule)
-
 		// Supervisor Assignment
 		r.With(common.RequiresPermission(permissions.ActivitiesRead), withTx).
 			Get("/{id}/supervisors", rs.getActivitySupervisors)

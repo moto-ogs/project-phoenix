@@ -265,7 +265,6 @@ var legacyNumericIDsAToO = []string{
 	"httpadapter.RoomResponse.ID",
 	"httpadapter.RoomSessionEntry.SessionID",
 	"httpadapter.ScheduleRequest.TimeframeID",
-	"httpadapter.TimeframeResponse.ID",
 	"me.ProfileResponse.ID",
 	"mealplan.BillingMonthChild.StudentID",
 	"notifications.feedEntryResponse.ID",

@@ -11,7 +11,6 @@ import (
 )
 
 const (
-	routeScheduleByID         = "/{id}/schedules/{scheduleId}"
 	msgActivityCreatedSuccess = "Activity created successfully"
 	msgActivityUpdatedSuccess = "Activity updated successfully"
 )
