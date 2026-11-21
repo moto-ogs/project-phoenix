@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // These tests pin the presence contract of the offering-source fields on the
@@ -42,7 +43,7 @@ func TestUpdateTemplateRequestSourceFieldPresence(t *testing.T) {
 	t.Run("explicit values are set", func(t *testing.T) {
 		req := decodeUpdateSourceFields(t, `{"source_care_offering_ids":[7,9],"source_grade_levels":[2,3]}`)
 		require.True(t, req.SourceCareOfferingIDs.Set)
-		assert.Equal(t, []int64{7, 9}, req.SourceCareOfferingIDs.Value)
+		assert.Equal(t, []ident.ID{7, 9}, req.SourceCareOfferingIDs.Value)
 		assert.True(t, req.SourceGradeLevels.Set)
 		assert.Equal(t, []int{2, 3}, req.SourceGradeLevels.Value)
 	})
@@ -125,7 +126,7 @@ func TestUpdateTemplateBind_AssignsMissingTimesToTheirFields(t *testing.T) {
 func sourcedExistingTemplate(offeringIDs []int64, gradeLevels []int) templateResponse {
 	return templateResponse{
 		TargetGroupType:       timetableModule.TargetGroupTypeOffering,
-		SourceCareOfferingIDs: offeringIDs,
+		SourceCareOfferingIDs: ident.IDs(offeringIDs),
 		SourceGradeLevels:     gradeLevels,
 	}
 }
@@ -138,7 +139,7 @@ func TestApplyOfferingSourcePresence(t *testing.T) {
 	t.Run("omitted fields carry the stored sources and filter", func(t *testing.T) {
 		req := &updateTemplateRequest{TargetGroupType: timetableModule.TargetGroupTypeOffering}
 		applyOfferingSourcePresence(req, sourcedExistingTemplate(storedOfferingIDs, []int{1, 2}))
-		assert.Equal(t, storedOfferingIDs, req.SourceCareOfferingIDs.Value)
+		assert.Equal(t, ident.IDs(storedOfferingIDs), req.SourceCareOfferingIDs.Value)
 		assert.Equal(t, []int{1, 2}, req.SourceGradeLevels.Value)
 	})
 
@@ -156,18 +157,18 @@ func TestApplyOfferingSourcePresence(t *testing.T) {
 	t.Run("provided values win over the stored ones", func(t *testing.T) {
 		req := &updateTemplateRequest{
 			TargetGroupType:       timetableModule.TargetGroupTypeOffering,
-			SourceCareOfferingIDs: NullableInt64Slice{Set: true, Value: []int64{44}},
+			SourceCareOfferingIDs: NullableInt64Slice{Set: true, Value: []ident.ID{44}},
 			SourceGradeLevels:     NullableIntSlice{Set: true, Value: []int{4}},
 		}
 		applyOfferingSourcePresence(req, sourcedExistingTemplate(storedOfferingIDs, []int{1, 2}))
-		assert.Equal(t, []int64{44}, req.SourceCareOfferingIDs.Value)
+		assert.Equal(t, []ident.ID{44}, req.SourceCareOfferingIDs.Value)
 		assert.Equal(t, []int{4}, req.SourceGradeLevels.Value)
 	})
 
 	t.Run("omitted filter follows a provided source", func(t *testing.T) {
 		req := &updateTemplateRequest{
 			TargetGroupType:       timetableModule.TargetGroupTypeOffering,
-			SourceCareOfferingIDs: NullableInt64Slice{Set: true, Value: []int64{44}},
+			SourceCareOfferingIDs: NullableInt64Slice{Set: true, Value: []ident.ID{44}},
 		}
 		applyOfferingSourcePresence(req, sourcedExistingTemplate(storedOfferingIDs, []int{1, 2}))
 		assert.Equal(t, []int{1, 2}, req.SourceGradeLevels.Value)
@@ -196,11 +197,11 @@ func TestApplyOfferingSourcePresenceClassFilter(t *testing.T) {
 	t.Parallel()
 
 	stored := templateResponse{
-		SourceCareOfferingIDs: []int64{44},
+		SourceCareOfferingIDs: []ident.ID{44},
 		SourceGradeLevels:     []int{1},
 	}
 	storedClasses := templateResponse{
-		SourceCareOfferingIDs: []int64{44},
+		SourceCareOfferingIDs: []ident.ID{44},
 		SourceSchoolClasses:   []string{"1b"},
 	}
 

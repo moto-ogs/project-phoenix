@@ -57,7 +57,7 @@ export interface RelationshipFormData {
 interface PhoneEntry {
   id: string;
   phoneNumber: string;
-  phoneType: PhoneType;
+  phoneType: PhoneType | undefined;
   label: string;
   isPrimary: boolean;
 }
@@ -227,7 +227,7 @@ interface GuardianFormModalProps {
       phoneNumbers: Array<{
         id?: string; // Phone ID (for edit mode)
         phoneNumber: string;
-        phoneType: PhoneType;
+        phoneType: PhoneType | undefined;
         label?: string;
         isPrimary: boolean;
       }>;
@@ -469,7 +469,7 @@ export default function GuardianFormModal({
     phoneNumbers: Array<{
       id?: string;
       phoneNumber: string;
-      phoneType: PhoneType;
+      phoneType: PhoneType | undefined;
       label?: string;
       isPrimary: boolean;
     }>;
@@ -767,7 +767,7 @@ export default function GuardianFormModal({
                         <div className="w-full sm:w-32">
                           <CustomSelect
                             id={`phone-type-${entry.id}-${phone.id}`}
-                            value={phone.phoneType}
+                            value={phone.phoneType ?? ""}
                             options={(
                               Object.keys(PHONE_TYPE_LABELS) as PhoneType[]
                             ).map((type) => ({

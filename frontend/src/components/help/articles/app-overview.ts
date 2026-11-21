@@ -74,6 +74,10 @@ export function appOverviewTopic(): HelpTopic {
           "Unter `Betrifft dich` steht, was dich selbst angeht: deine Gruppen, Vertretungen, Termine und Dienste.",
           "Dort steht auch, ob du heute fehlst oder dein Dienst anders ist oder ausfällt.",
           "Unter `Schule` steht der Rest der Schule.",
+          // Kinder in „Heute anders" (#7665): einzeln in den eigenen Gruppen,
+          // sonst eine aufklappbare Zeile pro Gruppe oder Klasse.
+          "Bei den Kindern steht, wer krank gemeldet oder entschuldigt ist, wer zu einer anderen Zeit geht, wer allein nach Hause geht und wer einen Hinweis zum Abholen hat.",
+          "Die Kinder deiner Gruppen stehen einzeln da. Für die übrige Schule gibt es eine Zeile pro Gruppe, etwa `Gruppe Igel` mit `4 krank, 1 geht allein`. Tippe auf den Namen der Gruppe, um die Kinder zu sehen.",
           // Darstellung über den Tag (#7660). Die Zeilen mit Uhrzeit und das
           // eingeklappte „erledigt“ beschreibt erst die erste Quelle mit
           // Uhrzeit (Termine, #7662/#7663), vorher gibt es sie nicht.
@@ -120,6 +124,8 @@ export function appOverviewTopic(): HelpTopic {
       "Unter `Bausteine` fehlt eine Karte? Dann steht sie schon auf deiner Startseite. Oder deine Rolle oder deine OGS sieht sie nicht vor.",
       // Sichtregel von „Heute anders" (#7659): Namen nur für die eigenen
       // Gruppen, für die übrige Schule nur die Zahl; die Leitung sieht alle.
+      // Kinder nur mit users:read, wie auf der Seite eines Kindes (#7665).
+      "In `Heute anders` fehlen die Kinder? Die Kinder siehst du nur, wenn du auch ihre Krankmeldungen auf der Seite eines Kindes sehen darfst.",
       "In `Heute anders` stehen bei dir nur Zahlen statt Namen? Namen siehst du für deine eigenen Gruppen. Für den Rest der Schule zeigt die Karte nur, wie viele fehlen. Die Leitung sieht alle Namen.",
       // Dienste in „Heute anders" (#7661): die Betreuung sieht nur den
       // eigenen, wer den Dienstplan der Schule öffnen darf, sieht alle.

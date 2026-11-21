@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ClosingDayRequest represents a create/update request for a closing day
@@ -42,12 +43,12 @@ func (req *ClosingDayRequest) Bind(_ *http.Request) error {
 
 // ClosingDayResponse represents a closing day in API responses
 type ClosingDayResponse struct {
-	ID        int64  `json:"id"`
-	StartDate string `json:"start_date"`
-	EndDate   string `json:"end_date"`
-	Reason    string `json:"reason"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
+	ID        common.ID `json:"id"`
+	StartDate string    `json:"start_date"`
+	EndDate   string    `json:"end_date"`
+	Reason    string    `json:"reason"`
+	CreatedAt string    `json:"created_at"`
+	UpdatedAt string    `json:"updated_at"`
 	// Traeger marks a closing day the school's Träger planned (#4702): it
 	// counts like the school's own, but only the Träger-Büro changes it.
 	Traeger bool `json:"traeger"`
@@ -55,7 +56,7 @@ type ClosingDayResponse struct {
 
 func mapClosingDayToResponse(d schoolcalendar.ClosingDay) ClosingDayResponse {
 	return ClosingDayResponse{
-		ID:        d.ID,
+		ID:        ident.ID(d.ID),
 		StartDate: d.StartDate,
 		EndDate:   d.EndDate,
 		Reason:    d.Reason,

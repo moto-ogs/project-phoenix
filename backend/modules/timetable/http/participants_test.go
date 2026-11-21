@@ -17,6 +17,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -121,9 +122,9 @@ func TestGetInstanceParticipants_AdminSeesSortedNames(t *testing.T) {
 	var got InstanceParticipantsResponse
 	decodeEnvelope(t, w, &got)
 
-	assert.Equal(t, s.instanceID, got.InstanceID)
+	assert.Equal(t, ident.ID(s.instanceID), got.InstanceID)
 	require.Len(t, got.Participants, 2)
-	assert.Equal(t, s.students[0].studentID, got.Participants[0].StudentID)
+	assert.Equal(t, ident.ID(s.students[0].studentID), got.Participants[0].StudentID)
 	assert.Equal(t, s.students[0].fullName, got.Participants[0].DisplayName)
 	assert.Equal(t, s.students[1].fullName, got.Participants[1].DisplayName)
 }
@@ -142,12 +143,12 @@ func TestGetInstanceParticipants_NonStaffSeesNoStudentNames(t *testing.T) {
 
 	var got InstanceParticipantsResponse
 	decodeEnvelope(t, w, &got)
-	assert.Equal(t, s.instanceID, got.InstanceID)
+	assert.Equal(t, ident.ID(s.instanceID), got.InstanceID)
 	assert.Empty(t, got.Participants)
 	// Staff names are deliberately unfiltered — the team overview ("wer ist
 	// wo eingesetzt") must work even when no child is readable.
 	require.Len(t, got.Staff, 1)
-	assert.Equal(t, s.staffID, got.Staff[0].StaffID)
+	assert.Equal(t, ident.ID(s.staffID), got.Staff[0].StaffID)
 	assert.Equal(t, s.staffFullName, got.Staff[0].DisplayName)
 }
 
@@ -172,7 +173,7 @@ func TestGetInstanceParticipants_AlumnusExcluded(t *testing.T) {
 	var got InstanceParticipantsResponse
 	decodeEnvelope(t, w, &got)
 	require.Len(t, got.Participants, 1)
-	assert.Equal(t, s.students[1].studentID, got.Participants[0].StudentID)
+	assert.Equal(t, ident.ID(s.students[1].studentID), got.Participants[0].StudentID)
 }
 
 func TestGetInstanceParticipants_UnknownInstance404(t *testing.T) {

@@ -17,6 +17,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // createInstanceRequest is the JSON body accepted by POST /instances.
@@ -26,17 +27,17 @@ import (
 // (date anchored at UTC midnight, times anchored at 2000-01-01 UTC) so
 // callers do not have to think about that detail.
 type createInstanceRequest struct {
-	Date            string  `json:"date"`
-	StartTime       string  `json:"start_time"`
-	EndTime         string  `json:"end_time"`
-	Title           string  `json:"title"`
-	Description     *string `json:"description,omitempty"`
-	Notes           *string `json:"notes,omitempty"`
-	RoomID          int64   `json:"room_id"`
-	ActivityGroupID *int64  `json:"activity_group_id,omitempty"`
-	ListKind        *string `json:"list_kind,omitempty"`
-	StaffIDs        []int64 `json:"staff_ids,omitempty"`
-	StudentIDs      []int64 `json:"student_ids,omitempty"`
+	Date            string      `json:"date"`
+	StartTime       string      `json:"start_time"`
+	EndTime         string      `json:"end_time"`
+	Title           string      `json:"title"`
+	Description     *string     `json:"description,omitempty"`
+	Notes           *string     `json:"notes,omitempty"`
+	RoomID          common.ID   `json:"room_id"`
+	ActivityGroupID *common.ID  `json:"activity_group_id,omitempty"`
+	ListKind        *string     `json:"list_kind,omitempty"`
+	StaffIDs        []common.ID `json:"staff_ids,omitempty"`
+	StudentIDs      []common.ID `json:"student_ids,omitempty"`
 	// RequiredStaff is the optional per-occurrence Personalbedarf pin (#1839);
 	// omitted/null = no pin (inherit the template override, else derive from
 	// the Betreuungsschlüssel), a value = pin for this occurrence.
@@ -217,11 +218,11 @@ func (rs *Resource) createInstance(w http.ResponseWriter, r *http.Request) {
 		Title:            req.Title,
 		Description:      req.Description,
 		Notes:            req.Notes,
-		RoomID:           req.RoomID,
-		ActivityGroupID:  req.ActivityGroupID,
+		RoomID:           req.RoomID.Int64(),
+		ActivityGroupID:  (*int64)(req.ActivityGroupID),
 		ListKind:         listKind,
-		StaffIDs:         req.StaffIDs,
-		StudentIDs:       req.StudentIDs,
+		StaffIDs:         ident.Int64s(req.StaffIDs),
+		StudentIDs:       ident.Int64s(req.StudentIDs),
 		CreatedByStaffID: rs.createdByStaffID(r.Context()),
 		IdempotencyKey:   idempotencyKey,
 		RequiredStaff:    normalizeRequiredStaff(req.RequiredStaff),
@@ -264,10 +265,10 @@ func respondCreatedWithoutEnrichment(w http.ResponseWriter, r *http.Request, ins
 	// The registered answer type, so the contract holds on this path too: the
 	// fields below as before, every enriched field at its empty value.
 	common.Respond(w, r, http.StatusCreated, enrichedInstance{
-		ID: inst.ID, Date: inst.Date.Format(dateLayout),
+		ID: ident.ID(inst.ID), Date: inst.Date.Format(dateLayout),
 		StartTime: inst.StartTime.Format("15:04"), EndTime: inst.EndTime.Format("15:04"),
-		Title: inst.Title, Status: inst.Status, IsSpontaneous: inst.IsSpontaneous, RoomID: inst.RoomID,
-		Staff: []instanceStaffSummary{}, StudentIDs: []int64{}, Students: []instanceStudentSummary{},
+		Title: inst.Title, Status: inst.Status, IsSpontaneous: inst.IsSpontaneous, RoomID: ident.ID(inst.RoomID),
+		Staff: []instanceStaffSummary{}, StudentIDs: ident.IDs([]int64{}), Students: []instanceStudentSummary{},
 		EnrichWarning: fmt.Sprintf("enrichment failed: %v", err),
 	}, "Instance created (without enrichment)")
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
@@ -105,6 +106,9 @@ func membershipError(op string, err error) error {
 }
 
 func MembershipID(id any) (int64, error) {
+	if typed, ok := id.(ident.ID); ok {
+		id = typed.Int64()
+	}
 	switch value := id.(type) {
 	case int64:
 		return value, nil

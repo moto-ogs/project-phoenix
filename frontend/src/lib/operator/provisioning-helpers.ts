@@ -1,13 +1,45 @@
+import { knownEnum } from "~/lib/contract/known-enum";
+import { requiredDay } from "~/lib/contract/required-day";
+import type {
+  DeviceTransferStatus as WireDeviceTransferStatus,
+  createDeviceRequest,
+} from "~/lib/contract/operator-devices.generated";
+import type {
+  OrganizationSummary as WireOrganizationSummary,
+  SampleChildrenResult as WireSampleChildrenResult,
+  TestTraeger as WireTestTraeger,
+  TraegerErasureOrder as WireTraegerErasureOrder,
+  TraegerInvitation as WireTraegerInvitation,
+  TraegerMember as WireTraegerMember,
+  createOrganizationRequest,
+  createTestTraegerRequest,
+  recordTraegerErasureOrderRecordsRequest,
+  recordTraegerErasureOrderRequest,
+  traegerMemberRequest,
+  updateOrganizationRequest,
+} from "~/lib/contract/operator-organizations.generated";
+import type {
+  SchoolAccount as WireSchoolAccount,
+  SchoolPWAUsage as WireSchoolPWAUsage,
+  SchoolRequiredDetails as WireSchoolRequiredDetails,
+  createSchoolAccountRequest,
+  createSchoolRequest,
+  inviteSchoolAdminRequest,
+  operatorInvitationResponse as WireInvitation,
+  updateSchoolRequest,
+} from "~/lib/contract/operator-schools.generated";
+import type { ProvisioningStats as WireProvisioningStats } from "~/lib/contract/operator-stats.generated";
+import type { scanResponse as WireUnregisteredTagScan } from "~/lib/contract/operator-unregistered-tag-scans.generated";
+import type { CatererSecurityResponse as WireOperatorCaterer } from "~/lib/contract/operator-caterers.generated";
+import type {
+  OperatorDevice as WireOperatorDevice,
+  OperatorPerson as WireOperatorPerson,
+  Organization as WireOrganization,
+  OrganizationAccount as WireOrgAccount,
+  School as WireSchool,
+  SchoolSummary as WireSchoolSummary,
+} from "~/lib/contract/shared.generated";
 import { isTraegerRole, type TraegerRole } from "~/lib/traeger-roles";
-
-// Backend response types (snake_case, int64 ids)
-
-export interface BackendProvisioningStats {
-  traeger_count: number;
-  schulen_count: number;
-  konten_count: number;
-  geraete_count: number;
-}
 
 export interface ProvisioningStats {
   traegerCount: number;
@@ -17,7 +49,7 @@ export interface ProvisioningStats {
 }
 
 export function mapProvisioningStats(
-  data: BackendProvisioningStats,
+  data: WireProvisioningStats,
 ): ProvisioningStats {
   return {
     traegerCount: data.traeger_count,
@@ -25,17 +57,6 @@ export function mapProvisioningStats(
     kontenCount: data.konten_count,
     geraeteCount: data.geraete_count,
   };
-}
-
-interface BackendPWAPortalUsage {
-  standalone_users: number;
-  eligible_users: number;
-}
-
-export interface BackendSchoolPWAUsage {
-  window_days: number;
-  staff: BackendPWAPortalUsage;
-  parent: BackendPWAPortalUsage;
 }
 
 interface PWAPortalUsage {
@@ -53,26 +74,19 @@ export interface SchoolPWAUsage {
   parent: PWAPortalUsage;
 }
 
-function mapPWAPortalUsage(data: BackendPWAPortalUsage): PWAPortalUsage {
+function mapPWAPortalUsage(data: WireSchoolPWAUsage["staff"]): PWAPortalUsage {
   return {
     standaloneUsers: data.standalone_users,
     eligibleUsers: data.eligible_users,
   };
 }
 
-export function mapSchoolPWAUsage(data: BackendSchoolPWAUsage): SchoolPWAUsage {
+export function mapSchoolPWAUsage(data: WireSchoolPWAUsage): SchoolPWAUsage {
   return {
     windowDays: data.window_days,
     staff: mapPWAPortalUsage(data.staff),
     parent: mapPWAPortalUsage(data.parent),
   };
-}
-
-export interface BackendOrganizationSummary extends BackendOrganization {
-  schulen_count: number;
-  konten_count: number;
-  geraete_count: number;
-  personen_count: number;
 }
 
 export interface OrganizationSummary extends Organization {
@@ -83,7 +97,7 @@ export interface OrganizationSummary extends Organization {
 }
 
 export function mapOrganizationSummary(
-  data: BackendOrganizationSummary,
+  data: WireOrganizationSummary,
 ): OrganizationSummary {
   return {
     ...mapOrganization(data),
@@ -92,37 +106,6 @@ export function mapOrganizationSummary(
     geraeteCount: data.geraete_count,
     personenCount: data.personen_count,
   };
-}
-
-export interface BackendSchoolSummary {
-  id: number | string;
-  organization_id: number | string;
-  organization_name: string;
-  name: string;
-  slug: string;
-  subdomain: string;
-  active: boolean;
-  hidden: boolean;
-  created_at: string;
-  updated_at: string;
-  deleted_at?: string | null;
-  address: string;
-  city: string;
-  zip: string;
-  phone: string;
-  email: string;
-  settings: string | null;
-  konten_count: number;
-  geraete_count: number;
-  personen_count: number;
-  // Kinderkontingent (#3567): null bundles means no limit.
-  child_quota_bundles: number | null;
-  child_quota_bundle_size: number;
-  // Kontingentzahl the Kinderkontingent is checked against (#3568).
-  child_quota_count: number;
-  // Geräteplätze the school bought (#2312); null while moto set none.
-  // geraete_count is what occupies them.
-  device_slots?: number | null;
 }
 
 export interface SchoolSummary {
@@ -152,10 +135,10 @@ export interface SchoolSummary {
   deviceSlots: number | null;
 }
 
-export function mapSchoolSummary(data: BackendSchoolSummary): SchoolSummary {
+export function mapSchoolSummary(data: WireSchoolSummary): SchoolSummary {
   return {
-    id: data.id.toString(),
-    organizationId: data.organization_id.toString(),
+    id: data.id,
+    organizationId: data.organization_id,
     organizationName: data.organization_name,
     name: data.name,
     slug: data.slug,
@@ -165,18 +148,18 @@ export function mapSchoolSummary(data: BackendSchoolSummary): SchoolSummary {
     createdAt: data.created_at,
     updatedAt: data.updated_at,
     deletedAt: data.deleted_at ?? null,
-    address: data.address,
-    city: data.city,
-    zip: data.zip,
-    phone: data.phone,
-    email: data.email,
+    address: data.address ?? "",
+    city: data.city ?? "",
+    zip: data.zip ?? "",
+    phone: data.phone ?? "",
+    email: data.email ?? "",
     kontenCount: data.konten_count,
     geraeteCount: data.geraete_count,
     personenCount: data.personen_count,
     childQuotaBundles: data.child_quota_bundles,
     childQuotaBundleSize: data.child_quota_bundle_size,
     childQuotaCount: data.child_quota_count,
-    deviceSlots: data.device_slots ?? null,
+    deviceSlots: data.device_slots,
   };
 }
 
@@ -216,61 +199,6 @@ export function summaryToSchool(summary: SchoolSummary): School {
     createdAt: summary.createdAt,
     updatedAt: summary.updatedAt,
   };
-}
-
-export interface BackendOrganization {
-  id: number | string;
-  name: string;
-  slug: string;
-  active: boolean;
-  // Backend uses json:",omitempty" on a *time.Time, so the field is absent
-  // (undefined) when the row is not soft-deleted, not null.
-  deleted_at?: string | null;
-  settings: string | null;
-  created_at: string;
-  updated_at: string;
-  /** Test-Träger mit Test-Schulen und erfundenen Beispieldaten (#4658). */
-  test_system?: boolean;
-}
-
-export interface BackendSchool {
-  id: number | string;
-  organization_id: number | string;
-  name: string;
-  slug: string;
-  subdomain: string;
-  address: string;
-  city: string;
-  zip: string;
-  phone: string;
-  email: string;
-  active: boolean;
-  hidden: boolean;
-  // Backend uses json:",omitempty" on a *time.Time, so the field is absent
-  // (undefined) when the row is not soft-deleted, not null.
-  deleted_at?: string | null;
-  settings: string | null;
-  created_at: string;
-  updated_at: string;
-  organization?: BackendOrganization;
-}
-
-export interface BackendInvitation {
-  id: number | string;
-  email: string;
-  role_id: number | string;
-  role_name?: string;
-  expires_at: string;
-  first_name?: string | null;
-  last_name?: string | null;
-  position?: string | null;
-  caregiver_enabled?: boolean;
-  created_by: number | string;
-  creator?: string;
-  delivery_status: string;
-  email_sent_at?: string | null;
-  email_error?: string | null;
-  email_retry_count: number;
 }
 
 // Frontend types (camelCase, string ids)
@@ -325,21 +253,6 @@ export interface Invitation {
 
 // Account types for operator school accounts listing
 
-export interface BackendSchoolAccount {
-  account_id: number | string;
-  email: string;
-  active: boolean;
-  first_name: string;
-  last_name: string;
-  role_name: string;
-  pedagogic_role: string;
-  status: string;
-  has_admin_role?: boolean;
-  has_user_role?: boolean;
-  has_caregiver_profile?: boolean;
-  is_active_caregiver?: boolean;
-}
-
 export interface SchoolAccount {
   accountId: string;
   email: string;
@@ -355,9 +268,9 @@ export interface SchoolAccount {
   isActiveCaregiver: boolean;
 }
 
-export function mapSchoolAccount(data: BackendSchoolAccount): SchoolAccount {
+export function mapSchoolAccount(data: WireSchoolAccount): SchoolAccount {
   return {
-    accountId: data.account_id.toString(),
+    accountId: data.account_id,
     email: data.email,
     active: data.active,
     firstName: data.first_name,
@@ -365,108 +278,78 @@ export function mapSchoolAccount(data: BackendSchoolAccount): SchoolAccount {
     roleName: data.role_name,
     pedagogicRole: data.pedagogic_role,
     status: data.status,
-    hasAdminRole: data.has_admin_role ?? false,
-    hasUserRole: data.has_user_role ?? false,
-    hasCaregiverProfile: data.has_caregiver_profile ?? false,
-    isActiveCaregiver: data.is_active_caregiver ?? false,
+    hasAdminRole: data.has_admin_role,
+    hasUserRole: data.has_user_role,
+    hasCaregiverProfile: data.has_caregiver_profile,
+    isActiveCaregiver: data.is_active_caregiver,
   };
 }
 
 // Org-level account types (includes school context)
-
-export interface BackendOrgAccount extends BackendSchoolAccount {
-  school_id: number | string;
-  school_name: string;
-}
 
 export interface OrgAccount extends SchoolAccount {
   schoolId: string;
   schoolName: string;
 }
 
-export function mapOrgAccount(data: BackendOrgAccount): OrgAccount {
+export function mapOrgAccount(data: WireOrgAccount): OrgAccount {
   return {
     ...mapSchoolAccount(data),
-    schoolId: data.school_id.toString(),
+    schoolId: data.school_id,
     schoolName: data.school_name,
   };
 }
 
 // Request types (snake_case for backend)
 
-export interface CreateOrganizationRequest {
-  name: string;
-  slug: string;
-}
+export type CreateOrganizationRequest = Required<createOrganizationRequest>;
 
 /** Auftrag für ein Testsystem (#4658): Test-Träger mit Test-Schulen. */
-export interface CreateTestTraegerRequest {
-  name: string;
-  slug: string;
-  school_count: number;
-  contact_email: string;
-  /** Bundesland of every test school (#7174). */
-  federal_state: string;
-}
-
-export interface BackendTestTraeger {
-  organization: BackendOrganization;
-  schools: BackendSchool[];
-}
+/** `federal_state`: Bundesland of every test school (#7174). */
+export type CreateTestTraegerRequest = Required<createTestTraegerRequest>;
 
 export interface TestTraeger {
   organization: Organization;
   schools: School[];
 }
 
-export function mapTestTraeger(data: BackendTestTraeger): TestTraeger {
+export function mapTestTraeger(data: WireTestTraeger): TestTraeger {
   return {
     organization: mapOrganization(data.organization),
-    schools: data.schools.map(mapSchool),
+    schools: (data.schools ?? []).map(mapSchool),
   };
 }
 
 /** Erfundene Beispielkinder in den Test-Schulen eines Test-Trägers. */
-export interface BackendSampleChildrenResult {
-  created_count: number;
-  schools: {
-    school_id: number | string;
-    created_count: number;
-    skipped_count: number;
-  }[];
-}
-
 export interface SampleChildrenResult {
   createdCount: number;
   skippedCount: number;
 }
 
 export function mapSampleChildrenResult(
-  data: BackendSampleChildrenResult,
+  data: WireSampleChildrenResult,
 ): SampleChildrenResult {
   return {
     createdCount: data.created_count,
-    skippedCount: data.schools.reduce(
+    skippedCount: (data.schools ?? []).reduce(
       (sum, school) => sum + school.skipped_count,
       0,
     ),
   };
 }
 
-export interface CreateSchoolRequest {
-  organization_id: number;
-  name: string;
-  slug: string;
-  subdomain: string;
-  address?: string;
-  city?: string;
-  zip?: string;
-  phone?: string;
-  email?: string;
-  /** ISO 3166-2 code of the Bundesland; required, there is no default (#7174). */
-  federal_state: string;
-  hidden?: boolean;
-}
+/**
+ * `organization_id` stays a number: the request type of the contract says so.
+ * `federal_state` is the ISO 3166-2 code of the Bundesland; required, there is
+ * no default (#7174).
+ */
+export type CreateSchoolRequest = createSchoolRequest &
+  Required<
+    Pick<
+      createSchoolRequest,
+      "organization_id" | "name" | "slug" | "subdomain" | "federal_state"
+    >
+  >;
 
 /**
  * The federal states a school can be in, as the options of the setting
@@ -491,52 +374,44 @@ export const FEDERAL_STATES: readonly { value: string; label: string }[] = [
   { value: "DE-TH", label: "Thüringen" },
 ];
 
-export interface InviteAdminRequest {
-  email: string;
-  first_name?: string;
-  last_name?: string;
-  position?: string;
-  caregiver_enabled?: boolean;
-}
+export type InviteAdminRequest = inviteSchoolAdminRequest &
+  Required<Pick<inviteSchoolAdminRequest, "email">>;
 
-export interface CreateAccountRequest {
-  email: string;
-  first_name: string;
-  last_name: string;
-  password: string;
-  confirm_password: string;
-  role_id?: string;
-  position?: string;
-  caregiver_enabled?: boolean;
-}
+export type CreateAccountRequest = createSchoolAccountRequest &
+  Required<
+    Pick<
+      createSchoolAccountRequest,
+      "email" | "first_name" | "last_name" | "password" | "confirm_password"
+    >
+  >;
 
 // Mapping functions
 
-export function mapOrganization(data: BackendOrganization): Organization {
+export function mapOrganization(data: WireOrganization): Organization {
   return {
-    id: data.id.toString(),
+    id: data.id,
     name: data.name,
     slug: data.slug,
     active: data.active,
     deletedAt: data.deleted_at ?? null,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
-    testSystem: data.test_system ?? false,
+    testSystem: data.test_system,
   };
 }
 
-export function mapSchool(data: BackendSchool): School {
+export function mapSchool(data: WireSchool): School {
   return {
-    id: data.id.toString(),
-    organizationId: data.organization_id.toString(),
+    id: data.id,
+    organizationId: data.organization_id,
     name: data.name,
     slug: data.slug,
     subdomain: data.subdomain,
-    address: data.address,
-    city: data.city,
-    zip: data.zip,
-    phone: data.phone,
-    email: data.email,
+    address: data.address ?? "",
+    city: data.city ?? "",
+    zip: data.zip ?? "",
+    phone: data.phone ?? "",
+    email: data.email ?? "",
     active: data.active,
     hidden: data.hidden,
     deletedAt: data.deleted_at ?? null,
@@ -548,18 +423,18 @@ export function mapSchool(data: BackendSchool): School {
   };
 }
 
-export function mapInvitation(data: BackendInvitation): Invitation {
+export function mapInvitation(data: WireInvitation): Invitation {
   return {
-    id: data.id.toString(),
+    id: data.id,
     email: data.email,
-    roleId: data.role_id.toString(),
+    roleId: data.role_id,
     roleName: data.role_name ?? "",
     expiresAt: data.expires_at,
     firstName: data.first_name ?? null,
     lastName: data.last_name ?? null,
     position: data.position ?? null,
-    caregiverEnabled: data.caregiver_enabled ?? false,
-    createdBy: data.created_by.toString(),
+    caregiverEnabled: data.caregiver_enabled,
+    createdBy: data.created_by,
     creator: data.creator ?? "",
     deliveryStatus: data.delivery_status,
     emailSentAt: data.email_sent_at ?? null,
@@ -568,35 +443,18 @@ export function mapInvitation(data: BackendInvitation): Invitation {
   };
 }
 
-export interface UpdateOrganizationRequest {
-  name: string;
-  slug: string;
-  active: boolean;
-}
+export type UpdateOrganizationRequest = Required<updateOrganizationRequest>;
 
-export interface UpdateSchoolRequest {
-  organization_id: number;
-  name: string;
-  slug: string;
-  subdomain: string;
-  address: string;
-  city: string;
-  zip: string;
-  phone: string;
-  email: string;
-  active: boolean;
-  hidden: boolean;
-  // Kinderkontingent (#3567): absent keeps it, null removes it, an object
-  // sets it.
-  child_quota?: { bundles: number; bundle_size: number } | null;
-}
+/**
+ * Kinderkontingent (#3567): `child_quota` absent keeps it, null removes it,
+ * an object sets it.
+ */
+export type UpdateSchoolRequest = Required<
+  Omit<updateSchoolRequest, "child_quota">
+> &
+  Pick<updateSchoolRequest, "child_quota">;
 
-// What a school still lacks of its required details (#7174).
-export interface BackendSchoolRequiredDetails {
-  school_id: number | string;
-  reply_address_missing: boolean;
-}
-
+/** What a school still lacks of its required details (#7174). */
 export interface SchoolRequiredDetails {
   schoolId: string;
   /** Neither the reply setting nor the contact address answers parents. */
@@ -604,43 +462,22 @@ export interface SchoolRequiredDetails {
 }
 
 export function mapSchoolRequiredDetails(
-  data: BackendSchoolRequiredDetails,
+  data: WireSchoolRequiredDetails,
 ): SchoolRequiredDetails {
   return {
-    schoolId: data.school_id.toString(),
+    schoolId: data.school_id,
     replyAddressMissing: data.reply_address_missing,
   };
 }
 
 // Device creation / API key management
 
-export interface CreateDeviceRequest {
-  school_id: number;
-  device_id: string;
-  device_type: string;
-  name?: string;
-  api_key?: string;
-}
+export type CreateDeviceRequest = createDeviceRequest &
+  Required<
+    Pick<createDeviceRequest, "school_id" | "device_id" | "device_type">
+  >;
 
 // Device types for operator device listing
-
-export interface BackendOperatorDevice {
-  id: number | string;
-  device_id: string;
-  device_type: string;
-  name?: string;
-  status: string;
-  api_key?: string;
-  masked_api_key: string;
-  last_seen?: string;
-  is_online: boolean;
-  school_id: number | string;
-  school_name: string;
-  organization_id: number | string;
-  organization_name: string;
-  created_at: string;
-  updated_at: string;
-}
 
 export interface OperatorDevice {
   id: string;
@@ -661,11 +498,11 @@ export interface OperatorDevice {
 }
 
 export function mapOperatorDevice(
-  data: BackendOperatorDevice,
+  data: WireOperatorDevice,
   includeCredential = false,
 ): OperatorDevice {
   return {
-    id: data.id.toString(),
+    id: data.id,
     deviceId: data.device_id,
     deviceType: data.device_type,
     name: data.name ?? "",
@@ -674,28 +511,13 @@ export function mapOperatorDevice(
     maskedApiKey: data.masked_api_key,
     lastSeen: data.last_seen ?? null,
     isOnline: data.is_online,
-    schoolId: data.school_id.toString(),
+    schoolId: data.school_id,
     schoolName: data.school_name,
-    organizationId: data.organization_id.toString(),
+    organizationId: data.organization_id,
     organizationName: data.organization_name,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   };
-}
-
-interface BackendDeviceTransferSession {
-  id: number;
-  started_at: string;
-  activity_name?: string;
-  room_name?: string;
-}
-
-export interface BackendDeviceTransferStatus {
-  can_transfer: boolean;
-  is_online: boolean;
-  is_protected: boolean;
-  last_seen?: string;
-  active_session?: BackendDeviceTransferSession;
 }
 
 export interface DeviceTransferStatus {
@@ -712,7 +534,7 @@ export interface DeviceTransferStatus {
 }
 
 export function mapDeviceTransferStatus(
-  data: BackendDeviceTransferStatus,
+  data: WireDeviceTransferStatus,
 ): DeviceTransferStatus {
   return {
     canTransfer: data.can_transfer,
@@ -721,7 +543,7 @@ export function mapDeviceTransferStatus(
     lastSeen: data.last_seen ?? null,
     activeSession: data.active_session
       ? {
-          id: data.active_session.id.toString(),
+          id: data.active_session.id,
           startedAt: data.active_session.started_at,
           activityName: data.active_session.activity_name ?? "",
           roomName: data.active_session.room_name ?? "",
@@ -752,22 +574,6 @@ export function isValidSlug(slug: string): boolean {
 
 // Person types for operator person listing + soft delete
 
-export interface BackendOperatorPerson {
-  id: number | string;
-  first_name: string;
-  last_name: string;
-  has_account: boolean;
-  account_email?: string | null;
-  has_rfid_card: boolean;
-  is_staff: boolean;
-  is_student: boolean;
-  school_id: number | string;
-  school_name: string;
-  organization_id: number | string;
-  organization_name: string;
-  created_at: string;
-}
-
 export interface OperatorPerson {
   id: string;
   firstName: string;
@@ -785,9 +591,9 @@ export interface OperatorPerson {
   createdAt: string;
 }
 
-export function mapOperatorPerson(data: BackendOperatorPerson): OperatorPerson {
+export function mapOperatorPerson(data: WireOperatorPerson): OperatorPerson {
   return {
-    id: data.id.toString(),
+    id: data.id,
     firstName: data.first_name,
     lastName: data.last_name,
     fullName: `${data.first_name} ${data.last_name}`,
@@ -796,31 +602,12 @@ export function mapOperatorPerson(data: BackendOperatorPerson): OperatorPerson {
     hasRfidCard: data.has_rfid_card,
     isStaff: data.is_staff,
     isStudent: data.is_student,
-    schoolId: data.school_id.toString(),
+    schoolId: data.school_id,
     schoolName: data.school_name,
-    organizationId: data.organization_id.toString(),
+    organizationId: data.organization_id,
     organizationName: data.organization_name,
     createdAt: data.created_at,
   };
-}
-
-export interface BackendUnregisteredTagScan {
-  id: number | string;
-  tenant_id: number | string;
-  tag_uid: string;
-  device_id?: number | null;
-  scanned_at: string;
-  resolved_at?: string | null;
-  resolved_by_operator_id?: number | null;
-  resolution_note?: string | null;
-  created_at: string;
-  updated_at: string;
-  school_id: number | string;
-  school_name: string;
-  organization_id: number | string;
-  organization_name: string;
-  device_identifier?: string | null;
-  device_name?: string | null;
 }
 
 export interface UnregisteredTagScan {
@@ -843,26 +630,25 @@ export interface UnregisteredTagScan {
 }
 
 export function mapUnregisteredTagScan(
-  data: BackendUnregisteredTagScan,
+  data: WireUnregisteredTagScan,
 ): UnregisteredTagScan {
   return {
-    id: data.id.toString(),
-    tenantId: data.tenant_id.toString(),
+    id: data.id,
+    tenantId: data.tenant_id,
     tagUid: data.tag_uid,
-    deviceId: data.device_id != null ? data.device_id.toString() : null,
+    deviceId: data.device_id ?? null,
     scannedAt: data.scanned_at,
     resolvedAt: data.resolved_at ?? null,
-    resolvedByOperatorId:
-      data.resolved_by_operator_id != null
-        ? data.resolved_by_operator_id.toString()
-        : null,
+    resolvedByOperatorId: data.resolved_by_operator_id ?? null,
     resolutionNote: data.resolution_note ?? null,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
-    schoolId: data.school_id.toString(),
-    schoolName: data.school_name,
-    organizationId: data.organization_id.toString(),
-    organizationName: data.organization_name,
+    // Go fills school and Träger on every listed scan; omitempty only types
+    // them optional.
+    schoolId: data.school_id ?? "",
+    schoolName: data.school_name ?? "",
+    organizationId: data.organization_id ?? "",
+    organizationName: data.organization_name ?? "",
     deviceIdentifier: data.device_identifier ?? null,
     deviceName: data.device_name ?? null,
   };
@@ -876,7 +662,14 @@ export const API_KEY_COPY_FAILED_MESSAGE =
 
 export { TRAEGER_ROLE_LABELS, type TraegerRole } from "~/lib/traeger-roles";
 
-export type TraegerMemberStatus = "active" | "pending" | "inactive";
+// Go does not register these sets; the contract types them as string.
+const TRAEGER_MEMBER_STATUS_VALUES = ["active", "pending", "inactive"] as const;
+const TRAEGER_RECORDS_CHOICE_VALUES = [
+  "handed_over",
+  "erasure_chosen",
+] as const;
+
+export type TraegerMemberStatus = (typeof TRAEGER_MEMBER_STATUS_VALUES)[number];
 
 export const TRAEGER_MEMBER_STATUS_LABELS: Readonly<
   Record<TraegerMemberStatus, string>
@@ -886,38 +679,31 @@ export const TRAEGER_MEMBER_STATUS_LABELS: Readonly<
   inactive: "Inaktiv",
 };
 
-export interface BackendTraegerMember {
-  account_id: number | string;
-  email: string;
-  status: TraegerMemberStatus;
-  roles: string[];
-  activated_at: string | null;
-}
-
 export interface TraegerMember {
   accountId: string;
   email: string;
-  status: TraegerMemberStatus;
+  /** undefined: a status this build does not know. */
+  status: TraegerMemberStatus | undefined;
   roles: TraegerRole[];
   activatedAt: string | null;
 }
 
-export function mapTraegerMember(data: BackendTraegerMember): TraegerMember {
+export function mapTraegerMember(data: WireTraegerMember): TraegerMember {
   return {
-    accountId: data.account_id.toString(),
+    accountId: data.account_id,
     email: data.email,
-    status: data.status,
+    status: knownEnum(TRAEGER_MEMBER_STATUS_VALUES, data.status),
     // A role this client does not know yet stays out instead of showing a
     // raw key.
     roles: (data.roles ?? []).filter(isTraegerRole),
-    activatedAt: data.activated_at ?? null,
+    activatedAt: data.activated_at,
   };
 }
 
-export interface AssignTraegerMemberRequest {
+export type AssignTraegerMemberRequest = traegerMemberRequest & {
   email: string;
   roles: TraegerRole[];
-}
+};
 
 /** The operator's invitation into a Träger-Büro (#5144). */
 export type InviteTraegerMemberRequest = AssignTraegerMemberRequest;
@@ -927,14 +713,6 @@ export type InviteTraegerMemberRequest = AssignTraegerMemberRequest;
  * (#5749). `expired` marks a link the person can no longer use; the backend
  * deletes it later.
  */
-export interface BackendTraegerInvitation {
-  id: number | string;
-  email: string;
-  roles: string[];
-  expires_at: string;
-  expired: boolean;
-}
-
 export interface TraegerInvitation {
   id: string;
   email: string;
@@ -944,39 +722,28 @@ export interface TraegerInvitation {
 }
 
 export function mapTraegerInvitation(
-  data: BackendTraegerInvitation,
+  data: WireTraegerInvitation,
 ): TraegerInvitation {
   return {
-    id: data.id.toString(),
+    id: data.id,
     email: data.email,
     roles: (data.roles ?? []).filter(isTraegerRole),
     expiresAt: data.expires_at,
-    expired: data.expired === true,
+    expired: data.expired,
   };
-}
-
-// Löschauftrag eines deaktivierten Trägers (#4657). Kalenderdaten bleiben
-// "YYYY-MM-DD"-Strings.
-export interface BackendTraegerErasureOrder {
-  id: number | string;
-  organization_id: number | string;
-  order_reference: string;
-  confirmed_on: string;
-  erase_not_before: string;
-  recorded_by: number | string;
-  recorded_at: string;
-  started_at?: string | null;
-  records_choice?: TraegerRecordsChoice | "";
-  records_handed_over_on?: string | null;
-  records_export_sha256?: string | null;
 }
 
 /**
  * Choice of the customer after the hint on records subject to retention
  * (#4720, AVV Ziff. 8.4): Rückgabe handed over, or lawful erasure chosen.
  */
-export type TraegerRecordsChoice = "handed_over" | "erasure_chosen";
+export type TraegerRecordsChoice =
+  (typeof TRAEGER_RECORDS_CHOICE_VALUES)[number];
 
+/**
+ * Löschauftrag eines deaktivierten Trägers (#4657). Kalenderdaten bleiben
+ * "YYYY-MM-DD"-Strings.
+ */
 export interface TraegerErasureOrder {
   id: string;
   organizationId: string;
@@ -986,72 +753,58 @@ export interface TraegerErasureOrder {
   recordedAt: string;
   /** Set once the internal erasure began; then the order stays. */
   startedAt: string | null;
-  /** Null on orders recorded before #4720. */
-  recordsChoice: TraegerRecordsChoice | null;
+  /**
+   * Null on orders recorded before #4720; undefined: a choice is recorded,
+   * but this build does not know it.
+   */
+  recordsChoice: TraegerRecordsChoice | null | undefined;
   recordsHandedOverOn: string | null;
   recordsExportSha256: string | null;
 }
 
 export function mapTraegerErasureOrder(
-  data: BackendTraegerErasureOrder,
+  data: WireTraegerErasureOrder,
 ): TraegerErasureOrder {
   return {
-    id: data.id.toString(),
-    organizationId: data.organization_id.toString(),
+    id: data.id,
+    organizationId: data.organization_id,
     orderReference: data.order_reference,
-    confirmedOn: data.confirmed_on,
-    eraseNotBefore: data.erase_not_before,
+    confirmedOn: requiredDay(
+      data.confirmed_on,
+      "TraegerErasureOrder.confirmed_on",
+    ),
+    eraseNotBefore: requiredDay(
+      data.erase_not_before,
+      "TraegerErasureOrder.erase_not_before",
+    ),
     recordedAt: data.recorded_at,
     startedAt: data.started_at ?? null,
-    recordsChoice: data.records_choice || null,
+    recordsChoice: data.records_choice
+      ? knownEnum(TRAEGER_RECORDS_CHOICE_VALUES, data.records_choice)
+      : null,
     recordsHandedOverOn: data.records_handed_over_on ?? null,
     recordsExportSha256: data.records_export_sha256 || null,
   };
 }
 
-/** The backend answers without `data` when no order is open. */
-export function isBackendTraegerErasureOrder(
-  data: unknown,
-): data is BackendTraegerErasureOrder {
-  return (
-    typeof data === "object" &&
-    data !== null &&
-    // The catalog proxy delivers the id as a string (#2352).
-    typeof (data as { id?: unknown }).id === "string"
-  );
-}
-
-export interface RecordTraegerErasureOrderRequest {
-  order_reference: string;
-  confirmed_on: string;
-  erase_not_before: string;
-  records_notice_acknowledged: boolean;
-  records_choice: TraegerRecordsChoice;
-  records_handed_over_on?: string;
-  records_export_sha256?: string;
-}
+export type RecordTraegerErasureOrderRequest =
+  recordTraegerErasureOrderRequest & {
+    order_reference: string;
+    confirmed_on: string;
+    erase_not_before: string;
+    records_notice_acknowledged: boolean;
+    records_choice: TraegerRecordsChoice;
+  };
 
 /**
  * The hint and the customer's choice recorded afterwards on an open order
  * that was recorded without them (#4720), also once the erasure started.
  */
-export type RecordTraegerErasureOrderRecordsRequest = Pick<
-  RecordTraegerErasureOrderRequest,
-  | "records_notice_acknowledged"
-  | "records_choice"
-  | "records_handed_over_on"
-  | "records_export_sha256"
->;
-
-/** Wire shape of GET /operator/caterers (#4497): one row per caterer account. */
-export interface BackendOperatorCaterer {
-  // The backend sends the IDs as strings.
-  id: string;
-  account_id: string;
-  name: string;
-  email: string;
-  mfa_enabled: boolean;
-}
+export type RecordTraegerErasureOrderRecordsRequest =
+  recordTraegerErasureOrderRecordsRequest & {
+    records_notice_acknowledged: boolean;
+    records_choice: TraegerRecordsChoice;
+  };
 
 export interface OperatorCaterer {
   id: string;
@@ -1061,9 +814,7 @@ export interface OperatorCaterer {
   mfaEnabled: boolean;
 }
 
-export function mapOperatorCaterer(
-  data: BackendOperatorCaterer,
-): OperatorCaterer {
+export function mapOperatorCaterer(data: WireOperatorCaterer): OperatorCaterer {
   return {
     id: data.id,
     accountId: data.account_id,

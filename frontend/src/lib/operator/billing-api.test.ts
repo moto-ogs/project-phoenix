@@ -145,8 +145,34 @@ describe("operator billing api", () => {
     );
   });
 
-  it("treats a missing list as no captured months", async () => {
-    fetchMock.mockResolvedValue(jsonResponse(null));
+  it("leaves out an override of a scope this build does not know (#2353)", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        key_day: 15,
+        next_key_date: "2026-11-15",
+        updated_at: "2026-11-01T08:00:00Z",
+        overrides: [
+          {
+            scope: "region",
+            id: "4",
+            organization_id: "4",
+            name: "Region Nord",
+            organization_name: "",
+            key_day: 3,
+            next_key_date: "2026-12-03",
+            updated_at: "2026-11-01T08:00:00Z",
+          },
+        ],
+      }),
+    );
+    const keyDay = await operatorBillingService.getKeyDay();
+    // Resetting it as a Träger's override would delete the wrong level.
+    expect(keyDay.keyDay).toBe(15);
+    expect(keyDay.overrides).toEqual([]);
+  });
+
+  it("maps an empty list as no captured months", async () => {
+    fetchMock.mockResolvedValue(jsonResponse([]));
     await expect(operatorBillingService.listKeyDateCounts()).resolves.toEqual(
       [],
     );

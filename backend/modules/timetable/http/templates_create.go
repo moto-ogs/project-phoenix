@@ -28,6 +28,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -39,21 +40,21 @@ import (
 //
 // MaxParticipants is optional. Omitted or null means no participant limit.
 type createTemplateRequest struct {
-	Name            string `json:"name"`
-	Type            string `json:"type"` // care | activity | external | duty
-	Weekdays        []int  `json:"weekdays"`
-	StartTime       string `json:"start_time"` // HH:MM
-	EndTime         string `json:"end_time"`   // HH:MM
-	RoomID          int64  `json:"room_id"`
-	CategoryID      int64  `json:"category_id"`
-	PlanningTrackID *int64 `json:"planning_track_id,omitempty"`
-	MaxParticipants *int   `json:"max_participants,omitempty"`
+	Name            string     `json:"name"`
+	Type            string     `json:"type"` // care | activity | external | duty
+	Weekdays        []int      `json:"weekdays"`
+	StartTime       string     `json:"start_time"` // HH:MM
+	EndTime         string     `json:"end_time"`   // HH:MM
+	RoomID          common.ID  `json:"room_id"`
+	CategoryID      common.ID  `json:"category_id"`
+	PlanningTrackID *common.ID `json:"planning_track_id,omitempty"`
+	MaxParticipants *int       `json:"max_participants,omitempty"`
 	// RequiredStaff is the optional manual Personalbedarf override (#1839);
 	// omitted/null = derive from the Betreuungsschlüssel.
-	RequiredStaff    *int   `json:"required_staff,omitempty"`
-	WeekPattern      *int   `json:"week_pattern,omitempty"`
-	CalendarPeriodID *int64 `json:"calendar_period_id,omitempty"`
-	EducationGroupID *int64 `json:"education_group_id,omitempty"`
+	RequiredStaff    *int       `json:"required_staff,omitempty"`
+	WeekPattern      *int       `json:"week_pattern,omitempty"`
+	CalendarPeriodID *common.ID `json:"calendar_period_id,omitempty"`
+	EducationGroupID *common.ID `json:"education_group_id,omitempty"`
 	// Zielgruppe (target-group) fields. TargetGroupType is one of
 	// timetableModule.TargetGroupType* ("jahrgang" | "klasse" | "gruppe" |
 	// "angebot" | "none"/omitted). "gruppe" reuses EducationGroupID above
@@ -69,8 +70,8 @@ type createTemplateRequest struct {
 	// Jahrgänge (empty = all). student_ids must be empty when set, and the
 	// rule is mutually exclusive with the multi-target list above (targets
 	// never carry the type "angebot").
-	SourceCareOfferingIDs []int64 `json:"source_care_offering_ids,omitempty"`
-	SourceGradeLevels     []int   `json:"source_grade_levels,omitempty"`
+	SourceCareOfferingIDs []common.ID `json:"source_care_offering_ids,omitempty"`
+	SourceGradeLevels     []int       `json:"source_grade_levels,omitempty"`
 	// SourceSchoolClasses narrows the same rule to concrete Schulklassen
 	// (#2482, empty = all). Mutually exclusive with source_grade_levels — a
 	// payload carrying both is rejected with 400.
@@ -93,12 +94,12 @@ type createTemplateRequest struct {
 	// EndDate is the optional last day of the series (YYYY-MM-DD, inclusive,
 	// #3594): no occurrences after it. Must not lie before the start nor after
 	// the planning period. Omitted = the series runs until the period ends.
-	EndDate         *string `json:"end_date,omitempty"`
-	MaterializeFrom *string `json:"materialize_from,omitempty"` // YYYY-MM-DD
-	MaterializeTo   *string `json:"materialize_to,omitempty"`   // YYYY-MM-DD
-	StudentIDs      []int64 `json:"student_ids,omitempty"`
-	StaffIDs        []int64 `json:"staff_ids,omitempty"`
-	PrimaryStaffID  *int64  `json:"primary_staff_id,omitempty"`
+	EndDate         *string     `json:"end_date,omitempty"`
+	MaterializeFrom *string     `json:"materialize_from,omitempty"` // YYYY-MM-DD
+	MaterializeTo   *string     `json:"materialize_to,omitempty"`   // YYYY-MM-DD
+	StudentIDs      []common.ID `json:"student_ids,omitempty"`
+	StaffIDs        []common.ID `json:"staff_ids,omitempty"`
+	PrimaryStaffID  *common.ID  `json:"primary_staff_id,omitempty"`
 	// WeekdayAssignments overrides the shared roster above for individual
 	// weekdays (#2129). Omitted/empty = the same staff and children on every
 	// weekday of the series.
@@ -106,16 +107,16 @@ type createTemplateRequest struct {
 }
 
 type templateTargetRequest struct {
-	Type             string  `json:"type"`
-	GradeLevel       *int16  `json:"grade_level,omitempty"`
-	SchoolClass      *string `json:"school_class,omitempty"`
-	EducationGroupID *int64  `json:"education_group_id,omitempty"`
+	Type             string     `json:"type"`
+	GradeLevel       *int16     `json:"grade_level,omitempty"`
+	SchoolClass      *string    `json:"school_class,omitempty"`
+	EducationGroupID *common.ID `json:"education_group_id,omitempty"`
 }
 
 func (target templateTargetRequest) model() *timetableModule.GroupTargetInput {
 	return &timetableModule.GroupTargetInput{
 		TargetGroupType: target.Type, TargetGradeLevel: target.GradeLevel,
-		TargetSchoolClass: target.SchoolClass, EducationGroupID: target.EducationGroupID,
+		TargetSchoolClass: target.SchoolClass, EducationGroupID: (*int64)(target.EducationGroupID),
 	}
 }
 
@@ -130,7 +131,7 @@ func targetInputs(targets []templateTargetRequest) []timetableModule.GroupTarget
 	for _, target := range targets {
 		result = append(result, timetableModule.GroupTargetInput{
 			TargetGroupType: target.Type, TargetGradeLevel: target.GradeLevel,
-			TargetSchoolClass: target.SchoolClass, EducationGroupID: target.EducationGroupID,
+			TargetSchoolClass: target.SchoolClass, EducationGroupID: (*int64)(target.EducationGroupID),
 		})
 	}
 	return result
@@ -214,8 +215,8 @@ func (req *createTemplateRequest) Bind(_ *http.Request) error {
 		return err
 	}
 	targetType, schoolClass, sourceGradeLevels, sourceSchoolClasses, err := normalizeTemplateTargetFields(
-		req.TargetGroupType, req.TargetGradeLevel, req.TargetSchoolClass, req.EducationGroupID,
-		req.SourceCareOfferingIDs, req.SourceGradeLevels, req.SourceSchoolClasses, req.Targets,
+		req.TargetGroupType, req.TargetGradeLevel, req.TargetSchoolClass, (*int64)(req.EducationGroupID),
+		ident.Int64s(req.SourceCareOfferingIDs), req.SourceGradeLevels, req.SourceSchoolClasses, req.Targets,
 	)
 	if err != nil {
 		return err
@@ -230,10 +231,10 @@ func (req *createTemplateRequest) Bind(_ *http.Request) error {
 	}
 	req.ListKind = listKind
 	return timetableModule.ValidateTemplateShape(timetableModule.TemplateShape{
-		Type: req.Type, RoomID: req.RoomID, TargetGroupType: req.TargetGroupType,
-		HasTargets: len(req.Targets) > 0, HasStudents: hasAssignedStudents(req.StudentIDs, req.WeekdayAssignments),
+		Type: req.Type, RoomID: req.RoomID.Int64(), TargetGroupType: req.TargetGroupType,
+		HasTargets: len(req.Targets) > 0, HasStudents: hasAssignedStudents(ident.Int64s(req.StudentIDs), req.WeekdayAssignments),
 		HasOfferingSource: len(req.SourceCareOfferingIDs) > 0, MaxParticipants: derefInt(req.MaxParticipants),
-		ListKind: req.ListKind, EducationGroupID: req.EducationGroupID,
+		ListKind: req.ListKind, EducationGroupID: (*int64)(req.EducationGroupID),
 	})
 }
 
@@ -315,12 +316,12 @@ func normalizeTemplateListKind(raw *string) (*string, error) {
 // planner UI: the new template id, the schedule ids, and (if materialize
 // was requested) the count of fresh instances on the grid.
 type createTemplateResponse struct {
-	TemplateID       int64   `json:"template_id"`
-	TimeframeID      int64   `json:"timeframe_id"`
-	ScheduleIDs      []int64 `json:"schedule_ids"`
-	InstancesCreated int     `json:"instances_created,omitempty"`
-	MaterializedFrom string  `json:"materialized_from,omitempty"`
-	MaterializedTo   string  `json:"materialized_to,omitempty"`
+	TemplateID       common.ID   `json:"template_id"`
+	TimeframeID      common.ID   `json:"timeframe_id"`
+	ScheduleIDs      []common.ID `json:"schedule_ids"`
+	InstancesCreated int         `json:"instances_created,omitempty"`
+	MaterializedFrom string      `json:"materialized_from,omitempty"`
+	MaterializedTo   string      `json:"materialized_to,omitempty"`
 }
 
 // parsedCreateTemplate holds the request plus the values derived from cheap
@@ -412,11 +413,11 @@ func (rs *Resource) createTemplate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	gradeLevelMax, rosterValidFrom, ok := rs.templateWritePreflight(w, r, parsed.req.CalendarPeriodID, parsed.startDate)
+	gradeLevelMax, rosterValidFrom, ok := rs.templateWritePreflight(w, r, (*int64)(parsed.req.CalendarPeriodID), parsed.startDate)
 	if !ok {
 		return
 	}
-	if !rs.validateSeriesEnd(w, r, parsed.endDate, rosterValidFrom, parsed.req.CalendarPeriodID) {
+	if !rs.validateSeriesEnd(w, r, parsed.endDate, rosterValidFrom, (*int64)(parsed.req.CalendarPeriodID)) {
 		return
 	}
 
@@ -429,9 +430,9 @@ func (rs *Resource) createTemplate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := createTemplateResponse{
-		TemplateID:  result.TemplateID,
-		TimeframeID: result.TimeframeID,
-		ScheduleIDs: result.ScheduleIDs,
+		TemplateID:  ident.ID(result.TemplateID),
+		TimeframeID: ident.ID(result.TimeframeID),
+		ScheduleIDs: ident.IDs(result.ScheduleIDs),
 	}
 	rs.materializeTemplateWindow(ctx, parsed.req, result.TemplateID, &resp)
 
@@ -468,28 +469,28 @@ func buildCreateTemplateInput(
 		Weekdays:              req.Weekdays,
 		StartTime:             parsed.startTime,
 		EndTime:               parsed.endTime,
-		RoomID:                req.RoomID,
-		CategoryID:            req.CategoryID,
-		PlanningTrackID:       req.PlanningTrackID,
+		RoomID:                req.RoomID.Int64(),
+		CategoryID:            req.CategoryID.Int64(),
+		PlanningTrackID:       (*int64)(req.PlanningTrackID),
 		MaxParticipants:       parsed.maxParticipants,
 		RequiredStaff:         normalizeRequiredStaff(req.RequiredStaff),
 		WeekPattern:           parsed.weekPattern,
-		CalendarPeriodID:      req.CalendarPeriodID,
-		EducationGroupID:      req.EducationGroupID,
+		CalendarPeriodID:      (*int64)(req.CalendarPeriodID),
+		EducationGroupID:      (*int64)(req.EducationGroupID),
 		TargetGroupType:       req.TargetGroupType,
 		TargetGradeLevel:      req.TargetGradeLevel,
 		TargetSchoolClass:     req.TargetSchoolClass,
 		Targets:               targetInputs(req.Targets),
-		SourceCareOfferingIDs: req.SourceCareOfferingIDs,
+		SourceCareOfferingIDs: ident.Int64s(req.SourceCareOfferingIDs),
 		SourceGradeLevels:     req.SourceGradeLevels,
 		SourceSchoolClasses:   req.SourceSchoolClasses,
 		ListKind:              req.ListKind,
 		Notes:                 normalizeNotes(req.Notes),
 		IncludeClosingDays:    req.IncludeClosingDays,
 		SeriesLastDay:         parsed.endDate,
-		StudentIDs:            req.StudentIDs,
-		StaffIDs:              req.StaffIDs,
-		PrimaryStaffID:        req.PrimaryStaffID,
+		StudentIDs:            ident.Int64s(req.StudentIDs),
+		StaffIDs:              ident.Int64s(req.StaffIDs),
+		PrimaryStaffID:        (*int64)(req.PrimaryStaffID),
 		WeekdayAssignments:    toServiceWeekdayAssignments(req.WeekdayAssignments),
 		CreatedBy:             createdByPtr,
 		RosterValidFrom:       rosterValidFrom,

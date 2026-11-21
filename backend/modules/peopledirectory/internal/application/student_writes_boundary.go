@@ -7,6 +7,7 @@ import (
 	"time"
 
 	owner1 "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/domain"
@@ -168,6 +169,9 @@ func (w *StudentRecords) Delete(ctx context.Context, id any) error {
 }
 
 func studentIDOf(id any) (int64, bool) {
+	if typed, ok := id.(ident.ID); ok {
+		id = typed.Int64()
+	}
 	switch value := id.(type) {
 	case int64:
 		return value, true

@@ -10,20 +10,21 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type updateInstanceRequest struct {
-	Date            string  `json:"date"`
-	StartTime       string  `json:"start_time"`
-	EndTime         string  `json:"end_time"`
-	Title           string  `json:"title"`
-	Description     *string `json:"description,omitempty"`
-	Notes           *string `json:"notes,omitempty"`
-	RoomID          int64   `json:"room_id"`
-	ActivityGroupID *int64  `json:"activity_group_id,omitempty"`
-	ListKind        *string `json:"list_kind,omitempty"`
-	StaffIDs        []int64 `json:"staff_ids,omitempty"`
-	StudentIDs      []int64 `json:"student_ids,omitempty"`
+	Date            string      `json:"date"`
+	StartTime       string      `json:"start_time"`
+	EndTime         string      `json:"end_time"`
+	Title           string      `json:"title"`
+	Description     *string     `json:"description,omitempty"`
+	Notes           *string     `json:"notes,omitempty"`
+	RoomID          common.ID   `json:"room_id"`
+	ActivityGroupID *common.ID  `json:"activity_group_id,omitempty"`
+	ListKind        *string     `json:"list_kind,omitempty"`
+	StaffIDs        []common.ID `json:"staff_ids,omitempty"`
+	StudentIDs      []common.ID `json:"student_ids,omitempty"`
 	// RequiredStaff is the optional per-occurrence Personalbedarf pin (#1839);
 	// omitted/null clears the pin (inherit the template override, else derive
 	// from the Betreuungsschlüssel), a value = pin for this occurrence.
@@ -84,11 +85,11 @@ func (rs *Resource) updateInstance(w http.ResponseWriter, r *http.Request) {
 		Title:           req.Title,
 		Description:     req.Description,
 		Notes:           req.Notes,
-		RoomID:          req.RoomID,
-		ActivityGroupID: req.ActivityGroupID,
+		RoomID:          req.RoomID.Int64(),
+		ActivityGroupID: (*int64)(req.ActivityGroupID),
 		ListKind:        listKind,
-		StaffIDs:        req.StaffIDs,
-		StudentIDs:      req.StudentIDs,
+		StaffIDs:        ident.Int64s(req.StaffIDs),
+		StudentIDs:      ident.Int64s(req.StudentIDs),
 		RequiredStaff:   normalizeRequiredStaff(req.RequiredStaff),
 	}, sessiontoken.ActorAccountIDFromCtx(r.Context()))
 	if err != nil {

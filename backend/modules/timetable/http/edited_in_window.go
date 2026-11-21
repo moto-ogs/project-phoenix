@@ -19,14 +19,15 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // editedOccurrenceItem is one individually-adjusted occurrence.
 type editedOccurrenceItem struct {
-	InstanceID int64  `json:"instance_id"`
-	Date       string `json:"date"`
-	StartTime  string `json:"start_time"`
-	Title      string `json:"title"`
+	InstanceID common.ID `json:"instance_id"`
+	Date       string    `json:"date"`
+	StartTime  string    `json:"start_time"`
+	Title      string    `json:"title"`
 	// Changes lists the diverging field categories ("title", "notes", "room",
 	// "time", "staff", "students", "attendance") — stable machine-readable
 	// strings the frontend maps to German labels.
@@ -126,7 +127,7 @@ func toEditedItems(occurrences []timetableModule.EditedOccurrence) []editedOccur
 	items := make([]editedOccurrenceItem, 0, len(occurrences))
 	for _, o := range occurrences {
 		items = append(items, editedOccurrenceItem{
-			InstanceID: o.InstanceID,
+			InstanceID: ident.ID(o.InstanceID),
 			Date:       o.Date.Format(dateLayout),
 			StartTime:  o.StartTime,
 			Title:      o.Title,

@@ -11,6 +11,7 @@ import (
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
 	"github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -70,6 +71,9 @@ func (s *RetainedPersonDirectory) WithCareParticipation(resolve peoplePorts.Care
 func (s *RetainedPersonDirectory) Get(ctx context.Context, id interface{}) (*peopleValues.DirectoryPersonSnapshot, error) {
 	// Convert id to int64
 	var personID int64
+	if typed, ok := id.(ident.ID); ok {
+		id = typed.Int64()
+	}
 	switch v := id.(type) {
 	case int:
 		personID = int64(v)

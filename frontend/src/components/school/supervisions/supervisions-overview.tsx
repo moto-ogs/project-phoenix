@@ -26,7 +26,10 @@ import { startProximityLabel, summarizeDay } from "./view-model";
 // Schild, das nichts unterscheidet, und drängt auf schmalen Geräten den Namen
 // heraus, auf den es ankommt.
 const STATUS_BADGES: Partial<
-  Record<PlannedTimetableInstance["status"], { label: string; color: string }>
+  Record<
+    NonNullable<PlannedTimetableInstance["status"]>,
+    { label: string; color: string }
+  >
 > = {
   active: { label: "Läuft", color: LOCATION_COLORS.GROUP_ROOM },
   completed: { label: "Beendet", color: LOCATION_COLORS.OTHER_ROOM },
@@ -47,7 +50,8 @@ function SupervisionRow({
   const detail = cancelled
     ? room
     : `${room} · ${instance.expectedStudentsCount} Kinder erwartet`;
-  const badge = STATUS_BADGES[instance.status];
+  // A status this build does not know carries no badge, like "planned".
+  const badge = instance.status ? STATUS_BADGES[instance.status] : undefined;
   const proximity = startProximityLabel(instance);
 
   return (

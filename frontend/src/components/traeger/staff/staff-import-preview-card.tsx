@@ -21,6 +21,7 @@ import { SegmentedControl } from "~/components/ui/segmented-control";
 import { StatCard } from "~/components/ui/stat-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { formatDate } from "~/lib/date-helpers";
+import { labelOf } from "~/lib/label-of";
 import type {
   StaffImportResult,
   StaffImportRow,
@@ -36,6 +37,9 @@ import {
 } from "./staff-import-format";
 
 const IMPORT_PAGE_SIZE = 50;
+
+/** A state this build does not know: no claim about the row. */
+const UNKNOWN_STATUS = { label: "–", tone: "gray" } as const;
 
 function PersonCell({ row }: Readonly<{ row: StaffImportRow }>) {
   const name = `${row.firstName} ${row.lastName}`.trim();
@@ -112,11 +116,11 @@ const COLUMNS: DataTableColumn<StaffImportRow>[] = [
     header: "Was moto tut",
     render: (row) => (
       <StatusBadge
-        tone={STAFF_IMPORT_STATUS[row.status].tone}
-        label={STAFF_IMPORT_STATUS[row.status].label}
+        tone={labelOf(STAFF_IMPORT_STATUS, row.status, UNKNOWN_STATUS).tone}
+        label={labelOf(STAFF_IMPORT_STATUS, row.status, UNKNOWN_STATUS).label}
       />
     ),
-    sortValue: (row) => row.status,
+    sortValue: (row) => row.status ?? "",
     stacked: "meta",
   },
   {

@@ -17,14 +17,10 @@ import type {
   GuardianWithRelationship,
   GuardianFormData,
   StudentGuardianLinkRequest,
-  BackendGuardianProfile,
-  BackendGuardianPickerResponse,
-  BackendGuardianWithRelationship,
   PhoneNumber,
   PhoneType,
   PhoneNumberCreateRequest,
   PhoneNumberUpdateRequest,
-  BackendPhoneNumber,
   GuardianRole,
 } from "./guardian-helpers";
 import {
@@ -153,10 +149,13 @@ export async function fetchStudentGuardians(
   }
 
   const result = (await response.json()) as ApiResponse<
-    BackendGuardianWithRelationship[]
+    guardiansWire.GuardianWithRelationship[]
   >;
 
-  return (result.data ?? []).map(mapGuardianWithRelationshipResponse);
+  return (result.data ?? []).flatMap((link) => {
+    const mapped = mapGuardianWithRelationshipResponse(link);
+    return mapped ? [mapped] : [];
+  });
 }
 
 const SEND_BLOCKS = [
@@ -288,7 +287,8 @@ export async function updateGuardian(
     );
   }
 
-  const result = (await response.json()) as ApiResponse<BackendGuardianProfile>;
+  const result =
+    (await response.json()) as ApiResponse<guardiansWire.GuardianResponse>;
 
   if (!result.data) {
     throw bodyError(result, "Failed to update guardian");
@@ -448,7 +448,7 @@ export interface NewStudentGuardianInput {
   emergencyPriority: number;
   phoneNumbers?: Array<{
     phoneNumber: string;
-    phoneType: PhoneType;
+    phoneType: PhoneType | undefined;
     label?: string;
     isPrimary: boolean;
   }>;
@@ -680,7 +680,7 @@ export async function searchGuardians(query: string): Promise<Guardian[]> {
   }
 
   const result =
-    (await response.json()) as PaginatedResponse<BackendGuardianPickerResponse>;
+    (await response.json()) as PaginatedResponse<guardiansWire.GuardianPickerResponse>;
 
   return (result.data ?? []).map(mapGuardianPickerResponse);
 }
@@ -717,7 +717,8 @@ export async function addGuardianPhoneNumber(
     );
   }
 
-  const result = (await response.json()) as ApiResponse<BackendPhoneNumber>;
+  const result =
+    (await response.json()) as ApiResponse<guardiansWire.PhoneNumberResponse>;
 
   if (!result.data) {
     throw bodyError(result, "Failed to add phone number");

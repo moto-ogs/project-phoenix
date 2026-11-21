@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	activitiesHTTP "github.com/moto-ogs/project-phoenix/modules/timetable/http/activities"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/require"
@@ -36,7 +37,7 @@ func TestPresenceGroups20ActivitiesQueryBudget(t *testing.T) {
 	expectedGroup := func(g *testpkg.ActivityGroup) activitiesHTTP.ActivityResponse {
 		var category testpkg.ActivityCategory
 		require.NoError(t, db.NewSelect().Model(&category).Where("id = ?", g.CategoryID).Scan(testpkg.Ctx(t)))
-		return activitiesHTTP.ActivityResponse{ID: g.ID, Name: g.Name, MaxParticipants: &g.MaxParticipants, IsOpen: g.IsOpen, CategoryID: g.CategoryID, CreatedBy: g.CreatedBy, CreatedAt: g.CreatedAt.UTC(), UpdatedAt: g.UpdatedAt.UTC(), Category: &activitiesHTTP.ActivityCategoryResponse{ID: category.ID, Name: category.Name, Color: category.Color, CreatedAt: category.CreatedAt.UTC(), UpdatedAt: category.UpdatedAt.UTC()}}
+		return activitiesHTTP.ActivityResponse{ID: ident.ID(g.ID), Name: g.Name, MaxParticipants: &g.MaxParticipants, IsOpen: g.IsOpen, CategoryID: ident.ID(g.CategoryID), CreatedBy: (*ident.ID)(g.CreatedBy), CreatedAt: g.CreatedAt.UTC(), UpdatedAt: g.UpdatedAt.UTC(), Category: &activitiesHTTP.ActivityCategoryResponse{ID: ident.ID(category.ID), Name: category.Name, Color: category.Color, CreatedAt: category.CreatedAt.UTC(), UpdatedAt: category.UpdatedAt.UTC()}}
 	}
 	expectedGroups := map[int64]activitiesHTTP.ActivityResponse{group.ID: expectedGroup(group)}
 	var groups []int64
@@ -62,13 +63,13 @@ func TestPresenceGroups20ActivitiesQueryBudget(t *testing.T) {
 			staff := testpkg.CreateTestStaff(t, db, "Activities20", fmt.Sprintf("Staff%02d", i))
 			supervisor, err := module.Timetable.CreatePlannedSupervisor(testpkg.Ctx(t), timetable.PlannedSupervisorInput{StaffID: staff.ID, GroupID: group.ID, ValidFrom: "2026-01-01"})
 			require.NoError(t, err)
-			supervisors = append(supervisors, activitiesHTTP.ActivitySupervisorResponse{ID: supervisor.ID, StaffID: staff.ID, FirstName: "Activities20", LastName: fmt.Sprintf("Staff%02d", i)})
+			supervisors = append(supervisors, activitiesHTTP.ActivitySupervisorResponse{ID: ident.ID(supervisor.ID), StaffID: ident.ID(staff.ID), FirstName: "Activities20", LastName: fmt.Sprintf("Staff%02d", i)})
 			end := fmt.Sprintf("%02d:45:00", 8+i)
 			timeframe, err := module.Timetable.CreateTimeframe(testpkg.Ctx(t), timetable.TimeframeInput{StartTime: fmt.Sprintf("%02d:15:00", 8+i), EndTime: &end, IsActive: true})
 			require.NoError(t, err)
 			schedule, err := module.Timetable.CreateSchedule(testpkg.Ctx(t), timetable.ScheduleInput{Weekday: i%5 + 1, ActivityGroupID: group.ID, TimeframeID: &timeframe.ID})
 			require.NoError(t, err)
-			schedules = append(schedules, activitiesHTTP.ActivityScheduleResponse{ID: schedule.ID, Weekday: schedule.Weekday, ActivityGroupID: group.ID, TimeframeID: &timeframe.ID, CreatedAt: schedule.CreatedAt.UTC(), UpdatedAt: schedule.UpdatedAt.UTC()})
+			schedules = append(schedules, activitiesHTTP.ActivityScheduleResponse{ID: ident.ID(schedule.ID), Weekday: schedule.Weekday, ActivityGroupID: ident.ID(group.ID), TimeframeID: (*ident.ID)(&timeframe.ID), CreatedAt: schedule.CreatedAt.UTC(), UpdatedAt: schedule.UpdatedAt.UTC()})
 		}
 		for len(groups) < n {
 			g := testpkg.CreateTestActivityGroup(t, db, fmt.Sprintf("Activities20List%02d", len(groups)))
@@ -136,14 +137,14 @@ func TestPresenceGroups20ActivitiesQueryBudget(t *testing.T) {
 				require.Len(t, rows, n)
 				var ids []int64
 				for _, row := range rows {
-					ids = append(ids, row.ID)
+					ids = append(ids, row.ID.Int64())
 					row.CreatedAt = row.CreatedAt.UTC()
 					row.UpdatedAt = row.UpdatedAt.UTC()
 					row.Category.CreatedAt = row.Category.CreatedAt.UTC()
 					row.Category.UpdatedAt = row.Category.UpdatedAt.UTC()
-					require.Equal(t, expectedGroups[row.ID], row)
+					require.Equal(t, expectedGroups[row.ID.Int64()], row)
 					require.NotEqual(t, hidden.ID, row.ID)
-					if row.ID == group.ID {
+					if row.ID == ident.ID(group.ID) {
 						require.Equal(t, n, row.EnrollmentCount)
 						require.ElementsMatch(t, supervisors, row.Supervisors)
 					}

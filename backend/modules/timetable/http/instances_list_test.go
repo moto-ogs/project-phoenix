@@ -21,6 +21,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/settings"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -318,7 +319,7 @@ func TestListInstances_ReportsOfferingEmptyRosterReason(t *testing.T) {
 	got := decodeTemplateData[weeklyInstancesResponse](t, w)
 	require.Len(t, got.Instances, 1)
 	require.NotNil(t, got.Instances[0].CalendarPeriodID)
-	assert.Equal(t, period.ID, *got.Instances[0].CalendarPeriodID)
+	assert.Equal(t, ident.ID(period.ID), *got.Instances[0].CalendarPeriodID)
 	require.NotNil(t, got.Instances[0].EmptyRosterReason)
 	assert.Equal(t, timetable.EmptyOfferingRosterBeforeServiceStart, got.Instances[0].EmptyRosterReason.Kind)
 	assert.Equal(t, "2026-08-13", got.Instances[0].EmptyRosterReason.ServiceStartDate)
@@ -344,7 +345,7 @@ func TestListInstances_HappyPath(t *testing.T) {
 	got := decodeList(t, w)
 	require.Len(t, got.Instances, 1)
 	item := got.Instances[0]
-	assert.Equal(t, inst.ID, item.ID)
+	assert.Equal(t, ident.ID(inst.ID), item.ID)
 	assert.Equal(t, "Mensa-List-Test", item.Title)
 	assert.Equal(t, "12:00", item.StartTime)
 	assert.Equal(t, "12:50", item.EndTime)
@@ -354,7 +355,7 @@ func TestListInstances_HappyPath(t *testing.T) {
 	// Spontaneous instances without an activity_group fall back to "activity"
 	// type so the frontend has a deterministic colour key.
 	assert.NotEmpty(t, item.ActivityType)
-	assert.Equal(t, s.roomID, item.RoomID)
+	assert.Equal(t, ident.ID(s.roomID), item.RoomID)
 	assert.NotEmpty(t, item.RoomName, "room name should resolve via RoomRepo")
 	assert.Empty(t, item.Staff)
 	assert.Empty(t, item.Students)
@@ -440,7 +441,7 @@ func TestListInstances_StaffAndStudentCounts(t *testing.T) {
 	// Order is non-deterministic; assert presence by id.
 	staffByID := map[int64]instanceStaffSummary{}
 	for _, s := range item.Staff {
-		staffByID[s.StaffID] = s
+		staffByID[s.StaffID.Int64()] = s
 	}
 	require.Contains(t, staffByID, staff1.ID)
 	require.Contains(t, staffByID, staff2.ID)
@@ -448,11 +449,11 @@ func TestListInstances_StaffAndStudentCounts(t *testing.T) {
 	assert.False(t, staffByID[staff1.ID].IsAbsent)
 	assert.True(t, staffByID[staff2.ID].IsAbsent)
 	assert.True(t, staffByID[staff2.ID].IsSickAbsence)
-	assert.ElementsMatch(t, []int64{student1.ID, student2.ID}, item.StudentIDs)
+	assert.ElementsMatch(t, []int64{student1.ID, student2.ID}, ident.Int64s(item.StudentIDs))
 	require.Len(t, item.Students, 2)
 	studentByID := map[int64]instanceStudentSummary{}
 	for _, row := range item.Students {
-		studentByID[row.StudentID] = row
+		studentByID[row.StudentID.Int64()] = row
 	}
 	require.Contains(t, studentByID, student1.ID)
 	require.Contains(t, studentByID, student2.ID)
@@ -511,7 +512,7 @@ func TestListInstances_CompletedExpectedRowStaysNotScheduled(t *testing.T) {
 	// out — and offers "abmelden" for a day that was never care (#1747 review).
 	careDayByStudent := map[int64]careplan.CareDayStatus{}
 	for _, row := range item.Students {
-		careDayByStudent[row.StudentID] = row.CareDayStatus
+		careDayByStudent[row.StudentID.Int64()] = row.CareDayStatus
 	}
 	assert.Equal(t, careplan.CareDayNotScheduled, careDayByStudent[student1.ID])
 	assert.Equal(t, careplan.CareDayUnknown, careDayByStudent[student2.ID],
@@ -614,7 +615,7 @@ func TestListInstances_StatusDayAbsenceOnUnbookedDayReadsAsNotScheduled(t *testi
 
 	careDayByStudent := map[int64]careplan.CareDayStatus{}
 	for _, row := range item.Students {
-		careDayByStudent[row.StudentID] = row.CareDayStatus
+		careDayByStudent[row.StudentID.Int64()] = row.CareDayStatus
 	}
 	assert.Equal(t, careplan.CareDayNotScheduled, careDayByStudent[sickUnbooked.ID],
 		"a status-day absence on a day the plan never booked is a false absence")
@@ -1001,7 +1002,7 @@ func TestListInstances_NamesTemplateEducationGroup(t *testing.T) {
 	got := decodeList(t, w)
 	require.Len(t, got.Instances, 3)
 	for _, item := range got.Instances {
-		if item.ID == ungrouped.ID {
+		if item.ID == ident.ID(ungrouped.ID) {
 			assert.Empty(t, item.GroupName, "a block without a template group carries no group name")
 			continue
 		}
@@ -1085,7 +1086,7 @@ func TestListInstances_OccupancyCountsChildrenStillThere(t *testing.T) {
 	got := decodeList(t, w)
 	require.Len(t, got.Instances, 2)
 	for _, item := range got.Instances {
-		if item.ID != limited.ID {
+		if item.ID != ident.ID(limited.ID) {
 			assert.Nil(t, item.Occupancy, "a block without a template has no limit")
 			continue
 		}

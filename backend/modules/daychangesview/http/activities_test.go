@@ -249,7 +249,7 @@ func TestDayChangesActivityQueryBudget(t *testing.T) {
 		}
 		baseline = n
 		counter.Reset()
-		_, body := read(t, router, account.ID, tenantID, "admin:*")
+		_, body := read(t, router, account.ID, tenantID, "schedules:read", "vacation:approve")
 		require.Len(t, activityLines(t, body), 2*n, "a moved and a covered entry per block")
 		measured := counter.Measurement(counter.Queries())
 		if round > 0 {

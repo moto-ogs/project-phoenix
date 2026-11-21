@@ -120,8 +120,7 @@ const mockGroups: ActiveGroup[] = [
     roomId: "301",
     startTime: new Date("2026-05-14T08:00:00.000Z"),
     isActive: true,
-    room: { id: 301, name: "Aula" },
-    actualGroup: { id: 201, name: "Gruppe A" },
+    room: { id: "301", name: "Aula" },
     createdAt: new Date("2026-05-14T08:00:00.000Z"),
     updatedAt: new Date("2026-05-14T08:00:00.000Z"),
   },
@@ -131,8 +130,7 @@ const mockGroups: ActiveGroup[] = [
     roomId: "302",
     startTime: new Date("2026-05-14T08:00:00.000Z"),
     isActive: false,
-    room: { id: 302, name: "Musikraum" },
-    actualGroup: { id: 202, name: "Gruppe B" },
+    room: { id: "302", name: "Musikraum" },
     createdAt: new Date("2026-05-14T08:00:00.000Z"),
     updatedAt: new Date("2026-05-14T08:00:00.000Z"),
   },
@@ -157,6 +155,14 @@ const mockRooms: Room[] = [
 ];
 
 const mutateStudents = vi.fn();
+// GET /api/active/groups sends no activity name; the section reads it from
+// the activity list (#2353).
+const mockActivities = [
+  { id: "201", name: "Gruppe A" },
+  { id: "202", name: "Gruppe B" },
+  { id: "203", name: "Gruppe C" },
+];
+
 const mutateMatching = vi.fn();
 const refreshRooms = vi.fn();
 
@@ -227,6 +233,10 @@ function mockTransitData({
       } as never;
     }
 
+    if (key === "checkin-target-activities") {
+      return { data: mockActivities, error: null, isLoading: false } as never;
+    }
+
     if (key === "rooms-list-{}") {
       return {
         data: rooms,
@@ -264,10 +274,10 @@ describe("TransitStudentsSection", () => {
     mockToastSuccess.mockReset();
     vi.mocked(useTenantMutateMatching).mockReturnValue(mutateMatching as never);
     vi.mocked(activeService.assignTransitStudents).mockResolvedValue({
-      assigned: [11],
+      assigned: ["11"],
       skipped: [],
-      active_group_id: 101,
-      room_id: 301,
+      active_group_id: "101",
+      room_id: "301",
     });
     mockTransitData();
   });
@@ -331,8 +341,7 @@ describe("TransitStudentsSection", () => {
           roomId: "303",
           startTime: new Date("2026-05-14T08:00:00.000Z"),
           isActive: true,
-          room: { id: 303, name: "Werkraum" },
-          actualGroup: { id: 203, name: "Gruppe C" },
+          room: { id: "303", name: "Werkraum" },
           createdAt: new Date("2026-05-14T08:00:00.000Z"),
           updatedAt: new Date("2026-05-14T08:00:00.000Z"),
         },
@@ -378,8 +387,7 @@ describe("TransitStudentsSection", () => {
           roomId: "303",
           startTime: new Date("2026-05-14T08:00:00.000Z"),
           isActive: true,
-          room: { id: 303, name: "Werkraum" },
-          actualGroup: { id: 203, name: "Gruppe C" },
+          room: { id: "303", name: "Werkraum" },
           createdAt: new Date("2026-05-14T08:00:00.000Z"),
           updatedAt: new Date("2026-05-14T08:00:00.000Z"),
         },
@@ -410,8 +418,7 @@ describe("TransitStudentsSection", () => {
           ...mockGroups[0]!,
           id: "103",
           roomId: "303",
-          room: { id: 303, name: "Werkraum" },
-          actualGroup: { id: 203, name: "Gruppe C" },
+          room: { id: "303", name: "Werkraum" },
         },
       ],
       activeSupervisions: [mockSupervisions[0]!],
@@ -439,8 +446,7 @@ describe("TransitStudentsSection", () => {
           ...mockGroups[0]!,
           id: "103",
           roomId: "303",
-          room: { id: 303, name: "Werkraum" },
-          actualGroup: { id: 203, name: "Gruppe C" },
+          room: { id: "303", name: "Werkraum" },
         },
       ],
       activeSupervisions: [],
@@ -634,11 +640,11 @@ describe("TransitStudentsSection booking into a released room", () => {
     refreshRooms.mockResolvedValue(undefined);
     vi.mocked(useTenantMutateMatching).mockReturnValue(mutateMatching as never);
     vi.mocked(activeService.moveStudentsToOpenRoom).mockResolvedValue({
-      moved: [11],
+      moved: ["11"],
       unchanged: [],
       skipped: [],
-      active_group_id: 401,
-      room_id: 310,
+      active_group_id: "401",
+      room_id: "310",
     });
     mockTransitData();
   });
@@ -723,11 +729,11 @@ describe("TransitStudentsSection booking into a released room", () => {
 
   it("names the children the server skipped", async () => {
     vi.mocked(activeService.moveStudentsToOpenRoom).mockResolvedValue({
-      moved: [11],
+      moved: ["11"],
       unchanged: [],
-      skipped: [{ student_id: 12, reason: "conflict" }],
-      active_group_id: 401,
-      room_id: 310,
+      skipped: [{ student_id: "12", reason: "conflict" }],
+      active_group_id: "401",
+      room_id: "310",
     });
     render(<TransitStudentsSection />);
 

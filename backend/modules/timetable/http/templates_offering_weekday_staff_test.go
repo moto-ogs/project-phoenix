@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -76,14 +77,14 @@ func TestTemplateOfferingSource_WeekdayStaffRoundTripsThroughCreateUpdateSplit(t
 		fmt.Sprintf("/templates/%d?period_id=%d", created.TemplateID, period.ID), nil)
 	require.Equal(t, http.StatusOK, getW.Code, "body=%s", getW.Body.String())
 	got := decodeTemplateData[templateResponse](t, getW)
-	assert.Equal(t, []int64{sourcedOfferingID}, got.SourceCareOfferingIDs)
+	assert.Equal(t, []ident.ID{ident.ID(sourcedOfferingID)}, got.SourceCareOfferingIDs)
 	require.Len(t, got.WeekdayAssignments, 2, "reopening the editor must show the per-weekday staffing")
 	assert.Equal(t, timetableModule.WeekdayMonday, got.WeekdayAssignments[0].Weekday)
-	assert.Equal(t, []int64{s.staffA}, got.WeekdayAssignments[0].StaffIDs)
+	assert.Equal(t, []ident.ID{ident.ID(s.staffA)}, got.WeekdayAssignments[0].StaffIDs)
 	require.NotNil(t, got.WeekdayAssignments[0].PrimaryStaffID)
-	assert.Equal(t, s.staffA, *got.WeekdayAssignments[0].PrimaryStaffID)
+	assert.Equal(t, ident.ID(s.staffA), *got.WeekdayAssignments[0].PrimaryStaffID)
 	assert.Equal(t, timetableModule.WeekdayWednesday, got.WeekdayAssignments[1].Weekday)
-	assert.Equal(t, []int64{s.staffB}, got.WeekdayAssignments[1].StaffIDs)
+	assert.Equal(t, []ident.ID{ident.ID(s.staffB)}, got.WeekdayAssignments[1].StaffIDs)
 
 	updateW := doTemplateJSON(t, router, http.MethodPut,
 		fmt.Sprintf("/templates/%d", created.TemplateID), sourcedWeekdayStaffBody(s, "Tpl-Randstunde"))

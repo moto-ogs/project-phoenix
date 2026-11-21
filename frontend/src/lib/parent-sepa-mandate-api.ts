@@ -4,6 +4,20 @@
 // Text über seine Prüfsumme. Die volle IBAN geht nur hin, nie zurück.
 
 import { apiErrorFromResponse, transportFetch } from "./api-error";
+import { knownEnum } from "./contract/known-enum";
+import type {
+  SEPAMandateInput as WireSepaMandateInput,
+  SEPAMandateSummary as WireSepaMandate,
+  SEPAMandateText as WireSepaMandateText,
+  SEPAMandateView as WireSepaMandateView,
+} from "./contract/parent-me.generated";
+import { requiredDay } from "./contract/required-day";
+
+// Go does not register this set; the contract types it as string. A value
+// this build does not know stays undefined instead of passing as a known one.
+const MANDATE_SOURCE_VALUES = ["office", "import", "parent"] as const;
+
+type MandateSource = (typeof MANDATE_SOURCE_VALUES)[number];
 
 interface SepaMandateCreditor {
   readonly name: string;
@@ -36,8 +50,8 @@ export interface SepaMandate {
   readonly accountHolder: string;
   readonly ibanMasked: string;
   readonly bic: string;
-  /** office, import or parent. */
-  readonly source: string;
+  /** undefined: a source this build does not know. */
+  readonly source: MandateSource | undefined;
   readonly creditorId: string;
   readonly revokedOn: string | null;
   readonly proof: SepaMandateProof | null;
@@ -73,48 +87,6 @@ export interface SepaMandateText {
   readonly accountToken: string;
 }
 
-interface BackendMandate {
-  collection_eligible: boolean;
-  id: string;
-  reference: string;
-  signed_on: string;
-  account_holder: string;
-  iban_masked: string;
-  bic: string;
-  source: string;
-  creditor_id: string;
-  revoked_on: string | null;
-  proof: {
-    channel: string;
-    version: string;
-    text_sha256: string;
-    text: string;
-    confirmed_at: string;
-  } | null;
-}
-
-interface BackendView {
-  enabled: boolean;
-  can_manage?: boolean;
-  creditor_missing?: boolean;
-  creditor?: { name: string; address: string; creditor_id: string } | null;
-  mandate?: BackendMandate | null;
-  prefill?: {
-    account_holder: string;
-    street: string;
-    postal_code: string;
-    city: string;
-  } | null;
-}
-
-interface BackendText {
-  version: string;
-  reference: string;
-  text: string;
-  text_sha256: string;
-  account_token: string;
-}
-
 const path = (organizationId: string, contractId: string) =>
   `/api/parent/me/documents/${encodeURIComponent(organizationId)}/contracts/${encodeURIComponent(contractId)}/sepa-mandate`;
 
@@ -134,16 +106,16 @@ async function request<T>(url: string, init: RequestInit): Promise<T> {
   return data;
 }
 
-function mapMandate(mandate: BackendMandate): SepaMandate {
+function mapMandate(mandate: WireSepaMandate): SepaMandate {
   return {
-    id: String(mandate.id),
+    id: mandate.id,
     collectionEligible: mandate.collection_eligible,
     reference: mandate.reference,
-    signedOn: mandate.signed_on,
+    signedOn: requiredDay(mandate.signed_on, "SEPAMandateSummary.signed_on"),
     accountHolder: mandate.account_holder,
     ibanMasked: mandate.iban_masked,
     bic: mandate.bic,
-    source: mandate.source,
+    source: knownEnum(MANDATE_SOURCE_VALUES, mandate.source),
     creditorId: mandate.creditor_id,
     revokedOn: mandate.revoked_on,
     proof: mandate.proof
@@ -158,11 +130,11 @@ function mapMandate(mandate: BackendMandate): SepaMandate {
   };
 }
 
-function mapView(view: BackendView): SepaMandateView {
+function mapView(view: WireSepaMandateView): SepaMandateView {
   return {
     enabled: view.enabled,
-    canManage: view.can_manage ?? false,
-    creditorMissing: view.creditor_missing ?? false,
+    canManage: view.can_manage,
+    creditorMissing: view.creditor_missing,
     creditor: view.creditor
       ? {
           name: view.creditor.name,
@@ -182,7 +154,7 @@ function mapView(view: BackendView): SepaMandateView {
   };
 }
 
-function inputBody(input: SepaMandateInput) {
+function inputBody(input: SepaMandateInput): WireSepaMandateInput {
   return {
     account_holder: input.accountHolder,
     iban: input.iban,
@@ -199,7 +171,7 @@ export async function fetchSepaMandate(
   contractId: string,
 ): Promise<SepaMandateView> {
   return mapView(
-    await request<BackendView>(path(organizationId, contractId), {
+    await request<WireSepaMandateView>(path(organizationId, contractId), {
       method: "GET",
     }),
   );
@@ -212,11 +184,14 @@ export async function previewSepaMandate(
   input: SepaMandateInput,
   reference?: string,
 ): Promise<SepaMandateText> {
-  const text = await request<BackendText>(
+  const text = await request<WireSepaMandateText>(
     `${path(organizationId, contractId)}/preview`,
     {
       method: "POST",
-      body: JSON.stringify({ ...inputBody(input), reference: reference ?? "" }),
+      body: JSON.stringify({
+        ...inputBody(input),
+        reference: reference ?? "",
+      } satisfies WireSepaMandateInput),
     },
   );
   return {
@@ -236,7 +211,7 @@ export async function grantSepaMandate(
   confirmed: Pick<SepaMandateText, "reference" | "textSha256" | "accountToken">,
 ): Promise<SepaMandateView> {
   return mapView(
-    await request<BackendView>(path(organizationId, contractId), {
+    await request<WireSepaMandateView>(path(organizationId, contractId), {
       method: "POST",
       body: JSON.stringify({
         ...inputBody(input),
@@ -244,7 +219,7 @@ export async function grantSepaMandate(
         text_sha256: confirmed.textSha256,
         account_token: confirmed.accountToken,
         holder_confirmed: true,
-      }),
+      } satisfies WireSepaMandateInput),
     }),
   );
 }
@@ -255,9 +230,12 @@ export async function revokeSepaMandate(
   contractId: string,
 ): Promise<SepaMandateView> {
   return mapView(
-    await request<BackendView>(`${path(organizationId, contractId)}/revoke`, {
-      method: "POST",
-      body: "{}",
-    }),
+    await request<WireSepaMandateView>(
+      `${path(organizationId, contractId)}/revoke`,
+      {
+        method: "POST",
+        body: "{}",
+      },
+    ),
   );
 }

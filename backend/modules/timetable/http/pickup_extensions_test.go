@@ -20,6 +20,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -101,22 +102,22 @@ func TestPickupExtensions_ListAndResolve(t *testing.T) {
 	listed := decodeTemplateData[pickupExtensionsResponse](t, w)
 	require.Len(t, listed.Tasks, 1)
 	task := listed.Tasks[0]
-	assert.Equal(t, childID, task.StudentID)
+	assert.Equal(t, ident.ID(childID), task.StudentID)
 	assert.Equal(t, childName, task.StudentName)
 	assert.Equal(t, timetable.PickupExtensionKindDay, task.Kind)
 	assert.Equal(t, pickupExtensionDate, task.Date)
 	assert.Equal(t, "14:45", task.PreviousPickupTime)
 	assert.Equal(t, "16:00", task.PickupTime)
-	assert.Equal(t, []pickupExtensionBlockResponse{{ID: s.freePlay, Title: "Freies Spiel", StartTime: "14:45", EndTime: "16:00"}}, task.Blocks)
+	assert.Equal(t, []pickupExtensionBlockResponse{{ID: ident.ID(s.freePlay), Title: "Freies Spiel", StartTime: "14:45", EndTime: "16:00"}}, task.Blocks)
 
 	w = executeRequest(testpkg.MountedQueryBudgetRouter("/api/timetable", router), http.MethodPost, fmt.Sprintf("/pickup-extensions/%d/resolve", task.ID),
 		map[string]any{"block_ids": []int64{s.freePlay}})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 	resolved := decodeTemplateData[resolvePickupExtensionResponse](t, w)
-	assert.Equal(t, childID, resolved.StudentID)
+	assert.Equal(t, ident.ID(childID), resolved.StudentID)
 	assert.Equal(t, 1, resolved.InstanceCount)
 	require.Len(t, resolved.AssignedBlocks, 1)
-	assert.Equal(t, s.freePlay, resolved.AssignedBlocks[0].ID)
+	assert.Equal(t, ident.ID(s.freePlay), resolved.AssignedBlocks[0].ID)
 
 	count, err := s.db.NewSelect().TableExpr("schedule.instance_students").
 		Where("tenant_id = ?", testpkg.Tenant(t)).
