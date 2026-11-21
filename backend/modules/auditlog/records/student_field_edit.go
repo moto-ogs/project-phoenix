@@ -52,6 +52,10 @@ const (
 	// without a report, and its withdrawal (#4791). Values are German text
 	// naming the status and the day.
 	StudentFieldSchoolAbsenceReport = "school_absence_report"
+	// StudentFieldRoomHistoryStop records setting and lifting the stop of a
+	// child's room history and mood capture (#3844). Values are German text
+	// naming the state; on a stop the new value counts the deleted visits.
+	StudentFieldRoomHistoryStop = "room_history_stop"
 
 	// StudentFieldDocumentPrefix marks an upload or deletion in the child's
 	// document file (#777). The full field name carries the category
@@ -110,7 +114,8 @@ func (e *StudentFieldEdit) Validate() error {
 	switch e.FieldName {
 	case StudentFieldStatus, StudentFieldExtraInfo,
 		StudentFieldHealthInfo, StudentFieldPickupStatus, StudentFieldPickupSchedule, StudentFieldDepartureDays,
-		StudentFieldDepartureCompanionNote, StudentFieldCareEnd, StudentFieldDocument, StudentFieldSchoolAbsenceReport:
+		StudentFieldDepartureCompanionNote, StudentFieldCareEnd, StudentFieldDocument, StudentFieldSchoolAbsenceReport,
+		StudentFieldRoomHistoryStop:
 		// Valid field names
 	default:
 		// Document fields carry their category in the name. The vocabulary of

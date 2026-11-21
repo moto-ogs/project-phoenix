@@ -114,9 +114,15 @@ func SchoolMembershipDependencies(db transactionruntime.Database) (schoolMembers
 
 // composeFeedback composes the observed Feedback owner over its settings.
 func composeFeedback(db transactionruntime.Database, settings *feedbackCompose.Settings) (feedbackModule.Capability, error) {
+	// A child whose mood capture is stopped (#3844) gets no rating stored.
+	stops, err := NewRoomHistoryStopReads(db)
+	if err != nil {
+		return nil, err
+	}
 	return feedbackCompose.New(feedbackCompose.Dependencies{
 		DB:       db.Pool(),
 		Settings: settings,
+		Stops:    stops,
 		Today:    feedbackModule.TodayOf(time.Now),
 		Observe: func(observation feedbackCompose.Observation) {
 			observability.ObserveFeedbackOperation(

@@ -622,6 +622,17 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/students/{id}/room-history-stop",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "RoomHistoryStopResponse"
+      }
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/students/{id}/status-days/{statusDayId}",
       "portals": [
         "tenant"
@@ -6325,6 +6336,17 @@
       "response": {
         "kind": "ref",
         "ref": "PrivacyConsentResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/students/{id}/room-history-stop",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "RoomHistoryStopResponse"
       }
     },
     {
@@ -20743,6 +20765,17 @@
       "response": {
         "kind": "ref",
         "ref": "PrivacyConsentResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/students/{id}/room-history-stop",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "RoomHistoryStopResponse"
       }
     },
     {
@@ -76899,6 +76932,37 @@
           "name": "name",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RoomHistoryStopResponse",
+      "go_type": "studentpresencehttp.RoomHistoryStopResponse",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "stopped",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "stopped_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "deleted_visits",
+          "schema": {
+            "kind": "int"
           }
         }
       ]

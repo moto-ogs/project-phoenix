@@ -193,6 +193,9 @@ const (
 type Settings interface {
 	GetPresenceMode(ctx context.Context) (string, error)
 	FeedbackEnabled(ctx context.Context) (bool, error)
+	// MoodCaptureStopped tells whether the child's mood capture is stopped
+	// (#3844); a stopped child gets no feedback prompt.
+	MoodCaptureStopped(ctx context.Context, studentID int64) (bool, error)
 	CapacityDetailsDisclosed(ctx context.Context, kind CapacityKind) (bool, error)
 	// DailyCheckoutTime is the raw "HH:MM" gate or empty when unset.
 	DailyCheckoutTime(ctx context.Context) (string, error)

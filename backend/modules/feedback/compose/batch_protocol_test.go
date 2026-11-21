@@ -28,7 +28,7 @@ func feedbackBatchModule(t *testing.T, db *bun.DB) feedback.Capability {
 	t.Helper()
 	settings, err := compose.NewBoundSettings(func(context.Context) (bool, error) { return true, nil }, func(context.Context) (int, error) { return 90, nil })
 	require.NoError(t, err)
-	module, err := compose.New(compose.Dependencies{DB: db, Settings: settings, Today: func() feedback.Date { return "2026-08-31" }, Observe: func(compose.Observation) {}})
+	module, err := compose.New(compose.Dependencies{DB: db, Settings: settings, Stops: noStops{}, Today: func() feedback.Date { return "2026-08-31" }, Observe: func(compose.Observation) {}})
 	require.NoError(t, err)
 	return module
 }

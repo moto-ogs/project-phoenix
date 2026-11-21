@@ -111,7 +111,10 @@ func (i *ActivityInstance) MarkCompleted(completedAt, reopenUntil time.Time, com
 }
 
 type CompletionAttendanceSnapshot struct {
-	RowID              int64      `json:"row_id"`
+	RowID int64 `json:"row_id"`
+	// StudentID lets a reopen leave out the attendance of a child it does
+	// not bring back (#3844); zero in a snapshot from before.
+	StudentID          int64      `json:"student_id,omitempty"`
 	Status             string     `json:"status"`
 	Substatus          *string    `json:"substatus,omitempty"`
 	Note               *string    `json:"note,omitempty"`
@@ -133,8 +136,12 @@ type CompletionSupervisorVersion struct {
 }
 
 type ActivityCompletionSnapshot struct {
-	ActiveGroupID      int64                                 `json:"active_group_id"`
-	VisitIDs           []int64                               `json:"visit_ids"`
+	ActiveGroupID int64   `json:"active_group_id"`
+	VisitIDs      []int64 `json:"visit_ids"`
+	// VisitStudentIDs names the child of each visit in VisitIDs. A reopen
+	// leaves out a child whose visit is gone since (#3844); a snapshot from
+	// before carries none and refuses such a reopen.
+	VisitStudentIDs    []int64                               `json:"visit_student_ids,omitempty"`
 	SupervisorVersions map[int64]CompletionSupervisorVersion `json:"supervisor_versions,omitempty"`
 	SupervisorIDs      []int64                               `json:"supervisor_ids"`
 	Attendance         []CompletionAttendanceSnapshot        `json:"attendance"`

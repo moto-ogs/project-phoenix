@@ -400,6 +400,7 @@ describe("traeger-holiday-registrations-api", () => {
     await changeHolidayRegistration("5", "7", "reopen");
     await rebookHolidayChild("5", "7", "9", [
       { weekId: "51", timeModelId: "61" },
+      { weekId: "9007199254740993", timeModelId: "9007199254740995" },
     ]);
 
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
@@ -411,7 +412,10 @@ describe("traeger-holiday-registrations-api", () => {
     );
     expect(fetchMock.mock.calls[1]?.[1]?.method).toBe("PUT");
     expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({
-      bookings: [{ week_id: "51", time_model_id: "61" }],
+      bookings: [
+        { week_id: "51", time_model_id: "61" },
+        { week_id: "9007199254740993", time_model_id: "9007199254740995" },
+      ],
     });
   });
 

@@ -22,6 +22,7 @@ type Observation struct {
 }
 
 type Store interface {
+	RoomHistoryStopStore
 	PrepareVisitWrites(context.Context, studentpresence.VisitWriteScope) (Stats, error)
 	SetSupervisionEnd(context.Context, int64, Date, time.Time) (int64, Stats, error)
 	EndOpenGroupSupervisions(context.Context, int64, int64, Date) (int, Stats, error)

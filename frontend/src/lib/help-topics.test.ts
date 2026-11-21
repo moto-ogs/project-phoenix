@@ -314,13 +314,17 @@ describe("getParentHelpTopicForPath", () => {
       id: HELP_TOPICS.studentSearch,
       group: "kinder",
     });
-    expect(caregiverTopics[9]?.instructionGroups).toHaveLength(6);
+    expect(caregiverTopics[9]?.instructionGroups).toHaveLength(7);
     expect(caregiverTopics[9]?.instructionGroups?.[3]).toMatchObject({
       title: "Ein Anwesenheitsprotokoll herunterladen",
       steps: expect.arrayContaining([
         "Möglich sind nur die sichtbaren Tage bis heute.",
         "Wähle das Format und danach `Herunterladen`.",
       ]),
+    });
+    expect(caregiverTopics[9]?.instructionGroups?.[4]).toMatchObject({
+      title: "Raumverlauf und Stimmung für ein Kind stoppen",
+      description: "Das kann nur die OGS-Verwaltung.",
     });
     expect(caregiverTopics[9]?.troubleshooting).toBe(
       HELP_TOPICS.missingChildOrGroup,

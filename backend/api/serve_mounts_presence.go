@@ -129,6 +129,10 @@ func newIoTResource(
 	if !ok {
 		return nil, errors.New("iot routes: the device fleet carries no device history")
 	}
+	moodStops, err := owners.NewRoomHistoryStopReads(db)
+	if err != nil {
+		return nil, err
+	}
 	deviceScan := scanBindings.New(devicescanCompose.Dependencies{Principal: DeviceScanPrincipal,
 		Fleet:      iot.Fleet(),
 		Presence:   presence,
@@ -142,7 +146,7 @@ func newIoTResource(
 		// A destination chosen at the kiosk runs the phone's open-room
 		// move (#3067).
 		OpenRooms: newDeviceOpenRoomMover(openRoomMove),
-		Settings:  newDeviceScanSettings(settings),
+		Settings:  newDeviceScanSettings(settings, moodStops),
 		Logger:    logger.With("service", "device-scan"), Now: now,
 	})
 	return iotAPI.NewResource(iotAPI.ServiceDependencies{

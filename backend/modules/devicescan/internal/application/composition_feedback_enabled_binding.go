@@ -17,6 +17,9 @@ type ScanSettings interface {
 	PerStudentCheckoutEnabled(ctx context.Context) (bool, error)
 	PerStudentCheckoutDeltaMinutes(ctx context.Context) (int, error)
 	DailyCheckoutFromAllRoomsEnabled(ctx context.Context) (bool, error)
+	// MoodCaptureStopped tells whether a child's mood capture is stopped
+	// (#3844); the root binds it to Student Presence's per-child stop.
+	MoodCaptureStopped(ctx context.Context, studentID int64) (bool, error)
 }
 
 func FeedbackEnabledBinding(ctx context.Context, source ScanSettings) (bool, error) {
@@ -25,6 +28,7 @@ func FeedbackEnabledBinding(ctx context.Context, source ScanSettings) (bool, err
 	}
 	return source.FeedbackEnabled(ctx)
 }
+
 func CapacityDetailsDisclosedBinding(ctx context.Context, source ScanSettings, kind ports.CapacityKind) (bool, error) {
 	if source == nil {
 		return false, ErrSettingsNotConfigured

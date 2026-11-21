@@ -21,7 +21,7 @@ func TestCheckoutTimeUsesResolvedSettingWithoutFallback(t *testing.T) {
 	for _, value := range []string{"", "15:00", "00:00"} {
 		t.Run(value, func(t *testing.T) {
 			t.Parallel()
-			resolved, err := (settings{settings: checkoutSettingsResolver{value: value}}).DailyCheckoutTime(context.Background())
+			resolved, err := (settings{ScanSettings: checkoutSettingsResolver{value: value}}).DailyCheckoutTime(context.Background())
 			if err != nil || resolved != value {
 				t.Fatalf("resolved checkout time = %q, %v; want %q unchanged", resolved, err, value)
 			}
@@ -32,7 +32,7 @@ func TestCheckoutTimeUsesResolvedSettingWithoutFallback(t *testing.T) {
 func TestCheckoutTimeDoesNotHideResolutionFailure(t *testing.T) {
 	t.Parallel()
 	failure := errors.New("settings unavailable")
-	value, err := (settings{settings: checkoutSettingsResolver{err: failure}}).DailyCheckoutTime(context.Background())
+	value, err := (settings{ScanSettings: checkoutSettingsResolver{err: failure}}).DailyCheckoutTime(context.Background())
 	if value != "" || !errors.Is(err, failure) {
 		t.Fatalf("resolution failure lost: value=%q err=%v", value, err)
 	}
