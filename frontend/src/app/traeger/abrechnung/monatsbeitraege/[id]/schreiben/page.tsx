@@ -55,6 +55,7 @@ import {
   startCareRun,
 } from "~/lib/traeger-care-billing-api";
 import { traegerPath } from "~/lib/traeger-url";
+import { labelOf } from "~/lib/label-of";
 
 const logger = createLogger({ component: "TraegerCareRunLettersPage" });
 
@@ -315,8 +316,8 @@ export default function TraegerCareRunLettersPage() {
         <>
           {run ? (
             <StatusBadge
-              label={CARE_RUN_STATUS_LABELS[run.status]}
-              tone={CARE_RUN_STATUS_TONES[run.status]}
+              label={labelOf(CARE_RUN_STATUS_LABELS, run.status, "–")}
+              tone={labelOf(CARE_RUN_STATUS_TONES, run.status, "gray")}
             />
           ) : null}
         </>

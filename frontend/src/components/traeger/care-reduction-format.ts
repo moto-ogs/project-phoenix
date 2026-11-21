@@ -51,15 +51,18 @@ export function ruleEffect(
 
 /** The line under a reduction on the invoice. */
 export function reductionExplanation(reduction: CareReduction): string {
-  switch (reduction.kind) {
+  const { kind } = reduction;
+  if (kind === undefined) return reduction.name;
+  const known = { ...reduction, kind };
+  switch (kind) {
     case "sibling":
-      return `${reduction.childRank ?? "?"}. Kind von ${reduction.familyChildren ?? "?"} · ${ruleEffect(reduction)} · zuerst zählt das Kind mit dem höchsten Beitrag`;
+      return `${reduction.childRank ?? "?"}. Kind von ${reduction.familyChildren ?? "?"} · ${ruleEffect(known)} · zuerst zählt das Kind mit dem höchsten Beitrag`;
     case "cap":
       return `Höchstbetrag ${formatEuro(reduction.capCents ?? 0)} je Familie und Monat erreicht`;
     case "income_level":
-      return `Einkommensstufe · ${ruleEffect(reduction)}`;
+      return `Einkommensstufe · ${ruleEffect(known)}`;
     case "single_parent":
-      return `Alleinerziehend · ${ruleEffect(reduction)}`;
+      return `Alleinerziehend · ${ruleEffect(known)}`;
   }
 }
 

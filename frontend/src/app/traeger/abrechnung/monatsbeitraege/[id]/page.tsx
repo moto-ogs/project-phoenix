@@ -86,6 +86,7 @@ import { traegerPath } from "~/lib/traeger-url";
 import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { EmptyRunCard } from "~/components/traeger/empty-run-card";
+import { labelOf } from "~/lib/label-of";
 
 const logger = createLogger({ component: "TraegerCareRunPage" });
 
@@ -451,8 +452,8 @@ export default function TraegerCareRunPage() {
         <>
           {run ? (
             <StatusBadge
-              label={CARE_RUN_STATUS_LABELS[run.status]}
-              tone={CARE_RUN_STATUS_TONES[run.status]}
+              label={labelOf(CARE_RUN_STATUS_LABELS, run.status, "–")}
+              tone={labelOf(CARE_RUN_STATUS_TONES, run.status, "gray")}
             />
           ) : null}
           {empty ? (
