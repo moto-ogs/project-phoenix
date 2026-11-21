@@ -137,7 +137,7 @@ func TestCareNoticeRunIssuesTheYearAndNoMonthlyRunBillsItAgain(t *testing.T) {
 	preview := f.noticeRun(t, int64(run.ID))
 	require.Len(t, preview.Notices, 1)
 	notice := preview.Notices[0]
-	assert.Equal(t, contract, notice.ContractID)
+	assert.Equal(t, contract, int64(notice.ContractID))
 	assert.Equal(t, "initial", notice.Kind)
 	assert.Empty(t, notice.Number, "a draft has no number")
 	assert.Equal(t, int64(4*7750), notice.TotalCents)
@@ -470,7 +470,7 @@ func TestCareNoticeAllowsMealOnlyInvoicesWithoutBillingCareAgain(t *testing.T) {
 	releaseMealMonth(t, f.db, f.office.organization, school, student, "2030-09-01", "Mia", 3)
 	run := f.run(t, int64(f.startRun(t, "2030-10-01").ID))
 	require.Len(t, run.Invoices, 1, "the notice covers care, not meals")
-	assert.Equal(t, contract, run.Invoices[0].ContractID)
+	assert.Equal(t, contract, int64(run.Invoices[0].ContractID))
 	assert.Equal(t, int64(1440), run.PreviewCents, "care must not be billed again")
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(run))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

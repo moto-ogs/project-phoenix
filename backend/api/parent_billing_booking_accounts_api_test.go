@@ -61,7 +61,7 @@ func TestBookingAccountsAreFrozenOntoTheIssuedPositions(t *testing.T) {
 	page := bookingAccountsOf(t, f)
 	require.NotEmpty(t, page.Offerings, "the Angebote of the prices")
 	offering := page.Offerings[0]
-	assert.Equal(t, f.office.schools[0], offering.SchoolID)
+	assert.Equal(t, f.office.schools[0], int64(offering.SchoolID))
 
 	put := func(scope string, scopeID int64, account string) int {
 		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, bookingAccountsPath+"/revenue-accounts",

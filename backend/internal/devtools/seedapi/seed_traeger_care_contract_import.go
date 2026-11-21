@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -55,7 +54,7 @@ func seedImportedCareContracts(client *Client, auth AuthRef, school int64) (int,
 	}
 	var templates struct {
 		Data []struct {
-			SchoolID     demoprofile.ID  `json:"school_id"`
+			SchoolID     apiID           `json:"school_id"`
 			SchoolName   string          `json:"school_name"`
 			OfferingName string          `json:"offering_name"`
 			Active       bool            `json:"active"`

@@ -115,7 +115,7 @@ func TestTraegerMemberNameNeedsTheAccountsRightAndAnActiveMember(t *testing.T) {
 		AccountID wireID `json:"account_id"`
 		Name      string `json:"name"`
 	}](t, rec.Body.Bytes())
-	assert.Equal(t, billing.ID, member.AccountID)
+	assert.Equal(t, billing.ID, int64(member.AccountID))
 	assert.Equal(t, "Tobias Engel", member.Name)
 	assert.Equal(t, "Tobias Engel", traegerMemberName(t, traegerBueroList(t, router, admin.AccessToken), billing.ID))
 

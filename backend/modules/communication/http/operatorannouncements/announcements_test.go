@@ -413,7 +413,7 @@ func TestGetAnnouncement_ResponseIncludesTargetingFields(t *testing.T) {
 	var response map[string]any
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
 	data := response["data"].(map[string]any)
-	assert.Equal(t, int64(3), testpkg.JSONID(t, data["target_org_ids"].([]any)[0]))
+	assert.Equal(t, []int64{3}, testpkg.JSONIDs(t, data["target_org_ids"]))
 	tenantIDs := data["target_tenant_ids"].([]any)
 	assert.Len(t, tenantIDs, 2)
 	assert.Equal(t, float64(7), tenantIDs[0])

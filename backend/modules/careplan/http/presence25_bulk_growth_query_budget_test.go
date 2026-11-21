@@ -45,7 +45,7 @@ func TestPresence25BulkGrowthQueryBudget(t *testing.T) {
 					StudentIDs []testpkg.ID `json:"student_ids"`
 				}
 				require.NoError(t, json.Unmarshal(envelope.Data, &result))
-				require.Equal(t, ids, result.StudentIDs)
+				require.Equal(t, ids, testpkg.IDs(result.StudentIDs))
 				t.Logf("presence25 POST %s N%d: %d full-route statements", route.path, n, counter.Total())
 				assertPresence25BulkBudget(t, route.name, n, counter.Measurement(counter.Queries()))
 			}

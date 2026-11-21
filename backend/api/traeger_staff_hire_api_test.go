@@ -107,7 +107,7 @@ func TestTraegerStaffHireCreatesRecordContractAndEmployments(t *testing.T) {
 			assert.Equal(t, new("2026-12-01"), person.EntryDate)
 		}
 		for _, employment := range record.Employments {
-			assert.Equal(t, staffIDs[int64(employment.SchoolID)], employment.StaffID)
+			assert.Equal(t, staffIDs[int64(employment.SchoolID)], int64(employment.StaffID))
 			assert.True(t, employment.Active)
 		}
 

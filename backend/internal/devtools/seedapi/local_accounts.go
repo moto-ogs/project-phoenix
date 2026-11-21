@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"net"
 	"net/url"
-
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 func localSeedAccountsEnabled(baseURL string, options SeedOptions) bool {
@@ -30,7 +28,7 @@ func registerSeedStaffAccount(rt *Runtime, body map[string]any) (AccountCredenti
 	}
 	var account struct {
 		Data struct {
-			ID             demoprofile.ID `json:"id"`
+			ID             apiID `json:"id"`
 			SchoolIdentity *struct {
 				StaffID int64 `json:"staff_id,string"`
 			} `json:"school_identity"`

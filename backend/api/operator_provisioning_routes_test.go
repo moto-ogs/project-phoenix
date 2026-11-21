@@ -203,7 +203,7 @@ func TestOperatorRoutesRotateAndTransferADevice(t *testing.T) {
 
 	var moved operatorRouteDevice
 	f.call(t, http.MethodPost, fmt.Sprintf("/operator/devices/%d/transfer", created.ID), map[string]int64{"target_school_id": target.ID}, &moved)
-	assert.Equal(t, target.ID, moved.SchoolID)
+	assert.Equal(t, target.ID, int64(moved.SchoolID))
 	var tenantID int64
 	require.NoError(t, f.db.NewSelect().TableExpr("iot.devices").Column("tenant_id").Where("id = ?", moved.ID).Scan(testpkg.Ctx(t), &tenantID))
 	assert.Equal(t, target.ID, tenantID, "the moved device belongs to the target school")
@@ -251,7 +251,7 @@ func TestOperatorRoutesBlockAndUnblockADevice(t *testing.T) {
 	}
 	f.call(t, http.MethodGet, fmt.Sprintf("/operator/schools/%d/devices", schoolID), nil, &fleet)
 	for _, row := range fleet {
-		assert.NotEqual(t, device.ID, row.ID, "the removed device is no longer listed")
+		assert.NotEqual(t, device.ID, int64(row.ID), "the removed device is no longer listed")
 	}
 }
 
@@ -283,7 +283,7 @@ func TestOperatorRoutesReadAndRenameTheProfileAndListCaterers(t *testing.T) {
 		DisplayName string `json:"display_name"`
 	}
 	f.call(t, http.MethodGet, "/operator/profile", nil, &profile)
-	assert.Equal(t, operator.ID, profile.ID)
+	assert.Equal(t, operator.ID, int64(profile.ID))
 	assert.Equal(t, operator.Email, profile.Email)
 
 	f.call(t, http.MethodPut, "/operator/profile", map[string]string{"display_name": "Route Betrieb"}, &profile)
@@ -344,7 +344,7 @@ func TestOperatorRoutesPublishAnAnnouncementAndReadItsViews(t *testing.T) {
 		SeenCount      int    `json:"seen_count"`
 	}
 	f.call(t, http.MethodGet, base+"/stats", nil, &stats)
-	assert.Equal(t, announcement.ID, stats.AnnouncementID)
+	assert.Equal(t, announcement.ID, int64(stats.AnnouncementID))
 	assert.Equal(t, 1, stats.SeenCount)
 	var views []struct {
 		UserID   wireID  `json:"user_id"`
@@ -353,7 +353,7 @@ func TestOperatorRoutesPublishAnAnnouncementAndReadItsViews(t *testing.T) {
 	}
 	f.call(t, http.MethodGet, base+"/views", nil, &views)
 	require.Len(t, views, 1)
-	assert.Equal(t, viewer.ID, views[0].UserID)
+	assert.Equal(t, viewer.ID, int64(views[0].UserID))
 	assert.Equal(t, "Route Leserin", views[0].UserName)
 	assert.NotNil(t, views[0].ShownAt)
 }
@@ -396,7 +396,7 @@ func TestOperatorRoutesListUnregisteredTagScansOfATraeger(t *testing.T) {
 	tags := func(scans []scan) []string {
 		var out []string
 		for _, s := range scans {
-			assert.Equal(t, schoolID, s.SchoolID)
+			assert.Equal(t, schoolID, int64(s.SchoolID))
 			assert.NotEmpty(t, s.SchoolName)
 			out = append(out, s.TagUID)
 		}

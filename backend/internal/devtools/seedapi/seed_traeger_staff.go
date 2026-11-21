@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"time"
-
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 // seedTraegerStaffStep seeds the Personalstamm of the demo Träger (#4705)
@@ -131,11 +129,11 @@ func seedTraegerStaffRelease(rt *Runtime) error {
 }
 
 type seedTraegerStaffSuggestion struct {
-	Reason   string          `json:"reason"`
-	RecordID *demoprofile.ID `json:"staff_record_id"`
+	Reason   string `json:"reason"`
+	RecordID *apiID `json:"staff_record_id"`
 	Members  []struct {
-		SchoolID demoprofile.ID `json:"school_id"`
-		StaffID  demoprofile.ID `json:"staff_id"`
+		SchoolID apiID `json:"school_id"`
+		StaffID  apiID `json:"staff_id"`
 	} `json:"members"`
 }
 
@@ -227,7 +225,7 @@ func seedTraegerStaffLink(client *Client, auth AuthRef, suggestion seedTraegerSt
 	}
 	var record struct {
 		Data struct {
-			ID demoprofile.ID `json:"id"`
+			ID apiID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &record); err != nil || record.Data.ID == 0 {

@@ -210,7 +210,7 @@ func (f holidayHostFixture) accessLog(t *testing.T, schoolID int64) []string {
 		Scan(t.Context(), &rows))
 	entries := make([]string, len(rows))
 	for i, row := range rows {
-		assert.Equal(t, f.offer.Weeks[0].ID, row.WeekID)
+		assert.Equal(t, int64(f.offer.Weeks[0].ID), row.WeekID)
 		entries[i] = row.ResourceType + ":" + row.Format + ":" + row.Participants
 	}
 	return entries

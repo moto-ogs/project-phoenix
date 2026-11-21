@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -103,7 +102,7 @@ func postAccidentReport(rt *Runtime, path string, body map[string]any) (int64, e
 	}
 	var envelope struct {
 		Data struct {
-			ID demoprofile.ID `json:"id"`
+			ID apiID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil || envelope.Data.ID <= 0 {

@@ -1093,7 +1093,7 @@ func TestListStudents_GroupAndCombinedFilters(t *testing.T) {
 		}
 		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
 		require.Len(t, resp.Data, 1)
-		assert.Equal(t, matching.ID, resp.Data[0].ID)
+		assert.Equal(t, matching.ID, int64(resp.Data[0].ID))
 		assert.Equal(t, "FGC1", resp.Data[0].SchoolClass)
 	})
 
@@ -1219,7 +1219,7 @@ func TestListStudents_AlumniHidden(t *testing.T) {
 		}
 		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
 		for _, s := range resp.Data {
-			assert.NotEqual(t, hidden.ID, s.ID, "alumnus must not be searchable")
+			assert.NotEqual(t, hidden.ID, int64(s.ID), "alumnus must not be searchable")
 		}
 	})
 

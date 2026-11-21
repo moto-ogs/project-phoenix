@@ -263,7 +263,7 @@ func TestTraegerAccountsStayInsideTheTraegerOfTheSession(t *testing.T) {
 
 	buero := traegerBueroList(t, router, admin.AccessToken)
 	require.Len(t, buero.Members, 1)
-	assert.NotEqual(t, foreignMember.ID, buero.Members[0].AccountID, "no Träger sees the people of another Träger")
+	assert.NotEqual(t, foreignMember.ID, int64(buero.Members[0].AccountID), "no Träger sees the people of another Träger")
 	assert.Empty(t, buero.Invitations)
 
 	rec := traegerCall(t, router, http.MethodPut, fmt.Sprintf("/traeger/accounts/%d/roles", foreignMember.ID), admin.AccessToken, map[string]any{"roles": []string{identityaccess.TraegerRoleReadOnly}})

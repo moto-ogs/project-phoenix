@@ -19,6 +19,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 type cancelledContributionBody struct {
@@ -65,7 +66,7 @@ func TestCancellationComputesTheRestOfTheSiblingGroupAgain(t *testing.T) {
 		ID     wireID `json:"id"`
 		Status string `json:"status"`
 	}](t, rec.Body.Bytes())
-	assert.Equal(t, first, cancelled.ID)
+	assert.Equal(t, first, int64(cancelled.ID))
 	assert.Equal(t, "cancelled", cancelled.Status)
 
 	assert.Equal(t, []int64{4500, 2250, 4500}, f.contributionVersions(t, second),
@@ -100,7 +101,7 @@ func TestCancellationKeepsTheRestOfALargerGroupTogether(t *testing.T) {
 
 	groups := f.siblingGroups(t)
 	require.Len(t, groups, 1)
-	assert.Equal(t, []int64{second, third}, groups[0].RegistrationIDs)
+	assert.Equal(t, []int64{second, third}, testpkg.IDs(groups[0].RegistrationIDs))
 	assert.Equal(t, int64(4500), f.cancelledContribution(t, second).TotalCents, "the second child moves up to the first")
 	assert.Equal(t, int64(2250), f.cancelledContribution(t, third).TotalCents)
 	action, siblings := f.lastHistory(t, first)

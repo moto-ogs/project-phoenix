@@ -190,7 +190,7 @@ func TestCareContractDraftFromTheAcceptedApplicationIsSentWithItsFrozenPDF(t *te
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	candidates := decodeSchoolPortalData[[]careContractCandidateBody](t, rec.Body.Bytes())
 	require.Len(t, candidates, 1)
-	assert.Equal(t, f.child, candidates[0].RequestChildID)
+	assert.Equal(t, f.child, int64(candidates[0].RequestChildID))
 	assert.Equal(t, []careContractServiceBody{
 		{Weekday: "mon", CareOfferingID: wireID(f.offering), ModuleName: "Offene Ganztagsschule", EndsAt: "14:00"},
 		{Weekday: "tue", CareOfferingID: wireID(f.offering), ModuleName: "Offene Ganztagsschule", EndsAt: "16:30"},

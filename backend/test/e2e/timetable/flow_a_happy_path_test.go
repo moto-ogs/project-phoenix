@@ -166,7 +166,7 @@ func TestFlowA_PlanToReport(t *testing.T) {
 		decodeResponse(t, rr, &dayResp)
 		require.Len(t, dayResp.Instances, 1, "student %d day: exactly one instance", studentID)
 		entry := dayResp.Instances[0]
-		assert.Equal(t, instance.ID, entry.ID)
+		assert.Equal(t, instance.ID, int64(entry.ID))
 		assert.Equal(t, testpkg.ScheduleInstanceStatusCompleted, entry.Status)
 		assert.False(t, entry.Attendance.IsUnplanned)
 

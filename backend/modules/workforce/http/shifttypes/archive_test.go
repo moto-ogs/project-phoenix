@@ -82,7 +82,7 @@ func TestShiftTypeRemovalArchivesUsedTypes(t *testing.T) {
 
 	withUsage := list("?with_usage=true")
 	require.Len(t, withUsage, 2)
-	require.Equal(t, used.ID, withUsage[0].ID)
+	require.Equal(t, used.ID, int64(withUsage[0].ID))
 	require.NotNil(t, withUsage[0].Usage)
 	assert.Equal(t, 1, withUsage[0].Usage.Shifts)
 	require.NotNil(t, withUsage[1].Usage)
@@ -99,7 +99,7 @@ func TestShiftTypeRemovalArchivesUsedTypes(t *testing.T) {
 	assert.Empty(t, list(""), "the choice hides the archived type and the deleted one is gone")
 	all := list("?include_archived=true")
 	require.Len(t, all, 1)
-	assert.Equal(t, used.ID, all[0].ID)
+	assert.Equal(t, used.ID, int64(all[0].ID))
 	assert.NotNil(t, all[0].ArchivedAt)
 }
 
@@ -128,7 +128,7 @@ func TestShiftTypeUpdateAnswersTheStoredType(t *testing.T) {
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(response.Body.Bytes(), &envelope))
-	assert.Equal(t, created.ID, envelope.Data.ID)
+	assert.Equal(t, created.ID, int64(envelope.Data.ID))
 	assert.Equal(t, "Spätdienst", envelope.Data.Name)
 	assert.Equal(t, "#5080D8", envelope.Data.Color)
 	assert.True(t, envelope.Data.IsActive, "an update without is_active keeps the type active")

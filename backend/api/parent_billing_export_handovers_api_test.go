@@ -178,7 +178,7 @@ func TestFinanceExportHandoverOfARun(t *testing.T) {
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, recipientPath(recipient), renamed)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	saved := decodeSchoolPortalData[recipientBody](t, rec.Body.Bytes())
-	assert.Equal(t, recipient, saved.ID)
+	assert.Equal(t, recipient, int64(saved.ID))
 	assert.Equal(t, "Kämmerei Nord", saved.Name)
 	assert.True(t, saved.Ready, "a saved recipient with its password stays ready")
 

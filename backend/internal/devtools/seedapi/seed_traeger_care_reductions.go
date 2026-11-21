@@ -7,7 +7,6 @@ import (
 	"maps"
 	"slices"
 
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -31,23 +30,23 @@ func seedConflictCode(err error, code string) bool {
 }
 
 type seedCareRule struct {
-	ID         demoprofile.ID   `json:"id"`
-	Kind       string           `json:"kind"`
-	ValidUntil *calendar.Date   `json:"valid_until"`
-	SchoolIDs  []demoprofile.ID `json:"school_ids"`
+	ID         apiID          `json:"id"`
+	Kind       string         `json:"kind"`
+	ValidUntil *calendar.Date `json:"valid_until"`
+	SchoolIDs  []apiID        `json:"school_ids"`
 }
 
 type seedCareRuleSet struct {
 	Rules   []seedCareRule `json:"rules"`
 	Schools []struct {
-		ID demoprofile.ID `json:"id"`
+		ID apiID `json:"id"`
 	} `json:"schools"`
 }
 
 type seedCareEvidenceSet struct {
 	Contracts []struct {
-		ContractID demoprofile.ID    `json:"contract_id"`
-		SchoolID   demoprofile.ID    `json:"school_id"`
+		ContractID apiID             `json:"contract_id"`
+		SchoolID   apiID             `json:"school_id"`
 		Evidences  []json.RawMessage `json:"evidences"`
 	} `json:"contracts"`
 	Levels []seedCareRule `json:"levels"`
@@ -169,7 +168,7 @@ func seedCareKindKept(rules []seedCareRule, kind string) bool {
 // in month or later.
 func seedCareRuleCovers(rules []seedCareRule, kind string, schoolID int64, month calendar.Date) bool {
 	return slices.ContainsFunc(rules, func(rule seedCareRule) bool {
-		return rule.Kind == kind && slices.Contains(rule.SchoolIDs, demoprofile.ID(schoolID)) && (rule.ValidUntil == nil || !rule.ValidUntil.Before(month))
+		return rule.Kind == kind && slices.Contains(rule.SchoolIDs, apiID(schoolID)) && (rule.ValidUntil == nil || !rule.ValidUntil.Before(month))
 	})
 }
 

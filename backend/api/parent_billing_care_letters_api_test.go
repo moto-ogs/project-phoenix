@@ -306,14 +306,14 @@ func TestCareInvoiceCancelledBeforeTheSendReachesNoFamilyAndIsIssuedAgain(t *tes
 	next := f.startRun(t, careMonth)
 	preview := f.run(t, int64(next.ID))
 	require.Len(t, preview.Invoices, 1)
-	assert.Equal(t, contracts["Mia"], preview.Invoices[0].ContractID)
+	assert.Equal(t, contracts["Mia"], int64(preview.Invoices[0].ContractID))
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(next.ID), "/release"), careRelease(preview))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	reissued := decodeSchoolPortalData[careRunBody](t, rec.Body.Bytes()).Invoices[0]
 	var replaces int64
 	require.NoError(t, f.db.NewRaw(`SELECT replaces_invoice_id FROM parent_billing.care_invoices WHERE id = ?`, reissued.ID).
 		Scan(context.Background(), &replaces))
-	assert.Equal(t, mia.ID, replaces)
+	assert.Equal(t, int64(mia.ID), replaces)
 	assert.True(t, careLetterOf(careLetters(t, f, int64(run.ID)), mia, "cancellation").Replaced, "the old run must stop offering reissue after release")
 	assert.Empty(t, f.run(t, int64(f.startRun(t, careMonth).ID)).Invoices, "the new invoice bills the contract again, once")
 }

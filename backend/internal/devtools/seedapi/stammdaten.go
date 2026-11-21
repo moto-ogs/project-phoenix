@@ -7,8 +7,6 @@ import (
 	"net/url"
 	"sort"
 	"time"
-
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 // StaffCredentials stores login credentials for a staff member
@@ -431,7 +429,7 @@ func (s *FixedSeeder) seedRooms(_ context.Context, result *FixedResult) error {
 		var resp struct {
 			Status string `json:"status"`
 			Data   struct {
-				ID demoprofile.ID `json:"id"`
+				ID apiID `json:"id"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -486,8 +484,8 @@ func (s *FixedSeeder) seedStaff(_ context.Context, result *FixedResult) error {
 		var resp struct {
 			Status string `json:"status"`
 			Data   struct {
-				ID        json.Number    `json:"id"`
-				TeacherID demoprofile.ID `json:"teacher_id,omitempty"`
+				ID        json.Number `json:"id"`
+				TeacherID apiID       `json:"teacher_id,omitempty"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -587,7 +585,7 @@ func (s *FixedSeeder) seedGroups(_ context.Context, result *FixedResult) error {
 		var resp struct {
 			Status string `json:"status"`
 			Data   struct {
-				ID demoprofile.ID `json:"id"`
+				ID apiID `json:"id"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -706,7 +704,7 @@ func (s *FixedSeeder) seedStudents(_ context.Context, result *FixedResult) error
 		var resp struct {
 			Status string `json:"status"`
 			Data   struct {
-				ID demoprofile.ID `json:"id"`
+				ID apiID `json:"id"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -792,7 +790,7 @@ func (s *FixedSeeder) getCheckedInStudentIDs() (map[int64]bool, error) {
 	var resp struct {
 		Status string `json:"status"`
 		Data   []struct {
-			StudentID demoprofile.ID `json:"student_id"`
+			StudentID apiID `json:"student_id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -865,7 +863,7 @@ func (s *FixedSeeder) createDemoGuardian(index int, guardian DemoGuardian) (int6
 	}
 	var resp struct {
 		Data struct {
-			ID demoprofile.ID `json:"id"`
+			ID apiID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -1110,8 +1108,8 @@ func (s *FixedSeeder) fetchCategories(_ context.Context) error {
 	var resp struct {
 		Status string `json:"status"`
 		Data   []struct {
-			ID   demoprofile.ID `json:"id"`
-			Name string         `json:"name"`
+			ID   apiID  `json:"id"`
+			Name string `json:"name"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -1182,7 +1180,7 @@ func (s *FixedSeeder) seedActivities(_ context.Context, result *FixedResult) err
 		var resp struct {
 			Status string `json:"status"`
 			Data   struct {
-				ID demoprofile.ID `json:"id"`
+				ID apiID `json:"id"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -1286,8 +1284,8 @@ func (s *FixedSeeder) seedDevices(_ context.Context, result *FixedResult) error 
 		var resp struct {
 			Status string `json:"status"`
 			Data   struct {
-				ID     demoprofile.ID `json:"id"`
-				APIKey string         `json:"api_key"`
+				ID     apiID  `json:"id"`
+				APIKey string `json:"api_key"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -1423,7 +1421,7 @@ func (s *FixedSeeder) seedStaffAccounts(ctx context.Context, result *FixedResult
 		var account struct {
 			Status string `json:"status"`
 			Data   struct {
-				ID demoprofile.ID `json:"id"`
+				ID apiID `json:"id"`
 				// int64 ids travel as JSON strings on this field.
 				SchoolIdentity *struct {
 					PersonID int64 `json:"person_id,string"`

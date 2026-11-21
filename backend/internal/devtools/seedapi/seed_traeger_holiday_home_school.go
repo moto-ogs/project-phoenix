@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -107,9 +106,9 @@ func seedHomeSchoolPeriod(client *Client, auth AuthRef, today calendar.Date, hos
 		Data struct {
 			PublicToken string `json:"public_token"`
 			Weeks       []struct {
-				ID         demoprofile.ID `json:"id"`
+				ID         apiID `json:"id"`
 				TimeModels []struct {
-					ID demoprofile.ID `json:"id"`
+					ID apiID `json:"id"`
 				} `json:"time_models"`
 			} `json:"weeks"`
 		} `json:"data"`
@@ -173,7 +172,7 @@ func seedHomeSchoolStudent(rt *Runtime) error {
 		return fmt.Errorf("read the demo school's children at other schools: %w", err)
 	}
 	type booking struct {
-		StudentID *demoprofile.ID `json:"student_id"`
+		StudentID *apiID `json:"student_id"`
 	}
 	var envelope struct {
 		Data []booking `json:"data"`

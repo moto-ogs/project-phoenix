@@ -71,7 +71,7 @@ func TestTraegerPlansClosingDaysAndSeesEachSchoolsFederalState(t *testing.T) {
 
 	view := traegerCalendarOf(t, router, office)
 	require.Len(t, view.ClosingDays, 1)
-	assert.Equal(t, []int64{office.schools[0]}, view.ClosingDays[0].SchoolIDs)
+	assert.Equal(t, []int64{office.schools[0]}, testpkg.IDs(view.ClosingDays[0].SchoolIDs))
 	require.Len(t, view.Schools, 2)
 	for _, school := range view.Schools {
 		assert.Equal(t, "DE-NW", school.FederalState.Code, "the federal state the moto team set, read only")
@@ -87,7 +87,7 @@ func TestTraegerPlansClosingDaysAndSeesEachSchoolsFederalState(t *testing.T) {
 	created.EndDate = "2027-05-08"
 	rec = traegerJSON(t, router, office.token, http.MethodPut, traegerClosingDayPath(int64(created.ID)), created)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.ElementsMatch(t, office.schools, traegerCalendarOf(t, router, office).ClosingDays[0].SchoolIDs)
+	assert.ElementsMatch(t, office.schools, testpkg.IDs(traegerCalendarOf(t, router, office).ClosingDays[0].SchoolIDs))
 
 	// The list as a file, for the window of the page (#4718).
 	exportPath := "/traeger/closing-days/export?from=2027-01-01&to=2027-12-31"
@@ -136,7 +136,7 @@ func TestTraegerClosingDaysNeedTheSettingsRightAndStayWithTheirTraeger(t *testin
 	view := traegerCalendarOf(t, router, other)
 	assert.Empty(t, view.ClosingDays)
 	for _, school := range view.Schools {
-		assert.NotContains(t, own.schools, school.ID, "another Träger's schools stay hidden")
+		assert.NotContains(t, own.schools, int64(school.ID), "another Träger's schools stay hidden")
 	}
 	rec = traegerJSON(t, router, other.token, http.MethodPost, "/traeger/closing-days/", traegerClosingDayBody{
 		StartDate: "2027-05-07", EndDate: "2027-05-07", Reason: "Fremd", SchoolIDs: testpkg.IDsOf[wireID](own.schools),

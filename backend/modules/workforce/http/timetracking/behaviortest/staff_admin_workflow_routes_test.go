@@ -77,7 +77,7 @@ func TestAbsenceDecisionsAnswerWithTheDecidedAbsence(t *testing.T) {
 		ID     testpkg.ID `json:"id"`
 		Status string     `json:"status"`
 	}](t, rec)
-	assert.Equal(t, approved, answer.ID)
+	assert.Equal(t, approved, int64(answer.ID))
 	assert.Equal(t, absenceStatusApprovd, answer.Status)
 	assert.Equal(t, absenceStatusApprovd, w.absenceStatus(t, approved))
 
@@ -87,7 +87,7 @@ func TestAbsenceDecisionsAnswerWithTheDecidedAbsence(t *testing.T) {
 		ID           testpkg.ID `json:"id"`
 		DecisionNote string     `json:"decision_note"`
 	}](t, rec)
-	assert.Equal(t, declined, denied.ID)
+	assert.Equal(t, declined, int64(denied.ID))
 	assert.Equal(t, "Zu knapp besetzt", denied.DecisionNote)
 	assert.NotEqual(t, absenceStatusReqd, w.absenceStatus(t, declined))
 }
@@ -107,7 +107,7 @@ func TestTakeoverRoutesBookAndRemoveTheOpenings(t *testing.T) {
 		Year      int        `json:"year"`
 		Remaining float64    `json:"entered_remaining_days"`
 	}](t, rec)
-	assert.Equal(t, subject.ID, opening.StaffID)
+	assert.Equal(t, subject.ID, int64(opening.StaffID))
 	assert.Equal(t, 2026, opening.Year)
 	assert.InDelta(t, 12, opening.Remaining, 0.001)
 
@@ -123,7 +123,7 @@ func TestTakeoverRoutesBookAndRemoveTheOpenings(t *testing.T) {
 		Type    string     `json:"type"`
 		Delta   int        `json:"minutes_delta"`
 	}](t, rec)
-	assert.Equal(t, subject.ID, balance.StaffID)
+	assert.Equal(t, subject.ID, int64(balance.StaffID))
 	assert.Equal(t, "opening", balance.Type)
 	assert.Equal(t, 90, balance.Delta)
 }

@@ -65,7 +65,7 @@ func TestFlowI_StaffPoolAndAtomicMove(t *testing.T) {
 		categories[int64(e.StaffID)] = e.Category
 		if int64(e.StaffID) == mover.ID {
 			require.Len(t, e.Assignments, 1)
-			assert.Equal(t, schulhof.ID, e.Assignments[0].InstanceID)
+			assert.Equal(t, schulhof.ID, int64(e.Assignments[0].InstanceID))
 			assert.Equal(t, "Schulhof", e.Assignments[0].Title)
 		}
 	}
@@ -83,7 +83,7 @@ func TestFlowI_StaffPoolAndAtomicMove(t *testing.T) {
 	}
 	decodeResponse(t, rr, &moved)
 	assert.Equal(t, "moved", moved.Action)
-	assert.Equal(t, mensa.ID, moved.TargetInstanceID)
+	assert.Equal(t, mensa.ID, int64(moved.TargetInstanceID))
 
 	var rows []*testpkg.InstanceStaff
 	require.NoError(t, s.db.NewSelect().Model(&rows).
@@ -106,7 +106,7 @@ func TestFlowI_StaffPoolAndAtomicMove(t *testing.T) {
 	require.Len(t, history.Events, 1, "exactly one protocol entry for the move")
 	assert.Equal(t, "staff_moved", history.Events[0].EventType)
 	require.NotNil(t, history.Events[0].InstanceID)
-	assert.Equal(t, mensa.ID, *history.Events[0].InstanceID)
+	assert.Equal(t, mensa.ID, int64(*history.Events[0].InstanceID))
 	require.NotNil(t, history.Events[0].SubjectStaffName)
 	assert.Contains(t, *history.Events[0].SubjectStaffName, "Ina")
 	// 4. Pool assign: the free person joins Mensa without a source block.

@@ -92,7 +92,7 @@ func checkCheckInToTarget(t *testing.T, graph *goldenRuntime) {
 	}
 	require.NoError(t, json.Unmarshal([]byte(body), &stay))
 	assert.Equal(t, []int64{yardChild}, stay.Data.CheckedIn)
-	assert.Equal(t, gym.ID, stay.Data.RoomID)
+	assert.Equal(t, gym.ID, int64(stay.Data.RoomID))
 	assert.Equal(t, []int64{int64(stay.Data.ActiveGroupID)}, openVisitSessions(t, db, yardChild),
 		"a released room needs no supervision")
 
@@ -127,6 +127,6 @@ func checkCheckInToTarget(t *testing.T, graph *goldenRuntime) {
 	}
 	require.NoError(t, json.Unmarshal([]byte(body), &assigned))
 	assert.Equal(t, []int64{transitChild}, assigned.Data.Assigned)
-	assert.Equal(t, supervised.ID, assigned.Data.ActiveGroupID)
+	assert.Equal(t, supervised.ID, int64(assigned.Data.ActiveGroupID))
 	assert.Equal(t, []int64{supervised.ID}, openVisitSessions(t, db, transitChild))
 }

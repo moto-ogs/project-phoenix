@@ -9,8 +9,6 @@ import (
 	"sort"
 	"strings"
 	"time"
-
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 const (
@@ -136,9 +134,9 @@ func manualStaffCredential(rt *Runtime, credential AccountCredentials) (AccountC
 	}
 	var envelope struct {
 		Data []struct {
-			ID        demoprofile.ID `json:"id"`
-			AccountID demoprofile.ID `json:"account_id"`
-			TeacherID demoprofile.ID `json:"teacher_id"`
+			ID        apiID `json:"id"`
+			AccountID apiID `json:"account_id"`
+			TeacherID apiID `json:"teacher_id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
@@ -372,7 +370,7 @@ func readManualGuardian(rt *Runtime, studentID int64, source DemoGuardian) (Seed
 	var envelope struct {
 		Data []struct {
 			Guardian struct {
-				ID demoprofile.ID `json:"id"`
+				ID apiID `json:"id"`
 			} `json:"guardian"`
 		} `json:"data"`
 	}
@@ -385,7 +383,7 @@ func readManualGuardian(rt *Runtime, studentID int64, source DemoGuardian) (Seed
 func decodeSeedEntityID(raw []byte) (int64, error) {
 	var envelope struct {
 		Data struct {
-			ID demoprofile.ID `json:"id"`
+			ID apiID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
@@ -497,11 +495,11 @@ func verifyManualStudents(rt *Runtime, expected SeedExpectedState, data manualPr
 	}
 	var envelope struct {
 		Data []struct {
-			ID             demoprofile.ID `json:"id"`
-			SchoolClass    string         `json:"school_class"`
-			GroupID        demoprofile.ID `json:"group_id"`
-			Location       string         `json:"current_location"`
-			ActualPickupAt *string        `json:"actual_pickup_time"`
+			ID             apiID   `json:"id"`
+			SchoolClass    string  `json:"school_class"`
+			GroupID        apiID   `json:"group_id"`
+			Location       string  `json:"current_location"`
+			ActualPickupAt *string `json:"actual_pickup_time"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
@@ -517,11 +515,11 @@ func verifyManualStudents(rt *Runtime, expected SeedExpectedState, data manualPr
 }
 
 func verifyManualStudentRows(rows []struct {
-	ID             demoprofile.ID `json:"id"`
-	SchoolClass    string         `json:"school_class"`
-	GroupID        demoprofile.ID `json:"group_id"`
-	Location       string         `json:"current_location"`
-	ActualPickupAt *string        `json:"actual_pickup_time"`
+	ID             apiID   `json:"id"`
+	SchoolClass    string  `json:"school_class"`
+	GroupID        apiID   `json:"group_id"`
+	Location       string  `json:"current_location"`
+	ActualPickupAt *string `json:"actual_pickup_time"`
 }, expected SeedExpectedState, roomTracking bool) error {
 	present, checkedOut := 0, 0
 	for _, student := range rows {

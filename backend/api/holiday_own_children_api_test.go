@@ -85,7 +85,7 @@ func TestHostingSchoolPlansTheBookedDaysOfItsOwnChildAndShowsItsRegistration(t *
 	entries = f.registration(t, lead, lia)
 	require.Len(t, entries, 1)
 	entry := entries[0]
-	assert.Equal(t, week, entry.WeekID)
+	assert.Equal(t, int64(week), entry.WeekID)
 	assert.Equal(t, "Sommerferien 2099", entry.PeriodName)
 	assert.Equal(t, calendar.NewDate(2099, 7, 6), entry.StartsOn)
 	assert.Equal(t, "bis 16 Uhr", entry.TimeModelName)

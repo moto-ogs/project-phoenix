@@ -81,7 +81,7 @@ func TestContractSendPushesOncePerAddress(t *testing.T) {
 	assert.Nil(t, queued[0].TenantID, "a push of the Träger names no school")
 	assert.JSONEq(t, `{"deferred":true}`, string(queued[0].Recipient), "the devices are found when the worker sends")
 	assert.Equal(t, "care_contract_document", queued[0].RelatedType, "not the letters' type: equal IDs never collide")
-	assert.Equal(t, id, queued[0].RelatedID)
+	assert.Equal(t, int64(id), queued[0].RelatedID)
 	assert.Regexp(t, fmt.Sprintf(`^care-contract-document:%d:[0-9a-f]{16}$`, id), queued[0].IdempotencyKey, "the key names no address")
 	var payload struct {
 		OrganizationID wireID `json:"organization_id"`
@@ -89,7 +89,7 @@ func TestContractSendPushesOncePerAddress(t *testing.T) {
 		RecipientEmail string `json:"recipient_email"`
 	}
 	require.NoError(t, json.Unmarshal(queued[0].Payload, &payload))
-	assert.Equal(t, f.office.organization, payload.OrganizationID)
+	assert.Equal(t, f.office.organization, int64(payload.OrganizationID))
 	assert.Equal(t, id, payload.ContractID)
 	assert.Equal(t, "erika.muster@example.org", payload.RecipientEmail)
 
@@ -137,7 +137,7 @@ func TestReleaseForParentsPushesOncePerRelease(t *testing.T) {
 	require.Len(t, queued, 1)
 	assert.Equal(t, fmt.Sprintf("traeger-document-release:%d", release.ID), queued[0].IdempotencyKey)
 	assert.Equal(t, "traeger_document_release", queued[0].RelatedType)
-	assert.Equal(t, release.ID, queued[0].RelatedID)
+	assert.Equal(t, int64(release.ID), queued[0].RelatedID)
 	assert.Nil(t, queued[0].TenantID)
 	var payload organizationtenancy.TraegerDocumentReleaseNotice
 	require.NoError(t, json.Unmarshal(queued[0].Payload, &payload))
@@ -152,7 +152,7 @@ func TestReleaseForParentsPushesOncePerRelease(t *testing.T) {
 	again := f.released(t, token, int64(document.ID), map[string]any{"audience": "parents", "school_id": f.office.schools[0]})
 	queued = pushes()
 	require.Len(t, queued, 2, "a release after the revocation is a new event")
-	assert.Equal(t, again.ID, queued[1].RelatedID)
+	assert.Equal(t, int64(again.ID), queued[1].RelatedID)
 }
 
 // TestDocumentPushChecksFindNothingOfAnotherTraegerBeneathRLS pins the

@@ -113,7 +113,7 @@ func TestTraegerOfficeDecidesTheParentsChangeOnlyWithTheRightAndForItsOwnTraeger
 	read := decodeSchoolPortalData[contractChangesBody](t, rec.Body.Bytes())
 	assert.True(t, read.Decidable)
 	require.Len(t, read.Pending, 1)
-	assert.Equal(t, review.pending.ID, read.Pending[0].ID)
+	assert.Equal(t, review.pending.ID, int64(read.Pending[0].ID))
 	require.Len(t, read.Pending[0].Lines, 1)
 	assert.Equal(t, "changed", read.Pending[0].Lines[0].State)
 	assert.Equal(t, []string{"mon", "tue"}, read.Pending[0].Lines[0].AfterDays)

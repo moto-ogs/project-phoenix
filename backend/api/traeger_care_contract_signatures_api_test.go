@@ -160,7 +160,7 @@ func TestCareContractMailLinkSignsOnceOnlyItsContract(t *testing.T) {
 		Status           string   `json:"status"`
 		WithdrawalNotice []string `json:"withdrawal_notice"`
 	}](t, rec.Body.Bytes())
-	assert.Equal(t, contract, view.ContractID, "the link names its contract")
+	assert.Equal(t, contract, int64(view.ContractID), "the link names its contract")
 	assert.Equal(t, "versendet", view.Status)
 	assert.NotEmpty(t, view.WithdrawalNotice)
 	assert.NotContains(t, rec.Body.String(), "child_birth_date", "the link without an account shows no birth date")

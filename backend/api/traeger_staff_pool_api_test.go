@@ -137,7 +137,7 @@ func TestStaffPoolLetsEverySchoolBlockASpringerOnce(t *testing.T) {
 		assert.True(t, body.Available)
 		assert.Equal(t, "2026-11-16", body.WeekStart)
 		require.Len(t, springers, 1, "a contract without the Merkmal is no Springer")
-		assert.Equal(t, springer, springers[0].RecordID)
+		assert.Equal(t, springer, int64(springers[0].RecordID))
 		assert.Equal(t, "2026-08-01", springers[0].PoolFrom)
 		require.NotEmpty(t, springers[0].Proofs, "the standard Nachweise of the Träger are mandatory")
 		for _, proof := range springers[0].Proofs {

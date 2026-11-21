@@ -199,7 +199,7 @@ func TestTraegerBankAccountsKeepOneDefault(t *testing.T) {
 	require.NoError(t, db.NewRaw(`SELECT subject_id, old_value, new_value FROM platform.traeger_master_data_audit
 		WHERE organization_id = ? AND subject = 'bank_account' AND action = 'update' ORDER BY id LIMIT 1`, office.organization).
 		Scan(context.Background(), &demotion))
-	assert.Equal(t, first.ID, demotion.SubjectID, "the first update takes the flag from the old default")
+	assert.Equal(t, int64(first.ID), demotion.SubjectID, "the first update takes the flag from the old default")
 	assert.Contains(t, string(demotion.Old), `"is_default": true`)
 	assert.Contains(t, string(demotion.New), `"is_default": false`)
 }

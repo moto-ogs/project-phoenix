@@ -93,7 +93,7 @@ func TestCrossTenantStudentsPositiveGrowthQueryBudget(t *testing.T) {
 		require.Len(t, response.Data, len(want))
 		seen := make(map[int64]bool)
 		for _, row := range response.Data {
-			require.Contains(t, want, row.ID)
+			require.Contains(t, want, int64(row.ID))
 			require.False(t, seen[int64(row.ID)])
 			seen[int64(row.ID)] = true
 			require.Equal(t, want[int64(row.ID)], row.FirstName)

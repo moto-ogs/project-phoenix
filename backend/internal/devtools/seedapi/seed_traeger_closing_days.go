@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -112,8 +111,8 @@ func seedHolidayClosures(rt *Runtime, auth AuthRef) error {
 	var period struct {
 		Data struct {
 			Weeks []struct {
-				StartsOn     calendar.Date  `json:"starts_on"`
-				HostSchoolID demoprofile.ID `json:"host_school_id"`
+				StartsOn     calendar.Date `json:"starts_on"`
+				HostSchoolID apiID         `json:"host_school_id"`
 			} `json:"weeks"`
 		} `json:"data"`
 	}
@@ -171,10 +170,10 @@ func seedNotifySchoolHolidayClosures(rt *Runtime) (int, error) {
 		return 0, fmt.Errorf("read the school's holiday closure notices: %w", err)
 	}
 	var notices []struct {
-		ID        demoprofile.ID `json:"id"`
-		Revision  int64          `json:"revision"`
-		Token     string         `json:"token"`
-		CanNotify bool           `json:"can_notify"`
+		ID        apiID  `json:"id"`
+		Revision  int64  `json:"revision"`
+		Token     string `json:"token"`
+		CanNotify bool   `json:"can_notify"`
 	}
 	// A stand-in server of the seed tests answers every read with an object;
 	// only a list holds notices.
@@ -203,7 +202,7 @@ func seedBridgeDay(raw []byte) (calendar.Date, []int64, error) {
 	var envelope struct {
 		Data struct {
 			Schools []struct {
-				ID demoprofile.ID `json:"id"`
+				ID apiID `json:"id"`
 			} `json:"schools"`
 			Holidays []struct {
 				Holidays []struct {

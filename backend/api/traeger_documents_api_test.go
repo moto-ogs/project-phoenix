@@ -242,7 +242,7 @@ func TestTraegerDocumentsReachOnlyTheReleasedSchool(t *testing.T) {
 	for _, school := range audiences {
 		require.Len(t, school.Groups, 1, "every school offers its own groups")
 		if int64(school.ID) == nord {
-			assert.Equal(t, sonnen, school.Groups[0].ID)
+			assert.Equal(t, sonnen, int64(school.Groups[0].ID))
 		}
 	}
 
@@ -251,7 +251,7 @@ func TestTraegerDocumentsReachOnlyTheReleasedSchool(t *testing.T) {
 	assert.Equal(t, http.StatusConflict, rec.Code, "one active release per audience")
 	assert.Equal(t, "traeger.document_already_released", refusalOf(t, rec).Code)
 	forGroup := f.released(t, f.office.token, int64(document.ID), map[string]any{"audience": "parents", "school_id": nord, "group_id": sonnen})
-	assert.Equal(t, sonnen, *forGroup.GroupID)
+	assert.Equal(t, sonnen, int64(*forGroup.GroupID))
 	assert.Contains(t, forGroup.GroupName, "Sonnenblumen", "the release keeps the group's name")
 
 	rec = f.release(t, f.office.token, int64(document.ID), map[string]any{"audience": "parents", "school_id": nord, "group_id": mond})

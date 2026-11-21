@@ -264,7 +264,7 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 					require.Equal(t, fmt.Sprintf("Child%02d", idx), row.FirstName)
 					require.Equal(t, "BudgetFamily", row.LastName)
 					require.Equal(t, "2b", row.Class)
-					require.Equal(t, linkIDs[idx], row.Link)
+					require.Equal(t, linkIDs[idx], int64(row.Link))
 					require.Equal(t, "primary_guardian", row.Role)
 				}
 			}

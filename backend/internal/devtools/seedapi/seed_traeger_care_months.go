@@ -7,7 +7,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -24,25 +23,25 @@ func (seedTraegerCareMonthsStep) Name() string { return "Seeding the Träger mon
 const seedCareNumberPattern = "MB-{JJJJ}-{NNNN}"
 
 type seedCareModule struct {
-	SchoolID       demoprofile.ID `json:"school_id"`
-	CareOfferingID demoprofile.ID `json:"care_offering_id"`
-	ModuleName     string         `json:"module_name"`
+	SchoolID       apiID  `json:"school_id"`
+	CareOfferingID apiID  `json:"care_offering_id"`
+	ModuleName     string `json:"module_name"`
 }
 
 type seedCareRunDetail struct {
-	ID           demoprofile.ID `json:"id"`
-	Status       string         `json:"status"`
-	PreviewCount int            `json:"preview_count"`
-	PreviewCents int64          `json:"preview_cents"`
-	Fingerprint  string         `json:"fingerprint"`
+	ID           apiID  `json:"id"`
+	Status       string `json:"status"`
+	PreviewCount int    `json:"preview_count"`
+	PreviewCents int64  `json:"preview_cents"`
+	Fingerprint  string `json:"fingerprint"`
 	// ExcludedCount and Invoices show the review of the open run (#5916).
 	ExcludedCount int `json:"excluded_count"`
 	Invoices      []struct {
-		ContractID demoprofile.ID `json:"contract_id"`
-		Service    string         `json:"service"`
+		ContractID apiID  `json:"contract_id"`
+		Service    string `json:"service"`
 		// Amendments are the changes of the review (#6197).
 		Amendments []struct {
-			ID demoprofile.ID `json:"id"`
+			ID apiID `json:"id"`
 		} `json:"amendments"`
 	} `json:"invoices"`
 }
@@ -232,8 +231,8 @@ func seedCarePriceLists(client *Client, auth AuthRef, month calendar.Date, freeM
 	var envelope struct {
 		Data struct {
 			Tariffs []struct {
-				SchoolID  demoprofile.ID `json:"school_id"`
-				ValidFrom calendar.Date  `json:"valid_from"`
+				SchoolID  apiID         `json:"school_id"`
+				ValidFrom calendar.Date `json:"valid_from"`
 			} `json:"tariffs"`
 		} `json:"data"`
 	}
@@ -311,9 +310,9 @@ func seedCareOfferings(client *Client, auth AuthRef) ([]seedCareModule, error) {
 	}
 	var envelope struct {
 		Data []struct {
-			SchoolID     demoprofile.ID `json:"school_id"`
-			OfferingID   demoprofile.ID `json:"offering_id"`
-			OfferingName string         `json:"offering_name"`
+			SchoolID     apiID  `json:"school_id"`
+			OfferingID   apiID  `json:"offering_id"`
+			OfferingName string `json:"offering_name"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
@@ -479,10 +478,10 @@ func seedCareAmendment(client *Client, auth AuthRef, runID int64) error {
 
 // seedCareRunRef is a monthly run as the run list shows it.
 type seedCareRunRef struct {
-	ID           demoprofile.ID   `json:"id"`
-	BillingMonth calendar.Date    `json:"billing_month"`
-	Status       string           `json:"status"`
-	SchoolIDs    []demoprofile.ID `json:"school_ids"`
+	ID           apiID         `json:"id"`
+	BillingMonth calendar.Date `json:"billing_month"`
+	Status       string        `json:"status"`
+	SchoolIDs    []apiID       `json:"school_ids"`
 }
 
 // seedCareRunOf is the first run of the list in the given status that
@@ -501,7 +500,7 @@ func seedCareRunOf(client *Client, auth AuthRef, school int64, month calendar.Da
 		return 0, fmt.Errorf("read the monthly runs: %w", err)
 	}
 	for _, run := range envelope.Data.Runs {
-		if run.BillingMonth == month && run.Status == status && slices.Contains(run.SchoolIDs, demoprofile.ID(school)) {
+		if run.BillingMonth == month && run.Status == status && slices.Contains(run.SchoolIDs, apiID(school)) {
 			return int64(run.ID), nil
 		}
 	}

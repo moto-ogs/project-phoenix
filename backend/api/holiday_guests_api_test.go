@@ -271,7 +271,7 @@ func TestHolidayGuestsJoinTheGroupOfTheHostingSchoolOnlyFromAConfirmedBooking(t 
 	}](t, f.get(t, lead, "/").Body.Bytes())
 	require.Len(t, listed, 1)
 	require.NotNil(t, listed[0].GuestGroupID)
-	assert.Equal(t, f.group, *listed[0].GuestGroupID)
+	assert.Equal(t, f.group, int64(*listed[0].GuestGroupID))
 	assert.Equal(t, 1, listed[0].Guests)
 
 	ben := children["Ben Muster"]

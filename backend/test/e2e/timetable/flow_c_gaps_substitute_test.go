@@ -235,7 +235,7 @@ func TestFlowC_GapsAndSubstitute(t *testing.T) {
 	decodeResponse(t, rr, &gapsResp2)
 	require.Len(t, gapsResp2.Gaps, 1, "exactly one gap expected")
 	g := gapsResp2.Gaps[0]
-	assert.Equal(t, gapInstance.ID, g.InstanceID)
+	assert.Equal(t, gapInstance.ID, int64(g.InstanceID))
 	// BUG-FINDING (E2E-C1): per PR #1303 docs the response should carry
 	// `assigned_staff_count=2, absent_staff_count=2` for this input. The
 	// handler hardcodes assigned_staff_count=0 (gaps.go:168) — the comment

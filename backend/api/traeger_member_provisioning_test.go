@@ -80,7 +80,7 @@ func TestOperatorAssignsTheFirstPersonOfATraegerBuero(t *testing.T) {
 		Status    string   `json:"status"`
 		Roles     []string `json:"roles"`
 	}](t, rec.Body.Bytes())
-	assert.Equal(t, account.ID, member.AccountID)
+	assert.Equal(t, account.ID, int64(member.AccountID))
 	assert.Equal(t, "active", member.Status)
 	assert.ElementsMatch(t, []string{"administration", "billing"}, member.Roles, "several roles in one assignment (#5144)")
 	var audited int
@@ -101,7 +101,7 @@ func TestOperatorAssignsTheFirstPersonOfATraegerBuero(t *testing.T) {
 	listed, schools := traegerSchools(t, traeger, answer.AccessToken)
 	require.Equal(t, http.StatusOK, listed.Code, listed.Body.String())
 	require.Len(t, schools, 1)
-	assert.Equal(t, schoolID, schools[0].ID, "the assigned person sees the school of the Träger")
+	assert.Equal(t, schoolID, int64(schools[0].ID), "the assigned person sees the school of the Träger")
 }
 
 func TestOperatorTraegerMemberListQueryBudgetIsFlat(t *testing.T) {
@@ -318,7 +318,7 @@ func TestOperatorInvitesTheFirstPersonOfATraegerBuero(t *testing.T) {
 	listed, schools := traegerSchools(t, traeger, answer.AccessToken)
 	require.Equal(t, http.StatusOK, listed.Code, listed.Body.String())
 	require.Len(t, schools, 1)
-	assert.Equal(t, schoolID, schools[0].ID)
+	assert.Equal(t, schoolID, int64(schools[0].ID))
 	var schoolAccounts int
 	require.NoError(t, db.NewRaw(`SELECT (SELECT count(*) FROM auth.account_tenants at JOIN auth.accounts a ON a.id = at.account_id WHERE a.email = ?)
 		+ (SELECT count(*) FROM users.persons p JOIN auth.accounts a ON a.id = p.account_id WHERE a.email = ?)`, address, address).Scan(ctx, &schoolAccounts))

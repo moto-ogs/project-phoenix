@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -22,8 +21,8 @@ func (seedTraegerCareLettersStep) Name() string { return "Seeding the letters of
 type seedCareLetters struct {
 	Letters   *struct{} `json:"letters"`
 	Documents []struct {
-		InvoiceID demoprofile.ID `json:"invoice_id"`
-		Kind      string         `json:"kind"`
+		InvoiceID apiID  `json:"invoice_id"`
+		Kind      string `json:"kind"`
 	} `json:"documents"`
 }
 
@@ -42,8 +41,8 @@ func (seedTraegerCareLettersStep) Run(_ context.Context, rt *Runtime) error {
 	var list struct {
 		Data struct {
 			Runs []struct {
-				ID     demoprofile.ID `json:"id"`
-				Status string         `json:"status"`
+				ID     apiID  `json:"id"`
+				Status string `json:"status"`
 			} `json:"runs"`
 		} `json:"data"`
 	}

@@ -3,18 +3,17 @@ package api
 import (
 	"fmt"
 
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 type demoPresenceBooking struct {
-	StudentID demoprofile.ID `json:"student_id"`
-	Date      calendar.Date  `json:"date"`
-	Expected  bool           `json:"expected"`
-	NoPlan    bool           `json:"no_plan"`
-	Cancelled bool           `json:"cancelled"`
-	Arrival   *int           `json:"arrival_minute"`
-	Pickup    *int           `json:"pickup_minute"`
+	StudentID apiID         `json:"student_id"`
+	Date      calendar.Date `json:"date"`
+	Expected  bool          `json:"expected"`
+	NoPlan    bool          `json:"no_plan"`
+	Cancelled bool          `json:"cancelled"`
+	Arrival   *int          `json:"arrival_minute"`
+	Pickup    *int          `json:"pickup_minute"`
 }
 
 // loadDemoPresenceBookings reads the effective care plan once for the whole

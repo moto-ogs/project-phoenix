@@ -284,7 +284,7 @@ func TestListStudents_LocationStateTransitWithGroupID_IntersectsFilters(t *testi
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
 
 	require.Len(t, resp.Data, 1)
-	assert.Equal(t, matchingTransitStudent.ID, resp.Data[0].ID)
+	assert.Equal(t, matchingTransitStudent.ID, int64(resp.Data[0].ID))
 }
 
 func TestListStudents_LocationStateTransit_InvalidFilters(t *testing.T) {

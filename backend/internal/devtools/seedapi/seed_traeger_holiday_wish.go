@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"maps"
 	"slices"
-
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 // seedHolidayWishes lets the period take the holiday care wish of the OGS
@@ -64,12 +62,12 @@ func seedHolidayWishDecision(rt *Runtime, auth AuthRef, periodID int64, firstNam
 	var list struct {
 		Data struct {
 			Registrations []struct {
-				ID       demoprofile.ID `json:"id"`
+				ID       apiID `json:"id"`
 				Children []struct {
-					ID        demoprofile.ID `json:"id"`
-					FirstName string         `json:"first_name"`
-					LastName  string         `json:"last_name"`
-					Check     bool           `json:"holiday_wish_check"`
+					ID        apiID  `json:"id"`
+					FirstName string `json:"first_name"`
+					LastName  string `json:"last_name"`
+					Check     bool   `json:"holiday_wish_check"`
 				} `json:"children"`
 			} `json:"registrations"`
 		} `json:"data"`

@@ -6,19 +6,17 @@ import (
 	"fmt"
 	"slices"
 	"time"
-
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 type seedPlanningDemoStep struct{}
 
 type seedPlanningInstance struct {
-	ID              demoprofile.ID  `json:"id"`
-	Title           string          `json:"title"`
-	Status          string          `json:"status"`
-	ActivityGroupID *demoprofile.ID `json:"activity_group_id"`
+	ID              apiID  `json:"id"`
+	Title           string `json:"title"`
+	Status          string `json:"status"`
+	ActivityGroupID *apiID `json:"activity_group_id"`
 	Staff           []struct {
-		StaffID demoprofile.ID `json:"staff_id"`
+		StaffID apiID `json:"staff_id"`
 	} `json:"staff"`
 }
 
@@ -299,7 +297,7 @@ func createSeedPlanningTrack(rt *Runtime) (int64, error) {
 	}
 	var response struct {
 		Data struct {
-			ID demoprofile.ID `json:"id"`
+			ID apiID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &response); err != nil || response.Data.ID == 0 {
@@ -490,7 +488,7 @@ func seedClassStudentIDs(fs *FixedSeeder, class string) []int64 {
 func confirmSeedManualRoster(rt *Runtime, created []byte) error {
 	var response struct {
 		Data struct {
-			TemplateID demoprofile.ID `json:"template_id"`
+			TemplateID apiID `json:"template_id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(created, &response); err != nil || response.Data.TemplateID == 0 {

@@ -385,7 +385,7 @@ func TestSchoolSupervisionCheckOutAndComplete(t *testing.T) {
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &absent), rec.Body.String())
-	assert.Equal(t, away.ID, absent.Data.StudentID)
+	assert.Equal(t, away.ID, int64(absent.Data.StudentID))
 	assert.Equal(t, "absent", absent.Data.Status, rec.Body.String())
 
 	rec = schoolSupervisionRequest(t, supervisionRouter, supervisionClaims, http.MethodPost, childPath+"/check-out", nil)
@@ -421,7 +421,7 @@ func TestSchoolSupervisionCheckOutAndComplete(t *testing.T) {
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &completed), rec.Body.String())
-	assert.Equal(t, mine.ID, completed.Data.ID)
+	assert.Equal(t, mine.ID, int64(completed.Data.ID))
 	assert.Equal(t, "completed", completed.Data.Status, rec.Body.String())
 	assert.NotNil(t, completed.Data.CompletedAt, rec.Body.String())
 }

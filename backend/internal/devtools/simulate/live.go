@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
-
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 // LiveOptions configures the continuous live simulation.
@@ -552,8 +550,8 @@ func fetchCurrentSessionID(client Client, state *SeedState, device SeedDevice) (
 	}
 	var envelope struct {
 		Data struct {
-			ActiveGroupID *demoprofile.ID `json:"active_group_id"`
-			IsActive      bool            `json:"is_active"`
+			ActiveGroupID *apiID `json:"active_group_id"`
+			IsActive      bool   `json:"is_active"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(resp, &envelope); err != nil {
@@ -573,8 +571,8 @@ func lookupSchulhofRoom(client Client) int64 {
 	}
 	var envelope struct {
 		Data []struct {
-			ID   demoprofile.ID `json:"id"`
-			Name string         `json:"name"`
+			ID   apiID  `json:"id"`
+			Name string `json:"name"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(resp, &envelope); err != nil {
@@ -612,7 +610,7 @@ func bootstrapLiveState(client Client, ls *liveState, students []SeedStudent) er
 
 	var envelope struct {
 		Data []struct {
-			StudentID demoprofile.ID `json:"student_id"`
+			StudentID apiID `json:"student_id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(resp, &envelope); err != nil {

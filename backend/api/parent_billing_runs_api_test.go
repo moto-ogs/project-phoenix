@@ -176,7 +176,7 @@ func TestHolidayBillingRunPreviewsCorrectsAndIssuesNumberedInvoices(t *testing.T
 	require.Len(t, preview.Documents, 1)
 	family := preview.Documents[0]
 	assert.Empty(t, family.Number, "a draft has no number")
-	assert.Equal(t, f.siblings, family.RegistrationID)
+	assert.Equal(t, f.siblings, int64(family.RegistrationID))
 	assert.Equal(t, "Eva", family.RecipientFirstName)
 	assert.Equal(t, "eva.muster@example.org", family.RecipientEmail)
 	assert.Equal(t, frozen.TotalCents, family.TotalCents, "the run bills what the confirmation froze")
@@ -250,7 +250,7 @@ func TestHolidayBillingRunPreviewsCorrectsAndIssuesNumberedInvoices(t *testing.T
 	assert.Equal(t, checked.PreviewCents, *released.TotalCents)
 	require.Len(t, released.Documents, 2)
 	assert.Equal(t, "FE-0001", released.Documents[0].Number, "numbers in the order of the registrations")
-	assert.Equal(t, f.siblings, released.Documents[0].RegistrationID)
+	assert.Equal(t, f.siblings, int64(released.Documents[0].RegistrationID))
 	assert.Equal(t, "FE-0002", released.Documents[1].Number)
 	assert.NotNil(t, released.Documents[0].IssuedOn)
 	issuedLia := released.Documents[0].Children[0]

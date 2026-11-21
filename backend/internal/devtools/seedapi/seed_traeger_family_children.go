@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -15,14 +14,14 @@ import (
 // placeholder sibling rule counts the family (seedCareReductions).
 
 type seedFamilyChild struct {
-	ContractID demoprofile.ID `json:"contract_id"`
+	ContractID apiID `json:"contract_id"`
 }
 
 type seedFamilyChildrenSet struct {
 	Families []struct {
 		Children []seedFamilyChild `json:"children"`
 		Count    *struct {
-			ID demoprofile.ID `json:"id"`
+			ID apiID `json:"id"`
 		} `json:"count"`
 	} `json:"families"`
 }

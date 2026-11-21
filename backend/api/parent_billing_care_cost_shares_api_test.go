@@ -242,7 +242,7 @@ func TestCareReviewReleaseRefusesAnotherCostBearerAtTheSameAmount(t *testing.T) 
 	for _, invoice := range released.Invoices {
 		if int64(invoice.ContractID) == mia {
 			require.Len(t, invoice.CostShares, 1)
-			assert.Equal(t, youthOffice, invoice.CostShares[0].CostBearerID, "the release issues the state reviewed last")
+			assert.Equal(t, youthOffice, int64(invoice.CostShares[0].CostBearerID), "the release issues the state reviewed last")
 		}
 	}
 }

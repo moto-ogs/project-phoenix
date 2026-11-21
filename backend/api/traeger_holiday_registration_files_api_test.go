@@ -106,7 +106,7 @@ func TestHolidayRegistrationFilesKeepAnsweredInactiveAndArchivedCriteria(t *test
 			if record.Detail.ID == int64(first.ID) {
 				assert.Equal(t, criteria, record.Detail.Criteria, "the ZIP keeps the same answers as the single PDF")
 			} else {
-				assert.Equal(t, later.ID, record.Detail.ID)
+				assert.Equal(t, int64(later.ID), record.Detail.ID)
 				assert.Empty(t, record.Detail.Criteria, "another family's historical questions do not appear")
 			}
 		}

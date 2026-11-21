@@ -152,13 +152,13 @@ func TestWorkTimeModelAssignmentBindsSeveralPeopleFromToday(t *testing.T) {
 	facts := h.facts()
 	assert.True(t, facts[custom.ID].HasSchedule, "a running schedule is reported")
 	require.NotNil(t, facts[already.ID].WorkTimeModelID)
-	assert.Equal(t, template.ID, *facts[already.ID].WorkTimeModelID)
+	assert.Equal(t, template.ID, int64(*facts[already.ID].WorkTimeModelID))
 	assert.NotContains(t, facts, fresh.ID, "a person without any fact is absent")
 
 	status, result, _ := h.assign(template.ID, "", custom.ID, fresh.ID, already.ID, fresh.ID)
 	require.Equal(t, http.StatusOK, status)
-	assert.Equal(t, sortedIDs(fresh.ID, custom.ID), result.Assigned)
-	assert.Equal(t, []int64{already.ID}, result.Unchanged)
+	assert.Equal(t, sortedIDs(fresh.ID, custom.ID), testpkg.IDs(result.Assigned))
+	assert.Equal(t, []int64{already.ID}, testpkg.IDs(result.Unchanged))
 	assert.Equal(t, assignmentToday, result.ValidFrom)
 	assert.Equal(t, 1, h.notified)
 

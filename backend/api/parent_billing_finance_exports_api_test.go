@@ -135,7 +135,7 @@ func TestFinanceExportsOfAReleasedRun(t *testing.T) {
 
 	runs := exportRuns(t, f)
 	require.Len(t, runs, 1)
-	assert.Equal(t, run, runs[0].RunID)
+	assert.Equal(t, run, int64(runs[0].RunID))
 	assert.Nil(t, runs[0].LastSollstellung, "not yet exported")
 
 	first, content := sollstellung(t, f, run)

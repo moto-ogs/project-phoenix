@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -100,11 +99,11 @@ func nextSeedNoticeCase(present map[string]bool) string {
 }
 
 type seedNoticeContract struct {
-	NeedsSignature bool           `json:"-"`
-	PartyName      string         `json:"party_name"`
-	ID             demoprofile.ID `json:"id"`
-	ChildFirstName string         `json:"child_first_name"`
-	ChildLastName  string         `json:"child_last_name"`
+	NeedsSignature bool   `json:"-"`
+	PartyName      string `json:"party_name"`
+	ID             apiID  `json:"id"`
+	ChildFirstName string `json:"child_first_name"`
+	ChildLastName  string `json:"child_last_name"`
 }
 
 func seedNoticeContracts(client *Client, auth AuthRef, status string) ([]seedNoticeContract, error) {

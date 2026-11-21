@@ -55,8 +55,8 @@ func TestBillingLetterSendPushesTheInboxOncePerLetter(t *testing.T) {
 			RecipientEmail string `json:"recipient_email"`
 		}
 		require.NoError(t, json.Unmarshal(notice.Payload, &payload))
-		assert.Equal(t, f.office.organization, payload.OrganizationID)
-		assert.Equal(t, notice.RelatedID, payload.DocumentID)
+		assert.Equal(t, f.office.organization, int64(payload.OrganizationID))
+		assert.Equal(t, notice.RelatedID, int64(payload.DocumentID))
 		var recipient string
 		for _, mailing := range mailings {
 			if mailing.DocumentID == payload.DocumentID {

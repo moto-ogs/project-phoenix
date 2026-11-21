@@ -159,7 +159,7 @@ func TestTraegerHolidayPeriodIsPlannedChangedAndPublished(t *testing.T) {
 	assert.Equal(t, "draft", created.Status)
 	assert.Nil(t, created.PublishedAt)
 	require.Len(t, created.Weeks, 2)
-	assert.Equal(t, office.schools[0], created.Weeks[0].HostSchoolID)
+	assert.Equal(t, office.schools[0], int64(created.Weeks[0].HostSchoolID))
 	assert.Equal(t, "2027-01-04", created.Weeks[0].StartsOn)
 	require.Len(t, created.Weeks[0].TimeModels, 2)
 	assert.Equal(t, holidayTimeModelBody{ID: created.Weeks[0].TimeModels[0].ID, Name: "bis 13 Uhr", StartsAt: "08:00", EndsAt: "13:00", PriceCents: 4500},
@@ -289,7 +289,7 @@ func TestTraegerHolidayPeriodsStayWithTheirTraeger(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	unchanged := decodeSchoolPortalData[holidayPeriodBody](t, rec.Body.Bytes())
 	assert.Equal(t, "draft", unchanged.Status, "the foreign publication changed nothing")
-	assert.Equal(t, own.schools[0], unchanged.Weeks[0].HostSchoolID, "the foreign update changed nothing")
+	assert.Equal(t, own.schools[0], int64(unchanged.Weeks[0].HostSchoolID), "the foreign update changed nothing")
 }
 
 func TestTraegerHolidayPeriodsNeedTheEnrollmentRight(t *testing.T) {

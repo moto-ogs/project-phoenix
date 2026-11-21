@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"time"
-
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 // The Arbeitsverträge of the demo records (#4706): every record the seed
@@ -46,12 +44,12 @@ const seedCodeHolidayWeekSchoolOverride = "workforce.traeger_holiday_week_school
 
 type seedTraegerStaffRecord struct {
 	Employments []struct {
-		SchoolID demoprofile.ID `json:"school_id"`
-		StaffID  demoprofile.ID `json:"staff_id"`
-		Active   bool           `json:"active"`
+		SchoolID apiID `json:"school_id"`
+		StaffID  apiID `json:"staff_id"`
+		Active   bool  `json:"active"`
 	} `json:"employments"`
 	Contracts []struct {
-		ID demoprofile.ID `json:"id"`
+		ID apiID `json:"id"`
 	} `json:"contracts"`
 }
 

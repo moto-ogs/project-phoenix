@@ -183,8 +183,8 @@ func TestHolidayWishRoundTrip(t *testing.T) {
 	for _, registration := range checks.Registrations {
 		ids = append(ids, int64(registration.ID))
 	}
-	assert.Contains(t, ids, unknownID)
-	assert.NotContains(t, ids, statedID, "a stated wish needs no check")
+	assert.Contains(t, ids, int64(unknownID))
+	assert.NotContains(t, ids, int64(statedID), "a stated wish needs no check")
 
 	wishPath := f.registrationPath(int64(unknownID), fmt.Sprintf("/children/%d/holiday-wish", unknownChild.ID))
 	other := newTraegerOffice(t, f.db, f.traeger, "Fremder Träger Ferienwunsch", identityaccess.TraegerRoleAdministration)

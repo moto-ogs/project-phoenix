@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -19,17 +18,17 @@ import (
 const seedCareCostShareOverlap = "parent_billing.care_cost_share_overlap"
 
 type seedCareCostShareContract struct {
-	ContractID demoprofile.ID    `json:"contract_id"`
-	SchoolID   demoprofile.ID    `json:"school_id"`
+	ContractID apiID             `json:"contract_id"`
+	SchoolID   apiID             `json:"school_id"`
 	Shares     []json.RawMessage `json:"shares"`
 }
 
 type seedCareCostShareSet struct {
 	Contracts   []seedCareCostShareContract `json:"contracts"`
 	CostBearers []struct {
-		ID     demoprofile.ID `json:"id"`
-		Name   string         `json:"name"`
-		Active bool           `json:"active"`
+		ID     apiID  `json:"id"`
+		Name   string `json:"name"`
+		Active bool   `json:"active"`
 	} `json:"cost_bearers"`
 }
 

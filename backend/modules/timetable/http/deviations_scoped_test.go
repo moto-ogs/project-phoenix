@@ -140,7 +140,7 @@ func TestApplyDeviations_SubstitutionTargetsSelectedInstances(t *testing.T) {
 	var response scopedApplyResponse
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
 	require.Len(t, response.Data.AffectedInstances, 1)
-	assert.Equal(t, selected.ID, response.Data.AffectedInstances[0].InstanceID)
+	assert.Equal(t, selected.ID, int64(response.Data.AffectedInstances[0].InstanceID))
 }
 
 func TestApplyDeviations_AbsenceTargetsSelectedInstances(t *testing.T) {
@@ -394,7 +394,7 @@ func TestApplyDeviations_RemovesSubstituteOnlyFromSelectedInstances(t *testing.T
 	var response scopedApplyResponse
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
 	require.Len(t, response.Data.AffectedInstances, 1)
-	assert.Equal(t, selected.ID, response.Data.AffectedInstances[0].InstanceID)
+	assert.Equal(t, selected.ID, int64(response.Data.AffectedInstances[0].InstanceID))
 	assert.Equal(t, "substitute_removed", response.Data.AffectedInstances[0].Action)
 }
 

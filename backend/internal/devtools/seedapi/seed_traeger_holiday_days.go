@@ -8,7 +8,6 @@ import (
 	"slices"
 	"time"
 
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -56,9 +55,9 @@ func (seedTraegerHolidayDaysStep) Run(_ context.Context, rt *Runtime) error {
 		Data struct {
 			PublicToken string `json:"public_token"`
 			Weeks       []struct {
-				ID         demoprofile.ID `json:"id"`
+				ID         apiID `json:"id"`
 				TimeModels []struct {
-					ID demoprofile.ID `json:"id"`
+					ID apiID `json:"id"`
 				} `json:"time_models"`
 			} `json:"weeks"`
 		} `json:"data"`

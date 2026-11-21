@@ -8,8 +8,6 @@ import (
 	"slices"
 	"strconv"
 	"time"
-
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 const enrollmentWeeklyProfileKey = "anmeldung-wochenplan"
@@ -276,8 +274,8 @@ func inviteWeeklyProfileParent(ctx context.Context, rt *Runtime, step parentEnro
 	var response struct {
 		Data []struct {
 			Guardian struct {
-				ID    demoprofile.ID `json:"id"`
-				Email string         `json:"email"`
+				ID    apiID  `json:"id"`
+				Email string `json:"email"`
 			} `json:"guardian"`
 		} `json:"data"`
 	}
@@ -472,7 +470,7 @@ func linkDeveloperAdmin(ctx context.Context, primary, target *Runtime, state *Se
 	}
 	var tenants struct {
 		Data []struct {
-			TenantID demoprofile.ID `json:"tenant_id"`
+			TenantID apiID `json:"tenant_id"`
 		} `json:"data"`
 	}
 	if err := parseJSON(raw, &tenants); err != nil {

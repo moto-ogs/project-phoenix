@@ -487,12 +487,12 @@ func TestSEPADebitFilesCollectTheInstallmentAndTheInvoiceOfAMonthOnce(t *testing
 	installments := sepaDebitsPath + "/notice-months/202910"
 	runFile, rateFile := read(sepaDebitRunPath(october, "")), read(installments)
 	require.Len(t, runFile.Debits, 1)
-	assert.Equal(t, noah, runFile.Debits[0].ContractID, "the run's file holds Noah's invoice")
+	assert.Equal(t, noah, int64(runFile.Debits[0].ContractID), "the run's file holds Noah's invoice")
 	assert.Zero(t, runFile.Debits[0].NoticeID)
 	require.Len(t, rateFile.Debits, 1)
 	rate := rateFile.Debits[0]
-	assert.Equal(t, mia, rate.ContractID, "the installments' file holds Mia's installment")
-	assert.Equal(t, miaNotice, rate.NoticeID)
+	assert.Equal(t, mia, int64(rate.ContractID), "the installments' file holds Mia's installment")
+	assert.Equal(t, miaNotice, int64(rate.NoticeID))
 	assert.Equal(t, "2029-10-01", rate.NoticeMonth)
 	assert.Equal(t, int64(7750), rate.AmountCents, "what the family pays after the cost bearers, as the notice sets it")
 	assert.Equal(t, "2029-10-01", rate.DueOn)

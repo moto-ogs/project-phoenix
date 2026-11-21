@@ -96,7 +96,7 @@ func checkTimetableStaffRoutes(t *testing.T, api *goldenRuntime) {
 		for _, option := range sources.Offerings {
 			if int64(option.ID) == offering.ID {
 				listed = true
-				assert.Equal(t, phase.ID, option.PhaseID)
+				assert.Equal(t, phase.ID, int64(option.PhaseID))
 			}
 		}
 		assert.True(t, listed, "the active care offering is a selectable source")
@@ -142,7 +142,7 @@ func checkTimetableStaffRoutes(t *testing.T, api *goldenRuntime) {
 			Status    string `json:"status"`
 		}
 		request(t, http.MethodPut, fmt.Sprintf("/api/timetable/operations/instances/%d/students/%d/homework-feedback", block.ID, child.ID), `{"status":"done"}`, &saved)
-		assert.Equal(t, child.ID, saved.StudentID)
+		assert.Equal(t, child.ID, int64(saved.StudentID))
 		assert.Equal(t, "done", saved.Status)
 		var stored string
 		require.NoError(t, db.NewRaw(`SELECT status FROM education.homework_feedback WHERE tenant_id = ? AND student_id = ?`, tenantID, child.ID).Scan(testpkg.Ctx(t), &stored))

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -86,8 +85,8 @@ func seedPaperContracts(client *Client, auth AuthRef, school int64, minimum int)
 	var drafts struct {
 		Data struct {
 			Contracts []struct {
-				ID        demoprofile.ID `json:"id"`
-				PartyName string         `json:"party_name"`
+				ID        apiID  `json:"id"`
+				PartyName string `json:"party_name"`
 			} `json:"contracts"`
 		} `json:"data"`
 	}
@@ -174,8 +173,8 @@ func seedSendContractsToParents(rt *Runtime, auth AuthRef) error {
 	var drafts struct {
 		Data struct {
 			Contracts []struct {
-				ID         demoprofile.ID `json:"id"`
-				PartyEmail string         `json:"party_email"`
+				ID         apiID  `json:"id"`
+				PartyEmail string `json:"party_email"`
 			} `json:"contracts"`
 		} `json:"data"`
 	}

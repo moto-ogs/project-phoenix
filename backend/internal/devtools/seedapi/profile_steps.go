@@ -26,11 +26,11 @@ type configureProfileStep struct {
 }
 
 type operatorSeedDevice struct {
-	ID         demoprofile.ID `json:"id"`
-	DeviceID   string         `json:"device_id"`
-	DeviceType string         `json:"device_type"`
-	Name       *string        `json:"name"`
-	Status     string         `json:"status"`
+	ID         apiID   `json:"id"`
+	DeviceID   string  `json:"device_id"`
+	DeviceType string  `json:"device_type"`
+	Name       *string `json:"name"`
+	Status     string  `json:"status"`
 }
 
 func (configureProfileStep) Name() string { return "Configuring demo school profile" }
@@ -321,11 +321,11 @@ func verifyProfilePlanning(rt *Runtime, expected SeedScheduledActivityState) err
 	var envelope struct {
 		Data struct {
 			Instances []struct {
-				Status     string           `json:"status"`
-				RoomID     demoprofile.ID   `json:"room_id"`
-				StudentIDs []demoprofile.ID `json:"student_ids"`
+				Status     string  `json:"status"`
+				RoomID     apiID   `json:"room_id"`
+				StudentIDs []apiID `json:"student_ids"`
 				Staff      []struct {
-					StaffID demoprofile.ID `json:"staff_id"`
+					StaffID apiID `json:"staff_id"`
 				} `json:"staff"`
 			} `json:"instances"`
 		} `json:"data"`

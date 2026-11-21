@@ -246,7 +246,7 @@ func TestFamilyChildrenOfContractsWithoutAMailAddressThroughTheRoutes(t *testing
 	assert.Equal(t, map[int64]int64{mia: 3875, noah: 7750}, totals, "Mia pays the sibling price, Noah the full one")
 	assert.Equal(t, 1, preview.UncountedFamilies)
 	require.Len(t, preview.UncountedContracts, 1)
-	assert.Equal(t, noah, preview.UncountedContracts[0].ContractID)
+	assert.Equal(t, noah, int64(preview.UncountedContracts[0].ContractID))
 	assert.Equal(t, "missing", preview.UncountedContracts[0].Status)
 
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodDelete, familyChildrenPath+"/"+strconv.FormatInt(mia, 10), nil)

@@ -68,7 +68,7 @@ func TestCalendarReadPositiveGrowthQueryBudget(t *testing.T) {
 				} `json:"data"`
 			}
 			require.NoError(t, json.Unmarshal(read(base, staffToken, "/api"), &detail))
-			require.Equal(t, appointmentID, detail.Data.Appointment.ID)
+			require.Equal(t, appointmentID, int64(detail.Data.Appointment.ID))
 			require.Len(t, detail.Data.Recipients, n)
 			assertCalendarReadBudget(t, "appointment_detail", n, counter.Measurement(counter.Queries()))
 			for _, surface := range []struct{ name, path, token, mount string }{

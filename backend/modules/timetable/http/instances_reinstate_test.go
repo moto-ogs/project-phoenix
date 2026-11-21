@@ -72,7 +72,7 @@ func TestReinstateInstanceAnswers(t *testing.T) {
 			}
 			if tc.wantCode == http.StatusOK {
 				assert.Equal(t, int64(31), tc.double.gotID)
-				assert.Equal(t, int64(31), body.Data.InstanceID)
+				assert.Equal(t, int64(31), int64(body.Data.InstanceID))
 				assert.Equal(t, "planned", body.Data.Status)
 			}
 		})

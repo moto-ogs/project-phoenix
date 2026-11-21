@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 // seedTraegerBillingReissueStep cancels the corrected invoice of the second
@@ -23,17 +21,17 @@ const seedReissueReason = "Anschrift war falsch. Neue Rechnung folgt."
 
 // seedReissueRun is what the step reads of a run.
 type seedReissueRun struct {
-	HolidayPeriodID demoprofile.ID `json:"holiday_period_id"`
+	HolidayPeriodID apiID `json:"holiday_period_id"`
 	Documents       []struct {
-		ID              demoprofile.ID `json:"id"`
-		Kind            string         `json:"kind"`
-		ReferenceNumber string         `json:"reference_number"`
+		ID              apiID  `json:"id"`
+		Kind            string `json:"kind"`
+		ReferenceNumber string `json:"reference_number"`
 		Children        []struct {
 			Positions []struct {
 				Kind string `json:"kind"`
 			} `json:"positions"`
 			CarriedCorrections []struct {
-				PositionID demoprofile.ID `json:"position_id"`
+				PositionID apiID `json:"position_id"`
 			} `json:"carried_corrections"`
 		} `json:"children"`
 	} `json:"documents"`

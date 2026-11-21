@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -40,13 +39,13 @@ const (
 )
 
 type seedCareNoticeRun struct {
-	ID           demoprofile.ID   `json:"id"`
-	Year         int              `json:"year"`
-	Status       string           `json:"status"`
-	SchoolIDs    []demoprofile.ID `json:"school_ids"`
-	PreviewCount int              `json:"preview_count"`
-	PreviewCents int64            `json:"preview_cents"`
-	Fingerprint  string           `json:"fingerprint"`
+	ID           apiID   `json:"id"`
+	Year         int     `json:"year"`
+	Status       string  `json:"status"`
+	SchoolIDs    []apiID `json:"school_ids"`
+	PreviewCount int     `json:"preview_count"`
+	PreviewCents int64   `json:"preview_cents"`
+	Fingerprint  string  `json:"fingerprint"`
 }
 
 // seedCareNotices issues the Jahresbescheide of the months after current up
@@ -202,7 +201,7 @@ func seedOpenNoticeRun(client *Client, auth AuthRef, school int64, year int) (in
 		if run.Year != year || run.Status != "calculated" {
 			continue
 		}
-		if slices.Contains(run.SchoolIDs, demoprofile.ID(school)) {
+		if slices.Contains(run.SchoolIDs, apiID(school)) {
 			return int64(run.ID), nil
 		}
 		fmt.Printf("  Träger fee notices: the open notice run %d of %d assesses other schools; skipped\n", run.ID, year)

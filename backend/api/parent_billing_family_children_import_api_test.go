@@ -111,7 +111,7 @@ func TestFamilyChildrenImportAddsTheNumbersOfAFile(t *testing.T) {
 		"a child named twice with different numbers takes over none, also not for its sibling")
 	assert.Equal(t, []string{"", "", "", "child_last_name:no_contract", "children:rows_differ", "children:rows_differ",
 		"child_last_name:repeated", "children:invalid", "children:rows_differ", "child_last_name:repeated", "children:rows_differ"}, problems)
-	assert.Equal(t, mia, preview.Rows[0].ContractID)
+	assert.Equal(t, mia, int64(preview.Rows[0].ContractID))
 	require.NotNil(t, preview.Rows[0].ValidFrom)
 	assert.Equal(t, careReductionStart, *preview.Rows[0].ValidFrom, "the number counts from the first day of the contract")
 	require.NotNil(t, preview.Rows[1].ConfirmedChildren)

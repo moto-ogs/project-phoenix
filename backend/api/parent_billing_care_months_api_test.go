@@ -525,7 +525,7 @@ func TestCareMonthlyContractLeftOutForAMissingPriceIsBilledLater(t *testing.T) {
 
 	second := f.run(t, int64(f.startRun(t, careMonth).ID))
 	require.Len(t, second.Invoices, 1)
-	assert.Equal(t, late, second.Invoices[0].ContractID)
+	assert.Equal(t, late, int64(second.Invoices[0].ContractID))
 	assert.Equal(t, int64(4100), second.Invoices[0].TotalCents, "32,00 € Monday and 9,00 € Saturday")
 	assert.Equal(t, 1, second.Billed)
 }
@@ -753,7 +753,7 @@ func TestCareMonthlyReleaseBillsTheValidChildrenAndKeepsTheDuplicateInSight(t *t
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	released := decodeSchoolPortalData[careRunBody](t, rec.Body.Bytes())
 	require.Len(t, released.Invoices, 1, "only the valid child is billed")
-	assert.Equal(t, valid, released.Invoices[0].ContractID)
+	assert.Equal(t, valid, int64(released.Invoices[0].ContractID))
 	assert.Equal(t, int64(7750), released.PreviewCents)
 	assert.Equal(t, 1, released.DuplicateChildren, "the release names the children it left out")
 
@@ -786,7 +786,7 @@ func TestCareMonthlyReleaseBillsTheValidChildrenAndKeepsTheDuplicateInSight(t *t
 	require.NoError(t, err)
 	later := f.run(t, int64(f.startRun(t, careMonth).ID))
 	require.Len(t, later.Invoices, 1)
-	assert.Equal(t, kept, later.Invoices[0].ContractID)
+	assert.Equal(t, kept, int64(later.Invoices[0].ContractID))
 	assert.Equal(t, int64(7750), later.Invoices[0].TotalCents)
 	assert.Equal(t, 1, later.Billed, "Noah is not billed again")
 	assert.Equal(t, 1, later.DuplicateChildren, "only Noah's new duplicate")

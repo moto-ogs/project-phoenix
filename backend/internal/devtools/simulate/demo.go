@@ -9,8 +9,6 @@ import (
 	"maps"
 	"slices"
 	"time"
-
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 const (
@@ -237,8 +235,8 @@ func (d *DemoTicker) ensureSessions(ctx context.Context) ([]int64, error) {
 		}
 		var response struct {
 			Data struct {
-				Active bool           `json:"is_active"`
-				RoomID demoprofile.ID `json:"room_id"`
+				Active bool  `json:"is_active"`
+				RoomID apiID `json:"room_id"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(raw, &response); err != nil {
@@ -246,7 +244,7 @@ func (d *DemoTicker) ensureSessions(ctx context.Context) ([]int64, error) {
 		}
 		room := response.Data.RoomID
 		if !response.Data.Active {
-			room = demoprofile.ID(findRoomForActivity(activities[i], state.Rooms))
+			room = apiID(findRoomForActivity(activities[i], state.Rooms))
 			if room == 0 {
 				return nil, fmt.Errorf("demo activity %q has no room", activities[i])
 			}

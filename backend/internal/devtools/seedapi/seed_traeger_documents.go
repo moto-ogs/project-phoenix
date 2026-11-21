@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 // seedTraegerDocumentsStep gives the demo Träger documents it shares (#4692)
@@ -128,9 +126,9 @@ func seedTraegerDocumentAudience(client *Client, auth AuthRef) (school, group in
 	}
 	var envelope struct {
 		Data []struct {
-			ID     demoprofile.ID `json:"id"`
+			ID     apiID `json:"id"`
 			Groups []struct {
-				ID demoprofile.ID `json:"id"`
+				ID apiID `json:"id"`
 			} `json:"groups"`
 		} `json:"data"`
 	}
@@ -161,8 +159,8 @@ func seedTraegerDocumentTitles(client *Client, auth AuthRef) (map[string]int64, 
 	}
 	var envelope struct {
 		Data []struct {
-			ID    demoprofile.ID `json:"id"`
-			Title string         `json:"title"`
+			ID    apiID  `json:"id"`
+			Title string `json:"title"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
@@ -183,7 +181,7 @@ func seedTraegerDocumentUpload(client *Client, auth AuthRef, document seedTraege
 	}
 	var envelope struct {
 		Data struct {
-			ID demoprofile.ID `json:"id"`
+			ID apiID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil || envelope.Data.ID == 0 {

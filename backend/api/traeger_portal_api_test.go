@@ -400,8 +400,8 @@ func TestTraegerPortalLoginAsksAMemberOfSeveralTraegerToChoose(t *testing.T) {
 	assert.Equal(t, "organization_selection_required", answer.Status)
 	assert.Empty(t, answer.AccessToken, "no session before the choice")
 	require.Len(t, answer.Organizations, 2)
-	assert.Equal(t, first, answer.Organizations[0].ID)
-	assert.Equal(t, second, answer.Organizations[1].ID)
+	assert.Equal(t, first, int64(answer.Organizations[0].ID))
+	assert.Equal(t, second, int64(answer.Organizations[1].ID))
 
 	code, answer = traegerSignIn(t, router, account.Email, password, second)
 	require.Equal(t, http.StatusOK, code)

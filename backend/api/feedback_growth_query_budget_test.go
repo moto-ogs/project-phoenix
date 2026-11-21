@@ -60,8 +60,8 @@ func TestFeedbackListsPositiveGrowthQueryBudget(t *testing.T) {
 			require.Len(t, body.Data, n)
 			for i, row := range body.Data {
 				want := entries[n-1-i]
-				require.Equal(t, want.ID, row.ID)
-				require.Equal(t, student.ID, row.StudentID)
+				require.Equal(t, want.ID, int64(row.ID))
+				require.Equal(t, student.ID, int64(row.StudentID))
 				require.Equal(t, want.Value, row.Value)
 				require.Equal(t, string(want.Day), row.Day)
 				require.Equal(t, want.Time, row.Time)

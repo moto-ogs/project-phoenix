@@ -99,7 +99,7 @@ func TestCareMealMonthsAreBilledOnceOnTheChildsInvoice(t *testing.T) {
 	preview := decodeSchoolPortalData[careMealRunBody](t, rec.Body.Bytes())
 	require.Len(t, preview.Invoices, 1)
 	invoice := preview.Invoices[0]
-	assert.Equal(t, contract, invoice.ContractID)
+	assert.Equal(t, contract, int64(invoice.ContractID))
 	require.Len(t, invoice.MealPositions, 2)
 	assert.Equal(t, "2029-11-01", invoice.MealPositions[0].MealMonth)
 	assert.Equal(t, 3, invoice.MealPositions[0].Quantity)
@@ -245,7 +245,7 @@ func TestCareMealMonthsReturnOnTheReissueAfterAStorno(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	reissue := decodeSchoolPortalData[careMealRunBody](t, rec.Body.Bytes())
 	require.Len(t, reissue.Invoices, 1)
-	assert.Equal(t, contract, reissue.Invoices[0].ContractID)
+	assert.Equal(t, contract, int64(reissue.Invoices[0].ContractID))
 	require.Len(t, reissue.Invoices[0].MealPositions, 1, "the reissue bills the Mensa month the Storno took back")
 	assert.Equal(t, int64(5500), reissue.Invoices[0].MealPositions[0].AmountCents)
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(again.ID), "/release"),

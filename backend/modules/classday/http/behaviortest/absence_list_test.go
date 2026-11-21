@@ -316,7 +316,7 @@ func TestAbsenceListLeavesOutAKnownNewChildBeforeItsStart(t *testing.T) {
 	child := testpkg.CreateTestScheduledStudent(t, f.db, "Neu", "Februar", f.class, "2099-04-19")
 	after := read()
 	for _, row := range after.Children {
-		assert.NotEqual(t, child.ID, row.StudentID, "a child that starts after today was never cared for in this period")
+		assert.NotEqual(t, child.ID, int64(row.StudentID), "a child that starts after today was never cared for in this period")
 	}
 	assert.Equal(t, before.Children, after.Children)
 	assert.Equal(t, before.Totals, after.Totals)
@@ -377,7 +377,7 @@ func TestAbsenceListKeepsAKnownNewChildOutBeforeItsStartAfterActivation(t *testi
 	const january = "&from=2099-01-01&to=2099-01-31"
 	januaryBefore, halfYearBefore := read(january), read("")
 	for _, row := range januaryBefore.Children {
-		require.NotEqual(t, child.ID, row.StudentID, "the child was not cared for in January")
+		require.NotEqual(t, child.ID, int64(row.StudentID), "the child was not cared for in January")
 	}
 
 	startDay, err := calendar.ParseDate(start)

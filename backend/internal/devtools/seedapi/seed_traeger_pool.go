@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"time"
-
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 // The Vertretungspool of the demo Träger (#4709): the school of this run
@@ -29,7 +27,7 @@ var seedPoolSlots = [][2]string{{"08:00", "13:00"}, {"17:00", "19:00"}, {"06:30"
 type seedPoolWeek struct {
 	Available bool `json:"available"`
 	Springers []struct {
-		RecordID demoprofile.ID `json:"staff_record_id"`
+		RecordID apiID `json:"staff_record_id"`
 		Blocks   []struct {
 			Own bool `json:"own"`
 		} `json:"blocks"`

@@ -268,7 +268,7 @@ func TestStudentDayPopulatedGrowthQueryBudget(t *testing.T) {
 			} `json:"instances"`
 		}
 		decodeGrowthEnvelope(t, response, &body)
-		require.Equal(t, s.StudentID, body.StudentID)
+		require.Equal(t, s.StudentID, int64(body.StudentID))
 		require.Equal(t, date.String(), body.Date)
 		require.Len(t, body.Instances, n)
 		require.Zero(t, counter.WriteRows())

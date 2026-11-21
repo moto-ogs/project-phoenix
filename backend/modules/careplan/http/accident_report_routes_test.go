@@ -79,7 +79,7 @@ func TestAccidentReportIsRecordedSignedCorrectedAndDeletedThroughTheRoutes(t *te
 	base := fmt.Sprintf("/%d/accident-reports", child.ID)
 
 	created := send(http.MethodPost, base, report("Prellung"), http.StatusCreated)
-	assert.Equal(t, child.ID, created.StudentID)
+	assert.Equal(t, child.ID, int64(created.StudentID))
 	assert.Equal(t, "unfallanzeige", created.Category)
 	assert.Equal(t, "open", created.AccidentReport.Status)
 
@@ -110,7 +110,7 @@ func TestAccidentReportIsRecordedSignedCorrectedAndDeletedThroughTheRoutes(t *te
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &deleted))
-	assert.Equal(t, child.ID, deleted.Data.StudentID)
+	assert.Equal(t, child.ID, int64(deleted.Data.StudentID))
 	var open int
 	require.NoError(t, tc.db.NewSelect().TableExpr("users.student_documents").ColumnExpr("COUNT(*)").
 		Where("student_id = ? AND deleted_at IS NULL", child.ID).Scan(testpkg.Ctx(t), &open))

@@ -3,8 +3,6 @@ package api
 import (
 	"context"
 	"fmt"
-
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 // seedTestTraegerStep creates a test Träger with test schools and invented
@@ -38,7 +36,7 @@ func (seedTestTraegerStep) Run(_ context.Context, rt *Runtime) error {
 	var created struct {
 		Data struct {
 			Organization struct {
-				ID demoprofile.ID `json:"id"`
+				ID apiID `json:"id"`
 			} `json:"organization"`
 		} `json:"data"`
 	}

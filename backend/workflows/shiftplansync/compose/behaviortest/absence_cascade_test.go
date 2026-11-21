@@ -121,7 +121,7 @@ func TestAbsenceCascade_ApprovedVacationLeavesThePlansUntilWithdrawn(t *testing.
 	}
 	require.NoError(t, json.Unmarshal(marked[0].NewValue, &cause))
 	assert.Equal(t, "absence", cause.Cause)
-	assert.Equal(t, absenceID, cause.AbsenceID)
+	assert.Equal(t, absenceID, int64(cause.AbsenceID))
 
 	e.inTx(t, func(ctx context.Context) error {
 		return e.absences.SickReports.CancelAbsence(ctx, requester.staffID, requester.accountID, absenceID)

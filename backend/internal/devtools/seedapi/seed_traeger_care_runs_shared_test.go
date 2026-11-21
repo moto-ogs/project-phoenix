@@ -46,12 +46,12 @@ func (f *seedSharedTraegerRuns) serve(t *testing.T) func(w seedHTTPResponseWrite
 			require.NoError(t, json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"runs": f.runs}}))
 		case path == "POST /traeger/care-billing-runs/":
 			var start struct {
-				BillingMonth calendar.Date    `json:"billing_month"`
-				SchoolIDs    []demoprofile.ID `json:"school_ids"`
+				BillingMonth calendar.Date `json:"billing_month"`
+				SchoolIDs    []apiID       `json:"school_ids"`
 			}
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&start))
 			f.started = append(f.started, demoprofile.IDs(start.SchoolIDs))
-			run := seedCareRunRef{ID: demoprofile.ID(10 + len(f.started)), BillingMonth: start.BillingMonth, Status: "calculated", SchoolIDs: start.SchoolIDs}
+			run := seedCareRunRef{ID: apiID(10 + len(f.started)), BillingMonth: start.BillingMonth, Status: "calculated", SchoolIDs: start.SchoolIDs}
 			f.runs = append([]seedCareRunRef{run}, f.runs...)
 			f.preview[int64(run.ID)] = 2
 			_, _ = fmt.Fprintf(w, `{"data":{"id":%d}}`, run.ID)
@@ -103,8 +103,8 @@ func TestSeedCareRunsBillTheSeededSchoolBesideLeftoverRunsOfOtherDemoSchools(t *
 	october, november := calendar.NewDate(2026, 10, 1), calendar.NewDate(2026, 11, 1)
 	traeger := &seedSharedTraegerRuns{
 		runs: []seedCareRunRef{
-			{ID: 4, BillingMonth: october, Status: "calculated", SchoolIDs: []demoprofile.ID{53, 59, 60}},
-			{ID: 3, BillingMonth: october, Status: "released", SchoolIDs: []demoprofile.ID{53, 59}},
+			{ID: 4, BillingMonth: october, Status: "calculated", SchoolIDs: []apiID{53, 59, 60}},
+			{ID: 3, BillingMonth: october, Status: "released", SchoolIDs: []apiID{53, 59}},
 		},
 		preview: map[int64]int{4: 0, 3: 0},
 	}

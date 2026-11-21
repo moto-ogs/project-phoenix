@@ -7,8 +7,6 @@ import (
 	"log/slog"
 	"strconv"
 	"time"
-
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 // The demo day (#3921) keeps a weekday of a demo school plausible at any
@@ -77,25 +75,25 @@ func demoActivities(state *SeedState) []demoActivity {
 
 // demoBlock is one timetable block of today as the instance list returns it.
 type demoBlock struct {
-	ID              demoprofile.ID  `json:"id"`
-	Date            string          `json:"date"`
-	StartTime       string          `json:"start_time"`
-	EndTime         string          `json:"end_time"`
-	Title           string          `json:"title"`
-	Description     *string         `json:"description,omitempty"`
-	Notes           *string         `json:"notes,omitempty"`
-	Status          string          `json:"status"`
-	IsSpontaneous   bool            `json:"is_spontaneous"`
-	ActivityGroupID *demoprofile.ID `json:"activity_group_id,omitempty"`
-	ListKind        *string         `json:"list_kind,omitempty"`
-	RoomID          demoprofile.ID  `json:"room_id"`
+	ID              apiID   `json:"id"`
+	Date            string  `json:"date"`
+	StartTime       string  `json:"start_time"`
+	EndTime         string  `json:"end_time"`
+	Title           string  `json:"title"`
+	Description     *string `json:"description,omitempty"`
+	Notes           *string `json:"notes,omitempty"`
+	Status          string  `json:"status"`
+	IsSpontaneous   bool    `json:"is_spontaneous"`
+	ActivityGroupID *apiID  `json:"activity_group_id,omitempty"`
+	ListKind        *string `json:"list_kind,omitempty"`
+	RoomID          apiID   `json:"room_id"`
 	Staff           []struct {
-		StaffID demoprofile.ID `json:"staff_id"`
+		StaffID apiID `json:"staff_id"`
 	} `json:"staff"`
-	StudentIDs []demoprofile.ID `json:"student_ids"`
+	StudentIDs []apiID `json:"student_ids"`
 	Students   []struct {
-		StudentID demoprofile.ID `json:"student_id"`
-		Status    string         `json:"status"`
+		StudentID apiID  `json:"student_id"`
+		Status    string `json:"status"`
 	} `json:"students"`
 }
 
@@ -468,10 +466,10 @@ func (day *demoDay) writeTimeException(client Client, studentID int64, kind stri
 	var envelope struct {
 		Data struct {
 			Exceptions []struct {
-				ID            demoprofile.ID `json:"id"`
-				ExceptionDate string         `json:"exception_date"`
-				Reason        string         `json:"reason"`
-				Source        string         `json:"source"`
+				ID            apiID  `json:"id"`
+				ExceptionDate string `json:"exception_date"`
+				Reason        string `json:"reason"`
+				Source        string `json:"source"`
 			} `json:"exceptions"`
 		} `json:"data"`
 	}
@@ -508,10 +506,10 @@ func (day *demoDay) settlePickupTasks(client Client, moved map[int64]string) {
 	var envelope struct {
 		Data struct {
 			Tasks []struct {
-				ID         demoprofile.ID `json:"id"`
-				StudentID  demoprofile.ID `json:"student_id"`
-				Date       string         `json:"date"`
-				PickupTime string         `json:"pickup_time"`
+				ID         apiID  `json:"id"`
+				StudentID  apiID  `json:"student_id"`
+				Date       string `json:"date"`
+				PickupTime string `json:"pickup_time"`
 			} `json:"tasks"`
 		} `json:"data"`
 	}

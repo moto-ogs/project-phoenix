@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"maps"
 	"slices"
-
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 // seedHolidayWaitlist gives the week of the third sibling as many places as
@@ -26,8 +24,8 @@ func seedHolidayWaitlist(rt *Runtime, auth AuthRef, token string, periodID int64
 	}
 	var places struct {
 		Data []struct {
-			WeekID demoprofile.ID `json:"week_id"`
-			Placed int            `json:"placed"`
+			WeekID apiID `json:"week_id"`
+			Placed int   `json:"placed"`
 		} `json:"data"`
 	}
 	placed, found := 0, false

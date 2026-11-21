@@ -198,14 +198,14 @@ func TestTraegerAccessLogShowsOnlyTheOwnSchoolsAndIsItselfLogged(t *testing.T) {
 	require.Len(t, page.Entries, 2, "the day's entries of the Träger's schools only: %+v", page.Entries)
 	assert.False(t, page.HasMore)
 	change, read := page.Entries[0], page.Entries[1]
-	assert.Equal(t, f.second, change.SchoolID, "newest first")
+	assert.Equal(t, f.second, int64(change.SchoolID), "newest first")
 	assert.Equal(t, "OGS Waldweg", change.SchoolName)
 	assert.Equal(t, "Lena Leitung", change.Person, "the ledger stores her staff ID; the log names the person behind it")
 	require.NotNil(t, change.AccountID)
-	assert.Equal(t, f.otherStaff, *change.AccountID, "and her account, so the person filter finds the change")
+	assert.Equal(t, f.otherStaff, int64(*change.AccountID), "and her account, so the person filter finds the change")
 	assert.Equal(t, "change", change.Kind)
 	assert.Equal(t, "Personalnummer einer Fachkraft", change.DataLabel)
-	assert.Equal(t, f.first, read.SchoolID)
+	assert.Equal(t, f.first, int64(read.SchoolID))
 	assert.Equal(t, "Frieda Fachkraft", read.Person)
 	assert.Equal(t, "read", read.Kind)
 	assert.Equal(t, "attendance_history", read.Data)
@@ -225,7 +225,7 @@ func TestTraegerAccessLogFiltersByPersonSchoolPeriodAndKind(t *testing.T) {
 
 	page := listAccessLog(t, f.router, f.token, map[string]string{"school_id": fmt.Sprint(f.first)})
 	require.Len(t, page.Entries, 1)
-	assert.Equal(t, f.first, page.Entries[0].SchoolID)
+	assert.Equal(t, f.first, int64(page.Entries[0].SchoolID))
 
 	// The personnel number ledger stores Lena's staff ID; the account filter
 	// still finds it (quorum review of #4932).
@@ -233,7 +233,7 @@ func TestTraegerAccessLogFiltersByPersonSchoolPeriodAndKind(t *testing.T) {
 	require.Len(t, page.Entries, 2)
 	for _, entry := range page.Entries {
 		require.NotNil(t, entry.AccountID)
-		assert.Equal(t, f.otherStaff, *entry.AccountID)
+		assert.Equal(t, f.otherStaff, int64(*entry.AccountID))
 	}
 
 	page = listAccessLog(t, f.router, f.token, map[string]string{"kind": "change"})
@@ -448,7 +448,7 @@ func TestTraegerAccessLogShowsTheHolidayRegistrationTrailOfTheOwnTraeger(t *test
 		assert.Equal(t, want.label, entry.DataLabel, "entry %d", i)
 		assert.Equal(t, person, entry.Person, "entry %d", i)
 		require.NotNil(t, entry.AccountID)
-		assert.Equal(t, member, *entry.AccountID)
+		assert.Equal(t, member, int64(*entry.AccountID))
 		assert.Zero(t, entry.SchoolID, "a holiday registration belongs to the Träger, not to a school")
 		assert.Equal(t, "Träger (keine Schule)", entry.SchoolName)
 	}

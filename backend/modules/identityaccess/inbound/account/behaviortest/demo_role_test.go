@@ -329,9 +329,9 @@ func TestDemoRoleTraegerSignsTheVisitorInToTheSchoolsOwnTraeger(t *testing.T) {
 		TenantID testpkg.ID `json:"tenant_id"`
 	}
 	require.NoError(t, json.Unmarshal(payload, &claims))
-	assert.Equal(t, visitor.ID, claims.ID, "the Träger-Büro is the visitor's own account")
+	assert.Equal(t, visitor.ID, int64(claims.ID), "the Träger-Büro is the visitor's own account")
 	assert.Equal(t, "org", claims.Scope)
-	assert.Equal(t, traegerID, claims.OrgID)
+	assert.Equal(t, traegerID, int64(claims.OrgID))
 	assert.Zero(t, claims.TenantID)
 	assert.Equal(t, []string{"ogs-leitung"}, env.schoolRoles(t, visitor.ID), "the school role of the last switch stays")
 }

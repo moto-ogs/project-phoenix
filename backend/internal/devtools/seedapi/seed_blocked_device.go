@@ -3,8 +3,6 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 // demoBlockedDevice is a retired tablet the school blocked (Gerätesperre,
@@ -31,7 +29,7 @@ func (s *FixedSeeder) seedBlockedDevice() error {
 	}
 	var device struct {
 		Data struct {
-			ID demoprofile.ID `json:"id"`
+			ID apiID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(created, &device); err != nil {

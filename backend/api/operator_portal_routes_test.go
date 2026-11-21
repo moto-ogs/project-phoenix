@@ -257,7 +257,7 @@ func TestOperatorRoutesManageTheOperatorTeam(t *testing.T) {
 		Active bool   `json:"active"`
 	}
 	f.call(t, http.MethodPost, fmt.Sprintf("/operator/operators/%d/deactivate", member.ID), nil, &deactivated)
-	assert.Equal(t, member.ID, deactivated.ID)
+	assert.Equal(t, member.ID, int64(deactivated.ID))
 	assert.False(t, deactivated.Active)
 	var reactivated struct {
 		Active bool `json:"active"`
@@ -289,7 +289,7 @@ func TestOperatorRoutesWriteChangeAndDeleteAnAnnouncement(t *testing.T) {
 		"title": "Route Wartung", "content": "Heute Abend", "type": "announcement", "severity": "info",
 		"target_tenant_ids": []int64{testpkg.Tenant(t)},
 	}, &created))
-	assert.Equal(t, []int64{testpkg.Tenant(t)}, created.TargetTenantIDs)
+	assert.Equal(t, []int64{testpkg.Tenant(t)}, testpkg.IDs(created.TargetTenantIDs))
 	var changed announcement
 	f.call(t, http.MethodPut, fmt.Sprintf("/operator/announcements/%d", created.ID), map[string]any{
 		"title": "Route Wartung verschoben", "content": "Morgen Abend", "type": "announcement", "severity": "info",

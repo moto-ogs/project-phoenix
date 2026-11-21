@@ -191,7 +191,7 @@ func TestCareReductionsRunTheWholeChainThroughTheRoutes(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	next := decodeSchoolPortalData[careReductionRunBody](t, rec.Body.Bytes())
 	require.Len(t, next.Invoices, 1)
-	assert.Equal(t, lea, next.Invoices[0].ContractID)
+	assert.Equal(t, lea, int64(next.Invoices[0].ContractID))
 	assert.Zero(t, next.Invoices[0].TotalCents)
 
 }
@@ -309,7 +309,7 @@ func TestCareReductionsAreCheckedBeforeTheyAreSaved(t *testing.T) {
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodDelete, careRulesPath+"/"+strconv.FormatInt(level, 10), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	for _, rule := range decodeSchoolPortalData[careRuleSetBody](t, rec.Body.Bytes()).Rules {
-		assert.NotEqual(t, level, rule.ID, "the deleted level is gone")
+		assert.NotEqual(t, level, int64(rule.ID), "the deleted level is gone")
 	}
 }
 

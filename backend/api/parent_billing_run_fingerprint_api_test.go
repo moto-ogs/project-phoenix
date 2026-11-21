@@ -60,7 +60,7 @@ func TestHolidayReleaseRefusesAmountsMovedBetweenFamilies(t *testing.T) {
 	preview := billingRun(t, f, checker, int64(run.ID))
 	require.Len(t, preview.Documents, 2)
 	x, y := preview.Documents[0], preview.Documents[1]
-	require.Equal(t, f.siblings, x.RegistrationID)
+	require.Equal(t, f.siblings, int64(x.RegistrationID))
 	xChild, yChild := x.Children[0].ChildID, y.Children[0].ChildID
 	correctChild(t, f, corrector, int64(run.ID), int64(x.RegistrationID), int64(xChild), 1000, "Geschwister zahlen 10 Euro")
 	correctChild(t, f, corrector, int64(run.ID), int64(y.RegistrationID), int64(yChild), 2000, "Zwei Tage gebucht")

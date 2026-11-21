@@ -264,7 +264,7 @@ func TestHolidayPositiveGrowthQueryBudget(t *testing.T) {
 				Format       string     `json:"format"`
 			}
 			require.NoError(t, json.Unmarshal([]byte(metadata), &audit))
-			require.Equal(t, f.week, audit.Week)
+			require.Equal(t, f.week, int64(audit.Week))
 			require.Equal(t, n, audit.Participants)
 			require.Equal(t, "xlsx", audit.Format)
 			// Denied reads neither expose data nor append successful-read audit rows.

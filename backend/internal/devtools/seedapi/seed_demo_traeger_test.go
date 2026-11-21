@@ -10,8 +10,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 )
 
 // The visitor of an own Demo-Träger (ADR 0271) joins its Träger-Büro with
@@ -109,9 +107,9 @@ func TestTraegerStaffLinksLeaveTheVisitorOut(t *testing.T) {
 	suggestion := func(schoolID, staffID int64) seedTraegerStaffSuggestion {
 		var s seedTraegerStaffSuggestion
 		s.Members = append(s.Members, struct {
-			SchoolID demoprofile.ID `json:"school_id"`
-			StaffID  demoprofile.ID `json:"staff_id"`
-		}{demoprofile.ID(schoolID), demoprofile.ID(staffID)})
+			SchoolID apiID `json:"school_id"`
+			StaffID  apiID `json:"staff_id"`
+		}{apiID(schoolID), apiID(staffID)})
 		return s
 	}
 	kept := withoutVisitorStaff(rt, []seedTraegerStaffSuggestion{

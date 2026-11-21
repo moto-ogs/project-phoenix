@@ -203,14 +203,14 @@ func TestTraegerListsHolidayRegistrationsWithFiltersAndDuplicateHints(t *testing
 	siblings := registrationByID(t, all, f.siblings)
 	assert.False(t, siblings.Frozen, "the registration window is still open")
 	require.Len(t, siblings.Children, 2)
-	assert.Equal(t, []int64{f.again}, siblings.Children[0].DuplicateRegistrationIDs,
+	assert.Equal(t, []int64{f.again}, testpkg.IDs(siblings.Children[0].DuplicateRegistrationIDs),
 		"Lia was registered twice: same name in other letter case and the same date of birth")
 	assert.Empty(t, siblings.Children[1].DuplicateRegistrationIDs)
 	assert.Nil(t, siblings.Children[1].HomeSchoolID, "Ben is a holiday guest")
 	require.Len(t, siblings.Children[1].Bookings, 2)
 	assert.Equal(t, "bis 13 Uhr", siblings.Children[1].Bookings[0].TimeModelName)
-	assert.Equal(t, f.office.schools[1], siblings.Children[1].Bookings[1].HostSchoolID, "the second week is hosted by the second school")
-	assert.Equal(t, []int64{f.siblings}, registrationByID(t, all, f.again).Children[0].DuplicateRegistrationIDs)
+	assert.Equal(t, f.office.schools[1], int64(siblings.Children[1].Bookings[1].HostSchoolID), "the second week is hosted by the second school")
+	assert.Equal(t, []int64{f.siblings}, testpkg.IDs(registrationByID(t, all, f.again).Children[0].DuplicateRegistrationIDs))
 
 	assert.Equal(t, []int64{f.siblings}, registrationIDs(f.list(t, "?school=guest")))
 	assert.Equal(t, []int64{f.siblings, f.again}, registrationIDs(f.list(t, fmt.Sprintf("?school=%d", f.office.schools[0]))))

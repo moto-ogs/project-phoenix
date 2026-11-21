@@ -339,7 +339,7 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 				assert.Equal(t, "last_name", change.Field)
 				assert.Equal(t, "Sommer", change.Value)
 				require.NotNil(t, change.SchoolID)
-				assert.Equal(t, north, *change.SchoolID, "the value not taken keeps its school")
+				assert.Equal(t, north, int64(*change.SchoolID), "the value not taken keeps its school")
 			}
 		}
 		assert.Equal(t, 1, notChosen)

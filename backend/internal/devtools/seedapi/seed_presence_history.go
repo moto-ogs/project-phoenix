@@ -8,7 +8,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -57,9 +56,9 @@ type presenceHistoryStatusDay struct {
 }
 
 type presenceHistoryStatusDayResponse struct {
-	ID     demoprofile.ID `json:"id"`
-	Date   string         `json:"date"`
-	Status string         `json:"status"`
+	ID     apiID  `json:"id"`
+	Date   string `json:"date"`
+	Status string `json:"status"`
 }
 
 // presenceHistoryPlan is the deterministic past of the school: who came on
@@ -501,8 +500,8 @@ func listPresenceHistoryStudents(rt *Runtime) ([]presenceHistoryStudent, error) 
 	for page := 1; ; page++ {
 		var envelope struct {
 			Data []struct {
-				ID         demoprofile.ID `json:"id"`
-				CareEndsOn string         `json:"care_ends_on"`
+				ID         apiID  `json:"id"`
+				CareEndsOn string `json:"care_ends_on"`
 			} `json:"data"`
 			Pagination struct {
 				TotalPages int `json:"total_pages"`

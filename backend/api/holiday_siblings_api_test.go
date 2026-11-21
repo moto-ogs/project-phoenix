@@ -121,7 +121,7 @@ func TestSiblingsFromTwoRegistrationsRankTogether(t *testing.T) {
 	rec := f.merge(t, f.office.token, second, first, first)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	group := decodeSchoolPortalData[siblingGroupBody](t, rec.Body.Bytes())
-	assert.Equal(t, []int64{first, second}, group.RegistrationIDs)
+	assert.Equal(t, []int64{first, second}, testpkg.IDs(group.RegistrationIDs))
 	assert.Equal(t, []siblingGroupBody{group}, f.siblingGroups(t))
 
 	earlier := f.siblingContribution(t, first)
@@ -132,7 +132,7 @@ func TestSiblingsFromTwoRegistrationsRankTogether(t *testing.T) {
 	assert.Equal(t, []string{"base:4500", "sibling:-2250"}, lineKinds(later.Children[0].Lines))
 	assert.Equal(t, 2, *later.Children[0].Lines[1].ChildRank)
 	require.Len(t, later.Siblings, 1)
-	assert.Equal(t, first, later.Siblings[0].RegistrationID)
+	assert.Equal(t, first, int64(later.Siblings[0].RegistrationID))
 	assert.Equal(t, "Mia", later.Siblings[0].Children[0].FirstName, "the registration names the children of the other one")
 
 	rec = f.confirmWith(t, second, nil)
@@ -145,7 +145,7 @@ func TestSiblingsFromTwoRegistrationsRankTogether(t *testing.T) {
 	third := f.submitChild(t, f.period, f.offer, "oma.rang@example.org", "Ida", 1)
 	rec = f.merge(t, f.office.token, third, second)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, []int64{first, second, third}, decodeSchoolPortalData[siblingGroupBody](t, rec.Body.Bytes()).RegistrationIDs,
+	assert.Equal(t, []int64{first, second, third}, testpkg.IDs(decodeSchoolPortalData[siblingGroupBody](t, rec.Body.Bytes()).RegistrationIDs),
 		"a merge with a member takes the whole group")
 	assert.Len(t, f.siblingGroups(t), 1)
 	assert.Equal(t, int64(6750), f.contribution(t, third).TotalCents)
