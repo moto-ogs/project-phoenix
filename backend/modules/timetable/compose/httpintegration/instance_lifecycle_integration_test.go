@@ -2423,3 +2423,31 @@ func TestInstance_StartByUnplannedStaffAddsNoSupervisor(t *testing.T) {
 	require.Len(t, sups, 1)
 	assert.Equal(t, s.staffID, sups[0].StaffID)
 }
+
+// TestInstance_Reopen_LeavesOutAStoppedChild covers #3844: a child whose
+// room history is stopped keeps no closed visit, so the completion deletes
+// its visit. The reopen brings the other child back instead of refusing.
+func TestInstance_Reopen_LeavesOutAStoppedChild(t *testing.T) {
+	t.Parallel()
+
+	s := buildLifecycle(t)
+	ai := seedInstance(t, s, true, true)
+	started, err := s.svc.Start(s.ctx, ai.ID, 0)
+	require.NoError(t, err)
+	_, err = s.db.ExecContext(s.ctx, `INSERT INTO active.room_history_stops (tenant_id, student_id, stopped_at)
+		SELECT tenant_id, id, NOW() FROM users.student_profiles WHERE id = ?`, s.student1)
+	require.NoError(t, err)
+	checkIn := time.Now().Add(-10 * time.Minute)
+	testpkg.CreateTestVisit(t, s.db, s.student1, started.ActiveGroupID, checkIn, nil)
+	testpkg.CreateTestVisit(t, s.db, s.student2, started.ActiveGroupID, checkIn, nil)
+
+	_, err = s.svc.Complete(s.ctx, ai.ID)
+	require.NoError(t, err)
+	_, err = s.svc.Reopen(s.ctx, ai.ID, 0, true)
+	require.NoError(t, err)
+
+	var open []int64
+	require.NoError(t, s.db.NewRaw(`SELECT student_id FROM active.visits WHERE active_group_id = ? AND exit_time IS NULL ORDER BY student_id`,
+		started.ActiveGroupID).Scan(s.ctx, &open))
+	assert.Equal(t, []int64{s.student2}, open, "only the child with a room history comes back")
+}
