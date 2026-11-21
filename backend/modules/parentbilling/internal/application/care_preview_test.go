@@ -91,16 +91,16 @@ func TestCareMonthGoldenSJR(t *testing.T) {
 	got, err := json.MarshalIndent(month.invoices, "", "  ")
 	require.NoError(t, err)
 	assert.JSONEq(t, `[{
-		"id": "0", "number": "", "issued_on": null, "contract_id": "501", "school_id": "11",
+		"id": 0, "number": "", "issued_on": null, "contract_id": 501, "school_id": 11,
 		"school_name": "Grundschule Ispringen", "child_first_name": "Mia", "child_last_name": "Beispiel",
 		"recipient": {"first_name": "Eva", "last_name": "Beispiel", "email": "eva@example.org",
 			"kind": "", "second_name": "", "address": null},
 		"family_email": "eva@example.org", "payment": null,
 		"positions": [
-			{"care_offering_id": "101", "module_name": "Betreuung bis 14:00 Uhr", "version_number": 1,
+			{"care_offering_id": 101, "module_name": "Betreuung bis 14:00 Uhr", "version_number": 1,
 			 "service_from": "2027-01-01", "service_until": "2027-01-31",
 			 "weekdays": [{"weekday": "mon", "monthly_cents": 3200, "amount_cents": 3200}], "amount_cents": 3200, "payable_cents": 3200},
-			{"care_offering_id": "102", "module_name": "Betreuung bis 16:30 Uhr", "version_number": 1,
+			{"care_offering_id": 102, "module_name": "Betreuung bis 16:30 Uhr", "version_number": 1,
 			 "service_from": "2027-01-01", "service_until": "2027-01-31",
 			 "weekdays": [{"weekday": "tue", "monthly_cents": 4550, "amount_cents": 4550}], "amount_cents": 4550, "payable_cents": 4550}
 		],
