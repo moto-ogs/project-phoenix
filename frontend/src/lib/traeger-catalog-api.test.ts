@@ -1,4 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type {
+  TraegerOffering as OfferingWire,
+  PhaseDetail,
+  Preview,
+  Rollout,
+} from "./contract/traeger-catalog.generated";
 import {
   createTraegerOffering,
   fetchTraegerPhase,
@@ -11,9 +17,56 @@ const request = vi.hoisted(() => vi.fn());
 vi.mock("./traeger-api", () => ({ traegerRequest: request }));
 afterEach(() => request.mockReset());
 
-const backendPhase = {
-  id: 7,
-  organization_id: 2,
+// The decoded answer of the proxy: string IDs, every field Go always sends.
+const offeringWire: OfferingWire = {
+  id: "31",
+  organization_id: "2",
+  traeger_phase_id: "7",
+  updated_at: "2026-11-11T10:00:00Z",
+  draft: {
+    fields: {
+      name: "Frühbetreuung",
+      description: null,
+      days_of_week_mode: "fixed",
+      available_days: ["mon", "tue"],
+      includes_holiday_care: false,
+      includes_lunch: false,
+      capacity: null,
+      price_cents: null,
+      is_required: false,
+      counts_as_care: true,
+      selection_group: "",
+      selection_rule: "optional",
+      sort_order: 0,
+      pickup_times: { mon: "08:30", tue: "08:30" },
+    },
+    prices: [
+      {
+        weekday: "mon",
+        monthly_cents: 650,
+        sibling_cents: 500,
+        meal_extra: false,
+      },
+      { weekday: "tue", monthly_cents: 650, meal_extra: false },
+    ],
+    contract_template: {
+      term_kind: "school_year",
+      notice_months: 1,
+      notice_to: "month_end",
+      special_termination: false,
+      special_termination_note: "",
+      statute_required: false,
+      statute_title: "",
+      statute_url: "",
+      contract_partner: "",
+    },
+  },
+  schools: [{ school_id: "11", applied_version: 1, outcome: "applied" }],
+};
+
+const backendPhase: PhaseDetail = {
+  id: "7",
+  organization_id: "2",
   draft: {
     name: "Schuljahr 2027/28",
     kind: "school_year",
@@ -21,65 +74,32 @@ const backendPhase = {
     service_end_date: "2028-07-31",
     enrollment_open_at: null,
     enrollment_close_at: null,
-    audience: "",
-    care_overflow_mode: "",
-    care_offering_selection_mode: "",
+    audience: "open",
+    care_overflow_mode: "waitlist",
+    care_offering_selection_mode: "optional",
   },
   all_schools: false,
   released_version: 2,
   schools: [
-    { school_id: 11, selected: true, applied_version: 2, outcome: "applied" },
     {
-      school_id: 12,
+      school_id: "11",
+      selected: true,
+      applied_version: 2,
+      outcome: "applied",
+    },
+    {
+      school_id: "12",
       selected: true,
       outcome: "rejected",
       error_code: "enrollment.traeger_copy_rejected",
     },
   ],
   updated_at: "2026-11-11T10:00:00Z",
-  offerings: [
-    {
-      id: 31,
-      traeger_phase_id: 7,
-      draft: {
-        fields: {
-          name: "Frühbetreuung",
-          days_of_week_mode: "fixed",
-          available_days: ["mon", "tue"],
-          includes_holiday_care: false,
-          includes_lunch: false,
-          is_required: false,
-          counts_as_care: true,
-          pickup_times: { mon: "08:30", tue: "08:30" },
-        },
-        prices: [
-          {
-            weekday: "mon",
-            monthly_cents: 650,
-            sibling_cents: 500,
-            meal_extra: false,
-          },
-          { weekday: "tue", monthly_cents: 650, meal_extra: false },
-        ],
-        contract_template: {
-          term_kind: "school_year",
-          notice_months: 1,
-          notice_to: "month_end",
-          special_termination: false,
-          special_termination_note: "",
-          statute_required: false,
-          statute_title: "",
-          statute_url: "",
-          contract_partner: "",
-        },
-      },
-      schools: [{ school_id: 11, applied_version: 1, outcome: "applied" }],
-    },
-  ],
+  offerings: [offeringWire],
 };
 
 describe("Träger catalog requests (#4704)", () => {
-  it("maps IDs to strings, fills defaults and keeps a school's refusal code", async () => {
+  it("maps the phase and keeps a school's refusal code", async () => {
     request.mockResolvedValue(backendPhase);
     const phase = await fetchTraegerPhase("7");
 
@@ -151,7 +171,7 @@ describe("Träger catalog requests (#4704)", () => {
   });
 
   it("sends a scale price without weekday and leaves out an empty sibling price", async () => {
-    request.mockResolvedValue(backendPhase.offerings[0]);
+    request.mockResolvedValue(offeringWire);
     await createTraegerOffering("7", {
       fields: {
         name: "Ganztag",
@@ -192,12 +212,12 @@ describe("Träger catalog requests (#4704)", () => {
 
   it("reads the preview per school and confirms it with its fingerprint", async () => {
     request.mockResolvedValueOnce({
-      traeger_phase_id: 7,
+      traeger_phase_id: "7",
       version: 3,
       fingerprint: "abc",
       schools: [
         {
-          school_id: 11,
+          school_id: "11",
           action: "update",
           outcome: "ready",
           care_beyond_end: 2,
@@ -206,7 +226,7 @@ describe("Träger catalog requests (#4704)", () => {
           ],
           offerings: [
             {
-              traeger_offering_id: 31,
+              traeger_offering_id: "31",
               name: "Frühbetreuung",
               action: "update",
               fields: null,
@@ -216,7 +236,7 @@ describe("Träger catalog requests (#4704)", () => {
           ],
         },
       ],
-    });
+    } satisfies Preview);
     const preview = await previewTraegerPhase("7");
     expect(preview.schools[0]).toMatchObject({
       schoolId: "11",
@@ -231,10 +251,10 @@ describe("Träger catalog requests (#4704)", () => {
     });
 
     request.mockResolvedValueOnce({
-      traeger_phase_id: 7,
+      traeger_phase_id: "7",
       version: 3,
-      schools: [{ school_id: 11, outcome: "stale" }],
-    });
+      schools: [{ school_id: "11", outcome: "stale", care_beyond_end: 0 }],
+    } satisfies Rollout);
     const rollout = await rolloutTraegerPhase("7", preview.fingerprint);
     expect(request).toHaveBeenLastCalledWith(
       "/api/traeger/catalog/phases/7/rollout",
