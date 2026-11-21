@@ -3,7 +3,7 @@
 // Permission Entity Configuration
 
 import { defineEntityConfig } from "@/lib/database/types";
-import type { Permission, BackendPermission } from "@/lib/auth-helpers";
+import type { Permission, PermissionWire } from "@/lib/auth-helpers";
 import { mapPermissionResponse } from "@/lib/auth-helpers";
 import {
   formatPermissionDisplay,
@@ -218,7 +218,7 @@ export const permissionsConfig = defineEntityConfig<Permission>({
       ) {
         actual = (data as { status: string; data: unknown }).data;
       }
-      return mapPermissionResponse(actual as BackendPermission);
+      return mapPermissionResponse(actual as PermissionWire);
     },
   },
 
