@@ -5,4 +5,6 @@
  * (catalog-proxy.server.ts, #2352), and `route-cache-policy.test.ts` keeps
  * it out of this list.
  */
-export const PRIVATE_DOWNLOAD_ROUTES = [["students/export", "POST"]] as const;
+export const PRIVATE_DOWNLOAD_ROUTES: ReadonlyArray<
+  readonly [route: string, method: string]
+> = [];
