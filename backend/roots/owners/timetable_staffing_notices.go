@@ -120,14 +120,14 @@ func NewGroupTeacherStaff(membership schoolmembership.Query) GroupTeacherStaff {
 }
 
 // timetableGroupTeachers names the teachers of OGS groups as staff ids: the
-// group assignments, then the teachers' staff records, two batched reads.
+// group assignments with their live teachers' staff records, one batched
+// read (#7675, the query budget of "Heute anders").
 type timetableGroupTeachers struct {
 	membership groupTeacherLister
 }
 
 type groupTeacherLister interface {
 	ListGroupAssignments(context.Context, schoolmembership.GroupAssignmentFilter) ([]schoolmembership.GroupAssignment, error)
-	ListTeachers(context.Context, schoolmembership.TeacherFilter) ([]schoolmembership.Teacher, error)
 }
 
 func (t timetableGroupTeachers) GroupTeacherStaffIDs(ctx context.Context, groupIDs []int64) (map[int64][]int64, error) {
@@ -135,25 +135,13 @@ func (t timetableGroupTeachers) GroupTeacherStaffIDs(ctx context.Context, groupI
 	if len(groupIDs) == 0 {
 		return result, nil
 	}
-	assignments, err := t.membership.ListGroupAssignments(ctx, schoolmembership.GroupAssignmentFilter{GroupIDs: groupIDs})
-	if err != nil || len(assignments) == 0 {
-		return result, err
-	}
-	teacherIDs := make([]int64, 0, len(assignments))
-	for _, assignment := range assignments {
-		teacherIDs = append(teacherIDs, assignment.TeacherID)
-	}
-	teachers, err := t.membership.ListTeachers(ctx, schoolmembership.TeacherFilter{IDs: teacherIDs})
+	assignments, err := t.membership.ListGroupAssignments(ctx, schoolmembership.GroupAssignmentFilter{GroupIDs: groupIDs, WithTeacherStaff: true})
 	if err != nil {
 		return nil, err
 	}
-	staffOf := make(map[int64]int64, len(teachers))
-	for _, teacher := range teachers {
-		staffOf[teacher.ID] = teacher.StaffID
-	}
 	for _, assignment := range assignments {
-		if staffID, ok := staffOf[assignment.TeacherID]; ok {
-			result[assignment.GroupID] = append(result[assignment.GroupID], staffID)
+		if assignment.TeacherStaffID > 0 {
+			result[assignment.GroupID] = append(result[assignment.GroupID], assignment.TeacherStaffID)
 		}
 	}
 	return result, nil

@@ -88,7 +88,10 @@ type ActivityInstance struct {
 	TemplateType string `bun:"-" json:"-"`
 	// TemplateRequiredStaff is the template's Personalbedarf override, read
 	// along with TemplateType; a duty's gap rule needs it (#3822).
-	TemplateRequiredStaff *int            `bun:"-" json:"-"`
+	TemplateRequiredStaff *int `bun:"-" json:"-"`
+	// TemplatePlannedRoomID is the template's planned room, read along with
+	// TemplateType; "Heute anders" names a moved block with it (#7662).
+	TemplatePlannedRoomID *int64          `bun:"-" json:"-"`
 	StartedBy             *int64          `bun:"started_by" json:"started_by,omitempty"`
 	StartedAt             *time.Time      `bun:"started_at" json:"started_at,omitempty"`
 	CompletedAt           *time.Time      `bun:"completed_at" json:"completed_at,omitempty"`

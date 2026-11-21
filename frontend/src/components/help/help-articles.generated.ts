@@ -1037,6 +1037,10 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
           "Neue Änderungen stehen oben. Längere Änderungen stehen kurz darunter, zum Beispiel mit `seit 3.11.`.",
           // Quelle Stundenplan (#7662): Uhrzeit und Raum.
           "Bei Angeboten und AGs stehen Uhrzeit und Raum unter dem Satz. Sie stehen nach Beginn geordnet.",
+          // Abwesenheit und Vertretung bei einem Termin (#7675): Quelle
+          // Personal, Link in den Vertretungsplan mit schedules:manage.
+          "Auch wer nur bei einem Termin fehlt oder vertritt, steht mit Uhrzeit da. Beispiel: `Sara übernimmt heute „Chor“ für Ben.`",
+          "Darfst du den `Vertretungsplan` öffnen, führt dich der Eintrag zu diesem Termin.",
           "Am Handy zeigt `Schule` nur die ersten 3 Einträge. Den Rest zeigt `Alle anzeigen`.",
           "Dienste, Angebote und AGs, die schon vorbei sind, stehen ganz unten unter `erledigt`. Wähle `erledigt`, um sie zu sehen.",
           // Hinweise der Leitung in „Heute anders" (#7667), components/home/day-notice-row.tsx.
@@ -1080,6 +1084,9 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
       // Kinder nur mit users:read, wie auf der Seite eines Kindes (#7665).
       "In `Heute anders` fehlen die Kinder? Die Kinder siehst du nur, wenn du auch ihre Krankmeldungen auf der Seite eines Kindes sehen darfst.",
       "In `Heute anders` stehen bei dir nur Zahlen statt Namen? Namen siehst du für deine eigenen Gruppen. Für den Rest der Schule zeigt die Karte nur, wie viele fehlen. Die Leitung sieht alle Namen.",
+      // Termin-Vertretungen in „Heute anders" (#7675): Namen für eigene
+      // Termine und das eigene Team, sonst nur die Zeile ohne Namen.
+      "In `Heute anders` steht bei Terminen nur `ändert sich heute, wer betreut`? Namen siehst du bei deinen Terminen und deinen Gruppen. Für die übrigen Termine zeigt die Karte nur, wie viele es sind. Die Leitung sieht alle Namen.",
       // Dienste in „Heute anders" (#7661): die Betreuung sieht nur den
       // eigenen, wer den Dienstplan der Schule öffnen darf, sieht alle.
       "Du siehst in `Heute anders` nur deinen eigenen Dienst? Geänderte Dienste der anderen sieht nur, wer den `Dienstplan` der Schule öffnen darf.",

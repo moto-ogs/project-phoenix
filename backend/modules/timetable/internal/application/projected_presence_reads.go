@@ -135,7 +135,7 @@ func legacyInstance(row ports.ActivityInstance) *scheduleModels.ActivityInstance
 		IsSpontaneous: row.IsSpontaneous, UnderstaffedAck: row.UnderstaffedAck, UnderstaffedNote: row.UnderstaffedNote,
 		CancelReason: row.CancelReason, Notes: row.Notes, IdempotencyKey: row.IdempotencyKey,
 		IdempotencyFingerprint: row.IdempotencyFingerprint, CreatedBy: row.CreatedBy, TemplateType: row.TemplateType,
-		TemplateRequiredStaff: row.TemplateRequiredStaff, StartedBy: row.StartedBy, StartedAt: row.StartedAt,
+		TemplateRequiredStaff: row.TemplateRequiredStaff, TemplatePlannedRoomID: row.TemplatePlannedRoomID, StartedBy: row.StartedBy, StartedAt: row.StartedAt,
 		CompletedAt: row.CompletedAt, CompletedBy: row.CompletedBy, ReopenUntil: row.ReopenUntil, CompletionSnapshot: row.CompletionSnapshot,
 	}
 	instance.ID, instance.CreatedAt, instance.UpdatedAt = row.ID, row.CreatedAt, row.UpdatedAt

@@ -905,3 +905,118 @@ describe("Termine aus dem Stundenplan (#7662)", () => {
     });
   });
 });
+
+describe("Abwesenheit und Vertretung bei Terminen (#7675)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    phone.value = false;
+    // Mittags: der Termin von 10 bis 11 Uhr ist vorbei, der um 13 Uhr nicht.
+    setTestClock("2026-09-09T12:00:00+02:00");
+  });
+
+  const termin = (
+    kind: string,
+    title: string,
+    start: string,
+    end: string,
+    extra: Partial<DayChange> = {},
+  ): DayChange =>
+    change({
+      kind,
+      section: "you",
+      activity: { id: title, title },
+      startsAt: `2026-09-09T${start}:00+02:00`,
+      endsAt: `2026-09-09T${end}:00+02:00`,
+      link: {
+        target: "substitution_plan",
+        staffId: null,
+        instanceId: "41",
+        day: "2026-09-09",
+      },
+      ...extra,
+    });
+
+  it("zeigt Vertretung und Ausfall mit Uhrzeit, Link zum Vertretungsplan und Vergangenes unter „erledigt“", () => {
+    serve({
+      entries: [
+        termin("block_substitution", "Chor", "13:00", "14:00", {
+          roomName: "Aula",
+          people: [
+            { staffId: "1", name: "Sara", role: "substitute", isSelf: false },
+            { staffId: "2", name: "Ben", role: "replaced", isSelf: false },
+          ],
+        }),
+        termin("block_staff_absent", "Lernzeit", "10:00", "11:00", {
+          people: [
+            { staffId: "3", name: "Anna", role: "absent", isSelf: true },
+          ],
+        }),
+      ],
+    });
+    render(<DayChangesBlock />);
+
+    const mine = screen.getByRole("region", { name: "Betrifft dich" });
+    const cover = within(mine).getByRole("link", {
+      name: /Sara übernimmt heute „Chor“ für Ben\.\s*13:00 bis 14:00 Uhr · Aula/,
+    });
+    expect(cover).toHaveAttribute(
+      "href",
+      "/schule/vertretung?d=2026-09-09&block=41",
+    );
+    expect(
+      screen.queryByText("Bei „Lernzeit“ bist du heute nicht da."),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(within(mine).getByRole("button", { name: "1 erledigt" }));
+    expect(rowTexts(mine).at(-1)).toBe(
+      "Bei „Lernzeit“ bist du heute nicht da.10:00 bis 11:00 Uhr",
+    );
+    expect(trackEvent).toHaveBeenCalledWith("day_changes_done_expanded");
+
+    fireEvent.click(cover);
+    expect(trackEvent).toHaveBeenCalledWith("day_changes_entry_clicked", {
+      day_change_kind: "block_substitution",
+    });
+  });
+
+  it("nennt die Vertretung eines Termins aus Sicht der Person", async () => {
+    const { dayChangeText } = await import("./day-changes-text");
+    const sub = {
+      staffId: "1",
+      name: "Sara",
+      role: "substitute",
+      isSelf: false,
+    };
+    const replaced = {
+      staffId: "2",
+      name: "Ben",
+      role: "replaced",
+      isSelf: false,
+    };
+    const text = (people: DayChange["people"]) =>
+      dayChangeText(
+        termin("block_substitution", "Chor", "13:00", "14:00", { people }),
+      );
+    expect(text([{ ...sub, isSelf: true }, replaced])).toBe(
+      "Du übernimmst heute „Chor“ für Ben.",
+    );
+    expect(text([sub, { ...replaced, isSelf: true }])).toBe(
+      "Sara übernimmt heute „Chor“ für dich.",
+    );
+    expect(
+      dayChangeText(
+        termin("block_staff_absent", "Chor", "13:00", "14:00", {
+          people: [{ ...replaced, role: "absent" }],
+        }),
+      ),
+    ).toBe("Bei „Chor“ ist Ben heute nicht da.");
+    const count = (n: number) =>
+      dayChangeText(change({ kind: "block_change_count", count: n }));
+    expect(count(1)).toBe(
+      "Bei 1 weiteren Termin ändert sich heute, wer betreut.",
+    );
+    expect(count(3)).toBe(
+      "Bei 3 weiteren Terminen ändert sich heute, wer betreut.",
+    );
+  });
+});

@@ -40,6 +40,10 @@ export interface DayChangeLink {
   readonly target: LinkTarget | (string & {});
   readonly staffId: string | null;
   readonly studentId?: string | null;
+  /** Der Termin im Vertretungsplan (#7675). */
+  readonly instanceId?: string | null;
+  /** Der Tag der Übersicht, für den Vertretungsplan dieses Tages. */
+  readonly day?: string | null;
 }
 
 /** Die Kinder einer Gruppe oder Klasse außerhalb der eigenen Gruppen. */
@@ -97,7 +101,10 @@ export interface DayChange {
     readonly name: string;
     readonly traeger: boolean;
   } | null;
-  /** Der Termin eines Eintrags der Quelle Stundenplan (#7662). */
+  /**
+   * Der Termin eines Eintrags der Quelle Stundenplan (#7662) oder einer
+   * Abwesenheit oder Vertretung bei einem Termin (#7675).
+   */
   readonly activity?: { readonly id: string; readonly title: string } | null;
   /** Wo der Termin heute ist. */
   readonly roomName?: string | null;
@@ -112,12 +119,14 @@ export interface DayChangesOverview {
   readonly entries: readonly DayChange[];
 }
 
-function mapLink(link: Entry["link"]): DayChangeLink | null {
+function mapLink(link: Entry["link"], day?: string): DayChangeLink | null {
   return link
     ? {
         target: link.target,
         staffId: link.staff_id ?? null,
         studentId: link.student_id ?? null,
+        instanceId: link.instance_id ?? null,
+        day: day ?? null,
       }
     : null;
 }
@@ -164,7 +173,7 @@ function mapNotice(notice: DayNotice | null): DayChangeNotice | null {
   };
 }
 
-function mapEntry(entry: Entry): DayChange {
+function mapEntry(entry: Entry, day: string): DayChange {
   return {
     kind: entry.kind,
     section: entry.section,
@@ -180,7 +189,7 @@ function mapEntry(entry: Entry): DayChange {
       isSelf: person.is_self,
     })),
     groupName: entry.group?.name ?? null,
-    link: mapLink(entry.link),
+    link: mapLink(entry.link, day),
     count: entry.count,
     child: entry.child ? mapChild(entry.child) : null,
     childSummary: entry.child_summary
@@ -204,7 +213,9 @@ function mapDayChanges(overview: Overview): DayChangesOverview {
     failedSources: (overview.sources ?? [])
       .filter((source) => source.status === "failed")
       .map((source) => source.source),
-    entries: (overview.entries ?? []).map(mapEntry),
+    entries: (overview.entries ?? []).map((entry) =>
+      mapEntry(entry, overview.date ?? ""),
+    ),
   };
 }
 

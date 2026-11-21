@@ -246,3 +246,39 @@ Projektion nutzt „change“.
   gemessen mit einem Konto, das die Schließtage liest.
 - Klassenausflug und Stundenplanänderung einer Klasse passen nicht mehr ins
   Budget, ohne es zu erhöhen. Sie kommen in einem Folge-Ticket.
+
+## Nachtrag 2026-11-21: Abwesenheit und Vertretung einzelner Termine (#7675)
+
+- Die Arten `block_staff_absent` (eine Kraft fehlt bei einem Termin, niemand
+  übernimmt) und `block_substitution` (jemand übernimmt einen Termin) gehören
+  zur Quelle Personal. Timetable liefert über `BlockStaffChangeQuery` die
+  Termine des Tages mit einer abwesenden oder vertretenden Kraft samt allen
+  Zuordnungen, in einer Anweisung und ohne Grund. Die Root-Bindung wendet die
+  Personal-Regel an.
+- Sichtregel: Namen sieht die Betreuung bei eigenen Terminen (sie steht in
+  der Zuordnung) und wenn jemand aus ihrem Team fehlt oder übernimmt; die
+  Leitung sieht alle. Für die übrigen Termine bekommt ein Konto mit
+  `users:read` nur die Zahl (`block_change_count`), wie bei den
+  Abwesenheiten.
+- Team ist hier das Team der Person (Lehrkräfte der eigenen Gruppen und die
+  Vertretungen des Tages), wie bei den tagesweiten Abwesenheiten. #7138
+  bestimmt das Team eines Termins über dessen OGS-Gruppen; das kostet zwei
+  weitere Anweisungen (Gruppen des Termins, Gruppen der geplanten Kinder) und
+  passt nicht ins Budget. Ein Folge-Ticket kann es nach einer Einsparung
+  nachziehen.
+- Eine Abwesenheit, die eine Krankmeldung gesetzt hat oder die eine
+  ganztägige Abwesenheit des Tages abdeckt, ist kein eigener Eintrag; ihre
+  Vertretung schon. Bei einer halbtägigen Abwesenheit bleiben die Termine
+  der anderen Tageshälfte Einträge.
+- Die Projektion legt die Zeile „andere Leitung“ der Quelle Stundenplan mit
+  dem Eintrag der Quelle Personal zum selben Termin zusammen und übernimmt
+  deren Raum. Das ist kein Rechte-Filter: Fehlt der Eintrag der Quelle
+  Personal, bleibt die Zeile des Stundenplans.
+- Link: der Vertretungsplan des Tages mit dem Termin (`schedules:manage` oder
+  Admin), sonst der Tagesplan (`schedules:read`).
+- Budget: Die neue Anweisung wird an anderer Stelle eingespart. Die
+  Gruppen-Lehrkräfte kommen mit ihren Personal-Datensätzen in einer Anweisung
+  (School Membership), der geplante Raum einer Serie kommt mit dem Termin aus
+  dem bestehenden Join der Vorlage, und die Quellen eines Savepoints lesen die
+  Personalnamen gemeinsam. `api.day_changes.today` bleibt bei 19,
+  `api.day_changes.today_activities` bei 20 Anweisungen.

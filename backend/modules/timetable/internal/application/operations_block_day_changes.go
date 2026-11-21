@@ -17,8 +17,8 @@ import (
 // operational overview sees every block of the school, everyone else the
 // blocks they are planned for. A caller without a staff record and without
 // the overview sees nothing; that is no error. The read is set-based: the
-// day's blocks, their staff, their series, the room names and the day's
-// protocol, one statement each.
+// day's blocks with their series' planned room, their staff, the room names
+// and the day's protocol, one statement each.
 func (s *operations) BlockDayChanges(ctx context.Context, accountID int64, isAdmin bool, date calendar.Date) ([]timetable.BlockDayChange, error) {
 	viewer, err := s.blockDayViewer(ctx, accountID, isAdmin)
 	if err != nil || !viewer.sees {
@@ -32,10 +32,7 @@ func (s *operations) BlockDayChanges(ctx context.Context, accountID int64, isAdm
 	if err != nil {
 		return nil, err
 	}
-	regularRooms, err := s.regularRooms(ctx, visible)
-	if err != nil {
-		return nil, err
-	}
+	regularRooms := regularRooms(visible)
 	changes := make([]timetable.BlockDayChange, 0)
 	for _, inst := range visible {
 		change, ok := blockDayChange(inst, staffByInstance[inst.ID], reinstated[inst.ID], regularRooms[inst.ID])
@@ -255,38 +252,17 @@ func (states reinstatementStates) forInstance(instance *scheduleModels.ActivityI
 	return reinstated, found
 }
 
-// regularRooms maps each series block to the room its series plans. A block
-// without a series (spontaneous or one-off) has no regular room.
-func (s *operations) regularRooms(ctx context.Context, instances []*scheduleModels.ActivityInstance) (map[int64]int64, error) {
-	seriesIDs := make([]int64, 0, len(instances))
-	seen := map[int64]bool{}
-	for _, inst := range instances {
-		if inst.ActivityGroupID == nil || inst.IsSpontaneous || seen[*inst.ActivityGroupID] {
-			continue
-		}
-		seen[*inst.ActivityGroupID] = true
-		seriesIDs = append(seriesIDs, *inst.ActivityGroupID)
-	}
+// regularRooms maps each series block to the room its series plans, read
+// along with the block (#7675 saved the series read). A block without a
+// series (spontaneous or one-off) has no regular room.
+func regularRooms(instances []*scheduleModels.ActivityInstance) map[int64]int64 {
 	result := map[int64]int64{}
-	if len(seriesIDs) == 0 {
-		return result, nil
-	}
-	series, err := listLegacyGroups(ctx, s.deps.Templates, timetable.GroupFilter{IDs: seriesIDs}, "block day changes: series")
-	if err != nil {
-		return nil, err
-	}
-	planned := make(map[int64]int64, len(series))
-	for _, group := range series {
-		if group != nil && group.PlannedRoomID != nil {
-			planned[group.ID] = *group.PlannedRoomID
-		}
-	}
 	for _, inst := range instances {
-		if inst.ActivityGroupID != nil && !inst.IsSpontaneous {
-			result[inst.ID] = planned[*inst.ActivityGroupID]
+		if inst.ActivityGroupID != nil && !inst.IsSpontaneous && inst.TemplatePlannedRoomID != nil {
+			result[inst.ID] = *inst.TemplatePlannedRoomID
 		}
 	}
-	return result, nil
+	return result
 }
 
 // nameRooms names the current and the regular rooms in one read.

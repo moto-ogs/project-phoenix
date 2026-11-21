@@ -4386,18 +4386,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
-      "binding_digest": "b9dc4a9a0c85386b1535a1e0a80fd607",
+      "binding_digest": "cd77aeed6db7d2227c87d86aef33ecc8",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListGroupAssignments",
-      "target_owner": "school-membership"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
-      "binding_digest": "ab4a54feaa75ef7e02971009f13d9a1b",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListTeachers",
       "target_owner": "school-membership"
     },
     {
@@ -4410,7 +4402,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
-      "binding_digest": "dc9ce93a11ccc9dbfb83ff722f8ed944",
+      "binding_digest": "9a619cab4827059361260556d9505749",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListGroupAssignments",
@@ -4418,26 +4410,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
-      "binding_digest": "bfa4570731d57e92cf1777530d3e983c",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListTeachers",
-      "target_owner": "school-membership"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
-      "binding_digest": "09a296102250e4f844230e843a643a39",
+      "binding_digest": "dd2348d22039d0f646db88c4b68e9ab6",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.ListGroupAssignments",
-      "target_owner": "school-membership"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
-      "binding_digest": "8a5f7358c060f2ab42edf8da8399070d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.ListTeachers",
       "target_owner": "school-membership"
     },
     {
