@@ -961,8 +961,8 @@ export async function rebookHolidayChild(
         method: "PUT",
         body: {
           bookings: bookings.map((booking) => ({
-            week_id: Number(booking.weekId),
-            time_model_id: Number(booking.timeModelId),
+            week_id: booking.weekId,
+            time_model_id: booking.timeModelId,
             ...(booking.days && booking.days.length > 0
               ? { days: booking.days }
               : {}),
