@@ -744,6 +744,179 @@ describe("traeger-holiday-registrations-api", () => {
     expect(merged.answers).toMatchObject({ krankenkasse: "AOK" });
     expect(merged.childAnswers["9"]).toMatchObject({ tetanus: "ja" });
   });
+  // #2353: values the build does not know. development passed them through
+  // as if they were known.
+  it.each([
+    ["status", { ...BACKEND_DETAIL, status: "archived" }],
+    [
+      "placement",
+      {
+        ...BACKEND_DETAIL,
+        children: BACKEND_DETAIL.children.map((child) => ({
+          ...child,
+          bookings: [{ ...BACKEND_BOOKING, placement: "reserved" }],
+        })),
+      },
+    ],
+    [
+      "contact kind",
+      {
+        ...BACKEND_DETAIL,
+        contacts: [
+          {
+            kind: "doctor",
+            name: "Dr. Kurz",
+            phone: "05402",
+            relationship: "",
+          },
+        ],
+      },
+    ],
+    [
+      "booked day",
+      {
+        ...BACKEND_DETAIL,
+        children: BACKEND_DETAIL.children.map((child) => ({
+          ...child,
+          bookings: [{ ...BACKEND_BOOKING, week_starts_on: null }],
+        })),
+      },
+    ],
+  ])(
+    "fails the read of a registration with an unknown %s instead of guessing it",
+    async (_field, backend) => {
+      fetchMock.mockResolvedValue(jsonResponse(200, { data: backend }));
+      await expect(fetchHolidayRegistration("5", "7")).rejects.toThrow(
+        /contract:/,
+      );
+    },
+  );
+
+  it("drops a registration with an unknown status or placement from the list", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, {
+        data: {
+          registrations: [
+            { ...BACKEND_SUMMARY, id: "7", status: "archived" },
+            {
+              ...BACKEND_SUMMARY,
+              id: "8",
+              children: [
+                {
+                  ...BACKEND_DETAIL.children[0]!,
+                  bookings: [{ ...BACKEND_BOOKING, placement: "reserved" }],
+                },
+              ],
+            },
+            { ...BACKEND_SUMMARY, id: "9" },
+          ],
+          total: 3,
+          status_counts: { received: 2 },
+        },
+      }),
+    );
+
+    const list = await fetchHolidayRegistrations(
+      "5",
+      EMPTY_HOLIDAY_REGISTRATION_FILTER,
+    );
+
+    expect(list.registrations.map((registration) => registration.id)).toEqual([
+      "9",
+    ]);
+  });
+
+  it("drops history entries, criteria and mails it would have to guess", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, {
+        data: {
+          ...BACKEND_DETAIL,
+          history: [
+            event("merge_away", "2026-11-04T09:00:00Z", {}),
+            event("allocate", "2026-11-04T09:00:00Z", {
+              week_ids: ["51"],
+              placement: "reserved",
+            }),
+            event("wish", "2026-11-04T09:00:00Z", {
+              child_id: "9",
+              wish: "maybe",
+            }),
+            event("criteria_check", "2026-11-05T09:00:00Z", {
+              checks: [
+                { criterion_id: "3", child_id: null, checked: "yes" },
+                { criterion_id: "4", child_id: null, checked: "partly" },
+              ],
+            }),
+          ],
+          criteria: [
+            {
+              criterion_id: "3",
+              name: "Berufstätig",
+              question: "Sind beide berufstätig?",
+              scope: "family",
+              child_id: null,
+              stated: "yes",
+              checked: null,
+              checked_at: null,
+            },
+            {
+              criterion_id: "4",
+              name: "Neu",
+              question: "Neu?",
+              scope: "class",
+              child_id: null,
+              stated: "yes",
+              checked: null,
+              checked_at: null,
+            },
+            {
+              criterion_id: "5",
+              name: "Geprüft",
+              question: "Geprüft?",
+              scope: "family",
+              child_id: null,
+              stated: "yes",
+              checked: "partly",
+              checked_at: "2026-11-05T09:00:00Z",
+            },
+          ],
+          mail_problems: [
+            { kind: "holiday_registration_received", state: "failed" },
+            { kind: "holiday_invoice", state: "failed" },
+            { kind: "holiday_registration_received", state: "lost" },
+          ],
+          mails: [
+            { kind: "holiday_registration_received", outcome: "delivered" },
+            { kind: "holiday_invoice", outcome: "delivered" },
+            { kind: "holiday_place_granted", outcome: "teleported" },
+          ],
+        },
+      }),
+    );
+
+    const detail = await fetchHolidayRegistration("5", "7");
+
+    expect(detail.history.map((entry) => entry.action)).toEqual([
+      "criteria_check",
+    ]);
+    expect(detail.history[0]?.checks).toEqual([
+      { criterionId: "3", childId: null, checked: "yes" },
+    ]);
+    expect(detail.criteria?.map((criterion) => criterion.criterionId)).toEqual([
+      "3",
+    ]);
+    expect(detail.mailProblems).toEqual([
+      { kind: "holiday_registration_received", state: "failed" },
+    ]);
+    expect(detail.mails).toEqual([
+      {
+        kind: "holiday_registration_received",
+        outcome: "delivered",
+        createdAt: null,
+      },
+    ]);
+  });
+
   it("reads the places of a week with an unknown waiting status as unknown", async () => {
     const week = {
       week_id: "51",
