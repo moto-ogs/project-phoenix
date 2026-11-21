@@ -90,7 +90,6 @@ func Int64s(ids []ID) []int64 {
 	return out
 }
 
-
 // OptionalInt64s converts an optional list of IDs back to int64 identifiers.
 func OptionalInt64s(ids *[]ID) *[]int64 {
 	if ids == nil {
