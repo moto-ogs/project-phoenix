@@ -96,9 +96,9 @@ describe("suggestion queries", () => {
 
 describe("mapOfferingSuggestion combinations", () => {
   it("maps complete alternatives without dropping complementary offerings", () => {
-    const randstunde = { id: 7, name: "Randstunde" };
-    const ganztag = { id: 4, name: "Ganztag" };
-    const spaet = { id: 8, name: "Ganztag spät" };
+    const randstunde = { id: "7", name: "Randstunde" };
+    const ganztag = { id: "4", name: "Ganztag" };
+    const spaet = { id: "8", name: "Ganztag spät" };
     const suggestion = mapOfferingSuggestion({
       suggestion: {
         offerings: [ganztag, randstunde],
@@ -106,6 +106,9 @@ describe("mapOfferingSuggestion combinations", () => {
           [ganztag, randstunde],
           [spaet, randstunde],
         ],
+        grade_levels: null,
+        school_classes: null,
+        candidates: null,
         unbooked_count: 0,
         missing_count: 0,
         ambiguous: true,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { offeringGapsResponseSchema } from "./contract/timetable.generated";
 import { mapOfferingGaps } from "./offering-gap";
 
 describe("mapOfferingGaps", () => {
@@ -7,7 +8,7 @@ describe("mapOfferingGaps", () => {
     const [gap] = mapOfferingGaps({
       gaps: [
         {
-          offering: { id: 7, name: "Randstunde" },
+          offering: { id: "7", name: "Randstunde" },
           student_count: 3,
           school_classes: ["1a"],
           weekdays: [2],
@@ -24,18 +25,23 @@ describe("mapOfferingGaps", () => {
     expect(gap?.newSeriesPlansCovered).toBe(false);
   });
 
-  it("offers no creation when the answer says nothing about it", () => {
-    const [gap] = mapOfferingGaps({
+  // The creation guard is a required field (#2353): an answer that says
+  // nothing about it never reaches the hint, so no creation is offered.
+  it("refuses an answer that says nothing about the creation guard", () => {
+    const parsed = offeringGapsResponseSchema.safeParse({
       gaps: [
         {
-          offering: { id: 7, name: "Randstunde" },
+          offering: { id: "7", name: "Randstunde" },
           student_count: 3,
+          school_classes: null,
+          weekdays: null,
           acknowledged: false,
+          acknowledged_classes: null,
+          new_series_classes: null,
         },
       ],
     });
 
-    expect(gap?.newSeriesClasses).toEqual([]);
-    expect(gap?.newSeriesPlansCovered).toBe(true);
+    expect(parsed.success).toBe(false);
   });
 });
