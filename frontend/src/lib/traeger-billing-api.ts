@@ -96,6 +96,13 @@ type BillingPositionKind = (typeof POSITION_KIND_VALUES)[number];
 /** An invoice, its Storno or its Gutschrift (#4690). */
 export type BillingDocumentKind = (typeof DOCUMENT_KIND_VALUES)[number];
 
+/** The document kind a value names, undefined when unknown. */
+export function knownDocumentKind(
+  value: string,
+): BillingDocumentKind | undefined {
+  return knownEnum(DOCUMENT_KIND_VALUES, value);
+}
+
 /**
  * A document of the history of an invoice: its Storno, its Gutschriften and
  * the invoice that replaces it, which may belong to another run.
@@ -355,7 +362,7 @@ function documentLinkFromBackend(link: WireDocumentLink): BillingDocumentLink {
   return {
     id: link.id,
     runId: link.run_id,
-    kind: knownEnum(DOCUMENT_KIND_VALUES, link.kind),
+    kind: knownDocumentKind(link.kind),
     number: link.number,
     issuedOn: link.issued_on,
     totalCents: link.total_cents,
@@ -367,7 +374,7 @@ function documentFromBackend(document: WireDocument): BillingDocument {
   return {
     // A draft has no ID yet: 0, which the contract decoder hands on as "0".
     id: document.id === "0" ? "" : document.id,
-    kind: knownEnum(DOCUMENT_KIND_VALUES, document.kind),
+    kind: knownDocumentKind(document.kind),
     referenceNumber: document.reference_number,
     reason: document.reason,
     history: (document.history ?? []).map(documentLinkFromBackend),
@@ -753,7 +760,7 @@ export interface LetterSeries {
 function mailingFromBackend(mailing: WireLetterMailing): LetterMailing {
   return {
     documentId: mailing.document_id,
-    kind: knownEnum(DOCUMENT_KIND_VALUES, mailing.kind),
+    kind: knownDocumentKind(mailing.kind),
     number: mailing.number,
     recipientFirstName: mailing.recipient_first_name,
     recipientLastName: mailing.recipient_last_name,
