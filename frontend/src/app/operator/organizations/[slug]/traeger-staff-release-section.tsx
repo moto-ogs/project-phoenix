@@ -57,8 +57,8 @@ const STAFF_REPRESENTATIONS: readonly {
   },
 ];
 
-const representationLabel = (value: StaffRepresentation) =>
-  STAFF_REPRESENTATIONS.find((entry) => entry.value === value)?.label ?? value;
+const representationLabel = (value: StaffRepresentation | undefined) =>
+  STAFF_REPRESENTATIONS.find((entry) => entry.value === value)?.label ?? "–";
 
 export function TraegerStaffReleaseSection({
   organizationId,

@@ -14,6 +14,8 @@ import {
   getDeviceStatusDisplayName,
   getDeviceTypeDisplayName,
 } from "./iot-helpers";
+import type { LifecycleEventResponse as WireSchoolHistoryEntry } from "./contract/iot.generated";
+import type { deviceHistoryResponse as WireOperatorHistoryEntry } from "./contract/operator-devices.generated";
 
 /** What happened to the device; the backend's closed set. */
 type DeviceHistoryAction =
@@ -46,28 +48,24 @@ export interface DeviceHistoryEntry {
   readonly schoolName?: string;
 }
 
-interface BackendHistoryEntry {
-  id: string;
-  action: string;
-  actor_kind: string;
-  actor_name?: string | null;
-  changes?: Record<string, DeviceHistoryChange> | null;
-  occurred_at: string;
-  school_name?: string;
-}
-
-/** Maps the wire entry of either portal to the shared shape. */
+/**
+ * Maps the wire entry of either portal to the shared shape: the school
+ * portal's entry names the person, the operator's the school.
+ */
 export function mapDeviceHistoryEntry(
-  raw: BackendHistoryEntry,
+  raw: WireSchoolHistoryEntry | WireOperatorHistoryEntry,
 ): DeviceHistoryEntry {
+  const actorName = "actor_name" in raw ? raw.actor_name?.trim() : undefined;
   return {
     id: raw.id,
+    // An action this build does not know reads as „Geändert“ in
+    // describeDeviceHistoryEntry.
     action: raw.action,
     actorKind: raw.actor_kind,
-    actorName: raw.actor_name?.trim() ? raw.actor_name.trim() : null,
+    actorName: actorName ? actorName : null,
     changes: raw.changes ?? {},
     occurredAt: raw.occurred_at,
-    ...(raw.school_name === undefined ? {} : { schoolName: raw.school_name }),
+    ...("school_name" in raw ? { schoolName: raw.school_name } : {}),
   };
 }
 
@@ -88,8 +86,8 @@ export async function fetchDeviceHistory(
     );
   }
   const body = (await response.json()) as
-    BackendHistoryEntry[] | { data?: BackendHistoryEntry[] | null };
-  const rows = Array.isArray(body) ? body : (body.data ?? []);
+    WireSchoolHistoryEntry[] | { data: WireSchoolHistoryEntry[] };
+  const rows = Array.isArray(body) ? body : body.data;
   return rows.map(mapDeviceHistoryEntry);
 }
 
