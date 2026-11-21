@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Closing days in booked holiday weeks (#6434, #6442, #6457, ADR 0196). A
@@ -68,7 +69,7 @@ type HolidayClosure struct {
 
 // HolidayClosureSpan is the stored version of a Träger closing day.
 type HolidayClosureSpan struct {
-	SchoolIDs []int64       `json:"school_ids"`
+	SchoolIDs []ident.ID    `json:"school_ids"`
 	StartsOn  calendar.Date `json:"start_date"`
 	EndsOn    calendar.Date `json:"end_date"`
 }
@@ -166,12 +167,12 @@ type HolidayClosedDay struct {
 // many children and families booked it. Waitlisted counts the children of
 // Children that wait for a place.
 type HolidayClosureWeek struct {
-	WeekID       int64              `json:"week_id"`
-	PeriodID     int64              `json:"period_id"`
+	WeekID       ident.ID           `json:"week_id"`
+	PeriodID     ident.ID           `json:"period_id"`
 	PeriodName   string             `json:"period_name"`
 	StartsOn     calendar.Date      `json:"starts_on"`
 	EndsOn       calendar.Date      `json:"ends_on"`
-	HostSchoolID int64              `json:"host_school_id"`
+	HostSchoolID ident.ID           `json:"host_school_id"`
 	ClosedDays   []HolidayClosedDay `json:"closed_days"`
 	ReopenedDays []HolidayClosedDay `json:"reopened_days"`
 	Children     int                `json:"children"`

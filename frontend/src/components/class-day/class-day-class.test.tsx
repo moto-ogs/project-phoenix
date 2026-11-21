@@ -511,7 +511,7 @@ describe("ClassDayClass", () => {
 
       await waitFor(() =>
         expect(record).toHaveBeenCalledWith("4a", todayISO(), [
-          { student_id: 1, status: "absent" },
+          { student_id: "1", status: "absent" },
           { list_entry_id: "9007199254740993", status: "present" },
         ]),
       );
@@ -584,7 +584,7 @@ describe("ClassDayClass", () => {
       );
       await waitFor(() =>
         expect(record).toHaveBeenCalledWith("4a", todayISO(), [
-          { student_id: 3, status: "absent" },
+          { student_id: "3", status: "absent" },
         ]),
       );
     });
@@ -615,7 +615,7 @@ describe("ClassDayClass", () => {
       fireEvent.click(retry);
       await waitFor(() =>
         expect(record).toHaveBeenLastCalledWith("4a", todayISO(), [
-          { student_id: 1, status: "absent" },
+          { student_id: "1", status: "absent" },
         ]),
       );
     });
@@ -816,7 +816,7 @@ describe("ClassDayClass", () => {
       await waitFor(() =>
         expect(save).toHaveBeenLastCalledWith("4a", todayISO(), {
           present: [],
-          absent: [1, 2],
+          absent: ["1", "2"],
         }),
       );
     });
@@ -873,8 +873,8 @@ describe("ClassDayClass", () => {
 
       await waitFor(() =>
         expect(handOver).toHaveBeenCalledWith("4a", todayISO(), {
-          present: [2],
-          absent: [1],
+          present: ["2"],
+          absent: ["1"],
         }),
       );
       expect(
@@ -921,8 +921,8 @@ describe("ClassDayClass", () => {
       fireEvent.click(screen.getByRole("button", { name: "Übergeben" }));
       await waitFor(() =>
         expect(handOver).toHaveBeenCalledWith("4a", todayISO(), {
-          present: [2],
-          absent: [1],
+          present: ["2"],
+          absent: ["1"],
         }),
       );
     });

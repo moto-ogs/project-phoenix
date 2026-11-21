@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -22,8 +23,8 @@ func fullyPopulatedStudentResponse() StudentResponse {
 	yes := true
 
 	return StudentResponse{
-		ID:                       id,
-		PersonID:                 id + 1,
+		ID:                       ident.ID(id),
+		PersonID:                 ident.ID(id + 1),
 		FirstName:                "Emma",
 		LastName:                 "Meyer",
 		TagID:                    "TAG-1",
@@ -32,7 +33,7 @@ func fullyPopulatedStudentResponse() StudentResponse {
 		Location:                 "Gruppenraum",
 		LocationSince:            &now,
 		RoomColor:                str("#83CD2D"),
-		GroupID:                  id + 2,
+		GroupID:                  ident.ID(id + 2),
 		GroupName:                "Sternengruppe",
 		AddressStreet:            "Musterstrasse 12a",
 		AddressCity:              "Koeln",
@@ -53,7 +54,7 @@ func fullyPopulatedStudentResponse() StudentResponse {
 		AllowedDepartureModes:    departure.AllowedDepartureModes{"mon": {"pickup"}},
 		DepartureRuleConfigured:  true,
 		DepartureCompanionNote:   "geht mit Nachbarskind",
-		CompanionStudentIDs:      []int64{id + 3},
+		CompanionStudentIDs:      []ident.ID{ident.ID(id + 3)},
 		CompanionsChanged:        &yes,
 		Bus:                      true,
 		BusDays:                  departure.BusDays{"mon": true},
@@ -70,7 +71,7 @@ func fullyPopulatedStudentResponse() StudentResponse {
 		PhotoURL:                 "/api/students/4711/photo",
 		PhotoConsentGiven:        &yes,
 		PhotoConsentGivenAt:      &now,
-		PhotoConsentGivenBy:      &id,
+		PhotoConsentGivenBy:      (*ident.ID)(&id),
 		AGBAcceptedAt:            &now,
 		DataProcessingAcceptedAt: &now,
 		EmailContactAcceptedAt:   &now,

@@ -3,6 +3,7 @@ package application
 import (
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // traegerChangesWithin keeps only changes covered by the Träger approval.
@@ -19,7 +20,7 @@ func traegerChangesWithin(bookings []changedBooking, closure enrollment.HolidayC
 		add(closure.SchoolIDs, closure.StartsOn, closure.EndsOn)
 	}
 	if closure.Previous != nil {
-		add(closure.Previous.SchoolIDs, closure.Previous.StartsOn, closure.Previous.EndsOn)
+		add(ident.Int64s(closure.Previous.SchoolIDs), closure.Previous.StartsOn, closure.Previous.EndsOn)
 	}
 	var result []changedBooking
 	for _, booking := range bookings {

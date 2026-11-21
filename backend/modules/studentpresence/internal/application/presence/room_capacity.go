@@ -24,7 +24,7 @@ func (s *service) ensureRoomCapacity(ctx context.Context, roomID int64, incoming
 	}
 
 	return &RoomCapacityError{
-		RoomID:           room.ID,
+		RoomID:           room.ID.Int64(),
 		RoomName:         room.Name,
 		CurrentOccupancy: currentOccupancy,
 		MaxCapacity:      *room.Capacity,

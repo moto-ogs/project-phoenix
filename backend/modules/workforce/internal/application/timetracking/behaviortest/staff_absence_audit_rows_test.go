@@ -7,6 +7,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	api "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,18 +23,18 @@ func TestStaffAbsenceAuditRowsWriteTheRecordedAuditBack(t *testing.T) {
 	ctx := testpkg.Ctx(t)
 	day := calendar.NewDate(2026, time.March, 2).String()
 	absence, err := workTime.CreateStaffAbsence(ctx, &workforce.StaffAbsence{
-		StaffID:     staff.ID,
+		StaffID:     ident.ID(staff.ID),
 		AbsenceType: workforce.AbsenceTypeVacation,
 		DateStart:   day,
 		DateEnd:     day,
 		Status:      workforce.AbsenceStatusRequested,
-		CreatedBy:   staff.ID,
+		CreatedBy:   ident.ID(staff.ID),
 	})
 	require.NoError(t, err)
 
 	fromStatus := workforce.AbsenceStatusRequested
 	audit := workforce.StaffAbsenceAudit{
-		AbsenceID:  absence.ID,
+		AbsenceID:  absence.ID.Int64(),
 		FromStatus: &fromStatus,
 		ToStatus:   workforce.AbsenceStatusApproved,
 		ActorID:    account.ID,

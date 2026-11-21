@@ -189,7 +189,7 @@ describe("quoteHolidayContribution (#5664)", () => {
 
     await quoteHolidayContribution(
       "abc",
-      [[{ week_id: 1, time_model_id: 2 }], []],
+      [[{ week_id: "1", time_model_id: "2" }], []],
       false,
       [2, 1],
     );

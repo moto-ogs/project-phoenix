@@ -235,9 +235,9 @@ export async function mapSchoolProofKind(
     await traegerRequest<WireSchoolProofKinds[]>(`${BASE}/school-kinds`, {
       method: "PUT",
       body: {
-        school_id: Number(schoolId),
-        school_type_id: Number(schoolTypeId),
-        proof_type_id: proofTypeId === null ? null : Number(proofTypeId),
+        school_id: schoolId,
+        school_type_id: schoolTypeId,
+        proof_type_id: proofTypeId === null ? null : proofTypeId,
       } satisfies ProofMappingRequest,
     }),
   );

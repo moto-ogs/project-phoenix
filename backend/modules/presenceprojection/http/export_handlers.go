@@ -386,7 +386,7 @@ func populateExportPhotoConsentFilterData(responses []StudentResponse, students 
 		consentByStudentID[student.ID] = student.PhotoConsentGivenAt != nil
 	}
 	for i := range responses {
-		consentGiven, ok := consentByStudentID[responses[i].ID]
+		consentGiven, ok := consentByStudentID[responses[i].ID.Int64()]
 		if !ok {
 			continue
 		}
@@ -471,7 +471,7 @@ func applyExportFilters(students []StudentResponse, filters studentExportFilters
 		if withHealthInfoOnly && !hasHealthInfo(student) {
 			continue
 		}
-		if selectedIDs != nil && !selectedIDs[student.ID] {
+		if selectedIDs != nil && !selectedIDs[student.ID.Int64()] {
 			continue
 		}
 		if exportStudentMatchesFilters(student, filters, byBirthday, months, planningDate) {

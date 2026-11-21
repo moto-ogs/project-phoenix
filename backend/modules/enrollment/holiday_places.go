@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Places of the holiday weeks (#4699, decision E-e). A week has a capacity
@@ -56,18 +57,18 @@ var ErrHolidayWeekNotFound = errors.New("holiday week not found")
 // HolidayReceiptPlacement is the placement of one booking of a sent
 // registration. ChildPosition is the child's position in the form, from 1.
 type HolidayReceiptPlacement struct {
-	ChildPosition int    `json:"child_position"`
-	WeekID        int64  `json:"week_id"`
-	Placement     string `json:"placement"`
+	ChildPosition int      `json:"child_position"`
+	WeekID        ident.ID `json:"week_id"`
+	Placement     string   `json:"placement"`
 }
 
 // HolidayPromotion is one booking that moved up from the waiting list.
 type HolidayPromotion struct {
 	// BookingID identifies the persisted booking generation for mail deduplication.
-	BookingID      int64 `json:"-"`
-	RegistrationID int64 `json:"registration_id"`
-	ChildID        int64 `json:"child_id"`
-	WeekID         int64 `json:"week_id"`
+	BookingID      int64    `json:"-"`
+	RegistrationID ident.ID `json:"registration_id"`
+	ChildID        ident.ID `json:"child_id"`
+	WeekID         ident.ID `json:"week_id"`
 	// ChildPosition is the child's position in the form, from 1.
 	ChildPosition int `json:"-"`
 }
@@ -76,10 +77,10 @@ type HolidayPromotion struct {
 // order. It names the child, the registration and when it came in.
 type HolidayWaitlistEntry struct {
 	Position           int       `json:"position"`
-	RegistrationID     int64     `json:"registration_id"`
+	RegistrationID     ident.ID  `json:"registration_id"`
 	RegistrationStatus string    `json:"registration_status"`
 	SubmittedAt        time.Time `json:"submitted_at"`
-	ChildID            int64     `json:"child_id"`
+	ChildID            ident.ID  `json:"child_id"`
 	ChildFirstName     string    `json:"child_first_name"`
 	ChildLastName      string    `json:"child_last_name"`
 	TimeModelName      string    `json:"time_model_name"`
@@ -94,10 +95,10 @@ type HolidayWaitlistEntry struct {
 // unlimited, the placed bookings of registrations that count and the
 // waiting list.
 type HolidayWeekPlaces struct {
-	WeekID       int64                  `json:"week_id"`
+	WeekID       ident.ID               `json:"week_id"`
 	StartsOn     calendar.Date          `json:"starts_on"`
 	EndsOn       calendar.Date          `json:"ends_on"`
-	HostSchoolID int64                  `json:"host_school_id"`
+	HostSchoolID ident.ID               `json:"host_school_id"`
 	Capacity     *int                   `json:"capacity"`
 	Placed       int                    `json:"placed"`
 	Waitlist     []HolidayWaitlistEntry `json:"waitlist"`

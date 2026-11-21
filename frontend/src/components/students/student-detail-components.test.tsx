@@ -16,18 +16,21 @@ const { mockUseSWR } = vi.hoisted(() => ({
   mockUseSWR: vi.fn(),
 }));
 
-// The Laufgemeinschaft reads through the real hook (its fetch is mocked
-// below); every other read gets the per-test fake.
+// Companion and attendance history reads use the real cache; other reads
+// get the per-test fake.
 vi.mock("~/lib/swr", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/lib/swr")>();
   return {
+    useInvalidateMatching: actual.useInvalidateMatching,
     useSWRAuth: (key: string | null, ...rest: unknown[]) => {
-      const companions = key?.startsWith("student-companions-") ?? false;
+      const useRealCache =
+        (key?.startsWith("student-companions-") ?? false) ||
+        key === "student-attendance-history-123";
       const real = actual.useSWRAuth(
-        companions ? key : null,
+        useRealCache ? key : null,
         ...(rest as [() => Promise<unknown>]),
       );
-      return companions ? real : mockUseSWR(key, ...rest);
+      return useRealCache ? real : mockUseSWR(key, ...rest);
     },
   };
 });
@@ -64,6 +67,7 @@ import {
   PersonalInfoReadOnly,
   StudentHistorySection,
 } from "./student-detail-components";
+import { useSWRAuth } from "~/lib/swr";
 import { SectionCard } from "~/components/ui/section-card";
 import { ApiError } from "~/lib/api-error";
 import { fetchStudentCompanions } from "~/lib/student-companion-api";
@@ -1532,9 +1536,22 @@ describe("StudentHistorySection", () => {
         stoppedAt: "2026-11-21T09:00:00Z",
         deletedVisits: 3,
       });
+      function CachedHistory() {
+        const { data } = useSWRAuth(
+          "student-attendance-history-123",
+          async () => ["Previously loaded visit"],
+        );
+        return <div>{data?.join(", ") ?? "No cached visits"}</div>;
+      }
       render(
-        <StudentHistorySection {...defaultProps} canManageRoomHistoryStop />,
+        <>
+          <CachedHistory />
+          <StudentHistorySection {...defaultProps} canManageRoomHistoryStop />
+        </>,
       );
+      expect(
+        await screen.findByText("Previously loaded visit"),
+      ).toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: "Stopp setzen" }));
       const confirm = screen.getByRole("button", {
         name: "Stoppen und löschen",
@@ -1558,6 +1575,8 @@ describe("StudentHistorySection", () => {
           { revalidate: false },
         ),
       );
+      expect(await screen.findByText("No cached visits")).toBeInTheDocument();
+      expect(screen.queryByText("Previously loaded visit")).toBeNull();
       expect(
         await screen.findByText("Gestoppt. 3 Raumbesuche sind gelöscht."),
       ).toBeInTheDocument();

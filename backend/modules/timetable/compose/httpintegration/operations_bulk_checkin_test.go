@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	fixtures "github.com/moto-ogs/project-phoenix/modules/timetable/fixturetest"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -35,7 +36,7 @@ func TestTimetableOperationsCheckInStudentsChecksInTheWholeSelection(t *testing.
 	deps.personService.people[619] = &timetable.Person{FirstName: "Tom", LastName: "Muster"}
 	deps.visitRepo.currentByStudent[movedStudentID] = &studentpresence.Visit{StudentID: movedStudentID, ActiveGroupID: originActiveGroupID, EntryTime: opsNow}
 	deps.activeService.moveResult = &studentpresence.StudentMoveResult{
-		Moved:                  []int64{movedStudentID},
+		Moved:                  []ident.ID{ident.ID(movedStudentID)},
 		PreviousActiveGroupIDs: map[int64]int64{movedStudentID: originActiveGroupID},
 	}
 

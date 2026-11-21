@@ -13,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Holiday periods of a Träger (#4659). The caller runs every operation in the
@@ -185,7 +186,7 @@ func (h *HolidayPeriods) refuseLockedAllocationMode(ctx context.Context, organiz
 	if input.AllocationMode == current.AllocationMode {
 		return nil
 	}
-	fresh, err := foundHolidayPeriod(h.store.FindHolidayPeriod(ctx, organizationID, current.ID, false))
+	fresh, err := foundHolidayPeriod(h.store.FindHolidayPeriod(ctx, organizationID, current.ID.Int64(), false))
 	if err != nil {
 		return err
 	}
@@ -308,12 +309,12 @@ func keepArchivedHolidayTimeModels(input enrollment.HolidayPeriodInput, current 
 	archived := map[int64]bool{}
 	for _, week := range current.Weeks {
 		for _, model := range week.TimeModels {
-			archived[model.ID] = model.Archived
+			archived[model.ID.Int64()] = model.Archived
 		}
 	}
 	for _, week := range input.Weeks {
 		for j := range week.TimeModels {
-			if archived[week.TimeModels[j].ID] {
+			if archived[week.TimeModels[j].ID.Int64()] {
 				week.TimeModels[j].Archived = true
 			}
 		}
@@ -406,7 +407,7 @@ func validateHolidayWeeks(weeks []enrollment.HolidayWeekInput, current enrollmen
 	errs := validation.Errors{}
 	known := map[int64]enrollment.HolidayWeek{}
 	for _, week := range current.Weeks {
-		known[week.ID] = week
+		known[week.ID.Int64()] = week
 	}
 	seen := map[int64]bool{}
 	overlaps := overlappingHolidayWeeks(weeks)
@@ -477,7 +478,7 @@ func refuseBookedLunchRemoval(weeks []enrollment.HolidayWeekInput, current enrol
 			continue
 		}
 		if slices.ContainsFunc(current.Weeks, func(stored enrollment.HolidayWeek) bool {
-			return stored.ID == week.ID && stored.LunchBooked
+			return stored.ID == ident.ID(week.ID) && stored.LunchBooked
 		}) {
 			return fmt.Errorf("%w: %w", enrollment.ErrHolidayWeekBooked, enrollment.ErrHolidayLunchBooked)
 		}
@@ -492,7 +493,7 @@ func refuseBookedLunchRemoval(weeks []enrollment.HolidayWeekInput, current enrol
 func refuseBookedUnitChange(weeks []enrollment.HolidayWeekInput, current enrollment.HolidayPeriod) error {
 	stored := map[int64]enrollment.HolidayWeek{}
 	for _, week := range current.Weeks {
-		stored[week.ID] = week
+		stored[week.ID.Int64()] = week
 	}
 	for _, week := range weeks {
 		before, ok := stored[week.ID]
@@ -547,19 +548,19 @@ func validateHolidayTimeModels(models []enrollment.HolidayTimeModelInput, curren
 	errs := validation.Errors{}
 	known := map[int64]bool{}
 	for _, model := range current.TimeModels {
-		known[model.ID] = true
+		known[model.ID.Int64()] = true
 	}
 	seenIDs := map[int64]bool{}
 	var names []string
 	for i, model := range models {
 		modelErrs := validateHolidayTimeModel(model)
-		if model.ID != 0 && (!known[model.ID] || seenIDs[model.ID]) {
+		if model.ID != 0 && (!known[model.ID.Int64()] || seenIDs[model.ID.Int64()]) {
 			modelErrs["id"] = errors.New("the time model is not a time model of this week")
 		}
 		if model.ID == 0 && model.Archived {
 			modelErrs["archived"] = errors.New("only a stored time model can be archived")
 		}
-		seenIDs[model.ID] = true
+		seenIDs[model.ID.Int64()] = true
 		name := strings.ToLower(model.Name)
 		if name != "" && slices.Contains(names, name) {
 			modelErrs["name"] = errors.New("the week already has a time model with this name")
@@ -602,7 +603,7 @@ func validateHolidayTimeModel(model enrollment.HolidayTimeModelInput) validation
 func keepHolidayBookingUnits(input enrollment.HolidayPeriodInput, current enrollment.HolidayPeriod) enrollment.HolidayPeriodInput {
 	stored := map[int64]string{}
 	for _, week := range current.Weeks {
-		stored[week.ID] = week.BookingUnit
+		stored[week.ID.Int64()] = week.BookingUnit
 	}
 	for i, week := range input.Weeks {
 		if unit, ok := stored[week.ID]; ok && week.ID != 0 && week.BookingUnit == "" {

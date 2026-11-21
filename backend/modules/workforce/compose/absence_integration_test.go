@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,8 +21,8 @@ import (
 
 func testAbsence(staffID int64, absenceType, status string, day calendar.Date) *workforce.StaffAbsence {
 	return &workforce.StaffAbsence{
-		StaffID: staffID, AbsenceType: absenceType, Status: status,
-		DateStart: day.String(), DateEnd: day.String(), CreatedBy: staffID,
+		StaffID: ident.ID(staffID), AbsenceType: absenceType, Status: status,
+		DateStart: day.String(), DateEnd: day.String(), CreatedBy: ident.ID(staffID),
 	}
 }
 
@@ -41,17 +42,17 @@ func TestStaffAbsencesAreTenantIsolated(t *testing.T) {
 
 	localAbsence, err := capability.CreateStaffAbsence(ctx, testAbsence(local.ID, workforce.AbsenceTypeSick, workforce.AbsenceStatusReported, day))
 	require.NoError(t, err)
-	assert.Equal(t, testpkg.Tenant(t), localAbsence.TenantID, "the ambient tenant is stamped on the row")
+	assert.Equal(t, ident.ID(testpkg.Tenant(t)), localAbsence.TenantID, "the ambient tenant is stamped on the row")
 	foreignAbsence, err := capability.CreateStaffAbsence(foreignCtx, testAbsence(foreign.ID, workforce.AbsenceTypeSick, workforce.AbsenceStatusReported, day))
 	require.NoError(t, err)
-	assert.Equal(t, foreignTenantID, foreignAbsence.TenantID)
+	assert.Equal(t, ident.ID(foreignTenantID), foreignAbsence.TenantID)
 
 	listed, err := capability.ListStaffAbsences(ctx, workforce.StaffAbsenceFilter{OverlapFrom: day.String(), OverlapTo: day.String()})
 	require.NoError(t, err)
 	require.Len(t, listed, 1)
 	assert.Equal(t, localAbsence.ID, listed[0].ID)
 
-	_, err = capability.FindStaffAbsence(ctx, foreignAbsence.ID)
+	_, err = capability.FindStaffAbsence(ctx, foreignAbsence.ID.Int64())
 	require.ErrorIs(t, err, workforce.ErrStaffAbsenceNotFound, "a foreign row is invisible, not an error of another kind")
 
 	absent, err := capability.StaffAbsenceMapForDate(ctx, day.String())
@@ -59,8 +60,8 @@ func TestStaffAbsencesAreTenantIsolated(t *testing.T) {
 	assert.Equal(t, map[int64]string{local.ID: workforce.AbsenceTypeSick}, absent)
 
 	// A delete addressed at a foreign row is a no-op in the caller's tenant.
-	require.NoError(t, capability.DeleteStaffAbsence(ctx, foreignAbsence.ID))
-	stillThere, err := capability.FindStaffAbsence(foreignCtx, foreignAbsence.ID)
+	require.NoError(t, capability.DeleteStaffAbsence(ctx, foreignAbsence.ID.Int64()))
+	stillThere, err := capability.FindStaffAbsence(foreignCtx, foreignAbsence.ID.Int64())
 	require.NoError(t, err)
 	assert.Equal(t, foreignAbsence.ID, stillThere.ID)
 
@@ -87,7 +88,7 @@ func TestStaffAbsenceMapForDatePrefersSickOverVacation(t *testing.T) {
 	_, err = capability.CreateStaffAbsence(ctx, vacation)
 	require.NoError(t, err)
 	custom := testAbsence(staff.ID, workforce.AbsenceTypeOther, workforce.AbsenceStatusReported, day)
-	custom.AbsenceTypeID = &absenceType.ID
+	custom.AbsenceTypeID = (*ident.ID)(&absenceType.ID)
 	_, err = capability.CreateStaffAbsence(ctx, custom)
 	require.NoError(t, err)
 	_, err = capability.CreateStaffAbsence(ctx, testAbsence(staff.ID, workforce.AbsenceTypeSick, workforce.AbsenceStatusRequested, day))
@@ -139,7 +140,7 @@ func TestStaffAbsenceTypesAreTenantIsolated(t *testing.T) {
 
 	staff := testpkg.CreateTestStaff(t, db, "Type", "User")
 	absence := testAbsence(staff.ID, workforce.AbsenceTypeOther, workforce.AbsenceStatusReported, calendar.NewDate(2026, 3, 11))
-	absence.AbsenceTypeID = &local.ID
+	absence.AbsenceTypeID = (*ident.ID)(&local.ID)
 	_, err = capability.CreateStaffAbsence(ctx, absence)
 	require.NoError(t, err)
 	inUse, err := capability.StaffAbsenceTypeInUse(ctx, local.ID)
@@ -168,20 +169,20 @@ func TestStaffAbsenceAuditIsTenantIsolated(t *testing.T) {
 	foreignAbsence, err := capability.CreateStaffAbsence(foreignCtx, testAbsence(foreign.ID, workforce.AbsenceTypeVacation, workforce.AbsenceStatusRequested, day))
 	require.NoError(t, err)
 
-	localAudit, err := capability.RecordStaffAbsenceAudit(ctx, workforce.StaffAbsenceAudit{AbsenceID: localAbsence.ID, ToStatus: workforce.AbsenceStatusApproved, ActorID: localAccount.ID})
+	localAudit, err := capability.RecordStaffAbsenceAudit(ctx, workforce.StaffAbsenceAudit{AbsenceID: localAbsence.ID.Int64(), ToStatus: workforce.AbsenceStatusApproved, ActorID: localAccount.ID})
 	require.NoError(t, err)
 	assert.Equal(t, testpkg.Tenant(t), localAudit.TenantID)
 	assert.False(t, localAudit.ChangedAt.IsZero(), "the database stamps the change instant")
-	foreignAudit, err := capability.RecordStaffAbsenceAudit(foreignCtx, workforce.StaffAbsenceAudit{AbsenceID: foreignAbsence.ID, ToStatus: workforce.AbsenceStatusApproved, ActorID: foreignAccount.ID})
+	foreignAudit, err := capability.RecordStaffAbsenceAudit(foreignCtx, workforce.StaffAbsenceAudit{AbsenceID: foreignAbsence.ID.Int64(), ToStatus: workforce.AbsenceStatusApproved, ActorID: foreignAccount.ID})
 	require.NoError(t, err)
 	assert.Equal(t, foreignTenantID, foreignAudit.TenantID)
 
-	_, err = capability.RecordStaffAbsenceAudit(ctx, workforce.StaffAbsenceAudit{AbsenceID: localAbsence.ID, ToStatus: ""})
+	_, err = capability.RecordStaffAbsenceAudit(ctx, workforce.StaffAbsenceAudit{AbsenceID: localAbsence.ID.Int64(), ToStatus: ""})
 	require.ErrorIs(t, err, workforce.ErrInvalidStaffAbsence)
 
 	var tenantIDs []int64
 	require.NoError(t, db.NewSelect().TableExpr("active.staff_absence_audit").Column("tenant_id").
-		Where("absence_id IN (?)", bun.List([]int64{localAbsence.ID, foreignAbsence.ID})).OrderExpr("id ASC").Scan(ctx, &tenantIDs))
+		Where("absence_id IN (?)", bun.List([]int64{localAbsence.ID.Int64(), foreignAbsence.ID.Int64()})).OrderExpr("id ASC").Scan(ctx, &tenantIDs))
 	assert.Equal(t, []int64{testpkg.Tenant(t), foreignTenantID}, tenantIDs)
 }
 
@@ -266,7 +267,7 @@ func TestAbsenceDecisionRollsBackAfterEachWriteAndRetriesCleanly(t *testing.T) {
 			return injected
 		}
 		if _, err := capability.RecordStaffAbsenceAudit(ctx, workforce.StaffAbsenceAudit{
-			AbsenceID: created.ID, ToStatus: workforce.AbsenceStatusApproved, ActorID: account.ID,
+			AbsenceID: created.ID.Int64(), ToStatus: workforce.AbsenceStatusApproved, ActorID: account.ID,
 		}); err != nil {
 			return err
 		}

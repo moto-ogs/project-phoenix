@@ -12,6 +12,7 @@ import (
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	studentpresence "github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	tenant "github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -88,7 +89,7 @@ func (rs *Resource) bulkCreateStudentStatusDays(w http.ResponseWriter, r *http.R
 	}
 
 	userPermissions := sessiontoken.PermissionsFromCtx(r.Context())
-	if err := rs.StudentStatusDayService.BulkCreateForDates(r.Context(), rs.newStatusDayCreateWriteContext(r, userPermissions, req.Status, dates), req.StudentIDs, req.Status, req.Reason, dates); err != nil {
+	if err := rs.StudentStatusDayService.BulkCreateForDates(r.Context(), rs.newStatusDayCreateWriteContext(r, userPermissions, req.Status, dates), ident.Int64s(req.StudentIDs), req.Status, req.Reason, dates); err != nil {
 		rs.renderStatusDayCreateError(w, r, err, true, "failed to bulk create student status days")
 		return
 	}

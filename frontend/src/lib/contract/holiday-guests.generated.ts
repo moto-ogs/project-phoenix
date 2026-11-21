@@ -4,7 +4,7 @@ import {
   arr,
   bool,
   calendarDate,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   safeInt,
@@ -27,7 +27,7 @@ export interface HolidayGuestBadge {
 }
 
 export const HolidayGuestBadgeSchema: z.ZodType<HolidayGuestBadge, unknown> = object<HolidayGuestBadge>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   school_name: str,
 });
 
@@ -41,8 +41,8 @@ export interface HolidayGuestGroup {
 }
 
 export const HolidayGuestGroupSchema: z.ZodType<HolidayGuestGroup, unknown> = object<HolidayGuestGroup>({
-  group_id: int64StringOrNumber,
-  week_id: int64StringOrNumber,
+  group_id: int64String,
+  week_id: int64String,
   starts_on: nullable(calendarDate),
   ends_on: nullable(calendarDate),
   guests: safeInt,
@@ -69,15 +69,15 @@ export interface HolidayGuestSheet {
 }
 
 export const HolidayGuestSheetSchema: z.ZodType<HolidayGuestSheet, unknown> = object<HolidayGuestSheet>({
-  student_id: int64StringOrNumber,
-  week_id: int64StringOrNumber,
+  student_id: int64String,
+  week_id: int64String,
   starts_on: nullable(calendarDate),
   ends_on: nullable(calendarDate),
   time_model_name: str,
   time_model_starts_at: str,
   time_model_ends_at: str,
   lunch: bool,
-  home_school_id: nullable(int64StringOrNumber),
+  home_school_id: nullable(int64String),
   guest_school_name: str,
   school_name: str,
   emergency_contacts: nullable(arr(HolidayGuestContactSchema)),

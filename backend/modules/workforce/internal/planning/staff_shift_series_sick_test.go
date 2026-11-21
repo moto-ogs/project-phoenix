@@ -11,13 +11,14 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func sickAbsence(id int64, start, end calendar.Date, mutate func(*workforce.StaffAbsence)) workforce.StaffAbsence {
 	absence := workforce.StaffAbsence{
-		ID: id, StaffID: 7, AbsenceType: workforce.AbsenceTypeSick,
+		ID: ident.ID(id), StaffID: 7, AbsenceType: workforce.AbsenceTypeSick,
 		DateStart: start.String(), DateEnd: end.String(), Status: workforce.AbsenceStatusReported,
 	}
 	if mutate != nil {

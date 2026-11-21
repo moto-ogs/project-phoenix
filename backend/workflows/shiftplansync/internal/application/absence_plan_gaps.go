@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // AbsencePlanGaps lists the absences in force whose plan rows from today on
@@ -59,7 +60,7 @@ func (s *sickCascade) AbsencePlanGaps(ctx context.Context) ([]workforce.AbsenceP
 // that no earlier absence of the person claimed.
 func planGapOf(report sickReport, today calendar.Date, openShifts, openBlocks map[staffDay]int, claimed map[staffDay]bool) workforce.AbsencePlanGap {
 	gap := workforce.AbsencePlanGap{
-		AbsenceID: report.absenceID, StaffID: report.subjectStaffID, AbsenceType: report.absenceType,
+		AbsenceID: ident.ID(report.absenceID), StaffID: ident.ID(report.subjectStaffID), AbsenceType: report.absenceType,
 		DateStart: report.dateStart.String(), DateEnd: report.dateEnd.String(),
 	}
 	for _, day := range sickCascadeDays(report, today) {
@@ -91,10 +92,10 @@ func (s *sickCascade) MarkAbsenceInForce(ctx context.Context, absenceID, actorSt
 	}
 	skipStart, skipEnd := absence.HalfBoundaryDays()
 	if err := s.MarkSickForRange(ctx, workforce.SickCascadeInput{
-		SubjectStaffID: absence.StaffID, AbsenceType: absence.AbsenceType,
+		SubjectStaffID: absence.StaffID.Int64(), AbsenceType: absence.AbsenceType,
 		DateStart: absence.DateStart, DateEnd: absence.DateEnd,
 		SkipStartDay: skipStart, SkipEndDay: skipEnd,
-		AbsenceID: absence.ID, ActorStaffID: actorStaffID, ActorAccountID: actorAccountID,
+		AbsenceID: absence.ID.Int64(), ActorStaffID: actorStaffID, ActorAccountID: actorAccountID,
 	}); err != nil {
 		return false, err
 	}
@@ -120,7 +121,7 @@ func (s *sickCascade) absencesInForce(ctx context.Context, today calendar.Date) 
 	for _, row := range rows {
 		skipStart, skipEnd := row.HalfBoundaryDays()
 		report, err := parseSickReport(workforce.SickCascadeInput{
-			SubjectStaffID: row.StaffID, AbsenceType: row.AbsenceType, AbsenceID: row.ID,
+			SubjectStaffID: row.StaffID.Int64(), AbsenceType: row.AbsenceType, AbsenceID: row.ID.Int64(),
 			DateStart: row.DateStart, DateEnd: row.DateEnd, SkipStartDay: skipStart, SkipEndDay: skipEnd,
 		})
 		if err != nil {

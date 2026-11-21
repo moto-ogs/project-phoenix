@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/classday"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // classDayReportedAt answers "since when is this known" for a deviating row,
@@ -106,7 +107,7 @@ func classDayRow(row DayRosterRow, weekday string, facts classDayFacts) classday
 		pickupChanged, pickupRegular = false, ""
 	}
 	return classday.DayRow{
-		StudentID:   row.StudentID,
+		StudentID:   ident.ID(row.StudentID),
 		FirstName:   row.FirstName,
 		LastName:    row.LastName,
 		ListEntry:   row.ListEntry,

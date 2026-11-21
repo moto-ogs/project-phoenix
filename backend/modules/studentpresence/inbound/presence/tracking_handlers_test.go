@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	tenantsettings "github.com/moto-ogs/project-phoenix/modules/settings"
 	"github.com/stretchr/testify/assert"
@@ -67,7 +68,7 @@ func TestGetTrackingIndicators_EmptyStudentIDs(t *testing.T) {
 
 	rs := resourceForTest(Resource{})
 
-	req := createTrackingRequest(t, TrackingIndicatorsRequest{StudentIDs: []int64{}})
+	req := createTrackingRequest(t, TrackingIndicatorsRequest{StudentIDs: []ident.ID{}})
 	rr := httptest.NewRecorder()
 
 	rs.getTrackingIndicators(rr, req)
@@ -87,7 +88,7 @@ func TestGetTrackingIndicators_InvalidStudentID(t *testing.T) {
 
 	rs := resourceForTest(Resource{})
 
-	req := createTrackingRequest(t, TrackingIndicatorsRequest{StudentIDs: []int64{10, 0}})
+	req := createTrackingRequest(t, TrackingIndicatorsRequest{StudentIDs: []ident.ID{10, 0}})
 	rr := httptest.NewRecorder()
 
 	rs.getTrackingIndicators(rr, req)
@@ -100,7 +101,7 @@ func TestGetTrackingIndicators_NegativeStudentID(t *testing.T) {
 
 	rs := resourceForTest(Resource{})
 
-	req := createTrackingRequest(t, TrackingIndicatorsRequest{StudentIDs: []int64{10, -5}})
+	req := createTrackingRequest(t, TrackingIndicatorsRequest{StudentIDs: []ident.ID{10, -5}})
 	rr := httptest.NewRecorder()
 
 	rs.getTrackingIndicators(rr, req)
@@ -117,7 +118,7 @@ func TestGetTrackingIndicators_SettingsError(t *testing.T) {
 
 	rs := resourceForTest(Resource{SettingsService: settings})
 
-	req := createTrackingRequest(t, TrackingIndicatorsRequest{StudentIDs: []int64{10}})
+	req := createTrackingRequest(t, TrackingIndicatorsRequest{StudentIDs: []ident.ID{10}})
 	rr := httptest.NewRecorder()
 
 	rs.getTrackingIndicators(rr, req)
@@ -140,7 +141,7 @@ func TestGetTrackingIndicators_Disabled(t *testing.T) {
 
 	rs := resourceForTest(Resource{SettingsService: settings})
 
-	req := createTrackingRequest(t, TrackingIndicatorsRequest{StudentIDs: []int64{10}})
+	req := createTrackingRequest(t, TrackingIndicatorsRequest{StudentIDs: []ident.ID{10}})
 	rr := httptest.NewRecorder()
 
 	rs.getTrackingIndicators(rr, req)
@@ -167,7 +168,7 @@ func TestGetTrackingIndicators_NoLabelsConfigured(t *testing.T) {
 
 	rs := resourceForTest(Resource{SettingsService: settings})
 
-	req := createTrackingRequest(t, TrackingIndicatorsRequest{StudentIDs: []int64{10}})
+	req := createTrackingRequest(t, TrackingIndicatorsRequest{StudentIDs: []ident.ID{10}})
 	rr := httptest.NewRecorder()
 
 	rs.getTrackingIndicators(rr, req)
@@ -194,7 +195,7 @@ func TestGetTrackingIndicators_LabelResolutionError(t *testing.T) {
 
 	rs := resourceForTest(Resource{SettingsService: settings})
 
-	req := createTrackingRequest(t, TrackingIndicatorsRequest{StudentIDs: []int64{10}})
+	req := createTrackingRequest(t, TrackingIndicatorsRequest{StudentIDs: []ident.ID{10}})
 	rr := httptest.NewRecorder()
 
 	rs.getTrackingIndicators(rr, req)
@@ -241,7 +242,7 @@ func TestGetTrackingIndicators_Success(t *testing.T) {
 		Operations:      mockSvc,
 	})
 
-	req := createTrackingRequest(t, TrackingIndicatorsRequest{StudentIDs: []int64{10, 20}})
+	req := createTrackingRequest(t, TrackingIndicatorsRequest{StudentIDs: []ident.ID{10, 20}})
 	rr := httptest.NewRecorder()
 
 	rs.getTrackingIndicators(rr, req)
@@ -279,7 +280,7 @@ func TestGetTrackingIndicators_ServiceError(t *testing.T) {
 		Operations:      mockSvc,
 	})
 
-	req := createTrackingRequest(t, TrackingIndicatorsRequest{StudentIDs: []int64{10}})
+	req := createTrackingRequest(t, TrackingIndicatorsRequest{StudentIDs: []ident.ID{10}})
 	rr := httptest.NewRecorder()
 
 	rs.getTrackingIndicators(rr, req)
@@ -301,7 +302,7 @@ func TestGetTrackingIndicators_WhitespaceOnlyLabels(t *testing.T) {
 
 	rs := resourceForTest(Resource{SettingsService: settings})
 
-	req := createTrackingRequest(t, TrackingIndicatorsRequest{StudentIDs: []int64{10}})
+	req := createTrackingRequest(t, TrackingIndicatorsRequest{StudentIDs: []ident.ID{10}})
 	rr := httptest.NewRecorder()
 
 	rs.getTrackingIndicators(rr, req)
@@ -344,7 +345,7 @@ func TestGetTrackingIndicators_PartialLabelsConfigured(t *testing.T) {
 		Operations:      mockSvc,
 	})
 
-	req := createTrackingRequest(t, TrackingIndicatorsRequest{StudentIDs: []int64{10}})
+	req := createTrackingRequest(t, TrackingIndicatorsRequest{StudentIDs: []ident.ID{10}})
 	rr := httptest.NewRecorder()
 
 	rs.getTrackingIndicators(rr, req)

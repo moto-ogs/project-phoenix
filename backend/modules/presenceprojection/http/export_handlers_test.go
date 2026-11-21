@@ -10,6 +10,7 @@ import (
 	peopleState "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -173,7 +174,7 @@ func TestApplyExportFiltersAdministrativeFilters(t *testing.T) {
 			got := applyExportFilters(students, tt.filters, lists.PresetOGSWeekly, testExportDate)
 			gotIDs := make([]int64, 0, len(got))
 			for _, student := range got {
-				gotIDs = append(gotIDs, student.ID)
+				gotIDs = append(gotIDs, student.ID.Int64())
 			}
 			assert.Equal(t, tt.wantIDs, gotIDs)
 		})
@@ -193,7 +194,7 @@ func TestApplyExportFiltersClassTripStatus(t *testing.T) {
 	got := applyExportFilters(students, studentExportFilters{Status: "klassenfahrt"}, lists.PresetOGSWeekly, testExportDate)
 
 	require.Len(t, got, 1)
-	assert.Equal(t, int64(101), got[0].ID)
+	assert.Equal(t, ident.ID(int64(101)), got[0].ID)
 }
 
 func TestApplyExportFiltersExcusedAndClassTrip(t *testing.T) {
@@ -223,7 +224,7 @@ func TestApplyExportFiltersExcusedAndClassTrip(t *testing.T) {
 
 			gotIDs := make([]int64, 0, len(got))
 			for _, student := range got {
-				gotIDs = append(gotIDs, student.ID)
+				gotIDs = append(gotIDs, student.ID.Int64())
 			}
 			assert.Equal(t, tt.wantIDs, gotIDs)
 			assert.Contains(t, exportFilterLabelsForDate(filters, testExportDate, true), "Momentaufnahme: "+tt.label)
@@ -254,11 +255,11 @@ func TestPopulateExportPhotoConsentFilterDataSupportsFeatureOffResponses(t *test
 
 	yes := applyExportFilters(responses, studentExportFilters{PhotoConsent: "yes"}, lists.PresetOGSWeekly, testExportDate)
 	require.Len(t, yes, 1)
-	assert.Equal(t, int64(101), yes[0].ID)
+	assert.Equal(t, ident.ID(int64(101)), yes[0].ID)
 
 	no := applyExportFilters(responses, studentExportFilters{PhotoConsent: "no"}, lists.PresetOGSWeekly, testExportDate)
 	require.Len(t, no, 1)
-	assert.Equal(t, int64(102), no[0].ID)
+	assert.Equal(t, ident.ID(int64(102)), no[0].ID)
 }
 
 func TestApplyExportFiltersCombinedWithDayStatus(t *testing.T) {
@@ -352,7 +353,7 @@ func TestApplyExportFiltersCombinedWithDayStatus(t *testing.T) {
 			got := applyExportFilters(students, tt.filters, lists.PresetOGSWeekly, testExportDate)
 			gotIDs := make([]int64, 0, len(got))
 			for _, student := range got {
-				gotIDs = append(gotIDs, student.ID)
+				gotIDs = append(gotIDs, student.ID.Int64())
 			}
 			assert.Equal(t, tt.wantIDs, gotIDs)
 		})
@@ -438,7 +439,7 @@ func TestApplyExportFiltersMultipleSchoolYears(t *testing.T) {
 
 	gotIDs := make([]int64, 0, len(got))
 	for _, student := range got {
-		gotIDs = append(gotIDs, student.ID)
+		gotIDs = append(gotIDs, student.ID.Int64())
 	}
 	assert.Equal(t, []int64{202, 203}, gotIDs)
 

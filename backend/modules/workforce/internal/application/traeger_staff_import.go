@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -502,7 +503,7 @@ func publicStaffImportRow(row staffImportRow) workforce.StaffImportRow {
 	check := row.check
 	public := workforce.StaffImportRow{
 		Line: row.line, Status: check.Status, PersonnelNumber: check.Values.PersonnelNumber, FirstName: check.Values.FirstName,
-		LastName: check.Values.LastName, Birthday: check.Values.Birthday, RecordID: check.RecordID,
+		LastName: check.Values.LastName, Birthday: check.Values.Birthday, RecordID: ident.ID(check.RecordID),
 		IBANMasked:                 domain.MaskStaffValue(domain.StaffFieldIBAN, check.Values.IBAN),
 		TaxIDMasked:                domain.MaskStaffValue(domain.StaffFieldTaxID, check.Values.TaxID),
 		SocialSecurityNumberMasked: domain.MaskStaffValue(domain.StaffFieldSocialSecurityNumber, check.Values.SocialSecurityNumber),
@@ -549,7 +550,7 @@ func (t *TraegerStaff) StaffImportLog(ctx context.Context, actor workforce.Traeg
 	}
 	entries := make([]workforce.StaffImportEntry, len(events))
 	for i, event := range events {
-		entries[i] = workforce.StaffImportEntry{File: event.File, AccountID: event.AccountID, ByYou: event.AccountID == actor.AccountID,
+		entries[i] = workforce.StaffImportEntry{File: event.File, AccountID: ident.ID(event.AccountID), ByYou: event.AccountID == actor.AccountID,
 			AccountName: names[event.AccountID], ImportedAt: event.ImportedAt, Created: event.Created, Completed: event.Completed}
 	}
 	return entries, nil

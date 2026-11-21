@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -26,7 +27,7 @@ func carryoverType(t *testing.T, svc workforce.Capability, name string) workforc
 func bookAllowanceDay(t *testing.T, svc workforce.Capability, staffID, typeID int64, day string, enteredAt time.Time) {
 	t.Helper()
 	_, err := svc.CreateStaffAbsence(testpkg.Ctx(t), &workforce.StaffAbsence{
-		StaffID: staffID, CreatedBy: staffID, AbsenceType: workforce.AbsenceTypeOther, AbsenceTypeID: &typeID,
+		StaffID: ident.ID(staffID), CreatedBy: ident.ID(staffID), AbsenceType: workforce.AbsenceTypeOther, AbsenceTypeID: (*ident.ID)(&typeID),
 		Status: workforce.AbsenceStatusReported, DateStart: day, DateEnd: day, CreatedAt: enteredAt,
 	})
 	require.NoError(t, err)

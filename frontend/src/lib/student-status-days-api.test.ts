@@ -195,7 +195,7 @@ describe("student-status-days-api", () => {
     );
   });
 
-  it("posts bulk class trip ranges with numeric student ids and reason", async () => {
+  it("posts bulk class trip ranges with string student ids and reason", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       Response.json({
         status: "success",
@@ -214,7 +214,7 @@ describe("student-status-days-api", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/students/status-days/bulk", {
       method: "POST",
       body: JSON.stringify({
-        student_ids: [42, 43],
+        student_ids: ["42", "43"],
         status: "class_trip",
         from: "2026-05-26",
         to: "2026-05-28",
@@ -242,7 +242,7 @@ describe("student-status-days-api", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/students/status-days/bulk", {
       method: "POST",
       body: JSON.stringify({
-        student_ids: [42],
+        student_ids: ["42"],
         status: "class_trip",
         from: "2026-05-26",
         to: "2026-05-26",

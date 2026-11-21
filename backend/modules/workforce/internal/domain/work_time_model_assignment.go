@@ -48,7 +48,7 @@ func AssignmentVersionStart(validFrom, today string, staffIDs []int64, history m
 	closedByStaff := make(map[int64][]*StaffMonthBalanceSnapshot, len(staffIDs))
 	for _, snapshot := range closed {
 		if snapshot != nil {
-			closedByStaff[snapshot.StaffID] = append(closedByStaff[snapshot.StaffID], snapshot)
+			closedByStaff[snapshot.StaffID.Int64()] = append(closedByStaff[snapshot.StaffID.Int64()], snapshot)
 		}
 	}
 	for _, staffID := range staffIDs {

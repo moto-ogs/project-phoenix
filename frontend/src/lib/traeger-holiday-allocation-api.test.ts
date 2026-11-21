@@ -104,7 +104,7 @@ describe("traeger holiday allocation api (#4700)", () => {
     });
   });
 
-  it("sends decisions and criteria with numeric IDs", async () => {
+  it("sends decisions and criteria with string IDs", async () => {
     fetchMock.mockResolvedValue(jsonResponse(200, { data: BACKEND_BOARD }));
     await decideHolidayAllocation("5", [
       {
@@ -120,7 +120,7 @@ describe("traeger holiday allocation api (#4700)", () => {
     expect(JSON.parse(String(init?.body))).toEqual({
       decisions: [
         {
-          booking_id: 100,
+          booking_id: "100",
           placement: "waitlisted",
           proposal: "placed",
           reason: "Grund",
@@ -150,14 +150,14 @@ describe("traeger holiday allocation api (#4700)", () => {
     expect(JSON.parse(String(saveInit?.body))).toEqual({
       criteria: [
         {
-          id: 0,
+          id: "0",
           name: "Neu",
           question: "Trifft das zu?",
           scope: "child",
           active: true,
         },
         {
-          id: 4,
+          id: "4",
           name: "Alt",
           question: "Und das?",
           scope: "family",

@@ -292,7 +292,7 @@ export async function reportClassTripSchool(
       body: {
         from: input.from,
         to: input.to,
-        student_ids: input.studentIds.map(Number),
+        student_ids: [...input.studentIds],
         ...(input.reason ? { reason: input.reason } : {}),
         ...(input.returnTime ? { return_time: input.returnTime } : {}),
       } satisfies ClassTripRequest,
@@ -344,7 +344,7 @@ export async function deleteDayHintSchool(
  * (String, wie in der Tageszeile).
  */
 export type MorningAttendanceMark =
-  | { student_id: number; status: MorningAttendanceStatus }
+  | { student_id: string; status: MorningAttendanceStatus }
   | { list_entry_id: string; status: MorningAttendanceStatus };
 
 /** Speichert die Markierungen einer zugewiesenen Klasse für heute. */
@@ -409,8 +409,8 @@ function classHandoverPath(schoolClass: string, date: string): string {
 
 /** Die übergebenen Kinder, die in die OGS gehen: „da“ und „nicht da“. */
 export interface ClassHandoverChildren {
-  readonly present: readonly number[];
-  readonly absent: readonly number[];
+  readonly present: readonly string[];
+  readonly absent: readonly string[];
 }
 
 /** Übergibt eine zugewiesene Klasse heute an die OGS (#4794). */

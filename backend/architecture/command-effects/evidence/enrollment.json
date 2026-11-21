@@ -1946,7 +1946,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.holidayTraegerDirectory.HolidayTraeger",
-      "binding_digest": "f84272bfba7fd15bfede0db3b5064520",
+      "binding_digest": "a76c3ae3a760158d23b75ddbf047d7ad",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindOrganization",
@@ -1954,7 +1954,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.holidayTraegerDirectory.HolidayTraeger",
-      "binding_digest": "ca00cbe8929f5992cdeaf110458dfcda",
+      "binding_digest": "f27964a9568754d335cf15830d878e69",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListSchoolsByOrganization",
@@ -1962,7 +1962,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.holidayTraegerDirectory.HolidayTraeger",
-      "binding_digest": "505d45c215dabe08917ccc064459b40b",
+      "binding_digest": "17095d9003fa7423b1d19afce3ae47ee",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Organization.IsDeleted",
@@ -1970,7 +1970,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.holidayTraegerDirectory.HolidayTraeger",
-      "binding_digest": "b644ec927b4836b41b790de70b9b02c2",
+      "binding_digest": "80447c626210636af75b389617852891",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindOrganization",
@@ -1978,7 +1978,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.holidayTraegerDirectory.HolidayTraeger",
-      "binding_digest": "065076878c52b885faced9b2c5f3c424",
+      "binding_digest": "e04f9af21f30c6d3a546a4f3e95e66c5",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListSchoolsByOrganization",
@@ -1986,7 +1986,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.holidayTraegerDirectory.HolidayTraeger",
-      "binding_digest": "6f458179df720ab6043af672add9358c",
+      "binding_digest": "05dee29c297e11fa491e90510cd17fb1",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
@@ -1994,7 +1994,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.holidayOfficeTraeger.HolidayTraeger",
-      "binding_digest": "4bbe71fe07a0fd16f30613e7f55f7104",
+      "binding_digest": "2706d06437b149524f4c3cba8d180701",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListSchoolsByOrganization",
@@ -2002,7 +2002,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.holidayOfficeTraeger.HolidayTraeger",
-      "binding_digest": "9fc7018f1df9787306cb534a40be5d48",
+      "binding_digest": "1cbffe35fb8177c593e6a802f12313bd",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListSchoolsByOrganization",
@@ -2010,7 +2010,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.holidayOfficeTraeger.HolidayTraeger",
-      "binding_digest": "b112e8d9a314448040ce58631feda0ac",
+      "binding_digest": "39ca909e82b4240f8f7e709ea7b96869",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
@@ -2018,7 +2018,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.holidayOfficeTraeger.HolidayTraeger",
-      "binding_digest": "fed3d56af8ca7e1dcf5668053f98964e",
+      "binding_digest": "4d615137b50db92ab3b2e0d2e8496827",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerMasterData.TraegerName",
@@ -2026,7 +2026,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.holidayOfficeTraeger.HolidayTraeger",
-      "binding_digest": "ee0fb058738e9d6ba0b3588aabbc466a",
+      "binding_digest": "940ea12526b71ed8204902414a5e9d0b",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerNames.TraegerName",
@@ -2034,7 +2034,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.holidayOfficeTraeger.HolidayTraeger",
-      "binding_digest": "0231ef15c8816b85ea7c3cc3714813d6",
+      "binding_digest": "8fc9f57f7bcf623d827b1696bcd3012f",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/ports.TraegerMasterDataStore.TraegerName",

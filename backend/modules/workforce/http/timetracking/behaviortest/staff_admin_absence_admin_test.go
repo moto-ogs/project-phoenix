@@ -119,7 +119,7 @@ func TestAdminCreateStaffAbsence_SickCascades(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, shift.Cancelled)
 	require.NotNil(t, shift.SickAbsenceID)
-	assert.Equal(t, absences[0].ID, *shift.SickAbsenceID)
+	assert.Equal(t, absences[0].ID.Int64(), *shift.SickAbsenceID)
 
 	// DELETE undoes it: absence gone, shift reactivated.
 	req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/staff/%d/absences/%d", subjectID, absences[0].ID), nil)

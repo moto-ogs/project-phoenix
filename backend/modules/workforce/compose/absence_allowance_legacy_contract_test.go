@@ -5,6 +5,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -62,22 +63,22 @@ func TestCustomAbsenceAllowanceSummarizesOnlyItsOwnType(t *testing.T) {
 	typeID := absenceType.ID
 	for _, absence := range []workforce.StaffAbsence{
 		{
-			StaffID: staff.ID, AbsenceType: workforce.AbsenceTypeOther,
-			AbsenceTypeID: &typeID, Status: workforce.AbsenceStatusReported,
+			StaffID: ident.ID(staff.ID), AbsenceType: workforce.AbsenceTypeOther,
+			AbsenceTypeID: (*ident.ID)(&typeID), Status: workforce.AbsenceStatusReported,
 			DateStart: calendar.NewDate(2026, 9, 7).String(), DateEnd: calendar.NewDate(2026, 9, 7).String(),
-			HalfDay: true, CreatedBy: admin.ID,
+			HalfDay: true, CreatedBy: ident.ID(admin.ID),
 		},
 		{
-			StaffID: staff.ID, AbsenceType: workforce.AbsenceTypeOther,
-			AbsenceTypeID: &typeID, Status: workforce.AbsenceStatusRequested,
+			StaffID: ident.ID(staff.ID), AbsenceType: workforce.AbsenceTypeOther,
+			AbsenceTypeID: (*ident.ID)(&typeID), Status: workforce.AbsenceStatusRequested,
 			DateStart: calendar.NewDate(2026, 10, 5).String(), DateEnd: calendar.NewDate(2026, 10, 5).String(),
-			CreatedBy: staff.ID,
+			CreatedBy: ident.ID(staff.ID),
 		},
 		{
-			StaffID: staff.ID, AbsenceType: workforce.AbsenceTypeVacation,
+			StaffID: ident.ID(staff.ID), AbsenceType: workforce.AbsenceTypeVacation,
 			Status:    workforce.AbsenceStatusApproved,
 			DateStart: calendar.NewDate(2026, 11, 2).String(), DateEnd: calendar.NewDate(2026, 11, 2).String(),
-			CreatedBy: staff.ID,
+			CreatedBy: ident.ID(staff.ID),
 		},
 	} {
 		_, err := svc.CreateStaffAbsence(ctx, &absence)

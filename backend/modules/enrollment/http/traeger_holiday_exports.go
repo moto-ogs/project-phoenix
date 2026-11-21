@@ -89,7 +89,7 @@ func holidayPeriodRow(period capability.HolidayPeriod, school func(int64) string
 	var first, last calendar.Date
 	for i, week := range period.Weeks {
 		days[[2]calendar.Date{week.StartsOn, week.EndsOn}] = true
-		hosts[school(week.HostSchoolID)] = true
+		hosts[school(week.HostSchoolID.Int64())] = true
 		if i == 0 || week.StartsOn.Before(first) {
 			first = week.StartsOn
 		}
@@ -164,7 +164,7 @@ func (rs *HolidayPeriodResource) exportPlaces(w http.ResponseWriter, r *http.Req
 	if !ok {
 		return
 	}
-	weeks, err := rs.places.HolidayWeekPlaces(r.Context(), reviewer, period.ID)
+	weeks, err := rs.places.HolidayWeekPlaces(r.Context(), reviewer, period.ID.Int64())
 	if err != nil {
 		renderHolidayReviewError(w, r, err)
 		return
@@ -172,7 +172,7 @@ func (rs *HolidayPeriodResource) exportPlaces(w http.ResponseWriter, r *http.Req
 	school := holidayNames(r)
 	var rows [][]string
 	for _, week := range weeks {
-		label, host := holidayWeekLabel(week.StartsOn, week.EndsOn), school(week.HostSchoolID)
+		label, host := holidayWeekLabel(week.StartsOn, week.EndsOn), school(week.HostSchoolID.Int64())
 		capacity := "Ohne Grenze"
 		if week.Capacity != nil {
 			capacity = strconv.Itoa(*week.Capacity)
@@ -211,7 +211,7 @@ func (rs *HolidayPeriodResource) exportAllocation(w http.ResponseWriter, r *http
 	if !ok {
 		return
 	}
-	board, err := rs.allocation.HolidayAllocationBoard(r.Context(), reviewer, period.ID)
+	board, err := rs.allocation.HolidayAllocationBoard(r.Context(), reviewer, period.ID.Int64())
 	if err != nil {
 		renderHolidayAllocationError(w, r, err)
 		return
@@ -224,11 +224,11 @@ func (rs *HolidayPeriodResource) exportAllocation(w http.ResponseWriter, r *http
 func holidayAllocationTable(period capability.HolidayPeriod, board capability.HolidayAllocationBoard, school func(int64) string) common.ListTable {
 	criteria := make(map[int64]string, len(board.Criteria))
 	for _, criterion := range board.Criteria {
-		criteria[criterion.ID] = criterion.Name
+		criteria[criterion.ID.Int64()] = criterion.Name
 	}
 	hosts := make(map[int64]string, len(period.Weeks))
 	for _, week := range period.Weeks {
-		hosts[week.ID] = school(week.HostSchoolID)
+		hosts[week.ID.Int64()] = school(week.HostSchoolID.Int64())
 	}
 	var rows [][]string
 	for _, week := range board.Weeks {
@@ -236,18 +236,18 @@ func holidayAllocationTable(period capability.HolidayPeriod, board capability.Ho
 			met := make([]string, 0, len(entry.Criteria))
 			for _, value := range entry.Criteria {
 				if value.Value == capability.HolidayCriterionYes {
-					met = append(met, criteria[value.CriterionID])
+					met = append(met, criteria[value.CriterionID.Int64()])
 				}
 			}
 			rows = append(rows, []string{
-				holidayWeekLabel(week.StartsOn, week.EndsOn), hosts[week.WeekID], "Offen", strconv.Itoa(entry.Rank), entry.ChildLastName, entry.ChildFirstName,
+				holidayWeekLabel(week.StartsOn, week.EndsOn), hosts[week.WeekID.Int64()], "Offen", strconv.Itoa(entry.Rank), entry.ChildLastName, entry.ChildFirstName,
 				entry.TimeModelName, holidayPlacementLabels[entry.Proposal], "", strings.Join(met, ", "), "", holidayInstant(entry.SubmittedAt),
 			})
 		}
 	}
 	for _, decision := range board.Decisions {
 		rows = append(rows, []string{
-			holidayWeekLabel(decision.WeekStartsOn, decision.WeekEndsOn), hosts[decision.WeekID], "Entschieden", strconv.Itoa(decision.Rank),
+			holidayWeekLabel(decision.WeekStartsOn, decision.WeekEndsOn), hosts[decision.WeekID.Int64()], "Entschieden", strconv.Itoa(decision.Rank),
 			decision.ChildLastName, decision.ChildFirstName, "", holidayPlacementLabels[decision.Proposal], holidayPlacementLabels[decision.Placement],
 			strings.Join(decision.CriteriaMet, ", "), decision.Reason, holidayInstant(decision.DecidedAt),
 		})

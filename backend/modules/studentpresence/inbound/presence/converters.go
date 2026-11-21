@@ -3,14 +3,16 @@ package presence
 import (
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ===== Conversion Functions =====
 
 func newPresenceLiveGroupResponse(group studentpresence.LiveGroup) ActiveGroupResponse {
 	return ActiveGroupResponse{
-		ID: group.ID, GroupID: group.ActivityGroupID, RoomID: group.RoomID,
+		ID: ident.ID(group.ID), GroupID: (*ident.ID)(group.ActivityGroupID), RoomID: ident.ID(group.RoomID),
 		StartTime: group.StartTime, EndTime: group.EndTime, IsActive: group.IsOpen(),
 		CreatedAt: group.CreatedAt, UpdatedAt: group.UpdatedAt,
 	}
@@ -18,26 +20,26 @@ func newPresenceLiveGroupResponse(group studentpresence.LiveGroup) ActiveGroupRe
 
 // newSessionRoomResponse projects the room summary a session response embeds.
 func newSessionRoomResponse(room studentpresence.SessionRoomSummary) *RoomSimple {
-	return &RoomSimple{ID: room.ID, Name: room.Name, Color: room.Color}
+	return &RoomSimple{ID: ident.ID(room.ID), Name: room.Name, Color: room.Color}
 }
 
 // claimedSupervisionResponse keeps the wire shape of the claimed supervision
 // record: the persisted row with its calendar start day.
 type claimedSupervisionResponse struct {
-	ID        int64     `json:"id"`
+	ID        common.ID `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
-	TenantID  int64     `json:"tenant_id"`
-	StaffID   int64     `json:"staff_id"`
-	GroupID   int64     `json:"group_id"`
+	TenantID  common.ID `json:"tenant_id"`
+	StaffID   common.ID `json:"staff_id"`
+	GroupID   common.ID `json:"group_id"`
 	Role      string    `json:"role"`
 	StartDate string    `json:"start_date"`
 }
 
 func newClaimedSupervisionResponse(row studentpresence.ClaimedSupervision) claimedSupervisionResponse {
 	return claimedSupervisionResponse{
-		ID: row.ID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, TenantID: row.TenantID,
-		StaffID: row.StaffID, GroupID: row.GroupID, Role: row.Role, StartDate: row.StartDate,
+		ID: ident.ID(row.ID), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, TenantID: ident.ID(row.TenantID),
+		StaffID: ident.ID(row.StaffID), GroupID: ident.ID(row.GroupID), Role: row.Role, StartDate: row.StartDate,
 	}
 }
 

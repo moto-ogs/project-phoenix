@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -65,7 +66,7 @@ func TestWorkTimeModelDetailQueryBudgetIsFlat(t *testing.T) {
 		want, encodeErr := json.Marshal(map[string]any{
 			"status": "success", "message": "Work time model retrieved",
 			"data": map[string]any{
-				"id": created.ID, "name": created.Name, "rotation_length": 2,
+				"id": strconv.FormatInt(int64(created.ID), 10), "name": created.Name, "rotation_length": 2,
 				"rotation_anchor_date": "2026-10-26", "entries": entries, "weekly_totals": totals,
 			},
 		})

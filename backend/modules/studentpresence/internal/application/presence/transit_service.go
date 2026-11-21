@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const (
@@ -92,7 +93,7 @@ func (s *service) assignTransitStudentsToActiveGroup(ctx context.Context, studen
 	if err != nil {
 		return nil, err
 	}
-	if err := s.authorizeTransitTarget(ctx, auth, targetGroup.ID); err != nil {
+	if err := s.authorizeTransitTarget(ctx, auth, targetGroup.ID.Int64()); err != nil {
 		return nil, err
 	}
 
@@ -110,7 +111,7 @@ func (s *service) assignTransitStudentsToActiveGroup(ctx context.Context, studen
 	result := newTransitAssignResult(targetGroup)
 	if mode == PresenceModeBinary {
 		for _, studentID := range uniqueIDs {
-			result.Skipped = append(result.Skipped, TransitAssignSkipped{StudentID: studentID, Reason: TransitSkipNotInTransit})
+			result.Skipped = append(result.Skipped, TransitAssignSkipped{StudentID: ident.ID(studentID), Reason: TransitSkipNotInTransit})
 		}
 		return result, nil
 	}
@@ -119,7 +120,7 @@ func (s *service) assignTransitStudentsToActiveGroup(ctx context.Context, studen
 		return nil, err
 	}
 	if len(result.Assigned) > 0 {
-		if err := s.UpdateSessionActivity(ctx, targetGroup.ID); err != nil {
+		if err := s.UpdateSessionActivity(ctx, targetGroup.ID.Int64()); err != nil {
 			return nil, err
 		}
 	}
@@ -145,7 +146,7 @@ func (s *service) authorizeTransitTarget(ctx context.Context, auth *StudentMoveA
 
 func newTransitAssignResult(targetGroup *ports.ActiveGroup) *TransitAssignResult {
 	return &TransitAssignResult{
-		Assigned:      []int64{},
+		Assigned:      []ident.ID{},
 		Skipped:       []TransitAssignSkipped{},
 		ActiveGroupID: targetGroup.ID,
 		RoomID:        targetGroup.RoomID,
@@ -166,7 +167,7 @@ func (s *service) assignStudentsInTransit(ctx context.Context, targetGroup *port
 		inTransit[studentID] = hasAttendance && !hasVisit
 	}
 	if incoming := countTrue(inTransit); incoming > 0 {
-		if err := s.ensureRoomCapacity(ctx, targetGroup.RoomID, incoming); err != nil {
+		if err := s.ensureRoomCapacity(ctx, targetGroup.RoomID.Int64(), incoming); err != nil {
 			return err
 		}
 		// All or nothing: a bulk assignment that does not fit is refused as
@@ -179,18 +180,18 @@ func (s *service) assignStudentsInTransit(ctx context.Context, targetGroup *port
 	guard := s.transitVisitGuard(ctx, studentIDs, inTransit)
 	for _, studentID := range studentIDs {
 		if !inTransit[studentID] {
-			result.Skipped = append(result.Skipped, TransitAssignSkipped{StudentID: studentID, Reason: TransitSkipNotInTransit})
+			result.Skipped = append(result.Skipped, TransitAssignSkipped{StudentID: ident.ID(studentID), Reason: TransitSkipNotInTransit})
 			continue
 		}
-		assigned, err := s.assignTransitStudent(ctx, targetGroup.ID, studentID, guard)
+		assigned, err := s.assignTransitStudent(ctx, targetGroup.ID.Int64(), studentID, guard)
 		if err != nil {
 			return err
 		}
 		if !assigned {
-			result.Skipped = append(result.Skipped, TransitAssignSkipped{StudentID: studentID, Reason: TransitSkipNotInTransit})
+			result.Skipped = append(result.Skipped, TransitAssignSkipped{StudentID: ident.ID(studentID), Reason: TransitSkipNotInTransit})
 			continue
 		}
-		result.Assigned = append(result.Assigned, studentID)
+		result.Assigned = append(result.Assigned, ident.ID(studentID))
 	}
 	return nil
 }

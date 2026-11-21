@@ -1,6 +1,10 @@
 package workforce
 
-import "context"
+import (
+	"context"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+)
 
 // SickShiftChangeReason is the neutral change reason of a shift a sick
 // report cancels (#1843): the sick cascade writes it on shifts planned before
@@ -124,11 +128,11 @@ type SickReportWrites interface {
 // re-applied over it closes the gap without overriding hand planning.
 // DateStart and DateEnd are calendar days in DateLayout.
 type AbsencePlanGap struct {
-	AbsenceID   int64  `json:"absence_id"`
-	StaffID     int64  `json:"staff_id"`
-	AbsenceType string `json:"absence_type"`
-	DateStart   string `json:"date_start"`
-	DateEnd     string `json:"date_end"`
-	OpenShifts  int    `json:"open_shifts"`
-	OpenBlocks  int    `json:"open_blocks"`
+	AbsenceID   ident.ID `json:"absence_id"`
+	StaffID     ident.ID `json:"staff_id"`
+	AbsenceType string   `json:"absence_type"`
+	DateStart   string   `json:"date_start"`
+	DateEnd     string   `json:"date_end"`
+	OpenShifts  int      `json:"open_shifts"`
+	OpenBlocks  int      `json:"open_blocks"`
 }

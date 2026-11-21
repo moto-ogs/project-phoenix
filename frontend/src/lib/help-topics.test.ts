@@ -324,6 +324,7 @@ describe("getParentHelpTopicForPath", () => {
     });
     expect(caregiverTopics[9]?.instructionGroups?.[4]).toMatchObject({
       title: "Raumverlauf und Stimmung für ein Kind stoppen",
+      description: "Das kann nur die OGS-Verwaltung.",
     });
     expect(caregiverTopics[9]?.troubleshooting).toBe(
       HELP_TOPICS.missingChildOrGroup,

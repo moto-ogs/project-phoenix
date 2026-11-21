@@ -3,6 +3,8 @@ package workforce
 import (
 	"context"
 	"errors"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 var (
@@ -44,13 +46,13 @@ func (e *TargetOverrideError) Unwrap() error { return e.Kind }
 // the work-time schedule; statutory holidays stay at zero. Dates use
 // DateLayout, EndDate is inclusive.
 type StaffTargetOverride struct {
-	ID             int64  `json:"id"`
-	StaffID        int64  `json:"staff_id"`
-	StartDate      string `json:"start_date"`
-	EndDate        string `json:"end_date"`
-	DailyMinutes   *int   `json:"daily_minutes"`
-	WeekdayMinutes []int  `json:"weekday_minutes"`
-	CreatedBy      *int64 `json:"created_by,omitempty"`
+	ID             ident.ID  `json:"id"`
+	StaffID        ident.ID  `json:"staff_id"`
+	StartDate      string    `json:"start_date"`
+	EndDate        string    `json:"end_date"`
+	DailyMinutes   *int      `json:"daily_minutes"`
+	WeekdayMinutes []int     `json:"weekday_minutes"`
+	CreatedBy      *ident.ID `json:"created_by,omitempty"`
 	// KeptByTraeger is true for the Ferien-Soll of a contract the Träger
 	// keeps (#4706): the school sees the range but does not change it.
 	KeptByTraeger bool `json:"kept_by_traeger"`

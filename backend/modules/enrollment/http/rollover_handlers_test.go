@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // mockRolloverService records its inputs and replays canned outputs.
@@ -289,7 +290,7 @@ func TestListRolloverReviewHandler_HappyPath(t *testing.T) {
 	require.Len(t, envelope.Data, 1)
 	row := envelope.Data[0]
 	assert.Equal(t, "999", strconv.FormatInt(child.ID, 10))
-	assert.Equal(t, int64(999), row.ChildID)
+	assert.Equal(t, ident.ID(int64(999)), row.ChildID)
 	assert.Equal(t, "Lina", row.FirstName)
 	require.NotNil(t, row.TargetGradeLevel)
 	assert.Equal(t, int16(5), *row.TargetGradeLevel)

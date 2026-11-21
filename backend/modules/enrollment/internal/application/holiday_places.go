@@ -13,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Places of the holiday weeks (#4699, decision E-e); the rules are on
@@ -84,7 +85,7 @@ func (p holidayPlacement) place(ctx context.Context, organizationID int64, perio
 	if len(weeks) == 0 {
 		return nil, nil, nil
 	}
-	locked, err := p.store.LockHolidayWeeks(ctx, organizationID, period.ID, weeks)
+	locked, err := p.store.LockHolidayWeeks(ctx, organizationID, period.ID.Int64(), weeks)
 	if err != nil {
 		return nil, nil, fmt.Errorf("enrollment: lock holiday weeks: %w", err)
 	}
@@ -94,7 +95,7 @@ func (p holidayPlacement) place(ctx context.Context, organizationID int64, perio
 			return nil, nil, fmt.Errorf("enrollment: place holiday waiting list: %w", err)
 		}
 		for _, booking := range placed {
-			if booking.RegistrationID == submittedID && (p.initialChildID == 0 || booking.ChildID == p.initialChildID) {
+			if booking.RegistrationID == ident.ID(submittedID) && (p.initialChildID == 0 || booking.ChildID == ident.ID(p.initialChildID)) {
 				own = append(own, booking)
 			} else {
 				promoted = append(promoted, booking)
@@ -203,10 +204,10 @@ func (p holidayPlacement) announce(ctx context.Context, organizationID int64, pe
 	byRegistration := map[int64][]enrollment.HolidayPromotion{}
 	var order []int64
 	for _, booking := range promoted {
-		if _, seen := byRegistration[booking.RegistrationID]; !seen {
-			order = append(order, booking.RegistrationID)
+		if _, seen := byRegistration[booking.RegistrationID.Int64()]; !seen {
+			order = append(order, booking.RegistrationID.Int64())
 		}
-		byRegistration[booking.RegistrationID] = append(byRegistration[booking.RegistrationID], booking)
+		byRegistration[booking.RegistrationID.Int64()] = append(byRegistration[booking.RegistrationID.Int64()], booking)
 	}
 	for _, registrationID := range order {
 		if err := p.announceRegistration(ctx, organizationID, traeger, period, registrationID, byRegistration[registrationID], actorAccountID); err != nil {
@@ -219,7 +220,7 @@ func (p holidayPlacement) announce(ctx context.Context, organizationID int64, pe
 func (p holidayPlacement) announceRegistration(ctx context.Context, organizationID int64, traeger enrollment.HolidayTraeger, period enrollment.HolidayPeriod,
 	registrationID int64, promoted []enrollment.HolidayPromotion, actorAccountID int64,
 ) error {
-	read, _, err := p.store.ReadHolidayReview(ctx, organizationID, period.ID, registrationID)
+	read, _, err := p.store.ReadHolidayReview(ctx, organizationID, period.ID.Int64(), registrationID)
 	if err != nil {
 		return fmt.Errorf("enrollment: read holiday registration: %w", err)
 	}
@@ -231,23 +232,23 @@ func (p holidayPlacement) announceRegistration(ctx context.Context, organization
 	keys := make([]string, 0, len(promoted))
 	for _, booking := range promoted {
 		keys = append(keys, strconv.FormatInt(booking.BookingID, 10))
-		weeks[booking.ChildID] = append(weeks[booking.ChildID], booking.WeekID)
+		weeks[booking.ChildID.Int64()] = append(weeks[booking.ChildID.Int64()], booking.WeekID.Int64())
 	}
 	lines := holidayWeekLines(traeger, period)
 	children := []enrollment.HolidayRegistrationMailChild{}
 	for _, child := range registration.Children {
-		moved := weeks[child.ID]
+		moved := weeks[child.ID.Int64()]
 		if len(moved) == 0 {
 			continue
 		}
-		details := holidayPromotionDetails{ChildID: child.ID, WeekIDs: moved}
-		if err := p.store.AppendHolidayAudit(ctx, organizationID, period.ID, registrationID, enrollment.HolidayAuditPromote, details, actorAccountID); err != nil {
+		details := holidayPromotionDetails{ChildID: child.ID.Int64(), WeekIDs: moved}
+		if err := p.store.AppendHolidayAudit(ctx, organizationID, period.ID.Int64(), registrationID, enrollment.HolidayAuditPromote, details, actorAccountID); err != nil {
 			return fmt.Errorf("enrollment: record holiday promotion: %w", err)
 		}
 		mailChild := enrollment.HolidayRegistrationMailChild{Name: child.FirstName + " " + child.LastName, Guest: child.HomeSchoolID == nil}
 		for _, booking := range child.Bookings {
-			if slices.Contains(moved, booking.WeekID) {
-				mailChild.Weeks = append(mailChild.Weeks, lines(booking.WeekID, booking.TimeModelID, booking.Days, booking.Lunch))
+			if slices.Contains(moved, booking.WeekID.Int64()) {
+				mailChild.Weeks = append(mailChild.Weeks, lines(booking.WeekID.Int64(), booking.TimeModelID.Int64(), booking.Days, booking.Lunch))
 			}
 		}
 		children = append(children, mailChild)
@@ -277,20 +278,20 @@ func (p holidayPlacement) announceRegistration(ctx context.Context, organization
 func holidayWeekLines(traeger enrollment.HolidayTraeger, period enrollment.HolidayPeriod) func(weekID, timeModelID int64, days []calendar.Date, lunch bool) string {
 	schools := map[int64]string{}
 	for _, school := range traeger.Schools {
-		schools[school.ID] = school.Name
+		schools[school.ID.Int64()] = school.Name
 	}
 	weeks := map[int64]enrollment.HolidayWeek{}
 	models := map[int64]enrollment.HolidayTimeModel{}
 	for _, week := range period.Weeks {
-		weeks[week.ID] = week
+		weeks[week.ID.Int64()] = week
 		for _, model := range week.TimeModels {
-			models[model.ID] = model
+			models[model.ID.Int64()] = model
 		}
 	}
 	return func(weekID, timeModelID int64, days []calendar.Date, lunch bool) string {
 		week, model := weeks[weekID], models[timeModelID]
 		place := model.Name
-		if school := schools[week.HostSchoolID]; school != "" {
+		if school := schools[week.HostSchoolID.Int64()]; school != "" {
 			place = school + ", " + model.Name
 		}
 		line := fmt.Sprintf("%s bis %s: %s (%s bis %s Uhr)", week.StartsOn.Format("02.01.2006"),
@@ -318,7 +319,7 @@ func holidayBookedWeeks(read []enrollment.HolidayRegistrationDetail) []int64 {
 	for _, registration := range read {
 		for _, child := range registration.Children {
 			for _, booking := range child.Bookings {
-				weeks = append(weeks, booking.WeekID)
+				weeks = append(weeks, booking.WeekID.Int64())
 			}
 		}
 	}
@@ -391,7 +392,7 @@ func (h *HolidayPlaces) SetHolidayWeekCapacity(ctx context.Context, reviewer enr
 	if err != nil {
 		return enrollment.HolidayCapacityChange{}, err
 	}
-	index := slices.IndexFunc(period.Weeks, func(week enrollment.HolidayWeek) bool { return week.ID == weekID })
+	index := slices.IndexFunc(period.Weeks, func(week enrollment.HolidayWeek) bool { return week.ID == ident.ID(weekID) })
 	if index < 0 {
 		return enrollment.HolidayCapacityChange{}, enrollment.ErrHolidayWeekNotFound
 	}
@@ -418,7 +419,7 @@ func (h *HolidayPlaces) SetHolidayWeekCapacity(ctx context.Context, reviewer enr
 		change.Promotions = []enrollment.HolidayPromotion{}
 	}
 	for _, week := range places {
-		if week.WeekID == weekID {
+		if week.WeekID == ident.ID(weekID) {
 			change.Week = week
 		}
 	}

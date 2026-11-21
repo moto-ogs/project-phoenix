@@ -21,6 +21,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce/http/absencetypes"
 	timetracking "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/workforcetest"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
@@ -111,7 +112,7 @@ func (r *ownAllowancesRoute) claim(t *testing.T, ctx context.Context, staffID, t
 func (r *ownAllowancesRoute) book(t *testing.T, ctx context.Context, staffID, typeID int64, day, status string) {
 	t.Helper()
 	_, err := r.capability.CreateStaffAbsence(ctx, &workforce.StaffAbsence{
-		StaffID: staffID, CreatedBy: staffID, AbsenceType: workforce.AbsenceTypeOther, AbsenceTypeID: &typeID,
+		StaffID: ident.ID(staffID), CreatedBy: ident.ID(staffID), AbsenceType: workforce.AbsenceTypeOther, AbsenceTypeID: (*ident.ID)(&typeID),
 		Status: status, DateStart: day, DateEnd: day, CreatedAt: ownAllowancesNow,
 	})
 	require.NoError(t, err)

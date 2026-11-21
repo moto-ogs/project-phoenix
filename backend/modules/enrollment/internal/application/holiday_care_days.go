@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Days without holiday care (#4702): a statutory holiday of the host school's
@@ -78,7 +79,7 @@ func withHolidayNoCareDays(ctx context.Context, source enrollment.HolidaySchoolC
 func markHolidayNoCareDays(ctx context.Context, source enrollment.HolidaySchoolCalendar, period enrollment.HolidayPeriod) (enrollment.HolidayPeriod, error) {
 	spans := make([]holidayWeekSpan, 0, len(period.Weeks))
 	for _, week := range period.Weeks {
-		spans = append(spans, holidayWeekSpan{StartsOn: week.StartsOn, EndsOn: week.EndsOn, HostSchoolID: week.HostSchoolID})
+		spans = append(spans, holidayWeekSpan{StartsOn: week.StartsOn, EndsOn: week.EndsOn, HostSchoolID: week.HostSchoolID.Int64()})
 	}
 	days, err := holidayNoCareDays(ctx, source, spans)
 	if err != nil {
@@ -102,13 +103,13 @@ func markHolidayNoCareDays(ctx context.Context, source enrollment.HolidaySchoolC
 func refuseHolidayWeeksWithoutCare(ctx context.Context, source enrollment.HolidaySchoolCalendar, weeks []enrollment.HolidayWeekInput, current enrollment.HolidayPeriod) error {
 	stored := map[int64]enrollment.HolidayWeek{}
 	for _, week := range current.Weeks {
-		stored[week.ID] = week
+		stored[week.ID.Int64()] = week
 	}
 	var spans []holidayWeekSpan
 	var positions []int
 	for i, week := range weeks {
 		if before, ok := stored[week.ID]; ok && week.ID != 0 && before.StartsOn == week.StartsOn &&
-			before.EndsOn == week.EndsOn && before.HostSchoolID == week.HostSchoolID &&
+			before.EndsOn == week.EndsOn && before.HostSchoolID == ident.ID(week.HostSchoolID) &&
 			holidayBookingUnitOf(before.BookingUnit) == holidayBookingUnitOf(week.BookingUnit) {
 			continue
 		}
@@ -156,10 +157,10 @@ func holidayWeekKeepsACareDay(week holidayWeekSpan, none []enrollment.HolidayNoC
 func refuseHolidayBookingsWithoutCare(bookings []enrollment.HolidayBookingInput, period enrollment.HolidayPeriod, kept []enrollment.HolidayBookingInput) error {
 	weeks := map[int64]enrollment.HolidayWeek{}
 	for _, week := range period.Weeks {
-		weeks[week.ID] = week
+		weeks[week.ID.Int64()] = week
 	}
 	for i, booking := range bookings {
-		week, ok := weeks[booking.WeekID]
+		week, ok := weeks[booking.WeekID.Int64()]
 		if !ok || len(week.NoCareDays) == 0 {
 			continue
 		}
@@ -167,14 +168,14 @@ func refuseHolidayBookingsWithoutCare(bookings []enrollment.HolidayBookingInput,
 			// A booking of days is refused only for a day without care it
 			// adds; a day it booked before stays (#4701).
 			if day, refused := holidayNewNoCareDay(week, booking, kept); refused {
-				return &enrollment.HolidayWeekNoCareDayRefusal{Week: i, WeekID: week.ID, Day: day}
+				return &enrollment.HolidayWeekNoCareDayRefusal{Week: i, WeekID: week.ID.Int64(), Day: day}
 			}
 			continue
 		}
 		if slices.ContainsFunc(kept, func(k enrollment.HolidayBookingInput) bool { return k.WeekID == booking.WeekID }) {
 			continue
 		}
-		return &enrollment.HolidayWeekNoCareDayRefusal{Week: i, WeekID: week.ID, Day: week.NoCareDays[0]}
+		return &enrollment.HolidayWeekNoCareDayRefusal{Week: i, WeekID: week.ID.Int64(), Day: week.NoCareDays[0]}
 	}
 	return nil
 }

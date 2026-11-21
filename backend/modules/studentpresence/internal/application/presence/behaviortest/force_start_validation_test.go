@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/require"
@@ -176,10 +177,10 @@ func TestForceStartSupervisorValidationGrowthQueryBudget(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, created)
 			require.Positive(t, created.ID)
-			require.Equal(t, testpkg.Tenant(t), created.TenantID)
-			require.Equal(t, &activity.ID, created.GroupID)
-			require.Equal(t, &device.ID, created.DeviceID)
-			require.Equal(t, target.ID, created.RoomID)
+			require.Equal(t, ident.ID(testpkg.Tenant(t)), created.TenantID)
+			require.Equal(t, (*ident.ID)(&activity.ID), created.GroupID)
+			require.Equal(t, (*ident.ID)(&device.ID), created.DeviceID)
+			require.Equal(t, ident.ID(target.ID), created.RoomID)
 			require.Nil(t, created.EndTime)
 			for _, id := range groupIDs {
 				old, readErr := svc.GetActiveGroup(ctx, id)
@@ -189,10 +190,10 @@ func TestForceStartSupervisorValidationGrowthQueryBudget(t *testing.T) {
 			for _, id := range visitIDs {
 				visit, readErr := module.FindVisit(ctx, id)
 				require.NoError(t, readErr)
-				require.Equal(t, created.ID, visit.ActiveGroupID)
+				require.Equal(t, created.ID.Int64(), visit.ActiveGroupID)
 				require.Nil(t, visit.ExitTime)
 			}
-			rows, err := module.QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{GroupIDs: []int64{created.ID}, OpenOnly: true})
+			rows, err := module.QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{GroupIDs: []int64{created.ID.Int64()}, OpenOnly: true})
 			require.NoError(t, err)
 			gotStaff := make([]int64, 0, len(rows))
 			for _, row := range rows {
