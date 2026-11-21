@@ -7,7 +7,6 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Träger memberships (ADR 0084, #4649). A membership only counts while the
