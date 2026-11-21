@@ -1594,7 +1594,7 @@ describe("staff-api", () => {
     const backendSchedule = {
       mode: "template" as const,
       model: {
-        id: 5,
+        id: "5",
         name: "Vollzeit",
         rotation_length: 2,
         rotation_anchor_date: "2026-06-01",
@@ -1750,6 +1750,27 @@ describe("staff-api", () => {
   });
 
   describe("workTimeModelService", () => {
+    it("reports a refused list instead of showing no templates", async () => {
+      const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
+      mockFetch.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            status: 403,
+            code: "general.permission",
+            detail: "forbidden",
+          }),
+          {
+            status: 403,
+            headers: { "Content-Type": "application/problem+json" },
+          },
+        ),
+      );
+
+      await expect(workTimeModelService.list()).rejects.toMatchObject({
+        status: 403,
+      });
+    });
+
     it("lists and maps work time models", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
       mockFetch.mockResolvedValueOnce({
@@ -1758,7 +1779,7 @@ describe("staff-api", () => {
           Promise.resolve({
             data: [
               {
-                id: 9,
+                id: "9",
                 name: "Halbtag",
                 rotation_length: 1,
                 rotation_anchor_date: "2026-06-01",
@@ -2167,14 +2188,14 @@ describe("staff-api", () => {
         json: () =>
           Promise.resolve({
             data: {
-              id: 7,
-              staff_id: 4,
+              id: "7",
+              staff_id: "4",
               year: 2026,
               effective_date: "2026-02-28",
               taken_before_days: 5.5,
               entered_remaining_days: 26.5,
               note: "Übernahme aus Urlaubsliste",
-              decided_by: 9,
+              decided_by: "9",
               decided_at: "2026-03-01T08:00:00Z",
             },
           }),
@@ -3261,7 +3282,7 @@ describe("staff-api", () => {
 
   describe("staffStammdatenService", () => {
     const backendStammdaten = {
-      staff_id: 7,
+      staff_id: "7",
       person: {
         first_name: "Max",
         last_name: "Mustermann",
@@ -3292,7 +3313,12 @@ describe("staff-api", () => {
           acquired_on: "2023-03-10",
           expires_on: "2026-03-10",
         },
-        { name: "Schwimmschein", acquired_on: null, expires_on: null },
+        {
+          type_id: null,
+          name: "Schwimmschein",
+          acquired_on: null,
+          expires_on: null,
+        },
       ],
     };
 
