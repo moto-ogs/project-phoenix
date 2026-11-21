@@ -35,9 +35,9 @@ func concludeContract(ctx context.Context, store Store, organizationID, accountI
 		record.Version.Status != carecontract.VersionRequested {
 		return carecontract.ErrContractNotConcludable
 	}
-	if err := store.MarkConcluded(ctx, organizationID, record.Summary.ID, record.Version.ID, conclusion); err != nil {
+	if err := store.MarkConcluded(ctx, organizationID, record.Summary.ID.Int64(), record.Version.ID.Int64(), conclusion); err != nil {
 		return err
 	}
 	return trailContract(ctx, store, organizationID, accountID, record, ActionConclude,
-		map[string]any{"method": conclusion.Method, "version_id": record.Version.ID, "document_id": *record.DocumentID})
+		map[string]any{"method": conclusion.Method, "version_id": record.Version.ID.Int64(), "document_id": *record.DocumentID})
 }

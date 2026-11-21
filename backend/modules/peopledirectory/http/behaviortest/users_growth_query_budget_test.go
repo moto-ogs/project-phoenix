@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	users "github.com/moto-ogs/project-phoenix/modules/peopledirectory/http"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/require"
@@ -53,8 +54,8 @@ func TestUsersProductionBoundPositiveGrowthQueryBudget(t *testing.T) {
 			testpkg.LinkRFIDToStudent(t, db, person.ID, card.ID)
 			// The tag assignment updates the persisted version shown in the DTO.
 			require.NoError(t, db.NewSelect().Model(person).ModelTableExpr("users.persons AS person").Where("id = ?", person.ID).Scan(context.Background()))
-			want = append(want, users.PersonResponse{ID: person.ID, FirstName: person.FirstName, LastName: person.LastName,
-				Email: account.Email, TagID: card.ID, AccountID: account.ID, CreatedAt: person.CreatedAt.UTC(), UpdatedAt: person.UpdatedAt.UTC()})
+			want = append(want, users.PersonResponse{ID: ident.ID(person.ID), FirstName: person.FirstName, LastName: person.LastName,
+				Email: account.Email, TagID: card.ID, AccountID: ident.ID(account.ID), CreatedAt: person.CreatedAt.UTC(), UpdatedAt: person.UpdatedAt.UTC()})
 		}
 		request := testutil.NewAuthenticatedRequest(t, http.MethodGet, "/api/users/?first_name="+prefix+"&page=1&page_size=20", nil,
 			testutil.WithJWTBearer(token))

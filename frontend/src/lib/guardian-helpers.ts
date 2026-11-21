@@ -147,7 +147,7 @@ export interface StudentGuardianPayload {
   // creating one (sibling case, #1513). The profile fields below are then
   // carried only for local display in the create modal's summary list — the
   // backend ignores them and never mutates the existing profile.
-  guardian_profile_id?: number;
+  guardian_profile_id?: string;
   first_name: string;
   last_name: string;
   email?: string;
@@ -284,7 +284,7 @@ export function mapStudentGuardianLinkToBackend(
   data: StudentGuardianLinkRequest,
 ): StudentGuardianLinkWire {
   return {
-    guardian_profile_id: Number.parseInt(data.guardianProfileId),
+    guardian_profile_id: data.guardianProfileId,
     relationship_type: data.relationshipType,
     guardian_role: data.guardianRole,
     is_primary: data.isPrimary,

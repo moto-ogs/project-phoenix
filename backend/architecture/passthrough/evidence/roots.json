@@ -2,14 +2,14 @@
   "sites": [
     {
       "build": "production",
-      "evidence": "func (p AttendanceRoutePeople) FindByAccountID(ctx context.Context, id int64) (int64, bool, error) {\n\trow, err := p.source.FindByAccountID(ctx, id)\n\tif row == nil {\n\t\treturn 0, false, err\n\t}\n\treturn row.ID, true, err\n}",
+      "evidence": "func (p AttendanceRoutePeople) FindByAccountID(ctx context.Context, id int64) (int64, bool, error) {\n\trow, err := p.source.FindByAccountID(ctx, id)\n\tif row == nil {\n\t\treturn 0, false, err\n\t}\n\treturn row.ID.Int64(), true, err\n}",
       "form": "unclassified-evidence",
       "id": "api/AttendanceRoutePeople.FindByAccountID",
       "owner": "roots"
     },
     {
       "build": "production",
-      "evidence": "func (p AttendanceRoutePeople) GetStaffByPersonID(ctx context.Context, id int64) (int64, int64, bool, error) {\n\trow, err := p.source.StaffRows().FindByPersonID(ctx, id)\n\tif row == nil {\n\t\treturn 0, 0, false, err\n\t}\n\treturn row.ID, row.TenantID, true, err\n}",
+      "evidence": "func (p AttendanceRoutePeople) GetStaffByPersonID(ctx context.Context, id int64) (int64, int64, bool, error) {\n\trow, err := p.source.StaffRows().FindByPersonID(ctx, id)\n\tif row == nil {\n\t\treturn 0, 0, false, err\n\t}\n\treturn row.ID.Int64(), row.TenantID.Int64(), true, err\n}",
       "form": "unclassified-evidence",
       "id": "api/AttendanceRoutePeople.GetStaffByPersonID",
       "owner": "roots"
@@ -310,7 +310,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p TimetablePeople) AccountPersonID(ctx context.Context, accountID int64) (int64, error) {\n\tperson, err := p.persons.FindByAccountID(ctx, accountID)\n\tif err != nil {\n\t\treturn 0, err\n\t}\n\tif person == nil {\n\t\treturn 0, fmt.Errorf(\"account %d: %w\", accountID, errAccountWithoutPerson)\n\t}\n\treturn person.ID, nil\n}",
+      "evidence": "func (p TimetablePeople) AccountPersonID(ctx context.Context, accountID int64) (int64, error) {\n\tperson, err := p.persons.FindByAccountID(ctx, accountID)\n\tif err != nil {\n\t\treturn 0, err\n\t}\n\tif person == nil {\n\t\treturn 0, fmt.Errorf(\"account %d: %w\", accountID, errAccountWithoutPerson)\n\t}\n\treturn person.ID.Int64(), nil\n}",
       "form": "unclassified-evidence",
       "id": "api/TimetablePeople.AccountPersonID",
       "owner": "roots"
@@ -338,7 +338,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p TimetablePeople) PersonStaffID(ctx context.Context, personID int64) (int64, error) {\n\tstaff, err := p.persons.StaffRows().FindByPersonID(ctx, personID)\n\tif err != nil {\n\t\treturn 0, err\n\t}\n\tif staff == nil {\n\t\treturn 0, nil\n\t}\n\treturn staff.ID, nil\n}",
+      "evidence": "func (p TimetablePeople) PersonStaffID(ctx context.Context, personID int64) (int64, error) {\n\tstaff, err := p.persons.StaffRows().FindByPersonID(ctx, personID)\n\tif err != nil {\n\t\treturn 0, err\n\t}\n\tif staff == nil {\n\t\treturn 0, nil\n\t}\n\treturn staff.ID.Int64(), nil\n}",
       "form": "unclassified-evidence",
       "id": "api/TimetablePeople.PersonStaffID",
       "owner": "roots"
@@ -352,7 +352,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p TimetablePeople) StaffPersonID(ctx context.Context, staffID int64) (int64, error) {\n\tstaff, err := p.persons.StaffRows().FindMembershipByID(ctx, staffID)\n\tif err != nil {\n\t\treturn 0, err\n\t}\n\tif staff == nil || staff.ID == 0 {\n\t\treturn 0, nil\n\t}\n\treturn staff.PersonID, nil\n}",
+      "evidence": "func (p TimetablePeople) StaffPersonID(ctx context.Context, staffID int64) (int64, error) {\n\tstaff, err := p.persons.StaffRows().FindMembershipByID(ctx, staffID)\n\tif err != nil {\n\t\treturn 0, err\n\t}\n\tif staff == nil || staff.ID == 0 {\n\t\treturn 0, nil\n\t}\n\treturn staff.PersonID.Int64(), nil\n}",
       "form": "unclassified-evidence",
       "id": "api/TimetablePeople.StaffPersonID",
       "owner": "roots"
@@ -471,14 +471,14 @@
     },
     {
       "build": "production",
-      "evidence": "func (s birthdayStore) FindPersonByAccount(ctx context.Context, accountID int64) (int64, bool, error) {\n\tperson, err := s.repos.Persons.FindByAccountID(ctx, accountID)\n\tif err != nil {\n\t\tif isRepositoryNotFound(err) {\n\t\t\treturn 0, false, nil\n\t\t}\n\t\treturn 0, false, err\n\t}\n\tif person == nil {\n\t\treturn 0, false, nil\n\t}\n\treturn person.ID, true, nil\n}",
+      "evidence": "func (s birthdayStore) FindPersonByAccount(ctx context.Context, accountID int64) (int64, bool, error) {\n\tperson, err := s.repos.Persons.FindByAccountID(ctx, accountID)\n\tif err != nil {\n\t\tif isRepositoryNotFound(err) {\n\t\t\treturn 0, false, nil\n\t\t}\n\t\treturn 0, false, err\n\t}\n\tif person == nil {\n\t\treturn 0, false, nil\n\t}\n\treturn person.ID.Int64(), true, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/birthdayStore.FindPersonByAccount",
       "owner": "roots"
     },
     {
       "build": "production",
-      "evidence": "func (s birthdayStore) FindStaffByPerson(ctx context.Context, personID int64) (peopleCompose.BirthdayStaff, bool, error) {\n\tstaff, err := s.repos.Staff.FindByPersonID(ctx, personID)\n\tif err != nil {\n\t\tif isRepositoryNotFound(err) {\n\t\t\treturn peopleCompose.BirthdayStaff{}, false, nil\n\t\t}\n\t\treturn peopleCompose.BirthdayStaff{}, false, err\n\t}\n\tif staff == nil {\n\t\treturn peopleCompose.BirthdayStaff{}, false, nil\n\t}\n\treturn peopleCompose.BirthdayStaff{ID: staff.ID, OptOut: staff.BirthdayDisplayOptOut}, true, nil\n}",
+      "evidence": "func (s birthdayStore) FindStaffByPerson(ctx context.Context, personID int64) (peopleCompose.BirthdayStaff, bool, error) {\n\tstaff, err := s.repos.Staff.FindByPersonID(ctx, personID)\n\tif err != nil {\n\t\tif isRepositoryNotFound(err) {\n\t\t\treturn peopleCompose.BirthdayStaff{}, false, nil\n\t\t}\n\t\treturn peopleCompose.BirthdayStaff{}, false, err\n\t}\n\tif staff == nil {\n\t\treturn peopleCompose.BirthdayStaff{}, false, nil\n\t}\n\treturn peopleCompose.BirthdayStaff{ID: staff.ID.Int64(), OptOut: staff.BirthdayDisplayOptOut}, true, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/birthdayStore.FindStaffByPerson",
       "owner": "roots"
@@ -667,7 +667,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (b classDaySheetStudents) PersonsByID(ctx context.Context, personIDs []int64) (map[int64]classdayCompose.SheetPerson, error) {\n\tpersons, err := b.persons.FindByIDs(ctx, personIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tout := make(map[int64]classdayCompose.SheetPerson, len(persons))\n\tfor _, person := range persons {\n\t\tif person != nil {\n\t\t\tout[person.ID] = classdayCompose.SheetPerson{FirstName: person.FirstName, LastName: person.LastName}\n\t\t}\n\t}\n\treturn out, nil\n}",
+      "evidence": "func (b classDaySheetStudents) PersonsByID(ctx context.Context, personIDs []int64) (map[int64]classdayCompose.SheetPerson, error) {\n\tpersons, err := b.persons.FindByIDs(ctx, personIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tout := make(map[int64]classdayCompose.SheetPerson, len(persons))\n\tfor _, person := range persons {\n\t\tif person != nil {\n\t\t\tout[person.ID.Int64()] = classdayCompose.SheetPerson{FirstName: person.FirstName, LastName: person.LastName}\n\t\t}\n\t}\n\treturn out, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/classDaySheetStudents.PersonsByID",
       "owner": "roots"
@@ -947,7 +947,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (n holidaySchoolNames) HolidaySchoolNames(ctx context.Context, organizationID int64) (map[int64]string, error) {\n\tschools, err := n.overview.Schools(ctx, organizationID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tnames := make(map[int64]string, len(schools))\n\tfor _, school := range schools {\n\t\tnames[school.ID] = school.Name\n\t}\n\treturn names, nil\n}",
+      "evidence": "func (n holidaySchoolNames) HolidaySchoolNames(ctx context.Context, organizationID int64) (map[int64]string, error) {\n\tschools, err := n.overview.Schools(ctx, organizationID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tnames := make(map[int64]string, len(schools))\n\tfor _, school := range schools {\n\t\tnames[school.ID.Int64()] = school.Name\n\t}\n\treturn names, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/holidaySchoolNames.HolidaySchoolNames",
       "owner": "roots"
@@ -2445,14 +2445,14 @@
     },
     {
       "build": "production",
-      "evidence": "func (b CaregiverPlannedSupervisionBlockers) ListPlannedSupervisionBlockers(ctx context.Context, staffID, tenantID int64) ([]peopledirectory.BlockerActivity, error) {\n\trows, err := b.Supervisors.ListPlannedSupervisionBlockers(ctx, staffID, tenantID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]peopledirectory.BlockerActivity, 0, len(rows))\n\tfor _, row := range rows {\n\t\tresult = append(result, peopledirectory.BlockerActivity{ID: row.ID, ActivityID: row.ActivityID, ActivityName: row.ActivityName, IsPrimary: row.IsPrimary})\n\t}\n\treturn result, nil\n}",
+      "evidence": "func (b CaregiverPlannedSupervisionBlockers) ListPlannedSupervisionBlockers(ctx context.Context, staffID, tenantID int64) ([]peopledirectory.BlockerActivity, error) {\n\trows, err := b.Supervisors.ListPlannedSupervisionBlockers(ctx, staffID, tenantID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]peopledirectory.BlockerActivity, 0, len(rows))\n\tfor _, row := range rows {\n\t\tresult = append(result, peopledirectory.BlockerActivity{ID: ident.ID(row.ID), ActivityID: ident.ID(row.ActivityID), ActivityName: row.ActivityName, IsPrimary: row.IsPrimary})\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/CaregiverPlannedSupervisionBlockers.ListPlannedSupervisionBlockers",
       "owner": "roots"
     },
     {
       "build": "production",
-      "evidence": "func (b CaregiverSupervisionBlockers) ListActiveSupervisionBlockers(ctx context.Context, staffID int64) ([]peopleValues.BlockerSupervision, error) {\n\trows, err := b.Records.ListActiveSupervisionBlockers(ctx, staffID)\n\tif rows == nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]peopleValues.BlockerSupervision, len(rows))\n\tfor i, row := range rows {\n\t\tresult[i] = peopleValues.BlockerSupervision{ID: row.ID, GroupID: row.GroupID, GroupName: row.GroupName, StartDate: row.StartDate}\n\t}\n\treturn result, err\n}",
+      "evidence": "func (b CaregiverSupervisionBlockers) ListActiveSupervisionBlockers(ctx context.Context, staffID int64) ([]peopleValues.BlockerSupervision, error) {\n\trows, err := b.Records.ListActiveSupervisionBlockers(ctx, staffID)\n\tif rows == nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]peopleValues.BlockerSupervision, len(rows))\n\tfor i, row := range rows {\n\t\tresult[i] = peopleValues.BlockerSupervision{ID: ident.ID(row.ID), GroupID: row.GroupID, GroupName: row.GroupName, StartDate: row.StartDate}\n\t}\n\treturn result, err\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/CaregiverSupervisionBlockers.ListActiveSupervisionBlockers",
       "owner": "roots"
@@ -3341,7 +3341,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (r ReminderPersonReader) FindByIDs(ctx context.Context, ids []int64) (map[int64]*ports.Person, error) {\n\tvalues, err := r.Source.FindByIDs(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64]*ports.Person, len(values))\n\tfor id, value := range values {\n\t\tif value != nil {\n\t\t\tresult[id] = \u0026ports.Person{ID: value.ID, Name: value.GetFullName()}\n\t\t}\n\t}\n\treturn result, nil\n}",
+      "evidence": "func (r ReminderPersonReader) FindByIDs(ctx context.Context, ids []int64) (map[int64]*ports.Person, error) {\n\tvalues, err := r.Source.FindByIDs(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64]*ports.Person, len(values))\n\tfor id, value := range values {\n\t\tif value != nil {\n\t\t\tresult[id] = \u0026ports.Person{ID: value.ID.Int64(), Name: value.GetFullName()}\n\t\t}\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/ReminderPersonReader.FindByIDs",
       "owner": "roots"
@@ -3369,7 +3369,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (r ReminderSupervisionReader) GetStaffActiveSupervisions(ctx context.Context, id int64) ([]*ports.GroupSupervisor, error) {\n\tday := timezone.TodayDate().String()\n\tvalues, err := r.Presence.QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{StaffID: \u0026id, ActiveOn: \u0026day})\n\tif err != nil {\n\t\treturn nil, \u0026studentpresence.OperationError{Op: \"GetStaffActiveSupervisions\", Err: studentpresence.ErrDatabaseOperation}\n\t}\n\tresult := make([]*ports.GroupSupervisor, 0, len(values))\n\tfor _, value := range values {\n\t\tresult = append(result, \u0026ports.GroupSupervisor{StaffID: value.StaffID, GroupID: value.GroupID})\n\t}\n\treturn result, nil\n}",
+      "evidence": "func (r ReminderSupervisionReader) GetStaffActiveSupervisions(ctx context.Context, id int64) ([]*ports.GroupSupervisor, error) {\n\tday := timezone.TodayDate().String()\n\tvalues, err := r.Presence.QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{StaffID: \u0026id, ActiveOn: \u0026day})\n\tif err != nil {\n\t\treturn nil, \u0026studentpresence.OperationError{Op: \"GetStaffActiveSupervisions\", Err: studentpresence.ErrDatabaseOperation}\n\t}\n\tresult := make([]*ports.GroupSupervisor, 0, len(values))\n\tfor _, value := range values {\n\t\tresult = append(result, \u0026ports.GroupSupervisor{StaffID: ident.ID(value.StaffID).Int64(), GroupID: ident.ID(value.GroupID).Int64()})\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/ReminderSupervisionReader.GetStaffActiveSupervisions",
       "owner": "roots"
@@ -3502,7 +3502,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (r StaffMembershipRepository) Update(ctx context.Context, entity *peopleValues.Staff) error {\n\tif entity == nil {\n\t\treturn repositoryError(\"update staff\", errors.New(\"staff cannot be nil\"))\n\t}\n\tupdated, err := r.Membership.UpdateStaff(ctx, schoolmembership.UpdateStaff{ID: entity.ID, StaffFields: staffFieldsFromLegacy(entity)})\n\tif err != nil {\n\t\treturn membershipError(\"update staff\", err)\n\t}\n\tapplyStaffToLegacy(entity, updated)\n\treturn nil\n}",
+      "evidence": "func (r StaffMembershipRepository) Update(ctx context.Context, entity *peopleValues.Staff) error {\n\tif entity == nil {\n\t\treturn repositoryError(\"update staff\", errors.New(\"staff cannot be nil\"))\n\t}\n\tupdated, err := r.Membership.UpdateStaff(ctx, schoolmembership.UpdateStaff{ID: entity.ID.Int64(), StaffFields: staffFieldsFromLegacy(entity)})\n\tif err != nil {\n\t\treturn membershipError(\"update staff\", err)\n\t}\n\tapplyStaffToLegacy(entity, updated)\n\treturn nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/StaffMembershipRepository.Update",
       "owner": "roots"
@@ -3922,7 +3922,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (d TraegerMembershipDirectory) ListAccountTraegerOrganizations(ctx context.Context, accountID int64) ([]identityaccess.TraegerOrganization, error) {\n\tif d.Memberships == nil {\n\t\treturn nil, errors.New(\"the Träger membership directory is not composed\")\n\t}\n\torganizations, err := d.Memberships.ListAccountTraegerOrganizations(ctx, accountID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]identityaccess.TraegerOrganization, 0, len(organizations))\n\tfor _, organization := range organizations {\n\t\tresult = append(result, identityaccess.TraegerOrganization{ID: organization.ID, Name: organization.Name})\n\t}\n\treturn result, nil\n}",
+      "evidence": "func (d TraegerMembershipDirectory) ListAccountTraegerOrganizations(ctx context.Context, accountID int64) ([]identityaccess.TraegerOrganization, error) {\n\tif d.Memberships == nil {\n\t\treturn nil, errors.New(\"the Träger membership directory is not composed\")\n\t}\n\torganizations, err := d.Memberships.ListAccountTraegerOrganizations(ctx, accountID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]identityaccess.TraegerOrganization, 0, len(organizations))\n\tfor _, organization := range organizations {\n\t\tresult = append(result, identityaccess.TraegerOrganization{ID: organization.ID.Int64(), Name: organization.Name})\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/TraegerMembershipDirectory.ListAccountTraegerOrganizations",
       "owner": "roots"
@@ -4167,7 +4167,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (q attendanceStaffDirectory) StaffTenantID(ctx context.Context, id int64) (*int64, error) {\n\tstaff, err := q.source.FindByID(ctx, id)\n\tif err != nil || staff == nil {\n\t\treturn nil, err\n\t}\n\ttenantID := staff.TenantID\n\treturn \u0026tenantID, nil\n}",
+      "evidence": "func (q attendanceStaffDirectory) StaffTenantID(ctx context.Context, id int64) (*int64, error) {\n\tstaff, err := q.source.FindByID(ctx, id)\n\tif err != nil || staff == nil {\n\t\treturn nil, err\n\t}\n\ttenantID := staff.TenantID\n\treturn (*int64)(\u0026tenantID), nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/attendanceStaffDirectory.StaffTenantID",
       "owner": "roots"
@@ -4356,7 +4356,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p calendarGroupPort) List(ctx context.Context) ([]*calendarCompose.Group, error) {\n\tvalue, err := p.source.List(ctx, nil)\n\treturn CalendarMapSlice(value, func(v *educationRepo.Group) *calendarCompose.Group {\n\t\treturn \u0026calendarCompose.Group{ID: v.ID, Name: v.Name}\n\t}), err\n}",
+      "evidence": "func (p calendarGroupPort) List(ctx context.Context) ([]*calendarCompose.Group, error) {\n\tvalue, err := p.source.List(ctx, nil)\n\treturn CalendarMapSlice(value, func(v *educationRepo.Group) *calendarCompose.Group {\n\t\treturn \u0026calendarCompose.Group{ID: v.ID.Int64(), Name: v.Name}\n\t}), err\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/calendarGroupPort.List",
       "owner": "roots"
@@ -4391,7 +4391,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p calendarIdentityPort) GetCurrentUser(ctx context.Context) (*calendarCompose.Account, error) {\n\tvalue, err := p.source.Account(ctx)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn \u0026calendarCompose.Account{ID: value.ID, Email: value.Email, Active: value.Active}, nil\n}",
+      "evidence": "func (p calendarIdentityPort) GetCurrentUser(ctx context.Context) (*calendarCompose.Account, error) {\n\tvalue, err := p.source.Account(ctx)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\treturn \u0026calendarCompose.Account{ID: value.ID.Int64(), Email: value.Email, Active: value.Active}, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/calendarIdentityPort.GetCurrentUser",
       "owner": "roots"
@@ -4510,7 +4510,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p callerPeople) FindPersonByAccount(ctx context.Context, accountID int64) (identityaccess.CallerPerson, bool, error) {\n\tperson, err := p.persons.Rows.FindByAccountID(ctx, accountID)\n\tif err != nil || person == nil {\n\t\treturn identityaccess.CallerPerson{}, false, err\n\t}\n\treturn identityaccess.CallerPerson{ID: person.ID, FirstName: person.FirstName, LastName: person.LastName, TagID: person.TagID, CreatedAt: person.CreatedAt, UpdatedAt: person.UpdatedAt}, true, nil\n}",
+      "evidence": "func (p callerPeople) FindPersonByAccount(ctx context.Context, accountID int64) (identityaccess.CallerPerson, bool, error) {\n\tperson, err := p.persons.Rows.FindByAccountID(ctx, accountID)\n\tif err != nil || person == nil {\n\t\treturn identityaccess.CallerPerson{}, false, err\n\t}\n\treturn identityaccess.CallerPerson{ID: person.ID.Int64(), FirstName: person.FirstName, LastName: person.LastName, TagID: person.TagID, CreatedAt: person.CreatedAt, UpdatedAt: person.UpdatedAt}, true, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/callerPeople.FindPersonByAccount",
       "owner": "roots"
@@ -4972,7 +4972,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (d caregiverDirectory) FindCaregiverPersons(ctx context.Context, personIDs []int64) (map[int64]schoolmembership.CaregiverPerson, error) {\n\tpersons, err := d.deps.persons.FindByIDs(ctx, personIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64]schoolmembership.CaregiverPerson, len(persons))\n\tfor id, person := range persons {\n\t\tif person != nil {\n\t\t\tresult[id] = schoolmembership.CaregiverPerson{ID: person.ID, TenantID: person.GetTenantID(), AccountID: person.AccountID, FirstName: person.FirstName, LastName: person.LastName}\n\t\t}\n\t}\n\treturn result, nil\n}",
+      "evidence": "func (d caregiverDirectory) FindCaregiverPersons(ctx context.Context, personIDs []int64) (map[int64]schoolmembership.CaregiverPerson, error) {\n\tpersons, err := d.deps.persons.FindByIDs(ctx, personIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64]schoolmembership.CaregiverPerson, len(persons))\n\tfor id, person := range persons {\n\t\tif person != nil {\n\t\t\tresult[id] = schoolmembership.CaregiverPerson{ID: person.ID.Int64(), TenantID: person.GetTenantID(), AccountID: (*int64)(person.AccountID), FirstName: person.FirstName, LastName: person.LastName}\n\t\t}\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/caregiverDirectory.FindCaregiverPersons",
       "owner": "roots"
@@ -5784,7 +5784,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s enrollmentReviewerStaff) StaffIDByPerson(ctx context.Context, personID int64) (int64, error) {\n\tstaff, err := s.repo.FindByPersonID(ctx, personID)\n\tif err != nil || staff == nil {\n\t\treturn 0, err\n\t}\n\treturn staff.ID, nil\n}",
+      "evidence": "func (s enrollmentReviewerStaff) StaffIDByPerson(ctx context.Context, personID int64) (int64, error) {\n\tstaff, err := s.repo.FindByPersonID(ctx, personID)\n\tif err != nil || staff == nil {\n\t\treturn 0, err\n\t}\n\treturn staff.ID.Int64(), nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/enrollmentReviewerStaff.StaffIDByPerson",
       "owner": "roots"
@@ -6267,7 +6267,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (q monthCloseStaffQuery) ListMonthCloseStaff(ctx context.Context) ([]workforceModule.MonthCloseStaff, error) {\n\trows, err := q.source.ListAllWithPerson(ctx)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tstaff := make([]workforceModule.MonthCloseStaff, 0, len(rows))\n\tfor _, row := range rows {\n\t\tstaff = append(staff, workforceModule.MonthCloseStaff{ID: row.ID, ExternalCaregiver: row.IsExternalCaregiver})\n\t}\n\treturn staff, nil\n}",
+      "evidence": "func (q monthCloseStaffQuery) ListMonthCloseStaff(ctx context.Context) ([]workforceModule.MonthCloseStaff, error) {\n\trows, err := q.source.ListAllWithPerson(ctx)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tstaff := make([]workforceModule.MonthCloseStaff, 0, len(rows))\n\tfor _, row := range rows {\n\t\tstaff = append(staff, workforceModule.MonthCloseStaff{ID: row.ID.Int64(), ExternalCaregiver: row.IsExternalCaregiver})\n\t}\n\treturn staff, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/monthCloseStaffQuery.ListMonthCloseStaff",
       "owner": "roots"
@@ -7107,7 +7107,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (a planExportPlanningTracks) ListPlanningTracks(ctx context.Context) ([]*planexport.PlanningTrack, error) {\n\ttracks, err := a.source.ListPlanningTracks(ctx, timetable.PlanningTrackFilter{Ordered: true})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tout := make([]*planexport.PlanningTrack, 0, len(tracks))\n\tfor _, track := range tracks {\n\t\tout = append(out, \u0026planexport.PlanningTrack{ID: track.ID, Color: track.Color})\n\t}\n\treturn out, nil\n}",
+      "evidence": "func (a planExportPlanningTracks) ListPlanningTracks(ctx context.Context) ([]*planexport.PlanningTrack, error) {\n\ttracks, err := a.source.ListPlanningTracks(ctx, timetable.PlanningTrackFilter{Ordered: true})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tout := make([]*planexport.PlanningTrack, 0, len(tracks))\n\tfor _, track := range tracks {\n\t\tout = append(out, \u0026planexport.PlanningTrack{ID: track.ID.Int64(), Color: track.Color})\n\t}\n\treturn out, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/planExportPlanningTracks.ListPlanningTracks",
       "owner": "roots"
@@ -7282,7 +7282,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p provisioningPeople) FindStaff(ctx context.Context, personID int64) (organizationCompose.StaffMember, bool, error) {\n\tstaff, err := p.staffRows.FindByPersonID(ctx, personID)\n\tif err != nil || staff == nil {\n\t\treturn organizationCompose.StaffMember{}, false, err\n\t}\n\treturn organizationCompose.StaffMember{ID: staff.ID, TenantID: staff.TenantID}, true, nil\n}",
+      "evidence": "func (p provisioningPeople) FindStaff(ctx context.Context, personID int64) (organizationCompose.StaffMember, bool, error) {\n\tstaff, err := p.staffRows.FindByPersonID(ctx, personID)\n\tif err != nil || staff == nil {\n\t\treturn organizationCompose.StaffMember{}, false, err\n\t}\n\treturn organizationCompose.StaffMember{ID: staff.ID.Int64(), TenantID: staff.TenantID.Int64()}, true, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/provisioningPeople.FindStaff",
       "owner": "roots"
@@ -7814,7 +7814,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p statusDayOverviewPeople) GetByIDs(ctx context.Context, ids []int64) (map[int64]*studentpresence.PersonName, error) {\n\trows, err := p.source.GetByIDs(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tnames := make(map[int64]*studentpresence.PersonName, len(rows))\n\tfor id, row := range rows {\n\t\tif row == nil {\n\t\t\tcontinue\n\t\t}\n\t\tnames[id] = \u0026studentpresence.PersonName{ID: row.ID, FirstName: row.FirstName, LastName: row.LastName}\n\t}\n\treturn names, nil\n}",
+      "evidence": "func (p statusDayOverviewPeople) GetByIDs(ctx context.Context, ids []int64) (map[int64]*studentpresence.PersonName, error) {\n\trows, err := p.source.GetByIDs(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tnames := make(map[int64]*studentpresence.PersonName, len(rows))\n\tfor id, row := range rows {\n\t\tif row == nil {\n\t\t\tcontinue\n\t\t}\n\t\tnames[id] = \u0026studentpresence.PersonName{ID: row.ID.Int64(), FirstName: row.FirstName, LastName: row.LastName}\n\t}\n\treturn names, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/statusDayOverviewPeople.GetByIDs",
       "owner": "roots"

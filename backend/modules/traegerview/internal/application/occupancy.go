@@ -5,6 +5,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func occupancyPortsBound(ports traegerview.OccupancyPorts) bool {
@@ -97,10 +98,10 @@ func (o *Overview) careFormReads(ctx context.Context, scope []int64, day calenda
 // the children of the roster count, each child once per group and per care
 // form.
 func (r occupancyReads) school(school traegerview.TraegerSchool) traegerview.SchoolOccupancy {
-	roster := r.roster[school.ID]
+	roster := r.roster[school.ID.Int64()]
 	row := traegerview.SchoolOccupancy{TraegerSchool: school, Children: len(roster)}
-	row.Groups, row.WithoutGroup = groupOccupancy(roster, r.groups[school.ID], r.names[school.ID])
-	row.CareForms, row.WithoutCareForm = careFormOccupancy(roster, r.bookings[school.ID], r.children[school.ID])
+	row.Groups, row.WithoutGroup = groupOccupancy(roster, r.groups[school.ID.Int64()], r.names[school.ID.Int64()])
+	row.CareForms, row.WithoutCareForm = careFormOccupancy(roster, r.bookings[school.ID.Int64()], r.children[school.ID.Int64()])
 	return row
 }
 
@@ -124,7 +125,7 @@ func groupOccupancy(roster, membershipGroups map[int64]int64, names []traegervie
 	}
 	groups := make([]traegerview.OccupancyGroup, 0, len(names))
 	for _, group := range names {
-		groups = append(groups, traegerview.OccupancyGroup{ID: group.ID, Name: group.Name, Children: counts[group.ID]})
+		groups = append(groups, traegerview.OccupancyGroup{ID: ident.ID(group.ID), Name: group.Name, Children: counts[group.ID]})
 	}
 	return groups, without
 }
@@ -148,7 +149,7 @@ func careFormOccupancy(roster map[int64]int64, offerings []traegerview.CareOffer
 				booked[student] = struct{}{}
 			}
 		}
-		forms = append(forms, traegerview.OccupancyCareForm{ID: offering.ID, Name: offering.Name, Children: len(students), Capacity: offering.Capacity, Active: offering.Active})
+		forms = append(forms, traegerview.OccupancyCareForm{ID: ident.ID(offering.ID), Name: offering.Name, Children: len(students), Capacity: offering.Capacity, Active: offering.Active})
 	}
 	return forms, len(roster) - len(booked)
 }

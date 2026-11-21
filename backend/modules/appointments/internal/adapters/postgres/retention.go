@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/appointments"
 	"github.com/moto-ogs/project-phoenix/modules/appointments/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/uptrace/bun"
 )
 
@@ -79,7 +80,7 @@ func retentionCandidatesFromRows(rows []appointmentRow, rules []recurrenceRuleRo
 	rulesByAppointment := make(map[int64]*appointments.RecurrenceRule, len(rules))
 	for _, rule := range rules {
 		rulesByAppointment[rule.AppointmentID] = &appointments.RecurrenceRule{
-			AppointmentID: rule.AppointmentID, Frequency: rule.Frequency, IntervalCount: rule.IntervalCount,
+			AppointmentID: ident.ID(rule.AppointmentID), Frequency: rule.Frequency, IntervalCount: rule.IntervalCount,
 			Weekdays: rule.Weekdays, MonthDays: rule.MonthDays, EndsOn: publicDate(rule.EndsOn), OccurrenceCount: rule.OccurrenceCount,
 		}
 	}
@@ -87,7 +88,7 @@ func retentionCandidatesFromRows(rows []appointmentRow, rules []recurrenceRuleRo
 	for _, row := range rows {
 		candidates = append(candidates, appointments.RetentionCandidate{
 			Appointment: &appointments.Appointment{
-				ID: row.ID, TenantID: row.TenantID,
+				ID: ident.ID(row.ID), TenantID: ident.ID(row.TenantID),
 				StartDate: appointments.Date(row.StartDate), EndDate: appointments.Date(row.EndDate),
 			},
 			Rule:           rulesByAppointment[row.ID],

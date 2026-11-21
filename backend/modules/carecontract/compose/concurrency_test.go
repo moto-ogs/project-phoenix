@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -101,7 +102,7 @@ func TestConcurrentSendsOfOneDraftLetExactlyOneTransitionWin(t *testing.T) {
 		_, err := intake.SaveTemplate(ctx, reviewer, school.school.ID, offering, terms)
 		require.NoError(t, err)
 	}
-	created, err := intake.CreateContracts(ctx, reviewer, []carecontract.CandidateKey{{SchoolID: school.school.ID, RequestChildID: school.child}})
+	created, err := intake.CreateContracts(ctx, reviewer, []carecontract.CandidateKey{{SchoolID: ident.ID(school.school.ID), RequestChildID: ident.ID(school.child)}})
 	require.NoError(t, err)
 	require.Len(t, created.Created, 1)
 	id := created.Created[0].ID
@@ -114,7 +115,7 @@ func TestConcurrentSendsOfOneDraftLetExactlyOneTransitionWin(t *testing.T) {
 		var outcome sendOutcome
 		outcome.err = tenant.WithinTraeger(ctx, organization, func(txCtx context.Context) error {
 			var err error
-			outcome.result, err = contracts.SendContracts(txCtx, reviewer, []int64{id})
+			outcome.result, err = contracts.SendContracts(txCtx, reviewer, []int64{id.Int64()})
 			return err
 		})
 		out <- outcome
@@ -164,7 +165,7 @@ func TestConcurrentSendsOfOneDraftLetExactlyOneTransitionWin(t *testing.T) {
 	}
 	assert.Equal(t, 1, sent, "exactly one send wins the transition entwurf → versendet")
 	assert.Equal(t, 1, pending, "the other send finds the mail still waiting")
-	assert.Equal(t, []int64{id}, outcomes[0].result.Sent, "the send that held the lock first wins")
+	assert.Equal(t, []ident.ID{id}, outcomes[0].result.Sent, "the send that held the lock first wins")
 
 	var documents, mailings int
 	require.NoError(t, db.NewRaw(`SELECT COUNT(*) FROM care_contract.contract_documents WHERE contract_id = ?`, id).

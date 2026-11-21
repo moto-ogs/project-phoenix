@@ -16,6 +16,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type RoomReads interface {
@@ -183,7 +184,7 @@ func roomHistory(service RoomReads) func(context.Context, int64, time.Time, time
 		result := make([]RoomSessionEntry, 0, len(entries))
 		for _, entry := range entries {
 			result = append(result, RoomSessionEntry{
-				SessionID: entry.SessionID, StartedAt: entry.StartedAt, EndedAt: entry.EndedAt,
+				SessionID: ident.ID(entry.SessionID), StartedAt: entry.StartedAt, EndedAt: entry.EndedAt,
 				DurationMinutes: entry.DurationMinutes, ActivityName: entry.ActivityName,
 				SupervisorName: entry.SupervisorName, StudentCount: entry.StudentCount,
 			})

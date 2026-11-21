@@ -168,7 +168,7 @@ func seedApprovedChildWithStudent(
 	endDate := calendar.Date(env.sourcePhase.ServiceEndDate)
 	classFromGrade := classForGrade(grade)
 	student := &peopledirectory.StudentState{
-		PersonID:      person.ID,
+		PersonID:      person.ID.Int64(),
 		SchoolClass:   classFromGrade,
 		Status:        peopledirectory.StudentStatusActive,
 		EnrolledFrom:  &startDate,

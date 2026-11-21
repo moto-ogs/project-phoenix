@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -56,10 +57,10 @@ func TestTimetableOperationsPlannedNowFiltersByAssignmentAndWindow(t *testing.T)
 	result, err := deps.service.PlannedNow(context.Background(), 610, false, calendar.DateFromTime(now), now, timetable.PlannedNowOptions{})
 	require.NoError(t, err)
 	require.Len(t, result, 1)
-	assert.Equal(t, instanceID, result[0].ID)
+	assert.Equal(t, ident.ID(instanceID), result[0].ID)
 	require.NotNil(t, result[0].RoomName)
 	assert.Equal(t, "Lernraum", *result[0].RoomName)
-	assert.Equal(t, []int64{assignedID}, result[0].AssignedStaffIDs)
+	assert.Equal(t, []ident.ID{ident.ID(assignedID)}, result[0].AssignedStaffIDs)
 	assert.True(t, result[0].IsAssigned)
 	assert.True(t, result[0].IsPrimary)
 	assert.Equal(t, 1, result[0].ExpectedStudentsCount)
@@ -90,7 +91,7 @@ func TestTimetableOperationsPlannedNowKeepsSpontaneousAfterEnd(t *testing.T) {
 	result, err := deps.service.PlannedNow(context.Background(), 611, false, calendar.DateFromTime(now), now, timetable.PlannedNowOptions{})
 	require.NoError(t, err)
 	require.Len(t, result, 1)
-	assert.Equal(t, instanceID, result[0].ID)
+	assert.Equal(t, ident.ID(instanceID), result[0].ID)
 	assert.True(t, result[0].CanStart)
 	assert.Empty(t, result[0].StartExpiresAt)
 }
@@ -140,7 +141,7 @@ func TestTimetableOperationsPlannedNowIncludesSchulhof(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Len(t, result, 2)
-	ids := []int64{result[0].ID, result[1].ID}
+	ids := []int64{result[0].ID.Int64(), result[1].ID.Int64()}
 	assert.ElementsMatch(t, []int64{330, 331}, ids)
 }
 
@@ -202,7 +203,7 @@ func TestTimetableOperationsPlannedNowErrorBranches(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Len(t, result, 1)
-		assert.Equal(t, int64(336), result[0].ID)
+		assert.Equal(t, ident.ID(int64(336)), result[0].ID)
 	})
 
 	t.Run("propagates unexpected person lookup errors", func(t *testing.T) {
@@ -284,7 +285,7 @@ func TestTimetableOperationsPlannedNowIncludesStartLeadWindow(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Len(t, result, 1)
-	assert.Equal(t, int64(341), result[0].ID)
+	assert.Equal(t, ident.ID(int64(341)), result[0].ID)
 }
 
 func TestTimetableOperationsPlannedNowSupportsUpcomingOptions(t *testing.T) {
@@ -321,7 +322,7 @@ func TestTimetableOperationsPlannedNowSupportsUpcomingOptions(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Len(t, result, 1)
-	assert.Equal(t, int64(337), result[0].ID)
+	assert.Equal(t, ident.ID(int64(337)), result[0].ID)
 	require.Len(t, result[0].RosterPreview, 1)
 	assert.Equal(t, "Lina Lang", result[0].RosterPreview[0].StudentName)
 	assert.True(t, result[0].PickupTimesLoaded)
@@ -362,7 +363,7 @@ func TestTimetableOperationsPlannedNowPastScopeSelectsFinishedBlocks(t *testing.
 
 	require.NoError(t, err)
 	require.Len(t, result, 2)
-	ids := []int64{result[0].ID, result[1].ID}
+	ids := []int64{result[0].ID.Int64(), result[1].ID.Int64()}
 	assert.ElementsMatch(t, []int64{360, 361}, ids)
 	for _, inst := range result {
 		assert.False(t, inst.CanStart)
@@ -402,7 +403,7 @@ func TestTimetableOperationsPlannedNowPastScopeAnnouncesReopen(t *testing.T) {
 	require.NoError(t, err)
 	reopenable := map[int64]bool{}
 	for _, inst := range result {
-		reopenable[inst.ID] = inst.CanReopen
+		reopenable[inst.ID.Int64()] = inst.CanReopen
 		if inst.ID == 380 {
 			assert.Equal(t, now.Add(30*time.Minute).Format(time.RFC3339), inst.ReopenUntil)
 		} else {
@@ -447,7 +448,7 @@ func TestTimetableOperationsPlannedNowPastScopeIncludesUnassignedCompleter(t *te
 
 	result := list(completer, now, past)
 	require.Len(t, result, 1)
-	assert.Equal(t, int64(381), result[0].ID)
+	assert.Equal(t, ident.ID(int64(381)), result[0].ID)
 	assert.True(t, result[0].CanReopen)
 	assert.Equal(t, reopenUntil.Format(time.RFC3339), result[0].ReopenUntil)
 	assert.Empty(t, list(completer+1, now, past), "another unassigned account cannot see the block")
@@ -478,7 +479,7 @@ func TestTimetableOperationsPlannedNowPastScopeKeepsVisibilityRules(t *testing.T
 	result, err := deps.service.PlannedNow(context.Background(), 633, false, calendar.DateFromTime(now), now, timetable.PlannedNowOptions{Scope: timetable.PlannedNowScopePast})
 	require.NoError(t, err)
 	require.Len(t, result, 1)
-	assert.Equal(t, int64(370), result[0].ID)
+	assert.Equal(t, ident.ID(int64(370)), result[0].ID)
 
 	deps.settings.scope = overviewScopeAdmins
 	result, err = deps.service.PlannedNow(context.Background(), 633, true, calendar.DateFromTime(now), now, timetable.PlannedNowOptions{Scope: timetable.PlannedNowScopePast})
@@ -531,7 +532,7 @@ func TestTimetableOperationsPlannedNowPastBlocksOpenAsRoster(t *testing.T) {
 			require.NotEmpty(t, listed)
 
 			for _, inst := range listed {
-				_, err := deps.service.Roster(context.Background(), 636, tc.admin, inst.ID)
+				_, err := deps.service.Roster(context.Background(), 636, tc.admin, inst.ID.Int64())
 				require.NoError(t, err, "listed block %d must open as roster", inst.ID)
 			}
 		})
@@ -570,7 +571,7 @@ func TestTimetableOperationsPlannedNowDayScopeFollowsOperationalOverview(t *test
 		fixtureRow.StaffID = 999
 	})}
 
-	deps.tracks.byID[trackID] = timetable.PlanningTrack{ID: trackID, Name: "Angebote", Color: "#5080D8"}
+	deps.tracks.byID[trackID] = timetable.PlanningTrack{ID: ident.ID(trackID), Name: "Angebote", Color: "#5080D8"}
 	activityGroup := &activityContract.Group{PlanningTrackID: &trackID, EducationGroupID: &educationGroupID}
 	activityGroup.ID = activityGroupID
 	deps.activityGroups.byID[activityGroupID] = activityGroup
@@ -583,7 +584,7 @@ func TestTimetableOperationsPlannedNowDayScopeFollowsOperationalOverview(t *test
 	result, err := deps.service.PlannedNow(context.Background(), 634, false, calendar.DateFromTime(now), now, timetable.PlannedNowOptions{Scope: timetable.PlannedNowScopeDay})
 	require.NoError(t, err)
 	require.Len(t, result, 1)
-	assert.Equal(t, int64(380), result[0].ID)
+	assert.Equal(t, ident.ID(int64(380)), result[0].ID)
 
 	deps.settings.scope = overviewScopeAllStaff
 	result, err = deps.service.PlannedNow(context.Background(), 634, false, calendar.DateFromTime(now), now, timetable.PlannedNowOptions{Scope: timetable.PlannedNowScopeDay})
@@ -591,11 +592,11 @@ func TestTimetableOperationsPlannedNowDayScopeFollowsOperationalOverview(t *test
 	require.Len(t, result, 3)
 	byID := map[int64]timetable.OperationPlannedInstance{}
 	for _, inst := range result {
-		byID[inst.ID] = inst
+		byID[inst.ID.Int64()] = inst
 	}
 	require.Contains(t, byID, int64(381))
 	require.NotNil(t, byID[381].ActiveGroupID)
-	assert.Equal(t, activeGroupID, *byID[381].ActiveGroupID)
+	assert.Equal(t, ident.ID(activeGroupID), *byID[381].ActiveGroupID)
 	require.NotNil(t, byID[381].PlanningTrackColor)
 	assert.Equal(t, "#5080D8", *byID[381].PlanningTrackColor)
 	require.NotNil(t, byID[381].PlanningTrackName)

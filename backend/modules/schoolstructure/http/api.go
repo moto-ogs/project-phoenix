@@ -22,6 +22,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -97,11 +98,11 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 
 // GroupResponse represents a group API response
 type GroupResponse struct {
-	ID               int64             `json:"id"`
+	ID               common.ID         `json:"id"`
 	Name             string            `json:"name"`
-	RoomID           *int64            `json:"room_id,omitempty"`
+	RoomID           *common.ID        `json:"room_id,omitempty"`
 	Room             *Room             `json:"room,omitempty"`
-	RepresentativeID *int64            `json:"representative_id,omitempty"`
+	RepresentativeID *common.ID        `json:"representative_id,omitempty"`
 	Representative   *TeacherResponse  `json:"representative,omitempty"`
 	Teachers         []TeacherResponse `json:"teachers,omitempty"`
 	StudentCount     int               `json:"student_count"`
@@ -111,26 +112,26 @@ type GroupResponse struct {
 
 // TeacherResponse represents a teacher in API responses
 type TeacherResponse struct {
-	ID             int64  `json:"id"`
-	StaffID        int64  `json:"staff_id"`
-	FirstName      string `json:"first_name"`
-	LastName       string `json:"last_name"`
-	Specialization string `json:"specialization"`
-	Role           string `json:"role,omitempty"`
-	FullName       string `json:"full_name"`
+	ID             common.ID `json:"id"`
+	StaffID        common.ID `json:"staff_id"`
+	FirstName      string    `json:"first_name"`
+	LastName       string    `json:"last_name"`
+	Specialization string    `json:"specialization"`
+	Role           string    `json:"role,omitempty"`
+	FullName       string    `json:"full_name"`
 }
 
 // Room represents a simplified room for inclusion in group responses
 type Room struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	ID   common.ID `json:"id"`
+	Name string    `json:"name"`
 }
 
 // GroupRequest represents a group creation/update request
 type GroupRequest struct {
-	Name       string  `json:"name"`
-	RoomID     *int64  `json:"room_id,omitempty"`
-	TeacherIDs []int64 `json:"teacher_ids,omitempty"`
+	Name       string      `json:"name"`
+	RoomID     *common.ID  `json:"room_id,omitempty"`
+	TeacherIDs []common.ID `json:"teacher_ids,omitempty"`
 }
 
 // Bind validates the group request
@@ -144,9 +145,9 @@ func (req *GroupRequest) Bind(_ *http.Request) error {
 // newGroupResponse converts a group model to a response object
 func newGroupResponse(group *education.Group, teachers []*education.Teacher, studentCount int) GroupResponse {
 	response := GroupResponse{
-		ID:           group.ID,
+		ID:           ident.ID(group.ID),
 		Name:         group.Name,
-		RoomID:       group.RoomID,
+		RoomID:       (*ident.ID)(group.RoomID),
 		StudentCount: studentCount,
 		CreatedAt:    group.CreatedAt,
 		UpdatedAt:    group.UpdatedAt,
@@ -166,13 +167,13 @@ func newGroupResponse(group *education.Group, teachers []*education.Teacher, stu
 
 		// First teacher is the representative by convention
 		firstTeacher := teachers[0]
-		response.RepresentativeID = &firstTeacher.ID
+		response.RepresentativeID = (*ident.ID)(&firstTeacher.ID)
 
 		// Convert all teachers to response format
 		for _, teacher := range teachers {
 			teacherResp := TeacherResponse{
-				ID:             teacher.ID,
-				StaffID:        teacher.StaffID,
+				ID:             ident.ID(teacher.ID),
+				StaffID:        ident.ID(teacher.StaffID),
 				Specialization: teacher.Specialization,
 				Role:           teacher.Role,
 				FullName:       teacher.FullName(),
@@ -232,7 +233,7 @@ func (rs *Resource) userHasGroupAccess(r *http.Request, groupID int64) bool {
 	}
 
 	for _, myGroup := range myGroups {
-		if myGroup.ID == groupID {
+		if myGroup.ID == ident.ID(groupID) {
 			return true
 		}
 	}
@@ -319,7 +320,7 @@ func (rs *Resource) createGroup(w http.ResponseWriter, r *http.Request) {
 	// Create group
 	group := &education.Group{
 		Name:   req.Name,
-		RoomID: req.RoomID,
+		RoomID: (*int64)(req.RoomID),
 	}
 
 	if err := tenant.WithinCurrentTenant(r.Context(), func(ctx context.Context) error {
@@ -328,7 +329,7 @@ func (rs *Resource) createGroup(w http.ResponseWriter, r *http.Request) {
 		}
 		// Assign teachers to the group if any were provided
 		if len(req.TeacherIDs) > 0 {
-			if err := rs.EducationService.UpdateGroupTeachers(ctx, group.ID, req.TeacherIDs); err != nil {
+			if err := rs.EducationService.UpdateGroupTeachers(ctx, group.ID, ident.Int64s(req.TeacherIDs)); err != nil {
 				return err
 			}
 		}
@@ -373,7 +374,7 @@ func (rs *Resource) updateGroup(w http.ResponseWriter, r *http.Request) {
 
 	// Update fields
 	group.Name = req.Name
-	group.RoomID = req.RoomID
+	group.RoomID = (*int64)(req.RoomID)
 
 	// Update group
 	if err := tenant.WithinCurrentTenant(r.Context(), func(ctx context.Context) error {
@@ -382,7 +383,7 @@ func (rs *Resource) updateGroup(w http.ResponseWriter, r *http.Request) {
 		}
 		// Update teacher assignments if provided
 		if req.TeacherIDs != nil {
-			if err := rs.EducationService.UpdateGroupTeachers(ctx, group.ID, req.TeacherIDs); err != nil {
+			if err := rs.EducationService.UpdateGroupTeachers(ctx, group.ID, ident.Int64s(req.TeacherIDs)); err != nil {
 				return err
 			}
 		}

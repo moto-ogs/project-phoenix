@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ErrInvalidShiftCoverageQuery identifies caller-controlled validation
@@ -16,14 +17,14 @@ var ErrInvalidShiftCoverageQuery = errors.New("invalid shift coverage query")
 // ShiftCoverageWarning is one advisory uncovered interval returned by the
 // shift-coverage probe. It never blocks the subsequent write.
 type ShiftCoverageWarning struct {
-	StaffID            int64  `json:"staff_id"`
-	StaffName          string `json:"staff_name"`
-	Date               string `json:"date"`
-	StartTime          string `json:"start_time"`
-	EndTime            string `json:"end_time"`
-	UncoveredStartTime string `json:"uncovered_start_time"`
-	UncoveredEndTime   string `json:"uncovered_end_time"`
-	Message            string `json:"message"`
+	StaffID            ident.ID `json:"staff_id"`
+	StaffName          string   `json:"staff_name"`
+	Date               string   `json:"date"`
+	StartTime          string   `json:"start_time"`
+	EndTime            string   `json:"end_time"`
+	UncoveredStartTime string   `json:"uncovered_start_time"`
+	UncoveredEndTime   string   `json:"uncovered_end_time"`
+	Message            string   `json:"message"`
 }
 
 // ShiftCoverageResult carries at most a bounded number of warnings plus the

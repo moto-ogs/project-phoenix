@@ -21,7 +21,7 @@ func (c GroupLiveCaller) MyGroupRecords(ctx context.Context) ([]grouplive.GroupR
 	records := make([]grouplive.GroupRecord, 0, len(groups))
 	for _, group := range groups {
 		if group != nil {
-			records = append(records, grouplive.GroupRecord{ID: group.ID, Name: group.Name, RoomID: group.RoomID})
+			records = append(records, grouplive.GroupRecord{ID: group.ID.Int64(), Name: group.Name, RoomID: (*int64)(group.RoomID)})
 		}
 	}
 	return records, nil
@@ -59,7 +59,7 @@ func (c SupervisionCaller) MyGroups(ctx context.Context) ([]SupervisionCallerGro
 	}
 	result := make([]SupervisionCallerGroup, 0, len(groups))
 	for _, group := range groups {
-		result = append(result, SupervisionCallerGroup{ID: group.ID, Name: group.Name, RoomID: group.RoomID})
+		result = append(result, SupervisionCallerGroup{ID: group.ID.Int64(), Name: group.Name, RoomID: (*int64)(group.RoomID)})
 	}
 	return result, nil
 }

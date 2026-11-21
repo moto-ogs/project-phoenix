@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 var importToday = calendar.NewDate(2026, 11, 14)
@@ -117,7 +118,7 @@ func TestContractImportMappingSettlesTheOnlySchoolAndModule(t *testing.T) {
 	only.offerings = only.offerings[:1]
 	only.modules = only.offerings
 	one := settleContractImportMapping(suggested, []importSchool{only})
-	assert.Equal(t, only.school.ID, one.SchoolID)
+	assert.Equal(t, ident.ID(only.school.ID), one.SchoolID)
 	assert.Equal(t, "Ganztag", one.ModuleName)
 	_, unmapped, err := resolveContractImportMapping(headers, one, []importSchool{only})
 	require.NoError(t, err)
@@ -171,7 +172,7 @@ func TestContractImportRowBecomesAContractOfTheRunningPhase(t *testing.T) {
 	candidate := importCheckOf(t).candidate(importRow(nil), 2)
 	row := candidate.row
 	require.Equal(t, carecontract.ContractImportReady, row.Status, problemsOf(row))
-	assert.Equal(t, candidate.contract.SchoolID, row.SchoolID)
+	assert.Equal(t, ident.ID(candidate.contract.SchoolID), row.SchoolID)
 	assert.Equal(t, []string{"OGS bis 14 Uhr"}, row.ModuleNames)
 	assert.Equal(t, []string{"mon", "tue", "wed", "thu", "fri"}, row.Weekdays)
 	assert.Equal(t, importDay(2027, 7, 31), row.EndsOn, "the contract ends with the phase of its module")
@@ -247,7 +248,7 @@ func TestContractImportRecognisesAnEarlierImportThatEnded(t *testing.T) {
 
 	row := check.candidate(importRow(nil), 2).row
 	assert.Equal(t, carecontract.ContractImportDuplicate, row.Status)
-	assert.Equal(t, stored.ContractID, row.ContractID)
+	assert.Equal(t, ident.ID(stored.ContractID), row.ContractID)
 	assert.Equal(t, []string{carecontract.ContractImportHintImportedBefore}, row.Hints)
 
 	later := check.candidate(importRow(map[int]string{6: "01.12.2026"}), 3).row
@@ -284,7 +285,7 @@ func TestContractImportFindsDuplicatesAndRepeatedChildren(t *testing.T) {
 
 	duplicate := check.candidate(importRow(nil), 2).row
 	assert.Equal(t, carecontract.ContractImportDuplicate, duplicate.Status)
-	assert.Equal(t, running.ContractID, duplicate.ContractID)
+	assert.Equal(t, ident.ID(running.ContractID), duplicate.ContractID)
 
 	again := check.candidate(importRow(map[int]string{1: "Muster", 0: "Ben"}), 3).row
 	assert.Equal(t, carecontract.ContractImportReady, again.Status, "the old contract has ended")
@@ -345,7 +346,7 @@ func TestContractImportTakesAChosenFirstDayForEveryRow(t *testing.T) {
 	schools, templates := importFixture()
 	headers := []string{"Nachname Kind", "Vorname Kind", "", "Debitor-Nr.", "Kontoinhaber", "IBAN", "Mandat ist gültig ab", ""}
 	mapping := settleContractImportMapping(suggestContractImportMapping(headers), schools)
-	mapping.SchoolID, mapping.ModuleName = schools[0].school.ID, "OGS bis 14 Uhr"
+	mapping.SchoolID, mapping.ModuleName = ident.ID(schools[0].school.ID), "OGS bis 14 Uhr"
 	_, unmapped, err := resolveContractImportMapping(headers, mapping, schools)
 	require.NoError(t, err)
 	assert.Equal(t, []string{carecontract.ContractImportFieldEffectiveFrom}, unmapped)

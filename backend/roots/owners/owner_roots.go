@@ -108,7 +108,7 @@ func ComposeParentMessagingRepositories(
 				out[id] = nil
 				continue
 			}
-			out[id] = &recordports.StaffPersonAccount{AccountID: row.AccountID}
+			out[id] = &recordports.StaffPersonAccount{AccountID: (*int64)(row.AccountID)}
 		}
 		return out, err
 	}

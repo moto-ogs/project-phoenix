@@ -43,5 +43,5 @@ func trail(ctx context.Context, store eventStore, organizationID, accountID, con
 }
 
 func trailContract(ctx context.Context, store eventStore, organizationID, accountID int64, record ContractRecord, action string, details map[string]any) error {
-	return trail(ctx, store, organizationID, accountID, record.Summary.ID, record.Summary.SchoolID, action, details)
+	return trail(ctx, store, organizationID, accountID, record.Summary.ID.Int64(), record.Summary.SchoolID.Int64(), action, details)
 }

@@ -4,7 +4,7 @@ import {
   arr,
   bool,
   fileAnswer,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   optional,
@@ -28,7 +28,7 @@ export interface celebrationResponse {
 
 export const celebrationResponseSchema: z.ZodType<celebrationResponse, unknown> = object<celebrationResponse>({
   kind: str,
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   group_name: optional(str),
   school_class: optional(str),

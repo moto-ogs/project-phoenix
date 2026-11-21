@@ -9,6 +9,8 @@ import (
 	"net"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const (
@@ -130,10 +132,10 @@ func IsAnnouncementExpired(a *Announcement, now time.Time) bool {
 }
 
 type AnnouncementStats struct {
-	AnnouncementID int64 `json:"announcement_id"`
-	TargetCount    int   `json:"target_count"`
-	SeenCount      int   `json:"seen_count"`
-	DismissedCount int   `json:"dismissed_count"`
+	AnnouncementID ident.ID `json:"announcement_id"`
+	TargetCount    int      `json:"target_count"`
+	SeenCount      int      `json:"seen_count"`
+	DismissedCount int      `json:"dismissed_count"`
 }
 
 type AnnouncementViewDetail struct {

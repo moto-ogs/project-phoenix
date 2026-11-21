@@ -2,11 +2,12 @@ package supervisiondashboard
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -396,8 +397,8 @@ func TestSelectGroup(t *testing.T) {
 	}{
 		{name: "defaults to the first group", want: int64Ptr(10)},
 		{name: "uses a requested group", requested: 20, want: int64Ptr(20)},
-		{name: "permits the supervised yard group", requested: 30, yard: &SchulhofStatus{IsUserSupervising: true, ActiveGroupID: &yardGroupID}, want: int64Ptr(30)},
-		{name: "rejects an unsupervised yard group", requested: 30, yard: &SchulhofStatus{ActiveGroupID: &yardGroupID}, wantErr: ErrForbiddenGroup},
+		{name: "permits the supervised yard group", requested: 30, yard: &SchulhofStatus{IsUserSupervising: true, ActiveGroupID: (*ident.ID)(&yardGroupID)}, want: int64Ptr(30)},
+		{name: "rejects an unsupervised yard group", requested: 30, yard: &SchulhofStatus{ActiveGroupID: (*ident.ID)(&yardGroupID)}, wantErr: ErrForbiddenGroup},
 		{name: "rejects an unsupervised group", requested: 40, wantErr: ErrForbiddenGroup},
 	}
 
@@ -814,7 +815,7 @@ func TestDashboardSelectedGroupSectionsFollowAccess(t *testing.T) {
 		},
 		yard: func(_ context.Context, staffID int64) (*SchulhofStatus, error) {
 			assert.Equal(t, int64(77), staffID)
-			return &SchulhofStatus{Exists: true, IsUserSupervising: true, ActiveGroupID: &yardGroupID}, nil
+			return &SchulhofStatus{Exists: true, IsUserSupervising: true, ActiveGroupID: (*ident.ID)(&yardGroupID)}, nil
 		},
 		groupVisits: func(_ context.Context, activeGroupID int64) ([]VisitRecord, error) {
 			assert.Equal(t, yardGroupID, activeGroupID)
@@ -913,7 +914,7 @@ func TestProjectionWireShape(t *testing.T) {
 	projection.Capabilities = Capabilities{WebSpontaneousActivitiesEnabled: true}
 	projection.ActiveSessions = []ActiveSession{{ActiveGroupID: 11, InstanceID: 5, Title: "Malen", StartTime: "14:00", EndTime: "15:00"}}
 	projection.PlannedNow = []PlannedInstance{{ID: 5, Title: "Malen", Date: "2026-08-19", StartTime: "14:00", EndTime: "15:00", RoomID: 21, Status: "planned",
-		AssignedStaffIDs: []int64{7}, RosterPreview: []RosterRow{{StudentID: 1, StudentName: "Erika Muster", Status: "expected", PickupTime: &clock, CareDayStatus: "scheduled"}},
+		AssignedStaffIDs: []ident.ID{7}, RosterPreview: []RosterRow{{StudentID: 1, StudentName: "Erika Muster", Status: "expected", PickupTime: &clock, CareDayStatus: "scheduled"}},
 		PickupTimesLoaded: true, Warnings: []ConflictWarning{}, StartAvailableAt: "13:45", StartExpiresAt: "15:00"}}
 	projection.Visits = []Visit{{StudentID: 1, StudentName: "Erika Muster", SchoolClass: "4a", GroupName: "Bären", ActiveGroupID: 11, CheckInTime: entry, ActualArrivalTime: &clock, Sick: false, PhotoURL: "/api/students/1/photo/p.jpg"}}
 	projection.TrackingIndicators = DashboardTrackingIndicators{Labels: []string{"Hausaufgaben"}, Results: map[int64][]bool{1: {true}}}
@@ -921,7 +922,7 @@ func TestProjectionWireShape(t *testing.T) {
 	projection.ArrivalTimes = []ArrivalTime{{StudentID: 1, Date: "2026-08-19", WeekdayName: "Mittwoch"}}
 	projection.TeacherHints = []SupervisionTeacherHint{{StudentID: 1, Body: "Heute Sportzeug vergessen", AuthorName: "Frau Kurz", SchoolClass: "4a"}}
 
-	got, err := json.Marshal(projection)
+	got, err := wire.Marshal(projection)
 	require.NoError(t, err)
 
 	want := `{"business_day":"2026-08-19","spontaneous_start_availability":{"available":true},` +
@@ -929,17 +930,17 @@ func TestProjectionWireShape(t *testing.T) {
 		`{"id":"12","name":"Adler","is_current_user_supervising":false,"can_assign":false}],` +
 		`"selected_group_id":"11","unclaimed_groups":[{"id":"13","room_name":"Igel"}],"current_staff_id":"7",` +
 		`"educational_groups":[{"id":"41","name":"Bären","room_name":"Igel"}],` +
-		`"schulhof_status":{"exists":true,"room_name":"Schulhof","is_user_supervising":false,"supervisor_count":0,"student_count":0,"supervisors":[{"id":1,"staff_id":7,"name":"Erika","is_current_user":true}]},` +
+		`"schulhof_status":{"exists":true,"room_name":"Schulhof","is_user_supervising":false,"supervisor_count":0,"student_count":0,"supervisors":[{"id":"1","staff_id":"7","name":"Erika","is_current_user":true}]},` +
 		`"open_rooms":[{"room_id":"31","name":"Schulhof","is_user_supervising":true,"active_group_ids":["11","14"],"has_occupying_session":true,"student_count":1,` +
 		`"students":[{"student_id":"2","student_name":"Max Hof","school_class":"","group_name":"","active_group_id":"14","check_in_time":"2026-08-19T06:00:00Z","sick":false,"excused":false,"independent":true}],` +
 		`"sessions":[{"active_group_id":"11","title":"Malen","independent":false,"is_user_supervising":true,"can_assign":true,"student_count":0,"participant_limit":45,"supervisors":[{"staff_id":"7","name":"Erika"}],` +
 		`"block":{"instance_id":"5","start_time":"14:00","end_time":"15:00","is_spontaneous":false,"is_user_assigned":true,"can_operate":true}},` +
 		`{"active_group_id":"14","title":"","independent":true,"is_user_supervising":false,"can_assign":false,"student_count":1,"block":null}]}],` +
 		`"capabilities":{"web_spontaneous_activities_enabled":true},` +
-		`"active_sessions":[{"active_group_id":11,"instance_id":5,"title":"Malen","start_time":"14:00","end_time":"15:00"}],` +
-		`"planned_now":[{"id":5,"title":"Malen","date":"2026-08-19","start_time":"14:00","end_time":"15:00","room_id":21,"status":"planned","is_overdue":false,"minutes_until_start":0,` +
-		`"expected_students_count":0,"present_students_count":0,"not_scheduled_students_count":0,"current_students_count":0,"planned_students_count":0,"is_spontaneous":false,"assigned_staff_ids":[7],"is_assigned":false,"is_primary":false,"is_substitute":false,"is_absent":false,` +
-		`"roster_preview":[{"student_id":1,"student_name":"Erika Muster","school_class":"","group_name":"","planned":false,"is_unplanned":false,"currently_present":false,"status":"expected","pickup_time":"08:00","care_day_status":"scheduled"}],` +
+		`"active_sessions":[{"active_group_id":"11","instance_id":"5","title":"Malen","start_time":"14:00","end_time":"15:00"}],` +
+		`"planned_now":[{"id":"5","title":"Malen","date":"2026-08-19","start_time":"14:00","end_time":"15:00","room_id":"21","status":"planned","is_overdue":false,"minutes_until_start":0,` +
+		`"expected_students_count":0,"present_students_count":0,"not_scheduled_students_count":0,"current_students_count":0,"planned_students_count":0,"is_spontaneous":false,"assigned_staff_ids":["7"],"is_assigned":false,"is_primary":false,"is_substitute":false,"is_absent":false,` +
+		`"roster_preview":[{"student_id":"1","student_name":"Erika Muster","school_class":"","group_name":"","planned":false,"is_unplanned":false,"currently_present":false,"status":"expected","pickup_time":"08:00","care_day_status":"scheduled"}],` +
 		`"pickup_times_loaded":true,"warnings":[],"can_start":false,"start_available_at":"13:45","start_expires_at":"15:00"}],` +
 		`"visits":[{"student_id":"1","student_name":"Erika Muster","school_class":"4a","group_name":"Bären","active_group_id":"11","check_in_time":"2026-08-19T06:00:00Z","actual_arrival_time":"08:00","sick":false,"excused":false,"photo_url":"/api/students/1/photo/p.jpg"}],` +
 		`"tracking_indicators":{"labels":["Hausaufgaben"],"results":{"1":[true]}},` +
@@ -949,7 +950,7 @@ func TestProjectionWireShape(t *testing.T) {
 	assert.JSONEq(t, want, string(got))
 	assert.Equal(t, want, string(got), "key order is part of the golden contract")
 
-	empty, err := json.Marshal(emptyProjection())
+	empty, err := wire.Marshal(emptyProjection())
 	require.NoError(t, err)
 	assert.Equal(t, `{"business_day":"","spontaneous_start_availability":{"available":false},"groups":[],"unclaimed_groups":[],"educational_groups":[],"schulhof_status":null,`+
 		`"open_rooms":[],"capabilities":{"web_spontaneous_activities_enabled":false},"active_sessions":[],"planned_now":[],"visits":[],"tracking_indicators":{"labels":[],"results":{}},"pickup_times":[],"arrival_times":[],"teacher_hints":[]}`, string(empty))

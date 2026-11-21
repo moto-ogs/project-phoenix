@@ -23429,7 +23429,7 @@
         {
           "name": "school_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -23441,7 +23441,7 @@
         {
           "name": "account_id",
           "schema": {
-            "kind": "legacy_id",
+            "kind": "id",
             "nullable": true
           }
         },
@@ -23507,7 +23507,7 @@
         {
           "name": "account_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -24269,13 +24269,13 @@
         {
           "name": "active_group_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "instance_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -27427,7 +27427,7 @@
         {
           "name": "announcement_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -27487,7 +27487,7 @@
         {
           "name": "user_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -27700,13 +27700,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "tenant_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -27724,7 +27724,7 @@
         {
           "name": "organizer_staff_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -27999,13 +27999,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "tenant_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -28023,7 +28023,7 @@
         {
           "name": "appointment_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -28036,14 +28036,14 @@
           "name": "staff_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "guardian_profile_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -28102,13 +28102,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "tenant_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -28126,7 +28126,7 @@
         {
           "name": "appointment_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -28139,7 +28139,7 @@
           "name": "target_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -28336,13 +28336,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -28360,7 +28360,7 @@
         {
           "name": "created_by",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -28585,13 +28585,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -28636,7 +28636,7 @@
         {
           "name": "created_by",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -28663,7 +28663,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         }
@@ -28797,7 +28797,7 @@
           "name": "recipient_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id",
+            "kind": "id",
             "nullable": true
           }
         }
@@ -30917,7 +30917,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -31806,13 +31806,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "activity_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -31836,13 +31836,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "group_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -31854,7 +31854,7 @@
         {
           "name": "teacher_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -31863,7 +31863,7 @@
           "schema": {
             "kind": "array",
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         }
@@ -31876,7 +31876,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -31906,7 +31906,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -32329,7 +32329,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
@@ -32355,7 +32355,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
@@ -32480,7 +32480,7 @@
           "name": "group_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -32490,7 +32490,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
@@ -32772,7 +32772,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -32809,7 +32809,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -32827,7 +32827,7 @@
         {
           "name": "tenant_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -32840,7 +32840,7 @@
           "name": "room_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -32914,13 +32914,13 @@
         {
           "name": "school_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "request_child_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -33019,14 +33019,14 @@
           "name": "school_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "request_child_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         }
       ]
@@ -38689,7 +38689,7 @@
         {
           "name": "account_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -38714,21 +38714,21 @@
           "name": "person_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "staff_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "teacher_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -39034,7 +39034,7 @@
         {
           "name": "care_offering_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -39215,7 +39215,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -39792,7 +39792,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -41167,7 +41167,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -41196,7 +41196,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
@@ -41303,13 +41303,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "school_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -41322,7 +41322,7 @@
         {
           "name": "closing_day_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -41466,7 +41466,7 @@
         {
           "name": "companion_student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -41502,7 +41502,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -41706,7 +41706,7 @@
         {
           "name": "resource_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -41732,7 +41732,7 @@
           "name": "conflicting_instance_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -41838,14 +41838,14 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id",
+            "kind": "id",
             "nullable": true
           }
         },
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -41857,7 +41857,7 @@
         {
           "name": "school_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -42342,7 +42342,7 @@
         {
           "name": "account_id",
           "schema": {
-            "kind": "legacy_id",
+            "kind": "id",
             "nullable": true
           }
         },
@@ -42374,7 +42374,7 @@
         {
           "name": "school_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -42399,7 +42399,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -42479,7 +42479,7 @@
           "name": "school_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -42559,7 +42559,7 @@
           "name": "contract_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -42606,7 +42606,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -42796,13 +42796,13 @@
         {
           "name": "contract_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "organization_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -43048,14 +43048,14 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id",
+            "kind": "id",
             "nullable": true
           }
         },
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -43067,7 +43067,7 @@
         {
           "name": "school_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -43160,7 +43160,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -44349,7 +44349,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
@@ -44360,7 +44360,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         }
@@ -44793,13 +44793,13 @@
         {
           "name": "school_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "request_child_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -46993,13 +46993,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -47025,7 +47025,7 @@
           "name": "created_by",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -47580,7 +47580,7 @@
           "name": "account_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         }
       ]
@@ -47592,13 +47592,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "tenant_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -47643,7 +47643,7 @@
           "name": "account_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -50786,7 +50786,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -50810,7 +50810,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -50848,7 +50848,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -52247,7 +52247,7 @@
           "name": "room_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id",
+            "kind": "id",
             "nullable": true
           }
         },
@@ -52258,7 +52258,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         }
@@ -52271,7 +52271,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -52284,7 +52284,7 @@
           "name": "room_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -52299,7 +52299,7 @@
           "name": "representative_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -52348,7 +52348,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -53004,25 +53004,25 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "tenant_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "guardian_profile_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -53238,7 +53238,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -53404,7 +53404,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -53488,7 +53488,7 @@
           "name": "account_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         }
       ]
@@ -53587,7 +53587,7 @@
         {
           "name": "relationship_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -58046,7 +58046,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -60454,13 +60454,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "tenant_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -60558,7 +60558,7 @@
         {
           "name": "resource_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -60584,7 +60584,7 @@
           "name": "conflicting_instance_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -61661,7 +61661,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -61679,7 +61679,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -63765,7 +63765,7 @@
           "name": "guardian_profile_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id",
+            "kind": "id",
             "nullable": true
           }
         },
@@ -64025,7 +64025,7 @@
         {
           "name": "contract_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -64167,13 +64167,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "school_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -64186,7 +64186,7 @@
         {
           "name": "closing_day_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -64488,7 +64488,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -64525,7 +64525,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -65127,7 +65127,7 @@
         {
           "name": "traeger_offering_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -65367,7 +65367,7 @@
         {
           "name": "school_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -65379,7 +65379,7 @@
         {
           "name": "offering_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -65931,7 +65931,7 @@
           "name": "staff_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -65990,7 +65990,7 @@
         {
           "name": "instance_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -66020,7 +66020,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -66050,7 +66050,7 @@
         {
           "name": "room_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -66127,7 +66127,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
@@ -66226,7 +66226,7 @@
           "name": "active_group_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -66376,7 +66376,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -66401,13 +66401,13 @@
           "name": "active_group_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "room_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -66470,7 +66470,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -66513,7 +66513,7 @@
           "name": "visit_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -66655,7 +66655,7 @@
           "name": "expected_group_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -66669,7 +66669,7 @@
           "name": "current_education_group_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         }
       ]
@@ -66681,7 +66681,7 @@
         {
           "name": "staff_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -66731,7 +66731,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -66801,7 +66801,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
@@ -66811,14 +66811,14 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
         {
           "name": "created_by",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -67605,7 +67605,7 @@
         {
           "name": "school_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -67617,7 +67617,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -67887,7 +67887,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -68064,7 +68064,7 @@
         {
           "name": "instance_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -69487,13 +69487,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -69531,7 +69531,7 @@
         {
           "name": "created_by",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -70747,7 +70747,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -70828,7 +70828,7 @@
         {
           "name": "tenant_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -70875,7 +70875,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -70908,7 +70908,7 @@
           "name": "account_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -71262,7 +71262,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         }
@@ -71880,7 +71880,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -72205,13 +72205,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -72256,7 +72256,7 @@
         {
           "name": "created_by",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -72308,13 +72308,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -72340,7 +72340,7 @@
         {
           "name": "created_by",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -72439,13 +72439,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -72496,7 +72496,7 @@
         {
           "name": "created_by",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -72699,7 +72699,7 @@
         {
           "name": "resource_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -72711,7 +72711,7 @@
         {
           "name": "conflicting_instance_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -72791,7 +72791,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -72821,7 +72821,7 @@
         {
           "name": "room_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -72891,7 +72891,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
@@ -72976,7 +72976,7 @@
           "name": "active_group_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -73044,13 +73044,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "tenant_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -73099,7 +73099,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -73501,7 +73501,7 @@
         {
           "name": "traeger_phase_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -75493,13 +75493,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "tenant_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -75517,7 +75517,7 @@
         {
           "name": "appointment_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -76696,7 +76696,7 @@
         {
           "name": "traeger_phase_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -76989,7 +76989,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -77190,7 +77190,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -77307,7 +77307,7 @@
         {
           "name": "session_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -77401,7 +77401,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -77444,7 +77444,7 @@
           "name": "visit_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -77564,7 +77564,7 @@
           "name": "expected_group_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -77578,7 +77578,7 @@
           "name": "current_education_group_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         }
       ]
@@ -79250,7 +79250,7 @@
         {
           "name": "school_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -79915,7 +79915,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -79933,7 +79933,7 @@
         {
           "name": "tenant_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -79947,14 +79947,14 @@
           "name": "activity_group_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "calendar_period_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -79985,7 +79985,7 @@
         {
           "name": "room_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -80005,7 +80005,7 @@
           "name": "active_group_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -80052,14 +80052,14 @@
           "name": "created_by",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "started_by",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -80080,7 +80080,7 @@
           "name": "completed_by",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -80415,7 +80415,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -80566,7 +80566,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -80818,7 +80818,7 @@
         {
           "name": "school_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -80842,7 +80842,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -81393,7 +81393,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -81517,7 +81517,7 @@
         {
           "name": "school_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -81614,7 +81614,7 @@
         {
           "name": "school_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -81737,7 +81737,7 @@
         {
           "name": "school_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -81784,7 +81784,7 @@
           "name": "school_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         }
       ]
@@ -82171,7 +82171,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -82411,7 +82411,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -82538,7 +82538,7 @@
           "name": "room_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -82551,14 +82551,14 @@
           "name": "activity_group_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "active_group_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -82571,7 +82571,7 @@
           "name": "supervision_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -82613,7 +82613,7 @@
           "name": "room_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -82626,14 +82626,14 @@
           "name": "activity_group_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "active_group_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -82646,7 +82646,7 @@
           "name": "supervision_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -83076,7 +83076,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
@@ -83100,7 +83100,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
@@ -83124,7 +83124,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -83286,7 +83286,7 @@
         {
           "name": "care_offering_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -84512,7 +84512,7 @@
         {
           "name": "staff_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -85172,13 +85172,13 @@
         {
           "name": "contract_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "organization_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -85937,7 +85937,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -85955,13 +85955,13 @@
         {
           "name": "tenant_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "person_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -85982,7 +85982,7 @@
           "name": "work_time_model_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -87321,7 +87321,7 @@
         {
           "name": "staff_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -89646,13 +89646,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -89684,7 +89684,7 @@
         {
           "name": "created_by",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -90333,7 +90333,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -90367,13 +90367,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -90545,7 +90545,7 @@
           "name": "guardian_profile_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -91273,7 +91273,7 @@
           "name": "group_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id",
+            "kind": "id",
             "nullable": true
           }
         },
@@ -92509,13 +92509,13 @@
         {
           "name": "instance_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "other_instance_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -92941,13 +92941,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "staff_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -93009,13 +93009,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "staff_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -93275,13 +93275,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "staff_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -94408,7 +94408,7 @@
         {
           "name": "recipient_id",
           "schema": {
-            "kind": "legacy_id",
+            "kind": "id",
             "nullable": true
           }
         }
@@ -94600,7 +94600,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
@@ -95249,7 +95249,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -95307,7 +95307,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -95432,7 +95432,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -95574,7 +95574,7 @@
         {
           "name": "account_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -95663,13 +95663,13 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "school_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -95682,7 +95682,7 @@
         {
           "name": "closing_day_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -95776,19 +95776,19 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "organization_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
           "name": "traeger_phase_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -96018,7 +96018,7 @@
         {
           "name": "school_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -96735,7 +96735,7 @@
         {
           "name": "account_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -96784,7 +96784,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -97040,7 +97040,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -98267,7 +98267,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -98309,7 +98309,7 @@
         {
           "name": "recipient_id",
           "schema": {
-            "kind": "legacy_id",
+            "kind": "id",
             "nullable": true
           }
         },
@@ -98952,7 +98952,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -99214,7 +99214,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
@@ -99225,7 +99225,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         }
@@ -99381,7 +99381,7 @@
           "name": "group_id",
           "optional": true,
           "schema": {
-            "kind": "legacy_id",
+            "kind": "id",
             "nullable": true
           }
         },
@@ -99740,7 +99740,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -99781,7 +99781,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -100042,7 +100042,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -102742,7 +102742,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "legacy_id"
+              "kind": "id"
             }
           }
         },
@@ -103920,7 +103920,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -107936,7 +107936,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -108192,7 +108192,7 @@
         {
           "name": "guardian_profile_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -110345,7 +110345,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -114936,7 +114936,7 @@
         {
           "name": "id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         },
         {
@@ -116200,7 +116200,7 @@
         {
           "name": "student_id",
           "schema": {
-            "kind": "legacy_id"
+            "kind": "id"
           }
         }
       ]
@@ -119723,128 +119723,13 @@
     "account.ReplaceRolePermissionsRequest.PermissionIDs",
     "account.SchoolInvitationResponse.CreatedBy",
     "account.SchoolInvitationResponse.ID",
-    "appointments.Appointment.ID",
-    "appointments.Appointment.OrganizerStaffID",
-    "appointments.Appointment.TenantID",
-    "appointments.AppointmentRecipient.AppointmentID",
-    "appointments.AppointmentRecipient.GuardianProfileID",
-    "appointments.AppointmentRecipient.ID",
-    "appointments.AppointmentRecipient.StaffID",
-    "appointments.AppointmentRecipient.TenantID",
-    "appointments.AppointmentTarget.AppointmentID",
-    "appointments.AppointmentTarget.ID",
-    "appointments.AppointmentTarget.TargetID",
-    "appointments.AppointmentTarget.TenantID",
-    "appointments.RecurrenceRule.AppointmentID",
-    "appointments.RecurrenceRule.ID",
-    "appointments.RecurrenceRule.TenantID",
-    "birthdays.celebrationResponse.ID",
-    "care.ContractNoticeOptions.ContractID",
-    "care.ContractNoticeOptions.OrganizationID",
-    "carecontract.CandidateKey.RequestChildID",
-    "carecontract.CandidateKey.SchoolID",
-    "carecontract.ChangeLine.CareOfferingID",
-    "carecontract.ChangeRequest.ID",
-    "carecontract.ContractImportEntry.AccountID",
-    "carecontract.ContractImportMapping.SchoolID",
-    "carecontract.ContractImportModule.ID",
-    "carecontract.ContractImportRow.ContractID",
-    "carecontract.ContractImportRow.SchoolID",
-    "carecontract.ContractImportSchool.ID",
-    "carecontract.ContractSummary.ID",
-    "carecontract.ContractSummary.SchoolID",
-    "carecontract.ContractSummary.StudentID",
-    "carecontract.ContractTemplate.ID",
-    "carecontract.NoticeOptions.ContractID",
-    "carecontract.OfferingTemplate.OfferingID",
-    "carecontract.OfferingTemplate.SchoolID",
-    "carecontract.OverrunChild.SchoolID",
-    "carecontract.OverrunChild.StudentID",
-    "carecontract.SchoolConclusion.SchoolID",
-    "carecontract.SchoolOverruns.SchoolID",
-    "carecontract.SendResult.Sent",
-    "carecontract.SendSkip.ID",
-    "carecontract.Service.CareOfferingID",
-    "carecontract.SigningView.ContractID",
-    "carecontract.SigningView.OrganizationID",
-    "carecontract.Version.ID",
-    "carecontracthttp.SendRequest.ContractIDs",
-    "careplan.OverwriteWarning.StudentID",
-    "careplan.TraegerOffering.ID",
-    "careplan.TraegerOffering.OrganizationID",
-    "careplan.TraegerOffering.TraegerPhaseID",
-    "careplan.TraegerOfferingSchool.SchoolID",
-    "careplanhttp.ArrivalNoteResponse.CreatedBy",
-    "careplanhttp.ArrivalNoteResponse.ID",
-    "careplanhttp.ArrivalNoteResponse.StudentID",
-    "careplanhttp.ArrivalScheduleResponse.CreatedBy",
-    "careplanhttp.ArrivalScheduleResponse.ID",
-    "careplanhttp.ArrivalScheduleResponse.StudentID",
-    "careplanhttp.ArrivalScheduleStatusResponse.StudentIDs",
-    "careplanhttp.BulkEffectiveTimeRequest.StudentIDs",
-    "careplanhttp.BulkPickupSchedulePatchRequest.StudentIDs",
-    "careplanhttp.BulkUpsertArrivalScheduleRequest.GroupID",
-    "careplanhttp.BulkUpsertArrivalScheduleRequest.StudentIDs",
     "careplanhttp.CompanionEntry.CompanionStudentID",
-    "careplanhttp.CompanionResponse.CompanionStudentID",
-    "careplanhttp.DepartureExceptionResponse.CreatedBy",
-    "careplanhttp.DepartureExceptionResponse.ID",
-    "careplanhttp.DepartureExceptionResponse.StudentID",
-    "careplanhttp.PartialAbsenceResponse.CreatedBy",
-    "careplanhttp.PartialAbsenceResponse.ID",
-    "careplanhttp.PartialAbsenceResponse.StudentID",
-    "careplanhttp.PickupExceptionResponse.CreatedBy",
-    "careplanhttp.PickupExceptionResponse.ID",
-    "careplanhttp.PickupExceptionResponse.StudentID",
-    "careplanhttp.PickupNoteResponse.CreatedBy",
-    "careplanhttp.PickupNoteResponse.ID",
-    "careplanhttp.PickupNoteResponse.StudentID",
-    "careplanhttp.PickupScheduleResponse.CreatedBy",
-    "careplanhttp.PickupScheduleResponse.ID",
-    "careplanhttp.PickupScheduleResponse.StudentID",
-    "careplanhttp.StudentArrivalExceptionResponse.CreatedBy",
-    "careplanhttp.StudentArrivalExceptionResponse.ID",
-    "careplanhttp.StudentArrivalExceptionResponse.StudentID",
-    "careplanhttp.StudentDocumentListResponse.StudentID",
-    "careplanhttp.StudentDocumentResponse.ID",
-    "careplanhttp.StudentDocumentResponse.StudentID",
-    "careplanhttp.StudentRequest.GroupID",
-    "careplanhttp.UpdateStudentRequest.GroupID",
-    "careplanhttp.studentDocumentDeletedResponse.StudentID",
-    "common.TrustedDeviceDTO.ID",
-    "communication.AnnouncementStats.AnnouncementID",
-    "dataimport.OpeningBalanceImportRow.StaffID",
-    "dataimport.SampleSchoolResult.SchoolID",
     "devices.DeviceRequest.RegisteredByID",
     "devices.DeviceResponse.ID",
     "devices.DeviceResponse.RegisteredByID",
-    "display.InfoDisplayResponse.ID",
-    "display.InfoDisplayResponse.TenantID",
-    "domain.Group.ID",
-    "domain.Group.RoomID",
-    "domain.Group.TenantID",
-    "domain.GroupRoom.ID",
-    "exporttransfer.TraegerAssignment.RecipientID",
-    "exporttransfer.TraegerRecipient.ID",
-    "exporttransfer.TraegerTransferEntry.ID",
-    "exporttransfer.TraegerTransferEntry.RecipientID",
-    "exporttransferhttp.AssignmentRequest.RecipientID",
-    "feedback.FeedbackResponse.ID",
-    "feedback.FeedbackResponse.StudentID",
-    "feedback.FeedbackStudentResponse.ID",
     "files.FolderRequest.AccountIDs",
     "files.FolderRequest.RoleIDs",
-    "holidayclosurenotification.ClosureNotice.ClosingDayID",
-    "holidayclosurenotification.ClosureNotice.ID",
-    "holidayclosurenotification.ClosureNotice.SchoolID",
-    "http.NoticeResponse.ClosingDayID",
-    "http.NoticeResponse.ID",
-    "http.NoticeResponse.SchoolID",
-    "httpadapter.RoomResponse.ID",
-    "httpadapter.RoomSessionEntry.SessionID",
     "me.ProfileResponse.ID",
-    "mealplan.BillingMonthChild.StudentID",
-    "notifications.feedEntryResponse.ID",
     "operator.AccountTenantAccessEntry.OrganizationID",
     "operator.AccountTenantAccessEntry.TenantID",
     "operator.OperatorListItem.ID",
@@ -119868,15 +119753,6 @@
     "operator.transferDeviceRequest.TargetSchoolID",
     "operator.updateAccountTenantRoleRequest.RoleID",
     "operator.updateSchoolRequest.OrganizationID",
-    "operatorannouncements.AnnouncementViewDetailResponse.UserID",
-    "operatorannouncements.CreateAnnouncementRequest.TargetOrgIDs",
-    "operatorannouncements.CreateAnnouncementRequest.TargetTenantIDs",
-    "operatorannouncements.OperatorAnnouncementResponse.CreatedBy",
-    "operatorannouncements.OperatorAnnouncementResponse.ID",
-    "operatorannouncements.OperatorAnnouncementResponse.TargetOrgIDs",
-    "operatorannouncements.OperatorAnnouncementResponse.TargetTenantIDs",
-    "operatorannouncements.UpdateAnnouncementRequest.TargetOrgIDs",
-    "operatorannouncements.UpdateAnnouncementRequest.TargetTenantIDs",
     "organizationtenancy.CreatedAccount.ID",
     "organizationtenancy.DeviceTransferSession.ID",
     "organizationtenancy.OperatorDevice.ID",
@@ -119911,39 +119787,6 @@
     "organizationtenancy.TraegerMember.AccountID",
     "organizationtenancy.TraegerReportDistrict.SchoolID",
     "organizationtenancy.TraegerReportTemplate.ID",
-    "parent.HolidayRegistrationEntryResponse.ID",
-    "parent.notificationFeedEntryResponse.ID",
-    "peopledirectory.BlockerActivity.ActivityID",
-    "peopledirectory.BlockerActivity.ID",
-    "peopledirectory.BlockerGroup.GroupID",
-    "peopledirectory.BlockerGroup.ID",
-    "peopledirectory.BlockerGroup.TeacherID",
-    "peopledirectory.BlockerGroup.TeacherIDs",
-    "peopledirectory.BlockerSubstitution.ID",
-    "peopledirectory.BlockerSupervision.ID",
-    "peopledirectory.CaregiverCapabilityState.AccountID",
-    "peopledirectory.CaregiverCapabilityState.PersonID",
-    "peopledirectory.CaregiverCapabilityState.StaffID",
-    "peopledirectory.CaregiverCapabilityState.TeacherID",
-    "peopledirectory.DirectoryPersonSnapshot.AccountID",
-    "peopledirectory.DirectoryPersonSnapshot.ID",
-    "peopledirectory.DirectoryPersonSnapshot.TenantID",
-    "peopledirectory.NewStudentGuardian.GuardianProfileID",
-    "peopledirectory.PersonAccountSnapshot.ID",
-    "peopledirectory.PersonRFIDSnapshot.TenantID",
-    "peopledirectory.Staff.ID",
-    "peopledirectory.Staff.PersonID",
-    "peopledirectory.Staff.TenantID",
-    "peopledirectory.Staff.WorkTimeModelID",
-    "platformannouncements.PlatformAnnouncementResponse.ID",
-    "schoolstructurehttp.GroupRequest.RoomID",
-    "schoolstructurehttp.GroupRequest.TeacherIDs",
-    "schoolstructurehttp.GroupResponse.ID",
-    "schoolstructurehttp.GroupResponse.RepresentativeID",
-    "schoolstructurehttp.GroupResponse.RoomID",
-    "schoolstructurehttp.Room.ID",
-    "schoolstructurehttp.TeacherResponse.ID",
-    "schoolstructurehttp.TeacherResponse.StaffID",
     "staff.DocumentDirectoryEntry.ID",
     "staff.MinimalStaffProfileResponse.ID",
     "staff.SchoolClassesResponse.StaffID",
@@ -119955,70 +119798,12 @@
     "staff.StaffWithRoleResponse.ID",
     "staff.StaffWithRoleResponse.PersonID",
     "staff.StaffWithRoleResponse.TeacherID",
-    "staffcalendarhttp.TraegerClosingDayRequest.SchoolIDs",
     "staffcalendarhttp.appointmentTargetRequest.ID",
     "substitutions.additionalSupervisionRequest.ActiveGroupID",
     "substitutions.additionalSupervisionRequest.TargetStaffID",
     "substitutions.endRequest.ID",
     "substitutions.groupHandoverRequest.GroupID",
     "substitutions.groupHandoverRequest.TargetStaffID",
-    "supervisiondashboard.ActiveSession.ActiveGroupID",
-    "supervisiondashboard.ActiveSession.InstanceID",
-    "supervisiondashboard.ConflictWarning.ConflictingInstanceID",
-    "supervisiondashboard.ConflictWarning.ResourceID",
-    "supervisiondashboard.ParallelPresence.InstanceID",
-    "supervisiondashboard.PlannedInstance.ActiveGroupID",
-    "supervisiondashboard.PlannedInstance.AssignedStaffIDs",
-    "supervisiondashboard.PlannedInstance.ID",
-    "supervisiondashboard.PlannedInstance.RoomID",
-    "supervisiondashboard.RosterRow.StudentID",
-    "supervisiondashboard.RosterRow.VisitID",
-    "supervisiondashboard.RosterWarning.CurrentEducationGroup",
-    "supervisiondashboard.RosterWarning.ExpectedGroupID",
-    "supervisiondashboard.SchulhofStatus.ActiveGroupID",
-    "supervisiondashboard.SchulhofStatus.ActivityGroupID",
-    "supervisiondashboard.SchulhofStatus.RoomID",
-    "supervisiondashboard.SchulhofStatus.SupervisionID",
-    "supervisiondashboard.StaffName.StaffID",
-    "supervisiondashboard.Supervisor.ID",
-    "supervisiondashboard.Supervisor.StaffID",
-    "supervisiondashboardhttp.SchulhofStatusResponse.ActiveGroupID",
-    "supervisiondashboardhttp.SchulhofStatusResponse.ActivityGroupID",
-    "supervisiondashboardhttp.SchulhofStatusResponse.RoomID",
-    "supervisiondashboardhttp.SchulhofStatusResponse.SupervisionID",
-    "supervisiondashboardhttp.SupervisorInfoResponse.ID",
-    "supervisiondashboardhttp.SupervisorInfoResponse.StaffID",
-    "timetable.InstanceConflictWarning.ConflictingInstanceID",
-    "timetable.InstanceConflictWarning.ResourceID",
-    "timetable.OperationParallelPresence.InstanceID",
-    "timetable.OperationPlannedInstance.ActiveGroupID",
-    "timetable.OperationPlannedInstance.AssignedStaffIDs",
-    "timetable.OperationPlannedInstance.ID",
-    "timetable.OperationPlannedInstance.RoomID",
-    "timetable.OperationRosterInstance.ActiveGroupID",
-    "timetable.OperationRosterInstance.ID",
-    "timetable.OperationRosterInstance.RoomID",
-    "timetable.OperationRosterRow.StudentID",
-    "timetable.OperationRosterRow.VisitID",
-    "timetable.OperationRosterWarning.CurrentEducationGroup",
-    "timetable.OperationRosterWarning.ExpectedGroupID",
-    "timetable.OperationStaffName.StaffID",
-    "timetable.PlannedConflictWarning.ConflictingInstanceID",
-    "timetable.PlannedConflictWarning.ResourceID",
-    "timetable.PlanningTrack.ID",
-    "timetable.PlanningTrack.TenantID",
-    "timetable.ScheduledInstance.ActiveGroupID",
-    "timetable.ScheduledInstance.ActivityGroupID",
-    "timetable.ScheduledInstance.CalendarPeriodID",
-    "timetable.ScheduledInstance.CompletedBy",
-    "timetable.ScheduledInstance.CreatedBy",
-    "timetable.ScheduledInstance.ID",
-    "timetable.ScheduledInstance.RoomID",
-    "timetable.ScheduledInstance.StartedBy",
-    "timetable.ScheduledInstance.TenantID",
-    "timetable.ShiftCoverageWarning.StaffID",
-    "timetable.SubstituteTimeConflict.InstanceID",
-    "timetable.SubstituteTimeConflict.OtherID",
     "timetablehttp.bulkCheckInRequest.StudentIDs",
     "timetablehttp.spontaneousStartRequest.StaffIDs",
     "timetracking.RebookAbsencesBody.AbsenceIDs",
@@ -120026,52 +119811,11 @@
     "timetracking.StammdatenQualificationPayload.ID",
     "timetracking.StammdatenQualificationPayload.TypeID",
     "traeger.ReportDistrictRequest.SchoolID",
-    "traegercalendar.CalendarSchool.ID",
-    "traegercalendar.ClosingDay.ID",
-    "traegercalendar.ClosingDay.SchoolIDs",
-    "traegercatalog.OfferingPlan.TraegerOfferingID",
-    "traegercatalog.Preview.TraegerPhaseID",
-    "traegercatalog.Rollout.TraegerPhaseID",
-    "traegercatalog.SchoolPlan.SchoolID",
-    "traegercatalog.SchoolResult.SchoolID",
-    "traegercataloghttp.PhaseRequest.SchoolIDs",
-    "traegerportal.SchoolSessionRequest.SchoolID",
-    "traegerportal.TraegerHistoryEntryResponse.ID",
-    "traegerportal.TraegerInvitationResponse.ID",
-    "traegerportal.TraegerMemberResponse.AccountID",
-    "traegerportal.TraegerProfileResponse.AccountID",
     "traegerstaff.HireSite.SchoolID",
     "traegerstaff.HolidayWeeksRequest.SchoolID",
     "traegerstaff.HolidayWeeksRequest.StaffID",
     "traegerstaff.SiteSollPayload.SchoolID",
     "traegerstaff.SiteSollPayload.StaffID",
-    "traegerview.AccessLogEntry.AccountID",
-    "traegerview.AccessLogEntry.SchoolID",
-    "traegerview.AccessLogPerson.AccountID",
-    "traegerview.ChildAttendance.StudentID",
-    "traegerview.KeyDateReportTemplate.ID",
-    "traegerview.KeyDateSchool.ID",
-    "traegerview.OccupancyCareForm.ID",
-    "traegerview.OccupancyGroup.ID",
-    "traegerview.Traeger.ID",
-    "traegerview.TraegerSchool.ID",
-    "traegerview.UtilizationOffering.ID",
-    "traegerview.UtilizationRoom.ID",
-    "users.DirectoryPersonRequest.AccountID",
-    "users.GuardianLinkResponse.GuardianProfileID",
-    "users.GuardianLinkResponse.ID",
-    "users.GuardianLinkResponse.StudentID",
-    "users.GuardianLinkResponse.TenantID",
-    "users.GuardianPickerResponse.ID",
-    "users.GuardianResponse.AccountID",
-    "users.GuardianResponse.ID",
-    "users.GuardianWithRelationship.RelationshipID",
-    "users.PersonResponse.AccountID",
-    "users.PersonResponse.ID",
-    "users.PhoneNumberResponse.ID",
-    "users.StudentGuardianLinkRequest.GuardianProfileID",
-    "users.bulkInviteRequest.StudentIDs",
-    "users.guardianEmailStatusResponse.GuardianProfileID",
     "workforce.BreakDurationUpdate.ID",
     "workforce.CreateAbsenceRequest.AbsenceTypeID",
     "workforce.UpdateAbsenceRequest.AbsenceTypeID"

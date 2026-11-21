@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/api"
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
@@ -44,7 +45,7 @@ func TestPersonService_Get(t *testing.T) {
 		// ASSERT
 		require.NoError(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, person.ID, result.ID)
+		assert.Equal(t, ident.ID(person.ID), result.ID)
 		assert.Equal(t, "Get", result.FirstName)
 		assert.Equal(t, "Test", result.LastName)
 	})
@@ -79,7 +80,7 @@ func TestPersonService_Get(t *testing.T) {
 		// ASSERT
 		require.NoError(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, person.ID, result.ID)
+		assert.Equal(t, ident.ID(person.ID), result.ID)
 	})
 }
 
@@ -152,7 +153,7 @@ func TestPersonService_Create(t *testing.T) {
 		// Verify person was created
 		result, err := testpkg.TenantQuery1(t, ctx, db, service.Get, any(person.ID))
 		require.NoError(t, err)
-		assert.Equal(t, person.ID, result.ID)
+		assert.Equal(t, ident.ID(person.ID), result.ID)
 	})
 
 	t.Run("returns error for invalid person data", func(t *testing.T) {
@@ -176,7 +177,7 @@ func TestPersonService_Create(t *testing.T) {
 		person := &peopleValues.DirectoryPersonSnapshot{
 			FirstName: "WithAccount",
 			LastName:  "Test",
-			AccountID: &account.ID,
+			AccountID: (*ident.ID)(&account.ID),
 		}
 
 		// ACT
@@ -193,7 +194,7 @@ func TestPersonService_Create(t *testing.T) {
 		person := &peopleValues.DirectoryPersonSnapshot{
 			FirstName: "Invalid",
 			LastName:  "Account",
-			AccountID: &nonExistentAccountID,
+			AccountID: (*ident.ID)(&nonExistentAccountID),
 		}
 
 		// ACT
@@ -325,7 +326,7 @@ func TestPersonService_FindByTagID(t *testing.T) {
 		// ASSERT
 		require.NoError(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, person.ID, result.ID)
+		assert.Equal(t, ident.ID(person.ID), result.ID)
 	})
 
 	t.Run("returns error when tag not found", func(t *testing.T) {
@@ -361,7 +362,7 @@ func TestPersonService_FindByAccountID(t *testing.T) {
 		// ASSERT
 		require.NoError(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, person.ID, result.ID)
+		assert.Equal(t, ident.ID(person.ID), result.ID)
 	})
 
 	t.Run("returns error when account not linked to any person", func(t *testing.T) {
@@ -408,7 +409,7 @@ func TestPersonService_LinkToAccount(t *testing.T) {
 		// Verify link
 		result, err := testpkg.TenantQuery1(t, ctx, db, service.FindByAccountID, account.ID)
 		require.NoError(t, err)
-		assert.Equal(t, person.ID, result.ID)
+		assert.Equal(t, ident.ID(person.ID), result.ID)
 	})
 
 	t.Run("returns error when account not found", func(t *testing.T) {
@@ -511,7 +512,7 @@ func TestPersonService_LinkToRFIDCard(t *testing.T) {
 		// Verify link
 		result, err := testpkg.TenantQuery1(t, ctx, db, service.FindByTagID, rfidCard.ID)
 		require.NoError(t, err)
-		assert.Equal(t, person.ID, result.ID)
+		assert.Equal(t, ident.ID(person.ID), result.ID)
 	})
 
 	t.Run("auto-creates RFID card if not exists", func(t *testing.T) {
@@ -530,7 +531,7 @@ func TestPersonService_LinkToRFIDCard(t *testing.T) {
 		// Verify link
 		result, err := testpkg.TenantQuery1(t, ctx, db, service.FindByTagID, newTagID)
 		require.NoError(t, err)
-		assert.Equal(t, person.ID, result.ID)
+		assert.Equal(t, ident.ID(person.ID), result.ID)
 	})
 
 	t.Run("transfers card from another person", func(t *testing.T) {
@@ -552,7 +553,7 @@ func TestPersonService_LinkToRFIDCard(t *testing.T) {
 		// Verify card is now with second person
 		result, err := testpkg.TenantQuery1(t, ctx, db, service.FindByTagID, rfidCard.ID)
 		require.NoError(t, err)
-		assert.Equal(t, person2.ID, result.ID)
+		assert.Equal(t, ident.ID(person2.ID), result.ID)
 	})
 }
 
@@ -584,7 +585,7 @@ func TestPersonService_LinkStudentToRFIDCard(t *testing.T) {
 		require.NoError(t, err)
 		holder, err := testpkg.TenantQuery1(t, ctx, db, service.FindByTagID, rfidCard.ID)
 		require.NoError(t, err)
-		assert.Equal(t, student.PersonID, holder.ID)
+		assert.Equal(t, ident.ID(student.PersonID), holder.ID)
 	})
 
 	t.Run("refuses a graduated student and leaves the tag free", func(t *testing.T) {
@@ -806,7 +807,7 @@ func TestPersonService_LinkToRFIDCard_RFIDNotFound(t *testing.T) {
 		require.NoError(t, err)
 
 		// ACT - LinkToRFIDCard takes tagID as string
-		err = testpkg.TenantCommand2(t, ctx, db, service.LinkToRFIDCard, person.ID, "nonexistent-tag-id")
+		err = testpkg.TenantCommand2(t, ctx, db, service.LinkToRFIDCard, person.ID.Int64(), "nonexistent-tag-id")
 
 		// ASSERT
 		require.Error(t, err)
@@ -949,7 +950,7 @@ func TestPersonService_Update_WithChangedAccount(t *testing.T) {
 		newAccount := testpkg.CreateTestAccount(t, db, "new-account-update")
 
 		// Update person with new account ID
-		person.AccountID = &newAccount.ID
+		person.AccountID = (*ident.ID)(&newAccount.ID)
 
 		// ACT
 		err = testpkg.TenantCommand1(t, ctx, db, service.Update, person)
@@ -970,7 +971,7 @@ func TestPersonService_Update_WithChangedAccount(t *testing.T) {
 		require.NoError(t, err)
 
 		nonExistentAccountID := int64(99999999)
-		person.AccountID = &nonExistentAccountID
+		person.AccountID = (*ident.ID)(&nonExistentAccountID)
 
 		// ACT
 		err = testpkg.TenantCommand1(t, ctx, db, service.Update, person)
@@ -1054,7 +1055,7 @@ func TestPersonService_Update_WithChangedRFID(t *testing.T) {
 		card := testpkg.CreateTestRFIDCard(t, db, "SAMERFIDCARD")
 
 		// Link card to person
-		err = testpkg.TenantCommand2(t, ctx, db, service.LinkToRFIDCard, person.ID, card.ID)
+		err = testpkg.TenantCommand2(t, ctx, db, service.LinkToRFIDCard, person.ID.Int64(), card.ID)
 		require.NoError(t, err)
 
 		// Refetch person to get TagID set
@@ -1098,7 +1099,7 @@ func TestPersonService_LinkToAccount_SamePersonRelink(t *testing.T) {
 		// Verify link still exists
 		found, err := testpkg.TenantQuery1(t, ctx, db, service.FindByAccountID, account.ID)
 		require.NoError(t, err)
-		assert.Equal(t, person.ID, found.ID)
+		assert.Equal(t, ident.ID(person.ID), found.ID)
 	})
 }
 
@@ -1152,7 +1153,7 @@ func TestPersonService_Get_WithIntID(t *testing.T) {
 		// ASSERT
 		require.NoError(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, person.ID, result.ID)
+		assert.Equal(t, ident.ID(person.ID), result.ID)
 	})
 }
 
@@ -1201,7 +1202,7 @@ func TestPersonService_CreateStaffWithTeacher_AdoptsLiveCaregiverProfile(t *test
 	require.NoError(t, err)
 	assert.False(t, teacherCreationFailed)
 	require.NotNil(t, staff)
-	assert.Equal(t, existing.Staff.ID, staff.ID, "the live staff record is adopted, not duplicated")
+	assert.Equal(t, ident.ID(existing.Staff.ID), staff.ID, "the live staff record is adopted, not duplicated")
 
 	require.NotNil(t, teacher, "the caregiver profile the staff record carries must be reported")
 	assert.Equal(t, existing.ID, teacher.ID)
@@ -1404,5 +1405,5 @@ func TestPersonService_CreateStaffWithTeacher_CreatesCaregiverProfileWithoutAcco
 	assert.False(t, teacherCreationFailed)
 	require.NotNil(t, staff)
 	require.NotNil(t, teacher, "a caregiver profile is created for a plain staff member")
-	assert.Equal(t, staff.ID, teacher.StaffID)
+	assert.Equal(t, staff.ID.Int64(), teacher.StaffID)
 }

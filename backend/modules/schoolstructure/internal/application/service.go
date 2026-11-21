@@ -99,8 +99,8 @@ func (s *Service) ListGroupsByID(ctx context.Context, ids []int64) ([]schoolstru
 
 func toPublic(value domain.Group) schoolstructure.Group {
 	return schoolstructure.Group{
-		ID: value.ID, TenantID: value.TenantID, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
-		Name: value.Name, RoomID: value.RoomID,
+		ID: value.ID.Int64(), TenantID: value.TenantID.Int64(), CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
+		Name: value.Name, RoomID: (*int64)(value.RoomID),
 	}
 }
 

@@ -343,7 +343,7 @@ func (rs *Resource) blockSelection(ctx context.Context, filter timetable.BlockFi
 	}
 	ids := make([]int64, 0, len(instances))
 	for _, inst := range instances {
-		ids = append(ids, inst.ID)
+		ids = append(ids, inst.ID.Int64())
 	}
 	groups, err := rs.BlockGroups.BlockEducationGroups(ctx, ids)
 	if err != nil {
@@ -403,11 +403,11 @@ func (rs *Resource) enrichWrittenInstance(ctx context.Context, instanceID int64)
 	if err != nil {
 		return enrichedInstance{}, fmt.Errorf("load instance rows: %w", err)
 	}
-	metadata, err := rs.TimetableData.BlockDisplayMetadata(ctx, []int64{inst.ID})
+	metadata, err := rs.TimetableData.BlockDisplayMetadata(ctx, []int64{inst.ID.Int64()})
 	if err != nil {
 		return enrichedInstance{}, fmt.Errorf("load block display metadata: %w", err)
 	}
-	enriched, _, _, err := rs.enrichInstance(ctx, inst, rows, metadata[inst.ID], make(map[int64]timetable.EmptyOfferingRosterExplainer), rs.childrenPerStaffRatio(ctx), careDays)
+	enriched, _, _, err := rs.enrichInstance(ctx, inst, rows, metadata[inst.ID.Int64()], make(map[int64]timetable.EmptyOfferingRosterExplainer), rs.childrenPerStaffRatio(ctx), careDays)
 	if err != nil {
 		return enrichedInstance{}, err
 	}
@@ -432,7 +432,7 @@ func (rs *Resource) enrichInstances(
 	}
 	instanceIDs := make([]int64, 0, len(instances))
 	for _, inst := range instances {
-		instanceIDs = append(instanceIDs, inst.ID)
+		instanceIDs = append(instanceIDs, inst.ID.Int64())
 	}
 	metadata, err := rs.TimetableData.BlockDisplayMetadata(ctx, instanceIDs)
 	if err != nil {
@@ -446,14 +446,14 @@ func (rs *Resource) enrichInstances(
 		matches = make([]bool, 0, len(instances))
 	}
 	for _, inst := range instances {
-		item, staffRows, studentRows, err := rs.enrichInstance(ctx, inst, rows, metadata[inst.ID], offeringSourceCache, childrenPerStaffRatio, careDays)
+		item, staffRows, studentRows, err := rs.enrichInstance(ctx, inst, rows, metadata[inst.ID.Int64()], offeringSourceCache, childrenPerStaffRatio, careDays)
 		if err != nil {
 			return nil, nil, nil, err
 		}
 		enriched = append(enriched, item)
 		conflictInputs = append(conflictInputs, windowConflictBlock(inst, staffRows, studentRows))
 		if matches != nil {
-			matches = append(matches, selection.filter.Matches(inst.RoomID, staffRows, selection.groups[inst.ID]))
+			matches = append(matches, selection.filter.Matches(inst.RoomID.Int64(), staffRows, selection.groups[inst.ID.Int64()]))
 		}
 	}
 	return enriched, conflictInputs, matches, nil
@@ -463,12 +463,12 @@ func (rs *Resource) enrichInstances(
 // the Timetable owner's window conflict detection (#2139).
 func windowConflictBlock(inst timetable.ScheduledInstance, staffRows []timetable.InstanceStaff, studentRows []timetable.ScheduledParticipant) timetable.WindowConflictBlock {
 	block := timetable.WindowConflictBlock{
-		InstanceID: inst.ID,
+		InstanceID: inst.ID.Int64(),
 		Date:       inst.Date,
 		Title:      inst.Title,
 		StartTime:  inst.StartTime,
 		EndTime:    inst.EndTime,
-		RoomID:     inst.RoomID,
+		RoomID:     inst.RoomID.Int64(),
 		Status:     inst.Status,
 		Staff:      make([]timetable.WindowConflictStaff, 0, len(staffRows)),
 		Students:   make([]timetable.WindowConflictStudent, 0, len(studentRows)),
@@ -505,10 +505,10 @@ func (rs *Resource) enrichInstance(
 	childrenPerStaffRatio int,
 	careDays map[int64]map[calendar.Date]careplan.CareDayStatus,
 ) (enrichedInstance, []timetable.InstanceStaff, []timetable.ScheduledParticipant, error) {
-	staffRows := rows.Staff[inst.ID]
+	staffRows := rows.Staff[inst.ID.Int64()]
 	staff, absentCount := summarizeInstanceStaff(staffRows)
 
-	studentRows := rows.Participants[inst.ID]
+	studentRows := rows.Participants[inst.ID.Int64()]
 	attendance := summarizeInstanceStudents(inst, studentRows, careDays, rows.Cutoffs[inst.Date])
 
 	availability, err := rs.completionAvailability(ctx, inst)
@@ -602,7 +602,7 @@ func (rs *Resource) dayConflictWarningsFor(
 	dayInstances, err := rs.TimetableData.ListScheduledInstances(ctx, inst.Date, inst.Date)
 	if err != nil {
 		rs.getLogger().Warn("day conflict detection: load day instances failed",
-			slog.Int64("instance_id", inst.ID),
+			slog.Int64("instance_id", inst.ID.Int64()),
 			slog.String("date", inst.Date.String()),
 			slog.String("error", err.Error()),
 		)
@@ -611,16 +611,16 @@ func (rs *Resource) dayConflictWarningsFor(
 	rows, err := rs.TimetableData.ListScheduledInstanceRows(ctx, dayInstances)
 	if err != nil {
 		rs.getLogger().Warn("day conflict detection: load instance rows failed",
-			slog.Int64("instance_id", inst.ID),
+			slog.Int64("instance_id", inst.ID.Int64()),
 			slog.String("error", err.Error()),
 		)
 		return empty
 	}
 	inputs := make([]timetable.WindowConflictBlock, 0, len(dayInstances))
 	for _, dayInst := range dayInstances {
-		inputs = append(inputs, windowConflictBlock(dayInst, rows.Staff[dayInst.ID], rows.Participants[dayInst.ID]))
+		inputs = append(inputs, windowConflictBlock(dayInst, rows.Staff[dayInst.ID.Int64()], rows.Participants[dayInst.ID.Int64()]))
 	}
-	if warnings, ok := rs.ConflictDetection.DetectWindowConflicts(inputs)[inst.ID]; ok {
+	if warnings, ok := rs.ConflictDetection.DetectWindowConflicts(inputs)[inst.ID.Int64()]; ok {
 		return warnings
 	}
 	return empty
@@ -638,15 +638,15 @@ func (rs *Resource) resolveEmptyRosterReason(
 	}
 	periodKey := int64(0)
 	if inst.CalendarPeriodID != nil {
-		periodKey = *inst.CalendarPeriodID
+		periodKey = (*inst.CalendarPeriodID).Int64()
 	}
 	explain, cached := cache[periodKey]
 	if !cached {
 		var err error
-		explain, err = rs.OfferingSourceOptions.EmptyRosterExplainer(ctx, inst.CalendarPeriodID)
+		explain, err = rs.OfferingSourceOptions.EmptyRosterExplainer(ctx, (*int64)(inst.CalendarPeriodID))
 		if err != nil {
 			rs.getLogger().Warn("instance list: offering-source explanation failed",
-				slog.Int64("instance_id", inst.ID),
+				slog.Int64("instance_id", inst.ID.Int64()),
 				slog.String("error", err.Error()),
 			)
 			return nil

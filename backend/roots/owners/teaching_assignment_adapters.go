@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	educationRepo "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose"
 
@@ -199,8 +200,8 @@ func (r *GroupTeacherRepositoryBinding) ListGroupTeacherBlockers(ctx context.Con
 	result := make([]peopleValues.BlockerGroup, 0, len(blockers))
 	for _, blocker := range blockers {
 		result = append(result, peopleValues.BlockerGroup{
-			ID: blocker.AssignmentID, GroupID: blocker.GroupID, GroupName: blocker.GroupName,
-			TeacherID: blocker.TeacherID, TeacherIDs: blocker.TeacherIDs,
+			ID: ident.ID(blocker.AssignmentID), GroupID: ident.ID(blocker.GroupID), GroupName: blocker.GroupName,
+			TeacherID: ident.ID(blocker.TeacherID), TeacherIDs: ident.IDs(blocker.TeacherIDs),
 		})
 	}
 	return result, nil

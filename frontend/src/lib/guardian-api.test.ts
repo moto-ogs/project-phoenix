@@ -520,7 +520,7 @@ describe("guardian-api functions", () => {
         string,
         unknown
       >;
-      expect(body.guardian_profile_id).toBe(1);
+      expect(body.guardian_profile_id).toBe("1");
       expect(body.relationship_type).toBe("parent");
       expect(body.guardian_role).toBe(mockLinkRequest.guardianRole);
       expect(body.is_primary).toBe(true);

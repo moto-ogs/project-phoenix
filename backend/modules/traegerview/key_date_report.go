@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The key-date report of a Träger (#4716, spec #4611 user stories 115 and
@@ -167,7 +168,7 @@ type KeyDateCareForm struct {
 // day the school still keeps an attendance of, nil when it keeps none or the
 // report shows no absences.
 type KeyDateSchool struct {
-	ID             int64             `json:"id"`
+	ID             ident.ID          `json:"id"`
 	Name           string            `json:"name"`
 	City           string            `json:"city"`
 	District       *string           `json:"district"`
@@ -195,8 +196,8 @@ type KeyDateTotal struct {
 
 // KeyDateReportTemplate names the template a report was drawn up with.
 type KeyDateReportTemplate struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 // ReportWindow is a window of days, both included.

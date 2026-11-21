@@ -123,7 +123,7 @@ func (a *SubstitutionAdapter) loadOverviewStaff(ctx context.Context, instances [
 	instanceIDs := make([]int64, 0, len(instances))
 	for _, instance := range instances {
 		if instance != nil {
-			instanceIDs = append(instanceIDs, instance.ID)
+			instanceIDs = append(instanceIDs, instance.ID.Int64())
 		}
 	}
 	rows, err := a.deps.InstanceStaff.FindByInstanceIDs(ctx, instanceIDs)
@@ -153,7 +153,7 @@ func (a *SubstitutionAdapter) loadOverviewStaff(ctx context.Context, instances [
 func projectSubstitutionAppointments(instances []*timetable.ScheduledInstance, deviations map[int64][]*timetable.InstanceStaff, staffByID map[int64]*workforce.PlanStaff, canManage bool, today calendar.Date) []education.ScheduleAppointmentOverview {
 	appointments := make([]education.ScheduleAppointmentOverview, 0, len(deviations))
 	for _, instance := range instances {
-		rows := deviations[instance.ID]
+		rows := deviations[instance.ID.Int64()]
 		if len(rows) == 0 {
 			continue
 		}
@@ -174,7 +174,7 @@ func projectSubstitutionAppointments(instances []*timetable.ScheduledInstance, d
 			})
 		}
 		appointments = append(appointments, education.ScheduleAppointmentOverview{
-			ID: instance.ID, Type: education.TargetScheduleSubstitution,
+			ID: instance.ID.Int64(), Type: education.TargetScheduleSubstitution,
 			Date:      instance.Date,
 			StartTime: instance.StartTime.Format("15:04"), EndTime: instance.EndTime.Format("15:04"),
 			Title: instance.Title, Status: instance.Status, Staff: staff,

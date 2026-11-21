@@ -201,7 +201,7 @@ func (s *attendanceMirror) MirrorCheckOutForVisits(ctx context.Context, visits [
 		if visit.ActiveGroupID <= 0 || instance == nil {
 			continue // walk-in / no bridged instance — nothing to mirror
 		}
-		keys = append(keys, timetable.InstanceStudentKey{InstanceID: instance.ID, StudentID: visit.StudentID})
+		keys = append(keys, timetable.InstanceStudentKey{InstanceID: instance.ID.Int64(), StudentID: visit.StudentID})
 	}
 	if len(keys) == 0 {
 		return nil
@@ -243,7 +243,7 @@ func (s *attendanceMirror) instancesByActiveGroup(ctx context.Context, groupIDs 
 	instanceByGroup := make(map[int64]*timetable.ScheduledInstance, len(instances))
 	for _, instance := range instances {
 		if instance.ActiveGroupID != nil {
-			instanceByGroup[*instance.ActiveGroupID] = instance
+			instanceByGroup[(*instance.ActiveGroupID).Int64()] = instance
 		}
 	}
 	return instanceByGroup, nil

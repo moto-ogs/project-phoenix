@@ -103,13 +103,13 @@ type staffDirectory struct {
 
 func personRecord(person *peopledirectory.DirectoryPersonSnapshot) identityPorts.PersonRecord {
 	return identityPorts.PersonRecord{
-		ID: person.ID, TenantID: person.TenantID, AccountID: person.AccountID,
+		ID: person.ID.Int64(), TenantID: person.TenantID.Int64(), AccountID: (*int64)(person.AccountID),
 		FirstName: person.FirstName, LastName: person.LastName, TagID: person.TagID, Deleted: person.DeletedAt != nil,
 	}
 }
 
 func staffMember(staff *peopledirectory.Staff) identityPorts.StaffMember {
-	return identityPorts.StaffMember{ID: staff.ID, TenantID: staff.GetTenantID(), PersonID: staff.PersonID, Deleted: staff.DeletedAt != nil}
+	return identityPorts.StaffMember{ID: staff.ID.Int64(), TenantID: staff.GetTenantID(), PersonID: staff.PersonID.Int64(), Deleted: staff.DeletedAt != nil}
 }
 
 func (d staffDirectory) FindStaff(ctx context.Context, staffID int64) (identityPorts.StaffMember, bool, error) {

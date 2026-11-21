@@ -614,7 +614,8 @@ function StudentDetailPageContent() {
   const canViewEnrollments =
     sessionStatus === "authenticated" &&
     hasPermission(session, "config:manage");
-  // Den Stopp von Raumverlauf und Stimmung setzt die OGS-Verwaltung (#3844).
+  // Den Stopp von Raumverlauf und Stimmung setzt die OGS-Verwaltung (#3844);
+  // das Backend verlangt dazu auch Schreibzugriff auf das Kind.
   const canManageRoomHistoryStop =
     sessionStatus === "authenticated" &&
     hasPermission(session, "config:manage");
@@ -2464,7 +2465,7 @@ function FullAccessView({
           attendanceLogEnabled={attendanceLogEnabled}
           feedbackEnabled={feedbackEnabled}
           canViewChangeHistory={hasWriteAccess}
-          canManageRoomHistoryStop={canManageRoomHistoryStop}
+          canManageRoomHistoryStop={canManageRoomHistoryStop && hasWriteAccess}
           onNavigate={(path) => historyRouter.push(path)}
         />
       </StudentTabPanel>

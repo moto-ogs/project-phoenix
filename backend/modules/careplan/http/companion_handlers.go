@@ -19,10 +19,10 @@ import (
 // CompanionResponse is one child this child walks home with, plus the weekdays
 // they walk together.
 type CompanionResponse struct {
-	CompanionStudentID int64    `json:"companion_student_id"`
-	FirstName          string   `json:"first_name,omitempty"`
-	LastName           string   `json:"last_name,omitempty"`
-	Weekdays           []string `json:"weekdays"`
+	CompanionStudentID common.ID `json:"companion_student_id"`
+	FirstName          string    `json:"first_name,omitempty"`
+	LastName           string    `json:"last_name,omitempty"`
+	Weekdays           []string  `json:"weekdays"`
 }
 
 // companionPlanErrorRenderer maps the companion sentinels that a departure-plan

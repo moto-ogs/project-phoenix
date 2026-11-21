@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/collation"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 var validPhoneTypes = map[string]bool{"mobile": true, "home": true, "work": true, "other": true}
@@ -72,7 +73,7 @@ func (rs *GuardianResource) searchGuardiansForPicker(w http.ResponseWriter, r *h
 	responses := make([]*GuardianPickerResponse, 0, len(matches))
 	for _, match := range matches {
 		responses = append(responses, &GuardianPickerResponse{
-			ID: match.Guardian.ID, FirstName: match.Guardian.FirstName, LastName: match.Guardian.LastName,
+			ID: ident.ID(match.Guardian.ID), FirstName: match.Guardian.FirstName, LastName: match.Guardian.LastName,
 			Email: match.Guardian.Email, LinkedChildrenCount: match.LinkedChildrenCount,
 		})
 	}
@@ -386,7 +387,7 @@ func (rs *GuardianResource) getStudentGuardians(w http.ResponseWriter, r *http.R
 	for _, row := range rows {
 		responses = append(responses, &GuardianWithRelationship{
 			Guardian:           newGuardianResponse(row.Guardian),
-			RelationshipID:     row.Link.ID,
+			RelationshipID:     ident.ID(row.Link.ID),
 			RelationshipType:   row.Link.RelationshipType,
 			GuardianRole:       row.Link.GuardianRole,
 			IsPrimary:          row.Link.IsPrimary,
@@ -472,7 +473,7 @@ func (rs *GuardianResource) linkGuardianToStudent(w http.ResponseWriter, r *http
 		return
 	}
 	link, err := rs.directory.LinkGuardianToStudent(r.Context(), peopledirectory.LinkGuardian{
-		StudentID: studentID, GuardianProfileID: req.GuardianProfileID,
+		StudentID: studentID, GuardianProfileID: req.GuardianProfileID.Int64(),
 		RelationshipType: req.RelationshipType, GuardianRole: req.GuardianRole,
 		IsPrimary: req.IsPrimary, IsEmergencyContact: req.IsEmergencyContact, CanPickup: req.CanPickup,
 		PickupNotes: req.PickupNotes, EmergencyPriority: req.EmergencyPriority,

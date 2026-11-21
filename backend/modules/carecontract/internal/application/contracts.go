@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const maxSendBatch = 200
@@ -89,7 +90,7 @@ func (c *Contracts) ListContracts(ctx context.Context, reviewer carecontract.Rev
 	}
 	bySchool := map[int64][]int64{}
 	for _, contract := range list.Contracts {
-		bySchool[contract.SchoolID] = append(bySchool[contract.SchoolID], contract.ID)
+		bySchool[contract.SchoolID.Int64()] = append(bySchool[contract.SchoolID.Int64()], contract.ID.Int64())
 	}
 	if err := c.logSchools(ctx, reviewer, "care_contract_"+view, bySchool); err != nil {
 		return carecontract.ContractList{}, err
@@ -112,7 +113,7 @@ func (c *Contracts) Contract(ctx context.Context, reviewer carecontract.Reviewer
 	if err != nil {
 		return carecontract.ContractDetail{}, err
 	}
-	return detail, c.logSchools(ctx, reviewer, "care_contract_detail", map[int64][]int64{detail.SchoolID: {detail.ID}})
+	return detail, c.logSchools(ctx, reviewer, "care_contract_detail", map[int64][]int64{detail.SchoolID.Int64(): {detail.ID.Int64()}})
 }
 
 // ContractDocument answers the PDF and records the read in the access log
@@ -191,7 +192,7 @@ func (c *Contracts) listContracts(ctx context.Context, reviewer carecontract.Rev
 	if len(contracts) > 0 {
 		ids := make([]int64, len(contracts))
 		for i, contract := range contracts {
-			ids[i] = contract.ID
+			ids[i] = contract.ID.Int64()
 		}
 		if err := trail(ctx, c.store, reviewer.OrganizationID, reviewer.AccountID, 0, 0, ActionRead,
 			map[string]any{"view": view, "contract_ids": ids}); err != nil {
@@ -220,11 +221,11 @@ func (c *Contracts) contract(ctx context.Context, reviewer carecontract.Reviewer
 }
 
 func (c *Contracts) detail(ctx context.Context, reviewer carecontract.Reviewer, record ContractRecord) (carecontract.ContractDetail, error) {
-	mailings, err := c.mailings(ctx, reviewer.OrganizationID, record.Summary.ID)
+	mailings, err := c.mailings(ctx, reviewer.OrganizationID, record.Summary.ID.Int64())
 	if err != nil {
 		return carecontract.ContractDetail{}, err
 	}
-	versions, err := c.store.Versions(ctx, reviewer.OrganizationID, record.Summary.ID)
+	versions, err := c.store.Versions(ctx, reviewer.OrganizationID, record.Summary.ID.Int64())
 	if err != nil {
 		return carecontract.ContractDetail{}, err
 	}
@@ -247,7 +248,7 @@ func (c *Contracts) detail(ctx context.Context, reviewer carecontract.Reviewer, 
 // contract's current version.
 func (c *Contracts) versionToday(ctx context.Context, organizationID int64, record ContractRecord) (carecontract.Version, error) {
 	today := calendar.DateFromTime(c.clock.now())
-	periods, err := c.versions.VersionsInForce(ctx, organizationID, today, today, record.Summary.ID)
+	periods, err := c.versions.VersionsInForce(ctx, organizationID, today, today, record.Summary.ID.Int64())
 	if err != nil || len(periods) == 0 {
 		return record.Version, err
 	}
@@ -296,7 +297,7 @@ func (c *Contracts) contractDocument(ctx context.Context, reviewer carecontract.
 	}
 	var file carecontract.File
 	if record.DocumentID != nil {
-		file, _, err = c.store.VersionDocument(ctx, reviewer.OrganizationID, record.Version.ID)
+		file, _, err = c.store.VersionDocument(ctx, reviewer.OrganizationID, record.Version.ID.Int64())
 	} else {
 		file, _, err = c.render(ctx, reviewer, record)
 	}
@@ -310,7 +311,7 @@ func (c *Contracts) contractDocument(ctx context.Context, reviewer carecontract.
 	if err := trailContract(ctx, c.store, reviewer.OrganizationID, reviewer.AccountID, record, ActionRead, map[string]any{"view": view}); err != nil {
 		return carecontract.File{}, 0, err
 	}
-	return file, record.Summary.SchoolID, nil
+	return file, record.Summary.SchoolID.Int64(), nil
 }
 
 func (c *Contracts) render(ctx context.Context, reviewer carecontract.Reviewer, record ContractRecord) (carecontract.File, int, error) {
@@ -358,20 +359,20 @@ func (c *Contracts) ResendContract(ctx context.Context, reviewer carecontract.Re
 }
 
 func (c *Contracts) sendContracts(ctx context.Context, reviewer carecontract.Reviewer, ids []int64, destination string) (carecontract.SendResult, error) {
-	result := carecontract.SendResult{Sent: []int64{}, Skipped: []carecontract.SendSkip{}}
+	result := carecontract.SendResult{Sent: []ident.ID{}, Skipped: []carecontract.SendSkip{}}
 	// The send holds its transaction, so the whole batch shares the provider's limits.
 	ctx = c.post.ShareMailBlockLimit(ctx)
 	for _, id := range ids {
 		err := c.send(ctx, reviewer, id, destination)
 		if err == nil {
-			result.Sent = append(result.Sent, id)
+			result.Sent = append(result.Sent, ident.ID(id))
 			continue
 		}
 		reason, skipped := sendSkipReason(err)
 		if !skipped {
 			return carecontract.SendResult{}, err
 		}
-		result.Skipped = append(result.Skipped, carecontract.SendSkip{ID: id, Reason: reason})
+		result.Skipped = append(result.Skipped, carecontract.SendSkip{ID: ident.ID(id), Reason: reason})
 	}
 	return result, nil
 }
@@ -453,7 +454,7 @@ func (c *Contracts) deliver(ctx context.Context, reviewer carecontract.Reviewer,
 		return err
 	}
 	outboxID, err := c.post.EnqueueContractMail(ctx, carecontract.ContractMail{
-		OrganizationID: reviewer.OrganizationID, ContractID: contractID, Recipient: party.Email,
+		OrganizationID: reviewer.OrganizationID, ContractID: contractID.Int64(), Recipient: party.Email,
 		GuardianName: fullName(party.FirstName, party.LastName), TraegerName: traegerName(head.SenderText, record.Version.Terms),
 		ChildName: fullName(record.Version.ChildFirstName, record.Version.ChildLastName),
 		Modules:   carecontract.JoinNames(ModuleNames(record.Version.Services)), Filename: file.Filename, PDF: file.Data,
@@ -464,15 +465,15 @@ func (c *Contracts) deliver(ctx context.Context, reviewer carecontract.Reviewer,
 	if err != nil {
 		return fmt.Errorf("care contract: enqueue mail: %w", err)
 	}
-	if err := c.enqueueDocumentNotice(ctx, reviewer.OrganizationID, contractID, party.Email); err != nil {
+	if err := c.enqueueDocumentNotice(ctx, reviewer.OrganizationID, contractID.Int64(), party.Email); err != nil {
 		return err
 	}
 	now := c.clock.now()
-	if err := c.store.InsertMailing(ctx, reviewer.OrganizationID, reviewer.AccountID, contractID, documentID, outboxID, party.Email, now); err != nil {
+	if err := c.store.InsertMailing(ctx, reviewer.OrganizationID, reviewer.AccountID, contractID.Int64(), documentID, outboxID, party.Email, now); err != nil {
 		return err
 	}
 	if record.Summary.Status == carecontract.StatusDraft {
-		if err := c.store.MarkSent(ctx, reviewer.OrganizationID, contractID, now); err != nil {
+		if err := c.store.MarkSent(ctx, reviewer.OrganizationID, contractID.Int64(), now); err != nil {
 			return err
 		}
 	}
@@ -486,7 +487,7 @@ func (c *Contracts) deliveryParty(ctx context.Context, organizationID int64, rec
 	if !ok {
 		return carecontract.Party{}, 0, carecontract.ErrRecipientMissing
 	}
-	mailings, err := c.mailings(ctx, organizationID, record.Summary.ID)
+	mailings, err := c.mailings(ctx, organizationID, record.Summary.ID.Int64())
 	if err != nil {
 		return carecontract.Party{}, 0, err
 	}
@@ -551,7 +552,7 @@ func sameMailAddress(a, b string) bool {
 // frozenDocument is the stored PDF, rendered and stored at the first send.
 func (c *Contracts) frozenDocument(ctx context.Context, reviewer carecontract.Reviewer, record ContractRecord) (carecontract.File, int64, error) {
 	if record.DocumentID != nil {
-		file, err := c.store.Document(ctx, reviewer.OrganizationID, record.Summary.ID)
+		file, err := c.store.Document(ctx, reviewer.OrganizationID, record.Summary.ID.Int64())
 		return file, *record.DocumentID, err
 	}
 	file, templateVersion, err := c.render(ctx, reviewer, record)

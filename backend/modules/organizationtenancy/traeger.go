@@ -5,6 +5,8 @@ import (
 	"errors"
 	"net"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Träger membership (ADR 0084, #2811, #935): the account reaches the
@@ -24,7 +26,7 @@ var ErrOrganizationInactive = errors.New("organization is inactive")
 // TraegerOrganization is a Träger an account may sign in to: active,
 // undeleted, with an active membership of the account.
 type TraegerOrganization struct {
-	ID   int64
+	ID   ident.ID
 	Name string
 	// TestSystem marks a test Träger (#4658).
 	TestSystem bool

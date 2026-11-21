@@ -107,9 +107,11 @@ func (s *InstanceLifecycleService) validateReopenState(ctx context.Context, inst
 }
 
 // lockReopenSnapshotStudents locks the children of the snapshot's visits. A
-// visit deleted since the completion leaves the snapshot: a child whose room
-// history is stopped (#3844) keeps no closed visit, so the reopen brings the
-// others back and that child checks in again.
+// visit deleted since the completion leaves the snapshot together with its
+// child's attendance: a child whose room history is stopped (#3844) keeps no
+// closed visit, so the reopen brings the others back and that child stays as
+// the completion left it until it checks in again. A snapshot that does not
+// name its visits' children refuses such a reopen, as before.
 func (s *InstanceLifecycleService) lockReopenSnapshotStudents(ctx context.Context, snapshot *scheduleModel.ActivityCompletionSnapshot) ([]int64, error) {
 	if len(snapshot.VisitIDs) == 0 {
 		return nil, nil
@@ -122,19 +124,9 @@ func (s *InstanceLifecycleService) lockReopenSnapshotStudents(ctx context.Contex
 	for _, visit := range closedVisits {
 		studentByVisit[visit.ID] = visit.StudentID
 	}
-	studentIDs := make([]int64, 0, len(snapshot.VisitIDs))
-	present := make([]int64, 0, len(snapshot.VisitIDs))
-	for _, visitID := range snapshot.VisitIDs {
-		studentID := studentByVisit[visitID]
-		if studentID <= 0 {
-			continue
-		}
-		present = append(present, visitID)
-		studentIDs = append(studentIDs, studentID)
-	}
-	snapshot.VisitIDs = present
-	if len(studentIDs) == 0 {
-		return nil, nil
+	studentIDs, err := leaveOutGoneVisits(snapshot, studentByVisit)
+	if err != nil || len(studentIDs) == 0 {
+		return nil, err
 	}
 	slices.Sort(studentIDs)
 	studentIDs = slices.Compact(studentIDs)
@@ -401,4 +393,33 @@ func (s *InstanceLifecycleService) broadcastRestoredToGroup(tenantID int64, topi
 			slog.String("error", err.Error()),
 		)
 	}
+}
+
+// leaveOutGoneVisits keeps the snapshot's visits that still exist and drops
+// the attendance of the children whose visit is gone. It returns the children
+// of the kept visits.
+func leaveOutGoneVisits(snapshot *scheduleModel.ActivityCompletionSnapshot, studentByVisit map[int64]int64) ([]int64, error) {
+	named := len(snapshot.VisitStudentIDs) == len(snapshot.VisitIDs)
+	studentIDs := make([]int64, 0, len(snapshot.VisitIDs))
+	present := make([]int64, 0, len(snapshot.VisitIDs))
+	gone := map[int64]bool{}
+	for i, visitID := range snapshot.VisitIDs {
+		studentID := studentByVisit[visitID]
+		if studentID <= 0 {
+			if !named {
+				return nil, fmt.Errorf("%w: snapshot visit missing", timetable.ErrInvalidInstanceTransition)
+			}
+			gone[snapshot.VisitStudentIDs[i]] = true
+			continue
+		}
+		present = append(present, visitID)
+		studentIDs = append(studentIDs, studentID)
+	}
+	snapshot.VisitIDs, snapshot.VisitStudentIDs = present, slices.Clone(studentIDs)
+	if len(gone) > 0 {
+		snapshot.Attendance = slices.DeleteFunc(snapshot.Attendance, func(row scheduleModel.CompletionAttendanceSnapshot) bool {
+			return gone[row.StudentID]
+		})
+	}
+	return studentIDs, nil
 }

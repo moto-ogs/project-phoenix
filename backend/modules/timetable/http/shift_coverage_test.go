@@ -100,7 +100,7 @@ func TestShiftCoverage_ExactWarningAndConcreteDeviationSemantics(t *testing.T) {
 	result := decodeShiftCoverage(t, recorder)
 	require.Len(t, result.CoverageWarnings, 1, "absent planned staff is skipped; substitute is checked")
 	warning := result.CoverageWarnings[0]
-	assert.Equal(t, substitute.ID, warning.StaffID)
+	assert.Equal(t, ident.ID(substitute.ID), warning.StaffID)
 	assert.Contains(t, warning.StaffName, "Active Sub-")
 	assert.Equal(t, s.date.String(), warning.Date)
 	assert.Equal(t, "14:30", warning.StartTime)

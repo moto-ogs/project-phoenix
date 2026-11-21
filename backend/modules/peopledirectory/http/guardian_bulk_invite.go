@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Bulk invitation (#3378): a school whose children and contacts already
@@ -19,9 +21,9 @@ import (
 const bulkInviteMaxStudents = 2000
 
 type bulkInviteRequest struct {
-	StudentIDs []int64 `json:"student_ids"`
-	ResendOpen bool    `json:"resend_open"`
-	DryRun     bool    `json:"dry_run"`
+	StudentIDs []common.ID `json:"student_ids"`
+	ResendOpen bool        `json:"resend_open"`
+	DryRun     bool        `json:"dry_run"`
 }
 
 type bulkInviteProblemResponse struct {
@@ -67,7 +69,7 @@ func (rs *GuardianResource) bulkInviteGuardians(w http.ResponseWriter, r *http.R
 		rs.failMessage(w, r, FailureInvalidRequest, "too many student_ids")
 		return
 	}
-	students, err := rs.directory.ListStudentsByID(r.Context(), body.StudentIDs)
+	students, err := rs.directory.ListStudentsByID(r.Context(), ident.Int64s(body.StudentIDs))
 	if err != nil {
 		rs.moduleFailure(w, r, err)
 		return

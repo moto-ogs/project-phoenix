@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
-  int64StringOrNumber,
+  int64String,
   noData,
   object,
   optional,
@@ -23,7 +23,7 @@ export interface BlockerSupervision {
 }
 
 export const BlockerSupervisionSchema: z.ZodType<BlockerSupervision, unknown> = object<BlockerSupervision>({
-  id: int64StringOrNumber,
+  id: int64String,
   group_name: str,
   start_date: str,
 });
@@ -37,7 +37,7 @@ export interface BlockerSubstitution {
 }
 
 export const BlockerSubstitutionSchema: z.ZodType<BlockerSubstitution, unknown> = object<BlockerSubstitution>({
-  id: int64StringOrNumber,
+  id: int64String,
   group_name: str,
   start_date: str,
   end_date: str,
@@ -52,8 +52,8 @@ export interface BlockerActivity {
 }
 
 export const BlockerActivitySchema: z.ZodType<BlockerActivity, unknown> = object<BlockerActivity>({
-  id: int64StringOrNumber,
-  activity_id: int64StringOrNumber,
+  id: int64String,
+  activity_id: int64String,
   activity_name: str,
   is_primary: bool,
 });
@@ -68,11 +68,11 @@ export interface BlockerGroup {
 }
 
 export const BlockerGroupSchema: z.ZodType<BlockerGroup, unknown> = object<BlockerGroup>({
-  id: int64StringOrNumber,
-  group_id: int64StringOrNumber,
+  id: int64String,
+  group_id: int64String,
   group_name: str,
-  teacher_id: int64StringOrNumber,
-  teacher_ids: optional(arr(int64StringOrNumber)),
+  teacher_id: int64String,
+  teacher_ids: optional(arr(int64String)),
 });
 
 /** Go: peopledirectory.CaregiverCapabilityState */
@@ -100,13 +100,13 @@ export interface CaregiverCapabilityState {
 }
 
 export const CaregiverCapabilityStateSchema: z.ZodType<CaregiverCapabilityState, unknown> = object<CaregiverCapabilityState>({
-  account_id: int64StringOrNumber,
+  account_id: int64String,
   email: str,
   first_name: str,
   last_name: str,
-  person_id: optional(int64StringOrNumber),
-  staff_id: optional(int64StringOrNumber),
-  teacher_id: optional(int64StringOrNumber),
+  person_id: optional(int64String),
+  staff_id: optional(int64String),
+  teacher_id: optional(int64String),
   has_admin_role: bool,
   has_user_role: bool,
   has_person: bool,

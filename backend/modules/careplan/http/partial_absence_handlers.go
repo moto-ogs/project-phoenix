@@ -12,6 +12,7 @@ import (
 	sessiontoken "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	tenant "github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -38,19 +39,19 @@ func (req *PartialAbsenceRequest) Bind(_ *http.Request) error {
 }
 
 type PartialAbsenceResponse struct {
-	ID         int64   `json:"id"`
-	StudentID  int64   `json:"student_id"`
-	Date       string  `json:"date"`
-	FromTime   string  `json:"from_time"`
-	Reason     *string `json:"reason,omitempty"`
-	PickupTime *string `json:"pickup_time,omitempty"`
+	ID         common.ID `json:"id"`
+	StudentID  common.ID `json:"student_id"`
+	Date       string    `json:"date"`
+	FromTime   string    `json:"from_time"`
+	Reason     *string   `json:"reason,omitempty"`
+	PickupTime *string   `json:"pickup_time,omitempty"`
 	// Auto marks an excusal derived from a pulled-forward pickup time
 	// (#2360). Auto rows follow the day's pickup time and cannot be deleted
 	// through the manual endpoints — editing converts them to manual.
-	Auto      bool   `json:"auto"`
-	CreatedBy int64  `json:"created_by"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
+	Auto      bool      `json:"auto"`
+	CreatedBy common.ID `json:"created_by"`
+	CreatedAt string    `json:"created_at"`
+	UpdatedAt string    `json:"updated_at"`
 }
 
 // partialAbsenceDeletedResponse confirms a removed partial absence.
@@ -60,8 +61,8 @@ type partialAbsenceDeletedResponse struct {
 
 func mapPartialAbsenceToResponse(row *careplan.PickupException) PartialAbsenceResponse {
 	response := PartialAbsenceResponse{
-		ID:        row.ID,
-		StudentID: row.StudentID,
+		ID:        ident.ID(row.ID),
+		StudentID: ident.ID(row.StudentID),
 		Date:      row.ExceptionDate.String(),
 		Reason:    row.ExcusedReason,
 		Auto:      row.ExcusedAuto,
@@ -69,7 +70,7 @@ func mapPartialAbsenceToResponse(row *careplan.PickupException) PartialAbsenceRe
 		UpdatedAt: row.UpdatedAt.Format(time.RFC3339),
 	}
 	if row.ExcusedCreatedBy != nil {
-		response.CreatedBy = *row.ExcusedCreatedBy
+		response.CreatedBy = ident.ID(*row.ExcusedCreatedBy)
 	}
 	if row.ExcusedFrom != nil {
 		response.FromTime = calendar.NormalizeWallClock(*row.ExcusedFrom).Format("15:04")

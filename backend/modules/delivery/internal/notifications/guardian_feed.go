@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/domain"
 	deliveryPorts "github.com/moto-ogs/project-phoenix/modules/delivery/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/uptrace/bun"
 )
@@ -173,7 +174,7 @@ func feedPageEntries(entries []domain.FeedEntry, limit int) ([]FeedEntry, string
 	page := make([]FeedEntry, 0, len(entries))
 	for _, entry := range entries {
 		page = append(page, FeedEntry{
-			ID: entry.ID, Type: entry.Type, Title: entry.Title, Body: entry.Body, DeepLink: entry.DeepLink,
+			ID: ident.ID(entry.ID), Type: entry.Type, Title: entry.Title, Body: entry.Body, DeepLink: entry.DeepLink,
 			CreatedAt: entry.CreatedAt, UpdatedAt: entry.UpdatedAt, ReadAt: entry.ReadAt,
 		})
 	}

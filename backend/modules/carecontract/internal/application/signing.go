@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The signature of a contract (#4679, ADR 0088 section 3): the one-time
@@ -114,7 +115,7 @@ func (s *Signatures) openLinkContract(ctx context.Context, organizationID int64,
 	if err != nil {
 		return linkTarget{}, err
 	}
-	document, err := s.store.CurrentDocument(ctx, organizationID, link.ContractID, record.Version.ID)
+	document, err := s.store.CurrentDocument(ctx, organizationID, link.ContractID, record.Version.ID.Int64())
 	if errors.Is(err, carecontract.ErrContractNotSignable) {
 		return linkTarget{}, carecontract.ErrSigningLinkInvalid
 	}
@@ -221,7 +222,7 @@ func (s *Signatures) InboxSigningView(ctx context.Context, organizationID, contr
 	if err != nil {
 		return carecontract.SigningView{}, err
 	}
-	stored, err := s.store.Signature(ctx, organizationID, record.Summary.ID, record.Version.ID)
+	stored, err := s.store.Signature(ctx, organizationID, record.Summary.ID.Int64(), record.Version.ID.Int64())
 	if err != nil {
 		return carecontract.SigningView{}, err
 	}
@@ -231,7 +232,7 @@ func (s *Signatures) InboxSigningView(ctx context.Context, organizationID, contr
 			EarlyStartRequested: stored.EarlyStartRequested,
 		}
 		if stored.Method != carecontract.SignaturePaper {
-			ends, err := s.periods().withdrawalEnd(ctx, record.Summary.SchoolID, stored.SignedAt)
+			ends, err := s.periods().withdrawalEnd(ctx, record.Summary.SchoolID.Int64(), stored.SignedAt)
 			if err != nil {
 				return carecontract.SigningView{}, err
 			}
@@ -249,7 +250,7 @@ func (s *Signatures) SignInInbox(ctx context.Context, organizationID, contractID
 	account := reader.AccountID
 	// The parents sign what the newest send gave them, the PDF and the
 	// version of its link.
-	link, found, err := s.store.LatestSigningLink(ctx, organizationID, record.Summary.ID)
+	link, found, err := s.store.LatestSigningLink(ctx, organizationID, record.Summary.ID.Int64())
 	if err != nil {
 		return carecontract.SigningView{}, err
 	}
@@ -284,7 +285,7 @@ func (s *Signatures) inboxContract(ctx context.Context, organizationID, contract
 	if err != nil {
 		return ContractRecord{}, StoredDocument{}, err
 	}
-	document, err := s.store.CurrentDocument(ctx, organizationID, contractID, record.Version.ID)
+	document, err := s.store.CurrentDocument(ctx, organizationID, contractID, record.Version.ID.Int64())
 	if errors.Is(err, carecontract.ErrContractNotSignable) {
 		return ContractRecord{}, StoredDocument{}, carecontract.ErrInboxDocumentNotFound
 	}
@@ -331,7 +332,7 @@ type signer struct {
 // the withdrawal notice, all in the caller's Träger transaction.
 func (s *Signatures) sign(ctx context.Context, organizationID int64, record ContractRecord, document StoredDocument,
 	input carecontract.SignatureInput, who signer, now time.Time) (carecontract.SigningView, error) {
-	if record.Summary.Status != carecontract.StatusSent || document.VersionID != record.Version.ID {
+	if record.Summary.Status != carecontract.StatusSent || ident.ID(document.VersionID) != record.Version.ID {
 		return carecontract.SigningView{}, carecontract.ErrContractNotSignable
 	}
 	checksum, err := s.unchangedChecksum(record, document, who.sent)
@@ -350,7 +351,7 @@ func (s *Signatures) sign(ctx context.Context, organizationID int64, record Cont
 		return carecontract.SigningView{}, carecontract.ErrSignatureInvalid
 	}
 	auditID, err := s.ports.Ledger.RecordContractSignature(ctx, carecontract.ContractSignatureEntry{
-		OrganizationID: organizationID, VersionID: record.Version.ID, SignerAccountID: who.accountID,
+		OrganizationID: organizationID, VersionID: record.Version.ID.Int64(), SignerAccountID: who.accountID,
 		SignerName: signerName, DocumentSHA256: document.SHA256, SignedAt: now, Input: input,
 	})
 	if err != nil {
@@ -358,7 +359,7 @@ func (s *Signatures) sign(ctx context.Context, organizationID int64, record Cont
 	}
 	documentID := document.ID
 	if err := s.store.InsertSignature(ctx, organizationID, NewSignature{
-		ContractID: record.Summary.ID, VersionID: record.Version.ID, DocumentID: &documentID, Method: input.Method,
+		ContractID: record.Summary.ID.Int64(), VersionID: record.Version.ID.Int64(), DocumentID: &documentID, Method: input.Method,
 		Channel: who.channel, AuditSignatureID: &auditID, SignerName: signerName, SignerAccountID: who.accountID,
 		SigningLinkID: who.linkID, VersionSHA256: checksum, DocumentSHA256: document.SHA256, WithdrawalNoticeAt: &now,
 		EarlyStartRequested: input.EarlyStart, SignedOn: calendar.DateFromTime(now), SignedAt: now,
@@ -397,7 +398,7 @@ func (s *Signatures) signedView(ctx context.Context, organizationID int64, recor
 	if err != nil {
 		return carecontract.SigningView{}, err
 	}
-	ends, err := s.periods().withdrawalEnd(ctx, record.Summary.SchoolID, signature.SignedAt)
+	ends, err := s.periods().withdrawalEnd(ctx, record.Summary.SchoolID.Int64(), signature.SignedAt)
 	if err != nil {
 		return carecontract.SigningView{}, err
 	}
@@ -414,7 +415,7 @@ func (s *Signatures) confirm(ctx context.Context, organizationID int64, record C
 	if strings.TrimSpace(party.Email) == "" {
 		return nil
 	}
-	address, err := deliveryAddress(ctx, s.store, organizationID, record.Summary.ID, party.Email)
+	address, err := deliveryAddress(ctx, s.store, organizationID, record.Summary.ID.Int64(), party.Email)
 	if err != nil {
 		return err
 	}
@@ -427,7 +428,7 @@ func (s *Signatures) confirm(ctx context.Context, organizationID int64, record C
 	}
 	signature := view.Signature
 	_, err = s.ports.Post.EnqueueContractMail(ctx, carecontract.ContractMail{
-		OrganizationID: organizationID, ContractID: record.Summary.ID, Recipient: address,
+		OrganizationID: organizationID, ContractID: record.Summary.ID.Int64(), Recipient: address,
 		GuardianName: fullName(party.FirstName, party.LastName), TraegerName: view.TraegerName,
 		ChildName: fullName(record.Version.ChildFirstName, record.Version.ChildLastName),
 		Modules:   carecontract.JoinNames(ModuleNames(record.Version.Services)), Filename: document.File.Filename, PDF: document.File.Data,
@@ -456,7 +457,7 @@ func (s *Signatures) view(ctx context.Context, organizationID int64, record Cont
 	partner := firstText(record.Version.Terms.ContractPartner, traeger)
 	party, _ := recipient(record.Parties)
 	return carecontract.SigningView{
-		ContractID: record.Summary.ID, OrganizationID: organizationID, Status: record.Summary.Status,
+		ContractID: record.Summary.ID, OrganizationID: ident.ID(organizationID), Status: record.Summary.Status,
 		TraegerName: traeger, PartyName: fullName(party.FirstName, party.LastName), Version: signingContract(record.Version),
 		DocumentSHA256: document.SHA256, WithdrawalNotice: withdrawalNoticeParagraphs(withdrawalAddressee(partner, letterhead, reach)),
 	}, nil

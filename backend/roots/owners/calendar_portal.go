@@ -196,7 +196,7 @@ func (p calendarIdentityPort) GetCurrentUser(ctx context.Context) (*calendarComp
 	if err != nil {
 		return nil, err
 	}
-	return &calendarCompose.Account{ID: value.ID, Email: value.Email, Active: value.Active}, nil
+	return &calendarCompose.Account{ID: value.ID.Int64(), Email: value.Email, Active: value.Active}, nil
 }
 
 func (p calendarIdentityPort) MissingUser(err error) bool {

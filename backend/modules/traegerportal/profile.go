@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The names of the Träger-Büro (#4693). A person with "Konten verwalten"
@@ -41,9 +42,9 @@ func (req *TraegerNameRequest) Bind(_ *http.Request) error { return nil }
 
 // TraegerProfileResponse is the signed-in person at the Träger of the session.
 type TraegerProfileResponse struct {
-	AccountID int64  `json:"account_id"`
-	Email     string `json:"email"`
-	Name      string `json:"name"`
+	AccountID ident.ID `json:"account_id"`
+	Email     string   `json:"email"`
+	Name      string   `json:"name"`
 }
 
 func (rs *Resource) ownProfile(w http.ResponseWriter, r *http.Request) {
@@ -110,5 +111,5 @@ func (rs *Resource) profileActor(w http.ResponseWriter, r *http.Request) (identi
 }
 
 func profileResponse(member identityaccess.TraegerMember) TraegerProfileResponse {
-	return TraegerProfileResponse{AccountID: member.AccountID, Email: member.Email, Name: member.Name}
+	return TraegerProfileResponse{AccountID: ident.ID(member.AccountID), Email: member.Email, Name: member.Name}
 }

@@ -45,7 +45,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/devicefleet.Capability.Dashboard",
-      "reason": "Read-only target already reviewed as query: device-fleet reaches modules/timetable.IsPlannedInstanceStatus (timetable-activities) through *modules/devicefleet/internal/application.Service.Dashboard. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: device-fleet reaches modules/timetable.IsPlannedInstanceStatus (timetable-activities) through *modules/devicefleet/internal/application.Service.Dashboard. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "device-fleet",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.IsPlannedInstanceStatus",
       "target_owner": "timetable-activities"
@@ -55,7 +55,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/devicefleet.Capability.Dashboard",
-      "reason": "Read-only target already reviewed as query: device-fleet reaches modules/timetable.SessionRecords.ListSessionInstances (timetable-activities) through *modules/devicefleet/internal/application.Service.Dashboard. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: device-fleet reaches modules/timetable.SessionRecords.ListSessionInstances (timetable-activities) through *modules/devicefleet/internal/application.Service.Dashboard. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "device-fleet",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.SessionRecords.ListSessionInstances",
       "target_owner": "timetable-activities"
@@ -75,7 +75,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/devicefleet.Capability.Dashboard",
-      "reason": "Read-only target already reviewed as query: device-fleet reaches modules/timetable/internal/application.SessionRecords.ListSessionInstances (timetable-activities) through *modules/devicefleet/internal/application.Service.Dashboard. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: device-fleet reaches modules/timetable/internal/application.SessionRecords.ListSessionInstances (timetable-activities) through *modules/devicefleet/internal/application.Service.Dashboard. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "device-fleet",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.SessionRecords.ListSessionInstances",
       "target_owner": "timetable-activities"
@@ -105,7 +105,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/devicefleet.Query.Dashboard",
-      "reason": "Read-only target already reviewed as query: device-fleet reaches modules/timetable.IsPlannedInstanceStatus (timetable-activities) through modules/devicefleet.Capability.Dashboard. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: device-fleet reaches modules/timetable.IsPlannedInstanceStatus (timetable-activities) through modules/devicefleet.Capability.Dashboard. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "device-fleet",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.IsPlannedInstanceStatus",
       "target_owner": "timetable-activities"
@@ -115,7 +115,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/devicefleet.Query.Dashboard",
-      "reason": "Read-only target already reviewed as query: device-fleet reaches modules/timetable.SessionRecords.ListSessionInstances (timetable-activities) through modules/devicefleet.Capability.Dashboard. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: device-fleet reaches modules/timetable.SessionRecords.ListSessionInstances (timetable-activities) through modules/devicefleet.Capability.Dashboard. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "device-fleet",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.SessionRecords.ListSessionInstances",
       "target_owner": "timetable-activities"
@@ -135,7 +135,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/devicefleet.Query.Dashboard",
-      "reason": "Read-only target already reviewed as query: device-fleet reaches modules/timetable/internal/application.SessionRecords.ListSessionInstances (timetable-activities) through modules/devicefleet.Capability.Dashboard. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: device-fleet reaches modules/timetable/internal/application.SessionRecords.ListSessionInstances (timetable-activities) through modules/devicefleet.Capability.Dashboard. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "device-fleet",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.SessionRecords.ListSessionInstances",
       "target_owner": "timetable-activities"
@@ -345,7 +345,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/devicefleet/internal/application.PlannedActivitySource.ListPlannedActivities",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/timetable.IsPlannedInstanceStatus; modules/timetable/activity_instances.go:20. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/timetable.IsPlannedInstanceStatus; modules/timetable/activity_instances.go:20. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "device-fleet",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.IsPlannedInstanceStatus",
       "target_owner": "timetable-activities"
@@ -355,7 +355,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/devicefleet/internal/application.PlannedActivitySource.ListPlannedActivities",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/timetable.SessionRecords.ListSessionInstances; modules/timetable/session_records.go:12. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/timetable.SessionRecords.ListSessionInstances; modules/timetable/session_records.go:12. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "device-fleet",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.SessionRecords.ListSessionInstances",
       "target_owner": "timetable-activities"
@@ -365,7 +365,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/devicefleet/internal/application.PlannedActivitySource.ListPlannedActivities",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/timetable/internal/application.SessionRecords.ListSessionInstances; modules/timetable/internal/application/session_records.go:41. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/timetable/internal/application.SessionRecords.ListSessionInstances; modules/timetable/internal/application/session_records.go:41. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "device-fleet",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.SessionRecords.ListSessionInstances",
       "target_owner": "timetable-activities"
@@ -457,7 +457,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/devicefleet/internal/ports.DashboardSources.ListPlannedActivities",
-      "reason": "Read-only already reviewed target: device-fleet reaches modules/timetable.IsPlannedInstanceStatus (timetable-activities) through modules/devicefleet/internal/application.DashboardSources.ListPlannedActivities. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: device-fleet reaches modules/timetable.IsPlannedInstanceStatus (timetable-activities) through modules/devicefleet/internal/application.DashboardSources.ListPlannedActivities. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "device-fleet",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.IsPlannedInstanceStatus",
       "target_owner": "timetable-activities"
@@ -467,7 +467,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/devicefleet/internal/ports.DashboardSources.ListPlannedActivities",
-      "reason": "Read-only already reviewed target: device-fleet reaches modules/timetable.SessionRecords.ListSessionInstances (timetable-activities) through modules/devicefleet/internal/application.DashboardSources.ListPlannedActivities. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: device-fleet reaches modules/timetable.SessionRecords.ListSessionInstances (timetable-activities) through modules/devicefleet/internal/application.DashboardSources.ListPlannedActivities. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "device-fleet",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.SessionRecords.ListSessionInstances",
       "target_owner": "timetable-activities"
@@ -477,7 +477,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/devicefleet/internal/ports.DashboardSources.ListPlannedActivities",
-      "reason": "Read-only already reviewed target: device-fleet reaches modules/timetable/internal/application.SessionRecords.ListSessionInstances (timetable-activities) through modules/devicefleet/internal/application.DashboardSources.ListPlannedActivities. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: device-fleet reaches modules/timetable/internal/application.SessionRecords.ListSessionInstances (timetable-activities) through modules/devicefleet/internal/application.DashboardSources.ListPlannedActivities. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "device-fleet",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.SessionRecords.ListSessionInstances",
       "target_owner": "timetable-activities"

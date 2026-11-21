@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func reportPortsBound(ports traegerview.ReportPorts) bool {
@@ -75,7 +76,7 @@ func (o *Overview) drawKeyDateReport(ctx context.Context, organizationID, templa
 		if err != nil {
 			return err
 		}
-		result.Template = &traegerview.KeyDateReportTemplate{ID: template.ID, Name: template.Name}
+		result.Template = &traegerview.KeyDateReportTemplate{ID: ident.ID(template.ID), Name: template.Name}
 		result.Sections = template.Sections
 		districts = template.Districts
 	}
@@ -195,19 +196,19 @@ func (o *Overview) rosterReads(ctx context.Context, scope []int64, keyDate calen
 // school applies the definitions of traegerview.KeyDateReport to one school.
 func (r keyDateReads) school(school traegerview.TraegerSchool, districts map[int64]string) traegerview.KeyDateSchool {
 	row := traegerview.KeyDateSchool{ID: school.ID, Name: school.Name, City: school.City, CareForms: []traegerview.KeyDateCareForm{}}
-	if district, ok := districts[school.ID]; ok {
+	if district, ok := districts[school.ID.Int64()]; ok {
 		row.District = &district
 	}
-	figures := traegerview.KeyDateFigures{Children: len(r.roster[school.ID]), Staff: len(r.staff[school.ID])}
+	figures := traegerview.KeyDateFigures{Children: len(r.roster[school.ID.Int64()]), Staff: len(r.staff[school.ID.Int64()])}
 	if r.withCareForms {
-		forms, without := careFormOccupancy(r.roster[school.ID], r.bookings[school.ID], r.children[school.ID])
+		forms, without := careFormOccupancy(r.roster[school.ID.Int64()], r.bookings[school.ID.Int64()], r.children[school.ID.Int64()])
 		figures.WithoutCareForm = without
 		for _, form := range forms {
 			row.CareForms = append(row.CareForms, traegerview.KeyDateCareForm{Name: form.Name, Children: form.Children, Capacity: form.Capacity, Active: form.Active})
 		}
 	}
 	if r.window != nil {
-		attendance := r.attendance[school.ID]
+		attendance := r.attendance[school.ID.Int64()]
 		row.AttendanceFrom = attendance.From
 		// Only days with a check-in at the school count: on such a day the
 		// school was open and still keeps its attendance, so a sick or excused
@@ -218,11 +219,11 @@ func (r keyDateReads) school(school traegerview.TraegerSchool, districts map[int
 				continue
 			}
 			figures.PresentDays += count
-			figures.SickDays += r.sick[school.ID][day]
-			figures.ExcusedDays += r.excused[school.ID][day]
+			figures.SickDays += r.sick[school.ID.Int64()][day]
+			figures.ExcusedDays += r.excused[school.ID.Int64()][day]
 		}
 	}
-	figures.Open, figures.Waitlisted = r.open[school.ID], r.waitlisted[school.ID]
+	figures.Open, figures.Waitlisted = r.open[school.ID.Int64()], r.waitlisted[school.ID.Int64()]
 	row.Figures = completeFigures(figures, row.CareForms)
 	return row
 }

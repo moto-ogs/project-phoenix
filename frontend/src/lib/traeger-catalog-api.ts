@@ -445,7 +445,7 @@ function phaseInputToBackend(input: TraegerPhaseInput): PhaseRequest {
     care_overflow_mode: input.careOverflowMode,
     care_offering_selection_mode: input.careOfferingSelectionMode,
     all_schools: input.allSchools,
-    school_ids: input.allSchools ? [] : input.schoolIds.map(Number),
+    school_ids: input.allSchools ? [] : [...input.schoolIds],
   } satisfies PhaseRequest;
 }
 

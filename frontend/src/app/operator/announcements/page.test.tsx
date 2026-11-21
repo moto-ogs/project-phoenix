@@ -1142,7 +1142,7 @@ describe("OperatorAnnouncementsPage", () => {
       mockToastError.mockClear();
     });
 
-    it("handleSave creates announcement with parsed int IDs and shows success toast", async () => {
+    it("handleSave creates announcement with string IDs and shows success toast", async () => {
       mockCreate.mockResolvedValue({});
       mockMutate.mockResolvedValue(undefined);
 
@@ -1201,8 +1201,8 @@ describe("OperatorAnnouncementsPage", () => {
           expect.objectContaining({
             title: "Test Title",
             content: "Test Content",
-            target_org_ids: [1],
-            target_tenant_ids: [10],
+            target_org_ids: ["1"],
+            target_tenant_ids: ["10"],
           }),
         );
       });

@@ -292,7 +292,7 @@ export function prepareStudentForBackend(student: StudentUpdate) {
         ? undefined
         : normalizeDepartureDays(student.departure_days),
     group_id: student.group_id
-      ? Number.parseInt(String(student.group_id), 10)
+      ? String(student.group_id)
       : undefined,
     address_street: student.address_street,
     address_city: student.address_city,

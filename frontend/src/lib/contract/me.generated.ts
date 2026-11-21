@@ -64,7 +64,7 @@ export interface GroupRoom {
 }
 
 export const GroupRoomSchema: z.ZodType<GroupRoom, unknown> = object<GroupRoom>({
-  id: int64StringOrNumber,
+  id: int64String,
   created_at: instant,
   updated_at: instant,
   name: str,
@@ -88,12 +88,12 @@ export interface CallerGroupRow {
 }
 
 export const CallerGroupRowSchema: z.ZodType<CallerGroupRow, unknown> = object<CallerGroupRow>({
-  id: int64StringOrNumber,
+  id: int64String,
   created_at: instant,
   updated_at: instant,
-  tenant_id: int64StringOrNumber,
+  tenant_id: int64String,
   name: str,
-  room_id: optional(int64StringOrNumber),
+  room_id: optional(int64String),
   room: optional(GroupRoomSchema),
   via_substitution: bool,
 });
@@ -376,7 +376,7 @@ export interface PersonAccountSnapshot {
 }
 
 export const PersonAccountSnapshotSchema: z.ZodType<PersonAccountSnapshot, unknown> = object<PersonAccountSnapshot>({
-  id: int64StringOrNumber,
+  id: int64String,
   created_at: instant,
   updated_at: instant,
   email: str,
@@ -400,7 +400,7 @@ export const PersonRFIDSnapshotSchema: z.ZodType<PersonRFIDSnapshot, unknown> = 
   id: str,
   created_at: instant,
   updated_at: instant,
-  tenant_id: int64StringOrNumber,
+  tenant_id: int64String,
   active: bool,
 });
 
@@ -420,15 +420,15 @@ export interface DirectoryPersonSnapshot {
 }
 
 export const DirectoryPersonSnapshotSchema: z.ZodType<DirectoryPersonSnapshot, unknown> = object<DirectoryPersonSnapshot>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
   created_at: instant,
   updated_at: instant,
   first_name: str,
   last_name: str,
   birthday: optional(calendarDate),
   tag_id: optional(str),
-  account_id: optional(int64StringOrNumber),
+  account_id: optional(int64String),
   account: optional(PersonAccountSnapshotSchema),
   rfid_card: optional(PersonRFIDSnapshotSchema),
 });
@@ -449,14 +449,14 @@ export interface Staff {
 }
 
 export const StaffSchema: z.ZodType<Staff, unknown> = object<Staff>({
-  id: int64StringOrNumber,
+  id: int64String,
   created_at: instant,
   updated_at: instant,
-  tenant_id: int64StringOrNumber,
-  person_id: int64StringOrNumber,
+  tenant_id: int64String,
+  person_id: int64String,
   staff_notes: optional(str),
   employment_type: optional(str),
-  work_time_model_id: optional(int64StringOrNumber),
+  work_time_model_id: optional(int64String),
   rotation_anchor_date: optional(calendarDate),
   birthday_display_opt_out: bool,
   person: optional(DirectoryPersonSnapshotSchema),

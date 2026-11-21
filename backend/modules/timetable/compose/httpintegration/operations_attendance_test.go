@@ -54,7 +54,7 @@ func TestTimetableOperationsCheckInCreatesVisitAndMarksPlannedPresent(t *testing
 	assert.Equal(t, fixtures.AttendanceStatusPresent(), *deps.studentRepo.updates[0].patch.Status)
 	assert.True(t, deps.studentRepo.updates[0].patch.SubstatusClear)
 	assert.True(t, deps.activeGroups.lastActivity[activeGroupID].After(time.Time{}))
-	assert.Equal(t, studentID, roster.Rows[0].StudentID)
+	assert.Equal(t, ident.ID(studentID), roster.Rows[0].StudentID)
 }
 
 func TestTimetableOperationsCheckInStopsWhenPresenceReadFails(t *testing.T) {
@@ -287,7 +287,7 @@ func TestTimetableOperationsCheckOutAlreadyEndedReturnsRoster(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, roster)
-	assert.Equal(t, int64(413), roster.Instance.ID)
+	assert.Equal(t, ident.ID(int64(413)), roster.Instance.ID)
 }
 
 func TestTimetableOperationsPatchAttendanceUpdatesRowAndBroadcasts(t *testing.T) {
@@ -322,7 +322,7 @@ func TestTimetableOperationsPatchAttendanceUpdatesRowAndBroadcasts(t *testing.T)
 
 	require.NoError(t, err)
 	require.NotNil(t, row)
-	assert.Equal(t, studentID, row.StudentID)
+	assert.Equal(t, ident.ID(studentID), row.StudentID)
 	require.Len(t, deps.studentRepo.updates, 1)
 	assert.Equal(t, rowID, deps.studentRepo.updates[0].rowID)
 	assert.Equal(t, &note, deps.studentRepo.updates[0].patch.Note)

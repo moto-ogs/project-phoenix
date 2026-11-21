@@ -208,7 +208,7 @@ Decided in #5529, enforced since #5531. Not up for renegotiation: if code cannot
 - One sentence, ≤ ~12 words, verb in 3rd person, full stop; the consequence, not the button word. No technical words, no „Klicken Sie hier“.
 - „sofort“ when deleted or sent without a question, „moto fragt vorher nach“ before a confirmation; name who gets notified.
 - Same action, same sentence; repeated text lives in the kit piece. Translated portals: every language's catalog.
-- `disabledReason`: what is missing or comes first („Wählen Sie zuerst mindestens ein Kind aus.“), never just „Nicht möglich.“
+- `disabledReason`: what is missing or comes first („Wähle zuerst mindestens ein Kind aus.“), never just „Nicht möglich.“
 - `noTooltip` only if the word says it all with no side effect („Abbrechen“, „Zurück“, a pure „Speichern“); never deleting, sending, releasing, icon buttons.
 - Menu entries: visible `description` or `noDescription: "<Grund>"` (`ui-kit/menu-item-needs-description`: `label` + `onClick`; not `kind`, `selected`, `retry: {…}`). Full stop optional; deleting says „sofort“ or „moto fragt vorher nach“.
 

@@ -26,6 +26,7 @@ import (
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -667,8 +668,8 @@ func TestApplyDeviations_SameSubstituteForTwoAbsent_WarningsNotDuplicated(t *tes
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 
 	require.Len(t, resp.Data.Warnings, 1, "the conflict must appear once, not once per absent position")
-	assert.Equal(t, inst.ID, resp.Data.Warnings[0].InstanceID)
-	assert.Equal(t, foreign.ID, resp.Data.Warnings[0].OtherID)
+	assert.Equal(t, ident.ID(inst.ID), resp.Data.Warnings[0].InstanceID)
+	assert.Equal(t, ident.ID(foreign.ID), resp.Data.Warnings[0].OtherID)
 
 }
 

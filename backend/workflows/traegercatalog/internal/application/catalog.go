@@ -141,7 +141,7 @@ func (s snapshot) prospective() release {
 	next := release{month: s.month, phase: s.phase.Draft, phaseVersion: nextVersion(s.phase.ReleasedVersion, s.phase.Released != nil && sameJSON(*s.phase.Released, s.phase.Draft)), offerings: map[int64]offeringRelease{}}
 	for _, offering := range s.offerings {
 		unchanged := offering.Released != nil && sameJSON(*offering.Released, offering.Draft)
-		next.offerings[offering.ID] = offeringRelease{version: nextVersion(offering.ReleasedVersion, unchanged), draft: offering.Draft}
+		next.offerings[offering.ID.Int64()] = offeringRelease{version: nextVersion(offering.ReleasedVersion, unchanged), draft: offering.Draft}
 	}
 	return next
 }

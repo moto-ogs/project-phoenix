@@ -32,6 +32,7 @@ import (
 	supervisiondashboardCompose "github.com/moto-ogs/project-phoenix/modules/supervisiondashboard/compose"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	calendarpkg "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // SupervisionCallerContext is the Identity & Access caller context the
@@ -168,12 +169,12 @@ func (y supervisionYard) Status(ctx context.Context, staffID int64) (*supervisio
 	}
 	result := &supervisiondashboard.SchulhofStatus{
 		Exists:            status.Exists,
-		RoomID:            status.RoomID,
+		RoomID:            (*ident.ID)(status.RoomID),
 		RoomName:          status.RoomName,
-		ActivityGroupID:   status.ActivityGroupID,
-		ActiveGroupID:     status.ActiveGroupID,
+		ActivityGroupID:   (*ident.ID)(status.ActivityGroupID),
+		ActiveGroupID:     (*ident.ID)(status.ActiveGroupID),
 		IsUserSupervising: status.IsUserSupervising,
-		SupervisionID:     status.SupervisionID,
+		SupervisionID:     (*ident.ID)(status.SupervisionID),
 		SupervisorCount:   status.SupervisorCount,
 		StudentCount:      status.StudentCount,
 	}
@@ -183,7 +184,7 @@ func (y supervisionYard) Status(ctx context.Context, staffID int64) (*supervisio
 		result.Supervisors = make([]supervisiondashboard.Supervisor, 0, len(status.Supervisors))
 		for _, supervisor := range status.Supervisors {
 			result.Supervisors = append(result.Supervisors, supervisiondashboard.Supervisor{
-				ID: supervisor.ID, StaffID: supervisor.StaffID, Name: supervisor.Name, IsCurrentUser: supervisor.IsCurrentUser,
+				ID: ident.ID(supervisor.ID), StaffID: ident.ID(supervisor.StaffID), Name: supervisor.Name, IsCurrentUser: supervisor.IsCurrentUser,
 			})
 		}
 	}
@@ -459,8 +460,8 @@ func (s supervisionSchedule) ActiveSessions(ctx context.Context, date supervisio
 	}
 	return owners.CalendarMapSlice(sessions, func(session timetable.OperationActiveSession) supervisiondashboard.ActiveSession {
 		return supervisiondashboard.ActiveSession{
-			ActiveGroupID: session.ActiveGroupID,
-			InstanceID:    session.InstanceID,
+			ActiveGroupID: ident.ID(session.ActiveGroupID),
+			InstanceID:    ident.ID(session.InstanceID),
 			Title:         session.Title,
 			StartTime:     session.StartTime,
 			EndTime:       session.EndTime,

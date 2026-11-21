@@ -254,7 +254,7 @@ func TestResolveEmptyRosterReason_ExplainsOfferingDerivedEmptyOccurrence(t *test
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			instance := timetable.ScheduledInstance{Date: tt.date, CalendarPeriodID: &periodID}
+			instance := timetable.ScheduledInstance{Date: tt.date, CalendarPeriodID: (*ident.ID)(&periodID)}
 			reason := resource.resolveEmptyRosterReason(
 				context.Background(), instance, metadata, nil,
 				make(map[int64]timetable.EmptyOfferingRosterExplainer),
@@ -268,7 +268,7 @@ func TestResolveEmptyRosterReason_ExplainsOfferingDerivedEmptyOccurrence(t *test
 
 	populated := resource.resolveEmptyRosterReason(
 		context.Background(),
-		timetable.ScheduledInstance{Date: calendar.NewDate(2026, 8, 10), CalendarPeriodID: &periodID},
+		timetable.ScheduledInstance{Date: calendar.NewDate(2026, 8, 10), CalendarPeriodID: (*ident.ID)(&periodID)},
 		metadata,
 		[]timetable.ScheduledParticipant{{StudentID: sourceID + 2}},
 		make(map[int64]timetable.EmptyOfferingRosterExplainer),
@@ -668,10 +668,10 @@ func TestListInstances_IncludesWindowConflictWarnings(t *testing.T) {
 	require.Len(t, warningsA, 1)
 	require.Len(t, warningsB, 1)
 	assert.Equal(t, timetable.ConflictKindStudent, warningsA[0].Kind)
-	assert.Equal(t, student.ID, warningsA[0].ResourceID)
+	assert.Equal(t, ident.ID(student.ID), warningsA[0].ResourceID)
 	assert.True(t, warningsA[0].CanOverride)
-	assert.Equal(t, instB.ID, warningsA[0].ConflictingInstanceID)
-	assert.Equal(t, instA.ID, warningsB[0].ConflictingInstanceID)
+	assert.Equal(t, ident.ID(instB.ID), warningsA[0].ConflictingInstanceID)
+	assert.Equal(t, ident.ID(instA.ID), warningsB[0].ConflictingInstanceID)
 	assert.NotEmpty(t, warningsA[0].Fingerprint)
 	assert.Equal(t, warningsA[0].Fingerprint, warningsB[0].Fingerprint,
 		"mirrored warnings must share one fingerprint")

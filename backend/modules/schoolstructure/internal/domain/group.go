@@ -6,18 +6,19 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 var ErrNotFound = errors.New("group not found")
 
 // Group is an education group (Klasse/Gruppe) of education.groups.
 type Group struct {
-	ID        int64     `json:"id"`
+	ID        ident.ID  `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
-	TenantID  int64     `json:"tenant_id"`
+	TenantID  ident.ID  `json:"tenant_id"`
 	Name      string    `json:"name"`
-	RoomID    *int64    `json:"room_id,omitempty"`
+	RoomID    *ident.ID `json:"room_id,omitempty"`
 
 	// Room is the group's room as the Facilities owner resolves it; the
 	// room-enriched reads fill it, the others leave it nil.
@@ -37,7 +38,7 @@ func (g *Group) Validate() error {
 // room-enriched group reads carry it (#2665). facilities.rooms belongs to
 // that owner; School Structure only keeps this projection.
 type GroupRoom struct {
-	ID        int64     `json:"id"`
+	ID        ident.ID  `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Name      string    `json:"name"`

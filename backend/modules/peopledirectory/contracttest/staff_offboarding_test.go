@@ -258,7 +258,7 @@ func TestOffboardStaff_CleanupIntentFailureRestoresAccessAndAllOwnerWrites(t *te
 	person, err := testpkg.TenantQuery1(t, sc.ctx, testpkg.SetupTestDB(t), sc.reposPeople.Person.FindByID, any(staff.PersonID))
 	require.NoError(t, err)
 	require.NotNil(t, person.AccountID)
-	require.Equal(t, account.ID, *person.AccountID)
+	require.Equal(t, ident.ID(account.ID), *person.AccountID)
 	var roleCount int
 	require.NoError(t, sc.db.NewSelect().TableExpr("auth.account_roles").ColumnExpr("count(*)").
 		Where("account_id = ?", account.ID).Where("tenant_id = ?", testpkg.Tenant(t)).Scan(sc.ctx, &roleCount))
@@ -1370,7 +1370,7 @@ func TestOffboardStaff_ReleasesTransponderForTheNextPerson(t *testing.T) {
 	holder, err := testpkg.TenantQuery1(t, sc.ctx, sc.db, persons.FindByTagID, card.ID)
 	require.NoError(t, err)
 	require.NotNil(t, holder)
-	assert.Equal(t, next.ID, holder.ID)
+	assert.Equal(t, ident.ID(next.ID), holder.ID)
 }
 
 // TestOffboardStaff_LocksAccountBeforeRevokingRoles pins the LOCK ORDER the

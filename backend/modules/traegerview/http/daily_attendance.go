@@ -98,7 +98,7 @@ var dailyAttendanceStatus = map[string]string{
 func dailyAttendanceTable(export traegerview.DailyAttendanceExport) common.ListTable {
 	schools := make(map[int64]traegerview.TraegerSchool, len(export.Schools))
 	for _, school := range export.Schools {
-		schools[school.ID] = school
+		schools[school.ID.Int64()] = school
 	}
 	rows := make([][]string, 0, len(export.Records))
 	number, last := 0, struct {

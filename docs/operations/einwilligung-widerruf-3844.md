@@ -215,7 +215,14 @@ lesen darf jede Person mit vollem Zugriff auf das Kind. Wirkung im Code:
   room_history_stop`. Weder Räume noch Zeiten noch Stimmungen werden dabei
   protokolliert.
 - Ein schon beendeter Stundenplantermin, in dem das Kind war, lässt sich
-  wieder öffnen; das gestoppte Kind kommt dabei nicht zurück in den Termin.
+  wieder öffnen; das gestoppte Kind kommt dabei weder mit Raum noch mit
+  Anwesenheit zurück in den Termin. Es bleibt so, wie der Abschluss es
+  hinterlassen hat, bis es sich wieder anmeldet.
+- **Grenzen:** Der Stopp gilt für den Datensatz des Kindes an dieser Schule.
+  Ein Ferienkind an einer anderen Schule hat dort einen eigenen Datensatz;
+  dort muss der Stopp gesondert gesetzt werden. Ein im selben Moment
+  nachgetragener, schon abgeschlossener Raumbesuch kann den Stopp überleben;
+  erneutes Aufheben und Setzen entfernt ihn.
 
 Der zugehörige Personal-API-Weg ist `GET`/`PUT /students/{id}/privacy-consent`
 (`users:read` bzw. `users:update` plus Kinderzugriff). Auch der Kinderimport

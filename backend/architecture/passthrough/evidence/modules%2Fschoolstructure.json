@@ -121,7 +121,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (r *GroupRoomDirectory) ListGroupRooms(ctx context.Context) ([]*schoolstructure.GroupRoomAssignment, error) {\n\trows, err := r.records.List(ctx, nil)\n\tif rows == nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]*schoolstructure.GroupRoomAssignment, len(rows))\n\tfor i, row := range rows {\n\t\tif row != nil {\n\t\t\tresult[i] = \u0026schoolstructure.GroupRoomAssignment{ID: row.ID, RoomID: row.RoomID}\n\t\t}\n\t}\n\treturn result, err\n}",
+      "evidence": "func (r *GroupRoomDirectory) ListGroupRooms(ctx context.Context) ([]*schoolstructure.GroupRoomAssignment, error) {\n\trows, err := r.records.List(ctx, nil)\n\tif rows == nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]*schoolstructure.GroupRoomAssignment, len(rows))\n\tfor i, row := range rows {\n\t\tif row != nil {\n\t\t\tresult[i] = \u0026schoolstructure.GroupRoomAssignment{ID: row.ID.Int64(), RoomID: (*int64)(row.RoomID)}\n\t\t}\n\t}\n\treturn result, err\n}",
       "form": "unclassified-evidence",
       "id": "modules/schoolstructure/internal/application/GroupRoomDirectory.ListGroupRooms",
       "owner": "modules/schoolstructure"

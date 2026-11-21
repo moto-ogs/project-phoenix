@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/appointments"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -76,17 +77,17 @@ func TestModuleRunsAppointmentLifecycleAndIsolatesBothTables(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Positive(t, created.ID)
-	assert.Equal(t, testpkg.Tenant(t), created.TenantID)
+	assert.Equal(t, ident.ID(testpkg.Tenant(t)), created.TenantID)
 	assert.Equal(t, "Planung", created.Title)
 	assert.Equal(t, appointments.OverviewVisibilityOrganizer, created.OverviewVisibility)
 	require.Len(t, targets, 1)
 	assert.Positive(t, targets[0].ID)
 	assert.Equal(t, created.ID, targets[0].AppointmentID)
 
-	found, err := module.FindAppointment(ctx, created.ID)
+	found, err := module.FindAppointment(ctx, created.ID.Int64())
 	require.NoError(t, err)
 	assert.Equal(t, created, found)
-	foundTargets, err := module.FindAppointmentTargets(ctx, created.ID)
+	foundTargets, err := module.FindAppointmentTargets(ctx, created.ID.Int64())
 	require.NoError(t, err)
 	assert.Equal(t, targets, foundTargets)
 
@@ -97,12 +98,12 @@ func TestModuleRunsAppointmentLifecycleAndIsolatesBothTables(t *testing.T) {
 	}
 	require.NoError(t, module.CreateRecurrenceRule(ctx, rule))
 	assert.Positive(t, rule.ID)
-	assert.Equal(t, testpkg.Tenant(t), rule.TenantID)
+	assert.Equal(t, ident.ID(testpkg.Tenant(t)), rule.TenantID)
 	assert.Equal(t, []string{"monday"}, rule.Weekdays)
-	foundRule, err := module.FindRecurrenceRule(ctx, created.ID)
+	foundRule, err := module.FindRecurrenceRule(ctx, created.ID.Int64())
 	require.NoError(t, err)
 	assert.Equal(t, rule, foundRule)
-	rules, err := module.FindRecurrenceRules(ctx, []int64{created.ID})
+	rules, err := module.FindRecurrenceRules(ctx, []int64{created.ID.Int64()})
 	require.NoError(t, err)
 	assert.Equal(t, []*appointments.RecurrenceRule{rule}, rules)
 
@@ -110,20 +111,20 @@ func TestModuleRunsAppointmentLifecycleAndIsolatesBothTables(t *testing.T) {
 	startDate := appointments.NewDate(2030, time.January, 9)
 	startClock := time.Date(1, time.January, 1, 8, 30, 0, 0, time.FixedZone("source", 3600))
 	override := &appointments.AppointmentOccurrenceOverride{
-		AppointmentID: created.ID, OccurrenceDate: movedDate, StartDate: &startDate, StartTime: &startClock,
+		AppointmentID: created.ID.Int64(), OccurrenceDate: movedDate, StartDate: &startDate, StartTime: &startClock,
 	}
 	require.NoError(t, module.CreateOccurrenceOverride(ctx, override))
 	assert.Positive(t, override.ID)
 	assert.Equal(t, testpkg.Tenant(t), override.TenantID)
 	require.NotNil(t, override.StartTime)
 	assert.Equal(t, 8, override.StartTime.Hour(), "wall-clock hour must not shift through Postgres")
-	foundOverrides, err := module.FindOccurrenceOverrides(ctx, []int64{created.ID}, []appointments.Date{movedDate})
+	foundOverrides, err := module.FindOccurrenceOverrides(ctx, []int64{created.ID.Int64()}, []appointments.Date{movedDate})
 	require.NoError(t, err)
 	assert.Equal(t, []*appointments.AppointmentOccurrenceOverride{override}, foundOverrides)
-	movedOverrides, err := module.FindOccurrenceOverridesByStartDates(ctx, []int64{created.ID}, []appointments.Date{startDate})
+	movedOverrides, err := module.FindOccurrenceOverridesByStartDates(ctx, []int64{created.ID.Int64()}, []appointments.Date{startDate})
 	require.NoError(t, err)
 	assert.Equal(t, foundOverrides, movedOverrides)
-	cancelledOverrides, err := module.FindCancelledOccurrenceOverrides(ctx, []int64{created.ID})
+	cancelledOverrides, err := module.FindCancelledOccurrenceOverrides(ctx, []int64{created.ID.Int64()})
 	require.NoError(t, err)
 	assert.Empty(t, cancelledOverrides)
 
@@ -134,72 +135,72 @@ func TestModuleRunsAppointmentLifecycleAndIsolatesBothTables(t *testing.T) {
 
 	otherCtx, otherTenantID := otherTenantContext(t, db)
 	otherStaff := testpkg.CreateTestStaffForTenant(t, db, otherTenantID, "Fremde", "Planerin")
-	_, err = module.FindAppointment(otherCtx, created.ID)
+	_, err = module.FindAppointment(otherCtx, created.ID.Int64())
 	require.ErrorIs(t, err, appointments.ErrAppointmentNotFound)
-	foreignTargets, err := module.FindAppointmentTargets(otherCtx, created.ID)
+	foreignTargets, err := module.FindAppointmentTargets(otherCtx, created.ID.Int64())
 	require.NoError(t, err)
 	assert.Empty(t, foreignTargets)
-	foreignRule, err := module.FindRecurrenceRule(otherCtx, created.ID)
+	foreignRule, err := module.FindRecurrenceRule(otherCtx, created.ID.Int64())
 	require.NoError(t, err)
 	assert.Nil(t, foreignRule)
-	require.NoError(t, module.DeleteRecurrenceRule(otherCtx, created.ID))
-	survivingRule, err := module.FindRecurrenceRule(ctx, created.ID)
+	require.NoError(t, module.DeleteRecurrenceRule(otherCtx, created.ID.Int64()))
+	survivingRule, err := module.FindRecurrenceRule(ctx, created.ID.Int64())
 	require.NoError(t, err)
 	assert.Equal(t, rule, survivingRule, "another tenant cannot delete the recurrence rule")
-	foreignOverrides, err := module.FindOccurrenceOverrides(otherCtx, []int64{created.ID}, []appointments.Date{movedDate})
+	foreignOverrides, err := module.FindOccurrenceOverrides(otherCtx, []int64{created.ID.Int64()}, []appointments.Date{movedDate})
 	require.NoError(t, err)
 	assert.Empty(t, foreignOverrides)
-	_, err = module.CancelAppointmentOccurrence(otherCtx, created.ID, appointments.NewDate(2030, time.January, 14))
+	_, err = module.CancelAppointmentOccurrence(otherCtx, created.ID.Int64(), appointments.NewDate(2030, time.January, 14))
 	require.Error(t, err, "another tenant cannot write an override for this appointment")
 	_, err = module.UpdateAppointment(otherCtx, appointments.UpdateAppointment{
-		ID:                created.ID,
+		ID:                created.ID.Int64(),
 		AppointmentFields: appointmentFields(otherStaff.ID, "Fremder Titel"),
 	})
 	require.ErrorIs(t, err, appointments.ErrAppointmentLifecycleConflict)
 
 	updatedFields := appointmentFields(staff.ID, "Neue Planung")
 	updatedFields.NotifyGuardians = true
-	updated, err := module.UpdateAppointment(ctx, appointments.UpdateAppointment{ID: created.ID, AppointmentFields: updatedFields})
+	updated, err := module.UpdateAppointment(ctx, appointments.UpdateAppointment{ID: created.ID.Int64(), AppointmentFields: updatedFields})
 	require.NoError(t, err)
 	assert.Equal(t, "Neue Planung", updated.Title)
 	assert.True(t, updated.NotifyGuardians)
 	assert.Equal(t, created.Revision+1, updated.Revision)
 
 	cancelDate := appointments.NewDate(2030, time.January, 14)
-	transitioned, err := module.CancelAppointmentOccurrence(ctx, created.ID, cancelDate)
+	transitioned, err := module.CancelAppointmentOccurrence(ctx, created.ID.Int64(), cancelDate)
 	require.NoError(t, err)
 	assert.True(t, transitioned)
-	afterOccurrenceCancel, err := module.FindAppointment(ctx, created.ID)
+	afterOccurrenceCancel, err := module.FindAppointment(ctx, created.ID.Int64())
 	require.NoError(t, err)
 	assert.Equal(t, updated.Revision+1, afterOccurrenceCancel.Revision)
-	transitioned, err = module.CancelAppointmentOccurrence(ctx, created.ID, cancelDate)
+	transitioned, err = module.CancelAppointmentOccurrence(ctx, created.ID.Int64(), cancelDate)
 	require.NoError(t, err)
 	assert.False(t, transitioned, "cancelling one occurrence twice is idempotent")
-	afterIdempotentRetry, err := module.FindAppointment(ctx, created.ID)
+	afterIdempotentRetry, err := module.FindAppointment(ctx, created.ID.Int64())
 	require.NoError(t, err)
 	assert.Equal(t, afterOccurrenceCancel.Revision, afterIdempotentRetry.Revision)
-	cancelledOverrides, err = module.FindCancelledOccurrenceOverrides(ctx, []int64{created.ID})
+	cancelledOverrides, err = module.FindCancelledOccurrenceOverrides(ctx, []int64{created.ID.Int64()})
 	require.NoError(t, err)
 	require.Len(t, cancelledOverrides, 1)
 	assert.Equal(t, cancelDate, cancelledOverrides[0].OccurrenceDate)
 
-	transitioned, err = module.CancelAppointment(ctx, created.ID)
+	transitioned, err = module.CancelAppointment(ctx, created.ID.Int64())
 	require.NoError(t, err)
 	assert.True(t, transitioned)
-	transitioned, err = module.CancelAppointment(ctx, created.ID)
+	transitioned, err = module.CancelAppointment(ctx, created.ID.Int64())
 	require.NoError(t, err)
 	assert.False(t, transitioned, "cancelling twice is idempotent")
 
-	require.NoError(t, module.SoftDeleteAppointment(ctx, created.ID))
+	require.NoError(t, module.SoftDeleteAppointment(ctx, created.ID.Int64()))
 	hidden, err := module.ListAppointmentsVisibleToStaff(ctx, staff.ID, created.StartDate, created.EndDate)
 	require.NoError(t, err)
 	assert.Empty(t, hidden)
-	deleted, err := module.FindAppointment(ctx, created.ID)
+	deleted, err := module.FindAppointment(ctx, created.ID.Int64())
 	require.NoError(t, err)
 	assert.NotNil(t, deleted.DeletedAt, "feed tombstones remain directly readable")
 
-	require.NoError(t, module.DeleteAppointment(ctx, created.ID))
-	_, err = module.FindAppointment(ctx, created.ID)
+	require.NoError(t, module.DeleteAppointment(ctx, created.ID.Int64()))
+	_, err = module.FindAppointment(ctx, created.ID.Int64())
 	require.ErrorIs(t, err, appointments.ErrAppointmentNotFound)
 
 	log.mu.Lock()
@@ -252,16 +253,16 @@ func TestCompoundWritesRollbackAndRetryWithoutDuplicates(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, visible, 1, "retry creates exactly one appointment")
 
-	_, err = module.ReplaceAppointmentTargets(ctx, created.ID, []appointments.AppointmentTargetFields{{TargetType: "not_a_target"}})
+	_, err = module.ReplaceAppointmentTargets(ctx, created.ID.Int64(), []appointments.AppointmentTargetFields{{TargetType: "not_a_target"}})
 	require.Error(t, err)
-	afterFailure, findErr := module.FindAppointmentTargets(ctx, created.ID)
+	afterFailure, findErr := module.FindAppointmentTargets(ctx, created.ID.Int64())
 	require.NoError(t, findErr)
 	assert.Equal(t, originalTargets, afterFailure, "a failed replacement must roll back its delete")
 
-	retriedTargets, err := module.ReplaceAppointmentTargets(ctx, created.ID, nil)
+	retriedTargets, err := module.ReplaceAppointmentTargets(ctx, created.ID.Int64(), nil)
 	require.NoError(t, err)
 	assert.Empty(t, retriedTargets)
-	afterRetry, err := module.FindAppointmentTargets(ctx, created.ID)
+	afterRetry, err := module.FindAppointmentTargets(ctx, created.ID.Int64())
 	require.NoError(t, err)
 	assert.Empty(t, afterRetry)
 }
@@ -290,22 +291,22 @@ func TestOccurrenceCancellationRollsBackWhenRevisionBumpFails(t *testing.T) {
 	`)
 	require.NoError(t, err)
 
-	transitioned, err := module.CancelAppointmentOccurrence(ctx, created.ID, date)
+	transitioned, err := module.CancelAppointmentOccurrence(ctx, created.ID.Int64(), date)
 	require.Error(t, err)
 	assert.False(t, transitioned, "a rolled-back transition must not escape the command")
-	overrides, findErr := module.FindOccurrenceOverrides(ctx, []int64{created.ID}, []appointments.Date{date})
+	overrides, findErr := module.FindOccurrenceOverrides(ctx, []int64{created.ID.Int64()}, []appointments.Date{date})
 	require.NoError(t, findErr)
 	assert.Empty(t, overrides, "the override insert must roll back with the failed revision bump")
-	afterFailure, findErr := module.FindAppointment(ctx, created.ID)
+	afterFailure, findErr := module.FindAppointment(ctx, created.ID.Int64())
 	require.NoError(t, findErr)
 	assert.Equal(t, created.Revision, afterFailure.Revision)
 
 	_, err = db.ExecContext(context.Background(), `DROP TRIGGER fail_appointment_revision_bump ON calendar.appointments`)
 	require.NoError(t, err)
-	transitioned, err = module.CancelAppointmentOccurrence(ctx, created.ID, date)
+	transitioned, err = module.CancelAppointmentOccurrence(ctx, created.ID.Int64(), date)
 	require.NoError(t, err)
 	assert.True(t, transitioned)
-	overrides, err = module.FindOccurrenceOverrides(ctx, []int64{created.ID}, []appointments.Date{date})
+	overrides, err = module.FindOccurrenceOverrides(ctx, []int64{created.ID.Int64()}, []appointments.Date{date})
 	require.NoError(t, err)
 	require.Len(t, overrides, 1, "retry creates exactly one override")
 }
@@ -324,17 +325,17 @@ func TestAppointmentRecipientsAreAtomicTenantScopedAndDeduplicateReminderPushes(
 	})
 	require.NoError(t, err)
 
-	recipients, links, err := module.CreateAppointmentRecipients(ctx, created.ID, []appointments.AppointmentRecipientFields{
+	recipients, links, err := module.CreateAppointmentRecipients(ctx, created.ID.Int64(), []appointments.AppointmentRecipientFields{
 		{RecipientType: appointments.RecipientTypeStaff, StaffID: &staff.ID, Status: appointments.ResponseStatusPending},
 		{RecipientType: appointments.RecipientTypeGuardianProfile, GuardianProfileID: &guardian.ID, Status: appointments.ResponseStatusPending, StudentIDs: []int64{student.ID, student.ID}},
 	})
 	require.NoError(t, err)
 	require.Len(t, recipients, 2)
 	require.Len(t, links, 1, "duplicate student IDs must not create duplicate links")
-	assert.Equal(t, testpkg.Tenant(t), recipients[0].TenantID)
+	assert.Equal(t, ident.ID(testpkg.Tenant(t)), recipients[0].TenantID)
 	assert.Equal(t, testpkg.Tenant(t), links[0].TenantID)
 	assert.Equal(t, student.ID, links[0].StudentID)
-	assertRecipientPersistenceAndResponse(t, module, ctx, created.ID, student.ID, recipients, links)
+	assertRecipientPersistenceAndResponse(t, module, ctx, created.ID.Int64(), student.ID, recipients, links)
 	assertReminderClaimLifecycle(t, module, ctx, created, guardian.ID, log)
 }
 
@@ -344,7 +345,7 @@ func assertRecipientPersistenceAndResponse(t *testing.T, module appointments.Own
 	for _, recipient := range recipients {
 		value := *recipient
 		for _, link := range links {
-			if link.RecipientID == value.ID {
+			if ident.ID(link.RecipientID) == value.ID {
 				value.StudentIDs = append(value.StudentIDs, link.StudentID)
 			}
 		}
@@ -368,12 +369,12 @@ func assertRecipientPersistenceAndResponse(t *testing.T, module appointments.Own
 		guardianRecipient = recipients[0]
 	}
 	require.NotNil(t, guardianRecipient.GuardianProfileID)
-	require.NoError(t, module.UpdateAppointmentRecipientResponse(ctx, appointments.RecipientResponse{RecipientID: guardianRecipient.ID, Status: appointments.ResponseStatusAccepted}))
-	responded, err := module.FindAppointmentRecipient(ctx, guardianRecipient.ID)
+	require.NoError(t, module.UpdateAppointmentRecipientResponse(ctx, appointments.RecipientResponse{RecipientID: guardianRecipient.ID.Int64(), Status: appointments.ResponseStatusAccepted}))
+	responded, err := module.FindAppointmentRecipient(ctx, guardianRecipient.ID.Int64())
 	require.NoError(t, err)
 	assert.Equal(t, appointments.ResponseStatusAccepted, responded.Status)
 	assert.NotNil(t, responded.RespondedAt)
-	assertOccurrenceResponses(t, module, ctx, guardianRecipient.ID)
+	assertOccurrenceResponses(t, module, ctx, guardianRecipient.ID.Int64())
 }
 
 // assertOccurrenceResponses answers single dates of a series apart from the
@@ -401,14 +402,14 @@ func assertOccurrenceResponses(t *testing.T, module appointments.Owner, ctx cont
 
 func assertReminderClaimLifecycle(t *testing.T, module appointments.Owner, ctx context.Context, appointment *appointments.Appointment, guardianID int64, log *observationLog) {
 	t.Helper()
-	claimed, err := module.ClaimReminderPushDelivery(ctx, appointment.ID, appointment.Revision, appointment.StartDate, guardianID)
+	claimed, err := module.ClaimReminderPushDelivery(ctx, appointment.ID.Int64(), appointment.Revision, appointment.StartDate, guardianID)
 	require.NoError(t, err)
 	assert.True(t, claimed)
-	claimed, err = module.ClaimReminderPushDelivery(ctx, appointment.ID, appointment.Revision, appointment.StartDate, guardianID)
+	claimed, err = module.ClaimReminderPushDelivery(ctx, appointment.ID.Int64(), appointment.Revision, appointment.StartDate, guardianID)
 	require.NoError(t, err)
 	assert.False(t, claimed, "the same reminder delivery must be claimed once")
-	require.NoError(t, module.ReleaseReminderPushDelivery(ctx, appointment.ID, appointment.Revision, appointment.StartDate, guardianID))
-	claimed, err = module.ClaimReminderPushDelivery(ctx, appointment.ID, appointment.Revision, appointment.StartDate, guardianID)
+	require.NoError(t, module.ReleaseReminderPushDelivery(ctx, appointment.ID.Int64(), appointment.Revision, appointment.StartDate, guardianID))
+	claimed, err = module.ClaimReminderPushDelivery(ctx, appointment.ID.Int64(), appointment.Revision, appointment.StartDate, guardianID)
 	require.NoError(t, err)
 	assert.True(t, claimed, "a released failed delivery must be retryable")
 
@@ -449,7 +450,7 @@ func seedAppointmentRecipientTables(t *testing.T, db *bun.DB, module appointment
 	guardian := testpkg.CreateTestGuardianProfileForTenant(t, db, tenantID, "RLS", label, label+"@recipient-rls.example")
 	created, _, err := module.CreateAppointment(ctx, appointments.CreateAppointment{AppointmentFields: appointmentFields(staff.ID, "RLS "+label)})
 	require.NoError(t, err)
-	recipients, links, err := module.CreateAppointmentRecipients(ctx, created.ID, []appointments.AppointmentRecipientFields{
+	recipients, links, err := module.CreateAppointmentRecipients(ctx, created.ID.Int64(), []appointments.AppointmentRecipientFields{
 		{RecipientType: appointments.RecipientTypeStaff, StaffID: &staff.ID, Status: appointments.ResponseStatusPending},
 		{RecipientType: appointments.RecipientTypeGuardianProfile, GuardianProfileID: &guardian.ID, Status: appointments.ResponseStatusPending, StudentIDs: []int64{student.ID}},
 	})
@@ -457,7 +458,7 @@ func seedAppointmentRecipientTables(t *testing.T, db *bun.DB, module appointment
 	require.Len(t, links, 1)
 	for _, recipient := range recipients {
 		if recipient.GuardianProfileID != nil {
-			return recipient.ID
+			return recipient.ID.Int64()
 		}
 	}
 	t.Fatal("guardian recipient was not persisted")
@@ -509,9 +510,9 @@ func TestAppointmentRecipientWritesRollbackAfterEachAuthoritativeWriteAndRetry(t
 		FOR EACH ROW EXECUTE FUNCTION fail_appointment_recipient_insert();
 	`)
 	require.NoError(t, err)
-	_, _, err = module.CreateAppointmentRecipients(ctx, created.ID, fields)
+	_, _, err = module.CreateAppointmentRecipients(ctx, created.ID.Int64(), fields)
 	require.Error(t, err)
-	recipients, findErr := module.FindAppointmentRecipients(ctx, created.ID)
+	recipients, findErr := module.FindAppointmentRecipients(ctx, created.ID.Int64())
 	require.NoError(t, findErr)
 	assert.Empty(t, recipients)
 	_, err = db.ExecContext(context.Background(), `DROP TRIGGER fail_appointment_recipient_insert ON calendar.appointment_recipients`)
@@ -526,19 +527,19 @@ func TestAppointmentRecipientWritesRollbackAfterEachAuthoritativeWriteAndRetry(t
 		FOR EACH ROW EXECUTE FUNCTION fail_appointment_recipient_student_insert();
 	`)
 	require.NoError(t, err)
-	_, _, err = module.CreateAppointmentRecipients(ctx, created.ID, fields)
+	_, _, err = module.CreateAppointmentRecipients(ctx, created.ID.Int64(), fields)
 	require.Error(t, err)
-	recipients, findErr = module.FindAppointmentRecipients(ctx, created.ID)
+	recipients, findErr = module.FindAppointmentRecipients(ctx, created.ID.Int64())
 	require.NoError(t, findErr)
 	assert.Empty(t, recipients, "a failed student-link insert must roll back the recipient insert")
 	_, err = db.ExecContext(context.Background(), `DROP TRIGGER fail_appointment_recipient_student_insert ON calendar.appointment_recipient_students`)
 	require.NoError(t, err)
 
-	recipients, links, err := module.CreateAppointmentRecipients(ctx, created.ID, fields)
+	recipients, links, err := module.CreateAppointmentRecipients(ctx, created.ID.Int64(), fields)
 	require.NoError(t, err)
 	require.Len(t, recipients, 1, "retry must create one recipient")
 	require.Len(t, links, 1, "retry must create one student link")
-	stored, err := module.FindAppointmentRecipients(ctx, created.ID)
+	stored, err := module.FindAppointmentRecipients(ctx, created.ID.Int64())
 	require.NoError(t, err)
 	assert.Len(t, stored, 1)
 }
@@ -557,27 +558,27 @@ func TestReadFailuresAreNotTurnedIntoNotFound(t *testing.T) {
 	}
 	require.NoError(t, module.CreateRecurrenceRule(testpkg.Ctx(t), rule))
 	override := &appointments.AppointmentOccurrenceOverride{
-		AppointmentID: created.ID, OccurrenceDate: created.StartDate, Cancelled: true,
+		AppointmentID: created.ID.Int64(), OccurrenceDate: created.StartDate, Cancelled: true,
 	}
 	require.NoError(t, module.CreateOccurrenceOverride(testpkg.Ctx(t), override))
 	ctx, cancel := context.WithCancel(testpkg.Ctx(t))
 	cancel()
 
-	_, err = module.FindAppointment(ctx, created.ID)
+	_, err = module.FindAppointment(ctx, created.ID.Int64())
 	require.Error(t, err)
 	assert.ErrorIs(t, err, context.Canceled)
 	assert.NotErrorIs(t, err, appointments.ErrAppointmentNotFound)
-	_, err = module.FindRecurrenceRule(ctx, created.ID)
+	_, err = module.FindRecurrenceRule(ctx, created.ID.Int64())
 	require.ErrorIs(t, err, context.Canceled)
-	_, err = module.FindOccurrenceOverrides(ctx, []int64{created.ID}, []appointments.Date{created.StartDate})
+	_, err = module.FindOccurrenceOverrides(ctx, []int64{created.ID.Int64()}, []appointments.Date{created.StartDate})
 	require.ErrorIs(t, err, context.Canceled)
-	_, err = module.FindAppointmentRecipients(ctx, created.ID)
+	_, err = module.FindAppointmentRecipients(ctx, created.ID.Int64())
 	require.ErrorIs(t, err, context.Canceled)
-	_, err = module.FindAppointmentRecipient(ctx, created.ID)
+	_, err = module.FindAppointmentRecipient(ctx, created.ID.Int64())
 	require.ErrorIs(t, err, context.Canceled)
-	_, err = module.FindAppointmentRecipientStudents(ctx, []int64{created.ID})
+	_, err = module.FindAppointmentRecipientStudents(ctx, []int64{created.ID.Int64()})
 	require.ErrorIs(t, err, context.Canceled)
-	_, err = module.CountAppointmentRecipientStudents(ctx, created.ID)
+	_, err = module.CountAppointmentRecipientStudents(ctx, created.ID.Int64())
 	require.ErrorIs(t, err, context.Canceled)
 }
 

@@ -163,7 +163,7 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 				require.Empty(t, row.Problems)
 			case "search":
 				var rows []struct {
-					ID                  int64
+					ID                  wireID
 					FirstName           string `json:"first_name"`
 					LastName            string `json:"last_name"`
 					Email               string
@@ -173,11 +173,11 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 				require.Len(t, rows, n)
 				seen := map[int64]bool{}
 				for _, row := range rows {
-					require.False(t, seen[row.ID])
-					seen[row.ID] = true
+					require.False(t, seen[int64(row.ID)])
+					seen[int64(row.ID)] = true
 					idx := -1
 					for i, id := range guardianIDs {
-						if id == row.ID {
+						if id == int64(row.ID) {
 							idx = i
 						}
 					}
@@ -195,19 +195,19 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 				}
 			case "detail", "phones":
 				type phone struct {
-					ID     int64
+					ID     wireID
 					Number string `json:"phone_number"`
 					Type   string `json:"phone_type"`
 				}
 				var rows []phone
 				if name == "detail" {
 					var row struct {
-						ID           int64
+						ID           wireID
 						FirstName    string  `json:"first_name"`
 						PhoneNumbers []phone `json:"phone_numbers"`
 					}
 					require.NoError(t, json.Unmarshal(envelope.Data, &row))
-					require.Equal(t, guardianIDs[0], row.ID)
+					require.Equal(t, guardianIDs[0], int64(row.ID))
 					require.Equal(t, "BudgetGuardian", row.FirstName)
 					rows = row.PhoneNumbers
 				} else {
@@ -217,7 +217,7 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 				got := map[int64]string{}
 				for _, row := range rows {
 					require.Equal(t, "mobile", row.Type)
-					got[row.ID] = row.Number
+					got[int64(row.ID)] = row.Number
 				}
 				require.Len(t, got, n)
 				for i, id := range phoneIDs {

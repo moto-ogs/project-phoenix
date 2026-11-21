@@ -9,6 +9,7 @@ import (
 	scheduleModels "github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain/schedulerecords"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // plannedNowAccess is what the caller may see and do on the day plan.
@@ -277,12 +278,12 @@ func (s *operations) mapPlannedInstance(candidate plannedNowCandidate, now time.
 	counts := s.plannedAttendanceCounts(inst, candidate.studentRows, careDay)
 	start := instanceStartAt(inst, now.Location())
 	mapped := timetable.OperationPlannedInstance{
-		ID:                    inst.ID,
+		ID:                    ident.ID(inst.ID),
 		Title:                 inst.Title,
 		Date:                  inst.Date.Format("2006-01-02"),
 		StartTime:             inst.StartTime.Format("15:04"),
 		EndTime:               inst.EndTime.Format("15:04"),
-		RoomID:                inst.RoomID,
+		RoomID:                ident.ID(inst.RoomID),
 		RoomName:              optionalText(candidate.display.RoomName),
 		ActivityType:          inst.TemplateType,
 		Status:                inst.Status,
@@ -295,7 +296,7 @@ func (s *operations) mapPlannedInstance(candidate plannedNowCandidate, now time.
 		PlannedStudentsCount:  counts.planned,
 		IsSpontaneous:         inst.IsSpontaneous,
 		Warnings:              []timetable.InstanceConflictWarning{},
-		ActiveGroupID:         inst.ActiveGroupID,
+		ActiveGroupID:         (*ident.ID)(inst.ActiveGroupID),
 		CancelReason:          inst.CancelReason,
 		PlanningTrackName:     optionalText(candidate.display.PlanningTrackName),
 		PlanningTrackColor:    optionalText(candidate.display.PlanningTrackColor),
@@ -306,10 +307,10 @@ func (s *operations) mapPlannedInstance(candidate plannedNowCandidate, now time.
 
 // applyPlannedStaff fills the assigned staff and the caller's own role.
 func applyPlannedStaff(mapped *timetable.OperationPlannedInstance, staffRows []*scheduleModels.InstanceStaff, currentStaffID int64) {
-	mapped.AssignedStaffIDs = make([]int64, 0, len(staffRows))
+	mapped.AssignedStaffIDs = ident.IDs(make([]int64, 0, len(staffRows)))
 	for _, row := range staffRows {
 		if !row.IsAbsent {
-			mapped.AssignedStaffIDs = append(mapped.AssignedStaffIDs, row.StaffID)
+			mapped.AssignedStaffIDs = append(mapped.AssignedStaffIDs, ident.ID(row.StaffID))
 		}
 		if currentStaffID > 0 && row.StaffID == currentStaffID {
 			mapped.IsAssigned = !row.IsAbsent

@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/uptrace/bun"
 )
 
@@ -27,15 +28,15 @@ type groupRow struct {
 
 func newGroupRow(group *domain.Group) *groupRow {
 	return &groupRow{
-		ID: group.ID, CreatedAt: group.CreatedAt, UpdatedAt: group.UpdatedAt,
-		TenantID: group.TenantID, Name: group.Name, RoomID: group.RoomID,
+		ID: group.ID.Int64(), CreatedAt: group.CreatedAt, UpdatedAt: group.UpdatedAt,
+		TenantID: group.TenantID.Int64(), Name: group.Name, RoomID: (*int64)(group.RoomID),
 	}
 }
 
 // copyTo writes the stored columns back onto the group, keeping its room.
 func (row *groupRow) copyTo(group *domain.Group) {
-	group.ID, group.CreatedAt, group.UpdatedAt = row.ID, row.CreatedAt, row.UpdatedAt
-	group.TenantID, group.Name, group.RoomID = row.TenantID, row.Name, row.RoomID
+	group.ID, group.CreatedAt, group.UpdatedAt = ident.ID(row.ID), row.CreatedAt, row.UpdatedAt
+	group.TenantID, group.Name, group.RoomID = ident.ID(row.TenantID), row.Name, (*ident.ID)(row.RoomID)
 }
 
 func (row *groupRow) group() *domain.Group {
@@ -82,7 +83,7 @@ func (r *GroupRepository) Create(ctx context.Context, group *domain.Group) error
 		return err
 	}
 	if group.TenantID == 0 {
-		group.TenantID = r.runtime.TenantID(ctx)
+		group.TenantID = ident.ID(r.runtime.TenantID(ctx))
 	}
 	row := newGroupRow(group)
 	ambientDB1, databaseErr1 := r.runtime.DB(ctx)
@@ -232,7 +233,7 @@ func (r *GroupRepository) FindByIDs(ctx context.Context, ids []int64) (map[int64
 	// Convert to map for O(1) lookups
 	result := make(map[int64]*domain.Group, len(groups))
 	for _, group := range groups {
-		result[group.ID] = group
+		result[group.ID.Int64()] = group
 	}
 
 	return result, nil
@@ -377,7 +378,7 @@ func (r *GroupRepository) FindByIDsWithRooms(ctx context.Context, ids []int64) (
 	}
 
 	for _, group := range groups {
-		result[group.ID] = group
+		result[group.ID.Int64()] = group
 	}
 	return result, nil
 }

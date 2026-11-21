@@ -153,10 +153,10 @@ func (p schoolIdentityProvisioner) ListAccountPersons(ctx context.Context, accou
 			continue
 		}
 		identity := identityPorts.AccountPersonIdentity{
-			ID: person.ID, TenantID: person.TenantID, FirstName: person.FirstName, LastName: person.LastName, Deleted: !peopledirectory.PersonIsLive(person.DeletedAt),
+			ID: person.ID.Int64(), TenantID: person.TenantID.Int64(), FirstName: person.FirstName, LastName: person.LastName, Deleted: !peopledirectory.PersonIsLive(person.DeletedAt),
 		}
 		if !identity.Deleted {
-			isStudent, err := p.personIsStudent(ctx, person.ID)
+			isStudent, err := p.personIsStudent(ctx, person.ID.Int64())
 			if err != nil {
 				return nil, err
 			}

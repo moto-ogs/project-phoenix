@@ -41,7 +41,7 @@ func (s *service) applyClassHandovers(ctx context.Context, projection *Dashboard
 	for i := range projection.PlannedNow {
 		for j := range projection.PlannedNow[i].RosterPreview {
 			row := &projection.PlannedNow[i].RosterPreview[j]
-			row.ClassHandover = mark(row.StudentID)
+			row.ClassHandover = mark(row.StudentID.Int64())
 		}
 	}
 	return nil
@@ -67,7 +67,7 @@ func handoverCandidateIDs(projection *DashboardProjection) []int64 {
 	}
 	for _, instance := range projection.PlannedNow {
 		for _, row := range instance.RosterPreview {
-			add(row.StudentID)
+			add(row.StudentID.Int64())
 		}
 	}
 	return ids

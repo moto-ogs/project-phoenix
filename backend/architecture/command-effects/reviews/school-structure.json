@@ -947,7 +947,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.ExternalCaregiverDirectory.ListExternalCaregivers",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "school-structure",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -957,7 +957,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.ExternalCaregiverDirectory.ListExternalCaregivers",
-      "reason": "Read-only newly exposed target: school-structure reaches modules/identityaccess.Owner.ListPendingSchoolInvitations (identity-access) through roots/owners.EducationExternalCaregivers.ListExternalCaregivers. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: school-structure reaches modules/identityaccess.Owner.ListPendingSchoolInvitations (identity-access) through roots/owners.EducationExternalCaregivers.ListExternalCaregivers. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "school-structure",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ListPendingSchoolInvitations",
       "target_owner": "identity-access"
@@ -967,7 +967,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.ExternalCaregiverDirectory.ListExternalCaregivers",
-      "reason": "Read-only newly exposed target: school-structure reaches modules/identityaccess.PendingInvitationsByPerson (identity-access) through roots/owners.EducationExternalCaregivers.ListExternalCaregivers. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: school-structure reaches modules/identityaccess.PendingInvitationsByPerson (identity-access) through roots/owners.EducationExternalCaregivers.ListExternalCaregivers. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "school-structure",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.PendingInvitationsByPerson",
       "target_owner": "identity-access"
@@ -977,7 +977,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.ExternalCaregiverDirectory.ListExternalCaregivers",
-      "reason": "Read-only newly exposed target: school-structure reaches modules/identityaccess.SchoolInvitations.ListPendingSchoolInvitations (identity-access) through roots/owners.EducationExternalCaregivers.ListExternalCaregivers. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: school-structure reaches modules/identityaccess.SchoolInvitations.ListPendingSchoolInvitations (identity-access) through roots/owners.EducationExternalCaregivers.ListExternalCaregivers. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "school-structure",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SchoolInvitations.ListPendingSchoolInvitations",
       "target_owner": "identity-access"
@@ -997,7 +997,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.ExternalCaregiverDirectory.ListExternalCaregivers",
-      "reason": "Read-only already reviewed target: school-structure reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through roots/owners.EducationExternalCaregivers.ListExternalCaregivers. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: school-structure reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through roots/owners.EducationExternalCaregivers.ListExternalCaregivers. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "school-structure",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -1047,7 +1047,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.ExternalCaregiverDirectory.ListExternalCaregivers",
-      "reason": "Read-only newly exposed target: school-structure reaches modules/schoolmembership.ExternalCaregiver (school-membership) through roots/owners.EducationExternalCaregivers.ListExternalCaregivers. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: school-structure reaches modules/schoolmembership.ExternalCaregiver (school-membership) through roots/owners.EducationExternalCaregivers.ListExternalCaregivers. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "school-structure",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ExternalCaregiver",
       "target_owner": "school-membership"
@@ -1399,7 +1399,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.RoomDirectory.FindRoom",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/facilities.Capability.FindRoom; modules/facilities.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed #6845: the binding now maps an archived room to ErrRoomNotFound so no group moves into it; still a read with no lock or write.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/facilities.Capability.FindRoom; modules/facilities.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed #6845: the binding now maps an archived room to ErrRoomNotFound so no group moves into it; still a read with no lock or write. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "school-structure",
       "target": "github.com/moto-ogs/project-phoenix/modules/facilities.Capability.FindRoom",
       "target_owner": "facilities"
@@ -1409,7 +1409,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.RoomDirectory.FindRoom",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/facilities.Catalog.FindRoom; modules/facilities.Catalog (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed #6845: the binding now maps an archived room to ErrRoomNotFound so no group moves into it; still a read with no lock or write.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/facilities.Catalog.FindRoom; modules/facilities.Catalog (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed #6845: the binding now maps an archived room to ErrRoomNotFound so no group moves into it; still a read with no lock or write. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "school-structure",
       "target": "github.com/moto-ogs/project-phoenix/modules/facilities.Catalog.FindRoom",
       "target_owner": "facilities"
@@ -1419,7 +1419,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.RoomDirectory.FindRoom",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/facilities.Query.FindRoom; modules/facilities/facilities.go:57. May-bind method surface, not a production-call/liveness claim. Re-reviewed #6845: the binding now maps an archived room to ErrRoomNotFound so no group moves into it; still a read with no lock or write.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/facilities.Query.FindRoom; modules/facilities/facilities.go:57. May-bind method surface, not a production-call/liveness claim. Re-reviewed #6845: the binding now maps an archived room to ErrRoomNotFound so no group moves into it; still a read with no lock or write. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "school-structure",
       "target": "github.com/moto-ogs/project-phoenix/modules/facilities.Query.FindRoom",
       "target_owner": "facilities"
@@ -1429,7 +1429,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.StaffDirectory.StaffExists",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "school-structure",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -1479,7 +1479,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.StaffDirectory.StaffExists",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "school-structure",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -1529,7 +1529,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.StaffLockStore.LockStaff",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "school-structure",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -1572,7 +1572,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.StaffLockStore.LockStaff",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "school-structure",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -1687,7 +1687,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.TeacherDirectory.ListTeachers",
-      "reason": "Reviewed teacher hydration extraction: the legacy detail/all-list paths still read School Membership ListStaff with their original tombstone filter, then resolve People persons through the extracted hydrateTeacherPersons helper. The new kiosk-only roster path is separate. This binding remains a tenant-scoped nonlocking read without writes or detached effects.",
+      "reason": "Reviewed teacher hydration extraction: the legacy detail/all-list paths still read School Membership ListStaff with their original tombstone filter, then resolve People persons through the extracted hydrateTeacherPersons helper. The new kiosk-only roster path is separate. This binding remains a tenant-scoped nonlocking read without writes or detached effects. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "school-structure",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -1707,7 +1707,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/application/groups.TeacherDirectory.ListTeachers",
-      "reason": "Reviewed teacher hydration extraction: the legacy detail/all-list paths still read School Membership ListStaff with their original tombstone filter, then resolve People persons through the extracted hydrateTeacherPersons helper. The new kiosk-only roster path is separate. This binding remains a tenant-scoped nonlocking read without writes or detached effects.",
+      "reason": "Reviewed teacher hydration extraction: the legacy detail/all-list paths still read School Membership ListStaff with their original tombstone filter, then resolve People persons through the extracted hydrateTeacherPersons helper. The new kiosk-only roster path is separate. This binding remains a tenant-scoped nonlocking read without writes or detached effects. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "school-structure",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"

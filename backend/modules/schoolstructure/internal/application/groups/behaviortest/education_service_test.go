@@ -9,6 +9,7 @@ import (
 
 	schoolStructureCompose "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -50,13 +51,13 @@ func TestListGroups(t *testing.T) {
 		// Verify our created groups are in the list
 		foundGroup1, foundGroup2, foundGroup3 := false, false, false
 		for _, g := range groups {
-			if g.ID == group1.ID {
+			if g.ID == ident.ID(group1.ID) {
 				foundGroup1 = true
 			}
-			if g.ID == group2.ID {
+			if g.ID == ident.ID(group2.ID) {
 				foundGroup2 = true
 			}
-			if g.ID == group3.ID {
+			if g.ID == ident.ID(group3.ID) {
 				foundGroup3 = true
 			}
 		}
@@ -93,7 +94,7 @@ func TestListGroups(t *testing.T) {
 		// Verify our group is in the list
 		found := false
 		for _, g := range groups {
-			if g.ID == group.ID {
+			if g.ID == ident.ID(group.ID) {
 				found = true
 				break
 			}
@@ -192,7 +193,7 @@ func TestGroupOperations(t *testing.T) {
 		// Cleanup
 
 		// Verify it can be retrieved
-		retrieved, err := testpkg.TenantQuery1(t, ctx, db, service.GetGroup, group.ID)
+		retrieved, err := testpkg.TenantQuery1(t, ctx, db, service.GetGroup, group.ID.Int64())
 		require.NoError(t, err)
 		assert.Equal(t, group.Name, retrieved.Name)
 	})
@@ -250,7 +251,7 @@ func TestTeacherGroupOperations(t *testing.T) {
 
 		groupIDs := make(map[int64]bool)
 		for _, g := range groups {
-			groupIDs[g.ID] = true
+			groupIDs[g.ID.Int64()] = true
 		}
 		assert.True(t, groupIDs[group1.ID])
 		assert.True(t, groupIDs[group2.ID])
@@ -284,7 +285,7 @@ func TestEducationService_UpdateGroup(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify update
-		updated, err := testpkg.TenantQuery1(t, ctx, db, service.GetGroup, group.ID)
+		updated, err := testpkg.TenantQuery1(t, ctx, db, service.GetGroup, group.ID.Int64())
 		require.NoError(t, err)
 		assert.Equal(t, newName, updated.Name)
 	})
@@ -310,7 +311,7 @@ func TestEducationService_UpdateGroup(t *testing.T) {
 		group := schoolStructureGroupOf(testpkg.CreateTestEducationGroup(t, db, "RoomChangeGroup"))
 		room := testpkg.CreateTestRoom(t, db, "NewRoom")
 
-		group.RoomID = &room.ID
+		group.RoomID = (*ident.ID)(&room.ID)
 
 		// ACT
 		err := testpkg.TenantCommand1(t, ctx, db, service.UpdateGroup, group)
@@ -529,7 +530,7 @@ func TestEducationService_CreateGroup_EdgeCases(t *testing.T) {
 		uniqueName := fmt.Sprintf("GroupWithBadRoom-%d", time.Now().UnixNano())
 		group := &schoolStructureCompose.Group{
 			Name:   uniqueName,
-			RoomID: &nonExistentRoomID,
+			RoomID: (*ident.ID)(&nonExistentRoomID),
 		}
 
 		// ACT
@@ -546,7 +547,7 @@ func TestEducationService_CreateGroup_EdgeCases(t *testing.T) {
 		uniqueName := fmt.Sprintf("GroupWithRoom-%d", time.Now().UnixNano())
 		group := &schoolStructureCompose.Group{
 			Name:   uniqueName,
-			RoomID: &room.ID,
+			RoomID: (*ident.ID)(&room.ID),
 		}
 
 		// ACT
@@ -554,7 +555,7 @@ func TestEducationService_CreateGroup_EdgeCases(t *testing.T) {
 
 		// ASSERT
 		require.NoError(t, err)
-		defer func() { _ = testpkg.TenantCommand1(t, ctx, db, service.DeleteGroup, group.ID) }()
+		defer func() { _ = testpkg.TenantCommand1(t, ctx, db, service.DeleteGroup, group.ID.Int64()) }()
 		assert.NotZero(t, group.ID)
 	})
 
@@ -607,11 +608,11 @@ func TestEducationService_FindGroupWithRoom(t *testing.T) {
 		room := testpkg.CreateTestRoom(t, db, "FindGroupRoom")
 		group := schoolStructureGroupOf(testpkg.CreateTestEducationGroup(t, db, "FindGroupWithRoom"))
 
-		group.RoomID = &room.ID
+		group.RoomID = (*ident.ID)(&room.ID)
 		require.NoError(t, testpkg.TenantCommand1(t, ctx, db, service.UpdateGroup, group))
 
 		// ACT
-		found, err := testpkg.TenantQuery1(t, ctx, db, service.FindGroupWithRoom, group.ID)
+		found, err := testpkg.TenantQuery1(t, ctx, db, service.FindGroupWithRoom, group.ID.Int64())
 
 		// ASSERT
 		require.NoError(t, err)
@@ -665,7 +666,7 @@ func TestEducationError_Unwrap(t *testing.T) {
 // group reads return it.
 func schoolStructureGroupOf(row *testpkg.EducationGroup) *schoolStructureCompose.Group {
 	return &schoolStructureCompose.Group{
-		ID: row.ID, TenantID: row.TenantID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
-		Name: row.Name, RoomID: row.RoomID,
+		ID: ident.ID(row.ID), TenantID: ident.ID(row.TenantID), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
+		Name: row.Name, RoomID: (*ident.ID)(row.RoomID),
 	}
 }

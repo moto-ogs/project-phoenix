@@ -42,7 +42,7 @@ func (s *reminderPlanner) loadReminderCandidateRelations(
 ) (reminderCandidateRelations, error) {
 	ids := make([]int64, 0, len(appointments))
 	for _, appointment := range appointments {
-		ids = append(ids, appointment.ID)
+		ids = append(ids, appointment.ID.Int64())
 	}
 	recurrences, err := s.query.FindRecurrenceRules(ctx, ids)
 	if err != nil {
@@ -50,7 +50,7 @@ func (s *reminderPlanner) loadReminderCandidateRelations(
 	}
 	recurrenceByAppointment := make(map[int64]*RecurrenceRule, len(recurrences))
 	for _, recurrence := range recurrences {
-		recurrenceByAppointment[recurrence.AppointmentID] = recurrence
+		recurrenceByAppointment[recurrence.AppointmentID.Int64()] = recurrence
 	}
 	movedOverrides, err := s.query.FindOccurrenceOverridesByStartDates(ctx, ids, dateRange(from, to))
 	if err != nil {
@@ -70,8 +70,8 @@ func eligibleReminderAppointments(
 ) []*Appointment {
 	eligible := appointments[:0]
 	for _, appointment := range appointments {
-		rule := relations.recurrences[appointment.ID]
-		if rule != nil && rule.OccurrenceCount != nil && !HasOccurrenceInWindow(appointment, rule, from, to) && len(relations.moved[appointment.ID]) == 0 {
+		rule := relations.recurrences[appointment.ID.Int64()]
+		if rule != nil && rule.OccurrenceCount != nil && !HasOccurrenceInWindow(appointment, rule, from, to) && len(relations.moved[appointment.ID.Int64()]) == 0 {
 			continue
 		}
 		eligible = append(eligible, appointment)
@@ -109,11 +109,11 @@ func collectDueAppointmentReminders(
 ) []DueReminder {
 	due := make([]DueReminder, 0)
 	for _, appointment := range appointments {
-		locked := current.appointments[appointment.ID]
+		locked := current.appointments[appointment.ID.Int64()]
 		if locked == nil {
 			continue
 		}
-		for _, occurrence := range occurrences[appointment.ID] {
+		for _, occurrence := range occurrences[appointment.ID.Int64()] {
 			if reminder := dueAppointmentForOccurrence(locked, occurrence, current, from, to); reminder != nil {
 				due = append(due, *reminder)
 			}
@@ -128,11 +128,11 @@ func dueAppointmentForOccurrence(
 	current lockedReminderCandidates,
 	from, to time.Time,
 ) *DueReminder {
-	rule := current.recurrences[appointment.ID]
+	rule := current.recurrences[appointment.ID.Int64()]
 	if (rule == nil && appointment.StartDate != Date(occurrence)) || (rule != nil && !OccurrenceExists(appointment, rule, occurrence)) {
 		return nil
 	}
-	override := current.overrides[appointmentOccurrenceKey(appointment.ID, occurrence)]
+	override := current.overrides[appointmentOccurrenceKey(appointment.ID.Int64(), occurrence)]
 	if override != nil && override.Cancelled {
 		return nil
 	}
@@ -151,7 +151,7 @@ func (s *reminderPlanner) loadLockedReminderCandidates(
 ) (lockedReminderCandidates, error) {
 	ids := make([]int64, 0, len(appointments))
 	for _, appointment := range appointments {
-		ids = append(ids, appointment.ID)
+		ids = append(ids, appointment.ID.Int64())
 	}
 	locked, err := s.query.FindReminderCandidatesForUpdate(ctx, ids)
 	if err != nil {
@@ -160,8 +160,8 @@ func (s *reminderPlanner) loadLockedReminderCandidates(
 	lockedIDs := make([]int64, 0, len(locked))
 	byID := make(map[int64]*Appointment, len(locked))
 	for _, appointment := range locked {
-		lockedIDs = append(lockedIDs, appointment.ID)
-		byID[appointment.ID] = appointment
+		lockedIDs = append(lockedIDs, appointment.ID.Int64())
+		byID[appointment.ID.Int64()] = appointment
 	}
 	rules, err := s.query.FindRecurrenceRules(ctx, lockedIDs)
 	if err != nil {
@@ -169,7 +169,7 @@ func (s *reminderPlanner) loadLockedReminderCandidates(
 	}
 	rulesByID := make(map[int64]*RecurrenceRule, len(rules))
 	for _, rule := range rules {
-		rulesByID[rule.AppointmentID] = rule
+		rulesByID[rule.AppointmentID.Int64()] = rule
 	}
 	dates := distinctReminderOccurrenceDates(lockedIDs, occurrences)
 	overrides, err := s.query.FindOccurrenceOverrides(ctx, lockedIDs, dates)
@@ -192,17 +192,17 @@ func reminderOccurrencesByAppointment(
 	result := make(map[int64][]Date, len(appointments))
 	for _, appointment := range appointments {
 		seen := make(map[Date]bool)
-		for _, occurrence := range reminderOccurrences(appointment, rules[appointment.ID], from, to) {
+		for _, occurrence := range reminderOccurrences(appointment, rules[appointment.ID.Int64()], from, to) {
 			if !seen[occurrence] {
 				seen[occurrence] = true
-				result[appointment.ID] = append(result[appointment.ID], occurrence)
+				result[appointment.ID.Int64()] = append(result[appointment.ID.Int64()], occurrence)
 			}
 		}
-		for _, override := range moved[appointment.ID] {
+		for _, override := range moved[appointment.ID.Int64()] {
 			occurrence := Date(override.OccurrenceDate)
 			if !seen[occurrence] {
 				seen[occurrence] = true
-				result[appointment.ID] = append(result[appointment.ID], occurrence)
+				result[appointment.ID.Int64()] = append(result[appointment.ID.Int64()], occurrence)
 			}
 		}
 	}

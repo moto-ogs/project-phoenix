@@ -105,7 +105,7 @@ export const Unread: Story = {
           overline="Gruppe Sternengruppe"
           meta="07.11.2026, 14:10"
           title="Laternen basteln"
-          subtitle="Bitte geben Sie Ihrem Kind alte Kleidung mit."
+          subtitle="Bitte gebt eurem Kind alte Kleidung mit."
           badge={
             <NotificationBadge
               count={1}

@@ -3,6 +3,7 @@ package timetable
 import (
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -90,8 +91,8 @@ func TestDetectSubstituteTimeConflicts_OverlapCases(t *testing.T) {
 			}
 			if assert.Len(t, out, 1) {
 				assert.Equal(t, SubstituteConflictKind, out[0].Kind)
-				assert.Equal(t, tc.target.ID, out[0].InstanceID)
-				assert.Equal(t, tc.foreign.ID, out[0].OtherID)
+				assert.Equal(t, ident.ID(tc.target.ID), out[0].InstanceID)
+				assert.Equal(t, ident.ID(tc.foreign.ID), out[0].OtherID)
 				assert.Contains(t, out[0].Message, tc.wantStartMsg)
 			}
 		})
@@ -132,10 +133,10 @@ func TestDetectSubstituteTimeConflicts_MultipleTargetsMultipleForeigns(t *testin
 	out := DetectSubstituteTimeConflicts(targets, foreigns)
 	if assert.Len(t, out, 2) {
 		// Iteration order: targets outer, foreigns inner → Tgt1 first.
-		assert.Equal(t, int64(1), out[0].InstanceID)
-		assert.Equal(t, int64(100), out[0].OtherID)
-		assert.Equal(t, int64(2), out[1].InstanceID)
-		assert.Equal(t, int64(101), out[1].OtherID)
+		assert.Equal(t, ident.ID(int64(1)), out[0].InstanceID)
+		assert.Equal(t, ident.ID(int64(100)), out[0].OtherID)
+		assert.Equal(t, ident.ID(int64(2)), out[1].InstanceID)
+		assert.Equal(t, ident.ID(int64(101)), out[1].OtherID)
 	}
 }
 

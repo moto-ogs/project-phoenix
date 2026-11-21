@@ -19,6 +19,7 @@ import (
 	parentBillingCompose "github.com/moto-ogs/project-phoenix/modules/parentbilling/compose"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/moto-ogs/project-phoenix/workflows/parentportal"
 	parentportalcompose "github.com/moto-ogs/project-phoenix/workflows/parentportal/compose"
@@ -364,7 +365,7 @@ func parentSigningView(view carecontract.SigningView, err error) (parentportal.C
 	case err != nil:
 		return nil, err
 	}
-	encoded, err := json.Marshal(view)
+	encoded, err := wire.Marshal(view)
 	if err != nil {
 		return nil, fmt.Errorf("encode contract signing view: %w", err)
 	}

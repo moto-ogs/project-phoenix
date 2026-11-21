@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // amendmentRead is a school with two modules: care until 14:00 and care
@@ -332,7 +333,7 @@ func TestASecondChangeOnTheSameDayReplacesTheFirstCumulatively(t *testing.T) {
 	require.Empty(t, reason)
 	require.NotNil(t, plan)
 	require.NotNil(t, plan.replace)
-	assert.Equal(t, int64(33), plan.replace.ID)
+	assert.Equal(t, ident.ID(int64(33)), plan.replace.ID)
 	assert.Equal(t, []carecontract.Service{
 		{Weekday: "mon", CareOfferingID: 2, ModuleName: "Ganztag", EndsAt: "16:30"},
 		{Weekday: "thu", CareOfferingID: 2, ModuleName: "Ganztag", EndsAt: "16:30"},
