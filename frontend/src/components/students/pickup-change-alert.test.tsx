@@ -1,4 +1,10 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PickupChangeNotice } from "~/lib/pickup-change-notices-api";
@@ -86,12 +92,15 @@ describe("upcomingPickupChanges", () => {
   });
 });
 
+// The banner is an event (#7707): it lists only the changes the reader has
+// not seen yet; the lasting state stands in the Betreuungszeiten.
 describe("PickupChangeAlert", () => {
-  it("names the day and the new time", () => {
+  it("names the day and the new time of an unseen change", () => {
     render(
       <PickupChangeAlert
         exceptions={[exception({ exceptionDate: "2026-09-10" })]}
         today={TODAY}
+        fresh={[notice()]}
       />,
     );
 
@@ -101,7 +110,7 @@ describe("PickupChangeAlert", () => {
     expect(screen.getByText("Morgen: 14:30 Uhr")).toBeInTheDocument();
   });
 
-  it("lists several days with their weekday", () => {
+  it("lists several unseen days with their weekday", () => {
     render(
       <PickupChangeAlert
         exceptions={[
@@ -113,6 +122,10 @@ describe("PickupChangeAlert", () => {
           }),
         ]}
         today={TODAY}
+        fresh={[
+          notice({ date: TODAY }),
+          notice({ requestId: "22", date: "2026-09-14" }),
+        ]}
       />,
     );
 
@@ -122,15 +135,46 @@ describe("PickupChangeAlert", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows nothing once the change is withdrawn or past", () => {
+  it("shows nothing for changes the reader has already seen", () => {
     const { container } = render(
       <PickupChangeAlert
-        exceptions={[exception({ exceptionDate: "2026-09-08" })]}
+        exceptions={[exception({ exceptionDate: "2026-09-10" })]}
         today={TODAY}
       />,
     );
 
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("shows nothing once the change is withdrawn or past", () => {
+    const { container } = render(
+      <PickupChangeAlert
+        exceptions={[exception({ exceptionDate: "2026-09-08" })]}
+        today={TODAY}
+        fresh={[notice({ date: "2026-09-08" })]}
+      />,
+    );
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("closes through its X", () => {
+    const onDismiss = vi.fn();
+    render(
+      <PickupChangeAlert
+        exceptions={[exception({ exceptionDate: "2026-09-10" })]}
+        today={TODAY}
+        fresh={[notice()]}
+        onDismiss={onDismiss}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Hinweis zur geänderten Abholzeit schließen",
+      }),
+    );
+    expect(onDismiss).toHaveBeenCalledOnce();
   });
 });
 
@@ -150,7 +194,7 @@ function notice(over: Partial<PickupChangeNotice> = {}): PickupChangeNotice {
 // The changes the reader had not seen yet carry „Neu“; a taken-back change
 // has no exception any more and says that the regular time applies (#6855).
 describe("PickupChangeAlert with unseen changes", () => {
-  it("marks unseen days and lists a taken-back day", () => {
+  it("lists only unseen days, including a taken-back day", () => {
     render(
       <PickupChangeAlert
         exceptions={[
@@ -176,8 +220,8 @@ describe("PickupChangeAlert with unseen changes", () => {
     ).toBeInTheDocument();
     expect(screen.getAllByText("Neu")).toHaveLength(2);
     expect(
-      screen.getByText("Montag, 14.09.2026: 14:30 Uhr"),
-    ).toBeInTheDocument();
+      screen.queryByText("Montag, 14.09.2026: 14:30 Uhr"),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -283,6 +327,75 @@ describe("StudentPickupChanges", () => {
     );
     expect(screen.getByText("Morgen: 14:30 Uhr")).toBeInTheDocument();
     expect(screen.getByText("Neu")).toBeInTheDocument();
+  });
+
+  it("closes the banner at once and brings it back for a newer change", async () => {
+    notices.list = [notice()];
+    const { rerender } = render(
+      <StudentPickupChanges
+        studentId="7"
+        exceptions={[exception({ exceptionDate: "2026-09-10" })]}
+        today={TODAY}
+      />,
+    );
+    await waitFor(() => expect(notices.markRead).toHaveBeenCalledOnce());
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Hinweis zur geänderten Abholzeit schließen",
+      }),
+    );
+    expect(screen.queryByTestId("pickup-change-alert")).not.toBeInTheDocument();
+    // Closing changes nothing about what was confirmed.
+    expect(notices.markRead).toHaveBeenCalledOnce();
+
+    notices.list = [
+      notice({ requestId: "23", date: "2026-09-11", pickupTime: "13:00" }),
+    ];
+    await act(async () => {
+      rerender(
+        <StudentPickupChanges
+          studentId="7"
+          exceptions={[
+            exception({ exceptionDate: "2026-09-10" }),
+            exception({
+              id: "2",
+              exceptionDate: "2026-09-11",
+              pickupTime: "13:00",
+            }),
+          ]}
+          today={TODAY}
+        />,
+      );
+    });
+    expect(
+      screen.getByText("Freitag, 11.09.2026: 13:00 Uhr"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Morgen: 14:30 Uhr")).not.toBeInTheDocument();
+  });
+
+  it("does not carry a seen change over to another child", async () => {
+    const withdrawn = notice({ withdrawn: true, pickupTime: "" });
+    notices.list = [withdrawn];
+    const { container, rerender } = render(
+      <StudentPickupChanges studentId="7" exceptions={[]} today={TODAY} />,
+    );
+    await waitFor(() =>
+      expect(notices.markRead).toHaveBeenCalledWith("7", [withdrawn]),
+    );
+    notices.list = [];
+    rerender(
+      <StudentPickupChanges studentId="7" exceptions={[]} today={TODAY} />,
+    );
+    // Anker: this child's taken-back change still stands during the visit.
+    expect(
+      screen.getByText("Morgen: wieder normale Abholzeit"),
+    ).toBeInTheDocument();
+
+    rerender(
+      <StudentPickupChanges studentId="8" exceptions={[]} today={TODAY} />,
+    );
+    expect(container).toBeEmptyDOMElement();
   });
 
   it("confirms nothing before the pickup times are there", () => {

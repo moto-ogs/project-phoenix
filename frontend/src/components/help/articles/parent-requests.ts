@@ -47,7 +47,8 @@ export function parentRequestsTopic(groupMode: HelpGroupMode): HelpTopic {
       // (Typ student_pickup_changed) und markiert die Kinderakte.
       "Gibst du eine neue Abholzeit für einen Tag frei, bekommt das Team des Kindes einen Hinweis. Er steht oben in der Kopfzeile unter `Neu für dich` mit rotem Zähler. Ist es eingeschaltet, kommt er auch aufs Handy. Ein Tippen darauf öffnet das Kind.",
       "Nimmst du die Freigabe mit `Entscheidung korrigieren` zurück, bekommt das Team wieder einen Hinweis: `wieder normale Abholzeit`.",
-      "Oben in der Kinderakte steht danach `Abholzeit an einzelnen Tagen geändert` mit Tag und Uhrzeit. Ist der Tag neu für die Person, steht `Neu` daneben. Der Hinweis verschwindet, wenn der Tag vorbei ist oder die Ausnahme gelöscht wird.",
+      // #7707: Banner nur für ungesehene Änderungen, der Stand in den Betreuungszeiten.
+      "Wer die Änderung noch nicht gesehen hat, sieht oben in der Kinderakte `Abholzeit an einzelnen Tagen geändert` mit Tag, Uhrzeit und `Neu`. Der Hinweis lässt sich mit dem X schließen und kommt nur bei einer neuen Änderung wieder. Der geänderte Tag bleibt unter `Betreuungszeiten` markiert: neue Uhrzeit, reguläre Zeit durchgestrichen und `Ausnahme`. Die Markierung verschwindet, wenn der Tag vorbei ist oder die Ausnahme gelöscht wird.",
       // #5102: von Hand gepflegte Regeltermine nach einer Angebotsanfrage.
       "Planen von Hand gepflegte Regeltermine das Kind nach einer Angebotsanfrage weiter ein? Dann bleibt die Anfrage nach dem Freigeben offen stehen. Sie zeigt `Nicht angepasst, weil von Hand gepflegt`. Wähle `Dort auch entfernen` oder `Fertig`.",
       // Von Hand eingetragene Abholzeiten überdecken eine neue Buchung.
