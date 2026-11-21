@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import type {
-  BackendPickupSchedule,
-  BackendPickupException,
-  BackendPickupData,
+  PickupScheduleWire,
+  PickupExceptionWire,
+  PickupDataWire,
   PickupSchedule,
   PickupException,
 } from "./pickup-schedule-helpers";
@@ -26,25 +26,28 @@ import {
 } from "./pickup-schedule-helpers";
 
 // Sample backend data for testing
-const sampleBackendSchedule: BackendPickupSchedule = {
-  id: 1,
-  student_id: 100,
+const sampleBackendSchedule: PickupScheduleWire = {
+  id: "1",
+  student_id: "100",
   weekday: 1,
   weekday_name: "Montag",
   pickup_time: "14:30",
   notes: "Bus line 5",
-  created_by: 5,
+  source: "staff",
+  created_by: "5",
   created_at: "2024-01-15T10:00:00Z",
   updated_at: "2024-01-15T12:00:00Z",
 };
 
-const sampleBackendException: BackendPickupException = {
-  id: 1,
-  student_id: 100,
+const sampleBackendException: PickupExceptionWire = {
+  id: "1",
+  student_id: "100",
   exception_date: "2024-01-15",
   pickup_time: "15:00",
   reason: "Doctor appointment",
-  created_by: 5,
+  source: "staff",
+  excused_auto: false,
+  created_by: "5",
   created_at: "2024-01-15T10:00:00Z",
   updated_at: "2024-01-15T12:00:00Z",
 };
@@ -80,6 +83,7 @@ describe("mapPickupScheduleResponse", () => {
       weekdayName: "Montag",
       pickupTime: "14:30",
       notes: "Bus line 5",
+      source: "staff",
       createdBy: "5",
       createdAt: "2024-01-15T10:00:00Z",
       updatedAt: "2024-01-15T12:00:00Z",
@@ -133,6 +137,8 @@ describe("mapPickupExceptionResponse", () => {
       exceptionDate: "2024-01-15",
       pickupTime: "15:00",
       reason: "Doctor appointment",
+      source: "staff",
+      excusedAuto: false,
       createdBy: "5",
       createdAt: "2024-01-15T10:00:00Z",
       updatedAt: "2024-01-15T12:00:00Z",
@@ -151,11 +157,49 @@ describe("mapPickupExceptionResponse", () => {
 });
 
 describe("mapPickupDataResponse", () => {
+  // The contract sends the departure mode as an open string (#2353): an
+  // entry with a mode this build does not know is left out, not shown as
+  // another mode.
+  it("drops a departure exception with an unknown mode", () => {
+    const result = mapPickupDataResponse({
+      schedules: [],
+      exceptions: [],
+      notes: [],
+      departure_exceptions: [
+        {
+          id: "1",
+          student_id: "100",
+          exception_date: "2026-09-10",
+          departure_mode: "bus",
+          updated_at: "2026-09-01T10:00:00Z",
+        },
+        {
+          id: "2",
+          student_id: "100",
+          exception_date: "2026-09-11",
+          departure_mode: "taxi",
+          updated_at: "2026-09-01T10:00:00Z",
+        },
+      ],
+    });
+
+    expect(result.departureExceptions).toEqual([
+      {
+        id: "1",
+        studentId: "100",
+        exceptionDate: "2026-09-10",
+        departureMode: "bus",
+        reason: undefined,
+      },
+    ]);
+  });
+
   it("maps combined backend data to frontend format", () => {
-    const backendData: BackendPickupData = {
+    const backendData: PickupDataWire = {
       schedules: [sampleBackendSchedule],
       exceptions: [sampleBackendException],
       notes: [],
+      departure_exceptions: [],
     };
 
     const result = mapPickupDataResponse(backendData);
@@ -167,7 +211,7 @@ describe("mapPickupDataResponse", () => {
   });
 
   it("maps date-specific projected schedules", () => {
-    const backendData: BackendPickupData = {
+    const backendData: PickupDataWire = {
       schedules: [],
       effective_schedules: [
         {
@@ -182,6 +226,7 @@ describe("mapPickupDataResponse", () => {
       ],
       exceptions: [],
       notes: [],
+      departure_exceptions: [],
     };
 
     const result = mapPickupDataResponse(backendData);
@@ -194,11 +239,14 @@ describe("mapPickupDataResponse", () => {
   });
 
   it("preserves an explicit date without a projected schedule", () => {
-    const backendData: BackendPickupData = {
+    const backendData: PickupDataWire = {
       schedules: [sampleBackendSchedule],
-      effective_schedules: [{ date: "2026-08-18", schedule: null }],
+      effective_schedules: [
+        { date: "2026-08-18", schedule: null, offering_schedule: null },
+      ],
       exceptions: [],
       notes: [],
+      departure_exceptions: [],
     };
 
     const result = mapPickupDataResponse(backendData);
@@ -213,10 +261,11 @@ describe("mapPickupDataResponse", () => {
   });
 
   it("handles empty arrays", () => {
-    const backendData: BackendPickupData = {
+    const backendData: PickupDataWire = {
       schedules: [],
       exceptions: [],
       notes: [],
+      departure_exceptions: [],
     };
 
     const result = mapPickupDataResponse(backendData);
@@ -229,7 +278,7 @@ describe("mapPickupDataResponse", () => {
     const backendData = {
       schedules: null,
       exceptions: null,
-    } as unknown as BackendPickupData;
+    } as unknown as PickupDataWire;
 
     const result = mapPickupDataResponse(backendData);
 
@@ -532,6 +581,8 @@ describe("getDayData", () => {
       exceptionDate: "2024-01-15",
       pickupTime: "15:00",
       reason: "Doctor appointment",
+      source: "staff",
+      excusedAuto: false,
       createdBy: "5",
       createdAt: "2024-01-15T10:00:00Z",
       updatedAt: "2024-01-15T12:00:00Z",
