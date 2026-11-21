@@ -8,19 +8,21 @@ import (
 )
 
 // The staff members of today's changed Dienst (#7661), by name in DemoStaff:
-// an OGS-Büro colleague whose Dienst the Leitung cancels, and the external
-// caregiver, who has no Dienst of her own, covering its morning. The
-// simulation clocks in neither of them.
+// the OGS-Büro colleague in the Spätdienst, whose Dienst the Leitung cancels,
+// and a colleague in the regular Dienst, which ends at 16:30, covering its
+// last half hour. The simulation clocks in neither of them, and no later step
+// offboards them. The cover is created after the cancelled colleague, so the
+// cancellation locks the two in ascending order (#7683).
 const (
-	cancelledShiftTodayStaff = "Natalia Schulz"
-	coverShiftTodayStaff     = "Ana Silva"
-	coverShiftTodayEnd       = "12:00"
+	cancelledShiftTodayStaff = "Anna Müller"
+	coverShiftTodayStaff     = "Petra Koch"
+	coverShiftTodayStart     = regularDutyEnd
 )
 
 // seedTodaysShiftChangesStep makes "Heute anders" show a changed Dienstplan:
-// the Leitung cancels one colleague's Dienst today for a training and lets the
-// external caregiver cover its morning, through the Dienstplan's own
-// cancellation route. It runs after this week's shifts, which it changes.
+// the Leitung cancels one colleague's Dienst today for a training and lets a
+// colleague cover its end after her own Dienst, through the Dienstplan's
+// own cancellation route. It runs after this week's shifts, which it changes.
 type seedTodaysShiftChangesStep struct{}
 
 func (seedTodaysShiftChangesStep) Name() string { return "Seeding today's changed shift" }
@@ -50,15 +52,16 @@ func seedTodaysShiftChanges(rt *Runtime, today seedDate) error {
 		Data []struct {
 			ID        string `json:"id"`
 			StartTime string `json:"start_time"`
+			EndTime   string `json:"end_time"`
 			Cancelled bool   `json:"cancelled"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
 		return fmt.Errorf("parse today's shift: %w", err)
 	}
-	// The cover takes the morning until noon; a Dienst that starts later
-	// has no morning to cover.
-	if len(envelope.Data) == 0 || envelope.Data[0].Cancelled || envelope.Data[0].StartTime >= coverShiftTodayEnd {
+	// The cover takes over after her own Dienst; a Dienst that ends by then
+	// has nothing left to cover.
+	if len(envelope.Data) == 0 || envelope.Data[0].Cancelled || envelope.Data[0].EndTime <= coverShiftTodayStart {
 		fmt.Println("  no Dienst today to change")
 		return nil
 	}
@@ -66,12 +69,12 @@ func seedTodaysShiftChanges(rt *Runtime, today seedDate) error {
 	if _, err := rt.Client.Put("/api/staff-shifts/"+shift.ID+"/cancellation", map[string]any{
 		"cancelled": true, "change_reason": "Fortbildung",
 		"replacements": []map[string]any{{
-			"staff_id": coverID, "start_time": shift.StartTime,
-			"end_time": coverShiftTodayEnd, "break_minutes": 0,
+			"staff_id": coverID, "start_time": coverShiftTodayStart,
+			"end_time": shift.EndTime, "break_minutes": 0,
 		}},
 	}); err != nil {
 		return fmt.Errorf("cancel today's shift: %w", err)
 	}
-	fmt.Println("  1 Dienst cancelled today, its morning covered")
+	fmt.Println("  1 Dienst cancelled today, its end covered")
 	return nil
 }
