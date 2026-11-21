@@ -1,8 +1,8 @@
 package api
 
 // The Kinder source of "Heute anders" (#7665, ADR 0299). It reads Care
-// Plan's status days, pickup exceptions, day departures and dated pickup
-// notes of the day, the People Directory's names, groups and classes of these
+// Plan's status days, pickup exceptions, day departures and pickup notes that
+// apply on the day, the People Directory's names, groups and classes of these
 // children and the group names, and applies the rule of the child detail
 // page: only an account with users:read (or an admin) sees the status of a
 // child, so without it the source has nothing to show. Children of the
@@ -109,9 +109,9 @@ func (s dayChangesChildren) changes(ctx context.Context, day calendar.Date) ([]c
 		}
 	}
 	for _, note := range notes {
-		// A date filter also returns the weekday notes; only the note of
-		// this day is a change.
-		if note.NoteDate == date && note.Content != "" {
+		// A date filter returns dated notes and recurring weekday notes that
+		// apply on this day. The latter have no NoteDate.
+		if (note.NoteDate == date || note.Weekday != 0) && note.Content != "" {
 			content := note.Content
 			changes = append(changes, childChange{kind: daychangesview.KindChildPickupNote, child: daychangesview.Child{StudentID: note.StudentID, Note: &content}})
 		}

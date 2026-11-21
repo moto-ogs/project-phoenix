@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
@@ -137,6 +138,8 @@ func TestDayChangesChildrenSource(t *testing.T) {
 	tom := child("Tom", "2a", igel.ID)
 	testpkg.CreateTestPickupNote(t, db, tom, day, carer.StaffID, "Oma holt ab")
 	testpkg.CreateTestPickupScheduleWithNote(t, db, tom, int(day.Weekday()), carer.StaffID, "15:00", "Wochennotiz Tom")
+	nora := child("Nora", "2a", igel.ID)
+	testpkg.CreateTestRecurringPickupNote(t, db, nora, calendar.ISOWeekday(day), carer.StaffID, "Jeden Mittwoch Oma")
 	bus := child("Ben", "2a", igel.ID)
 	testpkg.CreateTestDepartureException(t, db, bus, day, carer.StaffID, "bus", "")
 	gestern := child("Emil", "2a", igel.ID)
@@ -169,6 +172,7 @@ func TestDayChangesChildrenSource(t *testing.T) {
 			"you child_absent Mia sick @Igel ->student",
 			"you child_goes_alone Ida @Igel ->student",
 			"you child_pickup_changed Leo 14:30 @Igel ->student",
+			"you child_pickup_note Nora »Jeden Mittwoch Oma« @Igel ->student",
 			"you child_pickup_note Tom »Oma holt ab« @Igel ->student",
 			classSummary,
 			fuchsSummary,
@@ -183,8 +187,8 @@ func TestDayChangesChildrenSource(t *testing.T) {
 		assert.Equal(t, []string{
 			classSummary,
 			fuchsSummary,
-			"school child_summary @Igel sick=1 excused=0 pickup=1 alone=1 note=1 " +
-				"[child_goes_alone Ida ->student; child_pickup_changed Leo 14:30 ->student; child_absent Mia sick ->student; child_pickup_note Tom »Oma holt ab« ->student]",
+			"school child_summary @Igel sick=1 excused=0 pickup=1 alone=1 note=2 " +
+				"[child_goes_alone Ida ->student; child_pickup_changed Leo 14:30 ->student; child_absent Mia sick ->student; child_pickup_note Nora »Jeden Mittwoch Oma« ->student; child_pickup_note Tom »Oma holt ab« ->student]",
 		}, childLines(t, body))
 		assert.NotContains(t, body, "Xaver", "another school stays out")
 	})
