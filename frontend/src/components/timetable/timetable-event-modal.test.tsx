@@ -550,10 +550,10 @@ describe("TimetableEventModal", () => {
       expect(mockCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           title: "Mensa",
-          room_id: 3,
+          room_id: "3",
           notes: "ohne Nuesse",
-          student_ids: [21],
-          staff_ids: [11],
+          student_ids: ["21"],
+          staff_ids: ["11"],
         }),
         expect.any(String),
       ),
@@ -1312,7 +1312,7 @@ describe("TimetableEventModal", () => {
     await waitFor(() =>
       expect(mockUpdate).toHaveBeenCalledWith(
         "42",
-        expect.objectContaining({ student_ids: [21] }),
+        expect.objectContaining({ student_ids: ["21"] }),
       ),
     );
   });
@@ -3022,7 +3022,7 @@ describe("TimetableEventModal", () => {
     await waitFor(() =>
       expect(mockUpdate).toHaveBeenCalledWith(
         "42",
-        expect.objectContaining({ title: "Mensa", activity_group_id: 7 }),
+        expect.objectContaining({ title: "Mensa", activity_group_id: "7" }),
       ),
     );
     expect(mockSplitTemplate).not.toHaveBeenCalled();
@@ -4230,7 +4230,7 @@ describe("TimetableEventModal", () => {
     await waitFor(() =>
       expect(mockUpdate).toHaveBeenCalledWith(
         "42",
-        expect.objectContaining({ student_ids: [31] }),
+        expect.objectContaining({ student_ids: ["31"] }),
       ),
     );
     expect(mockGetTemplate).not.toHaveBeenCalled();
@@ -4265,7 +4265,7 @@ describe("TimetableEventModal", () => {
     await waitFor(() =>
       expect(mockUpdate).toHaveBeenCalledWith(
         "42",
-        expect.objectContaining({ staff_ids: [31] }),
+        expect.objectContaining({ staff_ids: ["31"] }),
       ),
     );
     expect(mockGetTemplate).not.toHaveBeenCalled();

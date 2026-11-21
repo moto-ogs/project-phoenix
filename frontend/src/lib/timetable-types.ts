@@ -32,7 +32,8 @@ type ConflictKind = "staff" | "student";
  * keys on it.
  */
 interface ConflictWarning {
-  kind: ConflictKind;
+  /** "other": a kind of conflict this build does not know; it stays shown. */
+  kind: ConflictKind | "other";
   resourceId: string;
   message: string;
   canOverride: boolean;
@@ -105,7 +106,9 @@ export function isNotScheduledRow(
 
 export interface InstanceStudentSummary {
   studentId: string;
-  status: InstanceAttendanceStatus;
+  /** undefined: a status this build does not know. */
+  status: InstanceAttendanceStatus | undefined;
+  /** null: none; undefined: none or a substatus this build does not know. */
   substatus?: InstanceAttendanceSubstatus | null;
   note?: string | null;
   checkedInAt?: string | null;
@@ -153,7 +156,8 @@ export interface EnrichedInstance {
    * Regeltermin. Shown on every occurrence, survives Re-Plan/Split.
    */
   seriesNotes?: string;
-  status: InstanceStatus;
+  /** undefined: a status this build does not know. */
+  status: InstanceStatus | undefined;
   isSpontaneous: boolean;
   isLive: boolean;
   activityGroupId?: string;
@@ -164,7 +168,8 @@ export interface EnrichedInstance {
   planningTrackColor?: string;
   planningTrackSortOrder?: number;
   listKind?: TimetableListKind;
-  activityType: ActivityType;
+  /** undefined: a block type this build does not know. */
+  activityType: ActivityType | undefined;
   roomId: string;
   roomName: string;
   /**
@@ -228,7 +233,8 @@ export interface EnrichedInstance {
 }
 
 interface EmptyRosterReason {
-  kind: "before_offering_start" | "offering_source_empty";
+  /** undefined: a reason this build does not know; the block shows the plain hint. */
+  kind: "before_offering_start" | "offering_source_empty" | undefined;
   phaseName?: string;
   serviceStartDate?: string;
 }
@@ -239,99 +245,6 @@ export interface WeeklyInstancesResponse {
   instances: EnrichedInstance[];
 }
 
-/**
- * Backend GET /api/timetable/instances response shape (snake_case).
- * Used internally by the mapper; consumers should rely on
- * WeeklyInstancesResponse.
- */
-interface BackendInstanceStaffSummary {
-  staff_id: number | string;
-  is_primary: boolean;
-  is_absent: boolean;
-  is_substitute: boolean;
-  is_sick_absence?: boolean;
-  absence_reason?: string | null;
-}
-
-interface BackendInstanceStudentSummary {
-  student_id: number | string;
-  status: InstanceAttendanceStatus;
-  substatus?: InstanceAttendanceSubstatus | null;
-  note?: string | null;
-  checked_in_at?: string | null;
-  care_day_status?: CareDayStatus;
-  early_pickup_time?: string | null;
-}
-
-export interface BackendEnrichedInstance {
-  id: number | string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  title: string;
-  description?: string;
-  notes?: string;
-  series_notes?: string;
-  status: InstanceStatus;
-  is_spontaneous: boolean;
-  is_live: boolean;
-  activity_group_id?: number | string;
-  calendar_period_id?: number | string;
-  planning_track_id?: number | string;
-  planning_track_name?: string;
-  planning_track_color?: string;
-  planning_track_sort_order?: number;
-  list_kind?: TimetableListKind;
-  activity_type: ActivityType;
-  room_id: number | string;
-  room_name: string;
-  group_name?: string;
-  staff: BackendInstanceStaffSummary[];
-  student_ids?: (number | string)[];
-  students?: BackendInstanceStudentSummary[];
-  staff_count: number;
-  absent_staff_count: number;
-  understaffed_ack?: boolean;
-  understaffed_note?: string | null;
-  cancel_reason?: string | null;
-  expected_students_count: number;
-  present_students_count: number;
-  current_students_count?: number;
-  occupancy?: {
-    participant_limit: number;
-    current_students_count: number;
-  } | null;
-  empty_roster_reason?: {
-    kind: "before_offering_start" | "offering_source_empty";
-    phase_name?: string;
-    service_start_date?: string;
-  };
-  not_scheduled_students_count?: number;
-  required_staff_count: number;
-  assigned_staff_count: number;
-  required_staff_override?: number | null;
-  conflict_warnings?: Array<{
-    kind: ConflictKind;
-    resource_id: number | string;
-    message: string;
-    can_override: boolean;
-    fingerprint?: string;
-    conflicting_instance_id?: number | string;
-    conflicting_title?: string;
-    overlap_start?: string;
-    overlap_end?: string;
-  }>;
-  can_reopen?: boolean;
-  can_complete?: boolean;
-  complete_available_at?: string;
-}
-
-export interface BackendWeeklyInstancesResponse {
-  from: string;
-  to: string;
-  instances: BackendEnrichedInstance[];
-}
-
 export interface GapInstance {
   instanceId: string;
   date: string;
@@ -339,7 +252,8 @@ export interface GapInstance {
   startTime: string;
   endTime: string;
   roomId: string;
-  status: InstanceStatus;
+  /** undefined: a status this build does not know. */
+  status: InstanceStatus | undefined;
   assignedStaffCount: number;
   absentStaffCount: number;
   /** Non-absent count: planned people still there plus any covering substitute. */
@@ -356,28 +270,6 @@ export interface GapsResponse {
   gaps: GapInstance[];
   /** #1840: zero-staff blocks an admin deliberately left open — still a shortfall, no longer nagging. */
   acknowledged: GapInstance[];
-}
-
-export interface BackendGapInstance {
-  instance_id: number | string;
-  date: string;
-  title: string;
-  start_time: string;
-  end_time: string;
-  room_id: number | string;
-  status: InstanceStatus;
-  assigned_staff_count: number;
-  absent_staff_count: number;
-  present_staff_count?: number;
-  planned_staff_count?: number;
-  understaffed_note?: string | null;
-}
-
-export interface BackendGapsResponse {
-  from: string;
-  to: string;
-  gaps: BackendGapInstance[];
-  acknowledged?: BackendGapInstance[];
 }
 
 /** Ereignistypen des Änderungsprotokolls (#1886) — offenes Vokabular, das
@@ -423,30 +315,6 @@ export interface DeviationHistoryEvent {
 
 export interface DeviationHistoryResponse {
   events: DeviationHistoryEvent[];
-}
-
-interface BackendDeviationHistoryEvent {
-  id: number | string;
-  activity_group_id?: number | string;
-  occurrence_date: string;
-  start_time: string;
-  instance_id?: number | string;
-  event_type: string;
-  subject_staff_id?: number | string;
-  subject_staff_name?: string;
-  related_staff_id?: number | string;
-  related_staff_name?: string;
-  actor_account_id?: number | string;
-  actor_name?: string;
-  // json.RawMessage im Backend (beliebiges JSON oder fehlend, omitempty).
-  old_value?: unknown;
-  new_value?: unknown;
-  reason?: string;
-  occurred_at: string;
-}
-
-export interface BackendDeviationHistoryResponse {
-  events: BackendDeviationHistoryEvent[] | null;
 }
 
 interface TemplateSchedule {
@@ -896,20 +764,11 @@ export interface AttendanceResponse {
   id: string;
   instanceId: string;
   studentId: string;
-  status: InstanceAttendanceStatus;
+  /** undefined: a status this build does not know. */
+  status: InstanceAttendanceStatus | undefined;
   substatus?: InstanceAttendanceSubstatus | null;
   note?: string | null;
   checkedInAt?: string | null;
-}
-
-export interface BackendAttendanceResponse {
-  id: number | string;
-  instance_id: number | string;
-  student_id: number | string;
-  status: InstanceAttendanceStatus;
-  substatus?: InstanceAttendanceSubstatus | null;
-  note?: string | null;
-  checked_in_at?: string | null;
 }
 
 interface SubstituteTimeConflict {
@@ -1150,13 +1009,14 @@ export interface CreateInstanceBody {
   start_time: string; // HH:MM
   end_time: string; // HH:MM
   title: string;
-  room_id: number;
+  /** Identifiers travel as decimal strings since #2342. */
+  room_id: string;
   description?: string;
   notes?: string;
-  activity_group_id?: number;
+  activity_group_id?: string;
   list_kind?: TimetableListKind;
-  staff_ids?: number[];
-  student_ids?: number[];
+  staff_ids?: string[];
+  student_ids?: string[];
   /** Manual Personalbedarf override (#1839); null/omitted = derive. */
   required_staff?: number | null;
 }
@@ -1171,7 +1031,11 @@ export interface CreateInstanceBody {
  */
 export interface CreateTemplateBody {
   name: string;
-  type: ActivityType;
+  /**
+   * undefined: the stored block has a type this build does not know; the
+   * backend refuses the save instead of the form guessing a type.
+   */
+  type: ActivityType | undefined;
   list_kind?: TimetableListKind;
   weekdays: number[];
   start_time: string; // HH:MM

@@ -38,7 +38,8 @@ import { SectionCard } from "~/components/ui/section-card";
 /** One aggregated conflict (both involved blocks share the fingerprint). */
 export interface ConflictBannerEntry {
   fingerprint: string;
-  kind: "staff" | "student";
+  /** "other": a kind of conflict this build does not know. */
+  kind: "staff" | "student" | "other";
   /** Display name of the double-booked person; resolved by the caller. */
   personName: string;
   dateISO: string;
@@ -73,6 +74,7 @@ interface ConflictWarningsBannerProps {
 }
 
 function kindLabel(kind: ConflictBannerEntry["kind"]): string {
+  if (kind === "other") return "Person";
   return kind === "student" ? "Kind" : "Personal";
 }
 

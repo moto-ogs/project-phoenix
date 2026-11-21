@@ -1678,13 +1678,13 @@ export function useEventForm({
       title: form.title.trim(),
       start_time: form.startTime,
       end_time: form.endTime,
-      room_id: roomId,
+      room_id: String(roomId),
       notes: form.notes.trim() || undefined,
       // Ein Dienst hat keine Kinder und gehört in keine Tagesliste (#3822).
       list_kind: form.type === "duty" ? undefined : form.listKind || undefined,
-      activity_group_id: activityGroupId ? Number(activityGroupId) : undefined,
-      staff_ids: staffIDsForSave.map(Number),
-      student_ids: form.type === "duty" ? [] : studentIDsForSave.map(Number),
+      activity_group_id: activityGroupId || undefined,
+      staff_ids: [...staffIDsForSave],
+      student_ids: form.type === "duty" ? [] : [...studentIDsForSave],
       required_staff: parseRequiredStaffOverride(form.requiredStaff),
     }) satisfies CreateInstanceBody;
 

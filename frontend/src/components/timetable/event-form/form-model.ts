@@ -306,7 +306,12 @@ export interface EventFormState {
   startTime: string;
   endTime: string;
   roomId: string;
-  type: ActivityType;
+  /**
+   * undefined: the stored block has a type this build does not know. The
+   * form keeps it unset instead of guessing one, so a save sends no type
+   * and the backend refuses it rather than changing the block silently.
+   */
+  type: ActivityType | undefined;
   categoryId: string;
   planningTrackId: string;
   /**
@@ -369,7 +374,8 @@ export interface EventFormState {
    * above as its value rather than a separate field — switching away from
    * "gruppe" clears educationGroupId so the two never disagree.
    */
-  targetGroupType: TargetGroupType;
+  /** undefined: a stored target group this build does not know (see `type`). */
+  targetGroupType: TargetGroupType | undefined;
   targetGradeLevel: string; // "" | configured grade, only meaningful for "jahrgang"
   targetSchoolClass: string; // "", only meaningful for "klasse"
   targetGradeLevels: string[];
