@@ -36,7 +36,7 @@ export interface withdrawnReleaseResponse {
 }
 
 export const withdrawnReleaseResponseSchema: z.ZodType<withdrawnReleaseResponse, unknown> = object<withdrawnReleaseResponse>({
-  organization_id: int64StringOrNumber,
+  organization_id: int64String,
 });
 
 /** Go: operator.resetTraegerMemberMFARequest */

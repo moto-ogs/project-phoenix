@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/require"
@@ -47,7 +48,7 @@ func TestShiftTypesListQueryBudgetIsFlat(t *testing.T) {
 				Name: name, Color: "#5080D8", Description: description, IsActive: &active,
 			})
 			require.NoError(t, createErr)
-			row := map[string]any{"id": created.ID, "name": name, "color": "#5080D8", "is_active": active}
+			row := map[string]any{"id": ident.ID(created.ID), "name": name, "color": "#5080D8", "is_active": active}
 			if description != "" {
 				row["description"] = description
 			}

@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/require"
@@ -65,7 +66,7 @@ func TestWorkTimeModelDetailQueryBudgetIsFlat(t *testing.T) {
 		want, encodeErr := json.Marshal(map[string]any{
 			"status": "success", "message": "Work time model retrieved",
 			"data": map[string]any{
-				"id": created.ID, "name": created.Name, "rotation_length": 2,
+				"id": ident.ID(created.ID), "name": created.Name, "rotation_length": 2,
 				"rotation_anchor_date": "2026-10-26", "entries": entries, "weekly_totals": totals,
 			},
 		})

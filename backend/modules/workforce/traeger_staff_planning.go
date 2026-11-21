@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Einsatzplanung of the Träger (#4708, ADR 0089 section 8, ADR 0242):
@@ -41,17 +42,17 @@ type TraegerPlanningRules struct {
 
 // TraegerPlanningSite is one live Einsatzort of a person.
 type TraegerPlanningSite struct {
-	SchoolID   int64  `json:"school_id"`
-	SchoolName string `json:"school_name"`
-	StaffID    int64  `json:"staff_id"`
+	SchoolID   ident.ID `json:"school_id"`
+	SchoolName string   `json:"school_name"`
+	StaffID    ident.ID `json:"staff_id"`
 }
 
 // TraegerPlanningShift is one shift of a person at one Einsatzort.
 type TraegerPlanningShift struct {
-	ID               int64         `json:"id"`
-	SchoolID         int64         `json:"school_id"`
+	ID               ident.ID      `json:"id"`
+	SchoolID         ident.ID      `json:"school_id"`
 	SchoolName       string        `json:"school_name"`
-	StaffID          int64         `json:"staff_id"`
+	StaffID          ident.ID      `json:"staff_id"`
 	Date             calendar.Date `json:"date"`
 	StartTime        string        `json:"start_time"`
 	EndTime          string        `json:"end_time"`
@@ -68,7 +69,7 @@ type TraegerPlanningShift struct {
 // its shifts, the planned net minutes and the Soll of the week, and every
 // working-time warning of the week.
 type TraegerPlanningPerson struct {
-	RecordID       int64                  `json:"staff_record_id"`
+	RecordID       ident.ID               `json:"staff_record_id"`
 	FirstName      string                 `json:"first_name"`
 	LastName       string                 `json:"last_name"`
 	Sites          []TraegerPlanningSite  `json:"sites"`
@@ -88,7 +89,7 @@ type TraegerPlanningPerson struct {
 // TraegerPlanningAbsentDay is a full absence day of a Personalakte at one
 // school.
 type TraegerPlanningAbsentDay struct {
-	SchoolID int64         `json:"school_id"`
+	SchoolID ident.ID      `json:"school_id"`
 	Date     calendar.Date `json:"date"`
 }
 
@@ -96,7 +97,7 @@ type TraegerPlanningAbsentDay struct {
 // day of the week from its Arbeitsvertrag, without the school's holidays and
 // closing days.
 type TraegerPlanningSollDay struct {
-	SchoolID int64         `json:"school_id"`
+	SchoolID ident.ID      `json:"school_id"`
 	Date     calendar.Date `json:"date"`
 	Minutes  int           `json:"minutes"`
 }
@@ -127,9 +128,9 @@ type TraegerPlanShift struct {
 // TraegerFutureShifts counts the shifts after today at one school, for the
 // list before the Träger switches the Einsatzplanung off.
 type TraegerFutureShifts struct {
-	SchoolID   int64  `json:"school_id"`
-	SchoolName string `json:"school_name"`
-	Shifts     int    `json:"shifts"`
+	SchoolID   ident.ID `json:"school_id"`
+	SchoolName string   `json:"school_name"`
+	Shifts     int      `json:"shifts"`
 }
 
 // TraegerStaffPlanning is the Einsatzplanung of the Träger-Portal.

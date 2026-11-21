@@ -4,7 +4,7 @@ import "github.com/moto-ogs/project-phoenix/api/common"
 
 // DeletedResponse names the template a delete removed.
 type DeletedResponse struct {
-	ID int64 `json:"id"`
+	ID common.ID `json:"id"`
 }
 
 // RouteContracts registers the typed contract of the work-time templates

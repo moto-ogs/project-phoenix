@@ -28,6 +28,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/realtime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -253,7 +254,7 @@ func TestSickCascade_MarkSickForRange(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		absenceID = resp.ID
+		absenceID = resp.ID.Int64()
 		return nil
 	})
 	require.NotZero(t, absenceID)
@@ -261,8 +262,8 @@ func TestSickCascade_MarkSickForRange(t *testing.T) {
 	// Subject/creator separation.
 	absence, err := e.shifts.FindStaffAbsence(e.ctx, absenceID)
 	require.NoError(t, err)
-	assert.Equal(t, e.subject.ID, absence.StaffID)
-	assert.Equal(t, e.admin.ID, absence.CreatedBy)
+	assert.Equal(t, ident.ID(e.subject.ID), absence.StaffID)
+	assert.Equal(t, ident.ID(e.admin.ID), absence.CreatedBy)
 
 	// Plain shift: cancelled, neutral reason, provenance stamped. Past-day
 	// shifts are included by design (they did not take place).
@@ -321,7 +322,7 @@ func TestSickCascade_MarkSickForRange(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		require.Equal(t, absenceID, resp.ID, "same-range sick report must merge into the primary absence")
+		require.Equal(t, ident.ID(absenceID), resp.ID, "same-range sick report must merge into the primary absence")
 		return nil
 	})
 	events = e.eventsByType(t, yesterday, tomorrow, eventSickReported)
@@ -517,7 +518,7 @@ func TestSickCascade_ReconcileSickRangeAppliesOnlyDateDelta(t *testing.T) {
 			DateEnd:     dayTwo.String(),
 		})
 		if err == nil {
-			absenceID = created.ID
+			absenceID = created.ID.Int64()
 		}
 		return err
 	})
@@ -758,7 +759,7 @@ func (e *sickCascadeEnv) createSickAbsence(t *testing.T, start, end calendar.Dat
 			DateEnd:     end.String(),
 		})
 		if err == nil {
-			absenceID = created.ID
+			absenceID = created.ID.Int64()
 		}
 		return err
 	})
@@ -787,7 +788,7 @@ func TestSickCascade_ClearSickForRange(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		absenceID = resp.ID
+		absenceID = resp.ID.Int64()
 		return nil
 	})
 	ackNote := "bewusst offen"
@@ -917,7 +918,7 @@ func TestSickCascade_ReassignSickStamps(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		absenceID = resp.ID
+		absenceID = resp.ID.Int64()
 		return nil
 	})
 	e.eventsByType(t, tomorrow, tomorrow, eventSickReported) // registers event cleanup

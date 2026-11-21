@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/moto-ogs/project-phoenix/tenant/tenanttest"
 	"github.com/stretchr/testify/assert"
@@ -3835,7 +3836,7 @@ func TestStaffAbsenceCapability_ReturnsTheSickCascadePlan(t *testing.T) {
 		AbsenceType: AbsenceTypeSick, DateStart: "2026-02-10", DateEnd: "2026-02-12",
 	})
 	require.NoError(t, err)
-	assert.Equal(t, int64(555), created.ID)
+	assert.Equal(t, ident.ID(int64(555)), created.ID)
 	assert.Equal(t, workforce.SickCascadePlan{{Kind: workforce.SickCascadeMark, Report: workforce.SickCascadeInput{
 		SubjectStaffID: 100, AbsenceType: AbsenceTypeSick, DateStart: "2026-02-10", DateEnd: "2026-02-12", AbsenceID: 555, ActorStaffID: 200, ActorAccountID: &accountID,
 	}}}, plan)

@@ -5,6 +5,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,12 +23,12 @@ func TestStaffAbsenceListContract(t *testing.T) {
 		staff := testpkg.CreateTestStaff(t, db, "Test", "Staff")
 		today := calendar.TodayDate()
 		absence := workforce.StaffAbsence{
-			StaffID:     staff.ID,
+			StaffID:     ident.ID(staff.ID),
 			AbsenceType: workforce.AbsenceTypeSick,
 			DateStart:   today.String(),
 			DateEnd:     today.String(),
 			Status:      workforce.AbsenceStatusReported,
-			CreatedBy:   staff.ID,
+			CreatedBy:   ident.ID(staff.ID),
 		}
 		_, err := repo.CreateStaffAbsence(ctx, &absence)
 		require.NoError(t, err)
@@ -41,12 +42,12 @@ func TestStaffAbsenceListContract(t *testing.T) {
 		staff := testpkg.CreateTestStaff(t, db, "Test", "Staff")
 		today := calendar.TodayDate()
 		absence := workforce.StaffAbsence{
-			StaffID:     staff.ID,
+			StaffID:     ident.ID(staff.ID),
 			AbsenceType: workforce.AbsenceTypeSick,
 			DateStart:   today.String(),
 			DateEnd:     today.String(),
 			Status:      workforce.AbsenceStatusReported,
-			CreatedBy:   staff.ID,
+			CreatedBy:   ident.ID(staff.ID),
 		}
 		_, err := repo.CreateStaffAbsence(ctx, &absence)
 		require.NoError(t, err)

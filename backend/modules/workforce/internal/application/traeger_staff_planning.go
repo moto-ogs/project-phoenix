@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Einsatzplanung of the Träger (#4708, ADR 0242). The week view reads
@@ -77,11 +78,11 @@ func (t *TraegerStaff) PlanningWeek(ctx context.Context, actor workforce.Traeger
 	people := make(map[int64]*planningPerson, len(scene.records))
 	bySchool := linksBySchool(scene.records, people)
 	for _, school := range scene.schools {
-		links := bySchool[school.ID]
+		links := bySchool[school.ID.Int64()]
 		if len(links) == 0 {
 			continue
 		}
-		err := t.ports.Runtime.WithinSchool(ctx, school.ID, func(ctx context.Context) error {
+		err := t.ports.Runtime.WithinSchool(ctx, school.ID.Int64(), func(ctx context.Context) error {
 			return t.readPlanningSchool(ctx, actor, view, school, links, people, monday, &week.Rules)
 		})
 		if err != nil {
@@ -139,7 +140,7 @@ func (t *TraegerStaff) readPlanningSchool(ctx context.Context, actor workforce.T
 	}
 	*rules = view.Rules
 	for staffID, recordID := range live {
-		people[recordID].sites = append(people[recordID].sites, workforce.TraegerPlanningSite{SchoolID: school.ID, SchoolName: school.Name, StaffID: staffID})
+		people[recordID].sites = append(people[recordID].sites, workforce.TraegerPlanningSite{SchoolID: school.ID, SchoolName: school.Name, StaffID: ident.ID(staffID)})
 	}
 	for _, shift := range view.Shifts {
 		person := people[live[shift.StaffID]]
@@ -224,7 +225,7 @@ func (p *planningPerson) public(rules workforce.TraegerPlanningRules, monday cal
 		}
 		return strings.Compare(a.StartTime, b.StartTime)
 	})
-	person := workforce.TraegerPlanningPerson{RecordID: p.record.ID, FirstName: p.record.FirstName, LastName: p.record.LastName,
+	person := workforce.TraegerPlanningPerson{RecordID: ident.ID(p.record.ID), FirstName: p.record.FirstName, LastName: p.record.LastName,
 		Sites: p.sites, Shifts: []workforce.TraegerPlanningShift{}, SollDays: p.weekSollDays(),
 		AbsentDays: append([]workforce.TraegerPlanningAbsentDay{}, p.absentDays...), Warnings: []workforce.ShiftWorkingTimeWarning{}}
 	slots := make([]domain.PlanSlot, 0, len(p.shifts))
@@ -280,7 +281,7 @@ func appendInWeek(shifts []workforce.TraegerPlanningShift, shift workforce.Traeg
 }
 
 func planSlot(shift workforce.TraegerPlanningShift) domain.PlanSlot {
-	return domain.PlanSlot{SchoolID: shift.SchoolID, ShiftID: shift.ID, Date: shift.Date, Start: clockMinutes(shift.StartTime),
+	return domain.PlanSlot{SchoolID: shift.SchoolID.Int64(), ShiftID: shift.ID.Int64(), Date: shift.Date, Start: clockMinutes(shift.StartTime),
 		End: clockMinutes(shift.EndTime), BreakMinutes: shift.BreakMinutes}
 }
 
@@ -294,7 +295,7 @@ func clockMinutes(value string) int {
 
 func planningShift(shift workforce.PlannedShift, school workforce.TraegerStaffSchool) workforce.TraegerPlanningShift {
 	result := workforce.TraegerPlanningShift{
-		ID: shift.ID, SchoolID: school.ID, SchoolName: school.Name, StaffID: shift.StaffID, Date: calendar.Date(shift.Date),
+		ID: ident.ID(shift.ID), SchoolID: school.ID, SchoolName: school.Name, StaffID: ident.ID(shift.StaffID), Date: calendar.Date(shift.Date),
 		StartTime: shortClock(shift.StartTime), EndTime: shortClock(shift.EndTime), BreakMinutes: shift.BreakMinutes, Notes: shift.Notes,
 		Cancelled: shift.Cancelled, PlannedByTraeger: shift.PlannedByTraeger, FromSeries: shift.SeriesID != nil,
 	}

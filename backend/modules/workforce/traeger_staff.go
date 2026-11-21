@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Personalstamm of ADR 0089 (#4705): one record per person the Träger
@@ -132,8 +134,8 @@ type TraegerStaffActor struct {
 
 // TraegerStaffSchool is one school of the Träger.
 type TraegerStaffSchool struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 // TraegerSchoolStaffMember is one live employment of a school with its
@@ -154,16 +156,16 @@ type TraegerSchoolStaffMember struct {
 // ViaPool marks an Einsatzort a block of the Vertretungspool created: it
 // ends after the school's last block and resumes with the next (ADR 0253).
 type TraegerStaffEmployment struct {
-	SchoolID   int64  `json:"school_id"`
-	SchoolName string `json:"school_name"`
-	StaffID    int64  `json:"staff_id"`
-	Active     bool   `json:"active"`
-	ViaPool    bool   `json:"via_pool"`
+	SchoolID   ident.ID `json:"school_id"`
+	SchoolName string   `json:"school_name"`
+	StaffID    ident.ID `json:"staff_id"`
+	Active     bool     `json:"active"`
+	ViaPool    bool     `json:"via_pool"`
 }
 
 // TraegerStaffRecordSummary is one record in the list.
 type TraegerStaffRecordSummary struct {
-	ID              int64                    `json:"id"`
+	ID              ident.ID                 `json:"id"`
 	FirstName       string                   `json:"first_name"`
 	LastName        string                   `json:"last_name"`
 	Birthday        string                   `json:"birthday,omitempty"`
@@ -174,14 +176,14 @@ type TraegerStaffRecordSummary struct {
 
 // TraegerStaffCandidate is a live employment no record holds yet.
 type TraegerStaffCandidate struct {
-	SchoolID        int64   `json:"school_id"`
-	SchoolName      string  `json:"school_name"`
-	StaffID         int64   `json:"staff_id"`
-	FirstName       string  `json:"first_name"`
-	LastName        string  `json:"last_name"`
-	Birthday        string  `json:"birthday,omitempty"`
-	PersonnelNumber *string `json:"personnel_number"`
-	HasAccount      bool    `json:"has_account"`
+	SchoolID        ident.ID `json:"school_id"`
+	SchoolName      string   `json:"school_name"`
+	StaffID         ident.ID `json:"staff_id"`
+	FirstName       string   `json:"first_name"`
+	LastName        string   `json:"last_name"`
+	Birthday        string   `json:"birthday,omitempty"`
+	PersonnelNumber *string  `json:"personnel_number"`
+	HasAccount      bool     `json:"has_account"`
 }
 
 // TraegerStaffSuggestion is one proposal: employments that may be one
@@ -189,7 +191,7 @@ type TraegerStaffCandidate struct {
 // Personalverwaltung confirms every proposal; nothing joins by itself.
 type TraegerStaffSuggestion struct {
 	Reason   string                  `json:"reason"`
-	RecordID *int64                  `json:"staff_record_id,omitempty"`
+	RecordID *ident.ID               `json:"staff_record_id,omitempty"`
 	Members  []TraegerStaffCandidate `json:"members"`
 }
 
@@ -204,8 +206,8 @@ type TraegerStaffOverview struct {
 
 // TraegerStaffMemberRef names one employment of one school.
 type TraegerStaffMemberRef struct {
-	SchoolID int64 `json:"school_id"`
-	StaffID  int64 `json:"staff_id"`
+	SchoolID ident.ID `json:"school_id"`
+	StaffID  ident.ID `json:"staff_id"`
 }
 
 // TraegerStaffLinkRequest joins employments to a new record or, with
@@ -255,7 +257,7 @@ type TraegerStaffChange struct {
 	Kind       string    `json:"kind"`
 	Field      string    `json:"field"`
 	Value      string    `json:"value"`
-	SchoolID   *int64    `json:"school_id,omitempty"`
+	SchoolID   *ident.ID `json:"school_id,omitempty"`
 	SchoolName string    `json:"school_name,omitempty"`
 	OccurredAt time.Time `json:"occurred_at"`
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // TraegerStaff is the Personalstamm of ADR 0089 (#4705) in the Träger-Portal.
@@ -291,7 +292,7 @@ func publicTraegerStaffError(err error) error {
 func schoolIDs(schools []workforce.TraegerStaffSchool) []int64 {
 	ids := make([]int64, 0, len(schools))
 	for _, school := range schools {
-		ids = append(ids, school.ID)
+		ids = append(ids, school.ID.Int64())
 	}
 	return ids
 }
@@ -299,7 +300,7 @@ func schoolIDs(schools []workforce.TraegerStaffSchool) []int64 {
 func schoolNames(schools []workforce.TraegerStaffSchool) map[int64]string {
 	names := make(map[int64]string, len(schools))
 	for _, school := range schools {
-		names[school.ID] = school.Name
+		names[school.ID.Int64()] = school.Name
 	}
 	return names
 }
@@ -324,14 +325,14 @@ func linkWanted(record domain.TraegerStaffRecord) map[int64][]int64 {
 // school no longer holds as live stays listed as ended.
 func summarize(record domain.TraegerStaffRecord, names map[int64]string, reads map[int64]schoolRead) workforce.TraegerStaffRecordSummary {
 	summary := workforce.TraegerStaffRecordSummary{
-		ID: record.ID, FirstName: record.FirstName, LastName: record.LastName, Birthday: record.Birthday,
+		ID: ident.ID(record.ID), FirstName: record.FirstName, LastName: record.LastName, Birthday: record.Birthday,
 		PersonnelNumber: record.PersonnelNumber, HasFinancial: record.HasFinancial(),
 		Employments: make([]workforce.TraegerStaffEmployment, 0, len(record.Links)),
 	}
 	for _, link := range record.Links {
 		_, active := reads[link.SchoolID].members[link.StaffID]
 		summary.Employments = append(summary.Employments, workforce.TraegerStaffEmployment{
-			SchoolID: link.SchoolID, SchoolName: names[link.SchoolID], StaffID: link.StaffID, Active: active, ViaPool: link.ViaPool,
+			SchoolID: ident.ID(link.SchoolID), SchoolName: names[link.SchoolID], StaffID: ident.ID(link.StaffID), Active: active, ViaPool: link.ViaPool,
 		})
 	}
 	slices.SortStableFunc(summary.Employments, func(a, b workforce.TraegerStaffEmployment) int { return strings.Compare(a.SchoolName, b.SchoolName) })
@@ -357,14 +358,14 @@ func matchRecord(record domain.TraegerStaffRecord, reads map[int64]schoolRead) d
 func unlinkedCandidates(schools []workforce.TraegerStaffSchool, reads map[int64]schoolRead, linked map[[2]int64]bool) []domain.StaffCandidate {
 	var candidates []domain.StaffCandidate
 	for _, school := range schools {
-		read := reads[school.ID]
+		read := reads[school.ID.Int64()]
 		for _, staffID := range read.order {
-			if linked[[2]int64{school.ID, staffID}] {
+			if linked[[2]int64{school.ID.Int64(), staffID}] {
 				continue
 			}
 			member := read.members[staffID]
 			candidates = append(candidates, domain.StaffCandidate{
-				SchoolID: school.ID, StaffID: staffID, AccountID: member.AccountID, FirstName: member.FirstName,
+				SchoolID: school.ID.Int64(), StaffID: staffID, AccountID: member.AccountID, FirstName: member.FirstName,
 				LastName: member.LastName, Birthday: member.Birthday, PersonnelNumber: domain.Deref(member.PersonnelNumber),
 			})
 		}
@@ -381,7 +382,7 @@ func unlinkedCandidates(schools []workforce.TraegerStaffSchool, reads map[int64]
 func publicSuggestion(suggestion domain.StaffSuggestion, names map[int64]string, reads map[int64]schoolRead) workforce.TraegerStaffSuggestion {
 	public := workforce.TraegerStaffSuggestion{Reason: suggestion.Reason, Members: make([]workforce.TraegerStaffCandidate, 0, len(suggestion.Candidates))}
 	if suggestion.RecordID > 0 {
-		public.RecordID = new(suggestion.RecordID)
+		public.RecordID = (*ident.ID)(new(suggestion.RecordID))
 	}
 	for _, candidate := range suggestion.Candidates {
 		public.Members = append(public.Members, publicCandidate(reads[candidate.SchoolID].members[candidate.StaffID], candidate.SchoolID, names))
@@ -391,7 +392,7 @@ func publicSuggestion(suggestion domain.StaffSuggestion, names map[int64]string,
 
 func publicCandidate(member workforce.TraegerSchoolStaffMember, schoolID int64, names map[int64]string) workforce.TraegerStaffCandidate {
 	return workforce.TraegerStaffCandidate{
-		SchoolID: schoolID, SchoolName: names[schoolID], StaffID: member.StaffID, FirstName: member.FirstName,
+		SchoolID: ident.ID(schoolID), SchoolName: names[schoolID], StaffID: ident.ID(member.StaffID), FirstName: member.FirstName,
 		LastName: member.LastName, Birthday: member.Birthday, PersonnelNumber: member.PersonnelNumber,
 		HasAccount: member.AccountID != nil,
 	}
@@ -404,7 +405,7 @@ func publicRelease(release domain.TraegerStaffRelease) *workforce.TraegerStaffRe
 }
 
 func publicChange(change domain.TraegerStaffChange, names map[int64]string) workforce.TraegerStaffChange {
-	public := workforce.TraegerStaffChange{Kind: change.Kind, Field: change.Field, SchoolID: change.SchoolID, OccurredAt: change.OccurredAt}
+	public := workforce.TraegerStaffChange{Kind: change.Kind, Field: change.Field, SchoolID: (*ident.ID)(change.SchoolID), OccurredAt: change.OccurredAt}
 	switch {
 	case change.ValueMasked != nil:
 		public.Value = *change.ValueMasked

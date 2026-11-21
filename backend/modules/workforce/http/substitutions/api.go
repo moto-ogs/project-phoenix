@@ -22,6 +22,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -203,7 +204,7 @@ type additionalSupervisionRequest struct {
 }
 
 type scheduleAssignmentRequest struct {
-	InstanceID           int64                                   `json:"instance_id"`
+	InstanceID           ident.ID                                `json:"instance_id"`
 	UnderstaffedAck      *bool                                   `json:"understaffed_ack,omitempty"`
 	UnderstaffedNote     *string                                 `json:"understaffed_note,omitempty"`
 	Absences             []workforce.ScheduleAbsenceChange       `json:"absences,omitempty"`
@@ -214,8 +215,8 @@ type scheduleAssignmentRequest struct {
 }
 
 type wholeDaysRequest struct {
-	AbsentStaffID     int64      `json:"absent_staff_id"`
-	SubstituteStaffID *int64     `json:"substitute_staff_id,omitempty"`
+	AbsentStaffID     ident.ID   `json:"absent_staff_id"`
+	SubstituteStaffID *ident.ID  `json:"substitute_staff_id,omitempty"`
 	Dates             []wireDate `json:"dates"`
 	Reason            *string    `json:"reason,omitempty"`
 }
@@ -428,7 +429,7 @@ func (request assignmentRequest) toScheduleAssignment(assignment workforce.Subst
 	}
 	wire := request.ScheduleSubstitution
 	value := &workforce.ScheduleSubstitutionAssignment{
-		InstanceID: wire.InstanceID, UnderstaffedAck: wire.UnderstaffedAck, UnderstaffedNote: wire.UnderstaffedNote,
+		InstanceID: wire.InstanceID.Int64(), UnderstaffedAck: wire.UnderstaffedAck, UnderstaffedNote: wire.UnderstaffedNote,
 		Absences: wire.Absences, Substitutions: wire.Substitutions,
 		SubstitutionRemovals: wire.SubstitutionRemovals, Presences: wire.Presences,
 	}
@@ -438,7 +439,7 @@ func (request assignmentRequest) toScheduleAssignment(assignment workforce.Subst
 			dates = append(dates, string(date))
 		}
 		value.WholeDays = &workforce.ScheduleWholeDayAssignment{
-			AbsentStaffID: wire.WholeDays.AbsentStaffID, SubstituteStaffID: wire.WholeDays.SubstituteStaffID,
+			AbsentStaffID: wire.WholeDays.AbsentStaffID.Int64(), SubstituteStaffID: (*int64)(wire.WholeDays.SubstituteStaffID),
 			Dates: dates, Reason: wire.WholeDays.Reason,
 		}
 	}

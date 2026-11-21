@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Personal-Import of the Träger-Portal (#4724, ADR 0089 section 5): a
@@ -149,7 +151,7 @@ type StaffImportRow struct {
 	IBANMasked                 string               `json:"iban_masked,omitempty"`
 	TaxIDMasked                string               `json:"tax_id_masked,omitempty"`
 	SocialSecurityNumberMasked string               `json:"social_security_number_masked,omitempty"`
-	RecordID                   int64                `json:"staff_record_id,omitempty"`
+	RecordID                   ident.ID             `json:"staff_record_id,omitempty"`
 	Completes                  []string             `json:"completes"`
 	Problems                   []StaffImportProblem `json:"problems"`
 }
@@ -183,8 +185,8 @@ type StaffImport struct {
 // StaffImportEntry is one import in the log: when, by whom, which file,
 // how many records it created and how many it completed.
 type StaffImportEntry struct {
-	File      string `json:"file"`
-	AccountID int64  `json:"account_id"`
+	File      string   `json:"file"`
+	AccountID ident.ID `json:"account_id"`
 	// ByYou marks the reader's own import; AccountName names a colleague's
 	// with the name the colleague carries at the Träger, empty without one.
 	ByYou       bool      `json:"by_you"`
