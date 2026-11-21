@@ -2843,12 +2843,12 @@ describe("staff-api", () => {
 
   describe("staffBalanceAdjustmentService", () => {
     const backendAdjustment = {
-      id: 17,
+      id: "17",
       type: "payout",
       minutes_delta: -120,
       effective_date: "2026-07-31",
       note: "Juligehalt",
-      decided_by: 9,
+      decided_by: "9",
       decided_at: "2026-07-24T08:00:00Z",
     };
 
@@ -2907,7 +2907,7 @@ describe("staff-api", () => {
             Promise.resolve({
               data: {
                 ...backendAdjustment,
-                id: 18,
+                id: "18",
                 type: "reset",
                 minutes_delta: 60,
               },
@@ -3141,13 +3141,13 @@ describe("staff-api", () => {
         json: () =>
           Promise.resolve({
             data: {
-              id: 21,
-              staff_id: 4,
+              id: "21",
+              staff_id: "4",
               type: "opening",
               minutes_delta: -330,
               effective_date: "2026-07-31",
               note: "Übernahme aus Altsystem",
-              decided_by: 9,
+              decided_by: "9",
               decided_at: "2026-08-01T08:00:00Z",
             },
           }),

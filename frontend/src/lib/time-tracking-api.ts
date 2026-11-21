@@ -1,5 +1,7 @@
 // Time tracking API service for check-in/out and history management
 
+import type * as shared from "~/lib/contract/shared.generated";
+import type * as tt from "~/lib/contract/time-tracking.generated";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import type { MailOutcomeCounts } from "~/lib/email-delivery-status";
 import { unavailableApiError } from "./api-error";
@@ -10,10 +12,6 @@ import {
   type BackendAbsenceTypeAllowanceSummary,
 } from "./absence-type-api";
 import type {
-  BackendClosingDayRange,
-  BackendDailyProjection,
-  BackendHoliday,
-  BackendMonthSummary,
   DayProjection,
   HistoryResult,
   MonthSummary,
@@ -218,7 +216,7 @@ class TimeTrackingService {
       year: String(year),
       month: String(month),
     });
-    const result = await this.request<BackendMonthSummary>(
+    const result = await this.request<shared.MonthSummary>(
       `/month-summary?${params}`,
       "GET",
       "Failed to get month summary",
@@ -234,7 +232,7 @@ class TimeTrackingService {
     to: string,
   ): Promise<ReadonlyMap<string, DayProjection>> {
     const params = new URLSearchParams({ from, to });
-    const result = await this.request<BackendDailyProjection[] | null>(
+    const result = await this.request<shared.DailyProjection[] | null>(
       `/schedule-targets?${params}`,
       "GET",
       "Failed to get daily projection",
@@ -250,7 +248,7 @@ class TimeTrackingService {
     to: string,
   ): Promise<ReadonlyMap<string, string>> {
     const params = new URLSearchParams({ from, to });
-    const result = await this.request<BackendHoliday[] | null>(
+    const result = await this.request<tt.PublicHoliday[] | null>(
       `/holidays?${params}`,
       "GET",
       "Failed to get holidays",
@@ -266,7 +264,7 @@ class TimeTrackingService {
     to: string,
   ): Promise<ReadonlyMap<string, string>> {
     const params = new URLSearchParams({ from, to });
-    const result = await this.request<BackendClosingDayRange[] | null>(
+    const result = await this.request<tt.closingDayRangeResponse[] | null>(
       `/closing-days?${params}`,
       "GET",
       "Failed to get closing days",

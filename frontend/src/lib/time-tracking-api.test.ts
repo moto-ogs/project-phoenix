@@ -28,8 +28,8 @@ function mockFetchResponse(data: unknown, ok = true, status = 200) {
 
 // Sample backend responses (snake_case, numeric IDs)
 const backendSession = {
-  id: 1,
-  staff_id: 10,
+  id: "1",
+  staff_id: "10",
   date: "2025-06-15T00:00:00Z",
   status: "present",
   check_in_time: "2025-06-15T08:00:00Z",
@@ -37,7 +37,7 @@ const backendSession = {
   break_minutes: 0,
   notes: "",
   auto_checked_out: false,
-  created_by: 10,
+  created_by: "10",
   updated_by: null,
   created_at: "2025-06-15T08:00:00Z",
   updated_at: "2025-06-15T08:00:00Z",
@@ -50,8 +50,8 @@ const backendSessionWithCheckout = {
 };
 
 const backendBreak = {
-  id: 5,
-  session_id: 1,
+  id: "5",
+  session_id: "1",
   started_at: "2025-06-15T12:00:00Z",
   ended_at: "2025-06-15T12:30:00Z",
   duration_minutes: 30,
@@ -71,10 +71,10 @@ const backendHistory = {
 };
 
 const backendEdit = {
-  id: 3,
-  session_id: 1,
-  staff_id: 10,
-  edited_by: 99,
+  id: "3",
+  session_id: "1",
+  staff_id: "10",
+  edited_by: "99",
   field_name: "notes",
   old_value: null,
   new_value: "Updated",
@@ -83,17 +83,17 @@ const backendEdit = {
 };
 
 const backendAbsence = {
-  id: 7,
-  staff_id: 10,
+  id: "7",
+  staff_id: "10",
   absence_type: "sick",
   date_start: "2025-06-20T00:00:00Z",
   date_end: "2025-06-21T00:00:00Z",
   half_day: false,
   note: "Flu",
   status: "approved",
-  approved_by: 99,
+  approved_by: "99",
   approved_at: "2025-06-20T08:00:00Z",
-  created_by: 10,
+  created_by: "10",
   created_at: "2025-06-20T07:00:00Z",
   updated_at: "2025-06-20T08:00:00Z",
   duration_days: 2,

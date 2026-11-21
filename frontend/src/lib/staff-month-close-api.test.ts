@@ -14,7 +14,7 @@ import {
 const mockedSessionFetch = vi.mocked(sessionFetch);
 
 const snapshot = {
-  staff_id: 12,
+  staff_id: "12",
   year: 2026,
   month: 6,
   closing_balance_minutes: 90,
@@ -24,7 +24,7 @@ const snapshot = {
   credited_minutes: 0,
   adjustment_minutes: 0,
   closed_at: "2026-07-01T08:00:00Z",
-  closed_by: 4,
+  closed_by: "4",
   close_reason: "Lohnlauf",
   source: "manual",
 };
