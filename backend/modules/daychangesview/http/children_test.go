@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -220,12 +221,23 @@ func TestDayChangesChildrenQueryBudget(t *testing.T) {
 	carer, account := testpkg.CreateTestTeacherWithAccount(t, db, "Budget", "Betreuung")
 	own := testpkg.CreateTestEducationGroup(t, db, "Budget-Eigene")
 	testpkg.CreateTestGroupTeacher(t, db, own.ID, carer.ID)
+	// The care staff is staff of the classes too: the class trips and the
+	// changed Unterrichtsschluss (#7681) read its classes.
+	testpkg.CreateTestClassTeacher(t, db, carer.StaffID, "1a")
+	arrivals, err := api.NewDayChangesClassDismissalForTests(testpkg.NewDatabase(t, db))
+	require.NoError(t, err)
 	router := newRouter(t, db, day)
 	counter := testpkg.CaptureQueries(t, db)
 	var statements testpkg.QueryMeasurement
 	baseline := 0
 	for round, n := range []int{1, 4} {
 		for created := baseline; created < n; created++ {
+			class := fmt.Sprintf("%dc", created+2)
+			trip := testpkg.CreateTestStudent(t, db, "Budget", fmt.Sprintf("Reise-%d", created), class)
+			testpkg.CreateTestStudentStatusDay(t, db, trip.ID, day, "class_trip")
+			outing := testpkg.CreateTestStudent(t, db, "Budget", fmt.Sprintf("Ausflug-%d", created), class+"x")
+			testpkg.CreateTestArrivalException(t, db, outing.ID, day, carer.StaffID, "13:00", "Ausflug")
+			addClassDismissal(t, arrivals, class, day, "11:30", "")
 			other := testpkg.CreateTestEducationGroup(t, db, fmt.Sprintf("Budget-%d", created))
 			for _, groupID := range []int64{own.ID, other.ID} {
 				student := testpkg.CreateTestStudent(t, db, "Budget", fmt.Sprintf("Kind-%d-%d", created, groupID), "1a")
@@ -240,6 +252,7 @@ func TestDayChangesChildrenQueryBudget(t *testing.T) {
 		counter.Reset()
 		_, body := read(t, router, account.ID, testpkg.Tenant(t), "users:read")
 		require.Len(t, childLines(t, body), 4*n+n)
+		require.Len(t, classLines(t, body), 3*n, "a trip, an outing and a changed Unterrichtsschluss per round")
 		measured := counter.Measurement(counter.Queries())
 		if round > 0 {
 			require.Len(t, measured.Statements, len(statements.Statements), "statements must not grow with the children")

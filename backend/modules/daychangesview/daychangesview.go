@@ -40,6 +40,9 @@ const (
 	// SourceActivities is Stundenplan: cancelled, reinstated, moved and
 	// covered activity blocks (#7662).
 	SourceActivities Source = "activities"
+	// SourceClasses is Stundenplan der Klassen: a class whose
+	// Unterrichtsschluss changes today (#7681).
+	SourceClasses Source = "classes"
 )
 
 // SourceState says whether a source answered. A source the caller lacks the
@@ -108,6 +111,13 @@ const (
 	KindActivityRoomChanged Kind = "activity_room_changed"
 	// KindActivityLeadChanged: somebody covers for a planned supervisor.
 	KindActivityLeadChanged Kind = "activity_lead_changed"
+	// KindClassTrip: children of a class are on a trip today (#7681), from
+	// the Kinder source. Class.Time is the return time of a day outing, nil
+	// for a trip over the whole day. Never a child's name or a reason.
+	KindClassTrip Kind = "class_trip"
+	// KindClassDismissalChanged: a class ends school at another time today
+	// (#7681); Class.Time is the new Unterrichtsschluss. Never a reason.
+	KindClassDismissalChanged Kind = "class_dismissal_changed"
 )
 
 // ChildStatus is the status of an absent child, as on the detail page.
@@ -250,6 +260,16 @@ type DayClosing struct {
 	Traeger bool   `json:"traeger"`
 }
 
+// DayClass is the school class an entry concerns (#7681). Name is the class
+// as the school entered it; Time ("15:04", the school's wall clock) is the
+// return time of a day outing or the changed Unterrichtsschluss; Children
+// is the number of children on a class trip.
+type DayClass struct {
+	Name     string  `json:"name"`
+	Time     *string `json:"time"`
+	Children int     `json:"children"`
+}
+
 // BlockRoom is the room an entry names.
 type BlockRoom struct {
 	ID   int64  `json:"id,string"`
@@ -299,6 +319,8 @@ type SourceEntry struct {
 	Activity     *BlockActivity
 	Room         *BlockRoom
 	PreviousRoom *BlockRoom
+	// Class is set on the class kinds (#7681).
+	Class *DayClass
 }
 
 // Entry is one change to regular operation of the day.
@@ -328,6 +350,8 @@ type Entry struct {
 	Activity     *BlockActivity `json:"activity"`
 	Room         *BlockRoom     `json:"room"`
 	PreviousRoom *BlockRoom     `json:"previous_room"`
+	// Class: see SourceEntry.
+	Class *DayClass `json:"class"`
 }
 
 // SourceStatus reports one source.
@@ -379,6 +403,13 @@ type ClosingDays interface {
 	ClosingDays(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
 }
 
+// ClassChanges is the port of the Stundenplan der Klassen (#7681): the
+// classes whose Unterrichtsschluss changes on the day, as the caller may see
+// them, and whether the caller belongs to the staff of the class.
+type ClassChanges interface {
+	ClassChanges(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
+}
+
 // Isolation runs source reads so that a failure leaves the request's
 // transaction usable (a savepoint). It returns the source's own error
 // unchanged and reports a failure of the isolation itself as fatal.
@@ -403,7 +434,9 @@ type Dependencies struct {
 	Closing   ClosingDays
 	// Activities is the Stundenplan source (#7662).
 	Activities ActivityChanges
-	Logger     *slog.Logger
+	// Classes is the Stundenplan der Klassen (#7681).
+	Classes ClassChanges
+	Logger  *slog.Logger
 }
 
 // Query reads the overview of the session's school.
@@ -428,7 +461,7 @@ type view struct {
 
 // New builds the projection.
 func New(deps Dependencies) (Query, error) {
-	if deps.Today == nil || deps.Isolation == nil || deps.Staff == nil || deps.Children == nil || deps.Notices == nil || deps.Closing == nil || deps.Activities == nil {
+	if deps.Today == nil || deps.Isolation == nil || deps.Staff == nil || deps.Children == nil || deps.Notices == nil || deps.Closing == nil || deps.Activities == nil || deps.Classes == nil {
 		return nil, ErrDependencies
 	}
 	logger := deps.Logger
@@ -446,6 +479,7 @@ func New(deps Dependencies) (Query, error) {
 			{source: SourceNotices, read: deps.Notices.StaffNotices},
 			{source: SourceClosingDays, read: deps.Closing.ClosingDays},
 			{source: SourceActivities, read: deps.Activities.ActivityChanges},
+			{source: SourceClasses, read: deps.Classes.ClassChanges},
 		},
 	}, nil
 }
@@ -567,6 +601,7 @@ func toEntry(entry SourceEntry) Entry {
 		People: people, Group: entry.Group, Link: entry.Link, Count: entry.Count, Notice: entry.Notice,
 		Closing: entry.Closing, Child: entry.Child, ChildSummary: entry.ChildSummary,
 		Activity: entry.Activity, Room: entry.Room, PreviousRoom: entry.PreviousRoom,
+		Class: entry.Class,
 	}
 }
 
@@ -627,6 +662,9 @@ func firstName(entry Entry) string {
 }
 
 func groupName(entry Entry) string {
+	if entry.Group == nil && entry.Class != nil {
+		return entry.Class.Name
+	}
 	if entry.Group == nil && entry.ChildSummary != nil {
 		return entry.ChildSummary.SchoolClass
 	}

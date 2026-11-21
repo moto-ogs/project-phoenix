@@ -46139,6 +46139,31 @@
       ]
     },
     {
+      "name": "DayClass",
+      "go_type": "daychangesview.DayClass",
+      "fields": [
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "time",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "DayClosing",
       "go_type": "daychangesview.DayClosing",
       "fields": [
@@ -48995,6 +49020,14 @@
             "kind": "ref",
             "nullable": true,
             "ref": "BlockRoom"
+          }
+        },
+        {
+          "name": "class",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "DayClass"
           }
         }
       ]

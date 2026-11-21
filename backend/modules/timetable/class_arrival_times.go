@@ -53,3 +53,22 @@ type ClassArrivalQuery interface {
 	ListClassArrivalPlans(context.Context, []string) ([]ClassArrivalPlan, error)
 	ListClassArrivalExceptions(context.Context, []string, string, string) ([]ClassArrivalException, error)
 }
+
+// ClassArrivalDayQuery reads the class-wide dismissal changes of every class
+// on one day (#7681). Date is YYYY-MM-DD.
+type ClassArrivalDayQuery interface {
+	ListClassArrivalExceptionsOn(ctx context.Context, date string) ([]ClassArrivalException, error)
+}
+
+// ErrNoClassArrivalDay reports a class arrival query without the day read.
+var ErrNoClassArrivalDay = errors.New("timetable class arrivals: the query reads no day of every class")
+
+// ClassArrivalDayOf is the day read of the class arrival query the owner
+// composed.
+func ClassArrivalDayOf(query ClassArrivalQuery) (ClassArrivalDayQuery, error) {
+	day, ok := query.(ClassArrivalDayQuery)
+	if !ok {
+		return nil, ErrNoClassArrivalDay
+	}
+	return day, nil
+}

@@ -13,10 +13,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// classTripArrivalReason is the reason the OGS reads at a child's arrival
-// time when a Lehrkraft reported a day outing with a return time.
-const classTripArrivalReason = "Ausflug"
-
 // classTrips is the second write seam of the class-day view (#4799): a
 // Lehrkraft reports a class trip or day outing of an assigned class through
 // "moto schule". It writes no rows of its own. A trip without a return time
@@ -93,7 +89,7 @@ func (t classTrips) ReportClassTrip(ctx context.Context, in classday.ClassTripWr
 	// Use one order even when callers select the same children in reverse.
 	slices.Sort(studentIDs)
 	arrival := calendar.NormalizeWallClock(*in.ReturnTime)
-	arrivalReason := classTripArrivalReason
+	arrivalReason := classday.ClassTripArrivalReason
 	if reason != "" {
 		arrivalReason += ": " + reason
 	}

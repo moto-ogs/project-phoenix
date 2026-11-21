@@ -124,6 +124,26 @@ func (q classArrivalQueries) ListClassArrivalExceptions(ctx context.Context, cla
 	return result, nil
 }
 
+// ListClassArrivalExceptionsOn returns the exceptions of every class of the
+// school on one day, in one statement (#7681): "Heute anders" names the
+// classes whose Unterrichtsschluss changes today without knowing them first.
+func (q classArrivalQueries) ListClassArrivalExceptionsOn(ctx context.Context, date string) ([]timetable.ClassArrivalException, error) {
+	if !timetable.ValidDate(date) {
+		return nil, timetable.ErrInvalidClassArrivalExceptionRange
+	}
+	started := time.Now()
+	rows, stats, err := q.store.ListClassArrivalExceptionRecords(ctx, nil, date, date)
+	q.observe(internalports.Observation{Operation: "list_class_arrival_exceptions_on", Duration: time.Since(started), Stats: stats, Err: err})
+	if err != nil {
+		return nil, err
+	}
+	result := make([]timetable.ClassArrivalException, len(rows))
+	for i, row := range rows {
+		result[i] = nativeClassArrivalException(row)
+	}
+	return result, nil
+}
+
 func classArrivalKeys(classes []string) []string {
 	keys := make([]string, 0, len(classes))
 	for _, class := range classes {

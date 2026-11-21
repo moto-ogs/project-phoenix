@@ -70,6 +70,11 @@ type StudentName struct {
 	SchoolMemberOnly  bool           `json:"-"`
 	SchoolMemberFrom  *calendar.Date `json:"-"`
 	SchoolMemberUntil *calendar.Date `json:"-"`
+	// SchoolClass and GroupID are set by the read by id, so an owner names a
+	// child and places it in its class and group in one statement ("Heute
+	// anders", #7681). Not on the wire.
+	SchoolClass string `json:"-"`
+	GroupID     *int64 `json:"-"`
 }
 
 func (s Student) IsAlumnus() bool { return s.Status == StudentStatusAlumnus }

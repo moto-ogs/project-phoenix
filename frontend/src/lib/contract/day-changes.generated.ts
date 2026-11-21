@@ -205,6 +205,19 @@ export const BlockRoomSchema: z.ZodType<BlockRoom, unknown> = object<BlockRoom>(
   name: str,
 });
 
+/** Go: daychangesview.DayClass */
+export interface DayClass {
+  name: string;
+  time: string | null;
+  children: number;
+}
+
+export const DayClassSchema: z.ZodType<DayClass, unknown> = object<DayClass>({
+  name: str,
+  time: nullable(str),
+  children: safeInt,
+});
+
 /** Go: daychangesview.Entry */
 export interface Entry {
   kind: OpenEnum<Kind>;
@@ -226,6 +239,7 @@ export interface Entry {
   activity: BlockActivity | null;
   room: BlockRoom | null;
   previous_room: BlockRoom | null;
+  class: DayClass | null;
 }
 
 export const EntrySchema: z.ZodType<Entry, unknown> = object<Entry>({
@@ -248,6 +262,7 @@ export const EntrySchema: z.ZodType<Entry, unknown> = object<Entry>({
   activity: nullable(BlockActivitySchema),
   room: nullable(BlockRoomSchema),
   previous_room: nullable(BlockRoomSchema),
+  class: nullable(DayClassSchema),
 });
 
 /** Go: daychangesview.Overview */

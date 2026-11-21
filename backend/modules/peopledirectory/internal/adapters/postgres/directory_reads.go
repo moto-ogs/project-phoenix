@@ -127,7 +127,7 @@ func (s *studentDirectoryReads) ListNamesByIDs(ctx context.Context, ids []int64)
 	}
 	rows := []directory.StudentName{}
 	query := withStudentTenant(s.studentRows(db, scope).
-		ColumnExpr(`"student".id AS student_id, "person".first_name, "person".last_name`).
+		ColumnExpr(`"student".id AS student_id, "person".first_name, "person".last_name, "student".school_class, "student".group_id`).
 		Join(`JOIN users.persons AS "person" ON "person".tenant_id = "student".tenant_id AND "person".id = "student".person_id`).
 		Where(`"student".id IN (?)`, bun.List(ids)).
 		Where(`"person".deleted_at IS NULL`), scope).
