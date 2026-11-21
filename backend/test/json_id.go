@@ -15,9 +15,6 @@ import (
 // decodes into int64 or string instead.
 type ID int64
 
-// Int64 returns the identifier as an int64.
-func (id ID) Int64() int64 { return int64(id) }
-
 // UnmarshalJSON accepts a JSON number or a decimal string; null leaves the
 // value unchanged, as encoding/json does for an int64.
 func (id *ID) UnmarshalJSON(data []byte) error {
