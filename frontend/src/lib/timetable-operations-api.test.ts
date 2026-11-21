@@ -4,6 +4,12 @@ import {
   timetableOperationsApi,
   isReopenUnavailableError,
 } from "./timetable-operations-api";
+import {
+  buildOperationPlannedInstance,
+  buildOperationRoster,
+  buildOperationRosterInstance,
+  buildOperationRosterRow,
+} from "~/test/fixtures/timetable-operations";
 
 describe("timetableOperationsApi", () => {
   let originalFetch: typeof fetch;
@@ -23,25 +29,18 @@ describe("timetableOperationsApi", () => {
       jsonResponse({
         data: {
           instances: [
-            {
-              id: 130,
+            buildOperationPlannedInstance({
+              id: "130",
               title: "Lernzeit",
-              date: "2026-05-10",
-              start_time: "14:00",
-              end_time: "15:00",
-              room_id: 230,
+              room_id: "230",
               room_name: "Lernraum",
-              status: "planned",
-              is_overdue: false,
               minutes_until_start: 10,
               expected_students_count: 12,
-              present_students_count: 0,
-              assigned_staff_ids: [330],
+              assigned_staff_ids: ["330"],
               is_assigned: true,
-              is_primary: false,
               is_substitute: true,
               roster_preview: [],
-            },
+            }),
           ],
         },
       }),
@@ -129,9 +128,10 @@ describe("timetableOperationsApi", () => {
     mockFetch.mockResolvedValueOnce(
       jsonResponse({
         data: {
-          instance_id: 131,
-          active_group_id: 231,
+          instance_id: "131",
+          active_group_id: "231",
           status: "active",
+          warnings: null,
         },
       }),
     );
@@ -158,9 +158,10 @@ describe("timetableOperationsApi", () => {
     mockFetch.mockResolvedValueOnce(
       jsonResponse({
         data: {
-          instance_id: 132,
-          active_group_id: 232,
+          instance_id: "132",
+          active_group_id: "232",
           status: "active",
+          warnings: null,
         },
       }),
     );
@@ -337,7 +338,12 @@ describe("timetableOperationsApi", () => {
   it("reopens a recently completed instance", async () => {
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(
       jsonResponse({
-        data: { instance_id: 135, active_group_id: 77, status: "active" },
+        data: {
+          instance_id: "135",
+          active_group_id: "77",
+          status: "active",
+          warnings: null,
+        },
       }),
     );
     await expect(timetableOperationsApi.reopen("135")).resolves.toMatchObject({
@@ -436,28 +442,25 @@ function jsonResponse(body: unknown, ok = true, status = 200): Response {
 }
 
 function rosterPayload(instanceId: number) {
-  return {
-    instance: {
-      id: instanceId,
+  return buildOperationRoster({
+    instance: buildOperationRosterInstance({
+      id: String(instanceId),
       title: "Lernzeit",
       status: "active",
-      is_spontaneous: false,
-      active_group_id: 240,
-      room_id: 241,
+      active_group_id: "240",
+      room_id: "241",
       room_name: "Raum A",
-    },
+    }),
     rows: [
-      {
-        student_id: 440,
+      buildOperationRosterRow({
+        student_id: "440",
         student_name: "Mila Muster",
         school_class: "3a",
         group_name: "OGS Blau",
-        planned: true,
-        is_unplanned: false,
         currently_present: true,
-        visit_id: 540,
+        visit_id: "540",
         status: "present",
-      },
+      }),
     ],
-  };
+  });
 }

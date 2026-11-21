@@ -51,7 +51,8 @@ type BlockClock = Pick<
   PlannedTimetableInstance,
   "startTime" | "endTime" | "isSpontaneous"
 > & {
-  status: string;
+  /** undefined: a status this build does not know. */
+  status: string | undefined;
 };
 
 /**
