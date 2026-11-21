@@ -299,6 +299,7 @@ func (s *Service) FindTeacherByStaff(ctx context.Context, staffID int64) (result
 func (s *Service) ListTeachers(ctx context.Context, filter schoolmembership.TeacherFilter) (result []schoolmembership.Teacher, err error) {
 	filter.IDs = uniquePositive(filter.IDs)
 	filter.StaffIDs = uniquePositive(filter.StaffIDs)
+	filter.GroupIDs = uniquePositive(filter.GroupIDs)
 	filter.Specialization = strings.TrimSpace(filter.Specialization)
 	filter.SpecializationContains = strings.TrimSpace(filter.SpecializationContains)
 	filter.RoleContains = strings.TrimSpace(filter.RoleContains)

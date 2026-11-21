@@ -132,6 +132,8 @@ const DAY_CHANGE_TEXTS: Readonly<
   activity_room_changed: (change) =>
     `${activityName(change, true)} ist heute in einem anderen Raum.`,
   activity_lead_changed: activityLeadChangedText,
+  // Nur die Kurzinfo (#7666); was es gibt, steht auf der Seite Speiseplan.
+  meal_plan_changed: () => "Der Speiseplan für heute wurde geändert.",
 };
 
 export function dayChangeText(change: DayChange): string | null {
@@ -187,6 +189,7 @@ const SOURCE_FAILURE_TEXTS: Readonly<Record<string, string>> = {
   notices: "Hinweise der Leitung konnten gerade nicht geladen werden.",
   activities:
     "Änderungen an Angeboten und AGs konnten gerade nicht geladen werden.",
+  meal_plan: "Änderungen am Speiseplan konnten gerade nicht geladen werden.",
 };
 
 export function sourceFailureText(source: string): string {
@@ -217,6 +220,8 @@ export function dayChangeHref(change: DayChange): string | null {
       // Die Zeile ersetzt den Weg durch den Tagesplan der Person
       // (useDayPlanHref); das hier ist der Weg der Betreuung.
       return "/tagesplan";
+    case "meal_plan":
+      return "/meal-plan";
     default:
       return null;
   }

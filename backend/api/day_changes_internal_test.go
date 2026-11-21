@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/daychangesview"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/modules/mealplan"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
@@ -21,7 +22,7 @@ func (invisibleDayChangesCaller) CurrentStaffID(context.Context) (int64, bool, e
 	return 0, false, nil
 }
 
-func (invisibleDayChangesCaller) MyGroupIDs(context.Context) ([]int64, error) {
+func (invisibleDayChangesCaller) MyTeacherGroupIDs(context.Context) ([]int64, error) {
 	return nil, errors.New("must not resolve groups for a non-staff account")
 }
 
@@ -48,6 +49,13 @@ func (directDayChangesIsolation) Run(ctx context.Context, read func(context.Cont
 
 func (directDayChangesIsolation) IsFatal(error) bool { return false }
 
+// unchangedDayChangesMenu is a meal plan without a changed menu today.
+type unchangedDayChangesMenu struct{}
+
+func (unchangedDayChangesMenu) MenuChangedOn(context.Context, mealplan.Date) (bool, error) {
+	return false, nil
+}
+
 func TestDayChangesInvisibleAccountSkipsUnavailableWorkforce(t *testing.T) {
 	t.Parallel()
 	workforceSource := &unavailableDayChangesWorkforce{}
@@ -62,6 +70,8 @@ func TestDayChangesInvisibleAccountSkipsUnavailableWorkforce(t *testing.T) {
 		Notices: dayChangesNotices{},
 		// Without schedules:read the Stundenplan source reads nothing.
 		Activities: dayChangesActivities{},
+		// No change mark today: the Essen source answers without an entry.
+		MealPlan: dayChangesMealPlan{reads: unchangedDayChangesMenu{}},
 	})
 	require.NoError(t, err)
 
@@ -71,6 +81,7 @@ func TestDayChangesInvisibleAccountSkipsUnavailableWorkforce(t *testing.T) {
 		{Source: daychangesview.SourceStaff, Status: daychangesview.SourceLoaded},
 		{Source: daychangesview.SourceNotices, Status: daychangesview.SourceLoaded},
 		{Source: daychangesview.SourceActivities, Status: daychangesview.SourceLoaded},
+		{Source: daychangesview.SourceMealPlan, Status: daychangesview.SourceLoaded},
 	}, overview.Sources)
 	assert.Empty(t, overview.Entries)
 	assert.False(t, workforceSource.handoversRead)

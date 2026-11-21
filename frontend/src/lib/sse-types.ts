@@ -46,6 +46,10 @@ type SSEEventType =
   // gelöscht. Ohne Inhalt; „Heute anders“ und die Tagesinformationen laden neu.
   // See backend/realtime/events.go EventStaffNoticesChanged.
   | "staff_notices_changed"
+  // Speiseplan (#7666): das Menü eines Tages wurde gespeichert oder gelöscht.
+  // Ohne Inhalt; „Heute anders“ lädt neu.
+  // See backend/realtime/events.go EventMealPlanChanged.
+  | "meal_plan_changed"
   // Timetable instance lifecycle events emitted by the backend (WP-B9).
   // The weekly planner subscribes to these so admin and office staff see
   // live status changes (start/complete/cancel) without manual refresh.

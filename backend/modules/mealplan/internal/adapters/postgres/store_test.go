@@ -80,7 +80,7 @@ func TestStoreRoundTripsAllergens(t *testing.T) {
 	_, err = store.ReplaceDay(context.Background(), date, []mealplan.Dish{
 		{Dish: "Fischstäbchen", Allergens: []mealplan.Allergen{mealplan.AllergenGluten, mealplan.AllergenFish}},
 		{Dish: "Obst", Allergens: []mealplan.Allergen{}},
-	})
+	}, nil)
 	require.NoError(t, err)
 
 	entries, _, err := store.FindWeek(context.Background(), date, date)

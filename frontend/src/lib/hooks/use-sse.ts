@@ -230,6 +230,9 @@ export function useSSE(
           // deleted. Named, so it must be registered here or „Heute anders“
           // and the Tagesinformationen count only refresh on focus.
           "staff_notices_changed",
+          // Speiseplan (#7666): the menu of a day changed. Named, so it must
+          // be registered here or „Heute anders“ only refreshes on focus.
+          "meal_plan_changed",
           // moto schule only (#4792): wakes an open class view after a new
           // sick note. Named like the others, so it must be registered here
           // or SchoolRealtimeBridge never sees it.

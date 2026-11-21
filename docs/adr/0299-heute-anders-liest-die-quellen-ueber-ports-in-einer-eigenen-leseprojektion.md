@@ -196,3 +196,29 @@ Projektion nutzt „change“.
   zwei weitere (`ROLLBACK TO`, `RELEASE`) und einen neuen `SAVEPOINT`.
 - Die Namen der Quelle Personal liest die Wurzel jetzt ohne das
   Beschäftigungsprofil: Die Übersicht braucht nur Mitgliedschaft und Person.
+
+## Nachtrag 2026-11-21: Quelle Speiseplan (#7666)
+
+- Die Quelle Essen liest Meal Plans neue Lesefähigkeit `MenuChanges`
+  (`MenuChangedOn`, ein Statement im Adapter des Owners). Meal Plan
+  kennzeichnet einen Tag beim Speichern mit `menu_changed_at`, wenn ein schon
+  veröffentlichtes Menü geändert wird. Das ist dieselbe Regel wie beim Hinweis
+  an die Eltern (#7145): Die erste Veröffentlichung ist keine Änderung, ein
+  erneutes Speichern desselben Menüs behält die Kennzeichnung, Löschen entfernt
+  den Tag samt Kennzeichnung.
+- Rechte-Regel: Jedes Konto des Staff-Portals sieht die Kurzinfo, auch ohne
+  `meals:read`. Sie nennt kein Gericht. Den Link auf die Seite Speiseplan
+  bekommt nur ein Konto, das den Speiseplan lesen darf (Regel von
+  `GET /api/meal-plan/`), damit niemand auf einer leeren Seite landet.
+- Live: Meal Plan meldet ein gespeichertes oder gelöschtes Menü mit dem Event
+  `meal_plan_changed` ohne Inhalt an die Schule. Die Wurzel bindet es als
+  Middleware außerhalb der Anfrage-Transaktion der beiden Schreibrouten, sie
+  sendet also nur nach einer bestätigten 2xx-Antwort, und braucht keinen
+  neuen After-Commit-Eintrag.
+- Query-Budget: Die Quelle kostet ein Statement. Dafür liest die Quelle
+  Personal das Team der eigenen Gruppen jetzt in einem Statement
+  (`TeacherFilter.GroupIDs` in School Membership) statt in zweien. Die eigenen
+  Gruppen liest sie über `MyTeacherGroupIDs`; die heute vertretenen Gruppen
+  leitet sie aus den Gruppenübergaben des Tages ab, die sie ohnehin liest (wie
+  in #7661 beschrieben). `api.day_changes.today` misst danach 18 von 19,
+  `api.day_changes.today_activities` 20 von 20.
