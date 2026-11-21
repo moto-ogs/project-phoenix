@@ -351,6 +351,10 @@ const HOST_RULES: Record<HostedPortalKey, PortalHostRules> = {
       "/api/enrollment/requests/",
       /^\/api\/enrollment\/[^/]+\/uploads$/,
       "/api/demo/access/",
+      // The calendar subscription the backend hands parents names this host
+      // (#2352); the token is its only credential and next.config.js
+      // rewrites it to the staff proxy's public file route.
+      { get: /^\/api\/calendar-feed\/[^/]+$/ },
     ],
     localized: true,
     help: true,

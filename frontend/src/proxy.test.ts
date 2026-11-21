@@ -1,4 +1,4 @@
-import { readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, it, expect, vi } from "vitest";
 import { NextRequest } from "next/server";
@@ -2127,6 +2127,60 @@ describe("proxy", () => {
       ]) {
         expect(status(PARENTS_HOSTNAME, apiPath), apiPath).toBe(404);
       }
+    });
+
+    // The backend hands parents a feed address on the parents host
+    // (schoolcalendar feedURLs with ParentsURL); calendar apps poll it with
+    // the token as the only credential (#2352, regression of #6151). The
+    // path is read from the Go source so both sides cannot drift apart.
+    it("serves the calendar feed address the backend gives parents, GET only", () => {
+      const repoRoot = path.join(__dirname, "..", "..");
+      const feedSource = readFileSync(
+        path.join(
+          repoRoot,
+          "backend/modules/schoolcalendar/portal/internal/application/feed.go",
+        ),
+        "utf8",
+      );
+      expect(feedSource).toContain("feedURLs(s.cfg.ParentsURL, token)");
+      const feedPrefix = /"(\/api\/[^"]+\/)" \+ token/.exec(feedSource)?.[1];
+      expect(feedPrefix).toBe("/api/calendar-feed/");
+      const feedPath = `${feedPrefix}tok`;
+
+      const answer = (method: string, apiPath: string) => {
+        const request = new NextRequest(
+          `http://${PARENTS_HOSTNAME}${apiPath}`,
+          {
+            method,
+          },
+        );
+        request.headers.set("host", PARENTS_HOSTNAME);
+        return proxy(request).status;
+      };
+      for (const method of ["GET", "HEAD"]) {
+        expect(answer(method, feedPath), method).toBe(200);
+      }
+      for (const [method, apiPath] of [
+        ["POST", feedPath],
+        ["PUT", feedPath],
+        ["DELETE", feedPath],
+        ["GET", `${feedPrefix}tok/extra`],
+        ["GET", "/api/calendar-feed"],
+      ] as const) {
+        expect(answer(method, apiPath), `${method} ${apiPath}`).toBe(404);
+      }
+
+      // The request feed's address names the school's own subdomain
+      // (requestfeed feedURL), so the parents host keeps it closed.
+      const requestFeedSource = readFileSync(
+        path.join(
+          repoRoot,
+          "backend/modules/careplan/requestfeed/internal/application/service.go",
+        ),
+        "utf8",
+      );
+      expect(requestFeedSource).toContain('host = subdomain + "." + host');
+      expect(answer("GET", "/api/request-feed/tok")).toBe(404);
     });
   });
 
