@@ -18,6 +18,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil/routetest"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	identityoperator "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/operator"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // invitationMockService implements OperatorAccess —
@@ -778,7 +779,7 @@ func TestAcceptInvitation_Success(t *testing.T) {
 	require.NoError(t, err)
 
 	data := response["data"].(map[string]interface{})
-	assert.Equal(t, float64(100), data["id"])
+	assert.Equal(t, int64(100), testpkg.JSONID(t, data["id"]))
 	assert.Equal(t, "new@example.com", data["email"])
 }
 

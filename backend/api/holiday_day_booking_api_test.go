@@ -41,23 +41,23 @@ const (
 type dayOfferBody struct {
 	MaxDaysPerChild *int `json:"max_days_per_child"`
 	Weeks           []struct {
-		ID          int64    `json:"id"`
-		BookingUnit string   `json:"booking_unit"`
-		CareDays    []string `json:"care_days"`
-		FullDays    []string `json:"full_days"`
+		ID          testpkg.ID `json:"id"`
+		BookingUnit string     `json:"booking_unit"`
+		CareDays    []string   `json:"care_days"`
+		FullDays    []string   `json:"full_days"`
 		TimeModels  []struct {
-			ID         int64 `json:"id"`
-			PriceCents int64 `json:"price_cents"`
+			ID         testpkg.ID `json:"id"`
+			PriceCents int64      `json:"price_cents"`
 		} `json:"time_models"`
 	} `json:"weeks"`
 	Schools []struct {
-		ID int64 `json:"id"`
+		ID testpkg.ID `json:"id"`
 	} `json:"schools"`
 }
 
 type dayPlacesBody struct {
-	WeekID      int64  `json:"week_id"`
-	BookingUnit string `json:"booking_unit"`
+	WeekID      testpkg.ID `json:"week_id"`
+	BookingUnit string     `json:"booking_unit"`
 	Days        []struct {
 		Date   string `json:"date"`
 		Placed int    `json:"placed"`
@@ -94,12 +94,12 @@ func newDayFixture(t *testing.T, name string) dayFixture {
 	rec := traegerJSON(t, f.traeger, office.token, http.MethodPost, "/traeger/holiday-periods/", body)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	created := decodeSchoolPortalData[traegerPeriodLink](t, rec.Body.Bytes())
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayPeriodPath(created.ID)+"/publish", nil)
+	rec = traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayPeriodPath(int64(created.ID))+"/publish", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	period := decodeSchoolPortalData[traegerPeriodLink](t, rec.Body.Bytes())
 	d := dayFixture{holidayRegistrationFixture: f, office: office, period: period}
 	d.offer = d.readOffer(t)
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayCapacityPath(period.ID, d.offer.Weeks[0].ID), map[string]any{"capacity": 1})
+	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayCapacityPath(int64(period.ID), int64(d.offer.Weeks[0].ID)), map[string]any{"capacity": 1})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	return d
 }
@@ -141,7 +141,7 @@ func (d dayFixture) submit(t *testing.T, body map[string]any) receiptBody {
 
 func (d dayFixture) places(t *testing.T) dayPlacesBody {
 	t.Helper()
-	rec := traegerJSON(t, d.traeger, d.office.token, http.MethodGet, holidayPlacesPath(d.period.ID), nil)
+	rec := traegerJSON(t, d.traeger, d.office.token, http.MethodGet, holidayPlacesPath(int64(d.period.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	for _, week := range decodeSchoolPortalData[[]dayPlacesBody](t, rec.Body.Bytes()) {
 		if week.WeekID == d.offer.Weeks[0].ID {
@@ -192,11 +192,11 @@ func TestHolidayDayBookingPlacesEachDayAndBillsItsDays(t *testing.T) {
 	assert.Equal(t, []string{dayTuesday, dayWednesday}, places.Waitlist[0].Days)
 	assert.Equal(t, []string{dayMonday, dayTuesday, dayWednesday}, d.readOffer(t).Weeks[0].FullDays)
 
-	rec := traegerJSON(t, d.traeger, d.office.token, http.MethodPost, holidayConfirmPath(d.period.ID, tom.ID), nil)
+	rec := traegerJSON(t, d.traeger, d.office.token, http.MethodPost, holidayConfirmPath(int64(d.period.ID), int64(tom.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	confirmed := decodeSchoolPortalData[confirmationBody](t, rec.Body.Bytes())
 	assert.Equal(t, int64(3000), confirmed.Contribution.TotalCents, "two days at 15 €; the repeated Monday counts once")
-	rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPost, holidayConfirmPath(d.period.ID, ida.ID), nil)
+	rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPost, holidayConfirmPath(int64(d.period.ID), int64(ida.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, int64(0), decodeSchoolPortalData[confirmationBody](t, rec.Body.Bytes()).Contribution.TotalCents,
 		"a waiting booking is not billed")
@@ -210,7 +210,7 @@ func TestHolidayDayBookingPlacesEachDayAndBillsItsDays(t *testing.T) {
 	assert.Equal(t, []string{dayMonday + ".." + dayMonday, dayTuesday + ".." + dayTuesday}, d.hostWindows(t, d.office.schools[0]),
 		"the host school's Soll keeps to the booked days")
 
-	rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPost, holidayConfirmPath(d.period.ID, max.ID), nil)
+	rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPost, holidayConfirmPath(int64(d.period.ID), int64(max.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, map[string]int{dayMonday: 1, dayTuesday: 1, dayWednesday: 1}, d.hostedDays(t),
 		"the hosted week counts the confirmed children per booked day; Ida waits and counts nowhere")
@@ -293,9 +293,9 @@ func TestHolidayChildDayLimitRefusesMoreDaysThanThePeriodAllows(t *testing.T) {
 	assert.Contains(t, fields, "children.0.bookings.0.days")
 
 	ole := d.submit(t, d.registration("ole.tage@example.org", "Ole", d.days(dayThursday, dayFriday)))
-	child := d.childOf(t, ole.ID)
+	child := d.childOf(t, int64(ole.ID))
 	rebook := func(bookings ...map[string]any) int {
-		rec := traegerJSON(t, d.traeger, d.office.token, http.MethodPut, holidayRebookPath(d.period.ID, ole.ID, child),
+		rec := traegerJSON(t, d.traeger, d.office.token, http.MethodPut, holidayRebookPath(int64(d.period.ID), int64(ole.ID), child),
 			map[string]any{"bookings": bookings})
 		return rec.Code
 	}
@@ -414,7 +414,7 @@ func TestHolidayDailyBillingRulesStartOnTheFirstSelectedDay(t *testing.T) {
 	assert.True(t, quoted.ExemptionAvailable)
 	assert.Equal(t, int64(0), quote(true).TotalCents)
 	receipt := d.submit(t, d.registration("rules.days@example.org", "Mia", d.days(dayFriday, dayThursday)))
-	rec := traegerJSON(t, d.traeger, d.office.token, http.MethodPost, holidayConfirmPath(d.period.ID, receipt.ID),
+	rec := traegerJSON(t, d.traeger, d.office.token, http.MethodPost, holidayConfirmPath(int64(d.period.ID), int64(receipt.ID)),
 		map[string]any{"benefits_exemption": true})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	confirmed := decodeSchoolPortalData[confirmationBody](t, rec.Body.Bytes()).Contribution

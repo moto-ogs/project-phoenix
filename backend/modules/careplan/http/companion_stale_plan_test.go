@@ -33,15 +33,15 @@ func companionLinkDays(t *testing.T, tc *testContext, studentID int64) map[int64
 
 	var body struct {
 		Data []struct {
-			CompanionStudentID int64    `json:"companion_student_id"`
-			Weekdays           []string `json:"weekdays"`
+			CompanionStudentID testpkg.ID `json:"companion_student_id"`
+			Weekdays           []string   `json:"weekdays"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
 
 	links := make(map[int64][]string, len(body.Data))
 	for _, entry := range body.Data {
-		links[entry.CompanionStudentID] = entry.Weekdays
+		links[int64(entry.CompanionStudentID)] = entry.Weekdays
 	}
 	return links
 }

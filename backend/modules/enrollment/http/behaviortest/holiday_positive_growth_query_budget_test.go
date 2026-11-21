@@ -259,9 +259,9 @@ func TestHolidayPositiveGrowthQueryBudget(t *testing.T) {
 			var metadata string
 			require.NoError(t, f.db.NewRaw(`SELECT metadata::text FROM audit.data_access_log WHERE tenant_id=? AND resource_type='holiday_participants_export' ORDER BY id DESC LIMIT 1`, f.school).Scan(t.Context(), &metadata))
 			var audit struct {
-				Week         int64  `json:"week_id"`
-				Participants int    `json:"participants"`
-				Format       string `json:"format"`
+				Week         testpkg.ID `json:"week_id"`
+				Participants int        `json:"participants"`
+				Format       string     `json:"format"`
 			}
 			require.NoError(t, json.Unmarshal([]byte(metadata), &audit))
 			require.Equal(t, f.week, audit.Week)

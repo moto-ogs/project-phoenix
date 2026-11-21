@@ -57,11 +57,11 @@ func TestHolidayAllocationWorkflowRollsBackOnARefusedContribution(t *testing.T) 
 	testpkg.SetupIsolatedTestDB(t)
 	f := newReviewFixture(t, "Träger Workflow Rückabwicklung")
 	first, second := f.offer.Weeks[0], f.offer.Weeks[1]
-	f.setCapacity(t, first.ID, 2)
+	f.setCapacity(t, int64(first.ID), 2)
 	tom := f.submitPlaces(t, "tom.workflow@example.org", map[string][]int{"Tom": {0}})
 	require.Equal(t, "waitlisted", tom.Placements[0].Placement)
-	require.Equal(t, http.StatusOK, f.confirmWith(t, tom.ID, nil).Code)
-	frozen := f.contributionVersions(t, tom.ID)
+	require.Equal(t, http.StatusOK, f.confirmWith(t, int64(tom.ID), nil).Code)
+	frozen := f.contributionVersions(t, int64(tom.ID))
 	require.Len(t, frozen, 1)
 	ben := f.list(t, "").Registrations[0].Children[1]
 	rebook := map[string]any{"bookings": []map[string]any{{"week_id": second.ID, "time_model_id": second.TimeModels[0].ID}}}
@@ -71,19 +71,19 @@ func TestHolidayAllocationWorkflowRollsBackOnARefusedContribution(t *testing.T) 
 
 	assertUnchanged := func(t *testing.T, what string) {
 		t.Helper()
-		week := f.places(t)[first.ID]
+		week := f.places(t)[int64(first.ID)]
 		require.NotNil(t, week.Capacity, what)
 		assert.Equal(t, 2, *week.Capacity, "%s: the capacity rolls back", what)
 		assert.Equal(t, 2, week.Placed, "%s: Ben keeps his place", what)
 		require.Len(t, week.Waitlist, 1, what)
 		assert.Equal(t, tom.ID, week.Waitlist[0].RegistrationID, "%s: Tom stays on the waiting list", what)
-		assert.Equal(t, frozen, f.contributionVersions(t, tom.ID), "%s: no contribution version", what)
+		assert.Equal(t, frozen, f.contributionVersions(t, int64(tom.ID)), "%s: no contribution version", what)
 		assert.Equal(t, outbox, f.traegerOutbox(t), "%s: no mail is queued", what)
 	}
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(f.period.ID, f.siblings, ben.ID), rebook)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID)), rebook)
 	require.Equal(t, http.StatusInternalServerError, rec.Code, rec.Body.String())
 	assertUnchanged(t, "rebooking")
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayCapacityPath(f.period.ID, first.ID), map[string]any{"capacity": 3})
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayCapacityPath(int64(f.period.ID), int64(first.ID)), map[string]any{"capacity": 3})
 	require.Equal(t, http.StatusInternalServerError, rec.Code, rec.Body.String())
 	assertUnchanged(t, "capacity")
 	rec = a.decide(t, decision(candidate, "placed", ""))
@@ -95,16 +95,16 @@ func TestHolidayAllocationWorkflowRollsBackOnARefusedContribution(t *testing.T) 
 	assert.Equal(t, decisionOutbox, a.traegerOutbox(t), "no decision mail is queued")
 
 	allow()
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(f.period.ID, f.siblings, ben.ID), rebook)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID)), rebook)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Empty(t, f.places(t)[first.ID].Waitlist, "the retry moves Tom up")
-	assert.Equal(t, 1, f.mails(t, "holiday_place_granted", tom.ID))
-	assert.Len(t, f.contributionVersions(t, tom.ID), 2, "the retry freezes Tom's new contribution")
-	assert.Equal(t, first.TimeModels[0].PriceCents, f.contributionTotal(t, tom.ID))
+	assert.Empty(t, f.places(t)[int64(first.ID)].Waitlist, "the retry moves Tom up")
+	assert.Equal(t, 1, f.mails(t, "holiday_place_granted", int64(tom.ID)))
+	assert.Len(t, f.contributionVersions(t, int64(tom.ID)), 2, "the retry freezes Tom's new contribution")
+	assert.Equal(t, first.TimeModels[0].PriceCents, f.contributionTotal(t, int64(tom.ID)))
 	rec = a.decide(t, decision(candidate, "placed", ""))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, []int64{4500, 2250}, a.contributionVersions(t, sibling), "the retry refreezes the confirmed sibling")
-	assert.Equal(t, 1, a.mails(t, "holiday_place_granted", candidate.RegistrationID))
+	assert.Equal(t, 1, a.mails(t, "holiday_place_granted", int64(candidate.RegistrationID)))
 }
 
 // refusedDecisionFixture is a period by criteria with a confirmed child that
@@ -119,8 +119,8 @@ func refusedDecisionFixture(t *testing.T) (allocationFixture, int64, allocationC
 	first := a.submitCriteria(t, "erstes.workflow@example.org", false, false)
 	rec := a.decide(t, decision(a.board(t).Weeks[0].Pending[0], "placed", ""))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	require.Equal(t, http.StatusOK, a.act(t, first.ID, "confirm").Code)
-	require.Equal(t, []int64{4500}, a.contributionVersions(t, first.ID))
+	require.Equal(t, http.StatusOK, a.act(t, int64(first.ID), "confirm").Code)
+	require.Equal(t, []int64{4500}, a.contributionVersions(t, int64(first.ID)))
 	body := placesRegistration(a.reviewFixture, "zweites.workflow@example.org", map[string][]int{"Ida": {0}})
 	body["criteria"] = map[string]bool{fmt.Sprint(a.working): true}
 	child := body["children"].([]map[string]any)[0]
@@ -129,10 +129,10 @@ func refusedDecisionFixture(t *testing.T) (allocationFixture, int64, allocationC
 	rec = publicJSON(t, a.public, http.MethodPost, registrationPath(a.period.PublicToken), body)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	second := decodeSchoolPortalData[receiptBody](t, rec.Body.Bytes())
-	rec = a.merge(t, a.office.token, first.ID, second.ID)
+	rec = a.merge(t, a.office.token, int64(first.ID), int64(second.ID))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	a.setCapacity(t, a.offer.Weeks[0].ID, 2)
+	a.setCapacity(t, int64(a.offer.Weeks[0].ID), 2)
 	candidate := a.board(t).Weeks[0].Pending[0]
 	require.Equal(t, second.ID, candidate.RegistrationID)
-	return a, first.ID, candidate
+	return a, int64(first.ID), candidate
 }

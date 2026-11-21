@@ -112,10 +112,10 @@ type catalogField struct {
 type catalogPreviewBody struct {
 	Fingerprint string `json:"fingerprint"`
 	Schools     []struct {
-		SchoolID  int64  `json:"school_id"`
-		Action    string `json:"action"`
-		Outcome   string `json:"outcome"`
-		ErrorCode string `json:"error_code"`
+		SchoolID  testpkg.ID `json:"school_id"`
+		Action    string     `json:"action"`
+		Outcome   string     `json:"outcome"`
+		ErrorCode string     `json:"error_code"`
 		Offerings []struct {
 			Fields     []catalogField `json:"fields"`
 			PricesFrom *string        `json:"prices_from"`
@@ -124,9 +124,9 @@ type catalogPreviewBody struct {
 }
 
 type catalogResult struct {
-	ErrorCode string `json:"error_code"`
-	SchoolID  int64  `json:"school_id"`
-	Outcome   string `json:"outcome"`
+	ErrorCode string     `json:"error_code"`
+	SchoolID  testpkg.ID `json:"school_id"`
+	Outcome   string     `json:"outcome"`
 }
 
 type catalogRolloutBody struct {
@@ -134,14 +134,14 @@ type catalogRolloutBody struct {
 }
 
 type catalogPhaseBody struct {
-	ID      int64 `json:"id"`
+	ID      testpkg.ID `json:"id"`
 	Schools []struct {
-		SchoolID       int64  `json:"school_id"`
-		Outcome        string `json:"outcome"`
-		AppliedVersion *int   `json:"applied_version"`
+		SchoolID       testpkg.ID `json:"school_id"`
+		Outcome        string     `json:"outcome"`
+		AppliedVersion *int       `json:"applied_version"`
 	} `json:"schools"`
 	Offerings []struct {
-		ID int64 `json:"id"`
+		ID testpkg.ID `json:"id"`
 	} `json:"offerings"`
 }
 
@@ -190,7 +190,7 @@ func TestTraegerCatalogRollsOutIntoEverySchoolAndKeepsTheSchoolsChanges(t *testi
 		assert.Equal(t, "create", school.Action)
 	}
 	rollout := catalogRollout(t, router, office.token, phasePath, preview.Fingerprint)
-	assert.Equal(t, []catalogResult{{SchoolID: office.schools[0], Outcome: "applied"}, {SchoolID: office.schools[1], Outcome: "applied"}}, rollout.Schools)
+	assert.Equal(t, []catalogResult{{SchoolID: testpkg.ID(office.schools[0]), Outcome: "applied"}, {SchoolID: testpkg.ID(office.schools[1]), Outcome: "applied"}}, rollout.Schools)
 
 	// The list and the phase with its offerings, as the catalog page reads them.
 	rec = traegerJSON(t, router, office.token, http.MethodGet, "/traeger/catalog/phases", nil)
@@ -201,7 +201,7 @@ func TestTraegerCatalogRollsOutIntoEverySchoolAndKeepsTheSchoolsChanges(t *testi
 	rec = traegerJSON(t, router, office.token, http.MethodGet, phasePath, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	detail := decodeSchoolPortalData[struct {
-		ID        int64                      `json:"id"`
+		ID        testpkg.ID                 `json:"id"`
 		Offerings []careplan.TraegerOffering `json:"offerings"`
 	}](t, rec.Body.Bytes())
 	assert.Equal(t, phase.ID, detail.ID)

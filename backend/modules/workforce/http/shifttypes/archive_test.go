@@ -17,9 +17,9 @@ import (
 )
 
 type shiftTypeWire struct {
-	ID         int64   `json:"id"`
-	Name       string  `json:"name"`
-	ArchivedAt *string `json:"archived_at"`
+	ID         testpkg.ID `json:"id"`
+	Name       string     `json:"name"`
+	ArchivedAt *string    `json:"archived_at"`
 	Usage      *struct {
 		Shifts int `json:"shifts"`
 		Series int `json:"series"`
@@ -121,10 +121,10 @@ func TestShiftTypeUpdateAnswersTheStoredType(t *testing.T) {
 	require.Equal(t, http.StatusOK, response.Code, response.Body.String())
 	var envelope struct {
 		Data struct {
-			ID       int64  `json:"id"`
-			Name     string `json:"name"`
-			Color    string `json:"color"`
-			IsActive bool   `json:"is_active"`
+			ID       testpkg.ID `json:"id"`
+			Name     string     `json:"name"`
+			Color    string     `json:"color"`
+			IsActive bool       `json:"is_active"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(response.Body.Bytes(), &envelope))

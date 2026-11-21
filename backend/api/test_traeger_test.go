@@ -76,16 +76,16 @@ func (f testTraegerFixture) call(t *testing.T, method, path string, body any) *h
 
 type createdTestTraeger struct {
 	Organization struct {
-		ID         int64  `json:"id"`
-		Name       string `json:"name"`
-		TestSystem bool   `json:"test_system"`
+		ID         testpkg.ID `json:"id"`
+		Name       string     `json:"name"`
+		TestSystem bool       `json:"test_system"`
 	} `json:"organization"`
 	Schools []struct {
-		ID        int64  `json:"id"`
-		Name      string `json:"name"`
-		Subdomain string `json:"subdomain"`
-		Hidden    bool   `json:"hidden"`
-		Active    bool   `json:"active"`
+		ID        testpkg.ID `json:"id"`
+		Name      string     `json:"name"`
+		Subdomain string     `json:"subdomain"`
+		Hidden    bool       `json:"hidden"`
+		Active    bool       `json:"active"`
 	} `json:"schools"`
 }
 
@@ -108,9 +108,9 @@ func (f testTraegerFixture) createTestTraeger(t *testing.T, slug string, schools
 type sampleChildrenAnswer struct {
 	CreatedCount int `json:"created_count"`
 	Schools      []struct {
-		SchoolID     int64 `json:"school_id"`
-		CreatedCount int   `json:"created_count"`
-		SkippedCount int   `json:"skipped_count"`
+		SchoolID     testpkg.ID `json:"school_id"`
+		CreatedCount int        `json:"created_count"`
+		SkippedCount int        `json:"skipped_count"`
 	} `json:"schools"`
 }
 
@@ -226,9 +226,9 @@ func TestSampleChildrenNeverEnterARealTraeger(t *testing.T) {
 }
 
 type traegerFrame struct {
-	ID         int64  `json:"id"`
-	Name       string `json:"name"`
-	TestSystem bool   `json:"test_system"`
+	ID         testpkg.ID `json:"id"`
+	Name       string     `json:"name"`
+	TestSystem bool       `json:"test_system"`
 }
 
 func traegerOrganizationFrame(t *testing.T, router http.Handler, token string) (*httptest.ResponseRecorder, traegerFrame) {
@@ -260,13 +260,13 @@ func TestTraegerPortalMarksATestTraegerAndOnlyNamesTheSessionsTraeger(t *testing
 	require.Equal(t, http.StatusOK, code)
 	rec, frame := traegerOrganizationFrame(t, portal, answer.AccessToken)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, traegerFrame{ID: testTraeger, Name: "Test-Träger Portal", TestSystem: true}, frame)
+	assert.Equal(t, traegerFrame{ID: testpkg.ID(testTraeger), Name: "Test-Träger Portal", TestSystem: true}, frame)
 
 	code, answer = traegerSignIn(t, portal, office.Email, password, 0)
 	require.Equal(t, http.StatusOK, code)
 	rec, frame = traegerOrganizationFrame(t, portal, answer.AccessToken)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, traegerFrame{ID: realTraeger, Name: "Echter Träger Portal"}, frame, "a real Träger is not marked and never sees another Träger")
+	assert.Equal(t, traegerFrame{ID: testpkg.ID(realTraeger), Name: "Echter Träger Portal"}, frame, "a real Träger is not marked and never sees another Träger")
 
 	noRight := testpkg.MintTestJWT(t, sessiontoken.AppClaims{ID: int(office.ID), Sub: office.Email, Scope: "org", OrgID: realTraeger, Roles: []string{identityaccess.TraegerRoleBilling}})
 	rec, _ = traegerOrganizationFrame(t, portal, noRight)
@@ -303,7 +303,7 @@ func TestATestTraegerWithSampleChildrenIsErasedCompletely(t *testing.T) {
 	rec := f.call(t, http.MethodPost, fmt.Sprintf("/organizations/%d/sample-children", organizationID), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	for _, school := range created.Schools {
-		require.Positive(t, schoolErasureRows(t, f.db, school.ID), "the sample children are in the test school")
+		require.Positive(t, schoolErasureRows(t, f.db, int64(school.ID)), "the sample children are in the test school")
 	}
 
 	// The test Träger leaves like every Träger (#4657): deactivated, with a
@@ -317,14 +317,14 @@ func TestATestTraegerWithSampleChildrenIsErasedCompletely(t *testing.T) {
 	erasure, err := tenancyCompose.NewErasure(f.db, objects.NewLocal(t.TempDir()), erasureledger.New(testErasureLedger(t), securityruntime.Fingerprint))
 	require.NoError(t, err)
 	_, err = erasure.Run(t.Context(), organizationtenancy.ErasureRequest{
-		OrganizationID: organizationID, OperatorID: f.operatorID, OrderReference: "TEST-TRAEGER",
+		OrganizationID: int64(organizationID), OperatorID: f.operatorID, OrderReference: "TEST-TRAEGER",
 		Confirmation: fmt.Sprintf("organization:%d", organizationID), PrerequisitesChecked: true, WritersStopped: true,
 		LockTimeout: time.Second, StatementTimeout: time.Minute,
 	})
 	require.NoError(t, err)
 
 	for _, school := range created.Schools {
-		assert.Zero(t, schoolErasureRows(t, f.db, school.ID), "no row of test school %d is left", school.ID)
+		assert.Zero(t, schoolErasureRows(t, f.db, int64(school.ID)), "no row of test school %d is left", school.ID)
 	}
 	assert.Zero(t, f.count(t, `SELECT count(*) FROM platform.schools WHERE organization_id = ?`, organizationID))
 	assert.Zero(t, f.count(t, `SELECT count(*) FROM platform.organizations WHERE id = ?`, organizationID), "the test Träger itself is gone")

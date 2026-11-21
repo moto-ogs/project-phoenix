@@ -21,7 +21,7 @@ import (
 // /api/timetable/operations. The roster bounds every write.
 
 type homeworkRosterRow struct {
-	StudentID int64 `json:"student_id"`
+	StudentID testpkg.ID `json:"student_id"`
 	Homework  []struct {
 		Subject     *string `json:"subject"`
 		Description string  `json:"description"`
@@ -51,7 +51,7 @@ func decodeHomeworkRoster(t *testing.T, body []byte) homeworkRoster {
 
 func (r homeworkRoster) row(studentID int64) *homeworkRosterRow {
 	for i := range r.Rows {
-		if r.Rows[i].StudentID == studentID {
+		if int64(r.Rows[i].StudentID) == studentID {
 			return &r.Rows[i]
 		}
 	}

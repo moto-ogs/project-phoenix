@@ -37,17 +37,17 @@ type overrunEvaluationBody struct {
 	ToleranceMinutes int                `json:"tolerance_minutes"`
 	Total            overrunFiguresBody `json:"total"`
 	Schools          []struct {
-		SchoolID       int64              `json:"school_id"`
+		SchoolID       testpkg.ID         `json:"school_id"`
 		ComparedDays   int                `json:"compared_days"`
 		UncomparedDays int                `json:"uncompared_days"`
 		Figures        overrunFiguresBody `json:"figures"`
 	} `json:"schools"`
 	Children []struct {
-		SchoolID     int64  `json:"school_id"`
-		StudentID    int64  `json:"student_id"`
-		FirstName    string `json:"first_name"`
-		LastName     string `json:"last_name"`
-		ExtraMinutes int    `json:"extra_minutes"`
+		SchoolID     testpkg.ID `json:"school_id"`
+		StudentID    testpkg.ID `json:"student_id"`
+		FirstName    string     `json:"first_name"`
+		LastName     string     `json:"last_name"`
+		ExtraMinutes int        `json:"extra_minutes"`
 	} `json:"children"`
 }
 
@@ -171,9 +171,9 @@ func TestCareTimeOverrunsSummariseEverySchoolFromTheContract(t *testing.T) {
 	attended := map[int64]int{}
 	uncompared := map[int64]int{}
 	for _, school := range body.Schools {
-		figures[school.SchoolID] = school.Figures
-		attended[school.SchoolID] = school.ComparedDays
-		uncompared[school.SchoolID] = school.UncomparedDays
+		figures[int64(school.SchoolID)] = school.Figures
+		attended[int64(school.SchoolID)] = school.ComparedDays
+		uncompared[int64(school.SchoolID)] = school.UncomparedDays
 	}
 	assert.Equal(t, want, figures[f.school])
 	assert.Equal(t, 3, attended[f.school], "the booked child's three check-in days were compared")

@@ -42,7 +42,7 @@ func TestCalendarReadPositiveGrowthQueryBudget(t *testing.T) {
 				require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 				var created createAppointmentE2EResponse
 				require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &created))
-				appointmentID = created.Data.Appointment.ID
+				appointmentID = int64(created.Data.Appointment.ID)
 			}
 			base := "/calendar/appointments/" + strconv.FormatInt(appointmentID, 10)
 			counter := testpkg.CaptureQueries(t, db)
@@ -60,10 +60,10 @@ func TestCalendarReadPositiveGrowthQueryBudget(t *testing.T) {
 			var detail struct {
 				Data struct {
 					Appointment struct {
-						ID int64 `json:"id"`
+						ID testpkg.ID `json:"id"`
 					} `json:"appointment"`
 					Recipients []struct {
-						ID int64 `json:"id"`
+						ID testpkg.ID `json:"id"`
 					} `json:"recipients"`
 				} `json:"data"`
 			}

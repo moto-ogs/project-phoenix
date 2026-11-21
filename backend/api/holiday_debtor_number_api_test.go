@@ -40,18 +40,18 @@ func askForDebtorNumber(t *testing.T, f reviewFixture, on bool) {
 
 func (f reviewFixture) confirmWith(t *testing.T, id int64, body map[string]any) *httptest.ResponseRecorder {
 	t.Helper()
-	return traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(f.period.ID, id), body)
+	return traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(f.period.ID), id), body)
 }
 
 func (f reviewFixture) changeDebtorNumber(t *testing.T, token string, id int64, number string) *httptest.ResponseRecorder {
 	t.Helper()
-	return traegerJSON(t, f.traeger, token, http.MethodPut, holidayDebtorNumberPath(f.period.ID, id), map[string]any{"debtor_number": number})
+	return traegerJSON(t, f.traeger, token, http.MethodPut, holidayDebtorNumberPath(int64(f.period.ID), id), map[string]any{"debtor_number": number})
 }
 
 type debtorNumberDetail struct {
-	ID           int64  `json:"id"`
-	Status       string `json:"status"`
-	DebtorNumber string `json:"debtor_number"`
+	ID           testpkg.ID `json:"id"`
+	Status       string     `json:"status"`
+	DebtorNumber string     `json:"debtor_number"`
 	History      []struct {
 		Action  string         `json:"action"`
 		Details map[string]any `json:"details"`
@@ -152,7 +152,7 @@ func TestDebtorNumberChangesUntilAnInvoiceIsIssued(t *testing.T) {
 	askForDebtorNumber(t, f, true)
 
 	setNumberRange(t, f, billing, "FE-{NNNN}")
-	run := billingRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
+	run := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
 	assert.Equal(t, 2, run.MissingDebtorNumbers, "the run counts the invoices without a number while the switch is on")
 
 	rec := f.changeDebtorNumber(t, f.office.token, f.siblings, " 10 4711 ")
@@ -180,13 +180,13 @@ func TestDebtorNumberChangesUntilAnInvoiceIsIssued(t *testing.T) {
 		map[string]any{"before": "10 4711", "after": "10 4712"},
 	}, changes, "every change names the number before and after")
 
-	run = billingRun(t, f, billing, run.ID)
+	run = billingRun(t, f, billing, int64(run.ID))
 	assert.Equal(t, 1, run.MissingDebtorNumbers)
 	askForDebtorNumber(t, f, false)
-	assert.Zero(t, billingRun(t, f, billing, run.ID).MissingDebtorNumbers, "without the switch the run counts nothing")
-	run = billingRun(t, f, billing, run.ID)
+	assert.Zero(t, billingRun(t, f, billing, int64(run.ID)).MissingDebtorNumbers, "without the switch the run counts nothing")
+	run = billingRun(t, f, billing, int64(run.ID))
 	assert.False(t, f.contribution(t, f.siblings).Invoiced, "no invoice before the release")
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(run))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(run))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.True(t, f.contribution(t, f.siblings).Invoiced, "the contribution names the issued invoice, so the page offers no change")
 
@@ -203,8 +203,8 @@ func TestDebtorNumberChangesUntilAnInvoiceIsIssued(t *testing.T) {
 
 type billingDebtorBody struct {
 	Documents []struct {
-		RegistrationID int64  `json:"registration_id"`
-		DebtorNumber   string `json:"debtor_number"`
+		RegistrationID testpkg.ID `json:"registration_id"`
+		DebtorNumber   string     `json:"debtor_number"`
 	} `json:"documents"`
 }
 
@@ -218,19 +218,19 @@ func TestReleasedInvoiceKeepsTheDebtorNumberForLetterAndOverview(t *testing.T) {
 	require.Equal(t, http.StatusOK, f.confirmWith(t, f.again, nil).Code)
 
 	setNumberRange(t, f, billing, "FE-{NNNN}")
-	run := billingRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
+	run := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
 	numbers := func(body []byte) map[int64]string {
 		out := map[int64]string{}
 		for _, document := range decodeSchoolPortalData[billingDebtorBody](t, body).Documents {
-			out[document.RegistrationID] = document.DebtorNumber
+			out[int64(document.RegistrationID)] = document.DebtorNumber
 		}
 		return out
 	}
 	want := map[int64]string{f.siblings: "10 4711", f.again: ""}
-	rec := traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(run.ID, ""), nil)
+	rec := traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(int64(run.ID), ""), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, want, numbers(rec.Body.Bytes()), "the preview names the number of the registration")
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(run))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(run))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, want, numbers(rec.Body.Bytes()), "the release copies the number into the invoice")
 
@@ -238,23 +238,23 @@ func TestReleasedInvoiceKeepsTheDebtorNumberForLetterAndOverview(t *testing.T) {
 	require.NoError(t, err)
 	_, err = f.db.ExecContext(t.Context(), `UPDATE parent_billing.documents SET debtor_number = '55' WHERE holiday_registration_id = ?`, f.siblings)
 	assert.ErrorContains(t, err, "never changes", "an issued invoice refuses a change of its number")
-	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(run.ID, ""), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(int64(run.ID), ""), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, want, numbers(rec.Body.Bytes()), "the invoice keeps its own copy")
 
-	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(run.ID, "/export?format=csv"), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(int64(run.ID), "/export?format=csv"), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	lines := strings.Split(strings.TrimSpace(strings.TrimPrefix(rec.Body.String(), "\xEF\xBB\xBF")), "\n")
 	assert.Equal(t, "Rechnungsnummer;Empfänger;Debitorennummer;Kind;Position;Betrag in Euro;Zahlungsweg;Fällig am", strings.TrimSpace(lines[0]))
 	assert.Contains(t, rec.Body.String(), ";Muster, Eva;10 4711;Lia Muster;")
 	assert.Contains(t, rec.Body.String(), ";Muster, Eva;10 4711;;Summe der Rechnung;", "the sum of the invoice names the number")
 	assert.Contains(t, rec.Body.String(), "FE-0002;Muster, Eva;;LIA muster;", "an invoice without a number keeps the cell empty")
-	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(run.ID, "/export?format=xlsx"), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(int64(run.ID), "/export?format=xlsx"), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	for _, text := range []string{"Debitorennummer", "10 4711"} {
 		assert.Contains(t, xlsxText(t, rec.Body.Bytes()), text)
 	}
-	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(run.ID, "/export?format=pdf"), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(int64(run.ID), "/export?format=pdf"), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.True(t, strings.HasPrefix(rec.Body.String(), "%PDF"), "the PDF renders the same table")
 }
@@ -268,13 +268,13 @@ func TestDebtorNumberShowsInListDetailAndExportOfTheTraegerOnly(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	list := decodeSchoolPortalData[struct {
 		Registrations []struct {
-			ID           int64  `json:"id"`
-			DebtorNumber string `json:"debtor_number"`
+			ID           testpkg.ID `json:"id"`
+			DebtorNumber string     `json:"debtor_number"`
 		} `json:"registrations"`
 	}](t, rec.Body.Bytes())
 	got := map[int64]string{}
 	for _, registration := range list.Registrations {
-		got[registration.ID] = registration.DebtorNumber
+		got[int64(registration.ID)] = registration.DebtorNumber
 	}
 	assert.Equal(t, map[int64]string{f.siblings: "10 4711", f.again: ""}, got, "the list names the number")
 	assert.Equal(t, "10 4711", f.debtorNumberDetail(t, f.siblings).DebtorNumber, "the detail names the number")
@@ -335,19 +335,19 @@ func TestHolidayInvoiceTakesTheDebtorNumberOfTheFamily(t *testing.T) {
 	require.Equal(t, http.StatusOK, f.confirmWith(t, f.again, nil).Code)
 	askForDebtorNumber(t, f, true)
 	setNumberRange(t, f, billing, "FE-{NNNN}")
-	run := billingRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
+	run := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
 	assert.Equal(t, 1, run.MissingDebtorNumbers, "the number of the family counts; only the family without one is missing")
 
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(run))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(run))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	numbers := map[int64]string{}
 	for _, document := range decodeSchoolPortalData[billingDebtorBody](t, rec.Body.Bytes()).Documents {
-		numbers[document.RegistrationID] = document.DebtorNumber
+		numbers[int64(document.RegistrationID)] = document.DebtorNumber
 	}
 	assert.Equal(t, map[int64]string{f.siblings: "20 815", f.again: ""}, numbers, "the release copies the number of the family")
 	assert.Empty(t, f.debtorNumberDetail(t, f.siblings).DebtorNumber, "the registration keeps its own, empty number")
 
-	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(run.ID, "/export?format=csv"), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(int64(run.ID), "/export?format=csv"), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), ";Muster, Eva;20 815;", "the overview for the Kämmerei names the number of the family")
 }

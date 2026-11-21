@@ -39,8 +39,8 @@ func TestHolidayReleaseBooksEachWeekOnItsHostSchool(t *testing.T) {
 	addCenter("holiday", 0, "2026-01-01", "FER")
 
 	setNumberRange(t, f, billing, "FE-{NNNN}")
-	run := startBillingRun(t, f, billing, f.period.ID)
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(billingRun(t, f, billing, run.ID)))
+	run := startBillingRun(t, f, billing, int64(f.period.ID))
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(billingRun(t, f, billing, int64(run.ID))))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	type position struct {

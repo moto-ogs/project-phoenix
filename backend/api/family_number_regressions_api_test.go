@@ -71,9 +71,9 @@ func TestHolidayOnlyUsesActualContractsWithAndWithoutDocuments(t *testing.T) {
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		var own, holiday bool
 		for _, row := range decodeSchoolPortalData[[]struct {
-			ID          int64  `json:"id"`
-			FamilyEmail string `json:"family_email"`
-			HolidayOnly bool   `json:"holiday_only"`
+			ID          testpkg.ID `json:"id"`
+			FamilyEmail string     `json:"family_email"`
+			HolidayOnly bool       `json:"holiday_only"`
 		}](t, rec.Body.Bytes()) {
 			switch row.FamilyEmail {
 			case "eva.muster@example.org":
@@ -97,8 +97,8 @@ func TestHolidayOnlyUsesActualContractsWithAndWithoutDocuments(t *testing.T) {
 	}
 	list()
 	setNumberRange(t, f, billing, "FE-{NNNN}")
-	run := billingRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(run))
+	run := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(run))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	list()
 }

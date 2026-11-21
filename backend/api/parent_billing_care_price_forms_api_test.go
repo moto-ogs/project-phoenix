@@ -6,6 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // The SJR price lists 2026/27 through the routes (#6196): Ispringen prices
@@ -19,13 +21,13 @@ const (
 )
 
 type priceFormsRunBody struct {
-	ID           int64  `json:"id"`
-	PreviewCount int    `json:"preview_count"`
-	PreviewCents int64  `json:"preview_cents"`
-	Fingerprint  string `json:"fingerprint"`
-	FreeOfCharge int    `json:"free_of_charge"`
+	ID           testpkg.ID `json:"id"`
+	PreviewCount int        `json:"preview_count"`
+	PreviewCents int64      `json:"preview_cents"`
+	Fingerprint  string     `json:"fingerprint"`
+	FreeOfCharge int        `json:"free_of_charge"`
 	Invoices     []struct {
-		ContractID int64 `json:"contract_id"`
+		ContractID testpkg.ID `json:"contract_id"`
 		Positions  []struct {
 			DaysPerWeek      *int   `json:"days_per_week"`
 			TierMonthlyCents *int64 `json:"tier_monthly_cents"`
@@ -106,26 +108,26 @@ func TestSJRPriceFormsBillThroughTheRoutes(t *testing.T) {
 		map[string]any{"sibling_from_child": 2, "discount_basis_points": 2500}))
 
 	run := f.startRun(t, careMonth)
-	preview := f.priceFormsRun(t, run.ID)
+	preview := f.priceFormsRun(t, int64(run.ID))
 	totals := map[int64]int64{}
 	for _, invoice := range preview.Invoices {
-		totals[invoice.ContractID] = invoice.TotalCents
+		totals[int64(invoice.ContractID)] = invoice.TotalCents
 	}
 	// Ispringen: 4 × 16,00 + 14,00 = 78,00 €; the second child 4 × 12,50 +
 	// 10,50 = 60,50 €. Birkenfeld Modul 4 with 3 days: 60,00 €, the second
 	// child 45,00 €. Rosa is the only child of her family in Birkenfeld.
 	assert.Equal(t, map[int64]int64{anna: 7800, ben: 6050, jonas: 6000, klara: 4500, rosa: 6000}, totals)
 
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"),
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"),
 		map[string]any{"document_count": preview.PreviewCount, "total_cents": preview.PreviewCents, "fingerprint": preview.Fingerprint})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	released := decodeSchoolPortalData[priceFormsRunBody](t, rec.Body.Bytes())
 	require.Len(t, released.Invoices, 5)
 	for _, invoice := range released.Invoices {
-		assert.Equal(t, totals[invoice.ContractID], invoice.TotalCents, "the issued invoice keeps its total")
+		assert.Equal(t, totals[int64(invoice.ContractID)], invoice.TotalCents, "the issued invoice keeps its total")
 		require.Len(t, invoice.Positions, 1)
 		position := invoice.Positions[0]
-		switch invoice.ContractID {
+		switch int64(invoice.ContractID) {
 		case klara:
 			require.NotNil(t, position.DaysPerWeek, "the issued position keeps its scale step")
 			assert.Equal(t, 3, *position.DaysPerWeek)
@@ -145,14 +147,14 @@ func TestSJRPriceFormsBillThroughTheRoutes(t *testing.T) {
 	assert.Contains(t, rec.Body.String(), "parent_billing.care_tariff_month_billed")
 
 	// August is free at Ispringen only.
-	august := f.priceFormsRun(t, f.startRun(t, "2030-08-01").ID)
+	august := f.priceFormsRun(t, int64(f.startRun(t, "2030-08-01").ID))
 	assert.Equal(t, 2, august.FreeOfCharge)
 	billed := []int64{}
 	for _, invoice := range august.Invoices {
-		billed = append(billed, invoice.ContractID)
+		billed = append(billed, int64(invoice.ContractID))
 	}
 	assert.ElementsMatch(t, []int64{jonas, klara, rosa}, billed)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(august.ID, "/release"),
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(august.ID), "/release"),
 		map[string]any{"document_count": august.PreviewCount, "total_cents": august.PreviewCents, "fingerprint": august.Fingerprint})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, 2, decodeSchoolPortalData[priceFormsRunBody](t, rec.Body.Bytes()).FreeOfCharge)
@@ -160,7 +162,7 @@ func TestSJRPriceFormsBillThroughTheRoutes(t *testing.T) {
 	changedList["free_months"] = []int{}
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, changedList)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, 2, f.priceFormsRun(t, august.ID).FreeOfCharge)
+	assert.Equal(t, 2, f.priceFormsRun(t, int64(august.ID)).FreeOfCharge)
 }
 
 // The routes refuse a price list that mixes forms within a module or puts
@@ -200,11 +202,11 @@ func TestFreeMonthRunClosesWithoutInvoices(t *testing.T) {
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunsPath,
 		map[string]any{"billing_month": "2030-08-01", "school_ids": []int64{ispringen}})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	august := f.priceFormsRun(t, decodeSchoolPortalData[priceFormsRunBody](t, rec.Body.Bytes()).ID)
+	august := f.priceFormsRun(t, int64(decodeSchoolPortalData[priceFormsRunBody](t, rec.Body.Bytes()).ID))
 	assert.Zero(t, august.PreviewCount)
 	assert.Equal(t, 1, august.FreeOfCharge)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(august.ID, "/release"),
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(august.ID), "/release"),
 		map[string]any{"document_count": 0, "total_cents": 0, "fingerprint": august.Fingerprint})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, "released", f.run(t, august.ID).Status)
+	assert.Equal(t, "released", f.run(t, int64(august.ID)).Status)
 }

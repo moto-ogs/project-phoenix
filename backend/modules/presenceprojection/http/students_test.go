@@ -20,10 +20,10 @@ import (
 )
 
 type studentDayPlanningTestResponse struct {
-	ID                int64  `json:"id"`
-	DayPlanningStatus string `json:"day_planning_status"`
-	DayPlanningReason string `json:"day_planning_reason"`
-	Location          string `json:"current_location"`
+	ID                testpkg.ID `json:"id"`
+	DayPlanningStatus string     `json:"day_planning_status"`
+	DayPlanningReason string     `json:"day_planning_reason"`
+	Location          string     `json:"current_location"`
 }
 
 func decodeStudentsByID(t *testing.T, body []byte) map[int64]studentDayPlanningTestResponse {
@@ -34,7 +34,7 @@ func decodeStudentsByID(t *testing.T, body []byte) map[int64]studentDayPlanningT
 	require.NoError(t, json.Unmarshal(body, &resp))
 	byID := make(map[int64]studentDayPlanningTestResponse, len(resp.Data))
 	for _, student := range resp.Data {
-		byID[student.ID] = student
+		byID[int64(student.ID)] = student
 	}
 	return byID
 }
@@ -90,19 +90,19 @@ func TestListStudents_WithPickupTimes(t *testing.T) {
 		found := false
 		for _, raw := range resp.Data {
 			var student struct {
-				ID         int64   `json:"id"`
-				PickupTime *string `json:"pickup_time"`
+				ID         testpkg.ID `json:"id"`
+				PickupTime *string    `json:"pickup_time"`
 			}
 			err := json.Unmarshal(raw, &student)
 			require.NoError(t, err)
 
-			if student.ID == studentWithSchedule.ID {
+			if int64(student.ID) == studentWithSchedule.ID {
 				found = true
 				require.NotNil(t, student.PickupTime, "Student with schedule should have pickup_time")
 				assert.Equal(t, "15:30", *student.PickupTime, "Pickup time should match the schedule")
 			}
 
-			if student.ID == studentNoSchedule.ID {
+			if int64(student.ID) == studentNoSchedule.ID {
 				assert.Nil(t, student.PickupTime, "Student without schedule should not have pickup_time")
 			}
 		}
@@ -166,19 +166,19 @@ func TestListStudents_WithArrivalTimes(t *testing.T) {
 		found := false
 		for _, raw := range resp.Data {
 			var student struct {
-				ID          int64   `json:"id"`
-				ArrivalTime *string `json:"arrival_time"`
+				ID          testpkg.ID `json:"id"`
+				ArrivalTime *string    `json:"arrival_time"`
 			}
 			err := json.Unmarshal(raw, &student)
 			require.NoError(t, err)
 
-			if student.ID == studentWithSchedule.ID {
+			if int64(student.ID) == studentWithSchedule.ID {
 				found = true
 				require.NotNil(t, student.ArrivalTime)
 				assert.Equal(t, "08:15", *student.ArrivalTime)
 			}
 
-			if student.ID == studentNoSchedule.ID {
+			if int64(student.ID) == studentNoSchedule.ID {
 				assert.Nil(t, student.ArrivalTime)
 			}
 		}
@@ -1087,8 +1087,8 @@ func TestListStudents_GroupAndCombinedFilters(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rr.Code, "Expected 200 OK. Body: %s", rr.Body.String())
 		var resp struct {
 			Data []struct {
-				ID          int64  `json:"id"`
-				SchoolClass string `json:"school_class"`
+				ID          testpkg.ID `json:"id"`
+				SchoolClass string     `json:"school_class"`
 			} `json:"data"`
 		}
 		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
@@ -1194,14 +1194,14 @@ func TestListStudents_AlumniHidden(t *testing.T) {
 
 		var resp struct {
 			Data []struct {
-				ID int64 `json:"id"`
+				ID testpkg.ID `json:"id"`
 			} `json:"data"`
 		}
 		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
 
 		ids := make([]int64, 0, len(resp.Data))
 		for _, s := range resp.Data {
-			ids = append(ids, s.ID)
+			ids = append(ids, int64(s.ID))
 		}
 		assert.Contains(t, ids, visible.ID)
 		assert.NotContains(t, ids, hidden.ID)
@@ -1214,7 +1214,7 @@ func TestListStudents_AlumniHidden(t *testing.T) {
 
 		var resp struct {
 			Data []struct {
-				ID int64 `json:"id"`
+				ID testpkg.ID `json:"id"`
 			} `json:"data"`
 		}
 		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))

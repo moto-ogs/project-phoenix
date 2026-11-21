@@ -24,11 +24,11 @@ const familyChildrenPath = "/traeger/family-children"
 
 type familyChildrenSetBody struct {
 	Families []struct {
-		ContractID     int64  `json:"contract_id"`
-		RecipientEmail string `json:"recipient_email"`
-		Status         string `json:"status"`
+		ContractID     testpkg.ID `json:"contract_id"`
+		RecipientEmail string     `json:"recipient_email"`
+		Status         string     `json:"status"`
 		Children       []struct {
-			ContractID int64 `json:"contract_id"`
+			ContractID testpkg.ID `json:"contract_id"`
 		} `json:"children"`
 		Count *struct {
 			ConfirmedChildren *int `json:"confirmed_children"`
@@ -68,7 +68,7 @@ func TestFamilyChildrenCountInTheSiblingRuleThroughTheRoutes(t *testing.T) {
 
 	run := f.startRun(t, careMonth)
 	preview := decodeSchoolPortalData[careReductionRunBody](t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet,
-		careRunPath(run.ID, ""), nil).Body.Bytes())
+		careRunPath(int64(run.ID), ""), nil).Body.Bytes())
 	require.Len(t, preview.Invoices, 1)
 	invoice := preview.Invoices[0]
 	assert.Equal(t, int64(3875), invoice.TotalCents)
@@ -80,7 +80,7 @@ func TestFamilyChildrenCountInTheSiblingRuleThroughTheRoutes(t *testing.T) {
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyChildrenPath, familyChildren(mia, 2, "2030-02-01"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	preview = decodeSchoolPortalData[careReductionRunBody](t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet,
-		careRunPath(run.ID, ""), nil).Body.Bytes())
+		careRunPath(int64(run.ID), ""), nil).Body.Bytes())
 	require.Len(t, preview.Invoices, 1)
 	assert.Equal(t, int64(3875), preview.Invoices[0].TotalCents, "a future confirmation preserves the draft discount")
 	require.NotEmpty(t, preview.Invoices[0].Reductions)
@@ -93,23 +93,23 @@ func TestFamilyChildrenCountInTheSiblingRuleThroughTheRoutes(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	marchRun := f.startRun(t, "2030-03-01")
 	march := decodeSchoolPortalData[careReductionRunBody](t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet,
-		careRunPath(marchRun.ID, ""), nil).Body.Bytes())
+		careRunPath(int64(marchRun.ID), ""), nil).Body.Bytes())
 	require.Len(t, march.Invoices, 1)
 	assert.Equal(t, int64(7750), march.Invoices[0].TotalCents, "the corrected expiry ends the sibling discount")
 	assert.Empty(t, march.Invoices[0].Reductions)
 	assert.Equal(t, 1, march.UncountedFamilies, "the expired family needs a new confirmation")
 	preview = decodeSchoolPortalData[careReductionRunBody](t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet,
-		careRunPath(run.ID, ""), nil).Body.Bytes())
+		careRunPath(int64(run.ID), ""), nil).Body.Bytes())
 	require.Len(t, preview.Invoices, 1)
 	assert.Equal(t, int64(3875), preview.Invoices[0].TotalCents, "the correction preserves the earlier billing period")
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"),
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"),
 		map[string]any{"document_count": preview.PreviewCount, "total_cents": preview.PreviewCents, "fingerprint": preview.Fingerprint})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodDelete, familyChildrenPath+"/"+strconv.FormatInt(mia, 10), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	released := decodeSchoolPortalData[careReductionRunBody](t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet,
-		careRunPath(run.ID, ""), nil).Body.Bytes())
+		careRunPath(int64(run.ID), ""), nil).Body.Bytes())
 	require.Len(t, released.Invoices, 1)
 	assert.Equal(t, int64(3875), released.Invoices[0].TotalCents, "the released run keeps the amount")
 	assert.Equal(t, 3, *released.Invoices[0].Reductions[0].FamilyChildren, "and the number it counted")
@@ -220,7 +220,7 @@ func TestFamilyChildrenOfContractsWithoutAMailAddressThroughTheRoutes(t *testing
 	states := map[int64]string{}
 	for _, family := range set.Families {
 		assert.Empty(t, family.RecipientEmail)
-		states[family.ContractID] = family.Status
+		states[int64(family.ContractID)] = family.Status
 	}
 	assert.Equal(t, map[int64]string{mia: "confirmed", noah: "missing"}, states)
 
@@ -228,17 +228,17 @@ func TestFamilyChildrenOfContractsWithoutAMailAddressThroughTheRoutes(t *testing
 	type reviewBody struct {
 		careReductionRunBody
 		UncountedContracts []struct {
-			ContractID     int64  `json:"contract_id"`
-			ChildFirstName string `json:"child_first_name"`
-			Status         string `json:"status"`
+			ContractID     testpkg.ID `json:"contract_id"`
+			ChildFirstName string     `json:"child_first_name"`
+			Status         string     `json:"status"`
 		} `json:"uncounted_contracts"`
 	}
 	review := func() (map[int64]int64, reviewBody) {
 		body := decodeSchoolPortalData[reviewBody](t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet,
-			careRunPath(run.ID, ""), nil).Body.Bytes())
+			careRunPath(int64(run.ID), ""), nil).Body.Bytes())
 		totals := map[int64]int64{}
 		for _, invoice := range body.Invoices {
-			totals[invoice.ContractID] = invoice.TotalCents
+			totals[int64(invoice.ContractID)] = invoice.TotalCents
 		}
 		return totals, body
 	}

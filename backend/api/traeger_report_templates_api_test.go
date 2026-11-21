@@ -22,8 +22,8 @@ import (
 const reportTemplatesPath = "/traeger/report-templates"
 
 type reportTemplateDistrict struct {
-	SchoolID int64  `json:"school_id"`
-	District string `json:"district"`
+	SchoolID testpkg.ID `json:"school_id"`
+	District string     `json:"district"`
 }
 
 type reportTemplateBody struct {
@@ -35,7 +35,7 @@ type reportTemplateBody struct {
 }
 
 type reportTemplateAnswer struct {
-	ID int64 `json:"id"`
+	ID testpkg.ID `json:"id"`
 	reportTemplateBody
 	UpdatedAt string `json:"updated_at"`
 }
@@ -69,11 +69,11 @@ func TestTraegerReportTemplatesKeepTheTemplatesOfTheTraeger(t *testing.T) {
 	jugendamt := createReportTemplate(t, router, office.token, reportTemplateBody{
 		Name: "  Jugendamt Stichtag  ", Sections: []string{"demand", "children", "absences", "staff", "children"},
 		KeyDateMonth: 10, KeyDateDay: 15,
-		Districts: []reportTemplateDistrict{{SchoolID: south, District: " Süd "}, {SchoolID: north, District: "Nord"}},
+		Districts: []reportTemplateDistrict{{SchoolID: testpkg.ID(south), District: " Süd "}, {SchoolID: testpkg.ID(north), District: "Nord"}},
 	})
 	assert.Equal(t, "Jugendamt Stichtag", jugendamt.Name, "the name is trimmed")
 	assert.Equal(t, []string{"children", "staff", "absences", "demand"}, jugendamt.Sections, "each section once, in the order of the report")
-	wantDistricts := []reportTemplateDistrict{{SchoolID: north, District: "Nord"}, {SchoolID: south, District: "Süd"}}
+	wantDistricts := []reportTemplateDistrict{{SchoolID: testpkg.ID(north), District: "Nord"}, {SchoolID: testpkg.ID(south), District: "Süd"}}
 	if south < north {
 		wantDistricts[0], wantDistricts[1] = wantDistricts[1], wantDistricts[0]
 	}
@@ -88,7 +88,7 @@ func TestTraegerReportTemplatesKeepTheTemplatesOfTheTraeger(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	listed := decodeSchoolPortalData[[]reportTemplateAnswer](t, rec.Body.Bytes())
 	require.Len(t, listed, 2)
-	assert.Equal(t, []int64{jugendamt.ID, leap.ID}, []int64{listed[0].ID, listed[1].ID}, "ordered by name")
+	assert.Equal(t, []int64{int64(jugendamt.ID), int64(leap.ID)}, []int64{int64(listed[0].ID), int64(listed[1].ID)}, "ordered by name")
 
 	duplicate := traegerJSON(t, router, office.token, http.MethodPost, reportTemplatesPath, reportTemplateBody{
 		Name: "JUGENDAMT stichtag", Sections: []string{"children"}, KeyDateMonth: 1, KeyDateDay: 1,
@@ -106,11 +106,11 @@ func TestTraegerReportTemplatesKeepTheTemplatesOfTheTraeger(t *testing.T) {
 		"31 April":                    {reportTemplateBody{Name: "April", Sections: []string{"staff"}, KeyDateMonth: 4, KeyDateDay: 31}, []string{"key_date_day"}},
 		"month 13":                    {reportTemplateBody{Name: "Monat", Sections: []string{"staff"}, KeyDateMonth: 13, KeyDateDay: 1}, []string{"key_date_month"}},
 		"school of another Träger": {reportTemplateBody{Name: "Fremd", Sections: []string{"staff"}, KeyDateMonth: 1, KeyDateDay: 1,
-			Districts: []reportTemplateDistrict{{SchoolID: foreignOffice.schools[0], District: "Nord"}}}, []string{"districts"}},
+			Districts: []reportTemplateDistrict{{SchoolID: testpkg.ID(foreignOffice.schools[0]), District: "Nord"}}}, []string{"districts"}},
 		"school twice": {reportTemplateBody{Name: "Doppelt", Sections: []string{"staff"}, KeyDateMonth: 1, KeyDateDay: 1,
-			Districts: []reportTemplateDistrict{{SchoolID: north, District: "Nord"}, {SchoolID: north, District: "Süd"}}}, []string{"districts"}},
+			Districts: []reportTemplateDistrict{{SchoolID: testpkg.ID(north), District: "Nord"}, {SchoolID: testpkg.ID(north), District: "Süd"}}}, []string{"districts"}},
 		"empty district": {reportTemplateBody{Name: "Ohne", Sections: []string{"staff"}, KeyDateMonth: 1, KeyDateDay: 1,
-			Districts: []reportTemplateDistrict{{SchoolID: north, District: "  "}}}, []string{"districts"}},
+			Districts: []reportTemplateDistrict{{SchoolID: testpkg.ID(north), District: "  "}}}, []string{"districts"}},
 	} {
 		rec := traegerJSON(t, router, office.token, http.MethodPost, reportTemplatesPath, refused.body)
 		require.Equal(t, http.StatusBadRequest, rec.Code, "%s: %s", name, rec.Body.String())
@@ -118,20 +118,20 @@ func TestTraegerReportTemplatesKeepTheTemplatesOfTheTraeger(t *testing.T) {
 		assert.ElementsMatch(t, refused.fields, refusedFields(t, rec), name)
 	}
 
-	replaced := traegerJSON(t, router, office.token, http.MethodPut, reportTemplatePath(leap.ID), reportTemplateBody{
+	replaced := traegerJSON(t, router, office.token, http.MethodPut, reportTemplatePath(int64(leap.ID)), reportTemplateBody{
 		Name: "Kommune Belegung und Nachfrage", Sections: []string{"demand"}, KeyDateMonth: 3, KeyDateDay: 1,
-		Districts: []reportTemplateDistrict{{SchoolID: north, District: "Mitte"}},
+		Districts: []reportTemplateDistrict{{SchoolID: testpkg.ID(north), District: "Mitte"}},
 	})
 	require.Equal(t, http.StatusOK, replaced.Code, replaced.Body.String())
 	updated := decodeSchoolPortalData[reportTemplateAnswer](t, replaced.Body.Bytes())
 	assert.Equal(t, leap.ID, updated.ID)
 	assert.Equal(t, "Kommune Belegung und Nachfrage", updated.Name)
 	assert.Equal(t, []string{"demand"}, updated.Sections)
-	renamedOnto := traegerJSON(t, router, office.token, http.MethodPut, reportTemplatePath(leap.ID), reportTemplateBody{
+	renamedOnto := traegerJSON(t, router, office.token, http.MethodPut, reportTemplatePath(int64(leap.ID)), reportTemplateBody{
 		Name: "Jugendamt Stichtag", Sections: []string{"demand"}, KeyDateMonth: 3, KeyDateDay: 1,
 	})
 	assert.Equal(t, http.StatusConflict, renamedOnto.Code, "another template's name: %s", renamedOnto.Body.String())
-	keptName := traegerJSON(t, router, office.token, http.MethodPut, reportTemplatePath(jugendamt.ID), reportTemplateBody{
+	keptName := traegerJSON(t, router, office.token, http.MethodPut, reportTemplatePath(int64(jugendamt.ID)), reportTemplateBody{
 		Name: "Jugendamt Stichtag", Sections: []string{"children"}, KeyDateMonth: 10, KeyDateDay: 15,
 	})
 	assert.Equal(t, http.StatusOK, keptName.Code, "a template keeps its own name: %s", keptName.Body.String())
@@ -139,8 +139,8 @@ func TestTraegerReportTemplatesKeepTheTemplatesOfTheTraeger(t *testing.T) {
 	// Another Träger's template is no template of this one: 404, nothing changes.
 	foreign := createReportTemplate(t, router, foreignOffice.token, reportTemplateBody{Name: "Fremde Vorlage", Sections: []string{"staff"}, KeyDateMonth: 1, KeyDateDay: 1})
 	for _, rec := range []*httptest.ResponseRecorder{
-		traegerJSON(t, router, office.token, http.MethodPut, reportTemplatePath(foreign.ID), reportTemplateBody{Name: "Übernommen", Sections: []string{"staff"}, KeyDateMonth: 1, KeyDateDay: 1}),
-		traegerJSON(t, router, office.token, http.MethodDelete, reportTemplatePath(foreign.ID), nil),
+		traegerJSON(t, router, office.token, http.MethodPut, reportTemplatePath(int64(foreign.ID)), reportTemplateBody{Name: "Übernommen", Sections: []string{"staff"}, KeyDateMonth: 1, KeyDateDay: 1}),
+		traegerJSON(t, router, office.token, http.MethodDelete, reportTemplatePath(int64(foreign.ID)), nil),
 	} {
 		require.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 		assert.Equal(t, "traeger.report_template_not_found", refusalOf(t, rec).Code)
@@ -150,8 +150,8 @@ func TestTraegerReportTemplatesKeepTheTemplatesOfTheTraeger(t *testing.T) {
 	assert.Contains(t, foreignList.Body.String(), "Fremde Vorlage")
 	assert.NotContains(t, foreignList.Body.String(), "Jugendamt", "no Träger lists the templates of another")
 
-	require.Equal(t, http.StatusNoContent, traegerJSON(t, router, office.token, http.MethodDelete, reportTemplatePath(leap.ID), nil).Code)
-	gone := traegerJSON(t, router, office.token, http.MethodDelete, reportTemplatePath(leap.ID), nil)
+	require.Equal(t, http.StatusNoContent, traegerJSON(t, router, office.token, http.MethodDelete, reportTemplatePath(int64(leap.ID)), nil).Code)
+	gone := traegerJSON(t, router, office.token, http.MethodDelete, reportTemplatePath(int64(leap.ID)), nil)
 	assert.Equal(t, http.StatusNotFound, gone.Code, gone.Body.String())
 
 	var logged []string
@@ -182,8 +182,8 @@ func TestTraegerReportTemplatesNeedTheirRights(t *testing.T) {
 	assert.Equal(t, http.StatusOK, listed.Code, "Berichte lesen reads the templates: %s", listed.Body.String())
 	for _, write := range []*httptest.ResponseRecorder{
 		traegerJSON(t, router, readOnly, http.MethodPost, reportTemplatesPath, body),
-		traegerJSON(t, router, readOnly, http.MethodPut, reportTemplatePath(template.ID), body),
-		traegerJSON(t, router, readOnly, http.MethodDelete, reportTemplatePath(template.ID), nil),
+		traegerJSON(t, router, readOnly, http.MethodPut, reportTemplatePath(int64(template.ID)), body),
+		traegerJSON(t, router, readOnly, http.MethodDelete, reportTemplatePath(int64(template.ID)), nil),
 		traegerJSON(t, router, leader, http.MethodPost, reportTemplatesPath, body),
 	} {
 		assert.Equal(t, http.StatusForbidden, write.Code, "writing needs Einstellungen: %s", write.Body.String())
@@ -209,7 +209,7 @@ func TestTraegerReportTemplatesQueryBudget(t *testing.T) {
 	one := read()
 	for _, name := range []string{"Zwei", "Drei", "Vier"} {
 		createReportTemplate(t, router, office.token, reportTemplateBody{Name: name, Sections: []string{"staff"}, KeyDateMonth: 2, KeyDateDay: 3,
-			Districts: []reportTemplateDistrict{{SchoolID: office.schools[0], District: name}}})
+			Districts: []reportTemplateDistrict{{SchoolID: testpkg.ID(office.schools[0]), District: name}}})
 	}
 	assert.Len(t, read().Statements, len(one.Statements), "the list reads the same statements for any number of templates")
 	querybudgets.AssertQueryBudget(t, "api.traeger.report_templates", one)

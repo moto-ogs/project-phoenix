@@ -29,16 +29,16 @@ type billingLettersBody struct {
 		Name  string `json:"name"`
 		Phone string `json:"phone"`
 	} `json:"emergency_contacts"`
-	CreatedByAccountID *int64 `json:"created_by_account_id"`
-	TemplateVersion    int    `json:"template_version"`
+	CreatedByAccountID *testpkg.ID `json:"created_by_account_id"`
+	TemplateVersion    int         `json:"template_version"`
 }
 
 type billingRunLettersBody struct {
-	ID        int64  `json:"id"`
-	Status    string `json:"status"`
+	ID        testpkg.ID `json:"id"`
+	Status    string     `json:"status"`
 	Documents []struct {
-		ID     int64  `json:"id"`
-		Number string `json:"number"`
+		ID     testpkg.ID `json:"id"`
+		Number string     `json:"number"`
 	} `json:"documents"`
 	Letters *billingLettersBody `json:"letters"`
 }
@@ -66,8 +66,8 @@ func releasedBillingRun(t *testing.T, f reviewFixture, billing string) billingRu
 		require.Equal(t, http.StatusOK, f.act(t, id, "confirm").Code)
 	}
 	setNumberRange(t, f, billing, "FE-{NNNN}")
-	run := billingRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(run))
+	run := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(run))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	released := decodeSchoolPortalData[billingRunLettersBody](t, rec.Body.Bytes())
 	released.ID = run.ID
@@ -134,8 +134,8 @@ func TestBillingLettersConfirmEveryFamilyOnceInTheLayoutOfTheTraeger(t *testing.
 	billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
 
 	// A run in preview has no invoice to confirm yet.
-	preview := startBillingRun(t, f, billing, f.period.ID)
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(preview.ID, "/letters"), lettersBody("2099-01-15"))
+	preview := startBillingRun(t, f, billing, int64(f.period.ID))
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(preview.ID), "/letters"), lettersBody("2099-01-15"))
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	code, _ := registrationRefusalOf(t, rec)
 	assert.Equal(t, "parent_billing.billing_run_not_released", code)
@@ -146,13 +146,13 @@ func TestBillingLettersConfirmEveryFamilyOnceInTheLayoutOfTheTraeger(t *testing.
 	require.Len(t, run.Documents, 2)
 
 	// A letter asks for payment: without a bank account it is refused.
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/letters"), lettersBody("2099-01-15"))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/letters"), lettersBody("2099-01-15"))
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	code, _ = registrationRefusalOf(t, rec)
 	assert.Equal(t, "parent_billing.bank_account_missing", code)
 	brandTraeger(t, f)
 	requireLettersNeedTheLetterhead(t, f.traeger, f.office.token, func() *httptest.ResponseRecorder {
-		return traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/letters"), lettersBody("2099-01-15"))
+		return traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/letters"), lettersBody("2099-01-15"))
 	})
 
 	for body, field := range map[string]map[string]any{
@@ -160,29 +160,29 @@ func TestBillingLettersConfirmEveryFamilyOnceInTheLayoutOfTheTraeger(t *testing.
 		"payment in the past": {"payment_due_on": "2020-01-01"},
 		"emergency_contacts":  {"payment_due_on": "2099-01-15", "emergency_contacts": []map[string]any{{"name": "OGS"}}},
 	} {
-		rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/letters"), field)
+		rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/letters"), field)
 		require.Equal(t, http.StatusBadRequest, rec.Code, "%s: %s", body, rec.Body.String())
 		code, _ := registrationRefusalOf(t, rec)
 		assert.Equal(t, "parent_billing.billing_letters_invalid", code, body)
 	}
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/letters"), map[string]any{"payment_due_on": "15.01.2099"})
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/letters"), map[string]any{"payment_due_on": "15.01.2099"})
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	code, _ = registrationRefusalOf(t, rec)
 	assert.Equal(t, "parent_billing.billing_letters_invalid", code, "a date not in YYYY-MM-DD")
 
 	// The preview shows the letter of the first family and stores nothing.
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/letters/preview"), lettersBody("2099-01-15"))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/letters/preview"), lettersBody("2099-01-15"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, "application/pdf", rec.Header().Get("Content-Type"))
 	assert.Equal(t, `inline; filename="bestaetigung-fe-0001.pdf"`, rec.Header().Get("Content-Disposition"))
 	assert.Equal(t, "no-store", rec.Header().Get("Cache-Control"))
 	assert.True(t, bytes.HasPrefix(rec.Body.Bytes(), []byte("%PDF")))
-	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, letterPath(run.ID, run.Documents[0].ID), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, letterPath(int64(run.ID), int64(run.Documents[0].ID)), nil)
 	require.Equal(t, http.StatusNotFound, rec.Code, "the preview stored no letter: %s", rec.Body.String())
 	code, _ = registrationRefusalOf(t, rec)
 	assert.Equal(t, "parent_billing.billing_letter_not_found", code)
 
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/letters"), lettersBody("2099-01-15"))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/letters"), lettersBody("2099-01-15"))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	letters := decodeSchoolPortalData[billingLettersBody](t, rec.Body.Bytes())
 	assert.Equal(t, "2099-01-15", letters.PaymentDueOn)
@@ -192,19 +192,19 @@ func TestBillingLettersConfirmEveryFamilyOnceInTheLayoutOfTheTraeger(t *testing.
 	assert.NotNil(t, letters.CreatedByAccountID)
 
 	// A run has its letters once; they never change.
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/letters"), lettersBody("2099-02-01"))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/letters"), lettersBody("2099-02-01"))
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	code, _ = registrationRefusalOf(t, rec)
 	assert.Equal(t, "parent_billing.billing_letters_exist", code)
 
-	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(run.ID, ""), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(int64(run.ID), ""), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	detail := decodeSchoolPortalData[billingRunLettersBody](t, rec.Body.Bytes())
 	require.NotNil(t, detail.Letters, "the released run shows its letters")
 	assert.Equal(t, "2099-01-15", detail.Letters.PaymentDueOn)
 
 	for _, document := range detail.Documents {
-		rec := traegerJSON(t, f.traeger, billing, http.MethodGet, letterPath(run.ID, document.ID), nil)
+		rec := traegerJSON(t, f.traeger, billing, http.MethodGet, letterPath(int64(run.ID), int64(document.ID)), nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		assert.Equal(t, "application/pdf", rec.Header().Get("Content-Type"))
 		assert.Equal(t, fmt.Sprintf(`attachment; filename="bestaetigung-%s.pdf"`, map[string]string{"FE-0001": "fe-0001", "FE-0002": "fe-0002"}[document.Number]),
@@ -220,7 +220,7 @@ func TestBillingLettersConfirmEveryFamilyOnceInTheLayoutOfTheTraeger(t *testing.
 
 	// Every read of a letter and the creation stand in the trail; the read
 	// of the contact person and the bank account in the master data log.
-	actions := runActions(t, f, run.ID)
+	actions := runActions(t, f, int64(run.ID))
 	assert.Contains(t, actions, "letters")
 	var letterReads []string
 	require.NoError(t, f.db.NewRaw(`SELECT details->>'letter' FROM parent_billing.run_events
@@ -242,9 +242,9 @@ func TestBillingLettersNeedTheBillingRightAndStayWithTheirTraeger(t *testing.T) 
 		method, path string
 		body         any
 	}{
-		{http.MethodPost, billingRunPath(run.ID, "/letters/preview"), lettersBody("2099-01-15")},
-		{http.MethodPost, billingRunPath(run.ID, "/letters"), lettersBody("2099-01-15")},
-		{http.MethodGet, letterPath(run.ID, document), nil},
+		{http.MethodPost, billingRunPath(int64(run.ID), "/letters/preview"), lettersBody("2099-01-15")},
+		{http.MethodPost, billingRunPath(int64(run.ID), "/letters"), lettersBody("2099-01-15")},
+		{http.MethodGet, letterPath(int64(run.ID), int64(document)), nil},
 	}
 	for _, request := range requests {
 		rec := traegerJSON(t, f.traeger, f.office.token, request.method, request.path, request.body)
@@ -264,11 +264,11 @@ func TestBillingLettersNeedTheBillingRightAndStayWithTheirTraeger(t *testing.T) 
 
 	// The letter of an invoice of another run of the Träger is not found
 	// under this run.
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/letters"), lettersBody("2099-01-15"))
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/letters"), lettersBody("2099-01-15"))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, letterPath(run.ID+1000, document), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, letterPath(int64(run.ID+1000), int64(document)), nil)
 	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, foreign.token, http.MethodGet, letterPath(run.ID, document), nil)
+	rec = traegerJSON(t, f.traeger, foreign.token, http.MethodGet, letterPath(int64(run.ID), int64(document)), nil)
 	assert.Equal(t, http.StatusNotFound, rec.Code, "another Träger reads no stored letter: %s", rec.Body.String())
 }
 
@@ -287,7 +287,7 @@ func TestBillingLettersRefuseALetterheadWithoutRoomForTheLetter(t *testing.T) {
 	}
 	refused := func(what string) {
 		t.Helper()
-		for _, path := range []string{billingRunPath(run.ID, "/letters/preview"), billingRunPath(run.ID, "/letters")} {
+		for _, path := range []string{billingRunPath(int64(run.ID), "/letters/preview"), billingRunPath(int64(run.ID), "/letters")} {
 			rec := traegerJSON(t, f.traeger, billing, http.MethodPost, path, lettersBody("2099-01-15"))
 			require.Equal(t, http.StatusConflict, rec.Code, "%s, %s: %s", what, path, rec.Body.String())
 			code, _ := registrationRefusalOf(t, rec)
@@ -319,7 +319,7 @@ func TestBillingLettersWithStoredInterlacedLogo(t *testing.T) {
 	require.NoError(t, err)
 	for _, suffix := range []string{"/letters/preview", "/letters"} {
 		t.Run(suffix, func(t *testing.T) {
-			rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, suffix), lettersBody("2099-01-15"))
+			rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), suffix), lettersBody("2099-01-15"))
 			if suffix == "/letters/preview" {
 				require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 				assert.True(t, bytes.HasPrefix(rec.Body.Bytes(), []byte("%PDF")))
@@ -330,7 +330,7 @@ func TestBillingLettersWithStoredInterlacedLogo(t *testing.T) {
 		})
 	}
 	for _, document := range run.Documents {
-		rec := traegerJSON(t, f.traeger, billing, http.MethodGet, letterPath(run.ID, document.ID), nil)
+		rec := traegerJSON(t, f.traeger, billing, http.MethodGet, letterPath(int64(run.ID), int64(document.ID)), nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		assert.True(t, bytes.HasPrefix(rec.Body.Bytes(), []byte("%PDF")))
 		assert.Contains(t, rec.Body.String(), "/Subtype /Image")
@@ -356,7 +356,7 @@ func TestBillingLettersKeepTheTemplateVersionTheyWereWrittenWith(t *testing.T) {
 	rec := saveTemplate(t, f.traeger, f.office, "bestaetigung", own)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/letters"), lettersBody("2099-01-15"))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/letters"), lettersBody("2099-01-15"))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	assert.Equal(t, 1, decodeSchoolPortalData[billingLettersBody](t, rec.Body.Bytes()).TemplateVersion)
 	var stored []byte
@@ -367,12 +367,12 @@ func TestBillingLettersKeepTheTemplateVersionTheyWereWrittenWith(t *testing.T) {
 	rec = saveTemplate(t, f.traeger, f.office, "bestaetigung", own)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 
-	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(run.ID, ""), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(int64(run.ID), ""), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	detail := decodeSchoolPortalData[billingRunLettersBody](t, rec.Body.Bytes())
 	require.NotNil(t, detail.Letters)
 	assert.Equal(t, 1, detail.Letters.TemplateVersion, "the issued letters keep their version")
-	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, letterPath(run.ID, detail.Documents[0].ID), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, letterPath(int64(run.ID), int64(detail.Documents[0].ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, stored, rec.Body.Bytes(), "a new version changes no issued letter")
 }

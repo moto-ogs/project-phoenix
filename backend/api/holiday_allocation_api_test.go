@@ -23,50 +23,50 @@ import (
 )
 
 type allocationCandidateBody struct {
-	BookingID      int64  `json:"booking_id"`
-	Rank           int    `json:"rank"`
-	RegistrationID int64  `json:"registration_id"`
-	ChildFirstName string `json:"child_first_name"`
-	Proposal       string `json:"proposal"`
+	BookingID      testpkg.ID `json:"booking_id"`
+	Rank           int        `json:"rank"`
+	RegistrationID testpkg.ID `json:"registration_id"`
+	ChildFirstName string     `json:"child_first_name"`
+	Proposal       string     `json:"proposal"`
 	Criteria       []struct {
-		CriterionID int64  `json:"criterion_id"`
-		Value       string `json:"value"`
-		Source      string `json:"source"`
+		CriterionID testpkg.ID `json:"criterion_id"`
+		Value       string     `json:"value"`
+		Source      string     `json:"source"`
 	} `json:"criteria"`
 }
 
 type allocationBoardBody struct {
 	AllocationMode string `json:"allocation_mode"`
 	Criteria       []struct {
-		ID   int64  `json:"id"`
-		Name string `json:"name"`
+		ID   testpkg.ID `json:"id"`
+		Name string     `json:"name"`
 	} `json:"criteria"`
 	Weeks []struct {
-		WeekID  int64                     `json:"week_id"`
+		WeekID  testpkg.ID                `json:"week_id"`
 		Placed  int                       `json:"placed"`
 		Free    *int                      `json:"free"`
 		Pending []allocationCandidateBody `json:"pending"`
 	} `json:"weeks"`
 	Decisions []struct {
-		RegistrationID int64    `json:"registration_id"`
-		Placement      string   `json:"placement"`
-		Proposal       string   `json:"proposal"`
-		Rank           int      `json:"rank"`
-		CriteriaMet    []string `json:"criteria_met"`
-		Reason         string   `json:"reason"`
+		RegistrationID testpkg.ID `json:"registration_id"`
+		Placement      string     `json:"placement"`
+		Proposal       string     `json:"proposal"`
+		Rank           int        `json:"rank"`
+		CriteriaMet    []string   `json:"criteria_met"`
+		Reason         string     `json:"reason"`
 	} `json:"decisions"`
 }
 
 type criteriaBody struct {
 	Periods []struct {
-		ID int64 `json:"id"`
+		ID testpkg.ID `json:"id"`
 	} `json:"periods"`
 	Criteria []struct {
-		ID       int64  `json:"id"`
-		Name     string `json:"name"`
-		Scope    string `json:"scope"`
-		Active   bool   `json:"active"`
-		Position int    `json:"position"`
+		ID       testpkg.ID `json:"id"`
+		Name     string     `json:"name"`
+		Scope    string     `json:"scope"`
+		Active   bool       `json:"active"`
+		Position int        `json:"position"`
 	} `json:"criteria"`
 }
 
@@ -94,14 +94,14 @@ func newAllocationFixture(t *testing.T, name string) allocationFixture {
 	body.RegistrationOpensOn, body.RegistrationClosesOn = "2020-01-01", "2099-12-31"
 	body.AllocationMode = "criteria"
 	created := createHolidayPeriod(t, f.traeger, office, body)
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayPeriodPath(created.ID)+"/publish", nil)
+	rec = traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayPeriodPath(int64(created.ID))+"/publish", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	period := decodeSchoolPortalData[traegerPeriodLink](t, rec.Body.Bytes())
 	a := allocationFixture{
 		reviewFixture: reviewFixture{holidayRegistrationFixture: f, office: office, period: period, offer: holidayOffer(t, f, period.PublicToken)},
-		working:       criteria[0].ID, sibling: criteria[1].ID,
+		working:       int64(criteria[0].ID), sibling: int64(criteria[1].ID),
 	}
-	a.setCapacity(t, a.offer.Weeks[0].ID, 1)
+	a.setCapacity(t, int64(a.offer.Weeks[0].ID), 1)
 	return a
 }
 
@@ -120,8 +120,8 @@ func (a allocationFixture) submitCriteria(t *testing.T, email string, working, s
 type allocationOfferBody struct {
 	AllocationMode string `json:"allocation_mode"`
 	Criteria       []struct {
-		ID    int64  `json:"id"`
-		Scope string `json:"scope"`
+		ID    testpkg.ID `json:"id"`
+		Scope string     `json:"scope"`
 	} `json:"criteria"`
 }
 
@@ -134,14 +134,14 @@ func (a allocationFixture) publicOffer(t *testing.T) allocationOfferBody {
 
 func (a allocationFixture) board(t *testing.T) allocationBoardBody {
 	t.Helper()
-	rec := traegerJSON(t, a.traeger, a.office.token, http.MethodGet, holidayPeriodPath(a.period.ID)+"/allocation", nil)
+	rec := traegerJSON(t, a.traeger, a.office.token, http.MethodGet, holidayPeriodPath(int64(a.period.ID))+"/allocation", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	return decodeSchoolPortalData[allocationBoardBody](t, rec.Body.Bytes())
 }
 
 func (a allocationFixture) decide(t *testing.T, decisions ...map[string]any) *httptest.ResponseRecorder {
 	t.Helper()
-	return traegerJSON(t, a.traeger, a.office.token, http.MethodPost, holidayPeriodPath(a.period.ID)+"/allocation/decisions",
+	return traegerJSON(t, a.traeger, a.office.token, http.MethodPost, holidayPeriodPath(int64(a.period.ID))+"/allocation/decisions",
 		map[string]any{"decisions": decisions})
 }
 
@@ -169,7 +169,7 @@ func TestHolidayAllocationByCriteriaWaitsForTheOfficeDecision(t *testing.T) {
 	offer := a.publicOffer(t)
 	assert.Equal(t, "criteria", offer.AllocationMode)
 	require.Len(t, offer.Criteria, 2, "the form asks only the active criteria")
-	assert.Equal(t, []int64{a.working, a.sibling}, []int64{offer.Criteria[0].ID, offer.Criteria[1].ID})
+	assert.Equal(t, []int64{a.working, a.sibling}, []int64{int64(offer.Criteria[0].ID), int64(offer.Criteria[1].ID)})
 
 	missing := placesRegistration(a.reviewFixture, "ohne.angabe@example.org", map[string][]int{"Tom": {0}})
 	rec := publicJSON(t, a.public, http.MethodPost, registrationPath(a.period.PublicToken), missing)
@@ -182,7 +182,7 @@ func TestHolidayAllocationByCriteriaWaitsForTheOfficeDecision(t *testing.T) {
 	late := a.submitCriteria(t, "spaet@example.org", true, false)
 	assert.Equal(t, []placementBody{{ChildPosition: 1, WeekID: week.ID, Placement: "pending"}}, early.Placements, "no place when the form is sent")
 	assert.Equal(t, []placementBody{{ChildPosition: 1, WeekID: week.ID, Placement: "pending"}}, late.Placements)
-	assert.Equal(t, 0, a.places(t)[week.ID].Placed)
+	assert.Equal(t, 0, a.places(t)[int64(week.ID)].Placed)
 	var receipt string
 	require.NoError(t, a.db.NewRaw(`SELECT payload::text FROM platform.email_outbox
 		WHERE organization_id = ? AND kind = 'holiday_registration_received' AND related_entity_id = ?`, a.office.organization, early.ID).
@@ -190,9 +190,9 @@ func TestHolidayAllocationByCriteriaWaitsForTheOfficeDecision(t *testing.T) {
 	assert.Contains(t, receipt, `"pending_weeks"`, "the receipt names the weeks the Büro still decides on")
 	assert.NotContains(t, receipt, "Berufstätig", "the receipt names no criterion")
 
-	assert.Empty(t, a.setCapacity(t, week.ID, 2).MovedUp, "a higher capacity gives a pending booking no place")
-	a.setCapacity(t, week.ID, 1)
-	rec = a.act(t, early.ID, "confirm")
+	assert.Empty(t, a.setCapacity(t, int64(week.ID), 2).MovedUp, "a higher capacity gives a pending booking no place")
+	a.setCapacity(t, int64(week.ID), 1)
+	rec = a.act(t, int64(early.ID), "confirm")
 	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Equal(t, "enrollment.holiday_allocation_pending", a.errorCode(t, rec), "no confirmation before the decision")
 
@@ -206,7 +206,7 @@ func TestHolidayAllocationByCriteriaWaitsForTheOfficeDecision(t *testing.T) {
 	assert.Equal(t, "parent", pending[0].Criteria[0].Source)
 	require.NotNil(t, board.Weeks[0].Free)
 	assert.Equal(t, 1, *board.Weeks[0].Free)
-	exportPath := holidayPeriodPath(a.period.ID) + "/allocation/export"
+	exportPath := holidayPeriodPath(int64(a.period.ID)) + "/allocation/export"
 	export := traegerJSON(t, a.traeger, a.office.token, http.MethodGet, exportPath, nil)
 	require.Equal(t, http.StatusOK, export.Code, export.Body.String())
 	assert.Contains(t, export.Body.String(), ";Offen;1;", "the open registrations in the order of the proposal (#4718)")
@@ -224,7 +224,7 @@ func TestHolidayAllocationByCriteriaWaitsForTheOfficeDecision(t *testing.T) {
 	rec = a.decide(t, decision(pending[0], "placed", ""), decision(pending[1], "placed", "Härtefall nach Gespräch"))
 	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Equal(t, "enrollment.holiday_allocation_full", a.errorCode(t, rec), "no decision overbooks a week")
-	assert.Equal(t, 0, a.places(t)[week.ID].Placed, "a refused decision changes nothing")
+	assert.Equal(t, 0, a.places(t)[int64(week.ID)].Placed, "a refused decision changes nothing")
 
 	rec = a.decide(t, decision(pending[0], "waitlisted", "Kein Nachweis der Berufstätigkeit"), decision(pending[1], "placed", "Härtefall nach Gespräch"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -233,21 +233,21 @@ func TestHolidayAllocationByCriteriaWaitsForTheOfficeDecision(t *testing.T) {
 	require.Len(t, board.Decisions, 2)
 	reasons := map[int64]string{}
 	for _, decided := range board.Decisions {
-		reasons[decided.RegistrationID] = decided.Reason
+		reasons[int64(decided.RegistrationID)] = decided.Reason
 		if decided.RegistrationID == late.ID {
 			assert.Equal(t, []string{"Berufstätig"}, decided.CriteriaMet, "the decision keeps the criteria met at that moment")
 			assert.Equal(t, 1, decided.Rank)
 			assert.Equal(t, "placed", decided.Proposal)
 		}
 	}
-	assert.Equal(t, map[int64]string{early.ID: "Härtefall nach Gespräch", late.ID: "Kein Nachweis der Berufstätigkeit"}, reasons)
-	places := a.places(t)[week.ID]
+	assert.Equal(t, map[int64]string{int64(early.ID): "Härtefall nach Gespräch", int64(late.ID): "Kein Nachweis der Berufstätigkeit"}, reasons)
+	places := a.places(t)[int64(week.ID)]
 	assert.Equal(t, 1, places.Placed)
 	require.Len(t, places.Waitlist, 1)
 	assert.Equal(t, late.ID, places.Waitlist[0].RegistrationID)
-	assert.Equal(t, 1, a.mails(t, "holiday_place_granted", early.ID), "the parents hear of the decision")
-	assert.Equal(t, 1, a.mails(t, "holiday_place_granted", late.ID))
-	history := a.detail(t, traegerJSON(t, a.traeger, a.office.token, http.MethodGet, a.registrationPath(early.ID, ""), nil)).History
+	assert.Equal(t, 1, a.mails(t, "holiday_place_granted", int64(early.ID)), "the parents hear of the decision")
+	assert.Equal(t, 1, a.mails(t, "holiday_place_granted", int64(late.ID)))
+	history := a.detail(t, traegerJSON(t, a.traeger, a.office.token, http.MethodGet, a.registrationPath(int64(early.ID), ""), nil)).History
 	assert.Equal(t, "allocate", history[len(history)-1].Action, "the decision is in the registration's trail")
 	assert.Contains(t, a.auditActions(t), "allocation", "the read of the list is recorded")
 	export = traegerJSON(t, a.traeger, a.office.token, http.MethodGet, exportPath, nil)
@@ -257,12 +257,12 @@ func TestHolidayAllocationByCriteriaWaitsForTheOfficeDecision(t *testing.T) {
 
 	// After the decision the waiting list of #4699 holds: confirmed, then
 	// cancelled, the placed child frees its place for the waiting one.
-	confirmed := a.act(t, early.ID, "confirm")
+	confirmed := a.act(t, int64(early.ID), "confirm")
 	require.Equal(t, http.StatusOK, confirmed.Code, confirmed.Body.String())
-	rec = a.act(t, early.ID, "cancel")
+	rec = a.act(t, int64(early.ID), "cancel")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, []int64{late.ID}, decodeSchoolPortalData[placeChangeBody](t, rec.Body.Bytes()).MovedUp)
-	assert.Equal(t, 2, a.mails(t, "holiday_place_granted", late.ID))
+	assert.Equal(t, []int64{int64(late.ID)}, decodeSchoolPortalData[placeChangeBody](t, rec.Body.Bytes()).MovedUp)
+	assert.Equal(t, 2, a.mails(t, "holiday_place_granted", int64(late.ID)))
 }
 
 // TestHolidayAllocationHoldsFreePlacesForThePendingBookings: while a week has
@@ -280,15 +280,15 @@ func TestHolidayAllocationHoldsFreePlacesForThePendingBookings(t *testing.T) {
 	pending := a.board(t).Weeks[0].Pending
 	rec := a.decide(t, decision(pending[0], "placed", ""), decision(pending[1], "waitlisted", ""))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	confirmed := a.act(t, second.ID, "confirm")
+	confirmed := a.act(t, int64(second.ID), "confirm")
 	require.Equal(t, http.StatusOK, confirmed.Code, confirmed.Body.String())
-	assert.Zero(t, a.contributionTotal(t, second.ID), "a confirmed waiting booking costs nothing")
+	assert.Zero(t, a.contributionTotal(t, int64(second.ID)), "a confirmed waiting booking costs nothing")
 	third := a.submitCriteria(t, "dritte@example.org", false, false)
 
-	rec = a.act(t, first.ID, "cancel")
+	rec = a.act(t, int64(first.ID), "cancel")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Empty(t, decodeSchoolPortalData[placeChangeBody](t, rec.Body.Bytes()).MovedUp, "nobody moves up while a booking waits for the Büro")
-	places := a.places(t)[week.ID]
+	places := a.places(t)[int64(week.ID)]
 	assert.Equal(t, 0, places.Placed)
 	require.Len(t, places.Waitlist, 1)
 	assert.Equal(t, second.ID, places.Waitlist[0].RegistrationID)
@@ -298,7 +298,7 @@ func TestHolidayAllocationHoldsFreePlacesForThePendingBookings(t *testing.T) {
 	assert.Equal(t, "placed", board.Weeks[0].Pending[0].Proposal, "the freed place is proposed to the pending booking")
 
 	// The existing waiting child has priority over the last pending child.
-	rec = traegerJSON(t, a.traeger, a.office.token, http.MethodPut, a.registrationPath(second.ID, "/criteria"),
+	rec = traegerJSON(t, a.traeger, a.office.token, http.MethodPut, a.registrationPath(int64(second.ID), "/criteria"),
 		map[string]any{"checks": []map[string]any{{"criterion_id": a.working, "checked": "yes"}}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	// A billing failure after promotion must roll back the decision, the
@@ -310,21 +310,21 @@ func TestHolidayAllocationHoldsFreePlacesForThePendingBookings(t *testing.T) {
 	require.NoError(t, err)
 	refused := a.decide(t, decision(board.Weeks[0].Pending[0], "waitlisted", "Familie benötigt vorerst keinen Platz"))
 	require.Equal(t, http.StatusInternalServerError, refused.Code, refused.Body.String())
-	assert.Zero(t, a.places(t)[week.ID].Placed, "a failed contribution rolls back the promotion")
+	assert.Zero(t, a.places(t)[int64(week.ID)].Placed, "a failed contribution rolls back the promotion")
 	assert.Len(t, a.board(t).Weeks[0].Pending, 1, "the decision rolls back with billing")
-	assert.Equal(t, 1, a.mails(t, "holiday_place_granted", second.ID), "a failed promotion queues no mail")
-	assert.Zero(t, a.mails(t, "holiday_place_granted", third.ID), "a failed decision queues no mail")
+	assert.Equal(t, 1, a.mails(t, "holiday_place_granted", int64(second.ID)), "a failed promotion queues no mail")
+	assert.Zero(t, a.mails(t, "holiday_place_granted", int64(third.ID)), "a failed decision queues no mail")
 	_, err = a.db.ExecContext(t.Context(), `DROP TRIGGER reject_allocation_contribution ON parent_billing.holiday_contributions;
  DROP FUNCTION parent_billing.reject_allocation_contribution()`)
 	require.NoError(t, err)
 	rec = a.decide(t, decision(board.Weeks[0].Pending[0], "waitlisted", "Familie benötigt vorerst keinen Platz"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	places = a.places(t)[week.ID]
+	places = a.places(t)[int64(week.ID)]
 	assert.Equal(t, 1, places.Placed, "the last pending decision releases the hold")
 	require.Len(t, places.Waitlist, 1)
 	assert.Equal(t, third.ID, places.Waitlist[0].RegistrationID)
-	assert.Equal(t, 2, a.mails(t, "holiday_place_granted", second.ID), "decision and later promotion each notify the parents")
-	assert.Equal(t, week.TimeModels[0].PriceCents, a.contributionTotal(t, second.ID), "an allocation-triggered promotion refreezes the confirmed contribution")
+	assert.Equal(t, 2, a.mails(t, "holiday_place_granted", int64(second.ID)), "decision and later promotion each notify the parents")
+	assert.Equal(t, week.TimeModels[0].PriceCents, a.contributionTotal(t, int64(second.ID)), "an allocation-triggered promotion refreezes the confirmed contribution")
 }
 
 // TestHolidayAllocationOfficeCheckCountsBeforeTheStatement: the Büro's check
@@ -337,7 +337,7 @@ func TestHolidayAllocationOfficeCheckCountsBeforeTheStatement(t *testing.T) {
 	late := a.submitCriteria(t, "ungeprueft@example.org", true, false)
 	assert.Equal(t, late.ID, a.board(t).Weeks[0].Pending[0].RegistrationID)
 
-	rec := traegerJSON(t, a.traeger, a.office.token, http.MethodPut, a.registrationPath(late.ID, "/criteria"),
+	rec := traegerJSON(t, a.traeger, a.office.token, http.MethodPut, a.registrationPath(int64(late.ID), "/criteria"),
 		map[string]any{"checks": []map[string]any{{"criterion_id": a.working, "child_id": nil, "checked": "no"}}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), `"checked":"no"`)
@@ -345,7 +345,7 @@ func TestHolidayAllocationOfficeCheckCountsBeforeTheStatement(t *testing.T) {
 	assert.Equal(t, early.ID, pending[0].RegistrationID, "the checked answer counts: arrival decides again")
 	assert.Equal(t, "office", pending[1].Criteria[0].Source)
 
-	rec = traegerJSON(t, a.traeger, a.office.token, http.MethodPut, a.registrationPath(late.ID, "/criteria"),
+	rec = traegerJSON(t, a.traeger, a.office.token, http.MethodPut, a.registrationPath(int64(late.ID), "/criteria"),
 		map[string]any{"checks": []map[string]any{{"criterion_id": a.working, "child_id": nil, "checked": nil}}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, late.ID, a.board(t).Weeks[0].Pending[0].RegistrationID, "taking the check back restores the statement")
@@ -358,31 +358,31 @@ func TestHolidayAllocationOfficeCheckCountsBeforeTheStatement(t *testing.T) {
 func TestHolidayAllocationModeAndRights(t *testing.T) {
 	t.Parallel()
 	a := newAllocationFixture(t, "Träger Vergabe Rechte")
-	current := traegerJSON(t, a.traeger, a.office.token, http.MethodGet, holidayPeriodPath(a.period.ID), nil)
+	current := traegerJSON(t, a.traeger, a.office.token, http.MethodGet, holidayPeriodPath(int64(a.period.ID)), nil)
 	require.Equal(t, http.StatusOK, current.Code)
 	body := decodeSchoolPortalData[holidayPeriodBody](t, current.Body.Bytes())
 	assert.Equal(t, "criteria", body.AllocationMode)
 	a.submitCriteria(t, "sperre@example.org", true, true)
 
 	body.AllocationMode = "arrival"
-	rec := traegerJSON(t, a.traeger, a.office.token, http.MethodPut, holidayPeriodPath(a.period.ID), body)
+	rec := traegerJSON(t, a.traeger, a.office.token, http.MethodPut, holidayPeriodPath(int64(a.period.ID)), body)
 	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Equal(t, "enrollment.holiday_allocation_mode_locked", a.errorCode(t, rec))
 	body.AllocationMode = "criteria"
-	rec = traegerJSON(t, a.traeger, a.office.token, http.MethodPut, holidayPeriodPath(a.period.ID), body)
+	rec = traegerJSON(t, a.traeger, a.office.token, http.MethodPut, holidayPeriodPath(int64(a.period.ID)), body)
 	assert.Equal(t, http.StatusOK, rec.Code, rec.Body.String(), "keeping the mode is no change")
 	assert.True(t, strings.Contains(rec.Body.String(), `"allocation_mode_locked":true`))
 
 	byArrival := openHolidays(t, a.holidayRegistrationFixture, a.office)
-	rec = traegerJSON(t, a.traeger, a.office.token, http.MethodGet, holidayPeriodPath(byArrival.ID)+"/allocation", nil)
+	rec = traegerJSON(t, a.traeger, a.office.token, http.MethodGet, holidayPeriodPath(int64(byArrival.ID))+"/allocation", nil)
 	assert.Equal(t, http.StatusConflict, rec.Code, "a period by arrival has no allocation list")
 
 	readOnly := newTraegerOffice(t, a.db, a.traeger, "Vergabe Lesend", identityaccess.TraegerRoleReadOnly)
-	for _, path := range []string{holidayPeriodPath(a.period.ID) + "/allocation", holidayPeriodPath(a.period.ID) + "/allocation/export", "/traeger/holiday-periods/criteria"} {
+	for _, path := range []string{holidayPeriodPath(int64(a.period.ID)) + "/allocation", holidayPeriodPath(int64(a.period.ID)) + "/allocation/export", "/traeger/holiday-periods/criteria"} {
 		assert.Equal(t, http.StatusForbidden, traegerJSON(t, a.traeger, readOnly.token, http.MethodGet, path, nil).Code, path)
 	}
 	foreign := newTraegerOffice(t, a.db, a.traeger, "Vergabe Fremd", identityaccess.TraegerRoleAdministration)
-	assert.Equal(t, http.StatusNotFound, traegerJSON(t, a.traeger, foreign.token, http.MethodGet, holidayPeriodPath(a.period.ID)+"/allocation", nil).Code)
+	assert.Equal(t, http.StatusNotFound, traegerJSON(t, a.traeger, foreign.token, http.MethodGet, holidayPeriodPath(int64(a.period.ID))+"/allocation", nil).Code)
 	rec = traegerJSON(t, a.traeger, foreign.token, http.MethodGet, "/traeger/holiday-periods/criteria", nil)
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.Empty(t, decodeSchoolPortalData[criteriaBody](t, rec.Body.Bytes()).Criteria, "another Träger sees none of these criteria")
@@ -401,21 +401,21 @@ func TestHolidayAllocationWaitingListFollowsTheCriteria(t *testing.T) {
 	third := a.submitCriteria(t, "zuletzt@example.org", true, false)
 	byRegistration := map[int64]allocationCandidateBody{}
 	for _, candidate := range a.board(t).Weeks[0].Pending {
-		byRegistration[candidate.RegistrationID] = candidate
+		byRegistration[int64(candidate.RegistrationID)] = candidate
 	}
 	rec := a.decide(t,
-		decision(byRegistration[first.ID], "placed", "Vereinbarung aus dem Vorjahr"),
-		decision(byRegistration[second.ID], "waitlisted", ""),
-		decision(byRegistration[third.ID], "waitlisted", "Nachweis fehlt noch"))
+		decision(byRegistration[int64(first.ID)], "placed", "Vereinbarung aus dem Vorjahr"),
+		decision(byRegistration[int64(second.ID)], "waitlisted", ""),
+		decision(byRegistration[int64(third.ID)], "waitlisted", "Nachweis fehlt noch"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
-	waitlist := a.places(t)[week.ID].Waitlist
+	waitlist := a.places(t)[int64(week.ID)].Waitlist
 	require.Len(t, waitlist, 2)
-	assert.Equal(t, []int64{third.ID, second.ID}, []int64{waitlist[0].RegistrationID, waitlist[1].RegistrationID},
+	assert.Equal(t, []int64{int64(third.ID), int64(second.ID)}, []int64{int64(waitlist[0].RegistrationID), int64(waitlist[1].RegistrationID)},
 		"the family that meets the criterion waits first")
-	rec = a.act(t, first.ID, "cancel")
+	rec = a.act(t, int64(first.ID), "cancel")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, []int64{third.ID}, decodeSchoolPortalData[placeChangeBody](t, rec.Body.Bytes()).MovedUp)
+	assert.Equal(t, []int64{int64(third.ID)}, decodeSchoolPortalData[placeChangeBody](t, rec.Body.Bytes()).MovedUp)
 }
 
 // TestHolidayAllocationQueryBudgetIsFlat: the allocation list and the
@@ -435,7 +435,7 @@ func TestHolidayAllocationQueryBudgetIsFlat(t *testing.T) {
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		return counter.Measurement(counter.Selects(""))
 	}
-	board, criteria := holidayPeriodPath(a.period.ID)+"/allocation", "/traeger/holiday-periods/criteria"
+	board, criteria := holidayPeriodPath(int64(a.period.ID))+"/allocation", "/traeger/holiday-periods/criteria"
 	smallBoard, smallCriteria := measure(board), measure(criteria)
 	for n := 0; n < 3; n++ {
 		a.submitCriteria(t, fmt.Sprintf("budget.weitere%d@example.org", n), n%2 == 0, true)
@@ -475,7 +475,7 @@ func TestHolidayAllocationTakesTheHolidayWishAsTheFirstCriterion(t *testing.T) {
 	assert.Equal(t, "Ferienwunsch aus der OGS-Anmeldung", board.Criteria[0].Name, "the wish is the first criterion")
 	pending := board.Weeks[0].Pending
 	require.Len(t, pending, 2)
-	assert.Equal(t, []int64{plain.ID, without.ID}, []int64{pending[0].RegistrationID, pending[1].RegistrationID},
+	assert.Equal(t, []int64{int64(plain.ID), int64(without.ID)}, []int64{int64(pending[0].RegistrationID), int64(pending[1].RegistrationID)},
 		"a known no waits behind every other child")
 	assert.Equal(t, "no", pending[1].Criteria[0].Value)
 	assert.Equal(t, "office", pending[1].Criteria[0].Source)
@@ -496,7 +496,7 @@ func TestHolidayAllocationMailNamesTheTraegerAndTheHostSchool(t *testing.T) {
 	rec := a.decide(t, decision(pending[0], "placed", ""))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
-	mail := a.placeMail(t, receipt.ID)
+	mail := a.placeMail(t, int64(receipt.ID))
 	assert.True(t, mail.Allocated)
 	assert.Equal(t, "Träger Vergabe Absender", mail.TraegerName)
 	require.Len(t, mail.Children, 1)

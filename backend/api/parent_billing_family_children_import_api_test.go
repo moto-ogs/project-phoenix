@@ -26,12 +26,12 @@ type familyImportBody struct {
 	Fingerprint string         `json:"fingerprint"`
 	Counts      map[string]int `json:"counts"`
 	Rows        []struct {
-		Line              int     `json:"line"`
-		Status            string  `json:"status"`
-		ContractID        int64   `json:"contract_id"`
-		Children          *int    `json:"children"`
-		ConfirmedChildren *int    `json:"confirmed_children"`
-		ValidFrom         *string `json:"valid_from"`
+		Line              int        `json:"line"`
+		Status            string     `json:"status"`
+		ContractID        testpkg.ID `json:"contract_id"`
+		Children          *int       `json:"children"`
+		ConfirmedChildren *int       `json:"confirmed_children"`
+		ValidFrom         *string    `json:"valid_from"`
 		Problems          []struct {
 			Field string `json:"field"`
 			Code  string `json:"code"`
@@ -158,9 +158,9 @@ func TestFamilyChildrenImportAddsTheNumbersOfAFile(t *testing.T) {
 
 	run := f.startRun(t, careMonth)
 	review := decodeSchoolPortalData[careReductionRunBody](t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet,
-		careRunPath(run.ID, ""), nil).Body.Bytes())
+		careRunPath(int64(run.ID), ""), nil).Body.Bytes())
 	for _, invoice := range review.Invoices {
-		if invoice.ContractID == mia {
+		if int64(invoice.ContractID) == mia {
 			assert.Equal(t, int64(3875), invoice.TotalCents, "Mia is the 2nd child of two: 77,50 € − 50 %")
 		}
 	}

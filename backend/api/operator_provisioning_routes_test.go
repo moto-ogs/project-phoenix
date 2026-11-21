@@ -96,8 +96,8 @@ func TestOperatorRoutesCreateAndRestoreOrganizationsAndSchools(t *testing.T) {
 	suffix := testpkg.UniqueTestTenantID(t)
 
 	var organization struct {
-		ID   int64  `json:"id"`
-		Slug string `json:"slug"`
+		ID   testpkg.ID `json:"id"`
+		Slug string     `json:"slug"`
 	}
 	slug := fmt.Sprintf("route-org-%d", suffix)
 	assert.Equal(t, http.StatusCreated, f.call(t, http.MethodPost, "/operator/organizations/", map[string]string{"name": " Route Träger ", "slug": slug}, &organization))
@@ -106,9 +106,9 @@ func TestOperatorRoutesCreateAndRestoreOrganizationsAndSchools(t *testing.T) {
 	require.NoError(t, f.db.NewSelect().TableExpr("platform.organizations").Column("name").Where("id = ?", organization.ID).Scan(testpkg.Ctx(t), &storedName))
 	assert.Equal(t, "Route Träger", storedName)
 
-	require.NoError(t, f.service.SoftDeleteOrganization(f.ctx, organization.ID, f.operatorID, provisioningTestClientIP))
+	require.NoError(t, f.service.SoftDeleteOrganization(f.ctx, int64(organization.ID), f.operatorID, provisioningTestClientIP))
 	f.call(t, http.MethodPost, fmt.Sprintf("/operator/organizations/%d/restore", organization.ID), nil, nil)
-	assert.Nil(t, f.deletedAt(t, "platform.organizations", organization.ID), "the organization is restored")
+	assert.Nil(t, f.deletedAt(t, "platform.organizations", int64(organization.ID)), "the organization is restored")
 
 	_, schoolID := provisionTestSchool(t, f.db, f.service, f.operatorID, "route-restore")
 	require.NoError(t, f.service.SoftDeleteSchool(f.ctx, schoolID, f.operatorID, provisioningTestClientIP))
@@ -123,10 +123,10 @@ func TestOperatorRoutesInviteAnAdminAndCreateASchoolAccount(t *testing.T) {
 	_, schoolID := provisionTestSchool(t, f.db, f.service, f.operatorID, "route-accounts")
 
 	var invitation struct {
-		ID             int64  `json:"id"`
-		Email          string `json:"email"`
-		RoleName       string `json:"role_name"`
-		DeliveryStatus string `json:"delivery_status"`
+		ID             testpkg.ID `json:"id"`
+		Email          string     `json:"email"`
+		RoleName       string     `json:"role_name"`
+		DeliveryStatus string     `json:"delivery_status"`
 	}
 	email := fmt.Sprintf("route-admin-%d@example.test", schoolID)
 	assert.Equal(t, http.StatusCreated, f.call(t, http.MethodPost, fmt.Sprintf("/operator/schools/%d/invite-admin", schoolID),
@@ -139,8 +139,8 @@ func TestOperatorRoutesInviteAnAdminAndCreateASchoolAccount(t *testing.T) {
 
 	password := testpkg.NewTestPassword()
 	var account struct {
-		ID    int64  `json:"id"`
-		Email string `json:"email"`
+		ID    testpkg.ID `json:"id"`
+		Email string     `json:"email"`
 	}
 	accountEmail := fmt.Sprintf("route-account-%d@example.test", schoolID)
 	assert.Equal(t, http.StatusCreated, f.call(t, http.MethodPost, fmt.Sprintf("/operator/schools/%d/create-account", schoolID), map[string]string{
@@ -148,19 +148,19 @@ func TestOperatorRoutesInviteAnAdminAndCreateASchoolAccount(t *testing.T) {
 	}, &account))
 	assert.Equal(t, accountEmail, account.Email)
 	var accounts []struct {
-		AccountID int64 `json:"account_id"`
+		AccountID testpkg.ID `json:"account_id"`
 	}
 	f.call(t, http.MethodGet, fmt.Sprintf("/operator/schools/%d/accounts", schoolID), nil, &accounts)
 	assert.Contains(t, accounts, struct {
-		AccountID int64 `json:"account_id"`
+		AccountID testpkg.ID `json:"account_id"`
 	}{account.ID}, "the new account has access to the school")
 }
 
 type operatorRouteDevice struct {
-	ID       int64   `json:"id"`
-	SchoolID int64   `json:"school_id"`
-	Status   string  `json:"status"`
-	APIKey   *string `json:"api_key"`
+	ID       testpkg.ID `json:"id"`
+	SchoolID testpkg.ID `json:"school_id"`
+	Status   string     `json:"status"`
+	APIKey   *string    `json:"api_key"`
 }
 
 func (f operatorProvisioningRoutes) storedDevice(t *testing.T, id int64) (status string, hash string) {
@@ -187,12 +187,12 @@ func TestOperatorRoutesRotateAndTransferADevice(t *testing.T) {
 
 	var created operatorRouteDevice
 	f.call(t, http.MethodPost, "/operator/devices/", map[string]any{"school_id": sourceID, "device_id": fmt.Sprintf("route-device-%d", sourceID), "device_type": "rfid_terminal"}, &created)
-	_, firstHash := f.storedDevice(t, created.ID)
+	_, firstHash := f.storedDevice(t, int64(created.ID))
 
 	var rotated operatorRouteDevice
 	f.call(t, http.MethodPost, fmt.Sprintf("/operator/devices/%d/set-api-key", created.ID), map[string]string{}, &rotated)
 	require.NotNil(t, rotated.APIKey, "a rotation shows the new key once")
-	_, rotatedHash := f.storedDevice(t, created.ID)
+	_, rotatedHash := f.storedDevice(t, int64(created.ID))
 	assert.NotEqual(t, firstHash, rotatedHash, "the rotation stores a new key")
 
 	var status struct {
@@ -247,7 +247,7 @@ func TestOperatorRoutesBlockAndUnblockADevice(t *testing.T) {
 	// Removing the device takes it out of the school's fleet.
 	f.call(t, http.MethodDelete, fmt.Sprintf("/operator/devices/%d", device.ID), nil, nil)
 	var fleet []struct {
-		ID int64 `json:"id"`
+		ID testpkg.ID `json:"id"`
 	}
 	f.call(t, http.MethodGet, fmt.Sprintf("/operator/schools/%d/devices", schoolID), nil, &fleet)
 	for _, row := range fleet {
@@ -278,9 +278,9 @@ func TestOperatorRoutesReadAndRenameTheProfileAndListCaterers(t *testing.T) {
 	f := operatorProvisioningRoutes{router: router, ctx: ctx, operatorID: operator.ID}
 
 	var profile struct {
-		ID          int64  `json:"id"`
-		Email       string `json:"email"`
-		DisplayName string `json:"display_name"`
+		ID          testpkg.ID `json:"id"`
+		Email       string     `json:"email"`
+		DisplayName string     `json:"display_name"`
 	}
 	f.call(t, http.MethodGet, "/operator/profile", nil, &profile)
 	assert.Equal(t, operator.ID, profile.ID)
@@ -340,16 +340,16 @@ func TestOperatorRoutesPublishAnAnnouncementAndReadItsViews(t *testing.T) {
 
 	require.NoError(t, module.MarkSeen(ctx, announcementViewer(viewer.ID, testpkg.Tenant(t), tenantOrganizationID(t, db, testpkg.Tenant(t))), announcement.ID))
 	var stats struct {
-		AnnouncementID int64 `json:"announcement_id"`
-		SeenCount      int   `json:"seen_count"`
+		AnnouncementID testpkg.ID `json:"announcement_id"`
+		SeenCount      int        `json:"seen_count"`
 	}
 	f.call(t, http.MethodGet, base+"/stats", nil, &stats)
 	assert.Equal(t, announcement.ID, stats.AnnouncementID)
 	assert.Equal(t, 1, stats.SeenCount)
 	var views []struct {
-		UserID   int64   `json:"user_id"`
-		UserName string  `json:"user_name"`
-		ShownAt  *string `json:"shown_at"`
+		UserID   testpkg.ID `json:"user_id"`
+		UserName string     `json:"user_name"`
+		ShownAt  *string    `json:"shown_at"`
 	}
 	f.call(t, http.MethodGet, base+"/views", nil, &views)
 	require.Len(t, views, 1)
@@ -389,9 +389,9 @@ func TestOperatorRoutesListUnregisteredTagScansOfATraeger(t *testing.T) {
 	insert(schoolID, "ROUTE-DONE", true)
 	insert(otherSchool, "ROUTE-OTHER", false)
 	type scan struct {
-		TagUID     string `json:"tag_uid"`
-		SchoolID   int64  `json:"school_id"`
-		SchoolName string `json:"school_name"`
+		TagUID     string     `json:"tag_uid"`
+		SchoolID   testpkg.ID `json:"school_id"`
+		SchoolName string     `json:"school_name"`
 	}
 	tags := func(scans []scan) []string {
 		var out []string

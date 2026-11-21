@@ -103,16 +103,16 @@ func TestChildDebtorNumbersReachTheMonthlyInvoiceOfEachChild(t *testing.T) {
 	assert.Greater(t, lastUsed, careMonth, "a number prepared for a contract ahead is kept until the contract needs it")
 
 	run := f.startRun(t, careMonth)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(run.ID, ""), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(int64(run.ID), ""), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	numbers := map[int64]string{}
 	for _, invoice := range decodeSchoolPortalData[struct {
 		Invoices []struct {
-			ContractID   int64  `json:"contract_id"`
-			DebtorNumber string `json:"debtor_number"`
+			ContractID   testpkg.ID `json:"contract_id"`
+			DebtorNumber string     `json:"debtor_number"`
 		} `json:"invoices"`
 	}](t, rec.Body.Bytes()).Invoices {
-		numbers[invoice.ContractID] = invoice.DebtorNumber
+		numbers[int64(invoice.ContractID)] = invoice.DebtorNumber
 	}
 	assert.Equal(t, map[int64]string{mia: "10 0001", noah: "10 0002"}, numbers, "each sibling's invoice carries the child's own number")
 

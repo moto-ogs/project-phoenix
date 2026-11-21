@@ -43,23 +43,23 @@ type poolWeekBody struct {
 }
 
 type poolSpringerBody struct {
-	RecordID  int64   `json:"staff_record_id"`
-	LastName  string  `json:"last_name"`
-	PoolFrom  string  `json:"pool_from"`
-	PoolUntil *string `json:"pool_until"`
+	RecordID  testpkg.ID `json:"staff_record_id"`
+	LastName  string     `json:"last_name"`
+	PoolFrom  string     `json:"pool_from"`
+	PoolUntil *string    `json:"pool_until"`
 	Proofs    []struct {
 		TypeName string `json:"type_name"`
 		Status   string `json:"status"`
 	} `json:"proofs"`
 	Blocks []struct {
-		ID         *int64 `json:"id"`
-		SchoolID   int64  `json:"school_id"`
-		SchoolName string `json:"school_name"`
-		Own        bool   `json:"own"`
-		Date       string `json:"date"`
-		StartTime  string `json:"start_time"`
-		EndTime    string `json:"end_time"`
-		Lifted     bool   `json:"lifted"`
+		ID         *testpkg.ID `json:"id"`
+		SchoolID   testpkg.ID  `json:"school_id"`
+		SchoolName string      `json:"school_name"`
+		Own        bool        `json:"own"`
+		Date       string      `json:"date"`
+		StartTime  string      `json:"start_time"`
+		EndTime    string      `json:"end_time"`
+		Lifted     bool        `json:"lifted"`
 	} `json:"blocks"`
 }
 
@@ -121,7 +121,7 @@ func TestStaffPoolLetsEverySchoolBlockASpringerOnce(t *testing.T) {
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		assert.Contains(t, rec.Body.String(), fmt.Sprintf(`"pool":%t`, pool))
-		return id
+		return int64(id)
 	}
 	springer, fixed := record(mira.ID, true), record(jonas.ID, false)
 
@@ -159,12 +159,12 @@ func TestStaffPoolLetsEverySchoolBlockASpringerOnce(t *testing.T) {
 		rec := block(south, southLead.ID, springer, "2026-11-19", "08:00", "12:00")
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		created := decode[struct {
-			ID  *int64 `json:"id"`
-			Own bool   `json:"own"`
+			ID  *testpkg.ID `json:"id"`
+			Own bool        `json:"own"`
 		}](t, rec)
 		require.NotNil(t, created.ID)
 		assert.True(t, created.Own)
-		southBlock = *created.ID
+		southBlock = int64(*created.ID)
 
 		assertStaffRefusal(t, block(west, westLead.ID, springer, "2026-11-19", "11:00", "14:00"), http.StatusConflict, "workforce.pool_block_taken")
 		require.Equal(t, http.StatusCreated, block(west, westLead.ID, springer, "2026-11-19", "12:00", "14:00").Code, "a block may start when another ends")

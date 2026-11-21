@@ -18,11 +18,11 @@ import (
 
 type guardianSearchResponse struct {
 	Data []struct {
-		ID                  int64   `json:"id"`
-		FirstName           string  `json:"first_name"`
-		LastName            string  `json:"last_name"`
-		Email               *string `json:"email"`
-		LinkedChildrenCount int     `json:"linked_children_count"`
+		ID                  testpkg.ID `json:"id"`
+		FirstName           string     `json:"first_name"`
+		LastName            string     `json:"last_name"`
+		Email               *string    `json:"email"`
+		LinkedChildrenCount int        `json:"linked_children_count"`
 	} `json:"data"`
 	Pagination struct {
 		PageSize     int `json:"page_size"`
@@ -49,7 +49,7 @@ func (c *guardianCompositionContext) searchDefault(t *testing.T, query string) g
 
 func (r guardianSearchResponse) has(id int64) bool {
 	for _, guardian := range r.Data {
-		if guardian.ID == id {
+		if int64(guardian.ID) == id {
 			return true
 		}
 	}
@@ -113,7 +113,7 @@ func TestGuardianComposition_SearchProjectionIsGDPRSafe(t *testing.T) {
 
 	var found bool
 	for _, guardian := range response.Data {
-		if guardian.ID != guardianID {
+		if int64(guardian.ID) != guardianID {
 			continue
 		}
 		found = true

@@ -47,7 +47,7 @@ type absenceListBody struct {
 	CountedUntil  string `json:"counted_until"`
 	SchoolDays    int    `json:"school_days"`
 	Children      []struct {
-		StudentID int64 `json:"student_id"`
+		StudentID testpkg.ID `json:"student_id"`
 		absenceListCounts
 	} `json:"children"`
 	Totals absenceListCounts `json:"totals"`
@@ -95,7 +95,7 @@ func TestAbsenceListAPI(t *testing.T) {
 	assert.Equal(t, 6, list.SchoolDays)
 	counts := map[int64]absenceListCounts{}
 	for _, child := range list.Children {
-		counts[child.StudentID] = child.absenceListCounts
+		counts[int64(child.StudentID)] = child.absenceListCounts
 	}
 	require.Len(t, counts, 2, "the class-list entry and the other class stay out")
 	assert.Equal(t, absenceListCounts{AbsentDays: 2, ExcusedDays: 1, UnexcusedDays: 1, NotRecordedDays: 4}, counts[f.present])
@@ -209,7 +209,7 @@ func TestAbsenceListRetentionWindows(t *testing.T) {
 			assert.True(t, envelope.Data.Incomplete)
 			assert.Equal(t, "2099-01-30", envelope.Data.AvailableFrom)
 			for _, child := range envelope.Data.Children {
-				if child.StudentID == f.present {
+				if int64(child.StudentID) == f.present {
 					assert.Equal(t, 1, child.UnexcusedDays, "only the retained boundary day counts")
 				}
 			}
@@ -232,7 +232,7 @@ func TestAbsenceListIncludesEndedCare(t *testing.T) {
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &envelope))
 	counts := map[int64]absenceListCounts{}
 	for _, child := range envelope.Data.Children {
-		counts[child.StudentID] = child.absenceListCounts
+		counts[int64(child.StudentID)] = child.absenceListCounts
 	}
 	require.Contains(t, counts, f.present)
 	assert.Equal(t, absenceListCounts{AbsentDays: 1, UnexcusedDays: 1, NotRecordedDays: 3}, counts[f.present])
@@ -262,7 +262,7 @@ func TestAbsenceListPreservesCareBeforeAScheduledReturn(t *testing.T) {
 	before := read()
 	counts := map[int64]absenceListCounts{}
 	for _, child := range before.Children {
-		counts[child.StudentID] = child.absenceListCounts
+		counts[int64(child.StudentID)] = child.absenceListCounts
 	}
 	require.Contains(t, counts, f.present)
 	require.Equal(t, absenceListCounts{AbsentDays: 2, ExcusedDays: 1, UnexcusedDays: 1, NotRecordedDays: 3}, counts[f.present])
@@ -348,7 +348,7 @@ func TestAbsenceListKeepsRecordedCareOfAKnownNewChildBeforeItsStart(t *testing.T
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &envelope))
 	counts := map[int64]absenceListCounts{}
 	for _, row := range envelope.Data.Children {
-		counts[row.StudentID] = row.absenceListCounts
+		counts[int64(row.StudentID)] = row.absenceListCounts
 	}
 	require.Contains(t, counts, child.ID, "the day the child was cared for keeps its row")
 	assert.Equal(t, absenceListCounts{}, counts[child.ID],
@@ -424,7 +424,7 @@ func TestAbsenceListLeavesOutTheCareGapOfAResumedChild(t *testing.T) {
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &envelope))
 		counts := map[int64]absenceListCounts{}
 		for _, row := range envelope.Data.Children {
-			counts[row.StudentID] = row.absenceListCounts
+			counts[int64(row.StudentID)] = row.absenceListCounts
 		}
 		return counts
 	}

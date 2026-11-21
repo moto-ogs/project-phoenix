@@ -16,6 +16,8 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 const holidayTestPDF = "%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF\n"
@@ -60,9 +62,9 @@ func TestHolidayLegalDocumentsAndPinnedAcceptanceEvidence(t *testing.T) {
 	f := newHolidayRegistrationFixture(t)
 	office := newTraegerOffice(t, f.db, f.traeger, "Träger PDF", identityaccess.TraegerRoleAdministration)
 	period := openHolidays(t, f, office)
-	first, second := holidayPDF(t, f, office, period.ID), holidayPDF(t, f, office, period.ID)
+	first, second := holidayPDF(t, f, office, int64(period.ID)), holidayPDF(t, f, office, int64(period.ID))
 	blocks := holidayLegalBlocks(first, second)
-	rec := saveHolidayLegalBlocks(t, f, office, period.ID, blocks)
+	rec := saveHolidayLegalBlocks(t, f, office, int64(period.ID), blocks)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	saved := decodeSchoolPortalData[enrollment.HolidayPeriodForm](t, rec.Body.Bytes())
 	require.Equal(t, 2, saved.Version)
@@ -89,9 +91,9 @@ func TestHolidayLegalDocumentsAndPinnedAcceptanceEvidence(t *testing.T) {
 	rec = publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken), body)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	receipt := decodeSchoolPortalData[struct {
-		ID int64 `json:"id"`
+		ID testpkg.ID `json:"id"`
 	}](t, rec.Body.Bytes())
-	detailPath := fmt.Sprintf("%s/registrations/%d", holidayPeriodPath(period.ID), receipt.ID)
+	detailPath := fmt.Sprintf("%s/registrations/%d", holidayPeriodPath(int64(period.ID)), receipt.ID)
 	rec = traegerJSON(t, f.traeger, office.token, http.MethodGet, detailPath, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	detail := decodeSchoolPortalData[enrollment.HolidayRegistrationDetail](t, rec.Body.Bytes())
@@ -101,8 +103,8 @@ func TestHolidayLegalDocumentsAndPinnedAcceptanceEvidence(t *testing.T) {
 	assert.Equal(t, 2, detail.Form.Version)
 	// Replacement publishes a new version. The registration and private PDF
 	// keep the prior version, while the public link no longer exposes it.
-	replacement := holidayPDF(t, f, office, period.ID)
-	rec = saveHolidayLegalBlocks(t, f, office, period.ID, holidayLegalBlocks(replacement))
+	replacement := holidayPDF(t, f, office, int64(period.ID))
+	rec = saveHolidayLegalBlocks(t, f, office, int64(period.ID), holidayLegalBlocks(replacement))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	rec = publicJSON(t, f.public, http.MethodGet, publicPath, nil)
 	assert.Equal(t, http.StatusNotFound, rec.Code)
@@ -111,14 +113,14 @@ func TestHolidayLegalDocumentsAndPinnedAcceptanceEvidence(t *testing.T) {
 	pinned := decodeSchoolPortalData[enrollment.HolidayRegistrationDetail](t, rec.Body.Bytes())
 	assert.Equal(t, detail.Form, pinned.Form)
 	assert.Equal(t, detail.LegalAcceptances, pinned.LegalAcceptances)
-	privatePath := holidayFormPath(period.ID) + "/documents/" + first
+	privatePath := holidayFormPath(int64(period.ID)) + "/documents/" + first
 	rec = traegerJSON(t, f.traeger, office.token, http.MethodDelete, privatePath, nil)
 	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	rec = traegerJSON(t, f.traeger, office.token, http.MethodGet, privatePath, nil)
 	assert.Equal(t, http.StatusOK, rec.Code)
 	assert.Equal(t, holidayTestPDF, rec.Body.String())
-	draft := holidayPDF(t, f, office, period.ID)
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodDelete, holidayFormPath(period.ID)+"/documents/"+draft, nil)
+	draft := holidayPDF(t, f, office, int64(period.ID))
+	rec = traegerJSON(t, f.traeger, office.token, http.MethodDelete, holidayFormPath(int64(period.ID))+"/documents/"+draft, nil)
 	assert.Equal(t, http.StatusNoContent, rec.Code)
 }
 
@@ -139,32 +141,32 @@ func TestHolidayPDFUploadAndCrossTraegerBoundaries(t *testing.T) {
 		{"gross.pdf", append([]byte(holidayTestPDF), make([]byte, 10<<20)...), office.token, 400},
 		{"Hinweis.pdf", []byte(holidayTestPDF), reader.token, 403},
 	} {
-		rec := holidayPDFUpload(t, f, tc.token, period.ID, tc.name, tc.content)
+		rec := holidayPDFUpload(t, f, tc.token, int64(period.ID), tc.name, tc.content)
 		assert.Equal(t, tc.status, rec.Code, rec.Body.String())
 	}
-	own := holidayPDF(t, f, office, period.ID)
+	own := holidayPDF(t, f, office, int64(period.ID))
 	otherPeriod := openHolidays(t, f, office)
-	otherDoc := holidayPDF(t, f, office, otherPeriod.ID)
+	otherDoc := holidayPDF(t, f, office, int64(otherPeriod.ID))
 	foreign := newTraegerOffice(t, f.db, f.traeger, "Träger PDF Fremd", identityaccess.TraegerRoleAdministration)
 	foreignPeriod := openHolidays(t, f, foreign)
-	foreignDoc := holidayPDF(t, f, foreign, foreignPeriod.ID)
+	foreignDoc := holidayPDF(t, f, foreign, int64(foreignPeriod.ID))
 	for _, id := range []string{own, otherDoc, foreignDoc} {
 		rec := publicJSON(t, f.public, http.MethodGet, registrationPath(period.PublicToken)+"/documents/"+id, nil)
 		assert.Equal(t, http.StatusNotFound, rec.Code, "unreferenced or foreign document %s: %s", id, rec.Body.String())
 	}
 	for _, id := range []string{otherDoc, foreignDoc} {
-		rec := saveHolidayLegalBlocks(t, f, office, period.ID, holidayLegalBlocks(id))
+		rec := saveHolidayLegalBlocks(t, f, office, int64(period.ID), holidayLegalBlocks(id))
 		assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	}
-	rec := saveHolidayLegalBlocks(t, f, office, period.ID, holidayLegalBlocks(own))
+	rec := saveHolidayLegalBlocks(t, f, office, int64(period.ID), holidayLegalBlocks(own))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	for _, token := range []string{otherPeriod.PublicToken, foreignPeriod.PublicToken, "unknown"} {
 		rec = publicJSON(t, f.public, http.MethodGet, registrationPath(token)+"/documents/"+own, nil)
 		assert.Equal(t, http.StatusNotFound, rec.Code)
 	}
-	rec = traegerJSON(t, f.traeger, foreign.token, http.MethodGet, holidayFormPath(period.ID)+"/documents/"+own, nil)
+	rec = traegerJSON(t, f.traeger, foreign.token, http.MethodGet, holidayFormPath(int64(period.ID))+"/documents/"+own, nil)
 	assert.Equal(t, http.StatusNotFound, rec.Code)
-	rec = traegerJSON(t, f.traeger, reader.token, http.MethodGet, holidayFormPath(period.ID)+"/documents/"+own, nil)
+	rec = traegerJSON(t, f.traeger, reader.token, http.MethodGet, holidayFormPath(int64(period.ID))+"/documents/"+own, nil)
 	assert.Equal(t, http.StatusForbidden, rec.Code)
 }
 
@@ -173,7 +175,7 @@ func TestHolidayPDFSaveAndDeleteSerialize(t *testing.T) {
 	f := newHolidayRegistrationFixture(t)
 	office := newTraegerOffice(t, f.db, f.traeger, "Träger PDF Parallel", identityaccess.TraegerRoleAdministration)
 	period := openHolidays(t, f, office)
-	id := holidayPDF(t, f, office, period.ID)
+	id := holidayPDF(t, f, office, int64(period.ID))
 	start := make(chan struct{})
 	var saved, deleted *httptest.ResponseRecorder
 	var wg sync.WaitGroup
@@ -181,12 +183,12 @@ func TestHolidayPDFSaveAndDeleteSerialize(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		<-start
-		saved = saveHolidayLegalBlocks(t, f, office, period.ID, holidayLegalBlocks(id))
+		saved = saveHolidayLegalBlocks(t, f, office, int64(period.ID), holidayLegalBlocks(id))
 	}()
 	go func() {
 		defer wg.Done()
 		<-start
-		deleted = traegerJSON(t, f.traeger, office.token, http.MethodDelete, holidayFormPath(period.ID)+"/documents/"+id, nil)
+		deleted = traegerJSON(t, f.traeger, office.token, http.MethodDelete, holidayFormPath(int64(period.ID))+"/documents/"+id, nil)
 	}()
 	close(start)
 	wg.Wait()
@@ -234,7 +236,7 @@ func TestHolidayLegalBlocksRejectSchoolSettingsAndInvalidAcknowledgements(t *tes
 		{"required consent", []enrollment.FormLegalBlock{{Key: "fotos", Source: "custom", Kind: "consent", Enabled: true, Required: true, Title: "Fotos", Label: "Fotos"}}, "legal_blocks.0.required"},
 		{"school document URL", []enrollment.FormLegalBlock{{Key: "notice", Source: "custom", Kind: "notice", Enabled: true, Title: "Hinweis", Label: "Hinweis", Attachments: []enrollment.FormAttachment{{Label: "Schule", DocumentURL: "/uploads/enrollment-form-legal-documents/1_school.pdf"}}}}, "legal_blocks.0.attachments.0.document_url"},
 	} {
-		rec := saveHolidayLegalBlocks(t, f, office, period.ID, tc.blocks)
+		rec := saveHolidayLegalBlocks(t, f, office, int64(period.ID), tc.blocks)
 		require.Equal(t, http.StatusBadRequest, rec.Code, "%s: %s", tc.name, rec.Body.String())
 		var problem struct {
 			Errors []struct {

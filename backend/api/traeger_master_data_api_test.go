@@ -30,13 +30,13 @@ import (
 )
 
 type masterDataBankAccount struct {
-	ID            int64  `json:"id,omitempty"`
-	Label         string `json:"label"`
-	AccountHolder string `json:"account_holder"`
-	IBAN          string `json:"iban"`
-	BIC           string `json:"bic"`
-	BankName      string `json:"bank_name"`
-	IsDefault     bool   `json:"is_default"`
+	ID            testpkg.ID `json:"id,omitempty"`
+	Label         string     `json:"label"`
+	AccountHolder string     `json:"account_holder"`
+	IBAN          string     `json:"iban"`
+	BIC           string     `json:"bic"`
+	BankName      string     `json:"bank_name"`
+	IsDefault     bool       `json:"is_default"`
 }
 
 type masterDataContact struct {
@@ -164,7 +164,7 @@ func TestTraegerBankAccountsKeepOneDefault(t *testing.T) {
 	assert.False(t, second.IsDefault)
 
 	second.IsDefault = true
-	rec = traegerJSON(t, router, office.token, http.MethodPut, bankAccountPath(second.ID), second)
+	rec = traegerJSON(t, router, office.token, http.MethodPut, bankAccountPath(int64(second.ID)), second)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	profile = masterDataProfileOf(t, router, office)
 	require.Len(t, profile.BankAccounts, 2)
@@ -176,11 +176,11 @@ func TestTraegerBankAccountsKeepOneDefault(t *testing.T) {
 	// another one instead.
 	second.IsDefault = false
 	second.BankName = "Sparkasse"
-	rec = traegerJSON(t, router, office.token, http.MethodPut, bankAccountPath(second.ID), second)
+	rec = traegerJSON(t, router, office.token, http.MethodPut, bankAccountPath(int64(second.ID)), second)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.True(t, decodeSchoolPortalData[masterDataBankAccount](t, rec.Body.Bytes()).IsDefault)
 
-	rec = traegerJSON(t, router, office.token, http.MethodDelete, bankAccountPath(second.ID), nil)
+	rec = traegerJSON(t, router, office.token, http.MethodDelete, bankAccountPath(int64(second.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	profile = masterDataProfileOf(t, router, office)
 	require.Len(t, profile.BankAccounts, 1)
@@ -381,8 +381,8 @@ func TestTraegerMasterDataNeedsTheSettingsRight(t *testing.T) {
 		writes := []*httptest.ResponseRecorder{
 			traegerJSON(t, router, reader.token, http.MethodPut, "/traeger/master-data/contact", masterDataContact{Name: "Herr Beispiel"}),
 			traegerJSON(t, router, reader.token, http.MethodPost, "/traeger/master-data/bank-accounts", masterDataBankAccount{Label: "Neu", AccountHolder: "X", IBAN: traegerTestIBAN}),
-			traegerJSON(t, router, reader.token, http.MethodPut, bankAccountPath(account.ID), account),
-			traegerJSON(t, router, reader.token, http.MethodDelete, bankAccountPath(account.ID), nil),
+			traegerJSON(t, router, reader.token, http.MethodPut, bankAccountPath(int64(account.ID)), account),
+			traegerJSON(t, router, reader.token, http.MethodDelete, bankAccountPath(int64(account.ID)), nil),
 			traegerJSON(t, router, reader.token, http.MethodDelete, "/traeger/master-data/logo", nil),
 			uploadLogo(t, router, reader.token, "logo", "logo.png", pngLogo(t, 4, 4)),
 		}
@@ -414,10 +414,10 @@ func TestTraegerMasterDataStaysWithItsTraeger(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 
 	account.Label = "Übernommen"
-	rec = traegerJSON(t, router, other.token, http.MethodPut, bankAccountPath(account.ID), account)
+	rec = traegerJSON(t, router, other.token, http.MethodPut, bankAccountPath(int64(account.ID)), account)
 	require.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 	assert.Equal(t, "traeger.bank_account_not_found", refusalOf(t, rec).Code)
-	rec = traegerJSON(t, router, other.token, http.MethodDelete, bankAccountPath(account.ID), nil)
+	rec = traegerJSON(t, router, other.token, http.MethodDelete, bankAccountPath(int64(account.ID)), nil)
 	require.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 	rec = traegerJSON(t, router, other.token, http.MethodDelete, "/traeger/master-data/logo", nil)
 	require.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())

@@ -59,10 +59,10 @@ func TestParentBillingRebookingPreservesCalendarRefusal(t *testing.T) {
 			testpkg.OwnTenant(t)
 			f := newReviewFixture(t, "Umbuchung Kalendermeldung")
 			registration := f.submitPlaces(t, "kalendermeldung@example.test", map[string][]int{"Tom": {0}})
-			require.Equal(t, http.StatusOK, f.confirmWith(t, registration.ID, nil).Code)
-			before := f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(registration.ID, ""), nil))
+			require.Equal(t, http.StatusOK, f.confirmWith(t, int64(registration.ID), nil).Code)
+			before := f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(int64(registration.ID), ""), nil))
 			readContribution := func() contributionBody {
-				rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayContributionPath(f.period.ID, registration.ID), nil)
+				rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayContributionPath(int64(f.period.ID), int64(registration.ID)), nil)
 				require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 				return decodeSchoolPortalData[contributionBody](t, rec.Body.Bytes())
 			}
@@ -72,7 +72,7 @@ func TestParentBillingRebookingPreservesCalendarRefusal(t *testing.T) {
 			previousDay := day
 			previousDay.Date = calendar.NewDate(2027, 1, 4)
 			router := parentBillingCalendarRouter(t, f, owners.HolidayTestSchoolCalendar{previousDay, day})
-			path := holidayRebookPath(f.period.ID, registration.ID, before.Children[0].ID)
+			path := holidayRebookPath(int64(f.period.ID), int64(registration.ID), int64(before.Children[0].ID))
 			rebook := map[string]any{"bookings": []map[string]any{{"week_id": second.ID, "time_model_id": second.TimeModels[0].ID}}}
 
 			rec := traegerJSON(t, router, f.office.token, http.MethodPut, path, rebook)
@@ -89,7 +89,7 @@ func TestParentBillingRebookingPreservesCalendarRefusal(t *testing.T) {
 				"week": float64(0), "week_id": float64(second.ID), "date": "11.01.2027",
 				"iso_date": "2027-01-11", "kind": day.Kind, "name": day.Name,
 			}, refusal.Details)
-			after := f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(registration.ID, ""), nil))
+			after := f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(int64(registration.ID), ""), nil))
 			assert.Equal(t, before.Children, after.Children, "a refused rebooking changes no booking")
 			assert.Equal(t, contribution, readContribution(), "the frozen contribution and its positions stay")
 			assert.Equal(t, places, f.places(t), "no capacity, placement or waiting-list change")

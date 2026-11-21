@@ -315,15 +315,15 @@ func dataArray(t *testing.T, body []byte) []any {
 // studentGuardianRow is one entry of GET /students/{id}/guardians.
 type studentGuardianRow struct {
 	Guardian struct {
-		ID        int64  `json:"id"`
-		FirstName string `json:"first_name"`
+		ID        testpkg.ID `json:"id"`
+		FirstName string     `json:"first_name"`
 	} `json:"guardian"`
-	RelationshipID     int64  `json:"relationship_id"`
-	GuardianRole       string `json:"guardian_role"`
-	CanPickup          bool   `json:"can_pickup"`
-	IsEmergencyContact bool   `json:"is_emergency_contact"`
-	IsPayer            bool   `json:"is_payer"`
-	AccountStatus      string `json:"account_status"`
+	RelationshipID     testpkg.ID `json:"relationship_id"`
+	GuardianRole       string     `json:"guardian_role"`
+	CanPickup          bool       `json:"can_pickup"`
+	IsEmergencyContact bool       `json:"is_emergency_contact"`
+	IsPayer            bool       `json:"is_payer"`
+	AccountStatus      string     `json:"account_status"`
 }
 
 // studentGuardians reads a child's guardians as an admin holding the
@@ -682,7 +682,7 @@ func TestGuardianComposition_GuardianStudentsCarryNamesAndLink(t *testing.T) {
 	assert.Equal(t, "Mia", row["first_name"])
 	assert.Equal(t, "Directory", row["last_name"])
 	assert.Equal(t, "2b", row["school_class"])
-	assert.Equal(t, float64(linkID), row["relationship_id"])
+	assert.Equal(t, int64(linkID), testpkg.JSONID(t, row["relationship_id"]))
 	assert.Equal(t, "primary_guardian", row["guardian_role"])
 }
 
@@ -746,8 +746,8 @@ func TestGuardianComposition_LinkGuardianEchoesTheStoredLink(t *testing.T) {
 	})
 	testutil.AssertSuccessResponse(t, rr, http.StatusCreated)
 	data := dataObject(t, rr.Body.Bytes())
-	assert.Equal(t, float64(studentID), data["student_id"])
-	assert.Equal(t, float64(guardianID), data["guardian_profile_id"])
+	assert.Equal(t, int64(studentID), testpkg.JSONID(t, data["student_id"]))
+	assert.Equal(t, int64(guardianID), testpkg.JSONID(t, data["guardian_profile_id"]))
 	assert.Equal(t, "primary_guardian", data["guardian_role"])
 	assert.Equal(t, true, data["can_pickup"])
 	permissions, ok := data["permissions"].(map[string]any)
@@ -797,19 +797,19 @@ func (c *guardianCompositionContext) createGuardianWithPhones(t *testing.T) (gua
 		"language_preference":      "de",
 	})
 	require.Equal(t, http.StatusCreated, rr.Code, rr.Body.String())
-	guardianID = int64(dataObject(t, rr.Body.Bytes())["id"].(float64))
+	guardianID = testpkg.JSONID(t, dataObject(t, rr.Body.Bytes())["id"])
 
 	rr = c.do(t, admin, http.MethodPost, fmt.Sprintf("/%d/phone-numbers", guardianID), map[string]any{
 		"phone_number": "+49 123 456789", "phone_type": "mobile", "is_primary": true,
 	})
 	require.Equal(t, http.StatusCreated, rr.Code, rr.Body.String())
-	phone1ID = int64(dataObject(t, rr.Body.Bytes())["id"].(float64))
+	phone1ID = testpkg.JSONID(t, dataObject(t, rr.Body.Bytes())["id"])
 
 	rr = c.do(t, admin, http.MethodPost, fmt.Sprintf("/%d/phone-numbers", guardianID), map[string]any{
 		"phone_number": "+49 987 654321", "phone_type": "work", "is_primary": false,
 	})
 	require.Equal(t, http.StatusCreated, rr.Code, rr.Body.String())
-	phone2ID = int64(dataObject(t, rr.Body.Bytes())["id"].(float64))
+	phone2ID = testpkg.JSONID(t, dataObject(t, rr.Body.Bytes())["id"])
 	return guardianID, phone1ID, phone2ID
 }
 

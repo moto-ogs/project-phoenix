@@ -84,7 +84,7 @@ func TestHolidayRegistrationFilesKeepAnsweredInactiveAndArchivedCriteria(t *test
 	ctx := testpkg.ContextWithTenantRuntime(t.Context(), testpkg.TenantRuntime(t, f.db))
 	require.NoError(t, testpkg.WithinTraeger(ctx, reviewer.OrganizationID, func(ctx context.Context) error {
 		// Both downloads share these records, before the PDF renderer.
-		single, err := records.HolidayRegistrationRecord(ctx, reviewer, f.period.ID, first.ID, false)
+		single, err := records.HolidayRegistrationRecord(ctx, reviewer, int64(f.period.ID), int64(first.ID), false)
 		require.NoError(t, err)
 		require.Len(t, single.Records, 1)
 		criteria := single.Records[0].Detail.Criteria
@@ -99,11 +99,11 @@ func TestHolidayRegistrationFilesKeepAnsweredInactiveAndArchivedCriteria(t *test
 		assert.Equal(t, single.Records[0].Detail.Children[0].ID, *criteria[1].ChildID)
 		assert.Equal(t, enrollment.HolidayCriterionNo, criteria[1].Stated)
 
-		archive, err := records.HolidayRegistrationRecords(ctx, reviewer, f.period.ID, enrollment.HolidayRegistrationFilter{}, false)
+		archive, err := records.HolidayRegistrationRecords(ctx, reviewer, int64(f.period.ID), enrollment.HolidayRegistrationFilter{}, false)
 		require.NoError(t, err)
 		require.Len(t, archive.Records, 2)
 		for _, record := range archive.Records {
-			if record.Detail.ID == first.ID {
+			if record.Detail.ID == int64(first.ID) {
 				assert.Equal(t, criteria, record.Detail.Criteria, "the ZIP keeps the same answers as the single PDF")
 			} else {
 				assert.Equal(t, later.ID, record.Detail.ID)
@@ -290,7 +290,7 @@ func TestHolidayRegistrationKeepsTheRetentionOfItsText(t *testing.T) {
 	rec = publicJSON(t, f.public, http.MethodPost, registrationPath(f.period.PublicToken), agreed)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	later := decodeSchoolPortalData[struct {
-		ID int64 `json:"id"`
+		ID testpkg.ID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
 
 	// The last week of the fixture ends on 15.01.2027. The earlier
@@ -300,10 +300,10 @@ func TestHolidayRegistrationKeepsTheRetentionOfItsText(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	list := decodeSchoolPortalData[struct {
 		Registrations []struct {
-			ID              int64  `json:"id"`
-			RetentionDays   int    `json:"retention_days"`
-			DeletesOn       string `json:"deletes_on"`
-			HealthDeletesOn string `json:"health_deletes_on"`
+			ID              testpkg.ID `json:"id"`
+			RetentionDays   int        `json:"retention_days"`
+			DeletesOn       string     `json:"deletes_on"`
+			HealthDeletesOn string     `json:"health_deletes_on"`
 		} `json:"registrations"`
 	}](t, rec.Body.Bytes())
 	require.Len(t, list.Registrations, 3)
@@ -318,7 +318,7 @@ func TestHolidayRegistrationKeepsTheRetentionOfItsText(t *testing.T) {
 			"the health information goes after 92 days whatever the registration keeps")
 	}
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(later, ""), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(int64(later), ""), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "Er löscht sie 180 Tage nach den Ferien.", "the detail names the text the parents agreed to")
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(f.siblings, ""), nil)

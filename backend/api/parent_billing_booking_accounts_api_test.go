@@ -25,24 +25,24 @@ const bookingAccountsPath = financeExportsPath + "/booking-accounts"
 type bookingAccountsBody struct {
 	StandardAccount string `json:"standard_account"`
 	Schools         []struct {
-		ID int64 `json:"id"`
+		ID testpkg.ID `json:"id"`
 	} `json:"schools"`
 	Offerings []struct {
-		SchoolID       int64    `json:"school_id"`
-		CareOfferingID int64    `json:"care_offering_id"`
-		ModuleNames    []string `json:"module_names"`
+		SchoolID       testpkg.ID `json:"school_id"`
+		CareOfferingID testpkg.ID `json:"care_offering_id"`
+		ModuleNames    []string   `json:"module_names"`
 	} `json:"offerings"`
 	RevenueAccounts []struct {
-		Scope   string `json:"scope"`
-		ScopeID int64  `json:"scope_id"`
-		Account string `json:"account"`
+		Scope   string     `json:"scope"`
+		ScopeID testpkg.ID `json:"scope_id"`
+		Account string     `json:"account"`
 	} `json:"revenue_accounts"`
 	CostCenters []struct {
-		ID        int64  `json:"id"`
-		Scope     string `json:"scope"`
-		ScopeID   int64  `json:"scope_id"`
-		ValidFrom string `json:"valid_from"`
-		Code      string `json:"code"`
+		ID        testpkg.ID `json:"id"`
+		Scope     string     `json:"scope"`
+		ScopeID   testpkg.ID `json:"scope_id"`
+		ValidFrom string     `json:"valid_from"`
+		Code      string     `json:"code"`
 	} `json:"cost_centers"`
 }
 
@@ -73,7 +73,7 @@ func TestBookingAccountsAreFrozenOntoTheIssuedPositions(t *testing.T) {
 			map[string]any{"scope": scope, "scope_id": scopeID, "valid_from": from, "code": code})
 		return rec.Code
 	}
-	require.Equal(t, http.StatusOK, put("offering", offering.CareOfferingID, "4410"))
+	require.Equal(t, http.StatusOK, put("offering", int64(offering.CareOfferingID), "4410"))
 	// The Träger keeps no DATEV standard yet: the Leistungen carry their own.
 	require.Equal(t, http.StatusOK, put("care", 0, "4400"))
 	require.Equal(t, http.StatusOK, put("meals", 0, "4420"))
@@ -110,7 +110,7 @@ func TestBookingAccountsAreFrozenOntoTheIssuedPositions(t *testing.T) {
 
 	// Later changes reach no issued position: the Sollstellung of the run
 	// still writes the accounts of the release.
-	require.Equal(t, http.StatusOK, put("offering", offering.CareOfferingID, "4999"))
+	require.Equal(t, http.StatusOK, put("offering", int64(offering.CareOfferingID), "4999"))
 	require.Equal(t, http.StatusCreated, addCenter("school", f.office.schools[0], "2029-03-01", "NEU"))
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, financeExportsPath+"/settings/sollstellung", map[string]any{
 		"columns": []map[string]any{{"field": "invoice_number", "header": "Nr"}, {"field": "revenue_account", "header": "Konto"},

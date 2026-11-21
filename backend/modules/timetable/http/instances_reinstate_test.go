@@ -10,6 +10,8 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // reinstateDouble answers Reinstate with a fixed result (#7151).
@@ -60,8 +62,8 @@ func TestReinstateInstanceAnswers(t *testing.T) {
 			var body struct {
 				Code string `json:"code"`
 				Data struct {
-					InstanceID int64  `json:"instance_id"`
-					Status     string `json:"status"`
+					InstanceID testpkg.ID `json:"instance_id"`
+					Status     string     `json:"status"`
 				} `json:"data"`
 			}
 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))

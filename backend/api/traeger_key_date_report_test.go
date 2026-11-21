@@ -174,14 +174,14 @@ func TestTraegerKeyDateReportFollowsItsTemplate(t *testing.T) {
 	fixture := newKeyDateReportFixture(t, db, router, identityaccess.TraegerRoleAdministration)
 	template := createReportTemplate(t, router, fixture.token, reportTemplateBody{
 		Name: "Jugendamt Stichtag", Sections: []string{"children", "demand"}, KeyDateMonth: 10, KeyDateDay: 15,
-		Districts: []reportTemplateDistrict{{SchoolID: fixture.park, District: "Nord"}},
+		Districts: []reportTemplateDistrict{{SchoolID: testpkg.ID(fixture.park), District: "Nord"}},
 	})
 
-	rec := traegerOccupancyRequest(t, router, keyDateReportPath+keyDateReportQuery(template.ID), fixture.token, nil)
+	rec := traegerOccupancyRequest(t, router, keyDateReportPath+keyDateReportQuery(int64(template.ID)), fixture.token, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	report := decodeSchoolPortalData[traegerview.KeyDateReport](t, rec.Body.Bytes())
 	require.NotNil(t, report.Template)
-	assert.Equal(t, traegerview.KeyDateReportTemplate{ID: template.ID, Name: "Jugendamt Stichtag"}, *report.Template)
+	assert.Equal(t, traegerview.KeyDateReportTemplate{ID: int64(template.ID), Name: "Jugendamt Stichtag"}, *report.Template)
 	assert.Equal(t, []string{"children", "demand"}, report.Sections)
 	assert.Nil(t, report.AbsenceWindow, "the template shows no absences")
 	park := keyDateSchoolOf(t, report, fixture.park)
@@ -207,14 +207,14 @@ func TestTraegerKeyDateReportFollowsItsTemplate(t *testing.T) {
 		"xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 		"pdf":  "application/pdf",
 	} {
-		export := traegerOccupancyRequest(t, router, keyDateReportPath+"/export"+keyDateReportQuery(template.ID)+"&format="+format, fixture.token, nil)
+		export := traegerOccupancyRequest(t, router, keyDateReportPath+"/export"+keyDateReportQuery(int64(template.ID))+"&format="+format, fixture.token, nil)
 		require.Equal(t, http.StatusOK, export.Code, "%s: %s", format, export.Body.String())
 		assert.Equal(t, contentType, export.Header().Get("Content-Type"), format)
 		assert.Contains(t, export.Header().Get("Content-Disposition"), "bericht-stichtag-2026-10-15."+format, format)
 		assert.Equal(t, "no-store", export.Header().Get("Cache-Control"), format)
 		assert.NotEmpty(t, export.Body.Bytes(), format)
 	}
-	csv := traegerOccupancyRequest(t, router, keyDateReportPath+"/export"+keyDateReportQuery(template.ID)+"&format=csv", fixture.token, nil)
+	csv := traegerOccupancyRequest(t, router, keyDateReportPath+"/export"+keyDateReportQuery(int64(template.ID))+"&format=csv", fixture.token, nil)
 	lines := strings.Split(strings.TrimPrefix(csv.Body.String(), "\xEF\xBB\xBF"), "\n")
 	assert.Equal(t, "Standort;Ort;Sozialraum;Betreuungsform;Stichtag;Kinder;Ohne Betreuungsform;Plätze;Belegte Plätze;Freie Plätze;Offene Anmeldungen;Warteliste;Nachfrage;Anmeldungen Stand", lines[0])
 	for _, line := range []string{
@@ -249,7 +249,7 @@ func TestTraegerKeyDateReportRefusals(t *testing.T) {
 	// this Träger.
 	foreignPortal := newTraegerOffice(t, db, router, "Träger Fremde Berichte", identityaccess.TraegerRoleAdministration)
 	foreign := createReportTemplate(t, router, foreignPortal.token, reportTemplateBody{Name: "Fremd", Sections: []string{"staff"}, KeyDateMonth: 1, KeyDateDay: 1})
-	for _, path := range []string{keyDateReportPath + keyDateReportQuery(foreign.ID), keyDateReportPath + "/export" + keyDateReportQuery(foreign.ID) + "&format=csv"} {
+	for _, path := range []string{keyDateReportPath + keyDateReportQuery(int64(foreign.ID)), keyDateReportPath + "/export" + keyDateReportQuery(int64(foreign.ID)) + "&format=csv"} {
 		rec := traegerOccupancyRequest(t, router, path, fixture.token, nil)
 		require.Equal(t, http.StatusNotFound, rec.Code, "%s: %s", path, rec.Body.String())
 		assert.Equal(t, "traeger.report_template_not_found", refusalOf(t, rec).Code)
@@ -292,9 +292,9 @@ func TestTraegerKeyDateReportQueryBudget(t *testing.T) {
 	require.Equal(t, http.StatusOK, code)
 	template := createReportTemplate(t, router, answer.AccessToken, reportTemplateBody{
 		Name: "Alles", Sections: []string{"children", "staff", "absences", "demand"}, KeyDateMonth: 10, KeyDateDay: 15,
-		Districts: []reportTemplateDistrict{{SchoolID: schools[0], District: "Nord"}, {SchoolID: schools[1], District: "Süd"}},
+		Districts: []reportTemplateDistrict{{SchoolID: testpkg.ID(schools[0]), District: "Nord"}, {SchoolID: testpkg.ID(schools[1]), District: "Süd"}},
 	})
-	path := keyDateReportPath + keyDateReportQuery(template.ID)
+	path := keyDateReportPath + keyDateReportQuery(int64(template.ID))
 	read := func() testpkg.QueryMeasurement {
 		counter := testpkg.CaptureQueriesForContext(t, db)
 		rec := traegerOccupancyRequest(t, router, path, answer.AccessToken, counter)

@@ -80,10 +80,10 @@ func TestWorkforce20RebookGrowth(t *testing.T) {
 type workforce20RebookResponse struct {
 	Data struct {
 		Absences []struct {
-			ID               int64  `json:"id"`
-			AbsenceType      string `json:"absence_type"`
-			AbsenceTypeID    string `json:"absence_type_id"`
-			AbsenceTypeLabel string `json:"absence_type_label"`
+			ID               testpkg.ID `json:"id"`
+			AbsenceType      string     `json:"absence_type"`
+			AbsenceTypeID    string     `json:"absence_type_id"`
+			AbsenceTypeLabel string     `json:"absence_type_label"`
 		} `json:"absences"`
 		Days                float64 `json:"days"`
 		BalanceDeltaMinutes int     `json:"balance_delta_minutes"`

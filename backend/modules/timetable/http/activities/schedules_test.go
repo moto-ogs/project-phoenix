@@ -74,9 +74,7 @@ func TestSchedulesListTimeframes_Success(t *testing.T) {
 	for _, entry := range data {
 		row, isObject := entry.(map[string]interface{})
 		require.True(t, isObject, "Expected every timeframe to be an object")
-		id, isNumber := row["id"].(float64)
-		require.True(t, isNumber, "Expected every timeframe to carry a numeric id")
-		if int64(id) == timeframe.ID {
+		if testpkg.JSONID(t, row["id"]) == timeframe.ID {
 			listed = row
 		}
 	}

@@ -34,15 +34,15 @@ type timeAccountBody struct {
 	BalanceMinutes        int    `json:"balance_minutes"`
 	ClosingBalanceMinutes int    `json:"closing_balance_minutes"`
 	Schools               []struct {
-		SchoolID        int64  `json:"school_id"`
-		SchoolName      string `json:"school_name"`
-		TargetMinutes   int    `json:"target_minutes"`
-		ActualMinutes   int    `json:"actual_minutes"`
-		BalanceMinutes  int    `json:"balance_minutes"`
-		ByTraeger       bool   `json:"by_traeger"`
-		Closed          bool   `json:"closed"`
-		ClosedByTraeger bool   `json:"closed_by_traeger"`
-		CloseReason     string `json:"close_reason"`
+		SchoolID        testpkg.ID `json:"school_id"`
+		SchoolName      string     `json:"school_name"`
+		TargetMinutes   int        `json:"target_minutes"`
+		ActualMinutes   int        `json:"actual_minutes"`
+		BalanceMinutes  int        `json:"balance_minutes"`
+		ByTraeger       bool       `json:"by_traeger"`
+		Closed          bool       `json:"closed"`
+		ClosedByTraeger bool       `json:"closed_by_traeger"`
+		CloseReason     string     `json:"close_reason"`
 	} `json:"schools"`
 }
 

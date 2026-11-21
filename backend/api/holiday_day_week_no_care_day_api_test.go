@@ -17,20 +17,21 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 type noCareDayPeriodBody struct {
-	ID          int64  `json:"id"`
-	PublicToken string `json:"public_token"`
+	ID          testpkg.ID `json:"id"`
+	PublicToken string     `json:"public_token"`
 	Weeks       []struct {
-		ID          int64  `json:"id"`
-		BookingUnit string `json:"booking_unit"`
+		ID          testpkg.ID `json:"id"`
+		BookingUnit string     `json:"booking_unit"`
 		NoCareDays  []struct {
 			Date string `json:"date"`
 			Kind string `json:"kind"`
 		} `json:"no_care_days"`
 		TimeModels []struct {
-			ID int64 `json:"id"`
+			ID testpkg.ID `json:"id"`
 		} `json:"time_models"`
 	} `json:"weeks"`
 }
@@ -82,12 +83,12 @@ func TestHolidayWeekByDaysLeavesOutOnlyItsDaysWithoutCare(t *testing.T) {
 	assert.Equal(t, "closing_day", stored.NoCareDays[1].Kind)
 
 	model := stored.TimeModels[0].ID
-	noCareDay(traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayPeriodPath(created.ID), period(week(stored.ID, model, "week"))))
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayPeriodPath(created.ID), period(week(stored.ID, model, "day")))
+	noCareDay(traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayPeriodPath(int64(created.ID)), period(week(int64(stored.ID), int64(model), "week"))))
+	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayPeriodPath(int64(created.ID)), period(week(int64(stored.ID), int64(model), "day")))
 	require.Equal(t, http.StatusOK, rec.Code, "the week by days stays writable: %s", rec.Body.String())
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayPeriodPath(created.ID)+"/publish", nil)
+	rec = traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayPeriodPath(int64(created.ID))+"/publish", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayCapacityPath(created.ID, stored.ID), map[string]any{"capacity": 1})
+	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayCapacityPath(int64(created.ID), int64(stored.ID)), map[string]any{"capacity": 1})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	d := dayFixture{holidayRegistrationFixture: f, office: office, period: traegerPeriodLink{ID: created.ID, PublicToken: created.PublicToken}}
@@ -101,7 +102,7 @@ func TestHolidayWeekByDaysLeavesOutOnlyItsDaysWithoutCare(t *testing.T) {
 	assert.Equal(t, map[string]int{dayMonday: 1, dayTuesday: 0, dayWednesday: 0, dayThursday: 0, dayFriday: 1}, d.placedOn(t),
 		"the booking takes a place on its days only")
 
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayConfirmPath(created.ID, ole.ID), nil)
+	rec = traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayConfirmPath(int64(created.ID), int64(ole.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, int64(3000), decodeSchoolPortalData[confirmationBody](t, rec.Body.Bytes()).Contribution.TotalCents,
 		"two booked days at 15 €; the days without care cost nothing")

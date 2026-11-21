@@ -94,15 +94,15 @@ func traegerCall(t *testing.T, router http.Handler, method, path, token string, 
 
 type traegerBueroAnswer struct {
 	Members []struct {
-		AccountID int64    `json:"account_id"`
-		Email     string   `json:"email"`
-		Name      string   `json:"name"`
-		Roles     []string `json:"roles"`
+		AccountID testpkg.ID `json:"account_id"`
+		Email     string     `json:"email"`
+		Name      string     `json:"name"`
+		Roles     []string   `json:"roles"`
 	} `json:"members"`
 	Invitations []struct {
-		ID    int64    `json:"id"`
-		Email string   `json:"email"`
-		Roles []string `json:"roles"`
+		ID    testpkg.ID `json:"id"`
+		Email string     `json:"email"`
+		Roles []string   `json:"roles"`
 	} `json:"invitations"`
 }
 
@@ -121,7 +121,7 @@ func traegerInvite(t *testing.T, db *bun.DB, router http.Handler, token, address
 	rec := traegerCall(t, router, http.MethodPost, "/traeger/accounts/invitations", token, map[string]any{"email": address, "roles": roles})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	invitation := decodeSchoolPortalData[struct {
-		ID int64 `json:"id"`
+		ID testpkg.ID `json:"id"`
 	}](t, rec.Body.Bytes())
 	ctx := context.Background()
 	const queued = `FROM platform.email_outbox WHERE tenant_id IS NULL AND kind = ? AND payload->>'Type' = 'traeger_invitation' AND (payload->>'ReferenceID')::bigint = ?`

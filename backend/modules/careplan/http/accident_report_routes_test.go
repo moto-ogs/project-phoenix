@@ -23,9 +23,9 @@ import (
 )
 
 type accidentReportAnswer struct {
-	ID             int64  `json:"id"`
-	StudentID      int64  `json:"student_id"`
-	Category       string `json:"category"`
+	ID             testpkg.ID `json:"id"`
+	StudentID      testpkg.ID `json:"student_id"`
+	Category       string     `json:"category"`
 	AccidentReport struct {
 		Status       string  `json:"status"`
 		SupersedesID *string `json:"supersedes_id"`
@@ -106,7 +106,7 @@ func TestAccidentReportIsRecordedSignedCorrectedAndDeletedThroughTheRoutes(t *te
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 	var deleted struct {
 		Data struct {
-			StudentID int64 `json:"student_id"`
+			StudentID testpkg.ID `json:"student_id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &deleted))
@@ -136,10 +136,10 @@ func TestAccidentReportIsRecordedSignedCorrectedAndDeletedThroughTheRoutes(t *te
 	require.Equal(t, http.StatusCreated, storedScan.Code, storedScan.Body.String())
 	var scanAnswer struct {
 		Data struct {
-			ID          int64  `json:"id"`
-			Filename    string `json:"filename"`
-			ContentType string `json:"content_type"`
-			HasFile     bool   `json:"has_file"`
+			ID          testpkg.ID `json:"id"`
+			Filename    string     `json:"filename"`
+			ContentType string     `json:"content_type"`
+			HasFile     bool       `json:"has_file"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(storedScan.Body.Bytes(), &scanAnswer))

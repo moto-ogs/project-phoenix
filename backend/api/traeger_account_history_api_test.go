@@ -26,13 +26,13 @@ import (
 
 type traegerHistoryAnswer struct {
 	Entries []struct {
-		ID          int64    `json:"id"`
-		Action      string   `json:"action"`
-		ActorEmail  string   `json:"actor_email"`
-		TargetEmail string   `json:"target_email"`
-		TargetName  string   `json:"target_name"`
-		RolesBefore []string `json:"roles_before"`
-		RolesAfter  []string `json:"roles_after"`
+		ID          testpkg.ID `json:"id"`
+		Action      string     `json:"action"`
+		ActorEmail  string     `json:"actor_email"`
+		TargetEmail string     `json:"target_email"`
+		TargetName  string     `json:"target_name"`
+		RolesBefore []string   `json:"roles_before"`
+		RolesAfter  []string   `json:"roles_after"`
 	} `json:"entries"`
 	HasMore bool `json:"has_more"`
 }
@@ -206,7 +206,7 @@ func TestTraegerAccountHistoryIsPagedAndFlat(t *testing.T) {
 	require.Len(t, first.Entries, identityaccess.TraegerAccountHistoryPageSize)
 	assert.True(t, first.HasMore)
 	assert.Equal(t, second.Email, first.Entries[0].ActorEmail)
-	_, rest := read(first.Entries[len(first.Entries)-1].ID)
+	_, rest := read(int64(first.Entries[len(first.Entries)-1].ID))
 	require.Len(t, rest.Entries, 3, "the next page continues before the last entry")
 	assert.False(t, rest.HasMore)
 	assert.Equal(t, leader.Email, rest.Entries[0].ActorEmail)

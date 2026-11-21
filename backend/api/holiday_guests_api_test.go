@@ -34,14 +34,14 @@ import (
 )
 
 type holidayGuestSheetBody struct {
-	StudentID       int64  `json:"student_id"`
-	StartsOn        string `json:"starts_on"`
-	EndsOn          string `json:"ends_on"`
-	TimeModelName   string `json:"time_model_name"`
-	TimeModelStarts string `json:"time_model_starts_at"`
-	TimeModelEnds   string `json:"time_model_ends_at"`
-	HomeSchoolID    *int64 `json:"home_school_id"`
-	GuestSchoolName string `json:"guest_school_name"`
+	StudentID       testpkg.ID  `json:"student_id"`
+	StartsOn        string      `json:"starts_on"`
+	EndsOn          string      `json:"ends_on"`
+	TimeModelName   string      `json:"time_model_name"`
+	TimeModelStarts string      `json:"time_model_starts_at"`
+	TimeModelEnds   string      `json:"time_model_ends_at"`
+	HomeSchoolID    *testpkg.ID `json:"home_school_id"`
+	GuestSchoolName string      `json:"guest_school_name"`
 	Emergency       []struct {
 		Name         string `json:"name"`
 		Phone        string `json:"phone"`
@@ -246,9 +246,9 @@ func TestHolidayGuestsJoinTheGroupOfTheHostingSchoolOnlyFromAConfirmedBooking(t 
 	lead := f.staffOf(t, f.nord, permissions.ConfigRead, permissions.UsersCreate, permissions.UsersRead)
 	weekDay := calendar.NewDate(2099, 7, 8)
 
-	rec := f.assign(t, lead, week, f.group)
+	rec := f.assign(t, lead, int64(week), f.group)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, enrollment.HolidayGuestTransfer{WeekID: week, GroupID: f.group, Guests: 0},
+	assert.Equal(t, enrollment.HolidayGuestTransfer{WeekID: int64(week), GroupID: f.group, Guests: 0},
 		decodeSchoolPortalData[enrollment.HolidayGuestTransfer](t, rec.Body.Bytes()), "without a confirmed booking no child comes")
 	assert.Empty(t, f.roster(t, weekDay))
 
@@ -266,8 +266,8 @@ func TestHolidayGuestsJoinTheGroupOfTheHostingSchoolOnlyFromAConfirmedBooking(t 
 	assert.Equal(t, []string{"Ben Muster"}, names(children),
 		"the confirmed holiday guest joins the group; Lia is a child of the OGS Nord already, Tom is not confirmed")
 	listed := decodeSchoolPortalData[[]struct {
-		GuestGroupID *int64 `json:"guest_group_id"`
-		Guests       int    `json:"guests"`
+		GuestGroupID *testpkg.ID `json:"guest_group_id"`
+		Guests       int         `json:"guests"`
 	}](t, f.get(t, lead, "/").Body.Bytes())
 	require.Len(t, listed, 1)
 	require.NotNil(t, listed[0].GuestGroupID)
@@ -372,28 +372,28 @@ func TestHolidayGuestRoutesNeedTheSchoolPermissionAndTheHostingSchool(t *testing
 	week := f.offer.Weeks[0].ID
 	lead := f.staffOf(t, f.nord, permissions.ConfigRead, permissions.UsersCreate, permissions.UsersRead)
 	f.confirm(t, f.siblings, "confirm")
-	require.Equal(t, http.StatusOK, f.assign(t, lead, week, f.group).Code)
+	require.Equal(t, http.StatusOK, f.assign(t, lead, int64(week), f.group).Code)
 	ben := f.roster(t, calendar.NewDate(2099, 7, 8))["Ben Muster"]
 	require.NotZero(t, ben)
 
 	readOnly := f.staffOf(t, f.nord, permissions.ConfigRead, permissions.StudentsRead)
-	assert.Equal(t, http.StatusForbidden, f.assign(t, readOnly, week, f.group).Code, "picking the group needs users:create")
+	assert.Equal(t, http.StatusForbidden, f.assign(t, readOnly, int64(week), f.group).Code, "picking the group needs users:create")
 	assert.Equal(t, http.StatusForbidden, f.sheet(t, readOnly, ben).Code, "the contacts need users:read")
 
 	sued := f.office.schools[1]
 	other := f.staffOf(t, sued, permissions.ConfigRead, permissions.UsersCreate, permissions.UsersRead)
-	rec := f.assign(t, other, week, testpkg.CreateTestEducationGroupForTenant(t, f.db, sued, "Fremde Gruppe").ID)
+	rec := f.assign(t, other, int64(week), testpkg.CreateTestEducationGroupForTenant(t, f.db, sued, "Fremde Gruppe").ID)
 	assert.Equal(t, http.StatusNotFound, rec.Code, "a school of the same Träger cannot take a week it does not host")
 	assert.Contains(t, rec.Body.String(), "enrollment.hosted_holiday_week_not_found")
 	assert.Equal(t, http.StatusNotFound, f.sheet(t, other, ben).Code, "another school sees no guest of the host")
 
 	foreign := newTraegerOffice(t, f.db, f.traeger, "Träger Feriengäste Fremd", identityaccess.TraegerRoleAdministration)
 	stranger := f.staffOf(t, foreign.schools[0], permissions.ConfigRead, permissions.UsersCreate, permissions.UsersRead)
-	assert.Equal(t, http.StatusNotFound, f.assign(t, stranger, week, f.group).Code, "a school of another Träger sees no week")
+	assert.Equal(t, http.StatusNotFound, f.assign(t, stranger, int64(week), f.group).Code, "a school of another Träger sees no week")
 	assert.Equal(t, http.StatusNotFound, f.sheet(t, stranger, ben).Code)
 
 	foreignGroup := testpkg.CreateTestEducationGroupForTenant(t, f.db, sued, "Gruppe der OGS Süd").ID
-	rec = f.assign(t, lead, week, foreignGroup)
+	rec = f.assign(t, lead, int64(week), foreignGroup)
 	assert.Equal(t, http.StatusBadRequest, rec.Code, "the group must be one of the school's")
 	assert.Contains(t, rec.Body.String(), "enrollment.holiday_guest_group_invalid")
 	assert.Empty(t, f.guestLog(t, sued), "a refused access is not logged")
@@ -406,7 +406,7 @@ func TestHolidayGuestsLeaveGroupAndCheckInAfterTheWeek(t *testing.T) {
 	week := f.offer.Weeks[0].ID
 	lead := f.staffOf(t, f.nord, permissions.ConfigRead, permissions.UsersCreate, permissions.UsersRead)
 	f.confirm(t, f.siblings, "confirm")
-	require.Equal(t, http.StatusOK, f.assign(t, lead, week, f.group).Code)
+	require.Equal(t, http.StatusOK, f.assign(t, lead, int64(week), f.group).Code)
 	ben := f.roster(t, calendar.NewDate(2099, 7, 10))["Ben Muster"]
 	require.NotZero(t, ben, "the last day of the week still shows the guest")
 
@@ -437,7 +437,7 @@ func TestHolidayGuestReconciliationPlansWithoutAStaffAuthorAndReplansOnTheNextGr
 	week := f.offer.Weeks[0].ID
 	lead := f.staffOf(t, f.nord, permissions.ConfigRead, permissions.UsersCreate, permissions.UsersRead)
 	weekDay := calendar.NewDate(2099, 7, 8)
-	require.Equal(t, http.StatusOK, f.assign(t, lead, week, f.group).Code)
+	require.Equal(t, http.StatusOK, f.assign(t, lead, int64(week), f.group).Code)
 
 	// The account that picked the group loses its staff record: the hourly
 	// run copies the confirmed guest and plans its days all the same, since
@@ -472,7 +472,7 @@ func TestHolidayGuestReconciliationPlansWithoutAStaffAuthorAndReplansOnTheNextGr
 	}, f.careDays(t, ben), "without a group the week keeps its plan until the next group choice")
 
 	again := testpkg.CreateTestEducationGroupForTenant(t, f.db, f.nord, "Feriengruppe neu").ID
-	require.Equal(t, http.StatusOK, f.assign(t, lead, week, again).Code)
+	require.Equal(t, http.StatusOK, f.assign(t, lead, int64(week), again).Code)
 	assert.Equal(t, []string{
 		"2099-07-06 08:00-16:00", "2099-07-07 08:00-16:00", "2099-07-08 08:00-16:00", "2099-07-09 08:00-16:00", "2099-07-10 08:00-16:00",
 	}, f.careDays(t, ben), "the group choice plans the days with the times booked meanwhile")
@@ -513,7 +513,7 @@ func TestHolidayGuestDaysArePlannedWhenAnAccountWithoutStaffRecordPicksTheGroup(
 	require.Zero(t, staffInNord, "the account has no staff record in the hosting school")
 	f.confirm(t, f.siblings, "confirm")
 
-	rec := f.assign(t, office, week, f.group)
+	rec := f.assign(t, office, int64(week), f.group)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	ben := f.roster(t, calendar.NewDate(2099, 7, 8))["Ben Muster"]
 	require.NotZero(t, ben)
@@ -537,7 +537,7 @@ func TestHolidayGuestReconciliationPlansTheDaysOfACopiedGuestWithoutDays(t *test
 	week := f.offer.Weeks[0].ID
 	lead := f.staffOf(t, f.nord, permissions.ConfigRead, permissions.UsersCreate, permissions.UsersRead)
 	f.confirm(t, f.siblings, "confirm")
-	require.Equal(t, http.StatusOK, f.assign(t, lead, week, f.group).Code)
+	require.Equal(t, http.StatusOK, f.assign(t, lead, int64(week), f.group).Code)
 	ben := f.roster(t, calendar.NewDate(2099, 7, 8))["Ben Muster"]
 	require.NotZero(t, ben)
 

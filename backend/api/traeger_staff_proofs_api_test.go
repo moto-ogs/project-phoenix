@@ -30,12 +30,12 @@ type staffProofListBody struct {
 	Today   string                            `json:"today"`
 	Types   []workforce.TraegerStaffProofType `json:"types"`
 	Entries []struct {
-		RecordID  int64    `json:"staff_record_id"`
-		LastName  string   `json:"last_name"`
-		Schools   []string `json:"schools"`
-		TypeID    int64    `json:"type_id"`
-		Status    string   `json:"status"`
-		ExpiresOn string   `json:"expires_on"`
+		RecordID  testpkg.ID `json:"staff_record_id"`
+		LastName  string     `json:"last_name"`
+		Schools   []string   `json:"schools"`
+		TypeID    testpkg.ID `json:"type_id"`
+		Status    string     `json:"status"`
+		ExpiresOn string     `json:"expires_on"`
 	} `json:"entries"`
 	Counts workforce.TraegerStaffProofCounts `json:"counts"`
 }
@@ -179,7 +179,7 @@ func TestTraegerStaffProofsWarnBeforeExpiry(t *testing.T) {
 		assert.Equal(t, 1, list.Counts.Expired+list.Counts.ExpiringSoon)
 		assert.NotEqual(t, workforce.TraegerProofStatusValid, list.Entries[0].Status)
 		assert.Equal(t, workforce.TraegerProofStatusValid, list.Entries[len(list.Entries)-1].Status)
-		assert.Equal(t, []string{"Träger Personal OGS Nord", "Träger Personal OGS Süd"}, firstEntryOf(t, list, miraRecord.ID).Schools)
+		assert.Equal(t, []string{"Träger Personal OGS Nord", "Träger Personal OGS Süd"}, firstEntryOf(t, list, int64(miraRecord.ID)).Schools)
 
 		rec = traegerJSON(t, router, office.token, http.MethodGet, fmt.Sprintf("/traeger/staff-records/%d", miraRecord.ID), nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -281,16 +281,16 @@ func TestTraegerStaffProofsWarnBeforeExpiry(t *testing.T) {
 }
 
 func firstEntryOf(t *testing.T, list staffProofListBody, recordID int64) struct {
-	RecordID  int64    `json:"staff_record_id"`
-	LastName  string   `json:"last_name"`
-	Schools   []string `json:"schools"`
-	TypeID    int64    `json:"type_id"`
-	Status    string   `json:"status"`
-	ExpiresOn string   `json:"expires_on"`
+	RecordID  testpkg.ID `json:"staff_record_id"`
+	LastName  string     `json:"last_name"`
+	Schools   []string   `json:"schools"`
+	TypeID    testpkg.ID `json:"type_id"`
+	Status    string     `json:"status"`
+	ExpiresOn string     `json:"expires_on"`
 } {
 	t.Helper()
 	for _, entry := range list.Entries {
-		if entry.RecordID == recordID {
+		if int64(entry.RecordID) == recordID {
 			return entry
 		}
 	}

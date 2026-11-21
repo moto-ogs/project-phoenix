@@ -25,15 +25,15 @@ import (
 )
 
 type siblingGroupBody struct {
-	ID              int64   `json:"id"`
-	RegistrationIDs []int64 `json:"registration_ids"`
+	ID              testpkg.ID   `json:"id"`
+	RegistrationIDs []testpkg.ID `json:"registration_ids"`
 }
 
 type siblingContributionBody struct {
 	contributionBody
 	Siblings []struct {
-		RegistrationID int64  `json:"registration_id"`
-		Status         string `json:"status"`
+		RegistrationID testpkg.ID `json:"registration_id"`
+		Status         string     `json:"status"`
 		Children       []struct {
 			FirstName string `json:"first_name"`
 			LastName  string `json:"last_name"`
@@ -62,31 +62,31 @@ func (f reviewFixture) submitChild(t *testing.T, period traegerPeriodLink, offer
 	body["children"] = []map[string]any{first}
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken), body)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	return decodeSchoolPortalData[struct {
-		ID int64 `json:"id"`
-	}](t, rec.Body.Bytes()).ID
+	return int64(decodeSchoolPortalData[struct {
+		ID testpkg.ID `json:"id"`
+	}](t, rec.Body.Bytes()).ID)
 }
 
 func (f reviewFixture) merge(t *testing.T, token string, ids ...int64) *httptest.ResponseRecorder {
 	t.Helper()
-	return traegerJSON(t, f.traeger, token, http.MethodPost, siblingGroupsPath(f.period.ID), map[string]any{"registration_ids": ids})
+	return traegerJSON(t, f.traeger, token, http.MethodPost, siblingGroupsPath(int64(f.period.ID)), map[string]any{"registration_ids": ids})
 }
 
 func (f reviewFixture) split(t *testing.T, token string, id int64) *httptest.ResponseRecorder {
 	t.Helper()
-	return traegerJSON(t, f.traeger, token, http.MethodDelete, siblingSplitPath(f.period.ID, id), nil)
+	return traegerJSON(t, f.traeger, token, http.MethodDelete, siblingSplitPath(int64(f.period.ID), id), nil)
 }
 
 func (f reviewFixture) siblingContribution(t *testing.T, id int64) siblingContributionBody {
 	t.Helper()
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayContributionPath(f.period.ID, id), nil)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayContributionPath(int64(f.period.ID), id), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	return decodeSchoolPortalData[siblingContributionBody](t, rec.Body.Bytes())
 }
 
 func (f reviewFixture) siblingGroups(t *testing.T) []siblingGroupBody {
 	t.Helper()
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, siblingGroupsPath(f.period.ID), nil)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, siblingGroupsPath(int64(f.period.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	return decodeSchoolPortalData[[]siblingGroupBody](t, rec.Body.Bytes())
 }
@@ -166,11 +166,11 @@ func TestMergeWithAConfirmedRegistrationAddsAVersionAndSplitRestoresIt(t *testin
 	assert.Equal(t, []int64{4500}, f.contributionVersions(t, first))
 
 	setNumberRange(t, f, billing, "FE-{NNNN}")
-	run := startBillingRun(t, f, billing, f.period.ID)
+	run := startBillingRun(t, f, billing, int64(f.period.ID))
 	totals := func() map[int64]int64 {
 		out := map[int64]int64{}
-		for _, document := range billingRun(t, f, billing, run.ID).Documents {
-			out[document.RegistrationID] = document.TotalCents
+		for _, document := range billingRun(t, f, billing, int64(run.ID)).Documents {
+			out[int64(document.RegistrationID)] = document.TotalCents
 		}
 		return out
 	}
@@ -214,8 +214,8 @@ func TestSiblingsLockOnceAnInvoiceIsIssued(t *testing.T) {
 	require.Equal(t, http.StatusOK, f.confirmWith(t, second, nil).Code)
 
 	setNumberRange(t, f, billing, "FE-{NNNN}")
-	run := billingRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(run))
+	run := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(run))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	assertRefusedWith(t, f.split(t, f.office.token, second), http.StatusConflict, common.CodeParentBillingSiblingGroupInvoiced)
@@ -244,9 +244,9 @@ func TestMergeRefusesWhatIsNoSiblingGroup(t *testing.T) {
 	assertRefusedWith(t, f.split(t, f.office.token, f.siblings), http.StatusNotFound, common.CodeParentBillingSiblingGroupNotFound)
 
 	for _, request := range []struct{ method, path string }{
-		{http.MethodGet, siblingGroupsPath(f.period.ID)},
-		{http.MethodPost, siblingGroupsPath(f.period.ID)},
-		{http.MethodDelete, siblingSplitPath(f.period.ID, f.siblings)},
+		{http.MethodGet, siblingGroupsPath(int64(f.period.ID))},
+		{http.MethodPost, siblingGroupsPath(int64(f.period.ID))},
+		{http.MethodDelete, siblingSplitPath(int64(f.period.ID), f.siblings)},
 	} {
 		body := map[string]any{"registration_ids": []int64{f.siblings, f.again}}
 		rec := traegerJSON(t, f.traeger, billing, request.method, request.path, body)
@@ -254,7 +254,7 @@ func TestMergeRefusesWhatIsNoSiblingGroup(t *testing.T) {
 	}
 	rec := f.merge(t, foreign.token, f.siblings, f.again)
 	assert.Equal(t, http.StatusNotFound, rec.Code, "another Träger merges nothing: %s", rec.Body.String())
-	rec = traegerJSON(t, f.traeger, foreign.token, http.MethodGet, siblingGroupsPath(f.period.ID), nil)
+	rec = traegerJSON(t, f.traeger, foreign.token, http.MethodGet, siblingGroupsPath(int64(f.period.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Empty(t, decodeSchoolPortalData[[]siblingGroupBody](t, rec.Body.Bytes()))
 	assert.Empty(t, f.siblingGroups(t), "no refusal left a group")
@@ -280,7 +280,7 @@ func TestSiblingGroupListQueryBudgetIsFlat(t *testing.T) {
 	f := newReviewFixture(t, "Geschwister Budget")
 	list := func() testpkg.QueryMeasurement {
 		counter := testpkg.CaptureQueriesForContext(t, f.db)
-		req := httptest.NewRequest(http.MethodGet, siblingGroupsPath(f.period.ID), nil)
+		req := httptest.NewRequest(http.MethodGet, siblingGroupsPath(int64(f.period.ID)), nil)
 		req.Header.Set("Authorization", "Bearer "+f.office.token)
 		rec := httptest.NewRecorder()
 		testpkg.MeasuredHTTPRequest(counter, f.traeger, rec, req.WithContext(counter.Context(req.Context())))
@@ -428,8 +428,8 @@ func TestSiblingInvoiceLocksTheWholeGroup(t *testing.T) {
 	require.Equal(t, http.StatusOK, f.confirmWith(t, first, nil).Code)
 
 	setNumberRange(t, f, billing, "FE-{NNNN}")
-	run := billingRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(run))
+	run := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(run))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	other := f.siblingContribution(t, second)

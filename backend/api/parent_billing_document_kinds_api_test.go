@@ -40,10 +40,10 @@ type kindRunBody struct {
 	PreviewCents       int64  `json:"preview_cents"`
 	Fingerprint        string `json:"fingerprint"`
 	Documents          []struct {
-		ID           int64  `json:"id"`
-		Kind         string `json:"kind"`
-		DocumentKind string `json:"document_kind"`
-		Number       string `json:"number"`
+		ID           testpkg.ID `json:"id"`
+		Kind         string     `json:"kind"`
+		DocumentKind string     `json:"document_kind"`
+		Number       string     `json:"number"`
 	} `json:"documents"`
 }
 
@@ -94,8 +94,8 @@ func TestFeeNoticeNeedsTheLegalRemedyAndKeepsItsKindAfterTheRelease(t *testing.T
 	assert.Equal(t, "fee_notice", kinds.Services[0].DocumentKind)
 	assert.NotNil(t, kinds.Services[0].UpdatedAt)
 
-	run := startBillingRun(t, f, billing, f.period.ID)
-	preview := kindRun(t, f.traeger, billing, billingRunPath(run.ID, ""))
+	run := startBillingRun(t, f, billing, int64(f.period.ID))
+	preview := kindRun(t, f.traeger, billing, billingRunPath(int64(run.ID), ""))
 	assert.Equal(t, "fee_notice", preview.DocumentKind)
 	assert.True(t, preview.LegalRemedyMissing, "the run shows before the release that the legal remedy is missing")
 	for _, document := range preview.Documents {
@@ -103,7 +103,7 @@ func TestFeeNoticeNeedsTheLegalRemedyAndKeepsItsKindAfterTheRelease(t *testing.T
 	}
 	release := map[string]any{"document_count": preview.PreviewCount, "total_cents": preview.PreviewCents, "document_kind": "fee_notice",
 		"fingerprint": preview.Fingerprint}
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), release)
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), release)
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.legal_remedy_missing")
 	var issued int
@@ -121,24 +121,24 @@ func TestFeeNoticeNeedsTheLegalRemedyAndKeepsItsKindAfterTheRelease(t *testing.T
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, documentTemplatesPath+"/bescheid/versions", notice)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	assert.True(t, documentKinds(t, f.traeger, billing).LegalRemedySet)
-	assert.False(t, kindRun(t, f.traeger, billing, billingRunPath(run.ID, "")).LegalRemedyMissing)
+	assert.False(t, kindRun(t, f.traeger, billing, billingRunPath(int64(run.ID), "")).LegalRemedyMissing)
 
 	// The Abrechnung saw a fee notice; a release that would issue another
 	// kind refuses.
 	setDocumentKind(t, f.traeger, billing, "holiday", "invoice")
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), release)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), release)
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.billing_run_changed")
 	setDocumentKind(t, f.traeger, billing, "holiday", "fee_notice")
 
 	// The legal remedy changed since the review: the fingerprint of the
 	// preview covers it, as in the monthly run (#6506).
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), release)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), release)
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.billing_run_changed")
-	release["fingerprint"] = kindRun(t, f.traeger, billing, billingRunPath(run.ID, "")).Fingerprint
+	release["fingerprint"] = kindRun(t, f.traeger, billing, billingRunPath(int64(run.ID), "")).Fingerprint
 
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), release)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), release)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	released := decodeSchoolPortalData[kindRunBody](t, rec.Body.Bytes())
 	assert.Equal(t, "fee_notice", released.DocumentKind)
@@ -146,7 +146,7 @@ func TestFeeNoticeNeedsTheLegalRemedyAndKeepsItsKindAfterTheRelease(t *testing.T
 
 	// A later choice changes no issued document (snapshot).
 	setDocumentKind(t, f.traeger, billing, "holiday", "confirmation")
-	after := kindRun(t, f.traeger, billing, billingRunPath(run.ID, ""))
+	after := kindRun(t, f.traeger, billing, billingRunPath(int64(run.ID), ""))
 	assert.Equal(t, "fee_notice", after.DocumentKind, "the released run keeps the kind it froze")
 	for _, document := range after.Documents {
 		assert.Equal(t, "fee_notice", document.DocumentKind)
@@ -157,20 +157,20 @@ func TestFeeNoticeNeedsTheLegalRemedyAndKeepsItsKindAfterTheRelease(t *testing.T
 	assert.Equal(t, []string{"fee_notice", "fee_notice"}, stored)
 
 	// The letters are fee notices; their Storno is an Aufhebungsbescheid.
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/letters"), lettersBody("2099-01-15"))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/letters"), lettersBody("2099-01-15"))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, letterPath(run.ID, after.Documents[0].ID), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, letterPath(int64(run.ID), int64(after.Documents[0].ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Header().Get("Content-Disposition"), `filename="gebuehrenbescheid-gb-0001.pdf"`)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(run.ID, after.Documents[0].ID),
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(int64(run.ID), int64(after.Documents[0].ID)),
 		map[string]any{"reason": "Falsche Woche"})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	cancellation := decodeSchoolPortalData[struct {
-		ID           int64  `json:"id"`
-		DocumentKind string `json:"document_kind"`
+		ID           testpkg.ID `json:"id"`
+		DocumentKind string     `json:"document_kind"`
 	}](t, rec.Body.Bytes())
 	assert.Equal(t, "fee_notice", cancellation.DocumentKind, "the Storno keeps the kind of its notice")
-	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, letterPath(run.ID, cancellation.ID), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, letterPath(int64(run.ID), int64(cancellation.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Header().Get("Content-Disposition"), `filename="aufhebungsbescheid-gb-0003.pdf"`)
 }
@@ -240,17 +240,17 @@ func TestCareFeeNoticeNeedsTheLegalRemedyAndItsKindChangesTheReviewedState(t *te
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	run := f.startRun(t, careMonth)
-	reviewed := f.run(t, run.ID)
+	reviewed := f.run(t, int64(run.ID))
 
 	setDocumentKind(t, f.traeger, f.office.token, "care", "fee_notice")
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(reviewed))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(reviewed))
 	require.Equal(t, http.StatusConflict, rec.Code, "the reviewer saw invoices: %s", rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.billing_run_changed")
 
-	preview := kindRun(t, f.traeger, f.office.token, careRunPath(run.ID, ""))
+	preview := kindRun(t, f.traeger, f.office.token, careRunPath(int64(run.ID), ""))
 	assert.Equal(t, "fee_notice", preview.DocumentKind)
 	assert.True(t, preview.LegalRemedyMissing)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(f.run(t, run.ID)))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(f.run(t, int64(run.ID))))
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.legal_remedy_missing")
 
@@ -269,10 +269,10 @@ func TestCareFeeNoticeNeedsTheLegalRemedyAndItsKindChangesTheReviewedState(t *te
 	rec = traegerJSON(t, f.traeger, answer.AccessToken, http.MethodPost, documentTemplatesPath+"/bescheid/versions", notice)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(f.run(t, run.ID)))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(f.run(t, int64(run.ID))))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	setDocumentKind(t, f.traeger, f.office.token, "care", "invoice")
-	released := kindRun(t, f.traeger, f.office.token, careRunPath(run.ID, ""))
+	released := kindRun(t, f.traeger, f.office.token, careRunPath(int64(run.ID), ""))
 	assert.Equal(t, "fee_notice", released.DocumentKind, "a later choice changes no issued notice")
 	var kinds []string
 	require.NoError(t, f.db.NewRaw(`SELECT document_kind FROM parent_billing.care_invoices WHERE run_id = ?`, run.ID).
@@ -307,14 +307,14 @@ func TestCareReleaseRefusesALegalRemedyChangedSinceTheReview(t *testing.T) {
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 
 	run := f.startRun(t, careMonth)
-	reviewed := f.run(t, run.ID)
+	reviewed := f.run(t, int64(run.ID))
 	notice.LegalRemedy = "Gegen diesen Bescheid ist innerhalb von zwei Wochen Widerspruch möglich."
 	rec = traegerJSON(t, f.traeger, answer.AccessToken, http.MethodPost, documentTemplatesPath+"/bescheid/versions", notice)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(reviewed))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(reviewed))
 	require.Equal(t, http.StatusConflict, rec.Code, "the legal remedy changed since the review: %s", rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.billing_run_changed")
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(f.run(t, run.ID)))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(f.run(t, int64(run.ID))))
 	require.Equal(t, http.StatusOK, rec.Code, "the release of the state reviewed again: %s", rec.Body.String())
 }

@@ -27,10 +27,10 @@ func (f holidayGuestFixture) badges(t *testing.T, token string) map[int64]string
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	result := map[int64]string{}
 	for _, badge := range decodeSchoolPortalData[[]struct {
-		StudentID  int64  `json:"student_id"`
-		SchoolName string `json:"school_name"`
+		StudentID  testpkg.ID `json:"student_id"`
+		SchoolName string     `json:"school_name"`
 	}](t, rec.Body.Bytes()) {
-		result[badge.StudentID] = badge.SchoolName
+		result[int64(badge.StudentID)] = badge.SchoolName
 	}
 	return result
 }
@@ -48,7 +48,7 @@ func TestHolidayGuestsNameTheirHomeSchoolInTheSchoolLists(t *testing.T) {
 		(SELECT organization_id FROM enrollment.holiday_registrations WHERE id = ?)`, f.siblings, f.siblings).Scan(t.Context(), &tomRegistration))
 	f.confirm(t, f.siblings, "confirm")
 	f.confirm(t, tomRegistration, "confirm")
-	require.Equal(t, http.StatusOK, f.assign(t, lead, week, f.group).Code)
+	require.Equal(t, http.StatusOK, f.assign(t, lead, int64(week), f.group).Code)
 
 	f.today.Store(calendar.NewDate(2099, 7, 3))
 	assert.Empty(t, f.badges(t, team), "before the week no guest has a hint: it is in no list yet")
@@ -96,7 +96,7 @@ func TestHolidayGuestsNameTheirHomeSchoolInTheSchoolLists(t *testing.T) {
 
 	// Other schools see no guest of the OGS Nord, neither of the same Träger
 	// nor of another one.
-	assert.Empty(t, f.badges(t, f.staffOf(t, sued.ID, permissions.StudentsRead)), "the OGS Süd sees no guest of the OGS Nord")
+	assert.Empty(t, f.badges(t, f.staffOf(t, int64(sued.ID), permissions.StudentsRead)), "the OGS Süd sees no guest of the OGS Nord")
 	assert.Empty(t, f.badges(t, f.staffOf(t, foreignSchool, permissions.StudentsRead)), "a school of another Träger sees no guest")
 
 	// Without the permission of the child list the hints stay closed.
@@ -129,7 +129,7 @@ func TestHolidayGuestBadgesQueryBudgetIsFlat(t *testing.T) {
 		(SELECT organization_id FROM enrollment.holiday_registrations WHERE id = ?)`, f.siblings, f.siblings).Scan(t.Context(), &tomRegistration))
 	f.confirm(t, f.siblings, "confirm")
 	f.confirm(t, tomRegistration, "confirm")
-	require.Equal(t, http.StatusOK, f.assign(t, lead, f.offer.Weeks[0].ID, f.group).Code)
+	require.Equal(t, http.StatusOK, f.assign(t, lead, int64(f.offer.Weeks[0].ID), f.group).Code)
 	require.Len(t, f.badges(t, team), 2)
 	assert.Len(t, read().Statements, len(none.Statements), "the hints read the same statements for any number of guests")
 	querybudgets.AssertQueryBudget(t, "api.holiday_guests.list", none)

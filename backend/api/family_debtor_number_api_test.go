@@ -38,14 +38,14 @@ func (f reviewFixture) submitFamily(t *testing.T, email string) int64 {
 	t.Helper()
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(f.period.PublicToken), siblingsRegistration(f.offer, email))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	return decodeSchoolPortalData[struct {
-		ID int64 `json:"id"`
-	}](t, rec.Body.Bytes()).ID
+	return int64(decodeSchoolPortalData[struct {
+		ID testpkg.ID `json:"id"`
+	}](t, rec.Body.Bytes()).ID)
 }
 
 func (f reviewFixture) familyProposal(t *testing.T, token string, id int64) *httptest.ResponseRecorder {
 	t.Helper()
-	return traegerJSON(t, f.traeger, token, http.MethodGet, familyDebtorNumberPath(f.period.ID, id), nil)
+	return traegerJSON(t, f.traeger, token, http.MethodGet, familyDebtorNumberPath(int64(f.period.ID), id), nil)
 }
 
 func (f reviewFixture) proposedNumber(t *testing.T, id int64) string {
@@ -133,7 +133,7 @@ func TestDifferentNumberNeedsTheChoiceOfTheOffice(t *testing.T) {
 	rec = f.changeDebtorNumber(t, f.office.token, later, "55")
 	require.Equal(t, http.StatusConflict, rec.Code, "a change asks too: %s", rec.Body.String())
 	assert.Equal(t, "99", f.debtorNumberDetail(t, later).DebtorNumber, "the refused change rolls back")
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayDebtorNumberPath(f.period.ID, later),
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayDebtorNumberPath(int64(f.period.ID), later),
 		map[string]any{"debtor_number": "55", "family_debtor_number": "replace"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, "55", f.familyNumber(t, "eva.muster@example.org"), "replace makes it the family's number")
@@ -167,12 +167,12 @@ func TestFamiliesListShowsAndSetsTheNumberOfAHolidayFamily(t *testing.T) {
 	require.Equal(t, http.StatusOK, f.confirmWith(t, f.again, map[string]any{"debtor_number": "20 1"}).Code)
 
 	type listedFamily struct {
-		ID                 int64  `json:"id"`
-		RecipientFirstName string `json:"recipient_first_name"`
-		RecipientLastName  string `json:"recipient_last_name"`
-		FamilyEmail        string `json:"family_email"`
-		FamilyDebtorNumber string `json:"family_debtor_number"`
-		HolidayOnly        bool   `json:"holiday_only"`
+		ID                 testpkg.ID `json:"id"`
+		RecipientFirstName string     `json:"recipient_first_name"`
+		RecipientLastName  string     `json:"recipient_last_name"`
+		FamilyEmail        string     `json:"family_email"`
+		FamilyDebtorNumber string     `json:"family_debtor_number"`
+		HolidayOnly        bool       `json:"holiday_only"`
 	}
 	list := func() []listedFamily {
 		rec := traegerJSON(t, f.traeger, billing, http.MethodGet, "/traeger/billing-families", nil)
@@ -257,14 +257,14 @@ func TestFamilyNumberOutlivesTheRegistrationAndHasItsOwnPeriod(t *testing.T) {
 	summer.Weeks[0].StartsOn, summer.Weeks[0].EndsOn = "2027-07-05", "2027-07-09"
 	summer.Weeks[1].StartsOn, summer.Weeks[1].EndsOn = "2027-07-12", "2027-07-16"
 	created := createHolidayPeriod(t, f.traeger, f.office, summer)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayPeriodPath(created.ID)+"/publish", nil)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayPeriodPath(int64(created.ID))+"/publish", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	link := decodeSchoolPortalData[traegerPeriodLink](t, rec.Body.Bytes())
 	rec = publicJSON(t, f.public, http.MethodPost, registrationPath(link.PublicToken),
 		siblingsRegistration(holidayOffer(t, f.holidayRegistrationFixture, link.PublicToken), "eva.muster@example.org"))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	next := decodeSchoolPortalData[struct {
-		ID int64 `json:"id"`
+		ID testpkg.ID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
 
 	ctx := context.Background()
@@ -302,7 +302,7 @@ func TestFamilyNumberOutlivesTheRegistrationAndHasItsOwnPeriod(t *testing.T) {
 	retain(afterWinter)
 	require.Zero(t, registrations(), "the deletion run deleted the confirmed registration")
 	assert.Equal(t, "10 4711", f.familyNumber(t, "eva.muster@example.org"), "the family keeps its number")
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, familyDebtorNumberPath(created.ID, next), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, familyDebtorNumberPath(int64(created.ID), int64(next)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.JSONEq(t, `{"debtor_number":"10 4711"}`, string(decodeSchoolPortalRaw(t, rec.Body.Bytes())),
 		"the next registration of the family reads it")

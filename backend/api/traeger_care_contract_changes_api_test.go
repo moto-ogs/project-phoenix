@@ -74,8 +74,8 @@ func careContractChangeRouter(t *testing.T, db *bun.DB, review careplan.Offering
 type contractChangesBody struct {
 	Decidable bool `json:"decidable"`
 	Pending   []struct {
-		ID      int64  `json:"id"`
-		Version string `json:"version"`
+		ID      testpkg.ID `json:"id"`
+		Version string     `json:"version"`
 		Lines   []struct {
 			ModuleName string   `json:"module_name"`
 			State      string   `json:"state"`

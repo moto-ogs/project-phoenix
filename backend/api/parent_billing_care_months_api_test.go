@@ -33,11 +33,11 @@ const (
 )
 
 type careInvoiceBody struct {
-	ID             int64  `json:"id"`
-	Number         string `json:"number"`
-	ContractID     int64  `json:"contract_id"`
-	SchoolID       int64  `json:"school_id"`
-	ChildFirstName string `json:"child_first_name"`
+	ID             testpkg.ID `json:"id"`
+	Number         string     `json:"number"`
+	ContractID     testpkg.ID `json:"contract_id"`
+	SchoolID       testpkg.ID `json:"school_id"`
+	ChildFirstName string     `json:"child_first_name"`
 	Recipient      struct {
 		FirstName string `json:"first_name"`
 		Email     string `json:"email"`
@@ -54,7 +54,7 @@ type careInvoiceBody struct {
 }
 
 type careRunBody struct {
-	ID           int64             `json:"id"`
+	ID           testpkg.ID        `json:"id"`
 	BillingMonth string            `json:"billing_month"`
 	Status       string            `json:"status"`
 	MonthRule    string            `json:"month_rule"`
@@ -65,7 +65,7 @@ type careRunBody struct {
 	Duplicates []struct {
 		ChildFirstName string `json:"child_first_name"`
 		Contracts      []struct {
-			ContractID int64 `json:"contract_id"`
+			ContractID testpkg.ID `json:"contract_id"`
 		} `json:"contracts"`
 	} `json:"duplicates"`
 	DuplicateChildren int   `json:"duplicate_children"`
@@ -73,12 +73,12 @@ type careRunBody struct {
 	PreviewCount      int   `json:"preview_count"`
 	PreviewCents      int64 `json:"preview_cents"`
 	// The review of #5916.
-	SchoolIDs     []int64 `json:"school_ids"`
-	InvoiceDate   *string `json:"invoice_date"`
-	IssuedOn      *string `json:"issued_on"`
-	ExcludedCount int     `json:"excluded_count"`
-	ExcludedCents int64   `json:"excluded_cents"`
-	Fingerprint   string  `json:"fingerprint"`
+	SchoolIDs     []testpkg.ID `json:"school_ids"`
+	InvoiceDate   *string      `json:"invoice_date"`
+	IssuedOn      *string      `json:"issued_on"`
+	ExcludedCount int          `json:"excluded_count"`
+	ExcludedCents int64        `json:"excluded_cents"`
+	Fingerprint   string       `json:"fingerprint"`
 }
 
 type careService struct {
@@ -202,7 +202,7 @@ func TestCareMonthlyRunBillsTheContractByTheTariffsOfItsSchool(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	run := f.startRun(t, careMonth)
-	preview := f.run(t, run.ID)
+	preview := f.run(t, int64(run.ID))
 	assert.Equal(t, "calculated", preview.Status)
 	assert.Equal(t, "version_on_first", preview.MonthRule, "the default bills the full month by the version on the 1st")
 
@@ -215,15 +215,15 @@ func TestCareMonthlyRunBillsTheContractByTheTariffsOfItsSchool(t *testing.T) {
 	require.Len(t, preview.Invoices, 2)
 	totals := map[int64]int64{}
 	for _, invoice := range preview.Invoices {
-		totals[invoice.ContractID] = invoice.TotalCents
+		totals[int64(invoice.ContractID)] = invoice.TotalCents
 		assert.Empty(t, invoice.Number, "a draft has no number")
 	}
 	assert.Equal(t, map[int64]int64{contract: 7750, otherContract: 2800}, totals)
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"),
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"),
 		map[string]any{"document_count": 2, "total_cents": 1})
 	assert.Equal(t, http.StatusConflict, rec.Code, "a changed sum is refused: %s", rec.Body.String())
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(preview))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(preview))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	released := decodeSchoolPortalData[careRunBody](t, rec.Body.Bytes())
 	assert.Equal(t, "released", released.Status)
@@ -231,7 +231,7 @@ func TestCareMonthlyRunBillsTheContractByTheTariffsOfItsSchool(t *testing.T) {
 	var mia careInvoiceBody
 	for _, invoice := range released.Invoices {
 		assert.Regexp(t, `^MB-\d{4}-000[12]$`, invoice.Number)
-		if invoice.ContractID == contract {
+		if int64(invoice.ContractID) == contract {
 			mia = invoice
 		}
 	}
@@ -250,7 +250,7 @@ func TestCareMonthlyRunBillsTheContractByTheTariffsOfItsSchool(t *testing.T) {
 	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2030-02-01", 3600))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	again := f.run(t, run.ID)
+	again := f.run(t, int64(run.ID))
 	assert.Equal(t, mia.TotalCents, again.Invoices[0].TotalCents+again.Invoices[1].TotalCents-totals[otherContract],
 		"the issued invoice keeps its prices")
 
@@ -270,10 +270,10 @@ func TestCareMonthlyRunBillsTheContractByTheTariffsOfItsSchool(t *testing.T) {
 
 	// A second run of the month bills nobody twice.
 	second := f.startRun(t, careMonth)
-	detail := f.run(t, second.ID)
+	detail := f.run(t, int64(second.ID))
 	assert.Empty(t, detail.Invoices)
 	assert.Equal(t, 2, detail.Billed)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(second.ID, "/release"), careRelease(detail))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(second.ID), "/release"), careRelease(detail))
 	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 
 	var reads int
@@ -296,7 +296,7 @@ func TestCareMonthlyRunReleasedTwiceAtOnceBillsEveryChildOnce(t *testing.T) {
 	run := f.startRun(t, careMonth)
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunsPath, map[string]any{"billing_month": careMonth})
 	assert.Equal(t, http.StatusConflict, rec.Code, "one open run per month: %s", rec.Body.String())
-	preview := f.run(t, run.ID)
+	preview := f.run(t, int64(run.ID))
 	require.Len(t, preview.Invoices, 3)
 
 	codes := make([]int, 2)
@@ -305,7 +305,7 @@ func TestCareMonthlyRunReleasedTwiceAtOnceBillsEveryChildOnce(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			codes[i] = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(preview)).Code
+			codes[i] = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(preview)).Code
 		}()
 	}
 	wg.Wait()
@@ -330,7 +330,7 @@ func TestCareMonthlyBillingNeedsTheRightAndStaysWithItsTraeger(t *testing.T) {
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	run := f.startRun(t, careMonth)
-	preview := f.run(t, run.ID)
+	preview := f.run(t, int64(run.ID))
 
 	password := testpkg.NewTestPassword()
 	account := traegerAccount(t, f.db, password)
@@ -346,8 +346,8 @@ func TestCareMonthlyBillingNeedsTheRightAndStaysWithItsTraeger(t *testing.T) {
 		{http.MethodDelete, careTariffsPath + fmt.Sprintf("/%d/2029-09-01", school), nil},
 		{http.MethodGet, careRunsPath, nil},
 		{http.MethodPost, careRunsPath, map[string]any{"billing_month": "2030-02-01"}},
-		{http.MethodGet, careRunPath(run.ID, ""), nil},
-		{http.MethodPost, careRunPath(run.ID, "/release"), careRelease(preview)},
+		{http.MethodGet, careRunPath(int64(run.ID), ""), nil},
+		{http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(preview)},
 	}
 	for _, request := range requests {
 		rec := traegerJSON(t, f.traeger, answer.AccessToken, request.method, request.path, request.body)
@@ -374,7 +374,7 @@ func TestCareMonthlyBillingNeedsTheRightAndStaysWithItsTraeger(t *testing.T) {
 	foreignRun := traegerJSON(t, f.traeger, foreign.token, http.MethodPost, careRunsPath, map[string]any{"billing_month": careMonth})
 	require.Equal(t, http.StatusCreated, foreignRun.Code, foreignRun.Body.String())
 	foreignDetail := traegerJSON(t, f.traeger, foreign.token, http.MethodGet,
-		careRunPath(decodeSchoolPortalData[careRunBody](t, foreignRun.Body.Bytes()).ID, ""), nil)
+		careRunPath(int64(decodeSchoolPortalData[careRunBody](t, foreignRun.Body.Bytes()).ID), ""), nil)
 	require.Equal(t, http.StatusOK, foreignDetail.Code, foreignDetail.Body.String())
 	assert.Empty(t, decodeSchoolPortalData[careRunBody](t, foreignDetail.Body.Bytes()).Invoices)
 }
@@ -472,17 +472,17 @@ func TestHolidayAndMonthlyInvoicesNeverShareANumber(t *testing.T) {
 	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, careRunsPath, map[string]any{"billing_month": careMonth})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	careRun := decodeSchoolPortalData[careRunBody](t, rec.Body.Bytes())
-	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, careRunPath(careRun.ID, ""), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, careRunPath(int64(careRun.ID), ""), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, careRunPath(careRun.ID, "/release"),
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, careRunPath(int64(careRun.ID), "/release"),
 		careRelease(decodeSchoolPortalData[careRunBody](t, rec.Body.Bytes())))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, "R-0001", decodeSchoolPortalData[careRunBody](t, rec.Body.Bytes()).Invoices[0].Number)
 
 	require.Equal(t, http.StatusOK, f.act(t, f.siblings, "confirm").Code)
 	setNumberRange(t, f, billing, "R-{NNNN}")
-	run := billingRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(run))
+	run := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(run))
 	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.invoice_number_taken")
 	var holidayDocuments int
@@ -491,7 +491,7 @@ func TestHolidayAndMonthlyInvoicesNeverShareANumber(t *testing.T) {
 	assert.Zero(t, holidayDocuments, "the refused release issued nothing")
 
 	setNumberRange(t, f, billing, "F-{NNNN}")
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(run))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(run))
 	require.Equal(t, http.StatusOK, rec.Code, "another pattern releases: %s", rec.Body.String())
 }
 
@@ -508,10 +508,10 @@ func TestCareMonthlyContractLeftOutForAMissingPriceIsBilledLater(t *testing.T) {
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	run := f.startRun(t, careMonth)
-	preview := f.run(t, run.ID)
+	preview := f.run(t, int64(run.ID))
 	require.Len(t, preview.Invoices, 1)
 	require.Len(t, preview.Unpriced, 1)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(preview))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(preview))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	// The billed Monday keeps its price; Saturday gets one from the same list.
@@ -523,7 +523,7 @@ func TestCareMonthlyContractLeftOutForAMissingPriceIsBilledLater(t *testing.T) {
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3300))
 	assert.Equal(t, http.StatusConflict, rec.Code, "a billed price stays: %s", rec.Body.String())
 
-	second := f.run(t, f.startRun(t, careMonth).ID)
+	second := f.run(t, int64(f.startRun(t, careMonth).ID))
 	require.Len(t, second.Invoices, 1)
 	assert.Equal(t, late, second.Invoices[0].ContractID)
 	assert.Equal(t, int64(4100), second.Invoices[0].TotalCents, "32,00 € Monday and 9,00 € Saturday")
@@ -542,7 +542,7 @@ func TestCareMonthlyDuplicateContractIsShownNotBilled(t *testing.T) {
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	run := f.startRun(t, careMonth)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(run.ID, ""), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(int64(run.ID), ""), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	detail := decodeSchoolPortalData[struct {
 		careRunBody
@@ -551,7 +551,7 @@ func TestCareMonthlyDuplicateContractIsShownNotBilled(t *testing.T) {
 			ModuleName     string `json:"module_name"`
 			Weekday        string `json:"weekday"`
 			Contracts      []struct {
-				ContractID int64 `json:"contract_id"`
+				ContractID testpkg.ID `json:"contract_id"`
 			} `json:"contracts"`
 		} `json:"duplicates"`
 	}](t, rec.Body.Bytes())
@@ -562,8 +562,8 @@ func TestCareMonthlyDuplicateContractIsShownNotBilled(t *testing.T) {
 	assert.Equal(t, "mon", detail.Duplicates[0].Weekday)
 	require.Len(t, detail.Duplicates[0].Contracts, 2)
 	assert.ElementsMatch(t, []int64{first, second},
-		[]int64{detail.Duplicates[0].Contracts[0].ContractID, detail.Duplicates[0].Contracts[1].ContractID})
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(detail.careRunBody))
+		[]int64{int64(detail.Duplicates[0].Contracts[0].ContractID), int64(detail.Duplicates[0].Contracts[1].ContractID)})
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(detail.careRunBody))
 	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 }
 
@@ -635,7 +635,7 @@ func TestCareMonthlyReleaseWaitsForAPriceChange(t *testing.T) {
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	run := f.startRun(t, careMonth)
-	preview := f.run(t, run.ID)
+	preview := f.run(t, int64(run.ID))
 	require.Equal(t, int64(7750), preview.PreviewCents)
 
 	change := holdCareBilling(t, f.db, f.office.organization)
@@ -648,7 +648,7 @@ func TestCareMonthlyReleaseWaitsForAPriceChange(t *testing.T) {
 	var code int
 	go func() {
 		defer close(done)
-		code = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(preview)).Code
+		code = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(preview)).Code
 	}()
 	waitForCareBilling(t, f.db, f.office.organization, done)
 	require.NoError(t, change.Commit())
@@ -745,11 +745,11 @@ func TestCareMonthlyReleaseBillsTheValidChildrenAndKeepsTheDuplicateInSight(t *t
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	run := f.startRun(t, careMonth)
-	preview := f.run(t, run.ID)
+	preview := f.run(t, int64(run.ID))
 	require.Len(t, preview.Invoices, 1)
 	require.Equal(t, 1, preview.DuplicateChildren)
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(preview))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(preview))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	released := decodeSchoolPortalData[careRunBody](t, rec.Body.Bytes())
 	require.Len(t, released.Invoices, 1, "only the valid child is billed")
@@ -757,11 +757,11 @@ func TestCareMonthlyReleaseBillsTheValidChildrenAndKeepsTheDuplicateInSight(t *t
 	assert.Equal(t, int64(7750), released.PreviewCents)
 	assert.Equal(t, 1, released.DuplicateChildren, "the release names the children it left out")
 
-	shown := f.run(t, run.ID)
+	shown := f.run(t, int64(run.ID))
 	assert.Equal(t, "released", shown.Status)
 	require.Len(t, shown.Duplicates, 1, "the duplicate stays in sight after the release")
 	assert.ElementsMatch(t, []int64{kept, twice},
-		[]int64{shown.Duplicates[0].Contracts[0].ContractID, shown.Duplicates[0].Contracts[1].ContractID})
+		[]int64{int64(shown.Duplicates[0].Contracts[0].ContractID), int64(shown.Duplicates[0].Contracts[1].ContractID)})
 	var invoices int
 	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.care_invoices WHERE care_contract_id IN (?, ?)`, kept, twice).
 		Scan(context.Background(), &invoices))
@@ -771,11 +771,11 @@ func TestCareMonthlyReleaseBillsTheValidChildrenAndKeepsTheDuplicateInSight(t *t
 	// arises after it, Noah's second or Mia's third, does not reach back.
 	careContract(t, f.db, f.office.organization, school, "Noah", careMonth, sjrServices()[0])
 	third := careContract(t, f.db, f.office.organization, school, "Mia", careMonth, sjrServices()[1])
-	after := f.run(t, run.ID)
+	after := f.run(t, int64(run.ID))
 	require.Len(t, after.Duplicates, 1, "Noah's new duplicate does not reach back")
 	var stored []int64
 	for _, contract := range after.Duplicates[0].Contracts {
-		stored = append(stored, contract.ContractID)
+		stored = append(stored, int64(contract.ContractID))
 	}
 	assert.ElementsMatch(t, []int64{kept, twice}, stored, "Mia's third contract is not the release's")
 
@@ -784,16 +784,16 @@ func TestCareMonthlyReleaseBillsTheValidChildrenAndKeepsTheDuplicateInSight(t *t
 	// contract; his first is billed already.
 	_, err := f.db.NewRaw(`DELETE FROM care_contract.contracts WHERE id IN (?, ?)`, twice, third).Exec(context.Background())
 	require.NoError(t, err)
-	later := f.run(t, f.startRun(t, careMonth).ID)
+	later := f.run(t, int64(f.startRun(t, careMonth).ID))
 	require.Len(t, later.Invoices, 1)
 	assert.Equal(t, kept, later.Invoices[0].ContractID)
 	assert.Equal(t, int64(7750), later.Invoices[0].TotalCents)
 	assert.Equal(t, 1, later.Billed, "Noah is not billed again")
 	assert.Equal(t, 1, later.DuplicateChildren, "only Noah's new duplicate")
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(later.ID, "/release"), careRelease(later))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(later.ID), "/release"), careRelease(later))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	// The first run keeps its snapshot: Mia was not billed in it.
-	assert.Equal(t, 1, f.run(t, run.ID).DuplicateChildren)
+	assert.Equal(t, 1, f.run(t, int64(run.ID)).DuplicateChildren)
 	var perContract []int
 	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.care_invoices WHERE care_contract_id IN (?, ?)
 		GROUP BY care_contract_id ORDER BY care_contract_id`, valid, kept).Scan(context.Background(), &perContract))
@@ -815,9 +815,9 @@ func TestCareMonthlyReleasedRunKeepsItsSnapshot(t *testing.T) {
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	run := f.startRun(t, careMonth)
-	preview := f.run(t, run.ID)
+	preview := f.run(t, int64(run.ID))
 	require.Equal(t, 1, preview.DuplicateChildren)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(preview))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(preview))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	type shownDuplicates struct {
@@ -826,13 +826,13 @@ func TestCareMonthlyReleasedRunKeepsItsSnapshot(t *testing.T) {
 			ModuleName     string `json:"module_name"`
 			Weekday        string `json:"weekday"`
 			Contracts      []struct {
-				ContractID int64  `json:"contract_id"`
-				SchoolName string `json:"school_name"`
+				ContractID testpkg.ID `json:"contract_id"`
+				SchoolName string     `json:"school_name"`
 			} `json:"contracts"`
 		} `json:"duplicates"`
 	}
 	shown := func() shownDuplicates {
-		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(run.ID, ""), nil)
+		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(int64(run.ID), ""), nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		return decodeSchoolPortalData[shownDuplicates](t, rec.Body.Bytes())
 	}

@@ -41,17 +41,17 @@ type handoverResultBody struct {
 }
 
 type recipientBody struct {
-	ID      int64    `json:"id"`
-	Name    string   `json:"name"`
-	Ready   bool     `json:"ready"`
-	Formats []string `json:"formats"`
+	ID      testpkg.ID `json:"id"`
+	Name    string     `json:"name"`
+	Ready   bool       `json:"ready"`
+	Formats []string   `json:"formats"`
 }
 
 type recipientsPageBody struct {
 	Recipients  []recipientBody `json:"recipients"`
 	Assignments []struct {
-		Format      string `json:"format"`
-		RecipientID *int64 `json:"recipient_id"`
+		Format      string      `json:"format"`
+		RecipientID *testpkg.ID `json:"recipient_id"`
 	} `json:"assignments"`
 }
 
@@ -62,7 +62,7 @@ func addRecipient(t *testing.T, f careBillingFixture, body map[string]any) (*htt
 	if rec.Code != http.StatusCreated {
 		return rec, 0
 	}
-	return rec, decodeSchoolPortalData[recipientBody](t, rec.Body.Bytes()).ID
+	return rec, int64(decodeSchoolPortalData[recipientBody](t, rec.Body.Bytes()).ID)
 }
 
 // assignFormats sends each format to its recipient, 0 for the download.

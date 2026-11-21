@@ -61,7 +61,7 @@ func TestTraegerCatalogCarriesActiveFlagsAndKeepsSchoolDeviations(t *testing.T) 
 	rec = traegerJSON(t, router, office.token, http.MethodPost, path+"/offerings", catalogOffering(20, 1600))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	offeringID := decodeSchoolPortalData[struct {
-		ID int64 `json:"id"`
+		ID testpkg.ID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
 	apply := func() {
 		p := catalogPreview(t, router, office.token, path)

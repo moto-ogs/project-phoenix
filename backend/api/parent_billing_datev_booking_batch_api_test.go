@@ -215,10 +215,10 @@ func TestDatevBatchRightsAndTraeger(t *testing.T) {
 type datevRunsBody struct {
 	Ready bool `json:"ready"`
 	Runs  []struct {
-		RunKind     string   `json:"run_kind"`
-		RunID       int64    `json:"run_id"`
-		NewBookings int      `json:"new_bookings"`
-		FiscalYears []string `json:"fiscal_years"`
+		RunKind     string     `json:"run_kind"`
+		RunID       testpkg.ID `json:"run_id"`
+		NewBookings int        `json:"new_bookings"`
+		FiscalYears []string   `json:"fiscal_years"`
 	} `json:"runs"`
 }
 

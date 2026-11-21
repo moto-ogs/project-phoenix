@@ -18,12 +18,12 @@ import (
 )
 
 type routedNotice struct {
-	ID        int64  `json:"id"`
-	Token     string `json:"token"`
-	Revision  int    `json:"revision"`
-	Status    string `json:"status"`
-	Families  int    `json:"families"`
-	CanNotify bool   `json:"can_notify"`
+	ID        testpkg.ID `json:"id"`
+	Token     string     `json:"token"`
+	Revision  int        `json:"revision"`
+	Status    string     `json:"status"`
+	Families  int        `json:"families"`
+	CanNotify bool       `json:"can_notify"`
 }
 
 // The school reads its proposal and tells the parents through its routes:

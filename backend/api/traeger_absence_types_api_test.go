@@ -29,32 +29,32 @@ import (
 )
 
 type traegerAbsenceTypeBody struct {
-	ID           int64   `json:"id"`
-	Name         string  `json:"name"`
-	StandardDays float64 `json:"standard_days"`
-	Requestable  bool    `json:"requestable"`
+	ID           testpkg.ID `json:"id"`
+	Name         string     `json:"name"`
+	StandardDays float64    `json:"standard_days"`
+	Requestable  bool       `json:"requestable"`
 	Schools      []struct {
-		SchoolID        int64    `json:"school_id"`
-		Carried         bool     `json:"carried"`
-		Offered         bool     `json:"offered"`
-		SchoolLimitDays *float64 `json:"school_limit_days"`
+		SchoolID        testpkg.ID `json:"school_id"`
+		Carried         bool       `json:"carried"`
+		Offered         bool       `json:"offered"`
+		SchoolLimitDays *float64   `json:"school_limit_days"`
 	} `json:"schools"`
 }
 
 type traegerAbsenceAccountsBody struct {
 	Year     int `json:"year"`
 	Accounts []struct {
-		AbsenceTypeID int64   `json:"absence_type_id"`
-		EntitledDays  float64 `json:"entitled_days"`
-		Individual    bool    `json:"individual"`
-		TakenDays     float64 `json:"taken_days"`
-		ReservedDays  float64 `json:"reserved_days"`
-		RemainingDays float64 `json:"remaining_days"`
+		AbsenceTypeID testpkg.ID `json:"absence_type_id"`
+		EntitledDays  float64    `json:"entitled_days"`
+		Individual    bool       `json:"individual"`
+		TakenDays     float64    `json:"taken_days"`
+		ReservedDays  float64    `json:"reserved_days"`
+		RemainingDays float64    `json:"remaining_days"`
 		Schools       []struct {
-			SchoolID     int64    `json:"school_id"`
-			TakenDays    float64  `json:"taken_days"`
-			ReservedDays float64  `json:"reserved_days"`
-			LimitDays    *float64 `json:"limit_days"`
+			SchoolID     testpkg.ID `json:"school_id"`
+			TakenDays    float64    `json:"taken_days"`
+			ReservedDays float64    `json:"reserved_days"`
+			LimitDays    *float64   `json:"limit_days"`
 		} `json:"schools"`
 	} `json:"accounts"`
 }
@@ -129,12 +129,12 @@ func TestTraegerAbsenceTypesShareOneKontingentOverAllSchools(t *testing.T) {
 		for _, carried := range regeneration.Schools {
 			assert.True(t, carried.Carried && carried.Offered, "school %d carries the type", carried.SchoolID)
 		}
-		assert.Equal(t, ownNorth, schoolTypeOf(t, db, north, regeneration.ID), "the school's own type of the same name is taken over")
-		assert.NotZero(t, schoolTypeOf(t, db, south, regeneration.ID))
+		assert.Equal(t, ownNorth, schoolTypeOf(t, db, north, int64(regeneration.ID)), "the school's own type of the same name is taken over")
+		assert.NotZero(t, schoolTypeOf(t, db, south, int64(regeneration.ID)))
 		rec = traegerJSON(t, router, office.token, http.MethodPost, "/traeger/absence-types/", map[string]any{"name": "regenerationstag"})
 		assertStaffRefusal(t, rec, http.StatusConflict, "workforce.traeger_absence_type_name_taken")
 	})
-	northType, southType := schoolTypeOf(t, db, north, regeneration.ID), schoolTypeOf(t, db, south, regeneration.ID)
+	northType, southType := schoolTypeOf(t, db, north, int64(regeneration.ID)), schoolTypeOf(t, db, south, int64(regeneration.ID))
 
 	t.Run("a booking at one school draws on the one Kontingent of the person", func(t *testing.T) {
 		bookAbsence(t, db, north, miraNorth.ID, northType, "2027-03-03", "2027-03-03", "approved")
@@ -225,7 +225,7 @@ func TestTraegerAbsenceTypesShareOneKontingentOverAllSchools(t *testing.T) {
 		assert.Equal(t, 3.0, account.RemainingDays)
 		shares := map[int64][2]float64{}
 		for _, share := range account.Schools {
-			shares[share.SchoolID] = [2]float64{share.TakenDays, share.ReservedDays}
+			shares[int64(share.SchoolID)] = [2]float64{share.TakenDays, share.ReservedDays}
 		}
 		assert.Equal(t, map[int64][2]float64{north: {1, 0}, south: {0, 1}}, shares)
 		entries := map[int64]int{}
@@ -305,8 +305,8 @@ func TestTraegerAbsenceTypesQueryBudget(t *testing.T) {
 			})
 			require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 			typeID := decode[traegerAbsenceTypeBody](t, rec).ID
-			bookAbsence(t, db, north, miraNorth.ID, schoolTypeOf(t, db, north, typeID), "2027-03-03", "2027-03-03", "approved")
-			bookAbsence(t, db, south, miraSouth.ID, schoolTypeOf(t, db, south, typeID), "2027-03-04", "2027-03-04", "requested")
+			bookAbsence(t, db, north, miraNorth.ID, schoolTypeOf(t, db, north, int64(typeID)), "2027-03-03", "2027-03-03", "approved")
+			bookAbsence(t, db, south, miraSouth.ID, schoolTypeOf(t, db, south, int64(typeID)), "2027-03-04", "2027-03-04", "requested")
 		}
 	}
 	accountsPath := fmt.Sprintf("/traeger/staff-records/%d/absence-accounts?year=2027", record.ID)

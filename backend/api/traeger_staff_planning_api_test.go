@@ -57,29 +57,29 @@ type planningWeekBody struct {
 		MinRestMinutes int  `json:"min_rest_minutes"`
 	} `json:"rules"`
 	People []struct {
-		RecordID int64  `json:"staff_record_id"`
-		LastName string `json:"last_name"`
+		RecordID testpkg.ID `json:"staff_record_id"`
+		LastName string     `json:"last_name"`
 		Sites    []struct {
-			SchoolID int64 `json:"school_id"`
+			SchoolID testpkg.ID `json:"school_id"`
 		} `json:"sites"`
 		Shifts []struct {
-			ID               int64  `json:"id"`
-			SchoolID         int64  `json:"school_id"`
-			SchoolName       string `json:"school_name"`
-			Date             string `json:"date"`
-			StartTime        string `json:"start_time"`
-			PlannedByTraeger bool   `json:"planned_by_traeger"`
+			ID               testpkg.ID `json:"id"`
+			SchoolID         testpkg.ID `json:"school_id"`
+			SchoolName       string     `json:"school_name"`
+			Date             string     `json:"date"`
+			StartTime        string     `json:"start_time"`
+			PlannedByTraeger bool       `json:"planned_by_traeger"`
 		} `json:"shifts"`
 		PlannedMinutes int  `json:"planned_minutes"`
 		SollMinutes    *int `json:"soll_minutes"`
 		SollDays       []struct {
-			SchoolID int64  `json:"school_id"`
-			Date     string `json:"date"`
-			Minutes  int    `json:"minutes"`
+			SchoolID testpkg.ID `json:"school_id"`
+			Date     string     `json:"date"`
+			Minutes  int        `json:"minutes"`
 		} `json:"soll_days"`
 		AbsentDays []struct {
-			SchoolID int64  `json:"school_id"`
-			Date     string `json:"date"`
+			SchoolID testpkg.ID `json:"school_id"`
+			Date     string     `json:"date"`
 		} `json:"absent_days"`
 		Warnings []struct {
 			Kind string `json:"kind"`
@@ -195,9 +195,9 @@ func TestTraegerStaffPlanningChecksEveryEinsatzort(t *testing.T) {
 		afternoon["working_time_reason"] = "Vertretung für eine kranke Kollegin"
 		rec = traegerJSON(t, router, office.token, http.MethodPost, shifts, afternoon)
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-		afternoonID = decode[struct {
-			ID int64 `json:"id"`
-		}](t, rec).ID
+		afternoonID = int64(decode[struct {
+			ID testpkg.ID `json:"id"`
+		}](t, rec).ID)
 		assert.Equal(t, "true|", shiftColumn(t, db, `SELECT planned_by_traeger::text || '|' || COALESCE(created_by::text, '') FROM schedule.staff_shifts WHERE id = ?`, afternoonID),
 			"the shift is the school's, planned by the Träger without a planning staff member")
 		assert.Equal(t, "Vertretung für eine kranke Kollegin", shiftColumn(t, db, `SELECT reason FROM audit.deviation_events
@@ -327,8 +327,8 @@ func TestTraegerStaffPlanningChecksEveryEinsatzort(t *testing.T) {
 		rec := traegerJSON(t, router, office.token, http.MethodGet, "/traeger/staff-planning/future-shifts", nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		assert.NotEmpty(t, decode[[]struct {
-			SchoolID int64 `json:"school_id"`
-			Shifts   int   `json:"shifts"`
+			SchoolID testpkg.ID `json:"school_id"`
+			Shifts   int        `json:"shifts"`
 		}](t, rec))
 		rules.Off = true
 		rec = traegerJSON(t, router, office.token, http.MethodPost, shifts, map[string]any{
@@ -379,7 +379,7 @@ func TestTraegerStaffPlanningWeekQueryBudget(t *testing.T) {
 			"members": []map[string]int64{{"school_id": north, "staff_id": atNorth.ID}, {"school_id": south, "staff_id": atSouth.ID}},
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-		return decode[staffRecordBody](t, rec).ID
+		return int64(decode[staffRecordBody](t, rec).ID)
 	}
 	plan := func(recordID, schoolID int64, date string) {
 		rec := traegerJSON(t, router, office.token, http.MethodPost, fmt.Sprintf("/traeger/staff-planning/records/%d/shifts", recordID), map[string]any{

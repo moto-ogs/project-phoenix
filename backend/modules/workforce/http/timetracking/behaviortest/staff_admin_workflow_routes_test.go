@@ -74,8 +74,8 @@ func TestAbsenceDecisionsAnswerWithTheDecidedAbsence(t *testing.T) {
 	rec := w.do(http.MethodPost, fmt.Sprintf("/staff/absences/%d/approve", approved), `{"decision_note":"Passt"}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	answer := decodeContractData[struct {
-		ID     int64  `json:"id"`
-		Status string `json:"status"`
+		ID     testpkg.ID `json:"id"`
+		Status string     `json:"status"`
 	}](t, rec)
 	assert.Equal(t, approved, answer.ID)
 	assert.Equal(t, absenceStatusApprovd, answer.Status)
@@ -84,8 +84,8 @@ func TestAbsenceDecisionsAnswerWithTheDecidedAbsence(t *testing.T) {
 	rec = w.do(http.MethodPost, fmt.Sprintf("/staff/absences/%d/deny", declined), `{"decision_note":"Zu knapp besetzt"}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	denied := decodeContractData[struct {
-		ID           int64  `json:"id"`
-		DecisionNote string `json:"decision_note"`
+		ID           testpkg.ID `json:"id"`
+		DecisionNote string     `json:"decision_note"`
 	}](t, rec)
 	assert.Equal(t, declined, denied.ID)
 	assert.Equal(t, "Zu knapp besetzt", denied.DecisionNote)
@@ -103,9 +103,9 @@ func TestTakeoverRoutesBookAndRemoveTheOpenings(t *testing.T) {
 	rec := w.do(http.MethodPost, base+"/vacation/opening", `{"effective_date":"2026-11-09","remaining_days":12,"note":"Altsystem"}`)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	opening := decodeContractData[struct {
-		StaffID   int64   `json:"staff_id"`
-		Year      int     `json:"year"`
-		Remaining float64 `json:"entered_remaining_days"`
+		StaffID   testpkg.ID `json:"staff_id"`
+		Year      int        `json:"year"`
+		Remaining float64    `json:"entered_remaining_days"`
 	}](t, rec)
 	assert.Equal(t, subject.ID, opening.StaffID)
 	assert.Equal(t, 2026, opening.Year)
@@ -119,9 +119,9 @@ func TestTakeoverRoutesBookAndRemoveTheOpenings(t *testing.T) {
 	rec = w.do(http.MethodPost, base+"/time-tracking/opening", `{"effective_date":"2026-11-02","balance_minutes":90,"note":"Altsystem"}`)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	balance := decodeContractData[struct {
-		StaffID int64  `json:"staff_id"`
-		Type    string `json:"type"`
-		Delta   int    `json:"minutes_delta"`
+		StaffID testpkg.ID `json:"staff_id"`
+		Type    string     `json:"type"`
+		Delta   int        `json:"minutes_delta"`
 	}](t, rec)
 	assert.Equal(t, subject.ID, balance.StaffID)
 	assert.Equal(t, "opening", balance.Type)
@@ -144,8 +144,8 @@ func TestMonthCloseRoutesFreezeListAndReopen(t *testing.T) {
 	require.Positive(t, closed.ClosedStaff)
 
 	type snapshot struct {
-		StaffID int64  `json:"staff_id"`
-		Reason  string `json:"close_reason"`
+		StaffID testpkg.ID `json:"staff_id"`
+		Reason  string     `json:"close_reason"`
 	}
 	rec = w.do(http.MethodGet, "/staff/time-tracking/month-close?year=2026&month=10", "")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

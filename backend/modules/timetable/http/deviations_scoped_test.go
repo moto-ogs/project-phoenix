@@ -41,8 +41,8 @@ type scopedDevSetup struct {
 type scopedApplyResponse struct {
 	Data struct {
 		AffectedInstances []struct {
-			InstanceID int64  `json:"instance_id"`
-			Action     string `json:"action"`
+			InstanceID testpkg.ID `json:"instance_id"`
+			Action     string     `json:"action"`
 		} `json:"affected_instances"`
 	} `json:"data"`
 }
@@ -207,8 +207,8 @@ func TestApplyDeviations_SelectedCoverageWithAllDayAbsence(t *testing.T) {
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
 	require.Len(t, response.Data.AffectedInstances, 2, "each changed appointment appears once")
 	assert.ElementsMatch(t, []int64{covered.ID, uncovered.ID}, []int64{
-		response.Data.AffectedInstances[0].InstanceID,
-		response.Data.AffectedInstances[1].InstanceID,
+		int64(response.Data.AffectedInstances[0].InstanceID),
+		int64(response.Data.AffectedInstances[1].InstanceID),
 	})
 }
 

@@ -86,18 +86,18 @@ func TestStaffPoolFirstBlockEmploysTheSpringer(t *testing.T) {
 	}
 	blockID := func(rec *httptest.ResponseRecorder) int64 {
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-		return *decode[struct {
-			ID *int64 `json:"id"`
-		}](t, rec).ID
+		return int64(*decode[struct {
+			ID *testpkg.ID `json:"id"`
+		}](t, rec).ID)
 	}
 	account := miraAccount.ID
 
 	var first int64
 	t.Run("the first block employs the Springer at the school", func(t *testing.T) {
-		require.Equal(t, springerAt{}, springerAtSchool(t, db, south, account, record))
+		require.Equal(t, springerAt{}, springerAtSchool(t, db, south, account, int64(record)))
 		first = blockID(block(south, southLead.ID, "2037-11-19", "08:00", "13:00"))
 		assert.Equal(t, springerAt{People: 1, Memberships: 1, Roles: 1, Links: 1, Windows: 1},
-			springerAtSchool(t, db, south, account, record))
+			springerAtSchool(t, db, south, account, int64(record)))
 
 		var startsAt, endsAt time.Time
 		require.NoError(t, db.NewRaw(`SELECT (access_windows -> ?::text ->> 0)::timestamptz, (access_windows -> ?::text ->> 1)::timestamptz
@@ -119,7 +119,7 @@ func TestStaffPoolFirstBlockEmploysTheSpringer(t *testing.T) {
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		var atSouth bool
 		for _, employment := range decode[staffRecordBody](t, rec).Employments {
-			atSouth = atSouth || (employment.SchoolID == south && employment.Active)
+			atSouth = atSouth || (int64(employment.SchoolID) == south && employment.Active)
 		}
 		assert.True(t, atSouth, "the Personalverwaltung sees and plans the new Einsatzort")
 	})
@@ -127,7 +127,7 @@ func TestStaffPoolFirstBlockEmploysTheSpringer(t *testing.T) {
 	t.Run("a further block of the school adds only its window", func(t *testing.T) {
 		blockID(block(south, southLead.ID, "2037-11-19", "14:00", "16:00"))
 		assert.Equal(t, springerAt{People: 1, Memberships: 1, Roles: 1, Links: 1, Windows: 2},
-			springerAtSchool(t, db, south, account, record))
+			springerAtSchool(t, db, south, account, int64(record)))
 	})
 
 	t.Run("two first blocks at once create one employment", func(t *testing.T) {
@@ -142,13 +142,13 @@ func TestStaffPoolFirstBlockEmploysTheSpringer(t *testing.T) {
 		wg.Wait()
 		assert.Equal(t, []int{http.StatusCreated, http.StatusCreated}, codes)
 		assert.Equal(t, springerAt{People: 1, Memberships: 1, Roles: 1, Links: 1, Windows: 2},
-			springerAtSchool(t, db, west, account, record))
+			springerAtSchool(t, db, west, account, int64(record)))
 	})
 
 	t.Run("a regular Einsatzort stays unlimited and gets nothing", func(t *testing.T) {
-		before := springerAtSchool(t, db, north, account, record)
+		before := springerAtSchool(t, db, north, account, int64(record))
 		blockID(block(north, account, "2037-11-23", "08:00", "10:00"))
-		assert.Equal(t, before, springerAtSchool(t, db, north, account, record))
+		assert.Equal(t, before, springerAtSchool(t, db, north, account, int64(record)))
 		assert.True(t, admitted(t, db, account, north), "the home school admits without a window")
 	})
 
@@ -179,14 +179,14 @@ func TestStaffPoolFirstBlockEmploysTheSpringer(t *testing.T) {
 	t.Run("lifting a block closes its window", func(t *testing.T) {
 		rec := poolSchoolRequest(t, school, south, southLead.ID, manage, http.MethodDelete, fmt.Sprintf("/api/staff-pool/blocks/%d", first), nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-		assert.Equal(t, 1, springerAtSchool(t, db, south, account, record).Windows)
+		assert.Equal(t, 1, springerAtSchool(t, db, south, account, int64(record)).Windows)
 		assert.False(t, admitted(t, db, account, south), "the lifted block admits no more")
 
 		var westBlock int64
 		require.NoError(t, db.NewRaw(`SELECT min(id) FROM workforce.staff_pool_blocks WHERE school_id = ? AND lifted_at IS NULL`, west).Scan(t.Context(), &westBlock))
 		rec = traegerJSON(t, router, office.token, http.MethodDelete, fmt.Sprintf("/traeger/staff-pool/blocks/%d", westBlock), nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-		assert.Equal(t, 1, springerAtSchool(t, db, west, account, record).Windows, "the Personalverwaltung's lift closes the window at the school")
+		assert.Equal(t, 1, springerAtSchool(t, db, west, account, int64(record)).Windows, "the Personalverwaltung's lift closes the window at the school")
 	})
 
 	t.Run("another role at the school admits without a window", func(t *testing.T) {

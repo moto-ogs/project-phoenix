@@ -75,10 +75,10 @@ func TestOperatorAssignsTheFirstPersonOfATraegerBuero(t *testing.T) {
 	rec = call(http.MethodPost, members, map[string]any{"email": account.Email, "roles": []string{"billing", "administration", "billing"}})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	member := decodeSchoolPortalData[struct {
-		AccountID int64    `json:"account_id"`
-		Email     string   `json:"email"`
-		Status    string   `json:"status"`
-		Roles     []string `json:"roles"`
+		AccountID testpkg.ID `json:"account_id"`
+		Email     string     `json:"email"`
+		Status    string     `json:"status"`
+		Roles     []string   `json:"roles"`
 	}](t, rec.Body.Bytes())
 	assert.Equal(t, account.ID, member.AccountID)
 	assert.Equal(t, "active", member.Status)
@@ -279,9 +279,9 @@ func TestOperatorInvitesTheFirstPersonOfATraegerBuero(t *testing.T) {
 	rec = call(invitations, map[string]any{"email": address, "roles": []string{"billing", "administration"}})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	invitation := decodeSchoolPortalData[struct {
-		ID    int64    `json:"id"`
-		Email string   `json:"email"`
-		Roles []string `json:"roles"`
+		ID    testpkg.ID `json:"id"`
+		Email string     `json:"email"`
+		Roles []string   `json:"roles"`
 	}](t, rec.Body.Bytes())
 	assert.Equal(t, address, invitation.Email)
 	assert.Equal(t, []string{"administration", "billing", "leadership"}, invitation.Roles, "several roles in one invitation, Leitung for the first person")
@@ -466,11 +466,11 @@ func TestOperatorManagesTheOpenInvitationsOfATraegerBuero(t *testing.T) {
 		return rec
 	}
 	type listed struct {
-		ID        int64     `json:"id"`
-		Email     string    `json:"email"`
-		Roles     []string  `json:"roles"`
-		ExpiresAt time.Time `json:"expires_at"`
-		Expired   bool      `json:"expired"`
+		ID        testpkg.ID `json:"id"`
+		Email     string     `json:"email"`
+		Roles     []string   `json:"roles"`
+		ExpiresAt time.Time  `json:"expires_at"`
+		Expired   bool       `json:"expired"`
 	}
 	invitations := fmt.Sprintf("/organizations/%d/traeger-members/invitations", organizationID)
 	list := func() []listed {
@@ -518,7 +518,7 @@ func TestOperatorManagesTheOpenInvitationsOfATraegerBuero(t *testing.T) {
 	}
 
 	// Sending again replaces the expired link by a fresh one with the same roles.
-	staleToken := mailLink(byEmail[second].ID)
+	staleToken := mailLink(int64(byEmail[second].ID))
 	rec = call(http.MethodPost, fmt.Sprintf("%s/%d/resend", invitations, byEmail[second].ID), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	resent := decodeSchoolPortalData[listed](t, rec.Body.Bytes())
@@ -530,7 +530,7 @@ func TestOperatorManagesTheOpenInvitationsOfATraegerBuero(t *testing.T) {
 	require.NoError(t, db.NewRaw(`SELECT count(*) FROM platform.operator_audit_log
 		WHERE operator_id = ? AND action = 'resend' AND resource_type = 'traeger_invitation' AND resource_id = ?`, operatorID, resent.ID).Scan(ctx, &audited))
 	assert.Equal(t, 1, audited, "sending again is in the operator audit")
-	freshToken := mailLink(resent.ID)
+	freshToken := mailLink(int64(resent.ID))
 	assert.NotEqual(t, staleToken, freshToken, "the new mail carries a new link")
 	open = list()
 	require.Len(t, open, 2, "the old invitation gives way to the new one")
@@ -538,7 +538,7 @@ func TestOperatorManagesTheOpenInvitationsOfATraegerBuero(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, rec.Code, "a replaced invitation is not sent again: %s", rec.Body.String())
 
 	// A withdrawn invitation leaves the list and its link no longer works.
-	firstToken := mailLink(byEmail[first].ID)
+	firstToken := mailLink(int64(byEmail[first].ID))
 	rec = call(http.MethodDelete, fmt.Sprintf("%s/%d", invitations, byEmail[first].ID), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	require.NoError(t, db.NewRaw(`SELECT count(*) FROM platform.operator_audit_log

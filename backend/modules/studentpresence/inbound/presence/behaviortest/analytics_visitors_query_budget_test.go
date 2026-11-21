@@ -83,10 +83,10 @@ func TestCrossTenantStudentsPositiveGrowthQueryBudget(t *testing.T) {
 		require.Equal(t, testutil.StatusOK, rr.Code, rr.Body.String())
 		var response struct {
 			Data []struct {
-				ID         int64  `json:"student_id"`
-				FirstName  string `json:"first_name"`
-				LastName   string `json:"last_name"`
-				HomeTenant string `json:"home_tenant"`
+				ID         testpkg.ID `json:"student_id"`
+				FirstName  string     `json:"first_name"`
+				LastName   string     `json:"last_name"`
+				HomeTenant string     `json:"home_tenant"`
 			} `json:"data"`
 		}
 		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
@@ -94,9 +94,9 @@ func TestCrossTenantStudentsPositiveGrowthQueryBudget(t *testing.T) {
 		seen := make(map[int64]bool)
 		for _, row := range response.Data {
 			require.Contains(t, want, row.ID)
-			require.False(t, seen[row.ID])
-			seen[row.ID] = true
-			require.Equal(t, want[row.ID], row.FirstName)
+			require.False(t, seen[int64(row.ID)])
+			seen[int64(row.ID)] = true
+			require.Equal(t, want[int64(row.ID)], row.FirstName)
 			require.Equal(t, "Guest", row.LastName)
 			require.NotEmpty(t, row.HomeTenant)
 		}

@@ -19,21 +19,22 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 type correctedDocumentBody struct {
-	ID                  int64  `json:"id"`
-	RunID               int64  `json:"run_id"`
-	Kind                string `json:"kind"`
-	Number              string `json:"number"`
-	RegistrationID      int64  `json:"registration_id"`
-	ReferenceDocumentID *int64 `json:"reference_document_id"`
-	ReferenceNumber     string `json:"reference_number"`
-	Reason              string `json:"reason"`
-	TotalCents          int64  `json:"total_cents"`
+	ID                  testpkg.ID  `json:"id"`
+	RunID               testpkg.ID  `json:"run_id"`
+	Kind                string      `json:"kind"`
+	Number              string      `json:"number"`
+	RegistrationID      testpkg.ID  `json:"registration_id"`
+	ReferenceDocumentID *testpkg.ID `json:"reference_document_id"`
+	ReferenceNumber     string      `json:"reference_number"`
+	Reason              string      `json:"reason"`
+	TotalCents          int64       `json:"total_cents"`
 	Children            []struct {
-		ChildID    int64 `json:"child_id"`
-		TotalCents int64 `json:"total_cents"`
+		ChildID    testpkg.ID `json:"child_id"`
+		TotalCents int64      `json:"total_cents"`
 		Positions  []struct {
 			Kind        string `json:"kind"`
 			AmountCents int64  `json:"amount_cents"`
@@ -41,17 +42,17 @@ type correctedDocumentBody struct {
 		} `json:"positions"`
 	} `json:"children"`
 	History []struct {
-		ID         int64  `json:"id"`
-		RunID      int64  `json:"run_id"`
-		Kind       string `json:"kind"`
-		Number     string `json:"number"`
-		TotalCents int64  `json:"total_cents"`
-		Reason     string `json:"reason"`
+		ID         testpkg.ID `json:"id"`
+		RunID      testpkg.ID `json:"run_id"`
+		Kind       string     `json:"kind"`
+		Number     string     `json:"number"`
+		TotalCents int64      `json:"total_cents"`
+		Reason     string     `json:"reason"`
 	} `json:"history"`
 }
 
 type correctedRunBody struct {
-	ID           int64                   `json:"id"`
+	ID           testpkg.ID              `json:"id"`
 	Status       string                  `json:"status"`
 	PreviewCount int                     `json:"preview_count"`
 	PreviewCents int64                   `json:"preview_cents"`
@@ -97,23 +98,23 @@ func TestIssuedInvoicesAreCancelledCreditedAndIssuedAgainAsDocumentsOfTheirOwn(t
 	f := newReviewFixture(t, "Träger Storno Ferien")
 	billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
 	run := lettersOfRun(t, f, billing)
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/letters"), lettersBody("2099-01-15"))
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/letters"), lettersBody("2099-01-15"))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	released := correctedRun(t, f, billing, run.ID)
+	released := correctedRun(t, f, billing, int64(run.ID))
 	require.Len(t, released.Documents, 2)
 	first, second := documentByNumber(t, released, "FE-0001"), documentByNumber(t, released, "FE-0002")
 	assert.Equal(t, "invoice", first.Kind)
 	assert.Empty(t, first.History, "an invoice starts without history")
 
 	// A Storno needs a reason.
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(run.ID, first.ID), map[string]any{"reason": "  "})
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(int64(run.ID), int64(first.ID)), map[string]any{"reason": "  "})
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	code, _ := registrationRefusalOf(t, rec)
 	assert.Equal(t, "parent_billing.billing_document_correction_invalid", code)
 
 	// The Storno is its own document: the next number of the same range,
 	// every position with its minus and the reference to the invoice.
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(run.ID, first.ID),
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(int64(run.ID), int64(first.ID)),
 		map[string]any{"reason": "Anschrift falsch, neue Rechnung folgt."})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	cancellation := decodeSchoolPortalData[correctedDocumentBody](t, rec.Body.Bytes())
@@ -132,35 +133,35 @@ func TestIssuedInvoicesAreCancelledCreditedAndIssuedAgainAsDocumentsOfTheirOwn(t
 	}
 
 	// The run has its letters, so the Storno has its letter at once.
-	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, letterPath(run.ID, cancellation.ID), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, letterPath(int64(run.ID), int64(cancellation.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, `attachment; filename="storno-fe-0003.pdf"`, rec.Header().Get("Content-Disposition"))
 	assert.True(t, bytes.HasPrefix(rec.Body.Bytes(), []byte("%PDF")))
 
 	// A cancelled invoice is neither cancelled nor credited again.
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(run.ID, first.ID), map[string]any{"reason": "Doppelt"})
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(int64(run.ID), int64(first.ID)), map[string]any{"reason": "Doppelt"})
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	code, _ = registrationRefusalOf(t, rec)
 	assert.Equal(t, "parent_billing.invoice_cancelled", code)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, creditPath(run.ID, first.ID),
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, creditPath(int64(run.ID), int64(first.ID)),
 		map[string]any{"child_id": first.Children[0].ChildID, "amount_cents": 100, "reason": "Krank"})
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	code, _ = registrationRefusalOf(t, rec)
 	assert.Equal(t, "parent_billing.invoice_cancelled", code)
 	// A Storno is no invoice to cancel.
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(run.ID, cancellation.ID), map[string]any{"reason": "Storno"})
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(int64(run.ID), int64(cancellation.ID)), map[string]any{"reason": "Storno"})
 	require.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 	code, _ = registrationRefusalOf(t, rec)
 	assert.Equal(t, "parent_billing.billing_document_not_found", code)
 
 	// A Gutschrift lowers one child's amount, at most to zero.
 	child := second.Children[0]
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, creditPath(run.ID, second.ID),
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, creditPath(int64(run.ID), int64(second.ID)),
 		map[string]any{"child_id": child.ChildID, "amount_cents": child.TotalCents + 1, "reason": "Krank"})
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	code, _ = registrationRefusalOf(t, rec)
 	assert.Equal(t, "parent_billing.billing_document_correction_invalid", code)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, creditPath(run.ID, second.ID),
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, creditPath(int64(run.ID), int64(second.ID)),
 		map[string]any{"child_id": child.ChildID, "amount_cents": 500, "reason": "Erster Tag krank"})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	credit := decodeSchoolPortalData[correctedDocumentBody](t, rec.Body.Bytes())
@@ -173,19 +174,19 @@ func TestIssuedInvoicesAreCancelledCreditedAndIssuedAgainAsDocumentsOfTheirOwn(t
 	require.Len(t, credit.Children[0].Positions, 1)
 	assert.Equal(t, "credit", credit.Children[0].Positions[0].Kind)
 	assert.Equal(t, "Erster Tag krank", credit.Children[0].Positions[0].Note)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, letterPath(run.ID, credit.ID), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, letterPath(int64(run.ID), int64(credit.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, `attachment; filename="gutschrift-fe-0004.pdf"`, rec.Header().Get("Content-Disposition"))
 
 	// A credited invoice is not cancelled; the rest is credited instead.
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(run.ID, second.ID), map[string]any{"reason": "Abgemeldet"})
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(int64(run.ID), int64(second.ID)), map[string]any{"reason": "Abgemeldet"})
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	code, _ = registrationRefusalOf(t, rec)
 	assert.Equal(t, "parent_billing.invoice_credited", code)
 
 	// The run lists every document; the history of each invoice names its
 	// Storno and Gutschrift. The sum is what the families still owe.
-	detail := correctedRun(t, f, billing, run.ID)
+	detail := correctedRun(t, f, billing, int64(run.ID))
 	require.Len(t, detail.Documents, 4)
 	assert.Equal(t, 2, detail.PreviewCount, "two invoices")
 	assert.Equal(t, first.TotalCents+second.TotalCents-first.TotalCents-500, detail.PreviewCents)
@@ -200,7 +201,7 @@ func TestIssuedInvoicesAreCancelledCreditedAndIssuedAgainAsDocumentsOfTheirOwn(t
 
 	// The overview for the Kämmerei lists Storno and Gutschrift as lines of
 	// their own with their minus and the invoice they belong to.
-	csv := exportCSV(t, f, billing, run.ID)
+	csv := exportCSV(t, f, billing, int64(run.ID))
 	lines := strings.Split(strings.TrimSpace(csv), "\n")
 	assert.Equal(t, "Nummer;Art;Bezug;Empfänger;Kind;Position;Betrag in Euro;Zahlungsweg;Fällig am", strings.TrimSpace(lines[0]))
 	assert.Contains(t, csv, "FE-0001;Rechnung;;")
@@ -214,32 +215,32 @@ func TestIssuedInvoicesAreCancelledCreditedAndIssuedAgainAsDocumentsOfTheirOwn(t
 	// The cancelled invoice no longer bills its registration: the next run
 	// of the period issues it again with a new number and names the invoice
 	// it replaces.
-	next := startBillingRun(t, f, billing, f.period.ID)
-	preview := correctedRun(t, f, billing, next.ID)
+	next := startBillingRun(t, f, billing, int64(f.period.ID))
+	preview := correctedRun(t, f, billing, int64(next.ID))
 	require.Len(t, preview.Documents, 1, "only the cancelled family")
 	assert.Equal(t, first.RegistrationID, preview.Documents[0].RegistrationID)
 	assert.Equal(t, "FE-0001", preview.Documents[0].ReferenceNumber)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(next.ID, "/release"),
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(next.ID), "/release"),
 		map[string]any{"document_count": preview.PreviewCount, "total_cents": preview.PreviewCents, "fingerprint": preview.Fingerprint})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	reissued := correctedRun(t, f, billing, next.ID).Documents[0]
+	reissued := correctedRun(t, f, billing, int64(next.ID)).Documents[0]
 	assert.Equal(t, "FE-0005", reissued.Number)
 	assert.Equal(t, "invoice", reissued.Kind)
 	require.NotNil(t, reissued.ReferenceDocumentID)
 	assert.Equal(t, first.ID, *reissued.ReferenceDocumentID)
-	assert.Contains(t, exportCSV(t, f, billing, next.ID), "FE-0005;Rechnung;ersetzt FE-0001;")
+	assert.Contains(t, exportCSV(t, f, billing, int64(next.ID)), "FE-0005;Rechnung;ersetzt FE-0001;")
 
-	history = documentByNumber(t, correctedRun(t, f, billing, run.ID), "FE-0001").History
+	history = documentByNumber(t, correctedRun(t, f, billing, int64(run.ID)), "FE-0001").History
 	require.Len(t, history, 2, "the Storno and the new invoice")
 	assert.Equal(t, "invoice", history[1].Kind)
 	assert.Equal(t, "FE-0005", history[1].Number)
 	assert.Equal(t, next.ID, history[1].RunID, "the new invoice belongs to the next run")
 
 	// A third run of the period has nothing left to bill.
-	third := startBillingRun(t, f, billing, f.period.ID)
-	assert.Empty(t, correctedRun(t, f, billing, third.ID).Documents)
+	third := startBillingRun(t, f, billing, int64(f.period.ID))
+	assert.Empty(t, correctedRun(t, f, billing, int64(third.ID)).Documents)
 
-	actions := runActions(t, f, run.ID)
+	actions := runActions(t, f, int64(run.ID))
 	assert.Contains(t, actions, "cancel")
 	assert.Contains(t, actions, "credit")
 	var changed error
@@ -253,22 +254,22 @@ func TestStornoAndGutschriftNeedTheBillingRightAndStayWithTheirTraeger(t *testin
 	billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
 	foreign := newTraegerOffice(t, f.db, f.traeger, "Träger Storno Fremd", identityaccess.TraegerRoleBilling)
 	run := releasedBillingRun(t, f, billing)
-	invoice := correctedRun(t, f, billing, run.ID).Documents[0]
+	invoice := correctedRun(t, f, billing, int64(run.ID)).Documents[0]
 	credit := map[string]any{"child_id": invoice.Children[0].ChildID, "amount_cents": 100, "reason": "Krank"}
 	cancel := map[string]any{"reason": "Abgemeldet"}
 
 	for _, request := range []struct {
 		path string
 		body any
-	}{{cancellationPath(run.ID, invoice.ID), cancel}, {creditPath(run.ID, invoice.ID), credit}} {
+	}{{cancellationPath(int64(run.ID), int64(invoice.ID)), cancel}, {creditPath(int64(run.ID), int64(invoice.ID)), credit}} {
 		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, request.path, request.body)
 		assert.Equal(t, http.StatusForbidden, rec.Code, "%s without the right Abrechnung: %s", request.path, rec.Body.String())
 		rec = traegerJSON(t, f.traeger, foreign.token, http.MethodPost, request.path, request.body)
 		assert.Equal(t, http.StatusNotFound, rec.Code, "%s of another Träger: %s", request.path, rec.Body.String())
 	}
 	// An invoice of the Träger in another run is not part of this one.
-	other := startBillingRun(t, f, billing, f.period.ID)
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(other.ID, invoice.ID), cancel)
+	other := startBillingRun(t, f, billing, int64(f.period.ID))
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(int64(other.ID), int64(invoice.ID)), cancel)
 	assert.Equal(t, http.StatusConflict, rec.Code, "a run in preview has no invoice: %s", rec.Body.String())
 
 	var documents int
@@ -285,16 +286,16 @@ func TestStornoBeforeTheLettersGetsItsLetterWithTheLettersOfTheRun(t *testing.T)
 	f := newReviewFixture(t, "Träger Storno Schreiben")
 	billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
 	run := lettersOfRun(t, f, billing)
-	invoice := correctedRun(t, f, billing, run.ID).Documents[0]
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(run.ID, invoice.ID), map[string]any{"reason": "Abgemeldet"})
+	invoice := correctedRun(t, f, billing, int64(run.ID)).Documents[0]
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(int64(run.ID), int64(invoice.ID)), map[string]any{"reason": "Abgemeldet"})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	cancellation := decodeSchoolPortalData[correctedDocumentBody](t, rec.Body.Bytes())
-	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, letterPath(run.ID, cancellation.ID), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, letterPath(int64(run.ID), int64(cancellation.ID)), nil)
 	require.Equal(t, http.StatusNotFound, rec.Code, "no letter before the letters of the run: %s", rec.Body.String())
 
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/letters"), lettersBody("2099-01-15"))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/letters"), lettersBody("2099-01-15"))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, letterPath(run.ID, cancellation.ID), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, letterPath(int64(run.ID), int64(cancellation.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, `attachment; filename="storno-fe-0003.pdf"`, rec.Header().Get("Content-Disposition"))
 }
@@ -311,31 +312,31 @@ func TestCorrectionsAfterAPatternWithoutYearStayBehindTheirInvoice(t *testing.T)
 	billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
 	require.Equal(t, http.StatusOK, f.act(t, f.siblings, "confirm").Code)
 	setNumberRange(t, f, billing, "FE-{JJJJ}-{NNNN}")
-	run := billingRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(run))
+	run := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(run))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	invoice := correctedRun(t, f, billing, run.ID).Documents[0]
+	invoice := correctedRun(t, f, billing, int64(run.ID)).Documents[0]
 	require.True(t, strings.HasPrefix(invoice.Number, "FE-2"), invoice.Number)
 
 	setNumberRange(t, f, billing, "FE-{NNNN}")
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, creditPath(run.ID, invoice.ID),
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, creditPath(int64(run.ID), int64(invoice.ID)),
 		map[string]any{"child_id": invoice.Children[0].ChildID, "amount_cents": 100, "reason": "Krank"})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	credit := decodeSchoolPortalData[correctedDocumentBody](t, rec.Body.Bytes())
 	assert.Equal(t, "FE-0001", credit.Number, "the pattern without a year counts on its own")
 
-	detail := correctedRun(t, f, billing, run.ID)
+	detail := correctedRun(t, f, billing, int64(run.ID))
 	require.Len(t, detail.Documents, 2)
 	assert.Equal(t, []string{invoice.Number, "FE-0001"}, []string{detail.Documents[0].Number, detail.Documents[1].Number},
 		"the run lists the invoice before its Gutschrift")
 
 	brandTraeger(t, f)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/letters/preview"), lettersBody("2099-01-15"))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/letters/preview"), lettersBody("2099-01-15"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, fmt.Sprintf(`inline; filename="bestaetigung-%s.pdf"`, strings.ToLower(invoice.Number)),
 		rec.Header().Get("Content-Disposition"), "the preview shows the letter of an invoice")
 
-	lines := strings.Split(strings.TrimSpace(exportCSV(t, f, billing, run.ID)), "\n")
+	lines := strings.Split(strings.TrimSpace(exportCSV(t, f, billing, int64(run.ID))), "\n")
 	require.Greater(t, len(lines), 2)
 	assert.True(t, strings.HasPrefix(lines[1], invoice.Number+";Rechnung;"), lines[1])
 }

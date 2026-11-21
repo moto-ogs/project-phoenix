@@ -28,22 +28,22 @@ import (
 
 type contractRecordBody struct {
 	Contracts []struct {
-		ID       int64   `json:"id"`
-		Kind     string  `json:"kind"`
-		StartsOn string  `json:"starts_on"`
-		EndsOn   *string `json:"ends_on"`
+		ID       testpkg.ID `json:"id"`
+		Kind     string     `json:"kind"`
+		StartsOn string     `json:"starts_on"`
+		EndsOn   *string    `json:"ends_on"`
 		Sites    []struct {
-			SchoolID       int64  `json:"school_id"`
-			SchoolName     string `json:"school_name"`
-			ChangeableFrom string `json:"changeable_from"`
+			SchoolID       testpkg.ID `json:"school_id"`
+			SchoolName     string     `json:"school_name"`
+			ChangeableFrom string     `json:"changeable_from"`
 			Soll           []struct {
 				ValidFrom      string `json:"valid_from"`
 				WeekdayMinutes []int  `json:"weekday_minutes"`
 			} `json:"soll"`
 		} `json:"sites"`
 		HolidayWeeks []struct {
-			SchoolID  int64  `json:"school_id"`
-			WeekStart string `json:"week_start"`
+			SchoolID  testpkg.ID `json:"school_id"`
+			WeekStart string     `json:"week_start"`
 		} `json:"holiday_weeks"`
 	} `json:"contracts"`
 	Changes []struct {
@@ -117,7 +117,7 @@ func TestTraegerStaffContractsCarryTheSollIntoEachSchool(t *testing.T) {
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		body := decode[contractRecordBody](t, rec)
 		require.Len(t, body.Contracts, 1)
-		contractID = body.Contracts[0].ID
+		contractID = int64(body.Contracts[0].ID)
 		require.Len(t, body.Contracts[0].Sites, 2)
 		for _, site := range body.Contracts[0].Sites {
 			assert.Equal(t, "2026-11-01", site.ChangeableFrom, "October is closed at north, and the current month is November")

@@ -30,10 +30,10 @@ func TestStaffRecordCreateAndOffboardThroughTheRouter(t *testing.T) {
 	require.Equal(t, http.StatusCreated, status, string(body))
 	var created struct {
 		Data struct {
-			ID        string `json:"id"`
-			PersonID  string `json:"person_id"`
-			IsTeacher bool   `json:"is_teacher"`
-			TeacherID *int64 `json:"teacher_id"`
+			ID        string      `json:"id"`
+			PersonID  string      `json:"person_id"`
+			IsTeacher bool        `json:"is_teacher"`
+			TeacherID *testpkg.ID `json:"teacher_id"`
 			Person    struct {
 				FirstName string `json:"first_name"`
 			} `json:"person"`

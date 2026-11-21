@@ -38,15 +38,15 @@ func accessLogAt(hour int) time.Time {
 }
 
 type accessLogEntry struct {
-	ID         string    `json:"id"`
-	OccurredAt time.Time `json:"occurred_at"`
-	SchoolID   int64     `json:"school_id"`
-	SchoolName string    `json:"school_name"`
-	AccountID  *int64    `json:"account_id"`
-	Person     string    `json:"person"`
-	Kind       string    `json:"kind"`
-	Data       string    `json:"data"`
-	DataLabel  string    `json:"data_label"`
+	ID         string      `json:"id"`
+	OccurredAt time.Time   `json:"occurred_at"`
+	SchoolID   testpkg.ID  `json:"school_id"`
+	SchoolName string      `json:"school_name"`
+	AccountID  *testpkg.ID `json:"account_id"`
+	Person     string      `json:"person"`
+	Kind       string      `json:"kind"`
+	Data       string      `json:"data"`
+	DataLabel  string      `json:"data_label"`
 }
 
 type accessLogPage struct {
@@ -56,8 +56,8 @@ type accessLogPage struct {
 }
 
 type accessLogPerson struct {
-	AccountID int64  `json:"account_id"`
-	Name      string `json:"name"`
+	AccountID testpkg.ID `json:"account_id"`
+	Name      string     `json:"name"`
 }
 
 func accessLogRequest(t *testing.T, router http.Handler, token, path string, query url.Values) *httptest.ResponseRecorder {
@@ -250,7 +250,7 @@ func TestTraegerAccessLogFiltersByPersonSchoolPeriodAndKind(t *testing.T) {
 	rec := accessLogRequest(t, f.router, f.token, "/traeger/access-log/people", accessLogWindow(nil))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	people := decodeSchoolPortalData[[]accessLogPerson](t, rec.Body.Bytes())
-	assert.Equal(t, []accessLogPerson{{AccountID: f.staff, Name: "Frieda Fachkraft"}, {AccountID: f.otherStaff, Name: "Lena Leitung"}}, people)
+	assert.Equal(t, []accessLogPerson{{AccountID: testpkg.ID(f.staff), Name: "Frieda Fachkraft"}, {AccountID: testpkg.ID(f.otherStaff), Name: "Lena Leitung"}}, people)
 }
 
 func TestTraegerAccessLogRejectsAnInvalidWindow(t *testing.T) {
@@ -390,7 +390,7 @@ func TestTraegerAccessLogShowsTheSystemActorWithoutAnAccount(t *testing.T) {
 
 	rec := accessLogRequest(t, f.router, f.token, "/traeger/access-log/people", accessLogWindow(nil))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, []accessLogPerson{{AccountID: f.staff, Name: "Frieda Fachkraft"}}, decodeSchoolPortalData[[]accessLogPerson](t, rec.Body.Bytes()))
+	assert.Equal(t, []accessLogPerson{{AccountID: testpkg.ID(f.staff), Name: "Frieda Fachkraft"}}, decodeSchoolPortalData[[]accessLogPerson](t, rec.Body.Bytes()))
 }
 
 // recordHolidayAccess writes one entry of the audit trail of the holiday
@@ -427,11 +427,11 @@ func TestTraegerAccessLogShowsTheHolidayRegistrationTrailOfTheOwnTraeger(t *test
 	member, email := traegerOfficeAccount(t, f.db, f.office.organization)
 	foreignMember, _ := traegerOfficeAccount(t, f.db, foreign.organization)
 	registration := f.siblings
-	recordHolidayAccess(t, f.db, f.office.organization, f.period.ID, &registration, "read", member, accessLogAt(9))
-	recordHolidayAccess(t, f.db, f.office.organization, f.period.ID, &registration, "proof", member, accessLogAt(10))
-	recordHolidayAccess(t, f.db, f.office.organization, f.period.ID, nil, "export", member, accessLogAt(11))
-	recordHolidayAccess(t, f.db, f.office.organization, f.period.ID, &registration, "confirm", member, accessLogAt(12))
-	recordHolidayAccess(t, f.db, foreign.organization, foreignPeriod.ID, nil, "list", foreignMember, accessLogAt(13))
+	recordHolidayAccess(t, f.db, f.office.organization, int64(f.period.ID), &registration, "read", member, accessLogAt(9))
+	recordHolidayAccess(t, f.db, f.office.organization, int64(f.period.ID), &registration, "proof", member, accessLogAt(10))
+	recordHolidayAccess(t, f.db, f.office.organization, int64(f.period.ID), nil, "export", member, accessLogAt(11))
+	recordHolidayAccess(t, f.db, f.office.organization, int64(f.period.ID), &registration, "confirm", member, accessLogAt(12))
+	recordHolidayAccess(t, f.db, foreign.organization, int64(foreignPeriod.ID), nil, "list", foreignMember, accessLogAt(13))
 
 	page := listAccessLog(t, f.traeger, f.office.token, nil)
 	require.Len(t, page.Entries, 4, "the Träger's own holiday trail only: %+v", page.Entries)
@@ -460,7 +460,7 @@ func TestTraegerAccessLogShowsTheHolidayRegistrationTrailOfTheOwnTraeger(t *test
 
 	rec := accessLogRequest(t, f.traeger, f.office.token, "/traeger/access-log/people", accessLogWindow(nil))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, []accessLogPerson{{AccountID: member, Name: person}}, decodeSchoolPortalData[[]accessLogPerson](t, rec.Body.Bytes()))
+	assert.Equal(t, []accessLogPerson{{AccountID: testpkg.ID(member), Name: person}}, decodeSchoolPortalData[[]accessLogPerson](t, rec.Body.Bytes()))
 
 	rec = accessLogRequest(t, f.traeger, f.office.token, "/traeger/access-log/export", accessLogWindow(nil))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -483,7 +483,7 @@ func TestTraegerAccessLogPagesMergeTheSchoolAndTheHolidayTrail(t *testing.T) {
 	for i := 0; i < 30; i++ {
 		at := start.Add(time.Duration(2*i) * time.Minute)
 		recordAccessLogRead(t, f.db, school, member, "attendance_history", at)
-		recordHolidayAccess(t, f.db, f.office.organization, f.period.ID, nil, "list", member, at.Add(time.Minute))
+		recordHolidayAccess(t, f.db, f.office.organization, int64(f.period.ID), nil, "list", member, at.Add(time.Minute))
 	}
 
 	first := listAccessLog(t, f.traeger, f.office.token, nil)
@@ -582,12 +582,12 @@ func TestTraegerAccessLogWithoutSchoolsEndsAtTheDatabaseTime(t *testing.T) {
 	member, _ := traegerOfficeAccount(t, db, office.organization)
 	databaseNow := testpkg.DatabaseNow(t, db)
 	for i := 1; i <= 51; i++ {
-		recordHolidayAccess(t, db, office.organization, period.ID, nil, "list", member, databaseNow.Add(-time.Duration(i)*time.Second))
+		recordHolidayAccess(t, db, office.organization, int64(period.ID), nil, "list", member, databaseNow.Add(-time.Duration(i)*time.Second))
 	}
 	day := calendar.DateFromTime(databaseNow)
 	// Entries beyond the database bound must not use up the SQL page limit.
 	for i := 1; i <= 51; i++ {
-		recordHolidayAccess(t, db, office.organization, period.ID, nil, "export", member, databaseNow.Add(time.Hour+time.Duration(i)*time.Second))
+		recordHolidayAccess(t, db, office.organization, int64(period.ID), nil, "export", member, databaseNow.Add(time.Hour+time.Duration(i)*time.Second))
 	}
 	window := url.Values{"from": {day.AddDays(-1).String()}, "to": {day.AddDays(1).String()}}
 

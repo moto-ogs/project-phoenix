@@ -323,10 +323,10 @@ func TestDemoRoleTraegerSignsTheVisitorInToTheSchoolsOwnTraeger(t *testing.T) {
 	payload, err := base64.RawURLEncoding.DecodeString(segments[1])
 	require.NoError(t, err)
 	var claims struct {
-		ID       int64  `json:"id"`
-		Scope    string `json:"scope"`
-		OrgID    int64  `json:"org_id"`
-		TenantID int64  `json:"tenant_id"`
+		ID       testpkg.ID `json:"id"`
+		Scope    string     `json:"scope"`
+		OrgID    testpkg.ID `json:"org_id"`
+		TenantID testpkg.ID `json:"tenant_id"`
 	}
 	require.NoError(t, json.Unmarshal(payload, &claims))
 	assert.Equal(t, visitor.ID, claims.ID, "the Träger-Büro is the visitor's own account")

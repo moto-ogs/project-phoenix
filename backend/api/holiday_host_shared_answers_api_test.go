@@ -71,7 +71,7 @@ func TestTraegerSharesAHealthQuestionWithTheHostingSchool(t *testing.T) {
 	office := newTraegerOffice(t, f.db, f.traeger, "Träger Freigabe Formular", identityaccess.TraegerRoleAdministration)
 	period := createHolidayPeriod(t, f.traeger, office, januaryHolidays(office))
 
-	rec := traegerJSON(t, f.traeger, office.token, http.MethodGet, holidayFormPath(period.ID), nil)
+	rec := traegerJSON(t, f.traeger, office.token, http.MethodGet, holidayFormPath(int64(period.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	var template struct {
 		Data struct {
@@ -89,14 +89,14 @@ func TestTraegerSharesAHealthQuestionWithTheHostingSchool(t *testing.T) {
 
 	questions := sharedQuestions()
 	questions[1]["share_with_host"] = true
-	saved := saveHolidayForm(t, f, office, period.ID, questions)
+	saved := saveHolidayForm(t, f, office, int64(period.ID), questions)
 	assert.Equal(t, 2, saved.Version, "a shared health question is accepted")
 	var sharedHealth bool
 	require.NoError(t, f.db.NewRaw(`SELECT (fields->1->'share_with_host')::boolean AND (fields->1->'health')::boolean
 		FROM enrollment.holiday_period_forms WHERE holiday_period_id = ? AND version = 2`, period.ID).Scan(t.Context(), &sharedHealth))
 	assert.True(t, sharedHealth, "the version keeps the shared health question")
 
-	saved = saveHolidayForm(t, f, office, period.ID, sharedQuestions())
+	saved = saveHolidayForm(t, f, office, int64(period.ID), sharedQuestions())
 	assert.Equal(t, 3, saved.Version)
 	var encoded string
 	require.NoError(t, f.db.NewRaw(`SELECT fields::text FROM enrollment.holiday_period_forms
@@ -129,12 +129,12 @@ func (f holidayHostFixture) submitShared(t *testing.T) int64 {
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(f.link), body)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	id := decodeSchoolPortalData[struct {
-		ID int64 `json:"id"`
+		ID testpkg.ID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
 	_, err := f.db.ExecContext(t.Context(), `UPDATE enrollment.holiday_registrations
 		SET consent_version = NULL, custody_confirmed_at = NULL, declaration_name = NULL WHERE id = ?`, id)
 	require.NoError(t, err)
-	return id
+	return int64(id)
 }
 
 // sharedPrivate are the values of the Sommer registration that must never
@@ -234,7 +234,7 @@ func TestHolidayGuestSheetCarriesTheSecondGuardianAndTheSharedAnswersUntilTheyEx
 	sommer := f.submitShared(t)
 	f.confirm(t, f.siblings, "confirm")
 	f.confirm(t, sommer, "confirm")
-	rec := f.assign(t, lead, week, f.group)
+	rec := f.assign(t, lead, int64(week), f.group)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	f.today.Store(calendar.NewDate(2099, 7, 6))
 	f.reconcile(t)
@@ -312,7 +312,7 @@ func TestHolidayGuestSheetExcludesAnswersReclassifiedAsHealthInformation(t *test
 			saveHolidayForm(t, f.holidayRegistrationFixture, f.office, f.periodID(t), sharedQuestions())
 			registration := f.submitShared(t)
 			f.confirm(t, registration, "confirm")
-			rec := f.assign(t, lead, f.offer.Weeks[0].ID, f.group)
+			rec := f.assign(t, lead, int64(f.offer.Weeks[0].ID), f.group)
 			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 			f.today.Store(calendar.NewDate(2099, 7, 6))
 			f.reconcile(t)

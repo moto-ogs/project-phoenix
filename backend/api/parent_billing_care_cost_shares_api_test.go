@@ -25,10 +25,10 @@ const careCostSharesPath = "/traeger/care-cost-shares"
 
 type careCostShareSetBody struct {
 	Contracts []struct {
-		ContractID int64 `json:"contract_id"`
+		ContractID testpkg.ID `json:"contract_id"`
 		Shares     []struct {
-			ID     int64  `json:"id"`
-			Status string `json:"status"`
+			ID     testpkg.ID `json:"id"`
+			Status string     `json:"status"`
 		} `json:"shares"`
 	} `json:"contracts"`
 	Expiring int `json:"expiring"`
@@ -37,21 +37,21 @@ type careCostShareSetBody struct {
 type careCostShareRunBody struct {
 	careRunBody
 	Invoices []struct {
-		ID         int64  `json:"id"`
-		ContractID int64  `json:"contract_id"`
-		Number     string `json:"number"`
+		ID         testpkg.ID `json:"id"`
+		ContractID testpkg.ID `json:"contract_id"`
+		Number     string     `json:"number"`
 		CostShares []struct {
-			Kind           string `json:"kind"`
-			CostBearerID   int64  `json:"cost_bearer_id"`
-			CostBearerName string `json:"cost_bearer_name"`
-			AmountCents    int64  `json:"amount_cents"`
+			Kind           string     `json:"kind"`
+			CostBearerID   testpkg.ID `json:"cost_bearer_id"`
+			CostBearerName string     `json:"cost_bearer_name"`
+			AmountCents    int64      `json:"amount_cents"`
 		} `json:"cost_shares"`
 		TotalCents int64 `json:"total_cents"`
 	} `json:"invoices"`
 	CostBearers []struct {
-		CostBearerID int64 `json:"cost_bearer_id"`
-		InvoiceCount int   `json:"invoice_count"`
-		AmountCents  int64 `json:"amount_cents"`
+		CostBearerID testpkg.ID `json:"cost_bearer_id"`
+		InvoiceCount int        `json:"invoice_count"`
+		AmountCents  int64      `json:"amount_cents"`
 	} `json:"cost_bearers"`
 }
 
@@ -61,9 +61,9 @@ func (f careBillingFixture) costBearer(t *testing.T, name string) int64 {
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, "/traeger/cost-bearers",
 		map[string]any{"name": name, "address": "Am Kreishaus 1\n12345 Musterstadt", "file_reference": "51-2030", "active": true})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	return decodeSchoolPortalData[struct {
-		ID int64 `json:"id"`
-	}](t, rec.Body.Bytes()).ID
+	return int64(decodeSchoolPortalData[struct {
+		ID testpkg.ID `json:"id"`
+	}](t, rec.Body.Bytes()).ID)
 }
 
 func careCostShare(contractID int64, kind string, bearerID int64, share map[string]any) map[string]any {
@@ -108,12 +108,12 @@ func TestCareCostSharesSplitTheContributionAndStayOnTheIssuedInvoice(t *testing.
 	require.Len(t, set.Contracts, 2)
 
 	run := f.startRun(t, careMonth)
-	preview := f.costShareRun(t, run.ID)
+	preview := f.costShareRun(t, int64(run.ID))
 	totals, shares := map[int64]int64{}, map[int64]int64{}
 	for _, invoice := range preview.Invoices {
-		totals[invoice.ContractID] = invoice.TotalCents
+		totals[int64(invoice.ContractID)] = invoice.TotalCents
 		for _, share := range invoice.CostShares {
-			shares[invoice.ContractID] += share.AmountCents
+			shares[int64(invoice.ContractID)] += share.AmountCents
 		}
 	}
 	assert.Equal(t, map[int64]int64{mia: 0, lea: 5250}, totals, "the family pays the rest")
@@ -121,28 +121,28 @@ func TestCareCostSharesSplitTheContributionAndStayOnTheIssuedInvoice(t *testing.
 	assert.Equal(t, int64(5250), preview.PreviewCents, "the run sums what the families pay")
 	require.Len(t, preview.CostBearers, 2, "the preview names what each cost bearer pays")
 
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(preview.careRunBody))
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(preview.careRunBody))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	released := decodeSchoolPortalData[careCostShareRunBody](t, rec.Body.Bytes())
 	require.Len(t, released.Invoices, 2)
 	var miaNumber string
 	for _, invoice := range released.Invoices {
 		require.Len(t, invoice.CostShares, 1, "the issued invoice keeps its share")
-		assert.Equal(t, totals[invoice.ContractID], invoice.TotalCents)
-		if invoice.ContractID == mia {
+		assert.Equal(t, totals[int64(invoice.ContractID)], invoice.TotalCents)
+		if int64(invoice.ContractID) == mia {
 			miaNumber = invoice.Number
 			assert.Equal(t, "Jugendamt Musterkreis", invoice.CostShares[0].CostBearerName)
 		}
 	}
 
 	// #4718: the invoices of the released run as a file, each with its number.
-	invoices := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(run.ID, "/invoices/export"), nil)
+	invoices := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(int64(run.ID), "/invoices/export"), nil)
 	require.Equal(t, http.StatusOK, invoices.Code, invoices.Body.String())
 	assert.True(t, strings.HasPrefix(strings.TrimPrefix(invoices.Body.String(), "\xEF\xBB\xBF"),
 		"Rechnung Nr.;Ausgestellt am;Schule;Nachname;Vorname;Leistung;Empfänger;Debitorennummer;Summe (Euro)\n"), invoices.Body.String())
 	assert.Contains(t, invoices.Body.String(), miaNumber+";")
 	assert.Equal(t, 3, strings.Count(strings.TrimSpace(invoices.Body.String()), "\n")+1, "the header and both invoices")
-	spreadsheet := assertTraegerListFormats(t, f.traeger, f.office.token, careRunPath(run.ID, "/invoices/export"), "rechnungen-monatsbeitrag-"+released.BillingMonth[:7])
+	spreadsheet := assertTraegerListFormats(t, f.traeger, f.office.token, careRunPath(int64(run.ID), "/invoices/export"), "rechnungen-monatsbeitrag-"+released.BillingMonth[:7])
 	assertTraegerListNumbers(t, spreadsheet, map[string]string{"I7": "52.5", "I8": "0"})
 
 	// A later change of the share and of the cost bearer's name never
@@ -152,24 +152,24 @@ func TestCareCostSharesSplitTheContributionAndStayOnTheIssuedInvoice(t *testing.
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	shareID := set.Contracts[0].Shares[0].ID
 	for _, contract := range set.Contracts {
-		if contract.ContractID == mia {
+		if int64(contract.ContractID) == mia {
 			shareID = contract.Shares[0].ID
 		}
 	}
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careCostSharesPath+"/"+strconv.FormatInt(shareID, 10),
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careCostSharesPath+"/"+strconv.FormatInt(int64(shareID), 10),
 		careCostShare(mia, "youth_office", youthOffice, map[string]any{"share_basis_points": 1000}))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	again := f.costShareRun(t, run.ID)
+	again := f.costShareRun(t, int64(run.ID))
 	for _, invoice := range again.Invoices {
-		assert.Equal(t, totals[invoice.ContractID], invoice.TotalCents)
-		if invoice.ContractID == mia {
+		assert.Equal(t, totals[int64(invoice.ContractID)], invoice.TotalCents)
+		if int64(invoice.ContractID) == mia {
 			assert.Equal(t, "Jugendamt Musterkreis", invoice.CostShares[0].CostBearerName, "the invoice keeps its copy")
 			assert.Equal(t, int64(7750), invoice.CostShares[0].AmountCents)
 		}
 	}
 
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet,
-		careRunPath(run.ID, "/cost-shares/"+strconv.FormatInt(youthOffice, 10)+"/export?format=csv"), nil)
+		careRunPath(int64(run.ID), "/cost-shares/"+strconv.FormatInt(youthOffice, 10)+"/export?format=csv"), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	csv := rec.Body.String()
 	assert.Contains(t, csv, "Rechnungsnummer;Schule;Kind;Art;Berechnungsgrundlage in Euro;Anteil;Übernommener Betrag in Euro;Status")
@@ -211,36 +211,36 @@ func TestCareReviewReleaseRefusesAnotherCostBearerAtTheSameAmount(t *testing.T) 
 	set := f.saveCostShare(t, careCostShare(mia, "education_participation", jobcenter, map[string]any{"share_basis_points": 5000}))
 	var shareID int64
 	for _, contract := range set.Contracts {
-		if contract.ContractID == mia {
-			shareID = contract.Shares[0].ID
+		if int64(contract.ContractID) == mia {
+			shareID = int64(contract.Shares[0].ID)
 		}
 	}
 	require.NotZero(t, shareID)
 	run := f.startRun(t, careMonth)
-	reviewed := f.costShareRun(t, run.ID)
+	reviewed := f.costShareRun(t, int64(run.ID))
 
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodDelete, careCostSharesPath+"/"+strconv.FormatInt(shareID, 10), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	f.saveCostShare(t, careCostShare(mia, "youth_office", youthOffice, map[string]any{"share_basis_points": 5000}))
-	after := f.costShareRun(t, run.ID)
+	after := f.costShareRun(t, int64(run.ID))
 	assert.Equal(t, reviewed.PreviewCount, after.PreviewCount, "the invoices to issue stay the same")
 	assert.Equal(t, reviewed.PreviewCents, after.PreviewCents, "what the families pay stays the same")
 	family := func(run careCostShareRunBody) map[int64]int64 {
 		totals := map[int64]int64{}
 		for _, invoice := range run.Invoices {
-			totals[invoice.ContractID] = invoice.TotalCents
+			totals[int64(invoice.ContractID)] = invoice.TotalCents
 		}
 		return totals
 	}
 	assert.Equal(t, family(reviewed), family(after), "each family pays the same")
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(reviewed.careRunBody))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(reviewed.careRunBody))
 	assert.Equal(t, http.StatusConflict, rec.Code, "another cost bearer is another reviewed state: %s", rec.Body.String())
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(after.careRunBody))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(after.careRunBody))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	released := decodeSchoolPortalData[careCostShareRunBody](t, rec.Body.Bytes())
 	for _, invoice := range released.Invoices {
-		if invoice.ContractID == mia {
+		if int64(invoice.ContractID) == mia {
 			require.Len(t, invoice.CostShares, 1)
 			assert.Equal(t, youthOffice, invoice.CostShares[0].CostBearerID, "the release issues the state reviewed last")
 		}
@@ -259,9 +259,9 @@ func TestCareCostSharesNeedTheRightStayWithTheTraegerAndAreRecorded(t *testing.T
 	set := f.saveCostShare(t, careCostShare(contract, "youth_office", bearer, map[string]any{"share_basis_points": 10000}))
 	var shareID int64
 	for _, entry := range set.Contracts {
-		if entry.ContractID == contract {
+		if int64(entry.ContractID) == contract {
 			require.Len(t, entry.Shares, 1)
-			shareID = entry.Shares[0].ID
+			shareID = int64(entry.Shares[0].ID)
 		}
 	}
 	require.NotZero(t, shareID)
@@ -302,10 +302,10 @@ func TestCareCostSharesNeedTheRightStayWithTheTraegerAndAreRecorded(t *testing.T
 		map[string]any{"name": "Fremdes Jugendamt", "active": true})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	foreignBearer := decodeSchoolPortalData[struct {
-		ID int64 `json:"id"`
+		ID testpkg.ID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careCostSharesPath,
-		careCostShare(contract, "other_subsidy", foreignBearer, map[string]any{"share_cents": 100}))
+		careCostShare(contract, "other_subsidy", int64(foreignBearer), map[string]any{"share_cents": 100}))
 	assert.Equal(t, http.StatusBadRequest, rec.Code, "a share never names another Träger's cost bearer: %s", rec.Body.String())
 	rec = traegerJSON(t, f.traeger, foreign.token, http.MethodGet, careCostSharesPath, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

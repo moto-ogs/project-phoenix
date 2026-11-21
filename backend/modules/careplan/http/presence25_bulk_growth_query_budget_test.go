@@ -42,7 +42,7 @@ func TestPresence25BulkGrowthQueryBudget(t *testing.T) {
 				}
 				require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &envelope))
 				var result struct {
-					StudentIDs []int64 `json:"student_ids"`
+					StudentIDs []testpkg.ID `json:"student_ids"`
 				}
 				require.NoError(t, json.Unmarshal(envelope.Data, &result))
 				require.Equal(t, ids, result.StudentIDs)
