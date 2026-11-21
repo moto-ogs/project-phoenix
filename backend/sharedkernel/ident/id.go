@@ -93,3 +93,12 @@ func OptionalInt64s(ids *[]ID) *[]int64 {
 	values := Int64s(*ids)
 	return &values
 }
+
+// OptionalIDs converts an optional list of int64 identifiers.
+func OptionalIDs(values *[]int64) *[]ID {
+	if values == nil {
+		return nil
+	}
+	ids := IDs(*values)
+	return &ids
+}
