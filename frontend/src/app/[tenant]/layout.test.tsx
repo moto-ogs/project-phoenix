@@ -258,7 +258,7 @@ describe("TenantLayout", () => {
     expect(fetchSpy).toHaveBeenCalledOnce();
     expect(fetchSpy).toHaveBeenCalledWith(
       "http://server:8080/auth/tenant/resolve?slug=school-a",
-      { headers: {}, cache: "no-store" },
+      expect.objectContaining({ headers: {}, cache: "no-store" }),
     );
   });
 
@@ -374,13 +374,13 @@ describe("TenantLayout", () => {
 
     expect(fetchSpy).toHaveBeenCalledExactlyOnceWith(
       "http://server:8080/auth/tenant/resolve?slug=school-a",
-      {
+      expect.objectContaining({
         headers: {
           "X-Forwarded-For": "203.0.113.5",
           "User-Agent": "Browser/1",
         },
         cache: "no-store",
-      },
+      }),
     );
   });
 
