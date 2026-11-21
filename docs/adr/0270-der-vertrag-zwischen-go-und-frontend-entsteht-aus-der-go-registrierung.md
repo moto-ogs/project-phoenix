@@ -4,6 +4,10 @@ status: accepted
 
 # Der Vertrag zwischen Go und Frontend entsteht aus der Go-Registrierung
 
+> Ergänzt am 2026-11-21 durch [ADR 0300](0300-kennungen-sind-ein-typ-des-shared-kernel.md):
+> `common.ID` ist ein Alias auf `sharedkernel/ident.ID`, und Phase 2 geht
+> abweichend von Punkt 5 in einem Deploy hinaus.
+
 Entscheidung vom 2026-11-16 für
 [#2342](https://github.com/moto-ogs/project-phoenix/issues/2342), Schritt A von
 [#2341](https://github.com/moto-ogs/project-phoenix/issues/2341). Sie steht
