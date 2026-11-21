@@ -96,7 +96,7 @@ export function draftMarks(
     if (row.list_entry && row.list_entry_id) {
       marks.push({ list_entry_id: row.list_entry_id, status });
     } else if (!row.list_entry) {
-      marks.push({ student_id: row.student_id, status });
+      marks.push({ student_id: String(row.student_id), status });
     }
   }
   return marks;

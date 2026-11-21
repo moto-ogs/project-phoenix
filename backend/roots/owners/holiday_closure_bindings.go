@@ -15,6 +15,7 @@ import (
 	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -111,7 +112,7 @@ func (d holidayOfficeTraeger) HolidayTraeger(ctx context.Context, organizationID
 	traeger := enrollment.HolidayTraeger{Name: name, Schools: []enrollment.HolidaySchool{}}
 	for _, school := range schools {
 		if !school.IsDeleted() {
-			traeger.Schools = append(traeger.Schools, enrollment.HolidaySchool{ID: school.ID, Name: school.Name})
+			traeger.Schools = append(traeger.Schools, enrollment.HolidaySchool{ID: ident.ID(school.ID), Name: school.Name})
 		}
 	}
 	return traeger, nil

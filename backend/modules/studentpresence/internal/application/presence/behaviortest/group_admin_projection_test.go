@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/internal/ptrtest"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
@@ -26,7 +27,7 @@ func TestActiveGroupRepository_FindActiveByDeviceIDWithNamesInAdminTransaction(t
 	now := time.Now()
 	require.NoError(t, repo.Create(ctx, &ports.ActiveGroup{
 		StartTime: now, LastActivity: now, TimeoutMinutes: 30,
-		GroupID: ptrtest.Ptr(activityGroup.ID), DeviceID: &device.ID, RoomID: room.ID,
+		GroupID: (*ident.ID)(ptrtest.Ptr(activityGroup.ID)), DeviceID: (*ident.ID)(&device.ID), RoomID: ident.ID(room.ID),
 	}))
 
 	require.NoError(t, testpkg.WithAdminTx(t, context.Background(), db, func(adminCtx context.Context, _ testpkg.Tx) error {

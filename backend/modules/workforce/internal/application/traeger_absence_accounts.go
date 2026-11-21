@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Kontingente of a Personalakte in the Träger-Portal (#4710): one
@@ -122,7 +123,7 @@ func (p recordPool) account(value domain.TraegerAbsenceType, year int, today str
 	summary := ledger.Summary(p.record.ID, value.ID, year)
 	_, individual := p.claims[value.ID].Individual[year]
 	account := workforce.TraegerAbsenceAccount{
-		AbsenceTypeID: value.ID, AbsenceTypeName: value.Name, Year: year, EntitledDays: summary.EntitledDays,
+		AbsenceTypeID: ident.ID(value.ID), AbsenceTypeName: value.Name, Year: year, EntitledDays: summary.EntitledDays,
 		Individual: individual, StandardDays: value.StandardDays, TakenDays: summary.TakenDays,
 		ReservedDays: summary.ReservedDays, RemainingDays: summary.RemainingDays, ExpiresOn: summary.ExpiresOn,
 		ExpiredDays: summary.ExpiredDays,
@@ -140,7 +141,7 @@ func (p recordPool) account(value domain.TraegerAbsenceType, year int, today str
 func (p recordPool) schoolUses(typeID int64, year int, names map[int64]string, deviations map[int64][]domain.StaffAbsenceType) []workforce.TraegerAbsenceSchoolUse {
 	result := make([]workforce.TraegerAbsenceSchoolUse, 0, len(p.record.Links))
 	for _, link := range p.record.Links {
-		entry := workforce.TraegerAbsenceSchoolUse{SchoolID: link.SchoolID, SchoolName: names[link.SchoolID], Offered: true}
+		entry := workforce.TraegerAbsenceSchoolUse{SchoolID: ident.ID(link.SchoolID), SchoolName: names[link.SchoolID], Offered: true}
 		for _, row := range deviations[link.SchoolID] {
 			if row.TraegerAbsenceTypeID != nil && *row.TraegerAbsenceTypeID == typeID {
 				entry.Offered, entry.LimitDays = row.Offered, row.SchoolLimitDays

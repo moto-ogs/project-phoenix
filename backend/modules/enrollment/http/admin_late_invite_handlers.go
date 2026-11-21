@@ -9,6 +9,7 @@ import (
 	"time"
 
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/go-chi/render"
 
@@ -170,7 +171,7 @@ func (rs *Resource) createManualApprovedEnrollment(w http.ResponseWriter, r *htt
 		return
 	}
 
-	body.PhaseID = phaseID
+	body.PhaseID = ident.ID(phaseID)
 	serviceReq, parseErr := buildServiceRequest(&body.SubmitEnrollmentRequest, tenantID, remoteIPFromRequest(r))
 	if parseErr != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(parseErr))

@@ -13,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // sollInvoices are an invoice, its Storno and a holiday invoice whose
@@ -277,7 +278,7 @@ func TestImportDebtorNumbersPerFamily(t *testing.T) {
 		"neu@example.org", "gleich@example.org", "leer@example.org", ""}
 	candidates := make([]importCandidate, len(families))
 	for i, family := range families {
-		candidates[i] = importCandidate{family: family, row: parentbilling.SEPAMandateImportRow{Line: i + 2, ContractID: int64(100 + i)}}
+		candidates[i] = importCandidate{family: family, row: parentbilling.SEPAMandateImportRow{Line: i + 2, ContractID: ident.ID(int64(100 + i))}}
 	}
 	assignDebtorNumbers(candidates, table, columns, map[string]string{"anders@example.org": "20 9", "gleich@example.org": "40 1"},
 		parentbilling.DebtorNumberFormat{})

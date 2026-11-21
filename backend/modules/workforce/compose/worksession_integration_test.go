@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -401,18 +402,18 @@ func TestBalanceAndVacationRowsAreTenantIsolated(t *testing.T) {
 
 	// --- adjustments ---
 	adjustment, err := capability.CreateStaffBalanceAdjustment(ctx, workforce.StaffBalanceAdjustment{
-		StaffID: local.ID, Type: workforce.BalanceAdjustmentTypePayout, MinutesDelta: -60,
-		EffectiveDate: "2026-03-02", Note: "Auszahlung", DecidedBy: local.ID,
+		StaffID: ident.ID(local.ID), Type: workforce.BalanceAdjustmentTypePayout, MinutesDelta: -60,
+		EffectiveDate: "2026-03-02", Note: "Auszahlung", DecidedBy: ident.ID(local.ID),
 	})
 	require.NoError(t, err)
-	assert.Equal(t, testpkg.Tenant(t), adjustment.TenantID)
+	assert.Equal(t, ident.ID(testpkg.Tenant(t)), adjustment.TenantID)
 	foreignAdjustment, err := capability.CreateStaffBalanceAdjustment(foreignCtx, workforce.StaffBalanceAdjustment{
-		StaffID: foreign.ID, Type: workforce.BalanceAdjustmentTypeReset, MinutesDelta: 0,
-		EffectiveDate: "2026-03-02", DecidedBy: foreign.ID,
+		StaffID: ident.ID(foreign.ID), Type: workforce.BalanceAdjustmentTypeReset, MinutesDelta: 0,
+		EffectiveDate: "2026-03-02", DecidedBy: ident.ID(foreign.ID),
 	})
 	require.NoError(t, err)
 	_, err = capability.CreateStaffBalanceAdjustment(ctx, workforce.StaffBalanceAdjustment{
-		StaffID: local.ID, Type: "bonus", EffectiveDate: "2026-03-02", DecidedBy: local.ID,
+		StaffID: ident.ID(local.ID), Type: "bonus", EffectiveDate: "2026-03-02", DecidedBy: ident.ID(local.ID),
 	})
 	require.ErrorIs(t, err, workforce.ErrInvalidWorkSession)
 	assert.EqualError(t, err, "invalid balance adjustment type")
@@ -423,10 +424,10 @@ func TestBalanceAndVacationRowsAreTenantIsolated(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, listed, 1, "the foreign tenant's row is invisible")
 	assert.Equal(t, adjustment.ID, listed[0].ID)
-	_, err = capability.FindStaffBalanceAdjustment(ctx, foreignAdjustment.ID)
+	_, err = capability.FindStaffBalanceAdjustment(ctx, foreignAdjustment.ID.Int64())
 	require.ErrorIs(t, err, workforce.ErrStaffBalanceAdjustmentNotFound)
-	require.NoError(t, capability.DeleteStaffBalanceAdjustment(ctx, foreignAdjustment.ID))
-	_, err = capability.FindStaffBalanceAdjustment(foreignCtx, foreignAdjustment.ID)
+	require.NoError(t, capability.DeleteStaffBalanceAdjustment(ctx, foreignAdjustment.ID.Int64()))
+	_, err = capability.FindStaffBalanceAdjustment(foreignCtx, foreignAdjustment.ID.Int64())
 	require.NoError(t, err, "a foreign delete is a no-op")
 
 	byType, err := capability.ListStaffBalanceAdjustments(ctx, workforce.StaffBalanceAdjustmentFilter{
@@ -437,16 +438,16 @@ func TestBalanceAndVacationRowsAreTenantIsolated(t *testing.T) {
 
 	// --- vacation openings ---
 	opening, err := capability.CreateStaffVacationOpening(ctx, workforce.StaffVacationOpening{
-		StaffID: local.ID, Year: 2026, EffectiveDate: "2026-04-01", TakenBeforeDays: 3.5, EnteredRemainingDays: 26.5,
-		Note: "Übernahme", DecidedBy: local.ID,
+		StaffID: ident.ID(local.ID), Year: 2026, EffectiveDate: "2026-04-01", TakenBeforeDays: 3.5, EnteredRemainingDays: 26.5,
+		Note: "Übernahme", DecidedBy: ident.ID(local.ID),
 	})
 	require.NoError(t, err)
 	_, err = capability.CreateStaffVacationOpening(foreignCtx, workforce.StaffVacationOpening{
-		StaffID: foreign.ID, Year: 2026, EffectiveDate: "2026-04-01", TakenBeforeDays: 1, EnteredRemainingDays: 29, DecidedBy: foreign.ID,
+		StaffID: ident.ID(foreign.ID), Year: 2026, EffectiveDate: "2026-04-01", TakenBeforeDays: 1, EnteredRemainingDays: 29, DecidedBy: ident.ID(foreign.ID),
 	})
 	require.NoError(t, err)
 	_, err = capability.CreateStaffVacationOpening(ctx, workforce.StaffVacationOpening{
-		StaffID: local.ID, Year: 2026, EffectiveDate: "2025-12-31", TakenBeforeDays: 1, EnteredRemainingDays: 29, DecidedBy: local.ID,
+		StaffID: ident.ID(local.ID), Year: 2026, EffectiveDate: "2025-12-31", TakenBeforeDays: 1, EnteredRemainingDays: 29, DecidedBy: ident.ID(local.ID),
 	})
 	require.ErrorIs(t, err, workforce.ErrInvalidWorkSession)
 	assert.EqualError(t, err, "effective_date must lie in the opening year")

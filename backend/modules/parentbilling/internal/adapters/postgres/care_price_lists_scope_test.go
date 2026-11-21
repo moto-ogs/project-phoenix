@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -56,14 +57,14 @@ func TestCarePriceListsFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		heads, err := store.CarePriceListHeads(ctx, own.organization)
 		require.NoError(t, err)
 		require.Len(t, heads, 1, "CarePriceListHeads")
-		assert.Equal(t, parentbilling.CarePriceListHead{SchoolID: own.school, ValidFrom: january, FreeMonths: []int{8}}, heads[0])
+		assert.Equal(t, parentbilling.CarePriceListHead{SchoolID: ident.ID(own.school), ValidFrom: january, FreeMonths: []int{8}}, heads[0])
 
 		tariffs, err := store.CareTariffs(ctx, own.organization)
 		require.NoError(t, err)
 		require.Len(t, tariffs, 2, "CareTariffs")
 		byOffering := map[int64]parentbilling.CareTariff{}
 		for _, tariff := range tariffs {
-			byOffering[tariff.CareOfferingID] = tariff
+			byOffering[tariff.CareOfferingID.Int64()] = tariff
 		}
 		scale := byOffering[704]
 		require.NotNil(t, scale.DaysPerWeek)
@@ -184,10 +185,10 @@ func TestCarePriceListsJoinKeepsTheTraegerBelowRLS(t *testing.T) {
 		tariffs, heads, err := store.CarePriceLists(ctx, own.organization)
 		require.NoError(t, err)
 		require.Len(t, tariffs, 1, "CarePriceLists prices")
-		assert.Equal(t, own.school, tariffs[0].SchoolID)
+		assert.Equal(t, ident.ID(own.school), tariffs[0].SchoolID)
 		assert.Equal(t, int64(4500), *tariffs[0].SiblingCents)
 		require.Len(t, heads, 1, "CarePriceLists heads")
-		assert.Equal(t, parentbilling.CarePriceListHead{SchoolID: own.school, ValidFrom: january, FreeMonths: []int{8}}, heads[0])
+		assert.Equal(t, parentbilling.CarePriceListHead{SchoolID: ident.ID(own.school), ValidFrom: january, FreeMonths: []int{8}}, heads[0])
 		return rollback
 	})
 	require.ErrorIs(t, err, rollback)

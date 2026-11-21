@@ -14,6 +14,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The monthly contribution of the care contract (#4684): the price list,
@@ -75,13 +76,13 @@ type careRunRow struct {
 
 func (r careRunRow) run() parentbilling.CareRun {
 	run := parentbilling.CareRun{
-		ID: r.ID, BillingMonth: r.BillingMonth, Status: r.Status, CreatedAt: r.CreatedAt, ReleasedAt: r.ReleasedAt,
+		ID: ident.ID(r.ID), BillingMonth: r.BillingMonth, Status: r.Status, CreatedAt: r.CreatedAt, ReleasedAt: r.ReleasedAt,
 		IssuedOn: r.IssuedOn, DocumentCount: r.DocumentCount, TotalCents: r.TotalCents,
 		FreeOfCharge: r.FreeOfCharge, DiscardedAt: r.DiscardedAt,
-		CareRunScope: parentbilling.CareRunScope{SchoolIDs: r.SchoolIDs, InvoiceDate: r.InvoiceDate},
+		CareRunScope: parentbilling.CareRunScope{SchoolIDs: ident.IDs(r.SchoolIDs), InvoiceDate: r.InvoiceDate},
 	}
 	if run.SchoolIDs == nil {
-		run.SchoolIDs = []int64{}
+		run.SchoolIDs = []ident.ID{}
 	}
 	if r.MonthRule != nil {
 		run.MonthRule = *r.MonthRule
@@ -158,7 +159,7 @@ type careInvoiceRow struct {
 func (row careInvoiceRow) invoice(positions []parentbilling.CarePosition, reductions []parentbilling.CareReduction) parentbilling.CareInvoice {
 	issuedOn := row.IssuedOn
 	invoice := parentbilling.CareInvoice{
-		ID: row.ID, Number: row.Number, IssuedOn: &issuedOn, ContractID: row.CareContractID, Service: row.Service, SchoolID: row.SchoolID,
+		ID: ident.ID(row.ID), Number: row.Number, IssuedOn: &issuedOn, ContractID: ident.ID(row.CareContractID), Service: row.Service, SchoolID: ident.ID(row.SchoolID),
 		SchoolName: row.SchoolName, ChildFirstName: row.ChildFirstName, ChildLastName: row.ChildLastName, StudentID: row.StudentID,
 		Recipient: parentbilling.CareRecipient{FirstName: row.RecipientFirstName, LastName: row.RecipientLastName, Email: row.RecipientEmail,
 			Kind: textOf(row.RecipientKind), SecondName: textOf(row.RecipientSecondName)},
@@ -216,7 +217,7 @@ func (s *Store) CareTariffs(ctx context.Context, organizationID int64) ([]parent
 	tariffs := make([]parentbilling.CareTariff, len(rows))
 	for i, row := range rows {
 		tariffs[i] = parentbilling.CareTariff{
-			ID: row.ID, SchoolID: row.SchoolID, CareOfferingID: row.CareOfferingID, ModuleName: row.ModuleName,
+			ID: ident.ID(row.ID), SchoolID: ident.ID(row.SchoolID), CareOfferingID: ident.ID(row.CareOfferingID), ModuleName: row.ModuleName,
 			DaysPerWeek: row.DaysPerWeek, ValidFrom: row.ValidFrom, MonthlyCents: row.MonthlyCents,
 			SiblingCents: row.SiblingCents, MealExtra: row.MealExtra, CreatedAt: row.CreatedAt,
 		}
@@ -251,7 +252,7 @@ func (s *Store) ReplaceCarePrices(ctx context.Context, organizationID, accountID
 	rows := make([]careTariffRow, len(list.Prices))
 	for i, price := range list.Prices {
 		rows[i] = careTariffRow{
-			OrganizationID: organizationID, SchoolID: list.SchoolID, CareOfferingID: price.CareOfferingID,
+			OrganizationID: organizationID, SchoolID: list.SchoolID, CareOfferingID: price.CareOfferingID.Int64(),
 			ModuleName: price.ModuleName, DaysPerWeek: price.DaysPerWeek, ValidFrom: list.ValidFrom,
 			MonthlyCents: price.MonthlyCents, SiblingCents: price.SiblingCents, MealExtra: price.MealExtra,
 			CreatedByAccountID: &accountID,
@@ -512,12 +513,12 @@ func (s *Store) IssueCareInvoices(ctx context.Context, organizationID int64, run
 	rows := make([]careInvoiceRow, len(invoices))
 	for i, invoice := range invoices {
 		rows[i] = careInvoiceRow{
-			OrganizationID: organizationID, RunID: run.ID, Number: invoice.Number, NumberYear: year, NumberSequence: first + int64(i),
-			IssuedOn: *invoice.IssuedOn, BillingMonth: run.BillingMonth, CareContractID: invoice.ContractID, Service: invoiceService(invoice),
-			SchoolID: invoice.SchoolID, SchoolName: invoice.SchoolName, ChildFirstName: invoice.ChildFirstName,
+			OrganizationID: organizationID, RunID: run.ID.Int64(), Number: invoice.Number, NumberYear: year, NumberSequence: first + int64(i),
+			IssuedOn: *invoice.IssuedOn, BillingMonth: run.BillingMonth, CareContractID: invoice.ContractID.Int64(), Service: invoiceService(invoice),
+			SchoolID: invoice.SchoolID.Int64(), SchoolName: invoice.SchoolName, ChildFirstName: invoice.ChildFirstName,
 			ChildLastName: invoice.ChildLastName, RecipientFirstName: invoice.Recipient.FirstName,
 			RecipientLastName: invoice.Recipient.LastName, RecipientEmail: invoice.Recipient.Email,
-			MonthRule: rule, TotalCents: invoice.TotalCents, ReplacesInvoiceID: replaced[replacedKey{invoice.ContractID, invoiceService(invoice)}],
+			MonthRule: rule, TotalCents: invoice.TotalCents, ReplacesInvoiceID: replaced[replacedKey{invoice.ContractID.Int64(), invoiceService(invoice)}],
 			StudentID: invoice.StudentID, FamilyEmail: textRef(invoice.FamilyEmail), RecipientKind: textRef(invoice.Recipient.Kind),
 			RecipientSecondName: textRef(invoice.Recipient.SecondName),
 			DocumentKind:        careDocumentKind(invoice.DocumentKind), DebtorNumber: textRef(invoice.DebtorNumber),
@@ -577,7 +578,7 @@ func carePositionRows(organizationID int64, rows []careInvoiceRow, invoices []pa
 				return nil, err
 			}
 			positions = append(positions, careInvoicePositionRow{
-				OrganizationID: organizationID, InvoiceID: rows[i].ID, Position: j + 1, CareOfferingID: position.CareOfferingID,
+				OrganizationID: organizationID, InvoiceID: rows[i].ID, Position: j + 1, CareOfferingID: position.CareOfferingID.Int64(),
 				ModuleName: position.ModuleName, ContractVersionNumber: position.VersionNumber, ServiceFrom: position.ServiceFrom,
 				ServiceUntil: position.ServiceUntil, Weekdays: weekdays, AmountCents: position.AmountCents, NetCents: position.AmountCents, PayableCents: position.PayableCents,
 				DaysPerWeek: position.DaysPerWeek, TierMonthlyCents: position.TierMonthlyCents, MealExtra: position.MealExtra,
@@ -651,7 +652,7 @@ func (s *Store) CareRunInvoices(ctx context.Context, organizationID, runID int64
 	byInvoice := map[int64][]parentbilling.CarePosition{}
 	for _, row := range positions {
 		position := parentbilling.CarePosition{
-			CareOfferingID: row.CareOfferingID, ModuleName: row.ModuleName, VersionNumber: row.ContractVersionNumber,
+			CareOfferingID: ident.ID(row.CareOfferingID), ModuleName: row.ModuleName, VersionNumber: row.ContractVersionNumber,
 			ServiceFrom: row.ServiceFrom, ServiceUntil: row.ServiceUntil, AmountCents: row.AmountCents,
 			DaysPerWeek: row.DaysPerWeek, TierMonthlyCents: row.TierMonthlyCents, MealExtra: row.MealExtra,
 		}
@@ -702,8 +703,8 @@ func (s *Store) InsertCareRunHolds(ctx context.Context, organizationID, runID in
 	for i, hold := range holds {
 		schools := []int64{}
 		for _, contract := range hold.Contracts {
-			if !slices.Contains(schools, contract.SchoolID) {
-				schools = append(schools, contract.SchoolID)
+			if !slices.Contains(schools, contract.SchoolID.Int64()) {
+				schools = append(schools, contract.SchoolID.Int64())
 			}
 		}
 		slots := hold.Slots

@@ -9,6 +9,7 @@ import (
 	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/adapters/hubspot"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/adapters/postgres"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application"
 	internalports "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports"
@@ -54,11 +55,6 @@ type Dependencies struct {
 	Now func() time.Time
 }
 
-// New composes Identity & Access. Guardian writes join the caller's transaction
-// or open one for its tenant, committing with the approval that requested them.
-// Operator/session operations join an ambient transaction or use the root
-// connection. Login, refresh, switch and logout open an administrative unit
-// before a tenant is known; school statements apply the runtime's tenant filter.
 func New(dependencies Dependencies) (identityaccess.Owner, error) {
 	if dependencies.DB == nil || dependencies.Observe == nil {
 		return nil, errors.New("identity access compose: all dependencies are required")
@@ -120,9 +116,16 @@ func New(dependencies Dependencies) (identityaccess.Owner, error) {
 	}, nil
 }
 
-// composeBesideEngine composes the capabilities the owner carries beside its
-// services: the demo access, the Träger accounts and the caterer flows.
 func composeBesideEngine(dependencies Dependencies, auth *application.AccountAuthentication, store *postgres.Store, runAdmin func(context.Context, func(context.Context) error) error, flows application.MFAFlows, runtime tenantRuntime) (*identityaccess.DemoAccess, *application.TraegerAccounts, *identityaccess.CatererAccess, error) {
+	if dependencies.Demo != nil && dependencies.Demo.CRMEnabled {
+		provider, err := hubspot.NewDefault(dependencies.Demo.CRMToken)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		demo := *dependencies.Demo
+		demo.CRMJobs = &application.DemoCRMWorker{Store: store, Provider: provider, Execute: runAdmin, Now: dependencies.Now}
+		dependencies.Demo = &demo
+	}
 	demoAccess, traegerAccounts, err := newPortalAccess(dependencies, auth, store, runAdmin)
 	if err != nil {
 		return nil, nil, nil, err
@@ -131,7 +134,6 @@ func composeBesideEngine(dependencies Dependencies, auth *application.AccountAut
 	return demoAccess, traegerAccounts, caterers, err
 }
 
-// NewGuardianInvitationReads joins ambient transactions without the full owner.
 func NewGuardianInvitationReads(db *bun.DB, now func() time.Time) (identityaccess.GuardianInvitationReads, error) {
 	if db == nil {
 		return nil, errors.New("identity access compose: the guardian invitation reads need the database")
@@ -146,7 +148,6 @@ func NewGuardianInvitationInvalidation(db *bun.DB, now func() time.Time) (identi
 	return application.NewGuardianInvitationInvalidation(postgres.NewStore(db, clockOrReal(now))), nil
 }
 
-// clockOrReal binds the real clock where the root leaves it nil (ADR 0261).
 func clockOrReal(now func() time.Time) func() time.Time {
 	if now == nil {
 		return time.Now

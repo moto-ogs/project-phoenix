@@ -93,7 +93,7 @@ func (req *ServiceTermsRequest) Bind(*http.Request) error { return nil }
 // FamilyBillingRequest is the body of PUT /traeger/family-billing: the
 // deviation of the family of a contract of the Träger.
 type FamilyBillingRequest struct {
-	ContractID      int64                 `json:"contract_id"`
+	ContractID      common.ID             `json:"contract_id"`
 	RecipientKind   string                `json:"recipient_kind"`
 	SecondFirstName string                `json:"second_first_name"`
 	SecondLastName  string                `json:"second_last_name"`
@@ -111,7 +111,7 @@ func (req *FamilyBillingRequest) Bind(*http.Request) error { return nil }
 
 func (req *FamilyBillingRequest) input() capability.FamilyBillingInput {
 	return capability.FamilyBillingInput{
-		ContractID: req.ContractID, RecipientKind: req.RecipientKind, SecondFirstName: req.SecondFirstName, SecondLastName: req.SecondLastName,
+		ContractID: req.ContractID.Int64(), RecipientKind: req.RecipientKind, SecondFirstName: req.SecondFirstName, SecondLastName: req.SecondLastName,
 		PayerFirstName: req.PayerFirstName, PayerLastName: req.PayerLastName, PayerEmail: req.PayerEmail,
 		PayerAddress: (*capability.PostalAddress)(req.PayerAddress), PaymentMethod: req.PaymentMethod, DueDay: req.DueDay, DebtorNumber: req.DebtorNumber,
 	}

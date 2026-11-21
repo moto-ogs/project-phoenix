@@ -252,7 +252,7 @@ func markHandoverAbsent(report *classday.DayReport, absent []int64) {
 	}
 	for i := range report.Rows {
 		row := &report.Rows[i]
-		if !row.NoCare() && marked[row.StudentID] {
+		if !row.NoCare() && marked[row.StudentID.Int64()] {
 			row.HandoverAbsent = true
 		}
 	}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -20,7 +21,7 @@ func (s *service) CreateGroupSupervisor(ctx context.Context, supervisor *ports.G
 }
 
 func (s *service) createGroupSupervisor(ctx context.Context, supervisor *ports.GroupSupervisor) error {
-	if err := s.lockStaffForSupervision(ctx, supervisor.StaffID); err != nil {
+	if err := s.lockStaffForSupervision(ctx, supervisor.StaffID.Int64()); err != nil {
 		return &ActiveError{Op: "CreateGroupSupervisor", Err: err}
 	}
 
@@ -28,12 +29,12 @@ func (s *service) createGroupSupervisor(ctx context.Context, supervisor *ports.G
 	// active.groups row lock serializes this write with session absorption
 	// (absorbUnsupervisedOpenGroups) and ClaimActiveGroup, so a supervisor
 	// cannot attach to a group that a concurrent absorption is ending.
-	if err := s.validateActiveGroupOpenForUpdate(ctx, supervisor.GroupID); err != nil {
+	if err := s.validateActiveGroupOpenForUpdate(ctx, supervisor.GroupID.Int64()); err != nil {
 		return &ActiveError{Op: "CreateGroupSupervisor", Err: err}
 	}
 
 	// Check if staff is already supervising this group (only check active supervisors)
-	supervisors, err := s.SupervisorRepo.FindByActiveGroupID(ctx, supervisor.GroupID, true)
+	supervisors, err := s.SupervisorRepo.FindByActiveGroupID(ctx, supervisor.GroupID.Int64(), true)
 	if err != nil {
 		return &ActiveError{Op: "CreateGroupSupervisor", Err: ErrDatabaseOperation}
 	}
@@ -48,7 +49,7 @@ func (s *service) createGroupSupervisor(ctx context.Context, supervisor *ports.G
 	if s.SupervisorRepo.Create(ctx, supervisor) != nil {
 		return &ActiveError{Op: "CreateGroupSupervisor", Err: ErrDatabaseOperation}
 	}
-	s.queueSupervisionRefresh(ctx, supervisor.GroupID, activeSupervisionReasonSupervisorsChanged)
+	s.queueSupervisionRefresh(ctx, supervisor.GroupID.Int64(), activeSupervisionReasonSupervisorsChanged)
 
 	// Taking over a supervision that starts today means the staff member is
 	// working right now — auto-open their work session so they show as
@@ -59,7 +60,7 @@ func (s *service) createGroupSupervisor(ctx context.Context, supervisor *ports.G
 		if s.attendancePrincipal(ctx).IsIoT {
 			source = stampSourceNFC
 		}
-		s.ensureStaffPresence(ctx, supervisor.StaffID, source)
+		s.ensureStaffPresence(ctx, supervisor.StaffID.Int64(), source)
 	}
 
 	return nil
@@ -77,7 +78,7 @@ func (s *service) EndSupervision(ctx context.Context, id int64) error {
 		return &ActiveError{Op: "EndSupervision", Err: ErrGroupSupervisorNotFound}
 	}
 	return s.runInSessionTx(ctx, func(txCtx context.Context) error {
-		group, err := s.GroupRepo.FindByIDForUpdate(txCtx, supervision.GroupID)
+		group, err := s.GroupRepo.FindByIDForUpdate(txCtx, supervision.GroupID.Int64())
 		if err != nil {
 			return &ActiveError{Op: "EndSupervision", Err: fmt.Errorf("lock active group: %w", err)}
 		}
@@ -94,7 +95,7 @@ func (s *service) EndSupervision(ctx context.Context, id int64) error {
 		if err := s.SupervisorRepo.EndSupervision(txCtx, id); err != nil {
 			return &ActiveError{Op: "EndSupervision", Err: fmt.Errorf("end supervision failed: %w", err)}
 		}
-		s.queueSupervisionRefresh(txCtx, supervision.GroupID, activeSupervisionReasonSupervisorsChanged)
+		s.queueSupervisionRefresh(txCtx, supervision.GroupID.Int64(), activeSupervisionReasonSupervisorsChanged)
 		return nil
 	})
 }
@@ -138,10 +139,10 @@ func (s *service) releaseSupervisionLocked(ctx context.Context, activeGroupID, s
 	if others == 0 {
 		return nil, ErrLastSupervisor
 	}
-	if err := s.SupervisorRepo.EndSupervision(ctx, own.ID); err != nil {
+	if err := s.SupervisorRepo.EndSupervision(ctx, own.ID.Int64()); err != nil {
 		return nil, fmt.Errorf("end supervision failed: %w", err)
 	}
-	ended, err := s.SupervisorRepo.FindByID(ctx, own.ID)
+	ended, err := s.SupervisorRepo.FindByID(ctx, own.ID.Int64())
 	if err != nil {
 		return nil, fmt.Errorf("reread ended supervision: %w", err)
 	}
@@ -157,11 +158,11 @@ func releasedSupervision(supervisors []*ports.GroupSupervisor, staffID int64) (*
 	var own *ports.GroupSupervisor
 	others := map[int64]struct{}{}
 	for _, supervisor := range supervisors {
-		if supervisor.StaffID == staffID {
+		if supervisor.StaffID == ident.ID(staffID) {
 			own = supervisor
 			continue
 		}
-		others[supervisor.StaffID] = struct{}{}
+		others[supervisor.StaffID.Int64()] = struct{}{}
 	}
 	return own, len(others)
 }

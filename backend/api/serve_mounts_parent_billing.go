@@ -30,6 +30,7 @@ import (
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // mountParentBillingRoutes serves the Elternabrechnung (ADR 0088, #4664, ADR
@@ -206,7 +207,7 @@ func (s parentBillingCareSchools) TraegerSchools(ctx context.Context, organizati
 	result := make([]parentbilling.CareSchool, 0, len(schools))
 	for _, school := range schools {
 		if !school.IsDeleted() {
-			result = append(result, parentbilling.CareSchool{ID: school.ID, Name: school.Name})
+			result = append(result, parentbilling.CareSchool{ID: ident.ID(school.ID), Name: school.Name})
 		}
 	}
 	slices.SortFunc(result, func(a, b parentbilling.CareSchool) int { return strings.Compare(a.Name, b.Name) })
@@ -513,9 +514,9 @@ func (b parentBillingHolidayRegistrations) HolidayWeeks(ctx context.Context, lin
 	for i, week := range offer.Weeks {
 		models := make([]parentbilling.HolidayTimeModel, len(week.TimeModels))
 		for j, model := range week.TimeModels {
-			models[j] = parentbilling.HolidayTimeModel{ID: model.ID, Name: model.Name, PriceCents: int64(model.PriceCents)}
+			models[j] = parentbilling.HolidayTimeModel{ID: model.ID.Int64(), Name: model.Name, PriceCents: int64(model.PriceCents)}
 		}
-		weeks[i] = parentbilling.HolidayWeek{ID: week.ID, StartsOn: week.StartsOn, EndsOn: week.EndsOn, TimeModels: models}
+		weeks[i] = parentbilling.HolidayWeek{ID: week.ID.Int64(), StartsOn: week.StartsOn, EndsOn: week.EndsOn, TimeModels: models}
 		weeks[i].CareDays = week.CareDays
 		if week.LunchPriceCents != nil {
 			cents := int64(*week.LunchPriceCents)
@@ -649,11 +650,11 @@ func (b parentBillingBillingRegistrations) ConfirmedHolidayRegistrations(ctx con
 	for i, registration := range confirmed {
 		children := make([]parentbilling.HolidayBillingChild, len(registration.Children))
 		for j, child := range registration.Children {
-			children[j] = parentbilling.HolidayBillingChild{ID: child.ID, FirstName: child.FirstName, LastName: child.LastName,
+			children[j] = parentbilling.HolidayBillingChild{ID: child.ID.Int64(), FirstName: child.FirstName, LastName: child.LastName,
 				BirthDate: child.BirthDate}
 		}
 		registrations[i] = parentbilling.HolidayBillingRegistration{
-			ID: registration.ID, GuardianFirstName: registration.GuardianFirstName, GuardianLastName: registration.GuardianLastName,
+			ID: registration.ID.Int64(), GuardianFirstName: registration.GuardianFirstName, GuardianLastName: registration.GuardianLastName,
 			GuardianEmail: registration.GuardianEmail, DebtorNumber: registration.DebtorNumber, Children: children,
 		}
 		if address := registration.GuardianAddress; address != nil {
@@ -675,14 +676,14 @@ func (b parentBillingBillingRegistrations) HolidayProofRegistrations(ctx context
 	}
 	proofs := make(map[int64]bool, len(registrations))
 	for _, registration := range registrations {
-		proofs[registration.ID] = registration.HasBenefitsProof
+		proofs[registration.ID.Int64()] = registration.HasBenefitsProof
 	}
 	return proofs, nil
 }
 
 func parentBillingRegistration(detail enrollmentOwner.HolidayRegistrationDetail) parentbilling.HolidayRegistration {
 	registration := parentbilling.HolidayRegistration{
-		ID: detail.ID, Status: detail.Status, SubmittedAt: detail.SubmittedAt, BenefitsDeclared: detail.BenefitsDeclared,
+		ID: detail.ID.Int64(), Status: detail.Status, SubmittedAt: detail.SubmittedAt, BenefitsDeclared: detail.BenefitsDeclared,
 		DebtorNumber: detail.DebtorNumber, Children: make([]parentbilling.HolidayChild, len(detail.Children)),
 		MovedUp:           promotedRegistrations(detail.Promotions),
 		GuardianFirstName: detail.GuardianFirstName, GuardianLastName: detail.GuardianLastName, GuardianEmail: detail.GuardianEmail,
@@ -695,8 +696,8 @@ func parentBillingRegistration(detail enrollmentOwner.HolidayRegistrationDetail)
 				replacements[k] = parentbilling.HolidayBookingReplacement{WeekID: previous.WeekID, WeekStartsOn: previous.WeekStartsOn, WeekEndsOn: previous.WeekEndsOn}
 			}
 			bookings[j] = parentbilling.HolidayBooking{
-				WeekID: booking.WeekID, WeekStartsOn: booking.WeekStartsOn, WeekEndsOn: booking.WeekEndsOn,
-				TimeModelID: booking.TimeModelID, TimeModelName: booking.TimeModelName, PriceCents: int64(booking.PriceCents),
+				WeekID: booking.WeekID.Int64(), WeekStartsOn: booking.WeekStartsOn, WeekEndsOn: booking.WeekEndsOn,
+				TimeModelID: booking.TimeModelID.Int64(), TimeModelName: booking.TimeModelName, PriceCents: int64(booking.PriceCents),
 				BookedDays:    len(booking.Days),
 				Days:          booking.Days,
 				Waitlisted:    booking.Placement != enrollmentOwner.HolidayPlacementPlaced,
@@ -708,7 +709,7 @@ func parentBillingRegistration(detail enrollmentOwner.HolidayRegistrationDetail)
 			}
 		}
 		registration.Children[i] = parentbilling.HolidayChild{
-			ID: child.ID, Position: i + 1, FirstName: child.FirstName, LastName: child.LastName, BirthDate: child.BirthDate, Bookings: bookings,
+			ID: child.ID.Int64(), Position: i + 1, FirstName: child.FirstName, LastName: child.LastName, BirthDate: child.BirthDate, Bookings: bookings,
 		}
 	}
 	return registration

@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ErrAbsenceRebookingBlocked marks a rebooking the Leitung has to resolve
@@ -211,12 +212,12 @@ func (s *staffAbsenceService) loadRebookedAbsences(ctx context.Context, staffID 
 	}
 	byID := make(map[int64]workforce.StaffAbsence, len(storedAbsences))
 	for _, absence := range storedAbsences {
-		byID[absence.ID] = absence
+		byID[absence.ID.Int64()] = absence
 	}
 	entries := make([]rebookedAbsence, 0, len(ids))
 	for _, id := range ids {
 		storedAbsence, found := byID[id]
-		if !found || storedAbsence.StaffID != staffID {
+		if !found || storedAbsence.StaffID != ident.ID(staffID) {
 			return nil, workforce.ErrAbsenceNotFound
 		}
 		absence := absenceToRecord(storedAbsence)

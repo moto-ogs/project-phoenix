@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	movebinding "github.com/moto-ogs/project-phoenix/roots/openroommovebinding"
 
@@ -78,7 +79,7 @@ func (p *recordingPresence) MoveStudentsToOpenRoomSessionAuthorized(ctx context.
 	p.moves = append(p.moves, recordedMove{sessionID: sessionID, studentIDs: studentIDs, auth: auth})
 	_, inTx := tenant.TransactionFromContext(ctx)
 	p.inTx = append(p.inTx, inTx)
-	return &studentpresence.StudentMoveResult{Moved: studentIDs}, nil
+	return &studentpresence.StudentMoveResult{Moved: ident.IDs(studentIDs)}, nil
 }
 
 func (p *recordingPresence) CheckInStudentsToOpenRoomSessionAuthorized(ctx context.Context, studentIDs []int64, sessionID, staffID int64, auth studentpresence.StudentMoveAuthorization, _ bool) (*studentpresence.StudentMoveResult, error) {
@@ -90,7 +91,7 @@ func (p *recordingPresence) CheckInStudentsToOpenRoomSessionAuthorized(ctx conte
 	p.moves = append(p.moves, recordedMove{sessionID: sessionID, studentIDs: studentIDs, auth: auth, checkedInBy: staffID})
 	_, inTx := tenant.TransactionFromContext(ctx)
 	p.inTx = append(p.inTx, inTx)
-	return &studentpresence.StudentMoveResult{Moved: studentIDs, CheckedIn: studentIDs}, nil
+	return &studentpresence.StudentMoveResult{Moved: ident.IDs(studentIDs), CheckedIn: ident.IDs(studentIDs)}, nil
 }
 
 type moveStack struct {

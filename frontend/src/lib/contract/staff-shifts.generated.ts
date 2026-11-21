@@ -5,7 +5,6 @@ import {
   bool,
   fileAnswer,
   int64String,
-  int64StringOrNumber,
   nullable,
   object,
   optional,
@@ -43,7 +42,7 @@ export interface ShiftDeletedResponse {
 }
 
 export const ShiftDeletedResponseSchema: z.ZodType<ShiftDeletedResponse, unknown> = object<ShiftDeletedResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
 });
 
 /** Go: staffshifts.OverviewStaffResponse */
@@ -54,7 +53,7 @@ export interface OverviewStaffResponse {
 }
 
 export const OverviewStaffResponseSchema: z.ZodType<OverviewStaffResponse, unknown> = object<OverviewStaffResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   first_name: str,
   last_name: str,
 });
@@ -90,13 +89,13 @@ export interface AssignmentResponse {
 }
 
 export const AssignmentResponseSchema: z.ZodType<AssignmentResponse, unknown> = object<AssignmentResponse>({
-  instance_id: int64StringOrNumber,
-  staff_id: int64StringOrNumber,
+  instance_id: int64String,
+  staff_id: int64String,
   date: str,
   start_time: str,
   end_time: str,
   activity_title: str,
-  room_id: int64StringOrNumber,
+  room_id: int64String,
   room_name: str,
   status: str,
   is_absent: bool,
@@ -129,7 +128,7 @@ export interface WeeklySummaryResponse {
 }
 
 export const WeeklySummaryResponseSchema: z.ZodType<WeeklySummaryResponse, unknown> = object<WeeklySummaryResponse>({
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   week_start: str,
   planned_minutes: safeInt,
   target_minutes: nullable(safeInt),
@@ -179,14 +178,14 @@ export interface SeriesDetailResponse {
 
 export const SeriesDetailResponseSchema: z.ZodType<SeriesDetailResponse, unknown> = object<SeriesDetailResponse>({
   id: int64String,
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   weekdays: nullable(arr(safeInt)),
   start_time: str,
   end_time: str,
   break_minutes: safeInt,
-  shift_type_id: nullable(int64StringOrNumber),
+  shift_type_id: nullable(int64String),
   notes: optional(str),
-  calendar_period_id: int64StringOrNumber,
+  calendar_period_id: int64String,
   week_pattern: safeInt,
   valid_from: str,
   valid_until: nullable(str),

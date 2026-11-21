@@ -12,6 +12,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -38,7 +39,7 @@ func TestSEPAReturnReadsOnlyTheTraegersOwnBankData(t *testing.T) {
 		other := seedDebitScope(t, ctx, tx, otherScope, otherSchool, "DE98ABC09999999999", "SJR-RB-1")
 		collectOn := calendar.NewDate(2029, 6, 4)
 		require.NoError(t, store.SubmitSEPADebits(ctx, own.organization, 0, fmt.Sprintf("MOTO-RUECKGABE-%d", own.organization),
-			[]parentbilling.SEPADebit{{ID: own.debit, AmountCents: 7000, CollectOn: collectOn}},
+			[]parentbilling.SEPADebit{{ID: ident.ID(own.debit), AmountCents: 7000, CollectOn: collectOn}},
 			map[int64]calendar.Date{own.mandate: collectOn}))
 		_, err = tx.ExecContext(ctx, `UPDATE parent_billing.sepa_debits SET status = 'submitted', message_id = ?, submitted_at = NOW(),
 			submitted_amount_cents = 7000, collect_on = ? WHERE id = ?`, fmt.Sprintf("MOTO-RUECKGABE-%d", other.organization), collectOn, other.debit)
@@ -54,7 +55,7 @@ func TestSEPAReturnReadsOnlyTheTraegersOwnBankData(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, debits, 1, "only the Träger's own debit")
 		debit := debits[0]
-		assert.Equal(t, own.debit, debit.Debit.ID)
+		assert.Equal(t, ident.ID(own.debit), debit.Debit.ID)
 		assert.Equal(t, parentbilling.DebitSubmitted, debit.Debit.Status)
 		assert.Equal(t, int64(7000), debit.Debit.AmountCents, "the submitted amount")
 		assert.Equal(t, collectOn, debit.Debit.CollectOn)

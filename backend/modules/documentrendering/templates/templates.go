@@ -163,6 +163,20 @@ func Default(kind Kind) Template {
 	return catalog[kind].standard
 }
 
+// DefaultForOne is the standard template of kind for a letter to one
+// person (ADR 0294, #7463): the text of Default in the du-form, with its
+// closing. It carries no salutation; the letter greets the person by name.
+// A kind no letter to one person uses has none and keeps Default.
+func DefaultForOne(kind Kind) Template {
+	entry := catalog[kind]
+	if entry.forOne.Body == "" {
+		return entry.standard
+	}
+	one := entry.forOne
+	one.Closing = entry.standard.Closing
+	return one
+}
+
 // Normalize trims every part and unifies line breaks.
 func Normalize(template Template) Template {
 	clean := func(text string) string {

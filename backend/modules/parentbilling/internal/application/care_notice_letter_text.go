@@ -33,7 +33,7 @@ func feeNoticeLetter(notice parentbilling.CareNotice, head parentbilling.Letterh
 			notice.Recipient.SecondName, notice.Recipient.Address),
 		Facts:      careNoticeFacts(notice, head),
 		Subject:    fmt.Sprintf("%s für die Betreuung %d", strings.Fields(title)[0], notice.Year),
-		Salutation: billingSalutation(notice.Recipient.Kind, notice.Recipient.FirstName, notice.Recipient.LastName),
+		Salutation: recipientAddressee(notice.Recipient).salutation,
 		Closing:    nonBlank("Mit freundlichen Grüßen", firstLine(sender)),
 		Footer:     nonBlank(append(textLines(head.FooterText), bankLine(head.BankAccount))...),
 	}
@@ -85,7 +85,7 @@ func careNoticeBlocks(notice parentbilling.CareNotice, head parentbilling.Letter
 		{Heading: "II. Abrechnung", Text: "Der Gesamtbetrag ist in Monatsraten zum Monatsersten fällig. Raten für Monate, die schon begonnen haben, sind sofort fällig. " +
 			careNoticePaymentText(notice), Facts: careNoticeInstallmentFacts(notice.Installments, change)},
 	}
-	if question := questionText(head); question != "" {
+	if question := questionText(head, recipientAddressee(notice.Recipient)); question != "" {
 		blocks = append(blocks, LetterBlock{Text: question})
 	}
 	if remedy := strings.TrimSpace(filledLegalRemedy(notice, head)); remedy != "" {
@@ -133,13 +133,13 @@ func careNoticeInstallmentFacts(installments []parentbilling.CareNoticeInstallme
 	return facts
 }
 
-// careNoticePaymentText says what the family does with the rates.
+// careNoticePaymentText says what the recipient does with the rates.
 func careNoticePaymentText(notice parentbilling.CareNotice) string {
 	if notice.PaymentMethod == parentbilling.PaymentDirectDebit {
 		return "Die fälligen Raten werden per SEPA-Lastschrift eingezogen. Bitte nicht überweisen."
 	}
-	return "Bitte überweist jede Rate bis zum Fälligkeitstag auf das Konto unten. Gebt dabei die Bescheid-Nr. " +
-		notice.Number + " an."
+	return recipientAddressee(notice.Recipient).say("Bitte überweist jede Rate bis zum Fälligkeitstag auf das Konto unten. Gebt dabei die Bescheid-Nr. ",
+		"Bitte überweise jede Rate bis zum Fälligkeitstag auf das Konto unten. Gib dabei die Bescheid-Nr. ") + notice.Number + " an."
 }
 
 func noticePeriodText(from, until calendar.Date) string {

@@ -1,5 +1,6 @@
 import { ApiError, apiErrorFromResponse } from "./api-error";
 import type {
+  assignmentRequest,
   SubstitutionAssignmentResult,
   SubstitutionOverviewResult,
 } from "./contract/substitutions.generated";
@@ -27,11 +28,10 @@ import {
   prepareApplyDeviationsBody,
   prepareBulkSubstitutionBody,
 } from "./timetable-helpers";
+import type { ScheduleSubstitutionResult } from "./contract/substitutions.generated";
 import type {
   ApplyDeviationsInput,
   ApplyDeviationsResponse,
-  BackendApplyDeviationsResponse,
-  BackendBulkSubstitutionResponse,
   BulkSubstitutionInput,
   BulkSubstitutionResponse,
 } from "./timetable-types";
@@ -83,22 +83,23 @@ class SubstitutionService {
       // Weg. Der Absturztext des Anzeigewegs ist dafür die richtige Folge.
       throw new Error("cancellations do not go through a substitution");
     }
+    const body = prepareApplyDeviationsBody(input);
     const response = await sessionFetch("/api/substitutions", {
       method: "POST",
       credentials: "include",
       body: JSON.stringify({
         type: "schedule_substitution",
         schedule_substitution: {
-          instance_id: Number(instanceId),
-          ...prepareApplyDeviationsBody(input),
+          ...body,
+          instance_id: instanceId,
         },
-      }),
+      } satisfies assignmentRequest),
     });
     if (!response.ok) throw await substitutionError(response);
     const envelope =
       (await response.json()) as SubstitutionProxyEnvelope<unknown>;
     return mapApplyDeviations(
-      substitutionAssignmentResult<BackendApplyDeviationsResponse>(
+      substitutionAssignmentResult<ScheduleSubstitutionResult>(
         unwrapSubstitutionProxyEnvelope(envelope),
         "schedule_substitution",
       ),
@@ -108,21 +109,22 @@ class SubstitutionService {
   async applyBulkSubstitution(
     input: BulkSubstitutionInput,
   ): Promise<BulkSubstitutionResponse> {
+    const body = prepareBulkSubstitutionBody(input);
     const response = await sessionFetch("/api/substitutions", {
       method: "POST",
       credentials: "include",
       body: JSON.stringify({
         type: "schedule_substitution",
         schedule_substitution: {
-          whole_days: prepareBulkSubstitutionBody(input),
+          whole_days: body,
         },
-      }),
+      } satisfies assignmentRequest),
     });
     if (!response.ok) throw await substitutionError(response);
     const envelope =
       (await response.json()) as SubstitutionProxyEnvelope<unknown>;
     return mapBulkSubstitution(
-      substitutionAssignmentResult<BackendBulkSubstitutionResponse>(
+      substitutionAssignmentResult<ScheduleSubstitutionResult>(
         unwrapSubstitutionProxyEnvelope(envelope),
         "schedule_substitution",
       ),

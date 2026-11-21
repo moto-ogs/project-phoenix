@@ -6,7 +6,7 @@ import {
   calendarDate,
   fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   multipart,
   nullable,
   object,
@@ -46,8 +46,8 @@ export interface SEPAMandate {
 }
 
 export const SEPAMandateSchema: z.ZodType<SEPAMandate, unknown> = object<SEPAMandate>({
-  id: int64StringOrNumber,
-  contract_id: int64StringOrNumber,
+  id: int64String,
+  contract_id: int64String,
   family_email: str,
   party_first_name: str,
   party_last_name: str,
@@ -79,7 +79,7 @@ export interface SEPAMandateImportEntry {
 
 export const SEPAMandateImportEntrySchema: z.ZodType<SEPAMandateImportEntry, unknown> = object<SEPAMandateImportEntry>({
   file: str,
-  account_id: nullable(int64StringOrNumber),
+  account_id: nullable(int64String),
   imported_at: instant,
   mandates: safeInt,
 });
@@ -97,11 +97,11 @@ export interface SEPAMandateEvent {
 }
 
 export const SEPAMandateEventSchema: z.ZodType<SEPAMandateEvent, unknown> = object<SEPAMandateEvent>({
-  id: int64StringOrNumber,
+  id: int64String,
   action: str,
   source: str,
   fields: nullable(arr(str)),
-  account_id: nullable(int64StringOrNumber),
+  account_id: nullable(int64String),
   occurred_at: instant,
   import_file: optional(str),
   import_line: optional(safeInt),
@@ -109,7 +109,7 @@ export const SEPAMandateEventSchema: z.ZodType<SEPAMandateEvent, unknown> = obje
 
 /** Go: parentbillinghttp.SEPAMandateRequest */
 export interface SEPAMandateRequest {
-  contract_id?: number;
+  contract_id?: string;
   reference?: string;
   signed_on?: string | null;
   kind?: string;
@@ -229,12 +229,12 @@ export const SEPAMandateImportRowSchema: z.ZodType<SEPAMandateImportRow, unknown
   iban_masked: str,
   bic: str,
   account_holder: str,
-  contract_id: optional(int64StringOrNumber),
+  contract_id: optional(int64String),
   payer_first_name: str,
   payer_last_name: str,
   sequence: str,
   last_collected_on: nullable(calendarDate),
-  mandate_id: optional(int64StringOrNumber),
+  mandate_id: optional(int64String),
   problems: nullable(arr(SEPAMandateImportProblemSchema)),
   hints: nullable(arr(str)),
   debtor_number: optional(str),

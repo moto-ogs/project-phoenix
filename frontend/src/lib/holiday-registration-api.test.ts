@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { PublicHolidayRegistrationOfferResponse as WireHolidayRegistrationOffer } from "./contract/traeger-holiday-registrations.generated";
 import {
   fetchHolidayRegistrationFamily,
+  fetchHolidayRegistrationOffer,
   quoteHolidayContribution,
 } from "./holiday-registration-api";
 
@@ -187,7 +189,7 @@ describe("quoteHolidayContribution (#5664)", () => {
 
     await quoteHolidayContribution(
       "abc",
-      [[{ week_id: 1, time_model_id: 2 }], []],
+      [[{ week_id: "1", time_model_id: "2" }], []],
       false,
       [2, 1],
     );
@@ -196,10 +198,130 @@ describe("quoteHolidayContribution (#5664)", () => {
     const body = JSON.parse(String(init.body)) as unknown;
     expect(body).toEqual({
       children: [
-        { bookings: [{ week_id: 1, time_model_id: 2 }], age_rank: 2 },
+        { bookings: [{ week_id: "1", time_model_id: "2" }], age_rank: 2 },
         { bookings: [], age_rank: 1 },
       ],
       benefits_declared: false,
     });
   });
+});
+
+describe("fetchHolidayRegistrationOffer form (#2353)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function offer(
+    form: Partial<WireHolidayRegistrationOffer["form"]>,
+  ): WireHolidayRegistrationOffer {
+    return {
+      traeger_name: "Träger",
+      name: "Herbstferien",
+      registration_opens_on: "2026-09-01",
+      registration_closes_on: "2026-10-01",
+      binding: true,
+      notes: "",
+      open: true,
+      weeks: null,
+      max_days_per_child: null,
+      allocation_mode: "",
+      criteria: null,
+      schools: null,
+      captcha_site_key: "",
+      form: {
+        version: 2,
+        fields: [
+          {
+            key: "klasse",
+            label: "Klasse",
+            type: "text",
+            required: true,
+            sort_order: 1,
+            health: false,
+            share_with_host: false,
+          },
+        ],
+        legal_blocks: null,
+        address_requirement: "off",
+        health_requirement: "required",
+        ...form,
+      },
+      consent_texts: {
+        version: 1,
+        retention_days: 90,
+        privacy_consent: "",
+        health_consent: "",
+        binding_confirmed: "",
+        custody_confirmed: "",
+        declaration_name: "",
+      },
+      holiday_wish_mode: "off",
+    };
+  }
+
+  function answerWith(data: WireHolidayRegistrationOffer): void {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(answer(200, { status: "success", data })),
+    );
+  }
+
+  it("reads the questions and building blocks of the version", async () => {
+    answerWith(offer({}));
+
+    const { form } = await fetchHolidayRegistrationOffer("tok");
+
+    expect(form.fields.map((field) => [field.key, field.required])).toEqual([
+      ["klasse", true],
+    ]);
+    expect(form.healthRequirement).toBe("required");
+  });
+
+  // Read only, yet leaving an unknown question or rule out could hide a
+  // required answer the backend refuses when the registration arrives.
+  it.each([
+    [
+      "a field type",
+      {
+        fields: [
+          {
+            key: "unterschrift",
+            label: "Unterschrift",
+            type: "signature_pad",
+            required: true,
+            sort_order: 1,
+            health: false,
+            share_with_host: false,
+          },
+        ],
+      },
+    ],
+    [
+      "a legal block kind",
+      {
+        legal_blocks: [
+          {
+            key: "x",
+            kind: "waiver",
+            title: "",
+            label: "",
+            text: "",
+            required: true,
+            enabled: true,
+            sort_order: 0,
+          },
+        ],
+      },
+    ],
+    ["a health requirement", { health_requirement: "strict" }],
+  ] satisfies [string, Partial<WireHolidayRegistrationOffer["form"]>][])(
+    "fails the read on %s this build does not know",
+    async (_name, form) => {
+      answerWith(offer(form));
+
+      await expect(fetchHolidayRegistrationOffer("tok")).rejects.toThrow(
+        /^contract: HolidayRegistrationForm\..+ has an unknown value$/,
+      );
+    },
+  );
 });

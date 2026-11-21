@@ -12,6 +12,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Sentinel errors for handler mapping (#1417).
@@ -284,14 +285,14 @@ func (s *staffMonthCloseService) closedMonthsByStaff(ctx context.Context, staffI
 		if upperBound.before(month) {
 			continue
 		}
-		closed := result[snapshot.StaffID]
+		closed := result[snapshot.StaffID.Int64()]
 		if month == key {
 			closed.keyClosed = true
 		}
 		if closed.latest == nil || closed.latest.before(month) {
 			closed.latest = &month
 		}
-		result[snapshot.StaffID] = closed
+		result[snapshot.StaffID.Int64()] = closed
 	}
 	return result, nil
 }
@@ -325,7 +326,7 @@ func (s *staffMonthCloseService) closeStaffMonth(
 		return nil, false, fmt.Errorf("failed to compute month summary for staff %d: %w", staffID, err)
 	}
 	snapshot := &MonthSnapshot{
-		StaffID:               staffID,
+		StaffID:               ident.ID(staffID),
 		Year:                  key.Year,
 		Month:                 key.Month,
 		ClosingBalanceMinutes: summary.ClosingBalanceMinutes,
@@ -337,7 +338,7 @@ func (s *staffMonthCloseService) closeStaffMonth(
 		CreditedMinutes:   summary.CreditedSickMinutes + summary.CreditedVacationMinutes + summary.CreditedTrainingMinutes + summary.CreditedOtherMinutes,
 		AdjustmentMinutes: summary.AdjustmentMinutes,
 		ClosedAt:          closedAt,
-		ClosedBy:          closer.staffID,
+		ClosedBy:          ident.ID(closer.staffID),
 		ClosedByAccountID: closer.accountID,
 		CloseReason:       reason,
 		Source:            closer.source,
@@ -402,10 +403,10 @@ func (s *staffMonthCloseService) reopenStaffMonth(ctx context.Context, staffID, 
 	if byTraeger {
 		snapshot.ReopenedByAccountID = &reopenedBy
 	} else {
-		snapshot.ReopenedBy = &reopenedBy
+		snapshot.ReopenedBy = (*ident.ID)(&reopenedBy)
 	}
 	snapshot.ReopenReason = trimmedReason
-	if _, err := s.snapshotRepo.ReopenMonthSnapshot(ctx, snapshot.ID, reopenedBy, now, trimmedReason); err != nil {
+	if _, err := s.snapshotRepo.ReopenMonthSnapshot(ctx, snapshot.ID.Int64(), reopenedBy, now, trimmedReason); err != nil {
 		return fmt.Errorf("failed to reopen month snapshot: %w", err)
 	}
 

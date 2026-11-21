@@ -7682,7 +7682,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.traegerStaffSchools.TraegerSchools",
-      "binding_digest": "e066c13fc8cff32731e35c3933508e73",
+      "binding_digest": "eb6a1774ba951c26b6c1ca86736b229c",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffSchools.TraegerSchools",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListSchoolsByOrganization",
@@ -7690,7 +7690,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.traegerStaffSchools.TraegerSchools",
-      "binding_digest": "e7a3e6a0b2360ac4227d4ca6d37a56df",
+      "binding_digest": "b0815e0c4f0083083207737eb43635ae",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffSchools.TraegerSchools",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListSchoolsByOrganization",
@@ -7698,7 +7698,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.traegerStaffSchools.TraegerSchools",
-      "binding_digest": "4d72e1a3de1ee9d53b43d1edda302adb",
+      "binding_digest": "35fb97f0c12862119b9cfbb666141966",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffSchools.TraegerSchools",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Public holiday registration (spec #4611 user stories 26 and 28 to 31,
@@ -50,7 +51,7 @@ var (
 
 // HolidaySchool is a school of the Träger, by name.
 type HolidaySchool struct {
-	ID   int64
+	ID   ident.ID
 	Name string
 }
 
@@ -135,8 +136,8 @@ type HolidayAddress struct {
 // name the booked days of a week by days and are empty for a whole week
 // (#4701).
 type HolidayBookingInput struct {
-	WeekID      int64
-	TimeModelID int64
+	WeekID      ident.ID
+	TimeModelID ident.ID
 	Days        []calendar.Date
 	// Lunch books a lunch on every care day of the booking, in a week that
 	// offers lunch (#5631).
@@ -244,7 +245,7 @@ type HolidayRegistrationInput struct {
 // HolidayRegistrationReceipt confirms a stored registration. It repeats no
 // personal data.
 type HolidayRegistrationReceipt struct {
-	ID          int64
+	ID          ident.ID
 	SubmittedAt time.Time
 	// Placements say for every booking whether the child got a place or
 	// waits for one (#4699). They name the child by its position in the

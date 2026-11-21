@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -52,12 +53,12 @@ func TestFamilyChildrenFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		counts, err := store.FamilyChildCounts(ctx, own.organization)
 		require.NoError(t, err)
 		require.Len(t, counts, 1, "FamilyChildCounts of the Träger")
-		assert.Equal(t, contracts[own.organization], counts[0].ContractID)
+		assert.Equal(t, ident.ID(contracts[own.organization]), counts[0].ContractID)
 
 		count, found, err := store.FamilyChildCount(ctx, own.organization, family)
 		require.NoError(t, err)
 		require.True(t, found)
-		assert.Equal(t, contracts[own.organization], count.ContractID, "FamilyChildCount answers the own family, not the other Träger's")
+		assert.Equal(t, ident.ID(contracts[own.organization]), count.ContractID, "FamilyChildCount answers the own family, not the other Träger's")
 
 		// Even a foreign event carrying this row's ID must stay outside history.
 		for _, event := range []struct {
@@ -76,7 +77,7 @@ func TestFamilyChildrenFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		require.True(t, valid)
 		assert.Equal(t, 3, number, "confirmation history also names its Träger below RLS")
 
-		input := parentbilling.FamilyChildrenInput{ContractID: contracts[other.organization], Children: 3, ValidFrom: calendar.NewDate(2029, 9, 1)}
+		input := parentbilling.FamilyChildrenInput{ContractID: ident.ID(contracts[other.organization]), Children: 3, ValidFrom: calendar.NewDate(2029, 9, 1)}
 		_, err = tx.ExecContext(ctx, "SAVEPOINT foreign_contract")
 		require.NoError(t, err)
 		_, err = store.ConfirmFamilyChildren(ctx, own.organization, 0, "neu@example.org", input)
@@ -135,7 +136,7 @@ func TestFamilyChildrenStatementAfterConfirmationIsNewer(t *testing.T) {
 		require.NoError(t, tx.NewRaw(`INSERT INTO care_contract.contracts (organization_id, school_id, request_child_id)
 			VALUES (?, ?, ?) RETURNING id`, own.organization, own.school, own.contract).Scan(ctx, &contract))
 		_, err = store.ConfirmFamilyChildren(ctx, own.organization, 0, family,
-			parentbilling.FamilyChildrenInput{ContractID: contract, Children: 2, ValidFrom: calendar.NewDate(2029, 9, 1)})
+			parentbilling.FamilyChildrenInput{ContractID: ident.ID(contract), Children: 2, ValidFrom: calendar.NewDate(2029, 9, 1)})
 		require.NoError(t, err)
 		_, _, err = store.StateFamilyChildren(ctx, own.organization, 0, family, contract, 3, nil)
 		require.NoError(t, err)

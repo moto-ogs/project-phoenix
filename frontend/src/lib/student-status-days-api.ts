@@ -242,7 +242,7 @@ export async function bulkCreateStudentStatusDays(
   to: string,
   reason?: string,
 ): Promise<StatusDaysBulkCreatedResponse> {
-  const student_ids = studentIds.map(Number);
+  const student_ids = [...studentIds];
   const body: BulkCreateStudentStatusDaysRequest = reason
     ? { student_ids, status, from, to, reason }
     : { student_ids, status, from, to };

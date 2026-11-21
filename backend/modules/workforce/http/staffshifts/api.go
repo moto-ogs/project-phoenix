@@ -21,6 +21,7 @@ import (
 	"github.com/go-chi/render"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Middleware is the HTTP middleware shape the composition root supplies.
@@ -270,13 +271,13 @@ func (o *optionalString) UnmarshalJSON(data []byte) error {
 type ShiftResponse struct {
 	// IDs cross the JSON boundary as decimal strings. A JavaScript number cannot
 	// represent every PostgreSQL bigint value without rounding it.
-	ID           int64  `json:"id,string"`
-	StaffID      int64  `json:"staff_id"`
-	Date         string `json:"date"`
-	StartTime    string `json:"start_time"`
-	EndTime      string `json:"end_time"`
-	BreakMinutes int    `json:"break_minutes"`
-	ShiftTypeID  *int64 `json:"shift_type_id,omitempty"`
+	ID           int64     `json:"id,string"`
+	StaffID      ident.ID  `json:"staff_id"`
+	Date         string    `json:"date"`
+	StartTime    string    `json:"start_time"`
+	EndTime      string    `json:"end_time"`
+	BreakMinutes int       `json:"break_minutes"`
+	ShiftTypeID  *ident.ID `json:"shift_type_id,omitempty"`
 	// ShiftTypeName/ShiftTypeColor carry the resolved Schichtart so a staff
 	// member who cannot read the admin-only /api/shift-types endpoint still sees
 	// the label and color on their own shifts (#1844). Present only when the
@@ -303,12 +304,12 @@ type ShiftResponse struct {
 func ToShiftResponse(s workforce.PlannedShift) ShiftResponse {
 	resp := ShiftResponse{
 		ID:               s.ID,
-		StaffID:          s.StaffID,
+		StaffID:          ident.ID(s.StaffID),
 		Date:             s.Date,
 		StartTime:        FormatWallClock(s.StartTime),
 		EndTime:          FormatWallClock(s.EndTime),
 		BreakMinutes:     s.BreakMinutes,
-		ShiftTypeID:      s.ShiftTypeID,
+		ShiftTypeID:      (*ident.ID)(s.ShiftTypeID),
 		Notes:            s.Notes,
 		SeriesID:         s.SeriesID,
 		Detached:         s.Detached,
@@ -675,7 +676,7 @@ type ReplacementRequest struct {
 
 // ShiftDeletedResponse names the shift a delete removed.
 type ShiftDeletedResponse struct {
-	ID int64 `json:"id"`
+	ID ident.ID `json:"id"`
 }
 
 // CancellationResponse returns the updated origin plus the created covers.
@@ -792,5 +793,5 @@ func (rs *Resource) delete(w http.ResponseWriter, r *http.Request) {
 		rs.renderError(w, r, err)
 		return
 	}
-	rs.runtime.Success(w, r, http.StatusOK, ShiftDeletedResponse{ID: id}, "Staff shift deleted")
+	rs.runtime.Success(w, r, http.StatusOK, ShiftDeletedResponse{ID: ident.ID(id)}, "Staff shift deleted")
 }

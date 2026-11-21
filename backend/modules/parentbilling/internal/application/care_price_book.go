@@ -53,7 +53,7 @@ type priceBook map[moduleKey][]parentbilling.CareTariff
 func newPriceBook(tariffs []parentbilling.CareTariff) priceBook {
 	book := priceBook{}
 	for _, tariff := range tariffs {
-		key := moduleKey{tariff.SchoolID, tariff.CareOfferingID}
+		key := moduleKey{tariff.SchoolID.Int64(), tariff.CareOfferingID.Int64()}
 		book[key] = append(book[key], tariff)
 	}
 	for key := range book {
@@ -122,7 +122,7 @@ type tariffKey struct {
 }
 
 func keyOf(tariff parentbilling.CareTariff) tariffKey {
-	key := tariffKey{schoolID: tariff.SchoolID, offeringID: tariff.CareOfferingID, weekday: tariff.Weekday}
+	key := tariffKey{schoolID: tariff.SchoolID.Int64(), offeringID: tariff.CareOfferingID.Int64(), weekday: tariff.Weekday}
 	if tariff.DaysPerWeek != nil {
 		key.days = *tariff.DaysPerWeek
 	}
@@ -162,7 +162,7 @@ type freeMonths map[int64][]parentbilling.CarePriceListHead
 func newFreeMonths(heads []parentbilling.CarePriceListHead) freeMonths {
 	book := freeMonths{}
 	for _, head := range heads {
-		book[head.SchoolID] = append(book[head.SchoolID], head)
+		book[head.SchoolID.Int64()] = append(book[head.SchoolID.Int64()], head)
 	}
 	for school := range book {
 		slices.SortFunc(book[school], func(a, b parentbilling.CarePriceListHead) int { return a.ValidFrom.Compare(b.ValidFrom) })

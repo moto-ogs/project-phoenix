@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   calendarDate,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   requestBody,
@@ -39,9 +39,9 @@ export interface FamilyBilling {
 }
 
 export const FamilyBillingSchema: z.ZodType<FamilyBilling, unknown> = object<FamilyBilling>({
-  id: int64StringOrNumber,
+  id: int64String,
   family_email: str,
-  contract_id: int64StringOrNumber,
+  contract_id: int64String,
   recipient_kind: str,
   second_first_name: str,
   second_last_name: str,
@@ -60,7 +60,7 @@ export const FamilyBillingSchema: z.ZodType<FamilyBilling, unknown> = object<Fam
 
 /** Go: parentbillinghttp.FamilyBillingRequest */
 export interface FamilyBillingRequest {
-  contract_id?: number;
+  contract_id?: string;
   recipient_kind?: string;
   second_first_name?: string;
   second_last_name?: string;

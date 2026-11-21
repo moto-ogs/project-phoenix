@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,6 +14,31 @@ import (
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
+
+type traegerClosingDaySignals struct {
+	mu    sync.Mutex
+	calls []traegerClosingDaySignal
+}
+
+type traegerClosingDaySignal struct {
+	tenantID int64
+	source   string
+}
+
+func (s *traegerClosingDaySignals) AnnounceStaffingChanged(tenantID int64, source string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.calls = append(s.calls, traegerClosingDaySignal{tenantID: tenantID, source: source})
+	return nil
+}
+
+func (s *traegerClosingDaySignals) take() []traegerClosingDaySignal {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	calls := s.calls
+	s.calls = nil
+	return calls
+}
 
 type traegerClosingDayBody struct {
 	ID        wireID   `json:"id"`
@@ -107,6 +133,42 @@ func TestTraegerPlansClosingDaysAndSeesEachSchoolsFederalState(t *testing.T) {
 	rec = traegerJSON(t, router, office.token, http.MethodDelete, traegerClosingDayPath(int64(created.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Empty(t, traegerCalendarOf(t, router, office).ClosingDays)
+}
+
+// A Träger write has no school in its request context, but every named school
+// can display the day in "Heute anders". Create and delete wake their named
+// schools; an update also wakes a school removed from the day. The callbacks
+// run only after the Träger transaction commits.
+func TestTraegerClosingDayWritesWakeAffectedSchoolPages(t *testing.T) {
+	t.Parallel()
+	signals := &traegerClosingDaySignals{}
+	db, router := newTraegerPortalWithStaffing(t, signals)
+	office := newTraegerOffice(t, db, router, "Träger Live Schließtage", identityaccess.TraegerRoleAdministration)
+
+	rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/closing-days/", traegerClosingDayBody{
+		StartDate: "2027-05-07", EndDate: "2027-05-07", Reason: "Brückentag", SchoolIDs: []wireID{wireID(office.schools[0])},
+	})
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	created := decodeSchoolPortalData[traegerClosingDayBody](t, rec.Body.Bytes())
+	assert.Equal(t, []traegerClosingDaySignal{{tenantID: office.schools[0], source: "closing_days"}}, signals.take())
+
+	created.SchoolIDs = []wireID{wireID(office.schools[1])}
+	rec = traegerJSON(t, router, office.token, http.MethodPut, traegerClosingDayPath(int64(created.ID)), created)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.ElementsMatch(t, []traegerClosingDaySignal{
+		{tenantID: office.schools[0], source: "closing_days"},
+		{tenantID: office.schools[1], source: "closing_days"},
+	}, signals.take(), "the old and new school both need to refetch")
+
+	rec = traegerJSON(t, router, office.token, http.MethodDelete, traegerClosingDayPath(int64(created.ID)), nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.Equal(t, []traegerClosingDaySignal{{tenantID: office.schools[1], source: "closing_days"}}, signals.take())
+
+	rec = traegerJSON(t, router, office.token, http.MethodPost, "/traeger/closing-days/", traegerClosingDayBody{
+		StartDate: "2027-05-07", EndDate: "2027-05-07", SchoolIDs: []wireID{wireID(office.schools[0])},
+	})
+	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
+	assert.Empty(t, signals.take(), "a rejected write must not wake school pages")
 }
 
 // Planning needs the right "Einstellungen verwalten"; every Träger role reads

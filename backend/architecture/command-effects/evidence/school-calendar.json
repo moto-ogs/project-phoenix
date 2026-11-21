@@ -3682,7 +3682,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.traegerClosingDayHolidayNotices.NotifyHolidayBookings",
-      "binding_digest": "c4be01a2fdadda3906cc8e053d49497a",
+      "binding_digest": "c6ab6bcc4c9207d530ca838a10afde78",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar.HolidayNotices.NotifyHolidayBookings",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayClosures.NotifyHolidayClosure",
@@ -3690,7 +3690,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.traegerClosingDayHolidayNotices.NotifyHolidayBookings",
-      "binding_digest": "befede73bff2d1f0b6c32b587f2cf2f6",
+      "binding_digest": "5fd8e26bc316c7052adba683a6ee4ec0",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar.HolidayNotices.NotifyHolidayBookings",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/tenant.MarkRollback",

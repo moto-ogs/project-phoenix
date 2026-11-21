@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // „Person einstellen“ (#7206, ADR 0254). A hire checks everything first: the
@@ -179,11 +180,11 @@ func (t *TraegerStaff) logSchoolMatches(ctx context.Context, actor workforce.Tra
 		for _, person := range match.people {
 			staffIDs = append(staffIDs, person.member.StaffID)
 			matches = append(matches, workforce.TraegerStaffHireMatch{
-				Kind: workforce.TraegerStaffHireMatchSchool, SchoolID: match.school.ID, SchoolName: match.school.Name, StaffID: person.member.StaffID,
+				Kind: workforce.TraegerStaffHireMatchSchool, SchoolID: match.school.ID.Int64(), SchoolName: match.school.Name, StaffID: person.member.StaffID,
 				FirstName: person.member.FirstName, LastName: person.member.LastName, Reasons: person.reasons,
 			})
 		}
-		err := t.ports.Runtime.WithinSchool(ctx, match.school.ID, func(ctx context.Context) error {
+		err := t.ports.Runtime.WithinSchool(ctx, match.school.ID.Int64(), func(ctx context.Context) error {
 			return t.ports.Access.RecordTraegerStaffAccess(ctx, workforce.TraegerStaffAccess{
 				OrganizationID: actor.OrganizationID, AccountID: actor.AccountID, View: workforce.TraegerStaffViewHireCheck,
 				Rows: len(staffIDs), StaffIDs: staffIDs,
@@ -236,7 +237,7 @@ func recordMatch(record domain.TraegerStaffRecord, reason string) workforce.Trae
 func recordsReachedAt(matches []workforce.TraegerStaffHireMatch, records []domain.TraegerStaffRecord, schools []hireSchoolMatch) []workforce.TraegerStaffHireMatch {
 	reached := func(link domain.TraegerStaffLink) bool {
 		return slices.ContainsFunc(schools, func(school hireSchoolMatch) bool {
-			return school.school.ID == link.SchoolID && slices.Contains(school.reachedKept, link.StaffID)
+			return school.school.ID == ident.ID(link.SchoolID) && slices.Contains(school.reachedKept, link.StaffID)
 		})
 	}
 	for _, record := range records {
@@ -284,12 +285,12 @@ func (t *TraegerStaff) hireSchoolMatches(ctx context.Context, hire domain.StaffH
 	for _, school := range schools {
 		var people []hirePerson
 		var kept []int64
-		err := t.ports.Runtime.WithinSchool(ctx, school.ID, func(ctx context.Context) error {
+		err := t.ports.Runtime.WithinSchool(ctx, school.ID.Int64(), func(ctx context.Context) error {
 			members, err := t.schoolStaff(ctx, nil)
 			if err != nil {
 				return err
 			}
-			if err := numberTaken(hire, members, sites[school.ID]); err != nil {
+			if err := numberTaken(hire, members, sites[school.ID.Int64()]); err != nil {
 				return err
 			}
 			reached, err := t.reachedAt(ctx, hire)

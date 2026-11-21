@@ -19,6 +19,7 @@ import (
 	"github.com/go-chi/render"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Middleware is the HTTP middleware shape the composition root supplies.
@@ -90,16 +91,16 @@ type ShiftTypeRequest struct {
 	// shift type (#1837 follow-up). When present (including an empty array) it
 	// replaces the current mapping for this shift type; omitted (nil) leaves it
 	// untouched.
-	CategoryIDs []int64 `json:"category_ids"`
+	CategoryIDs []ident.ID `json:"category_ids"`
 }
 
 // ShiftTypeResponse is the wire format returned to clients.
 type ShiftTypeResponse struct {
-	ID          int64  `json:"id"`
-	Name        string `json:"name"`
-	Color       string `json:"color"`
-	Description string `json:"description,omitempty"`
-	IsActive    bool   `json:"is_active"`
+	ID          ident.ID `json:"id"`
+	Name        string   `json:"name"`
+	Color       string   `json:"color"`
+	Description string   `json:"description,omitempty"`
+	IsActive    bool     `json:"is_active"`
 	// ArchivedAt is present on a type the school removed while planned
 	// shifts or series still carried it (#6845); only a list requested with
 	// include_archived=true contains such types.
@@ -118,8 +119,8 @@ type ShiftTypeUsageResponse struct {
 // ShiftTypeDeleteResponse tells the client whether the type is gone or only
 // left the choice because planned shifts or series still carry it.
 type ShiftTypeDeleteResponse struct {
-	ID      int64  `json:"id"`
-	Outcome string `json:"outcome"`
+	ID      ident.ID `json:"id"`
+	Outcome string   `json:"outcome"`
 }
 
 func toShiftTypeResponse(t workforce.ShiftType) ShiftTypeResponse {
@@ -129,7 +130,7 @@ func toShiftTypeResponse(t workforce.ShiftType) ShiftTypeResponse {
 		archivedAt = &formatted
 	}
 	return ShiftTypeResponse{
-		ID:          t.ID,
+		ID:          ident.ID(t.ID),
 		Name:        t.Name,
 		Color:       t.Color,
 		Description: t.Description,
@@ -154,7 +155,7 @@ func offeredShiftTypes(types []workforce.ShiftType, includeArchived bool) []work
 
 func attachUsage(responses []ShiftTypeResponse, references map[int64]workforce.ShiftTypeReferences) {
 	for index := range responses {
-		entry := references[responses[index].ID]
+		entry := references[responses[index].ID.Int64()]
 		responses[index].Usage = &ShiftTypeUsageResponse{Shifts: entry.Shifts, Series: entry.Series}
 	}
 }
@@ -174,7 +175,7 @@ func toShiftTypeInput(id int64, req ShiftTypeRequest) workforce.ShiftTypeInput {
 		Color:       req.Color,
 		Description: req.Description,
 		IsActive:    req.IsActive,
-		CategoryIDs: req.CategoryIDs,
+		CategoryIDs: ident.Int64s(req.CategoryIDs),
 	}
 }
 
@@ -289,5 +290,5 @@ func (rs *Resource) delete(w http.ResponseWriter, r *http.Request) {
 		rs.renderError(w, r, err)
 		return
 	}
-	rs.runtime.Success(w, r, http.StatusOK, ShiftTypeDeleteResponse{ID: id, Outcome: string(removal)}, "Shift type removed")
+	rs.runtime.Success(w, r, http.StatusOK, ShiftTypeDeleteResponse{ID: ident.ID(id), Outcome: string(removal)}, "Shift type removed")
 }

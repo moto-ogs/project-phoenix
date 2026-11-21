@@ -100,7 +100,7 @@ func (rs *Resource) completeSchoolExchange(w http.ResponseWriter, r *http.Reques
 		portalauth.Render(w, r, err, portalauth.ExchangeRules)
 		return
 	}
-	render.JSON(w, r, tokens)
+	common.RenderJSON(w, r, tokens)
 }
 
 // mfaResend mails a new code for a school challenge and answers with the
@@ -120,7 +120,7 @@ func (rs *Resource) mfaResend(w http.ResponseWriter, r *http.Request) {
 		portalauth.Render(w, r, err, portalauth.MFARules)
 		return
 	}
-	render.JSON(w, r, common.MFAResendResponse{ChallengeToken: renewed})
+	common.RenderJSON(w, r, common.MFAResendResponse{ChallengeToken: renewed})
 }
 
 // mfaEnrollStart mails the enrollment code and answers with its challenge;
@@ -140,7 +140,7 @@ func (rs *Resource) mfaEnrollStart(w http.ResponseWriter, r *http.Request) {
 		portalauth.Render(w, r, err, portalauth.MFARules)
 		return
 	}
-	render.JSON(w, r, portalauth.EnrollStartResponse{ChallengeToken: challengeToken})
+	common.RenderJSON(w, r, portalauth.EnrollStartResponse{ChallengeToken: challengeToken})
 }
 
 // mfaEnrollConfirm redeems the enrollment challenge, records the factor and

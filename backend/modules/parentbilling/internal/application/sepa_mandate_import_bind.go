@@ -33,7 +33,7 @@ func (m *SEPAMandates) importAccounts(ctx context.Context, reviewer parentbillin
 	ids := []int64{}
 	for _, mandate := range existing {
 		if named[mandate.Reference] {
-			ids = append(ids, mandate.ID)
+			ids = append(ids, mandate.ID.Int64())
 		}
 	}
 	accounts := map[int64]importAccount{}
@@ -50,7 +50,7 @@ func (m *SEPAMandates) importAccounts(ctx context.Context, reviewer parentbillin
 		if err != nil {
 			return nil, err
 		}
-		accounts[entry.Mandate.ID], opened[i] = account, entry.Mandate
+		accounts[entry.Mandate.ID.Int64()], opened[i] = account, entry.Mandate
 	}
 	if err := m.store.InsertSEPAMandateEvents(ctx, reviewer.OrganizationID, reviewer.AccountID, mandateRead,
 		parentbilling.MandateFromImport, nil, opened); err != nil {

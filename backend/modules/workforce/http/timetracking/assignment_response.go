@@ -3,36 +3,38 @@ package timetracking
 import (
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // assignmentResponse is the wire format for one Betreuungsplan block a staff
 // member is planned into (#1844). It deliberately carries no student data
 // (GDPR: no child names in time-tracking lists).
 type assignmentResponse struct {
-	InstanceID      int64   `json:"instance_id"`
-	Title           string  `json:"title"`
-	GroupName       *string `json:"group_name,omitempty"`
-	RoomName        string  `json:"room_name,omitempty"`
-	Date            string  `json:"date"`
-	StartTime       string  `json:"start_time"`
-	EndTime         string  `json:"end_time"`
-	Status          string  `json:"status"`
-	IsSpontaneous   bool    `json:"is_spontaneous"`
-	Cancelled       bool    `json:"cancelled"`
-	IsPrimary       bool    `json:"is_primary"`
-	IsSubstitute    bool    `json:"is_substitute"`
-	IsAbsent        bool    `json:"is_absent"`
-	AbsenceReason   *string `json:"absence_reason,omitempty"`
-	CancelReason    *string `json:"cancel_reason,omitempty"`
-	UnderstaffedAck bool    `json:"understaffed_ack"`
+	InstanceID      common.ID `json:"instance_id"`
+	Title           string    `json:"title"`
+	GroupName       *string   `json:"group_name,omitempty"`
+	RoomName        string    `json:"room_name,omitempty"`
+	Date            string    `json:"date"`
+	StartTime       string    `json:"start_time"`
+	EndTime         string    `json:"end_time"`
+	Status          string    `json:"status"`
+	IsSpontaneous   bool      `json:"is_spontaneous"`
+	Cancelled       bool      `json:"cancelled"`
+	IsPrimary       bool      `json:"is_primary"`
+	IsSubstitute    bool      `json:"is_substitute"`
+	IsAbsent        bool      `json:"is_absent"`
+	AbsenceReason   *string   `json:"absence_reason,omitempty"`
+	CancelReason    *string   `json:"cancel_reason,omitempty"`
+	UnderstaffedAck bool      `json:"understaffed_ack"`
 }
 
 func toAssignmentResponses(assignments []workforce.StaffAssignment) []assignmentResponse {
 	out := make([]assignmentResponse, 0, len(assignments))
 	for _, a := range assignments {
 		out = append(out, assignmentResponse{
-			InstanceID:      a.InstanceID,
+			InstanceID:      ident.ID(a.InstanceID),
 			Title:           a.Title,
 			GroupName:       a.GroupName,
 			RoomName:        a.RoomName,

@@ -188,7 +188,7 @@ func (rs *FamilyChildrenResource) exportList(w http.ResponseWriter, r *http.Requ
 		// point 7); the key is no address.
 		address := family.RecipientEmail
 		if address == "" {
-			address = "Vertrag Nr. " + strconv.FormatInt(family.ContractID, 10)
+			address = "Vertrag Nr. " + strconv.FormatInt(family.ContractID.Int64(), 10)
 		}
 		table.Rows = append(table.Rows, []string{
 			family.RecipientLastName, family.RecipientFirstName, address, strings.Join(children, ", "),

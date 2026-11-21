@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // HolidayRegistrationHealth opens the health information of one registration
@@ -56,7 +57,7 @@ func openHolidayRegistrationHealth(cipher enrollment.HolidayHealthCipher, organi
 			return enrollment.HolidayRegistrationHealthDetail{}, err
 		}
 		detail.Children[i] = enrollment.HolidayRegistrationHealth{
-			ChildID: child.ChildID, Allergies: record.Allergies, Medication: record.Medication,
+			ChildID: ident.ID(child.ChildID), Allergies: record.Allergies, Medication: record.Medication,
 			HealthNotes: record.HealthNotes, CustomData: answersOrEmptyObject(record.Answers),
 		}
 	}

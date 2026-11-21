@@ -20,7 +20,7 @@ func TestGroupExportResponsesByClassKeepsWithinClassOrder(t *testing.T) {
 
 	groupExportResponsesByClass(students)
 
-	gotIDs := []int64{students[0].ID, students[1].ID, students[2].ID, students[3].ID}
+	gotIDs := []int64{students[0].ID.Int64(), students[1].ID.Int64(), students[2].ID.Int64(), students[3].ID.Int64()}
 	// "2a" before "10a" (numeric grade order); empty class last; the two
 	// 2a students keep their prior relative order (stable sort).
 	assert.Equal(t, []int64{2, 4, 1, 3}, gotIDs)

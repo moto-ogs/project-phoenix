@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Who gets an invoice, how it is paid and by when (#4689, spec #4611 user
@@ -161,9 +162,9 @@ func (s TermsSet) InvoiceService(service string) string {
 // mail address of the registration. PaymentMethod empty and DueDay nil keep
 // the terms of the service and the date of the run.
 type FamilyBilling struct {
-	ID              int64          `json:"id"`
+	ID              ident.ID       `json:"id"`
 	FamilyEmail     string         `json:"family_email"`
-	ContractID      int64          `json:"contract_id"`
+	ContractID      ident.ID       `json:"contract_id"`
 	RecipientKind   string         `json:"recipient_kind"`
 	SecondFirstName string         `json:"second_first_name"`
 	SecondLastName  string         `json:"second_last_name"`

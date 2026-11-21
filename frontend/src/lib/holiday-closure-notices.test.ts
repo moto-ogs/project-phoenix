@@ -158,9 +158,9 @@ describe("holiday closure notices (ADR 0196)", () => {
     expect(
       JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string),
     ).toMatchObject({
-      closing_day_id: 9,
+      closing_day_id: "9",
       previous: {
-        school_ids: [3],
+        school_ids: ["3"],
         start_date: "2026-10-05",
         end_date: "2026-10-06",
       },

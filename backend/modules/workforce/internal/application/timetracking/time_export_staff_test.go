@@ -77,7 +77,7 @@ func TestCompareOverviewRows_UsesGermanDictionaryOrder(t *testing.T) {
 	slices.SortStableFunc(rows, func(a, b TimeTrackingOverviewRow) int { return compareOverviewRows(a, b, "") })
 	ids := make([]int64, len(rows))
 	for i, row := range rows {
-		ids[i] = row.StaffID
+		ids[i] = row.StaffID.Int64()
 	}
 	assert.Equal(t, []int64{4, 3, 2, 1}, ids)
 }

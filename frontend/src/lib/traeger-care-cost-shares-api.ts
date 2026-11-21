@@ -122,9 +122,9 @@ function costShareSetFromBackend(body: WireSet): CareCostShareSet {
 
 function shareBody(input: CareCostShareInput): CareCostShareRequest {
   return {
-    contract_id: Number(input.contractId),
+    contract_id: input.contractId,
     kind: input.kind,
-    cost_bearer_id: Number(input.costBearerId),
+    cost_bearer_id: input.costBearerId,
     share_basis_points: input.shareBasisPoints,
     share_cents: input.shareCents,
     scope: input.scope,

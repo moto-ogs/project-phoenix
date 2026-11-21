@@ -753,8 +753,8 @@ describe("HolidayRegistrationForm", () => {
           expect.objectContaining({
             first_name: "Ben",
             birth_date: "2017-05-04",
-            home_school_id: 0,
-            bookings: [{ week_id: 11, time_model_id: 21 }],
+            home_school_id: "0",
+            bookings: [{ week_id: "11", time_model_id: "21" }],
           }),
         ],
         privacy_consent: true,
@@ -788,7 +788,7 @@ describe("HolidayRegistrationForm", () => {
     ).toBeInTheDocument();
     expect(mockQuote).toHaveBeenLastCalledWith(
       "link-key",
-      [[{ week_id: 11, time_model_id: 21 }]],
+      [[{ week_id: "11", time_model_id: "21" }]],
       false,
     );
     expect(screen.getAllByText("45,00 €").length).toBeGreaterThan(0);
@@ -808,7 +808,7 @@ describe("HolidayRegistrationForm", () => {
     ).toBeInTheDocument();
     expect(mockQuote).toHaveBeenLastCalledWith(
       "link-key",
-      [[{ week_id: 11, time_model_id: 21 }]],
+      [[{ week_id: "11", time_model_id: "21" }]],
       true,
     );
 
@@ -1147,7 +1147,7 @@ describe("HolidayRegistrationForm", () => {
         first_name: "Feli",
         last_name: "Schneider",
         birth_date: "2018-03-01",
-        home_school_id: 31,
+        home_school_id: "31",
       }),
     );
     // The registration is a copy: no school record is named in it.

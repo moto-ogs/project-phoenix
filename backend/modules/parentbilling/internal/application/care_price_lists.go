@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // keepBilledPrices holds the monthly billing and refuses a change of the
@@ -48,13 +49,13 @@ func priceListsAfter(tariffs []parentbilling.CareTariff, heads []parentbilling.C
 ) ([]parentbilling.CareTariff, []parentbilling.CarePriceListHead) {
 	after := make([]parentbilling.CareTariff, 0, len(tariffs))
 	for _, tariff := range tariffs {
-		if tariff.SchoolID != schoolID || tariff.ValidFrom != validFrom {
+		if tariff.SchoolID != ident.ID(schoolID) || tariff.ValidFrom != validFrom {
 			after = append(after, tariff)
 		}
 	}
 	headsAfter := make([]parentbilling.CarePriceListHead, 0, len(heads)+1)
 	for _, head := range heads {
-		if head.SchoolID != schoolID || head.ValidFrom != validFrom {
+		if head.SchoolID != ident.ID(schoolID) || head.ValidFrom != validFrom {
 			headsAfter = append(headsAfter, head)
 		}
 	}
@@ -62,11 +63,11 @@ func priceListsAfter(tariffs []parentbilling.CareTariff, heads []parentbilling.C
 		return after, headsAfter
 	}
 	for _, price := range replacement.Prices {
-		after = append(after, parentbilling.CareTariff{SchoolID: schoolID, CareOfferingID: price.CareOfferingID, ModuleName: price.ModuleName,
+		after = append(after, parentbilling.CareTariff{SchoolID: ident.ID(schoolID), CareOfferingID: ident.ID(price.CareOfferingID), ModuleName: price.ModuleName,
 			Weekday: price.Weekday, DaysPerWeek: price.DaysPerWeek, ValidFrom: validFrom,
 			MonthlyCents: price.MonthlyCents, SiblingCents: price.SiblingCents, MealExtra: price.MealExtra})
 	}
-	return after, append(headsAfter, parentbilling.CarePriceListHead{SchoolID: schoolID, ValidFrom: validFrom, FreeMonths: replacement.FreeMonths})
+	return after, append(headsAfter, parentbilling.CarePriceListHead{SchoolID: ident.ID(schoolID), ValidFrom: validFrom, FreeMonths: replacement.FreeMonths})
 }
 
 // changesBilledPrice reports a billed weekday or scale step whose price or
@@ -130,7 +131,7 @@ func normalizePriceList(list parentbilling.CarePriceList) (parentbilling.CarePri
 	modules := map[int64]moduleShape{}
 	for i, price := range list.Prices {
 		price.ModuleName = strings.TrimSpace(price.ModuleName)
-		tariff := parentbilling.CareTariff{CareOfferingID: price.CareOfferingID, Weekday: price.Weekday, DaysPerWeek: price.DaysPerWeek}
+		tariff := parentbilling.CareTariff{CareOfferingID: ident.ID(price.CareOfferingID), Weekday: price.Weekday, DaysPerWeek: price.DaysPerWeek}
 		if message := priceError(price); message != "" {
 			errs["prices"] = errors.New(message)
 		} else if seen[keyOf(tariff)] {
@@ -138,10 +139,10 @@ func normalizePriceList(list parentbilling.CarePriceList) (parentbilling.CarePri
 		}
 		seen[keyOf(tariff)] = true
 		shape := moduleShape{form: tariff.PriceForm(), meal: price.MealExtra}
-		if known, ok := modules[price.CareOfferingID]; ok && known != shape {
+		if known, ok := modules[price.CareOfferingID.Int64()]; ok && known != shape {
 			errs["prices"] = errors.New("a module has one price form and one meal note")
 		}
-		modules[price.CareOfferingID] = shape
+		modules[price.CareOfferingID.Int64()] = shape
 		list.Prices[i] = price
 	}
 	if len(errs) > 0 {
@@ -178,12 +179,12 @@ func modulePriceList(tariffs []parentbilling.CareTariff, heads []parentbilling.C
 	list := parentbilling.CarePriceList{SchoolID: module.SchoolID, ValidFrom: module.ValidFrom, FreeMonths: []int{}}
 	var latest calendar.Date
 	for _, head := range heads {
-		if head.SchoolID == module.SchoolID && !head.ValidFrom.After(module.ValidFrom) && (latest == "" || head.ValidFrom.After(latest)) {
+		if head.SchoolID == ident.ID(module.SchoolID) && !head.ValidFrom.After(module.ValidFrom) && (latest == "" || head.ValidFrom.After(latest)) {
 			latest, list.FreeMonths = head.ValidFrom, slices.Clone(head.FreeMonths)
 		}
 	}
 	for _, tariff := range tariffs {
-		if tariff.SchoolID == module.SchoolID && tariff.ValidFrom == module.ValidFrom && tariff.CareOfferingID != module.CareOfferingID {
+		if tariff.SchoolID == ident.ID(module.SchoolID) && tariff.ValidFrom == module.ValidFrom && tariff.CareOfferingID != ident.ID(module.CareOfferingID) {
 			list.Prices = append(list.Prices, parentbilling.CarePrice{
 				CareOfferingID: tariff.CareOfferingID, ModuleName: tariff.ModuleName, Weekday: tariff.Weekday,
 				DaysPerWeek: tariff.DaysPerWeek, MonthlyCents: tariff.MonthlyCents, SiblingCents: tariff.SiblingCents, MealExtra: tariff.MealExtra,
@@ -191,7 +192,7 @@ func modulePriceList(tariffs []parentbilling.CareTariff, heads []parentbilling.C
 		}
 	}
 	for _, price := range module.Prices {
-		price.CareOfferingID, price.ModuleName = module.CareOfferingID, module.ModuleName
+		price.CareOfferingID, price.ModuleName = ident.ID(module.CareOfferingID), module.ModuleName
 		list.Prices = append(list.Prices, price)
 	}
 	return list

@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -138,7 +139,7 @@ func primarySupervisorIDs(supervisorIDs map[int64]bool, currentSupervisors []*po
 	primaryIDs := maps.Clone(supervisorIDs)
 	for _, supervisor := range currentSupervisors {
 		if supervisor.Role != "supervisor" {
-			delete(primaryIDs, supervisor.StaffID)
+			delete(primaryIDs, supervisor.StaffID.Int64())
 		}
 	}
 	return primaryIDs
@@ -183,7 +184,7 @@ func (s *service) upsertSupervisors(ctx context.Context, activeGroupID int64, un
 // findExistingSupervisor finds a supervisor in the list by staff ID and role
 func (s *service) findExistingSupervisor(supervisors []*ports.GroupSupervisor, staffID int64) *ports.GroupSupervisor {
 	for _, existing := range supervisors {
-		if existing.StaffID == staffID && existing.Role == "supervisor" {
+		if existing.StaffID == ident.ID(staffID) && existing.Role == "supervisor" {
 			return existing
 		}
 	}
@@ -204,8 +205,8 @@ func (s *service) reactivateSupervisor(ctx context.Context, supervisor *ports.Gr
 // createNewSupervisor creates a new supervisor record
 func (s *service) createNewSupervisor(ctx context.Context, activeGroupID, supervisorID int64, now time.Time) error {
 	supervisor := &ports.GroupSupervisor{
-		StaffID:   supervisorID,
-		GroupID:   activeGroupID,
+		StaffID:   ident.ID(supervisorID),
+		GroupID:   ident.ID(activeGroupID),
 		Role:      "supervisor",
 		StartDate: calendar.DateFromTime(now),
 	}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The lists of the runs name no person: a run is a period, its counts and
@@ -54,7 +55,7 @@ func billingRunTable(runs []capability.BillingRun, periodID int64) common.ListTa
 		column("invoices", "Rechnungen"), euroColumn("total", "Summe"), column("issued", "Ausgestellt am"))
 	periodName := ""
 	for _, run := range runs {
-		if periodID > 0 && run.HolidayPeriodID != periodID {
+		if periodID > 0 && run.HolidayPeriodID != ident.ID(periodID) {
 			continue
 		}
 		periodName = run.PeriodName
@@ -103,7 +104,7 @@ func careRunTable(runs []capability.CareRun, schools []capability.CareRunSchool)
 		column("rule", "Bei Vertragsänderung im Monat"))
 	names := make(map[int64]string, len(schools))
 	for _, school := range schools {
-		names[school.ID] = school.Name
+		names[school.ID.Int64()] = school.Name
 	}
 	for _, run := range runs {
 		rule := monthRuleLabels[run.MonthRule]
@@ -111,7 +112,7 @@ func careRunTable(runs []capability.CareRun, schools []capability.CareRunSchool)
 			rule = "–"
 		}
 		table.Rows = append(table.Rows, []string{
-			run.BillingMonth.Format("01/2006"), runStatusLabels[run.Status], runSchoolNames(run.SchoolIDs, names),
+			run.BillingMonth.Format("01/2006"), runStatusLabels[run.Status], runSchoolNames(ident.Int64s(run.SchoolIDs), names),
 			countText(run.DocumentCount, "Rechnung", "Rechnungen"), optionalDecimalEuro(run.TotalCents), optionalDate(run.IssuedOn), rule,
 		})
 	}
@@ -166,7 +167,7 @@ func (rs *CareNoticeResource) exportList(w http.ResponseWriter, r *http.Request)
 			notices = countText(run.NoticeCount, "Bescheid", "Bescheide")
 		}
 		table.Rows = append(table.Rows, []string{
-			periodText(run.PeriodFrom, run.PeriodUntil), status, schoolCountText(run.SchoolIDs),
+			periodText(run.PeriodFrom, run.PeriodUntil), status, schoolCountText(ident.Int64s(run.SchoolIDs)),
 			notices, optionalDecimalEuro(run.TotalCents), optionalDate(run.IssuedOn),
 		})
 	}

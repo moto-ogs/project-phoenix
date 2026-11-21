@@ -15,6 +15,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // DecideHolidayAllocation decides on pending bookings of a period by
@@ -43,7 +44,7 @@ func (a *HolidayAllocation) DecideHolidayAllocation(ctx context.Context, reviewe
 	}
 	weeks := map[int64]enrollment.HolidayWeek{}
 	for _, week := range period.Weeks {
-		weeks[week.ID] = week
+		weeks[week.ID.Int64()] = week
 	}
 	var decisions []enrollment.HolidayAllocationDecision
 	for _, weekID := range batch.weeks {
@@ -61,7 +62,7 @@ func (a *HolidayAllocation) DecideHolidayAllocation(ctx context.Context, reviewe
 	placement := a.review.placement
 	placement.excludedBookingIDs = make(map[int64]bool, len(choices))
 	for _, choice := range choices {
-		placement.excludedBookingIDs[choice.BookingID] = true
+		placement.excludedBookingIDs[choice.BookingID.Int64()] = true
 	}
 	_, promoted, err := placement.place(ctx, reviewer.OrganizationID, period, batch.weeks, 0, reviewer.AccountID)
 	if err != nil {
@@ -78,11 +79,11 @@ func holidayPlacedRegistrations(decisions []enrollment.HolidayAllocationDecision
 	placed := map[int64]bool{}
 	for _, decision := range decisions {
 		if decision.Placement == enrollment.HolidayPlacementPlaced {
-			placed[decision.RegistrationID] = true
+			placed[decision.RegistrationID.Int64()] = true
 		}
 	}
 	for _, promotion := range promoted {
-		placed[promotion.RegistrationID] = true
+		placed[promotion.RegistrationID.Int64()] = true
 	}
 	return slices.Sorted(maps.Keys(placed))
 }
@@ -105,7 +106,7 @@ func (a *HolidayAllocation) lockChoices(ctx context.Context, organizationID int6
 	if err := store.LockHolidayCriteriaCatalog(ctx, organizationID); err != nil {
 		return holidayAllocationBatch{}, err
 	}
-	pending, err := store.ReadHolidayPendingBookings(ctx, organizationID, period.ID)
+	pending, err := store.ReadHolidayPendingBookings(ctx, organizationID, period.ID.Int64())
 	if err != nil {
 		return holidayAllocationBatch{}, fmt.Errorf("enrollment: read pending holiday bookings: %w", err)
 	}
@@ -114,13 +115,13 @@ func (a *HolidayAllocation) lockChoices(ctx context.Context, organizationID int6
 		batch.pending[booking.BookingID] = booking
 	}
 	for _, choice := range choices {
-		booking, found := batch.pending[choice.BookingID]
+		booking, found := batch.pending[choice.BookingID.Int64()]
 		if !found {
 			return holidayAllocationBatch{}, enrollment.ErrHolidayAllocationChanged
 		}
 		batch.byWeek[booking.WeekID] = append(batch.byWeek[booking.WeekID], choice)
 	}
-	if batch.weeks, err = store.LockHolidayWeeks(ctx, organizationID, period.ID, slices.Sorted(maps.Keys(batch.byWeek))); err != nil {
+	if batch.weeks, err = store.LockHolidayWeeks(ctx, organizationID, period.ID.Int64(), slices.Sorted(maps.Keys(batch.byWeek))); err != nil {
 		return holidayAllocationBatch{}, fmt.Errorf("enrollment: lock holiday weeks: %w", err)
 	}
 	if len(batch.weeks) != len(batch.byWeek) {
@@ -130,7 +131,7 @@ func (a *HolidayAllocation) lockChoices(ctx context.Context, organizationID int6
 	if err != nil {
 		return holidayAllocationBatch{}, fmt.Errorf("enrollment: read holiday criteria: %w", err)
 	}
-	answers, err := store.ReadHolidayCriterionAnswers(ctx, organizationID, period.ID, 0)
+	answers, err := store.ReadHolidayCriterionAnswers(ctx, organizationID, period.ID.Int64(), 0)
 	if err != nil {
 		return holidayAllocationBatch{}, fmt.Errorf("enrollment: read holiday criterion answers: %w", err)
 	}
@@ -196,7 +197,7 @@ func (w holidayWeekProposal) take(booking enrollment.HolidayQueuedBooking) bool 
 // decideWeek checks the choices of one locked week against its proposal and
 // its free places, in the order of the proposal, and writes them.
 func (a *HolidayAllocation) decideWeek(ctx context.Context, organizationID int64, week enrollment.HolidayWeek, batch holidayAllocationBatch, choices []enrollment.HolidayAllocationChoice) ([]enrollment.HolidayAllocationDecision, error) {
-	queue, found, err := a.review.store.ReadHolidayWeekQueue(ctx, organizationID, week.ID)
+	queue, found, err := a.review.store.ReadHolidayWeekQueue(ctx, organizationID, week.ID.Int64())
 	if err != nil {
 		return nil, fmt.Errorf("enrollment: read holiday week queue: %w", err)
 	}
@@ -206,7 +207,7 @@ func (a *HolidayAllocation) decideWeek(ctx context.Context, organizationID int64
 	proposal := newHolidayWeekProposal(queue)
 	chosen := map[int64]enrollment.HolidayAllocationChoice{}
 	for _, choice := range choices {
-		chosen[choice.BookingID] = choice
+		chosen[choice.BookingID.Int64()] = choice
 	}
 	var placed, waitlisted []int64
 	var decisions []enrollment.HolidayAllocationDecision
@@ -224,14 +225,14 @@ func (a *HolidayAllocation) decideWeek(ctx context.Context, organizationID int64
 		case proposal.take(booking):
 			placed = append(placed, booking.ID)
 		default:
-			return nil, &enrollment.HolidayAllocationFullRefusal{WeekID: week.ID}
+			return nil, &enrollment.HolidayAllocationFullRefusal{WeekID: week.ID.Int64()}
 		}
 		decisions = append(decisions, holidayDecisionOf(week, booking, batch, choice, i+1))
 	}
 	if len(decisions) != len(choices) {
 		return nil, enrollment.ErrHolidayAllocationChanged
 	}
-	changed, err := a.review.store.DecideHolidayBookings(ctx, organizationID, week.ID, placed, waitlisted)
+	changed, err := a.review.store.DecideHolidayBookings(ctx, organizationID, week.ID.Int64(), placed, waitlisted)
 	if err != nil {
 		return nil, err
 	}
@@ -246,8 +247,8 @@ func (a *HolidayAllocation) decideWeek(ctx context.Context, organizationID int64
 func holidayDecisionOf(week enrollment.HolidayWeek, booking enrollment.HolidayQueuedBooking, batch holidayAllocationBatch, choice enrollment.HolidayAllocationChoice, rank int) enrollment.HolidayAllocationDecision {
 	read := batch.pending[booking.ID]
 	return enrollment.HolidayAllocationDecision{
-		ID: booking.ID, WeekID: week.ID, WeekStartsOn: week.StartsOn, WeekEndsOn: week.EndsOn,
-		RegistrationID: booking.RegistrationID, ChildID: booking.ChildID,
+		ID: ident.ID(booking.ID), WeekID: week.ID, WeekStartsOn: week.StartsOn, WeekEndsOn: week.EndsOn,
+		RegistrationID: ident.ID(booking.RegistrationID), ChildID: ident.ID(booking.ChildID),
 		ChildFirstName: read.ChildFirstName, ChildLastName: read.ChildLastName,
 		Placement: choice.Placement, Proposal: choice.Proposal, Rank: rank, CriteriaMet: batch.met(read), Reason: choice.Reason,
 	}
@@ -262,19 +263,19 @@ func (a *HolidayAllocation) record(ctx context.Context, reviewer enrollment.Holi
 		decision.ID = 0
 		stored[i] = decision
 	}
-	ids, err := a.review.store.InsertHolidayAllocationDecisions(ctx, reviewer.OrganizationID, period.ID, stored, reviewer.AccountID)
+	ids, err := a.review.store.InsertHolidayAllocationDecisions(ctx, reviewer.OrganizationID, period.ID.Int64(), stored, reviewer.AccountID)
 	if err != nil {
 		return err
 	}
 	byRegistration := map[int64][]int{}
 	var order []int64
 	for i, decision := range stored {
-		if _, seen := byRegistration[decision.RegistrationID]; !seen {
-			order = append(order, decision.RegistrationID)
+		if _, seen := byRegistration[decision.RegistrationID.Int64()]; !seen {
+			order = append(order, decision.RegistrationID.Int64())
 		}
-		byRegistration[decision.RegistrationID] = append(byRegistration[decision.RegistrationID], i)
-		if err := a.review.audit(ctx, reviewer, period.ID, decision.RegistrationID, enrollment.HolidayAuditAllocate, enrollment.HolidayRegistrationEventDetails{
-			ChildID: decision.ChildID, WeekIDs: []int64{decision.WeekID}, Placement: decision.Placement, Proposal: decision.Proposal, Reason: decision.Reason,
+		byRegistration[decision.RegistrationID.Int64()] = append(byRegistration[decision.RegistrationID.Int64()], i)
+		if err := a.review.audit(ctx, reviewer, period.ID.Int64(), decision.RegistrationID.Int64(), enrollment.HolidayAuditAllocate, enrollment.HolidayRegistrationEventDetails{
+			ChildID: decision.ChildID, WeekIDs: []ident.ID{decision.WeekID}, Placement: decision.Placement, Proposal: decision.Proposal, Reason: decision.Reason,
 		}); err != nil {
 			return err
 		}
@@ -305,7 +306,7 @@ func (a *HolidayAllocation) record(ctx context.Context, reviewer enrollment.Holi
 func (a *HolidayAllocation) announce(ctx context.Context, organizationID int64, traeger enrollment.HolidayTraeger, period enrollment.HolidayPeriod, registrationID int64,
 	decisions []enrollment.HolidayAllocationDecision, keys []string,
 ) error {
-	read, _, err := a.review.store.ReadHolidayReview(ctx, organizationID, period.ID, registrationID)
+	read, _, err := a.review.store.ReadHolidayReview(ctx, organizationID, period.ID.Int64(), registrationID)
 	if err != nil {
 		return fmt.Errorf("enrollment: read holiday registration: %w", err)
 	}
@@ -352,7 +353,7 @@ func holidayAllocationMailChild(child enrollment.HolidayRegistrationChild, decis
 		if index < 0 {
 			continue
 		}
-		line := lines(booking.WeekID, booking.TimeModelID, booking.Days, booking.Lunch)
+		line := lines(booking.WeekID.Int64(), booking.TimeModelID.Int64(), booking.Days, booking.Lunch)
 		if decisions[index].Placement == enrollment.HolidayPlacementPlaced {
 			mailChild.Weeks = append(mailChild.Weeks, line)
 		} else {
@@ -376,7 +377,7 @@ func normalizeHolidayAllocationChoices(choices []enrollment.HolidayAllocationCho
 	normalized := make([]enrollment.HolidayAllocationChoice, len(choices))
 	for i, choice := range choices {
 		choice.Reason = strings.TrimSpace(choice.Reason)
-		if choice.BookingID <= 0 || seen[choice.BookingID] || !valid(choice.Placement) || !valid(choice.Proposal) {
+		if choice.BookingID <= 0 || seen[choice.BookingID.Int64()] || !valid(choice.Placement) || !valid(choice.Proposal) {
 			return nil, validation.Errors{fmt.Sprintf("decisions.%d", i): errors.New("needs a booking once, a placement and the proposal")}
 		}
 		if utf8.RuneCountInString(choice.Reason) > enrollment.HolidayAllocationReasonMaxLen {
@@ -388,7 +389,7 @@ func normalizeHolidayAllocationChoices(choices []enrollment.HolidayAllocationCho
 		if choice.Placement == choice.Proposal {
 			choice.Reason = ""
 		}
-		seen[choice.BookingID] = true
+		seen[choice.BookingID.Int64()] = true
 		normalized[i] = choice
 	}
 	return normalized, nil
@@ -408,7 +409,7 @@ func (a *HolidayAllocation) CheckHolidayCriteria(ctx context.Context, reviewer e
 			return "", nil, enrollment.ErrHolidayRegistrationStateConflict
 		}
 		for i, check := range checks {
-			if err := a.check(ctx, reviewer, period.ID, registrationID, i, check); err != nil {
+			if err := a.check(ctx, reviewer, period.ID.Int64(), registrationID, i, check); err != nil {
 				return "", nil, err
 			}
 		}
@@ -432,12 +433,12 @@ func (a *HolidayAllocation) check(ctx context.Context, reviewer enrollment.Holid
 	}
 	childID := int64(0)
 	if check.ChildID != nil {
-		childID = *check.ChildID
+		childID = (*check.ChildID).Int64()
 	}
 	if check.CriterionID <= 0 || childID < 0 {
 		return validation.Errors{field: errors.New("names no criterion of the registration")}
 	}
-	found, err := a.review.store.CheckHolidayCriterion(ctx, reviewer.OrganizationID, periodID, registrationID, check.CriterionID, childID, checked, reviewer.AccountID)
+	found, err := a.review.store.CheckHolidayCriterion(ctx, reviewer.OrganizationID, periodID, registrationID, check.CriterionID.Int64(), childID, checked, reviewer.AccountID)
 	if err != nil {
 		return err
 	}

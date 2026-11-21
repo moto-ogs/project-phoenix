@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Holiday guests of the hosting school (#4666, ADR 0120). The caller runs
@@ -144,7 +145,7 @@ func (h *HolidayGuests) AssignHolidayGuestGroup(ctx context.Context, host enroll
 	if err != nil {
 		return enrollment.HolidayGuestTransfer{}, err
 	}
-	return enrollment.HolidayGuestTransfer{WeekID: week.ID, GroupID: groupID, Guests: guests, OwnChildren: planned[week.ID]}, nil
+	return enrollment.HolidayGuestTransfer{WeekID: ident.ID(week.ID), GroupID: ident.ID(groupID), Guests: guests, OwnChildren: planned[week.ID]}, nil
 }
 
 // ReconcileHolidayGuests reconciles every week the school picked a group
@@ -613,9 +614,9 @@ func (h *HolidayGuests) HolidayGuestSheet(ctx context.Context, host enrollment.H
 
 func holidayGuestSheet(guest enrollment.HolidayGuest, today calendar.Date) enrollment.HolidayGuestSheet {
 	sheet := enrollment.HolidayGuestSheet{
-		StudentID: guest.StudentID, WeekID: guest.WeekID, StartsOn: guest.StartsOn, EndsOn: guest.EndsOn,
+		StudentID: ident.ID(guest.StudentID), WeekID: ident.ID(guest.WeekID), StartsOn: guest.StartsOn, EndsOn: guest.EndsOn,
 		TimeModelName: guest.TimeModelName, TimeModelStarts: guest.TimeModelStarts, TimeModelEnds: guest.TimeModelEnds, Lunch: guest.Lunch,
-		HomeSchoolID: guest.HomeSchoolID, GuestSchoolName: guest.GuestSchoolName,
+		HomeSchoolID: (*ident.ID)(guest.HomeSchoolID), GuestSchoolName: guest.GuestSchoolName,
 		SchoolName: enrollment.HolidayGuestSchoolName(guest.HomeSchoolID, guest.HomeSchoolName, guest.GuestSchoolName),
 		Emergency:  guest.Emergency, Pickup: guest.Pickup, Answers: guest.Answers, ReadOnly: guest.EndsOn.Before(today),
 	}
@@ -677,7 +678,7 @@ func (l HolidayGuestBadgeList) HolidayGuestBadges(ctx context.Context, schoolID 
 	badges := make([]enrollment.HolidayGuestBadge, len(current))
 	for i, guest := range current {
 		badges[i] = enrollment.HolidayGuestBadge{
-			StudentID:  guest.StudentID,
+			StudentID:  ident.ID(guest.StudentID),
 			SchoolName: enrollment.HolidayGuestSchoolName(guest.HomeSchoolID, guest.HomeSchoolName, guest.GuestSchoolName),
 		}
 	}

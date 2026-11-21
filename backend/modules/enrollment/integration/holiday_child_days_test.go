@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment/internal/adapters/postgres"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -105,9 +106,9 @@ func TestHolidayChildBookingsCountTheSameChildOverItsRegistrations(t *testing.T)
 		all, err := store.ReadHolidayChildBookings(ctx, p.organization, p.period, []enrollment.HolidayChildKey{oleTag, inaTag, oleTag, inaTag}, 0)
 		require.NoError(t, err)
 		assert.Equal(t, []enrollment.HolidayBookingInput{
-			{WeekID: p.week, TimeModelID: p.model, Days: []calendar.Date{calendar.NewDate(2027, 7, 5), calendar.NewDate(2027, 7, 6)}},
-			{WeekID: p.week, TimeModelID: p.model, Days: []calendar.Date{calendar.NewDate(2027, 7, 7)}},
-			{WeekID: p.week, TimeModelID: p.model, Days: []calendar.Date{calendar.NewDate(2027, 7, 8)}},
+			{WeekID: ident.ID(p.week), TimeModelID: ident.ID(p.model), Days: []calendar.Date{calendar.NewDate(2027, 7, 5), calendar.NewDate(2027, 7, 6)}},
+			{WeekID: ident.ID(p.week), TimeModelID: ident.ID(p.model), Days: []calendar.Date{calendar.NewDate(2027, 7, 7)}},
+			{WeekID: ident.ID(p.week), TimeModelID: ident.ID(p.model), Days: []calendar.Date{calendar.NewDate(2027, 7, 8)}},
 		}, all[oleTag], "placed, pending and waiting bookings of the same family and child count")
 		assert.Len(t, all[inaTag], 1, "one statement reads every asked child apart")
 		p.insert(t, db, childDaysBooking{"eva.tag@example.org", "Ole", "Tag", "2018-03-04", "received", "pending", "{2027-07-07}"})

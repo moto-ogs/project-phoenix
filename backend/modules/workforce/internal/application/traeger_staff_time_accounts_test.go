@@ -7,11 +7,12 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func accountSchool(name string, byTraeger, closed, closedByTraeger bool, laterClosed string) workforce.TraegerTimeAccountSchool {
 	return workforce.TraegerTimeAccountSchool{
-		SchoolID: int64(len(name)), SchoolName: name, ByTraeger: byTraeger, Closed: closed, ClosedByTraeger: closedByTraeger,
+		SchoolID: ident.ID(int64(len(name))), SchoolName: name, ByTraeger: byTraeger, Closed: closed, ClosedByTraeger: closedByTraeger,
 		LaterClosed: laterClosed, TraegerTimeAccountMinutes: workforce.TraegerTimeAccountMinutes{TargetMinutes: 600, ActualMinutes: 540, BalanceMinutes: -60},
 	}
 }

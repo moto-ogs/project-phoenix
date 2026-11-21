@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment/internal/adapters/postgres"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -130,13 +131,13 @@ func TestHolidayQueueOrdersBySubmissionOnTheOwnerClock(t *testing.T) {
 			Guardian:       enrollment.HolidayGuardianInput{FirstName: "Eva", LastName: "Uhr", Email: email, Phone: "0123"},
 			PrivacyConsent: true, CustodyConfirmed: true, DeclarationName: "Eva Uhr", RetentionDays: 365, FormVersion: 1, ConsentVersion: enrollment.HolidayConsentVersionCurrent,
 			Children: []enrollment.HolidayChildInput{{FirstName: "Kim", LastName: "Uhr", BirthDate: calendar.NewDate(2018, time.March, 4),
-				Bookings: []enrollment.HolidayBookingInput{{WeekID: w.week, TimeModelID: model}}}},
+				Bookings: []enrollment.HolidayBookingInput{{WeekID: ident.ID(w.week), TimeModelID: ident.ID(model)}}}},
 		}, enrollment.HolidayPlacementWaitlisted, func(int64) (enrollment.HolidaySealedHealth, error) {
 			return enrollment.HolidaySealedHealth{Children: make([][]byte, 1)}, nil
 		})
 		require.NoError(t, err)
 		assert.True(t, receipt.SubmittedAt.Equal(submitted), "submitted_at is the owner clock's instant")
-		return receipt.ID
+		return receipt.ID.Int64()
 	}
 
 	withinTraeger(t, db, w.organization, func(ctx context.Context) {

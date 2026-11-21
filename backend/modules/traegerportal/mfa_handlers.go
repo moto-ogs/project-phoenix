@@ -125,7 +125,7 @@ func (rs *Resource) mfaResend(w http.ResponseWriter, r *http.Request) {
 		portalauth.Render(w, r, err, portalauth.MFARules)
 		return
 	}
-	render.JSON(w, r, common.MFAResendResponse{ChallengeToken: renewed})
+	common.RenderJSON(w, r, common.MFAResendResponse{ChallengeToken: renewed})
 }
 
 // mfaEnrollStart mails the code that sets up the second factor.
@@ -144,7 +144,7 @@ func (rs *Resource) mfaEnrollStart(w http.ResponseWriter, r *http.Request) {
 		portalauth.Render(w, r, err, portalauth.MFARules)
 		return
 	}
-	render.JSON(w, r, portalauth.EnrollStartResponse{ChallengeToken: challengeToken})
+	common.RenderJSON(w, r, portalauth.EnrollStartResponse{ChallengeToken: challengeToken})
 }
 
 // mfaEnrollConfirm redeems the enrollment code, records the factor and mints
@@ -216,7 +216,7 @@ func (rs *Resource) completeTraegerExchange(w http.ResponseWriter, r *http.Reque
 		portalauth.Render(w, r, err, portalauth.ExchangeRules, portalauth.LoginRules)
 		return
 	}
-	render.JSON(w, r, tokens)
+	common.RenderJSON(w, r, tokens)
 }
 
 // listTrustedDevices answers the person's remembered devices at the Träger

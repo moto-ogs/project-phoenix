@@ -57,7 +57,8 @@ func NewDayChangesTestResource(db transactionruntime.Database, unit tenant.UnitO
 		Notices: timetableCompose.NewStaffNotices(timetableCompose.StaffNoticeDependencies{
 			DB: db.Pool(), Now: func() time.Time { return today.BerlinMidnight().Add(12 * time.Hour) },
 		}),
-		Today: func() calendar.Date { return today }, Logger: slog.Default(),
+		ClosingDays: owners.NewSchoolClosingDayReads(),
+		Today:       func() calendar.Date { return today }, Logger: slog.Default(),
 	})
 	if err != nil {
 		return nil, err

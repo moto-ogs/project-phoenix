@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // weekdayOrder sorts the booked weekdays from Monday to Sunday.
@@ -110,7 +111,7 @@ func feeNoticeHolds(invoiced map[int64]parentbilling.CareInvoice,
 		if invoice.DocumentKind != parentbilling.DocumentKindFeeNotice || len(invoice.Positions) > 0 || len(versions) == 0 {
 			continue
 		}
-		holds = append(holds, parentbilling.CareFeeNoticeHold{ContractID: contractID, SchoolID: versions[0].SchoolID,
+		holds = append(holds, parentbilling.CareFeeNoticeHold{ContractID: ident.ID(contractID), SchoolID: ident.ID(versions[0].SchoolID),
 			ChildFirstName: versions[0].ChildFirstName, ChildLastName: versions[0].ChildLastName, NoticeNumber: invoice.Number})
 	}
 	return holds
@@ -182,9 +183,9 @@ func chainCareMonth(result *careMonth, in careMonthInput, chained []*careChainEn
 	result.billedBySchool = make(map[int64]int)
 	result.feeNoticesBySchool = make(map[int64][]string)
 	for _, invoice := range in.invoiced {
-		result.billedBySchool[invoice.SchoolID]++
+		result.billedBySchool[invoice.SchoolID.Int64()]++
 		if invoice.DocumentKind == parentbilling.DocumentKindFeeNotice && invoice.Number != "" {
-			result.feeNoticesBySchool[invoice.SchoolID] = append(result.feeNoticesBySchool[invoice.SchoolID], invoice.Number)
+			result.feeNoticesBySchool[invoice.SchoolID.Int64()] = append(result.feeNoticesBySchool[invoice.SchoolID.Int64()], invoice.Number)
 		}
 	}
 	result.feeNoticeHeld = feeNoticeHolds(in.invoiced, byContract)
@@ -440,7 +441,7 @@ func sortedTracks(tracks map[int64]*moduleTrack, order []int64) []moduleTrack {
 func billContract(month calendar.Date, rule string, versions []parentbilling.CareContractVersion, entry bool, prices priceBook) (parentbilling.CareInvoice, []parentbilling.CareUnpriced) {
 	head := versions[0]
 	invoice := parentbilling.CareInvoice{
-		ContractID: head.ContractID, SchoolID: head.SchoolID, SchoolName: head.SchoolName,
+		ContractID: ident.ID(head.ContractID), SchoolID: ident.ID(head.SchoolID), SchoolName: head.SchoolName,
 		ChildFirstName: head.ChildFirstName, ChildLastName: head.ChildLastName, StudentID: studentOf(versions),
 		Positions: []parentbilling.CarePosition{}, MealPositions: []parentbilling.CareMealPosition{},
 	}
@@ -468,9 +469,9 @@ func missingPrices(head parentbilling.CareContractVersion, track moduleTrack, pr
 	var missing []parentbilling.CareUnpriced
 	unpriced := func(weekday string, days *int) parentbilling.CareUnpriced {
 		return parentbilling.CareUnpriced{
-			ContractID: head.ContractID, SchoolID: head.SchoolID, SchoolName: head.SchoolName,
+			ContractID: ident.ID(head.ContractID), SchoolID: ident.ID(head.SchoolID), SchoolName: head.SchoolName,
 			ChildFirstName: head.ChildFirstName, ChildLastName: head.ChildLastName,
-			CareOfferingID: track.offeringID, ModuleName: track.name, Weekday: weekday, DaysPerWeek: days,
+			CareOfferingID: ident.ID(track.offeringID), ModuleName: track.name, Weekday: weekday, DaysPerWeek: days,
 		}
 	}
 	form, _, _ := prices.module(head.SchoolID, track.offeringID, month)
@@ -516,7 +517,7 @@ func trackPositions(schoolID int64, track moduleTrack, prices priceBook, month c
 	positions := make([]parentbilling.CarePosition, len(track.runs))
 	for i, run := range track.runs {
 		position := parentbilling.CarePosition{
-			CareOfferingID: track.offeringID, ModuleName: track.name, VersionNumber: run.version,
+			CareOfferingID: ident.ID(track.offeringID), ModuleName: track.name, VersionNumber: run.version,
 			ServiceFrom: run.from, ServiceUntil: run.until, Weekdays: make([]parentbilling.CareWeekdayPrice, len(run.weekdays)),
 			MealExtra: mealExtra, AmountCents: runCents[i], SiblingCents: siblingCents[i],
 		}
@@ -647,7 +648,7 @@ func largestRemainder(numerators []int64, denominator, total int64) []int64 {
 func isMonthStart(day calendar.Date) bool { return !day.IsZero() && day.Day() == 1 }
 
 // compareOrdered orders two values ascending.
-func compareOrdered[T int | int64 | string](a, b T) int {
+func compareOrdered[T ~int | ~int64 | ~string](a, b T) int {
 	switch {
 	case a < b:
 		return -1

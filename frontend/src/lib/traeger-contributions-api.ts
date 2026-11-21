@@ -342,7 +342,7 @@ function childNumbersToBackend(
   numbers: readonly HolidayChildDebtorNumberInput[],
 ): NonNullable<HolidayChildDebtorNumbersRequest["children"]> {
   return numbers.map((number) => ({
-    child_id: Number(number.childId),
+    child_id: number.childId,
     debtor_number: number.debtorNumber,
   }));
 }

@@ -3,7 +3,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type {
-  BackendStudentEnrollment,
+  StudentEnrollmentBody,
   Activity,
   UpdateActivityRequest,
 } from "./activity-helpers";
@@ -80,7 +80,7 @@ const sampleBackendActivity = buildBackendActivity({
   enrollment_count: 15,
 });
 
-const sampleBackendEnrollment: BackendStudentEnrollment = {
+const sampleBackendEnrollment: StudentEnrollmentBody = {
   id: 1,
   first_name: "Jane",
   last_name: "Smith",

@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The changes of single invoices in the review of a monthly run (#6197,
@@ -41,7 +42,7 @@ func careInvoiceKeyOf(invoice parentbilling.CareInvoice) parentbilling.CareInvoi
 	if service == "" {
 		service = parentbilling.ServiceCare
 	}
-	return parentbilling.CareInvoiceKey{ContractID: invoice.ContractID, Service: service}
+	return parentbilling.CareInvoiceKey{ContractID: invoice.ContractID.Int64(), Service: service}
 }
 
 // keyPositions names every position of an invoice for a removal: a module
@@ -50,12 +51,12 @@ func careInvoiceKeyOf(invoice parentbilling.CareInvoice) parentbilling.CareInvoi
 func keyPositions(invoice *parentbilling.CareInvoice) {
 	for i := range invoice.Positions {
 		position := &invoice.Positions[i]
-		position.Key = "care:" + strconv.FormatInt(position.CareOfferingID, 10) + ":" +
+		position.Key = "care:" + strconv.FormatInt(position.CareOfferingID.Int64(), 10) + ":" +
 			strconv.Itoa(position.VersionNumber) + ":" + position.ServiceFrom.String()
 	}
 	for i := range invoice.MealPositions {
 		meal := &invoice.MealPositions[i]
-		meal.Key = "meal:" + strconv.FormatInt(meal.StudentID, 10) + ":" + meal.MealMonth.String()
+		meal.Key = "meal:" + strconv.FormatInt(meal.StudentID.Int64(), 10) + ":" + meal.MealMonth.String()
 	}
 }
 
@@ -93,7 +94,7 @@ type careAmendments struct {
 // readAmendments reads the entries of a run and the corrections the month
 // carries, and marks each change its revocation took back.
 func (c *CareBilling) readAmendments(ctx context.Context, organizationID int64, run parentbilling.CareRun) (careAmendments, error) {
-	entries, err := c.store.CareRunAmendments(ctx, organizationID, run.ID)
+	entries, err := c.store.CareRunAmendments(ctx, organizationID, run.ID.Int64())
 	if err != nil {
 		return careAmendments{}, err
 	}
@@ -106,7 +107,7 @@ func (c *CareBilling) readAmendments(ctx context.Context, organizationID int64, 
 		if entry.Kind != parentbilling.AmendRevoke {
 			continue
 		}
-		revocation := &parentbilling.CareRevocation{Reason: entry.Reason, AccountID: entry.AccountID, RevokedAt: entry.AmendedAt}
+		revocation := &parentbilling.CareRevocation{Reason: entry.Reason, AccountID: (*ident.ID)(entry.AccountID), RevokedAt: entry.AmendedAt}
 		if entry.RevokesID != nil {
 			revokedRun[*entry.RevokesID] = revocation
 		} else if entry.RevokesCorrectionID != nil {
@@ -116,7 +117,7 @@ func (c *CareBilling) readAmendments(ctx context.Context, organizationID int64, 
 	result := careAmendments{byInvoice: map[parentbilling.CareInvoiceKey][]parentbilling.CareAmendment{}, carried: carried}
 	for key, list := range carried {
 		for i := range list {
-			list[i].Revocation = revokedCarried[list[i].ID]
+			list[i].Revocation = revokedCarried[list[i].ID.Int64()]
 		}
 		result.carried[key] = list
 	}
@@ -125,8 +126,8 @@ func (c *CareBilling) readAmendments(ctx context.Context, organizationID int64, 
 			continue
 		}
 		result.byInvoice[entry.Invoice] = append(result.byInvoice[entry.Invoice], parentbilling.CareAmendment{
-			ID: entry.ID, Kind: entry.Kind, Label: entry.Label, AmountCents: entry.AmountCents, PositionKey: entry.PositionKey,
-			Before: entry.Before, After: entry.After, Reason: entry.Reason, AccountID: entry.AccountID, AmendedAt: entry.AmendedAt,
+			ID: ident.ID(entry.ID), Kind: entry.Kind, Label: entry.Label, AmountCents: entry.AmountCents, PositionKey: entry.PositionKey,
+			Before: entry.Before, After: entry.After, Reason: entry.Reason, AccountID: (*ident.ID)(entry.AccountID), AmendedAt: entry.AmendedAt,
 			Revocation: revokedRun[entry.ID],
 		})
 	}

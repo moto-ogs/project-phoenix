@@ -1,6 +1,7 @@
 package timetracking
 
 import (
+	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 )
 
@@ -22,10 +23,10 @@ type ScheduleEntryResponse struct {
 
 // ScheduleModelInfo describes the assigned work-time template, when there is one.
 type ScheduleModelInfo struct {
-	ID                 int64  `json:"id"`
-	Name               string `json:"name"`
-	RotationLength     int    `json:"rotation_length"`
-	RotationAnchorDate string `json:"rotation_anchor_date"`
+	ID                 common.ID `json:"id"`
+	Name               string    `json:"name"`
+	RotationLength     int       `json:"rotation_length"`
+	RotationAnchorDate string    `json:"rotation_anchor_date"`
 }
 
 // ScheduleResponse wraps the resolved schedule with rotation metadata.
@@ -53,7 +54,7 @@ type ScheduleResponse struct {
 //	create a tenant template from the same payload and bind it.
 type ScheduleUpdateRequest struct {
 	Mode               string                 `json:"mode"`
-	ModelID            *int64                 `json:"model_id,omitempty"`
+	ModelID            *common.ID             `json:"model_id,omitempty"`
 	RotationLength     int                    `json:"rotation_length,omitempty"`
 	RotationAnchorDate string                 `json:"rotation_anchor_date,omitempty"`
 	Entries            []ScheduleEntryRequest `json:"entries"`
@@ -78,7 +79,7 @@ func (req ScheduleUpdateRequest) toServiceInput() workforce.ScheduleUpdateInput 
 	}
 	return workforce.ScheduleUpdateInput{
 		Mode:               req.Mode,
-		ModelID:            req.ModelID,
+		ModelID:            (*int64)(req.ModelID),
 		RotationLength:     req.RotationLength,
 		RotationAnchorDate: req.RotationAnchorDate,
 		Entries:            entries,

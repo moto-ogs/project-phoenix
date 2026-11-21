@@ -79,8 +79,8 @@ export interface DayChange {
   /** Letzter Tag einer Änderung, die über heute hinausgeht („bis“). */
   readonly until: string | null;
   /**
-   * Beginn und Ende als Zeitpunkt bei einer Änderung mit Uhrzeit (#7660),
-   * sonst null. Ist das Ende vorbei, steht sie unter „erledigt“.
+   * Beginn und Ende als Zeitpunkt bei einer Änderung mit Uhrzeit (ein Dienst,
+   * #7661, #7660), sonst null. Ist das Ende vorbei, steht sie unter „erledigt“.
    */
   readonly startsAt: string | null;
   readonly endsAt: string | null;
@@ -92,6 +92,11 @@ export interface DayChange {
   readonly childSummary?: DayChangeChildSummary | null;
   /** Nur bei der Art `staff_notice`. */
   readonly notice?: DayChangeNotice | null;
+  /** Der Schließtag (#7664): sein Name und ob der Träger ihn plant. */
+  readonly closing?: {
+    readonly name: string;
+    readonly traeger: boolean;
+  } | null;
   /** Der Termin eines Eintrags der Quelle Stundenplan (#7662). */
   readonly activity?: { readonly id: string; readonly title: string } | null;
   /** Wo der Termin heute ist. */
@@ -182,6 +187,9 @@ function mapEntry(entry: Entry): DayChange {
       ? mapChildSummary(entry.child_summary)
       : null,
     notice: mapNotice(entry.notice ?? null),
+    closing: entry.closing
+      ? { name: entry.closing.name, traeger: entry.closing.traeger }
+      : null,
     activity: entry.activity
       ? { id: entry.activity.id, title: entry.activity.title }
       : null,

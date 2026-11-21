@@ -187,7 +187,7 @@ export async function fetchSepaMandates(
 /** The request body of a new mandate. */
 function sepaMandateBody(input: SepaMandateInput): SEPAMandateRequest {
   return {
-    contract_id: Number(input.contractId),
+    contract_id: input.contractId,
     reference: input.reference.trim(),
     signed_on: input.signedOn,
     kind: input.kind,

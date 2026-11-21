@@ -202,7 +202,7 @@ export async function saveCareMealTariff(input: {
     await traegerRequest<WireMealTariffs>(MEAL_TARIFFS_PATH, {
       method: "PUT",
       body: {
-        school_id: Number(input.schoolId),
+        school_id: input.schoolId,
         valid_from: input.validFrom,
         mode: input.mode,
         amount_cents: input.amountCents,

@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
@@ -85,7 +86,7 @@ func TestHostingSchoolPlansTheBookedDaysOfItsOwnChildAndShowsItsRegistration(t *
 	entries = f.registration(t, lead, lia)
 	require.Len(t, entries, 1)
 	entry := entries[0]
-	assert.Equal(t, int64(week), entry.WeekID)
+	assert.Equal(t, ident.ID(int64(week)), entry.WeekID)
 	assert.Equal(t, "Sommerferien 2099", entry.PeriodName)
 	assert.Equal(t, calendar.NewDate(2099, 7, 6), entry.StartsOn)
 	assert.Equal(t, "bis 16 Uhr", entry.TimeModelName)
@@ -203,7 +204,7 @@ func TestParticipantListNamesOwnChildrenThatFitNoStudentOrSeveral(t *testing.T) 
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		byChild := map[int64]enrollment.HolidayOwnChildAssignment{}
 		for _, assignment := range decodeSchoolPortalData[[]enrollment.HolidayOwnChildAssignment](t, rec.Body.Bytes()) {
-			byChild[assignment.ChildID] = assignment
+			byChild[assignment.ChildID.Int64()] = assignment
 		}
 		byName := map[string]enrollment.HolidayOwnChildAssignment{}
 		for _, participant := range list.Participants {
@@ -221,7 +222,7 @@ func TestParticipantListNamesOwnChildrenThatFitNoStudentOrSeveral(t *testing.T) 
 	matched := assignments()
 	assert.Equal(t, enrollment.HolidayOwnChildMatched, matched["Lia"].Assignment)
 	require.NotNil(t, matched["Lia"].StudentID)
-	assert.Equal(t, lia, *matched["Lia"].StudentID)
+	assert.Equal(t, ident.ID(lia), *matched["Lia"].StudentID)
 
 	twin := f.liaOfNord(t, "LIA")
 	assert.Equal(t, enrollment.HolidayOwnChildAmbiguous, assignments()["Lia"].Assignment, "two students fit: the registration is assigned to neither")

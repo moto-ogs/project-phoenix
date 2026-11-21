@@ -157,7 +157,7 @@ func TestDebtorNumberChangesUntilAnInvoiceIsIssued(t *testing.T) {
 
 	rec := f.changeDebtorNumber(t, f.office.token, f.siblings, " 10 4711 ")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.JSONEq(t, `{"id":`+jsonInt(f.siblings)+`,"debtor_number":"10 4711"}`, string(decodeSchoolPortalRaw(t, rec.Body.Bytes())))
+	assert.JSONEq(t, `{"id":"`+jsonInt(f.siblings)+`","debtor_number":"10 4711"}`, string(decodeSchoolPortalRaw(t, rec.Body.Bytes())))
 	assertDebtorNumberRefused(t, f.changeDebtorNumber(t, f.office.token, f.siblings, " "))
 	assertDebtorNumberRefused(t, f.changeDebtorNumber(t, f.office.token, f.siblings, strings.Repeat("1", 36)))
 	require.Equal(t, http.StatusOK, f.act(t, f.siblings, "freeze").Code)

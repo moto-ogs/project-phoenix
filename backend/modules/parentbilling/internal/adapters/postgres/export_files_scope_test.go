@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -94,7 +95,7 @@ func TestExportFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, runs.Runs, 1, "ExportRuns")
 		assert.Equal(t, 1, runs.Total, "ExportRuns counts only the own runs")
-		assert.Equal(t, own.run, runs.Runs[0].RunID)
+		assert.Equal(t, ident.ID(own.run), runs.Runs[0].RunID)
 		assert.Equal(t, 1, runs.Runs[0].Exports, "the other Träger's file of the same run ID is not counted")
 
 		content, err := store.ExportRunContent(ctx, own.organization, parentbilling.DebitRunCare, own.run)
@@ -404,7 +405,7 @@ func TestHolidayInvoiceHistoryShowsTheMailOfItsCancellation(t *testing.T) {
 		for _, step := range steps {
 			notes[step.Kind] = step.Note
 			if step.Kind == parentbilling.HistoryCancelled {
-				canceller = step.AccountID
+				canceller = (*int64)(step.AccountID)
 			}
 		}
 		require.NotNil(t, canceller, "the Storno names the account that cancelled")

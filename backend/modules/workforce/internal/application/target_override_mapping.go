@@ -5,12 +5,13 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func targetOverrideToPublic(row domain.StaffTargetOverride) workforce.StaffTargetOverride {
 	result := workforce.StaffTargetOverride{
-		ID: row.ID, StaffID: row.StaffID, StartDate: row.StartDate, EndDate: row.EndDate,
-		WeekdayMinutes: row.WeekdayMinutes, CreatedBy: row.CreatedBy, KeptByTraeger: row.TraegerContractID != nil,
+		ID: ident.ID(row.ID), StaffID: ident.ID(row.StaffID), StartDate: row.StartDate, EndDate: row.EndDate,
+		WeekdayMinutes: row.WeekdayMinutes, CreatedBy: (*ident.ID)(row.CreatedBy), KeptByTraeger: row.TraegerContractID != nil,
 	}
 	if row.WeekdayMinutes == nil {
 		dailyMinutes := row.DailyMinutes

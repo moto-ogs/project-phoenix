@@ -15,6 +15,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The revenue accounts and cost centers (#4821): what the page saves, how a
@@ -37,28 +38,28 @@ func (s *bookingAccountStore) BookingOfferings(context.Context, int64) ([]parent
 
 func (s *bookingAccountStore) SetRevenueAccount(_ context.Context, _, _ int64, scope string, scopeID int64, account string) error {
 	s.assignments.RevenueAccounts = slices.DeleteFunc(s.assignments.RevenueAccounts, func(a parentbilling.RevenueAccount) bool {
-		return a.Scope == scope && a.ScopeID == scopeID
+		return a.Scope == scope && a.ScopeID == ident.ID(scopeID)
 	})
-	s.assignments.RevenueAccounts = append(s.assignments.RevenueAccounts, parentbilling.RevenueAccount{Scope: scope, ScopeID: scopeID, Account: account})
+	s.assignments.RevenueAccounts = append(s.assignments.RevenueAccounts, parentbilling.RevenueAccount{Scope: scope, ScopeID: ident.ID(scopeID), Account: account})
 	return nil
 }
 
 func (s *bookingAccountStore) DeleteRevenueAccount(_ context.Context, _ int64, scope string, scopeID int64) error {
 	s.assignments.RevenueAccounts = slices.DeleteFunc(s.assignments.RevenueAccounts, func(a parentbilling.RevenueAccount) bool {
-		return a.Scope == scope && a.ScopeID == scopeID
+		return a.Scope == scope && a.ScopeID == ident.ID(scopeID)
 	})
 	return nil
 }
 
 func (s *bookingAccountStore) InsertCostCenter(_ context.Context, _, _ int64, center parentbilling.CostCenter) error {
-	center.ID = int64(len(s.assignments.CostCenters) + 1)
+	center.ID = ident.ID(int64(len(s.assignments.CostCenters) + 1))
 	s.assignments.CostCenters = append(s.assignments.CostCenters, center)
 	return nil
 }
 
 func (s *bookingAccountStore) DeleteCostCenter(_ context.Context, _, id int64) error {
 	before := len(s.assignments.CostCenters)
-	s.assignments.CostCenters = slices.DeleteFunc(s.assignments.CostCenters, func(c parentbilling.CostCenter) bool { return c.ID == id })
+	s.assignments.CostCenters = slices.DeleteFunc(s.assignments.CostCenters, func(c parentbilling.CostCenter) bool { return c.ID == ident.ID(id) })
 	if len(s.assignments.CostCenters) == before {
 		return parentbilling.ErrCostCenterNotFound
 	}
@@ -328,7 +329,7 @@ func TestBookingAccountsChecksTheScopeOfTheTraeger(t *testing.T) {
 		ValidFrom: onDay(2026, time.October, 1), Code: "X"})
 	assert.ErrorIs(t, err, parentbilling.ErrBookingScopeNotFound, "KOST1 belongs to a school or the holiday care")
 	for scopeID, name := range map[int64]string{99: "the holiday KOST1 of a school of another Träger", 0: "the holiday KOST1 names its school"} {
-		_, err = accounts.AddCostCenter(ctx, sjrReviewer, parentbilling.CostCenter{Scope: parentbilling.BookingScopeSchoolHoliday, ScopeID: scopeID,
+		_, err = accounts.AddCostCenter(ctx, sjrReviewer, parentbilling.CostCenter{Scope: parentbilling.BookingScopeSchoolHoliday, ScopeID: ident.ID(scopeID),
 			ValidFrom: onDay(2026, time.October, 1), Code: "X"})
 		assert.ErrorIs(t, err, parentbilling.ErrBookingScopeNotFound, name)
 	}

@@ -409,10 +409,10 @@ function mapStaffOverview(data: WireOverview): StaffOverview {
 
 function linkBody(input: StaffLinkInput): StaffLinkRequest {
   return {
-    staff_record_id: input.recordId === null ? null : Number(input.recordId),
+    staff_record_id: input.recordId === null ? null : input.recordId,
     members: input.members.map((member) => ({
-      school_id: Number(member.schoolId),
-      staff_id: Number(member.staffId),
+      school_id: member.schoolId,
+      staff_id: member.staffId,
     })),
     choices: input.choices,
   };

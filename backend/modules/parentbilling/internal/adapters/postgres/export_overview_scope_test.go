@@ -120,7 +120,7 @@ func TestExportOverviewCountsTheDocumentsASollstellungWrites(t *testing.T) {
 			assert.Equal(t, file.TotalCents, run.LastSollstellung.TotalCents, "%s: the file keeps its own sum", kind)
 			assert.Equal(t, 1, run.LastSollstellung.InvoiceCount, kind)
 
-			content, err := store.ExportRunContent(ctx, scope.organization, kind, run.RunID)
+			content, err := store.ExportRunContent(ctx, scope.organization, kind, run.RunID.Int64())
 			require.NoError(t, err)
 			assert.Len(t, content.Invoices, run.InvoiceCount, "%s: the overview counts what the file writes", kind)
 			assert.Equal(t, run.InvoiceCount, content.Run.InvoiceCount, kind)
@@ -169,7 +169,7 @@ func TestExportListsPageThroughEveryRowOfTheTraegerBelowRLS(t *testing.T) {
 			require.Len(t, page.Runs, 1, "offset %d", offset)
 			assert.Equal(t, 3, page.Total, "every own run, none of the other Träger")
 			assert.Equal(t, 1, page.NotExported, "one own run has no Sollstellung")
-			seen[page.Runs[0].RunID] = true
+			seen[page.Runs[0].RunID.Int64()] = true
 		}
 		assert.Equal(t, ownRuns, seen, "the pages hold every own run once")
 		last, err := store.ExportRuns(ctx, own.organization, 3, 1)
@@ -182,7 +182,7 @@ func TestExportListsPageThroughEveryRowOfTheTraegerBelowRLS(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, page.Files, 1, "offset %d", offset)
 			assert.Equal(t, 2, page.Total, "every own file, none of the other Träger")
-			files[page.Files[0].ID] = true
+			files[page.Files[0].ID.Int64()] = true
 		}
 		assert.Len(t, files, 2, "the pages hold every own file once")
 		return rollback

@@ -190,8 +190,8 @@ func careOfferingPublicTranslations(offering *CareOffering) (capability.Translat
 
 // CareOfferingRequest is the wire shape POST + PUT accept.
 type CareOfferingRequest struct {
-	PhaseID             int64                                `json:"phase_id"`
-	ActivityGroupID     *int64                               `json:"activity_group_id,omitempty"`
+	PhaseID             common.ID                            `json:"phase_id"`
+	ActivityGroupID     *common.ID                           `json:"activity_group_id,omitempty"`
 	Name                string                               `json:"name"`
 	Description         *string                              `json:"description,omitempty"`
 	DaysOfWeekMode      string                               `json:"days_of_week_mode"`
@@ -273,8 +273,8 @@ func (req *CareOfferingRequest) toModel(existingID int64) (*CareOffering, error)
 		return nil, err
 	}
 	o := &CareOffering{
-		PhaseID:                   req.PhaseID,
-		ActivityGroupID:           req.ActivityGroupID,
+		PhaseID:                   req.PhaseID.Int64(),
+		ActivityGroupID:           (*int64)(req.ActivityGroupID),
 		Name:                      req.Name,
 		Description:               req.Description,
 		DaysOfWeekMode:            req.DaysOfWeekMode,
@@ -313,7 +313,7 @@ func parseCareOfferingIDStrings(values []string, field string) ([]int64, error) 
 
 // CloneCareOfferingRequest is the body POST /{id}/clone accepts.
 type CloneCareOfferingRequest struct {
-	TargetPhaseID int64 `json:"target_phase_id"`
+	TargetPhaseID common.ID `json:"target_phase_id"`
 }
 
 func (req *CloneCareOfferingRequest) Bind(_ *http.Request) error { return nil }
@@ -567,7 +567,7 @@ func (rs *Resource) cloneCareOffering(w http.ResponseWriter, r *http.Request) {
 
 	var clone *CareOffering
 	err := rs.runInTenantTx(r, func(ctx context.Context) error {
-		c, e := rs.CareOfferingService.Clone(ctx, sourceID, req.TargetPhaseID)
+		c, e := rs.CareOfferingService.Clone(ctx, sourceID, req.TargetPhaseID.Int64())
 		clone = c
 		return e
 	})

@@ -47,7 +47,7 @@ export interface StammdatenAck {
 }
 
 export const StammdatenAckSchema: z.ZodType<StammdatenAck, unknown> = object<StammdatenAck>({
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
 });
 
 /** Go: staff.StaffPersonResponse */
@@ -151,8 +151,8 @@ export interface AbsencePlanGap {
 }
 
 export const AbsencePlanGapSchema: z.ZodType<AbsencePlanGap, unknown> = object<AbsencePlanGap>({
-  absence_id: int64StringOrNumber,
-  staff_id: int64StringOrNumber,
+  absence_id: int64String,
+  staff_id: int64String,
   absence_type: str,
   date_start: str,
   date_end: str,
@@ -190,7 +190,7 @@ export interface absenceRequestResponse {
 }
 
 export const absenceRequestResponseSchema: z.ZodType<absenceRequestResponse, unknown> = object<absenceRequestResponse>({
-  tenant_id: int64StringOrNumber,
+  tenant_id: int64String,
   absence_type: str,
   absence_type_label: optional(str),
   date_start: str,
@@ -201,11 +201,11 @@ export const absenceRequestResponseSchema: z.ZodType<absenceRequestResponse, unk
   note: optional(str),
   status: str,
   approved_at: optional(instant),
-  created_by: int64StringOrNumber,
+  created_by: int64String,
   working_days: optional(num),
   decision_note: optional(str),
   requested_at: instant,
-  substitute_staff_id: optional(int64StringOrNumber),
+  substitute_staff_id: optional(int64String),
   created_at: instant,
   updated_at: instant,
   duration_days: safeInt,
@@ -411,7 +411,7 @@ export interface AuditLogPerson {
 }
 
 export const AuditLogPersonSchema: z.ZodType<AuditLogPerson, unknown> = object<AuditLogPerson>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
 });
 
@@ -424,7 +424,7 @@ export interface AuditLogActor {
 }
 
 export const AuditLogActorSchema: z.ZodType<AuditLogActor, unknown> = object<AuditLogActor>({
-  staff_id: optional(int64StringOrNumber),
+  staff_id: optional(int64String),
   name: str,
   is_system: bool,
   is_self: bool,
@@ -444,7 +444,7 @@ export interface AuditLogEvent {
 export const AuditLogEventSchema: z.ZodType<AuditLogEvent, unknown> = object<AuditLogEvent>({
   occurred_at: instant,
   source: str,
-  entry_id: int64StringOrNumber,
+  entry_id: int64String,
   staff: optional(AuditLogPersonSchema),
   actor: AuditLogActorSchema,
   reason: str,
@@ -544,11 +544,11 @@ export interface StaffMonthBalanceSnapshot {
 }
 
 export const StaffMonthBalanceSnapshotSchema: z.ZodType<StaffMonthBalanceSnapshot, unknown> = object<StaffMonthBalanceSnapshot>({
-  id: int64StringOrNumber,
+  id: int64String,
   created_at: instant,
   updated_at: instant,
-  tenant_id: int64StringOrNumber,
-  staff_id: int64StringOrNumber,
+  tenant_id: int64String,
+  staff_id: int64String,
   year: safeInt,
   month: safeInt,
   closing_balance_minutes: safeInt,
@@ -558,11 +558,11 @@ export const StaffMonthBalanceSnapshotSchema: z.ZodType<StaffMonthBalanceSnapsho
   credited_minutes: safeInt,
   adjustment_minutes: safeInt,
   closed_at: instant,
-  closed_by: int64StringOrNumber,
+  closed_by: int64String,
   close_reason: optional(str),
   source: str,
   reopened_at: optional(instant),
-  reopened_by: optional(int64StringOrNumber),
+  reopened_by: optional(int64String),
   reopen_reason: optional(str),
 });
 
@@ -576,7 +576,7 @@ export interface TraegerMonthStaff {
 export const TraegerMonthStaffSchema: z.ZodType<TraegerMonthStaff, unknown> = object<TraegerMonthStaff>({
   year: safeInt,
   month: safeInt,
-  staff_ids: nullable(arr(int64StringOrNumber)),
+  staff_ids: nullable(arr(int64String)),
 });
 
 /** Go: workforce.TimeTrackingOverviewRow */
@@ -595,7 +595,7 @@ export interface TimeTrackingOverviewRow {
 }
 
 export const TimeTrackingOverviewRowSchema: z.ZodType<TimeTrackingOverviewRow, unknown> = object<TimeTrackingOverviewRow>({
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   first_name: str,
   last_name: str,
   name: str,
@@ -762,8 +762,8 @@ export interface StaffDocumentResponse {
 }
 
 export const StaffDocumentResponseSchema: z.ZodType<StaffDocumentResponse, unknown> = object<StaffDocumentResponse>({
-  id: int64StringOrNumber,
-  staff_id: int64StringOrNumber,
+  id: int64String,
+  staff_id: int64String,
   category: str,
   filename: str,
   size_bytes: safeInt,
@@ -781,7 +781,7 @@ export interface StaffDocumentListResponse {
 }
 
 export const StaffDocumentListResponseSchema: z.ZodType<StaffDocumentListResponse, unknown> = object<StaffDocumentListResponse>({
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   documents: nullable(arr(StaffDocumentResponseSchema)),
   visible_categories: nullable(arr(str)),
 });
@@ -794,7 +794,7 @@ export interface PayrollNumberResponse {
 }
 
 export const PayrollNumberResponseSchema: z.ZodType<PayrollNumberResponse, unknown> = object<PayrollNumberResponse>({
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   personnel_number: nullable(str),
   kept_by_traeger: bool,
 });
@@ -808,7 +808,7 @@ export interface ScheduleModelInfo {
 }
 
 export const ScheduleModelInfoSchema: z.ZodType<ScheduleModelInfo, unknown> = object<ScheduleModelInfo>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   rotation_length: safeInt,
   rotation_anchor_date: str,
@@ -943,7 +943,7 @@ export interface StammdatenResponse {
 }
 
 export const StammdatenResponseSchema: z.ZodType<StammdatenResponse, unknown> = object<StammdatenResponse>({
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   person: StammdatenPersonPayloadSchema,
   kontakt: StammdatenKontaktPayloadSchema,
   arbeitsvertrag: StammdatenArbeitsvertragPayloadSchema,
@@ -960,7 +960,7 @@ export interface StammdatenFinancialMaskedResponse {
 }
 
 export const StammdatenFinancialMaskedResponseSchema: z.ZodType<StammdatenFinancialMaskedResponse, unknown> = object<StammdatenFinancialMaskedResponse>({
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   iban_masked: nullable(str),
   tax_id_masked: nullable(str),
   social_security_number_masked: nullable(str),
@@ -980,13 +980,13 @@ export interface StaffTargetOverride {
 }
 
 export const StaffTargetOverrideSchema: z.ZodType<StaffTargetOverride, unknown> = object<StaffTargetOverride>({
-  id: int64StringOrNumber,
-  staff_id: int64StringOrNumber,
+  id: int64String,
+  staff_id: int64String,
   start_date: str,
   end_date: str,
   daily_minutes: nullable(safeInt),
   weekday_minutes: nullable(arr(safeInt)),
-  created_by: optional(int64StringOrNumber),
+  created_by: optional(int64String),
   kept_by_traeger: bool,
 });
 
@@ -1006,14 +1006,14 @@ export interface StaffBalanceAdjustment {
 }
 
 export const StaffBalanceAdjustmentSchema: z.ZodType<StaffBalanceAdjustment, unknown> = object<StaffBalanceAdjustment>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
-  staff_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
+  staff_id: int64String,
   type: str,
   minutes_delta: safeInt,
   effective_date: str,
   note: str,
-  decided_by: int64StringOrNumber,
+  decided_by: int64String,
   decided_at: instant,
   created_at: instant,
   updated_at: instant,
@@ -1289,7 +1289,7 @@ export interface StammdatenFinancialRevealResponse {
 }
 
 export const StammdatenFinancialRevealResponseSchema: z.ZodType<StammdatenFinancialRevealResponse, unknown> = object<StammdatenFinancialRevealResponse>({
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   iban: nullable(str),
   tax_id: nullable(str),
   social_security_number: nullable(str),
@@ -1415,7 +1415,7 @@ export interface ScheduleEntryRequest {
 /** Go: timetracking.ScheduleUpdateRequest */
 export interface ScheduleUpdateRequest {
   mode?: string;
-  model_id?: number | null;
+  model_id?: string | null;
   rotation_length?: number;
   rotation_anchor_date?: string;
   entries?: ScheduleEntryRequest[] | null;

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/uptrace/bun"
 )
 
@@ -49,22 +50,22 @@ type monthSnapshotRow struct {
 
 func monthSnapshotToDomain(v monthSnapshotRow) domain.StaffMonthBalanceSnapshot {
 	return domain.StaffMonthBalanceSnapshot{
-		ID: v.ID, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, TenantID: v.TenantID, StaffID: v.StaffID,
+		ID: ident.ID(v.ID), CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, TenantID: ident.ID(v.TenantID), StaffID: ident.ID(v.StaffID),
 		Year: v.Year, Month: v.Month, ClosingBalanceMinutes: v.ClosingBalanceMinutes, CarryInMinutes: v.CarryInMinutes,
 		TargetMinutes: v.TargetMinutes, ActualMinutes: v.ActualMinutes, CreditedMinutes: v.CreditedMinutes,
-		AdjustmentMinutes: v.AdjustmentMinutes, ClosedAt: v.ClosedAt, ClosedBy: v.ClosedBy, ClosedByAccountID: v.ClosedByAccountID, CloseReason: v.CloseReason,
-		Source: v.Source, ReopenedAt: v.ReopenedAt, ReopenedBy: v.ReopenedBy, ReopenedByAccountID: v.ReopenedByAccountID, ReopenReason: v.ReopenReason,
+		AdjustmentMinutes: v.AdjustmentMinutes, ClosedAt: v.ClosedAt, ClosedBy: ident.ID(v.ClosedBy), ClosedByAccountID: v.ClosedByAccountID, CloseReason: v.CloseReason,
+		Source: v.Source, ReopenedAt: v.ReopenedAt, ReopenedBy: (*ident.ID)(v.ReopenedBy), ReopenedByAccountID: v.ReopenedByAccountID, ReopenReason: v.ReopenReason,
 		PayrollRules: []byte(v.PayrollRules),
 	}
 }
 
 func monthSnapshotFromDomain(v domain.StaffMonthBalanceSnapshot) monthSnapshotRow {
 	return monthSnapshotRow{
-		ID: v.ID, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, TenantID: v.TenantID, StaffID: v.StaffID,
+		ID: v.ID.Int64(), CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, TenantID: v.TenantID.Int64(), StaffID: v.StaffID.Int64(),
 		Year: v.Year, Month: v.Month, ClosingBalanceMinutes: v.ClosingBalanceMinutes, CarryInMinutes: v.CarryInMinutes,
 		TargetMinutes: v.TargetMinutes, ActualMinutes: v.ActualMinutes, CreditedMinutes: v.CreditedMinutes,
-		AdjustmentMinutes: v.AdjustmentMinutes, ClosedAt: v.ClosedAt, ClosedBy: v.ClosedBy, ClosedByAccountID: v.ClosedByAccountID, CloseReason: v.CloseReason,
-		Source: v.Source, ReopenedAt: v.ReopenedAt, ReopenedBy: v.ReopenedBy, ReopenedByAccountID: v.ReopenedByAccountID, ReopenReason: v.ReopenReason,
+		AdjustmentMinutes: v.AdjustmentMinutes, ClosedAt: v.ClosedAt, ClosedBy: v.ClosedBy.Int64(), ClosedByAccountID: v.ClosedByAccountID, CloseReason: v.CloseReason,
+		Source: v.Source, ReopenedAt: v.ReopenedAt, ReopenedBy: (*int64)(v.ReopenedBy), ReopenedByAccountID: v.ReopenedByAccountID, ReopenReason: v.ReopenReason,
 		PayrollRules: v.PayrollRules,
 	}
 }

@@ -96,7 +96,7 @@ func debtorNumbersToSet(candidates []importCandidate) []parentbilling.FamilyDebt
 			continue
 		}
 		seen[candidate.family] = true
-		set = append(set, parentbilling.FamilyDebtorNumber{FamilyEmail: candidate.family, ContractID: candidate.row.ContractID,
+		set = append(set, parentbilling.FamilyDebtorNumber{FamilyEmail: candidate.family, ContractID: candidate.row.ContractID.Int64(),
 			DebtorNumber: candidate.row.DebtorNumber})
 	}
 	return set

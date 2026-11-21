@@ -16,6 +16,7 @@ import (
 	timetablePorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The operational day's behaviour tests run the owner's public capability
@@ -480,7 +481,7 @@ func (s *fakeOpsAttendance) MoveStudentsToActiveGroupAuthorized(_ context.Contex
 	if s.moveResult != nil {
 		return s.moveResult, nil
 	}
-	return &studentpresence.StudentMoveResult{Moved: studentIDs, ActiveGroupID: &activeGroupID}, nil
+	return &studentpresence.StudentMoveResult{Moved: ident.IDs(studentIDs), ActiveGroupID: (*ident.ID)(&activeGroupID)}, nil
 }
 
 func (s *fakeOpsAttendance) CreateVisitAs(_ context.Context, _ int64, visit *studentpresence.Visit) error {

@@ -13,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/sepa"
 )
 
@@ -206,8 +207,8 @@ func (m *SEPAMandates) nameParties(ctx context.Context, organizationID int64, ma
 	}
 	ids := make([]int64, 0, len(mandates))
 	for _, mandate := range mandates {
-		if !slices.Contains(ids, mandate.ContractID) {
-			ids = append(ids, mandate.ContractID)
+		if !slices.Contains(ids, mandate.ContractID.Int64()) {
+			ids = append(ids, mandate.ContractID.Int64())
 		}
 	}
 	parties, err := m.contracts.Recipients(ctx, organizationID, ids)
@@ -215,7 +216,7 @@ func (m *SEPAMandates) nameParties(ctx context.Context, organizationID int64, ma
 		return fmt.Errorf("parent billing: read the contract parties: %w", err)
 	}
 	for i := range mandates {
-		party := parties[mandates[i].ContractID]
+		party := parties[mandates[i].ContractID.Int64()]
 		mandates[i].PartyFirstName, mandates[i].PartyLastName = party.FirstName, party.LastName
 	}
 	return nil
@@ -254,7 +255,7 @@ func (m *SEPAMandates) CreateSEPAMandate(ctx context.Context, reviewer parentbil
 	if err != nil {
 		return parentbilling.SEPAMandate{}, err
 	}
-	mandate.FamilyEmail, mandate.ContractID = family, input.ContractID
+	mandate.FamilyEmail, mandate.ContractID = family, ident.ID(input.ContractID)
 	// A mandate is given to the Träger's creditor identifier and stays bound
 	// to it; a later change of the identifier needs a new mandate (ADR 0171).
 	creditor, err := creditorOf(ctx, m.store, reviewer.OrganizationID)
@@ -547,7 +548,7 @@ func (m *SEPAMandates) SEPAMandateDebits(ctx context.Context, reviewer parentbil
 		}
 		mandate.AccountHolder, mandate.HolderSealed = string(holder), nil
 		mandates[i] = mandate
-		debits[i] = parentbilling.SEPAMandateDebit{MandateID: mandate.ID, Reference: mandate.Reference, SignedOn: mandate.SignedOn,
+		debits[i] = parentbilling.SEPAMandateDebit{MandateID: mandate.ID.Int64(), Reference: mandate.Reference, SignedOn: mandate.SignedOn,
 			SequenceType: mandate.SequenceType(), AccountHolder: mandate.AccountHolder, IBAN: string(iban), BIC: mandate.BIC}
 	}
 	if err := m.store.InsertSEPAMandateEvents(ctx, reviewer.OrganizationID, reviewer.AccountID, mandateReveal,

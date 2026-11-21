@@ -17,6 +17,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
@@ -381,7 +382,7 @@ func holidayRegistrationDocument(export capability.HolidayRegistrationExport, fi
 	for _, row := range rows {
 		school := "Feriengast"
 		if row.Child.HomeSchoolID != nil {
-			school = schoolName(*row.Child.HomeSchoolID)
+			school = schoolName((*row.Child.HomeSchoolID).Int64())
 		} else if row.Child.GuestSchoolName != "" {
 			school = "Feriengast (" + row.Child.GuestSchoolName + ")"
 		}
@@ -389,7 +390,7 @@ func holidayRegistrationDocument(export capability.HolidayRegistrationExport, fi
 		if len(row.Child.DuplicateRegistrationIDs) > 0 {
 			numbers := make([]string, len(row.Child.DuplicateRegistrationIDs))
 			for i, id := range row.Child.DuplicateRegistrationIDs {
-				numbers[i] = strconv.FormatInt(id, 10)
+				numbers[i] = strconv.FormatInt(id.Int64(), 10)
 			}
 			duplicate = "Ja, Anmeldung Nr. " + strings.Join(numbers, ", ")
 		}
@@ -400,12 +401,12 @@ func holidayRegistrationDocument(export capability.HolidayRegistrationExport, fi
 		secondName, secondPhone := holidaySecondGuardianContact(row.SecondGuardian)
 		values := map[lists.ColumnID]string{
 			"status": holidayRegistrationStatusLabels[row.Registration.Status], "frozen": frozen,
-			"registration": strconv.FormatInt(row.Registration.ID, 10),
+			"registration": strconv.FormatInt(row.Registration.ID.Int64(), 10),
 			"submitted_at": row.Registration.SubmittedAt.In(calendar.Berlin).Format("02.01.2006 15:04"),
 			"last_name":    row.Child.LastName, "first_name": row.Child.FirstName,
 			"birth_date": row.Child.BirthDate.Format("02.01.2006"), "school": school,
 			"week":        holidayExportWeek(row.Booking),
-			"host_school": schoolName(row.Booking.HostSchoolID), "time_model": row.Booking.TimeModelName,
+			"host_school": schoolName(row.Booking.HostSchoolID.Int64()), "time_model": row.Booking.TimeModelName,
 			"lunch":    holidayExportLunch(row.Booking),
 			"guardian": row.Registration.GuardianFirstName + " " + row.Registration.GuardianLastName,
 			"email":    row.Registration.GuardianEmail, "phone": row.Registration.GuardianPhone, "duplicate": duplicate,
@@ -441,8 +442,8 @@ func holidayRegistrationFilterLabels(period capability.HolidayPeriod, filter cap
 		}
 	}
 	for _, week := range period.Weeks {
-		if week.ID == filter.WeekID {
-			labels = append(labels, "Woche: "+week.StartsOn.Format("02.01.")+" bis "+week.EndsOn.Format("02.01.2006")+", "+schoolName(week.HostSchoolID))
+		if week.ID == ident.ID(filter.WeekID) {
+			labels = append(labels, "Woche: "+week.StartsOn.Format("02.01.")+" bis "+week.EndsOn.Format("02.01.2006")+", "+schoolName(week.HostSchoolID.Int64()))
 		}
 	}
 	if filter.TimeModel != "" {

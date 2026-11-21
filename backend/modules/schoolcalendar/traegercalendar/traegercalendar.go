@@ -49,6 +49,10 @@ type ClosingDay struct {
 	// NotifiedFamilies counts the families a save told about the closing
 	// day in their booked holiday weeks (#6434); zero on a read.
 	NotifiedFamilies int `json:"notified_families"`
+	// AffectedSchoolIDs names every school whose calendar changed through this
+	// write. It includes schools removed from an updated closing day and is not
+	// part of the HTTP response.
+	AffectedSchoolIDs []int64 `json:"-"`
 }
 
 // ClosingDayInput is a closing day as the Träger-Büro writes it.
@@ -110,8 +114,8 @@ type ClosingDays interface {
 	UpdateClosingDay(ctx context.Context, organizationID, closingDayID int64, input ClosingDayInput) (ClosingDay, error)
 	// DeleteClosingDay removes a closing day and tells the parents of the
 	// holiday bookings whose days open again; holidayBookingsToken confirms
-	// that preview (#6457). It returns the families told.
-	DeleteClosingDay(ctx context.Context, organizationID, closingDayID int64, holidayBookingsToken string) (int, error)
+	// that preview (#6457). It returns the deleted day and the families told.
+	DeleteClosingDay(ctx context.Context, organizationID, closingDayID int64, holidayBookingsToken string) (ClosingDay, error)
 }
 
 // SchoolState is a school of a Träger with its federal-state ISO code, as

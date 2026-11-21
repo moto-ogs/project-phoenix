@@ -19,6 +19,7 @@ import (
 	securityruntime "github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	studentpresence "github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // attendanceHistoryResponse is the shape returned by GET /students/{id}/attendance-history.
@@ -56,9 +57,9 @@ type attendanceDayRecord struct {
 	CheckInTime     time.Time  `json:"check_in_time"`
 	CheckOutTime    *time.Time `json:"check_out_time,omitempty"`
 	DurationMinutes *int       `json:"duration_minutes,omitempty"`
-	CheckedInBy     int64      `json:"checked_in_by"`
-	CheckedOutBy    *int64     `json:"checked_out_by,omitempty"`
-	DeviceID        int64      `json:"device_id"`
+	CheckedInBy     common.ID  `json:"checked_in_by"`
+	CheckedOutBy    *common.ID `json:"checked_out_by,omitempty"`
+	DeviceID        common.ID  `json:"device_id"`
 	// CheckedInActor and CheckedOutActor name who recorded the day's arrival
 	// and pickup (#4761); inRow and outRow are the stays they come from.
 	CheckedInActor  *AttendanceActorResponse  `json:"checked_in_actor,omitempty"`
@@ -100,7 +101,7 @@ type attendanceSlotEntry struct {
 }
 
 type attendanceVisitEntry struct {
-	RoomID          *int64     `json:"room_id,omitempty"`
+	RoomID          *common.ID `json:"room_id,omitempty"`
 	RoomName        string     `json:"room_name,omitempty"`
 	EntryTime       time.Time  `json:"entry_time"`
 	ExitTime        *time.Time `json:"exit_time,omitempty"`
@@ -469,9 +470,9 @@ func newAttendanceHistoryDay(dateKey string, row *studentpresence.Attendance) *a
 	day.Attendance = &attendanceDayRecord{
 		CheckInTime:  row.CheckInTime,
 		CheckOutTime: row.CheckOutTime,
-		CheckedInBy:  row.CheckedInBy,
-		CheckedOutBy: row.CheckedOutBy,
-		DeviceID:     row.DeviceID,
+		CheckedInBy:  ident.ID(row.CheckedInBy),
+		CheckedOutBy: (*ident.ID)(row.CheckedOutBy),
+		DeviceID:     ident.ID(row.DeviceID),
 		Sessions:     []attendanceSessionRecord{newAttendanceSession(row)},
 		inRow:        row, outRow: row,
 	}
@@ -494,8 +495,8 @@ func mergeAttendanceRow(rec *attendanceDayRecord, row *studentpresence.Attendanc
 	rec.Sessions = append(rec.Sessions, newAttendanceSession(row))
 	if row.CheckInTime.Before(rec.CheckInTime) {
 		rec.CheckInTime = row.CheckInTime
-		rec.CheckedInBy = row.CheckedInBy
-		rec.DeviceID = row.DeviceID
+		rec.CheckedInBy = ident.ID(row.CheckedInBy)
+		rec.DeviceID = ident.ID(row.DeviceID)
 		rec.inRow = row
 	}
 	if rec.CheckOutTime == nil {
@@ -509,7 +510,7 @@ func mergeAttendanceRow(rec *attendanceDayRecord, row *studentpresence.Attendanc
 	}
 	if row.CheckOutTime.After(*rec.CheckOutTime) {
 		rec.CheckOutTime = row.CheckOutTime
-		rec.CheckedOutBy = row.CheckedOutBy
+		rec.CheckedOutBy = (*ident.ID)(row.CheckedOutBy)
 		rec.outRow = row
 	}
 }
@@ -565,7 +566,7 @@ func attendanceVisitEntries(visits []*studentpresence.VisitHistoryEntry) []atten
 			EntryTime: v.EntryTime,
 			ExitTime:  v.ExitTime,
 		}
-		entry.RoomID, entry.RoomName = v.RoomID, v.RoomName
+		entry.RoomID, entry.RoomName = (*ident.ID)(v.RoomID), v.RoomName
 		if v.ExitTime != nil {
 			mins := int(v.ExitTime.Sub(v.EntryTime).Minutes())
 			entry.DurationMinutes = &mins
