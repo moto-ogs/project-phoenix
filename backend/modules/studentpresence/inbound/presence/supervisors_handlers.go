@@ -56,7 +56,9 @@ func (rs *Resource) endSupervision(w http.ResponseWriter, r *http.Request) {
 	// Get the updated supervisor
 	response, err := rs.presenceSupervisor(r.Context(), id)
 	if err != nil {
-		common.Respond(w, r, http.StatusOK, nil, "Supervision ended successfully")
+		// A typed nil writes "data": null, the contract's answer without a
+		// supervisor; a bare nil drops the member.
+		common.Respond(w, r, http.StatusOK, (*SupervisorResponse)(nil), "Supervision ended successfully")
 		return
 	}
 
