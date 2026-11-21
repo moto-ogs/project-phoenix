@@ -1,21 +1,10 @@
+import type {
+  Request as StaffPersonMergeRequest,
+  Side as WireSide,
+  StaffPersonMergeCandidate as WireCandidate,
+} from "~/lib/contract/operator-staff-person-merges.generated";
 import { operatorFetch } from "./api-helpers";
 
-type BackendSide = {
-  person: {
-    id: string;
-    first_name: string;
-    last_name: string;
-    account_id?: string;
-    created_at: string;
-    birthday?: string;
-  };
-  employment: { id: string; created_at: string; deleted_at: string | null };
-};
-type BackendCandidate = {
-  keeper: BackendSide;
-  donor: BackendSide;
-  revision: string;
-};
 export type MergeSide = {
   personId: string;
   name: string;
@@ -31,14 +20,14 @@ export type StaffMergeCandidate = {
   donor: MergeSide;
   revision: string;
 };
-function mapSide(side: BackendSide): MergeSide {
+function mapSide(side: WireSide): MergeSide {
   return {
-    personId: String(side.person.id),
+    personId: side.person.id,
     name: `${side.person.first_name} ${side.person.last_name}`,
-    accountId: side.person.account_id?.toString(),
+    accountId: side.person.account_id,
     createdAt: side.person.created_at,
     birthday: side.person.birthday,
-    staffId: String(side.employment.id),
+    staffId: side.employment.id,
     staffCreatedAt: side.employment.created_at,
     retiredAt: side.employment.deleted_at,
   };
@@ -46,7 +35,7 @@ function mapSide(side: BackendSide): MergeSide {
 export async function previewStaffPersonMerges(
   schoolId: string,
 ): Promise<StaffMergeCandidate[]> {
-  const candidates = await operatorFetch<BackendCandidate[]>(
+  const candidates = await operatorFetch<WireCandidate[]>(
     `/api/operator/staff-person-merges/${encodeURIComponent(schoolId)}`,
   );
   return candidates.map((candidate) => ({
@@ -71,7 +60,7 @@ export async function executeStaffPersonMerges(
           keeper_id: candidate.keeper.personId,
           revision: candidate.revision,
         })),
-      },
+      } satisfies StaffPersonMergeRequest,
     },
   );
 }

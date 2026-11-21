@@ -1,28 +1,28 @@
 import { describe, it, expect } from "vitest";
+import type { PendingOperatorInvitationResponse as WireInvitationResponse } from "~/lib/contract/operator-invitations.generated";
+import type { OperatorListItem as WireOperatorListItem } from "~/lib/contract/shared.generated";
 import {
   mapPendingInvitation,
   mapOperatorInfo,
   mapInvitationValidation,
-  type BackendInvitationResponse,
-  type BackendOperatorListItem,
-  type BackendInvitationValidation,
+  type InvitationValidationBody,
 } from "./operator-invitation-helpers";
 
-const sampleInvitation: BackendInvitationResponse = {
-  id: 42,
+const sampleInvitation: WireInvitationResponse = {
+  id: "42",
   email: "new-op@example.com",
   display_name: "Max Mustermann",
-  created_by: 1,
+  created_by: "1",
   creator_name: "Admin",
   expires_at: "2026-04-06T12:00:00Z",
   email_sent_at: "2026-04-04T12:00:00Z",
-  email_error: null,
+  email_error: undefined,
   email_retry_count: 0,
   created_at: "2026-04-04T12:00:00Z",
 };
 
-const sampleOperator: BackendOperatorListItem = {
-  id: 7,
+const sampleOperator: WireOperatorListItem = {
+  id: "7",
   email: "operator@example.com",
   display_name: "Operator One",
   active: true,
@@ -31,7 +31,7 @@ const sampleOperator: BackendOperatorListItem = {
   is_self: false,
 };
 
-const sampleValidation: BackendInvitationValidation = {
+const sampleValidation: InvitationValidationBody = {
   email: "invited@example.com",
   display_name: "Invited User",
   expires_at: "2026-04-06T12:00:00Z",
@@ -58,7 +58,7 @@ describe("mapPendingInvitation", () => {
   it("converts null display_name to undefined", () => {
     const result = mapPendingInvitation({
       ...sampleInvitation,
-      display_name: null,
+      display_name: undefined,
     });
     expect(result.displayName).toBeUndefined();
   });
@@ -66,7 +66,7 @@ describe("mapPendingInvitation", () => {
   it("converts null email_sent_at to undefined", () => {
     const result = mapPendingInvitation({
       ...sampleInvitation,
-      email_sent_at: null,
+      email_sent_at: undefined,
     });
     expect(result.emailSentAt).toBeUndefined();
   });
@@ -74,7 +74,7 @@ describe("mapPendingInvitation", () => {
   it("converts null email_error to undefined", () => {
     const result = mapPendingInvitation({
       ...sampleInvitation,
-      email_error: null,
+      email_error: undefined,
     });
     expect(result.emailError).toBeUndefined();
   });
@@ -111,13 +111,16 @@ describe("mapOperatorInfo", () => {
     expect(result.deactivatedAt).toBe("2026-03-01T10:00:00Z");
     expect(result.isSelf).toBe(true);
     expect(
-      mapOperatorInfo({ ...sampleOperator, deactivated_at: null })
+      mapOperatorInfo({ ...sampleOperator, deactivated_at: undefined })
         .deactivatedAt,
     ).toBeUndefined();
   });
 
   it("converts null last_login to undefined", () => {
-    const result = mapOperatorInfo({ ...sampleOperator, last_login: null });
+    const result = mapOperatorInfo({
+      ...sampleOperator,
+      last_login: undefined,
+    });
     expect(result.lastLogin).toBeUndefined();
   });
 

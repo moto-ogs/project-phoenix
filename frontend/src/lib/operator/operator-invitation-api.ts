@@ -1,7 +1,10 @@
 import { operatorFetch } from "./api-helpers";
 import type {
-  BackendInvitationsListResponse,
-  BackendInvitationValidation,
+  CreateInvitationRequest,
+  InvitationsListResponse,
+} from "~/lib/contract/operator-invitations.generated";
+import type {
+  InvitationValidationBody,
   CreateOperatorInvitationRequest,
   AcceptOperatorInvitationRequest,
   PendingOperatorInvitation,
@@ -35,17 +38,22 @@ export async function createOperatorInvitation(
     body: {
       email: data.email,
       display_name: data.displayName,
-    },
+    } satisfies CreateInvitationRequest,
   });
 }
 
 export async function listOperatorInvitations(): Promise<OperatorInvitationsData> {
-  const raw = await operatorFetch<BackendInvitationsListResponse>(
+  const raw = await operatorFetch<InvitationsListResponse>(
     "/api/operator/invitations",
   );
+  // Go lists pointers; the contract types an entry nullable.
   return {
-    invitations: (raw.invitations ?? []).map(mapPendingInvitation),
-    operators: (raw.operators ?? []).map(mapOperatorInfo),
+    invitations: (raw.invitations ?? [])
+      .filter((entry) => entry !== null)
+      .map(mapPendingInvitation),
+    operators: (raw.operators ?? [])
+      .filter((entry) => entry !== null)
+      .map(mapOperatorInfo),
   };
 }
 
@@ -133,7 +141,7 @@ export async function validateOperatorInvitation(
   }
 
   const json: unknown = await response.json();
-  const data = unwrapResponse<BackendInvitationValidation>(json);
+  const data = unwrapResponse<InvitationValidationBody>(json);
   return mapInvitationValidation(data);
 }
 
