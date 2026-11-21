@@ -82,6 +82,9 @@ type CallerMemo interface {
 // DemoDependencies are the Organisation & Tenancy facts the demo flow needs
 // when the Identity & Access module is composed for the demo environment.
 type DemoDependencies struct {
+	CRMEnabled  bool
+	CRMToken    string
+	CRMJobs     identityaccess.DemoCRMJobs
 	Schools     DemoSchools
 	Mail        identityaccess.DemoAccessMail
 	NewToken    func() (raw, fingerprint string, err error)

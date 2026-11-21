@@ -3,7 +3,10 @@ package owners
 import (
 	"context"
 	"log/slog"
+	"strings"
 	"time"
+
+	"github.com/spf13/viper"
 
 	email "github.com/moto-ogs/project-phoenix/modules/delivery/mail"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
@@ -15,6 +18,8 @@ var demoContact = email.NewEmail(identityaccess.DemoContactName, identityaccess.
 // DemoAccessWiring configures the demo access; nil composes the module
 // without it, as every environment but APP_ENV=demo does.
 type DemoAccessWiring struct {
+	CRMEnabled  bool
+	CRMToken    string
 	Dispatcher  email.Dispatcher
 	Durable     DurableMailOutbox
 	DefaultFrom email.Email
@@ -37,7 +42,9 @@ func demoAccessWiringFor(appEnv string, dispatcher email.Dispatcher, defaultFrom
 	if !email.IsDemoEnvironment(appEnv) {
 		return nil
 	}
+	token := strings.TrimSpace(viper.GetString("hubspot_demo_token"))
 	return &DemoAccessWiring{
+		CRMEnabled: token != "", CRMToken: token,
 		Durable: durable, Dispatcher: dispatcher, DefaultFrom: defaultFrom, FrontendURL: frontendURL, MaxActiveSchools: maxActiveSchools, Logger: logger,
 		OperatorWithoutSecondFactor: identityaccess.DemoOperatorWithoutSecondFactor,
 		NewToken:                    tokens.NewCapabilityToken, Fingerprint: tokens.CapabilityFingerprint,
