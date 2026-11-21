@@ -352,6 +352,9 @@ func deferredPastSteps() []Step {
 		// Nach den Ausfällen von heute: sagt einen Termin ab, nimmt eine
 		// Absage zurück und verlegt einen Termin für „Heute anders“ (#7662).
 		seedTodaysBlockChangesStep{},
+		// Nach den geänderten Terminen: eine Kraft fehlt bei einem Termin,
+		// einen anderen übernimmt eine Vertretung (#7675).
+		seedTodaysBlockStaffStep{},
 		seedDataAccessAuditStep{},
 		// Rührt weder an der Zeiterfassung noch am NFC-Block: legt nur
 		// vergangene Kurstermine samt Anwesenheit an (#2891).
