@@ -22,8 +22,8 @@ func TestSeedTodaysBlockChangesCancelsReinstatesAndMoves(t *testing.T) {
 	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
 		paths = append(paths, r.Method+" "+r.URL.Path)
 		w.Header().Set("Content-Type", "application/json")
-		switch {
-		case r.Method == "GET":
+		switch r.Method {
+		case "GET":
 			_, _ = fmt.Fprint(w, `{"status":"success","data":{"instances":[`+
 				`{"id":61,"title":"Frühbetreuung","status":"planned","start_time":"15:00:00","end_time":"17:00:00","room_id":1,"activity_group_id":9,"staff":[]},`+
 				`{"id":62,"title":"Fußball","status":"planned","start_time":"14:00:00","end_time":"15:00:00","room_id":1,"activity_group_id":9,"staff":[{"staff_id":31}],"student_ids":[5,6]},`+
@@ -32,7 +32,7 @@ func TestSeedTodaysBlockChangesCancelsReinstatesAndMoves(t *testing.T) {
 				`{"id":65,"title":"Basteln","status":"planned","start_time":"13:00:00","end_time":"18:00:00","room_id":1,"activity_group_id":9,"staff":[{"staff_id":32,"is_substitute":true}]},`+
 				`{"id":66,"title":"Spontan","status":"planned","start_time":"13:00:00","end_time":"18:00:00","room_id":1,"staff":[]},`+
 				`{"id":67,"title":"Vorbei","status":"completed","start_time":"08:00:00","end_time":"09:00:00","room_id":1,"activity_group_id":9,"staff":[]}]}}`)
-		case r.Method == "PUT":
+		case "PUT":
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&moved))
 			_, _ = fmt.Fprint(w, `{"status":"success","data":{}}`)
 		default:
