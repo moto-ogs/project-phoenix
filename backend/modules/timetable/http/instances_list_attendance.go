@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // resolveCareDays derives, for the whole window at once, which assigned
@@ -127,7 +128,7 @@ func summarizeInstanceStudents(
 			earlyPickup = earlyPickupWithin(inst, pickupCutoffs, row.StudentID)
 		}
 		out.students = append(out.students, instanceStudentSummary{
-			StudentID:       row.StudentID,
+			StudentID:       ident.ID(row.StudentID),
 			Status:          row.Status,
 			Substatus:       row.Substatus,
 			Note:            row.Note,
@@ -206,7 +207,7 @@ func summarizeInstanceStaff(staffRows []timetable.InstanceStaff) ([]instanceStaf
 			absentCount++
 		}
 		staff = append(staff, instanceStaffSummary{
-			StaffID:       row.StaffID,
+			StaffID:       ident.ID(row.StaffID),
 			IsPrimary:     row.IsPrimary,
 			IsAbsent:      row.IsAbsent,
 			IsSubstitute:  row.IsSubstitute,

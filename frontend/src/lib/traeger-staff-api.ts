@@ -8,39 +8,92 @@
  * und Steuerdaten. Personendaten werden nie zwischengespeichert; jede Anfrage
  * steht im Zugriffsprotokoll der Schulen. Backend-IDs werden hier zu Strings.
  */
-import type { PersonRequest } from "~/lib/contract/traeger-staff-records.generated";
+import type {
+  ContractSollRequest,
+  CreateContractRequest,
+  HireRequest,
+  HolidayWeeksRequest,
+  PersonnelNumberRequest,
+  PersonRequest,
+  SiteSollPayload,
+  StaffFinancialRequest,
+  StaffLinkRequest,
+  TraegerStaffCandidate as WireCandidate,
+  TraegerStaffContract as WireContract,
+  TraegerStaffFinancial as WireFinancial,
+  TraegerStaffLinkPreview as WirePreview,
+  TraegerStaffOverview as WireOverview,
+  TraegerStaffRecordDetail as WireDetail,
+  TraegerStaffRecordSummary as WireSummary,
+  UpdateContractRequest,
+} from "~/lib/contract/traeger-staff-records.generated";
+import { knownEnum } from "~/lib/contract/known-enum";
+import { requiredDay } from "~/lib/contract/required-day";
 import {
   downloadTraegerList,
   type TraegerListFile,
   type TraegerListFormat,
 } from "./traeger-list-export";
 import { traegerRequest } from "~/lib/traeger-api";
-import {
-  mapStaffProof,
-  type BackendProof,
-  type StaffProof,
-} from "~/lib/traeger-staff-proofs-api";
+import { mapStaffProof, type StaffProof } from "~/lib/traeger-staff-proofs-api";
 
 const BASE = "/api/traeger/staff-records";
 
+// Go does not register these sets; the contract types them as string. A value
+// this build does not know stays undefined and shows as „–“.
+const STAFF_RECORD_FIELD_VALUES = [
+  "first_name",
+  "last_name",
+  "birthday",
+  "personnel_number",
+  "iban",
+  "tax_id",
+  "social_security_number",
+] as const;
+const STAFF_MATCH_REASON_VALUES = [
+  "same_account",
+  "same_personnel_number",
+  "same_name_birthday",
+  "single",
+] as const;
+const STAFF_REPRESENTATION_VALUES = ["agreement", "none"] as const;
+const STAFF_CHANGE_KIND_VALUES = [
+  "linked",
+  "not_chosen",
+  "changed",
+  "added",
+  "removed",
+  "imported",
+  "ended",
+  "resumed",
+] as const;
+const STAFF_CHANGE_FIELD_VALUES = [
+  ...STAFF_RECORD_FIELD_VALUES,
+  "school",
+  "record",
+  "contract",
+  "contract_soll",
+  "holiday_week",
+] as const;
+const STAFF_CONTRACT_KIND_VALUES = [
+  "part_time",
+  "full_time",
+  "minijob",
+  "uebungsleiter",
+  "ehrenamt",
+] as const;
+
 /** Die Felder einer Akte, in der Reihenfolge der Vorschau. */
-export type StaffRecordField =
-  | "first_name"
-  | "last_name"
-  | "birthday"
-  | "personnel_number"
-  | "iban"
-  | "tax_id"
-  | "social_security_number";
+export type StaffRecordField = (typeof STAFF_RECORD_FIELD_VALUES)[number];
 
 /** Warum moto Beschäftigungen zusammen vorschlägt (ADR 0089 Abschnitt 5). */
-export type StaffMatchReason =
-  "same_account" | "same_personnel_number" | "same_name_birthday" | "single";
+export type StaffMatchReason = (typeof STAFF_MATCH_REASON_VALUES)[number];
 
-type StaffRepresentation = "agreement" | "none";
+type StaffRepresentation = (typeof STAFF_REPRESENTATION_VALUES)[number];
 
 interface StaffRelease {
-  readonly representation: StaffRepresentation;
+  /** undefined: eine Vertretung, die dieser Build nicht kennt. */
+  readonly representation: StaffRepresentation | undefined;
   readonly releasedAt: string;
 }
 
@@ -88,7 +141,8 @@ export interface StaffCandidate {
 }
 
 export interface StaffSuggestion {
-  readonly reason: StaffMatchReason;
+  /** undefined: ein Grund, den dieser Build nicht kennt. */
+  readonly reason: StaffMatchReason | undefined;
   /** Gesetzt, wenn die Beschäftigungen zu einer bestehenden Akte passen. */
   readonly recordId: string | null;
   readonly members: readonly StaffCandidate[];
@@ -107,35 +161,27 @@ export interface StaffFinancial {
   readonly socialSecurityNumber: string | null;
 }
 
-/** Die Felder eines Vertragseintrags im Verlauf (#4706). */
-type StaffContractChangeField = "contract" | "contract_soll" | "holiday_week";
-
 export interface StaffChange {
   /**
    * `imported`: angelegt oder ergänzt vom Personal-Import (#4724).
    * `ended`: der Einsatzort aus dem Vertretungspool endete nach der letzten
    * Blockung, `resumed`: eine neue Blockung nahm ihn wieder auf (#7197).
+   * undefined: eine Art, die dieser Build nicht kennt.
    */
-  readonly kind:
-    | "linked"
-    | "not_chosen"
-    | "changed"
-    | "added"
-    | "removed"
-    | "imported"
-    | "ended"
-    | "resumed";
-  /** `record`: die ganze Akte, die der Personal-Import angelegt hat. */
-  readonly field:
-    StaffRecordField | "school" | "record" | StaffContractChangeField;
+  readonly kind: (typeof STAFF_CHANGE_KIND_VALUES)[number] | undefined;
+  /**
+   * `record`: die ganze Akte, die der Personal-Import angelegt hat;
+   * `contract`, `contract_soll`, `holiday_week`: ein Vertragseintrag (#4706).
+   * undefined: ein Feld, das dieser Build nicht kennt.
+   */
+  readonly field: (typeof STAFF_CHANGE_FIELD_VALUES)[number] | undefined;
   readonly value: string;
   readonly schoolName: string;
   readonly occurredAt: string;
 }
 
 /** Die Art eines Arbeitsvertrags (#4706). */
-export type StaffContractKind =
-  "part_time" | "full_time" | "minijob" | "uebungsleiter" | "ehrenamt";
+export type StaffContractKind = (typeof STAFF_CONTRACT_KIND_VALUES)[number];
 
 /** Ein Soll ab einem Tag, Montag bis Freitag in Minuten. */
 interface StaffContractSoll {
@@ -165,7 +211,8 @@ export interface StaffContractHolidayWeek {
 
 export interface StaffContract {
   readonly id: string;
-  readonly kind: StaffContractKind;
+  /** undefined: eine Art, die dieser Build nicht kennt. */
+  readonly kind: StaffContractKind | undefined;
   readonly startsOn: string;
   /** Letzter Tag oder `null`, solange der Vertrag unbefristet läuft. */
   readonly endsOn: string | null;
@@ -238,132 +285,29 @@ export interface StaffLinkInput {
   readonly choices: Readonly<Partial<Record<StaffRecordField, string>>>;
 }
 
-interface BackendEmployment {
-  school_id: number;
-  school_name: string;
-  staff_id: number;
-  active: boolean;
-  via_pool: boolean;
-}
-
-interface BackendSummary {
-  id: number;
-  first_name: string;
-  last_name: string;
-  birthday?: string;
-  personnel_number: string | null;
-  has_financial: boolean;
-  employments: BackendEmployment[] | null;
-}
-
-interface BackendCandidate {
-  school_id: number;
-  school_name: string;
-  staff_id: number;
-  first_name: string;
-  last_name: string;
-  birthday?: string;
-  personnel_number: string | null;
-  has_account: boolean;
-}
-
-interface BackendFinancial {
-  iban: string | null;
-  tax_id: string | null;
-  social_security_number: string | null;
-}
-
-interface BackendContract {
-  id: number;
-  kind: StaffContractKind;
-  starts_on: string;
-  ends_on: string | null;
-  pool?: boolean;
-  sites:
-    | {
-        school_id: number;
-        school_name: string;
-        staff_id: number;
-        changeable_from: string;
-        soll: { valid_from: string; weekday_minutes: number[] }[] | null;
-      }[]
-    | null;
-  holiday_weeks:
-    | {
-        school_id: number;
-        school_name: string;
-        staff_id: number;
-        week_start: string;
-        weekday_minutes: number[];
-      }[]
-    | null;
-}
-
-interface BackendDetail extends BackendSummary {
-  contracts?: BackendContract[] | null;
-  unsynced_schools?: string[] | null;
-  financial: BackendFinancial;
-  proofs?: BackendProof[] | null;
-  changes:
-    | {
-        kind: StaffChange["kind"];
-        field: StaffChange["field"];
-        value: string;
-        school_name?: string;
-        occurred_at: string;
-      }[]
-    | null;
-}
-
-interface BackendOverview {
-  release: { representation: StaffRepresentation; released_at: string } | null;
-  schools: { id: number; name: string }[] | null;
-  records: BackendSummary[] | null;
-  suggestions:
-    | {
-        reason: StaffMatchReason;
-        staff_record_id?: number;
-        members: BackendCandidate[] | null;
-      }[]
-    | null;
-}
-
-interface BackendPreview {
-  record?: BackendSummary | null;
-  members: BackendCandidate[] | null;
-  fields:
-    | {
-        field: StaffRecordField;
-        conflict: boolean;
-        options:
-          { source: string; school_name?: string; value: string }[] | null;
-      }[]
-    | null;
-}
-
-function mapSummary(record: BackendSummary): StaffRecordSummary {
+function mapSummary(record: WireSummary): StaffRecordSummary {
   return {
-    id: String(record.id),
+    id: record.id,
     firstName: record.first_name,
     lastName: record.last_name,
     birthday: record.birthday ?? "",
     personnelNumber: record.personnel_number,
     hasFinancial: record.has_financial,
     employments: (record.employments ?? []).map((employment) => ({
-      schoolId: String(employment.school_id),
+      schoolId: employment.school_id,
       schoolName: employment.school_name,
-      staffId: String(employment.staff_id),
+      staffId: employment.staff_id,
       active: employment.active,
       viaPool: employment.via_pool,
     })),
   };
 }
 
-function mapCandidate(candidate: BackendCandidate): StaffCandidate {
+function mapCandidate(candidate: WireCandidate): StaffCandidate {
   return {
-    schoolId: String(candidate.school_id),
+    schoolId: candidate.school_id,
     schoolName: candidate.school_name,
-    staffId: String(candidate.staff_id),
+    staffId: candidate.staff_id,
     firstName: candidate.first_name,
     lastName: candidate.last_name,
     birthday: candidate.birthday ?? "",
@@ -372,7 +316,7 @@ function mapCandidate(candidate: BackendCandidate): StaffCandidate {
   };
 }
 
-function mapFinancial(financial: BackendFinancial): StaffFinancial {
+function mapFinancial(financial: WireFinancial): StaffFinancial {
   return {
     iban: financial.iban,
     taxId: financial.tax_id,
@@ -380,13 +324,13 @@ function mapFinancial(financial: BackendFinancial): StaffFinancial {
   };
 }
 
-function mapDetail(record: BackendDetail): StaffRecordDetail {
+function mapDetail(record: WireDetail): StaffRecordDetail {
   return {
     ...mapSummary(record),
     financial: mapFinancial(record.financial),
     changes: (record.changes ?? []).map((change) => ({
-      kind: change.kind,
-      field: change.field,
+      kind: knownEnum(STAFF_CHANGE_KIND_VALUES, change.kind),
+      field: knownEnum(STAFF_CHANGE_FIELD_VALUES, change.field),
       value: change.value,
       schoolName: change.school_name ?? "",
       occurredAt: change.occurred_at,
@@ -397,64 +341,73 @@ function mapDetail(record: BackendDetail): StaffRecordDetail {
   };
 }
 
-function mapContract(contract: BackendContract): StaffContract {
+function mapContract(contract: WireContract): StaffContract {
   return {
-    id: String(contract.id),
-    kind: contract.kind,
-    startsOn: contract.starts_on,
+    id: contract.id,
+    kind: knownEnum(STAFF_CONTRACT_KIND_VALUES, contract.kind),
+    startsOn: requiredDay(contract.starts_on, "staff_contract.starts_on"),
     endsOn: contract.ends_on,
-    pool: contract.pool ?? false,
+    pool: contract.pool,
     sites: (contract.sites ?? []).map((site) => ({
-      schoolId: String(site.school_id),
+      schoolId: site.school_id,
       schoolName: site.school_name,
-      staffId: String(site.staff_id),
-      changeableFrom: site.changeable_from,
+      staffId: site.staff_id,
+      changeableFrom: requiredDay(
+        site.changeable_from,
+        "staff_contract_site.changeable_from",
+      ),
       soll: (site.soll ?? []).map((soll) => ({
-        validFrom: soll.valid_from,
-        weekdayMinutes: soll.weekday_minutes,
+        validFrom: requiredDay(
+          soll.valid_from,
+          "staff_contract_soll.valid_from",
+        ),
+        weekdayMinutes: soll.weekday_minutes ?? [],
       })),
     })),
     holidayWeeks: (contract.holiday_weeks ?? []).map((week) => ({
-      schoolId: String(week.school_id),
+      schoolId: week.school_id,
       schoolName: week.school_name,
-      staffId: String(week.staff_id),
-      weekStart: week.week_start,
-      weekdayMinutes: week.weekday_minutes,
+      staffId: week.staff_id,
+      weekStart: requiredDay(
+        week.week_start,
+        "staff_contract_holiday_week.week_start",
+      ),
+      weekdayMinutes: week.weekday_minutes ?? [],
     })),
   };
 }
 
-const siteBody = (site: StaffContractSiteInput) => ({
+const siteBody = (site: StaffContractSiteInput): SiteSollPayload => ({
   school_id: site.schoolId,
   staff_id: site.staffId,
-  weekday_minutes: site.weekdayMinutes,
+  weekday_minutes: [...site.weekdayMinutes],
 });
 
-function mapStaffOverview(data: BackendOverview): StaffOverview {
+function mapStaffOverview(data: WireOverview): StaffOverview {
   return {
     release: data.release
       ? {
-          representation: data.release.representation,
+          representation: knownEnum(
+            STAFF_REPRESENTATION_VALUES,
+            data.release.representation,
+          ),
           releasedAt: data.release.released_at,
         }
       : null,
     schools: (data.schools ?? []).map((school) => ({
-      id: String(school.id),
+      id: school.id,
       name: school.name,
     })),
     records: (data.records ?? []).map(mapSummary),
     suggestions: (data.suggestions ?? []).map((suggestion) => ({
-      reason: suggestion.reason,
-      recordId:
-        suggestion.staff_record_id === undefined
-          ? null
-          : String(suggestion.staff_record_id),
+      reason: knownEnum(STAFF_MATCH_REASON_VALUES, suggestion.reason),
+      recordId: suggestion.staff_record_id ?? null,
       members: (suggestion.members ?? []).map(mapCandidate),
     })),
   };
 }
 
-function linkBody(input: StaffLinkInput) {
+function linkBody(input: StaffLinkInput): StaffLinkRequest {
   return {
     staff_record_id: input.recordId === null ? null : Number(input.recordId),
     members: input.members.map((member) => ({
@@ -469,7 +422,7 @@ const recordPath = (id: string, suffix = "") =>
   `${BASE}/${encodeURIComponent(id)}${suffix}`;
 
 export async function fetchStaffOverview(): Promise<StaffOverview> {
-  return mapStaffOverview(await traegerRequest<BackendOverview>(`${BASE}`));
+  return mapStaffOverview(await traegerRequest<WireOverview>(`${BASE}`));
 }
 
 /** Die Liste der Akten als Datei; der Download steht im Zugriffsprotokoll. */
@@ -480,28 +433,35 @@ export function downloadStaffRecordList(
 }
 
 export async function fetchStaffRecord(id: string): Promise<StaffRecordDetail> {
-  return mapDetail(await traegerRequest<BackendDetail>(recordPath(id)));
+  return mapDetail(await traegerRequest<WireDetail>(recordPath(id)));
 }
 
 export async function previewStaffLink(
   input: StaffLinkInput,
 ): Promise<StaffLinkPreview> {
-  const data = await traegerRequest<BackendPreview>(`${BASE}/link-preview`, {
+  const data = await traegerRequest<WirePreview>(`${BASE}/link-preview`, {
     method: "POST",
     body: linkBody(input),
   });
   return {
     record: data.record ? mapSummary(data.record) : null,
     members: (data.members ?? []).map(mapCandidate),
-    fields: (data.fields ?? []).map((field) => ({
-      field: field.field,
-      conflict: field.conflict,
-      options: (field.options ?? []).map((option) => ({
-        source: option.source,
-        schoolName: option.school_name ?? "",
-        value: option.value,
-      })),
-    })),
+    // A field this build does not know cannot be chosen here: it stays out.
+    fields: (data.fields ?? []).flatMap((entry) => {
+      const field = knownEnum(STAFF_RECORD_FIELD_VALUES, entry.field);
+      if (field === undefined) return [];
+      return [
+        {
+          field,
+          conflict: entry.conflict,
+          options: (entry.options ?? []).map((option) => ({
+            source: option.source,
+            schoolName: option.school_name ?? "",
+            value: option.value,
+          })),
+        },
+      ];
+    }),
   };
 }
 
@@ -509,7 +469,7 @@ export async function linkStaff(
   input: StaffLinkInput,
 ): Promise<StaffRecordDetail> {
   return mapDetail(
-    await traegerRequest<BackendDetail>(`${BASE}`, {
+    await traegerRequest<WireDetail>(`${BASE}`, {
       method: "POST",
       body: linkBody(input),
     }),
@@ -521,9 +481,9 @@ export async function updateStaffPersonnelNumber(
   value: string | null,
 ): Promise<StaffRecordDetail> {
   return mapDetail(
-    await traegerRequest<BackendDetail>(recordPath(id, "/personnel-number"), {
+    await traegerRequest<WireDetail>(recordPath(id, "/personnel-number"), {
       method: "PUT",
-      body: { personnel_number: value },
+      body: { personnel_number: value } satisfies PersonnelNumberRequest,
     }),
   );
 }
@@ -561,10 +521,9 @@ export async function revealStaffFinancial(
   id: string,
 ): Promise<StaffFinancial> {
   return mapFinancial(
-    await traegerRequest<BackendFinancial>(
-      recordPath(id, "/financial/reveal"),
-      { method: "POST" },
-    ),
+    await traegerRequest<WireFinancial>(recordPath(id, "/financial/reveal"), {
+      method: "POST",
+    }),
   );
 }
 
@@ -578,7 +537,7 @@ export async function updateStaffFinancial(
       iban: values.iban,
       tax_id: values.taxId,
       social_security_number: values.socialSecurityNumber,
-    },
+    } satisfies StaffFinancialRequest,
   });
 }
 
@@ -591,7 +550,7 @@ export async function createStaffContract(
   input: StaffContractInput,
 ): Promise<StaffRecordDetail> {
   return mapDetail(
-    await traegerRequest<BackendDetail>(recordPath(recordId, "/contracts"), {
+    await traegerRequest<WireDetail>(recordPath(recordId, "/contracts"), {
       method: "POST",
       body: {
         kind: input.kind,
@@ -599,7 +558,7 @@ export async function createStaffContract(
         ends_on: input.endsOn,
         pool: input.pool,
         sites: input.sites.map(siteBody),
-      },
+      } satisfies CreateContractRequest,
     }),
   );
 }
@@ -615,9 +574,13 @@ export async function updateStaffContract(
   },
 ): Promise<StaffRecordDetail> {
   return mapDetail(
-    await traegerRequest<BackendDetail>(contractPath(recordId, contractId), {
+    await traegerRequest<WireDetail>(contractPath(recordId, contractId), {
       method: "PUT",
-      body: { kind: input.kind, ends_on: input.endsOn, pool: input.pool },
+      body: {
+        kind: input.kind,
+        ends_on: input.endsOn,
+        pool: input.pool,
+      } satisfies UpdateContractRequest,
     }),
   );
 }
@@ -630,11 +593,14 @@ export async function changeStaffContractSoll(
   sites: readonly StaffContractSiteInput[],
 ): Promise<StaffRecordDetail> {
   return mapDetail(
-    await traegerRequest<BackendDetail>(
+    await traegerRequest<WireDetail>(
       contractPath(recordId, contractId, "/soll"),
       {
         method: "POST",
-        body: { valid_from: validFrom, sites: sites.map(siteBody) },
+        body: {
+          valid_from: validFrom,
+          sites: sites.map(siteBody),
+        } satisfies ContractSollRequest,
       },
     ),
   );
@@ -647,7 +613,7 @@ export async function addStaffHolidayWeeks(
   input: StaffHolidayWeeksInput,
 ): Promise<StaffRecordDetail> {
   return mapDetail(
-    await traegerRequest<BackendDetail>(
+    await traegerRequest<WireDetail>(
       contractPath(recordId, contractId, "/holiday-weeks"),
       {
         method: "POST",
@@ -656,8 +622,8 @@ export async function addStaffHolidayWeeks(
           staff_id: input.staffId,
           from_week: input.fromWeek,
           to_week: input.toWeek,
-          weekday_minutes: input.weekdayMinutes,
-        },
+          weekday_minutes: [...input.weekdayMinutes],
+        } satisfies HolidayWeeksRequest,
       },
     ),
   );
@@ -671,7 +637,7 @@ export async function deleteStaffHolidayWeek(
   weekStart: string,
 ): Promise<StaffRecordDetail> {
   return mapDetail(
-    await traegerRequest<BackendDetail>(
+    await traegerRequest<WireDetail>(
       contractPath(
         recordId,
         contractId,
@@ -688,7 +654,7 @@ export async function deleteStaffContract(
   contractId: string,
 ): Promise<StaffRecordDetail> {
   return mapDetail(
-    await traegerRequest<BackendDetail>(contractPath(recordId, contractId), {
+    await traegerRequest<WireDetail>(contractPath(recordId, contractId), {
       method: "DELETE",
     }),
   );
@@ -775,7 +741,11 @@ export type StaffHireMatch =
       readonly staffId: string;
     });
 
-interface BackendHireMatch {
+/**
+ * One entry of `details.matches` of the hire refusal. It travels in the error
+ * envelope, which no contract decoder reads, so its IDs may still be numbers.
+ */
+interface HireMatchDetails {
   kind?: unknown;
   staff_record_id?: unknown;
   school_id?: unknown;
@@ -791,7 +761,7 @@ function hireMatchReasons(raw: unknown): StaffHireMatchReason[] {
   return HIRE_MATCH_REASONS.filter((reason) => raw.includes(reason));
 }
 
-function hireMatch(match: BackendHireMatch): StaffHireMatch | null {
+function hireMatch(match: HireMatchDetails): StaffHireMatch | null {
   const common = {
     firstName: typeof match.first_name === "string" ? match.first_name : "",
     lastName: typeof match.last_name === "string" ? match.last_name : "",
@@ -833,7 +803,7 @@ export function staffHireMatches(
   const matches: StaffHireMatch[] = [];
   for (const entry of raw as unknown[]) {
     if (typeof entry !== "object" || entry === null) continue;
-    const match = hireMatch(entry as BackendHireMatch);
+    const match = hireMatch(entry as HireMatchDetails);
     if (match) matches.push(match);
   }
   return matches;
@@ -875,7 +845,7 @@ export async function hireStaff(
   input: StaffHireInput,
 ): Promise<StaffRecordDetail> {
   return mapDetail(
-    await traegerRequest<BackendDetail>(`${BASE}/hire`, {
+    await traegerRequest<WireDetail>(`${BASE}/hire`, {
       method: "POST",
       body: {
         first_name: input.firstName,
@@ -891,10 +861,10 @@ export async function hireStaff(
         },
         sites: input.sites.map((site) => ({
           school_id: site.schoolId,
-          weekday_minutes: site.weekdayMinutes,
+          weekday_minutes: [...site.weekdayMinutes],
         })),
         confirm_duplicate: input.confirmDuplicate,
-      },
+      } satisfies HireRequest,
     }),
   );
 }

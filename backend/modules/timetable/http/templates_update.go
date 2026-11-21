@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -21,16 +22,16 @@ type updateTemplateRequest struct {
 	Weekdays        []int         `json:"weekdays"`
 	StartTime       string        `json:"start_time"`
 	EndTime         string        `json:"end_time"`
-	RoomID          int64         `json:"room_id"`
-	CategoryID      int64         `json:"category_id"`
+	RoomID          common.ID     `json:"room_id"`
+	CategoryID      common.ID     `json:"category_id"`
 	PlanningTrackID NullableInt64 `json:"planning_track_id"`
 	MaxParticipants NullableInt   `json:"max_participants"`
 	// RequiredStaff is the optional manual Personalbedarf override (#1839);
 	// omitted/null clears the override (derive from the Betreuungsschlüssel).
-	RequiredStaff    *int   `json:"required_staff,omitempty"`
-	WeekPattern      *int   `json:"week_pattern,omitempty"`
-	CalendarPeriodID *int64 `json:"calendar_period_id,omitempty"`
-	EducationGroupID *int64 `json:"education_group_id,omitempty"`
+	RequiredStaff    *int       `json:"required_staff,omitempty"`
+	WeekPattern      *int       `json:"week_pattern,omitempty"`
+	CalendarPeriodID *common.ID `json:"calendar_period_id,omitempty"`
+	EducationGroupID *common.ID `json:"education_group_id,omitempty"`
 	// Zielgruppe fields — see createTemplateRequest for the full contract.
 	TargetGroupType   string                  `json:"target_group_type,omitempty"`
 	TargetGradeLevel  *int16                  `json:"target_grade_level,omitempty"`
@@ -55,10 +56,10 @@ type updateTemplateRequest struct {
 	Notes *string `json:"notes,omitempty"`
 	// IncludeClosingDays sets the series' closing-day opt-in (#3594);
 	// omitted keeps the stored value.
-	IncludeClosingDays *bool   `json:"include_closing_days,omitempty"`
-	StudentIDs         []int64 `json:"student_ids,omitempty"`
-	StaffIDs           []int64 `json:"staff_ids,omitempty"`
-	PrimaryStaffID     *int64  `json:"primary_staff_id,omitempty"`
+	IncludeClosingDays *bool       `json:"include_closing_days,omitempty"`
+	StudentIDs         []common.ID `json:"student_ids,omitempty"`
+	StaffIDs           []common.ID `json:"staff_ids,omitempty"`
+	PrimaryStaffID     *common.ID  `json:"primary_staff_id,omitempty"`
 	// WeekdayAssignments overrides the shared roster for individual weekdays
 	// (#2129); omitted/empty resets the series to one shared roster.
 	WeekdayAssignments []weekdayAssignmentRequest `json:"weekday_assignments,omitempty"`
@@ -73,8 +74,8 @@ type updateTemplateRequest struct {
 	// student_ids / staff_ids above describe THIS segment and may legitimately
 	// differ from a predecessor's roster, so they are not its target set.
 	// Without a scope, series_roster_from mirrors nothing.
-	SeriesRosterScopeStudentIDs []int64 `json:"series_roster_scope_student_ids,omitempty"`
-	SeriesRosterScopeStaffIDs   []int64 `json:"series_roster_scope_staff_ids,omitempty"`
+	SeriesRosterScopeStudentIDs []common.ID `json:"series_roster_scope_student_ids,omitempty"`
+	SeriesRosterScopeStaffIDs   []common.ID `json:"series_roster_scope_staff_ids,omitempty"`
 	// SeriesRosterScopeWeekdays narrows the mirroring to the weekdays this
 	// edit describes. A series that staffs each weekday separately (#2129) is
 	// edited one weekday at a time, so the predecessor's other weekdays must
@@ -138,10 +139,10 @@ func (req *updateTemplateRequest) Bind(_ *http.Request) error {
 	}
 	req.ListKind = listKind
 	return timetableModule.ValidateTemplateShape(timetableModule.TemplateShape{
-		Type: req.Type, RoomID: req.RoomID, TargetGroupType: req.TargetGroupType,
-		HasTargets: len(req.Targets) > 0, HasStudents: hasAssignedStudents(req.StudentIDs, req.WeekdayAssignments),
+		Type: req.Type, RoomID: req.RoomID.Int64(), TargetGroupType: req.TargetGroupType,
+		HasTargets: len(req.Targets) > 0, HasStudents: hasAssignedStudents(ident.Int64s(req.StudentIDs), req.WeekdayAssignments),
 		HasOfferingSource: len(req.SourceCareOfferingIDs.Value) > 0, MaxParticipants: derefInt(req.MaxParticipants.Value),
-		ListKind: req.ListKind, EducationGroupID: req.EducationGroupID,
+		ListKind: req.ListKind, EducationGroupID: (*int64)(req.EducationGroupID),
 	})
 }
 
@@ -164,8 +165,8 @@ func (req *updateTemplateRequest) normalizeTargetAndSourceFields() error {
 		sourceSchoolClassesForBind = nil
 	}
 	targetType, schoolClass, sourceGradeLevels, sourceSchoolClasses, err := normalizeTemplateTargetFields(
-		req.TargetGroupType, req.TargetGradeLevel, req.TargetSchoolClass, req.EducationGroupID,
-		req.SourceCareOfferingIDs.Value, sourceGradeLevelsForBind, sourceSchoolClassesForBind, req.Targets,
+		req.TargetGroupType, req.TargetGradeLevel, req.TargetSchoolClass, (*int64)(req.EducationGroupID),
+		ident.Int64s(req.SourceCareOfferingIDs.Value), sourceGradeLevelsForBind, sourceSchoolClassesForBind, req.Targets,
 	)
 	if err != nil {
 		return err
@@ -334,7 +335,7 @@ func (rs *Resource) resolveTemplateForRead(
 		renderTemplateNotFound(w, r)
 		return nil, false
 	}
-	templates[0].ResolvedFromTemplateID = &requestedID
+	templates[0].ResolvedFromTemplateID = (*ident.ID)(&requestedID)
 	return templates, true
 }
 
@@ -364,11 +365,11 @@ func (rs *Resource) updateTemplate(w http.ResponseWriter, r *http.Request) {
 	if !rs.prepareTemplateUpdate(w, r, parsed, existing) {
 		return
 	}
-	gradeLevelMax, rosterValidFrom, ok := rs.templateWritePreflight(w, r, parsed.req.CalendarPeriodID, parsed.startDate)
+	gradeLevelMax, rosterValidFrom, ok := rs.templateWritePreflight(w, r, (*int64)(parsed.req.CalendarPeriodID), parsed.startDate)
 	if !ok {
 		return
 	}
-	if err := rs.Templates.ValidateTemplateEducationGroup(ctx, parsed.req.EducationGroupID); err != nil {
+	if err := rs.Templates.ValidateTemplateEducationGroup(ctx, (*int64)(parsed.req.EducationGroupID)); err != nil {
 		if !renderTemplateEducationGroupError(w, r, err) {
 			common.RenderError(w, r, common.ErrorInternalServerWrap("validate education group failed", err))
 		}
@@ -390,7 +391,7 @@ func (rs *Resource) updateTemplate(w http.ResponseWriter, r *http.Request) {
 		renderUpdateTemplateError(w, r, updateErr)
 		return
 	}
-	templates, err := rs.loadTemplates(ctx, &id, parsed.req.CalendarPeriodID)
+	templates, err := rs.loadTemplates(ctx, &id, (*int64)(parsed.req.CalendarPeriodID))
 	if err != nil || len(templates) == 0 {
 		common.RenderError(w, r, common.ErrorInternalServerWrap("reload template failed", err))
 		return
@@ -435,9 +436,9 @@ func updateCalendarPeriodID(
 		return requestedPeriodID
 	}
 	if len(existing.Schedules) > 0 && existing.Schedules[0].CalendarPeriodID != nil {
-		return existing.Schedules[0].CalendarPeriodID
+		return (*int64)(existing.Schedules[0].CalendarPeriodID)
 	}
-	return existing.CalendarPeriodID
+	return (*int64)(existing.CalendarPeriodID)
 }
 
 // applyOfferingSourcePresence resolves the presence-aware offering-source
@@ -560,19 +561,19 @@ func buildUpdateTemplateInput(
 		Fields: timetableModule.TemplateFields{
 			Name:                    req.Name,
 			Type:                    req.Type,
-			CategoryID:              req.CategoryID,
-			PlanningTrackID:         req.PlanningTrackID.Value,
+			CategoryID:              req.CategoryID.Int64(),
+			PlanningTrackID:         (*int64)(req.PlanningTrackID.Value),
 			PlanningTrackIDProvided: req.PlanningTrackID.Set,
-			RoomID:                  req.RoomID,
-			EducationGroupID:        req.EducationGroupID,
+			RoomID:                  req.RoomID.Int64(),
+			EducationGroupID:        (*int64)(req.EducationGroupID),
 			MaxParticipants:         parsed.maxParticipants,
 			MaxParticipantsProvided: parsed.maxParticipantsProvided,
 			RequiredStaff:           normalizeRequiredStaff(req.RequiredStaff),
-			CalendarPeriodID:        req.CalendarPeriodID,
+			CalendarPeriodID:        (*int64)(req.CalendarPeriodID),
 			TargetGroupType:         req.TargetGroupType,
 			TargetGradeLevel:        req.TargetGradeLevel,
 			TargetSchoolClass:       req.TargetSchoolClass,
-			SourceCareOfferingIDs:   req.SourceCareOfferingIDs.Value,
+			SourceCareOfferingIDs:   ident.Int64s(req.SourceCareOfferingIDs.Value),
 			SourceGradeLevels:       req.SourceGradeLevels.Value,
 			SourceSchoolClasses:     req.SourceSchoolClasses.Value,
 			ListKind:                req.ListKind,
@@ -584,19 +585,19 @@ func buildUpdateTemplateInput(
 		Weekdays:           req.Weekdays,
 		TimeframeID:        timeframeID,
 		WeekPattern:        parsed.weekPattern,
-		CalendarPeriodID:   req.CalendarPeriodID,
+		CalendarPeriodID:   (*int64)(req.CalendarPeriodID),
 		RosterValidFrom:    rosterValidFrom,
-		StudentIDs:         req.StudentIDs,
-		StaffIDs:           req.StaffIDs,
-		PrimaryStaffID:     req.PrimaryStaffID,
+		StudentIDs:         ident.Int64s(req.StudentIDs),
+		StaffIDs:           ident.Int64s(req.StaffIDs),
+		PrimaryStaffID:     (*int64)(req.PrimaryStaffID),
 		Targets:            targetInputs(req.Targets),
 		WeekdayAssignments: toServiceWeekdayAssignments(req.WeekdayAssignments),
 		GradeLevelMax:      gradeLevelMax,
 		SeriesRosterFrom:   parsed.seriesRosterFrom,
 		StartDate:          parsed.startDate,
 
-		SeriesRosterScopeStudentIDs:  req.SeriesRosterScopeStudentIDs,
-		SeriesRosterScopeStaffIDs:    req.SeriesRosterScopeStaffIDs,
+		SeriesRosterScopeStudentIDs:  ident.Int64s(req.SeriesRosterScopeStudentIDs),
+		SeriesRosterScopeStaffIDs:    ident.Int64s(req.SeriesRosterScopeStaffIDs),
 		SeriesRosterScopeWeekdays:    req.SeriesRosterScopeWeekdays,
 		SeriesRosterPrimaryChanged:   req.SeriesRosterPrimaryChanged,
 		PropagateNotesToPredecessors: req.PropagateNotesToPredecessors,
@@ -674,7 +675,7 @@ func (rs *Resource) archiveTemplate(w http.ResponseWriter, r *http.Request) {
 		renderTemplateNotFound(w, r)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, TemplateArchivedResponse{ID: id}, "Template archived")
+	common.Respond(w, r, http.StatusOK, TemplateArchivedResponse{ID: ident.ID(id)}, "Template archived")
 }
 
 func templateIDFromRequest(w http.ResponseWriter, r *http.Request) (int64, bool) {

@@ -16,6 +16,7 @@ import (
 
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
@@ -85,7 +86,7 @@ func (s *bookingLeftoversSetup) createHandTemplate(t *testing.T, name string, st
 	t.Helper()
 	w := doTemplateJSON(t, s.router, http.MethodPost, "/templates", s.handTemplateBody(name, studentIDs))
 	require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
-	return decodeTemplateData[createTemplateResponse](t, w).TemplateID
+	return (decodeTemplateData[createTemplateResponse](t, w).TemplateID).Int64()
 }
 
 // handTemplateBody is the create, update and split body of the hand
@@ -147,9 +148,9 @@ func TestBookingLeftoversSurviveTheReload(t *testing.T) {
 	leftovers := s.listLeftovers(t)
 	require.Len(t, leftovers, 1, "only the child whose Thursday ended: %+v", leftovers)
 	got := leftovers[0]
-	assert.Equal(t, template, got.TemplateID)
+	assert.Equal(t, ident.ID(template), got.TemplateID)
 	assert.Equal(t, "Hausaufgaben 2c", got.TemplateName)
-	assert.Equal(t, changed, got.StudentID)
+	assert.Equal(t, ident.ID(changed), got.StudentID)
 	assert.NotEmpty(t, got.StudentName)
 	assert.Equal(t, []int{timetableModule.WeekdayThursday}, got.Weekdays)
 	assert.Equal(t, change.String(), got.BookingEndedOn)
@@ -436,7 +437,7 @@ func TestBookingLeftoversRemoveOnlyTheGapBehindRosterDeviation(t *testing.T) {
 
 	deviations := s.listDeviations(t, s.period.ID)
 	require.Len(t, deviations, 1)
-	assert.Equal(t, template, deviations[0].TemplateID)
+	assert.Equal(t, ident.ID(template), deviations[0].TemplateID)
 	assert.Empty(t, s.listLeftovers(t), "the roster-deviation hint owns the display")
 
 	w := doTemplateJSON(t, s.router, http.MethodPost, fmt.Sprintf("/templates/%d/students/%d/remove-days", template, child), map[string]any{

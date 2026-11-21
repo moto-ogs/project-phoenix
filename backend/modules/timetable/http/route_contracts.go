@@ -24,7 +24,7 @@ type SchoolVacationAcknowledgedResponse struct {
 
 // TemplateArchivedResponse names the template a delete archived.
 type TemplateArchivedResponse struct {
-	ID int64 `json:"id"`
+	ID common.ID `json:"id"`
 }
 
 // PlannedNowResponse lists the caller's blocks of the day.

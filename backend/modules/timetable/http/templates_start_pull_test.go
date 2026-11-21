@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Issue #2226: PUT /timetable/templates/{id} accepts an optional start_date
@@ -100,12 +101,12 @@ func TestTemplateUpdateStartDatePullForward(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 	updated := decodeTemplateData[templateResponse](t, w)
 	require.NotNil(t, updated.CalendarPeriodID)
-	assert.Equal(t, period.ID, *updated.CalendarPeriodID, "omitted period must keep the stored pin")
+	assert.Equal(t, ident.ID(period.ID), *updated.CalendarPeriodID, "omitted period must keep the stored pin")
 	require.NotEmpty(t, updated.Schedules)
 	for _, sched := range updated.Schedules {
 		assert.Equal(t, newStart.String(), sched.ValidFrom, "schedule must carry the pulled-forward start")
 	}
-	assertTemplateRosterValidFrom(t, s, created.TemplateID, newStart)
+	assertTemplateRosterValidFrom(t, s, created.TemplateID.Int64(), newStart)
 
 	// Omitting start_date keeps the (moved) envelope untouched.
 	w = doTemplateJSON(t, router, http.MethodPut, putPath, updateBody(""))

@@ -1,3 +1,5 @@
+import { knownEnum } from "~/lib/contract/known-enum";
+import type { PhaseResponseOverviewResponse as WirePhaseResponseOverview } from "~/lib/contract/enrollment.generated";
 import { createLogger } from "~/lib/logger";
 import type { Translations } from "~/lib/enrollment-translations";
 import {
@@ -456,8 +458,19 @@ export async function decideRolloverReview(
 
 // Rücklauf der bestehenden Kinder (#3379)
 
+// Go does not register this set; the contract types it as string.
+const EXCLUSION_REASON_VALUES = [
+  "care_ending",
+  "graduating",
+  "not_in_scope",
+] as const;
+
+/**
+ * Why children do not count for the response rate. "other": a reason this
+ * build does not know; the children stay excluded (ADR 0270 point 6).
+ */
 type PhaseResponseExclusionReason =
-  "care_ending" | "graduating" | "not_in_scope";
+  (typeof EXCLUSION_REASON_VALUES)[number] | "other";
 
 export interface PhaseResponseChild {
   studentId: string;
@@ -489,28 +502,8 @@ export interface PhaseResponseOverview {
   excluded: PhaseResponseExclusion[];
 }
 
-interface BackendPhaseResponseChild {
-  student_id: string;
-  first_name: string;
-  last_name: string;
-  school_class: string;
-  has_parent_app: boolean;
-  responded: boolean;
-  request_id?: string | null;
-  pending_request_id?: string | null;
-  child_status?: string | null;
-}
-
-interface BackendPhaseResponseOverview {
-  applicable: boolean;
-  expected: number;
-  responded: number;
-  children?: BackendPhaseResponseChild[] | null;
-  excluded?: PhaseResponseExclusion[] | null;
-}
-
 export function mapPhaseResponseOverview(
-  data: BackendPhaseResponseOverview,
+  data: WirePhaseResponseOverview,
 ): PhaseResponseOverview {
   return {
     applicable: data.applicable,
@@ -527,7 +520,10 @@ export function mapPhaseResponseOverview(
       pendingRequestId: child.pending_request_id ?? null,
       childStatus: child.child_status ?? null,
     })),
-    excluded: data.excluded ?? [],
+    excluded: (data.excluded ?? []).map((entry) => ({
+      reason: knownEnum(EXCLUSION_REASON_VALUES, entry.reason) ?? "other",
+      count: entry.count,
+    })),
   };
 }
 
@@ -542,6 +538,6 @@ export async function getPhaseResponseOverview(
     throw await readError(response, "Rücklauf konnte nicht geladen werden");
   }
   return mapPhaseResponseOverview(
-    await readEnrollmentJSON<BackendPhaseResponseOverview>(response),
+    await readEnrollmentJSON<WirePhaseResponseOverview>(response),
   );
 }

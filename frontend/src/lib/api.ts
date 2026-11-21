@@ -9,7 +9,7 @@ import { createLogger } from "~/lib/logger";
 import { fetchWithRetry } from "./api-helpers";
 import { mapGroupsResponse } from "./group-helpers";
 
-import type { BackendGroup, Group as ImportedGroup } from "./group-helpers";
+import type { GroupWire, Group as ImportedGroup } from "./group-helpers";
 import { mapRoomsResponse } from "./room-helpers";
 
 import type { RoomResponse } from "./contract/rooms.generated";
@@ -159,7 +159,7 @@ export const groupService = {
         throw accessDeniedApiError(accessDeniedStatus, accessDeniedBody);
       }
 
-      return mapGroupsResponse(parseListResponse<BackendGroup>(data, "groups"));
+      return mapGroupsResponse(parseListResponse<GroupWire>(data, "groups"));
     } catch (error) {
       logger.error("failed to fetch groups", {
         error: error instanceof Error ? error.message : String(error),

@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	timetablePorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -64,7 +65,7 @@ func TestDeviationHistory_ReturnsEventsWithResolvedNames(t *testing.T) {
 	// Other tests share tenant 1; narrow to this instance's events.
 	var mine []DeviationHistoryEvent
 	for _, ev := range resp.Data.Events {
-		if ev.InstanceID != nil && *ev.InstanceID == inst.ID {
+		if ev.InstanceID != nil && *ev.InstanceID == ident.ID(inst.ID) {
 			mine = append(mine, ev)
 		}
 	}

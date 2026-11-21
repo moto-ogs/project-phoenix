@@ -5,10 +5,18 @@ import {
   wireErrorCode,
 } from "./api-error";
 import type {
+  CompleteOperationRequest,
+  OperationRoster,
+  ScheduledInstance,
+  startOperationResponse,
+} from "./contract/shared.generated";
+import type {
+  PlannedNowResponse,
+  spontaneousStartRequest,
+} from "./contract/timetable.generated";
+import type {
   AttendancePatchBody,
   HomeworkFeedbackBody,
-  BackendStartOperationResult,
-  BackendTimetableRoster,
   PlannedTimetableInstance,
   StartOperationResult,
   TimetableRoster,
@@ -35,12 +43,10 @@ interface PlannedNowOptions {
   scope?: "past" | "day";
 }
 
-export interface SpontaneousStartBody {
-  title: string;
-  room_id: number;
-  activity_group_id?: number;
-  staff_ids?: string[];
-}
+export type SpontaneousStartBody = Required<
+  Pick<spontaneousStartRequest, "title" | "room_id">
+> &
+  Pick<spontaneousStartRequest, "activity_group_id" | "staff_ids">;
 
 // Terminal reopen failures discard the five-minute undo banner. Room,
 // capacity, and concurrent-check-in conflicts also arrive as HTTP 409, but
@@ -86,19 +92,17 @@ export const timetableOperationsApi = {
     }
     if (options?.scope) params.set("scope", options.scope);
     const suffix = params.size > 0 ? `?${params.toString()}` : "";
-    const raw = await unwrap<{
-      instances: Parameters<typeof mapPlannedInstance>[0][];
-    }>(
+    const raw = await unwrap<PlannedNowResponse>(
       await transportFetch(`/api/timetable/operations/planned-now${suffix}`, {
         credentials: "include",
         headers: { Accept: "application/json" },
       }),
     );
-    return raw.instances.map(mapPlannedInstance);
+    return (raw.instances ?? []).map(mapPlannedInstance);
   },
 
   async start(instanceId: string): Promise<StartOperationResult> {
-    const raw = await unwrap<BackendStartOperationResult>(
+    const raw = await unwrap<startOperationResponse>(
       await transportFetch(
         `/api/timetable/operations/instances/${instanceId}/start`,
         {
@@ -114,7 +118,7 @@ export const timetableOperationsApi = {
   async createAndStartSpontaneous(
     body: SpontaneousStartBody,
   ): Promise<StartOperationResult> {
-    const raw = await unwrap<BackendStartOperationResult>(
+    const raw = await unwrap<startOperationResponse>(
       await transportFetch("/api/timetable/operations/spontaneous/start", {
         method: "POST",
         credentials: "include",
@@ -129,7 +133,7 @@ export const timetableOperationsApi = {
   },
 
   async roster(instanceId: string): Promise<TimetableRoster> {
-    const raw = await unwrap<BackendTimetableRoster>(
+    const raw = await unwrap<OperationRoster>(
       await transportFetch(
         `/api/timetable/operations/instances/${instanceId}/roster`,
         {
@@ -142,7 +146,7 @@ export const timetableOperationsApi = {
   },
 
   async rosterByActiveGroup(activeGroupId: string): Promise<TimetableRoster> {
-    const raw = await unwrap<BackendTimetableRoster>(
+    const raw = await unwrap<OperationRoster>(
       await transportFetch(
         `/api/timetable/operations/active-groups/${activeGroupId}/roster`,
         {
@@ -158,7 +162,7 @@ export const timetableOperationsApi = {
     instanceId: string,
     studentId: string,
   ): Promise<TimetableRoster> {
-    const raw = await unwrap<BackendTimetableRoster>(
+    const raw = await unwrap<OperationRoster>(
       await transportFetch(
         `/api/timetable/operations/instances/${instanceId}/students/${studentId}/check-in`,
         {
@@ -177,7 +181,7 @@ export const timetableOperationsApi = {
     instanceId: string,
     studentIds: readonly string[],
   ): Promise<TimetableRoster> {
-    const raw = await unwrap<BackendTimetableRoster>(
+    const raw = await unwrap<OperationRoster>(
       await transportFetch(
         `/api/timetable/operations/instances/${instanceId}/students/check-in`,
         {
@@ -201,7 +205,7 @@ export const timetableOperationsApi = {
     instanceId: string,
     studentId: string,
   ): Promise<TimetableRoster> {
-    const raw = await unwrap<BackendTimetableRoster>(
+    const raw = await unwrap<OperationRoster>(
       await transportFetch(
         `/api/timetable/operations/instances/${instanceId}/students/${studentId}/check-out`,
         {
@@ -261,7 +265,7 @@ export const timetableOperationsApi = {
     instanceId: string,
     confirmedPresentStudentIds: string[],
   ): Promise<{ reopenUntil?: string }> {
-    const raw = await unwrap<{ reopen_until?: string }>(
+    const raw = await unwrap<ScheduledInstance>(
       await transportFetch(
         `/api/timetable/operations/instances/${instanceId}/complete`,
         {
@@ -272,9 +276,8 @@ export const timetableOperationsApi = {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            confirmed_present_student_ids:
-              confirmedPresentStudentIds.map(Number),
-          }),
+            confirmed_present_student_ids: confirmedPresentStudentIds,
+          } satisfies CompleteOperationRequest),
         },
       ),
     );
@@ -282,7 +285,7 @@ export const timetableOperationsApi = {
   },
 
   async reopen(instanceId: string): Promise<StartOperationResult> {
-    const raw = await unwrap<BackendStartOperationResult>(
+    const raw = await unwrap<startOperationResponse>(
       await transportFetch(
         `/api/timetable/operations/instances/${instanceId}/reopen`,
         {

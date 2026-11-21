@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type RequestCorrections struct {
@@ -223,6 +224,9 @@ func correctionRowVersion(value any) string {
 }
 
 func correctionExceptionID(value any) (int64, bool) {
+	if typed, ok := value.(ident.ID); ok {
+		value = typed.Int64()
+	}
 	switch id := value.(type) {
 	case float64:
 		return int64(id), id > 0

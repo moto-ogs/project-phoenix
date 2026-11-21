@@ -86,6 +86,8 @@ type DayChangesSources struct {
 	Teachers  owners.GroupTeacherStaff
 	Names     dayChangesStaffNames
 	Groups    dayChangesGroups
+	CarePlan  dayChangesCarePlan
+	Students  dayChangesStudents
 	// Notices is Timetable's read of the Hinweise der Leitung (#7667).
 	Notices dayChangesNoticeReads
 	// Blocks is Timetable's read of the day's changed blocks (#7662).
@@ -99,6 +101,9 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 	if sources.Caller == nil || sources.Workforce == nil || sources.Teachers == nil || sources.Names == nil || sources.Groups == nil {
 		return nil, fmt.Errorf("%w: personal sources", daychangesview.ErrDependencies)
 	}
+	if sources.CarePlan == nil || sources.Students == nil {
+		return nil, fmt.Errorf("%w: children sources", daychangesview.ErrDependencies)
+	}
 	if sources.Notices == nil {
 		return nil, fmt.Errorf("%w: notice source", daychangesview.ErrDependencies)
 	}
@@ -109,6 +114,7 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 		Today:      sources.Today,
 		Isolation:  dayChangesSavepoints{},
 		Staff:      dayChangesStaff{sources: sources},
+		Children:   dayChangesChildren{sources: sources},
 		Notices:    dayChangesNotices{reads: sources.Notices},
 		Activities: dayChangesActivities{sources: sources},
 		Logger:     sources.Logger,

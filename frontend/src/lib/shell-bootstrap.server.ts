@@ -16,7 +16,9 @@ import {
   resolveChangeRequestAccess,
 } from "~/lib/change-request-access";
 import { createLogger } from "~/lib/logger";
-import { mapProfileResponse, type BackendProfile } from "~/lib/profile-helpers";
+import { mapProfileResponse } from "~/lib/profile-helpers";
+import { contractGet } from "~/lib/contract/client.server";
+import { routes as meRoutes } from "~/lib/contract/me.generated";
 import type { UnreadAnnouncement } from "~/lib/hooks/use-announcements";
 import type { RemindersResult } from "~/lib/reminders-api";
 import type { ShellBootstrap, ShellCounts } from "~/lib/shell-seed";
@@ -324,13 +326,19 @@ export async function loadShellBootstrap(
       // retries); leave that path to the browser instead of caching it.
       return context.incomplete ? undefined : context;
     }),
+    // Through the decoder like the browser's profile read: the generated
+    // type holds at runtime, IDs arrive as strings (#2353).
     optional("profile", async (signal) => {
-      const response = await apiGet<Envelope<BackendProfile>>(
+      const route = meRoutes["GET /api/me/profile"];
+      const result = await contractGet(
+        `${route.method} ${route.pattern}`,
+        route.response,
         "/api/me/profile",
         token,
         { signal },
       );
-      return mapProfileResponse(response.data);
+      if (!result.ok) throw result.error.cause;
+      return mapProfileResponse(result.value.data);
     }),
     optional("accountTenants", async (signal) => {
       const response = await apiGet<Envelope<AccountTenantBackend[] | null>>(

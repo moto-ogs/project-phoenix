@@ -110,7 +110,7 @@ func (rs *Resource) listCategories(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		for i := range responses {
-			count := usage[responses[i].ID]
+			count := usage[responses[i].ID.Int64()]
 			responses[i].UsageCount = &count
 		}
 	}

@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	activitiesHTTP "github.com/moto-ogs/project-phoenix/modules/timetable/http/activities"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/require"
@@ -64,7 +65,7 @@ func TestActivityCategoriesListQueryBudgetIsFlat(t *testing.T) {
 			category := insertCatalogCategory(t, db, index)
 			insertCatalogUsage(t, db, testpkg.Tenant(t), category.ID, index%3)
 			expected = append(expected, map[string]any{
-				"id": category.ID, "name": category.Name, "description": category.Description,
+				"id": ident.ID(category.ID), "name": category.Name, "description": category.Description,
 				"color": category.Color, "is_system": false, "usage_count": index % 3,
 				"created_at": category.CreatedAt, "updated_at": category.UpdatedAt,
 			})

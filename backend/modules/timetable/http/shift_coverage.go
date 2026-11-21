@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const (
@@ -20,15 +21,15 @@ const (
 // probe payload. Dates are explicit candidate weekdays; period + week_pattern
 // optionally reduce them to effective series occurrences.
 type ShiftCoverageRequest struct {
-	Dates                 []string `json:"dates"`
-	StartTime             string   `json:"start_time"`
-	EndTime               string   `json:"end_time"`
-	StaffIDs              []int64  `json:"staff_ids"`
-	ExcludeInstanceID     *int64   `json:"exclude_instance_id,omitempty"`
-	ConcreteInstanceDate  *string  `json:"concrete_instance_date,omitempty"`
-	ReplanActivityGroupID *int64   `json:"replan_activity_group_id,omitempty"`
-	CalendarPeriodID      *int64   `json:"calendar_period_id,omitempty"`
-	WeekPattern           *int     `json:"week_pattern,omitempty"`
+	Dates                 []string    `json:"dates"`
+	StartTime             string      `json:"start_time"`
+	EndTime               string      `json:"end_time"`
+	StaffIDs              []common.ID `json:"staff_ids"`
+	ExcludeInstanceID     *common.ID  `json:"exclude_instance_id,omitempty"`
+	ConcreteInstanceDate  *string     `json:"concrete_instance_date,omitempty"`
+	ReplanActivityGroupID *common.ID  `json:"replan_activity_group_id,omitempty"`
+	CalendarPeriodID      *common.ID  `json:"calendar_period_id,omitempty"`
+	WeekPattern           *int        `json:"week_pattern,omitempty"`
 }
 
 // ShiftCoverageResponse deliberately contains no shift rows; callers receive
@@ -105,11 +106,11 @@ func parseShiftCoverageProbe(request ShiftCoverageRequest) (timetable.ShiftCover
 		Dates:                 dates,
 		StartTime:             start,
 		EndTime:               end,
-		StaffIDs:              request.StaffIDs,
-		ExcludeInstanceID:     request.ExcludeInstanceID,
+		StaffIDs:              ident.Int64s(request.StaffIDs),
+		ExcludeInstanceID:     (*int64)(request.ExcludeInstanceID),
 		ConcreteInstanceDate:  concreteInstanceDate,
-		ReplanActivityGroupID: request.ReplanActivityGroupID,
-		CalendarPeriodID:      request.CalendarPeriodID,
+		ReplanActivityGroupID: (*int64)(request.ReplanActivityGroupID),
+		CalendarPeriodID:      (*int64)(request.CalendarPeriodID),
 		WeekPattern:           request.WeekPattern,
 	}, nil
 }

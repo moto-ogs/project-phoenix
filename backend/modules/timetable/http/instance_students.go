@@ -28,6 +28,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // PatchAttendanceRequest is the wire shape. Status uses *string (nullable-ish
@@ -319,13 +320,13 @@ func attendancePatchFieldErrors(errs []timetable.AttendanceFieldError) []fieldEr
 
 // AttendanceResponse is the on-wire shape of a schedule.instance_students row.
 type AttendanceResponse struct {
-	ID          int64   `json:"id"`
-	InstanceID  int64   `json:"instance_id"`
-	StudentID   int64   `json:"student_id"`
-	Status      string  `json:"status"`
-	Substatus   *string `json:"substatus"`
-	Note        *string `json:"note"`
-	CheckedInAt *string `json:"checked_in_at"`
+	ID          common.ID `json:"id"`
+	InstanceID  common.ID `json:"instance_id"`
+	StudentID   common.ID `json:"student_id"`
+	Status      string    `json:"status"`
+	Substatus   *string   `json:"substatus"`
+	Note        *string   `json:"note"`
+	CheckedInAt *string   `json:"checked_in_at"`
 }
 
 func mapAttendanceToResponse(row *timetable.ScheduledParticipant) AttendanceResponse {
@@ -334,9 +335,9 @@ func mapAttendanceToResponse(row *timetable.ScheduledParticipant) AttendanceResp
 
 func attendanceResponse(id, instanceID, studentID int64, status string, substatus, note *string, checkedInAt *time.Time) AttendanceResponse {
 	resp := AttendanceResponse{
-		ID:         id,
-		InstanceID: instanceID,
-		StudentID:  studentID,
+		ID:         ident.ID(id),
+		InstanceID: ident.ID(instanceID),
+		StudentID:  ident.ID(studentID),
 		Status:     status,
 		Substatus:  substatus,
 		Note:       note,

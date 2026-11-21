@@ -15,7 +15,7 @@ const createdWithoutEnrichment = {
   status: "success",
   data: {
     enrich_warning: "enrichment failed: read failed",
-    id: 41,
+    id: "41",
     date: "2026-11-18",
     start_time: "13:30",
     end_time: "14:15",
@@ -24,7 +24,7 @@ const createdWithoutEnrichment = {
     is_spontaneous: false,
     is_live: false,
     activity_type: "",
-    room_id: 7,
+    room_id: "7",
     room_name: "",
     staff: [],
     student_ids: [],

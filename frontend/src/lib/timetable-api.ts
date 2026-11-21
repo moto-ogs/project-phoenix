@@ -133,14 +133,14 @@ import {
 } from "./booking-leftover";
 import {
   mapOfferingGaps,
-  type BackendOfferingGapsResponse,
+  type OfferingGapsWire,
   type OfferingGap,
 } from "./offering-gap";
 import {
   draftPreviewQuery,
   mapOfferingSuggestion,
   suggestionQuery,
-  type BackendOfferingSuggestionResponse,
+  type OfferingSuggestionWire,
   type DraftRoster,
   type OfferingSuggestion,
   type OfferingSuggestionQuery,
@@ -475,7 +475,7 @@ class TimetableService {
         credentials: "include",
       },
     );
-    return mapOfferingGaps(await unwrap<BackendOfferingGapsResponse>(response));
+    return mapOfferingGaps(await unwrap<OfferingGapsWire>(response));
   }
 
   /**
@@ -540,7 +540,7 @@ class TimetableService {
       },
     );
     return mapOfferingSuggestion(
-      await unwrap<BackendOfferingSuggestionResponse>(response),
+      await unwrap<OfferingSuggestionWire>(response),
     );
   }
 
