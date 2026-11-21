@@ -17,7 +17,8 @@ import {
 } from "~/components/traeger/finance-export-handover";
 import {
   SEPA_DEBIT_LEFT_LABELS,
-  SEPA_SEQUENCE_BADGES,
+  debitDay,
+  sepaSequenceBadge,
   collectDatesText,
   debitDocumentLabel,
   debitCountLabel,
@@ -113,16 +114,16 @@ const columns: DataTableColumn<SepaDebit>[] = [
     header: "Abbuchung am",
     render: (debit) => (
       <span className="tabular-nums">
-        {formatDate(debit.collectOn ?? debit.dueOn)}
+        {debitDay(debit) ? formatDate(debitDay(debit)) : "–"}
       </span>
     ),
-    sortValue: (debit) => debit.collectOn ?? debit.dueOn,
+    sortValue: (debit) => debitDay(debit),
   },
   {
     key: "sequence",
     header: "Art",
     render: (debit) => {
-      const badge = SEPA_SEQUENCE_BADGES[debit.sequenceType];
+      const badge = sepaSequenceBadge(debit.sequenceType);
       return <StatusBadge label={badge.label} tone={badge.tone} size="xs" />;
     },
   },

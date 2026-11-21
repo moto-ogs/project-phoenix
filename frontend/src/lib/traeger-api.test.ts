@@ -5,6 +5,7 @@ import {
   fetchDatevRunStates,
   resetSollMapping,
 } from "./traeger-finance-exports-api";
+import { fetchSepaMandateCollections } from "./traeger-sepa-debits-api";
 import { applySepaImport, previewSepaImport } from "./traeger-sepa-import-api";
 import { ApiError } from "./api-error";
 import {
@@ -172,6 +173,59 @@ describe("traeger-api", () => {
       expect(result.counts.duplicate).toBe(2);
       expect(result.counts.debtorConflicts).toBe(0);
     }
+  });
+
+  // ADR 0270 point 6: a value a newer backend adds is not passed on as a
+  // known one. A debit left out for a new reason stays out of the file.
+  it("keeps unknown SEPA values apart from the known ones", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, {
+        data: [
+          {
+            id: "1",
+            mandate_id: "2",
+            contract_id: "3",
+            invoice_number: "MB-1",
+            recipient_name: "Familie Muster",
+            amount_cents: 100,
+            due_on: null,
+            sequence_type: "NEXT",
+            mandate_reference: "R1",
+            iban_masked: "DE** 1234",
+            status: "pending",
+            left: "new_reason",
+            submitted_at: null,
+          },
+        ],
+      }),
+    );
+    const [debit] = await fetchSepaMandateCollections("2");
+    expect(debit).toMatchObject({
+      id: "1",
+      dueOn: null,
+      sequenceType: undefined,
+      left: "other",
+    });
+
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, {
+        data: {
+          mapping: {
+            columns: {},
+            payer_key: "iban",
+            creditor_from_traeger: false,
+          },
+          counts: {},
+          rows: [{ line: 2, status: "later", sequence: "x", problems: null }],
+        },
+      }),
+    );
+    const result = await previewSepaImport({
+      file: new File(["csv"], "mandate.csv"),
+      mapping: null,
+    });
+    expect(result.mapping.payerKey).toBeNull();
+    expect(result.rows[0]).toMatchObject({ status: undefined, sequence: "" });
   });
 
   it("sends the chosen Träger as a number and returns only session status", async () => {
