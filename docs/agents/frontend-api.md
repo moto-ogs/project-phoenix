@@ -72,11 +72,11 @@ or write a `Backend*` interface for a registered route.
   carries a day or a wall-clock time says so in its tag: `contract:"date"`
   (`YYYY-MM-DD`) or `contract:"clock"` (`HH:MM`); the decoder then rejects
   another form. Closed value sets are registered in `Enums`.
-- A new identifier is a `common.ID`, a count an `int`; the generator rejects a
-  bare `int64` and a response shape that depends on a query parameter.
-- In a request type an identifier is a `string`, except a field Go still
-  reads only as a JSON number (`NumericIDs`): that one is a `number`. A
-  request type with its own `UnmarshalJSON` needs an entry in `Readers`
+- An identifier is a `common.ID` in an HTTP type and an `ident.ID`
+  (`backend/sharedkernel/ident`) in a domain type, a count an `int`; the
+  generator rejects a bare `int64` and a response shape that depends on a
+  query parameter.
+- In a request type an identifier is a `string`. A request type with its own `UnmarshalJSON` needs an entry in `Readers`
   (`backend/api/route_contracts.go`), or the generator stops.
 - Removing or renaming a registered field or route needs one release as
   deprecated (`DeprecatedFields`, `Deprecated`);
@@ -164,8 +164,6 @@ The key is the scope claim of the portal's session token
 - A route that answers 204 or the envelope without data registers
   `NoData: true` in place of a response type. Its decoder (`noData`) takes
   exactly those two answers, and the BFF answers `data: null` (a DELETE: 204).
-- An identifier in `NumericIDs` leaves the proxy as a string, whatever Go
-  sends. A client type for such a route reads `string`, never `number`.
 
 The registered routes are the entries of `portals.generated.ts`.
 
@@ -184,7 +182,8 @@ session, renews it once on a backend 401 and answers errors through
 `handleApiError`. The helpers that read the session (`backendFetch`,
 `forwardToBackend`, `runWithRenewal`) throw outside that wrapper;
 `src/app/api/route-session-coverage.test.ts` runs every route and fails on a
-session read outside it. Success answers `{ success, message, data }`, a
+session read outside it. Success passes the backend's envelope (`status`, `data`, `message`,
+`pagination`) through, a
 DELETE without a result answers 204, and a handler may return a Response as
 it is. Public JSON routes use `createPublicJsonProxy`
 (`lib/backend-proxy-route.server.ts`), login steps before a session

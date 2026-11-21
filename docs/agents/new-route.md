@@ -43,7 +43,7 @@ Worked example: `GET /api/activities/categories`, staff portal.
    may call it (`common.PortalTenant`, `PortalParent`, `PortalSchool`,
    `PortalTraeger`, `PortalCaterer`, `PortalOperator`, `PortalPublic`). `Query`
    lists every parameter the handler reads; the proxy drops the others.
-   Identifiers are `common.ID`, days `calendar.Date`, closed value sets go in
+   Identifiers are `common.ID` (`ident.ID` in domain types), days `calendar.Date`, closed value sets go in
    `Enums`; the generator refuses a bare `int64` and an answer whose shape
    depends on a query parameter.
 3. **Mount.** A new `RouteContracts()` function gets one row in the matching
