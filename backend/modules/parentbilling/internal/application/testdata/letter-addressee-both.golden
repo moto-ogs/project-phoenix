@@ -314,6 +314,60 @@ Bei Fragen erreicht ihr Ute Muster unter 07231 1234 oder abrechnung@example.org.
 Mit freundlichen Grüßen
 SJR Pforzheim
 
+=== Mensa-Rechnung
+Familie Beispiel
+Erika Beispiel und Ben Beispiel
+Rechnung MB-2027-0001
+Rechnung MB-2027-0001: Mensa Januar 2027
+Liebe Familie Beispiel,
+Rechnungsnummer: MB-2027-0001
+Kind: Mia Beispiel
+Monat: Januar 2027
+Datum: 04.01.2027
+Zahlen bis: 15.01.2027
+Ansprechperson: Ute Muster
+Telefon: 07231 1234
+E-Mail: abrechnung@example.org
+für das Mittagessen von Mia Beispiel an der Grundschule Ispringen berechnen wir euch die Mensa. Die Rechnung gehört zu Januar 2027.
+Euer Mittagessen
+Abgerechnet wird das Mittagessen, wie die OGS es für den Monat bestätigt hat.
+12 Mittagessen im Dezember 2026 à 4,50 € = 54,00 €
+Summe = 54,00 €
+Bitte überweist 54,00 € bis zum 15.01.2027 auf das Konto unten. Gebt als Verwendungszweck die Rechnungsnummer MB-2027-0001 an.
+Bezahlen per QR-Code
+Scannt den Code mit eurer Banking-App und überweist.
+Bei Fragen erreicht ihr Ute Muster unter 07231 1234 oder abrechnung@example.org.
+Mit freundlichen Grüßen
+SJR Pforzheim
+
+=== Monatsrechnung mit Mittagessen
+Familie Beispiel
+Erika Beispiel und Ben Beispiel
+Rechnung MB-2027-0001
+Rechnung MB-2027-0001: Monatsbeitrag Januar 2027
+Liebe Familie Beispiel,
+Rechnungsnummer: MB-2027-0001
+Kind: Mia Beispiel
+Monat: Januar 2027
+Datum: 04.01.2027
+Zahlen bis: 15.01.2027
+Ansprechperson: Ute Muster
+Telefon: 07231 1234
+E-Mail: abrechnung@example.org
+für die Betreuung von Mia Beispiel an der Grundschule Ispringen berechnen wir euch den Monatsbeitrag für Januar 2027. Der Betrag richtet sich nach eurem Betreuungsvertrag.
+Eure Betreuung
+Die Betreuung rechnen wir nach eurem Vertrag ab. Das Mittagessen rechnen wir so ab, wie die OGS es für den Monat bestätigt hat.
+Betreuung bis 14:00 Uhr (Mo) = 32,00 €
+Betreuung bis 16:30 Uhr (Di), 01.01. bis 15.01.2027 = 22,01 €
+12 Mittagessen im Dezember 2026 à 4,50 € = 54,00 €
+Summe = 108,01 €
+Bitte überweist 108,01 € bis zum 15.01.2027 auf das Konto unten. Gebt als Verwendungszweck die Rechnungsnummer MB-2027-0001 an.
+Bezahlen per QR-Code
+Scannt den Code mit eurer Banking-App und überweist.
+Bei Fragen erreicht ihr Ute Muster unter 07231 1234 oder abrechnung@example.org.
+Mit freundlichen Grüßen
+SJR Pforzheim
+
 === Storno der Monatsrechnung
 Familie Beispiel
 Erika Beispiel und Ben Beispiel
@@ -416,4 +470,43 @@ Rechtsbehelfsbelehrung
 Gegen diesen Bescheid ist Widerspruch möglich.
 Mit freundlichen Grüßen
 SJR Pforzheim
+
+=== Änderungsbescheid zum Jahresbescheid per Lastschrift
+Familie Beispiel
+Erika Beispiel und Ben Beispiel
+Änderungsbescheid MB-2030-0001
+Änderungsbescheid für die Betreuung 2030
+Liebe Familie Beispiel,
+Bescheid-Nr.: MB-2030-0001
+Datum: 24.09.2030
+Kind: Mia Beispiel
+Zeitraum: 01.08.2030 bis 31.07.2031
+Ändert Bescheid: MB-2030-0000 vom 20.08.2030
+Ansprechperson: Ute Muster
+Telefon: 07231 1234
+E-Mail: abrechnung@example.org
+für die Betreuung von Mia Beispiel an der Grundschule Ispringen ändern wir den Bescheid MB-2030-0000 vom 20.08.2030. Dieser Bescheid gilt ab jetzt für die genannten Monate. Die Spalte „bisher“ zeigt, was der Bescheid MB-2030-0000 festgesetzt hat.
+I. Berechnung
+Je Berechnungsgrundlage und Zeitraum mit gleichem Monatsbetrag eine Zeile.
+Betreuung bis 16:30 Uhr (Di), 01.08.2030 bis 31.07.2031, 12 × 45,50 €, bisher 12 × 0,00 € = bisher 0,00 €, neu 546,00 €, 0,00 €
+Bisher festgesetzt = 0,00 €
+Zu-/Abgang = 0,00 €
+Gesamtbetrag = 546,00 €
+II. Abrechnung
+Der Gesamtbetrag ist in Monatsraten zum Monatsersten fällig. Raten für Monate, die schon begonnen haben, sind sofort fällig. Die fälligen Raten werden per SEPA-Lastschrift eingezogen. Bitte nicht überweisen.
+Rate August 2030, sofort fällig (01.08.2030) = bisher 0,00 €, neu 45,50 €
+Bei Fragen erreicht ihr Ute Muster unter 07231 1234 oder abrechnung@example.org.
+Rechtsbehelfsbelehrung
+Gegen diesen Bescheid ist Widerspruch möglich.
+Mit freundlichen Grüßen
+SJR Pforzheim
+
+=== Gebührenbescheid ohne Buchungszeichen (Ferien)
+Bitte überweist 92,50 € bis zum 15.12.2026 auf das Konto unten. Gebt als Verwendungszweck die Bescheidnummer FE-2026-0007 an.
+
+=== Rückfragen nur mit Name
+Bei Fragen hilft euch Paula Kern.
+
+=== Rückfragen nur mit Telefon
+Bei Fragen erreicht ihr uns unter 05402 1234-0.
 

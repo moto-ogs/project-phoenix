@@ -166,23 +166,41 @@ func legalRemedyBlocks(blocks []templates.Block) []LetterBlock {
 }
 
 // letterTemplate is the Träger's template, or the standard one of kind
-// while the letterhead carries none. The standard template speaks to the
+// while the letterhead carries none. The standard text speaks to the
 // addressee: to one person in the du-form, greeting them by name (ADR
-// 0294, #7463). A Träger's own template keeps its wording.
+// 0294, #7463). A Träger without a template of its own gets the standard
+// text from Document Templates, and one may save it unchanged, so a
+// template with the standard text counts as standard too; it keeps its
+// table layout and legal remedy. A Träger's own wording stays (#7462).
 func letterTemplate(template parentbilling.LetterTemplate, kind templates.Kind, to letterAddressee) templates.Template {
 	if strings.TrimSpace(template.Body) == "" {
-		standard := templates.Default(kind)
-		if to.one {
-			standard = templates.DefaultForOne(kind)
-			standard.Salutation = to.salutation
-		}
-		standard.LegalRemedy = template.LegalRemedy
-		return standard
+		return standardTemplate(kind, to, templates.InvoiceLayout{}, template.LegalRemedy)
 	}
-	return templates.Template{
+	own := templates.Template{
 		Subject: template.Subject, Salutation: template.Salutation, Body: template.Body, Closing: template.Closing,
 		Invoice: invoiceLayout(template), LegalRemedy: template.LegalRemedy,
 	}
+	if to.one && sameText(own, templates.Default(kind)) {
+		return standardTemplate(kind, to, own.Invoice, own.LegalRemedy)
+	}
+	return own
+}
+
+// standardTemplate is the standard template of kind for the addressee.
+func standardTemplate(kind templates.Kind, to letterAddressee, layout templates.InvoiceLayout, legalRemedy string) templates.Template {
+	standard := templates.Default(kind)
+	if to.one {
+		standard = templates.DefaultForOne(kind)
+		standard.Salutation = to.salutation
+	}
+	standard.Invoice, standard.LegalRemedy = layout, legalRemedy
+	return standard
+}
+
+// sameText reports whether two templates have the same text.
+func sameText(a, b templates.Template) bool {
+	a, b = templates.Normalize(a), templates.Normalize(b)
+	return a.Subject == b.Subject && a.Salutation == b.Salutation && a.Body == b.Body && a.Closing == b.Closing
 }
 
 func invoiceLayout(template parentbilling.LetterTemplate) templates.InvoiceLayout {

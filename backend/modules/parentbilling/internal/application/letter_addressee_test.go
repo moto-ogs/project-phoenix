@@ -85,6 +85,32 @@ func TestATraegerTemplateKeepsItsWordingForOnePerson(t *testing.T) {
 	assert.Contains(t, text, "Bitte überweise 92,50 € bis zum 15.12.2026 auf das Konto unten. Gib als Verwendungszweck deine Debitorennummer 10234 an.")
 }
 
+// The standard text reaches a letter as the template Document Templates
+// delivers while the Träger has saved none, or as a saved copy of it: both
+// speak to one person in the du-form like a letterhead without a template,
+// and a saved copy keeps its table layout.
+func TestTheStandardTextSpeaksToOnePersonHoweverItArrives(t *testing.T) {
+	t.Parallel()
+	payer := addresseeRecipients[2]
+	for _, documentKind := range []string{"", parentbilling.DocumentKindInvoice, parentbilling.DocumentKindFeeNotice} {
+		delivered := addresseeHolidayContent(t, payer, documentKind)
+		blank := addresseeHolidayContent(t, payer, documentKind)
+		blank.letterhead.Template = parentbilling.LetterTemplate{LegalRemedy: delivered.letterhead.Template.LegalRemedy}
+		saved := addresseeHolidayContent(t, payer, documentKind)
+		saved.letterhead.Template.Version, saved.letterhead.Template.Body = 3, "  "+saved.letterhead.Template.Body+"\r\n"
+		want := addresseeLetterText(confirmationLetter(blank))
+		assert.Equal(t, want, addresseeLetterText(confirmationLetter(delivered)), documentKind)
+		assert.Equal(t, want, addresseeLetterText(confirmationLetter(saved)), documentKind)
+		assert.Contains(t, want, "Guten Tag Karin Muster,", documentKind)
+	}
+
+	grouped := addresseeHolidayContent(t, payer, parentbilling.DocumentKindInvoice)
+	grouped.letterhead.Template.GroupByChild = true
+	filled := letterTemplate(grouped.letterhead.Template, templateKindOf(parentbilling.DocumentKindInvoice), documentAddressee(grouped.document))
+	assert.True(t, filled.Invoice.GroupByChild, "a saved copy keeps its table layout")
+	assert.Contains(t, filled.Body, "berechnen wir dir")
+}
+
 // addresseeLetters renders every letter for the recipient, one after the
 // other.
 func addresseeLetters(t *testing.T, recipient addresseeRecipient) string {
@@ -151,12 +177,32 @@ func addresseeLetterSet(t *testing.T, recipient addresseeRecipient) []namedLette
 		CostBearerName: "Jugendamt Beispielstadt", ShareBasisPoints: &basisPoints, AmountCents: 5401}}
 	shared.invoice.TotalCents = 0
 	add("Monatsrechnung mit Kostenübernahme", careInvoiceLetter(shared))
+	mensa := addresseeCareContent(recipient)
+	mensa.invoice.Service, mensa.invoice.Positions = parentbilling.ServiceMeal, nil
+	mensa.invoice.MealPositions = []parentbilling.CareMealPosition{{MealMonth: calendar.NewDate(2026, 12, 1),
+		Mode: parentbilling.MealModePerMeal, Quantity: 12, UnitCents: 450, AmountCents: 5400}}
+	mensa.invoice.TotalCents = 5400
+	add("Mensa-Rechnung", careInvoiceLetter(mensa))
+	withMeals := addresseeCareContent(recipient)
+	withMeals.invoice.MealPositions, withMeals.invoice.TotalCents = mensa.invoice.MealPositions, 10801
+	add("Monatsrechnung mit Mittagessen", careInvoiceLetter(withMeals))
 	add("Storno der Monatsrechnung", careCancellationLetter(addresseeCareCancellation(recipient)))
 	add("Gebührenbescheid des Monats", careNoticeLetter(addresseeCareNotice(recipient)))
 	lifted := addresseeCareCancellation(recipient)
 	lifted.letterhead.Template.LegalRemedy = "Gegen diesen Bescheid ist Widerspruch möglich."
 	add("Aufhebungsbescheid des Monats", careNoticeCancellationLetter(lifted))
 	add("Jahresbescheid", feeNoticeLetter(addresseeYearNotice(recipient), addresseeCareContent(recipient).letterhead))
+	change := addresseeYearNotice(recipient)
+	earlier := calendar.NewDate(2030, 8, 20)
+	change.Kind, change.PaymentMethod = parentbilling.NoticeKindChange, parentbilling.PaymentDirectDebit
+	change.Amends = &parentbilling.CareNoticeReference{ID: 1, Number: "MB-2030-0000", IssuedOn: &earlier}
+	add("Änderungsbescheid zum Jahresbescheid per Lastschrift", feeNoticeLetter(change, addresseeCareContent(recipient).letterhead))
+	noDebtor := addresseeHolidayContent(t, recipient, parentbilling.DocumentKindFeeNotice)
+	noDebtor.document.DebtorNumber = ""
+	add("Gebührenbescheid ohne Buchungszeichen (Ferien)", Letter{Blocks: []LetterBlock{{Text: paymentText(noDebtor)}}})
+	to := documentAddressee(confirmation.document)
+	add("Rückfragen nur mit Name", Letter{Blocks: []LetterBlock{{Text: questionText(parentbilling.Letterhead{ContactName: "Paula Kern"}, to)}}})
+	add("Rückfragen nur mit Telefon", Letter{Blocks: []LetterBlock{{Text: questionText(parentbilling.Letterhead{ContactPhone: "05402 1234-0"}, to)}}})
 	return letters
 }
 
@@ -189,10 +235,19 @@ func addresseeHolidayContent(t *testing.T, recipient addresseeRecipient, documen
 	document.RecipientSecondName, document.RecipientAddress = recipient.secondName, recipient.address
 	// The notes are the Träger's own text and stay out of the form check.
 	content.input.Notes = "Frühstück, Wechselkleidung, Hausschuhe."
+	content.letterhead.Template = standardLetterTemplate(documentKind)
 	if documentKind == parentbilling.DocumentKindFeeNotice {
 		content.letterhead.Template.LegalRemedy = "Gegen diesen Bescheid ist Widerspruch möglich."
 	}
 	return content
+}
+
+// standardLetterTemplate is the template of a kind of document as Document
+// Templates delivers it while the Träger has saved none: the standard text
+// itself.
+func standardLetterTemplate(documentKind string) parentbilling.LetterTemplate {
+	standard := letterTemplate(parentbilling.LetterTemplate{}, templateKindOf(documentKind), letterAddressee{})
+	return parentbilling.LetterTemplate{Subject: standard.Subject, Salutation: standard.Salutation, Body: standard.Body, Closing: standard.Closing}
 }
 
 // addresseeCorrection is a Storno or a Gutschrift of the golden invoice of
@@ -242,6 +297,7 @@ func addresseeCareCancellation(recipient addresseeRecipient) careLetterContent {
 func addresseeCareNotice(recipient addresseeRecipient) careLetterContent {
 	content := addresseeCareContent(recipient)
 	content.invoice.DocumentKind, content.invoice.DebtorNumber = parentbilling.DocumentKindFeeNotice, "10234"
+	content.letterhead.Template = standardLetterTemplate(parentbilling.DocumentKindFeeNotice)
 	content.letterhead.Template.LegalRemedy = "Gegen diesen Bescheid ist Widerspruch möglich."
 	return content
 }
