@@ -10,6 +10,10 @@ import { ApiError, apiErrorFromBody, transportFetch } from "./api-error";
  * - materialize(from?, to?)      → POST   /materialize
  */
 
+import type {
+  offeringPreviewResponse,
+  rosterDeviationsResponse,
+} from "./contract/timetable.generated";
 import { hasSessionAccess } from "./session-access";
 import { getCachedSession } from "./session-cache";
 import { createLogger } from "./logger";
@@ -118,8 +122,6 @@ import {
   mapOfferingPreview,
   mapRosterDeviations,
   previewQuery,
-  type BackendOfferingPreview,
-  type BackendRosterDeviationsResponse,
   type OfferingPreview,
   type OfferingSelection,
   type RosterDeviation,
@@ -408,7 +410,7 @@ class TimetableService {
       },
     );
     return mapRosterDeviations(
-      await unwrap<BackendRosterDeviationsResponse>(response),
+      await unwrap<rosterDeviationsResponse>(response),
     );
   }
 
@@ -518,7 +520,7 @@ class TimetableService {
         credentials: "include",
       },
     );
-    return mapOfferingPreview(await unwrap<BackendOfferingPreview>(response));
+    return mapOfferingPreview(await unwrap<offeringPreviewResponse>(response));
   }
 
   /**
@@ -562,7 +564,7 @@ class TimetableService {
         credentials: "include",
       },
     );
-    return mapOfferingPreview(await unwrap<BackendOfferingPreview>(response));
+    return mapOfferingPreview(await unwrap<offeringPreviewResponse>(response));
   }
 
   /**
