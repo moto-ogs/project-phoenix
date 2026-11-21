@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // contractScene is what a contract write checks against: the record, its
@@ -170,7 +171,7 @@ func publicContracts(contracts []domain.TraegerStaffContract, names map[int64]st
 	result := make([]workforce.TraegerStaffContract, 0, len(contracts))
 	for _, contract := range contracts {
 		public := workforce.TraegerStaffContract{
-			ID: contract.ID, Kind: contract.Kind, StartsOn: contract.StartsOn, Pool: contract.Pool,
+			ID: ident.ID(contract.ID), Kind: contract.Kind, StartsOn: contract.StartsOn, Pool: contract.Pool,
 			Sites: []workforce.TraegerContractSiteDetail{}, HolidayWeeks: make([]workforce.TraegerContractHolidayWeek, 0, len(contract.HolidayWeeks)),
 		}
 		if !contract.EndsOn.IsZero() {
@@ -178,7 +179,7 @@ func publicContracts(contracts []domain.TraegerStaffContract, names map[int64]st
 		}
 		for _, site := range contract.Sites() {
 			detail := workforce.TraegerContractSiteDetail{
-				TraegerContractSite: workforce.TraegerContractSite{SchoolID: site.SchoolID, StaffID: site.StaffID},
+				TraegerContractSite: workforce.TraegerContractSite{SchoolID: ident.ID(site.SchoolID), StaffID: ident.ID(site.StaffID)},
 				SchoolName:          names[site.SchoolID], ChangeableFrom: openFrom[site.SchoolID],
 			}
 			for _, target := range contract.Targets {
@@ -191,7 +192,7 @@ func publicContracts(contracts []domain.TraegerStaffContract, names map[int64]st
 		}
 		for _, week := range contract.HolidayWeeks {
 			public.HolidayWeeks = append(public.HolidayWeeks, workforce.TraegerContractHolidayWeek{
-				TraegerContractSite: workforce.TraegerContractSite{SchoolID: week.SchoolID, StaffID: week.StaffID},
+				TraegerContractSite: workforce.TraegerContractSite{SchoolID: ident.ID(week.SchoolID), StaffID: ident.ID(week.StaffID)},
 				SchoolName:          names[week.SchoolID], WeekStart: week.WeekStart, WeekdayMinutes: week.WeekdayMinutes,
 			})
 		}

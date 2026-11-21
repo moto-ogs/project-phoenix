@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ActiveGroup is a room session (one active.groups row) together with the
@@ -12,17 +13,17 @@ import (
 // projections other owners provide; the session carries only their IDs.
 // The JSON shape is the wire shape of the caller-context session routes.
 type ActiveGroup struct {
-	ID             int64      `json:"id"`
+	ID             ident.ID   `json:"id"`
 	CreatedAt      time.Time  `json:"created_at"`
 	UpdatedAt      time.Time  `json:"updated_at"`
-	TenantID       int64      `json:"tenant_id"`
+	TenantID       ident.ID   `json:"tenant_id"`
 	StartTime      time.Time  `json:"start_time"`
 	EndTime        *time.Time `json:"end_time,omitempty"`
 	LastActivity   time.Time  `json:"last_activity"`   // Activity tracking for timeout
 	TimeoutMinutes int        `json:"timeout_minutes"` // Session timeout config (default 30)
-	GroupID        *int64     `json:"group_id"`
-	DeviceID       *int64     `json:"device_id,omitempty"` // Optional for RFID system
-	RoomID         int64      `json:"room_id"`
+	GroupID        *ident.ID  `json:"group_id"`
+	DeviceID       *ident.ID  `json:"device_id,omitempty"` // Optional for RFID system
+	RoomID         ident.ID   `json:"room_id"`
 
 	// ActualGroup and Room are projections populated through their owners.
 	ActualGroup *SessionActivity `json:"actual_group,omitempty"`
@@ -37,8 +38,8 @@ type ActiveGroup struct {
 // Device Fleet owns the device record; session reads do not expose credentials
 // or mutable device configuration.
 type SessionDevice struct {
-	ID         int64      `json:"id"`
-	TenantID   int64      `json:"tenant_id"`
+	ID         ident.ID   `json:"id"`
+	TenantID   ident.ID   `json:"tenant_id"`
 	CreatedAt  time.Time  `json:"created_at"`
 	UpdatedAt  time.Time  `json:"updated_at"`
 	DeviceID   string     `json:"device_id"`
@@ -49,13 +50,13 @@ type SessionDevice struct {
 }
 
 // GetID returns the session ID.
-func (g *ActiveGroup) GetID() int64 { return g.ID }
+func (g *ActiveGroup) GetID() int64 { return int64(g.ID) }
 
 // GetTenantID returns the owning tenant.
-func (g *ActiveGroup) GetTenantID() int64 { return g.TenantID }
+func (g *ActiveGroup) GetTenantID() int64 { return int64(g.TenantID) }
 
 // SetTenantID sets the owning tenant.
-func (g *ActiveGroup) SetTenantID(id int64) { g.TenantID = id }
+func (g *ActiveGroup) SetTenantID(id int64) { g.TenantID = ident.ID(id) }
 
 // Validate ensures active group data is valid
 func (g *ActiveGroup) Validate() error {
@@ -111,7 +112,7 @@ func (g *ActiveGroup) TemplateID() (int64, bool) {
 	if g.GroupID == nil {
 		return 0, false
 	}
-	return *g.GroupID, true
+	return (*g.GroupID).Int64(), true
 }
 
 // IsActive returns whether this active group session is currently active
@@ -131,12 +132,12 @@ func (g *ActiveGroup) SetEndTime(endTime time.Time) error {
 // GroupSupervisor is a staff member assigned to supervise a room session (one
 // active.group_supervisors row).
 type GroupSupervisor struct {
-	ID        int64     `json:"id"`
+	ID        ident.ID  `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
-	TenantID  int64     `json:"tenant_id"`
-	StaffID   int64     `json:"staff_id"`
-	GroupID   int64     `json:"group_id"`
+	TenantID  ident.ID  `json:"tenant_id"`
+	StaffID   ident.ID  `json:"staff_id"`
+	GroupID   ident.ID  `json:"group_id"`
 	Role      string    `json:"role"`
 	StartDate Date      `json:"start_date"`
 	EndDate   *Date     `json:"end_date,omitempty"`
@@ -150,13 +151,13 @@ type GroupSupervisor struct {
 }
 
 // GetID returns the supervision ID.
-func (gs *GroupSupervisor) GetID() int64 { return gs.ID }
+func (gs *GroupSupervisor) GetID() int64 { return int64(gs.ID) }
 
 // GetTenantID returns the owning tenant.
-func (gs *GroupSupervisor) GetTenantID() int64 { return gs.TenantID }
+func (gs *GroupSupervisor) GetTenantID() int64 { return int64(gs.TenantID) }
 
 // SetTenantID sets the owning tenant.
-func (gs *GroupSupervisor) SetTenantID(id int64) { gs.TenantID = id }
+func (gs *GroupSupervisor) SetTenantID(id int64) { gs.TenantID = ident.ID(id) }
 
 // Validate ensures group supervisor data is valid
 func (gs *GroupSupervisor) Validate() error {

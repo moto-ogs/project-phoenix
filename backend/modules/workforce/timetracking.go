@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // This file is the public time-tracking contract the web adapters consume
@@ -200,11 +202,11 @@ type HistoryResponse struct {
 
 // WorkSessionEdit is one audit row of a session edit.
 type WorkSessionEdit struct {
-	ID        int64     `json:"id"`
-	TenantID  int64     `json:"tenant_id"`
-	SessionID int64     `json:"session_id"`
-	StaffID   int64     `json:"staff_id"`
-	EditedBy  int64     `json:"edited_by"`
+	ID        ident.ID  `json:"id"`
+	TenantID  ident.ID  `json:"tenant_id"`
+	SessionID ident.ID  `json:"session_id"`
+	StaffID   ident.ID  `json:"staff_id"`
+	EditedBy  ident.ID  `json:"edited_by"`
 	FieldName string    `json:"field_name"`
 	OldValue  *string   `json:"old_value"`
 	NewValue  *string   `json:"new_value"`
@@ -372,12 +374,12 @@ func (r *UpdateAbsenceRequest) UnmarshalJSON(data []byte) error {
 // RequestVacationRequest is what a staff member submits via "Urlaub
 // beantragen"; the half-day flags cover the first and last day only.
 type RequestVacationRequest struct {
-	DateStart         string `json:"date_start"`
-	DateEnd           string `json:"date_end"`
-	StartHalfDay      bool   `json:"start_half_day"`
-	EndHalfDay        bool   `json:"end_half_day"`
-	Note              string `json:"note"`
-	SubstituteStaffID *int64 `json:"substitute_staff_id,omitempty"`
+	DateStart         string    `json:"date_start"`
+	DateEnd           string    `json:"date_end"`
+	StartHalfDay      bool      `json:"start_half_day"`
+	EndHalfDay        bool      `json:"end_half_day"`
+	Note              string    `json:"note"`
+	SubstituteStaffID *ident.ID `json:"substitute_staff_id,omitempty"`
 }
 
 // VacationDecisionRequest is the Leitung's approve/deny/question payload.
@@ -404,7 +406,7 @@ type AbsenceRequestListQuery struct {
 // VacationQuotaSummary aggregates entitled, taken and reserved vacation days
 // of one staff member and year.
 type VacationQuotaSummary struct {
-	StaffID         int64                 `json:"staff_id"`
+	StaffID         ident.ID              `json:"staff_id"`
 	Year            int                   `json:"year"`
 	EntitledDays    float64               `json:"entitled_days"`
 	CarryoverDays   float64               `json:"carryover_days"`
@@ -576,20 +578,20 @@ type StaffAbsences interface {
 
 // AdjustmentView is one Stundenkonto transaction as the Monatskarte shows it.
 type AdjustmentView struct {
-	ID            int64     `json:"id"`
+	ID            ident.ID  `json:"id"`
 	Type          string    `json:"type"`
 	MinutesDelta  int       `json:"minutes_delta"`
 	EffectiveDate string    `json:"effective_date"`
 	Note          string    `json:"note"`
-	DecidedBy     int64     `json:"decided_by"`
+	DecidedBy     ident.ID  `json:"decided_by"`
 	DecidedAt     time.Time `json:"decided_at"`
 }
 
 // MonthSummary is the Monatskarte of one staff member and month.
 type MonthSummary struct {
-	StaffID int64 `json:"staff_id"`
-	Year    int   `json:"year"`
-	Month   int   `json:"month"`
+	StaffID ident.ID `json:"staff_id"`
+	Year    int      `json:"year"`
+	Month   int      `json:"month"`
 
 	CarryInMinutes      int `json:"carry_in_minutes"`
 	TargetMinutes       int `json:"target_minutes"`
@@ -621,7 +623,7 @@ type MonthSummary struct {
 
 	IsClosed bool       `json:"is_closed"`
 	ClosedAt *time.Time `json:"closed_at,omitempty"`
-	ClosedBy *int64     `json:"closed_by,omitempty"`
+	ClosedBy *ident.ID  `json:"closed_by,omitempty"`
 	// ClosedByTraeger marks a close of the Personalverwaltung of the
 	// Träger (#4711); only the Träger reopens it.
 	ClosedByTraeger             bool    `json:"closed_by_traeger"`
@@ -659,11 +661,11 @@ type BalanceAdjustments interface {
 
 // StaffMonthBalanceSnapshot is one frozen month of one staff member.
 type StaffMonthBalanceSnapshot struct {
-	ID                    int64      `json:"id"`
+	ID                    ident.ID   `json:"id"`
 	CreatedAt             time.Time  `json:"created_at"`
 	UpdatedAt             time.Time  `json:"updated_at"`
-	TenantID              int64      `json:"tenant_id"`
-	StaffID               int64      `json:"staff_id"`
+	TenantID              ident.ID   `json:"tenant_id"`
+	StaffID               ident.ID   `json:"staff_id"`
 	Year                  int        `json:"year"`
 	Month                 int        `json:"month"`
 	ClosingBalanceMinutes int        `json:"closing_balance_minutes"`
@@ -673,12 +675,12 @@ type StaffMonthBalanceSnapshot struct {
 	CreditedMinutes       int        `json:"credited_minutes"`
 	AdjustmentMinutes     int        `json:"adjustment_minutes"`
 	ClosedAt              time.Time  `json:"closed_at"`
-	ClosedBy              int64      `json:"closed_by"`
+	ClosedBy              ident.ID   `json:"closed_by"`
 	ClosedByAccountID     int64      `json:"-"`
 	CloseReason           string     `json:"close_reason,omitempty"`
 	Source                string     `json:"source"`
 	ReopenedAt            *time.Time `json:"reopened_at,omitempty"`
-	ReopenedBy            *int64     `json:"reopened_by,omitempty"`
+	ReopenedBy            *ident.ID  `json:"reopened_by,omitempty"`
 	ReopenedByAccountID   *int64     `json:"-"`
 	ReopenReason          string     `json:"reopen_reason,omitempty"`
 	// PayrollRules is the JSON of the wage types, rules and absence type

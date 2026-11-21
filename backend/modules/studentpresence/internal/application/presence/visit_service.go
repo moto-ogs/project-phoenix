@@ -76,12 +76,12 @@ func (s *service) prepareVisitCheckIn(ctx context.Context, visit *studentpresenc
 	deviceID, staffID := s.extractContextIDs(ctx)
 
 	// Ensure no existing active visit for this student
-	occupancy, err := s.visitAdmissionOccupancy(ctx, visit.StudentID, targetGroup.ID)
+	occupancy, err := s.visitAdmissionOccupancy(ctx, visit.StudentID, targetGroup.ID.Int64())
 	if err != nil {
 		return createVisitError(err)
 	}
 	if visit.ExitTime == nil {
-		if err := s.ensureRoomCapacity(ctx, targetGroup.RoomID, 1); err != nil {
+		if err := s.ensureRoomCapacity(ctx, targetGroup.RoomID.Int64(), 1); err != nil {
 			return err
 		}
 		if err := s.ensureActivityParticipantLimit(ctx, targetGroup, 1, occupancy); err != nil {

@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	presenceAPI "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/require"
@@ -37,7 +38,7 @@ func TestPresence25VisitGrowthQueryBudget(t *testing.T) {
 				for len(expected) < n {
 					childID := testpkg.CreateTestStudent(t, tc.db, "Presence25", fmt.Sprintf("Child%d", len(expected)), "P25").ID
 					visit := testpkg.CreateTestVisit(t, tc.db, childID, group.ID, time.Date(2026, 11, 5, 9, len(expected), 0, 0, time.UTC), nil)
-					expected = append(expected, presenceAPI.VisitResponse{ID: visit.ID, StudentID: childID, ActiveGroupID: group.ID, CheckInTime: visit.EntryTime, IsActive: true, CreatedAt: visit.CreatedAt, UpdatedAt: visit.UpdatedAt})
+					expected = append(expected, presenceAPI.VisitResponse{ID: ident.ID(visit.ID), StudentID: ident.ID(childID), ActiveGroupID: ident.ID(group.ID), CheckInTime: visit.EntryTime, IsActive: true, CreatedAt: visit.CreatedAt, UpdatedAt: visit.UpdatedAt})
 				}
 				counter.Reset()
 				req := testutil.NewRequest(http.MethodGet, path, nil)

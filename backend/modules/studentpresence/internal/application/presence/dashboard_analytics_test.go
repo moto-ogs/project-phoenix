@@ -275,7 +275,7 @@ func TestCountStudentsInIndoorRooms(t *testing.T) {
 				roomStudentsMap: make(map[int64]map[int64]struct{}),
 			}
 			for _, room := range tt.rooms {
-				roomData.roomByID[room.ID] = room
+				roomData.roomByID[room.ID.Int64()] = room
 			}
 
 			// Use zero-value service (countStudentsInIndoorRooms doesn't use service fields)

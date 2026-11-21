@@ -172,7 +172,7 @@ func TestAbsenceCascade_ReportedTrainingCascadesButAHalfDayDoesNot(t *testing.T)
 			AbsenceType: workforce.AbsenceTypeTraining, DateStart: fullDay.String(), DateEnd: fullDay.String(),
 		})
 		if err == nil {
-			trainingID = created.ID
+			trainingID = created.ID.Int64()
 		}
 		return err
 	})
@@ -203,7 +203,7 @@ func TestAbsenceCascade_OpenEndedAbsenceCascadesOverABoundedWindow(t *testing.T)
 			AbsenceType: workforce.AbsenceTypeOther, DateStart: tomorrow.String(), DateEnd: "9999-12-31",
 		})
 		if err == nil {
-			absenceID = created.ID
+			absenceID = created.ID.Int64()
 		}
 		return err
 	})

@@ -19922,7 +19922,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.presenceSupervisionStaff.SupervisionStaff",
-      "binding_digest": "b68ecd6e0dedc352421975811ef1a804",
+      "binding_digest": "f19b92525405c45c76ce09a287dbef6f",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.SupervisionStaffDirectory.SupervisionStaff",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsByID",
@@ -19930,7 +19930,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.presenceSupervisionStaff.SupervisionStaff",
-      "binding_digest": "01d2a1832ff3195d5f7af72f20271703",
+      "binding_digest": "2b081e5f11dbec853e2bf6521097e0a2",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.SupervisionStaffDirectory.SupervisionStaff",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListPersonsByID",
@@ -19938,7 +19938,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.presenceSupervisionStaff.SupervisionStaff",
-      "binding_digest": "fdbde31ecaa125aa321cb337f7a4da26",
+      "binding_digest": "66d3b43ae7fc6f0990afa88a67988a91",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.SupervisionStaffDirectory.SupervisionStaff",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListPersonsByID",
@@ -19946,7 +19946,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.presenceSupervisionStaff.SupervisionStaff",
-      "binding_digest": "4429d9d3406f9ef18161faf739c4b2c1",
+      "binding_digest": "c17808b9f320f463bc26f5ca3eae785b",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.SupervisionStaffDirectory.SupervisionStaff",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.ParseRetainedCalendarDate",

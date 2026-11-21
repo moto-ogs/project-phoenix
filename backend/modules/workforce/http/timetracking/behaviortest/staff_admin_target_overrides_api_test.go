@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
@@ -61,13 +62,13 @@ func TestTargetOverridesAPI_CRUD(t *testing.T) {
 	rec := ctx.post(path, overrideBody("2026-10-19", "2026-10-23", 510), "time_tracking:manage")
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	created := decodeOverride(t, rec)
-	assert.Equal(t, staff.ID, created.StaffID)
+	assert.Equal(t, ident.ID(staff.ID), created.StaffID)
 	assert.Equal(t, "2026-10-19", created.StartDate)
 	require.NotNil(t, created.DailyMinutes)
 	assert.Equal(t, 510, *created.DailyMinutes)
 	assert.Nil(t, created.WeekdayMinutes, "a uniform range has no weekday targets")
 	require.NotNil(t, created.CreatedBy, "the editor's staff record is the author")
-	assert.Equal(t, ctx.staffID, *created.CreatedBy)
+	assert.Equal(t, ident.ID(ctx.staffID), *created.CreatedBy)
 
 	rec = ctx.get(path, "time_tracking:manage")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -175,7 +176,7 @@ func TestTargetOverridesAPI_RejectsClosedMonth(t *testing.T) {
 
 	capability := newWorkforceCapability(t, ctx.tc.db)
 	_, err := capability.RecordClosedMonth(testpkg.Ctx(t), workforce.StaffMonthBalanceSnapshot{
-		StaffID: staff.ID, Year: 2026, Month: 8, ClosedAt: time.Now(), ClosedBy: ctx.staffID, Source: workforce.SnapshotSourceAdmin,
+		StaffID: ident.ID(staff.ID), Year: 2026, Month: 8, ClosedAt: time.Now(), ClosedBy: ident.ID(ctx.staffID), Source: workforce.SnapshotSourceAdmin,
 	})
 	require.NoError(t, err)
 
@@ -290,7 +291,7 @@ func TestTargetOverridesAPI_OverviewMatchesMonthSummary(t *testing.T) {
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &overview))
 	var row *workforce.TimeTrackingOverviewRow
 	for i := range overview.Data.Rows {
-		if overview.Data.Rows[i].StaffID == staff.ID {
+		if overview.Data.Rows[i].StaffID == ident.ID(staff.ID) {
 			row = &overview.Data.Rows[i]
 		}
 	}
@@ -360,7 +361,7 @@ func TestTargetOverridesAPI_WeekdayTargets(t *testing.T) {
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &overview))
 	for _, row := range overview.Data.Rows {
-		if row.StaffID == staff.ID {
+		if row.StaffID == ident.ID(staff.ID) {
 			assert.Equal(t, 330, row.SollMinutes)
 		}
 	}

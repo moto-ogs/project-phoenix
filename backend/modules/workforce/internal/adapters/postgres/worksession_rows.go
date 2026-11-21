@@ -5,6 +5,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/uptrace/bun"
 )
 
@@ -162,16 +163,16 @@ func workSessionBreaksToDomain(rows []workSessionBreakRow) []workforce.WorkSessi
 
 func staffBalanceAdjustmentFromDomain(value workforce.StaffBalanceAdjustment) *staffBalanceAdjustmentRow {
 	return &staffBalanceAdjustmentRow{
-		ID: value.ID, TenantID: value.TenantID, StaffID: value.StaffID, Type: value.Type, MinutesDelta: value.MinutesDelta,
-		EffectiveDate: calendarDate(value.EffectiveDate), Note: value.Note, DecidedBy: value.DecidedBy, DecidedAt: value.DecidedAt,
+		ID: value.ID.Int64(), TenantID: value.TenantID.Int64(), StaffID: value.StaffID.Int64(), Type: value.Type, MinutesDelta: value.MinutesDelta,
+		EffectiveDate: calendarDate(value.EffectiveDate), Note: value.Note, DecidedBy: value.DecidedBy.Int64(), DecidedAt: value.DecidedAt,
 		CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
 	}
 }
 
 func staffBalanceAdjustmentToDomain(row staffBalanceAdjustmentRow) workforce.StaffBalanceAdjustment {
 	return workforce.StaffBalanceAdjustment{
-		ID: row.ID, TenantID: row.TenantID, StaffID: row.StaffID, Type: row.Type, MinutesDelta: row.MinutesDelta,
-		EffectiveDate: string(row.EffectiveDate), Note: row.Note, DecidedBy: row.DecidedBy, DecidedAt: row.DecidedAt,
+		ID: ident.ID(row.ID), TenantID: ident.ID(row.TenantID), StaffID: ident.ID(row.StaffID), Type: row.Type, MinutesDelta: row.MinutesDelta,
+		EffectiveDate: string(row.EffectiveDate), Note: row.Note, DecidedBy: ident.ID(row.DecidedBy), DecidedAt: row.DecidedAt,
 		CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
 	}
 }

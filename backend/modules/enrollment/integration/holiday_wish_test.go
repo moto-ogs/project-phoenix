@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment/internal/adapters/postgres"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -107,13 +108,13 @@ func TestHolidayWishOrdersOnlyTheWaitingList(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, places, 1)
 			for _, entry := range places[0].Waitlist {
-				order, deferred = append(order, entry.ChildID), append(deferred, entry.Deferred)
+				order, deferred = append(order, entry.ChildID.Int64()), append(deferred, entry.Deferred)
 			}
 			read, _, err := store.ReadHolidayReview(ctx, w.organization, w.period, 0)
 			require.NoError(t, err)
 			for _, registration := range read {
 				for _, child := range registration.Children {
-					if child.ID == order[0] {
+					if child.ID == ident.ID(order[0]) {
 						require.NotNil(t, child.Bookings[0].WaitlistPosition)
 						assert.Equal(t, 1, *child.Bookings[0].WaitlistPosition, "the review names the same order")
 					}
@@ -151,7 +152,7 @@ func TestHolidayWishOrdersOnlyTheWaitingList(t *testing.T) {
 		placed, err := store.PlaceHolidayBookings(ctx, w.organization, w.week, []int64{waiting[0].ID}, nil)
 		require.NoError(t, err)
 		require.Len(t, placed, 1)
-		assert.Equal(t, unknown, placed[0].ChildID, "the free place goes to the child with precedence")
+		assert.Equal(t, ident.ID(unknown), placed[0].ChildID, "the free place goes to the child with precedence")
 		return nil
 	}))
 	assert.Equal(t, "placed", w.placement(t, db, w.placedChild), "the place given before stays")

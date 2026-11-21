@@ -182,12 +182,12 @@ func (t *TraegerStaff) schoolPayrollMonths(ctx context.Context, actor workforce.
 	staffBySchool := scene.contractStaff()
 	months := map[siteKey]schoolPayrollMonth{}
 	for _, school := range scene.schools {
-		staffIDs := staffBySchool[school.ID]
+		staffIDs := staffBySchool[school.ID.Int64()]
 		if len(staffIDs) == 0 {
 			continue
 		}
 		var read []workforce.TraegerPayrollMonth
-		err := t.ports.Runtime.WithinSchool(ctx, school.ID, func(ctx context.Context) error {
+		err := t.ports.Runtime.WithinSchool(ctx, school.ID.Int64(), func(ctx context.Context) error {
 			if err := t.recordExportAccess(ctx, actor, view, staffIDs); err != nil {
 				return err
 			}
@@ -199,7 +199,7 @@ func (t *TraegerStaff) schoolPayrollMonths(ctx context.Context, actor workforce.
 			return nil, err
 		}
 		for _, value := range read {
-			months[siteKey{school.ID, value.StaffID}] = schoolPayrollMonth{school: school.Name, month: value}
+			months[siteKey{school.ID.Int64(), value.StaffID}] = schoolPayrollMonth{school: school.Name, month: value}
 		}
 	}
 	return months, nil

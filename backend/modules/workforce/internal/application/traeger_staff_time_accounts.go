@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Stundenkonto of a Personalakte over all schools (#4711, ADR 0243).
@@ -59,7 +60,7 @@ func (t *TraegerStaff) CloseTimeAccountMonth(ctx context.Context, actor workforc
 		if !school.ByTraeger || school.Closed {
 			continue
 		}
-		err := t.ports.Runtime.WithinSchool(ctx, school.SchoolID, func(ctx context.Context) error {
+		err := t.ports.Runtime.WithinSchool(ctx, school.SchoolID.Int64(), func(ctx context.Context) error {
 			_, err := t.ports.Months.CloseMonthForTraeger(ctx, links[i].StaffID, actor.AccountID, change.Year, change.Month, change.Reason)
 			return err
 		})
@@ -84,7 +85,7 @@ func (t *TraegerStaff) ReopenTimeAccountMonth(ctx context.Context, actor workfor
 		if !school.ClosedByTraeger {
 			continue
 		}
-		err := t.ports.Runtime.WithinSchool(ctx, school.SchoolID, func(ctx context.Context) error {
+		err := t.ports.Runtime.WithinSchool(ctx, school.SchoolID.Int64(), func(ctx context.Context) error {
 			return t.ports.Months.ReopenMonthForTraeger(ctx, links[i].StaffID, actor.AccountID, change.Year, change.Month, change.Reason)
 		})
 		if err != nil {
@@ -152,7 +153,7 @@ func (t *TraegerStaff) readTimeAccount(ctx context.Context, actor workforce.Trae
 func schoolMonth(schoolID int64, name string, read workforce.TraegerSchoolMonth) workforce.TraegerTimeAccountSchool {
 	summary := read.Summary
 	return workforce.TraegerTimeAccountSchool{
-		SchoolID: schoolID, SchoolName: name, HasTarget: summary.HasTarget, ByTraeger: read.Kept,
+		SchoolID: ident.ID(schoolID), SchoolName: name, HasTarget: summary.HasTarget, ByTraeger: read.Kept,
 		TraegerTimeAccountMinutes: workforce.TraegerTimeAccountMinutes{
 			TargetMinutes: summary.TargetMinutesToDate, ActualMinutes: summary.ActualMinutes,
 			CreditedMinutes:   summary.CreditedSickMinutes + summary.CreditedVacationMinutes + summary.CreditedTrainingMinutes + summary.CreditedOtherMinutes,
@@ -240,5 +241,5 @@ func reopenableAccount(account workforce.TraegerTimeAccount, reason string) erro
 
 // schoolMonthError names the school a close or reopen stopped at.
 func schoolMonthError(school workforce.TraegerTimeAccountSchool, err error) error {
-	return &workforce.TraegerSchoolMonthError{SchoolID: school.SchoolID, SchoolName: school.SchoolName, LaterMonth: school.LaterClosed, Err: err}
+	return &workforce.TraegerSchoolMonthError{SchoolID: school.SchoolID.Int64(), SchoolName: school.SchoolName, LaterMonth: school.LaterClosed, Err: err}
 }

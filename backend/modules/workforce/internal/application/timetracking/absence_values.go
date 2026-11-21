@@ -5,18 +5,19 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // --- mapping ---
 
 func StaffAbsenceToCapability(entity *StaffAbsence) workforce.StaffAbsence {
 	return workforce.StaffAbsence{
-		ID: entity.ID, TenantID: entity.TenantID, StaffID: entity.StaffID, AbsenceType: entity.AbsenceType,
-		AbsenceTypeID: entity.AbsenceTypeID, DateStart: entity.DateStart.String(), DateEnd: entity.DateEnd.String(),
+		ID: ident.ID(entity.ID), TenantID: ident.ID(entity.TenantID), StaffID: ident.ID(entity.StaffID), AbsenceType: entity.AbsenceType,
+		AbsenceTypeID: (*ident.ID)(entity.AbsenceTypeID), DateStart: entity.DateStart.String(), DateEnd: entity.DateEnd.String(),
 		HalfDay: entity.HalfDay, StartHalfDay: entity.StartHalfDay, EndHalfDay: entity.EndHalfDay, Note: entity.Note,
-		Status: entity.Status, ApprovedBy: entity.ApprovedBy, ApprovedAt: entity.ApprovedAt, CreatedBy: entity.CreatedBy,
+		Status: entity.Status, ApprovedBy: (*ident.ID)(entity.ApprovedBy), ApprovedAt: entity.ApprovedAt, CreatedBy: ident.ID(entity.CreatedBy),
 		WorkingDays: entity.WorkingDays, DecisionNote: entity.DecisionNote, RequestedAt: entity.RequestedAt,
-		SubstituteStaffID: entity.SubstituteStaffID, CreatedAt: entity.CreatedAt, UpdatedAt: entity.UpdatedAt,
+		SubstituteStaffID: (*ident.ID)(entity.SubstituteStaffID), CreatedAt: entity.CreatedAt, UpdatedAt: entity.UpdatedAt,
 	}
 }
 
@@ -27,13 +28,13 @@ func absenceToRecord(value workforce.StaffAbsence) *StaffAbsence {
 }
 
 func applyAbsenceToRecord(entity *StaffAbsence, value workforce.StaffAbsence) {
-	entity.ID = value.ID
+	entity.ID = value.ID.Int64()
 	entity.CreatedAt = value.CreatedAt
 	entity.UpdatedAt = value.UpdatedAt
-	entity.TenantID = value.TenantID
-	entity.StaffID = value.StaffID
+	entity.TenantID = value.TenantID.Int64()
+	entity.StaffID = value.StaffID.Int64()
 	entity.AbsenceType = value.AbsenceType
-	entity.AbsenceTypeID = value.AbsenceTypeID
+	entity.AbsenceTypeID = (*int64)(value.AbsenceTypeID)
 	entity.DateStart = calendar.Date(value.DateStart)
 	entity.DateEnd = calendar.Date(value.DateEnd)
 	entity.HalfDay = value.HalfDay
@@ -41,13 +42,13 @@ func applyAbsenceToRecord(entity *StaffAbsence, value workforce.StaffAbsence) {
 	entity.EndHalfDay = value.EndHalfDay
 	entity.Note = value.Note
 	entity.Status = value.Status
-	entity.ApprovedBy = value.ApprovedBy
+	entity.ApprovedBy = (*int64)(value.ApprovedBy)
 	entity.ApprovedAt = value.ApprovedAt
-	entity.CreatedBy = value.CreatedBy
+	entity.CreatedBy = value.CreatedBy.Int64()
 	entity.WorkingDays = value.WorkingDays
 	entity.DecisionNote = value.DecisionNote
 	entity.RequestedAt = value.RequestedAt
-	entity.SubstituteStaffID = value.SubstituteStaffID
+	entity.SubstituteStaffID = (*int64)(value.SubstituteStaffID)
 }
 
 // absenceWriteError keeps the legacy write error shape. Validation failures
@@ -71,7 +72,7 @@ func absencesToRecord(values []workforce.StaffAbsence) []*StaffAbsence {
 func staffAbsencesByID(values []workforce.StaffAbsence) map[int64][]*StaffAbsence {
 	result := make(map[int64][]*StaffAbsence)
 	for _, value := range values {
-		result[value.StaffID] = append(result[value.StaffID], absenceToRecord(value))
+		result[value.StaffID.Int64()] = append(result[value.StaffID.Int64()], absenceToRecord(value))
 	}
 	return result
 }

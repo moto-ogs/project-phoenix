@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 var _ enrollment.HolidayRegistrationMailReview = (*HolidayRegistrationReview)(nil)
@@ -27,7 +28,7 @@ func (h *HolidayRegistrationReview) HolidayRegistrationMailProblems(ctx context.
 	mails := []enrollment.HolidayRegistrationMails{}
 	for _, id := range ids {
 		if problems := holidayMailProblems(byRegistration[id]); len(problems) > 0 {
-			mails = append(mails, enrollment.HolidayRegistrationMails{RegistrationID: id, MailProblems: problems})
+			mails = append(mails, enrollment.HolidayRegistrationMails{RegistrationID: ident.ID(id), MailProblems: problems})
 		}
 	}
 	return mails, nil
@@ -37,11 +38,11 @@ func (h *HolidayRegistrationReview) HolidayRegistrationMailProblems(ctx context.
 // that did not reach the parents (#6737, #6976). Without the mail states the
 // detail names none.
 func (h *HolidayRegistrationReview) addMails(ctx context.Context, organizationID, periodID int64, detail *enrollment.HolidayRegistrationDetail) error {
-	_, byRegistration, err := h.registrationMails(ctx, organizationID, periodID, detail.ID)
+	_, byRegistration, err := h.registrationMails(ctx, organizationID, periodID, detail.ID.Int64())
 	if err != nil {
 		return err
 	}
-	mails := byRegistration[detail.ID]
+	mails := byRegistration[detail.ID.Int64()]
 	detail.MailProblems = holidayMailProblems(mails)
 	for _, mail := range mails {
 		outcome := enrollment.RequestMailOutcome{Kind: mail.Kind, Outcome: mail.Outcome}

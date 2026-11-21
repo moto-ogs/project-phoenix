@@ -14,7 +14,7 @@ func NewOpeningYearsReader(ledger workforce.Capability) func(ctx context.Context
 		}
 		ids := make([]int64, 0, len(rows))
 		for _, row := range rows {
-			ids = append(ids, row.StaffID)
+			ids = append(ids, row.StaffID.Int64())
 		}
 		return ids, nil
 	}

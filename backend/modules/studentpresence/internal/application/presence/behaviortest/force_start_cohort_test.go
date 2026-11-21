@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	activeService "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 )
@@ -48,11 +49,11 @@ func TestForceStartRejectsASourceCreatedAfterPreparation(t *testing.T) {
 		// The independent admin transaction creates another source in a room
 		// not protected by the force start's room advisory. It must not become
 		// a late transfer after the existing session locks have been taken.
-		row := &ports.ActiveGroup{GroupID: &activity.ID, RoomID: other.ID, StartTime: time.Now(), LastActivity: time.Now(), TimeoutMinutes: 30}
+		row := &ports.ActiveGroup{GroupID: (*ident.ID)(&activity.ID), RoomID: ident.ID(other.ID), StartTime: time.Now(), LastActivity: time.Now(), TimeoutMinutes: 30}
 		if err := svc.CreateActiveGroup(ctx, row); err != nil {
 			return err
 		}
-		late = row.ID
+		late = row.ID.Int64()
 		visit, err := module.RecordVisit(ctx, studentpresence.Visit{StudentID: lateChild.ID, ActiveGroupID: late, EntryTime: time.Now()})
 		lateVisit = visit.ID
 		return err

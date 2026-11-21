@@ -79,7 +79,7 @@ func TestEndDailySessionsVisitLookupFailure(t *testing.T) {
 
 	visit := studentpresence.Visit{
 		StudentID:     student.ID, // Real ID from fixture
-		ActiveGroupID: session.ID,
+		ActiveGroupID: session.ID.Int64(),
 		EntryTime:     time.Now(),
 	}
 	visit, err = presence.RecordVisit(ctx, visit)
@@ -87,7 +87,7 @@ func TestEndDailySessionsVisitLookupFailure(t *testing.T) {
 
 	// Verify the group is active before cleanup
 	groupRepo := sessionGroups(repoFactory.ActiveGroup)
-	activeBefore, err := groupRepo.FindByID(ctx, session.ID)
+	activeBefore, err := groupRepo.FindByID(ctx, session.ID.Int64())
 	require.NoError(t, err)
 	assert.True(t, activeBefore.IsActive(), "Group should be active before cleanup")
 
@@ -109,7 +109,7 @@ func TestEndDailySessionsVisitLookupFailure(t *testing.T) {
 	assert.GreaterOrEqual(t, result.VisitsEnded, 1, "Should end at least 1 visit")
 
 	// Verify the group is now ended
-	activeAfter, err := groupRepo.FindByID(ctx, session.ID)
+	activeAfter, err := groupRepo.FindByID(ctx, session.ID.Int64())
 	require.NoError(t, err)
 	assert.False(t, activeAfter.IsActive(), "Group should be ended after cleanup")
 
@@ -163,7 +163,7 @@ func TestEndDailySessionsConsistency(t *testing.T) {
 
 	visit1 := studentpresence.Visit{
 		StudentID:     student1.ID, // Real ID from fixture
-		ActiveGroupID: session1.ID,
+		ActiveGroupID: session1.ID.Int64(),
 		EntryTime:     time.Now(),
 	}
 	visit1, err = presence.RecordVisit(ctx, visit1)
@@ -171,7 +171,7 @@ func TestEndDailySessionsConsistency(t *testing.T) {
 
 	visit2 := studentpresence.Visit{
 		StudentID:     student2.ID, // Real ID from fixture
-		ActiveGroupID: session2.ID,
+		ActiveGroupID: session2.ID.Int64(),
 		EntryTime:     time.Now(),
 	}
 	visit2, err = presence.RecordVisit(ctx, visit2)
@@ -187,11 +187,11 @@ func TestEndDailySessionsConsistency(t *testing.T) {
 	// Verify both sessions were cleaned up consistently
 	groupRepo := sessionGroups(repoFactory.ActiveGroup)
 
-	group1After, err := groupRepo.FindByID(ctx, session1.ID)
+	group1After, err := groupRepo.FindByID(ctx, session1.ID.Int64())
 	require.NoError(t, err)
 	assert.False(t, group1After.IsActive(), "Group 1 should be ended")
 
-	group2After, err := groupRepo.FindByID(ctx, session2.ID)
+	group2After, err := groupRepo.FindByID(ctx, session2.ID.Int64())
 	require.NoError(t, err)
 	assert.False(t, group2After.IsActive(), "Group 2 should be ended")
 

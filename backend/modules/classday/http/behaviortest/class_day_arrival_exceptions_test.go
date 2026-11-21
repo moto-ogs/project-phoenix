@@ -29,6 +29,7 @@ import (
 	classdayhttp "github.com/moto-ogs/project-phoenix/modules/classday/http"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -76,7 +77,7 @@ func setupArrivalExceptionRoute(t *testing.T, clocks ...func() time.Time) (*test
 		})
 		report, err := testpkg.TenantQuery3(t, caller, db, factory.ClassDay.DayReport, class, classday.Date(arrivalExceptionMonday), classday.Actor{AccountID: accountID, Roles: "lehrkraft"})
 		require.NoError(t, err)
-		body, err := json.Marshal(report)
+		body, err := wire.Marshal(report)
 		require.NoError(t, err)
 		return body
 	}

@@ -6,6 +6,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	api "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -21,18 +22,18 @@ func TestRecordStaffAbsenceAuditReturnsIDAndTenant(t *testing.T) {
 	ctx := testpkg.TenantContext(staff.TenantID)
 	today := calendar.TodayDate().String()
 	absence, err := workTime.CreateStaffAbsence(ctx, &workforce.StaffAbsence{
-		StaffID:     staff.ID,
+		StaffID:     ident.ID(staff.ID),
 		AbsenceType: workforce.AbsenceTypeVacation,
 		DateStart:   today,
 		DateEnd:     today,
 		Status:      workforce.AbsenceStatusRequested,
-		CreatedBy:   staff.ID,
+		CreatedBy:   ident.ID(staff.ID),
 	})
 	require.NoError(t, err)
 
 	fromStatus := workforce.AbsenceStatusRequested
 	audit, err := workTime.RecordStaffAbsenceAudit(ctx, workforce.StaffAbsenceAudit{
-		AbsenceID:  absence.ID,
+		AbsenceID:  absence.ID.Int64(),
 		FromStatus: &fromStatus,
 		ToStatus:   workforce.AbsenceStatusApproved,
 		ActorID:    account.ID,

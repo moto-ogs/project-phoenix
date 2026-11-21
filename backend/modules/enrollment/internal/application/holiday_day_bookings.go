@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Booking of days and the bound of care days per child (#4701); the rules
@@ -65,11 +66,11 @@ func normalizeHolidayBookings(bookings []enrollment.HolidayBookingInput) []enrol
 func holidayBookedDayCount(bookings []enrollment.HolidayBookingInput, period enrollment.HolidayPeriod) int {
 	weeks := map[int64]enrollment.HolidayWeek{}
 	for _, week := range period.Weeks {
-		weeks[week.ID] = week
+		weeks[week.ID.Int64()] = week
 	}
 	count := 0
 	for _, booking := range bookings {
-		if week, ok := weeks[booking.WeekID]; ok {
+		if week, ok := weeks[booking.WeekID.Int64()]; ok {
 			count += len(enrollment.HolidayBookedDays(week, booking.Days))
 		}
 	}
@@ -104,7 +105,7 @@ func holidayDaysElsewhere(ctx context.Context, store HolidayPlaceStore, organiza
 	if period.MaxDaysPerChild == nil || len(keys) == 0 {
 		return days, nil
 	}
-	bookings, err := store.ReadHolidayChildBookings(ctx, organizationID, period.ID, keys, exceptChildID)
+	bookings, err := store.ReadHolidayChildBookings(ctx, organizationID, period.ID.Int64(), keys, exceptChildID)
 	if err != nil {
 		return nil, fmt.Errorf("enrollment: read the children's other holiday bookings: %w", err)
 	}
@@ -187,7 +188,7 @@ func (h *HolidayRegistrationReview) refuseEditedDayLimits(ctx context.Context, o
 func holidayChildWithKey(read []enrollment.HolidayRegistrationDetail, childID int64) (enrollment.HolidayRegistrationChild, enrollment.HolidayChildKey, bool) {
 	for _, registration := range read {
 		for _, child := range registration.Children {
-			if child.ID == childID {
+			if child.ID == ident.ID(childID) {
 				return child, enrollment.NewHolidayChildKey(registration.GuardianEmail, child.FirstName, child.LastName, child.BirthDate), true
 			}
 		}
@@ -213,7 +214,7 @@ func (h *HolidayPeriods) refuseRaisedDayLimit(ctx context.Context, organizationI
 		if week.ID == 0 {
 			continue
 		}
-		written.Weeks = append(written.Weeks, enrollment.HolidayWeek{ID: week.ID, StartsOn: week.StartsOn, EndsOn: week.EndsOn, BookingUnit: week.BookingUnit})
+		written.Weeks = append(written.Weeks, enrollment.HolidayWeek{ID: ident.ID(week.ID), StartsOn: week.StartsOn, EndsOn: week.EndsOn, BookingUnit: week.BookingUnit})
 		if before, ok := holidayStoredWeek(current, week.ID); ok && (before.StartsOn != week.StartsOn || before.EndsOn != week.EndsOn) {
 			moved[week.ID] = i
 		}
@@ -242,7 +243,7 @@ func (h *HolidayPeriods) refuseRaisedDayLimit(ctx context.Context, organizationI
 func holidayRaisingWeek(bookings []enrollment.HolidayBookingInput, moved map[int64]int, current, written enrollment.HolidayPeriod) int {
 	week := -1
 	for _, booking := range bookings {
-		index, ok := moved[booking.WeekID]
+		index, ok := moved[booking.WeekID.Int64()]
 		if !ok || (week >= 0 && week <= index) {
 			continue
 		}
@@ -263,7 +264,7 @@ func holidayStartsEarlier(week enrollment.HolidayWeekInput, current enrollment.H
 
 func holidayStoredWeek(period enrollment.HolidayPeriod, weekID int64) (enrollment.HolidayWeek, bool) {
 	for _, week := range period.Weeks {
-		if week.ID == weekID {
+		if week.ID == ident.ID(weekID) {
 			return week, true
 		}
 	}
@@ -280,7 +281,7 @@ func (h *HolidayRegistrations) fullHolidayDays(ctx context.Context, organization
 	}) {
 		return full, nil
 	}
-	places, err := h.deps.Places.ReadHolidayWeekPlaces(ctx, organizationID, period.ID)
+	places, err := h.deps.Places.ReadHolidayWeekPlaces(ctx, organizationID, period.ID.Int64())
 	if err != nil {
 		return nil, fmt.Errorf("enrollment: read holiday day places: %w", err)
 	}
@@ -290,7 +291,7 @@ func (h *HolidayRegistrations) fullHolidayDays(ctx context.Context, organization
 		}
 		for _, day := range week.Days {
 			if day.Placed >= *week.Capacity {
-				full[week.WeekID] = append(full[week.WeekID], day.Date)
+				full[week.WeekID.Int64()] = append(full[week.WeekID.Int64()], day.Date)
 			}
 		}
 	}
@@ -308,18 +309,18 @@ func validateHolidayBookings(bookings []enrollment.HolidayBookingInput, period e
 	}
 	weeks := map[int64]enrollment.HolidayWeek{}
 	for _, week := range period.Weeks {
-		weeks[week.ID] = week
+		weeks[week.ID.Int64()] = week
 	}
 	errs := validation.Errors{}
 	seen := map[int64]bool{}
 	for i, booking := range bookings {
-		week, ok := weeks[booking.WeekID]
+		week, ok := weeks[booking.WeekID.Int64()]
 		switch {
 		case !ok:
 			errs[fmt.Sprint(i)] = errors.New("the week is not a week of this period")
-		case seen[booking.WeekID]:
+		case seen[booking.WeekID.Int64()]:
 			errs[fmt.Sprint(i)] = errors.New("the week is booked twice")
-		case !holidayWeekOffers(week, booking.TimeModelID, holidayBookingKept(kept, booking)):
+		case !holidayWeekOffers(week, booking.TimeModelID.Int64(), holidayBookingKept(kept, booking)):
 			errs[fmt.Sprint(i)] = errors.New("the time model is not a bookable time model of this week")
 		case holidayBookingOverlaps(week, bookings[:i], weeks):
 			errs[fmt.Sprint(i)] = errors.New("the week shares a day with another booked week")
@@ -330,7 +331,7 @@ func validateHolidayBookings(bookings []enrollment.HolidayBookingInput, period e
 				errs[fmt.Sprint(i)] = validation.Errors{"lunch": errors.New("the week offers no lunch")}
 			}
 		}
-		seen[booking.WeekID] = true
+		seen[booking.WeekID.Int64()] = true
 	}
 	if len(errs) == 0 {
 		return nil
@@ -340,7 +341,7 @@ func validateHolidayBookings(bookings []enrollment.HolidayBookingInput, period e
 
 func holidayWeekOffers(week enrollment.HolidayWeek, timeModelID int64, kept bool) bool {
 	return slices.ContainsFunc(week.TimeModels, func(model enrollment.HolidayTimeModel) bool {
-		return model.ID == timeModelID && (!model.Archived || kept)
+		return model.ID == ident.ID(timeModelID) && (!model.Archived || kept)
 	})
 }
 
@@ -348,7 +349,7 @@ func holidayWeekOffers(week enrollment.HolidayWeek, timeModelID int64, kept bool
 // earlier bookings. A booking of an unknown week is refused on its own.
 func holidayBookingOverlaps(week enrollment.HolidayWeek, earlier []enrollment.HolidayBookingInput, weeks map[int64]enrollment.HolidayWeek) bool {
 	return slices.ContainsFunc(earlier, func(booking enrollment.HolidayBookingInput) bool {
-		other, ok := weeks[booking.WeekID]
+		other, ok := weeks[booking.WeekID.Int64()]
 		return ok && other.ID != week.ID && holidayDaysOverlap(week.StartsOn, week.EndsOn, other.StartsOn, other.EndsOn)
 	})
 }

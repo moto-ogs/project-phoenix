@@ -73,7 +73,7 @@ func TestStaffTargetOverrides_TenantIsolation(t *testing.T) {
 		days, err := capability.StaffTargetOverrideDays(otherCtx, []int64{staff.ID}, "2026-10-01", "2026-10-31")
 		require.NoError(t, err)
 		assert.Empty(t, days[staff.ID])
-		err = capability.DeleteStaffTargetOverride(otherCtx, staff.ID, created.ID)
+		err = capability.DeleteStaffTargetOverride(otherCtx, staff.ID, created.ID.Int64())
 		assert.ErrorIs(t, err, workforce.ErrStaffTargetOverrideNotFound)
 	})
 

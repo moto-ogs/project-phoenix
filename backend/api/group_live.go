@@ -271,7 +271,7 @@ func (h groupLiveHolidayGroupWeeks) HolidayGroupWeeks(ctx context.Context) ([]gr
 	weeks := make([]grouplive.HolidayGroupWeek, len(groups))
 	for i, group := range groups {
 		weeks[i] = grouplive.HolidayGroupWeek{
-			GroupID: group.GroupID, StartsOn: grouplive.Date(group.StartsOn.String()), EndsOn: grouplive.Date(group.EndsOn.String()),
+			GroupID: group.GroupID.Int64(), StartsOn: grouplive.Date(group.StartsOn.String()), EndsOn: grouplive.Date(group.EndsOn.String()),
 		}
 	}
 	return weeks, nil

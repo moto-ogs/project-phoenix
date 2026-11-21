@@ -85,7 +85,7 @@ func (c *Catalog) previewSchool(ctx context.Context, actor traegercatalog.Actor,
 	run := schoolRun{target: t}
 	err := c.deps.Runtime.WithinSchool(ctx, t.schoolID, func(ctx context.Context) error {
 		var err error
-		if err = c.lockSchool(ctx, snap.phase.OrganizationID, t.schoolID); err != nil {
+		if err = c.lockSchool(ctx, snap.phase.OrganizationID.Int64(), t.schoolID); err != nil {
 			return err
 		}
 		if state, err = c.schoolState(ctx, snap, false); err != nil {

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -32,7 +33,7 @@ type ChangeRequestResponse struct {
 	CreatedAt         time.Time                      `json:"created_at"`
 	UpdatedAt         time.Time                      `json:"updated_at"`
 	ReviewedAt        *time.Time                     `json:"reviewed_at,omitempty"`
-	ReviewedBy        *int64                         `json:"reviewed_by_account_id,omitempty"`
+	ReviewedBy        *common.ID                     `json:"reviewed_by_account_id,omitempty"`
 	Request           *AdminRequestSummary           `json:"request,omitempty"`
 	Messages          []ChangeRequestMessageResponse `json:"messages,omitempty"`
 	// RosterImpacts answer an approval that changed bookings (#5102).
@@ -40,12 +41,12 @@ type ChangeRequestResponse struct {
 }
 
 type ChangeRequestMessageResponse struct {
-	ID              string    `json:"id"`
-	AuthorType      string    `json:"author_type"`
-	AuthorAccountID *int64    `json:"author_account_id,omitempty"`
-	Body            string    `json:"body"`
-	InternalOnly    bool      `json:"internal_only"`
-	CreatedAt       time.Time `json:"created_at"`
+	ID              string     `json:"id"`
+	AuthorType      string     `json:"author_type"`
+	AuthorAccountID *common.ID `json:"author_account_id,omitempty"`
+	Body            string     `json:"body"`
+	InternalOnly    bool       `json:"internal_only"`
+	CreatedAt       time.Time  `json:"created_at"`
 }
 
 type CreateChangeRequestRequest struct {
@@ -294,7 +295,7 @@ func toChangeRequestResponse(agg *ChangeRequestAggregate, includeRequest bool, i
 		ReviewedAt:        row.ReviewedAt,
 	}
 	if includeInternal {
-		resp.ReviewedBy = row.ReviewedByAccountID
+		resp.ReviewedBy = (*ident.ID)(row.ReviewedByAccountID)
 		resp.RosterImpacts = newChildRosterImpactResponses(agg.RosterImpacts)
 	}
 	for _, msg := range agg.Messages {
@@ -306,7 +307,7 @@ func toChangeRequestResponse(agg *ChangeRequestAggregate, includeRequest bool, i
 			CreatedAt:    msg.CreatedAt,
 		}
 		if includeInternal {
-			out.AuthorAccountID = msg.AuthorAccountID
+			out.AuthorAccountID = (*ident.ID)(msg.AuthorAccountID)
 		}
 		resp.Messages = append(resp.Messages, out)
 	}

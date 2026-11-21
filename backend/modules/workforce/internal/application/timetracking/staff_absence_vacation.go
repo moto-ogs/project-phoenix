@@ -90,7 +90,7 @@ func (s *staffAbsenceService) RequestVacation(ctx context.Context, staffID int64
 		CreatedBy:         staffID,
 		WorkingDays:       &workingDays,
 		RequestedAt:       now,
-		SubstituteStaffID: req.SubstituteStaffID,
+		SubstituteStaffID: (*int64)(req.SubstituteStaffID),
 	}
 	absence.CreatedAt = now
 	absence.UpdatedAt = now

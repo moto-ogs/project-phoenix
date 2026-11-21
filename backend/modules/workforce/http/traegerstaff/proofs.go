@@ -216,9 +216,9 @@ func (rs *ProofsResource) schoolKinds(w http.ResponseWriter, r *http.Request) {
 // ProofMappingRequest maps one school kind onto a Träger kind; a null
 // proof_type_id removes the mapping.
 type ProofMappingRequest struct {
-	SchoolID     int64  `json:"school_id"`
-	SchoolTypeID int64  `json:"school_type_id"`
-	ProofTypeID  *int64 `json:"proof_type_id"`
+	SchoolID     common.ID  `json:"school_id"`
+	SchoolTypeID common.ID  `json:"school_type_id"`
+	ProofTypeID  *common.ID `json:"proof_type_id"`
 }
 
 func (req *ProofMappingRequest) Bind(*http.Request) error {
@@ -239,7 +239,7 @@ func (rs *ProofsResource) mapSchoolKind(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	kinds, err := rs.proofs.MapProofKind(r.Context(), session, workforce.TraegerProofMappingInput{
-		SchoolID: req.SchoolID, SchoolTypeID: req.SchoolTypeID, ProofTypeID: req.ProofTypeID,
+		SchoolID: req.SchoolID.Int64(), SchoolTypeID: req.SchoolTypeID.Int64(), ProofTypeID: (*int64)(req.ProofTypeID),
 	})
 	if err != nil {
 		renderProofError(w, r, err)

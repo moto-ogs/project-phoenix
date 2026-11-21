@@ -151,7 +151,7 @@ func buildSchoolDayReport(date calendar.Date, weekday string, enrollmentKnown bo
 // covering enrollment phase nobody is split.
 func schoolDayChild(row classday.DayRow, schoolDay, enrollmentKnown bool) classday.SchoolDayChild {
 	child := classday.SchoolDayChild{
-		StudentID: row.StudentID, ListEntry: row.ListEntry, ListEntryID: row.ListEntryID,
+		StudentID: row.StudentID.Int64(), ListEntry: row.ListEntry, ListEntryID: row.ListEntryID,
 		WithoutCarePlace: row.WithoutCarePlace,
 		FirstName:        row.FirstName, LastName: row.LastName,
 	}

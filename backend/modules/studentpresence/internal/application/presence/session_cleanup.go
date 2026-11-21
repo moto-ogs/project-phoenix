@@ -40,7 +40,7 @@ func (s *service) CleanupAbandonedSessions(ctx context.Context, threshold time.D
 	ids := make([]int64, 0, len(sessions))
 	for _, session := range sessions {
 		if !s.isDeviceOnline(ctx, session.Device, s.now()) {
-			ids = append(ids, session.ID)
+			ids = append(ids, session.ID.Int64())
 		}
 	}
 	slices.Sort(ids)
@@ -200,7 +200,7 @@ func (s *service) activeSessionIDs(ctx context.Context) ([]int64, error) {
 	}
 	activeIDs := make([]int64, 0, len(activeGroups))
 	for _, group := range activeGroups {
-		activeIDs = append(activeIDs, group.ID)
+		activeIDs = append(activeIDs, group.ID.Int64())
 	}
 	return activeIDs, nil
 }
@@ -267,10 +267,10 @@ func (s *service) cleanupOrphanedSupervisors(ctx context.Context, result *DailyS
 func (s *service) closeStaleSupervisor(ctx context.Context, record *ports.GroupSupervisor, today calendar.Date) (bool, error) {
 	closed := false
 	err := s.runInSessionTx(ctx, func(txCtx context.Context) error {
-		if err := s.lockGroupRows(txCtx, record.GroupID); err != nil {
+		if err := s.lockGroupRows(txCtx, record.GroupID.Int64()); err != nil {
 			return err
 		}
-		current, err := s.SupervisorRepo.FindByID(txCtx, record.ID)
+		current, err := s.SupervisorRepo.FindByID(txCtx, record.ID.Int64())
 		if err != nil {
 			return err
 		}

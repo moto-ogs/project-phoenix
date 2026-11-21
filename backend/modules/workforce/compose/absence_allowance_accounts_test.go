@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -52,7 +53,7 @@ func TestAllowanceAccountsMatchTheSummaryOfEachType(t *testing.T) {
 	bookAllowanceDay(t, svc, staff.ID, plain.ID, "2027-01-12", january)
 	bookAllowanceDay(t, svc, other.ID, plain.ID, "2027-01-13", january)
 	_, err = svc.CreateStaffAbsence(ctx, &workforce.StaffAbsence{
-		StaffID: staff.ID, CreatedBy: staff.ID, AbsenceType: workforce.AbsenceTypeOther, AbsenceTypeID: &plain.ID,
+		StaffID: ident.ID(staff.ID), CreatedBy: ident.ID(staff.ID), AbsenceType: workforce.AbsenceTypeOther, AbsenceTypeID: (*ident.ID)(&plain.ID),
 		Status: workforce.AbsenceStatusRequested, DateStart: "2027-01-14", DateEnd: "2027-01-14", HalfDay: true, CreatedAt: january,
 	})
 	require.NoError(t, err)

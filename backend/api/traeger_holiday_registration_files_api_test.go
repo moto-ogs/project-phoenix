@@ -27,6 +27,7 @@ import (
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -89,11 +90,11 @@ func TestHolidayRegistrationFilesKeepAnsweredInactiveAndArchivedCriteria(t *test
 		require.Len(t, single.Records, 1)
 		criteria := single.Records[0].Detail.Criteria
 		require.Len(t, criteria, 2, "both stored answers survive deactivation and archiving")
-		assert.Equal(t, f.working, criteria[0].CriterionID)
+		assert.Equal(t, ident.ID(f.working), criteria[0].CriterionID)
 		assert.Equal(t, "Sind Sie berufstätig?", criteria[0].Question)
 		assert.Nil(t, criteria[0].ChildID)
 		assert.Equal(t, enrollment.HolidayCriterionYes, criteria[0].Stated)
-		assert.Equal(t, f.sibling, criteria[1].CriterionID)
+		assert.Equal(t, ident.ID(f.sibling), criteria[1].CriterionID)
 		assert.Equal(t, "Ist ein Geschwisterkind schon in der OGS?", criteria[1].Question)
 		require.NotNil(t, criteria[1].ChildID)
 		assert.Equal(t, single.Records[0].Detail.Children[0].ID, *criteria[1].ChildID)
@@ -103,10 +104,10 @@ func TestHolidayRegistrationFilesKeepAnsweredInactiveAndArchivedCriteria(t *test
 		require.NoError(t, err)
 		require.Len(t, archive.Records, 2)
 		for _, record := range archive.Records {
-			if record.Detail.ID == int64(first.ID) {
+			if record.Detail.ID == ident.ID(int64(first.ID)) {
 				assert.Equal(t, criteria, record.Detail.Criteria, "the ZIP keeps the same answers as the single PDF")
 			} else {
-				assert.Equal(t, int64(later.ID), record.Detail.ID)
+				assert.Equal(t, ident.ID(int64(later.ID)), record.Detail.ID)
 				assert.Empty(t, record.Detail.Criteria, "another family's historical questions do not appear")
 			}
 		}

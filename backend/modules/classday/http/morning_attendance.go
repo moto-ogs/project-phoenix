@@ -26,9 +26,9 @@ const maxMorningAttendanceMarks = 200
 // with an OGS record, list_entry_id (a JSON string, like the day row) a
 // class-list-only entry; exactly one is set.
 type MorningAttendanceMarkRequest struct {
-	StudentID   int64  `json:"student_id,omitempty"`
-	ListEntryID int64  `json:"list_entry_id,string,omitempty"`
-	Status      string `json:"status"`
+	StudentID   common.ID `json:"student_id,omitempty"`
+	ListEntryID int64     `json:"list_entry_id,string,omitempty"`
+	Status      string    `json:"status"`
 }
 
 // MorningAttendanceRequest is the body of
@@ -93,7 +93,7 @@ func (rs *Resource) putMorningAttendance(w http.ResponseWriter, r *http.Request)
 	}
 	marks := make([]classday.MorningAttendanceMark, 0, len(req.Marks))
 	for _, mark := range req.Marks {
-		marks = append(marks, classday.MorningAttendanceMark{StudentID: mark.StudentID, ListEntryID: mark.ListEntryID, Status: mark.Status})
+		marks = append(marks, classday.MorningAttendanceMark{StudentID: mark.StudentID.Int64(), ListEntryID: mark.ListEntryID, Status: mark.Status})
 	}
 	if err := rs.ClassDay.RecordMorningAttendance(r.Context(), classday.MorningAttendanceWrite{
 		SchoolClass: class, Date: classday.Date(date.String()), RecordedBy: staffID, Marks: marks,

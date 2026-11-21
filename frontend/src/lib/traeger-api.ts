@@ -537,17 +537,17 @@ function holidayPeriodToBackend(
     max_days_per_child: input.maxDaysPerChild ?? null,
     allocation_mode: input.allocationMode ?? "arrival",
     weeks: input.weeks.map((week) => ({
-      ...(week.id ? { id: Number(week.id) } : {}),
+      ...(week.id ? { id: week.id } : {}),
       starts_on: week.startsOn,
       ends_on: week.endsOn,
-      host_school_id: Number(week.hostSchoolId),
+      host_school_id: week.hostSchoolId,
       booking_unit: week.bookingUnit ?? "week",
       // Left out, the week offers no lunch (#5631).
       ...(week.lunchPriceCents == null
         ? {}
         : { lunch_price_cents: week.lunchPriceCents }),
       time_models: week.timeModels.map((model) => ({
-        ...(model.id ? { id: Number(model.id) } : {}),
+        ...(model.id ? { id: model.id } : {}),
         name: model.name,
         starts_at: model.startsAt,
         ends_at: model.endsAt,

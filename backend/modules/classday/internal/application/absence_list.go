@@ -180,7 +180,7 @@ func (a absenceList) children(ctx context.Context, schoolClass string, from, unt
 	participationFrom, participationUntil := from, until
 	ids := make([]int64, 0, len(children))
 	for _, child := range children {
-		ids = append(ids, child.StudentID)
+		ids = append(ids, child.StudentID.Int64())
 	}
 	participation, err := a.deps.Participation.HistoricalParticipatingStudentIDsByDate(ctx, ids, participationFrom, participationUntil)
 	if err != nil {
@@ -200,8 +200,8 @@ func absenceListChildren(children []classday.AbsenceListChild, participation map
 	kept := make([]classday.AbsenceListChild, 0, len(children))
 	for _, child := range children {
 		for day := from; !day.After(until); day = day.AddDays(1) {
-			_, recorded := days[child.StudentID][day]
-			if participation[day][child.StudentID] || recordedBeforeMembership(child, day, recorded) {
+			_, recorded := days[child.StudentID.Int64()][day]
+			if participation[day][child.StudentID.Int64()] || recordedBeforeMembership(child, day, recorded) {
 				kept = append(kept, child)
 				break
 			}
@@ -227,7 +227,7 @@ func withSchoolMembersOnly(participation map[calendar.Date]map[int64]bool, child
 			if participation[day] == nil {
 				participation[day] = map[int64]bool{}
 			}
-			participation[day][child.StudentID] = true
+			participation[day][child.StudentID.Int64()] = true
 		}
 	}
 	return participation
@@ -272,15 +272,15 @@ func (a absenceList) count(ctx context.Context, report *classday.AbsenceListRepo
 		childID := children[i].StudentID
 		childSchoolDays := make(map[calendar.Date]bool)
 		for day := from; !day.After(until); day = day.AddDays(1) {
-			_, recorded := days[childID][day]
-			takesPart := participation[day][childID] || recordedBeforeMembership(children[i], day, recorded)
+			_, recorded := days[childID.Int64()][day]
+			takesPart := participation[day][childID.Int64()] || recordedBeforeMembership(children[i], day, recorded)
 			if !takesPart {
-				delete(days[childID], day)
+				delete(days[childID.Int64()], day)
 			} else if schoolDays[day] {
 				childSchoolDays[day] = true
 			}
 		}
-		children[i].AbsenceListCounts = countAbsenceDays(days[childID], childSchoolDays)
+		children[i].AbsenceListCounts = countAbsenceDays(days[childID.Int64()], childSchoolDays)
 		addAbsenceCounts(&report.Totals, children[i].AbsenceListCounts)
 	}
 	report.Children = children
@@ -358,8 +358,8 @@ func (a absenceList) childDays(ctx context.Context, children []classday.AbsenceL
 	}
 	studentIDs := make([]int64, 0, len(children))
 	for _, child := range children {
-		studentIDs = append(studentIDs, child.StudentID)
-		days[child.StudentID] = map[calendar.Date]absenceDay{}
+		studentIDs = append(studentIDs, child.StudentID.Int64())
+		days[child.StudentID.Int64()] = map[calendar.Date]absenceDay{}
 	}
 	marks, err := a.deps.Marks.MorningMarksBetween(ctx, from, until, studentIDs, nil)
 	if err != nil {

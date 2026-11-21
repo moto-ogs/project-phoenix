@@ -70,9 +70,9 @@ func TestSessionStartRollsBackVisitTransferAndRetries(t *testing.T) {
 	require.NotNil(t, created)
 	stored, err = module.FindVisit(ctx, visit.ID)
 	require.NoError(t, err)
-	assert.Equal(t, created.ID, stored.ActiveGroupID)
+	assert.Equal(t, created.ID.Int64(), stored.ActiveGroupID)
 	assert.Nil(t, stored.ExitTime)
-	count, err := module.TransferRecentDeviceVisits(ctx, created.ID, device.ID)
+	count, err := module.TransferRecentDeviceVisits(ctx, created.ID.Int64(), device.ID)
 	require.NoError(t, err)
 	assert.Zero(t, count, "retry must not transfer the same visit twice")
 }

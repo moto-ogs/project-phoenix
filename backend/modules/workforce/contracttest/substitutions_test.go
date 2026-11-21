@@ -10,6 +10,7 @@ import (
 	education "github.com/moto-ogs/project-phoenix/modules/schoolstructure/contract"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 )
@@ -88,10 +89,10 @@ func TestSubstitutionCapabilityPreservesAssignmentPresenceAndWholeDays(t *testin
 		t.Run(fmt.Sprint(populated), func(t *testing.T) {
 			input := workforce.SubstitutionAssignment{GroupHandover: &workforce.GroupHandoverAssignment{GroupID: staff.ID, TargetStaffID: staff.ID, StartDate: day.String(), EndDate: day.String()}, AdditionalSupervision: &workforce.AdditionalSupervisionAssignment{ActiveGroupID: staff.ID, TargetStaffID: staff.ID}, ScheduleSubstitution: &workforce.ScheduleSubstitutionAssignment{InstanceID: staff.ID}}
 			if populated {
-				input.ScheduleSubstitution.Absences = []workforce.ScheduleAbsenceChange{{StaffID: staff.ID}}
-				input.ScheduleSubstitution.Substitutions = []workforce.ScheduleSubstitutionChange{{AbsentStaffID: staff.ID, SubstituteStaffID: staff.ID}}
-				input.ScheduleSubstitution.SubstitutionRemovals = []workforce.ScheduleSubstitutionRemoval{{StaffID: staff.ID}}
-				input.ScheduleSubstitution.Presences = []workforce.SchedulePresenceChange{{StaffID: staff.ID}}
+				input.ScheduleSubstitution.Absences = []workforce.ScheduleAbsenceChange{{StaffID: ident.ID(staff.ID)}}
+				input.ScheduleSubstitution.Substitutions = []workforce.ScheduleSubstitutionChange{{AbsentStaffID: ident.ID(staff.ID), SubstituteStaffID: ident.ID(staff.ID)}}
+				input.ScheduleSubstitution.SubstitutionRemovals = []workforce.ScheduleSubstitutionRemoval{{StaffID: ident.ID(staff.ID)}}
+				input.ScheduleSubstitution.Presences = []workforce.SchedulePresenceChange{{StaffID: ident.ID(staff.ID)}}
 				input.ScheduleSubstitution.WholeDays = &workforce.ScheduleWholeDayAssignment{AbsentStaffID: staff.ID, SubstituteStaffID: &staff.ID, Dates: []string{day.String()}}
 			}
 			capability := api.SubstitutionCapability(substitutionContract{assign: func(c context.Context, _ education.Caller, a education.Assignment) (*education.AssignmentResult, error) {

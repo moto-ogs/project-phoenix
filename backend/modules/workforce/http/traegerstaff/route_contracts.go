@@ -9,7 +9,7 @@ var traegerPortal = []common.PortalScope{common.PortalTraeger}
 
 // IDResponse names the record or type a write touched.
 type IDResponse struct {
-	ID int64 `json:"id"`
+	ID common.ID `json:"id"`
 }
 
 // PersonnelNumberRequest is the body PUT /{id}/personnel-number reads: the
