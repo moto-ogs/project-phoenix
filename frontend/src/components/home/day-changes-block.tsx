@@ -152,6 +152,9 @@ function DayChangesAnnouncer({
                   entry.notice.acknowledged,
                 ]
               : null,
+            entry.closing
+              ? [entry.closing.name, entry.closing.traeger]
+              : null,
           ]),
         )
         .join("|")

@@ -1,6 +1,7 @@
 package staffcalendarhttp
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
@@ -24,16 +25,26 @@ type TraegerClosingDayResource struct {
 	lists         common.ListRenderer
 	requireRead   common.Middleware
 	requireManage common.Middleware
+	staffing      StaffingChangeQueue
 }
+
+// StaffingChangeQueue wakes a school's staff pages after the surrounding
+// transaction commits. The composition root binds it to the shared
+// staffing_deviation_changed queue.
+type StaffingChangeQueue interface {
+	QueueStaffingChanged(ctx context.Context, tenantID int64, source string)
+}
+
+const closingDayChangeSource = "closing_days"
 
 // NewTraegerClosingDayResource builds the resource; the root binds the right
 // checks to the rights Identity & Access bundles into the Träger roles;
 // lists renders the closing days as PDF, Excel or CSV (#4718).
-func NewTraegerClosingDayResource(days traegercalendar.ClosingDays, lists common.ListRenderer, requireRead, requireManage common.Middleware) *TraegerClosingDayResource {
+func NewTraegerClosingDayResource(days traegercalendar.ClosingDays, lists common.ListRenderer, requireRead, requireManage common.Middleware, staffing StaffingChangeQueue) *TraegerClosingDayResource {
 	if days == nil || lists == nil || requireRead == nil || requireManage == nil {
 		panic("school calendar http: the Träger closing days, the list renderer and the right checks are required")
 	}
-	return &TraegerClosingDayResource{days: days, lists: lists, requireRead: requireRead, requireManage: requireManage}
+	return &TraegerClosingDayResource{days: days, lists: lists, requireRead: requireRead, requireManage: requireManage, staffing: staffing}
 }
 
 // TraegerRouter returns the routes mounted at /traeger/closing-days.
@@ -124,6 +135,7 @@ func (rs *TraegerClosingDayResource) create(w http.ResponseWriter, r *http.Reque
 		renderTraegerClosingDayError(w, r, err)
 		return
 	}
+	rs.announceClosingDayChange(r.Context(), day.AffectedSchoolIDs)
 	common.Respond(w, r, http.StatusCreated, day, "Träger closing day created successfully")
 }
 
@@ -147,6 +159,7 @@ func (rs *TraegerClosingDayResource) update(w http.ResponseWriter, r *http.Reque
 		renderTraegerClosingDayError(w, r, err)
 		return
 	}
+	rs.announceClosingDayChange(r.Context(), day.AffectedSchoolIDs)
 	common.Respond(w, r, http.StatusOK, day, "Träger closing day updated successfully")
 }
 
@@ -160,12 +173,27 @@ func (rs *TraegerClosingDayResource) delete(w http.ResponseWriter, r *http.Reque
 		common.RenderError(w, r, common.ErrorNotFoundWithCode(traegercalendar.ErrClosingDayNotFound, common.CodeTraegerClosingDayNotFound))
 		return
 	}
-	families, err := rs.days.DeleteClosingDay(r.Context(), organizationID, id, r.URL.Query().Get("holiday_bookings_token"))
+	day, err := rs.days.DeleteClosingDay(r.Context(), organizationID, id, r.URL.Query().Get("holiday_bookings_token"))
 	if err != nil {
 		renderTraegerClosingDayError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, TraegerClosingDayDeleted{NotifiedFamilies: families}, "Träger closing day deleted successfully")
+	rs.announceClosingDayChange(r.Context(), day.AffectedSchoolIDs)
+	common.Respond(w, r, http.StatusOK, TraegerClosingDayDeleted{NotifiedFamilies: day.NotifiedFamilies}, "Träger closing day deleted successfully")
+}
+
+// announceClosingDayChange wakes exactly the school pages that can display a
+// changed Träger closing day. The Träger request has no school in its context,
+// so the saved operation supplies the affected school IDs. The injected queue
+// waits for the surrounding transaction to commit; an earlier wake could
+// refetch a rolled-back value.
+func (rs *TraegerClosingDayResource) announceClosingDayChange(ctx context.Context, schoolIDs []int64) {
+	if rs.staffing == nil || len(schoolIDs) == 0 {
+		return
+	}
+	for _, schoolID := range schoolIDs {
+		rs.staffing.QueueStaffingChanged(ctx, schoolID, closingDayChangeSource)
+	}
 }
 
 // TraegerClosingDayDeleted is the answer of DELETE: the families told that

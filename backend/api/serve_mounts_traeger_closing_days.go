@@ -14,6 +14,7 @@ import (
 	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
 	schoolCalendarHTTP "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar"
+	timetableHTTP "github.com/moto-ogs/project-phoenix/modules/timetable/http"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	holidayClosureHTTP "github.com/moto-ogs/project-phoenix/workflows/holidayclosurenotification/http"
@@ -25,15 +26,21 @@ import (
 // holiday bookings it affects (#6434); /traeger/holiday-closures previews
 // them and lists the closed days nobody told yet, behind the planning right.
 func mountTraegerClosingDayRoutes(root chi.Router, schools traegercalendar.Schools, organizations HolidayOrganizations,
-	mail owners.HolidayClosureMail, holidayCalendar enrollmentOwner.HolidaySchoolCalendar, holidays owners.HolidayClosureHolidays, now func() time.Time,
+	mail owners.HolidayClosureMail, holidayCalendar enrollmentOwner.HolidaySchoolCalendar, holidays owners.HolidayClosureHolidays, staffing schoolCalendarHTTP.StaffingChangeQueue, now func() time.Time,
 ) {
 	closures := newHolidayClosures(organizations, mail, holidayCalendar, holidays, now)
 	requireManage := common.RequiresPermission(identityaccess.TraegerRightSettingsManage)
 	resource := schoolCalendarHTTP.NewTraegerClosingDayResource(
 		schoolCalendarCompose.NewTraegerClosingDays(schools, owners.NewTraegerClosingDayHolidayNotices(closures)), traegerListRenderer(NewSimpleListRenderer()),
-		common.RequiresPermission(identityaccess.TraegerRightOverviewRead), requireManage)
+		common.RequiresPermission(identityaccess.TraegerRightOverviewRead), requireManage, staffing)
 	root.Mount("/traeger/closing-days", resource.TraegerRouter(ProtectedTraegerRoutes))
 	root.Mount("/traeger/holiday-closures", enrollmentAPI.NewHolidayClosureResource(closures, requireManage).TraegerRouter(ProtectedTraegerRoutes))
+}
+
+// newTraegerClosingDayStaffingQueue binds the Träger closing-day routes to
+// the same after-commit staffing signal queue as the school timetable routes.
+func newTraegerClosingDayStaffingQueue(staffing timetableHTTP.StaffingAnnouncer, logger *slog.Logger) schoolCalendarHTTP.StaffingChangeQueue {
+	return timetableHTTP.NewStaffingChangeQueue(staffing, logger)
 }
 
 // newHolidayClosures builds Enrollment's closing day notices over the

@@ -491,6 +491,32 @@ describe("DayChangesBlock über den Tag (#7660)", () => {
 
     expect(live).toHaveTextContent("„Heute anders“ hat sich geändert.");
   });
+
+  it("sagt einen geänderten Schließtag einer bestehenden Änderung an", () => {
+    serve({
+      entries: [
+        change({
+          kind: "closing_day",
+          closing: { name: "Brückentag", traeger: false },
+        }),
+      ],
+    });
+    const { rerender } = render(<DayChangesBlock />);
+    const live = document.querySelector('[aria-live="polite"]');
+    expect(live).toHaveTextContent("");
+
+    serve({
+      entries: [
+        change({
+          kind: "closing_day",
+          closing: { name: "Fortbildung", traeger: true },
+        }),
+      ],
+    });
+    rerender(<DayChangesBlock />);
+
+    expect(live).toHaveTextContent("„Heute anders“ hat sich geändert.");
+  });
 });
 
 describe("Texte der Gruppen-Vertretung", () => {
