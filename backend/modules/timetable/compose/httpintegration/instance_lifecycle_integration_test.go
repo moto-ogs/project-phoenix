@@ -2426,7 +2426,8 @@ func TestInstance_StartByUnplannedStaffAddsNoSupervisor(t *testing.T) {
 
 // TestInstance_Reopen_LeavesOutAStoppedChild covers #3844: a child whose
 // room history is stopped keeps no closed visit, so the completion deletes
-// its visit. The reopen brings the other child back instead of refusing.
+// its visit. The reopen brings the other child back, visit and attendance,
+// and leaves the stopped child's attendance as the completion left it.
 func TestInstance_Reopen_LeavesOutAStoppedChild(t *testing.T) {
 	t.Parallel()
 
@@ -2440,6 +2441,10 @@ func TestInstance_Reopen_LeavesOutAStoppedChild(t *testing.T) {
 	checkIn := time.Now().Add(-10 * time.Minute)
 	testpkg.CreateTestVisit(t, s.db, s.student1, started.ActiveGroupID, checkIn, nil)
 	testpkg.CreateTestVisit(t, s.db, s.student2, started.ActiveGroupID, checkIn, nil)
+	for _, studentID := range []int64{s.student1, s.student2} {
+		participant := fetchAttendance(t, s, ai.ID, studentID)
+		testpkg.UpdateSessionAttendance(t, s.ctx, s.db, participant.ID, map[string]any{"status": "present", "checked_in_at": &checkIn})
+	}
 
 	_, err = s.svc.Complete(s.ctx, ai.ID)
 	require.NoError(t, err)
@@ -2450,4 +2455,6 @@ func TestInstance_Reopen_LeavesOutAStoppedChild(t *testing.T) {
 	require.NoError(t, s.db.NewRaw(`SELECT student_id FROM active.visits WHERE active_group_id = ? AND exit_time IS NULL ORDER BY student_id`,
 		started.ActiveGroupID).Scan(s.ctx, &open))
 	assert.Equal(t, []int64{s.student2}, open, "only the child with a room history comes back")
+	assert.Nil(t, fetchAttendance(t, s, ai.ID, s.student2).CheckedOutAt, "the other child is checked in again")
+	assert.NotNil(t, fetchAttendance(t, s, ai.ID, s.student1).CheckedOutAt, "the stopped child stays checked out")
 }

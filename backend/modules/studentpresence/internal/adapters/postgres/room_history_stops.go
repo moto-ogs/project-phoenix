@@ -51,21 +51,32 @@ func (s *Store) InsertRoomHistoryStop(ctx context.Context, studentID int64, at t
 	}
 	var stoppedAt time.Time
 	started := time.Now()
-	err = db.NewRaw(insertRoomHistoryStopSQL, tenantID, studentID, at).Scan(ctx, &stoppedAt)
-	inserted := err == nil
-	stats := ports.Stats{Queries: 1, Rows: 1}
-	if errors.Is(err, sql.ErrNoRows) {
-		// ON CONFLICT may wait for an uncommitted insertion. A separate
-		// statement gets a fresh snapshot that sees the winning stop.
+	stats := ports.Stats{Rows: 1}
+	// ON CONFLICT may wait for an uncommitted insertion. A separate statement
+	// gets a fresh snapshot that sees the winning stop; if a concurrent lift
+	// removed it meanwhile, the next round inserts again.
+	for attempt := 0; attempt < 2; attempt++ {
+		err = db.NewRaw(insertRoomHistoryStopSQL, tenantID, studentID, at).Scan(ctx, &stoppedAt)
+		stats.Queries++
+		if !errors.Is(err, sql.ErrNoRows) {
+			break
+		}
 		err = db.NewRaw(`SELECT stopped_at FROM active.room_history_stops WHERE tenant_id = ? AND student_id = ?`,
 			tenantID, studentID).Scan(ctx, &stoppedAt)
 		stats.Queries++
+		if !errors.Is(err, sql.ErrNoRows) {
+			stats.StatementDuration = time.Since(started)
+			if err != nil {
+				return false, time.Time{}, stats, fmt.Errorf("insert room history stop: %w", err)
+			}
+			return false, stoppedAt, stats, nil
+		}
 	}
 	stats.StatementDuration = time.Since(started)
 	if err != nil {
 		return false, time.Time{}, stats, fmt.Errorf("insert room history stop: %w", err)
 	}
-	return inserted, stoppedAt, stats, nil
+	return true, stoppedAt, stats, nil
 }
 
 func (s *Store) DeleteRoomHistoryStop(ctx context.Context, studentID int64) (bool, ports.Stats, error) {

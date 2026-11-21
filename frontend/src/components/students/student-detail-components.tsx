@@ -1158,6 +1158,12 @@ interface StudentHistorySectionProps {
 /** Objekt der Fehlertexte aus dem Katalog (#2513). */
 const ROOM_HISTORY_STOP_OBJECT = "der Stopp von Raumverlauf und Stimmung";
 
+function roomHistoryStopSuccess(deletedVisits: number): string {
+  if (deletedVisits === 0) return "Raumverlauf und Stimmung sind gestoppt.";
+  if (deletedVisits === 1) return "Gestoppt. 1 Raumbesuch ist gelöscht.";
+  return `Gestoppt. ${deletedVisits} Raumbesuche sind gelöscht.`;
+}
+
 /**
  * The stop of a child's room history and mood (#3844): read for every
  * reader with full access, set and lifted by the OGS administration. Setting
@@ -1192,11 +1198,7 @@ function useRoomHistoryStop(studentId: string, enabled: boolean) {
         { clear: true },
       );
       setConfirming(false);
-      toast.success(
-        result.deletedVisits === 1
-          ? "Gestoppt. 1 Raumbesuch ist gelöscht."
-          : `Gestoppt. ${result.deletedVisits} Raumbesuche sind gelöscht.`,
-      );
+      toast.success(roomHistoryStopSuccess(result.deletedVisits));
     } catch (err) {
       await confirmErrors.show(err, {
         object: ROOM_HISTORY_STOP_OBJECT,
@@ -1374,6 +1376,9 @@ export function StudentHistorySection({
               </p>
               <p>Danach speichert moto keine Räume und keine Stimmung mehr.</p>
               <p>Der aktuelle Raum bleibt für die Betreuung sichtbar.</p>
+              <p>
+                Frühere Stimmungen bleiben bis zum Ende ihrer Frist gespeichert.
+              </p>
             </div>
           }
           gate={{

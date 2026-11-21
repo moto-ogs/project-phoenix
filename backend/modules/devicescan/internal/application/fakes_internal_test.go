@@ -496,6 +496,7 @@ type fakeSettings struct {
 	allRoomsErr      error
 	// moodStopped lists children whose mood capture is stopped (#3844).
 	moodStopped map[int64]bool
+	moodStopErr error
 }
 
 func (s fakeSettings) GetPresenceMode(context.Context) (string, error) {
@@ -511,7 +512,7 @@ func (s fakeSettings) FeedbackEnabled(context.Context) (bool, error) {
 	return s.feedback, s.feedbackErr
 }
 func (s fakeSettings) MoodCaptureStopped(_ context.Context, studentID int64) (bool, error) {
-	return s.moodStopped[studentID], nil
+	return s.moodStopped[studentID], s.moodStopErr
 }
 func (s fakeSettings) CapacityDetailsDisclosed(_ context.Context, kind ports.CapacityKind) (bool, error) {
 	if kind == ports.CapacityActivity {
