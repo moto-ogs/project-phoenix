@@ -84,6 +84,9 @@ export function appOverviewTopic(): HelpTopic {
           "Steht dort `Heute läuft alles wie geplant.`, gibt es heute nichts Besonderes.",
           "Die Karte zeigt nie, warum jemand fehlt.",
           "Ändert sich etwas, zeigt die Karte es ohne Neuladen.",
+          // Krank und Urlaub des Teams stehen seit #7668 nur noch hier, nicht
+          // mehr in „Personal heute“ (components/home/staff-today-block.tsx).
+          "Die Leitung sieht in `Personal heute`, wie viele in Aufsicht und eingestempelt sind. Wer krank oder im Urlaub ist, steht in `Heute anders`.",
         ],
       },
       {
@@ -116,6 +119,9 @@ export function appOverviewTopic(): HelpTopic {
       "Unter `Bausteine` fehlt eine Karte? Dann steht sie schon auf deiner Startseite. Oder deine Rolle oder deine OGS sieht sie nicht vor.",
       // Sichtregel von „Heute anders" (#7659): Namen nur für die eigenen
       // Gruppen, für die übrige Schule nur die Zahl; die Leitung sieht alle.
+      // Der Baustein „Hinweise der Leitung“ ist seit #7668 weg; Pflicht und
+      // Abschaltung der Schule gelten per Migration für „Heute anders“.
+      "Die Karte `Hinweise der Leitung` fehlt auf der Startseite? Ihre Hinweise stehen jetzt in `Heute anders`. Alle Hinweise, auch für andere Tage, findest du weiter in der Seitenleiste unter `Hinweise der Leitung`.",
       "In `Heute anders` stehen bei dir nur Zahlen statt Namen? Namen siehst du für deine eigenen Gruppen. Für den Rest der Schule zeigt die Karte nur, wie viele fehlen. Die Leitung sieht alle Namen.",
       // Kopfzeile aus BrandTraegerLine (#4656): nur bei einem Träger mit
       // mehreren Schulen, und nur am Computer, wo auch der Schulname steht.
