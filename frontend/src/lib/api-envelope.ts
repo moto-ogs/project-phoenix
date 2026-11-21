@@ -11,7 +11,7 @@ export interface ApiResponse<T> {
 }
 
 /** The page of a paginated list (`common.Pagination`). */
-export interface ApiPagination {
+interface ApiPagination {
   current_page: number;
   page_size: number;
   total_pages: number;
