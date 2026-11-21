@@ -196,3 +196,26 @@ Projektion nutzt „change“.
   zwei weitere (`ROLLBACK TO`, `RELEASE`) und einen neuen `SAVEPOINT`.
 - Die Namen der Quelle Personal liest die Wurzel jetzt ohne das
   Beschäftigungsprofil: Die Übersicht braucht nur Mitgliedschaft und Person.
+
+## Nachtrag 2026-11-21: Quelle Termine im Kalender (#7663)
+
+- Die Quelle Termine liest die Ausnahmen einzelner Kalendertermine über
+  die bestehenden Lesefähigkeiten von Appointments
+  (`ListAppointmentsVisibleToStaff`, `FindOccurrenceOverrides`,
+  `FindRecurrenceRules`). Ihre Rechte-Regel ist die des eigenen Kalenders
+  (`GET /api/calendar/my`): `calendar:own` und ein Personaldatensatz. Sichtbar
+  sind nur Termine, die das Konto organisiert oder zu denen es eingeladen ist;
+  die Leitung sieht hier keine fremden Termine. Darum steht jeder Eintrag
+  unter „Betrifft dich“. Ohne Recht bleibt die Quelle „geladen“ und leer.
+- Arten: `appointment_cancelled` (der Termin ist abgesagt oder der heutige
+  Termin einer Serie ist einzeln abgesagt) und `appointment_changed` (der
+  heutige Termin einer Serie hat einen anderen Ort oder eine andere Zeit).
+  Die Rücknahme einer Absage hat keinen eigenen Zustand: Es gibt keinen
+  Schreibweg dafür, und ein Termin ohne Ausnahme erscheint nicht.
+- Die Quelle liest höchstens drei Statements: die Termine, die Ausnahmen der
+  Tage, die heute erreichen können, und die Regeln nur abgesagter Serien.
+  Ohne `calendar:own` liest sie nichts.
+- Ein Live-Signal gibt es noch nicht. Eine neue After-Commit-Stelle müsste das
+  schrumpfende Register `durable_side_effect_notices.json` erweitern; das
+  entscheidet #7693. Bis dahin wird die Übersicht beim Fokus, bei erneuter
+  Verbindung und beim Laden aktuell.
