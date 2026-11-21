@@ -469,7 +469,14 @@ func (b *staffEntryBuilder) finish(ctx context.Context, names dayChangesStaffNam
 	}
 	b.appendCount(daychangesview.KindStaffAbsentCount, b.absentCount, daychangesview.LinkStaffList, b.viewer.staffRecords)
 	b.appendCount(daychangesview.KindGroupSubstitutionCount, b.handoverCount, daychangesview.LinkGroupHandovers, b.viewer.groupHandovers)
-	b.appendCount(daychangesview.KindBlockChangeCount, b.blockCount, daychangesview.LinkSubstitutionPlan, b.viewer.substitutionPlan)
+	switch {
+	case b.viewer.substitutionPlan:
+		b.appendCount(daychangesview.KindBlockChangeCount, b.blockCount, daychangesview.LinkSubstitutionPlan, true)
+	case b.viewer.dayPlan:
+		b.appendCount(daychangesview.KindBlockChangeCount, b.blockCount, daychangesview.LinkDayPlan, true)
+	default:
+		b.appendCount(daychangesview.KindBlockChangeCount, b.blockCount, daychangesview.LinkDayPlan, false)
+	}
 	return b.entries, nil
 }
 

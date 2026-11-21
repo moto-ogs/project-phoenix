@@ -25,11 +25,12 @@ type dayChangesBlockStaff interface {
 }
 
 // addBlocks reads the day's block changes in one read and adds those the
-// caller may see. An account without a staff record that is not the lead
-// sees none, so it reads nothing. absentToday are the staff members with an
-// absence of the day: their entry already says they are not there.
+// caller may see. An account without a staff record reads only the count when
+// it has users:read; it sees no named entries. absentToday are the staff
+// members with an absence of the day: their entry already says they are not
+// there.
 func (s dayChangesStaff) addBlocks(ctx context.Context, builder *staffEntryBuilder, day calendar.Date, absentToday map[int64]bool) error {
-	if builder.viewer.selfID == 0 && !builder.viewer.lead {
+	if builder.viewer.selfID == 0 && !builder.viewer.lead && !builder.viewer.counts {
 		return nil
 	}
 	changes, err := s.sources.BlockStaff.BlockStaffChanges(ctx, day)

@@ -41,6 +41,7 @@ func TestDayChangesBlockStaffSource(t *testing.T) {
 	_, bystanderAccount := testpkg.CreateTestStaffWithAccount(t, db, "Udo", "Unbeteiligt")
 	_, leadAccount := testpkg.CreateTestStaffWithAccount(t, db, "Lea", "Leitung")
 	_, plainAccount := testpkg.CreateTestStaffWithAccount(t, db, "Zoe", "Ohne")
+	noStaffAccount := testpkg.CreateTestAccount(t, db, "ohne-personal")
 	cover := testpkg.CreateTestStaff(t, db, "Sara", "Springer")
 	other := testpkg.CreateTestStaff(t, db, "Clara", "Andere")
 	sick := testpkg.CreateTestStaff(t, db, "Kai", "Krank")
@@ -141,6 +142,11 @@ func TestDayChangesBlockStaffSource(t *testing.T) {
 		overview, body = read(t, router, plainAccount.ID, tenantID)
 		assert.Empty(t, blockLines(t, body))
 		assert.NotContains(t, body, "block_change_count", "no number without users:read")
+		assert.Equal(t, "loaded", sourceStatus(overview, "staff"))
+		overview, body = read(t, router, noStaffAccount.ID, tenantID, "users:read", "schedules:read")
+		assert.Empty(t, blockLines(t, body), "an account without staff data never receives names")
+		assert.Contains(t, summary(overview.Entries), "school block_change_count n=5 ->day_plan",
+			"users:read permits the count and schedules:read permits its fallback link")
 		assert.Equal(t, "loaded", sourceStatus(overview, "staff"))
 	})
 
