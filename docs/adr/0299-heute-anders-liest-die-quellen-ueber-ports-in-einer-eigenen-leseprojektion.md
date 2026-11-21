@@ -246,3 +246,32 @@ Projektion nutzt „change“.
   gemessen mit einem Konto, das die Schließtage liest.
 - Klassenausflug und Stundenplanänderung einer Klasse passen nicht mehr ins
   Budget, ohne es zu erhöhen. Sie kommen in einem Folge-Ticket.
+
+## Nachtrag 2026-11-21: Abwesenheit und Vertretung einzelner Termine (#7675)
+
+- Die Arten `block_staff_absent` (eine Kraft fehlt bei einem Termin, niemand
+  übernimmt) und `block_substitution` (jemand übernimmt einen Termin) gehören
+  zur Quelle Personal. Timetable liefert über `BlockStaffChangeQuery` die
+  Termine des Tages mit einer abwesenden oder vertretenden Kraft samt allen
+  Zuordnungen, in einer Anweisung und ohne Grund. Die Root-Bindung wendet die
+  Personal-Regel an.
+- Sichtregel: Namen sieht die Betreuung bei eigenen Terminen (sie steht in
+  der Zuordnung) und wenn jemand aus ihrem Team (#7138) fehlt oder übernimmt;
+  die Leitung sieht alle. Andere Termine fehlen in dieser Quelle ganz, ohne
+  Zahl: Die Quelle Stundenplan zeigt sie nach der Regel des Tagesplans ohne
+  Namen. Eine Zahl dazu würde dieselben Termine doppelt melden.
+- Eine Abwesenheit, die eine Krankmeldung gesetzt hat oder die eine
+  tagesweite Abwesenheit abdeckt, ist kein eigener Eintrag; ihre Vertretung
+  schon.
+- Die Projektion legt die Zeile „andere Leitung“ der Quelle Stundenplan mit
+  dem Eintrag der Quelle Personal zum selben Termin zusammen und übernimmt
+  deren Raum. Das ist kein Rechte-Filter: Fehlt der Eintrag der Quelle
+  Personal, bleibt die Zeile des Stundenplans.
+- Link: der Vertretungsplan des Tages mit dem Termin (`schedules:manage` oder
+  Admin), sonst der Tagesplan (`schedules:read`).
+- Budget: Die neue Anweisung wird an anderer Stelle eingespart. Die
+  Gruppen-Lehrkräfte kommen mit ihren Personal-Datensätzen in einer Anweisung
+  (School Membership), der geplante Raum einer Serie kommt mit dem Termin aus
+  dem bestehenden Join der Vorlage, und die Quellen eines Savepoints lesen die
+  Personalnamen gemeinsam. `api.day_changes.today` bleibt bei 19,
+  `api.day_changes.today_activities` bei 20 Anweisungen.
