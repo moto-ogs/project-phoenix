@@ -801,21 +801,22 @@ export interface CreateTemplateBody {
   weekdays: number[];
   start_time: string; // HH:MM
   end_time: string; // HH:MM
-  room_id: number;
-  category_id: number;
-  planning_track_id?: number | null;
+  /** Identifiers travel as decimal strings since #2342. */
+  room_id: string;
+  category_id: string;
+  planning_track_id?: string | null;
   /** Durable Wochennotiz for the series (#1837 follow-up); omitted = none. */
   notes?: string;
   /** Also plan the series on closing days (#3594); the update keeps the
    * stored value when omitted. */
   include_closing_days?: boolean;
   end_date?: string | null;
-  education_group_id?: number;
+  education_group_id?: string;
   max_participants?: number | null;
   /** Manual Personalbedarf override (#1839); null/omitted = derive. */
   required_staff?: number | null;
   week_pattern?: number;
-  calendar_period_id?: number;
+  calendar_period_id?: string;
   target_group_type?: TargetGroupType;
   target_grade_level?: number;
   target_school_class?: string;
@@ -826,7 +827,7 @@ export interface CreateTemplateBody {
    * value, only an explicit null clears it — so always send null, never
    * undefined, to mean "no source". All offerings must belong to the same
    * enrollment phase. */
-  source_care_offering_ids?: number[] | null;
+  source_care_offering_ids?: string[] | null;
   source_grade_levels?: number[] | null;
   /** Klassenfilter (#2482), gleiche Presence-Semantik. Schließt
    * source_grade_levels aus: beide gesetzt ist ein 400. */
@@ -841,13 +842,13 @@ export interface CreateTemplateBody {
     type: "jahrgang" | "klasse" | "gruppe";
     grade_level?: number;
     school_class?: string;
-    education_group_id?: number;
+    education_group_id?: string;
   }>;
   materialize_from?: string;
   materialize_to?: string;
-  student_ids?: number[];
-  staff_ids?: number[];
-  primary_staff_id?: number;
+  student_ids?: string[];
+  staff_ids?: string[];
+  primary_staff_id?: string;
   /**
    * Per-weekday roster deviations (#2129). Each entry fully replaces the
    * shared `staff_ids` / `student_ids` / `primary_staff_id` above for that
@@ -859,9 +860,9 @@ export interface CreateTemplateBody {
 
 export interface WeekdayAssignmentBody {
   weekday: number;
-  staff_ids: number[];
-  student_ids: number[];
-  primary_staff_id?: number;
+  staff_ids: string[];
+  student_ids: string[];
+  primary_staff_id?: string;
 }
 
 export type UpdateTemplateBody = Omit<
@@ -896,8 +897,8 @@ export type UpdateTemplateBody = Omit<
    * describe the living segment, whose roster may legitimately differ from a
    * predecessor's, so they are not the predecessor's target set (#2187).
    */
-  series_roster_scope_student_ids?: number[];
-  series_roster_scope_staff_ids?: number[];
+  series_roster_scope_student_ids?: string[];
+  series_roster_scope_staff_ids?: string[];
   /**
    * The ISO weekdays this edit describes. Sent only for a series that staffs
    * each weekday separately (#2129), where the occurrence editor shows one

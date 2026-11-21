@@ -1225,15 +1225,15 @@ describe("TimetableEventModal", () => {
           weekday_assignments: [
             {
               weekday: 1,
-              staff_ids: [11],
-              student_ids: [21],
-              primary_staff_id: 11,
+              staff_ids: ["11"],
+              student_ids: ["21"],
+              primary_staff_id: "11",
             },
             {
               weekday: 2,
-              staff_ids: [12],
-              student_ids: [22],
-              primary_staff_id: 12,
+              staff_ids: ["12"],
+              student_ids: ["22"],
+              primary_staff_id: "12",
             },
           ],
         }),
@@ -1264,15 +1264,15 @@ describe("TimetableEventModal", () => {
           weekday_assignments: [
             {
               weekday: 1,
-              staff_ids: [11],
-              student_ids: [21],
-              primary_staff_id: 11,
+              staff_ids: ["11"],
+              student_ids: ["21"],
+              primary_staff_id: "11",
             },
             {
               weekday: 2,
-              staff_ids: [12],
-              student_ids: [22],
-              primary_staff_id: 12,
+              staff_ids: ["12"],
+              student_ids: ["22"],
+              primary_staff_id: "12",
             },
           ],
         }),
@@ -1347,7 +1347,7 @@ describe("TimetableEventModal", () => {
         expect.objectContaining({
           target_group_type: "klasse",
           target_school_class: "Klasse 3a",
-          student_ids: [21],
+          student_ids: ["21"],
         }),
       ),
     );
@@ -1639,13 +1639,13 @@ describe("TimetableEventModal", () => {
         expect.objectContaining({
           name: "Busaufsicht",
           type: "duty",
-          room_id: 0,
+          room_id: "0",
           target_group_type: "none",
           targets: [],
           student_ids: [],
           max_participants: null,
           required_staff: 1,
-          staff_ids: [11],
+          staff_ids: ["11"],
         }),
       ),
     );
@@ -1689,14 +1689,14 @@ describe("TimetableEventModal", () => {
         expect.objectContaining({
           name: "Yoga",
           type: "activity",
-          room_id: 3,
-          category_id: 2,
-          planning_track_id: 8,
-          calendar_period_id: 5,
+          room_id: "3",
+          category_id: "2",
+          planning_track_id: "8",
+          calendar_period_id: "5",
           start_date: "2026-05-04",
           materialize_from: "2026-05-01",
           materialize_to: "2026-06-25",
-          primary_staff_id: 11,
+          primary_staff_id: "11",
         }),
       ),
     );
@@ -1815,7 +1815,7 @@ describe("TimetableEventModal", () => {
     await waitFor(() =>
       expect(mockCreateTemplate).toHaveBeenCalledWith(
         expect.objectContaining({
-          calendar_period_id: 9,
+          calendar_period_id: "9",
           start_date: "2027-08-02",
           materialize_from: "2027-08-01",
         }),
@@ -1883,7 +1883,7 @@ describe("TimetableEventModal", () => {
     await waitFor(() =>
       expect(mockCreateTemplate).toHaveBeenCalledWith(
         expect.objectContaining({
-          calendar_period_id: 9,
+          calendar_period_id: "9",
           week_pattern: 1,
           start_date: "2027-08-09",
           materialize_from: "2027-08-01",
@@ -2098,7 +2098,7 @@ describe("TimetableEventModal", () => {
         expect.objectContaining({
           target_group_type: "jahrgang",
           target_grade_level: 3,
-          student_ids: expect.arrayContaining([21, 22, 23]),
+          student_ids: expect.arrayContaining(["21", "22", "23"]),
         }),
       ),
     );
@@ -2190,7 +2190,7 @@ describe("TimetableEventModal", () => {
         expect.objectContaining({
           name: "Yoga aktualisiert",
           target_group_type: "none",
-          education_group_id: 31,
+          education_group_id: "31",
         }),
       ),
     );
@@ -2217,7 +2217,7 @@ describe("TimetableEventModal", () => {
     await waitFor(() =>
       expect(mockUpdateTemplate).toHaveBeenCalledWith(
         "7",
-        expect.objectContaining({ calendar_period_id: 6 }),
+        expect.objectContaining({ calendar_period_id: "6" }),
       ),
     );
   });
@@ -2241,20 +2241,20 @@ describe("TimetableEventModal", () => {
       expect(mockUpdateTemplate).toHaveBeenCalledWith(
         "7",
         expect.objectContaining({
-          source_care_offering_ids: [41],
+          source_care_offering_ids: ["41"],
           student_ids: [],
           weekday_assignments: [
             {
               weekday: 1,
-              staff_ids: [11],
+              staff_ids: ["11"],
               student_ids: [],
-              primary_staff_id: 11,
+              primary_staff_id: "11",
             },
             {
               weekday: 2,
-              staff_ids: [12],
+              staff_ids: ["12"],
               student_ids: [],
-              primary_staff_id: 12,
+              primary_staff_id: "12",
             },
           ],
         }),
@@ -2391,9 +2391,9 @@ describe("TimetableEventModal", () => {
         "7",
         expect.objectContaining({
           weekdays: [1],
-          staff_ids: [11],
+          staff_ids: ["11"],
           student_ids: [],
-          primary_staff_id: 11,
+          primary_staff_id: "11",
           weekday_assignments: undefined,
         }),
       ),
@@ -2417,9 +2417,9 @@ describe("TimetableEventModal", () => {
       expect(mockUpdateTemplate).toHaveBeenCalledWith(
         "7",
         expect.objectContaining({
-          staff_ids: [12],
-          student_ids: [22],
-          primary_staff_id: 12,
+          staff_ids: ["12"],
+          student_ids: ["22"],
+          primary_staff_id: "12",
           weekday_assignments: undefined,
         }),
       ),
@@ -2458,11 +2458,11 @@ describe("TimetableEventModal", () => {
           weekday_assignments: [
             expect.objectContaining({
               weekday: 1,
-              student_ids: expect.arrayContaining([21, 22, 23]),
+              student_ids: expect.arrayContaining(["21", "22", "23"]),
             }),
             expect.objectContaining({
               weekday: 2,
-              student_ids: expect.arrayContaining([21, 22, 23]),
+              student_ids: expect.arrayContaining(["21", "22", "23"]),
             }),
           ],
         }),
@@ -2524,7 +2524,7 @@ describe("TimetableEventModal", () => {
     await waitFor(() =>
       expect(mockUpdateTemplate).toHaveBeenCalledWith(
         "7",
-        expect.objectContaining({ name: "Yoga", room_id: 3 }),
+        expect.objectContaining({ name: "Yoga", room_id: "3" }),
       ),
     );
     // Template edits rebuild future planned instances inside the update
@@ -2835,7 +2835,7 @@ describe("TimetableEventModal", () => {
           name: "Mensa",
           weekdays: [1, 2, 3, 4, 5],
           week_pattern: 0,
-          calendar_period_id: 5,
+          calendar_period_id: "5",
           // #2135: the picked Datum is the series start; the materialize
           // window still spans the period for tenant-wide backfill.
           start_date: "2026-05-04",
@@ -3058,9 +3058,9 @@ describe("TimetableEventModal", () => {
           name: "Yoga",
           // Weekdays/category/period come from the fetched template.
           weekdays: [1],
-          category_id: 2,
+          category_id: "2",
           week_pattern: 0,
-          calendar_period_id: 5,
+          calendar_period_id: "5",
         }),
       ),
     );
@@ -3454,8 +3454,8 @@ describe("TimetableEventModal", () => {
         "7",
         expect.objectContaining({
           name: "Mensa umbenannt",
-          staff_ids: [11],
-          primary_staff_id: 11,
+          staff_ids: ["11"],
+          primary_staff_id: "11",
         }),
       ),
     );
@@ -3739,7 +3739,7 @@ describe("TimetableEventModal", () => {
       expect(mockSplitTemplate).toHaveBeenCalledWith(
         "7",
         expect.objectContaining({
-          calendar_period_id: 6,
+          calendar_period_id: "6",
           materialize_to: "2026-06-28",
         }),
       ),
@@ -3778,7 +3778,7 @@ describe("TimetableEventModal", () => {
     await waitFor(() =>
       expect(mockSplitTemplate).toHaveBeenCalledWith(
         "7",
-        expect.objectContaining({ student_ids: [21, 22] }),
+        expect.objectContaining({ student_ids: ["21", "22"] }),
       ),
     );
   });
@@ -3818,8 +3818,8 @@ describe("TimetableEventModal", () => {
       expect(mockSplitTemplate).toHaveBeenCalledWith(
         "7",
         expect.objectContaining({
-          staff_ids: [11, 12],
-          primary_staff_id: 12,
+          staff_ids: ["11", "12"],
+          primary_staff_id: "12",
         }),
       ),
     );
@@ -3863,9 +3863,9 @@ describe("TimetableEventModal", () => {
         "7",
         expect.objectContaining({
           name: "Yoga",
-          room_id: 3,
+          room_id: "3",
           weekdays: [1],
-          category_id: 2,
+          category_id: "2",
           replan_future: true,
         }),
       ),
@@ -3901,7 +3901,7 @@ describe("TimetableEventModal", () => {
 
       await clickSave();
 
-      const expected = expect.objectContaining({ planning_track_id: 8 });
+      const expected = expect.objectContaining({ planning_track_id: "8" });
       if (write === "split") {
         await waitFor(() =>
           expect(mockSplitTemplate).toHaveBeenCalledWith("7", expected),
@@ -4031,7 +4031,10 @@ describe("TimetableEventModal", () => {
       expect(mockUpdateTemplate).toHaveBeenCalledWith(
         "7",
         // The server re-plans through the end of this pinned period (#6838).
-        expect.objectContaining({ calendar_period_id: 6, replan_future: true }),
+        expect.objectContaining({
+          calendar_period_id: "6",
+          replan_future: true,
+        }),
       ),
     );
     expect(mockReplanWeek).not.toHaveBeenCalled();
@@ -4065,7 +4068,7 @@ describe("TimetableEventModal", () => {
     await waitFor(() =>
       expect(mockUpdateTemplate).toHaveBeenCalledWith(
         "7",
-        expect.objectContaining({ student_ids: [21, 22] }),
+        expect.objectContaining({ student_ids: ["21", "22"] }),
       ),
     );
   });
@@ -4095,19 +4098,19 @@ describe("TimetableEventModal", () => {
       expect(mockUpdateTemplate).toHaveBeenCalledWith(
         "7",
         expect.objectContaining({
-          student_ids: [21, 22],
+          student_ids: ["21", "22"],
           weekday_assignments: [
             {
               weekday: 1,
-              staff_ids: [11],
-              student_ids: [21],
-              primary_staff_id: 11,
+              staff_ids: ["11"],
+              student_ids: ["21"],
+              primary_staff_id: "11",
             },
             {
               weekday: 2,
-              staff_ids: [12],
-              student_ids: [22],
-              primary_staff_id: 12,
+              staff_ids: ["12"],
+              student_ids: ["22"],
+              primary_staff_id: "12",
             },
           ],
         }),
@@ -4140,20 +4143,20 @@ describe("TimetableEventModal", () => {
         expect(mock()).toHaveBeenCalledWith(
           "7",
           expect.objectContaining({
-            source_care_offering_ids: [41],
+            source_care_offering_ids: ["41"],
             student_ids: [],
             weekday_assignments: [
               {
                 weekday: 1,
-                staff_ids: [11],
+                staff_ids: ["11"],
                 student_ids: [],
-                primary_staff_id: 11,
+                primary_staff_id: "11",
               },
               {
                 weekday: 2,
-                staff_ids: [12],
+                staff_ids: ["12"],
                 student_ids: [],
-                primary_staff_id: 12,
+                primary_staff_id: "12",
               },
             ],
           }),
@@ -4199,8 +4202,8 @@ describe("TimetableEventModal", () => {
       expect(mockUpdateTemplate).toHaveBeenCalledWith(
         "7",
         expect.objectContaining({
-          staff_ids: [11, 12],
-          primary_staff_id: 12,
+          staff_ids: ["11", "12"],
+          primary_staff_id: "12",
         }),
       ),
     );
@@ -5110,7 +5113,7 @@ describe("TimetableEventModal", () => {
     await clickSave();
     await waitFor(() =>
       expect(mockCreateTemplate).toHaveBeenCalledWith(
-        expect.objectContaining({ week_pattern: 2, calendar_period_id: 9 }),
+        expect.objectContaining({ week_pattern: 2, calendar_period_id: "9" }),
       ),
     );
   });
@@ -5705,7 +5708,7 @@ describe("TimetableEventModal", () => {
             series_roster_from: "2026-05-04",
             // ...restricted to the child the user actually added — everyone
             // else keeps their predecessor rows.
-            series_roster_scope_student_ids: [21],
+            series_roster_scope_student_ids: ["21"],
             // The re-plan rides on the RESOLVED id's update, not "87".
             replan_future: true,
           }),
@@ -5769,7 +5772,7 @@ describe("TimetableEventModal", () => {
           "88",
           expect.objectContaining({
             series_roster_scope_weekdays: [2],
-            series_roster_scope_student_ids: [21],
+            series_roster_scope_student_ids: ["21"],
           }),
         ),
       );
@@ -5818,10 +5821,10 @@ describe("TimetableEventModal", () => {
         expect(mockUpdateTemplate).toHaveBeenCalledWith(
           "88",
           expect.objectContaining({
-            primary_staff_id: 12,
-            staff_ids: [11, 12, 13],
+            primary_staff_id: "12",
+            staff_ids: ["11", "12", "13"],
             // Only the added supervisor is reconciled on the predecessor.
-            series_roster_scope_staff_ids: [13],
+            series_roster_scope_staff_ids: ["13"],
           }),
         ),
       );
@@ -5917,7 +5920,7 @@ describe("TimetableEventModal", () => {
           "88",
           expect.objectContaining({
             series_roster_from: "2026-05-04",
-            series_roster_scope_student_ids: [21],
+            series_roster_scope_student_ids: ["21"],
             student_ids: [],
           }),
         ),
@@ -6008,7 +6011,7 @@ describe("TimetableEventModal", () => {
         expect(mockUpdateTemplate).toHaveBeenCalledWith(
           "88",
           // Successor roster kept in full, the user's addition appended.
-          expect.objectContaining({ student_ids: [101, 105, 999, 7] }),
+          expect.objectContaining({ student_ids: ["101", "105", "999", "7"] }),
         ),
       );
     });
@@ -6150,7 +6153,7 @@ describe("TimetableEventModal", () => {
       await waitFor(() =>
         expect(mockUpdateTemplate).toHaveBeenCalledWith(
           "7",
-          expect.objectContaining({ calendar_period_id: 9 }),
+          expect.objectContaining({ calendar_period_id: "9" }),
         ),
       );
       expect(

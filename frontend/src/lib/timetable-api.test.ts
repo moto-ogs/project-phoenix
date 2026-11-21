@@ -241,9 +241,9 @@ describe("timetableService", () => {
       weekdays: [1],
       start_time: "14:00",
       end_time: "15:00",
-      room_id: 3,
-      category_id: 2,
-      calendar_period_id: 5,
+      room_id: "3",
+      category_id: "2",
+      calendar_period_id: "5",
     };
 
     await expect(timetableService.createTemplate(createBody)).resolves.toEqual({
@@ -288,9 +288,9 @@ describe("timetableService", () => {
       weekdays: [1],
       start_time: "14:00",
       end_time: "15:00",
-      room_id: 3,
-      category_id: 2,
-      calendar_period_id: 5,
+      room_id: "3",
+      category_id: "2",
+      calendar_period_id: "5",
       start_date: "2026-05-04",
       instance_notes: "Heute draußen",
     };
@@ -321,9 +321,9 @@ describe("timetableService", () => {
       weekdays: [1],
       start_time: "14:00",
       end_time: "15:00",
-      room_id: 3,
-      category_id: 2,
-      calendar_period_id: 5,
+      room_id: "3",
+      category_id: "2",
+      calendar_period_id: "5",
       series_roster_from: "2026-06-01",
     };
 
@@ -347,9 +347,9 @@ describe("timetableService", () => {
       weekdays: [1],
       start_time: "14:00",
       end_time: "15:00",
-      room_id: 3,
-      category_id: 2,
-      calendar_period_id: 5,
+      room_id: "3",
+      category_id: "2",
+      calendar_period_id: "5",
       start_date: "2026-08-12",
     };
 
@@ -402,8 +402,8 @@ describe("timetableService", () => {
       weekdays: [1],
       start_time: "15:00",
       end_time: "16:00",
-      room_id: 3,
-      category_id: 2,
+      room_id: "3",
+      category_id: "2",
       effective_date: "2026-06-01",
       materialize_from: "2026-06-01",
       materialize_to: "2026-06-07",

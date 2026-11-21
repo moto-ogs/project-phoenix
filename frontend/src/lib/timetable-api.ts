@@ -514,7 +514,7 @@ class TimetableService {
         },
         credentials: "include",
         body: JSON.stringify({
-          period_id: Number(periodId),
+          period_id: periodId,
           acknowledged,
         } satisfies offeringGapAckRequest),
       },
