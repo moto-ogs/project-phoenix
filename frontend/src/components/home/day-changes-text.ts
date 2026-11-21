@@ -71,7 +71,7 @@ function groupSubstitutionCountText(change: DayChange): string {
 function activityName(change: DayChange, sentenceStart: boolean): string {
   const title = change.activity?.title.trim();
   if (title) return `„${title}“`;
-  return sentenceStart ? "Ein Termin" : "einen Termin";
+  return sentenceStart ? "Ein Termin" : "einem Termin";
 }
 
 /** „Anna“, „Anna und Ben“, „Anna, Ben und Clara“. */
@@ -105,7 +105,8 @@ function activityLeadChangedText(change: DayChange): string {
       : absent.length > 0
         ? ` für ${namesOf(absent)}`
         : "";
-    return `${namesOf(substitutes)} übernimmt heute ${name}${forWhom}.`;
+    const verb = substitutes.length === 1 ? "übernimmt" : "übernehmen";
+    return `${namesOf(substitutes)} ${verb} heute ${name}${forWhom}.`;
   }
   if (meAbsent) return `Bei ${name} bist du heute nicht da.`;
   return absent.length === 1

@@ -28,7 +28,7 @@ func (s *operations) BlockDayChanges(ctx context.Context, accountID int64, isAdm
 	if err != nil || len(visible) == 0 {
 		return nil, err
 	}
-	reinstated, err := s.reinstatedOn(ctx, date)
+	reinstated, err := s.reinstatedOn(ctx, date, visible)
 	if err != nil {
 		return nil, err
 	}
@@ -142,11 +142,11 @@ func blockDayChange(inst *scheduleModels.ActivityInstance, staff []*scheduleMode
 
 // reinstatedOn names the blocks of the day whose last cancellation event in
 // the protocol is a reinstatement. The protocol is the only record of it: the
-// block itself returns to planned.
-func (s *operations) reinstatedOn(ctx context.Context, date calendar.Date) (map[int64]bool, error) {
-	result := map[int64]bool{}
+// block itself returns to planned. A re-plan replaces the instance row, so
+// template-backed events additionally resolve through their stable slot.
+func (s *operations) reinstatedOn(ctx context.Context, date calendar.Date, instances []*scheduleModels.ActivityInstance) (map[int64]bool, error) {
 	if s.deps.DeviationEvents == nil {
-		return result, nil
+		return map[int64]bool{}, nil
 	}
 	events, err := s.deps.DeviationEvents.ListDeviationEvents(ctx, date, date, nil, nil)
 	if err != nil {
@@ -158,18 +158,80 @@ func (s *operations) reinstatedOn(ctx context.Context, date calendar.Date) (map[
 		}
 		return events[i].ID < events[j].ID
 	})
+	return reinstatedInstances(instances, events), nil
+}
+
+// blockDaySlot identifies a template-backed occurrence independently of its
+// materialized row. Re-plans replace that row, while the protocol retains the
+// activity group, occurrence date and wall-clock start time.
+type blockDaySlot struct {
+	activityGroupID int64
+	date            calendar.Date
+	startTime       string
+}
+
+func instanceBlockDaySlot(instance *scheduleModels.ActivityInstance) (blockDaySlot, bool) {
+	if instance == nil || instance.ActivityGroupID == nil || *instance.ActivityGroupID <= 0 {
+		return blockDaySlot{}, false
+	}
+	return blockDaySlot{
+		activityGroupID: *instance.ActivityGroupID,
+		date:            calendar.Date(instance.Date),
+		startTime:       calendar.NormalizeWallClock(instance.StartTime).Format("15:04:05"),
+	}, true
+}
+
+func eventBlockDaySlot(event timetable.DeviationEvent) (blockDaySlot, bool) {
+	if event.ActivityGroupID == nil || *event.ActivityGroupID <= 0 || event.OccurrenceDate.IsZero() {
+		return blockDaySlot{}, false
+	}
+	return blockDaySlot{
+		activityGroupID: *event.ActivityGroupID,
+		date:            event.OccurrenceDate,
+		startTime:       calendar.NormalizeWallClock(event.StartTime).Format("15:04:05"),
+	}, true
+}
+
+// reinstatedInstances transfers the latest cancellation state from the
+// protocol to the current rows. Instance IDs retain compatibility for
+// one-off blocks; template-backed rows use their stable occurrence slot.
+func reinstatedInstances(instances []*scheduleModels.ActivityInstance, events []timetable.DeviationEvent) map[int64]bool {
+	byInstance := make(map[int64]bool)
+	bySlot := make(map[blockDaySlot]bool)
 	for _, event := range events {
-		if event.InstanceID == nil {
-			continue
-		}
+		var reinstated bool
 		switch event.EventType {
 		case DeviationEventCancellation:
-			result[*event.InstanceID] = false
+			reinstated = false
 		case DeviationEventReinstatement:
-			result[*event.InstanceID] = true
+			reinstated = true
+		default:
+			continue
+		}
+		if event.InstanceID != nil {
+			byInstance[*event.InstanceID] = reinstated
+		}
+		if slot, ok := eventBlockDaySlot(event); ok {
+			bySlot[slot] = reinstated
 		}
 	}
-	return result, nil
+
+	result := make(map[int64]bool)
+	for _, instance := range instances {
+		if instance == nil {
+			continue
+		}
+		if slot, ok := instanceBlockDaySlot(instance); ok {
+			if reinstated, found := bySlot[slot]; found {
+				result[instance.ID] = reinstated
+				continue
+			}
+		}
+		if reinstated, found := byInstance[instance.ID]; found {
+			result[instance.ID] = reinstated
+		}
+	}
+	return result
 }
 
 // regularRooms maps each series block to the room its series plans. A block

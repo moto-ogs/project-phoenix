@@ -494,6 +494,36 @@ describe("DayChangesBlock über den Tag (#7660)", () => {
 
     expect(live).toHaveTextContent("„Heute anders“ hat sich geändert.");
   });
+
+  it("sagt geänderte Titel und Räume einer bestehenden Terminänderung an", () => {
+    const activity = (
+      title: string,
+      roomName: string,
+      previousRoomName: string,
+    ) =>
+      change({
+        kind: "activity_room_changed",
+        activity: { id: "17", title },
+        roomName,
+        previousRoomName,
+      });
+    serve({ entries: [activity("Chor", "Aula", "Werkraum")] });
+    const { rerender } = render(<DayChangesBlock />);
+    const live = document.querySelector('[aria-live="polite"]');
+    expect(live).toHaveTextContent("");
+
+    serve({ entries: [activity("Konzert", "Aula", "Werkraum")] });
+    rerender(<DayChangesBlock />);
+    expect(live).toHaveTextContent("„Heute anders“ hat sich geändert.");
+
+    serve({ entries: [activity("Konzert", "Turnhalle", "Werkraum")] });
+    rerender(<DayChangesBlock />);
+    expect(live).toHaveTextContent("„Heute anders“ hat sich geändert.");
+
+    serve({ entries: [activity("Konzert", "Turnhalle", "Aula")] });
+    rerender(<DayChangesBlock />);
+    expect(live).toHaveTextContent("„Heute anders“ hat sich geändert.");
+  });
 });
 
 describe("Texte der Gruppen-Vertretung", () => {
@@ -607,7 +637,14 @@ describe("Termine aus dem Stundenplan (#7662)", () => {
     expect(lead([{ ...gone, isSelf: true }])).toBe(
       "Bei „Chor“ bist du heute nicht da.",
     );
-    expect(lead([sub], " ")).toBe("Sara übernimmt heute einen Termin.");
+    expect(lead([sub], " ")).toBe("Sara übernimmt heute einem Termin.");
+    expect(
+      lead([
+        sub,
+        { staffId: "3", name: "Toni", role: "substitute", isSelf: false },
+        gone,
+      ]),
+    ).toBe("Sara und Toni übernehmen heute „Chor“ für Ben.");
     expect(lead([])).toBe("Bei „Chor“ ändert sich heute, wer betreut.");
   });
 

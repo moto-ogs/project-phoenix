@@ -143,6 +143,9 @@ function DayChangesAnnouncer({
             ]),
             entry.groupName,
             entry.count,
+            entry.activity?.title,
+            entry.roomName,
+            entry.previousRoomName,
             entry.notice
               ? [
                   entry.notice.id,
