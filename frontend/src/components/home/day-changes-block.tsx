@@ -152,6 +152,14 @@ function DayChangesAnnouncer({
                   entry.notice.acknowledged,
                 ]
               : null,
+            entry.appointment
+              ? [
+                  entry.appointment.title,
+                  entry.appointment.location,
+                  entry.appointment.locationChanged,
+                  entry.appointment.timeChanged,
+                ]
+              : null,
           ]),
         )
         .join("|")
@@ -377,6 +385,9 @@ function dayChangeKeys(entries: readonly DayChange[]): string[] {
   return entries.map((entry) => {
     if (entry.notice) {
       return `${entry.section}:${entry.kind}:${entry.notice.id}`;
+    }
+    if (entry.appointment) {
+      return `${entry.section}:${entry.kind}:${entry.appointment.id}:${entry.appointment.occurrenceDate ?? ""}`;
     }
     const people = entry.people.map((person) => person.staffId).join(",");
     const base = `${entry.section}:${entry.kind}:${people}:${entry.groupName ?? ""}:${entry.startsAt ?? ""}`;

@@ -90,6 +90,9 @@ type DayChangesSources struct {
 	Notices dayChangesNoticeReads
 	Today   func() calendar.Date
 	Logger  *slog.Logger
+
+	// Appointments is Appointments' read of the own calendar (#7663).
+	Appointments dayChangesAppointmentReads
 }
 
 // NewDayChanges binds the sources to the projection's ports.
@@ -100,12 +103,17 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 	if sources.Notices == nil {
 		return nil, fmt.Errorf("%w: notice source", daychangesview.ErrDependencies)
 	}
+	if sources.Appointments == nil {
+		return nil, fmt.Errorf("%w: appointment source", daychangesview.ErrDependencies)
+	}
 	return daychangesview.New(daychangesview.Dependencies{
 		Today:     sources.Today,
 		Isolation: dayChangesSavepoints{},
 		Staff:     dayChangesStaff{sources: sources},
 		Notices:   dayChangesNotices{reads: sources.Notices},
 		Logger:    sources.Logger,
+
+		Appointments: dayChangesAppointments{caller: sources.Caller, reads: sources.Appointments},
 	})
 }
 

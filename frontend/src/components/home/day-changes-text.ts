@@ -67,6 +67,33 @@ function groupSubstitutionCountText(change: DayChange): string {
     : `In ${count} weiteren Gruppen vertritt heute jemand.`;
 }
 
+/** Der Titel eines Termins in Anführungszeichen, ohne Titel „Ein Termin“. */
+function appointmentName(change: DayChange): string {
+  const title = change.appointment?.title.trim();
+  return title ? `„${title}“` : "Ein Termin";
+}
+
+function appointmentCancelledText(change: DayChange): string {
+  return `${appointmentName(change)} fällt heute aus.`;
+}
+
+/**
+ * Ein Termin heute an einem anderen Ort oder zu einer anderen Zeit (#7663).
+ * Die neue Uhrzeit steht unter dem Satz, der neue Ort im Satz.
+ */
+function appointmentChangedText(change: DayChange): string {
+  const name = appointmentName(change);
+  const appointment = change.appointment;
+  const location = appointment?.location?.trim();
+  if (appointment?.locationChanged) {
+    const where = location ? ` Neuer Ort: ${location}.` : "";
+    return appointment.timeChanged
+      ? `${name} ist heute zu einer anderen Zeit und an einem anderen Ort.${where}`
+      : `${name} ist heute an einem anderen Ort.${where}`;
+  }
+  return `${name} ist heute zu einer anderen Zeit.`;
+}
+
 /** Der Satz je Art. Eine unbekannte Art zeigt die Übersicht nicht. */
 const DAY_CHANGE_TEXTS: Readonly<
   Record<string, (change: DayChange) => string>
@@ -77,6 +104,9 @@ const DAY_CHANGE_TEXTS: Readonly<
   group_substitution_count: groupSubstitutionCountText,
   // Der Hinweis der Leitung: sein Titel ist der Satz (#7667).
   staff_notice: (change) => change.notice?.title ?? "",
+  // Termine aus dem eigenen Kalender (#7663).
+  appointment_cancelled: appointmentCancelledText,
+  appointment_changed: appointmentChangedText,
 };
 
 export function dayChangeText(change: DayChange): string | null {
@@ -120,6 +150,7 @@ export function dayChangeSpan(change: DayChange): string | null {
 const SOURCE_FAILURE_TEXTS: Readonly<Record<string, string>> = {
   staff: "Ausfälle und Vertretungen konnten gerade nicht geladen werden.",
   notices: "Hinweise der Leitung konnten gerade nicht geladen werden.",
+  appointments: "Deine Termine konnten gerade nicht geladen werden.",
 };
 
 export function sourceFailureText(source: string): string {
@@ -146,6 +177,8 @@ export function dayChangeHref(change: DayChange): string | null {
       return "/substitutions";
     case "staff_notices":
       return "/tagesinformationen";
+    case "calendar":
+      return "/calendar";
     default:
       return null;
   }

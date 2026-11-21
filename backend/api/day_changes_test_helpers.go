@@ -35,6 +35,10 @@ func NewDayChangesTestResource(db transactionruntime.Database, unit tenant.UnitO
 	if err != nil {
 		return nil, err
 	}
+	calendarAppointments, err := NewAppointments(db)
+	if err != nil {
+		return nil, err
+	}
 	view, err := NewDayChanges(DayChangesSources{
 		Caller: caller, Workforce: owners.MustNewWorkforce(db), Teachers: owners.NewGroupTeacherStaff(membership),
 		Names: newDayChangesStaffNames(people), Groups: owners.NewSchoolStructureSuiteRepositories(db).Group,
@@ -44,6 +48,8 @@ func NewDayChangesTestResource(db transactionruntime.Database, unit tenant.UnitO
 			DB: db.Pool(), Now: func() time.Time { return today.BerlinMidnight().Add(12 * time.Hour) },
 		}),
 		Today: func() calendar.Date { return today }, Logger: slog.Default(),
+
+		Appointments: calendarAppointments,
 	})
 	if err != nil {
 		return nil, err

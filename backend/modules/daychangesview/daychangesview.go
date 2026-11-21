@@ -30,6 +30,9 @@ const (
 	SourceStaff Source = "staff"
 	// SourceNotices is Hinweise der Leitung: the notices that apply today.
 	SourceNotices Source = "notices"
+	// SourceAppointments is Termine im Kalender: today's exceptions of the
+	// caller's calendar appointments (#7663).
+	SourceAppointments Source = "appointments"
 )
 
 // SourceState says whether a source answered. A source the caller lacks the
@@ -57,6 +60,12 @@ const (
 	KindGroupSubstitutionCount Kind = "group_substitution_count"
 	// KindStaffNotice: a Hinweis der Leitung applies today.
 	KindStaffNotice Kind = "staff_notice"
+	// KindAppointmentCancelled: a calendar appointment of the caller does not
+	// take place today, as a single date of a series or as a whole (#7663).
+	KindAppointmentCancelled Kind = "appointment_cancelled"
+	// KindAppointmentChanged: today's date of a calendar appointment of the
+	// caller takes place at another location or another time (#7663).
+	KindAppointmentChanged Kind = "appointment_changed"
 )
 
 // PersonRole is what a person has to do with an entry.
@@ -84,6 +93,8 @@ const (
 	LinkGroupHandovers LinkTarget = "group_handovers"
 	// LinkStaffNotices is the page of the Hinweise der Leitung.
 	LinkStaffNotices LinkTarget = "staff_notices"
+	// LinkCalendar is the caller's own calendar ("Mein Kalender").
+	LinkCalendar LinkTarget = "calendar"
 )
 
 // Person is somebody an entry names. The ID is the staff record.
@@ -127,6 +138,21 @@ type DayNotice struct {
 	Acknowledged            bool           `json:"acknowledged"`
 }
 
+// DayAppointment is today's date of a calendar appointment of the caller
+// (#7663). Title and Location are the organizer's own text, as the date
+// takes place today; PreviousLocation is the series' location when today's
+// date moved elsewhere. The new time travels in the entry's StartsAt and
+// EndsAt.
+type DayAppointment struct {
+	ID               int64         `json:"id,string"`
+	OccurrenceDate   calendar.Date `json:"occurrence_date"`
+	Title            string        `json:"title"`
+	Location         *string       `json:"location"`
+	PreviousLocation *string       `json:"previous_location"`
+	LocationChanged  bool          `json:"location_changed"`
+	TimeChanged      bool          `json:"time_changed"`
+}
+
 // SourceEntry is what a source port returns: an entry without its section,
 // and whether the caller is involved. The source has applied its own
 // permission rule already; the projection never filters.
@@ -152,6 +178,8 @@ type SourceEntry struct {
 	Count *int
 	// Notice is set on KindStaffNotice only.
 	Notice *DayNotice
+	// Appointment is set on the appointment kinds only.
+	Appointment *DayAppointment
 }
 
 // Entry is one change to regular operation of the day.
@@ -172,6 +200,8 @@ type Entry struct {
 	Link     *Link      `json:"link"`
 	Count    *int       `json:"count"`
 	Notice   *DayNotice `json:"notice"`
+	// Appointment is set on the appointment kinds only (#7663).
+	Appointment *DayAppointment `json:"appointment"`
 }
 
 // SourceStatus reports one source.
@@ -202,6 +232,13 @@ type StaffNotices interface {
 	StaffNotices(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
 }
 
+// AppointmentChanges is the Termine port (#7663): today's cancelled and
+// changed dates of the calendar appointments the caller may see in the own
+// calendar. A caller without the calendar gets none.
+type AppointmentChanges interface {
+	AppointmentChanges(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
+}
+
 // Isolation runs source reads so that a failure leaves the request's
 // transaction usable (a savepoint). It returns the source's own error
 // unchanged and reports a failure of the isolation itself as fatal.
@@ -223,6 +260,9 @@ type Dependencies struct {
 	Staff     StaffChanges
 	Notices   StaffNotices
 	Logger    *slog.Logger
+
+	// Appointments is the Termine source (#7663).
+	Appointments AppointmentChanges
 }
 
 // Query reads the overview of the session's school.
@@ -247,7 +287,7 @@ type view struct {
 
 // New builds the projection.
 func New(deps Dependencies) (Query, error) {
-	if deps.Today == nil || deps.Isolation == nil || deps.Staff == nil || deps.Notices == nil {
+	if deps.Today == nil || deps.Isolation == nil || deps.Staff == nil || deps.Notices == nil || deps.Appointments == nil {
 		return nil, ErrDependencies
 	}
 	logger := deps.Logger
@@ -262,6 +302,7 @@ func New(deps Dependencies) (Query, error) {
 		sources: []sourceRead{
 			{source: SourceStaff, read: deps.Staff.StaffChanges},
 			{source: SourceNotices, read: deps.Notices.StaffNotices},
+			{source: SourceAppointments, read: deps.Appointments.AppointmentChanges},
 		},
 	}, nil
 }
@@ -343,6 +384,7 @@ func toEntry(entry SourceEntry) Entry {
 		Kind: entry.Kind, Section: section, AllDay: entry.StartsAt == nil, HalfDay: entry.HalfDay,
 		Since: entry.Since, Until: entry.Until, StartsAt: entry.StartsAt, EndsAt: entry.EndsAt,
 		People: people, Group: entry.Group, Link: entry.Link, Count: entry.Count, Notice: entry.Notice,
+		Appointment: entry.Appointment,
 	}
 }
 
