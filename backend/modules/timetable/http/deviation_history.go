@@ -23,21 +23,22 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // DeviationHistoryEvent is one protocol row in the response.
 type DeviationHistoryEvent struct {
-	ID               int64           `json:"id"`
-	ActivityGroupID  *int64          `json:"activity_group_id,omitempty"`
+	ID               common.ID       `json:"id"`
+	ActivityGroupID  *common.ID      `json:"activity_group_id,omitempty"`
 	OccurrenceDate   string          `json:"occurrence_date"`
 	StartTime        string          `json:"start_time"`
-	InstanceID       *int64          `json:"instance_id,omitempty"`
+	InstanceID       *common.ID      `json:"instance_id,omitempty"`
 	EventType        string          `json:"event_type"`
-	SubjectStaffID   *int64          `json:"subject_staff_id,omitempty"`
+	SubjectStaffID   *common.ID      `json:"subject_staff_id,omitempty"`
 	SubjectStaffName *string         `json:"subject_staff_name,omitempty"`
-	RelatedStaffID   *int64          `json:"related_staff_id,omitempty"`
+	RelatedStaffID   *common.ID      `json:"related_staff_id,omitempty"`
 	RelatedStaffName *string         `json:"related_staff_name,omitempty"`
-	ActorAccountID   *int64          `json:"actor_account_id,omitempty"`
+	ActorAccountID   *common.ID      `json:"actor_account_id,omitempty"`
 	ActorName        *string         `json:"actor_name,omitempty"`
 	OldValue         json.RawMessage `json:"old_value,omitempty"`
 	NewValue         json.RawMessage `json:"new_value,omitempty"`
@@ -116,17 +117,17 @@ func (rs *Resource) getDeviationHistory(w http.ResponseWriter, r *http.Request) 
 	out := make([]DeviationHistoryEvent, 0, len(events))
 	for _, ev := range events {
 		out = append(out, DeviationHistoryEvent{
-			ID:               ev.ID,
-			ActivityGroupID:  ev.ActivityGroupID,
+			ID:               ident.ID(ev.ID),
+			ActivityGroupID:  (*ident.ID)(ev.ActivityGroupID),
 			OccurrenceDate:   ev.OccurrenceDate.String(),
 			StartTime:        ev.StartTime.Format("15:04"),
-			InstanceID:       ev.InstanceID,
+			InstanceID:       (*ident.ID)(ev.InstanceID),
 			EventType:        ev.EventType,
-			SubjectStaffID:   ev.SubjectStaffID,
+			SubjectStaffID:   (*ident.ID)(ev.SubjectStaffID),
 			SubjectStaffName: lookupName(staffNames, ev.SubjectStaffID),
-			RelatedStaffID:   ev.RelatedStaffID,
+			RelatedStaffID:   (*ident.ID)(ev.RelatedStaffID),
 			RelatedStaffName: lookupName(staffNames, ev.RelatedStaffID),
-			ActorAccountID:   ev.ActorAccountID,
+			ActorAccountID:   (*ident.ID)(ev.ActorAccountID),
 			ActorName:        lookupName(actorNames, ev.ActorAccountID),
 			OldValue:         ev.OldValue,
 			NewValue:         ev.NewValue,

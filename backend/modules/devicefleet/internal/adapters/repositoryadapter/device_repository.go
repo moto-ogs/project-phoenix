@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // DeviceRepository delegates every operation to the owner capability. The
@@ -160,6 +161,9 @@ func (r *DeviceRepository) List(ctx context.Context, filters map[string]any) ([]
 }
 
 func int64ID(id any) (int64, error) {
+	if typed, ok := id.(ident.ID); ok {
+		id = typed.Int64()
+	}
 	switch value := id.(type) {
 	case int64:
 		return value, nil

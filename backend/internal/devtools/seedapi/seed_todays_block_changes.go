@@ -30,19 +30,19 @@ func (seedTodaysBlockChangesStep) Run(_ context.Context, rt *Runtime) error {
 // seedChangeableBlock is the part of a planner row the step reads and writes
 // back when it moves the block.
 type seedChangeableBlock struct {
-	ID              int64  `json:"id"`
+	ID              apiID  `json:"id"`
 	Title           string `json:"title"`
 	Status          string `json:"status"`
 	StartTime       string `json:"start_time"`
 	EndTime         string `json:"end_time"`
-	RoomID          int64  `json:"room_id"`
-	ActivityGroupID *int64 `json:"activity_group_id"`
+	RoomID          apiID  `json:"room_id"`
+	ActivityGroupID *apiID `json:"activity_group_id"`
 	Staff           []struct {
-		StaffID      int64 `json:"staff_id"`
+		StaffID      apiID `json:"staff_id"`
 		IsAbsent     bool  `json:"is_absent"`
 		IsSubstitute bool  `json:"is_substitute"`
 	} `json:"staff"`
-	StudentIDs []int64 `json:"student_ids"`
+	StudentIDs []apiID `json:"student_ids"`
 }
 
 func seedTodaysBlockChanges(rt *Runtime, today seedDate, now time.Time) error {
@@ -139,13 +139,13 @@ func clockOf(value string) string {
 // moveBlockToday puts one block of today into another room, with its staff
 // and children unchanged: the planner's single-occurrence edit.
 func moveBlockToday(rt *Runtime, today seedDate, block seedChangeableBlock) error {
-	to := otherSeedRoom(rt.FixedSeeder.roomIDs, block.RoomID)
+	to := otherSeedRoom(rt.FixedSeeder.roomIDs, int64(block.RoomID))
 	if to == 0 {
 		return fmt.Errorf("no other room for %s", block.Title)
 	}
 	staffIDs := make([]int64, 0, len(block.Staff))
 	for _, staff := range block.Staff {
-		staffIDs = append(staffIDs, staff.StaffID)
+		staffIDs = append(staffIDs, int64(staff.StaffID))
 	}
 	body := map[string]any{
 		"date": today.String(), "start_time": clockOf(block.StartTime), "end_time": clockOf(block.EndTime),

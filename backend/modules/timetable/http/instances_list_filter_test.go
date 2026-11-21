@@ -54,7 +54,7 @@ func TestListInstances_FiltersByGroupAndStaff(t *testing.T) {
 		got := decodeList(t, w)
 		out := make([]int64, 0, len(got.Instances))
 		for _, item := range got.Instances {
-			out = append(out, item.ID)
+			out = append(out, item.ID.Int64())
 		}
 		return out
 	}
@@ -96,7 +96,7 @@ func TestListInstances_FiltersByRoom(t *testing.T) {
 		require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 		out := map[int64]string{}
 		for _, item := range decodeList(t, w).Instances {
-			out[item.ID] = item.Status
+			out[item.ID.Int64()] = item.Status
 		}
 		return out
 	}
@@ -175,7 +175,7 @@ func TestListInstances_GroupFilterKeepsBlocksOfTheTemplateSourceGroup(t *testing
 		got := decodeTemplateData[weeklyInstancesResponse](t, w)
 		out := make([]int64, 0, len(got.Instances))
 		for _, item := range got.Instances {
-			out = append(out, item.ID)
+			out = append(out, item.ID.Int64())
 		}
 		return out
 	}

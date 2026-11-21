@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	offeringContract "github.com/moto-ogs/project-phoenix/modules/enrollment/offeringcontract"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	enrollmentNative "github.com/moto-ogs/project-phoenix/modules/enrollment"
@@ -99,6 +100,9 @@ func (recordNotFoundError) Error() string { return "repository: not found" }
 func (recordNotFoundError) RepositoryNotFound() {}
 
 func untypedID(id any) (int64, error) {
+	if typed, ok := id.(ident.ID); ok {
+		id = typed.Int64()
+	}
 	switch value := id.(type) {
 	case int64:
 		return value, nil

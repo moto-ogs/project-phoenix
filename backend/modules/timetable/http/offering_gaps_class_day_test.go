@@ -16,6 +16,7 @@ import (
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
@@ -57,7 +58,7 @@ func (s *offeringGapsSetup) createKlassenRandstunde(t *testing.T, class string, 
 	}
 	w := doTemplateJSON(t, s.router, http.MethodPost, "/templates", body)
 	require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
-	return decodeTemplateData[createTemplateResponse](t, w).TemplateID
+	return (decodeTemplateData[createTemplateResponse](t, w).TemplateID).Int64()
 }
 
 // classDayRandstunde books Randstunde (pickup 12:45) as a school-day
@@ -95,7 +96,7 @@ func TestOfferingGapsClassDay(t *testing.T) {
 	gaps := s.listGaps(t, period.ID)
 	require.Len(t, gaps, 1, "%+v", gaps)
 	assert.Equal(t, offeringGapResponse{
-		Offering:     templateRosterMaintenanceOfferingResponse{ID: rosterReviewOfferingID, Name: "Randstunde"},
+		Offering:     templateRosterMaintenanceOfferingResponse{ID: ident.ID(rosterReviewOfferingID), Name: "Randstunde"},
 		StudentCount: 5, SchoolClasses: []string{"1a", "3a"}, Weekdays: []int{1, 2, 3}, AcknowledgedClasses: []string{},
 		NewSeriesClasses: []string{"1a", "3a"}, NewSeriesPlansCovered: true,
 	}, gaps[0], "without pickup times the Klassen-Randstunde covers 1a on its own days only")
@@ -110,7 +111,7 @@ func TestOfferingGapsClassDay(t *testing.T) {
 	gaps = s.listGaps(t, period.ID)
 	require.Len(t, gaps, 1, "%+v", gaps)
 	assert.Equal(t, offeringGapResponse{
-		Offering:     templateRosterMaintenanceOfferingResponse{ID: rosterReviewOfferingID, Name: "Randstunde"},
+		Offering:     templateRosterMaintenanceOfferingResponse{ID: ident.ID(rosterReviewOfferingID), Name: "Randstunde"},
 		StudentCount: 3, SchoolClasses: []string{"1a"}, Weekdays: []int{2},
 		Acknowledged: true, AcknowledgedClasses: []string{"1a", "3a"},
 		NewSeriesClasses: []string{"1a"},
@@ -173,7 +174,7 @@ func TestOfferingGapsOverlappingPeriodsFollowTheMaterializedPeriod(t *testing.T)
 	require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
 	templateID := decodeTemplateData[createTemplateResponse](t, w).TemplateID
 	_, err := s.owner.CreateStudentEnrollment(s.ctx, timetableModule.StudentEnrollmentInput{
-		StudentID: child[0], ActivityGroupID: templateID, ValidFrom: rosterReviewMonday.AddDays(-10).String(), CalendarPeriodID: &halfYear.ID,
+		StudentID: child[0], ActivityGroupID: templateID.Int64(), ValidFrom: rosterReviewMonday.AddDays(-10).String(), CalendarPeriodID: &halfYear.ID,
 	})
 	require.NoError(t, err)
 
@@ -188,7 +189,7 @@ func TestOfferingGapsOverlappingPeriodsFollowTheMaterializedPeriod(t *testing.T)
 	assert.Equal(t, []int{1, 3}, gaps[0].Weekdays)
 
 	_, err = s.owner.CreateStudentEnrollment(s.ctx, timetableModule.StudentEnrollmentInput{
-		StudentID: child[0], ActivityGroupID: templateID, ValidFrom: rosterReviewMonday.AddDays(-10).String(),
+		StudentID: child[0], ActivityGroupID: templateID.Int64(), ValidFrom: rosterReviewMonday.AddDays(-10).String(),
 	})
 	require.NoError(t, err)
 	assert.Empty(t, s.listGaps(t, halfYear.ID), "a row without a period pin plans the child in the school year too")
