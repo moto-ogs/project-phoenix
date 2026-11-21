@@ -25,11 +25,11 @@ type contractImportBody struct {
 	Headers  []string `json:"headers"`
 	Unmapped []string `json:"unmapped"`
 	Mapping  struct {
-		SchoolID   testpkg.ID `json:"school_id"`
-		ModuleName string     `json:"module_name"`
+		SchoolID   wireID `json:"school_id"`
+		ModuleName string `json:"module_name"`
 	} `json:"mapping"`
 	Schools []struct {
-		ID      testpkg.ID `json:"id"`
+		ID      wireID `json:"id"`
 		Modules []struct {
 			Name          string `json:"name"`
 			HasConditions bool   `json:"has_conditions"`
@@ -43,15 +43,15 @@ type contractImportBody struct {
 		DebtorNumbers                                 int `json:"debtor_numbers"`
 	} `json:"counts"`
 	Rows []struct {
-		Line               int        `json:"line"`
-		Status             string     `json:"status"`
-		SchoolID           testpkg.ID `json:"school_id"`
-		ModuleNames        []string   `json:"module_names"`
-		Weekdays           []string   `json:"weekdays"`
-		EndsOn             *string    `json:"ends_on"`
-		ContractID         testpkg.ID `json:"contract_id"`
-		DebtorNumber       string     `json:"debtor_number"`
-		DebtorNumberStatus string     `json:"debtor_number_status"`
+		Line               int      `json:"line"`
+		Status             string   `json:"status"`
+		SchoolID           wireID   `json:"school_id"`
+		ModuleNames        []string `json:"module_names"`
+		Weekdays           []string `json:"weekdays"`
+		EndsOn             *string  `json:"ends_on"`
+		ContractID         wireID   `json:"contract_id"`
+		DebtorNumber       string   `json:"debtor_number"`
+		DebtorNumberStatus string   `json:"debtor_number_status"`
 		Problems           []struct {
 			Field string `json:"field"`
 			Code  string `json:"code"`
@@ -187,9 +187,9 @@ func TestCareContractImportTakesOverExistingContractsOnce(t *testing.T) {
 	rec = traegerJSON(t, f.traeger, token, http.MethodGet, contractImportPath, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	log := decodeSchoolPortalData[[]struct {
-		File      string      `json:"file"`
-		AccountID *testpkg.ID `json:"account_id"`
-		Contracts int         `json:"contracts"`
+		File      string  `json:"file"`
+		AccountID *wireID `json:"account_id"`
+		Contracts int     `json:"contracts"`
 	}](t, rec.Body.Bytes())
 	require.Len(t, log, 1)
 	assert.Equal(t, "kinder.csv", log[0].File)
@@ -405,10 +405,10 @@ func TestCareContractImportKeepsTheChildrenOfTheFamily(t *testing.T) {
 			FamilyChildren                     int `json:"family_children"`
 		} `json:"counts"`
 		Rows []struct {
-			Status               string     `json:"status"`
-			ContractID           testpkg.ID `json:"contract_id"`
-			FamilyChildren       *int       `json:"family_children"`
-			FamilyChildrenStatus string     `json:"family_children_status"`
+			Status               string `json:"status"`
+			ContractID           wireID `json:"contract_id"`
+			FamilyChildren       *int   `json:"family_children"`
+			FamilyChildrenStatus string `json:"family_children_status"`
 			Problems             []struct {
 				Field string `json:"field"`
 				Code  string `json:"code"`

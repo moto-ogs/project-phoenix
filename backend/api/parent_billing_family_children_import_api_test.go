@@ -26,12 +26,12 @@ type familyImportBody struct {
 	Fingerprint string         `json:"fingerprint"`
 	Counts      map[string]int `json:"counts"`
 	Rows        []struct {
-		Line              int        `json:"line"`
-		Status            string     `json:"status"`
-		ContractID        testpkg.ID `json:"contract_id"`
-		Children          *int       `json:"children"`
-		ConfirmedChildren *int       `json:"confirmed_children"`
-		ValidFrom         *string    `json:"valid_from"`
+		Line              int     `json:"line"`
+		Status            string  `json:"status"`
+		ContractID        wireID  `json:"contract_id"`
+		Children          *int    `json:"children"`
+		ConfirmedChildren *int    `json:"confirmed_children"`
+		ValidFrom         *string `json:"valid_from"`
 		Problems          []struct {
 			Field string `json:"field"`
 			Code  string `json:"code"`

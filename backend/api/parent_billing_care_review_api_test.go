@@ -24,18 +24,18 @@ import (
 )
 
 type careRunSchoolBody struct {
-	ID        testpkg.ID  `json:"id"`
-	Name      string      `json:"name"`
-	OpenRunID *testpkg.ID `json:"open_run_id"`
+	ID        wireID  `json:"id"`
+	Name      string  `json:"name"`
+	OpenRunID *wireID `json:"open_run_id"`
 }
 
 type careReviewInvoiceBody struct {
-	ContractID testpkg.ID `json:"contract_id"`
-	SchoolID   testpkg.ID `json:"school_id"`
-	TotalCents int64      `json:"total_cents"`
+	ContractID wireID `json:"contract_id"`
+	SchoolID   wireID `json:"school_id"`
+	TotalCents int64  `json:"total_cents"`
 	Exclusion  *struct {
-		Reason    string      `json:"reason"`
-		AccountID *testpkg.ID `json:"account_id"`
+		Reason    string  `json:"reason"`
+		AccountID *wireID `json:"account_id"`
 	} `json:"exclusion"`
 }
 
@@ -43,7 +43,7 @@ type careReviewBody struct {
 	careRunBody
 	Invoices []careReviewInvoiceBody `json:"invoices"`
 	Schools  []struct {
-		ID testpkg.ID `json:"id"`
+		ID wireID `json:"id"`
 	} `json:"schools"`
 }
 

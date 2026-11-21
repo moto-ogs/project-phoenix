@@ -76,16 +76,16 @@ func (f testTraegerFixture) call(t *testing.T, method, path string, body any) *h
 
 type createdTestTraeger struct {
 	Organization struct {
-		ID         testpkg.ID `json:"id"`
-		Name       string     `json:"name"`
-		TestSystem bool       `json:"test_system"`
+		ID         wireID `json:"id"`
+		Name       string `json:"name"`
+		TestSystem bool   `json:"test_system"`
 	} `json:"organization"`
 	Schools []struct {
-		ID        testpkg.ID `json:"id"`
-		Name      string     `json:"name"`
-		Subdomain string     `json:"subdomain"`
-		Hidden    bool       `json:"hidden"`
-		Active    bool       `json:"active"`
+		ID        wireID `json:"id"`
+		Name      string `json:"name"`
+		Subdomain string `json:"subdomain"`
+		Hidden    bool   `json:"hidden"`
+		Active    bool   `json:"active"`
 	} `json:"schools"`
 }
 
@@ -108,9 +108,9 @@ func (f testTraegerFixture) createTestTraeger(t *testing.T, slug string, schools
 type sampleChildrenAnswer struct {
 	CreatedCount int `json:"created_count"`
 	Schools      []struct {
-		SchoolID     testpkg.ID `json:"school_id"`
-		CreatedCount int        `json:"created_count"`
-		SkippedCount int        `json:"skipped_count"`
+		SchoolID     wireID `json:"school_id"`
+		CreatedCount int    `json:"created_count"`
+		SkippedCount int    `json:"skipped_count"`
 	} `json:"schools"`
 }
 
@@ -226,9 +226,9 @@ func TestSampleChildrenNeverEnterARealTraeger(t *testing.T) {
 }
 
 type traegerFrame struct {
-	ID         testpkg.ID `json:"id"`
-	Name       string     `json:"name"`
-	TestSystem bool       `json:"test_system"`
+	ID         wireID `json:"id"`
+	Name       string `json:"name"`
+	TestSystem bool   `json:"test_system"`
 }
 
 func traegerOrganizationFrame(t *testing.T, router http.Handler, token string) (*httptest.ResponseRecorder, traegerFrame) {
@@ -260,13 +260,13 @@ func TestTraegerPortalMarksATestTraegerAndOnlyNamesTheSessionsTraeger(t *testing
 	require.Equal(t, http.StatusOK, code)
 	rec, frame := traegerOrganizationFrame(t, portal, answer.AccessToken)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, traegerFrame{ID: testpkg.ID(testTraeger), Name: "Test-Träger Portal", TestSystem: true}, frame)
+	assert.Equal(t, traegerFrame{ID: wireID(testTraeger), Name: "Test-Träger Portal", TestSystem: true}, frame)
 
 	code, answer = traegerSignIn(t, portal, office.Email, password, 0)
 	require.Equal(t, http.StatusOK, code)
 	rec, frame = traegerOrganizationFrame(t, portal, answer.AccessToken)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, traegerFrame{ID: testpkg.ID(realTraeger), Name: "Echter Träger Portal"}, frame, "a real Träger is not marked and never sees another Träger")
+	assert.Equal(t, traegerFrame{ID: wireID(realTraeger), Name: "Echter Träger Portal"}, frame, "a real Träger is not marked and never sees another Träger")
 
 	noRight := testpkg.MintTestJWT(t, sessiontoken.AppClaims{ID: int(office.ID), Sub: office.Email, Scope: "org", OrgID: realTraeger, Roles: []string{identityaccess.TraegerRoleBilling}})
 	rec, _ = traegerOrganizationFrame(t, portal, noRight)

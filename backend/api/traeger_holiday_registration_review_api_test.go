@@ -24,31 +24,31 @@ import (
 )
 
 type reviewBooking struct {
-	WaitlistPosition *int       `json:"waitlist_position"`
-	WeekID           testpkg.ID `json:"week_id"`
-	HostSchoolID     testpkg.ID `json:"host_school_id"`
-	TimeModelID      testpkg.ID `json:"time_model_id"`
-	TimeModelName    string     `json:"time_model_name"`
-	PriceCents       int64      `json:"price_cents"`
+	WaitlistPosition *int   `json:"waitlist_position"`
+	WeekID           wireID `json:"week_id"`
+	HostSchoolID     wireID `json:"host_school_id"`
+	TimeModelID      wireID `json:"time_model_id"`
+	TimeModelName    string `json:"time_model_name"`
+	PriceCents       int64  `json:"price_cents"`
 }
 
 type reviewChild struct {
-	ID                       testpkg.ID      `json:"id"`
+	ID                       wireID          `json:"id"`
 	FirstName                string          `json:"first_name"`
-	HomeSchoolID             *testpkg.ID     `json:"home_school_id"`
+	HomeSchoolID             *wireID         `json:"home_school_id"`
 	GuestSchoolName          string          `json:"guest_school_name"`
 	Bookings                 []reviewBooking `json:"bookings"`
-	DuplicateRegistrationIDs []testpkg.ID    `json:"duplicate_registration_ids"`
+	DuplicateRegistrationIDs []wireID        `json:"duplicate_registration_ids"`
 }
 
 type reviewRegistration struct {
-	ID       testpkg.ID    `json:"id"`
+	ID       wireID        `json:"id"`
 	Status   string        `json:"status"`
 	Frozen   bool          `json:"frozen"`
 	Children []reviewChild `json:"children"`
 	Health   []struct {
-		ChildID   testpkg.ID `json:"child_id"`
-		Allergies string     `json:"allergies"`
+		ChildID   wireID `json:"child_id"`
+		Allergies string `json:"allergies"`
 	} `json:"health"`
 	Contacts []struct {
 		Kind string `json:"kind"`
@@ -56,7 +56,7 @@ type reviewRegistration struct {
 	} `json:"contacts"`
 	History []struct {
 		Action         string         `json:"action"`
-		ActorAccountID *testpkg.ID    `json:"actor_account_id"`
+		ActorAccountID *wireID        `json:"actor_account_id"`
 		Details        map[string]any `json:"details"`
 	} `json:"history"`
 }
@@ -96,7 +96,7 @@ func newReviewFixtureOf(t *testing.T, name string, holidays func(traegerOffice) 
 		rec := publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken), body)
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		return int64(decodeSchoolPortalData[struct {
-			ID testpkg.ID `json:"id"`
+			ID wireID `json:"id"`
 		}](t, rec.Body.Bytes()).ID)
 	}
 	siblings := submit(siblingsRegistration(offer, "eva.muster@example.org"))

@@ -75,10 +75,10 @@ func TestOperatorAssignsTheFirstPersonOfATraegerBuero(t *testing.T) {
 	rec = call(http.MethodPost, members, map[string]any{"email": account.Email, "roles": []string{"billing", "administration", "billing"}})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	member := decodeSchoolPortalData[struct {
-		AccountID testpkg.ID `json:"account_id"`
-		Email     string     `json:"email"`
-		Status    string     `json:"status"`
-		Roles     []string   `json:"roles"`
+		AccountID wireID   `json:"account_id"`
+		Email     string   `json:"email"`
+		Status    string   `json:"status"`
+		Roles     []string `json:"roles"`
 	}](t, rec.Body.Bytes())
 	assert.Equal(t, account.ID, member.AccountID)
 	assert.Equal(t, "active", member.Status)
@@ -279,9 +279,9 @@ func TestOperatorInvitesTheFirstPersonOfATraegerBuero(t *testing.T) {
 	rec = call(invitations, map[string]any{"email": address, "roles": []string{"billing", "administration"}})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	invitation := decodeSchoolPortalData[struct {
-		ID    testpkg.ID `json:"id"`
-		Email string     `json:"email"`
-		Roles []string   `json:"roles"`
+		ID    wireID   `json:"id"`
+		Email string   `json:"email"`
+		Roles []string `json:"roles"`
 	}](t, rec.Body.Bytes())
 	assert.Equal(t, address, invitation.Email)
 	assert.Equal(t, []string{"administration", "billing", "leadership"}, invitation.Roles, "several roles in one invitation, Leitung for the first person")
@@ -466,11 +466,11 @@ func TestOperatorManagesTheOpenInvitationsOfATraegerBuero(t *testing.T) {
 		return rec
 	}
 	type listed struct {
-		ID        testpkg.ID `json:"id"`
-		Email     string     `json:"email"`
-		Roles     []string   `json:"roles"`
-		ExpiresAt time.Time  `json:"expires_at"`
-		Expired   bool       `json:"expired"`
+		ID        wireID    `json:"id"`
+		Email     string    `json:"email"`
+		Roles     []string  `json:"roles"`
+		ExpiresAt time.Time `json:"expires_at"`
+		Expired   bool      `json:"expired"`
 	}
 	invitations := fmt.Sprintf("/organizations/%d/traeger-members/invitations", organizationID)
 	list := func() []listed {

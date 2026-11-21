@@ -71,9 +71,9 @@ func TestHolidayOnlyUsesActualContractsWithAndWithoutDocuments(t *testing.T) {
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		var own, holiday bool
 		for _, row := range decodeSchoolPortalData[[]struct {
-			ID          testpkg.ID `json:"id"`
-			FamilyEmail string     `json:"family_email"`
-			HolidayOnly bool       `json:"holiday_only"`
+			ID          wireID `json:"id"`
+			FamilyEmail string `json:"family_email"`
+			HolidayOnly bool   `json:"holiday_only"`
 		}](t, rec.Body.Bytes()) {
 			switch row.FamilyEmail {
 			case "eva.muster@example.org":

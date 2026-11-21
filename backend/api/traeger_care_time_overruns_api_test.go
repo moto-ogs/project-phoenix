@@ -37,17 +37,17 @@ type overrunEvaluationBody struct {
 	ToleranceMinutes int                `json:"tolerance_minutes"`
 	Total            overrunFiguresBody `json:"total"`
 	Schools          []struct {
-		SchoolID       testpkg.ID         `json:"school_id"`
+		SchoolID       wireID             `json:"school_id"`
 		ComparedDays   int                `json:"compared_days"`
 		UncomparedDays int                `json:"uncompared_days"`
 		Figures        overrunFiguresBody `json:"figures"`
 	} `json:"schools"`
 	Children []struct {
-		SchoolID     testpkg.ID `json:"school_id"`
-		StudentID    testpkg.ID `json:"student_id"`
-		FirstName    string     `json:"first_name"`
-		LastName     string     `json:"last_name"`
-		ExtraMinutes int        `json:"extra_minutes"`
+		SchoolID     wireID `json:"school_id"`
+		StudentID    wireID `json:"student_id"`
+		FirstName    string `json:"first_name"`
+		LastName     string `json:"last_name"`
+		ExtraMinutes int    `json:"extra_minutes"`
 	} `json:"children"`
 }
 

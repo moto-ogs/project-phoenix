@@ -34,14 +34,14 @@ import (
 )
 
 type holidayGuestSheetBody struct {
-	StudentID       testpkg.ID  `json:"student_id"`
-	StartsOn        string      `json:"starts_on"`
-	EndsOn          string      `json:"ends_on"`
-	TimeModelName   string      `json:"time_model_name"`
-	TimeModelStarts string      `json:"time_model_starts_at"`
-	TimeModelEnds   string      `json:"time_model_ends_at"`
-	HomeSchoolID    *testpkg.ID `json:"home_school_id"`
-	GuestSchoolName string      `json:"guest_school_name"`
+	StudentID       wireID  `json:"student_id"`
+	StartsOn        string  `json:"starts_on"`
+	EndsOn          string  `json:"ends_on"`
+	TimeModelName   string  `json:"time_model_name"`
+	TimeModelStarts string  `json:"time_model_starts_at"`
+	TimeModelEnds   string  `json:"time_model_ends_at"`
+	HomeSchoolID    *wireID `json:"home_school_id"`
+	GuestSchoolName string  `json:"guest_school_name"`
 	Emergency       []struct {
 		Name         string `json:"name"`
 		Phone        string `json:"phone"`
@@ -266,8 +266,8 @@ func TestHolidayGuestsJoinTheGroupOfTheHostingSchoolOnlyFromAConfirmedBooking(t 
 	assert.Equal(t, []string{"Ben Muster"}, names(children),
 		"the confirmed holiday guest joins the group; Lia is a child of the OGS Nord already, Tom is not confirmed")
 	listed := decodeSchoolPortalData[[]struct {
-		GuestGroupID *testpkg.ID `json:"guest_group_id"`
-		Guests       int         `json:"guests"`
+		GuestGroupID *wireID `json:"guest_group_id"`
+		Guests       int     `json:"guests"`
 	}](t, f.get(t, lead, "/").Body.Bytes())
 	require.Len(t, listed, 1)
 	require.NotNil(t, listed[0].GuestGroupID)

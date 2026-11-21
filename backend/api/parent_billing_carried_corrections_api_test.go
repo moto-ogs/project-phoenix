@@ -15,21 +15,20 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 const carriedCorrectionCents = int64(2000)
 
 type carriedCorrectionBody struct {
-	PositionID        testpkg.ID `json:"position_id"`
-	SourceNumber      string     `json:"source_number"`
-	AmountCents       int64      `json:"amount_cents"`
-	SourceAmountCents int64      `json:"source_amount_cents"`
-	Reason            string     `json:"reason"`
+	PositionID        wireID `json:"position_id"`
+	SourceNumber      string `json:"source_number"`
+	AmountCents       int64  `json:"amount_cents"`
+	SourceAmountCents int64  `json:"source_amount_cents"`
+	Reason            string `json:"reason"`
 }
 
 type carriedChildBody struct {
-	ChildID            testpkg.ID              `json:"child_id"`
+	ChildID            wireID                  `json:"child_id"`
 	TotalCents         int64                   `json:"total_cents"`
 	CarriedCorrections []carriedCorrectionBody `json:"carried_corrections"`
 	Corrections        []struct {
@@ -47,9 +46,9 @@ type carriedChildBody struct {
 }
 
 type carriedDocumentBody struct {
-	ID              testpkg.ID         `json:"id"`
+	ID              wireID             `json:"id"`
 	Number          string             `json:"number"`
-	RegistrationID  testpkg.ID         `json:"registration_id"`
+	RegistrationID  wireID             `json:"registration_id"`
 	ReferenceNumber string             `json:"reference_number"`
 	TotalCents      int64              `json:"total_cents"`
 	Children        []carriedChildBody `json:"children"`
@@ -61,7 +60,7 @@ type carriedDocumentBody struct {
 }
 
 type carriedRunBody struct {
-	ID           testpkg.ID            `json:"id"`
+	ID           wireID                `json:"id"`
 	Status       string                `json:"status"`
 	PreviewCount int                   `json:"preview_count"`
 	PreviewCents int64                 `json:"preview_cents"`

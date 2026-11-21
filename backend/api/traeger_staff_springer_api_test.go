@@ -87,7 +87,7 @@ func TestStaffPoolFirstBlockEmploysTheSpringer(t *testing.T) {
 	blockID := func(rec *httptest.ResponseRecorder) int64 {
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		return int64(*decode[struct {
-			ID *testpkg.ID `json:"id"`
+			ID *wireID `json:"id"`
 		}](t, rec).ID)
 	}
 	account := miraAccount.ID

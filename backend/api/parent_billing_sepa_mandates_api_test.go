@@ -29,22 +29,22 @@ const (
 )
 
 type sepaMandateBody struct {
-	ID              testpkg.ID `json:"id"`
-	ContractID      testpkg.ID `json:"contract_id"`
-	FamilyEmail     string     `json:"family_email"`
-	PartyLastName   string     `json:"party_last_name"`
-	Reference       string     `json:"reference"`
-	SignedOn        string     `json:"signed_on"`
-	Kind            string     `json:"kind"`
-	Sequence        string     `json:"sequence"`
-	AccountHolder   string     `json:"account_holder"`
-	CreditorID      string     `json:"creditor_id"`
-	CreditorCurrent bool       `json:"creditor_current"`
-	IBANMasked      string     `json:"iban_masked"`
-	Source          string     `json:"source"`
-	RevokedOn       *string    `json:"revoked_on"`
-	RevokedAt       *string    `json:"revoked_at"`
-	CreatedAtValid  string     `json:"created_at"`
+	ID              wireID  `json:"id"`
+	ContractID      wireID  `json:"contract_id"`
+	FamilyEmail     string  `json:"family_email"`
+	PartyLastName   string  `json:"party_last_name"`
+	Reference       string  `json:"reference"`
+	SignedOn        string  `json:"signed_on"`
+	Kind            string  `json:"kind"`
+	Sequence        string  `json:"sequence"`
+	AccountHolder   string  `json:"account_holder"`
+	CreditorID      string  `json:"creditor_id"`
+	CreditorCurrent bool    `json:"creditor_current"`
+	IBANMasked      string  `json:"iban_masked"`
+	Source          string  `json:"source"`
+	RevokedOn       *string `json:"revoked_on"`
+	RevokedAt       *string `json:"revoked_at"`
+	CreatedAtValid  string  `json:"created_at"`
 }
 
 type sepaPaymentBody struct {
@@ -52,20 +52,20 @@ type sepaPaymentBody struct {
 	DueOn    string `json:"due_on"`
 	DebitGap string `json:"debit_gap"`
 	Mandate  *struct {
-		MandateID    testpkg.ID `json:"mandate_id"`
-		Reference    string     `json:"reference"`
-		CreditorID   string     `json:"creditor_id"`
-		IBANMasked   string     `json:"iban_masked"`
-		SequenceType string     `json:"sequence_type"`
-		NoticeShort  bool       `json:"notice_short"`
+		MandateID    wireID `json:"mandate_id"`
+		Reference    string `json:"reference"`
+		CreditorID   string `json:"creditor_id"`
+		IBANMasked   string `json:"iban_masked"`
+		SequenceType string `json:"sequence_type"`
+		NoticeShort  bool   `json:"notice_short"`
 	} `json:"mandate"`
 }
 
 type sepaRunBody struct {
-	ID       testpkg.ID `json:"id"`
+	ID       wireID `json:"id"`
 	Invoices []struct {
-		ID         testpkg.ID      `json:"id"`
-		ContractID testpkg.ID      `json:"contract_id"`
+		ID         wireID          `json:"id"`
+		ContractID wireID          `json:"contract_id"`
 		Payment    sepaPaymentBody `json:"payment"`
 	} `json:"invoices"`
 	PreviewCount int    `json:"preview_count"`

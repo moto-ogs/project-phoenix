@@ -6,8 +6,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // The SJR price lists 2026/27 through the routes (#6196): Ispringen prices
@@ -21,13 +19,13 @@ const (
 )
 
 type priceFormsRunBody struct {
-	ID           testpkg.ID `json:"id"`
-	PreviewCount int        `json:"preview_count"`
-	PreviewCents int64      `json:"preview_cents"`
-	Fingerprint  string     `json:"fingerprint"`
-	FreeOfCharge int        `json:"free_of_charge"`
+	ID           wireID `json:"id"`
+	PreviewCount int    `json:"preview_count"`
+	PreviewCents int64  `json:"preview_cents"`
+	Fingerprint  string `json:"fingerprint"`
+	FreeOfCharge int    `json:"free_of_charge"`
 	Invoices     []struct {
-		ContractID testpkg.ID `json:"contract_id"`
+		ContractID wireID `json:"contract_id"`
 		Positions  []struct {
 			DaysPerWeek      *int   `json:"days_per_week"`
 			TierMonthlyCents *int64 `json:"tier_monthly_cents"`

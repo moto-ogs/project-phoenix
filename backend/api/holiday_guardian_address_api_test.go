@@ -24,7 +24,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 type holidayAddressFormBody struct {
@@ -164,7 +163,7 @@ func TestHolidayAddressIsAuditedAndOnlyInDetailAndExport(t *testing.T) {
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	assert.NotContains(t, rec.Body.String(), "Musterweg")
 	id := decodeSchoolPortalData[struct {
-		ID testpkg.ID `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
 
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(int64(id), ""), nil)
@@ -267,7 +266,7 @@ func TestHolidayAddressStaysOutOfSchoolParticipantsAndGuestCopy(t *testing.T) {
 
 type billingAddressBody struct {
 	Documents []struct {
-		RegistrationID   testpkg.ID `json:"registration_id"`
+		RegistrationID   wireID `json:"registration_id"`
 		RecipientAddress *struct {
 			Street     string `json:"street"`
 			PostalCode string `json:"postal_code"`

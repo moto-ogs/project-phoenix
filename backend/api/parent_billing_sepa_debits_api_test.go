@@ -33,16 +33,16 @@ const (
 )
 
 type sepaDebitBody struct {
-	ID            testpkg.ID `json:"id"`
-	MandateID     testpkg.ID `json:"mandate_id"`
-	InvoiceNumber string     `json:"invoice_number"`
-	RecipientName string     `json:"recipient_name"`
-	AmountCents   int64      `json:"amount_cents"`
-	DueOn         string     `json:"due_on"`
-	SequenceType  string     `json:"sequence_type"`
-	Status        string     `json:"status"`
-	Left          string     `json:"left"`
-	SubmittedAt   *string    `json:"submitted_at"`
+	ID            wireID  `json:"id"`
+	MandateID     wireID  `json:"mandate_id"`
+	InvoiceNumber string  `json:"invoice_number"`
+	RecipientName string  `json:"recipient_name"`
+	AmountCents   int64   `json:"amount_cents"`
+	DueOn         string  `json:"due_on"`
+	SequenceType  string  `json:"sequence_type"`
+	Status        string  `json:"status"`
+	Left          string  `json:"left"`
+	SubmittedAt   *string `json:"submitted_at"`
 }
 
 type sepaDebitRunBody struct {
@@ -470,9 +470,9 @@ func TestSEPADebitFilesCollectTheInstallmentAndTheInvoiceOfAMonthOnce(t *testing
 
 	type fileDebit struct {
 		sepaDebitBody
-		ContractID  testpkg.ID `json:"contract_id"`
-		NoticeID    testpkg.ID `json:"notice_id"`
-		NoticeMonth string     `json:"notice_month"`
+		ContractID  wireID `json:"contract_id"`
+		NoticeID    wireID `json:"notice_id"`
+		NoticeMonth string `json:"notice_month"`
 	}
 	type fileBody struct {
 		MessageID string      `json:"message_id"`

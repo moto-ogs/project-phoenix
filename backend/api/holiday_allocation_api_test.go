@@ -23,50 +23,50 @@ import (
 )
 
 type allocationCandidateBody struct {
-	BookingID      testpkg.ID `json:"booking_id"`
-	Rank           int        `json:"rank"`
-	RegistrationID testpkg.ID `json:"registration_id"`
-	ChildFirstName string     `json:"child_first_name"`
-	Proposal       string     `json:"proposal"`
+	BookingID      wireID `json:"booking_id"`
+	Rank           int    `json:"rank"`
+	RegistrationID wireID `json:"registration_id"`
+	ChildFirstName string `json:"child_first_name"`
+	Proposal       string `json:"proposal"`
 	Criteria       []struct {
-		CriterionID testpkg.ID `json:"criterion_id"`
-		Value       string     `json:"value"`
-		Source      string     `json:"source"`
+		CriterionID wireID `json:"criterion_id"`
+		Value       string `json:"value"`
+		Source      string `json:"source"`
 	} `json:"criteria"`
 }
 
 type allocationBoardBody struct {
 	AllocationMode string `json:"allocation_mode"`
 	Criteria       []struct {
-		ID   testpkg.ID `json:"id"`
-		Name string     `json:"name"`
+		ID   wireID `json:"id"`
+		Name string `json:"name"`
 	} `json:"criteria"`
 	Weeks []struct {
-		WeekID  testpkg.ID                `json:"week_id"`
+		WeekID  wireID                    `json:"week_id"`
 		Placed  int                       `json:"placed"`
 		Free    *int                      `json:"free"`
 		Pending []allocationCandidateBody `json:"pending"`
 	} `json:"weeks"`
 	Decisions []struct {
-		RegistrationID testpkg.ID `json:"registration_id"`
-		Placement      string     `json:"placement"`
-		Proposal       string     `json:"proposal"`
-		Rank           int        `json:"rank"`
-		CriteriaMet    []string   `json:"criteria_met"`
-		Reason         string     `json:"reason"`
+		RegistrationID wireID   `json:"registration_id"`
+		Placement      string   `json:"placement"`
+		Proposal       string   `json:"proposal"`
+		Rank           int      `json:"rank"`
+		CriteriaMet    []string `json:"criteria_met"`
+		Reason         string   `json:"reason"`
 	} `json:"decisions"`
 }
 
 type criteriaBody struct {
 	Periods []struct {
-		ID testpkg.ID `json:"id"`
+		ID wireID `json:"id"`
 	} `json:"periods"`
 	Criteria []struct {
-		ID       testpkg.ID `json:"id"`
-		Name     string     `json:"name"`
-		Scope    string     `json:"scope"`
-		Active   bool       `json:"active"`
-		Position int        `json:"position"`
+		ID       wireID `json:"id"`
+		Name     string `json:"name"`
+		Scope    string `json:"scope"`
+		Active   bool   `json:"active"`
+		Position int    `json:"position"`
 	} `json:"criteria"`
 }
 
@@ -120,8 +120,8 @@ func (a allocationFixture) submitCriteria(t *testing.T, email string, working, s
 type allocationOfferBody struct {
 	AllocationMode string `json:"allocation_mode"`
 	Criteria       []struct {
-		ID    testpkg.ID `json:"id"`
-		Scope string     `json:"scope"`
+		ID    wireID `json:"id"`
+		Scope string `json:"scope"`
 	} `json:"criteria"`
 }
 

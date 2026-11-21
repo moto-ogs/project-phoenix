@@ -48,15 +48,15 @@ type billingPositionBody struct {
 }
 
 type billingChildBody struct {
-	ChildID     testpkg.ID            `json:"child_id"`
+	ChildID     wireID                `json:"child_id"`
 	FirstName   string                `json:"first_name"`
 	Positions   []billingPositionBody `json:"positions"`
 	Corrections []struct {
-		AmountCents        int64       `json:"amount_cents"`
-		TotalBeforeCents   int64       `json:"total_before_cents"`
-		TotalAfterCents    int64       `json:"total_after_cents"`
-		Reason             string      `json:"reason"`
-		CreatedByAccountID *testpkg.ID `json:"created_by_account_id"`
+		AmountCents        int64   `json:"amount_cents"`
+		TotalBeforeCents   int64   `json:"total_before_cents"`
+		TotalAfterCents    int64   `json:"total_after_cents"`
+		Reason             string  `json:"reason"`
+		CreatedByAccountID *wireID `json:"created_by_account_id"`
 	} `json:"corrections"`
 	TotalCents int64 `json:"total_cents"`
 }
@@ -64,7 +64,7 @@ type billingChildBody struct {
 type billingDocumentBody struct {
 	Number             string             `json:"number"`
 	IssuedOn           *string            `json:"issued_on"`
-	RegistrationID     testpkg.ID         `json:"registration_id"`
+	RegistrationID     wireID             `json:"registration_id"`
 	RecipientFirstName string             `json:"recipient_first_name"`
 	RecipientEmail     string             `json:"recipient_email"`
 	ServiceFrom        string             `json:"service_from"`
@@ -74,8 +74,8 @@ type billingDocumentBody struct {
 }
 
 type billingRunBody struct {
-	ID              testpkg.ID            `json:"id"`
-	HolidayPeriodID testpkg.ID            `json:"holiday_period_id"`
+	ID              wireID                `json:"id"`
+	HolidayPeriodID wireID                `json:"holiday_period_id"`
 	PeriodName      string                `json:"period_name"`
 	ServiceFrom     string                `json:"service_from"`
 	Status          string                `json:"status"`
@@ -98,10 +98,10 @@ type billingRunBody struct {
 }
 
 type billingPeriodBody struct {
-	ID       testpkg.ID `json:"id"`
-	Name     string     `json:"name"`
-	StartsOn string     `json:"starts_on"`
-	EndsOn   string     `json:"ends_on"`
+	ID       wireID `json:"id"`
+	Name     string `json:"name"`
+	StartsOn string `json:"starts_on"`
+	EndsOn   string `json:"ends_on"`
 }
 
 func billingRunPath(id int64, suffix string) string {
@@ -384,7 +384,7 @@ func TestParallelReleasesNumberInvoicesWithoutAGap(t *testing.T) {
 		rec := publicJSON(t, f.public, http.MethodPost, registrationPath(second.PublicToken), siblingsRegistration(offer, email))
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		registrations = append(registrations, int64(decodeSchoolPortalData[struct {
-			ID testpkg.ID `json:"id"`
+			ID wireID `json:"id"`
 		}](t, rec.Body.Bytes()).ID))
 	}
 	for _, id := range []int64{f.siblings, f.again} {

@@ -30,9 +30,9 @@ type externalStaffWire struct {
 	ExternalAccountStatus string `json:"external_account_status"`
 	InvitationToken       string `json:"invitation_token"`
 	Person                *struct {
-		FirstName string      `json:"first_name"`
-		LastName  string      `json:"last_name"`
-		AccountID *testpkg.ID `json:"account_id"`
+		FirstName string  `json:"first_name"`
+		LastName  string  `json:"last_name"`
+		AccountID *wireID `json:"account_id"`
 	} `json:"person"`
 }
 

@@ -38,7 +38,7 @@ func (id ID) MarshalJSON() ([]byte, error) {
 }
 
 // IDs returns the identifiers as int64s.
-func IDs(ids []ID) []int64 {
+func IDs[T ~int64](ids []T) []int64 {
 	out := make([]int64, len(ids))
 	for i, id := range ids {
 		out[i] = int64(id)
@@ -46,11 +46,12 @@ func IDs(ids []ID) []int64 {
 	return out
 }
 
-// IDsOf returns int64s as identifiers.
-func IDsOf(ids []int64) []ID {
-	out := make([]ID, len(ids))
+// IDsOf returns int64s as identifiers of the type T (ID or a caller's own
+// copy of it).
+func IDsOf[T ~int64](ids []int64) []T {
+	out := make([]T, len(ids))
 	for i, id := range ids {
-		out[i] = ID(id)
+		out[i] = T(id)
 	}
 	return out
 }

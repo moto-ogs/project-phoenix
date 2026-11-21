@@ -24,11 +24,11 @@ import (
 const billingFamiliesPath = "/traeger/billing-families"
 
 type billingFamilyBody struct {
-	ID                 testpkg.ID `json:"id"`
-	RecipientFirstName string     `json:"recipient_first_name"`
-	RecipientLastName  string     `json:"recipient_last_name"`
-	RecipientEmail     string     `json:"recipient_email"`
-	DebtorNumbers      []string   `json:"debtor_numbers"`
+	ID                 wireID   `json:"id"`
+	RecipientFirstName string   `json:"recipient_first_name"`
+	RecipientLastName  string   `json:"recipient_last_name"`
+	RecipientEmail     string   `json:"recipient_email"`
+	DebtorNumbers      []string `json:"debtor_numbers"`
 	Payments           []struct {
 		Kind           string `json:"kind"`
 		CostBearerName string `json:"cost_bearer_name"`
@@ -41,17 +41,17 @@ type billingFamilyBody struct {
 	CreditedCents    int64 `json:"credited_cents"`
 	OpenCents        int64 `json:"open_cents"`
 	Documents        []struct {
-		ID              testpkg.ID `json:"id"`
-		RunID           testpkg.ID `json:"run_id"`
-		Kind            string     `json:"kind"`
-		Number          string     `json:"number"`
-		PeriodName      string     `json:"period_name"`
-		ReferenceNumber string     `json:"reference_number"`
-		Reason          string     `json:"reason"`
-		ChildNames      []string   `json:"child_names"`
-		TotalCents      int64      `json:"total_cents"`
-		Status          string     `json:"status"`
-		OpenCents       int64      `json:"open_cents"`
+		ID              wireID   `json:"id"`
+		RunID           wireID   `json:"run_id"`
+		Kind            string   `json:"kind"`
+		Number          string   `json:"number"`
+		PeriodName      string   `json:"period_name"`
+		ReferenceNumber string   `json:"reference_number"`
+		Reason          string   `json:"reason"`
+		ChildNames      []string `json:"child_names"`
+		TotalCents      int64    `json:"total_cents"`
+		Status          string   `json:"status"`
+		OpenCents       int64    `json:"open_cents"`
 		Payment         *struct {
 			Kind string `json:"kind"`
 		} `json:"payment"`
@@ -86,7 +86,7 @@ func releaseSecondPeriodFor(t *testing.T, f reviewFixture, billing, email string
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(second.PublicToken), siblingsRegistration(offer, email))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	registration := decodeSchoolPortalData[struct {
-		ID testpkg.ID `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes())
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(second.ID), int64(registration.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

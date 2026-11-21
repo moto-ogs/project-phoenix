@@ -16,8 +16,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 const holidayTestPDF = "%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF\n"
@@ -91,7 +89,7 @@ func TestHolidayLegalDocumentsAndPinnedAcceptanceEvidence(t *testing.T) {
 	rec = publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken), body)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	receipt := decodeSchoolPortalData[struct {
-		ID testpkg.ID `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes())
 	detailPath := fmt.Sprintf("%s/registrations/%d", holidayPeriodPath(int64(period.ID)), receipt.ID)
 	rec = traegerJSON(t, f.traeger, office.token, http.MethodGet, detailPath, nil)

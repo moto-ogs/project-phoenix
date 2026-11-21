@@ -29,32 +29,32 @@ import (
 )
 
 type traegerAbsenceTypeBody struct {
-	ID           testpkg.ID `json:"id"`
-	Name         string     `json:"name"`
-	StandardDays float64    `json:"standard_days"`
-	Requestable  bool       `json:"requestable"`
+	ID           wireID  `json:"id"`
+	Name         string  `json:"name"`
+	StandardDays float64 `json:"standard_days"`
+	Requestable  bool    `json:"requestable"`
 	Schools      []struct {
-		SchoolID        testpkg.ID `json:"school_id"`
-		Carried         bool       `json:"carried"`
-		Offered         bool       `json:"offered"`
-		SchoolLimitDays *float64   `json:"school_limit_days"`
+		SchoolID        wireID   `json:"school_id"`
+		Carried         bool     `json:"carried"`
+		Offered         bool     `json:"offered"`
+		SchoolLimitDays *float64 `json:"school_limit_days"`
 	} `json:"schools"`
 }
 
 type traegerAbsenceAccountsBody struct {
 	Year     int `json:"year"`
 	Accounts []struct {
-		AbsenceTypeID testpkg.ID `json:"absence_type_id"`
-		EntitledDays  float64    `json:"entitled_days"`
-		Individual    bool       `json:"individual"`
-		TakenDays     float64    `json:"taken_days"`
-		ReservedDays  float64    `json:"reserved_days"`
-		RemainingDays float64    `json:"remaining_days"`
+		AbsenceTypeID wireID  `json:"absence_type_id"`
+		EntitledDays  float64 `json:"entitled_days"`
+		Individual    bool    `json:"individual"`
+		TakenDays     float64 `json:"taken_days"`
+		ReservedDays  float64 `json:"reserved_days"`
+		RemainingDays float64 `json:"remaining_days"`
 		Schools       []struct {
-			SchoolID     testpkg.ID `json:"school_id"`
-			TakenDays    float64    `json:"taken_days"`
-			ReservedDays float64    `json:"reserved_days"`
-			LimitDays    *float64   `json:"limit_days"`
+			SchoolID     wireID   `json:"school_id"`
+			TakenDays    float64  `json:"taken_days"`
+			ReservedDays float64  `json:"reserved_days"`
+			LimitDays    *float64 `json:"limit_days"`
 		} `json:"schools"`
 	} `json:"accounts"`
 }

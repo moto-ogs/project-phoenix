@@ -33,11 +33,11 @@ const (
 )
 
 type careInvoiceBody struct {
-	ID             testpkg.ID `json:"id"`
-	Number         string     `json:"number"`
-	ContractID     testpkg.ID `json:"contract_id"`
-	SchoolID       testpkg.ID `json:"school_id"`
-	ChildFirstName string     `json:"child_first_name"`
+	ID             wireID `json:"id"`
+	Number         string `json:"number"`
+	ContractID     wireID `json:"contract_id"`
+	SchoolID       wireID `json:"school_id"`
+	ChildFirstName string `json:"child_first_name"`
 	Recipient      struct {
 		FirstName string `json:"first_name"`
 		Email     string `json:"email"`
@@ -54,7 +54,7 @@ type careInvoiceBody struct {
 }
 
 type careRunBody struct {
-	ID           testpkg.ID        `json:"id"`
+	ID           wireID            `json:"id"`
 	BillingMonth string            `json:"billing_month"`
 	Status       string            `json:"status"`
 	MonthRule    string            `json:"month_rule"`
@@ -65,7 +65,7 @@ type careRunBody struct {
 	Duplicates []struct {
 		ChildFirstName string `json:"child_first_name"`
 		Contracts      []struct {
-			ContractID testpkg.ID `json:"contract_id"`
+			ContractID wireID `json:"contract_id"`
 		} `json:"contracts"`
 	} `json:"duplicates"`
 	DuplicateChildren int   `json:"duplicate_children"`
@@ -73,12 +73,12 @@ type careRunBody struct {
 	PreviewCount      int   `json:"preview_count"`
 	PreviewCents      int64 `json:"preview_cents"`
 	// The review of #5916.
-	SchoolIDs     []testpkg.ID `json:"school_ids"`
-	InvoiceDate   *string      `json:"invoice_date"`
-	IssuedOn      *string      `json:"issued_on"`
-	ExcludedCount int          `json:"excluded_count"`
-	ExcludedCents int64        `json:"excluded_cents"`
-	Fingerprint   string       `json:"fingerprint"`
+	SchoolIDs     []wireID `json:"school_ids"`
+	InvoiceDate   *string  `json:"invoice_date"`
+	IssuedOn      *string  `json:"issued_on"`
+	ExcludedCount int      `json:"excluded_count"`
+	ExcludedCents int64    `json:"excluded_cents"`
+	Fingerprint   string   `json:"fingerprint"`
 }
 
 type careService struct {
@@ -551,7 +551,7 @@ func TestCareMonthlyDuplicateContractIsShownNotBilled(t *testing.T) {
 			ModuleName     string `json:"module_name"`
 			Weekday        string `json:"weekday"`
 			Contracts      []struct {
-				ContractID testpkg.ID `json:"contract_id"`
+				ContractID wireID `json:"contract_id"`
 			} `json:"contracts"`
 		} `json:"duplicates"`
 	}](t, rec.Body.Bytes())
@@ -826,8 +826,8 @@ func TestCareMonthlyReleasedRunKeepsItsSnapshot(t *testing.T) {
 			ModuleName     string `json:"module_name"`
 			Weekday        string `json:"weekday"`
 			Contracts      []struct {
-				ContractID testpkg.ID `json:"contract_id"`
-				SchoolName string     `json:"school_name"`
+				ContractID wireID `json:"contract_id"`
+				SchoolName string `json:"school_name"`
 			} `json:"contracts"`
 		} `json:"duplicates"`
 	}

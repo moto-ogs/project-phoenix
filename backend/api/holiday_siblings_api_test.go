@@ -25,15 +25,15 @@ import (
 )
 
 type siblingGroupBody struct {
-	ID              testpkg.ID   `json:"id"`
-	RegistrationIDs []testpkg.ID `json:"registration_ids"`
+	ID              wireID   `json:"id"`
+	RegistrationIDs []wireID `json:"registration_ids"`
 }
 
 type siblingContributionBody struct {
 	contributionBody
 	Siblings []struct {
-		RegistrationID testpkg.ID `json:"registration_id"`
-		Status         string     `json:"status"`
+		RegistrationID wireID `json:"registration_id"`
+		Status         string `json:"status"`
 		Children       []struct {
 			FirstName string `json:"first_name"`
 			LastName  string `json:"last_name"`
@@ -63,7 +63,7 @@ func (f reviewFixture) submitChild(t *testing.T, period traegerPeriodLink, offer
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken), body)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	return int64(decodeSchoolPortalData[struct {
-		ID testpkg.ID `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID)
 }
 

@@ -24,7 +24,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 type holidayFormField struct {
@@ -261,7 +260,7 @@ func TestHolidayRegistrationChecksTheAnswersAgainstItsForm(t *testing.T) {
 	rec = publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken), valid)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	id := decodeSchoolPortalData[struct {
-		ID testpkg.ID `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
 
 	var stored struct {
@@ -349,7 +348,7 @@ func TestHolidayRegistrationKeepsItsFormVersionAndHealthAnswersStayInTheHealthRe
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(f.period.PublicToken), body)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	id := decodeSchoolPortalData[struct {
-		ID testpkg.ID `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
 
 	var mail string
@@ -371,7 +370,7 @@ func TestHolidayRegistrationKeepsItsFormVersionAndHealthAnswersStayInTheHealthRe
 		Form            holidayFormBody `json:"form"`
 		CustomData      map[string]any  `json:"custom_data"`
 		ChildCustomData []struct {
-			ChildID    testpkg.ID     `json:"child_id"`
+			ChildID    wireID         `json:"child_id"`
 			CustomData map[string]any `json:"custom_data"`
 		} `json:"child_custom_data"`
 	}](t, rec.Body.Bytes())
@@ -608,7 +607,7 @@ func TestHolidayExportExcludesHealthFieldsFromUnexportedVersions(t *testing.T) {
 		rec := publicJSON(t, f.public, http.MethodPost, registrationPath(f.period.PublicToken), body)
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		return int64(decodeSchoolPortalData[struct {
-			ID testpkg.ID `json:"id"`
+			ID wireID `json:"id"`
 		}](t, rec.Body.Bytes()).ID)
 	}
 	export := func(filter string) string {

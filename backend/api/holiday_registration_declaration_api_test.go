@@ -17,7 +17,6 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // The texts of version 5 word for word, with the retention of a year the
@@ -142,7 +141,7 @@ func TestHolidayReceiptAndDetailRepeatTheDeclaration(t *testing.T) {
 	rec = publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken), body)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	registration := decodeSchoolPortalData[struct {
-		ID testpkg.ID `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
 
 	var payload string

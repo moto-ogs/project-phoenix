@@ -37,14 +37,14 @@ type proofReceipt struct {
 }
 
 type proofDetail struct {
-	ID               testpkg.ID `json:"id"`
-	BenefitsDeclared bool       `json:"benefits_declared"`
+	ID               wireID `json:"id"`
+	BenefitsDeclared bool   `json:"benefits_declared"`
 	BenefitsProofs   []struct {
-		ID          testpkg.ID `json:"id"`
-		Filename    string     `json:"filename"`
-		SizeBytes   int64      `json:"size_bytes"`
-		ContentType string     `json:"content_type"`
-		UploadedAt  string     `json:"uploaded_at"`
+		ID          wireID `json:"id"`
+		Filename    string `json:"filename"`
+		SizeBytes   int64  `json:"size_bytes"`
+		ContentType string `json:"content_type"`
+		UploadedAt  string `json:"uploaded_at"`
 	} `json:"benefits_proofs"`
 }
 
@@ -109,7 +109,7 @@ func TestHolidayProofIsClaimedAndOpenedOnlyFromTheRegistrationDetail(t *testing.
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(f.period.PublicToken), registration)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	id := decodeSchoolPortalData[struct {
-		ID testpkg.ID `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
 	assert.Equal(t, 2, countProofs(t, f.holidayRegistrationFixture, f.office.organization,
 		fmt.Sprintf("holiday_registration_id = %d AND token_hash IS NULL AND claimed_at IS NOT NULL", id)),

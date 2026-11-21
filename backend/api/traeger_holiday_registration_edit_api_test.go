@@ -20,7 +20,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 type editedRegistration struct {
@@ -38,12 +37,12 @@ type editedRegistration struct {
 		Email     string `json:"email"`
 	} `json:"second_guardian"`
 	Children []struct {
-		ID              testpkg.ID  `json:"id"`
-		FirstName       string      `json:"first_name"`
-		LastName        string      `json:"last_name"`
-		BirthDate       string      `json:"birth_date"`
-		HomeSchoolID    *testpkg.ID `json:"home_school_id"`
-		GuestSchoolName string      `json:"guest_school_name"`
+		ID              wireID  `json:"id"`
+		FirstName       string  `json:"first_name"`
+		LastName        string  `json:"last_name"`
+		BirthDate       string  `json:"birth_date"`
+		HomeSchoolID    *wireID `json:"home_school_id"`
+		GuestSchoolName string  `json:"guest_school_name"`
 	} `json:"children"`
 	Contacts []struct {
 		Kind  string `json:"kind"`
@@ -52,7 +51,7 @@ type editedRegistration struct {
 	} `json:"contacts"`
 	CustomData      map[string]any `json:"custom_data"`
 	ChildCustomData []struct {
-		ChildID    testpkg.ID     `json:"child_id"`
+		ChildID    wireID         `json:"child_id"`
 		CustomData map[string]any `json:"custom_data"`
 	} `json:"child_custom_data"`
 	History []struct {
@@ -80,7 +79,7 @@ func newEditFixture(t *testing.T, name string) reviewFixture {
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken), body)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	siblings := decodeSchoolPortalData[struct {
-		ID testpkg.ID `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
 	return reviewFixture{holidayRegistrationFixture: f, office: office, period: period, offer: offer, siblings: int64(siblings)}
 }
@@ -397,7 +396,7 @@ func newDependentAnswersFixture(t *testing.T, name string) (reviewFixture, int64
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken), body)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	siblings := decodeSchoolPortalData[struct {
-		ID testpkg.ID `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
 	f2 := reviewFixture{holidayRegistrationFixture: f, office: office, period: period, offer: offer, siblings: int64(siblings)}
 	return f2, int64(f2.readDetail(t, int64(siblings)).Children[0].ID)
@@ -458,7 +457,7 @@ func newAddressEditFixture(t *testing.T, name, requirement string) reviewFixture
 	rec := submitWithAddress(t, f, period.PublicToken, offer, "eva.muster@example.org", musterAddress())
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	siblings := decodeSchoolPortalData[struct {
-		ID testpkg.ID `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
 	return reviewFixture{holidayRegistrationFixture: f, office: office, period: period, offer: offer, siblings: int64(siblings)}
 }

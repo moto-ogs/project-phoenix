@@ -30,13 +30,13 @@ import (
 )
 
 type masterDataBankAccount struct {
-	ID            testpkg.ID `json:"id,omitempty"`
-	Label         string     `json:"label"`
-	AccountHolder string     `json:"account_holder"`
-	IBAN          string     `json:"iban"`
-	BIC           string     `json:"bic"`
-	BankName      string     `json:"bank_name"`
-	IsDefault     bool       `json:"is_default"`
+	ID            wireID `json:"id,omitempty"`
+	Label         string `json:"label"`
+	AccountHolder string `json:"account_holder"`
+	IBAN          string `json:"iban"`
+	BIC           string `json:"bic"`
+	BankName      string `json:"bank_name"`
+	IsDefault     bool   `json:"is_default"`
 }
 
 type masterDataContact struct {

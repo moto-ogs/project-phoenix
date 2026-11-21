@@ -102,23 +102,23 @@ type holidayOfferBody struct {
 	Open           bool   `json:"open"`
 	CaptchaSiteKey string `json:"captcha_site_key"`
 	Weeks          []struct {
-		ID             testpkg.ID `json:"id"`
-		StartsOn       string     `json:"starts_on"`
-		HostSchoolName string     `json:"host_school_name"`
+		ID             wireID `json:"id"`
+		StartsOn       string `json:"starts_on"`
+		HostSchoolName string `json:"host_school_name"`
 		TimeModels     []struct {
-			ID         testpkg.ID `json:"id"`
-			Name       string     `json:"name"`
-			PriceCents int64      `json:"price_cents"`
+			ID         wireID `json:"id"`
+			Name       string `json:"name"`
+			PriceCents int64  `json:"price_cents"`
 		} `json:"time_models"`
 	} `json:"weeks"`
 	Schools []struct {
-		ID   testpkg.ID `json:"id"`
-		Name string     `json:"name"`
+		ID   wireID `json:"id"`
+		Name string `json:"name"`
 	} `json:"schools"`
 }
 
 type traegerPeriodLink struct {
-	ID                testpkg.ID        `json:"id"`
+	ID                wireID            `json:"id"`
 	PublicToken       string            `json:"public_token"`
 	RegistrationCount int               `json:"registration_count"`
 	Weeks             []holidayWeekBody `json:"weeks"`

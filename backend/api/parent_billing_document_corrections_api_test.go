@@ -19,22 +19,21 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 type correctedDocumentBody struct {
-	ID                  testpkg.ID  `json:"id"`
-	RunID               testpkg.ID  `json:"run_id"`
-	Kind                string      `json:"kind"`
-	Number              string      `json:"number"`
-	RegistrationID      testpkg.ID  `json:"registration_id"`
-	ReferenceDocumentID *testpkg.ID `json:"reference_document_id"`
-	ReferenceNumber     string      `json:"reference_number"`
-	Reason              string      `json:"reason"`
-	TotalCents          int64       `json:"total_cents"`
+	ID                  wireID  `json:"id"`
+	RunID               wireID  `json:"run_id"`
+	Kind                string  `json:"kind"`
+	Number              string  `json:"number"`
+	RegistrationID      wireID  `json:"registration_id"`
+	ReferenceDocumentID *wireID `json:"reference_document_id"`
+	ReferenceNumber     string  `json:"reference_number"`
+	Reason              string  `json:"reason"`
+	TotalCents          int64   `json:"total_cents"`
 	Children            []struct {
-		ChildID    testpkg.ID `json:"child_id"`
-		TotalCents int64      `json:"total_cents"`
+		ChildID    wireID `json:"child_id"`
+		TotalCents int64  `json:"total_cents"`
 		Positions  []struct {
 			Kind        string `json:"kind"`
 			AmountCents int64  `json:"amount_cents"`
@@ -42,17 +41,17 @@ type correctedDocumentBody struct {
 		} `json:"positions"`
 	} `json:"children"`
 	History []struct {
-		ID         testpkg.ID `json:"id"`
-		RunID      testpkg.ID `json:"run_id"`
-		Kind       string     `json:"kind"`
-		Number     string     `json:"number"`
-		TotalCents int64      `json:"total_cents"`
-		Reason     string     `json:"reason"`
+		ID         wireID `json:"id"`
+		RunID      wireID `json:"run_id"`
+		Kind       string `json:"kind"`
+		Number     string `json:"number"`
+		TotalCents int64  `json:"total_cents"`
+		Reason     string `json:"reason"`
 	} `json:"history"`
 }
 
 type correctedRunBody struct {
-	ID           testpkg.ID              `json:"id"`
+	ID           wireID                  `json:"id"`
 	Status       string                  `json:"status"`
 	PreviewCount int                     `json:"preview_count"`
 	PreviewCents int64                   `json:"preview_cents"`

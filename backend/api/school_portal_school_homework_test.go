@@ -21,7 +21,7 @@ import (
 // /api/timetable/operations. The roster bounds every write.
 
 type homeworkRosterRow struct {
-	StudentID testpkg.ID `json:"student_id"`
+	StudentID wireID `json:"student_id"`
 	Homework  []struct {
 		Subject     *string `json:"subject"`
 		Description string  `json:"description"`

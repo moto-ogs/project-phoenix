@@ -25,15 +25,15 @@ import (
 )
 
 type careAmendmentBody struct {
-	ID                testpkg.ID  `json:"id"`
-	Kind              string      `json:"kind"`
-	Label             string      `json:"label"`
-	AmountCents       int64       `json:"amount_cents"`
-	Reason            string      `json:"reason"`
-	AccountID         *testpkg.ID `json:"account_id"`
-	Carried           bool        `json:"carried"`
-	CarriedFromNumber string      `json:"carried_from_number"`
-	Conflict          string      `json:"conflict"`
+	ID                wireID  `json:"id"`
+	Kind              string  `json:"kind"`
+	Label             string  `json:"label"`
+	AmountCents       int64   `json:"amount_cents"`
+	Reason            string  `json:"reason"`
+	AccountID         *wireID `json:"account_id"`
+	Carried           bool    `json:"carried"`
+	CarriedFromNumber string  `json:"carried_from_number"`
+	Conflict          string  `json:"conflict"`
 	Before            struct {
 		TotalCents *int64 `json:"total_cents"`
 	} `json:"before"`
@@ -43,9 +43,9 @@ type careAmendmentBody struct {
 }
 
 type careAmendedInvoiceBody struct {
-	ID         testpkg.ID `json:"id"`
-	ContractID testpkg.ID `json:"contract_id"`
-	TotalCents int64      `json:"total_cents"`
+	ID         wireID `json:"id"`
+	ContractID wireID `json:"contract_id"`
+	TotalCents int64  `json:"total_cents"`
 	Recipient  struct {
 		FirstName string `json:"first_name"`
 		LastName  string `json:"last_name"`

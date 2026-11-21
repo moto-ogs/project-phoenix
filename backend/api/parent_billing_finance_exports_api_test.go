@@ -44,7 +44,7 @@ type exportEntryBody struct {
 
 type exportRunBody struct {
 	RunKind          string           `json:"run_kind"`
-	RunID            testpkg.ID       `json:"run_id"`
+	RunID            wireID           `json:"run_id"`
 	Label            string           `json:"label"`
 	InvoiceCount     int              `json:"invoice_count"`
 	Exports          int              `json:"exports"`

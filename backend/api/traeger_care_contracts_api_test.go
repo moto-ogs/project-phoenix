@@ -29,15 +29,15 @@ import (
 )
 
 type careContractServiceBody struct {
-	Weekday        string     `json:"weekday"`
-	CareOfferingID testpkg.ID `json:"care_offering_id"`
-	ModuleName     string     `json:"module_name"`
-	EndsAt         string     `json:"ends_at"`
+	Weekday        string `json:"weekday"`
+	CareOfferingID wireID `json:"care_offering_id"`
+	ModuleName     string `json:"module_name"`
+	EndsAt         string `json:"ends_at"`
 }
 
 type careContractCandidateBody struct {
-	SchoolID       testpkg.ID                `json:"school_id"`
-	RequestChildID testpkg.ID                `json:"request_child_id"`
+	SchoolID       wireID                    `json:"school_id"`
+	RequestChildID wireID                    `json:"request_child_id"`
 	ChildFirstName string                    `json:"child_first_name"`
 	GuardianEmail  string                    `json:"guardian_email"`
 	Services       []careContractServiceBody `json:"services"`
@@ -46,19 +46,19 @@ type careContractCandidateBody struct {
 }
 
 type careContractSummaryBody struct {
-	ID            testpkg.ID `json:"id"`
-	Status        string     `json:"status"`
-	SchoolID      testpkg.ID `json:"school_id"`
-	ModuleNames   []string   `json:"module_names"`
-	PartyEmail    string     `json:"party_email"`
-	EffectiveFrom string     `json:"effective_from"`
+	ID            wireID   `json:"id"`
+	Status        string   `json:"status"`
+	SchoolID      wireID   `json:"school_id"`
+	ModuleNames   []string `json:"module_names"`
+	PartyEmail    string   `json:"party_email"`
+	EffectiveFrom string   `json:"effective_from"`
 }
 
 type careContractCreateBody struct {
 	Created []careContractSummaryBody `json:"created"`
 	Skipped []struct {
-		RequestChildID testpkg.ID `json:"request_child_id"`
-		Reason         string     `json:"reason"`
+		RequestChildID wireID `json:"request_child_id"`
+		Reason         string `json:"reason"`
 	} `json:"skipped"`
 }
 
@@ -192,9 +192,9 @@ func TestCareContractDraftFromTheAcceptedApplicationIsSentWithItsFrozenPDF(t *te
 	require.Len(t, candidates, 1)
 	assert.Equal(t, f.child, candidates[0].RequestChildID)
 	assert.Equal(t, []careContractServiceBody{
-		{Weekday: "mon", CareOfferingID: testpkg.ID(f.offering), ModuleName: "Offene Ganztagsschule", EndsAt: "14:00"},
-		{Weekday: "tue", CareOfferingID: testpkg.ID(f.offering), ModuleName: "Offene Ganztagsschule", EndsAt: "16:30"},
-		{Weekday: "wed", CareOfferingID: testpkg.ID(f.offering), ModuleName: "Offene Ganztagsschule", EndsAt: "16:30"},
+		{Weekday: "mon", CareOfferingID: wireID(f.offering), ModuleName: "Offene Ganztagsschule", EndsAt: "14:00"},
+		{Weekday: "tue", CareOfferingID: wireID(f.offering), ModuleName: "Offene Ganztagsschule", EndsAt: "16:30"},
+		{Weekday: "wed", CareOfferingID: wireID(f.offering), ModuleName: "Offene Ganztagsschule", EndsAt: "16:30"},
 	}, candidates[0].Services, "per weekday the module with its end time; the AG on Thursday is no care")
 	assert.Equal(t, "2027-08-01", candidates[0].EffectiveFrom)
 	assert.Equal(t, "template_missing", candidates[0].TemplateIssue)

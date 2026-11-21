@@ -22,16 +22,16 @@ import (
 )
 
 type namedExportEntry struct {
-	FileNumber     int64       `json:"file_number"`
-	ExportedBy     *testpkg.ID `json:"exported_by_account_id"`
-	ExportedByYou  bool        `json:"exported_by_you"`
-	ExportedByName string      `json:"exported_by_name"`
+	FileNumber     int64   `json:"file_number"`
+	ExportedBy     *wireID `json:"exported_by_account_id"`
+	ExportedByYou  bool    `json:"exported_by_you"`
+	ExportedByName string  `json:"exported_by_name"`
 }
 
 type namedHistory struct {
 	Entries []struct {
 		Kind        string            `json:"kind"`
-		AccountID   *testpkg.ID       `json:"account_id"`
+		AccountID   *wireID           `json:"account_id"`
 		ByYou       bool              `json:"by_you"`
 		AccountName string            `json:"account_name"`
 		File        *namedExportEntry `json:"file"`

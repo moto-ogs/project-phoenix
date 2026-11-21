@@ -43,23 +43,23 @@ type poolWeekBody struct {
 }
 
 type poolSpringerBody struct {
-	RecordID  testpkg.ID `json:"staff_record_id"`
-	LastName  string     `json:"last_name"`
-	PoolFrom  string     `json:"pool_from"`
-	PoolUntil *string    `json:"pool_until"`
+	RecordID  wireID  `json:"staff_record_id"`
+	LastName  string  `json:"last_name"`
+	PoolFrom  string  `json:"pool_from"`
+	PoolUntil *string `json:"pool_until"`
 	Proofs    []struct {
 		TypeName string `json:"type_name"`
 		Status   string `json:"status"`
 	} `json:"proofs"`
 	Blocks []struct {
-		ID         *testpkg.ID `json:"id"`
-		SchoolID   testpkg.ID  `json:"school_id"`
-		SchoolName string      `json:"school_name"`
-		Own        bool        `json:"own"`
-		Date       string      `json:"date"`
-		StartTime  string      `json:"start_time"`
-		EndTime    string      `json:"end_time"`
-		Lifted     bool        `json:"lifted"`
+		ID         *wireID `json:"id"`
+		SchoolID   wireID  `json:"school_id"`
+		SchoolName string  `json:"school_name"`
+		Own        bool    `json:"own"`
+		Date       string  `json:"date"`
+		StartTime  string  `json:"start_time"`
+		EndTime    string  `json:"end_time"`
+		Lifted     bool    `json:"lifted"`
 	} `json:"blocks"`
 }
 
@@ -159,8 +159,8 @@ func TestStaffPoolLetsEverySchoolBlockASpringerOnce(t *testing.T) {
 		rec := block(south, southLead.ID, springer, "2026-11-19", "08:00", "12:00")
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		created := decode[struct {
-			ID  *testpkg.ID `json:"id"`
-			Own bool        `json:"own"`
+			ID  *wireID `json:"id"`
+			Own bool    `json:"own"`
 		}](t, rec)
 		require.NotNil(t, created.ID)
 		assert.True(t, created.Own)

@@ -19,7 +19,6 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 type cancelledContributionBody struct {
@@ -63,8 +62,8 @@ func TestCancellationComputesTheRestOfTheSiblingGroupAgain(t *testing.T) {
 	rec := f.cancel(t, f.office.token, first)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	cancelled := decodeSchoolPortalData[struct {
-		ID     testpkg.ID `json:"id"`
-		Status string     `json:"status"`
+		ID     wireID `json:"id"`
+		Status string `json:"status"`
 	}](t, rec.Body.Bytes())
 	assert.Equal(t, first, cancelled.ID)
 	assert.Equal(t, "cancelled", cancelled.Status)

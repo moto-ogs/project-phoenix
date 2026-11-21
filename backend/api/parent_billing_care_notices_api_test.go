@@ -22,10 +22,10 @@ import (
 const careNoticeRunsPath = "/traeger/care-notice-runs"
 
 type careNoticeBody struct {
-	ID         testpkg.ID `json:"id"`
-	Number     string     `json:"number"`
-	Kind       string     `json:"kind"`
-	ContractID testpkg.ID `json:"contract_id"`
+	ID         wireID `json:"id"`
+	Number     string `json:"number"`
+	Kind       string `json:"kind"`
+	ContractID wireID `json:"contract_id"`
 	Lines      []struct {
 		Label       string `json:"label"`
 		Months      int    `json:"months"`
@@ -55,7 +55,7 @@ type careNoticeBody struct {
 }
 
 type careNoticeRunBody struct {
-	ID                 testpkg.ID       `json:"id"`
+	ID                 wireID           `json:"id"`
 	Status             string           `json:"status"`
 	Notices            []careNoticeBody `json:"notices"`
 	Unchanged          int              `json:"unchanged"`

@@ -38,15 +38,15 @@ func accessLogAt(hour int) time.Time {
 }
 
 type accessLogEntry struct {
-	ID         string      `json:"id"`
-	OccurredAt time.Time   `json:"occurred_at"`
-	SchoolID   testpkg.ID  `json:"school_id"`
-	SchoolName string      `json:"school_name"`
-	AccountID  *testpkg.ID `json:"account_id"`
-	Person     string      `json:"person"`
-	Kind       string      `json:"kind"`
-	Data       string      `json:"data"`
-	DataLabel  string      `json:"data_label"`
+	ID         string    `json:"id"`
+	OccurredAt time.Time `json:"occurred_at"`
+	SchoolID   wireID    `json:"school_id"`
+	SchoolName string    `json:"school_name"`
+	AccountID  *wireID   `json:"account_id"`
+	Person     string    `json:"person"`
+	Kind       string    `json:"kind"`
+	Data       string    `json:"data"`
+	DataLabel  string    `json:"data_label"`
 }
 
 type accessLogPage struct {
@@ -56,8 +56,8 @@ type accessLogPage struct {
 }
 
 type accessLogPerson struct {
-	AccountID testpkg.ID `json:"account_id"`
-	Name      string     `json:"name"`
+	AccountID wireID `json:"account_id"`
+	Name      string `json:"name"`
 }
 
 func accessLogRequest(t *testing.T, router http.Handler, token, path string, query url.Values) *httptest.ResponseRecorder {
@@ -250,7 +250,7 @@ func TestTraegerAccessLogFiltersByPersonSchoolPeriodAndKind(t *testing.T) {
 	rec := accessLogRequest(t, f.router, f.token, "/traeger/access-log/people", accessLogWindow(nil))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	people := decodeSchoolPortalData[[]accessLogPerson](t, rec.Body.Bytes())
-	assert.Equal(t, []accessLogPerson{{AccountID: testpkg.ID(f.staff), Name: "Frieda Fachkraft"}, {AccountID: testpkg.ID(f.otherStaff), Name: "Lena Leitung"}}, people)
+	assert.Equal(t, []accessLogPerson{{AccountID: wireID(f.staff), Name: "Frieda Fachkraft"}, {AccountID: wireID(f.otherStaff), Name: "Lena Leitung"}}, people)
 }
 
 func TestTraegerAccessLogRejectsAnInvalidWindow(t *testing.T) {
@@ -390,7 +390,7 @@ func TestTraegerAccessLogShowsTheSystemActorWithoutAnAccount(t *testing.T) {
 
 	rec := accessLogRequest(t, f.router, f.token, "/traeger/access-log/people", accessLogWindow(nil))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, []accessLogPerson{{AccountID: testpkg.ID(f.staff), Name: "Frieda Fachkraft"}}, decodeSchoolPortalData[[]accessLogPerson](t, rec.Body.Bytes()))
+	assert.Equal(t, []accessLogPerson{{AccountID: wireID(f.staff), Name: "Frieda Fachkraft"}}, decodeSchoolPortalData[[]accessLogPerson](t, rec.Body.Bytes()))
 }
 
 // recordHolidayAccess writes one entry of the audit trail of the holiday
@@ -460,7 +460,7 @@ func TestTraegerAccessLogShowsTheHolidayRegistrationTrailOfTheOwnTraeger(t *test
 
 	rec := accessLogRequest(t, f.traeger, f.office.token, "/traeger/access-log/people", accessLogWindow(nil))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, []accessLogPerson{{AccountID: testpkg.ID(member), Name: person}}, decodeSchoolPortalData[[]accessLogPerson](t, rec.Body.Bytes()))
+	assert.Equal(t, []accessLogPerson{{AccountID: wireID(member), Name: person}}, decodeSchoolPortalData[[]accessLogPerson](t, rec.Body.Bytes()))
 
 	rec = accessLogRequest(t, f.traeger, f.office.token, "/traeger/access-log/export", accessLogWindow(nil))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

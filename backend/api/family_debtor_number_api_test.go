@@ -39,7 +39,7 @@ func (f reviewFixture) submitFamily(t *testing.T, email string) int64 {
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(f.period.PublicToken), siblingsRegistration(f.offer, email))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	return int64(decodeSchoolPortalData[struct {
-		ID testpkg.ID `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID)
 }
 
@@ -167,12 +167,12 @@ func TestFamiliesListShowsAndSetsTheNumberOfAHolidayFamily(t *testing.T) {
 	require.Equal(t, http.StatusOK, f.confirmWith(t, f.again, map[string]any{"debtor_number": "20 1"}).Code)
 
 	type listedFamily struct {
-		ID                 testpkg.ID `json:"id"`
-		RecipientFirstName string     `json:"recipient_first_name"`
-		RecipientLastName  string     `json:"recipient_last_name"`
-		FamilyEmail        string     `json:"family_email"`
-		FamilyDebtorNumber string     `json:"family_debtor_number"`
-		HolidayOnly        bool       `json:"holiday_only"`
+		ID                 wireID `json:"id"`
+		RecipientFirstName string `json:"recipient_first_name"`
+		RecipientLastName  string `json:"recipient_last_name"`
+		FamilyEmail        string `json:"family_email"`
+		FamilyDebtorNumber string `json:"family_debtor_number"`
+		HolidayOnly        bool   `json:"holiday_only"`
 	}
 	list := func() []listedFamily {
 		rec := traegerJSON(t, f.traeger, billing, http.MethodGet, "/traeger/billing-families", nil)
@@ -264,7 +264,7 @@ func TestFamilyNumberOutlivesTheRegistrationAndHasItsOwnPeriod(t *testing.T) {
 		siblingsRegistration(holidayOffer(t, f.holidayRegistrationFixture, link.PublicToken), "eva.muster@example.org"))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	next := decodeSchoolPortalData[struct {
-		ID testpkg.ID `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
 
 	ctx := context.Background()

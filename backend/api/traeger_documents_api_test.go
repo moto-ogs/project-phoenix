@@ -41,7 +41,7 @@ import (
 var samplePDF = []byte("%PDF-1.4\n1 0 obj << >> endobj\ntrailer << >>\n%%EOF\n")
 
 type traegerDocumentBody struct {
-	ID       testpkg.ID                   `json:"id"`
+	ID       wireID                       `json:"id"`
 	Title    string                       `json:"title"`
 	FileName string                       `json:"file_name"`
 	Reads    int                          `json:"reads"`
@@ -49,19 +49,19 @@ type traegerDocumentBody struct {
 }
 
 type traegerDocumentReleaseBody struct {
-	ID        testpkg.ID  `json:"id"`
-	Audience  string      `json:"audience"`
-	SchoolID  *testpkg.ID `json:"school_id"`
-	GroupID   *testpkg.ID `json:"group_id"`
-	GroupName string      `json:"group_name"`
+	ID        wireID  `json:"id"`
+	Audience  string  `json:"audience"`
+	SchoolID  *wireID `json:"school_id"`
+	GroupID   *wireID `json:"group_id"`
+	GroupName string  `json:"group_name"`
 }
 
 type traegerDocumentSchoolBody struct {
-	ID     testpkg.ID `json:"id"`
-	Name   string     `json:"name"`
+	ID     wireID `json:"id"`
+	Name   string `json:"name"`
 	Groups []struct {
-		ID   testpkg.ID `json:"id"`
-		Name string     `json:"name"`
+		ID   wireID `json:"id"`
+		Name string `json:"name"`
 	} `json:"groups"`
 }
 

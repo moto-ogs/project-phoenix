@@ -41,23 +41,23 @@ const (
 type dayOfferBody struct {
 	MaxDaysPerChild *int `json:"max_days_per_child"`
 	Weeks           []struct {
-		ID          testpkg.ID `json:"id"`
-		BookingUnit string     `json:"booking_unit"`
-		CareDays    []string   `json:"care_days"`
-		FullDays    []string   `json:"full_days"`
+		ID          wireID   `json:"id"`
+		BookingUnit string   `json:"booking_unit"`
+		CareDays    []string `json:"care_days"`
+		FullDays    []string `json:"full_days"`
 		TimeModels  []struct {
-			ID         testpkg.ID `json:"id"`
-			PriceCents int64      `json:"price_cents"`
+			ID         wireID `json:"id"`
+			PriceCents int64  `json:"price_cents"`
 		} `json:"time_models"`
 	} `json:"weeks"`
 	Schools []struct {
-		ID testpkg.ID `json:"id"`
+		ID wireID `json:"id"`
 	} `json:"schools"`
 }
 
 type dayPlacesBody struct {
-	WeekID      testpkg.ID `json:"week_id"`
-	BookingUnit string     `json:"booking_unit"`
+	WeekID      wireID `json:"week_id"`
+	BookingUnit string `json:"booking_unit"`
 	Days        []struct {
 		Date   string `json:"date"`
 		Placed int    `json:"placed"`

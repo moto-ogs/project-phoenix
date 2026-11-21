@@ -29,9 +29,9 @@ const (
 )
 
 type careRuleBody struct {
-	ID   testpkg.ID `json:"id"`
-	Kind string     `json:"kind"`
-	Name string     `json:"name"`
+	ID   wireID `json:"id"`
+	Kind string `json:"kind"`
+	Name string `json:"name"`
 }
 
 type careRuleSetBody struct {
@@ -40,25 +40,25 @@ type careRuleSetBody struct {
 
 type careEvidenceSetBody struct {
 	Contracts []struct {
-		ContractID testpkg.ID `json:"contract_id"`
+		ContractID wireID `json:"contract_id"`
 		Evidences  []struct {
-			ID     testpkg.ID  `json:"id"`
-			Kind   string      `json:"kind"`
-			RuleID *testpkg.ID `json:"rule_id"`
+			ID     wireID  `json:"id"`
+			Kind   string  `json:"kind"`
+			RuleID *wireID `json:"rule_id"`
 		} `json:"evidences"`
 	} `json:"contracts"`
 	Levels []careRuleBody `json:"levels"`
 }
 
 type careReductionRunBody struct {
-	UncountedFamilies int        `json:"uncounted_families"`
-	ID                testpkg.ID `json:"id"`
+	UncountedFamilies int    `json:"uncounted_families"`
+	ID                wireID `json:"id"`
 	Status            string
 	PreviewCount      int    `json:"preview_count"`
 	PreviewCents      int64  `json:"preview_cents"`
 	Fingerprint       string `json:"fingerprint"`
 	Invoices          []struct {
-		ContractID testpkg.ID `json:"contract_id"`
+		ContractID wireID `json:"contract_id"`
 		Reductions []struct {
 			Kind           string `json:"kind"`
 			Name           string `json:"name"`

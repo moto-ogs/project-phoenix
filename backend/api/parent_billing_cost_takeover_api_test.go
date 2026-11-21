@@ -28,19 +28,19 @@ import (
 const costBearersPath = "/traeger/cost-bearers"
 
 type costBearerBody struct {
-	ID            testpkg.ID `json:"id"`
-	Name          string     `json:"name"`
-	Address       string     `json:"address"`
-	FileReference string     `json:"file_reference"`
-	Active        bool       `json:"active"`
-	InUse         bool       `json:"in_use"`
+	ID            wireID `json:"id"`
+	Name          string `json:"name"`
+	Address       string `json:"address"`
+	FileReference string `json:"file_reference"`
+	Active        bool   `json:"active"`
+	InUse         bool   `json:"in_use"`
 }
 
 type takeoverLineBody struct {
-	Kind           string      `json:"kind"`
-	AmountCents    int64       `json:"amount_cents"`
-	CostBearerID   *testpkg.ID `json:"cost_bearer_id"`
-	CostBearerName string      `json:"cost_bearer_name"`
+	Kind           string  `json:"kind"`
+	AmountCents    int64   `json:"amount_cents"`
+	CostBearerID   *wireID `json:"cost_bearer_id"`
+	CostBearerName string  `json:"cost_bearer_name"`
 }
 
 type takeoverContributionBody struct {
@@ -48,11 +48,11 @@ type takeoverContributionBody struct {
 		Lines      []takeoverLineBody `json:"lines"`
 		TotalCents int64              `json:"total_cents"`
 	} `json:"children"`
-	TotalCents        int64       `json:"total_cents"`
-	BenefitsExemption bool        `json:"benefits_exemption"`
-	CostBearerID      *testpkg.ID `json:"cost_bearer_id"`
-	CostBearerName    string      `json:"cost_bearer_name"`
-	Frozen            bool        `json:"frozen"`
+	TotalCents        int64   `json:"total_cents"`
+	BenefitsExemption bool    `json:"benefits_exemption"`
+	CostBearerID      *wireID `json:"cost_bearer_id"`
+	CostBearerName    string  `json:"cost_bearer_name"`
+	Frozen            bool    `json:"frozen"`
 }
 
 func youthOffice() map[string]any {
@@ -178,8 +178,8 @@ func TestCostTakeoverFreezesTheRestAfterTheSiblingDiscount(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	settings := decodeSchoolPortalData[struct {
 		CostBearers []struct {
-			ID   testpkg.ID `json:"id"`
-			Name string     `json:"name"`
+			ID   wireID `json:"id"`
+			Name string `json:"name"`
 		} `json:"cost_bearers"`
 	}](t, rec.Body.Bytes())
 	require.Len(t, settings.CostBearers, 1, "the Träger-Büro chooses among the active cost bearers of its Träger")

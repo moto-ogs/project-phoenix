@@ -33,10 +33,10 @@ type paymentBody struct {
 }
 
 type termsInvoiceBody struct {
-	FamilyEmail string     `json:"family_email"`
-	ID          testpkg.ID `json:"id"`
-	Number      string     `json:"number"`
-	ContractID  testpkg.ID `json:"contract_id"`
+	FamilyEmail string `json:"family_email"`
+	ID          wireID `json:"id"`
+	Number      string `json:"number"`
+	ContractID  wireID `json:"contract_id"`
 	Recipient   struct {
 		FirstName  string `json:"first_name"`
 		LastName   string `json:"last_name"`
@@ -53,7 +53,7 @@ type termsInvoiceBody struct {
 }
 
 type termsRunBody struct {
-	ID       testpkg.ID         `json:"id"`
+	ID       wireID             `json:"id"`
 	Status   string             `json:"status"`
 	Invoices []termsInvoiceBody `json:"invoices"`
 	DueDates []struct {
@@ -74,13 +74,13 @@ type termsDocumentBody struct {
 }
 
 type familyBillingBody struct {
-	ID            testpkg.ID `json:"id"`
-	FamilyEmail   string     `json:"family_email"`
-	ContractID    testpkg.ID `json:"contract_id"`
-	RecipientKind string     `json:"recipient_kind"`
-	PayerEmail    string     `json:"payer_email"`
-	PaymentMethod string     `json:"payment_method"`
-	DueDay        *int       `json:"due_day"`
+	ID            wireID `json:"id"`
+	FamilyEmail   string `json:"family_email"`
+	ContractID    wireID `json:"contract_id"`
+	RecipientKind string `json:"recipient_kind"`
+	PayerEmail    string `json:"payer_email"`
+	PaymentMethod string `json:"payment_method"`
+	DueDay        *int   `json:"due_day"`
 }
 
 func termsRun(t *testing.T, f careBillingFixture, token string, id int64) termsRunBody {
@@ -242,16 +242,16 @@ func TestCareByDirectDebitAndHolidayByTransferStaySeparateInvoices(t *testing.T)
 	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, "/traeger/billing-families", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	type familyBody struct {
-		ID             testpkg.ID `json:"id"`
-		InvoiceCount   int        `json:"invoice_count"`
-		IssuedCents    int64      `json:"issued_cents"`
-		PaymentMethods []string   `json:"payment_methods"`
+		ID             wireID   `json:"id"`
+		InvoiceCount   int      `json:"invoice_count"`
+		IssuedCents    int64    `json:"issued_cents"`
+		PaymentMethods []string `json:"payment_methods"`
 		Documents      []struct {
-			Service       string     `json:"service"`
-			RunID         testpkg.ID `json:"run_id"`
-			Number        string     `json:"number"`
-			PaymentMethod string     `json:"payment_method"`
-			PeriodName    string     `json:"period_name"`
+			Service       string `json:"service"`
+			RunID         wireID `json:"run_id"`
+			Number        string `json:"number"`
+			PaymentMethod string `json:"payment_method"`
+			PeriodName    string `json:"period_name"`
 		} `json:"documents"`
 	}
 	families := decodeSchoolPortalData[[]familyBody](t, rec.Body.Bytes())
@@ -374,8 +374,8 @@ func TestFamilyDeviationReachesTheNextReleaseOnly(t *testing.T) {
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, "/traeger/billing-families", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	listed := decodeSchoolPortalData[[]struct {
-		ID           testpkg.ID `json:"id"`
-		InvoiceCount int        `json:"invoice_count"`
+		ID           wireID `json:"id"`
+		InvoiceCount int    `json:"invoice_count"`
 	}](t, rec.Body.Bytes())
 	require.Len(t, listed, 1, "the payer does not split the family")
 	assert.Negative(t, listed[0].ID)

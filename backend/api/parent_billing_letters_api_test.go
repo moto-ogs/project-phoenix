@@ -29,16 +29,16 @@ type billingLettersBody struct {
 		Name  string `json:"name"`
 		Phone string `json:"phone"`
 	} `json:"emergency_contacts"`
-	CreatedByAccountID *testpkg.ID `json:"created_by_account_id"`
-	TemplateVersion    int         `json:"template_version"`
+	CreatedByAccountID *wireID `json:"created_by_account_id"`
+	TemplateVersion    int     `json:"template_version"`
 }
 
 type billingRunLettersBody struct {
-	ID        testpkg.ID `json:"id"`
-	Status    string     `json:"status"`
+	ID        wireID `json:"id"`
+	Status    string `json:"status"`
 	Documents []struct {
-		ID     testpkg.ID `json:"id"`
-		Number string     `json:"number"`
+		ID     wireID `json:"id"`
+		Number string `json:"number"`
 	} `json:"documents"`
 	Letters *billingLettersBody `json:"letters"`
 }

@@ -41,17 +41,17 @@ type handoverResultBody struct {
 }
 
 type recipientBody struct {
-	ID      testpkg.ID `json:"id"`
-	Name    string     `json:"name"`
-	Ready   bool       `json:"ready"`
-	Formats []string   `json:"formats"`
+	ID      wireID   `json:"id"`
+	Name    string   `json:"name"`
+	Ready   bool     `json:"ready"`
+	Formats []string `json:"formats"`
 }
 
 type recipientsPageBody struct {
 	Recipients  []recipientBody `json:"recipients"`
 	Assignments []struct {
-		Format      string      `json:"format"`
-		RecipientID *testpkg.ID `json:"recipient_id"`
+		Format      string  `json:"format"`
+		RecipientID *wireID `json:"recipient_id"`
 	} `json:"assignments"`
 }
 

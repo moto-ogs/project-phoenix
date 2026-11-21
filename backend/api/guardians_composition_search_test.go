@@ -18,11 +18,11 @@ import (
 
 type guardianSearchResponse struct {
 	Data []struct {
-		ID                  testpkg.ID `json:"id"`
-		FirstName           string     `json:"first_name"`
-		LastName            string     `json:"last_name"`
-		Email               *string    `json:"email"`
-		LinkedChildrenCount int        `json:"linked_children_count"`
+		ID                  wireID  `json:"id"`
+		FirstName           string  `json:"first_name"`
+		LastName            string  `json:"last_name"`
+		Email               *string `json:"email"`
+		LinkedChildrenCount int     `json:"linked_children_count"`
 	} `json:"data"`
 	Pagination struct {
 		PageSize     int `json:"page_size"`

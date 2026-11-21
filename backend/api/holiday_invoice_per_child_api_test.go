@@ -24,20 +24,20 @@ import (
 type holidayChildNumbersBody struct {
 	DebtorNumber string `json:"debtor_number"`
 	Children     []struct {
-		ChildID      testpkg.ID `json:"child_id"`
-		FirstName    string     `json:"first_name"`
-		DebtorNumber string     `json:"debtor_number"`
+		ChildID      wireID `json:"child_id"`
+		FirstName    string `json:"first_name"`
+		DebtorNumber string `json:"debtor_number"`
 	} `json:"children"`
 }
 
 type perChildDocumentBody struct {
-	ID                  testpkg.ID `json:"id"`
-	Kind                string     `json:"kind"`
-	Number              string     `json:"number"`
-	RegistrationID      testpkg.ID `json:"registration_id"`
-	RegistrationChildID testpkg.ID `json:"registration_child_id"`
-	DebtorNumber        string     `json:"debtor_number"`
-	ReferenceNumber     string     `json:"reference_number"`
+	ID                  wireID `json:"id"`
+	Kind                string `json:"kind"`
+	Number              string `json:"number"`
+	RegistrationID      wireID `json:"registration_id"`
+	RegistrationChildID wireID `json:"registration_child_id"`
+	DebtorNumber        string `json:"debtor_number"`
+	ReferenceNumber     string `json:"reference_number"`
 	Children            []struct {
 		FirstName string `json:"first_name"`
 	} `json:"children"`

@@ -40,10 +40,10 @@ type kindRunBody struct {
 	PreviewCents       int64  `json:"preview_cents"`
 	Fingerprint        string `json:"fingerprint"`
 	Documents          []struct {
-		ID           testpkg.ID `json:"id"`
-		Kind         string     `json:"kind"`
-		DocumentKind string     `json:"document_kind"`
-		Number       string     `json:"number"`
+		ID           wireID `json:"id"`
+		Kind         string `json:"kind"`
+		DocumentKind string `json:"document_kind"`
+		Number       string `json:"number"`
 	} `json:"documents"`
 }
 
@@ -166,8 +166,8 @@ func TestFeeNoticeNeedsTheLegalRemedyAndKeepsItsKindAfterTheRelease(t *testing.T
 		map[string]any{"reason": "Falsche Woche"})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	cancellation := decodeSchoolPortalData[struct {
-		ID           testpkg.ID `json:"id"`
-		DocumentKind string     `json:"document_kind"`
+		ID           wireID `json:"id"`
+		DocumentKind string `json:"document_kind"`
 	}](t, rec.Body.Bytes())
 	assert.Equal(t, "fee_notice", cancellation.DocumentKind, "the Storno keeps the kind of its notice")
 	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, letterPath(int64(run.ID), int64(cancellation.ID)), nil)

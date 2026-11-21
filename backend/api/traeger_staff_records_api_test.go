@@ -195,40 +195,40 @@ type staffOverviewBody struct {
 		Representation string `json:"representation"`
 	} `json:"release"`
 	Schools []struct {
-		ID testpkg.ID `json:"id"`
+		ID wireID `json:"id"`
 	} `json:"schools"`
 	Records     []staffRecordBody `json:"records"`
 	Suggestions []struct {
-		Reason   string      `json:"reason"`
-		RecordID *testpkg.ID `json:"staff_record_id"`
+		Reason   string  `json:"reason"`
+		RecordID *wireID `json:"staff_record_id"`
 		Members  []struct {
-			SchoolID testpkg.ID `json:"school_id"`
-			StaffID  testpkg.ID `json:"staff_id"`
-			LastName string     `json:"last_name"`
+			SchoolID wireID `json:"school_id"`
+			StaffID  wireID `json:"staff_id"`
+			LastName string `json:"last_name"`
 		} `json:"members"`
 	} `json:"suggestions"`
 }
 
 type staffRecordBody struct {
-	ID              testpkg.ID `json:"id"`
-	FirstName       string     `json:"first_name"`
-	LastName        string     `json:"last_name"`
-	Birthday        string     `json:"birthday"`
-	PersonnelNumber *string    `json:"personnel_number"`
-	HasFinancial    bool       `json:"has_financial"`
+	ID              wireID  `json:"id"`
+	FirstName       string  `json:"first_name"`
+	LastName        string  `json:"last_name"`
+	Birthday        string  `json:"birthday"`
+	PersonnelNumber *string `json:"personnel_number"`
+	HasFinancial    bool    `json:"has_financial"`
 	Employments     []struct {
-		SchoolID testpkg.ID `json:"school_id"`
-		StaffID  testpkg.ID `json:"staff_id"`
-		Active   bool       `json:"active"`
+		SchoolID wireID `json:"school_id"`
+		StaffID  wireID `json:"staff_id"`
+		Active   bool   `json:"active"`
 	} `json:"employments"`
 	Financial struct {
 		IBAN *string `json:"iban"`
 	} `json:"financial"`
 	Changes []struct {
-		Kind     string      `json:"kind"`
-		Field    string      `json:"field"`
-		Value    string      `json:"value"`
-		SchoolID *testpkg.ID `json:"school_id"`
+		Kind     string  `json:"kind"`
+		Field    string  `json:"field"`
+		Value    string  `json:"value"`
+		SchoolID *wireID `json:"school_id"`
 	} `json:"changes"`
 }
 
@@ -374,7 +374,7 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 		rec = traegerJSON(t, router, office.token, http.MethodPut, path, map[string]any{"iban": "DE89 3704 0044 0532 0130 00"})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		assert.Equal(t, record.ID, decode[struct {
-			ID testpkg.ID `json:"id"`
+			ID wireID `json:"id"`
 		}](t, rec).ID)
 		rec = traegerJSON(t, router, office.token, http.MethodGet, path, nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

@@ -85,9 +85,9 @@ func checkCheckInToTarget(t *testing.T, graph *goldenRuntime) {
 	require.Equal(t, http.StatusOK, code, body)
 	var stay struct {
 		Data struct {
-			CheckedIn     []int64    `json:"checked_in"`
-			ActiveGroupID testpkg.ID `json:"active_group_id"`
-			RoomID        testpkg.ID `json:"room_id"`
+			CheckedIn     []int64 `json:"checked_in"`
+			ActiveGroupID wireID  `json:"active_group_id"`
+			RoomID        wireID  `json:"room_id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal([]byte(body), &stay))
@@ -104,8 +104,8 @@ func checkCheckInToTarget(t *testing.T, graph *goldenRuntime) {
 	require.Equal(t, http.StatusOK, code, body)
 	var moved struct {
 		Data struct {
-			Moved         []int64    `json:"moved"`
-			ActiveGroupID testpkg.ID `json:"active_group_id"`
+			Moved         []int64 `json:"moved"`
+			ActiveGroupID wireID  `json:"active_group_id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal([]byte(body), &moved))
@@ -121,8 +121,8 @@ func checkCheckInToTarget(t *testing.T, graph *goldenRuntime) {
 	require.Equal(t, http.StatusOK, code, body)
 	var assigned struct {
 		Data struct {
-			Assigned      []int64    `json:"assigned"`
-			ActiveGroupID testpkg.ID `json:"active_group_id"`
+			Assigned      []int64 `json:"assigned"`
+			ActiveGroupID wireID  `json:"active_group_id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal([]byte(body), &assigned))

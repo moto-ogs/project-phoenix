@@ -27,11 +27,11 @@ import (
 )
 
 type holidayGuestGroupBody struct {
-	GroupID  testpkg.ID `json:"group_id"`
-	WeekID   testpkg.ID `json:"week_id"`
-	StartsOn string     `json:"starts_on"`
-	EndsOn   string     `json:"ends_on"`
-	Guests   int        `json:"guests"`
+	GroupID  wireID `json:"group_id"`
+	WeekID   wireID `json:"week_id"`
+	StartsOn string `json:"starts_on"`
+	EndsOn   string `json:"ends_on"`
+	Guests   int    `json:"guests"`
 }
 
 // groupLiveRouter serves the group page's navigation and live view of the
@@ -111,7 +111,7 @@ func TestFeriengruppeWaitsOutsideTheDailyListsUntilItsWeek(t *testing.T) {
 	f.today.Store(calendar.NewDate(2099, 7, 1))
 	require.Equal(t, http.StatusOK, f.assign(t, lead, int64(week.ID), f.group).Code)
 
-	assert.Equal(t, []holidayGuestGroupBody{{GroupID: testpkg.ID(f.group), WeekID: week.ID, StartsOn: "2099-07-06", EndsOn: "2099-07-10", Guests: 1}},
+	assert.Equal(t, []holidayGuestGroupBody{{GroupID: wireID(f.group), WeekID: week.ID, StartsOn: "2099-07-06", EndsOn: "2099-07-10", Guests: 1}},
 		f.guestGroups(t, lead), "the group management names the week and the guests waiting for it")
 	assert.Equal(t, []int64{regular}, dailyGroups(t, live, lead),
 		"before its week the empty Feriengruppe stays out of the daily lists")

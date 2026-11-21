@@ -129,7 +129,7 @@ func (f holidayHostFixture) submitShared(t *testing.T) int64 {
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(f.link), body)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	id := decodeSchoolPortalData[struct {
-		ID testpkg.ID `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
 	_, err := f.db.ExecContext(t.Context(), `UPDATE enrollment.holiday_registrations
 		SET consent_version = NULL, custody_confirmed_at = NULL, declaration_name = NULL WHERE id = ?`, id)

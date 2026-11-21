@@ -23,18 +23,18 @@ import (
 // push (#6347, decision A) through the routes.
 
 type careNoticeLetterBody struct {
-	NoticeID       testpkg.ID `json:"notice_id"`
-	ContractID     testpkg.ID `json:"contract_id"`
-	Kind           string     `json:"kind"`
-	Number         string     `json:"number"`
-	AmendsNumber   string     `json:"amends_number"`
-	AmendedBy      string     `json:"amended_by_number"`
-	RecipientEmail string     `json:"recipient_email"`
-	HasLetter      bool       `json:"has_letter"`
-	SHA256         string     `json:"sha256"`
-	InInbox        bool       `json:"in_inbox"`
-	Status         string     `json:"status"`
-	Sends          int        `json:"sends"`
+	NoticeID       wireID `json:"notice_id"`
+	ContractID     wireID `json:"contract_id"`
+	Kind           string `json:"kind"`
+	Number         string `json:"number"`
+	AmendsNumber   string `json:"amends_number"`
+	AmendedBy      string `json:"amended_by_number"`
+	RecipientEmail string `json:"recipient_email"`
+	HasLetter      bool   `json:"has_letter"`
+	SHA256         string `json:"sha256"`
+	InInbox        bool   `json:"in_inbox"`
+	Status         string `json:"status"`
+	Sends          int    `json:"sends"`
 }
 
 type careNoticeLettersBody struct {

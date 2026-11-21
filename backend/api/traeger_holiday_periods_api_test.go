@@ -22,25 +22,25 @@ import (
 )
 
 type holidayTimeModelBody struct {
-	ID         testpkg.ID `json:"id,omitempty"`
-	Name       string     `json:"name"`
-	StartsAt   string     `json:"starts_at"`
-	EndsAt     string     `json:"ends_at"`
-	PriceCents int64      `json:"price_cents"`
-	Archived   bool       `json:"archived,omitempty"`
-	Protected  bool       `json:"protected,omitempty"`
+	ID         wireID `json:"id,omitempty"`
+	Name       string `json:"name"`
+	StartsAt   string `json:"starts_at"`
+	EndsAt     string `json:"ends_at"`
+	PriceCents int64  `json:"price_cents"`
+	Archived   bool   `json:"archived,omitempty"`
+	Protected  bool   `json:"protected,omitempty"`
 }
 
 type holidayWeekBody struct {
-	ID           testpkg.ID             `json:"id,omitempty"`
+	ID           wireID                 `json:"id,omitempty"`
 	StartsOn     string                 `json:"starts_on"`
 	EndsOn       string                 `json:"ends_on"`
-	HostSchoolID testpkg.ID             `json:"host_school_id"`
+	HostSchoolID wireID                 `json:"host_school_id"`
 	TimeModels   []holidayTimeModelBody `json:"time_models"`
 }
 
 type holidayPeriodBody struct {
-	ID                   testpkg.ID        `json:"id,omitempty"`
+	ID                   wireID            `json:"id,omitempty"`
 	Name                 string            `json:"name"`
 	RegistrationOpensOn  string            `json:"registration_opens_on"`
 	RegistrationClosesOn string            `json:"registration_closes_on"`
@@ -120,11 +120,11 @@ func januaryHolidays(office traegerOffice) holidayPeriodBody {
 		Binding:              true,
 		Notes:                "Mittagessen gibt es vor Ort.",
 		Weeks: []holidayWeekBody{
-			{StartsOn: "2027-01-04", EndsOn: "2027-01-08", HostSchoolID: testpkg.ID(office.schools[0]), TimeModels: []holidayTimeModelBody{
+			{StartsOn: "2027-01-04", EndsOn: "2027-01-08", HostSchoolID: wireID(office.schools[0]), TimeModels: []holidayTimeModelBody{
 				{Name: "bis 13 Uhr", StartsAt: "8:00", EndsAt: "13:00", PriceCents: 4500},
 				{Name: "bis 16 Uhr", StartsAt: "08:00", EndsAt: "16:00", PriceCents: 6750},
 			}},
-			{StartsOn: "2027-01-11", EndsOn: "2027-01-15", HostSchoolID: testpkg.ID(office.schools[1]), TimeModels: []holidayTimeModelBody{
+			{StartsOn: "2027-01-11", EndsOn: "2027-01-15", HostSchoolID: wireID(office.schools[1]), TimeModels: []holidayTimeModelBody{
 				{Name: "bis 13 Uhr", StartsAt: "08:00", EndsAt: "13:00", PriceCents: 4500},
 			}},
 		},
@@ -171,7 +171,7 @@ func TestTraegerHolidayPeriodIsPlannedChangedAndPublished(t *testing.T) {
 	change := created
 	first := change.Weeks[0]
 	first.TimeModels = []holidayTimeModelBody{{ID: first.TimeModels[0].ID, Name: "bis 13 Uhr", StartsAt: "08:00", EndsAt: "13:00", PriceCents: 5000}}
-	change.Weeks = []holidayWeekBody{first, {StartsOn: "2027-01-18", EndsOn: "2027-01-22", HostSchoolID: testpkg.ID(office.schools[1]), TimeModels: []holidayTimeModelBody{
+	change.Weeks = []holidayWeekBody{first, {StartsOn: "2027-01-18", EndsOn: "2027-01-22", HostSchoolID: wireID(office.schools[1]), TimeModels: []holidayTimeModelBody{
 		{Name: "bis 16 Uhr", StartsAt: "08:00", EndsAt: "16:00", PriceCents: 7000},
 	}}}
 	change.Name = "Winterferien 2027 (geändert)"
@@ -231,7 +231,7 @@ func TestTraegerHolidayPeriodAcceptsOnlySchoolsOfTheTraeger(t *testing.T) {
 	foreignSchool := testpkg.CreateTestSchoolInOrganization(t, db, foreign, "OGS Fremd")
 
 	body := januaryHolidays(office)
-	body.Weeks[1].HostSchoolID = testpkg.ID(foreignSchool)
+	body.Weeks[1].HostSchoolID = wireID(foreignSchool)
 	rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/holiday-periods/", body)
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	var refusal holidayErrorBody
@@ -248,7 +248,7 @@ func TestTraegerHolidayPeriodAcceptsOnlySchoolsOfTheTraeger(t *testing.T) {
 	created := createHolidayPeriod(t, router, office, januaryHolidays(office))
 	testpkg.SoftDeleteTestSchool(t, db, office.schools[1])
 	change := created
-	change.Weeks[0].HostSchoolID = testpkg.ID(office.schools[1])
+	change.Weeks[0].HostSchoolID = wireID(office.schools[1])
 	rec = traegerJSON(t, router, office.token, http.MethodPut, holidayPeriodPath(int64(created.ID)), change)
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &refusal))

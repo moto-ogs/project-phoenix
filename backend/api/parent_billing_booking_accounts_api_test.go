@@ -25,24 +25,24 @@ const bookingAccountsPath = financeExportsPath + "/booking-accounts"
 type bookingAccountsBody struct {
 	StandardAccount string `json:"standard_account"`
 	Schools         []struct {
-		ID testpkg.ID `json:"id"`
+		ID wireID `json:"id"`
 	} `json:"schools"`
 	Offerings []struct {
-		SchoolID       testpkg.ID `json:"school_id"`
-		CareOfferingID testpkg.ID `json:"care_offering_id"`
-		ModuleNames    []string   `json:"module_names"`
+		SchoolID       wireID   `json:"school_id"`
+		CareOfferingID wireID   `json:"care_offering_id"`
+		ModuleNames    []string `json:"module_names"`
 	} `json:"offerings"`
 	RevenueAccounts []struct {
-		Scope   string     `json:"scope"`
-		ScopeID testpkg.ID `json:"scope_id"`
-		Account string     `json:"account"`
+		Scope   string `json:"scope"`
+		ScopeID wireID `json:"scope_id"`
+		Account string `json:"account"`
 	} `json:"revenue_accounts"`
 	CostCenters []struct {
-		ID        testpkg.ID `json:"id"`
-		Scope     string     `json:"scope"`
-		ScopeID   testpkg.ID `json:"scope_id"`
-		ValidFrom string     `json:"valid_from"`
-		Code      string     `json:"code"`
+		ID        wireID `json:"id"`
+		Scope     string `json:"scope"`
+		ScopeID   wireID `json:"scope_id"`
+		ValidFrom string `json:"valid_from"`
+		Code      string `json:"code"`
 	} `json:"cost_centers"`
 }
 

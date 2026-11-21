@@ -25,10 +25,10 @@ const careCostSharesPath = "/traeger/care-cost-shares"
 
 type careCostShareSetBody struct {
 	Contracts []struct {
-		ContractID testpkg.ID `json:"contract_id"`
+		ContractID wireID `json:"contract_id"`
 		Shares     []struct {
-			ID     testpkg.ID `json:"id"`
-			Status string     `json:"status"`
+			ID     wireID `json:"id"`
+			Status string `json:"status"`
 		} `json:"shares"`
 	} `json:"contracts"`
 	Expiring int `json:"expiring"`
@@ -37,21 +37,21 @@ type careCostShareSetBody struct {
 type careCostShareRunBody struct {
 	careRunBody
 	Invoices []struct {
-		ID         testpkg.ID `json:"id"`
-		ContractID testpkg.ID `json:"contract_id"`
-		Number     string     `json:"number"`
+		ID         wireID `json:"id"`
+		ContractID wireID `json:"contract_id"`
+		Number     string `json:"number"`
 		CostShares []struct {
-			Kind           string     `json:"kind"`
-			CostBearerID   testpkg.ID `json:"cost_bearer_id"`
-			CostBearerName string     `json:"cost_bearer_name"`
-			AmountCents    int64      `json:"amount_cents"`
+			Kind           string `json:"kind"`
+			CostBearerID   wireID `json:"cost_bearer_id"`
+			CostBearerName string `json:"cost_bearer_name"`
+			AmountCents    int64  `json:"amount_cents"`
 		} `json:"cost_shares"`
 		TotalCents int64 `json:"total_cents"`
 	} `json:"invoices"`
 	CostBearers []struct {
-		CostBearerID testpkg.ID `json:"cost_bearer_id"`
-		InvoiceCount int        `json:"invoice_count"`
-		AmountCents  int64      `json:"amount_cents"`
+		CostBearerID wireID `json:"cost_bearer_id"`
+		InvoiceCount int    `json:"invoice_count"`
+		AmountCents  int64  `json:"amount_cents"`
 	} `json:"cost_bearers"`
 }
 
@@ -62,7 +62,7 @@ func (f careBillingFixture) costBearer(t *testing.T, name string) int64 {
 		map[string]any{"name": name, "address": "Am Kreishaus 1\n12345 Musterstadt", "file_reference": "51-2030", "active": true})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	return int64(decodeSchoolPortalData[struct {
-		ID testpkg.ID `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID)
 }
 
@@ -302,7 +302,7 @@ func TestCareCostSharesNeedTheRightStayWithTheTraegerAndAreRecorded(t *testing.T
 		map[string]any{"name": "Fremdes Jugendamt", "active": true})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	foreignBearer := decodeSchoolPortalData[struct {
-		ID testpkg.ID `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careCostSharesPath,
 		careCostShare(contract, "other_subsidy", int64(foreignBearer), map[string]any{"share_cents": 100}))

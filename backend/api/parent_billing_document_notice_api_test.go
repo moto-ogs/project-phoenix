@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 type queuedDocumentNotice struct {
@@ -51,9 +50,9 @@ func TestBillingLetterSendPushesTheInboxOncePerLetter(t *testing.T) {
 		assert.JSONEq(t, `{"deferred":true}`, string(notice.Recipient), "the devices are found when the worker sends")
 		assert.Equal(t, fmt.Sprintf("parent-billing-document:%d", notice.RelatedID), notice.IdempotencyKey)
 		var payload struct {
-			OrganizationID testpkg.ID `json:"organization_id"`
-			DocumentID     testpkg.ID `json:"document_id"`
-			RecipientEmail string     `json:"recipient_email"`
+			OrganizationID wireID `json:"organization_id"`
+			DocumentID     wireID `json:"document_id"`
+			RecipientEmail string `json:"recipient_email"`
 		}
 		require.NoError(t, json.Unmarshal(notice.Payload, &payload))
 		assert.Equal(t, f.office.organization, payload.OrganizationID)

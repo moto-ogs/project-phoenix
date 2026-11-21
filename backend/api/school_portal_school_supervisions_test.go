@@ -85,7 +85,7 @@ func instanceIDsInDayList(t *testing.T, body []byte) []int64 {
 	var envelope struct {
 		Data struct {
 			Instances []struct {
-				ID testpkg.ID `json:"id"`
+				ID wireID `json:"id"`
 			} `json:"instances"`
 		} `json:"data"`
 	}
@@ -380,8 +380,8 @@ func TestSchoolSupervisionCheckOutAndComplete(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	var absent struct {
 		Data struct {
-			StudentID testpkg.ID `json:"student_id"`
-			Status    string     `json:"status"`
+			StudentID wireID `json:"student_id"`
+			Status    string `json:"status"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &absent), rec.Body.String())
@@ -393,9 +393,9 @@ func TestSchoolSupervisionCheckOutAndComplete(t *testing.T) {
 	var roster struct {
 		Data struct {
 			Rows []struct {
-				StudentID        testpkg.ID `json:"student_id"`
-				CurrentlyPresent bool       `json:"currently_present"`
-				CheckedOutAt     *string    `json:"checked_out_at"`
+				StudentID        wireID  `json:"student_id"`
+				CurrentlyPresent bool    `json:"currently_present"`
+				CheckedOutAt     *string `json:"checked_out_at"`
 			} `json:"rows"`
 		} `json:"data"`
 	}
@@ -415,9 +415,9 @@ func TestSchoolSupervisionCheckOutAndComplete(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	var completed struct {
 		Data struct {
-			ID          testpkg.ID `json:"id"`
-			Status      string     `json:"status"`
-			CompletedAt *string    `json:"completed_at"`
+			ID          wireID  `json:"id"`
+			Status      string  `json:"status"`
+			CompletedAt *string `json:"completed_at"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &completed), rec.Body.String())

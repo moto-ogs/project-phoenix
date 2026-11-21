@@ -156,9 +156,9 @@ func TestCareContractMailLinkSignsOnceOnlyItsContract(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, "no-store", rec.Header().Get("Cache-Control"))
 	view := decodeSchoolPortalData[struct {
-		ContractID       testpkg.ID `json:"contract_id"`
-		Status           string     `json:"status"`
-		WithdrawalNotice []string   `json:"withdrawal_notice"`
+		ContractID       wireID   `json:"contract_id"`
+		Status           string   `json:"status"`
+		WithdrawalNotice []string `json:"withdrawal_notice"`
 	}](t, rec.Body.Bytes())
 	assert.Equal(t, contract, view.ContractID, "the link names its contract")
 	assert.Equal(t, "versendet", view.Status)

@@ -65,7 +65,7 @@ func registerWithHealth(t *testing.T, f holidayGuestFixture) int64 {
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(f.link), body)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	return int64(decodeSchoolPortalData[struct {
-		ID testpkg.ID `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID)
 }
 
@@ -259,7 +259,7 @@ func TestOwnChildKeepsItsHealthFieldAndSeesTheRegistrationBesideIt(t *testing.T)
 	rec := f.get(t, lead, path)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	entries := decodeSchoolPortalData[[]struct {
-		WeekID testpkg.ID     `json:"week_id"`
+		WeekID wireID         `json:"week_id"`
 		Health hostHealthBody `json:"health"`
 	}](t, rec.Body.Bytes())
 	require.Len(t, entries, 1)

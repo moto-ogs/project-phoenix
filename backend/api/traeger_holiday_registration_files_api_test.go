@@ -290,7 +290,7 @@ func TestHolidayRegistrationKeepsTheRetentionOfItsText(t *testing.T) {
 	rec = publicJSON(t, f.public, http.MethodPost, registrationPath(f.period.PublicToken), agreed)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	later := decodeSchoolPortalData[struct {
-		ID testpkg.ID `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
 
 	// The last week of the fixture ends on 15.01.2027. The earlier
@@ -300,10 +300,10 @@ func TestHolidayRegistrationKeepsTheRetentionOfItsText(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	list := decodeSchoolPortalData[struct {
 		Registrations []struct {
-			ID              testpkg.ID `json:"id"`
-			RetentionDays   int        `json:"retention_days"`
-			DeletesOn       string     `json:"deletes_on"`
-			HealthDeletesOn string     `json:"health_deletes_on"`
+			ID              wireID `json:"id"`
+			RetentionDays   int    `json:"retention_days"`
+			DeletesOn       string `json:"deletes_on"`
+			HealthDeletesOn string `json:"health_deletes_on"`
 		} `json:"registrations"`
 	}](t, rec.Body.Bytes())
 	require.Len(t, list.Registrations, 3)

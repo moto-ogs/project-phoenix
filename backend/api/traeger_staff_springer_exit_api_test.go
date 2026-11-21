@@ -88,9 +88,9 @@ func TestStaffPoolLastBlockEndsTheSpringerEmployment(t *testing.T) {
 		rec := traegerJSON(t, router, office.token, http.MethodGet, fmt.Sprintf("/traeger/staff-records/%d", record), nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		type place struct {
-			SchoolID testpkg.ID `json:"school_id"`
-			Active   bool       `json:"active"`
-			ViaPool  bool       `json:"via_pool"`
+			SchoolID wireID `json:"school_id"`
+			Active   bool   `json:"active"`
+			ViaPool  bool   `json:"via_pool"`
 		}
 		body := decode[struct {
 			Employments []place `json:"employments"`

@@ -24,10 +24,10 @@ import (
 
 type holidayClosureImpactBody struct {
 	Weeks []struct {
-		WeekID       testpkg.ID `json:"week_id"`
-		HostSchoolID testpkg.ID `json:"host_school_id"`
-		Children     int        `json:"children"`
-		Families     int        `json:"families"`
+		WeekID       wireID `json:"week_id"`
+		HostSchoolID wireID `json:"host_school_id"`
+		Children     int    `json:"children"`
+		Families     int    `json:"families"`
 		ClosedDays   []struct {
 			Date string `json:"date"`
 		} `json:"closed_days"`
@@ -38,11 +38,11 @@ type holidayClosureImpactBody struct {
 }
 
 type traegerClosingDaySaveBody struct {
-	StartDate            string       `json:"start_date"`
-	EndDate              string       `json:"end_date"`
-	Reason               string       `json:"reason"`
-	SchoolIDs            []testpkg.ID `json:"school_ids"`
-	HolidayBookingsToken string       `json:"holiday_bookings_token,omitempty"`
+	StartDate            string   `json:"start_date"`
+	EndDate              string   `json:"end_date"`
+	Reason               string   `json:"reason"`
+	SchoolIDs            []wireID `json:"school_ids"`
+	HolidayBookingsToken string   `json:"holiday_bookings_token,omitempty"`
 }
 
 // bookHolidayWeek books one child of the family email into a week of a
@@ -117,7 +117,7 @@ func TestTraegerClosingDayTellsTheParentsOfBookedHolidayWeeksOnce(t *testing.T) 
 	north := bookHolidayWeek(t, office.organization, office.schools[0], "nord@example.org")
 	south := bookHolidayWeek(t, office.organization, office.schools[1], "sued@example.org")
 	bookHolidayWeek(t, foreign.organization, foreign.schools[0], "fremd@example.org")
-	day := traegerClosingDaySaveBody{StartDate: "2030-07-10", EndDate: "2030-07-10", Reason: "Betriebsausflug", SchoolIDs: testpkg.IDsOf(office.schools)}
+	day := traegerClosingDaySaveBody{StartDate: "2030-07-10", EndDate: "2030-07-10", Reason: "Betriebsausflug", SchoolIDs: testpkg.IDsOf[wireID](office.schools)}
 
 	rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/holiday-closures/preview", day)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -141,8 +141,8 @@ func TestTraegerClosingDayTellsTheParentsOfBookedHolidayWeeksOnce(t *testing.T) 
 	rec = traegerJSON(t, router, office.token, http.MethodPost, "/traeger/closing-days/", day)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	created := decodeSchoolPortalData[struct {
-		ID               testpkg.ID `json:"id"`
-		NotifiedFamilies int        `json:"notified_families"`
+		ID               wireID `json:"id"`
+		NotifiedFamilies int    `json:"notified_families"`
 	}](t, rec.Body.Bytes())
 	assert.Equal(t, 2, created.NotifiedFamilies)
 	assert.Equal(t, 2, closureMails(t, db, office.organization), "one mail per family")
@@ -163,7 +163,7 @@ func TestTraegerClosingDayTellsTheParentsOfBookedHolidayWeeksOnce(t *testing.T) 
 	assert.Empty(t, decodeSchoolPortalData[holidayClosureImpactBody](t, rec.Body.Bytes()).Weeks)
 
 	// A school of the foreign Träger is refused before anything is read.
-	day.SchoolIDs = testpkg.IDsOf(foreign.schools[:1])
+	day.SchoolIDs = testpkg.IDsOf[wireID](foreign.schools[:1])
 	rec = traegerJSON(t, router, office.token, http.MethodPost, "/traeger/closing-days/", day)
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "traeger.closing_day_school_outside")
@@ -216,11 +216,11 @@ func TestTraegerOfficeTellsTheParentsOfPendingSchoolClosingDays(t *testing.T) {
 	type pendingBody struct {
 		Token   string `json:"token"`
 		Notices []struct {
-			ID        testpkg.ID `json:"id"`
-			SchoolID  testpkg.ID `json:"school_id"`
-			Token     string     `json:"token"`
-			Revision  int        `json:"revision"`
-			CanNotify bool       `json:"can_notify"`
+			ID        wireID `json:"id"`
+			SchoolID  wireID `json:"school_id"`
+			Token     string `json:"token"`
+			Revision  int    `json:"revision"`
+			CanNotify bool   `json:"can_notify"`
 		} `json:"notices"`
 	}
 	pending := func() pendingBody {
@@ -238,8 +238,8 @@ func TestTraegerOfficeTellsTheParentsOfPendingSchoolClosingDays(t *testing.T) {
 		map[string]any{"token": first.Token, "revision": first.Revision})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	confirmed := decodeSchoolPortalData[struct {
-		ID        testpkg.ID `json:"id"`
-		CanNotify bool       `json:"can_notify"`
+		ID        wireID `json:"id"`
+		CanNotify bool   `json:"can_notify"`
 	}](t, rec.Body.Bytes())
 	assert.Equal(t, first.ID, confirmed.ID)
 	assert.False(t, confirmed.CanNotify, "a told notice waits for no further click")

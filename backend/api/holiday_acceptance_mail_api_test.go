@@ -76,7 +76,7 @@ func TestConfirmationSendsOneAcceptanceMailWithTheTextOfTheTraeger(t *testing.T)
 		rec := publicJSON(t, f.public, http.MethodPost, registrationPath(f.period.PublicToken), siblingsRegistration(f.offer, email))
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		return int64(decodeSchoolPortalData[struct {
-			ID testpkg.ID `json:"id"`
+			ID wireID `json:"id"`
 		}](t, rec.Body.Bytes()).ID)
 	}
 	plain, other := submit(parent), submit(fmt.Sprintf("zweite.%d@example.org", unique))

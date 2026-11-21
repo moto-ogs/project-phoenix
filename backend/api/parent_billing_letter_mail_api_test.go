@@ -23,11 +23,10 @@ import (
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 type letterMailingBody struct {
-	DocumentID     testpkg.ID `json:"document_id"`
+	DocumentID     wireID     `json:"document_id"`
 	Number         string     `json:"number"`
 	RecipientEmail string     `json:"recipient_email"`
 	Status         string     `json:"status"`
@@ -215,11 +214,11 @@ func TestBillingLetterMailsReachEveryFamilyOnceAndShowTheirState(t *testing.T) {
 	for _, mail := range mails {
 		assert.Nil(t, mail.TenantID, "a mail of the Träger has no school")
 		var payload struct {
-			DocumentID  testpkg.ID `json:"document_id"`
-			TraegerName string     `json:"traeger_name"`
-			Number      string     `json:"number"`
-			Filename    string     `json:"filename"`
-			PDF         []byte     `json:"pdf"`
+			DocumentID  wireID `json:"document_id"`
+			TraegerName string `json:"traeger_name"`
+			Number      string `json:"number"`
+			Filename    string `json:"filename"`
+			PDF         []byte `json:"pdf"`
 		}
 		require.NoError(t, json.Unmarshal(mail.Payload, &payload))
 		var recipient struct {

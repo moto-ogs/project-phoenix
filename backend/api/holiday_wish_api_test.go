@@ -88,15 +88,15 @@ func wishRegistration(offer holidayOfferBody, email, proof string) map[string]an
 }
 
 type wishChildBody struct {
-	ID                testpkg.ID `json:"id"`
-	FirstName         string     `json:"first_name"`
-	HolidayWish       string     `json:"holiday_wish"`
-	HolidayWishSource string     `json:"holiday_wish_source"`
-	HolidayWishCheck  bool       `json:"holiday_wish_check"`
+	ID                wireID `json:"id"`
+	FirstName         string `json:"first_name"`
+	HolidayWish       string `json:"holiday_wish"`
+	HolidayWishSource string `json:"holiday_wish_source"`
+	HolidayWishCheck  bool   `json:"holiday_wish_check"`
 }
 
 type wishRegistrationBody struct {
-	ID       testpkg.ID      `json:"id"`
+	ID       wireID          `json:"id"`
 	Children []wishChildBody `json:"children"`
 	History  []struct {
 		Action string `json:"action"`
@@ -139,7 +139,7 @@ func TestHolidayWishRoundTrip(t *testing.T) {
 	require.Equal(t, http.StatusCreated, stated.Code, stated.Body.String())
 	assert.NotContains(t, stated.Body.String(), "holiday_wish", "the receipt names no wish")
 	statedID := decodeSchoolPortalData[struct {
-		ID testpkg.ID `json:"id"`
+		ID wireID `json:"id"`
 	}](t, stated.Body.Bytes()).ID
 
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut,
@@ -157,7 +157,7 @@ func TestHolidayWishRoundTrip(t *testing.T) {
 	require.Equal(t, http.StatusCreated, unknown.StatusCode, "without a statement nothing is looked up and nothing refused")
 	var unknownBody struct {
 		Data struct {
-			ID testpkg.ID `json:"id"`
+			ID wireID `json:"id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.NewDecoder(unknown.Body).Decode(&unknownBody))

@@ -49,9 +49,9 @@ func (f reviewFixture) changeDebtorNumber(t *testing.T, token string, id int64, 
 }
 
 type debtorNumberDetail struct {
-	ID           testpkg.ID `json:"id"`
-	Status       string     `json:"status"`
-	DebtorNumber string     `json:"debtor_number"`
+	ID           wireID `json:"id"`
+	Status       string `json:"status"`
+	DebtorNumber string `json:"debtor_number"`
 	History      []struct {
 		Action  string         `json:"action"`
 		Details map[string]any `json:"details"`
@@ -203,8 +203,8 @@ func TestDebtorNumberChangesUntilAnInvoiceIsIssued(t *testing.T) {
 
 type billingDebtorBody struct {
 	Documents []struct {
-		RegistrationID testpkg.ID `json:"registration_id"`
-		DebtorNumber   string     `json:"debtor_number"`
+		RegistrationID wireID `json:"registration_id"`
+		DebtorNumber   string `json:"debtor_number"`
 	} `json:"documents"`
 }
 
@@ -268,8 +268,8 @@ func TestDebtorNumberShowsInListDetailAndExportOfTheTraegerOnly(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	list := decodeSchoolPortalData[struct {
 		Registrations []struct {
-			ID           testpkg.ID `json:"id"`
-			DebtorNumber string     `json:"debtor_number"`
+			ID           wireID `json:"id"`
+			DebtorNumber string `json:"debtor_number"`
 		} `json:"registrations"`
 	}](t, rec.Body.Bytes())
 	got := map[int64]string{}

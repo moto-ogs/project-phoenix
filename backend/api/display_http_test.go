@@ -191,7 +191,7 @@ func createDisplayViaAPI(t *testing.T, router http.Handler, adminJWT, name strin
 	var envelope struct {
 		Data struct {
 			Display struct {
-				ID testpkg.ID `json:"id"`
+				ID wireID `json:"id"`
 			} `json:"display"`
 			Token string `json:"token"`
 		} `json:"data"`
@@ -769,9 +769,9 @@ func TestDisplayManagementAnswersItsContract(t *testing.T) {
 		return rec.Body.Bytes()
 	}
 	type display struct {
-		ID       testpkg.ID `json:"id"`
-		Name     string     `json:"name"`
-		IsActive bool       `json:"is_active"`
+		ID       wireID `json:"id"`
+		Name     string `json:"name"`
+		IsActive bool   `json:"is_active"`
 	}
 
 	var created struct {

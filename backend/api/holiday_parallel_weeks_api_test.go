@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // parallelHolidays offers the first January week at both schools of the Träger.
@@ -84,7 +83,7 @@ func TestChildBooksOnlyOneOfTheParallelWeeks(t *testing.T) {
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	var receipt struct {
 		Data struct {
-			ID testpkg.ID `json:"id"`
+			ID wireID `json:"id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &receipt))

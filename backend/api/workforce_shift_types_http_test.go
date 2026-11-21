@@ -67,7 +67,7 @@ func decodeShiftTypeID(t *testing.T, response *http.Response) int64 {
 	defer func() { _ = response.Body.Close() }()
 	var envelope struct {
 		Data struct {
-			ID testpkg.ID `json:"id"`
+			ID wireID `json:"id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.NewDecoder(response.Body).Decode(&envelope))
@@ -156,8 +156,8 @@ func TestShiftTypesRouteRejectsUnknownCategoryIDsAndRollsBack(t *testing.T) {
 	require.Equal(t, http.StatusOK, listed.StatusCode)
 	var envelope struct {
 		Data []struct {
-			ID   testpkg.ID `json:"id"`
-			Name string     `json:"name"`
+			ID   wireID `json:"id"`
+			Name string `json:"name"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.NewDecoder(listed.Body).Decode(&envelope))

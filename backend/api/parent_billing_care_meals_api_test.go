@@ -27,7 +27,7 @@ import (
 const careMealTariffsPath = "/traeger/care-meal-tariffs"
 
 type careMealInvoiceBody struct {
-	ContractID    testpkg.ID `json:"contract_id"`
+	ContractID    wireID `json:"contract_id"`
 	MealPositions []struct {
 		MealMonth   string `json:"meal_month"`
 		Mode        string `json:"mode"`
@@ -39,7 +39,7 @@ type careMealInvoiceBody struct {
 }
 
 type careMealRunBody struct {
-	ID           testpkg.ID            `json:"id"`
+	ID           wireID                `json:"id"`
 	Invoices     []careMealInvoiceBody `json:"invoices"`
 	PreviewCount int                   `json:"preview_count"`
 	PreviewCents int64                 `json:"preview_cents"`
@@ -376,11 +376,11 @@ func TestCareMealExcludedChildGetsNoMensaPosition(t *testing.T) {
 // invoice (#4689, ADR 0167).
 type careMealPaymentRun struct {
 	Invoices []struct {
-		ContractID    testpkg.ID `json:"contract_id"`
-		Service       string     `json:"service"`
-		Positions     []any      `json:"positions"`
-		MealPositions []any      `json:"meal_positions"`
-		TotalCents    int64      `json:"total_cents"`
+		ContractID    wireID `json:"contract_id"`
+		Service       string `json:"service"`
+		Positions     []any  `json:"positions"`
+		MealPositions []any  `json:"meal_positions"`
+		TotalCents    int64  `json:"total_cents"`
 		Payment       *struct {
 			Method    string `json:"method"`
 			DueOn     string `json:"due_on"`
@@ -699,9 +699,9 @@ func TestCareCostSharesTakeTheMensaByTheirScope(t *testing.T) {
 // fingerprint.
 type careExclusionRun struct {
 	Invoices []struct {
-		ContractID testpkg.ID `json:"contract_id"`
-		Service    string     `json:"service"`
-		TotalCents int64      `json:"total_cents"`
+		ContractID wireID `json:"contract_id"`
+		Service    string `json:"service"`
+		TotalCents int64  `json:"total_cents"`
 		Exclusion  *struct {
 			Reason string `json:"reason"`
 		} `json:"exclusion"`

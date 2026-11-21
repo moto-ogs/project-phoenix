@@ -17,21 +17,20 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 type noCareDayPeriodBody struct {
-	ID          testpkg.ID `json:"id"`
-	PublicToken string     `json:"public_token"`
+	ID          wireID `json:"id"`
+	PublicToken string `json:"public_token"`
 	Weeks       []struct {
-		ID          testpkg.ID `json:"id"`
-		BookingUnit string     `json:"booking_unit"`
+		ID          wireID `json:"id"`
+		BookingUnit string `json:"booking_unit"`
 		NoCareDays  []struct {
 			Date string `json:"date"`
 			Kind string `json:"kind"`
 		} `json:"no_care_days"`
 		TimeModels []struct {
-			ID testpkg.ID `json:"id"`
+			ID wireID `json:"id"`
 		} `json:"time_models"`
 	} `json:"weeks"`
 }

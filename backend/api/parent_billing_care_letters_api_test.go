@@ -27,20 +27,20 @@ import (
 )
 
 type careLetterDocumentBody struct {
-	InvoiceID          testpkg.ID `json:"invoice_id"`
-	Kind               string     `json:"kind"`
-	Number             string     `json:"number"`
-	InvoiceNumber      string     `json:"invoice_number"`
-	RecipientEmail     string     `json:"recipient_email"`
-	TotalCents         int64      `json:"total_cents"`
-	Cancelled          bool       `json:"cancelled"`
-	CancellationNumber string     `json:"cancellation_number"`
-	HasLetter          bool       `json:"has_letter"`
-	InInbox            bool       `json:"in_inbox"`
-	Printed            bool       `json:"printed"`
-	Replaced           bool       `json:"replaced"`
-	Status             string     `json:"status"`
-	Sends              int        `json:"sends"`
+	InvoiceID          wireID `json:"invoice_id"`
+	Kind               string `json:"kind"`
+	Number             string `json:"number"`
+	InvoiceNumber      string `json:"invoice_number"`
+	RecipientEmail     string `json:"recipient_email"`
+	TotalCents         int64  `json:"total_cents"`
+	Cancelled          bool   `json:"cancelled"`
+	CancellationNumber string `json:"cancellation_number"`
+	HasLetter          bool   `json:"has_letter"`
+	InInbox            bool   `json:"in_inbox"`
+	Printed            bool   `json:"printed"`
+	Replaced           bool   `json:"replaced"`
+	Status             string `json:"status"`
+	Sends              int    `json:"sends"`
 }
 
 type careLettersBody struct {

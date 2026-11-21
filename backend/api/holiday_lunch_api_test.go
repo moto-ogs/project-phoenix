@@ -20,16 +20,15 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 type lunchOfferBody struct {
 	Weeks []struct {
-		ID              testpkg.ID `json:"id"`
-		LunchPriceCents *int64     `json:"lunch_price_cents"`
-		LunchDays       int        `json:"lunch_days"`
+		ID              wireID `json:"id"`
+		LunchPriceCents *int64 `json:"lunch_price_cents"`
+		LunchDays       int    `json:"lunch_days"`
 		TimeModels      []struct {
-			ID testpkg.ID `json:"id"`
+			ID wireID `json:"id"`
 		} `json:"time_models"`
 	} `json:"weeks"`
 }

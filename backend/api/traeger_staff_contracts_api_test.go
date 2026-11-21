@@ -28,22 +28,22 @@ import (
 
 type contractRecordBody struct {
 	Contracts []struct {
-		ID       testpkg.ID `json:"id"`
-		Kind     string     `json:"kind"`
-		StartsOn string     `json:"starts_on"`
-		EndsOn   *string    `json:"ends_on"`
+		ID       wireID  `json:"id"`
+		Kind     string  `json:"kind"`
+		StartsOn string  `json:"starts_on"`
+		EndsOn   *string `json:"ends_on"`
 		Sites    []struct {
-			SchoolID       testpkg.ID `json:"school_id"`
-			SchoolName     string     `json:"school_name"`
-			ChangeableFrom string     `json:"changeable_from"`
+			SchoolID       wireID `json:"school_id"`
+			SchoolName     string `json:"school_name"`
+			ChangeableFrom string `json:"changeable_from"`
 			Soll           []struct {
 				ValidFrom      string `json:"valid_from"`
 				WeekdayMinutes []int  `json:"weekday_minutes"`
 			} `json:"soll"`
 		} `json:"sites"`
 		HolidayWeeks []struct {
-			SchoolID  testpkg.ID `json:"school_id"`
-			WeekStart string     `json:"week_start"`
+			SchoolID  wireID `json:"school_id"`
+			WeekStart string `json:"week_start"`
 		} `json:"holiday_weeks"`
 	} `json:"contracts"`
 	Changes []struct {

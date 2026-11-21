@@ -17,8 +17,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 func TestHolidayRegistrationSecondGuardianValidation(t *testing.T) {
@@ -65,7 +63,7 @@ func TestHolidayRegistrationSecondGuardianStaysOptional(t *testing.T) {
 		rec := publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken), body)
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		id := decodeSchoolPortalData[struct {
-			ID testpkg.ID `json:"id"`
+			ID wireID `json:"id"`
 		}](t, rec.Body.Bytes()).ID
 		rec = traegerJSON(t, f.traeger, office.token, http.MethodGet, fmt.Sprintf("%s/registrations/%d", holidayPeriodPath(int64(period.ID)), id), nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -87,7 +85,7 @@ func TestHolidayRegistrationSecondGuardianIsAuditedAndOnlyInDetailAndExport(t *t
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(f.period.PublicToken), body)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	id := decodeSchoolPortalData[struct {
-		ID testpkg.ID `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
 	assert.NotContains(t, rec.Body.String(), "Anders")
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(int64(id), ""), nil)

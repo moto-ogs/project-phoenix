@@ -189,18 +189,18 @@ func traegerAccount(t *testing.T, db *bun.DB, password string) *testpkg.AccountF
 // traegerLoginAnswer reads both answer shapes: status is the login state of
 // a success and the HTTP status number of a refusal.
 type traegerLoginAnswer struct {
-	Status         any        `json:"status"`
-	AccessToken    string     `json:"access_token"`
-	RefreshToken   string     `json:"refresh_token"`
-	ChallengeToken string     `json:"challenge_token"`
-	MaskedEmail    string     `json:"masked_email"`
-	OrganizationID testpkg.ID `json:"organization_id"`
+	Status         any    `json:"status"`
+	AccessToken    string `json:"access_token"`
+	RefreshToken   string `json:"refresh_token"`
+	ChallengeToken string `json:"challenge_token"`
+	MaskedEmail    string `json:"masked_email"`
+	OrganizationID wireID `json:"organization_id"`
 	// The remember-device offer of the code step (#6955).
 	TrustedDeviceEnabled *bool `json:"trusted_device_enabled"`
 	TrustedDeviceDays    *int  `json:"trusted_device_days"`
 	Organizations        []struct {
-		ID   testpkg.ID `json:"id"`
-		Name string     `json:"name"`
+		ID   wireID `json:"id"`
+		Name string `json:"name"`
 	} `json:"organizations"`
 	Code string `json:"code"`
 }
@@ -294,8 +294,8 @@ func traegerSignIn(t *testing.T, portal *traegerPortalHandler, email, password s
 }
 
 type traegerSchool struct {
-	ID   testpkg.ID `json:"id"`
-	Name string     `json:"name"`
+	ID   wireID `json:"id"`
+	Name string `json:"name"`
 }
 
 func traegerSchools(t *testing.T, router http.Handler, token string) (*httptest.ResponseRecorder, []traegerSchool) {

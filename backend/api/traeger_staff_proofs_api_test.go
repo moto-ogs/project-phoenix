@@ -30,12 +30,12 @@ type staffProofListBody struct {
 	Today   string                            `json:"today"`
 	Types   []workforce.TraegerStaffProofType `json:"types"`
 	Entries []struct {
-		RecordID  testpkg.ID `json:"staff_record_id"`
-		LastName  string     `json:"last_name"`
-		Schools   []string   `json:"schools"`
-		TypeID    testpkg.ID `json:"type_id"`
-		Status    string     `json:"status"`
-		ExpiresOn string     `json:"expires_on"`
+		RecordID  wireID   `json:"staff_record_id"`
+		LastName  string   `json:"last_name"`
+		Schools   []string `json:"schools"`
+		TypeID    wireID   `json:"type_id"`
+		Status    string   `json:"status"`
+		ExpiresOn string   `json:"expires_on"`
 	} `json:"entries"`
 	Counts workforce.TraegerStaffProofCounts `json:"counts"`
 }
@@ -281,12 +281,12 @@ func TestTraegerStaffProofsWarnBeforeExpiry(t *testing.T) {
 }
 
 func firstEntryOf(t *testing.T, list staffProofListBody, recordID int64) struct {
-	RecordID  testpkg.ID `json:"staff_record_id"`
-	LastName  string     `json:"last_name"`
-	Schools   []string   `json:"schools"`
-	TypeID    testpkg.ID `json:"type_id"`
-	Status    string     `json:"status"`
-	ExpiresOn string     `json:"expires_on"`
+	RecordID  wireID   `json:"staff_record_id"`
+	LastName  string   `json:"last_name"`
+	Schools   []string `json:"schools"`
+	TypeID    wireID   `json:"type_id"`
+	Status    string   `json:"status"`
+	ExpiresOn string   `json:"expires_on"`
 } {
 	t.Helper()
 	for _, entry := range list.Entries {

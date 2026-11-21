@@ -315,15 +315,15 @@ func dataArray(t *testing.T, body []byte) []any {
 // studentGuardianRow is one entry of GET /students/{id}/guardians.
 type studentGuardianRow struct {
 	Guardian struct {
-		ID        testpkg.ID `json:"id"`
-		FirstName string     `json:"first_name"`
+		ID        wireID `json:"id"`
+		FirstName string `json:"first_name"`
 	} `json:"guardian"`
-	RelationshipID     testpkg.ID `json:"relationship_id"`
-	GuardianRole       string     `json:"guardian_role"`
-	CanPickup          bool       `json:"can_pickup"`
-	IsEmergencyContact bool       `json:"is_emergency_contact"`
-	IsPayer            bool       `json:"is_payer"`
-	AccountStatus      string     `json:"account_status"`
+	RelationshipID     wireID `json:"relationship_id"`
+	GuardianRole       string `json:"guardian_role"`
+	CanPickup          bool   `json:"can_pickup"`
+	IsEmergencyContact bool   `json:"is_emergency_contact"`
+	IsPayer            bool   `json:"is_payer"`
+	AccountStatus      string `json:"account_status"`
 }
 
 // studentGuardians reads a child's guardians as an admin holding the

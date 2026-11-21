@@ -174,7 +174,7 @@ func TestTraegerKeyDateReportFollowsItsTemplate(t *testing.T) {
 	fixture := newKeyDateReportFixture(t, db, router, identityaccess.TraegerRoleAdministration)
 	template := createReportTemplate(t, router, fixture.token, reportTemplateBody{
 		Name: "Jugendamt Stichtag", Sections: []string{"children", "demand"}, KeyDateMonth: 10, KeyDateDay: 15,
-		Districts: []reportTemplateDistrict{{SchoolID: testpkg.ID(fixture.park), District: "Nord"}},
+		Districts: []reportTemplateDistrict{{SchoolID: wireID(fixture.park), District: "Nord"}},
 	})
 
 	rec := traegerOccupancyRequest(t, router, keyDateReportPath+keyDateReportQuery(int64(template.ID)), fixture.token, nil)
@@ -292,7 +292,7 @@ func TestTraegerKeyDateReportQueryBudget(t *testing.T) {
 	require.Equal(t, http.StatusOK, code)
 	template := createReportTemplate(t, router, answer.AccessToken, reportTemplateBody{
 		Name: "Alles", Sections: []string{"children", "staff", "absences", "demand"}, KeyDateMonth: 10, KeyDateDay: 15,
-		Districts: []reportTemplateDistrict{{SchoolID: testpkg.ID(schools[0]), District: "Nord"}, {SchoolID: testpkg.ID(schools[1]), District: "Süd"}},
+		Districts: []reportTemplateDistrict{{SchoolID: wireID(schools[0]), District: "Nord"}, {SchoolID: wireID(schools[1]), District: "Süd"}},
 	})
 	path := keyDateReportPath + keyDateReportQuery(int64(template.ID))
 	read := func() testpkg.QueryMeasurement {

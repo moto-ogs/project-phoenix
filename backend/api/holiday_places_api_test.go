@@ -19,28 +19,27 @@ import (
 
 	enrollmentOwner "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 type placementBody struct {
-	ChildPosition int        `json:"child_position"`
-	WeekID        testpkg.ID `json:"week_id"`
-	Placement     string     `json:"placement"`
+	ChildPosition int    `json:"child_position"`
+	WeekID        wireID `json:"week_id"`
+	Placement     string `json:"placement"`
 }
 
 type receiptBody struct {
-	ID         testpkg.ID      `json:"id"`
+	ID         wireID          `json:"id"`
 	Placements []placementBody `json:"placements"`
 }
 
 type weekPlacesBody struct {
-	WeekID   testpkg.ID `json:"week_id"`
-	Capacity *int       `json:"capacity"`
-	Placed   int        `json:"placed"`
+	WeekID   wireID `json:"week_id"`
+	Capacity *int   `json:"capacity"`
+	Placed   int    `json:"placed"`
 	Waitlist []struct {
-		Position       int        `json:"position"`
-		RegistrationID testpkg.ID `json:"registration_id"`
-		ChildFirstName string     `json:"child_first_name"`
+		Position       int    `json:"position"`
+		RegistrationID wireID `json:"registration_id"`
+		ChildFirstName string `json:"child_first_name"`
 	} `json:"waitlist"`
 }
 

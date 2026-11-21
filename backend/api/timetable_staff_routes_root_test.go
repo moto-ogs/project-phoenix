@@ -43,7 +43,7 @@ func checkTimetableStaffRoutes(t *testing.T, api *goldenRuntime) {
 
 	t.Run("calendar period removal", func(t *testing.T) {
 		var period struct {
-			ID testpkg.ID `json:"id"`
+			ID wireID `json:"id"`
 		}
 		request(t, http.MethodPost, "/api/timetable/periods/",
 			fmt.Sprintf(`{"name":"Entfernen-%d","period_type":"custom","start_date":"2041-08-01","end_date":"2041-08-31","is_active":false}`, time.Now().UnixNano()), &period)
@@ -55,10 +55,10 @@ func checkTimetableStaffRoutes(t *testing.T, api *goldenRuntime) {
 
 	t.Run("planning track administration", func(t *testing.T) {
 		type track struct {
-			ID         testpkg.ID `json:"id"`
-			Name       string     `json:"name"`
-			SortOrder  int        `json:"sort_order"`
-			ArchivedAt *string    `json:"archived_at"`
+			ID         wireID  `json:"id"`
+			Name       string  `json:"name"`
+			SortOrder  int     `json:"sort_order"`
+			ArchivedAt *string `json:"archived_at"`
 		}
 		var early, late track
 		request(t, http.MethodPost, "/api/timetable/planning-tracks/", `{"name":"Früh","color":"#5080D8","sort_order":0}`, &early)
@@ -86,9 +86,9 @@ func checkTimetableStaffRoutes(t *testing.T, api *goldenRuntime) {
 		offering := testpkg.CreateTestCareOffering(t, db, phase.ID, "Randstunde")
 		var sources struct {
 			Offerings []struct {
-				ID         testpkg.ID `json:"id"`
-				PhaseID    testpkg.ID `json:"phase_id"`
-				TotalCount int        `json:"total_count"`
+				ID         wireID `json:"id"`
+				PhaseID    wireID `json:"phase_id"`
+				TotalCount int    `json:"total_count"`
 			} `json:"offerings"`
 		}
 		request(t, http.MethodGet, "/api/timetable/offering-sources", "", &sources)
@@ -138,8 +138,8 @@ func checkTimetableStaffRoutes(t *testing.T, api *goldenRuntime) {
 		require.NoError(t, err)
 
 		var saved struct {
-			StudentID testpkg.ID `json:"student_id"`
-			Status    string     `json:"status"`
+			StudentID wireID `json:"student_id"`
+			Status    string `json:"status"`
 		}
 		request(t, http.MethodPut, fmt.Sprintf("/api/timetable/operations/instances/%d/students/%d/homework-feedback", block.ID, child.ID), `{"status":"done"}`, &saved)
 		assert.Equal(t, child.ID, saved.StudentID)

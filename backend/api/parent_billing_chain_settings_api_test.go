@@ -16,7 +16,6 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 func setHolidayChoice(t *testing.T, f reviewFixture, key, value string) {
@@ -35,7 +34,7 @@ func (f reviewFixture) submitYoungerDearer(t *testing.T, email string) int64 {
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(f.period.PublicToken), body)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	return int64(decodeSchoolPortalData[struct {
-		ID testpkg.ID `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID)
 }
 

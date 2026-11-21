@@ -23,14 +23,14 @@ import (
 const contributionRulesPath = "/traeger/contribution-rules"
 
 type contributionRuleBody struct {
-	ID                  testpkg.ID `json:"id"`
-	Kind                string     `json:"kind"`
-	ValidFrom           string     `json:"valid_from"`
-	ValidUntil          *string    `json:"valid_until"`
-	SiblingFromChild    *int       `json:"sibling_from_child"`
-	DiscountBasisPoints *int       `json:"discount_basis_points"`
-	DiscountCents       *int64     `json:"discount_cents"`
-	Note                string     `json:"note"`
+	ID                  wireID  `json:"id"`
+	Kind                string  `json:"kind"`
+	ValidFrom           string  `json:"valid_from"`
+	ValidUntil          *string `json:"valid_until"`
+	SiblingFromChild    *int    `json:"sibling_from_child"`
+	DiscountBasisPoints *int    `json:"discount_basis_points"`
+	DiscountCents       *int64  `json:"discount_cents"`
+	Note                string  `json:"note"`
 }
 
 type contributionLineBody struct {
@@ -45,7 +45,7 @@ type contributionLineBody struct {
 
 type contributionBody struct {
 	Children []struct {
-		ChildID    testpkg.ID             `json:"child_id"`
+		ChildID    wireID                 `json:"child_id"`
 		Position   int                    `json:"position"`
 		Lines      []contributionLineBody `json:"lines"`
 		TotalCents int64                  `json:"total_cents"`
@@ -60,7 +60,7 @@ type contributionBody struct {
 }
 
 type confirmationBody struct {
-	ID           testpkg.ID       `json:"id"`
+	ID           wireID           `json:"id"`
 	Status       string           `json:"status"`
 	Contribution contributionBody `json:"contribution"`
 }
@@ -323,7 +323,7 @@ func TestBenefitsExemptionIsFrozenWithItsNoteOnlyWithARule(t *testing.T) {
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(f.period.PublicToken), declared)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	registration := decodeSchoolPortalData[struct {
-		ID testpkg.ID `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
 	detail := f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(int64(registration), ""), nil))
 	assert.Equal(t, int64(6750), detail.Children[0].Bookings[0].PriceCents)

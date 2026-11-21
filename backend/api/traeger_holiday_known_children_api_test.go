@@ -22,9 +22,9 @@ import (
 )
 
 type knownChildBody struct {
-	RegistrationID testpkg.ID `json:"registration_id"`
-	ChildID        testpkg.ID `json:"child_id"`
-	SchoolID       testpkg.ID `json:"school_id"`
+	RegistrationID wireID `json:"registration_id"`
+	ChildID        wireID `json:"child_id"`
+	SchoolID       wireID `json:"school_id"`
 }
 
 // schoolChild creates an actively managed child of a school with the names
@@ -82,7 +82,7 @@ func TestTraegerSeesWhichSchoolKnowsARegisteredChild(t *testing.T) {
 	require.Equal(t, "Ben", ben.FirstName)
 
 	known := f.knownChildren(t, f.office.token, "")
-	assert.Equal(t, []knownChildBody{{RegistrationID: testpkg.ID(f.siblings), ChildID: ben.ID, SchoolID: south}}, known,
+	assert.Equal(t, []knownChildBody{{RegistrationID: wireID(f.siblings), ChildID: ben.ID, SchoolID: south}}, known,
 		"only Ben is known, at the one school of the Träger that manages him")
 	assert.Equal(t, known, f.knownChildren(t, f.office.token, fmt.Sprintf("?registration_id=%d", f.siblings)))
 	assert.Empty(t, f.knownChildren(t, f.office.token, fmt.Sprintf("?registration_id=%d", f.again)),

@@ -24,11 +24,11 @@ const familyChildrenPath = "/traeger/family-children"
 
 type familyChildrenSetBody struct {
 	Families []struct {
-		ContractID     testpkg.ID `json:"contract_id"`
-		RecipientEmail string     `json:"recipient_email"`
-		Status         string     `json:"status"`
+		ContractID     wireID `json:"contract_id"`
+		RecipientEmail string `json:"recipient_email"`
+		Status         string `json:"status"`
 		Children       []struct {
-			ContractID testpkg.ID `json:"contract_id"`
+			ContractID wireID `json:"contract_id"`
 		} `json:"children"`
 		Count *struct {
 			ConfirmedChildren *int `json:"confirmed_children"`
@@ -228,9 +228,9 @@ func TestFamilyChildrenOfContractsWithoutAMailAddressThroughTheRoutes(t *testing
 	type reviewBody struct {
 		careReductionRunBody
 		UncountedContracts []struct {
-			ContractID     testpkg.ID `json:"contract_id"`
-			ChildFirstName string     `json:"child_first_name"`
-			Status         string     `json:"status"`
+			ContractID     wireID `json:"contract_id"`
+			ChildFirstName string `json:"child_first_name"`
+			Status         string `json:"status"`
 		} `json:"uncounted_contracts"`
 	}
 	review := func() (map[int64]int64, reviewBody) {

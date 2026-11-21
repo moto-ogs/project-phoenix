@@ -27,8 +27,8 @@ func (f holidayGuestFixture) badges(t *testing.T, token string) map[int64]string
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	result := map[int64]string{}
 	for _, badge := range decodeSchoolPortalData[[]struct {
-		StudentID  testpkg.ID `json:"student_id"`
-		SchoolName string     `json:"school_name"`
+		StudentID  wireID `json:"student_id"`
+		SchoolName string `json:"school_name"`
 	}](t, rec.Body.Bytes()) {
 		result[int64(badge.StudentID)] = badge.SchoolName
 	}

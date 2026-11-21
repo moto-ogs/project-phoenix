@@ -108,8 +108,8 @@ func TestChildDebtorNumbersReachTheMonthlyInvoiceOfEachChild(t *testing.T) {
 	numbers := map[int64]string{}
 	for _, invoice := range decodeSchoolPortalData[struct {
 		Invoices []struct {
-			ContractID   testpkg.ID `json:"contract_id"`
-			DebtorNumber string     `json:"debtor_number"`
+			ContractID   wireID `json:"contract_id"`
+			DebtorNumber string `json:"debtor_number"`
 		} `json:"invoices"`
 	}](t, rec.Body.Bytes()).Invoices {
 		numbers[int64(invoice.ContractID)] = invoice.DebtorNumber

@@ -195,8 +195,8 @@ func TestParticipantListNamesOwnChildrenThatFitNoStudentOrSeveral(t *testing.T) 
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		list := decodeSchoolPortalData[struct {
 			Participants []struct {
-				ChildID   testpkg.ID `json:"child_id"`
-				FirstName string     `json:"first_name"`
+				ChildID   wireID `json:"child_id"`
+				FirstName string `json:"first_name"`
 			} `json:"participants"`
 		}](t, rec.Body.Bytes())
 		rec = f.do(t, lead, http.MethodGet, fmt.Sprintf("/api/holiday-weeks/%d/own-children", week), nil)

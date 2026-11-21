@@ -32,13 +32,13 @@ import (
 )
 
 type hostedWeekBody struct {
-	ID           testpkg.ID `json:"id"`
-	PeriodName   string     `json:"period_name"`
-	StartsOn     string     `json:"starts_on"`
-	EndsOn       string     `json:"ends_on"`
-	Participants int        `json:"participants"`
-	CareStartsAt string     `json:"care_starts_at"`
-	CareEndsAt   string     `json:"care_ends_at"`
+	ID           wireID `json:"id"`
+	PeriodName   string `json:"period_name"`
+	StartsOn     string `json:"starts_on"`
+	EndsOn       string `json:"ends_on"`
+	Participants int    `json:"participants"`
+	CareStartsAt string `json:"care_starts_at"`
+	CareEndsAt   string `json:"care_ends_at"`
 	// DayParticipants maps each booked day of a week by days to its
 	// confirmed children.
 	DayParticipants []struct {
@@ -54,17 +54,17 @@ type participantListBody struct {
 		Count int    `json:"count"`
 	} `json:"time_models"`
 	HomeSchools []struct {
-		SchoolID *testpkg.ID `json:"school_id"`
-		Name     string      `json:"name"`
-		Count    int         `json:"count"`
+		SchoolID *wireID `json:"school_id"`
+		Name     string  `json:"name"`
+		Count    int     `json:"count"`
 	} `json:"home_schools"`
 	Participants []struct {
-		FirstName      string      `json:"first_name"`
-		LastName       string      `json:"last_name"`
-		BirthDate      string      `json:"birth_date"`
-		HomeSchoolID   *testpkg.ID `json:"home_school_id"`
-		HomeSchoolName string      `json:"home_school_name"`
-		TimeModelID    testpkg.ID  `json:"time_model_id"`
+		FirstName      string  `json:"first_name"`
+		LastName       string  `json:"last_name"`
+		BirthDate      string  `json:"birth_date"`
+		HomeSchoolID   *wireID `json:"home_school_id"`
+		HomeSchoolName string  `json:"home_school_name"`
+		TimeModelID    wireID  `json:"time_model_id"`
 	} `json:"participants"`
 }
 
@@ -98,7 +98,7 @@ func newHolidayHostFixture(t *testing.T, name string) holidayHostFixture {
 		rec := publicJSON(t, f.public, http.MethodPost, registrationPath(link.PublicToken), body)
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		return int64(decodeSchoolPortalData[struct {
-			ID testpkg.ID `json:"id"`
+			ID wireID `json:"id"`
 		}](t, rec.Body.Bytes()).ID)
 	}
 	siblings := submit(siblingsRegistration(offer, "eva.muster@example.org"))

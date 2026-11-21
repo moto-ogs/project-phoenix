@@ -48,12 +48,12 @@ func TestFeedbackListsPositiveGrowthQueryBudget(t *testing.T) {
 			require.Equal(t, http.StatusOK, response.Code, response.Body.String())
 			var body struct {
 				Data []struct {
-					ID              testpkg.ID `json:"id"`
-					StudentID       testpkg.ID `json:"student_id"`
-					Value           string     `json:"value"`
-					Day             string     `json:"day"`
-					Time            string     `json:"time"`
-					IsMensaFeedback bool       `json:"is_mensa_feedback"`
+					ID              wireID `json:"id"`
+					StudentID       wireID `json:"student_id"`
+					Value           string `json:"value"`
+					Day             string `json:"day"`
+					Time            string `json:"time"`
+					IsMensaFeedback bool   `json:"is_mensa_feedback"`
 				} `json:"data"`
 			}
 			require.NoError(t, json.Unmarshal(response.Body.Bytes(), &body))

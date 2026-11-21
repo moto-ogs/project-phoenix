@@ -48,7 +48,7 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 			require.Equal(t, http.StatusCreated, rr.Code, rr.Body.String())
 			var phone struct {
 				Data struct {
-					ID testpkg.ID `json:"id"`
+					ID wireID `json:"id"`
 				}
 			}
 			require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &phone))
@@ -241,12 +241,12 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 				}
 			case "students":
 				var rows []struct {
-					ID        testpkg.ID `json:"student_id"`
-					FirstName string     `json:"first_name"`
-					LastName  string     `json:"last_name"`
-					Class     string     `json:"school_class"`
-					Link      testpkg.ID `json:"relationship_id"`
-					Role      string     `json:"guardian_role"`
+					ID        wireID `json:"student_id"`
+					FirstName string `json:"first_name"`
+					LastName  string `json:"last_name"`
+					Class     string `json:"school_class"`
+					Link      wireID `json:"relationship_id"`
+					Role      string `json:"guardian_role"`
 				}
 				require.NoError(t, json.Unmarshal(envelope.Data, &rows))
 				require.Len(t, rows, n)
