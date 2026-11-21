@@ -8,7 +8,7 @@ import type React from "react";
 import { schoolClassLabel } from "~/lib/school-class-label";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { useSWRAuth } from "~/lib/swr";
+import { useInvalidateMatching, useSWRAuth } from "~/lib/swr";
 import { AlertTriangle, Check, Clock, Info } from "lucide-react";
 import { LocationBadge } from "@/components/students/presence/location-badge";
 import type { Student } from "~/lib/student-helpers";
@@ -1165,6 +1165,7 @@ const ROOM_HISTORY_STOP_OBJECT = "der Stopp von Raumverlauf und Stimmung";
  * from now on and asks nothing.
  */
 function useRoomHistoryStop(studentId: string, enabled: boolean) {
+  const invalidate = useInvalidateMatching();
   const read = useSWRAuth(
     enabled ? tenantStudentKeys.roomHistoryStop(studentId) : null,
     () => fetchRoomHistoryStop(studentId),
@@ -1186,6 +1187,10 @@ function useRoomHistoryStop(studentId: string, enabled: boolean) {
     try {
       const result = await stopRoomHistory(studentId);
       apply(result);
+      await invalidate(
+        (key) => key === tenantStudentKeys.attendanceHistory(studentId),
+        { clear: true },
+      );
       setConfirming(false);
       toast.success(
         result.deletedVisits === 1

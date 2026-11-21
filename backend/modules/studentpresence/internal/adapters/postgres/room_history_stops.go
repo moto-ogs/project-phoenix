@@ -39,34 +39,33 @@ func (s *Store) ListRoomHistoryStops(ctx context.Context, studentIDs []int64) (m
 	return result, stats, nil
 }
 
-// insertRoomHistoryStopSQL inserts the stop or, when the child is already
-// stopped, returns the existing start without changing it.
-const insertRoomHistoryStopSQL = `WITH inserted AS (
-	INSERT INTO active.room_history_stops (tenant_id, student_id, stopped_at) VALUES (?, ?, ?)
-	ON CONFLICT (tenant_id, student_id) DO NOTHING
-	RETURNING stopped_at
-)
-SELECT TRUE AS inserted, stopped_at FROM inserted
-UNION ALL
-SELECT FALSE, stopped_at FROM active.room_history_stops
-WHERE tenant_id = ? AND student_id = ? AND NOT EXISTS (SELECT 1 FROM inserted)`
+// insertRoomHistoryStopSQL preserves the original start of an existing stop.
+const insertRoomHistoryStopSQL = `INSERT INTO active.room_history_stops (tenant_id, student_id, stopped_at) VALUES (?, ?, ?)
+ON CONFLICT (tenant_id, student_id) DO NOTHING
+RETURNING stopped_at`
 
 func (s *Store) InsertRoomHistoryStop(ctx context.Context, studentID int64, at time.Time) (bool, time.Time, ports.Stats, error) {
 	db, tenantID, err := s.database(ctx)
 	if err != nil {
 		return false, time.Time{}, ports.Stats{}, err
 	}
-	var row struct {
-		Inserted  bool      `bun:"inserted"`
-		StoppedAt time.Time `bun:"stopped_at"`
-	}
+	var stoppedAt time.Time
 	started := time.Now()
-	err = db.NewRaw(insertRoomHistoryStopSQL, tenantID, studentID, at, tenantID, studentID).Scan(ctx, &row)
-	stats := ports.Stats{Queries: 1, Rows: 1, StatementDuration: time.Since(started)}
+	err = db.NewRaw(insertRoomHistoryStopSQL, tenantID, studentID, at).Scan(ctx, &stoppedAt)
+	inserted := err == nil
+	stats := ports.Stats{Queries: 1, Rows: 1}
+	if errors.Is(err, sql.ErrNoRows) {
+		// ON CONFLICT may wait for an uncommitted insertion. A separate
+		// statement gets a fresh snapshot that sees the winning stop.
+		err = db.NewRaw(`SELECT stopped_at FROM active.room_history_stops WHERE tenant_id = ? AND student_id = ?`,
+			tenantID, studentID).Scan(ctx, &stoppedAt)
+		stats.Queries++
+	}
+	stats.StatementDuration = time.Since(started)
 	if err != nil {
 		return false, time.Time{}, stats, fmt.Errorf("insert room history stop: %w", err)
 	}
-	return row.Inserted, row.StoppedAt, stats, nil
+	return inserted, stoppedAt, stats, nil
 }
 
 func (s *Store) DeleteRoomHistoryStop(ctx context.Context, studentID int64) (bool, ports.Stats, error) {
