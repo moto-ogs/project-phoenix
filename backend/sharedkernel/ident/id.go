@@ -65,27 +65,3 @@ func (id *ID) UnmarshalJSON(data []byte) error {
 	*id = ID(parsed)
 	return nil
 }
-
-// IDs converts int64 identifiers to IDs.
-func IDs(values []int64) []ID {
-	if values == nil {
-		return nil
-	}
-	out := make([]ID, len(values))
-	for i, v := range values {
-		out[i] = ID(v)
-	}
-	return out
-}
-
-// Int64s converts IDs back to int64 identifiers.
-func Int64s(ids []ID) []int64 {
-	if ids == nil {
-		return nil
-	}
-	out := make([]int64, len(ids))
-	for i, id := range ids {
-		out[i] = int64(id)
-	}
-	return out
-}

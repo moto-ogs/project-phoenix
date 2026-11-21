@@ -73,6 +73,6 @@ Der Typ aus ADR 0270, `common.ID`, liegt in `api/common`. Das dürfen nur
 
 - Fachtypen tragen mit `ident.ID` eine Entscheidung über ihre JSON-Form.
   Das ist dieselbe Art Entscheidung wie `calendar.Date` als `YYYY-MM-DD`.
-- Rechnen mit Kennungen braucht `Int64()` oder eine Umwandlung;
-  `ident.IDs` und `ident.Int64s` wandeln Listen.
+- Rechnen mit Kennungen braucht `Int64()` oder eine Umwandlung.
+  Listenhelfer kommen mit ihrem ersten produktiven Aufrufer hinzu.
 - `common.JSONID` behält seine Wire-Form und liest wie `ident.ID`.
