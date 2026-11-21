@@ -68,6 +68,8 @@ function recordsChoiceText(order: TraegerErasureOrder): string {
   if (order.recordsChoice === "handed_over" && order.recordsHandedOverOn) {
     return `Rückgabe übergeben am ${formatDate(order.recordsHandedOverOn)}`;
   }
+  // A choice is recorded, but this build does not know it.
+  if (order.recordsChoice === undefined) return "–";
   return "Nicht erfasst";
 }
 
@@ -295,7 +297,7 @@ function OpenErasureOrder({
         }
       >
         <LoadErrorAlert error={withdrawRefresh.error} className="mb-4" />
-        {order.recordsChoice ? null : (
+        {order.recordsChoice !== null ? null : (
           <div className="mb-4">
             <Alert
               type="warning"
@@ -325,7 +327,7 @@ function OpenErasureOrder({
             {recordsChoiceText(order)}
           </DataField>
         </DataGrid>
-        {order.recordsChoice ? null : (
+        {order.recordsChoice !== null ? null : (
           <RecordRecordsChoiceForm
             organizationId={organizationId}
             onRecorded={refreshAfterWithdraw}
