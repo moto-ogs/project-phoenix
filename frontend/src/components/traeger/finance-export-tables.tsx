@@ -38,6 +38,7 @@ import {
   type ExportRun,
   datevRunKey,
 } from "~/lib/traeger-finance-exports-api";
+import { labelOf } from "~/lib/label-of";
 
 function euro(cents: number) {
   return <span className="tabular-nums">{formatEuro(cents)}</span>;
@@ -404,7 +405,10 @@ function entryNotes(entry: ExportProtocolEntry) {
   ) : null;
 }
 
-const FALLBACK_REASONS: Record<CostCenterFallback["reason"], string> = {
+const FALLBACK_REASONS: Record<
+  NonNullable<CostCenterFallback["reason"]>,
+  string
+> = {
   no_school_cost_center:
     "Die Schule der Woche hat an dem Tag keine Kostenstelle.",
   no_host_school: "Zur Woche gibt es keine Schule.",
@@ -435,7 +439,7 @@ function CostCenterFallbackList({
               ? `, Woche ab ${formatDate(fallback.weekStartsOn)}`
               : null}
             {": "}
-            {FALLBACK_REASONS[fallback.reason]}{" "}
+            {labelOf(FALLBACK_REASONS, fallback.reason, "")}{" "}
             {fallback.costCenter
               ? `Gebucht auf ${fallback.costCenter}.`
               : "Gebucht ohne Kostenstelle."}
@@ -500,8 +504,8 @@ const PROTOCOL_COLUMNS: DataTableColumn<ExportProtocolEntry>[] = [
     header: "Art",
     render: (entry) => (
       <StatusBadge
-        label={FINANCE_FILE_KINDS[entry.format]}
-        tone={FILE_KIND_TONES[entry.format]}
+        label={labelOf(FINANCE_FILE_KINDS, entry.format, "Datei")}
+        tone={labelOf(FILE_KIND_TONES, entry.format, "gray")}
       />
     ),
   },
