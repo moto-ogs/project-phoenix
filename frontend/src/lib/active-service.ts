@@ -1,7 +1,6 @@
 // lib/active-service.ts
 import { hasSessionAccess } from "./session-access";
 import { getCachedSession, sessionFetch } from "./session-cache";
-import api from "./api";
 import { createLogger } from "~/lib/logger";
 import {
   apiErrorFromBody,
@@ -25,13 +24,7 @@ import {
   type BackendSchulhofStatus,
   type TrackingIndicatorsResponse,
 } from "./active-helpers";
-
-// Generic API response interface
-interface ApiResponse<T> {
-  data: T;
-  message?: string;
-  status?: string;
-}
+import type { ApiResponse } from "./api-envelope";
 
 interface TransitAssignSkipped {
   student_id: number | string;
@@ -159,62 +152,23 @@ function proxyError(
 }
 
 /**
- * Execute backend axios request (server context).
- */
-async function executeBackendFetch<T>(
-  method: HttpMethod,
-  url: string,
-  body?: unknown,
-): Promise<T> {
-  let response: { data: unknown };
-  switch (method) {
-    case "GET":
-      response = await api.get(url);
-      break;
-    case "POST":
-      response =
-        body === undefined ? await api.post(url) : await api.post(url, body);
-      break;
-    case "PUT":
-      response = await api.put(url, body);
-      break;
-    case "DELETE":
-      response = await api.delete(url);
-      break;
-  }
-  return response.data as T;
-}
-
-/**
- * Core fetch function that handles proxy vs backend routing, auth, errors, and response parsing.
+ * Core fetch through the BFF proxy: session auth, errors, and response parsing.
  */
 async function coreFetch<T>(
   method: HttpMethod,
   proxyPath: string,
-  backendPath: string,
   operationName: string,
   body?: unknown,
 ): Promise<T> {
-  const useProxyApi = globalThis.window !== undefined;
-
   try {
-    if (useProxyApi) {
-      const response = await executeProxyFetch(
-        method,
-        proxyPath,
-        operationName,
-        body,
-      );
-      const responseData = (await response.json()) as ApiResponse<T>;
-      return responseData.data;
-    } else {
-      const responseData = await executeBackendFetch<ApiResponse<T>>(
-        method,
-        proxyPath,
-        body,
-      );
-      return responseData.data;
-    }
+    const response = await executeProxyFetch(
+      method,
+      proxyPath,
+      operationName,
+      body,
+    );
+    const responseData = (await response.json()) as ApiResponse<T>;
+    return responseData.data;
   } catch (error) {
     logger.error("core fetch failed", {
       operation: operationName,
@@ -228,18 +182,11 @@ async function coreFetch<T>(
 async function coreFetchVoid(
   method: HttpMethod,
   proxyPath: string,
-  backendPath: string,
   operationName: string,
   body?: unknown,
 ): Promise<void> {
-  const useProxyApi = globalThis.window !== undefined;
-
   try {
-    if (useProxyApi) {
-      await executeProxyFetch(method, proxyPath, operationName, body);
-    } else {
-      await executeBackendFetch<unknown>(method, proxyPath, body);
-    }
+    await executeProxyFetch(method, proxyPath, operationName, body);
   } catch (error) {
     logger.error("core fetch void failed", {
       operation: operationName,
@@ -252,55 +199,33 @@ async function coreFetchVoid(
 /** GET request returning a single mapped item */
 async function proxyGet<TBackend, TFrontend>(
   proxyPath: string,
-  backendPath: string,
   mapper: (data: TBackend) => TFrontend,
   operationName: string,
 ): Promise<TFrontend> {
-  const data = await coreFetch<TBackend>(
-    "GET",
-    proxyPath,
-    backendPath,
-    operationName,
-  );
+  const data = await coreFetch<TBackend>("GET", proxyPath, operationName);
   return mapper(data);
 }
 
 /** GET request returning an array of mapped items */
 async function proxyGetArray<TBackend, TFrontend>(
   proxyPath: string,
-  backendPath: string,
   mapper: (data: TBackend) => TFrontend,
   operationName: string,
 ): Promise<TFrontend[]> {
-  const data = await coreFetch<TBackend[]>(
-    "GET",
-    proxyPath,
-    backendPath,
-    operationName,
-  );
+  const data = await coreFetch<TBackend[]>("GET", proxyPath, operationName);
   return data.map(mapper);
 }
 
 /** GET request returning paginated array (extracts from nested response) */
 async function proxyGetPaginated<TBackend, TFrontend>(
   proxyPath: string,
-  backendPath: string,
   mapper: (data: TBackend) => TFrontend,
   operationName: string,
 ): Promise<TFrontend[]> {
-  const useProxyApi = globalThis.window !== undefined;
-
   try {
-    if (useProxyApi) {
-      const response = await executeProxyFetch("GET", proxyPath, operationName);
-      const responseData = (await response.json()) as unknown;
-      const items = extractArrayFromResponse<TBackend>(responseData);
-      return items.map(mapper);
-    } else {
-      const response = await executeBackendFetch<unknown>("GET", proxyPath);
-      const items = extractArrayFromResponse<TBackend>(response);
-      return items.map(mapper);
-    }
+    const response = await executeProxyFetch("GET", proxyPath, operationName);
+    const responseData = (await response.json()) as unknown;
+    return extractArrayFromResponse<TBackend>(responseData).map(mapper);
   } catch (error) {
     logger.error("paginated fetch failed", {
       operation: operationName,
@@ -313,27 +238,20 @@ async function proxyGetPaginated<TBackend, TFrontend>(
 /** POST request without body, returning a single mapped item */
 async function proxyPostNoBody<TBackend, TFrontend>(
   proxyPath: string,
-  backendPath: string,
   mapper: (data: TBackend) => TFrontend,
   operationName: string,
 ): Promise<TFrontend> {
-  const data = await coreFetch<TBackend>(
-    "POST",
-    proxyPath,
-    backendPath,
-    operationName,
-  );
+  const data = await coreFetch<TBackend>("POST", proxyPath, operationName);
   return mapper(data);
 }
 
 /** POST request with body, returning void */
 async function proxyPostVoid(
   proxyPath: string,
-  backendPath: string,
   body: unknown,
   operationName: string,
 ): Promise<void> {
-  await coreFetchVoid("POST", proxyPath, backendPath, operationName, body);
+  await coreFetchVoid("POST", proxyPath, operationName, body);
 }
 
 /** Build query string suffix for active filter */
@@ -360,7 +278,6 @@ export const activeService = {
     const suffix = buildActiveFilterSuffix(filters);
     return proxyGetPaginated<BackendActiveGroup, ActiveGroup>(
       `/api/active/groups${suffix}`,
-      `/active/groups${suffix}`,
       mapActiveGroupResponse,
       "Get active groups",
     );
@@ -369,7 +286,6 @@ export const activeService = {
   getActiveGroupSupervisors: async (id: string): Promise<Supervisor[]> => {
     return proxyGetPaginated<BackendSupervisor, Supervisor>(
       `/api/active/groups/${id}/supervisors`,
-      `/active/groups/${id}/supervisors`,
       mapSupervisorResponse,
       "Get active group supervisors",
     );
@@ -383,7 +299,6 @@ export const activeService = {
     const suffix = buildActiveFilterSuffix(filters);
     return proxyGetArray<BackendVisit, Visit>(
       `/api/active/visits${suffix}`,
-      `/active/visits${suffix}`,
       mapVisitResponse,
       "Get visits",
     );
@@ -394,7 +309,6 @@ export const activeService = {
   ): Promise<Supervisor[]> => {
     return proxyGetArray<BackendSupervisor, Supervisor>(
       `/api/active/supervisors/staff/${staffId}/active`,
-      `/active/supervisors/staff/${staffId}/active`,
       mapSupervisorResponse,
       "Get staff active supervisions",
     );
@@ -404,7 +318,6 @@ export const activeService = {
   endSupervision: async (id: string): Promise<Supervisor | null> => {
     return proxyPostNoBody<BackendSupervisor | null, Supervisor | null>(
       `/api/active/supervisors/${id}/end`,
-      `/active/supervisors/${id}/end`,
       (data) => (data ? mapSupervisorResponse(data) : null),
       "End supervision",
     );
@@ -413,7 +326,6 @@ export const activeService = {
   claimActiveGroup: async (groupId: string): Promise<void> => {
     return proxyPostVoid(
       `/api/active/groups/${groupId}/claim`,
-      `/active/groups/${groupId}/claim`,
       { role: "supervisor" },
       "Claim group",
     );
@@ -426,7 +338,6 @@ export const activeService = {
     return coreFetch<TransitAssignResult>(
       "POST",
       "/api/active/visits/transit/assign",
-      "/active/visits/transit/assign",
       "Assign transit students",
       {
         student_ids: studentIds.map((id) => Number.parseInt(id, 10)),
@@ -442,7 +353,6 @@ export const activeService = {
     return coreFetch<StudentMoveResult>(
       "POST",
       "/api/active/visits/move-to-group",
-      "/active/visits/move-to-group",
       "Move students to active group",
       {
         student_ids: studentIds.map((id) => Number.parseInt(id, 10)),
@@ -498,7 +408,6 @@ export const activeService = {
     return coreFetch<StudentMoveResult>(
       "POST",
       "/api/active/visits/check-in-to-group",
-      "/active/visits/check-in-to-group",
       "Check students in to active group",
       {
         student_ids: studentIds.map((id) => Number.parseInt(id, 10)),
@@ -520,7 +429,6 @@ export const activeService = {
     return coreFetch<StudentMoveResult>(
       "POST",
       "/api/active/visits/check-in-to-room",
-      "/active/visits/check-in-to-room",
       "Check students in to open room",
       {
         student_ids: studentIds.map((id) => Number.parseInt(id, 10)),
@@ -538,7 +446,6 @@ export const activeService = {
   getSchulhofStatus: async (): Promise<SchulhofStatus> => {
     return proxyGet<BackendSchulhofStatus, SchulhofStatus>(
       "/api/active/schulhof/status",
-      "/active/schulhof/status",
       mapSchulhofStatusResponse,
       "Get Schulhof status",
     );

@@ -21,17 +21,17 @@ func TestCareLettersRespectInvoiceRecipientChanges(t *testing.T) {
 				brandCareTraeger(t, f)
 				run, contracts := amendableRun(t, f, "Mia")
 				for _, email := range []string{"vater@example.org", "rechnung@example.org"} {
-					code, _ := f.amend(t, run.ID, contracts["Mia"], map[string]any{
+					code, _ := f.amend(t, int64(run.ID), contracts["Mia"], map[string]any{
 						"kind": "recipient", "reason": "Rechnung an den Vater",
 						"recipient": map[string]any{"first_name": "Jan", "last_name": "Beispiel", "email": email},
 					})
 					require.Equal(t, http.StatusOK, code)
 				}
-				review := f.run(t, run.ID)
-				rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(review))
+				review := f.run(t, int64(run.ID))
+				rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(review))
 				require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-				invoice := invoiceOfContract(t, f.run(t, run.ID), contracts["Mia"])
-				rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/letters"), careLettersInput())
+				invoice := invoiceOfContract(t, f.run(t, int64(run.ID)), contracts["Mia"])
+				rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/letters"), careLettersInput())
 				require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 				if changed {
 					_, err := f.db.ExecContext(context.Background(), `UPDATE care_contract.contract_parties SET email = 'neu@example.org' WHERE contract_id = ?`, contracts["Mia"])
@@ -41,7 +41,7 @@ func TestCareLettersRespectInvoiceRecipientChanges(t *testing.T) {
 				if bulk {
 					path = "/letters/mail"
 				}
-				rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, path), nil)
+				rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), path), nil)
 				if changed && !bulk {
 					require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 					assert.Contains(t, rec.Body.String(), "parent_billing.care_recipient_changed")
@@ -55,7 +55,7 @@ func TestCareLettersRespectInvoiceRecipientChanges(t *testing.T) {
 					}
 					assert.Equal(t, want, decodeSchoolPortalData[careSeriesBody](t, rec.Body.Bytes()))
 				}
-				mails := careLetterMails(t, f, run.ID)
+				mails := careLetterMails(t, f, int64(run.ID))
 				if changed {
 					assert.Empty(t, mails)
 				} else {
@@ -79,8 +79,8 @@ func TestCareAmendmentsOutliveTheirAccount(t *testing.T) {
 		(organization_id, run_id, care_contract_id, service, kind, amount_cents, label, reason, account_id)
 		VALUES (?, ?, ?, 'care', 'add_position', 100, 'Ausflug', 'Elternbrief', ?)`, f.office.organization, run.ID, contracts["Mia"], account.ID)
 	require.NoError(t, err)
-	review := f.run(t, run.ID)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(review))
+	review := f.run(t, int64(run.ID))
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(review))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	for _, table := range []string{"care_run_amendments", "care_invoice_corrections"} {
 		_, err = f.db.ExecContext(ctx, `UPDATE parent_billing.`+table+` SET account_id = NULL, reason = 'Anders' WHERE account_id = ?`, account.ID)

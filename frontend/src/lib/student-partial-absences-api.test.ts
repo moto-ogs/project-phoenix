@@ -31,7 +31,7 @@ describe("student-partial-absences-api", () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValue(
-        new Response(JSON.stringify({ success: true, data: [backendRow] })),
+        new Response(JSON.stringify({ status: "success", data: [backendRow] })),
       );
     vi.stubGlobal("fetch", fetchMock);
 
@@ -58,7 +58,7 @@ describe("student-partial-absences-api", () => {
       .fn()
       .mockImplementation(() =>
         Promise.resolve(
-          new Response(JSON.stringify({ success: true, data: backendRow })),
+          new Response(JSON.stringify({ status: "success", data: backendRow })),
         ),
       );
     vi.stubGlobal("fetch", fetchMock);

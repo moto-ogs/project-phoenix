@@ -61,6 +61,12 @@ export interface DayChange {
     readonly name: string;
     readonly traeger: boolean;
   } | null;
+  /** Der Termin eines Eintrags der Quelle Stundenplan (#7662). */
+  readonly activity?: { readonly id: string; readonly title: string } | null;
+  /** Wo der Termin heute ist. */
+  readonly roomName?: string | null;
+  /** Wo der Termin sonst ist, wenn er heute in einem anderen Raum liegt. */
+  readonly previousRoomName?: string | null;
 }
 
 export interface DayChangesOverview {
@@ -106,6 +112,11 @@ function mapEntry(entry: Entry): DayChange {
     closing: entry.closing
       ? { name: entry.closing.name, traeger: entry.closing.traeger }
       : null,
+    activity: entry.activity
+      ? { id: entry.activity.id, title: entry.activity.title }
+      : null,
+    roomName: entry.room?.name ?? null,
+    previousRoomName: entry.previous_room?.name ?? null,
   };
 }
 

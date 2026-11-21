@@ -10,7 +10,7 @@ import { previewFamilyChildrenImport } from "./traeger-family-children-import-ap
  */
 function answer(data: unknown) {
   const fetchMock = vi.fn().mockResolvedValue(
-    new Response(JSON.stringify({ success: true, message: "ok", data }), {
+    new Response(JSON.stringify({ status: "success", message: "ok", data }), {
       status: 200,
       headers: { "content-type": "application/json" },
     }),

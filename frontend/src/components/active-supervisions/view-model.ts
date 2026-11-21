@@ -6,11 +6,6 @@ import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 
 export const SCHULHOF_ROOM_NAME = "Schulhof";
 
-export interface MinimalActiveGroup {
-  id: string;
-  room?: { name?: string };
-}
-
 export interface ActiveSupervisionStudent extends Student {
   activeGroupId: string;
   checkInTime: Date;

@@ -20,7 +20,7 @@ import (
 const carriedCorrectionCents = int64(2000)
 
 type carriedCorrectionBody struct {
-	PositionID        int64  `json:"position_id"`
+	PositionID        wireID `json:"position_id"`
 	SourceNumber      string `json:"source_number"`
 	AmountCents       int64  `json:"amount_cents"`
 	SourceAmountCents int64  `json:"source_amount_cents"`
@@ -28,7 +28,7 @@ type carriedCorrectionBody struct {
 }
 
 type carriedChildBody struct {
-	ChildID            int64                   `json:"child_id"`
+	ChildID            wireID                  `json:"child_id"`
 	TotalCents         int64                   `json:"total_cents"`
 	CarriedCorrections []carriedCorrectionBody `json:"carried_corrections"`
 	Corrections        []struct {
@@ -46,9 +46,9 @@ type carriedChildBody struct {
 }
 
 type carriedDocumentBody struct {
-	ID              int64              `json:"id"`
+	ID              wireID             `json:"id"`
 	Number          string             `json:"number"`
-	RegistrationID  int64              `json:"registration_id"`
+	RegistrationID  wireID             `json:"registration_id"`
 	ReferenceNumber string             `json:"reference_number"`
 	TotalCents      int64              `json:"total_cents"`
 	Children        []carriedChildBody `json:"children"`
@@ -60,7 +60,7 @@ type carriedDocumentBody struct {
 }
 
 type carriedRunBody struct {
-	ID           int64                 `json:"id"`
+	ID           wireID                `json:"id"`
 	Status       string                `json:"status"`
 	PreviewCount int                   `json:"preview_count"`
 	PreviewCents int64                 `json:"preview_cents"`
@@ -81,10 +81,10 @@ func carriedCorrectionPath(runID, positionID int64) string {
 
 func releaseCarriedRun(t *testing.T, f reviewFixture, token string, run carriedRunBody) carriedDocumentBody {
 	t.Helper()
-	rec := traegerJSON(t, f.traeger, token, http.MethodPost, billingRunPath(run.ID, "/release"),
+	rec := traegerJSON(t, f.traeger, token, http.MethodPost, billingRunPath(int64(run.ID), "/release"),
 		map[string]any{"document_count": run.PreviewCount, "total_cents": run.PreviewCents, "fingerprint": run.Fingerprint})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	released := carriedRun(t, f, token, run.ID)
+	released := carriedRun(t, f, token, int64(run.ID))
 	require.Len(t, released.Documents, 1)
 	return released.Documents[0]
 }
@@ -96,20 +96,20 @@ func correctedAndCancelled(t *testing.T, f reviewFixture, billing string) (carri
 	t.Helper()
 	require.Equal(t, http.StatusOK, f.act(t, f.siblings, "confirm").Code)
 	setNumberRange(t, f, billing, "FE-{NNNN}")
-	run := carriedRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
+	run := carriedRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
 	require.Len(t, run.Documents, 1)
 	document, child := run.Documents[0], run.Documents[0].Children[0]
 	require.Greater(t, child.TotalCents, carriedCorrectionCents)
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/corrections"), map[string]any{
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/corrections"), map[string]any{
 		"registration_id": document.RegistrationID, "child_id": child.ChildID,
 		"total_cents": child.TotalCents - carriedCorrectionCents, "reason": "Erster Tag krank",
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	run = decodeSchoolPortalData[carriedRunBody](t, rec.Body.Bytes())
 	issued := releaseCarriedRun(t, f, billing, run)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(run.ID, issued.ID), map[string]any{"reason": "Anschrift falsch"})
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(int64(run.ID), int64(issued.ID)), map[string]any{"reason": "Anschrift falsch"})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	return carriedRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID), child.TotalCents
+	return carriedRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID)), child.TotalCents
 }
 
 func TestReissuedInvoiceProposesTheCorrectionsOfTheCancelledInvoice(t *testing.T) {
@@ -157,16 +157,16 @@ func TestRemovedCarriedCorrectionIssuesTheFrozenAmount(t *testing.T) {
 	next, frozen := correctedAndCancelled(t, f, billing)
 	carried := next.Documents[0].Children[0].CarriedCorrections[0]
 
-	rec := traegerJSON(t, f.traeger, billing, http.MethodDelete, carriedCorrectionPath(next.ID, carried.PositionID), nil)
+	rec := traegerJSON(t, f.traeger, billing, http.MethodDelete, carriedCorrectionPath(int64(next.ID), int64(carried.PositionID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	removed := decodeSchoolPortalData[carriedRunBody](t, rec.Body.Bytes())
 	assert.Equal(t, frozen, removed.Documents[0].Children[0].TotalCents)
 	assert.Empty(t, removed.Documents[0].Children[0].CarriedCorrections)
-	assert.Contains(t, runActions(t, f, next.ID), "correct", "the removal stands in the trail of the run")
+	assert.Contains(t, runActions(t, f, int64(next.ID)), "correct", "the removal stands in the trail of the run")
 
 	// It stays removed on the next read and cannot be removed twice.
-	assert.Equal(t, frozen, carriedRun(t, f, billing, next.ID).Documents[0].Children[0].TotalCents)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodDelete, carriedCorrectionPath(next.ID, carried.PositionID), nil)
+	assert.Equal(t, frozen, carriedRun(t, f, billing, int64(next.ID)).Documents[0].Children[0].TotalCents)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodDelete, carriedCorrectionPath(int64(next.ID), int64(carried.PositionID)), nil)
 	require.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 	code, _ := registrationRefusalOf(t, rec)
 	assert.Equal(t, "parent_billing.carried_correction_not_found", code)
@@ -179,7 +179,7 @@ func TestRemovedCarriedCorrectionIssuesTheFrozenAmount(t *testing.T) {
 	assert.Empty(t, issued.Children[0].Corrections)
 
 	// A released run keeps what it issued.
-	rec = traegerJSON(t, f.traeger, billing, http.MethodDelete, carriedCorrectionPath(next.ID, carried.PositionID), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodDelete, carriedCorrectionPath(int64(next.ID), int64(carried.PositionID)), nil)
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 }
 
@@ -189,7 +189,7 @@ func TestChangedCarriedCorrectionReplacesTheProposal(t *testing.T) {
 	billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
 	next, frozen := correctedAndCancelled(t, f, billing)
 	carried := next.Documents[0].Children[0].CarriedCorrections[0]
-	path := carriedCorrectionPath(next.ID, carried.PositionID)
+	path := carriedCorrectionPath(int64(next.ID), int64(carried.PositionID))
 
 	// The amount without the correction is what removing it does.
 	rec := traegerJSON(t, f.traeger, billing, http.MethodPut, path, map[string]any{"total_cents": frozen, "reason": "Doch nicht krank"})
@@ -198,7 +198,7 @@ func TestChangedCarriedCorrectionReplacesTheProposal(t *testing.T) {
 	assert.Equal(t, "parent_billing.billing_correction_invalid", code)
 	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, path, map[string]any{"total_cents": frozen - 500, "reason": " "})
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
-	assert.Len(t, carriedRun(t, f, billing, next.ID).Documents[0].Children[0].CarriedCorrections, 1, "a refusal keeps the proposal")
+	assert.Len(t, carriedRun(t, f, billing, int64(next.ID)).Documents[0].Children[0].CarriedCorrections, 1, "a refusal keeps the proposal")
 
 	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, path, map[string]any{"total_cents": frozen - 500, "reason": "Nur ein halber Tag krank"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -224,19 +224,19 @@ func raisedAndZeroedCancelled(t *testing.T, f reviewFixture, billing string) car
 	t.Helper()
 	require.Equal(t, http.StatusOK, f.act(t, f.siblings, "confirm").Code)
 	setNumberRange(t, f, billing, "FE-{NNNN}")
-	first := carriedRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
+	first := carriedRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
 	document, child := first.Documents[0], first.Documents[0].Children[0]
 	for _, total := range []int64{child.TotalCents + 5000, 0} {
-		rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(first.ID, "/corrections"), map[string]any{
+		rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(first.ID), "/corrections"), map[string]any{
 			"registration_id": document.RegistrationID, "child_id": child.ChildID, "total_cents": total, "reason": "Nachbuchung",
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		first = decodeSchoolPortalData[carriedRunBody](t, rec.Body.Bytes())
 	}
 	issued := releaseCarriedRun(t, f, billing, first)
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(first.ID, issued.ID), map[string]any{"reason": "Anschrift falsch"})
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(int64(first.ID), int64(issued.ID)), map[string]any{"reason": "Anschrift falsch"})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	return carriedRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
+	return carriedRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
 }
 
 // TestCarriedCorrectionStopsAtZero removes the raise: the second proposal then
@@ -250,7 +250,7 @@ func TestCarriedCorrectionStopsAtZero(t *testing.T) {
 	carried := next.Documents[0].Children[0].CarriedCorrections
 	require.Len(t, carried, 2)
 
-	rec := traegerJSON(t, f.traeger, billing, http.MethodDelete, carriedCorrectionPath(next.ID, carried[0].PositionID), nil)
+	rec := traegerJSON(t, f.traeger, billing, http.MethodDelete, carriedCorrectionPath(int64(next.ID), int64(carried[0].PositionID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	after := decodeSchoolPortalData[carriedRunBody](t, rec.Body.Bytes())
 	assert.Equal(t, int64(0), after.Documents[0].Children[0].TotalCents)
@@ -270,20 +270,20 @@ func TestRemovingACarriedCorrectionCannotPushTheChildBelowZero(t *testing.T) {
 	billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
 	next := raisedAndZeroedCancelled(t, f, billing)
 	carried := next.Documents[0].Children[0].CarriedCorrections
-	rec := traegerJSON(t, f.traeger, billing, http.MethodDelete, carriedCorrectionPath(next.ID, carried[1].PositionID), nil)
+	rec := traegerJSON(t, f.traeger, billing, http.MethodDelete, carriedCorrectionPath(int64(next.ID), int64(carried[1].PositionID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	raised := decodeSchoolPortalData[carriedRunBody](t, rec.Body.Bytes())
 	document, child := raised.Documents[0], raised.Documents[0].Children[0]
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(next.ID, "/corrections"), map[string]any{
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(next.ID), "/corrections"), map[string]any{
 		"registration_id": document.RegistrationID, "child_id": child.ChildID, "total_cents": 0, "reason": "Doch nicht gebucht",
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 
-	rec = traegerJSON(t, f.traeger, billing, http.MethodDelete, carriedCorrectionPath(next.ID, carried[0].PositionID), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodDelete, carriedCorrectionPath(int64(next.ID), int64(carried[0].PositionID)), nil)
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	code, _ := registrationRefusalOf(t, rec)
 	assert.Equal(t, "parent_billing.billing_correction_invalid", code)
-	after := carriedRun(t, f, billing, next.ID).Documents[0]
+	after := carriedRun(t, f, billing, int64(next.ID)).Documents[0]
 	assert.Equal(t, int64(0), after.Children[0].TotalCents)
 	assert.Len(t, after.Children[0].CarriedCorrections, 1, "the refusal rolled the removal back")
 }
@@ -309,7 +309,7 @@ func TestGutschriftOfTheCancelledInvoiceIsNamedButNotCarried(t *testing.T) {
 		FROM parent_billing.documents WHERE organization_id = ? AND number = ?`, f.office.organization, cancelled)
 	require.NoError(t, err)
 
-	draft := carriedRun(t, f, billing, next.ID).Documents[0]
+	draft := carriedRun(t, f, billing, int64(next.ID)).Documents[0]
 	require.Len(t, draft.ReplacedCredits, 1)
 	assert.Equal(t, "FE-9000", draft.ReplacedCredits[0].Number)
 	assert.Equal(t, int64(-500), draft.ReplacedCredits[0].TotalCents)
@@ -326,7 +326,7 @@ func TestCarriedCorrectionsNeedTheBillingRightAndStayWithTheirTraeger(t *testing
 	foreign := newTraegerOffice(t, f.db, f.traeger, "Träger Korrektur Fremd", identityaccess.TraegerRoleBilling)
 	next, frozen := correctedAndCancelled(t, f, billing)
 	carried := next.Documents[0].Children[0].CarriedCorrections[0]
-	path := carriedCorrectionPath(next.ID, carried.PositionID)
+	path := carriedCorrectionPath(int64(next.ID), int64(carried.PositionID))
 	change := map[string]any{"total_cents": frozen - 100, "reason": "Fremd"}
 
 	for _, request := range []struct {
@@ -339,8 +339,8 @@ func TestCarriedCorrectionsNeedTheBillingRightAndStayWithTheirTraeger(t *testing
 		assert.Equal(t, http.StatusNotFound, rec.Code, "%s of another Träger: %s", request.method, rec.Body.String())
 	}
 	// A position that is no proposal of this run is not found.
-	rec := traegerJSON(t, f.traeger, billing, http.MethodDelete, carriedCorrectionPath(next.ID, carried.PositionID+100000), nil)
+	rec := traegerJSON(t, f.traeger, billing, http.MethodDelete, carriedCorrectionPath(int64(next.ID), int64(carried.PositionID+100000)), nil)
 	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 
-	assert.Equal(t, frozen-carriedCorrectionCents, carriedRun(t, f, billing, next.ID).Documents[0].Children[0].TotalCents, "refused requests change nothing")
+	assert.Equal(t, frozen-carriedCorrectionCents, carriedRun(t, f, billing, int64(next.ID)).Documents[0].Children[0].TotalCents, "refused requests change nothing")
 }

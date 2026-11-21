@@ -1,10 +1,11 @@
 import { ApiError, apiErrorFromResponse } from "./api-error";
+import type {
+  SubstitutionAssignmentResult,
+  SubstitutionOverviewResult,
+} from "./contract/substitutions.generated";
 import { sessionFetch } from "./session-cache";
 import {
-  type BackendGroupHandover,
-  type BackendAdditionalSupervisionResult,
   type RunningSupervision,
-  type BackendSubstitutionOverview,
   type Substitution,
   type TeacherAvailability,
   formatDateForBackend,
@@ -47,7 +48,7 @@ class SubstitutionService {
       );
     }
     const envelope =
-      (await response.json()) as SubstitutionProxyEnvelope<BackendSubstitutionOverview>;
+      (await response.json()) as SubstitutionProxyEnvelope<SubstitutionOverviewResult>;
     return mapSubstitutionOverview(unwrapSubstitutionProxyEnvelope(envelope));
   }
 
@@ -66,7 +67,7 @@ class SubstitutionService {
       );
     }
     const envelope =
-      (await response.json()) as SubstitutionProxyEnvelope<BackendSubstitutionOverview>;
+      (await response.json()) as SubstitutionProxyEnvelope<SubstitutionOverviewResult>;
     if (envelope.data === undefined) {
       throw invalidResponseError("schedule substitution overview");
     }
@@ -139,7 +140,7 @@ class SubstitutionService {
       throw await apiErrorFromResponse(response, "group handovers failed");
     }
     const envelope =
-      (await response.json()) as SubstitutionProxyEnvelope<BackendSubstitutionOverview>;
+      (await response.json()) as SubstitutionProxyEnvelope<SubstitutionOverviewResult>;
     const body = unwrapSubstitutionProxyEnvelope(envelope);
     return mapSubstitutionsResponse(body.group_handovers);
   }
@@ -152,12 +153,12 @@ class SubstitutionService {
       throw await apiErrorFromResponse(response, "available staff failed");
     }
     const envelope =
-      (await response.json()) as SubstitutionProxyEnvelope<BackendSubstitutionOverview>;
+      (await response.json()) as SubstitutionProxyEnvelope<SubstitutionOverviewResult>;
     const body = unwrapSubstitutionProxyEnvelope(envelope);
-    return body.targets.map((staff) => {
+    return (body.targets ?? []).map((staff) => {
       const [firstName = "", ...lastNameParts] = staff.full_name.split(" ");
       return {
-        id: staff.id.toString(),
+        id: staff.id,
         firstName,
         lastName: lastNameParts.join(" "),
         inSubstitution: false,
@@ -177,7 +178,7 @@ class SubstitutionService {
       throw await apiErrorFromResponse(response, "running supervision failed");
     }
     const envelope =
-      (await response.json()) as SubstitutionProxyEnvelope<BackendSubstitutionOverview>;
+      (await response.json()) as SubstitutionProxyEnvelope<SubstitutionOverviewResult>;
     const rows = unwrapSubstitutionProxyEnvelope(envelope).running_supervisions;
     if (!Array.isArray(rows) || rows.length !== 1 || !rows[0]) {
       throw invalidResponseError("running supervision");
@@ -231,12 +232,11 @@ class SubstitutionService {
     }
     const envelope =
       (await response.json()) as SubstitutionProxyEnvelope<unknown>;
-    const body =
-      substitutionAssignmentResult<BackendAdditionalSupervisionResult>(
-        unwrapSubstitutionProxyEnvelope(envelope),
-        "additional_supervision",
-      );
-    return { id: body.id.toString(), targetName: body.target.full_name };
+    const body = substitutionAssignmentResult<SubstitutionAssignmentResult>(
+      unwrapSubstitutionProxyEnvelope(envelope),
+      "additional_supervision",
+    );
+    return { id: body.id, targetName: body.target.full_name };
   }
 
   /**
@@ -281,12 +281,22 @@ class SubstitutionService {
     }
     const envelope =
       (await response.json()) as SubstitutionProxyEnvelope<unknown>;
-    return mapSubstitutionResponse(
-      substitutionAssignmentResult<BackendGroupHandover>(
-        unwrapSubstitutionProxyEnvelope(envelope),
-        "group_handover",
-      ),
+    const result = substitutionAssignmentResult<SubstitutionAssignmentResult>(
+      unwrapSubstitutionProxyEnvelope(envelope),
+      "group_handover",
     );
+    // A group handover always names its group and period; the contract
+    // shares the type with the other kinds, where both are absent.
+    if (!result.group || !result.period) {
+      throw new ApiError("group handover answer without group or period", 502);
+    }
+    return mapSubstitutionResponse({
+      id: result.id,
+      group: result.group,
+      target: result.target,
+      period: result.period,
+      can_end: result.can_end ?? false,
+    });
   }
 
   async deleteSubstitution(id: string): Promise<void> {

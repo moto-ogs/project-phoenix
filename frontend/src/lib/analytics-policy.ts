@@ -41,6 +41,10 @@ export type ChildScopeAnalyticsValue =
 // pull Zod and every route schema into every portal.
 const DAY_CHANGE_KINDS = [
   "closing_day",
+  "activity_cancelled",
+  "activity_lead_changed",
+  "activity_reinstated",
+  "activity_room_changed",
   "group_substitution",
   "group_substitution_count",
   "staff_absent",

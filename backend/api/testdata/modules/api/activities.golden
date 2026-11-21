@@ -7,8 +7,6 @@ GET /api/activities/categories -> basis
 GET /api/activities/students/{studentId} -> basis
 GET /api/activities/supervisors/available -> basis
 GET /api/activities/{id} -> basis
-GET /api/activities/{id}/schedules -> basis
-GET /api/activities/{id}/schedules/{scheduleId} -> basis
 GET /api/activities/{id}/students -> basis
 GET /api/activities/{id}/supervisors -> basis
 POST /api/activities/ -> basis

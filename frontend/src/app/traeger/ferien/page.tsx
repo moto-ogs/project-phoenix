@@ -64,7 +64,7 @@ const COLUMNS: DataTableColumn<HolidayPeriod>[] = [
         tone={period.status === "published" ? "green" : "gray"}
       />
     ),
-    sortValue: (period) => period.status,
+    sortValue: (period) => period.status ?? "",
     stacked: "meta",
   },
 ];

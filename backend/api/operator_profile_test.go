@@ -17,6 +17,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil/routetest"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	identityoperator "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/operator"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 func TestGetProfile_Success(t *testing.T) {
@@ -51,7 +52,7 @@ func TestGetProfile_Success(t *testing.T) {
 	require.NoError(t, err)
 
 	data := response["data"].(map[string]interface{})
-	assert.Equal(t, float64(123), data["id"])
+	assert.Equal(t, int64(123), testpkg.JSONID(t, data["id"]))
 	assert.Equal(t, "operator@example.com", data["email"])
 	assert.Equal(t, "Test Operator", data["display_name"])
 }

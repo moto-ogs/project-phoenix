@@ -37,10 +37,10 @@ type proofReceipt struct {
 }
 
 type proofDetail struct {
-	ID               int64 `json:"id"`
-	BenefitsDeclared bool  `json:"benefits_declared"`
+	ID               wireID `json:"id"`
+	BenefitsDeclared bool   `json:"benefits_declared"`
 	BenefitsProofs   []struct {
-		ID          int64  `json:"id"`
+		ID          wireID `json:"id"`
 		Filename    string `json:"filename"`
 		SizeBytes   int64  `json:"size_bytes"`
 		ContentType string `json:"content_type"`
@@ -109,7 +109,7 @@ func TestHolidayProofIsClaimedAndOpenedOnlyFromTheRegistrationDetail(t *testing.
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(f.period.PublicToken), registration)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	id := decodeSchoolPortalData[struct {
-		ID int64 `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
 	assert.Equal(t, 2, countProofs(t, f.holidayRegistrationFixture, f.office.organization,
 		fmt.Sprintf("holiday_registration_id = %d AND token_hash IS NULL AND claimed_at IS NOT NULL", id)),
@@ -123,7 +123,7 @@ func TestHolidayProofIsClaimedAndOpenedOnlyFromTheRegistrationDetail(t *testing.
 	assert.Equal(t, "enrollment.upload_expired", code)
 	assert.Equal(t, 3, f.list(t, "").Total, "the refused registration was not stored")
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(id, ""), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(int64(id), ""), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	detail := decodeSchoolPortalData[proofDetail](t, rec.Body.Bytes())
 	assert.True(t, detail.BenefitsDeclared)
@@ -152,7 +152,7 @@ func TestHolidayProofIsClaimedAndOpenedOnlyFromTheRegistrationDetail(t *testing.
 		f.traeger.ServeHTTP(rec, req)
 		return rec
 	}
-	rec = open(f.office.token, id, detail.BenefitsProofs[0].ID)
+	rec = open(f.office.token, int64(id), int64(detail.BenefitsProofs[0].ID))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, proofPDF, rec.Body.Bytes())
 	assert.Equal(t, "application/pdf", rec.Header().Get("Content-Type"))
@@ -162,11 +162,11 @@ func TestHolidayProofIsClaimedAndOpenedOnlyFromTheRegistrationDetail(t *testing.
 	assert.Equal(t, "private, no-store", rec.Header().Get("Cache-Control"))
 	assert.Contains(t, f.auditActions(t), fmt.Sprintf("proof:%d", id), "every opened proof stands in the audit trail")
 
-	rec = open(f.office.token, f.siblings, detail.BenefitsProofs[0].ID)
+	rec = open(f.office.token, f.siblings, int64(detail.BenefitsProofs[0].ID))
 	assert.Equal(t, http.StatusNotFound, rec.Code, "a proof opens only from its own registration")
 	code, _ = registrationRefusalOf(t, rec)
 	assert.Equal(t, "enrollment.upload_not_found", code)
-	rec = open(other.token, id, detail.BenefitsProofs[0].ID)
+	rec = open(other.token, int64(id), int64(detail.BenefitsProofs[0].ID))
 	assert.Equal(t, http.StatusNotFound, rec.Code, "another Träger opens nothing")
 
 	// The hosting OGS works in the school transaction of its school; the

@@ -48,15 +48,15 @@ type billingPositionBody struct {
 }
 
 type billingChildBody struct {
-	ChildID     int64                 `json:"child_id"`
+	ChildID     wireID                `json:"child_id"`
 	FirstName   string                `json:"first_name"`
 	Positions   []billingPositionBody `json:"positions"`
 	Corrections []struct {
-		AmountCents        int64  `json:"amount_cents"`
-		TotalBeforeCents   int64  `json:"total_before_cents"`
-		TotalAfterCents    int64  `json:"total_after_cents"`
-		Reason             string `json:"reason"`
-		CreatedByAccountID *int64 `json:"created_by_account_id"`
+		AmountCents        int64   `json:"amount_cents"`
+		TotalBeforeCents   int64   `json:"total_before_cents"`
+		TotalAfterCents    int64   `json:"total_after_cents"`
+		Reason             string  `json:"reason"`
+		CreatedByAccountID *wireID `json:"created_by_account_id"`
 	} `json:"corrections"`
 	TotalCents int64 `json:"total_cents"`
 }
@@ -64,7 +64,7 @@ type billingChildBody struct {
 type billingDocumentBody struct {
 	Number             string             `json:"number"`
 	IssuedOn           *string            `json:"issued_on"`
-	RegistrationID     int64              `json:"registration_id"`
+	RegistrationID     wireID             `json:"registration_id"`
 	RecipientFirstName string             `json:"recipient_first_name"`
 	RecipientEmail     string             `json:"recipient_email"`
 	ServiceFrom        string             `json:"service_from"`
@@ -74,8 +74,8 @@ type billingDocumentBody struct {
 }
 
 type billingRunBody struct {
-	ID              int64                 `json:"id"`
-	HolidayPeriodID int64                 `json:"holiday_period_id"`
+	ID              wireID                `json:"id"`
+	HolidayPeriodID wireID                `json:"holiday_period_id"`
 	PeriodName      string                `json:"period_name"`
 	ServiceFrom     string                `json:"service_from"`
 	Status          string                `json:"status"`
@@ -98,7 +98,7 @@ type billingRunBody struct {
 }
 
 type billingPeriodBody struct {
-	ID       int64  `json:"id"`
+	ID       wireID `json:"id"`
 	Name     string `json:"name"`
 	StartsOn string `json:"starts_on"`
 	EndsOn   string `json:"ends_on"`
@@ -159,7 +159,7 @@ func TestHolidayBillingRunPreviewsCorrectsAndIssuesNumberedInvoices(t *testing.T
 	assert.Equal(t, f.period.ID, periods[0].ID)
 	assert.Equal(t, "2027-01-04", periods[0].StartsOn)
 
-	run := startBillingRun(t, f, billing, f.period.ID)
+	run := startBillingRun(t, f, billing, int64(f.period.ID))
 	assert.Equal(t, "calculated", run.Status)
 	assert.Equal(t, "Winterferien 2027", run.PeriodName)
 	assert.Equal(t, "2027-01-04", run.ServiceFrom)
@@ -170,13 +170,13 @@ func TestHolidayBillingRunPreviewsCorrectsAndIssuesNumberedInvoices(t *testing.T
 
 	// The preview bills the confirmed family with the frozen contribution;
 	// the registration still received is not billed.
-	preview := billingRun(t, f, billing, run.ID)
+	preview := billingRun(t, f, billing, int64(run.ID))
 	assert.True(t, preview.BilledInAdvance, "holidays are billed in advance, before the first week")
 	assert.False(t, preview.NumberRangeSet)
 	require.Len(t, preview.Documents, 1)
 	family := preview.Documents[0]
 	assert.Empty(t, family.Number, "a draft has no number")
-	assert.Equal(t, f.siblings, family.RegistrationID)
+	assert.Equal(t, f.siblings, int64(family.RegistrationID))
 	assert.Equal(t, "Eva", family.RecipientFirstName)
 	assert.Equal(t, "eva.muster@example.org", family.RecipientEmail)
 	assert.Equal(t, frozen.TotalCents, family.TotalCents, "the run bills what the confirmation froze")
@@ -185,7 +185,7 @@ func TestHolidayBillingRunPreviewsCorrectsAndIssuesNumberedInvoices(t *testing.T
 	lia := family.Children[0]
 	assert.Equal(t, "Lia", lia.FirstName)
 
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(preview))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(preview))
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	code, _ = registrationRefusalOf(t, rec)
 	assert.Equal(t, "parent_billing.number_range_missing", code)
@@ -203,17 +203,17 @@ func TestHolidayBillingRunPreviewsCorrectsAndIssuesNumberedInvoices(t *testing.T
 
 	// A correction needs a reason and a child the run bills.
 	correction := map[string]any{"registration_id": f.siblings, "child_id": lia.ChildID, "total_cents": 3000, "reason": " "}
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/corrections"), correction)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/corrections"), correction)
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	code, fields = registrationRefusalOf(t, rec)
 	assert.Equal(t, "parent_billing.billing_correction_invalid", code)
 	assert.Equal(t, []string{"reason"}, fields)
 	correction["reason"] = "Erste Woche krank, halber Beitrag"
 	correction["registration_id"] = f.again
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/corrections"), correction)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/corrections"), correction)
 	require.Equal(t, http.StatusNotFound, rec.Code, "a registration the run does not bill: %s", rec.Body.String())
 	correction["registration_id"] = f.siblings
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/corrections"), correction)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/corrections"), correction)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	corrected := decodeSchoolPortalData[billingRunBody](t, rec.Body.Bytes()).Documents[0].Children[0]
 	assert.Equal(t, int64(3000), corrected.TotalCents)
@@ -225,7 +225,7 @@ func TestHolidayBillingRunPreviewsCorrectsAndIssuesNumberedInvoices(t *testing.T
 	assert.Equal(t, lia.TotalCents, corrected.Corrections[0].TotalBeforeCents)
 	assert.NotNil(t, corrected.Corrections[0].CreatedByAccountID, "the history names who corrected")
 	correction["total_cents"], correction["reason"] = 3500, "Doch nur ein Tag krank"
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/corrections"), correction)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/corrections"), correction)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	checked := decodeSchoolPortalData[billingRunBody](t, rec.Body.Bytes())
 	assert.Len(t, checked.Documents[0].Children[0].Corrections, 2, "the history keeps every correction")
@@ -234,14 +234,14 @@ func TestHolidayBillingRunPreviewsCorrectsAndIssuesNumberedInvoices(t *testing.T
 	// A family confirmed after the check changes the run: the release
 	// refuses and issues nothing.
 	require.Equal(t, http.StatusOK, f.act(t, f.again, "confirm").Code)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(checked))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(checked))
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	code, _ = registrationRefusalOf(t, rec)
 	assert.Equal(t, "parent_billing.billing_run_changed", code)
 
-	checked = billingRun(t, f, billing, run.ID)
+	checked = billingRun(t, f, billing, int64(run.ID))
 	require.Len(t, checked.Documents, 2)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(checked))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(checked))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	released := decodeSchoolPortalData[billingRunBody](t, rec.Body.Bytes())
 	assert.Equal(t, "released", released.Status)
@@ -250,7 +250,7 @@ func TestHolidayBillingRunPreviewsCorrectsAndIssuesNumberedInvoices(t *testing.T
 	assert.Equal(t, checked.PreviewCents, *released.TotalCents)
 	require.Len(t, released.Documents, 2)
 	assert.Equal(t, "FE-0001", released.Documents[0].Number, "numbers in the order of the registrations")
-	assert.Equal(t, f.siblings, released.Documents[0].RegistrationID)
+	assert.Equal(t, f.siblings, int64(released.Documents[0].RegistrationID))
 	assert.Equal(t, "FE-0002", released.Documents[1].Number)
 	assert.NotNil(t, released.Documents[0].IssuedOn)
 	issuedLia := released.Documents[0].Children[0]
@@ -259,18 +259,18 @@ func TestHolidayBillingRunPreviewsCorrectsAndIssuesNumberedInvoices(t *testing.T
 	assert.Equal(t, "correction", issuedLia.Positions[len(issuedLia.Positions)-1].Kind)
 
 	// A released run never changes.
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/corrections"), correction)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/corrections"), correction)
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	code, _ = registrationRefusalOf(t, rec)
 	assert.Equal(t, "parent_billing.billing_run_released", code)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(released))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(released))
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
-	assert.Equal(t, released.Documents, billingRun(t, f, billing, run.ID).Documents, "the issued invoices read back unchanged")
+	assert.Equal(t, released.Documents, billingRun(t, f, billing, int64(run.ID)).Documents, "the issued invoices read back unchanged")
 
 	// A later run of the period bills only what no invoice bills yet.
-	next := startBillingRun(t, f, billing, f.period.ID)
-	assert.Empty(t, billingRun(t, f, billing, next.ID).Documents, "every confirmed family has its invoice")
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(next.ID, "/release"), map[string]any{"document_count": 0, "total_cents": 0})
+	next := startBillingRun(t, f, billing, int64(f.period.ID))
+	assert.Empty(t, billingRun(t, f, billing, int64(next.ID)).Documents, "every confirmed family has its invoice")
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(next.ID), "/release"), map[string]any{"document_count": 0, "total_cents": 0})
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	code, _ = registrationRefusalOf(t, rec)
 	assert.Equal(t, "parent_billing.billing_run_empty", code)
@@ -290,7 +290,7 @@ func TestHolidayBillingRunPreviewsCorrectsAndIssuesNumberedInvoices(t *testing.T
 
 	// Every read of personal data and every change stands in the trail, the
 	// read of the registrations also in Enrollment's.
-	actions := runActions(t, f, run.ID)
+	actions := runActions(t, f, int64(run.ID))
 	assert.Equal(t, "create", actions[0])
 	for _, action := range []string{"read", "correct", "release"} {
 		assert.Contains(t, actions, action)
@@ -304,9 +304,9 @@ func TestHolidayBillingRunNeedsTheBillingRightAndStaysWithItsTraeger(t *testing.
 	billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
 	foreign := newTraegerOffice(t, f.db, f.traeger, "Träger Lauf Fremd", identityaccess.TraegerRoleBilling)
 	require.Equal(t, http.StatusOK, f.act(t, f.siblings, "confirm").Code)
-	run := startBillingRun(t, f, billing, f.period.ID)
+	run := startBillingRun(t, f, billing, int64(f.period.ID))
 	setNumberRange(t, f, billing, "FE-{NNNN}")
-	preview := billingRun(t, f, billing, run.ID)
+	preview := billingRun(t, f, billing, int64(run.ID))
 	child := preview.Documents[0].Children[0]
 	correction := map[string]any{"registration_id": f.siblings, "child_id": child.ChildID, "total_cents": 0, "reason": "Härtefall"}
 
@@ -318,9 +318,9 @@ func TestHolidayBillingRunNeedsTheBillingRightAndStaysWithItsTraeger(t *testing.
 		{http.MethodGet, billingRunsPath + "/periods", nil},
 		{http.MethodGet, billingRunsPath + "/export", nil},
 		{http.MethodPost, billingRunsPath, map[string]any{"holiday_period_id": f.period.ID}},
-		{http.MethodGet, billingRunPath(run.ID, ""), nil},
-		{http.MethodPost, billingRunPath(run.ID, "/corrections"), correction},
-		{http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(preview)},
+		{http.MethodGet, billingRunPath(int64(run.ID), ""), nil},
+		{http.MethodPost, billingRunPath(int64(run.ID), "/corrections"), correction},
+		{http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(preview)},
 		{http.MethodGet, numberRangesPath, nil},
 		{http.MethodPut, numberRangesPath + "/holiday", map[string]any{"pattern": "X-{N}"}},
 	} {
@@ -342,9 +342,9 @@ func TestHolidayBillingRunNeedsTheBillingRightAndStaysWithItsTraeger(t *testing.
 		body         any
 	}{
 		{http.MethodPost, billingRunsPath, map[string]any{"holiday_period_id": f.period.ID}},
-		{http.MethodGet, billingRunPath(run.ID, ""), nil},
-		{http.MethodPost, billingRunPath(run.ID, "/corrections"), correction},
-		{http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(preview)},
+		{http.MethodGet, billingRunPath(int64(run.ID), ""), nil},
+		{http.MethodPost, billingRunPath(int64(run.ID), "/corrections"), correction},
+		{http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(preview)},
 	} {
 		rec := traegerJSON(t, f.traeger, foreign.token, request.method, request.path, request.body)
 		assert.Equal(t, http.StatusNotFound, rec.Code, "%s %s of another Träger: %s", request.method, request.path, rec.Body.String())
@@ -366,7 +366,7 @@ func TestHolidayBillingRunNeedsTheBillingRightAndStaysWithItsTraeger(t *testing.
 		Scan(context.Background(), &corrections, &documents))
 	assert.Zero(t, corrections, "refused corrections wrote nothing")
 	assert.Zero(t, documents, "refused releases issued nothing")
-	assert.Equal(t, "calculated", billingRun(t, f, billing, run.ID).Status)
+	assert.Equal(t, "calculated", billingRun(t, f, billing, int64(run.ID)).Status)
 }
 
 // TestParallelReleasesNumberInvoicesWithoutAGap releases the runs of two
@@ -383,21 +383,21 @@ func TestParallelReleasesNumberInvoicesWithoutAGap(t *testing.T) {
 	for _, email := range []string{"a.muster@example.org", "b.muster@example.org", "c.muster@example.org"} {
 		rec := publicJSON(t, f.public, http.MethodPost, registrationPath(second.PublicToken), siblingsRegistration(offer, email))
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-		registrations = append(registrations, decodeSchoolPortalData[struct {
-			ID int64 `json:"id"`
-		}](t, rec.Body.Bytes()).ID)
+		registrations = append(registrations, int64(decodeSchoolPortalData[struct {
+			ID wireID `json:"id"`
+		}](t, rec.Body.Bytes()).ID))
 	}
 	for _, id := range []int64{f.siblings, f.again} {
 		require.Equal(t, http.StatusOK, f.act(t, id, "confirm").Code)
 	}
 	for _, id := range registrations {
-		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(second.ID, id), nil)
+		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(second.ID), id), nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	}
 	setNumberRange(t, f, billing, "FE-{NNNN}")
-	runs := []billingRunBody{startBillingRun(t, f, billing, f.period.ID), startBillingRun(t, f, billing, second.ID)}
+	runs := []billingRunBody{startBillingRun(t, f, billing, int64(f.period.ID)), startBillingRun(t, f, billing, int64(second.ID))}
 	for i := range runs {
-		runs[i] = billingRun(t, f, billing, runs[i].ID)
+		runs[i] = billingRun(t, f, billing, int64(runs[i].ID))
 	}
 
 	bodies := make([][]byte, len(runs))
@@ -413,7 +413,7 @@ func TestParallelReleasesNumberInvoicesWithoutAGap(t *testing.T) {
 		go func(i int) {
 			defer wait.Done()
 			run := runs[i%len(runs)]
-			req := httptest.NewRequest(http.MethodPost, billingRunPath(run.ID, "/release"), bytes.NewReader(bodies[i%len(runs)]))
+			req := httptest.NewRequest(http.MethodPost, billingRunPath(int64(run.ID), "/release"), bytes.NewReader(bodies[i%len(runs)]))
 			req.Header.Set("Content-Type", "application/json")
 			req.Header.Set("Authorization", "Bearer "+billing)
 			rec := httptest.NewRecorder()
@@ -448,10 +448,10 @@ func TestBillingRunListQueryBudgetIsFlat(t *testing.T) {
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		return counter.Measurement(counter.Selects(""))
 	}
-	startBillingRun(t, f, billing, f.period.ID)
+	startBillingRun(t, f, billing, int64(f.period.ID))
 	runs, periods := list(billingRunsPath), list(billingRunsPath+"/periods")
 	second := openHolidays(t, f.holidayRegistrationFixture, f.office)
-	startBillingRun(t, f, billing, second.ID)
+	startBillingRun(t, f, billing, int64(second.ID))
 	assert.Len(t, list(billingRunsPath).Statements, len(runs.Statements), "the list reads the same statements for any number of runs")
 	assert.Len(t, list(billingRunsPath+"/periods").Statements, len(periods.Statements), "the periods read the same statements for any number of periods")
 	querybudgets.AssertQueryBudget(t, "api.traeger.billing_runs", runs)

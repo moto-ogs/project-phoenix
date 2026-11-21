@@ -83,7 +83,7 @@ describe.each([
       expect(setter).toHaveBeenCalledOnce();
       expect(await response.json()).toEqual(
         path === "switch-tenant"
-          ? { success: true }
+          ? { status: "success", data: null }
           : {
               expires_in: 900,
               target_account_id: "42",

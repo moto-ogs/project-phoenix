@@ -13,5 +13,10 @@
     "file": "traeger/datev-export.golden",
     "routes": ["GET /traeger/datev-export/readiness"],
     "issue": 2352
+  },
+  {
+    "file": "api/schedules.golden",
+    "routes": ["GET /api/schedules/timeframes/"],
+    "issue": 2353
   }
 ]

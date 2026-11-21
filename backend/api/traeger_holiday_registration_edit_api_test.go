@@ -37,12 +37,12 @@ type editedRegistration struct {
 		Email     string `json:"email"`
 	} `json:"second_guardian"`
 	Children []struct {
-		ID              int64  `json:"id"`
-		FirstName       string `json:"first_name"`
-		LastName        string `json:"last_name"`
-		BirthDate       string `json:"birth_date"`
-		HomeSchoolID    *int64 `json:"home_school_id"`
-		GuestSchoolName string `json:"guest_school_name"`
+		ID              wireID  `json:"id"`
+		FirstName       string  `json:"first_name"`
+		LastName        string  `json:"last_name"`
+		BirthDate       string  `json:"birth_date"`
+		HomeSchoolID    *wireID `json:"home_school_id"`
+		GuestSchoolName string  `json:"guest_school_name"`
 	} `json:"children"`
 	Contacts []struct {
 		Kind  string `json:"kind"`
@@ -51,7 +51,7 @@ type editedRegistration struct {
 	} `json:"contacts"`
 	CustomData      map[string]any `json:"custom_data"`
 	ChildCustomData []struct {
-		ChildID    int64          `json:"child_id"`
+		ChildID    wireID         `json:"child_id"`
 		CustomData map[string]any `json:"custom_data"`
 	} `json:"child_custom_data"`
 	History []struct {
@@ -68,7 +68,7 @@ func newEditFixture(t *testing.T, name string) reviewFixture {
 	f := newHolidayRegistrationFixture(t)
 	office := newTraegerOffice(t, f.db, f.traeger, name, identityaccess.TraegerRoleAdministration)
 	period := openHolidays(t, f, office)
-	saveHolidayForm(t, f, office, period.ID, questionsForm())
+	saveHolidayForm(t, f, office, int64(period.ID), questionsForm())
 	offer := holidayOffer(t, f, period.PublicToken)
 	body := siblingsRegistration(offer, "eva.muster@example.org")
 	body["form_version"] = 2
@@ -79,9 +79,9 @@ func newEditFixture(t *testing.T, name string) reviewFixture {
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken), body)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	siblings := decodeSchoolPortalData[struct {
-		ID int64 `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
-	return reviewFixture{holidayRegistrationFixture: f, office: office, period: period, offer: offer, siblings: siblings}
+	return reviewFixture{holidayRegistrationFixture: f, office: office, period: period, offer: offer, siblings: int64(siblings)}
 }
 
 func (f reviewFixture) editDetails(t *testing.T, id int64, body map[string]any) *httptest.ResponseRecorder {
@@ -263,10 +263,10 @@ func TestTraegerEditFollowsTheStateAndKeepsContributionAndInvoice(t *testing.T) 
 	f.edited(t, f.editDetails(t, f.siblings, editedGuardians("0151 1111111", nil)))
 	require.Equal(t, http.StatusOK, f.act(t, f.siblings, "confirm").Code)
 	setNumberRange(t, f, billing, "FE-{NNNN}")
-	run := startBillingRun(t, f, billing, f.period.ID)
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(billingRun(t, f, billing, run.ID)))
+	run := startBillingRun(t, f, billing, int64(f.period.ID))
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(billingRun(t, f, billing, int64(run.ID))))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	invoice := billingRun(t, f, billing, run.ID)
+	invoice := billingRun(t, f, billing, int64(run.ID))
 	require.Len(t, invoice.Documents, 1)
 	require.NotEmpty(t, invoice.Documents[0].Number)
 	contribution := f.contribution(t, f.siblings)
@@ -278,7 +278,7 @@ func TestTraegerEditFollowsTheStateAndKeepsContributionAndInvoice(t *testing.T) 
 	}))
 	assert.Equal(t, "Evelyn", confirmed.GuardianFirstName, "a confirmed registration can be changed")
 	assert.Equal(t, contribution, f.contribution(t, f.siblings), "no detail changes the contribution")
-	assert.Equal(t, invoice, billingRun(t, f, billing, run.ID), "an issued invoice keeps its own copy")
+	assert.Equal(t, invoice, billingRun(t, f, billing, int64(run.ID)), "an issued invoice keeps its own copy")
 
 	assert.Equal(t, "cancelled", f.detail(t, f.act(t, f.again, "cancel")).Status)
 	rec = f.editDetails(t, f.again, editedGuardians("0151 2222222", nil))
@@ -336,7 +336,7 @@ func TestHolidayHostSeesAnEditedNameAtOnceAndTheGuestCopyAfterTheReconciliation(
 	f := newHolidayGuestFixture(t, "Träger Bearbeiten Ausrichtung")
 	week := f.offer.Weeks[0].ID
 	lead := f.staffOf(t, f.nord, permissions.ConfigRead, permissions.UsersCreate, permissions.UsersRead)
-	require.Equal(t, http.StatusOK, f.assign(t, lead, week, f.group).Code)
+	require.Equal(t, http.StatusOK, f.assign(t, lead, int64(week), f.group).Code)
 	f.confirm(t, f.siblings, "confirm")
 	f.today.Store(calendar.NewDate(2099, 7, 6))
 	f.reconcile(t)
@@ -354,7 +354,7 @@ func TestHolidayHostSeesAnEditedNameAtOnceAndTheGuestCopyAfterTheReconciliation(
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	lastNames := []string{}
-	for _, participant := range f.participants(t, lead, week).Participants {
+	for _, participant := range f.participants(t, lead, int64(week)).Participants {
 		lastNames = append(lastNames, participant.FirstName+" "+participant.LastName)
 	}
 	assert.Contains(t, lastNames, "Ben Mustermann", "the participant list reads the registration live")
@@ -385,7 +385,7 @@ func newDependentAnswersFixture(t *testing.T, name string) (reviewFixture, int64
 	f := newHolidayRegistrationFixture(t)
 	office := newTraegerOffice(t, f.db, f.traeger, name, identityaccess.TraegerRoleAdministration)
 	period := openHolidays(t, f, office)
-	saveHolidayForm(t, f, office, period.ID, dependentAnswersForm())
+	saveHolidayForm(t, f, office, int64(period.ID), dependentAnswersForm())
 	offer := holidayOffer(t, f, period.PublicToken)
 	body := siblingsRegistration(offer, "eva.muster@example.org")
 	body["form_version"] = 2
@@ -396,15 +396,15 @@ func newDependentAnswersFixture(t *testing.T, name string) (reviewFixture, int64
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken), body)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	siblings := decodeSchoolPortalData[struct {
-		ID int64 `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
-	f2 := reviewFixture{holidayRegistrationFixture: f, office: office, period: period, offer: offer, siblings: siblings}
-	return f2, f2.readDetail(t, siblings).Children[0].ID
+	f2 := reviewFixture{holidayRegistrationFixture: f, office: office, period: period, offer: offer, siblings: int64(siblings)}
+	return f2, int64(f2.readDetail(t, int64(siblings)).Children[0].ID)
 }
 
 func childAnswersOf(detail editedRegistration, childID int64) map[string]any {
 	for _, child := range detail.ChildCustomData {
-		if child.ChildID == childID {
+		if int64(child.ChildID) == childID {
 			return child.CustomData
 		}
 	}
@@ -440,7 +440,7 @@ func TestTraegerEditOfAFamilyAnswerUpdatesTheChildAnswers(t *testing.T) {
 	edited := f.edited(t, f.editDetails(t, f.siblings, map[string]any{"custom_data": map[string]any{"ausfluege_moeglich": false}}))
 	assert.Equal(t, map[string]any{"tetanus_datum": "Mai 2024"}, childAnswersOf(edited, lia),
 		"the hidden trip answer goes, the answer behind the health question stays")
-	assert.Empty(t, childAnswersOf(edited, ben))
+	assert.Empty(t, childAnswersOf(edited, int64(ben)))
 	assert.Equal(t, []any{"children.0.custom_data.ausflug_ziel", "children.1.custom_data.ausflug_ziel", "custom_data.ausfluege_moeglich"},
 		edited.History[len(edited.History)-1].Details["fields"])
 }
@@ -452,14 +452,14 @@ func newAddressEditFixture(t *testing.T, name, requirement string) reviewFixture
 	f := newHolidayRegistrationFixture(t)
 	office := newTraegerOffice(t, f.db, f.traeger, name, identityaccess.TraegerRoleAdministration)
 	period := openHolidays(t, f, office)
-	saveHolidayAddressForm(t, f, office, period.ID, requirement)
+	saveHolidayAddressForm(t, f, office, int64(period.ID), requirement)
 	offer := holidayOffer(t, f, period.PublicToken)
 	rec := submitWithAddress(t, f, period.PublicToken, offer, "eva.muster@example.org", musterAddress())
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	siblings := decodeSchoolPortalData[struct {
-		ID int64 `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
-	return reviewFixture{holidayRegistrationFixture: f, office: office, period: period, offer: offer, siblings: siblings}
+	return reviewFixture{holidayRegistrationFixture: f, office: office, period: period, offer: offer, siblings: int64(siblings)}
 }
 
 func guardiansWithAddress(address any) map[string]any {
@@ -512,11 +512,11 @@ func TestTraegerEditsTheGuardianAddressWithTheRulesOfItsForm(t *testing.T) {
 	billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
 	require.Equal(t, http.StatusOK, f.act(t, f.siblings, "confirm").Code)
 	setNumberRange(t, f, billing, "FE-{NNNN}")
-	run := startBillingRun(t, f, billing, f.period.ID)
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(billingRun(t, f, billing, run.ID)))
+	run := startBillingRun(t, f, billing, int64(f.period.ID))
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(billingRun(t, f, billing, int64(run.ID))))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	invoiceAddress := func() string {
-		rec := traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(run.ID, ""), nil)
+		rec := traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(int64(run.ID), ""), nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		documents := decodeSchoolPortalData[billingAddressBody](t, rec.Body.Bytes()).Documents
 		require.Len(t, documents, 1)

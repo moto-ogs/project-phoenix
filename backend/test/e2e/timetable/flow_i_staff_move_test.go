@@ -50,11 +50,11 @@ func TestFlowI_StaffPoolAndAtomicMove(t *testing.T) {
 	var pool struct {
 		DienstplanInUse bool `json:"dienstplan_in_use"`
 		Entries         []struct {
-			StaffID     int64  `json:"staff_id"`
-			Category    string `json:"category"`
+			StaffID     testpkg.ID `json:"staff_id"`
+			Category    string     `json:"category"`
 			Assignments []struct {
-				InstanceID int64  `json:"instance_id"`
-				Title      string `json:"title"`
+				InstanceID testpkg.ID `json:"instance_id"`
+				Title      string     `json:"title"`
 			} `json:"assignments"`
 		} `json:"entries"`
 	}
@@ -62,10 +62,10 @@ func TestFlowI_StaffPoolAndAtomicMove(t *testing.T) {
 	assert.True(t, pool.DienstplanInUse)
 	categories := map[int64]string{}
 	for _, e := range pool.Entries {
-		categories[e.StaffID] = e.Category
-		if e.StaffID == mover.ID {
+		categories[int64(e.StaffID)] = e.Category
+		if int64(e.StaffID) == mover.ID {
 			require.Len(t, e.Assignments, 1)
-			assert.Equal(t, schulhof.ID, e.Assignments[0].InstanceID)
+			assert.Equal(t, schulhof.ID, int64(e.Assignments[0].InstanceID))
 			assert.Equal(t, "Schulhof", e.Assignments[0].Title)
 		}
 	}
@@ -77,13 +77,13 @@ func TestFlowI_StaffPoolAndAtomicMove(t *testing.T) {
 	rr = s.do(http.MethodPost, fmt.Sprintf("/instances/%d/move-staff", mensa.ID), moveBody, claims)
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 	var moved struct {
-		TargetInstanceID int64  `json:"target_instance_id"`
-		SourceInstanceID *int64 `json:"source_instance_id"`
-		Action           string `json:"action"`
+		TargetInstanceID testpkg.ID  `json:"target_instance_id"`
+		SourceInstanceID *testpkg.ID `json:"source_instance_id"`
+		Action           string      `json:"action"`
 	}
 	decodeResponse(t, rr, &moved)
 	assert.Equal(t, "moved", moved.Action)
-	assert.Equal(t, mensa.ID, moved.TargetInstanceID)
+	assert.Equal(t, mensa.ID, int64(moved.TargetInstanceID))
 
 	var rows []*testpkg.InstanceStaff
 	require.NoError(t, s.db.NewSelect().Model(&rows).
@@ -97,16 +97,16 @@ func TestFlowI_StaffPoolAndAtomicMove(t *testing.T) {
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 	var history struct {
 		Events []struct {
-			EventType        string  `json:"event_type"`
-			InstanceID       *int64  `json:"instance_id"`
-			SubjectStaffName *string `json:"subject_staff_name"`
+			EventType        string      `json:"event_type"`
+			InstanceID       *testpkg.ID `json:"instance_id"`
+			SubjectStaffName *string     `json:"subject_staff_name"`
 		} `json:"events"`
 	}
 	decodeResponse(t, rr, &history)
 	require.Len(t, history.Events, 1, "exactly one protocol entry for the move")
 	assert.Equal(t, "staff_moved", history.Events[0].EventType)
 	require.NotNil(t, history.Events[0].InstanceID)
-	assert.Equal(t, mensa.ID, *history.Events[0].InstanceID)
+	assert.Equal(t, mensa.ID, int64(*history.Events[0].InstanceID))
 	require.NotNil(t, history.Events[0].SubjectStaffName)
 	assert.Contains(t, *history.Events[0].SubjectStaffName, "Ina")
 	// 4. Pool assign: the free person joins Mensa without a source block.

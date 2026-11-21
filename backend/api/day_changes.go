@@ -92,8 +92,10 @@ type DayChangesSources struct {
 	Notices dayChangesNoticeReads
 	// ClosingDays is School Calendar's read of the closing days (#7664).
 	ClosingDays dayChangesClosingDayReads
-	Today       func() calendar.Date
-	Logger      *slog.Logger
+	// Blocks is Timetable's read of the day's changed blocks (#7662).
+	Blocks dayChangesBlocks
+	Today  func() calendar.Date
+	Logger *slog.Logger
 }
 
 // NewDayChanges binds the sources to the projection's ports.
@@ -107,13 +109,17 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 	if sources.ClosingDays == nil {
 		return nil, fmt.Errorf("%w: closing day source", daychangesview.ErrDependencies)
 	}
+	if sources.Blocks == nil {
+		return nil, fmt.Errorf("%w: timetable source", daychangesview.ErrDependencies)
+	}
 	return daychangesview.New(daychangesview.Dependencies{
-		Today:     sources.Today,
-		Isolation: dayChangesSavepoints{},
-		Staff:     dayChangesStaff{sources: sources},
-		Notices:   dayChangesNotices{reads: sources.Notices},
-		Closing:   dayChangesClosingDays{reads: sources.ClosingDays},
-		Logger:    sources.Logger,
+		Today:      sources.Today,
+		Isolation:  dayChangesSavepoints{},
+		Staff:      dayChangesStaff{sources: sources},
+		Notices:    dayChangesNotices{reads: sources.Notices},
+		Closing:    dayChangesClosingDays{reads: sources.ClosingDays},
+		Activities: dayChangesActivities{sources: sources},
+		Logger:     sources.Logger,
 	})
 }
 

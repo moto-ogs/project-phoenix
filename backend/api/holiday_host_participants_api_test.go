@@ -32,7 +32,7 @@ import (
 )
 
 type hostedWeekBody struct {
-	ID           int64  `json:"id"`
+	ID           wireID `json:"id"`
 	PeriodName   string `json:"period_name"`
 	StartsOn     string `json:"starts_on"`
 	EndsOn       string `json:"ends_on"`
@@ -54,17 +54,17 @@ type participantListBody struct {
 		Count int    `json:"count"`
 	} `json:"time_models"`
 	HomeSchools []struct {
-		SchoolID *int64 `json:"school_id"`
-		Name     string `json:"name"`
-		Count    int    `json:"count"`
+		SchoolID *wireID `json:"school_id"`
+		Name     string  `json:"name"`
+		Count    int     `json:"count"`
 	} `json:"home_schools"`
 	Participants []struct {
-		FirstName      string `json:"first_name"`
-		LastName       string `json:"last_name"`
-		BirthDate      string `json:"birth_date"`
-		HomeSchoolID   *int64 `json:"home_school_id"`
-		HomeSchoolName string `json:"home_school_name"`
-		TimeModelID    int64  `json:"time_model_id"`
+		FirstName      string  `json:"first_name"`
+		LastName       string  `json:"last_name"`
+		BirthDate      string  `json:"birth_date"`
+		HomeSchoolID   *wireID `json:"home_school_id"`
+		HomeSchoolName string  `json:"home_school_name"`
+		TimeModelID    wireID  `json:"time_model_id"`
 	} `json:"participants"`
 }
 
@@ -90,16 +90,16 @@ func newHolidayHostFixture(t *testing.T, name string) holidayHostFixture {
 	body := julyHolidays2099(office)
 	body.RegistrationOpensOn, body.RegistrationClosesOn = "2020-01-01", "2099-06-30"
 	created := createHolidayPeriod(t, f.traeger, office, body)
-	rec := traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayPeriodPath(created.ID)+"/publish", nil)
+	rec := traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayPeriodPath(int64(created.ID))+"/publish", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	link := decodeSchoolPortalData[traegerPeriodLink](t, rec.Body.Bytes())
 	offer := holidayOffer(t, f, link.PublicToken)
 	submit := func(body map[string]any) int64 {
 		rec := publicJSON(t, f.public, http.MethodPost, registrationPath(link.PublicToken), body)
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-		return decodeSchoolPortalData[struct {
-			ID int64 `json:"id"`
-		}](t, rec.Body.Bytes()).ID
+		return int64(decodeSchoolPortalData[struct {
+			ID wireID `json:"id"`
+		}](t, rec.Body.Bytes()).ID)
 	}
 	siblings := submit(siblingsRegistration(offer, "eva.muster@example.org"))
 	tom := siblingsRegistration(offer, "tom.beispiel@example.org")
@@ -210,7 +210,7 @@ func (f holidayHostFixture) accessLog(t *testing.T, schoolID int64) []string {
 		Scan(t.Context(), &rows))
 	entries := make([]string, len(rows))
 	for i, row := range rows {
-		assert.Equal(t, f.offer.Weeks[0].ID, row.WeekID)
+		assert.Equal(t, int64(f.offer.Weeks[0].ID), row.WeekID)
 		entries[i] = row.ResourceType + ":" + row.Format + ":" + row.Participants
 	}
 	return entries
@@ -229,14 +229,14 @@ func TestHolidayHostSeesOnlyConfirmedChildrenOfItsWeek(t *testing.T) {
 		CareStartsAt: "08:00", CareEndsAt: "16:00", DayParticipants: weeks[0].DayParticipants}, weeks[0],
 		"the care window runs from the earliest start to the latest end of the week's time models")
 	assert.Empty(t, weeks[0].DayParticipants, "a week booked as a whole counts no single days")
-	empty := f.participants(t, host, week)
+	empty := f.participants(t, host, int64(week))
 	assert.Empty(t, empty.Participants, "without a confirmed booking the school sees no child")
 
 	f.confirm(t, f.siblings, "confirm")
 	weeks = f.weeks(t, host)
 	require.Len(t, weeks, 1)
 	assert.Equal(t, 2, weeks[0].Participants)
-	list := f.participants(t, host, week)
+	list := f.participants(t, host, int64(week))
 	require.Len(t, list.Participants, 2, "Tom's registration is not confirmed")
 	assert.Equal(t, "Ben", list.Participants[0].FirstName)
 	assert.Nil(t, list.Participants[0].HomeSchoolID)
@@ -315,7 +315,7 @@ func TestHolidayHostSeesOnlyConfirmedChildrenOfItsWeek(t *testing.T) {
 	assert.Empty(t, f.accessLog(t, sued), "a refused read is not logged")
 
 	f.confirm(t, f.siblings, "cancel")
-	assert.Empty(t, f.participants(t, host, week).Participants, "a cancelled booking ends the access at once")
+	assert.Empty(t, f.participants(t, host, int64(week)).Participants, "a cancelled booking ends the access at once")
 }
 
 // TestHolidayHostWeeksOpenToThePlanningViews pins who reads the list of
@@ -354,7 +354,7 @@ func TestHolidayHostAccessEndsAfterTheWeek(t *testing.T) {
 	f.confirm(t, f.siblings, "confirm")
 
 	f.today.Store(calendar.NewDate(2099, 7, 10))
-	assert.Len(t, f.participants(t, host, week).Participants, 2, "the last day of the week still shows the list")
+	assert.Len(t, f.participants(t, host, int64(week)).Participants, 2, "the last day of the week still shows the list")
 
 	f.today.Store(calendar.NewDate(2099, 7, 11))
 	assert.Empty(t, f.weeks(t, host), "after the week the school no longer sees it")

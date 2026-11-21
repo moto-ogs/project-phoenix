@@ -4,6 +4,10 @@
 // reports and names the PDF. The backend decides every permission
 // (student_accidents:read / :manage) and refuses changes to a signed report.
 
+import type {
+  AccidentReportResponse,
+  StudentDocumentResponse,
+} from "~/lib/contract/students.generated";
 import { bffJson } from "./bff-fetch";
 import { signatureRequestBody, type SignatureValue } from "./signature";
 
@@ -37,32 +41,11 @@ export interface AccidentReportDetails extends AccidentReportFields {
   signedDigitally: boolean;
 }
 
-export interface BackendAccidentReport {
-  status: AccidentReportStatus;
-  version?: number;
-  supersedes_id?: string;
-  superseded_by_id?: string;
-  signed_at?: string;
-  signed_digitally: boolean;
-  occurred_at: string;
-  location: string;
-  description: string;
-  injured_body_parts: string;
-  injury_kind: string;
-  witnesses: string;
-  first_aid: string;
-  doctor_visited: boolean;
-  doctor: string;
-  parents_notified: string;
-  parents_notified_at?: string;
-  supervisor: string;
-}
-
 export function mapAccidentReport(
-  data: BackendAccidentReport,
+  data: AccidentReportResponse,
 ): AccidentReportDetails {
   return {
-    status: data.status,
+    status: data.status === "signed" ? "signed" : "open",
     version: data.version ?? 0,
     supersedesId: data.supersedes_id ?? null,
     supersededById: data.superseded_by_id ?? null,
@@ -112,8 +95,8 @@ async function writeReport(
   method: "POST" | "PUT",
   body: unknown,
 ): Promise<string> {
-  const report = await bffJson<{ id: number | string }>(url, { method, body });
-  return report.id.toString();
+  const report = await bffJson<StudentDocumentResponse>(url, { method, body });
+  return report.id;
 }
 
 /** The page of one accident report in the tenant portal. */

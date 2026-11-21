@@ -406,6 +406,25 @@ describe.concurrent("error-path rules", () => {
       );
     });
 
+    it("follows the text and the pattern through variables, whatever their names", async () => {
+      const { status, output } = await lintSource(
+        `const CHUNK_TEXT = /Failed to load chunk/;
+      const STATUS_TEXT = new RegExp("status: (\\\\d{3})");
+      export function classify(err: unknown, context: { error?: unknown }) {
+        if (!(err instanceof Error)) return "other";
+        if (CHUNK_TEXT.test(err.message)) return "chunk";
+        const message = typeof context.error === "string" ? context.error : "";
+        if (STATUS_TEXT.exec(message)) return "status";
+        if (message.includes("Failed to fetch")) return "network";
+        return "other";
+      }`,
+        "src/lib/probe.ts",
+      );
+
+      expect(status).toBe(1);
+      expect(count(output, "no-error-text-match")).toBe(3);
+    });
+
     it("accepts decisions on the code, the status and unrelated text", async () => {
       const unrelatedChecks = MATCH_METHODS.flatMap((method) => [
         `if (warning.message.${method}("Frist")) return "deadline";`,
@@ -413,9 +432,12 @@ describe.concurrent("error-path rules", () => {
       ]);
       const { status, output } = await lintSource(
         `import { ApiError } from "~/lib/api-error";
-      export function classify(err: unknown, warning: { message: string }, codes: string[]) {
+      export function classify(err: unknown, warning: { message: string }, codes: string[], session: { error?: string }) {
         if (err instanceof ApiError && err.code === "general.permission") return "denied";
         if (err instanceof ApiError && err.status === 404) return "missing";
+        if (session.error === "RefreshTokenError") return "expired";
+        const LABEL = /Frist/;
+        if (LABEL.test(warning.message)) return "deadline";
         ${unrelatedChecks.join("\n        ")}
         return "other";
       }`,

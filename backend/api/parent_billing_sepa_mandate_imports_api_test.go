@@ -49,11 +49,11 @@ type sepaImportBody struct {
 		Status          string  `json:"status"`
 		Reference       string  `json:"reference"`
 		IBANMasked      string  `json:"iban_masked"`
-		ContractID      int64   `json:"contract_id"`
+		ContractID      wireID  `json:"contract_id"`
 		PayerLastName   string  `json:"payer_last_name"`
 		Sequence        string  `json:"sequence"`
 		LastCollectedOn *string `json:"last_collected_on"`
-		MandateID       int64   `json:"mandate_id"`
+		MandateID       wireID  `json:"mandate_id"`
 		Problems        []struct {
 			Field string `json:"field"`
 			Code  string `json:"code"`
@@ -237,9 +237,9 @@ func TestSEPAMandateImportTakesOverOldMandatesOnce(t *testing.T) {
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, sepaImportPath, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	var log []struct {
-		File      string `json:"file"`
-		AccountID *int64 `json:"account_id"`
-		Mandates  int    `json:"mandates"`
+		File      string  `json:"file"`
+		AccountID *wireID `json:"account_id"`
+		Mandates  int     `json:"mandates"`
 	}
 	require.NoError(t, json.Unmarshal(mustData(t, rec.Body.Bytes()), &log))
 	require.Len(t, log, 1, "the repeated import took over nothing")

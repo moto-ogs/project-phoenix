@@ -48,12 +48,12 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 			require.Equal(t, http.StatusCreated, rr.Code, rr.Body.String())
 			var phone struct {
 				Data struct {
-					ID int64 `json:"id"`
+					ID wireID `json:"id"`
 				}
 			}
 			require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &phone))
 			require.Positive(t, phone.Data.ID)
-			phoneIDs = append(phoneIDs, phone.Data.ID)
+			phoneIDs = append(phoneIDs, int64(phone.Data.ID))
 			numbers = append(numbers, number)
 			rr = c.do(t, withPerms(testutil.DefaultTestClaims(), "admin:*", "guardians:financial"), http.MethodPut, fmt.Sprintf("/%d/payment", gid), map[string]any{"iban": testIBAN, "account_holder": fmt.Sprintf("Holder%02d", i)})
 			require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
@@ -241,22 +241,22 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 				}
 			case "students":
 				var rows []struct {
-					ID        int64  `json:"student_id"`
+					ID        wireID `json:"student_id"`
 					FirstName string `json:"first_name"`
 					LastName  string `json:"last_name"`
 					Class     string `json:"school_class"`
-					Link      int64  `json:"relationship_id"`
+					Link      wireID `json:"relationship_id"`
 					Role      string `json:"guardian_role"`
 				}
 				require.NoError(t, json.Unmarshal(envelope.Data, &rows))
 				require.Len(t, rows, n)
 				seen := map[int64]bool{}
 				for _, row := range rows {
-					require.False(t, seen[row.ID])
-					seen[row.ID] = true
+					require.False(t, seen[int64(row.ID)])
+					seen[int64(row.ID)] = true
 					idx := -1
 					for i, id := range studentIDs {
-						if row.ID == id {
+						if int64(row.ID) == id {
 							idx = i
 						}
 					}
@@ -264,7 +264,7 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 					require.Equal(t, fmt.Sprintf("Child%02d", idx), row.FirstName)
 					require.Equal(t, "BudgetFamily", row.LastName)
 					require.Equal(t, "2b", row.Class)
-					require.Equal(t, linkIDs[idx], row.Link)
+					require.Equal(t, linkIDs[idx], int64(row.Link))
 					require.Equal(t, "primary_guardian", row.Role)
 				}
 			}

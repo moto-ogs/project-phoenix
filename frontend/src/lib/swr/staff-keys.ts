@@ -17,11 +17,8 @@ export const staffKeys = {
   profileKey: (id: string) => `staff-detail-${encodeURIComponent(id)}`,
   recordKey: (id: string) => `staff-record-${encodeURIComponent(id)}`,
   family: SWR_FAMILIES.staff,
-  key: (params: StaffFilters = {}, options: { strict?: boolean } = {}) =>
-    resourceKey("staff-directory-list-", {
-      ...params,
-      strict: options.strict ?? false,
-    }),
+  key: (params: StaffFilters = {}) =>
+    resourceKey("staff-directory-list-", params),
   teachersKey: () =>
     resourceKey("staff-directory-teachers-", { page: 1, pageSize: 1000 }),
   /** Dokumente der Personalakte (Reiter „Dokumente“). */

@@ -26,13 +26,7 @@ import {
   mapPickupNoteFormToBackend,
 } from "./pickup-schedule-helpers";
 import type { ArrivalScheduleInput } from "./student-arrival-api";
-
-// API Response Types
-interface ApiResponse<T> {
-  status: string;
-  data?: T;
-  message?: string;
-}
+import type { ApiResponse } from "./api-envelope";
 
 export interface BulkPickupScheduleInput {
   weekday: number;

@@ -5,6 +5,10 @@
  * from the contribution client, so the registration page does not load it.
  */
 
+import type {
+  HolidaySiblingGroup as WireGroup,
+  HolidaySiblingMergeRequest,
+} from "./contract/traeger-holiday-contributions.generated";
 import { traegerRequest } from "./traeger-api";
 
 export interface HolidaySiblingGroup {
@@ -12,29 +16,19 @@ export interface HolidaySiblingGroup {
   readonly registrationIds: readonly string[];
 }
 
-interface BackendGroup {
-  id: number;
-  registration_ids?: number[] | null;
-}
-
 const groupsPath = (periodId: string) =>
   `/api/traeger/holiday-contributions/${encodeURIComponent(periodId)}/sibling-groups`;
 
-function groupFromBackend(group: BackendGroup): HolidaySiblingGroup {
-  return {
-    id: String(group.id),
-    registrationIds: (group.registration_ids ?? []).map(String),
-  };
+function groupFromBackend(group: WireGroup): HolidaySiblingGroup {
+  return { id: group.id, registrationIds: group.registration_ids ?? [] };
 }
 
 /** The sibling groups of the period, by registration number. */
 export async function fetchHolidaySiblingGroups(
   periodId: string,
 ): Promise<HolidaySiblingGroup[]> {
-  const groups = await traegerRequest<BackendGroup[] | null>(
-    groupsPath(periodId),
-  );
-  return (groups ?? []).map(groupFromBackend);
+  const groups = await traegerRequest<WireGroup[]>(groupsPath(periodId));
+  return groups.map(groupFromBackend);
 }
 
 /**
@@ -46,9 +40,11 @@ export async function mergeHolidaySiblings(
   registrationIds: readonly string[],
 ): Promise<HolidaySiblingGroup> {
   return groupFromBackend(
-    await traegerRequest<BackendGroup>(groupsPath(periodId), {
+    await traegerRequest<WireGroup>(groupsPath(periodId), {
       method: "POST",
-      body: { registration_ids: registrationIds.map(Number) },
+      body: {
+        registration_ids: registrationIds.map(Number),
+      } satisfies HolidaySiblingMergeRequest,
     }),
   );
 }

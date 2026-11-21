@@ -33,6 +33,7 @@ import {
 } from "~/lib/supervision-derive";
 import type { NavigationGroup } from "~/lib/contract/students.generated";
 import type { NavigationEducationalGroup } from "~/lib/usercontext-helpers";
+import type { ApiResponse } from "./api-envelope";
 
 const logger = createLogger({ component: "SupervisionContext" });
 
@@ -375,11 +376,9 @@ export function SupervisionProvider({
 
       let supervised: SupervisedGroupPayload[] | null = null;
       if (response.ok) {
-        const responseData = (await response.json()) as {
-          success: boolean;
-          message: string;
-          data: SupervisedGroupPayload[] | null;
-        };
+        const responseData = (await response.json()) as ApiResponse<
+          SupervisedGroupPayload[] | null
+        >;
         supervised = responseData.data ?? [];
       }
 

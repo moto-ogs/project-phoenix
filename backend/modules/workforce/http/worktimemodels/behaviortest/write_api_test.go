@@ -15,10 +15,10 @@ import (
 )
 
 type writtenModel struct {
-	ID             int64  `json:"id"`
-	Name           string `json:"name"`
-	RotationLength int    `json:"rotation_length"`
-	Anchor         string `json:"rotation_anchor_date"`
+	ID             testpkg.ID `json:"id"`
+	Name           string     `json:"name"`
+	RotationLength int        `json:"rotation_length"`
+	Anchor         string     `json:"rotation_anchor_date"`
 	Entries        []struct {
 		DayOfWeek     int     `json:"day_of_week"`
 		TargetMinutes int     `json:"target_minutes"`
@@ -47,7 +47,7 @@ func TestWorkTimeModelIsCreatedRewrittenAndDeletedThroughTheRoutes(t *testing.T)
 	require.Equal(t, http.StatusCreated, status, string(data))
 	var created writtenModel
 	require.NoError(t, json.Unmarshal(data, &created))
-	testpkg.OwnTestWorkTimeModel(t, db, created.ID)
+	testpkg.OwnTestWorkTimeModel(t, db, int64(created.ID))
 	assert.Equal(t, "Vorlage anlegen", created.Name)
 	assert.Equal(t, "2026-10-12", created.Anchor)
 	assert.Equal(t, []int{300}, created.WeeklyTotals)
@@ -62,17 +62,17 @@ func TestWorkTimeModelIsCreatedRewrittenAndDeletedThroughTheRoutes(t *testing.T)
 	assert.Equal(t, created.ID, updated.ID)
 	assert.Equal(t, []int{240}, updated.WeeklyTotals)
 	assert.Equal(t, 1, h.notified, "a rewritten template refreshes the time-account views once")
-	stored, err := h.models.FindWorkTimeModel(testpkg.Ctx(t), created.ID)
+	stored, err := h.models.FindWorkTimeModel(testpkg.Ctx(t), int64(created.ID))
 	require.NoError(t, err)
 	assert.Equal(t, "Vorlage geändert", stored.Name)
 
 	status, data, _ = h.request(http.MethodDelete, fmt.Sprintf("/%d", created.ID), nil)
 	require.Equal(t, http.StatusOK, status, string(data))
 	var deleted struct {
-		ID int64 `json:"id"`
+		ID testpkg.ID `json:"id"`
 	}
 	require.NoError(t, json.Unmarshal(data, &deleted))
 	assert.Equal(t, created.ID, deleted.ID)
-	_, err = h.models.FindWorkTimeModel(testpkg.Ctx(t), created.ID)
+	_, err = h.models.FindWorkTimeModel(testpkg.Ctx(t), int64(created.ID))
 	require.ErrorIs(t, err, workforce.ErrWorkTimeModelNotFound)
 }

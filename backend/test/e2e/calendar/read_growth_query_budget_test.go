@@ -42,7 +42,7 @@ func TestCalendarReadPositiveGrowthQueryBudget(t *testing.T) {
 				require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 				var created createAppointmentE2EResponse
 				require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &created))
-				appointmentID = created.Data.Appointment.ID
+				appointmentID = int64(created.Data.Appointment.ID)
 			}
 			base := "/calendar/appointments/" + strconv.FormatInt(appointmentID, 10)
 			counter := testpkg.CaptureQueries(t, db)
@@ -60,15 +60,15 @@ func TestCalendarReadPositiveGrowthQueryBudget(t *testing.T) {
 			var detail struct {
 				Data struct {
 					Appointment struct {
-						ID int64 `json:"id"`
+						ID testpkg.ID `json:"id"`
 					} `json:"appointment"`
 					Recipients []struct {
-						ID int64 `json:"id"`
+						ID testpkg.ID `json:"id"`
 					} `json:"recipients"`
 				} `json:"data"`
 			}
 			require.NoError(t, json.Unmarshal(read(base, staffToken, "/api"), &detail))
-			require.Equal(t, appointmentID, detail.Data.Appointment.ID)
+			require.Equal(t, appointmentID, int64(detail.Data.Appointment.ID))
 			require.Len(t, detail.Data.Recipients, n)
 			assertCalendarReadBudget(t, "appointment_detail", n, counter.Measurement(counter.Queries()))
 			for _, surface := range []struct{ name, path, token, mount string }{

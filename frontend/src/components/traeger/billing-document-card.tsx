@@ -32,6 +32,8 @@ import {
 } from "./billing-format";
 import { formatEuro } from "./contribution-format";
 import { formatDateRange } from "./holiday-period-format";
+import { labelOf } from "~/lib/label-of";
+import { formatDay } from "./holiday-period-format";
 
 export function recipientName(document: BillingDocument): string {
   return `${document.recipientFirstName} ${document.recipientLastName}`;
@@ -40,7 +42,7 @@ export function recipientName(document: BillingDocument): string {
 function issuedText(document: BillingDocument): string {
   const reference = billingReferenceText(document);
   const issued = document.number
-    ? `${BILLING_DOCUMENT_KIND_LABELS[document.kind]} ${document.number}${document.issuedOn ? ` vom ${formatDate(document.issuedOn)}` : ""}`
+    ? `${labelOf(BILLING_DOCUMENT_KIND_LABELS, document.kind, "Beleg")} ${document.number}${document.issuedOn ? ` vom ${formatDate(document.issuedOn)}` : ""}`
     : "Entwurf ohne Nummer";
   return reference ? `${issued} · ${reference}` : issued;
 }
@@ -72,7 +74,7 @@ function DocumentHistory({
         <ul className="space-y-1 text-sm text-gray-700">
           {document.history.map((link) => (
             <li key={link.id} className="wrap-anywhere">
-              {formatDate(link.issuedOn)}:{" "}
+              {formatDay(link.issuedOn)}:{" "}
               {link.kind === "invoice" ? (
                 <>
                   Neue Rechnung{" "}
@@ -93,7 +95,7 @@ function DocumentHistory({
                 </>
               ) : (
                 <>
-                  {BILLING_DOCUMENT_KIND_LABELS[link.kind]}{" "}
+                  {labelOf(BILLING_DOCUMENT_KIND_LABELS, link.kind, "Beleg")}{" "}
                   <span className="font-mono">{link.number}</span> über{" "}
                   <span className="tabular-nums">
                     {formatEuro(link.totalCents)}
@@ -189,7 +191,7 @@ export function BillingDocumentBreakdown({
         <SlideOverContent>
           <SlideOverHeader>
             <SlideOverTitle>
-              {BILLING_DOCUMENT_KIND_LABELS[document.kind]} an{" "}
+              {labelOf(BILLING_DOCUMENT_KIND_LABELS, document.kind, "Beleg")} an{" "}
               {recipientName(document)}
             </SlideOverTitle>
             {/* E-Mail und Debitorennummer (bis 35 Zeichen am Stück) brechen um. */}
@@ -222,7 +224,7 @@ export function BillingDocumentBreakdown({
               totalLabel={
                 document.kind === "invoice"
                   ? "Rechnungsbetrag"
-                  : `${BILLING_DOCUMENT_KIND_LABELS[document.kind]} gesamt`
+                  : `${labelOf(BILLING_DOCUMENT_KIND_LABELS, document.kind, "Beleg")} gesamt`
               }
               total={formatEuro(document.totalCents)}
             />
@@ -230,7 +232,9 @@ export function BillingDocumentBreakdown({
               // Der Abrechnungslauf setzt das Recht „Abrechnung“ voraus.
               canManageBillingSettings
               kinds={document.children.flatMap((child) =>
-                child.positions.map((position) => position.kind),
+                child.positions.flatMap((position) =>
+                  position.kind ? [position.kind] : [],
+                ),
               )}
             />
             {document.children.map((child) => (

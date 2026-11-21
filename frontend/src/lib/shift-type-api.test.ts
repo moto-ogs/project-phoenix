@@ -10,7 +10,7 @@ import { ApiError } from "./api-error";
 import { shiftTypeService } from "./shift-type-api";
 
 const backendShiftType = {
-  id: 12,
+  id: "12",
   name: "Betreuung",
   color: "#83CD2D",
   description: "Zeit am Kind",

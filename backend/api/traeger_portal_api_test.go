@@ -211,12 +211,12 @@ type traegerLoginAnswer struct {
 	RefreshToken   string `json:"refresh_token"`
 	ChallengeToken string `json:"challenge_token"`
 	MaskedEmail    string `json:"masked_email"`
-	OrganizationID int64  `json:"organization_id"`
+	OrganizationID wireID `json:"organization_id"`
 	// The remember-device offer of the code step (#6955).
 	TrustedDeviceEnabled *bool `json:"trusted_device_enabled"`
 	TrustedDeviceDays    *int  `json:"trusted_device_days"`
 	Organizations        []struct {
-		ID   int64  `json:"id"`
+		ID   wireID `json:"id"`
 		Name string `json:"name"`
 	} `json:"organizations"`
 	Code string `json:"code"`
@@ -311,7 +311,7 @@ func traegerSignIn(t *testing.T, portal *traegerPortalHandler, email, password s
 }
 
 type traegerSchool struct {
-	ID   int64  `json:"id"`
+	ID   wireID `json:"id"`
 	Name string `json:"name"`
 }
 
@@ -364,7 +364,7 @@ func TestTraegerPortalLoginShowsOnlyTheSchoolsOfTheTraeger(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	var ids []int64
 	for _, school := range schools {
-		ids = append(ids, school.ID)
+		ids = append(ids, int64(school.ID))
 	}
 	assert.Equal(t, []int64{firstSchool, secondSchool}, ids, "both schools of the Träger, ordered by name")
 	assert.NotContains(t, ids, foreignSchool, "a Träger sees no school of another Träger")
@@ -417,8 +417,8 @@ func TestTraegerPortalLoginAsksAMemberOfSeveralTraegerToChoose(t *testing.T) {
 	assert.Equal(t, "organization_selection_required", answer.Status)
 	assert.Empty(t, answer.AccessToken, "no session before the choice")
 	require.Len(t, answer.Organizations, 2)
-	assert.Equal(t, first, answer.Organizations[0].ID)
-	assert.Equal(t, second, answer.Organizations[1].ID)
+	assert.Equal(t, first, int64(answer.Organizations[0].ID))
+	assert.Equal(t, second, int64(answer.Organizations[1].ID))
 
 	code, answer = traegerSignIn(t, router, account.Email, password, second)
 	require.Equal(t, http.StatusOK, code)

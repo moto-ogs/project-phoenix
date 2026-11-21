@@ -2,18 +2,18 @@ import { describe, expect, it } from "vitest";
 import {
   buildAuditLogQuery,
   mapAuditLogEvent,
-  type BackendAuditLogEvent,
+  type KnownAuditLogEvent,
 } from "./staff-audit-log-api";
 
 describe("mapAuditLogEvent", () => {
   it("maps ids to strings and keeps the typed detail payload", () => {
-    const backend: BackendAuditLogEvent = {
+    const backend: KnownAuditLogEvent = {
       occurred_at: "2026-06-10T14:00:00+02:00",
       source: "session_edit",
-      entry_id: 123,
-      staff: { id: 42, name: "Anna Muster" },
+      entry_id: "123",
+      staff: { id: "42", name: "Anna Muster" },
       actor: {
-        staff_id: 7,
+        staff_id: "7",
         name: "Florian Admin",
         is_system: false,
         is_self: false,
@@ -33,10 +33,10 @@ describe("mapAuditLogEvent", () => {
   });
 
   it("keeps school-wide events without a staff and system actors without a staff id", () => {
-    const backend: BackendAuditLogEvent = {
+    const backend: KnownAuditLogEvent = {
       occurred_at: "2026-06-10T14:00:00+02:00",
       source: "month_close",
-      entry_id: 456,
+      entry_id: "456",
       actor: { name: "System", is_system: true, is_self: false },
       reason: "",
       detail: { year: 2026, month: 5, account_count: 18 },

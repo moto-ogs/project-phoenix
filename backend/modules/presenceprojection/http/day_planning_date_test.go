@@ -151,7 +151,7 @@ func TestListStudents_DayPlanningForDate(t *testing.T) {
 // list ships, so the assertions below read the exact fields #1939 strips for a
 // non-today planning date.
 type studentLiveLocationTestResponse struct {
-	ID            int64      `json:"id"`
+	ID            testpkg.ID `json:"id"`
 	Location      string     `json:"current_location"`
 	LocationSince *time.Time `json:"location_since"`
 	RoomColor     *string    `json:"current_room_color"`
@@ -165,7 +165,7 @@ func decodeStudentLocationsByID(t *testing.T, body []byte) map[int64]studentLive
 	require.NoError(t, json.Unmarshal(body, &resp))
 	byID := make(map[int64]studentLiveLocationTestResponse, len(resp.Data))
 	for _, student := range resp.Data {
-		byID[student.ID] = student
+		byID[int64(student.ID)] = student
 	}
 	return byID
 }

@@ -23,22 +23,22 @@ import (
 
 type placementBody struct {
 	ChildPosition int    `json:"child_position"`
-	WeekID        int64  `json:"week_id"`
+	WeekID        wireID `json:"week_id"`
 	Placement     string `json:"placement"`
 }
 
 type receiptBody struct {
-	ID         int64           `json:"id"`
+	ID         wireID          `json:"id"`
 	Placements []placementBody `json:"placements"`
 }
 
 type weekPlacesBody struct {
-	WeekID   int64 `json:"week_id"`
-	Capacity *int  `json:"capacity"`
-	Placed   int   `json:"placed"`
+	WeekID   wireID `json:"week_id"`
+	Capacity *int   `json:"capacity"`
+	Placed   int    `json:"placed"`
 	Waitlist []struct {
 		Position       int    `json:"position"`
-		RegistrationID int64  `json:"registration_id"`
+		RegistrationID wireID `json:"registration_id"`
 		ChildFirstName string `json:"child_first_name"`
 	} `json:"waitlist"`
 }
@@ -86,25 +86,25 @@ func (f reviewFixture) submitPlaces(t *testing.T, email string, children map[str
 
 func (f reviewFixture) setCapacity(t *testing.T, weekID int64, capacity any) placeChangeBody {
 	t.Helper()
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayCapacityPath(f.period.ID, weekID), map[string]any{"capacity": capacity})
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayCapacityPath(int64(f.period.ID), weekID), map[string]any{"capacity": capacity})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	return decodeSchoolPortalData[placeChangeBody](t, rec.Body.Bytes())
 }
 
 func (f reviewFixture) places(t *testing.T) map[int64]weekPlacesBody {
 	t.Helper()
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayPlacesPath(f.period.ID), nil)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayPlacesPath(int64(f.period.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	weeks := map[int64]weekPlacesBody{}
 	for _, week := range decodeSchoolPortalData[[]weekPlacesBody](t, rec.Body.Bytes()) {
-		weeks[week.WeekID] = week
+		weeks[int64(week.WeekID)] = week
 	}
 	return weeks
 }
 
 func (f reviewFixture) contributionTotal(t *testing.T, registrationID int64) int64 {
 	t.Helper()
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayContributionPath(f.period.ID, registrationID), nil)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayContributionPath(int64(f.period.ID), registrationID), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	return decodeSchoolPortalData[contributionBody](t, rec.Body.Bytes()).TotalCents
 }
@@ -158,7 +158,7 @@ func TestHolidayPlacesGoInOrderOfArrivalAndMoveUpOnCancellation(t *testing.T) {
 	f := newReviewFixtureOf(t, "Träger Plätze Reihenfolge", julyHolidays2099)
 	first, second := f.offer.Weeks[0], f.offer.Weeks[1]
 	// Lia and Ben of the fixture hold both places of the first week.
-	change := f.setCapacity(t, first.ID, 2)
+	change := f.setCapacity(t, int64(first.ID), 2)
 	assert.Empty(t, change.MovedUp)
 
 	tom := f.submitPlaces(t, "tom.platz@example.org", map[string][]int{"Tom": {0}})
@@ -171,13 +171,13 @@ func TestHolidayPlacesGoInOrderOfArrivalAndMoveUpOnCancellation(t *testing.T) {
 	}, family.Placements)
 
 	weeks := f.places(t)
-	require.NotNil(t, weeks[first.ID].Capacity)
-	assert.Equal(t, 2, weeks[first.ID].Placed)
-	require.Len(t, weeks[first.ID].Waitlist, 2)
-	assert.Equal(t, tom.ID, weeks[first.ID].Waitlist[0].RegistrationID, "the waiting list keeps the order of arrival")
-	assert.Equal(t, 2, weeks[first.ID].Waitlist[1].Position)
-	assert.Nil(t, weeks[second.ID].Capacity, "a week without a capacity is unlimited")
-	assert.Empty(t, weeks[second.ID].Waitlist)
+	require.NotNil(t, weeks[int64(first.ID)].Capacity)
+	assert.Equal(t, 2, weeks[int64(first.ID)].Placed)
+	require.Len(t, weeks[int64(first.ID)].Waitlist, 2)
+	assert.Equal(t, tom.ID, weeks[int64(first.ID)].Waitlist[0].RegistrationID, "the waiting list keeps the order of arrival")
+	assert.Equal(t, 2, weeks[int64(first.ID)].Waitlist[1].Position)
+	assert.Nil(t, weeks[int64(second.ID)].Capacity, "a week without a capacity is unlimited")
+	assert.Empty(t, weeks[int64(second.ID)].Waitlist)
 
 	// The places as a file name the waiting children and land in the
 	// period's trail like the list (#4718).
@@ -188,14 +188,14 @@ func TestHolidayPlacesGoInOrderOfArrivalAndMoveUpOnCancellation(t *testing.T) {
 		return count
 	}
 	readsBefore := placesRead()
-	export := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayPlacesPath(f.period.ID)+"/export", nil)
+	export := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayPlacesPath(int64(f.period.ID))+"/export", nil)
 	require.Equal(t, http.StatusOK, export.Code, export.Body.String())
 	assert.Contains(t, export.Body.String(), "06.07.2099 bis 10.07.2099;")
 	assert.Contains(t, export.Body.String(), ";Woche;2;2;0;;;;;;;\n")
 	assert.Contains(t, export.Body.String(), ";Warteliste;;;;1;")
 	assert.Contains(t, export.Body.String(), ";Tom;")
 	assert.Equal(t, readsBefore+1, placesRead(), "the export is in the trail")
-	assertTraegerListFormats(t, f.traeger, f.office.token, holidayPlacesPath(f.period.ID)+"/export", "plaetze-sommerferien-2099")
+	assertTraegerListFormats(t, f.traeger, f.office.token, holidayPlacesPath(int64(f.period.ID))+"/export", "plaetze-sommerferien-2099")
 
 	var receipt string
 	require.NoError(t, f.db.NewRaw(`SELECT payload::text FROM platform.email_outbox
@@ -205,27 +205,27 @@ func TestHolidayPlacesGoInOrderOfArrivalAndMoveUpOnCancellation(t *testing.T) {
 
 	// The family is confirmed with Ida still waiting: only Max's week is billed.
 	f.detail(t, f.act(t, f.siblings, "confirm"))
-	confirmed := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(f.period.ID, family.ID), map[string]any{})
+	confirmed := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(f.period.ID), int64(family.ID)), map[string]any{})
 	require.Equal(t, http.StatusOK, confirmed.Code, confirmed.Body.String())
-	assert.Equal(t, second.TimeModels[0].PriceCents, f.contributionTotal(t, family.ID), "a waiting booking is never billed")
+	assert.Equal(t, second.TimeModels[0].PriceCents, f.contributionTotal(t, int64(family.ID)), "a waiting booking is never billed")
 	detail := f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(f.siblings, ""), nil))
 	host := detail.Children[0].Bookings[0].HostSchoolID
-	assert.Equal(t, 2, f.hostParticipants(t, host, first.ID), "the host school sees Lia and Ben, not the waiting Ida")
+	assert.Equal(t, 2, f.hostParticipants(t, int64(host), int64(first.ID)), "the host school sees Lia and Ben, not the waiting Ida")
 
 	// Cancelling Lia and Ben frees both places: Tom and Ida move up in order.
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayCancelPath(f.period.ID, f.siblings), nil)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayCancelPath(int64(f.period.ID), f.siblings), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, []int64{tom.ID, family.ID}, decodeSchoolPortalData[placeChangeBody](t, rec.Body.Bytes()).MovedUp)
+	assert.Equal(t, []int64{int64(tom.ID), int64(family.ID)}, decodeSchoolPortalData[placeChangeBody](t, rec.Body.Bytes()).MovedUp)
 	weeks = f.places(t)
-	assert.Equal(t, 2, weeks[first.ID].Placed)
-	assert.Empty(t, weeks[first.ID].Waitlist)
-	assert.Equal(t, 1, f.mails(t, "holiday_place_granted", tom.ID), "Tom's parents hear of the place")
-	assert.Equal(t, 1, f.mails(t, "holiday_place_granted", family.ID))
-	assert.Equal(t, first.TimeModels[0].PriceCents+second.TimeModels[0].PriceCents, f.contributionTotal(t, family.ID),
+	assert.Equal(t, 2, weeks[int64(first.ID)].Placed)
+	assert.Empty(t, weeks[int64(first.ID)].Waitlist)
+	assert.Equal(t, 1, f.mails(t, "holiday_place_granted", int64(tom.ID)), "Tom's parents hear of the place")
+	assert.Equal(t, 1, f.mails(t, "holiday_place_granted", int64(family.ID)))
+	assert.Equal(t, first.TimeModels[0].PriceCents+second.TimeModels[0].PriceCents, f.contributionTotal(t, int64(family.ID)),
 		"the contribution of the confirmed family is computed again with Ida's week")
-	assert.Equal(t, 1, f.hostParticipants(t, host, first.ID), "Ida, confirmed and placed, is now on the host school's list")
+	assert.Equal(t, 1, f.hostParticipants(t, int64(host), int64(first.ID)), "Ida, confirmed and placed, is now on the host school's list")
 
-	history := f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(tom.ID, ""), nil)).History
+	history := f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(int64(tom.ID), ""), nil)).History
 	assert.Equal(t, "promote", history[len(history)-1].Action)
 }
 
@@ -237,40 +237,40 @@ func TestHolidayPlacesMoveUpOnRebookingAndCapacity(t *testing.T) {
 	t.Parallel()
 	f := newReviewFixture(t, "Träger Plätze Umbuchung")
 	first, second := f.offer.Weeks[0], f.offer.Weeks[1]
-	f.setCapacity(t, first.ID, 2)
+	f.setCapacity(t, int64(first.ID), 2)
 	tom := f.submitPlaces(t, "tom.umbuchung@example.org", map[string][]int{"Tom": {0}})
 	require.Equal(t, "waitlisted", tom.Placements[0].Placement)
 
 	// Ben leaves the first week: Tom gets his place.
 	ben := f.list(t, "").Registrations[0].Children[1]
 	rebook := map[string]any{"bookings": []map[string]any{{"week_id": second.ID, "time_model_id": second.TimeModels[0].ID}}}
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(f.period.ID, f.siblings, ben.ID), rebook)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID)), rebook)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Empty(t, f.places(t)[first.ID].Waitlist)
-	assert.Equal(t, 1, f.mails(t, "holiday_place_granted", tom.ID))
+	assert.Empty(t, f.places(t)[int64(first.ID)].Waitlist)
+	assert.Equal(t, 1, f.mails(t, "holiday_place_granted", int64(tom.ID)))
 
 	ole := f.submitPlaces(t, "ole.kapazitaet@example.org", map[string][]int{"Ole": {0}})
 	require.Equal(t, "waitlisted", ole.Placements[0].Placement)
-	assert.Equal(t, []int64{ole.ID}, f.setCapacity(t, first.ID, 3).MovedUp, "a higher capacity moves the waiting list up")
-	assert.Empty(t, f.setCapacity(t, first.ID, 1).MovedUp)
-	assert.Equal(t, 3, f.places(t)[first.ID].Placed, "a lower capacity takes no place away")
-	assert.Empty(t, f.setCapacity(t, first.ID, nil).MovedUp)
-	assert.Nil(t, f.places(t)[first.ID].Capacity)
+	assert.Equal(t, []int64{int64(ole.ID)}, f.setCapacity(t, int64(first.ID), 3).MovedUp, "a higher capacity moves the waiting list up")
+	assert.Empty(t, f.setCapacity(t, int64(first.ID), 1).MovedUp)
+	assert.Equal(t, 3, f.places(t)[int64(first.ID)].Placed, "a lower capacity takes no place away")
+	assert.Empty(t, f.setCapacity(t, int64(first.ID), nil).MovedUp)
+	assert.Nil(t, f.places(t)[int64(first.ID)].Capacity)
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayCapacityPath(f.period.ID, first.ID), map[string]any{"capacity": -1})
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayCapacityPath(int64(f.period.ID), int64(first.ID)), map[string]any{"capacity": -1})
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	code, fields := registrationRefusalOf(t, rec)
 	assert.Equal(t, "enrollment.holiday_registration_invalid", code)
 	assert.Equal(t, []string{"capacity"}, fields)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayCapacityPath(f.period.ID, first.ID+second.ID+1000), map[string]any{"capacity": 1})
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayCapacityPath(int64(f.period.ID), int64(first.ID+second.ID+1000)), map[string]any{"capacity": 1})
 	require.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 	code, _ = registrationRefusalOf(t, rec)
 	assert.Equal(t, "enrollment.holiday_week_not_found", code)
 
 	other := newTraegerOffice(t, f.db, f.traeger, "Träger Plätze Fremd", identityaccess.TraegerRoleAdministration)
-	rec = traegerJSON(t, f.traeger, other.token, http.MethodGet, holidayPlacesPath(f.period.ID), nil)
+	rec = traegerJSON(t, f.traeger, other.token, http.MethodGet, holidayPlacesPath(int64(f.period.ID)), nil)
 	assert.Equal(t, http.StatusNotFound, rec.Code, "another Träger reads no places: %s", rec.Body.String())
-	rec = traegerJSON(t, f.traeger, other.token, http.MethodPut, holidayCapacityPath(f.period.ID, first.ID), map[string]any{"capacity": 9})
+	rec = traegerJSON(t, f.traeger, other.token, http.MethodPut, holidayCapacityPath(int64(f.period.ID), int64(first.ID)), map[string]any{"capacity": 9})
 	assert.Equal(t, http.StatusNotFound, rec.Code, "nor changes them: %s", rec.Body.String())
 }
 
@@ -289,8 +289,8 @@ func TestHolidayPlaceMailAfterAnOfficeChangeNamesTheTraegerAndTheHostSchool(t *t
 	first, second := f.offer.Weeks[0], f.offer.Weeks[1]
 	require.NotEqual(t, first.HostSchoolName, second.HostSchoolName, "the weeks are hosted by two schools")
 	// Lia and Ben hold the first week, LIA of the second registration the second.
-	f.setCapacity(t, first.ID, 2)
-	f.setCapacity(t, second.ID, 1)
+	f.setCapacity(t, int64(first.ID), 2)
+	f.setCapacity(t, int64(second.ID), 1)
 	tom := f.submitPlaces(t, "tom.absender@example.org", map[string][]int{"Tom": {1}})
 	ole := f.submitPlaces(t, "ole.absender@example.org", map[string][]int{"Ole": {0}})
 	max := f.submitPlaces(t, "max.absender@example.org", map[string][]int{"Max": {0}})
@@ -308,18 +308,18 @@ func TestHolidayPlaceMailAfterAnOfficeChangeNamesTheTraegerAndTheHostSchool(t *t
 	}
 	require.Equal(t, "Träger Plätze Absender", f.offer.TraegerName)
 
-	assert.Equal(t, []int64{tom.ID}, f.setCapacity(t, second.ID, 3).MovedUp)
-	assert.Equal(t, want("tom.absender@example.org", "Tom", 1), f.placeMail(t, tom.ID), "a higher capacity names the south school")
+	assert.Equal(t, []int64{int64(tom.ID)}, f.setCapacity(t, int64(second.ID), 3).MovedUp)
+	assert.Equal(t, want("tom.absender@example.org", "Tom", 1), f.placeMail(t, int64(tom.ID)), "a higher capacity names the south school")
 
 	ben := f.list(t, "").Registrations[0].Children[1]
 	rebook := map[string]any{"bookings": []map[string]any{{"week_id": second.ID, "time_model_id": second.TimeModels[0].ID}}}
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(f.period.ID, f.siblings, ben.ID), rebook)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID)), rebook)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, want("ole.absender@example.org", "Ole", 0), f.placeMail(t, ole.ID), "a rebooking names the north school")
+	assert.Equal(t, want("ole.absender@example.org", "Ole", 0), f.placeMail(t, int64(ole.ID)), "a rebooking names the north school")
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayCancelPath(f.period.ID, f.siblings), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayCancelPath(int64(f.period.ID), f.siblings), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, want("max.absender@example.org", "Max", 0), f.placeMail(t, max.ID), "a cancellation names the north school")
+	assert.Equal(t, want("max.absender@example.org", "Max", 0), f.placeMail(t, int64(max.ID)), "a cancellation names the north school")
 
 	var foreignMentions int
 	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM platform.email_outbox WHERE organization_id = ? AND payload::text LIKE '%Fremd%'`,
@@ -339,7 +339,7 @@ func TestHolidayPlacesHoldTheLastPlaceAgainstAConcurrentRegistration(t *testing.
 	t.Parallel()
 	f := newReviewFixture(t, "Träger Plätze Gleichzeitig")
 	first := f.offer.Weeks[0]
-	f.setCapacity(t, first.ID, 3)
+	f.setCapacity(t, int64(first.ID), 3)
 	ctx := context.Background()
 
 	holder, err := f.db.BeginTx(ctx, nil)

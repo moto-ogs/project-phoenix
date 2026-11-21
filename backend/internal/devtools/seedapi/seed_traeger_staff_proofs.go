@@ -28,7 +28,7 @@ const (
 )
 
 type seedProofKind struct {
-	ID          int64  `json:"id"`
+	ID          apiID  `json:"id"`
 	StandardKey string `json:"standard_key"`
 	Name        string `json:"name"`
 }
@@ -103,7 +103,7 @@ func seedProofKinds(client *Client, auth AuthRef) (map[string]int64, error) {
 		if key == "" {
 			key = kind.Name
 		}
-		kinds[key] = kind.ID
+		kinds[key] = int64(kind.ID)
 	}
 	return kinds, nil
 }
@@ -116,7 +116,7 @@ func seedTraegerStaffRecordIDs(client *Client, auth AuthRef) ([]int64, error) {
 	var envelope struct {
 		Data struct {
 			Records []struct {
-				ID int64 `json:"id"`
+				ID apiID `json:"id"`
 			} `json:"records"`
 		} `json:"data"`
 	}
@@ -125,7 +125,7 @@ func seedTraegerStaffRecordIDs(client *Client, auth AuthRef) ([]int64, error) {
 	}
 	ids := make([]int64, 0, len(envelope.Data.Records))
 	for _, record := range envelope.Data.Records {
-		ids = append(ids, record.ID)
+		ids = append(ids, int64(record.ID))
 	}
 	return ids, nil
 }
@@ -172,9 +172,9 @@ func seedMapSchoolProofKinds(client *Client, auth AuthRef, police int64) error {
 		return fmt.Errorf("read the school proof kinds: %w", err)
 	}
 	var schools []struct {
-		SchoolID int64 `json:"school_id"`
+		SchoolID apiID `json:"school_id"`
 		Kinds    []struct {
-			SchoolTypeID int64  `json:"school_type_id"`
+			SchoolTypeID apiID  `json:"school_type_id"`
 			Name         string `json:"name"`
 		} `json:"kinds"`
 	}

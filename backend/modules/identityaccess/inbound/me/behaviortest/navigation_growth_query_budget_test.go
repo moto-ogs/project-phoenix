@@ -102,7 +102,7 @@ func TestIdentityNavigationPositiveGrowthQueryBudget(t *testing.T) {
 			require.Len(t, rows, n)
 			var ids []int64
 			for _, row := range rows {
-				id := int64(row["id"].(float64))
+				id := testpkg.JSONID(t, row["id"])
 				ids = append(ids, id)
 				want, err := json.Marshal(expected[section.key][id])
 				require.NoError(t, err)

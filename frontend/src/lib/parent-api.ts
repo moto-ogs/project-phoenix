@@ -49,7 +49,6 @@ import type {
 
 import { boundSessionAccount } from "~/lib/session-account";
 import {
-  type BackendNoticeOptions,
   type ContractNoticeOptions,
   declarationBody,
   type NoticeDeclaration,
@@ -59,6 +58,7 @@ import {
   isParentAccessRefusal,
   PARENT_ACCESS_REFUSED_EVENT,
 } from "~/lib/parent-access-refusal";
+import type { ContractNoticeOptions as ParentNoticeOptions } from "./contract/parent-me.generated";
 
 // Capture the originating account before awaiting the cookie-bound request.
 const responseOrigins = new WeakMap<
@@ -2755,7 +2755,7 @@ export async function fetchMyContractNoticeOptions(
   contractId: string,
 ): Promise<ContractNoticeOptions> {
   return noticeOptionsFromBackend(
-    await getJson<BackendNoticeOptions>(
+    await getJson<ParentNoticeOptions>(
       contractNoticePath(organizationId, contractId),
     ),
   );
@@ -2768,7 +2768,7 @@ export async function declareMyContractNotice(
   declaration: NoticeDeclaration,
 ): Promise<ContractNoticeOptions> {
   return noticeOptionsFromBackend(
-    await postJson<BackendNoticeOptions>(
+    await postJson<ParentNoticeOptions>(
       contractNoticePath(organizationId, contractId),
       declarationBody(declaration),
     ),

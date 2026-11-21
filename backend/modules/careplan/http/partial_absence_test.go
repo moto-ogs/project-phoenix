@@ -257,18 +257,18 @@ func TestPartialAbsenceIsAPlannedPickupTimeWithoutAFullDayStatus(t *testing.T) {
 	require.Equal(t, http.StatusOK, listRR.Code, listRR.Body.String())
 	var response struct {
 		Data []struct {
-			ID                int64   `json:"id"`
-			PickupTime        *string `json:"pickup_time"`
-			PickupIsException bool    `json:"pickup_is_exception"`
-			Excused           bool    `json:"excused"`
-			DayPlanningStatus string  `json:"day_planning_status"`
-			DayPlanningReason string  `json:"day_planning_reason"`
+			ID                testpkg.ID `json:"id"`
+			PickupTime        *string    `json:"pickup_time"`
+			PickupIsException bool       `json:"pickup_is_exception"`
+			Excused           bool       `json:"excused"`
+			DayPlanningStatus string     `json:"day_planning_status"`
+			DayPlanningReason string     `json:"day_planning_reason"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(listRR.Body.Bytes(), &response))
 	var found bool
 	for _, row := range response.Data {
-		if row.ID != student.ID {
+		if int64(row.ID) != student.ID {
 			continue
 		}
 		found = true
@@ -286,12 +286,12 @@ func partialAbsenceResponseID(t *testing.T, body []byte) int64 {
 	t.Helper()
 	var response struct {
 		Data struct {
-			ID int64 `json:"id"`
+			ID testpkg.ID `json:"id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(body, &response))
 	require.Positive(t, response.Data.ID)
-	return response.Data.ID
+	return int64(response.Data.ID)
 }
 
 // attendanceSlotRow is the slice of a participant's attendance the partial

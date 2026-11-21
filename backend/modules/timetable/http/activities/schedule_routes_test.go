@@ -9,7 +9,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestActivityScheduleRoutesAreReadOnly(t *testing.T) {
+// Schedules are written and read through the activity itself; no route of
+// their own is exposed, neither a read nor a write.
+func TestActivityScheduleRoutesAreNotExposed(t *testing.T) {
 	t.Parallel()
 	resource := &httpadapter.Resource{}
 	router := resource.Router(func(r chi.Router, mount func(chi.Router, func(http.Handler) http.Handler)) {
@@ -20,14 +22,14 @@ func TestActivityScheduleRoutesAreReadOnly(t *testing.T) {
 		routes[method+" "+route] = true
 		return nil
 	}))
-	require.True(t, routes["GET /{id}/schedules"])
-	require.True(t, routes["GET "+httpadapter.RouteScheduleByIDForTest])
+	require.True(t, routes["GET /{id}"], "the activity read must stay mounted")
+	const byID = "/{id}/schedules/{scheduleId}"
 	for _, route := range []string{
-		"POST /{id}/schedules", "PUT " + httpadapter.RouteScheduleByIDForTest,
-		"DELETE " + httpadapter.RouteScheduleByIDForTest, "GET /schedules/available",
+		"GET /{id}/schedules", "POST /{id}/schedules", "GET " + byID, "PUT " + byID,
+		"DELETE " + byID, "GET /schedules/available",
 	} {
 		t.Run(route, func(t *testing.T) {
-			require.False(t, routes[route], "unused schedule endpoint must not be exposed: %s", route)
+			require.False(t, routes[route], "schedule endpoint must not be exposed: %s", route)
 		})
 	}
 }

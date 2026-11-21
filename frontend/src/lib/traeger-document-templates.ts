@@ -6,6 +6,14 @@
  * die Standardvorlage (Version 0).
  */
 import { traegerRequest } from "./traeger-api";
+import type {
+  SampleLetter,
+  Template as WireText,
+  TemplateRequest,
+  TraegerDocumentTemplate as WireVersion,
+  TraegerDocumentTemplateDetail as WireDetail,
+  TraegerDocumentTemplateSummary as WireSummary,
+} from "./contract/traeger-master-data.generated";
 
 /** Die Dokumentarten, in der Reihenfolge des Backends. */
 export type DocumentTemplateKind =
@@ -207,63 +215,39 @@ export interface DocumentTemplatePreview {
   readonly legalRemedy?: readonly DocumentTemplatePreviewBlock[];
 }
 
-interface BackendInvoiceLayout {
-  group_by_child?: boolean;
-  hide_time_models?: boolean;
-}
-
-interface BackendText {
-  subject: string;
-  salutation: string;
-  body: string;
-  closing: string;
-  invoice?: BackendInvoiceLayout | null;
-  legal_remedy?: string | null;
-}
-
-interface BackendVersion extends BackendText {
-  kind: DocumentTemplateKind;
-  version: number;
-  standard: boolean;
-  created_at: string | null;
-}
-
-interface BackendSummary {
-  kind: DocumentTemplateKind;
-  version: number;
-  standard: boolean;
-  updated_at: string | null;
-}
-
 const basePath = "/api/traeger/master-data/document-templates";
 const kindPath = (kind: DocumentTemplateKind) =>
   `${basePath}/${encodeURIComponent(kind)}`;
 
-function mapText(text: BackendText): DocumentTemplateText {
+function mapText(text: WireText): DocumentTemplateText {
   return templateTextOf({
-    subject: text.subject ?? "",
-    salutation: text.salutation ?? "",
-    body: text.body ?? "",
-    closing: text.closing ?? "",
+    subject: text.subject,
+    salutation: text.salutation,
+    body: text.body,
+    closing: text.closing,
     invoice: {
-      groupByChild: text.invoice?.group_by_child ?? false,
-      hideTimeModels: text.invoice?.hide_time_models ?? false,
+      groupByChild: text.invoice.group_by_child,
+      hideTimeModels: text.invoice.hide_time_models,
     },
-    legalRemedy: text.legal_remedy ?? "",
+    legalRemedy: text.legal_remedy,
   });
 }
 
-function mapVersion(version: BackendVersion): DocumentTemplateVersion {
+/** A version of the kind the page asked for; its kind is that one. */
+function mapVersion(
+  version: WireVersion,
+  kind: DocumentTemplateKind,
+): DocumentTemplateVersion {
   return {
-    kind: version.kind,
+    kind,
     version: version.version,
     standard: version.standard,
-    createdAt: version.created_at ?? null,
+    createdAt: version.created_at,
     ...mapText(version),
   };
 }
 
-function requestBody(text: DocumentTemplateText) {
+function requestBody(text: DocumentTemplateText): TemplateRequest {
   const layout = invoiceLayoutOf(text);
   return {
     subject: text.subject,
@@ -282,30 +266,33 @@ function requestBody(text: DocumentTemplateText) {
 export async function fetchDocumentTemplates(): Promise<
   DocumentTemplateSummary[]
 > {
-  const data = await traegerRequest<BackendSummary[] | null>(basePath);
-  return (data ?? []).map((summary) => ({
-    kind: summary.kind,
-    version: summary.version,
-    standard: summary.standard,
-    updatedAt: summary.updated_at ?? null,
-  }));
+  const data = await traegerRequest<WireSummary[]>(basePath);
+  // A kind this build does not know has no page; it is left out.
+  return data.flatMap((summary) => {
+    const { kind } = summary;
+    return isDocumentTemplateKind(kind)
+      ? [
+          {
+            kind,
+            version: summary.version,
+            standard: summary.standard,
+            updatedAt: summary.updated_at,
+          },
+        ]
+      : [];
+  });
 }
 
 /** Liest die Vorlage einer Dokumentart mit Platzhaltern und Versionen. */
 export async function fetchDocumentTemplate(
   kind: DocumentTemplateKind,
 ): Promise<DocumentTemplateDetail> {
-  const data = await traegerRequest<{
-    current: BackendVersion;
-    standard_template: BackendText;
-    placeholders: DocumentTemplatePlaceholder[] | null;
-    versions: BackendVersion[] | null;
-  }>(kindPath(kind));
+  const data = await traegerRequest<WireDetail>(kindPath(kind));
   return {
-    current: mapVersion(data.current),
+    current: mapVersion(data.current, kind),
     standardTemplate: mapText(data.standard_template),
     placeholders: data.placeholders ?? [],
-    versions: (data.versions ?? []).map(mapVersion),
+    versions: (data.versions ?? []).map((version) => mapVersion(version, kind)),
   };
 }
 
@@ -315,10 +302,11 @@ export async function saveDocumentTemplate(
   text: DocumentTemplateText,
 ): Promise<DocumentTemplateVersion> {
   return mapVersion(
-    await traegerRequest<BackendVersion>(`${kindPath(kind)}/versions`, {
+    await traegerRequest<WireVersion>(`${kindPath(kind)}/versions`, {
       method: "POST",
       body: requestBody(text),
     }),
+    kind,
   );
 }
 
@@ -327,25 +315,10 @@ export async function previewDocumentTemplate(
   kind: DocumentTemplateKind,
   text: DocumentTemplateText,
 ): Promise<DocumentTemplatePreview> {
-  const data = await traegerRequest<{
-    recipient: string[] | null;
-    facts: DocumentTemplatePreviewRow[] | null;
-    subject: string;
-    salutation: string;
-    blocks: Array<{
-      heading: string;
-      text: string;
-      bold: boolean;
-      rows: DocumentTemplatePreviewRow[] | null;
-    }> | null;
-    closing: string[] | null;
-    legal_remedy?: Array<{
-      heading: string;
-      text: string;
-      bold: boolean;
-      rows: DocumentTemplatePreviewRow[] | null;
-    }> | null;
-  }>(`${kindPath(kind)}/preview`, { method: "POST", body: requestBody(text) });
+  const data = await traegerRequest<SampleLetter>(`${kindPath(kind)}/preview`, {
+    method: "POST",
+    body: requestBody(text),
+  });
   return {
     recipient: data.recipient ?? [],
     facts: data.facts ?? [],

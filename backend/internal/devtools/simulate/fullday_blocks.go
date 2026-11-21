@@ -63,8 +63,8 @@ func (rt *Runtime) completeBlocks(before wallClock) error {
 func (rt *Runtime) rosterChildren(block dayBlock) []todayChild {
 	var children []todayChild
 	for _, id := range block.StudentIDs {
-		child, ok := rt.child(id)
-		if _, tagged := rt.RFIDTags[id]; ok && tagged && !child.Absent {
+		child, ok := rt.child(int64(id))
+		if _, tagged := rt.RFIDTags[int64(id)]; ok && tagged && !child.Absent {
 			children = append(children, child)
 		}
 	}
@@ -77,7 +77,7 @@ func (rt *Runtime) runningBlockIn(roomID int64) (startedBlock, bool) {
 		return startedBlock{}, false
 	}
 	for _, block := range rt.Blocks {
-		if !block.Completed && block.RoomID == roomID {
+		if !block.Completed && int64(block.RoomID) == roomID {
 			return block, true
 		}
 	}
@@ -176,10 +176,10 @@ func (rt *Runtime) earlyChildrenArrive(ctx context.Context, block dayBlock) erro
 		if err := rt.advanceClock(ctx, max(start, earlyCareStart)+wallClock(rt.Counts.EarlyCareChildren)); err != nil {
 			return err
 		}
-		if err := rt.checkInto(child.SeedStudent, block.RoomID); err != nil {
+		if err := rt.checkInto(child.SeedStudent, int64(block.RoomID)); err != nil {
 			return err
 		}
-		rt.Rooms.record(child.ID, block.RoomID)
+		rt.Rooms.record(child.ID, int64(block.RoomID))
 		rt.Counts.EarlyCareChildren++
 	}
 	return nil

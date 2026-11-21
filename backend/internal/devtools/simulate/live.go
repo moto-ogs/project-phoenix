@@ -550,7 +550,7 @@ func fetchCurrentSessionID(client Client, state *SeedState, device SeedDevice) (
 	}
 	var envelope struct {
 		Data struct {
-			ActiveGroupID *int64 `json:"active_group_id"`
+			ActiveGroupID *apiID `json:"active_group_id"`
 			IsActive      bool   `json:"is_active"`
 		} `json:"data"`
 	}
@@ -560,7 +560,7 @@ func fetchCurrentSessionID(client Client, state *SeedState, device SeedDevice) (
 	if !envelope.Data.IsActive || envelope.Data.ActiveGroupID == nil {
 		return 0, nil
 	}
-	return *envelope.Data.ActiveGroupID, nil
+	return int64(*envelope.Data.ActiveGroupID), nil
 }
 
 // lookupSchulhofRoom finds the auto-provisioned Schulhof system room (0 = not found).
@@ -571,7 +571,7 @@ func lookupSchulhofRoom(client Client) int64 {
 	}
 	var envelope struct {
 		Data []struct {
-			ID   int64  `json:"id"`
+			ID   apiID  `json:"id"`
 			Name string `json:"name"`
 		} `json:"data"`
 	}
@@ -580,7 +580,7 @@ func lookupSchulhofRoom(client Client) int64 {
 	}
 	for _, room := range envelope.Data {
 		if room.Name == "Schulhof" {
-			return room.ID
+			return int64(room.ID)
 		}
 	}
 	return 0
@@ -610,7 +610,7 @@ func bootstrapLiveState(client Client, ls *liveState, students []SeedStudent) er
 
 	var envelope struct {
 		Data []struct {
-			StudentID int64 `json:"student_id"`
+			StudentID apiID `json:"student_id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(resp, &envelope); err != nil {
@@ -619,7 +619,7 @@ func bootstrapLiveState(client Client, ls *liveState, students []SeedStudent) er
 
 	visitSet := make(map[int64]bool, len(envelope.Data))
 	for _, v := range envelope.Data {
-		visitSet[v.StudentID] = true
+		visitSet[int64(v.StudentID)] = true
 	}
 
 	for _, s := range students {

@@ -33,9 +33,9 @@ func (f reviewFixture) submitYoungerDearer(t *testing.T, email string) int64 {
 	ben["bookings"] = []map[string]any{{"week_id": f.offer.Weeks[0].ID, "time_model_id": f.offer.Weeks[0].TimeModels[0].ID}}
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(f.period.PublicToken), body)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	return decodeSchoolPortalData[struct {
-		ID int64 `json:"id"`
-	}](t, rec.Body.Bytes()).ID
+	return int64(decodeSchoolPortalData[struct {
+		ID wireID `json:"id"`
+	}](t, rec.Body.Bytes()).ID)
 }
 
 func TestOldestChildIsTheFirstChildInPreviewQuoteAndConfirmation(t *testing.T) {

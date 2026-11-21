@@ -180,15 +180,25 @@ vi.mock("~/components/ui/alert", () => ({
     title,
     message,
     action,
+    onDismiss,
+    dismissLabel,
   }: {
     title?: string;
     message: string;
     action?: React.ReactNode;
+    onDismiss?: () => void;
+    dismissLabel?: string;
   }) => (
     <div>
       {title ? <p>{title}</p> : null}
       {message}
       {action}
+      {/* The kit's X and its default name. */}
+      {onDismiss ? (
+        <button type="button" onClick={onDismiss}>
+          {dismissLabel ?? "Hinweis schließen"}
+        </button>
+      ) : null}
     </div>
   ),
 }));
@@ -837,7 +847,14 @@ describe("StudentSearchPage — school check-in wiring", () => {
         screen.getByRole("button", { name: "Nur „Zuhause“ zeigen" }),
       ).toBeInTheDocument();
 
-      fireEvent.click(screen.getByRole("button", { name: "Ausblenden" }));
+      // Anker: the notice with its filter buttons is shown (above). It
+      // closes with its X (#7704), no own „Ausblenden“ button.
+      expect(
+        screen.queryByRole("button", { name: "Ausblenden" }),
+      ).not.toBeInTheDocument();
+      fireEvent.click(
+        screen.getByRole("button", { name: "Hinweis schließen" }),
+      );
       expect(
         screen.queryByText("Noch nicht angemeldet: 2 Kinder"),
       ).not.toBeInTheDocument();

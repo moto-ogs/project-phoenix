@@ -21,10 +21,11 @@ import { recipientName } from "./billing-document-card";
 import { BILLING_DOCUMENT_KIND_LABELS, isCancelled } from "./billing-format";
 import { formatEuro } from "./contribution-format";
 import { LetterFileView } from "./letter-file-view";
+import { labelOf } from "~/lib/label-of";
 
 /** „Rechnung FE-2026-0001“, „Storno FE-2026-0007“. */
 function billingDocumentTitle(document: BillingDocument): string {
-  return `${BILLING_DOCUMENT_KIND_LABELS[document.kind]} ${document.number}`;
+  return `${labelOf(BILLING_DOCUMENT_KIND_LABELS, document.kind, "Beleg")} ${document.number}`;
 }
 
 export function BillingLetterPreview({
@@ -62,7 +63,7 @@ export function BillingLetterPreview({
               tabIndex={-1}
               className="text-base font-semibold text-gray-900 outline-none"
             >
-              {BILLING_DOCUMENT_KIND_LABELS[document.kind]}{" "}
+              {labelOf(BILLING_DOCUMENT_KIND_LABELS, document.kind, "Beleg")}{" "}
               <span className="font-mono">{document.number}</span>
             </h3>
             {isCancelled(document) ? (

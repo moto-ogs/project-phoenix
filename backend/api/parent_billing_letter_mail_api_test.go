@@ -26,7 +26,7 @@ import (
 )
 
 type letterMailingBody struct {
-	DocumentID     int64      `json:"document_id"`
+	DocumentID     wireID     `json:"document_id"`
 	Number         string     `json:"number"`
 	RecipientEmail string     `json:"recipient_email"`
 	Status         string     `json:"status"`
@@ -94,16 +94,16 @@ func TestBillingLetterMailShowsTheProvidersWord(t *testing.T) {
 	f := newReviewFixture(t, "Träger Zustellung Ferien")
 	billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
 	run := lettersOfRun(t, f, billing)
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/letters"), lettersBody("2099-01-15"))
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/letters"), lettersBody("2099-01-15"))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/mailings"), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/mailings"), nil)
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
-	mails := queuedLetterMails(t, f, run.ID)
+	mails := queuedLetterMails(t, f, int64(run.ID))
 	require.Len(t, mails, 2)
 	ctx := context.Background()
 	_, err := f.db.ExecContext(ctx, `UPDATE platform.email_outbox SET status = 'sent', sent_at = NOW() WHERE id IN (?)`, bun.List([]int64{mails[0].ID, mails[1].ID}))
 	require.NoError(t, err)
-	for _, mailing := range letterMailings(t, f, billing, run.ID) {
+	for _, mailing := range letterMailings(t, f, billing, int64(run.ID)) {
 		assert.Equal(t, "sent", mailing.Status)
 		assert.Equal(t, "accepted", mailing.MailOutcome, "acceptance is no delivery")
 	}
@@ -117,15 +117,15 @@ func TestBillingLetterMailShowsTheProvidersWord(t *testing.T) {
 	require.NoError(t, err)
 	outcomes := map[string]int{}
 	var delayedDocument int64
-	for _, mailing := range letterMailings(t, f, billing, run.ID) {
+	for _, mailing := range letterMailings(t, f, billing, int64(run.ID)) {
 		outcomes[mailing.MailOutcome]++
 		if mailing.MailOutcome == "delayed" {
-			delayedDocument = mailing.DocumentID
+			delayedDocument = int64(mailing.DocumentID)
 		}
 	}
 	assert.Equal(t, map[string]int{"delayed": 1, "delivered": 1}, outcomes)
 
-	refused := traegerJSON(t, f.traeger, billing, http.MethodPost, letterMailPath(run.ID, delayedDocument), nil)
+	refused := traegerJSON(t, f.traeger, billing, http.MethodPost, letterMailPath(int64(run.ID), delayedDocument), nil)
 	require.Equal(t, http.StatusConflict, refused.Code, refused.Body.String())
 	code, _ := registrationRefusalOf(t, refused)
 	assert.Equal(t, "parent_billing.letter_mail_delayed", code)
@@ -138,18 +138,18 @@ func TestBillingLetterMailFollowsTheCurrentProviderBlock(t *testing.T) {
 	f := newReviewFixture(t, "Träger Sperre Ferien")
 	billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
 	run := lettersOfRun(t, f, billing)
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/letters"), lettersBody("2099-01-15"))
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/letters"), lettersBody("2099-01-15"))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/mailings"), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/mailings"), nil)
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
-	mails := queuedLetterMails(t, f, run.ID)
+	mails := queuedLetterMails(t, f, int64(run.ID))
 	require.NotEmpty(t, mails)
 	ctx := context.Background()
 	_, err := f.db.ExecContext(ctx, `UPDATE platform.email_outbox SET status = 'sent', sent_at = NOW(), delivery_state = 'suppressed', delivery_state_at = NOW()
 		WHERE organization_id = ? AND kind = 'parent_billing_letter'`, f.office.organization)
 	require.NoError(t, err)
 	var mailing letterMailingBody
-	for _, candidate := range letterMailings(t, f, billing, run.ID) {
+	for _, candidate := range letterMailings(t, f, billing, int64(run.ID)) {
 		mailing = candidate
 		break
 	}
@@ -157,20 +157,20 @@ func TestBillingLetterMailFollowsTheCurrentProviderBlock(t *testing.T) {
 	assert.Equal(t, "provider_blocked", mailing.MailOutcome)
 
 	testProviderBlocks.Store(address, deliveryContract.EmailProviderBlockActive)
-	refused := traegerJSON(t, f.traeger, billing, http.MethodPost, letterMailPath(run.ID, mailing.DocumentID), nil)
+	refused := traegerJSON(t, f.traeger, billing, http.MethodPost, letterMailPath(int64(run.ID), int64(mailing.DocumentID)), nil)
 	require.Equal(t, http.StatusConflict, refused.Code, refused.Body.String())
 	code, _ := registrationRefusalOf(t, refused)
 	assert.Equal(t, "parent_billing.letter_mail_blocked", code)
-	assert.Equal(t, "active", letterMailings(t, f, billing, run.ID)[mailing.Number].ProviderBlock)
+	assert.Equal(t, "active", letterMailings(t, f, billing, int64(run.ID))[mailing.Number].ProviderBlock)
 
 	testProviderBlocks.Store(address, deliveryContract.EmailProviderBlockUnreadable)
-	refused = traegerJSON(t, f.traeger, billing, http.MethodPost, letterMailPath(run.ID, mailing.DocumentID), nil)
+	refused = traegerJSON(t, f.traeger, billing, http.MethodPost, letterMailPath(int64(run.ID), int64(mailing.DocumentID)), nil)
 	require.Equal(t, http.StatusConflict, refused.Code, refused.Body.String())
 	code, _ = registrationRefusalOf(t, refused)
 	assert.Equal(t, "parent_billing.letter_mail_block_unreadable", code)
 
 	testProviderBlocks.Store(address, deliveryContract.EmailProviderBlockNone)
-	sent := traegerJSON(t, f.traeger, billing, http.MethodPost, letterMailPath(run.ID, mailing.DocumentID), nil)
+	sent := traegerJSON(t, f.traeger, billing, http.MethodPost, letterMailPath(int64(run.ID), int64(mailing.DocumentID)), nil)
 	assert.Less(t, sent.Code, 300, "the block is gone, the old mail decides nothing: %s", sent.Body.String())
 }
 
@@ -183,20 +183,20 @@ func TestBillingLetterMailsReachEveryFamilyOnceAndShowTheirState(t *testing.T) {
 
 	// Without letters there is nothing to send or print.
 	for _, request := range []struct{ method, path string }{
-		{http.MethodGet, billingRunPath(run.ID, "/mailings")},
-		{http.MethodPost, billingRunPath(run.ID, "/mailings")},
-		{http.MethodPost, letterMailPath(run.ID, run.Documents[0].ID)},
-		{http.MethodGet, billingRunPath(run.ID, "/letters/print")},
+		{http.MethodGet, billingRunPath(int64(run.ID), "/mailings")},
+		{http.MethodPost, billingRunPath(int64(run.ID), "/mailings")},
+		{http.MethodPost, letterMailPath(int64(run.ID), int64(run.Documents[0].ID))},
+		{http.MethodGet, billingRunPath(int64(run.ID), "/letters/print")},
 	} {
 		rec := traegerJSON(t, f.traeger, billing, request.method, request.path, nil)
 		require.Equal(t, http.StatusConflict, rec.Code, "%s %s: %s", request.method, request.path, rec.Body.String())
 		code, _ := registrationRefusalOf(t, rec)
 		assert.Equal(t, "parent_billing.billing_letters_missing", code, request.path)
 	}
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/letters"), lettersBody("2099-01-15"))
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/letters"), lettersBody("2099-01-15"))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 
-	before := letterMailings(t, f, billing, run.ID)
+	before := letterMailings(t, f, billing, int64(run.ID))
 	require.Len(t, before, 2)
 	for number, mailing := range before {
 		assert.Equal(t, "not_sent", mailing.Status, number)
@@ -206,15 +206,15 @@ func TestBillingLetterMailsReachEveryFamilyOnceAndShowTheirState(t *testing.T) {
 
 	// The series puts one mail of the Träger per family on the outbox, with
 	// the stored letter attached.
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/mailings"), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/mailings"), nil)
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
 	assert.Equal(t, letterSeriesBody{Queued: 2}, decodeSchoolPortalData[letterSeriesBody](t, rec.Body.Bytes()))
-	mails := queuedLetterMails(t, f, run.ID)
+	mails := queuedLetterMails(t, f, int64(run.ID))
 	require.Len(t, mails, 2)
 	for _, mail := range mails {
 		assert.Nil(t, mail.TenantID, "a mail of the Träger has no school")
 		var payload struct {
-			DocumentID  int64  `json:"document_id"`
+			DocumentID  wireID `json:"document_id"`
 			TraegerName string `json:"traeger_name"`
 			Number      string `json:"number"`
 			Filename    string `json:"filename"`
@@ -235,31 +235,31 @@ func TestBillingLetterMailsReachEveryFamilyOnceAndShowTheirState(t *testing.T) {
 	}
 
 	// A second series sends nothing twice.
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/mailings"), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/mailings"), nil)
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
 	assert.Equal(t, letterSeriesBody{Already: 2}, decodeSchoolPortalData[letterSeriesBody](t, rec.Body.Bytes()))
-	assert.Len(t, queuedLetterMails(t, f, run.ID), 2)
+	assert.Len(t, queuedLetterMails(t, f, int64(run.ID)), 2)
 	// A retry that cannot enqueue another mail does not need the current
 	// letterhead. The stored letters already carry their original sender.
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut,
 		"/traeger/settings/values/"+configModels.KeyBrandingLetterheadText, map[string]any{"value": " \n "})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/mailings"), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/mailings"), nil)
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
 	assert.Equal(t, letterSeriesBody{Already: 2}, decodeSchoolPortalData[letterSeriesBody](t, rec.Body.Bytes()))
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut,
 		"/traeger/settings/values/"+configModels.KeyBrandingLetterheadText, map[string]any{"value": traegerTestLetterhead})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
-	queued := letterMailings(t, f, billing, run.ID)
+	queued := letterMailings(t, f, billing, int64(run.ID))
 	first, second := queued["FE-0001"], queued["FE-0002"]
 	assert.Equal(t, "queued", first.Status)
 	assert.Equal(t, 1, first.Sends)
-	assertInvoiceMailHistory(t, f.traeger, billing, "holiday-documents", first.DocumentID, 1, 0)
+	assertInvoiceMailHistory(t, f.traeger, billing, "holiday-documents", int64(first.DocumentID), 1, 0)
 	assert.NotNil(t, first.RequestedAt)
 
 	// While the mail waits, the family is not mailed again.
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, letterMailPath(run.ID, first.DocumentID), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, letterMailPath(int64(run.ID), int64(first.DocumentID)), nil)
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	code, _ := registrationRefusalOf(t, rec)
 	assert.Equal(t, "parent_billing.letter_mail_pending", code)
@@ -272,23 +272,23 @@ func TestBillingLetterMailsReachEveryFamilyOnceAndShowTheirState(t *testing.T) {
 			WHERE organization_id = ? AND kind = 'parent_billing_letter' AND (payload->>'document_id')::bigint = ?`, f.office.organization, documentID)
 		require.NoError(t, err)
 	}
-	setMailState(first.DocumentID, `status = 'dead_letter', dead_letter_at = NOW(), attempts = 5, last_error = 'mailbox unavailable'`)
-	assertInvoiceMailHistory(t, f.traeger, billing, "holiday-documents", first.DocumentID, 1, 0)
-	setMailState(second.DocumentID, `status = 'sent', sent_at = NOW(), attempts = 1`)
-	assertInvoiceMailHistory(t, f.traeger, billing, "holiday-documents", second.DocumentID, 1, 1)
-	states := letterMailings(t, f, billing, run.ID)
+	setMailState(int64(first.DocumentID), `status = 'dead_letter', dead_letter_at = NOW(), attempts = 5, last_error = 'mailbox unavailable'`)
+	assertInvoiceMailHistory(t, f.traeger, billing, "holiday-documents", int64(first.DocumentID), 1, 0)
+	setMailState(int64(second.DocumentID), `status = 'sent', sent_at = NOW(), attempts = 1`)
+	assertInvoiceMailHistory(t, f.traeger, billing, "holiday-documents", int64(second.DocumentID), 1, 1)
+	states := letterMailings(t, f, billing, int64(run.ID))
 	assert.Equal(t, "failed", states["FE-0001"].Status)
 	assert.Equal(t, 5, states["FE-0001"].Attempts)
 	assert.Equal(t, "sent", states["FE-0002"].Status)
 	assert.NotNil(t, states["FE-0002"].SentAt)
 
 	// The failed letter is sent again with a new outbox entry.
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, letterMailPath(run.ID, first.DocumentID), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, letterMailPath(int64(run.ID), int64(first.DocumentID)), nil)
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
 	again := decodeSchoolPortalData[letterMailingBody](t, rec.Body.Bytes())
 	assert.Equal(t, "queued", again.Status)
 	assert.Equal(t, 2, again.Sends)
-	mails = queuedLetterMails(t, f, run.ID)
+	mails = queuedLetterMails(t, f, int64(run.ID))
 	require.Len(t, mails, 3)
 	assert.Equal(t, fmt.Sprintf("parent-billing-letter:%d:2", first.DocumentID), mails[2].IdempotencyKey)
 
@@ -296,7 +296,7 @@ func TestBillingLetterMailsReachEveryFamilyOnceAndShowTheirState(t *testing.T) {
 	_, err := f.db.ExecContext(ctx, `DELETE FROM platform.email_outbox
 		WHERE organization_id = ? AND kind = 'parent_billing_letter' AND (payload->>'document_id')::bigint = ?`, f.office.organization, second.DocumentID)
 	require.NoError(t, err)
-	assert.Equal(t, "unknown", letterMailings(t, f, billing, run.ID)["FE-0002"].Status)
+	assert.Equal(t, "unknown", letterMailings(t, f, billing, int64(run.ID))["FE-0002"].Status)
 
 	// A worker that stopped during the provider call leaves the outcome
 	// open: the mail may have gone out, so it is not shown as failed.
@@ -304,10 +304,10 @@ func TestBillingLetterMailsReachEveryFamilyOnceAndShowTheirState(t *testing.T) {
 		WHERE organization_id = ? AND idempotency_key = ?`, deliveryContract.DispatchOutcomeUnknown, f.office.organization,
 		fmt.Sprintf("parent-billing-letter:%d:2", first.DocumentID))
 	require.NoError(t, err)
-	assert.Equal(t, "unknown", letterMailings(t, f, billing, run.ID)["FE-0001"].Status)
+	assert.Equal(t, "unknown", letterMailings(t, f, billing, int64(run.ID))["FE-0001"].Status)
 
 	// All letters print as one PDF.
-	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(run.ID, "/letters/print"), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(int64(run.ID), "/letters/print"), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, "application/pdf", rec.Header().Get("Content-Type"))
 	assert.Contains(t, rec.Header().Get("Content-Disposition"), `attachment; filename="bestaetigungsschreiben-`)
@@ -335,15 +335,15 @@ func TestBillingLetterMailsNeedTheBillingRightAndStayWithTheirTraeger(t *testing
 	billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
 	foreign := newTraegerOffice(t, f.db, f.traeger, "Träger Versand Fremd", identityaccess.TraegerRoleBilling)
 	run := lettersOfRun(t, f, billing)
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/letters"), lettersBody("2099-01-15"))
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/letters"), lettersBody("2099-01-15"))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	document := run.Documents[0].ID
 
 	requests := []struct{ method, path string }{
-		{http.MethodGet, billingRunPath(run.ID, "/mailings")},
-		{http.MethodPost, billingRunPath(run.ID, "/mailings")},
-		{http.MethodPost, letterMailPath(run.ID, document)},
-		{http.MethodGet, billingRunPath(run.ID, "/letters/print")},
+		{http.MethodGet, billingRunPath(int64(run.ID), "/mailings")},
+		{http.MethodPost, billingRunPath(int64(run.ID), "/mailings")},
+		{http.MethodPost, letterMailPath(int64(run.ID), int64(document))},
+		{http.MethodGet, billingRunPath(int64(run.ID), "/letters/print")},
 	}
 	for _, request := range requests {
 		rec := traegerJSON(t, f.traeger, f.office.token, request.method, request.path, nil)
@@ -364,7 +364,7 @@ func TestBillingLetterMailsNeedTheBillingRightAndStayWithTheirTraeger(t *testing
 	assert.Zero(t, reads, "refused requests read nothing")
 
 	// An invoice of another run is not found under this run.
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, letterMailPath(run.ID, document+1000), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, letterMailPath(int64(run.ID), int64(document+1000)), nil)
 	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 	code, _ := registrationRefusalOf(t, rec)
 	assert.Equal(t, "parent_billing.billing_letter_not_found", code)

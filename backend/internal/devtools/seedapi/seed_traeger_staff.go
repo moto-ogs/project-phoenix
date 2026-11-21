@@ -130,10 +130,10 @@ func seedTraegerStaffRelease(rt *Runtime) error {
 
 type seedTraegerStaffSuggestion struct {
 	Reason   string `json:"reason"`
-	RecordID *int64 `json:"staff_record_id"`
+	RecordID *apiID `json:"staff_record_id"`
 	Members  []struct {
-		SchoolID int64 `json:"school_id"`
-		StaffID  int64 `json:"staff_id"`
+		SchoolID apiID `json:"school_id"`
+		StaffID  apiID `json:"staff_id"`
 	} `json:"members"`
 }
 
@@ -150,7 +150,7 @@ func withoutVisitorStaff(rt *Runtime, suggestions []seedTraegerStaffSuggestion) 
 	for _, suggestion := range suggestions {
 		named := false
 		for _, member := range suggestion.Members {
-			if member.SchoolID == rt.Bootstrap.SchoolID && member.StaffID == visitorStaffID {
+			if int64(member.SchoolID) == rt.Bootstrap.SchoolID && int64(member.StaffID) == visitorStaffID {
 				named = true
 			}
 		}
@@ -182,7 +182,7 @@ func seedTraegerStaffSuggestions(client *Client, auth AuthRef) ([]seedTraegerSta
 func seedTraegerStaffLink(client *Client, auth AuthRef, suggestion seedTraegerStaffSuggestion) (int64, error) {
 	members := make([]map[string]int64, 0, len(suggestion.Members))
 	for _, member := range suggestion.Members {
-		members = append(members, map[string]int64{"school_id": member.SchoolID, "staff_id": member.StaffID})
+		members = append(members, map[string]int64{"school_id": int64(member.SchoolID), "staff_id": int64(member.StaffID)})
 	}
 	body := map[string]any{"members": members}
 	if suggestion.RecordID != nil {
@@ -225,13 +225,13 @@ func seedTraegerStaffLink(client *Client, auth AuthRef, suggestion seedTraegerSt
 	}
 	var record struct {
 		Data struct {
-			ID int64 `json:"id"`
+			ID apiID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &record); err != nil || record.Data.ID == 0 {
 		return 0, fmt.Errorf("decode a Träger staff record: %w", errors.Join(err, errors.New("no record id")))
 	}
-	return record.Data.ID, nil
+	return int64(record.Data.ID), nil
 }
 
 // seedTraegerStaffAlreadyLinked recognizes a proposal another school's run

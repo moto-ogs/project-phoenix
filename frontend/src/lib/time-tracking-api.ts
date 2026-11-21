@@ -1,5 +1,7 @@
 // Time tracking API service for check-in/out and history management
 
+import type * as shared from "~/lib/contract/shared.generated";
+import type * as tt from "~/lib/contract/time-tracking.generated";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import type { MailOutcomeCounts } from "~/lib/email-delivery-status";
 import { unavailableApiError } from "./api-error";
@@ -7,13 +9,8 @@ import { buildApiError } from "./api-error-response";
 import {
   mapAllowance,
   type AbsenceTypeAllowanceSummary,
-  type BackendAbsenceTypeAllowanceSummary,
 } from "./absence-type-api";
 import type {
-  BackendClosingDayRange,
-  BackendDailyProjection,
-  BackendHoliday,
-  BackendMonthSummary,
   DayProjection,
   HistoryResult,
   MonthSummary,
@@ -33,15 +30,7 @@ import {
   mapWorkSessionBreakResponse,
   mapWorkSessionEditResponse,
 } from "./time-tracking-helpers";
-
-/**
- * Standard API response wrapper
- */
-interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-}
+import type { ApiResponse } from "./api-envelope";
 
 export const PLANNED_START_NOT_REACHED_CODE: ErrorCode =
   "iot.planned_start_not_reached";
@@ -97,10 +86,6 @@ export interface UpdateAbsenceRequest {
 
 interface TimeTrackingConfig {
   accountStartDate: string;
-}
-
-interface BackendTimeTrackingConfig {
-  account_start_date?: string;
 }
 
 /**
@@ -192,7 +177,7 @@ class TimeTrackingService {
   }
 
   async getConfig(): Promise<TimeTrackingConfig> {
-    const result = await this.request<BackendTimeTrackingConfig>(
+    const result = await this.request<tt.ConfigResponse>(
       "/config",
       "GET",
       "Failed to get time tracking config",
@@ -218,7 +203,7 @@ class TimeTrackingService {
       year: String(year),
       month: String(month),
     });
-    const result = await this.request<BackendMonthSummary>(
+    const result = await this.request<shared.MonthSummary>(
       `/month-summary?${params}`,
       "GET",
       "Failed to get month summary",
@@ -234,7 +219,7 @@ class TimeTrackingService {
     to: string,
   ): Promise<ReadonlyMap<string, DayProjection>> {
     const params = new URLSearchParams({ from, to });
-    const result = await this.request<BackendDailyProjection[] | null>(
+    const result = await this.request<shared.DailyProjection[] | null>(
       `/schedule-targets?${params}`,
       "GET",
       "Failed to get daily projection",
@@ -250,7 +235,7 @@ class TimeTrackingService {
     to: string,
   ): Promise<ReadonlyMap<string, string>> {
     const params = new URLSearchParams({ from, to });
-    const result = await this.request<BackendHoliday[] | null>(
+    const result = await this.request<tt.PublicHoliday[] | null>(
       `/holidays?${params}`,
       "GET",
       "Failed to get holidays",
@@ -266,7 +251,7 @@ class TimeTrackingService {
     to: string,
   ): Promise<ReadonlyMap<string, string>> {
     const params = new URLSearchParams({ from, to });
-    const result = await this.request<BackendClosingDayRange[] | null>(
+    const result = await this.request<tt.closingDayRangeResponse[] | null>(
       `/closing-days?${params}`,
       "GET",
       "Failed to get closing days",
@@ -455,7 +440,7 @@ class TimeTrackingService {
    * Berlin year when none is given.
    */
   async getOwnAbsenceAllowances(): Promise<OwnAbsenceAllowance[]> {
-    const result = await this.request<BackendOwnAbsenceAllowance[] | null>(
+    const result = await this.request<tt.OwnAllowanceResponse[] | null>(
       "/absence-allowances",
       "GET",
       "Kontingente konnten nicht geladen werden",
@@ -465,10 +450,6 @@ class TimeTrackingService {
       summary: mapAllowance(entry),
     }));
   }
-}
-
-interface BackendOwnAbsenceAllowance extends BackendAbsenceTypeAllowanceSummary {
-  name: string;
 }
 
 /** One school-defined absence type with an allowance and its yearly account. */

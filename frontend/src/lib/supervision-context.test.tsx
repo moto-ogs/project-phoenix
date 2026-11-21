@@ -706,7 +706,7 @@ describe("SupervisionProvider school-wide overview paths", () => {
   it("fetches from the overview endpoint for admins in own mode", async () => {
     setupFetchMock({
       adminAll: {
-        success: true,
+        status: "success",
         data: [
           {
             id: 10,
@@ -737,7 +737,7 @@ describe("SupervisionProvider school-wide overview paths", () => {
   it("keeps an admin's own regular-room supervision while loading the overview", async () => {
     setupFetchMock({
       adminAll: {
-        success: true,
+        status: "success",
         data: [
           {
             id: 10,
@@ -834,7 +834,7 @@ describe("SupervisionProvider school-wide overview paths", () => {
     setOverviewScope("all_staff");
     setupFetchMock({
       adminAll: {
-        success: true,
+        status: "success",
         data: [
           {
             id: 11,

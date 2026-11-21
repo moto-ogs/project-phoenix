@@ -37,7 +37,7 @@ SettingAuditRepository → config.setting_audit (append-only)
 | `modules/settings/http/settings_api.go` | HTTP handlers (GET /schema, PUT/DELETE /values/{key}, GET /values/{key}/reveal for passwords) |
 | `frontend/src/lib/settings-api.ts` | Frontend API client + TypeScript types |
 | `frontend/src/components/settings/` | Settings page, field components, auto-save (plus hand-written exceptions: `personalization-tab.tsx`, `enrollment-link-panel.tsx`) |
-| `frontend/src/app/api/settings/` | Next.js proxy routes to backend (key regex `/^[a-z0-9_.]{1,255}$/`) |
+| `frontend/src/app/api/settings/values/[key]/route.ts` | Write, then purge the cached tenant lookup; key `/^[a-z0-9_.]{1,255}$/` |
 
 ### Registered Settings
 

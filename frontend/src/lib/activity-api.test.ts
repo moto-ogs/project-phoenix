@@ -198,7 +198,10 @@ describe("activity-api", () => {
         "fetch",
         vi.fn().mockResolvedValueOnce({
           ok: true,
-          json: async () => ({ success: true, data: sampleBackendActivity }),
+          json: async () => ({
+            status: "success",
+            data: sampleBackendActivity,
+          }),
         }),
       );
 

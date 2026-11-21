@@ -11,7 +11,6 @@ import (
 
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
@@ -362,39 +361,6 @@ func (rs *Resource) listSchemaVersions(w http.ResponseWriter, r *http.Request) {
 		out = append(out, toFormSchemaResponse(s))
 	}
 	common.Respond(w, r, http.StatusOK, out, "Form schema versions retrieved")
-}
-
-// getSchemaByID surfaces a specific version (used to render an
-// already-submitted request against its pinned schema).
-func (rs *Resource) getSchemaByID(w http.ResponseWriter, r *http.Request) {
-	if rs.FormSchemaService == nil {
-		common.RenderError(w, r, common.ErrorInternalServer(errors.New("form schema service not configured")))
-		return
-	}
-
-	idParam := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idParam, 10, 64)
-	if err != nil || id <= 0 {
-		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid schema id")))
-		return
-	}
-
-	var schema *capability.FormSchema
-	txErr := rs.runInTenantTx(r, func(ctx context.Context) error {
-		s, innerErr := rs.FormSchemaService.SchemaVersion(ctx, id)
-		schema = s
-		return innerErr
-	})
-	if txErr != nil {
-		if errors.Is(txErr, capability.ErrFormSchemaNotFound) {
-			common.RenderError(w, r, common.ErrorNotFoundWithCode(txErr, common.CodeEnrollmentSchemaNotFound))
-			return
-		}
-		common.RenderError(w, r, common.ErrorInternalServer(txErr))
-		return
-	}
-
-	common.Respond(w, r, http.StatusOK, toFormSchemaResponse(schema), "Form schema retrieved")
 }
 
 // publishSchema creates a schema. When the request body carries a

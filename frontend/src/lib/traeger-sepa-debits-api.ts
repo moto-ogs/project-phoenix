@@ -7,22 +7,37 @@
  * "YYYY-MM-DD".
  */
 
+import type { SEPADebit } from "./contract/shared.generated";
+import type {
+  SEPADebitRun,
+  SEPADebitSubmissionRequest,
+} from "./contract/traeger-sepa-debits.generated";
+import { knownEnum } from "./contract/known-enum";
 import { traegerRequest } from "./traeger-api";
 import { type BillingFile, billingFile } from "./traeger-billing-api";
 
+// Go does not register these sets; the contract types them as string.
+const SEQUENCE_TYPE_VALUES = ["FRST", "RCUR", "OOFF"] as const;
+const DEBIT_STATUS_VALUES = ["pending", "submitted"] as const;
+const DEBIT_LEFT_VALUES = [
+  "mandate_missing",
+  "cancelled",
+  "revoked",
+  "expired",
+  "creditor_changed",
+  "one_off_used",
+  "one_off_multiple",
+] as const;
+
 /** The kind of run a file belongs to, as the path names it. */
 export type SepaDebitRunKind = "care-runs" | "holiday-runs" | "notice-months";
-export type SepaSequenceType = "FRST" | "RCUR" | "OOFF";
-type SepaDebitStatus = "pending" | "submitted";
-/** Why a pending debit stays out of the file. */
-export type SepaDebitLeft =
-  | "mandate_missing"
-  | "cancelled"
-  | "revoked"
-  | "expired"
-  | "creditor_changed"
-  | "one_off_used"
-  | "one_off_multiple";
+export type SepaSequenceType = (typeof SEQUENCE_TYPE_VALUES)[number];
+type SepaDebitStatus = (typeof DEBIT_STATUS_VALUES)[number];
+/**
+ * Why a pending debit stays out of the file. "other": a reason this build
+ * does not know; the debit is still out of the file.
+ */
+export type SepaDebitLeft = (typeof DEBIT_LEFT_VALUES)[number] | "other";
 
 export interface SepaDebit {
   readonly id: string;
@@ -31,14 +46,15 @@ export interface SepaDebit {
   readonly invoiceNumber: string;
   readonly recipientName: string;
   readonly amountCents: number;
-  /** Calendar date the invoice is due, "YYYY-MM-DD". */
-  readonly dueOn: string;
+  /** Calendar date the invoice is due, "YYYY-MM-DD"; null when the backend has none. */
+  readonly dueOn: string | null;
   /** Collection day of the exported/submitted debit. */
   readonly collectOn: string | null;
-  readonly sequenceType: SepaSequenceType;
+  /** undefined: a sequence type this build does not know. */
+  readonly sequenceType: SepaSequenceType | undefined;
   readonly mandateReference: string;
   readonly ibanMasked: string;
-  readonly status: SepaDebitStatus;
+  readonly status: SepaDebitStatus | undefined;
   readonly left: SepaDebitLeft | null;
   readonly submittedAt: string | null;
   /** The month of the installment of a Jahresbescheid, "YYYY-MM-DD"; null for an invoice. */
@@ -46,9 +62,9 @@ export interface SepaDebit {
 }
 
 export interface SepaDebitGroup {
-  readonly sequenceType: SepaSequenceType;
-  /** Calendar date the bank collects, "YYYY-MM-DD". */
-  readonly collectOn: string;
+  readonly sequenceType: SepaSequenceType | undefined;
+  /** Calendar date the bank collects, "YYYY-MM-DD"; null when the backend has none. */
+  readonly collectOn: string | null;
   readonly count: number;
   readonly totalCents: number;
 }
@@ -73,68 +89,32 @@ export interface SepaDebitRun {
   readonly submittedAt: string | null;
 }
 
-interface BackendDebit {
-  id: number | string;
-  mandate_id: number | string;
-  contract_id: number | string;
-  invoice_number: string;
-  recipient_name: string;
-  amount_cents: number;
-  due_on: string;
-  collect_on?: string;
-  sequence_type: SepaSequenceType;
-  mandate_reference: string;
-  iban_masked: string;
-  status: SepaDebitStatus;
-  left?: SepaDebitLeft;
-  submitted_at: string | null;
-  notice_month?: string;
+function debitLeft(left: string | undefined): SepaDebitLeft | null {
+  if (!left) return null;
+  return knownEnum(DEBIT_LEFT_VALUES, left) ?? "other";
 }
 
-interface BackendDebitRun {
-  creditor_id: string;
-  creditor_name: string;
-  creditor_iban_masked: string;
-  account_missing: boolean;
-  message_id: string;
-  count: number;
-  total_cents: number;
-  groups:
-    | {
-        sequence_type: SepaSequenceType;
-        collect_on: string;
-        count: number;
-        total_cents: number;
-      }[]
-    | null;
-  past_due: number;
-  debits: BackendDebit[] | null;
-  submitted: BackendDebit[] | null;
-  left: BackendDebit[] | null;
-  submitted_at: string | null;
-}
-
-function debitFromBackend(debit: BackendDebit): SepaDebit {
+function debitFromBackend(debit: SEPADebit): SepaDebit {
   return {
-    id: String(debit.id),
-    mandateId: String(debit.mandate_id),
-    contractId: String(debit.contract_id),
+    id: debit.id,
+    mandateId: debit.mandate_id,
+    contractId: debit.contract_id,
     invoiceNumber: debit.invoice_number,
     recipientName: debit.recipient_name,
     amountCents: debit.amount_cents,
     dueOn: debit.due_on,
     collectOn: debit.collect_on ?? null,
-    sequenceType: debit.sequence_type,
+    sequenceType: knownEnum(SEQUENCE_TYPE_VALUES, debit.sequence_type),
     mandateReference: debit.mandate_reference,
     ibanMasked: debit.iban_masked,
-    status: debit.status,
-    left: debit.left ?? null,
+    status: knownEnum(DEBIT_STATUS_VALUES, debit.status),
+    left: debitLeft(debit.left),
     submittedAt: debit.submitted_at,
     noticeMonth: debit.notice_month || null,
   };
 }
 
-function debitRunFromBackend(run: BackendDebitRun): SepaDebitRun {
+function debitRunFromBackend(run: SEPADebitRun): SepaDebitRun {
   return {
     creditorId: run.creditor_id,
     creditorName: run.creditor_name,
@@ -144,7 +124,7 @@ function debitRunFromBackend(run: BackendDebitRun): SepaDebitRun {
     count: run.count,
     totalCents: run.total_cents,
     groups: (run.groups ?? []).map((group) => ({
-      sequenceType: group.sequence_type,
+      sequenceType: knownEnum(SEQUENCE_TYPE_VALUES, group.sequence_type),
       collectOn: group.collect_on,
       count: group.count,
       totalCents: group.total_cents,
@@ -167,7 +147,7 @@ export async function fetchSepaDebitRun(
   runId: string,
 ): Promise<SepaDebitRun> {
   return debitRunFromBackend(
-    await traegerRequest<BackendDebitRun>(runPath(kind, runId)),
+    await traegerRequest<SEPADebitRun>(runPath(kind, runId)),
   );
 }
 
@@ -194,13 +174,10 @@ export async function submitSepaDebits(
   messageId: string,
 ): Promise<SepaDebitRun> {
   return debitRunFromBackend(
-    await traegerRequest<BackendDebitRun>(
-      `${runPath(kind, runId)}/submission`,
-      {
-        method: "POST",
-        body: { message_id: messageId },
-      },
-    ),
+    await traegerRequest<SEPADebitRun>(`${runPath(kind, runId)}/submission`, {
+      method: "POST",
+      body: { message_id: messageId } satisfies SEPADebitSubmissionRequest,
+    }),
   );
 }
 
@@ -208,8 +185,8 @@ export async function submitSepaDebits(
 export async function fetchSepaMandateCollections(
   mandateId: string,
 ): Promise<SepaDebit[]> {
-  const debits = await traegerRequest<BackendDebit[] | null>(
+  const debits = await traegerRequest<SEPADebit[]>(
     `/api/traeger/sepa-mandates/${encodeURIComponent(mandateId)}/collections`,
   );
-  return (debits ?? []).map(debitFromBackend);
+  return debits.map(debitFromBackend);
 }

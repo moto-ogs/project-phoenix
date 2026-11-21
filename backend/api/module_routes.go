@@ -104,7 +104,6 @@ var moduleRouteRules = []moduleRouteRule{
 	{"/api/pwa", moduleRouteBasis},
 	{"/api/reminders", moduleRouteBasis},
 	{"/api/rooms", moduleRouteBasis},
-	{"/api/schedules", moduleRouteBasis},
 	{"/api/school-setup", moduleRouteBasis},
 	// The school search (ADR 0231); see docs/reference/modulschalter.md.
 	{"/api/search", moduleRouteBasis},

@@ -188,7 +188,7 @@ async function browserApi(
         });
         return;
       }
-      await route.fulfill({ json: { status: "success", success: true, data } });
+      await route.fulfill({ json: { status: "success", data } });
     },
   );
 }

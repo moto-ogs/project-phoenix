@@ -127,12 +127,12 @@ func TestNumberRangeStartContinuesTheNumbersOfAnotherProgram(t *testing.T) {
 	assert.Empty(t, care.Starts)
 
 	// The first released invoice carries the start value.
-	run := startBillingRun(t, f, billing, f.period.ID)
-	preview := billingRun(t, f, billing, run.ID)
+	run := startBillingRun(t, f, billing, int64(f.period.ID))
+	preview := billingRun(t, f, billing, int64(run.ID))
 	require.Equal(t, 1, preview.PreviewCount)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(preview))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(preview))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	released := billingRun(t, f, billing, run.ID)
+	released := billingRun(t, f, billing, int64(run.ID))
 	require.Len(t, released.Documents, 1)
 	assert.Equal(t, "7100", released.Documents[0].Number)
 	issued := numberRangeOf(t, f, billing, "holiday")
@@ -243,15 +243,15 @@ func TestNumberRangeStartAndReleaseNeverPassEachOther(t *testing.T) {
 	billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
 	require.Equal(t, http.StatusOK, f.act(t, f.siblings, "confirm").Code)
 	setNumberRange(t, f, billing, "{N}")
-	run := startBillingRun(t, f, billing, f.period.ID)
-	preview := billingRun(t, f, billing, run.ID)
+	run := startBillingRun(t, f, billing, int64(f.period.ID))
+	preview := billingRun(t, f, billing, int64(run.ID))
 
 	var wait sync.WaitGroup
 	var released, started int
 	wait.Add(2)
 	go func() {
 		defer wait.Done()
-		released = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(preview)).Code
+		released = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(preview)).Code
 	}()
 	go func() {
 		defer wait.Done()
@@ -261,7 +261,7 @@ func TestNumberRangeStartAndReleaseNeverPassEachOther(t *testing.T) {
 	require.Equal(t, http.StatusOK, released)
 	require.Equal(t, http.StatusOK, started, "50 is above the one number a release can issue first")
 
-	number := billingRun(t, f, billing, run.ID).Documents[0].Number
+	number := billingRun(t, f, billing, int64(run.ID)).Documents[0].Number
 	after := numberRangeOf(t, f, billing, "holiday")
 	switch number {
 	case "50":

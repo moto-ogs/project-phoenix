@@ -23,6 +23,7 @@ const DEBIT_GAP_LABELS = {
   creditor_missing: "Gläubiger-ID fehlt",
   creditor_changed: "Mandat für eine frühere Gläubiger-ID",
   mandate_expired: "Mandat verfallen: 36 Monate ohne Abbuchung",
+  other: "Wird nicht abgebucht",
 } as const;
 
 /** A family's invoice as the hints need it, from a care or a holiday run. */
@@ -60,10 +61,10 @@ export function debitHints(items: readonly DebitItem[]): DebitHint[] {
         item,
         text:
           payment.method === "transfer"
-            ? `${DEBIT_GAP_LABELS[payment.debitGap]}. Geht als Überweisung, fällig am ${formatDate(payment.dueOn)}.`
+            ? `${DEBIT_GAP_LABELS[payment.debitGap]}. Geht als Überweisung${payment.dueOn ? `, fällig am ${formatDate(payment.dueOn)}` : ""}.`
             : `${DEBIT_GAP_LABELS[payment.debitGap]}. Die Freigabe ist angehalten.`,
       });
-    } else if (payment?.mandate?.noticeShort) {
+    } else if (payment?.mandate?.noticeShort && payment.dueOn) {
       hints.push({
         item,
         text: `Abbuchung schon am ${formatDate(payment.dueOn)}. Das ist früher als deine Vorabankündigung erlaubt.`,
@@ -179,7 +180,13 @@ export function termDueDates(
   const dates = new Map<PaymentMethod, Set<string>>();
   for (const item of items) {
     const payment = item.payment;
-    if (item.excluded || item.totalCents <= 0 || payment?.dueSource !== "term")
+    if (
+      item.excluded ||
+      item.totalCents <= 0 ||
+      payment?.dueSource !== "term" ||
+      !payment.method ||
+      !payment.dueOn
+    )
       continue;
     const known = dates.get(payment.method) ?? new Set<string>();
     known.add(payment.dueOn);

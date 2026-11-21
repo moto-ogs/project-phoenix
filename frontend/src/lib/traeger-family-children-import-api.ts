@@ -9,21 +9,38 @@
 
 import { apiErrorFromResponse, transportFetch } from "./api-error";
 import { readJson } from "./traeger-api";
+import { knownEnum } from "./contract/known-enum";
+import type {
+  FamilyChildrenImport as WireResult,
+  FamilyChildrenImportRow as WireRow,
+} from "./contract/traeger-family-children.generated";
 
 const IMPORTS_PATH = "/api/traeger/family-children/imports";
 
 /** Largest file the backend reads, in bytes. */
 export const MAX_FAMILY_IMPORT_FILE_BYTES = 2 * 1024 * 1024;
 
-export type FamilyImportField =
-  | "child_first_name"
-  | "child_last_name"
-  | "child_birth_date"
-  | "school"
-  | "children";
+// Go does not register these sets; the contract types them as string. A value
+// this build does not know stays undefined instead of passing as a known one.
+const FIELD_VALUES = [
+  "child_first_name",
+  "child_last_name",
+  "child_birth_date",
+  "school",
+  "children",
+] as const;
+const ROW_STATUS_VALUES = [
+  "ready",
+  "same",
+  "differs",
+  "conflict",
+  "invalid",
+  "imported",
+] as const;
 
-export type FamilyImportRowStatus =
-  "ready" | "same" | "differs" | "conflict" | "invalid" | "imported";
+export type FamilyImportField = (typeof FIELD_VALUES)[number];
+
+export type FamilyImportRowStatus = (typeof ROW_STATUS_VALUES)[number];
 
 /** Header of the column each field comes from; "" leaves it unmapped. */
 type FamilyImportColumns = Readonly<Record<FamilyImportField, string>>;
@@ -35,13 +52,15 @@ export interface FamilyImportMapping {
 }
 
 interface FamilyImportProblem {
-  readonly field: FamilyImportField;
+  /** undefined: a field this build does not know. */
+  readonly field: FamilyImportField | undefined;
   readonly code: string;
 }
 
 export interface FamilyImportRow {
   readonly line: number;
-  readonly status: FamilyImportRowStatus;
+  /** undefined: a status this build does not know. */
+  readonly status: FamilyImportRowStatus | undefined;
   readonly childFirstName: string;
   readonly childLastName: string;
   readonly childBirthDate: string | null;
@@ -95,47 +114,22 @@ export interface FamilyImportRequest {
   readonly fingerprint?: string;
 }
 
-interface BackendRow {
-  line: number;
-  status: FamilyImportRowStatus;
-  child_first_name: string;
-  child_last_name: string;
-  child_birth_date: string | null;
-  school_name: string;
-  children: number | null;
-  contract_id?: string;
-  valid_from: string | null;
-  confirmed_children: number | null;
-  problems: FamilyImportProblem[] | null;
-  repeats_line?: number;
-}
-
-interface BackendResult {
-  encoding: string;
-  delimiter: string;
-  headers: string[] | null;
-  mapping: { columns: Record<FamilyImportField, string>; school_id: string };
-  unmapped: FamilyImportField[] | null;
-  schools: { id: string; name: string }[] | null;
-  fingerprint?: string;
-  applied: boolean;
-  counts: FamilyImportCounts;
-  rows: BackendRow[] | null;
-}
-
-function mapRow(row: BackendRow): FamilyImportRow {
+function mapRow(row: WireRow): FamilyImportRow {
   return {
     line: row.line,
-    status: row.status,
+    status: knownEnum(ROW_STATUS_VALUES, row.status),
     childFirstName: row.child_first_name,
     childLastName: row.child_last_name,
     childBirthDate: row.child_birth_date,
     schoolName: row.school_name,
     children: row.children,
-    contractId: row.contract_id ? String(row.contract_id) : null,
+    contractId: row.contract_id || null,
     validFrom: row.valid_from,
     confirmedChildren: row.confirmed_children,
-    problems: row.problems ?? [],
+    problems: (row.problems ?? []).map((problem) => ({
+      field: knownEnum(FIELD_VALUES, problem.field),
+      code: problem.code,
+    })),
     repeatsLine: row.repeats_line ?? null,
   };
 }
@@ -143,7 +137,7 @@ function mapRow(row: BackendRow): FamilyImportRow {
 /** The school of a mapping as the catalog proxy sends it; "0" names none. */
 const mappedSchoolId = (id: string): string => (id === "0" ? "" : id);
 
-function mapImportResult(result: BackendResult): FamilyImportResult {
+function mapImportResult(result: WireResult): FamilyImportResult {
   return {
     encoding: result.encoding,
     delimiter: result.delimiter,
@@ -152,9 +146,12 @@ function mapImportResult(result: BackendResult): FamilyImportResult {
       columns: result.mapping.columns,
       schoolId: mappedSchoolId(result.mapping.school_id),
     },
-    unmapped: result.unmapped ?? [],
+    unmapped: (result.unmapped ?? []).flatMap((field) => {
+      const known = knownEnum(FIELD_VALUES, field);
+      return known ? [known] : [];
+    }),
     schools: (result.schools ?? []).map((school) => ({
-      id: String(school.id),
+      id: school.id,
       name: school.name,
     })),
     fingerprint: result.fingerprint ?? "",
@@ -197,7 +194,7 @@ async function postImport(
     );
   }
   const data = await readJson(response);
-  return mapImportResult((data as { data: BackendResult }).data);
+  return mapImportResult((data as { data: WireResult }).data);
 }
 
 /** Reads the file and answers every row; stores nothing. */

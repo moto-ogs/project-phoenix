@@ -141,10 +141,10 @@ func TestStudents20CompanionsGrowthQueryBudget(t *testing.T) {
 	_ = testpkg.CreateTestStudent(t, tc.db, "Companion", "Unrelated", "S20")
 	putStudent(t, tc, child.ID, accompaniedPlanBody(nil))
 	type companion struct {
-		ID       int64    `json:"companion_student_id"`
-		First    string   `json:"first_name"`
-		Last     string   `json:"last_name"`
-		Weekdays []string `json:"weekdays"`
+		ID       testpkg.ID `json:"companion_student_id"`
+		First    string     `json:"first_name"`
+		Last     string     `json:"last_name"`
+		Weekdays []string   `json:"weekdays"`
 	}
 	expected := make([]companion, 0, 8)
 	ids := make([]int64, 0, 8)
@@ -155,7 +155,7 @@ func TestStudents20CompanionsGrowthQueryBudget(t *testing.T) {
 			name := fmt.Sprintf("Partner%02d", len(expected))
 			partner := testpkg.CreateTestStudent(t, tc.db, "Companion", name, "OtherClass")
 			putStudent(t, tc, partner.ID, accompaniedPlanBody(nil))
-			expected = append(expected, companion{partner.ID, "Companion", name, []string{"mon"}})
+			expected = append(expected, companion{testpkg.ID(partner.ID), "Companion", name, []string{"mon"}})
 			ids = append(ids, partner.ID)
 		}
 		entries := make([]map[string]any, 0, n)

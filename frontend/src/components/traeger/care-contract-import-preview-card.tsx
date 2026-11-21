@@ -36,6 +36,9 @@ import {
   takenOverWithoutEmail,
   WITHOUT_EMAIL_CONSEQUENCES,
 } from "./care-contract-import-format";
+import { labelOf } from "~/lib/label-of";
+
+const UNKNOWN_STATUS = { label: "–", tone: "gray" } as const;
 
 const IMPORT_PAGE_SIZE = 50;
 
@@ -207,8 +210,12 @@ export function CareContractImportPreviewCard({
       header: "Stand",
       render: (row) => (
         <StatusBadge
-          tone={CONTRACT_IMPORT_STATUS[row.status].tone}
-          label={CONTRACT_IMPORT_STATUS[row.status].label}
+          tone={
+            labelOf(CONTRACT_IMPORT_STATUS, row.status, UNKNOWN_STATUS).tone
+          }
+          label={
+            labelOf(CONTRACT_IMPORT_STATUS, row.status, UNKNOWN_STATUS).label
+          }
         />
       ),
       stacked: "meta",

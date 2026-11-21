@@ -69,7 +69,10 @@ import {
 } from "~/contexts/ToastContext";
 import { hasPermission, isAdmin } from "~/lib/auth-utils";
 import { berlinTodayISO, parseISODate, toISODate } from "~/lib/date-helpers";
-import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  useSwrLoadError,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import {
   cancelStaffAppointment,
@@ -566,13 +569,24 @@ function StaffCalendarPageInner() {
     mutateHolidays(),
   );
 
-  const { data: recipientOptions = emptyRecipientOptions } =
-    useSWRAuth<CalendarRecipientOptions>(
-      formOpen && canManageCalendar
-        ? tenantDailyKeys.calendarRecipientOptions(targetSearch)
-        : null,
-      () => getCalendarRecipientOptions(targetSearch),
-    );
+  const {
+    data: loadedRecipientOptions,
+    error: recipientOptionsError,
+    mutate: reloadRecipientOptions,
+  } = useSWRAuth<CalendarRecipientOptions>(
+    formOpen && canManageCalendar
+      ? tenantDailyKeys.calendarRecipientOptions(targetSearch)
+      : null,
+    () => getCalendarRecipientOptions(targetSearch),
+  );
+  const recipientOptions = loadedRecipientOptions ?? emptyRecipientOptions;
+  // Ohne die Liste stünde überall „Keine Treffer“, als gäbe es keine
+  // Empfänger (#2353): der Fehler steht an der Auswahl.
+  const recipientOptionsLoad = useSwrResourceLoadError(
+    [{ data: loadedRecipientOptions, error: recipientOptionsError }],
+    "die Empfängerauswahl",
+    () => reloadRecipientOptions(),
+  );
 
   const targetGroups = useMemo(
     () => buildTargetGroups(recipientOptions, targets),
@@ -1299,7 +1313,14 @@ function StaffCalendarPageInner() {
                             placeholder="Name, Klasse oder Gruppe"
                           />
                         </div>
-                        <div className="grid gap-3 lg:grid-cols-2">
+                        <LoadErrorAlert
+                          error={recipientOptionsLoad.error}
+                          className="mb-3"
+                        />
+                        <div
+                          className="grid gap-3 lg:grid-cols-2"
+                          hidden={recipientOptionsLoad.failure !== undefined}
+                        >
                           {targetGroups.map((group) => (
                             <InsetPanel as="section" key={group.type} framed>
                               <SectionLabel as="h4">{group.label}</SectionLabel>

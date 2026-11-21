@@ -38,7 +38,7 @@ func TestTraegerLoginSetsUpTheSecondFactorBeforeTheSession(t *testing.T) {
 	require.Equal(t, http.StatusOK, code)
 	assert.Equal(t, "mfa_enrollment_required", login.Status, "a Träger account without a factor sets it up first")
 	assert.Empty(t, login.RefreshToken, "no session before the second factor")
-	assert.Equal(t, organization, login.OrganizationID, "the Träger the login resolved travels back")
+	assert.Equal(t, organization, int64(login.OrganizationID), "the Träger the login resolved travels back")
 	assert.NotEmpty(t, login.MaskedEmail)
 	rec, _ := traegerSchools(t, portal, login.AccessToken)
 	assert.Equal(t, http.StatusUnauthorized, rec.Code, "the enrollment token opens no Träger route")
@@ -74,7 +74,7 @@ func TestTraegerLoginSetsUpTheSecondFactorBeforeTheSession(t *testing.T) {
 	require.Equal(t, http.StatusOK, code)
 	assert.Equal(t, "mfa_required", again.Status, "an enrolled account is asked for the mailed code")
 	assert.Empty(t, again.AccessToken, "no session before the code")
-	assert.Equal(t, organization, again.OrganizationID)
+	assert.Equal(t, organization, int64(again.OrganizationID))
 	code, verified := traegerPost(t, portal, "/traeger/auth/mfa/verify", "", map[string]any{
 		"challenge_token": again.ChallengeToken, "code": lastTraegerCode(t, portal, account.Email), "organization_id": organization,
 	})

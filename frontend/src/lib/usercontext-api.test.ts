@@ -21,12 +21,6 @@ vi.mock("next-auth/react", () => ({
   ),
 }));
 
-vi.mock("./api", () => ({
-  default: {
-    get: vi.fn(),
-  },
-}));
-
 vi.mock("./fetch-with-auth", () => ({
   fetchWithAuth: vi.fn(),
 }));
@@ -70,8 +64,7 @@ describe("userContextService", () => {
 
       fetchWithAuthMock.mockResolvedValueOnce({
         ok: true,
-        json: () =>
-          Promise.resolve({ success: true, message: "", data: backendData }),
+        json: () => Promise.resolve({ status: "success", data: backendData }),
       } as Response);
 
       const result = await userContextService.getMyEducationalGroups();
@@ -85,7 +78,7 @@ describe("userContextService", () => {
     it("returns empty array when data is null", async () => {
       fetchWithAuthMock.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ success: true, message: "", data: null }),
+        json: () => Promise.resolve({ status: "success", data: null }),
       } as Response);
 
       const result = await userContextService.getMyEducationalGroups();
@@ -96,8 +89,7 @@ describe("userContextService", () => {
     it("returns empty array when data is not an array", async () => {
       fetchWithAuthMock.mockResolvedValueOnce({
         ok: true,
-        json: () =>
-          Promise.resolve({ success: true, message: "", data: "invalid" }),
+        json: () => Promise.resolve({ status: "success", data: "invalid" }),
       } as Response);
 
       const result = await userContextService.getMyEducationalGroups();
@@ -121,7 +113,7 @@ describe("userContextService", () => {
     it("sends no Authorization header", async () => {
       fetchWithAuthMock.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ success: true, message: "", data: [] }),
+        json: () => Promise.resolve({ status: "success", data: [] }),
       } as Response);
 
       await userContextService.getMyEducationalGroups();
@@ -145,8 +137,7 @@ describe("userContextService", () => {
 
       fetchWithAuthMock.mockResolvedValueOnce({
         ok: true,
-        json: () =>
-          Promise.resolve({ success: true, message: "", data: backendData }),
+        json: () => Promise.resolve({ status: "success", data: backendData }),
       } as Response);
 
       const result = await userContextService.getMySupervisedGroups();
@@ -159,7 +150,7 @@ describe("userContextService", () => {
     it("handles null response data", async () => {
       fetchWithAuthMock.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ success: true, message: "", data: null }),
+        json: () => Promise.resolve({ status: "success", data: null }),
       } as Response);
 
       const result = await userContextService.getMySupervisedGroups();
@@ -177,8 +168,7 @@ describe("userContextService", () => {
 
       fetchWithAuthMock.mockResolvedValueOnce({
         ok: true,
-        json: () =>
-          Promise.resolve({ success: true, message: "", data: backendData }),
+        json: () => Promise.resolve({ status: "success", data: backendData }),
       } as Response);
 
       const result = await userContextService.getCurrentStaff();

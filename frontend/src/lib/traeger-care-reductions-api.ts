@@ -6,19 +6,39 @@
  * dates stay "YYYY-MM-DD".
  */
 
+import { knownEnum } from "./contract/known-enum";
+import { requiredDay } from "./contract/required-day";
+import type { ContributionRule as WireRule } from "./contract/shared.generated";
+import type {
+  CareEvidence as WireEvidence,
+  CareEvidenceRequest,
+  CareEvidenceSet as WireEvidenceSet,
+} from "./contract/traeger-care-evidences.generated";
+import type {
+  CareRuleRequest,
+  CareRuleSet as WireRuleSet,
+} from "./contract/traeger-care-rules.generated";
 import { traegerRequest } from "./traeger-api";
-import type { CareModule } from "./traeger-care-billing-api";
+import {
+  type CareModule,
+  moduleFromBackend,
+  schoolFromBackend,
+} from "./traeger-care-billing-api";
 
-/** Kinds of a care rule, in the order of the chain. */
-export type CareRuleKind = "income_level" | "sibling" | "single_parent" | "cap";
-export type CareEvidenceKind = "income_level" | "single_parent";
-
-export const CARE_RULE_KINDS: readonly CareRuleKind[] = [
+// Go does not register these sets; the contract types them as string.
+const RULE_KIND_VALUES = [
   "income_level",
   "sibling",
   "single_parent",
   "cap",
-];
+] as const;
+const EVIDENCE_KIND_VALUES = ["income_level", "single_parent"] as const;
+
+/** Kinds of a care rule, in the order of the chain. */
+export type CareRuleKind = (typeof RULE_KIND_VALUES)[number];
+export type CareEvidenceKind = (typeof EVIDENCE_KIND_VALUES)[number];
+
+export const CARE_RULE_KINDS: readonly CareRuleKind[] = RULE_KIND_VALUES;
 
 export interface CareRule {
   readonly id: string;
@@ -83,79 +103,29 @@ export interface CareEvidenceSet {
   readonly levels: readonly CareRule[];
 }
 
-interface BackendRule {
-  id: number | string;
-  kind: CareRuleKind;
-  name: string;
-  valid_from: string;
-  valid_until: string | null;
-  school_ids: (number | string)[] | null;
-  care_offering_ids: (number | string)[] | null;
-  count_school_ids: (number | string)[] | null;
-  sibling_from_child: number | null;
-  discount_basis_points: number | null;
-  discount_cents: number | null;
-  price_cents: number | null;
-  cap_cents: number | null;
-  tariff_sibling_price?: boolean;
-  counts_family_children?: boolean;
-}
-
-interface BackendModule {
-  school_id: number | string;
-  school_name: string;
-  care_offering_id: number | string;
-  module_name: string;
-  ends_at: string;
-  booked_weekdays: CareModule["bookedWeekdays"] | null;
-  booked_days_per_week?: number[] | null;
-  contract_count: number;
-}
-
-interface BackendRuleSet {
-  rules: BackendRule[] | null;
-  schools: { id: number | string; name: string }[] | null;
-  modules: BackendModule[] | null;
-}
-
-interface BackendEvidence {
-  id: number | string;
-  contract_id: number | string;
-  kind: CareEvidenceKind;
-  rule_id: number | string | null;
-  valid_from: string;
-  valid_until: string | null;
-  evidence: string;
-  checked_on: string;
-}
-
-interface BackendEvidenceSet {
-  contracts:
-    | {
-        contract_id: number | string;
-        school_id: number | string;
-        school_name: string;
-        child_first_name: string;
-        child_last_name: string;
-        evidences: BackendEvidence[] | null;
-      }[]
-    | null;
-  levels: BackendRule[] | null;
-}
-
 const RULES_PATH = "/api/traeger/care-rules";
 const EVIDENCES_PATH = "/api/traeger/care-evidences";
 
-const ids = (values: readonly (number | string)[] | null): string[] =>
-  (values ?? []).map(String);
+const ids = (values: readonly string[] | null): string[] => [...(values ?? [])];
 const numbers = (values: readonly string[]): number[] => values.map(Number);
 
-function ruleFromBackend(rule: BackendRule): CareRule {
+/**
+ * A rule of a kind this build does not know is left out: the chain editor
+ * cannot show or save it, and the backend keeps it as it is.
+ */
+function rulesFromBackend(rules: readonly WireRule[] | null): CareRule[] {
+  return (rules ?? []).flatMap((rule) => {
+    const kind = knownEnum(RULE_KIND_VALUES, rule.kind);
+    return kind ? [ruleFromBackend(rule, kind)] : [];
+  });
+}
+
+function ruleFromBackend(rule: WireRule, kind: CareRuleKind): CareRule {
   return {
-    id: String(rule.id),
-    kind: rule.kind,
+    id: rule.id,
+    kind,
     name: rule.name,
-    validFrom: rule.valid_from,
+    validFrom: requiredDay(rule.valid_from, "care_rule.valid_from"),
     validUntil: rule.valid_until,
     schoolIds: ids(rule.school_ids),
     careOfferingIds: ids(rule.care_offering_ids),
@@ -165,59 +135,56 @@ function ruleFromBackend(rule: BackendRule): CareRule {
     discountCents: rule.discount_cents,
     priceCents: rule.price_cents,
     capCents: rule.cap_cents,
-    tariffSiblingPrice: rule.tariff_sibling_price ?? false,
-    countsFamilyChildren: rule.counts_family_children ?? false,
+    tariffSiblingPrice: rule.tariff_sibling_price,
+    countsFamilyChildren: rule.counts_family_children,
   };
 }
 
-function ruleSetFromBackend(body: BackendRuleSet): CareRuleSet {
+function ruleSetFromBackend(body: WireRuleSet): CareRuleSet {
   return {
-    rules: (body.rules ?? []).map(ruleFromBackend),
-    schools: (body.schools ?? []).map((school) => ({
-      id: String(school.id),
-      name: school.name,
-    })),
-    modules: (body.modules ?? []).map((module) => ({
-      schoolId: String(module.school_id),
-      schoolName: module.school_name,
-      careOfferingId: String(module.care_offering_id),
-      moduleName: module.module_name,
-      endsAt: module.ends_at,
-      bookedWeekdays: module.booked_weekdays ?? [],
-      bookedDaysPerWeek: module.booked_days_per_week ?? [],
-      contractCount: module.contract_count,
-    })),
+    rules: rulesFromBackend(body.rules),
+    schools: (body.schools ?? []).map(schoolFromBackend),
+    modules: (body.modules ?? []).map(moduleFromBackend),
   };
 }
 
-function evidenceFromBackend(evidence: BackendEvidence): CareEvidence {
-  return {
-    id: String(evidence.id),
-    contractId: String(evidence.contract_id),
-    kind: evidence.kind,
-    ruleId: evidence.rule_id === null ? null : String(evidence.rule_id),
-    validFrom: evidence.valid_from,
-    validUntil: evidence.valid_until,
-    evidence: evidence.evidence,
-    checkedOn: evidence.checked_on,
-  };
+/** An evidence of a kind this build does not know is left out. */
+function evidencesFromBackend(
+  evidences: readonly WireEvidence[] | null,
+): CareEvidence[] {
+  return (evidences ?? []).flatMap((evidence) => {
+    const kind = knownEnum(EVIDENCE_KIND_VALUES, evidence.kind);
+    if (!kind) return [];
+    return [
+      {
+        id: evidence.id,
+        contractId: evidence.contract_id,
+        kind,
+        ruleId: evidence.rule_id,
+        validFrom: requiredDay(evidence.valid_from, "care_evidence.valid_from"),
+        validUntil: evidence.valid_until,
+        evidence: evidence.evidence,
+        checkedOn: requiredDay(evidence.checked_on, "care_evidence.checked_on"),
+      },
+    ];
+  });
 }
 
-function evidenceSetFromBackend(body: BackendEvidenceSet): CareEvidenceSet {
+function evidenceSetFromBackend(body: WireEvidenceSet): CareEvidenceSet {
   return {
     contracts: (body.contracts ?? []).map((contract) => ({
-      contractId: String(contract.contract_id),
-      schoolId: String(contract.school_id),
+      contractId: contract.contract_id,
+      schoolId: contract.school_id,
       schoolName: contract.school_name,
       childFirstName: contract.child_first_name,
       childLastName: contract.child_last_name,
-      evidences: (contract.evidences ?? []).map(evidenceFromBackend),
+      evidences: evidencesFromBackend(contract.evidences),
     })),
-    levels: (body.levels ?? []).map(ruleFromBackend),
+    levels: rulesFromBackend(body.levels),
   };
 }
 
-function ruleBody(input: CareRuleInput) {
+function ruleBody(input: CareRuleInput): CareRuleRequest {
   return {
     kind: input.kind,
     name: input.name,
@@ -236,7 +203,7 @@ function ruleBody(input: CareRuleInput) {
   };
 }
 
-function evidenceBody(input: CareEvidenceInput) {
+function evidenceBody(input: CareEvidenceInput): CareEvidenceRequest {
   return {
     contract_id: Number(input.contractId),
     kind: input.kind,
@@ -249,7 +216,7 @@ function evidenceBody(input: CareEvidenceInput) {
 }
 
 export async function fetchCareRules(): Promise<CareRuleSet> {
-  return ruleSetFromBackend(await traegerRequest<BackendRuleSet>(RULES_PATH));
+  return ruleSetFromBackend(await traegerRequest<WireRuleSet>(RULES_PATH));
 }
 
 /** Creates a rule without `ruleId`, changes that one otherwise. */
@@ -258,7 +225,7 @@ export async function saveCareRule(
   input: CareRuleInput,
 ): Promise<CareRuleSet> {
   return ruleSetFromBackend(
-    await traegerRequest<BackendRuleSet>(
+    await traegerRequest<WireRuleSet>(
       ruleId ? `${RULES_PATH}/${ruleId}` : RULES_PATH,
       { method: ruleId ? "PUT" : "POST", body: ruleBody(input) },
     ),
@@ -267,7 +234,7 @@ export async function saveCareRule(
 
 export async function deleteCareRule(ruleId: string): Promise<CareRuleSet> {
   return ruleSetFromBackend(
-    await traegerRequest<BackendRuleSet>(`${RULES_PATH}/${ruleId}`, {
+    await traegerRequest<WireRuleSet>(`${RULES_PATH}/${ruleId}`, {
       method: "DELETE",
     }),
   );
@@ -276,7 +243,7 @@ export async function deleteCareRule(ruleId: string): Promise<CareRuleSet> {
 /** Reads the evidences; the backend records the read per contract. */
 export async function fetchCareEvidences(): Promise<CareEvidenceSet> {
   return evidenceSetFromBackend(
-    await traegerRequest<BackendEvidenceSet>(EVIDENCES_PATH),
+    await traegerRequest<WireEvidenceSet>(EVIDENCES_PATH),
   );
 }
 
@@ -285,7 +252,7 @@ export async function saveCareEvidence(
   input: CareEvidenceInput,
 ): Promise<CareEvidenceSet> {
   return evidenceSetFromBackend(
-    await traegerRequest<BackendEvidenceSet>(
+    await traegerRequest<WireEvidenceSet>(
       evidenceId ? `${EVIDENCES_PATH}/${evidenceId}` : EVIDENCES_PATH,
       { method: evidenceId ? "PUT" : "POST", body: evidenceBody(input) },
     ),
@@ -296,9 +263,8 @@ export async function deleteCareEvidence(
   evidenceId: string,
 ): Promise<CareEvidenceSet> {
   return evidenceSetFromBackend(
-    await traegerRequest<BackendEvidenceSet>(
-      `${EVIDENCES_PATH}/${evidenceId}`,
-      { method: "DELETE" },
-    ),
+    await traegerRequest<WireEvidenceSet>(`${EVIDENCES_PATH}/${evidenceId}`, {
+      method: "DELETE",
+    }),
   );
 }
