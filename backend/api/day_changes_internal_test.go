@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/daychangesview"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
@@ -126,6 +127,22 @@ func TestDayChangesLinksRequireDestinationAccess(t *testing.T) {
 	assert.Equal(t, daychangesview.LinkGroupHandovers, allowed.entries[1].Link.Target)
 	assert.Equal(t, daychangesview.LinkStaffList, allowed.entries[2].Link.Target)
 	assert.Equal(t, daychangesview.LinkGroupHandovers, allowed.entries[3].Link.Target)
+}
+
+func TestSortBlockStaffTreatsAbsentSubstituteAsAbsent(t *testing.T) {
+	t.Parallel()
+	staff := sortBlockStaff(timetable.BlockStaffChange{Staff: []timetable.BlockStaffRow{
+		{StaffID: 2, Absent: true},
+		{StaffID: 3, Absent: true, Substitute: true},
+	}}, 0, nil)
+
+	kind, people, ok := staff.entry(0)
+	require.True(t, ok)
+	assert.Equal(t, daychangesview.KindBlockStaffAbsent, kind)
+	assert.Equal(t, []daychangesview.Person{
+		{StaffID: 2, Role: daychangesview.RoleAbsent},
+		{StaffID: 3, Role: daychangesview.RoleAbsent},
+	}, people)
 }
 
 func TestDayChangesViewerMatchesDestinationAccess(t *testing.T) {

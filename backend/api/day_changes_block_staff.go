@@ -58,13 +58,13 @@ func sortBlockStaff(change timetable.BlockStaffChange, selfID int64, absentToday
 	for _, row := range change.Staff {
 		staff.own = staff.own || (selfID != 0 && row.StaffID == selfID)
 		switch {
-		case row.Substitute:
-			staff.substitutes = append(staff.substitutes, row.StaffID)
 		case row.Absent:
 			staff.replaced = append(staff.replaced, row.StaffID)
 			if !row.SickReport && !absentToday[row.StaffID] {
 				staff.missing = append(staff.missing, row.StaffID)
 			}
+		case row.Substitute:
+			staff.substitutes = append(staff.substitutes, row.StaffID)
 		}
 	}
 	return staff
