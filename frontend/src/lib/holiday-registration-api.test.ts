@@ -56,8 +56,10 @@ describe("fetchHolidayRegistrationFamily (#4662)", () => {
               school_id: "31",
               first_name: "Mia",
               last_name: "Schneider",
+              contacts: null,
             },
           ],
+          account_proof: "",
         },
       }),
     );

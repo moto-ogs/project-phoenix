@@ -256,7 +256,9 @@ function MandateCard({
       ? t("givenInApp", { date: date(mandate.proof.confirmedAt) })
       : mandate.source === "import"
         ? t("givenImport")
-        : t("givenOffice");
+        : mandate.source === "office"
+          ? t("givenOffice")
+          : "–";
 
   const revoke = async () => {
     revokeError.clear();
