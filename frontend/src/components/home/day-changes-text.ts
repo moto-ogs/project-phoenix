@@ -75,10 +75,13 @@ const DAY_CHANGE_TEXTS: Readonly<
   staff_absent_count: staffAbsentCountText,
   group_substitution: groupSubstitutionText,
   group_substitution_count: groupSubstitutionCountText,
+  // Der Hinweis der Leitung: sein Titel ist der Satz (#7667).
+  staff_notice: (change) => change.notice?.title ?? "",
 };
 
 export function dayChangeText(change: DayChange): string | null {
-  return DAY_CHANGE_TEXTS[change.kind]?.(change) ?? null;
+  // Ein leerer Satz (ein Hinweis ohne Titel) zählt wie eine unbekannte Art.
+  return DAY_CHANGE_TEXTS[change.kind]?.(change) || null;
 }
 
 /** „3.11.“ aus „2026-11-03“. */
@@ -116,6 +119,7 @@ export function dayChangeSpan(change: DayChange): string | null {
 /** Der Hinweis, wenn eine Quelle gerade nicht geladen werden konnte. */
 const SOURCE_FAILURE_TEXTS: Readonly<Record<string, string>> = {
   staff: "Ausfälle und Vertretungen konnten gerade nicht geladen werden.",
+  notices: "Hinweise der Leitung konnten gerade nicht geladen werden.",
 };
 
 export function sourceFailureText(source: string): string {
@@ -140,6 +144,8 @@ export function dayChangeHref(change: DayChange): string | null {
       return "/staff";
     case "group_handovers":
       return "/substitutions";
+    case "staff_notices":
+      return "/tagesinformationen";
     default:
       return null;
   }

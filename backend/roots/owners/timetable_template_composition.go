@@ -56,3 +56,16 @@ func (a staffingAnnouncer) AnnounceStaffingChanged(tenantID int64, source string
 	event := realtime.NewEvent(realtime.EventStaffingDeviationChanged, "", realtime.EventData{Source: &source})
 	return a.broadcaster.BroadcastToTenant(tenantID, event)
 }
+
+// NewStaffNoticeAnnouncer binds Timetable's change signal of the staff
+// notices (#7667) to staff_notices_changed: it wakes the readers of the
+// Hinweise der Leitung through the realtime hub and carries no notice.
+func NewStaffNoticeAnnouncer(broadcaster realtime.Broadcaster) timetablePorts.StaffingAnnouncer {
+	if broadcaster == nil {
+		return nil
+	}
+	return timetablePorts.StaffingAnnouncerFunc(func(tenantID int64, source string) error {
+		event := realtime.NewEvent(realtime.EventStaffNoticesChanged, "", realtime.EventData{Source: &source})
+		return broadcaster.BroadcastToTenant(tenantID, event)
+	})
+}

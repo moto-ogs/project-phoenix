@@ -15,6 +15,7 @@ import {
   dayChangeText,
   sourceFailureText,
 } from "~/components/home/day-changes-text";
+import { DayNoticeRow } from "~/components/home/day-notice-row";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
@@ -80,7 +81,7 @@ export function DayChangesBlock() {
           if (!data) {
             return isLoading || error ? <DayChangesSkeleton /> : null;
           }
-          return <DayChangesContent overview={data} />;
+          return <DayChangesContent overview={data} onChanged={mutate} />;
         })()}
       </div>
       <DayChangesAnnouncer overview={data} />
@@ -141,6 +142,16 @@ function DayChangesAnnouncer({
             ]),
             entry.groupName,
             entry.count,
+            entry.notice
+              ? [
+                  entry.notice.id,
+                  entry.notice.title,
+                  entry.notice.body,
+                  entry.notice.important,
+                  entry.notice.requiresAcknowledgement,
+                  entry.notice.acknowledged,
+                ]
+              : null,
           ]),
         )
         .join("|")
@@ -184,8 +195,11 @@ function changeMessage(
 
 function DayChangesContent({
   overview,
+  onChanged,
 }: {
   readonly overview: DayChangesOverview;
+  /** Lädt die Übersicht neu, etwa nach einer Kenntnisnahme (#7667). */
+  readonly onChanged: () => Promise<unknown>;
 }) {
   const now = useCurrentTimestamp();
   const shown = shownEntries(overview);
@@ -214,13 +228,19 @@ function DayChangesContent({
         }
       >
         {mine.length > 0 ? (
-          <DayChangesSection title="Betrifft dich" entries={mine} now={now} />
+          <DayChangesSection
+            title="Betrifft dich"
+            entries={mine}
+            now={now}
+            onChanged={onChanged}
+          />
         ) : null}
         {school.length > 0 ? (
           <DayChangesSection
             title="Schule"
             entries={school}
             now={now}
+            onChanged={onChanged}
             capOnPhone
           />
         ) : null}
@@ -233,12 +253,14 @@ function DayChangesSection({
   title,
   entries,
   now,
+  onChanged,
   capOnPhone = false,
 }: {
   readonly title: string;
   readonly entries: readonly DayChange[];
   /** Die Uhr des Browsers in Minuten-Schritten; 0 vor dem ersten Rendern. */
   readonly now: number;
+  readonly onChanged: () => Promise<unknown>;
   /** Auf dem Telefon nur die ersten Einträge, damit „Mein Tag“ sichtbar bleibt. */
   readonly capOnPhone?: boolean;
 }) {
@@ -259,9 +281,18 @@ function DayChangesSection({
       </SectionLabel>
       {visible.length > 0 ? (
         <ul ref={listRef} className="space-y-2">
-          {withKeys(visible).map(([key, entry]) => (
-            <DayChangeRow key={key} entry={entry} />
-          ))}
+          {withKeys(visible).map(([key, entry]) =>
+            entry.notice ? (
+              <DayNoticeRow
+                key={key}
+                entry={entry}
+                notice={entry.notice}
+                onChanged={onChanged}
+              />
+            ) : (
+              <DayChangeRow key={key} entry={entry} />
+            ),
+          )}
         </ul>
       ) : null}
       {capped ? (
@@ -344,6 +375,9 @@ function DoneChanges({ entries }: { readonly entries: readonly DayChange[] }) {
 function dayChangeKeys(entries: readonly DayChange[]): string[] {
   const seen = new Map<string, number>();
   return entries.map((entry) => {
+    if (entry.notice) {
+      return `${entry.section}:${entry.kind}:${entry.notice.id}`;
+    }
     const people = entry.people.map((person) => person.staffId).join(",");
     const base = `${entry.section}:${entry.kind}:${people}:${entry.groupName ?? ""}:${entry.startsAt ?? ""}`;
     const count = (seen.get(base) ?? 0) + 1;

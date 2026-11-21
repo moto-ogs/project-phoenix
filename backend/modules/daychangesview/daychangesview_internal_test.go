@@ -14,10 +14,17 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// fakeIsolation runs the read in place; fatal marks its own failure.
-type fakeIsolation struct{ fatal error }
+// fakeIsolation runs the read in place and counts its runs; fatal marks
+// its own failure.
+type fakeIsolation struct {
+	fatal error
+	runs  *int
+}
 
 func (f fakeIsolation) Run(ctx context.Context, read func(context.Context) error) error {
+	if f.runs != nil {
+		*f.runs++
+	}
 	if f.fatal != nil {
 		return f.fatal
 	}
@@ -45,6 +52,9 @@ func TestTodayKeepsOtherSourcesWhenOneFails(t *testing.T) {
 			today: func() calendar.Date { return day }, isolation: isolation,
 			logger: slog.New(slog.NewTextHandler(&logs, nil)),
 			sources: []sourceRead{
+				{source: SourceNotices, read: entriesOf(SourceEntry{
+					Kind: KindStaffNotice, Notice: &DayNotice{ID: 3, Title: "Elternabend"},
+				})},
 				{source: "first", read: failing},
 				{source: SourceStaff, read: entriesOf(SourceEntry{
 					Kind: KindStaffAbsent, Involved: true,
@@ -54,12 +64,27 @@ func TestTodayKeepsOtherSourcesWhenOneFails(t *testing.T) {
 		}
 	}
 
-	overview, err := build(fakeIsolation{}).Today(context.Background())
+	runs := 0
+	overview, err := build(fakeIsolation{runs: &runs}).Today(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, day, overview.Date)
-	assert.Equal(t, []SourceStatus{{Source: "first", Status: SourceFailed}, {Source: SourceStaff, Status: SourceLoaded}}, overview.Sources)
-	require.Len(t, overview.Entries, 1)
+	assert.Equal(t, []SourceStatus{
+		{Source: SourceNotices, Status: SourceLoaded},
+		{Source: "first", Status: SourceFailed},
+		{Source: SourceStaff, Status: SourceLoaded},
+	}, overview.Sources)
+	require.Len(t, overview.Entries, 2, "the entries read before the failure are kept")
 	assert.Equal(t, SectionYou, overview.Entries[0].Section)
+	assert.Equal(t, KindStaffNotice, overview.Entries[1].Kind)
+	assert.Equal(t, 2, runs, "the sources share one isolation until one fails; the rest get a fresh one")
+
+	runs = 0
+	_, err = (&view{
+		today: func() calendar.Date { return day }, isolation: fakeIsolation{runs: &runs}, logger: slog.Default(),
+		sources: []sourceRead{{source: SourceStaff, read: entriesOf()}, {source: SourceNotices, read: entriesOf()}},
+	}).Today(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, 1, runs, "succeeding sources share one isolation")
 	assert.Contains(t, logs.String(), "source=first")
 	assert.NotContains(t, logs.String(), "Ben", "the log names no person")
 

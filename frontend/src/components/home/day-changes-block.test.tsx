@@ -1,4 +1,11 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DayChange, DayChangesOverview } from "~/lib/day-changes";
@@ -7,11 +14,24 @@ import { setTestClock } from "~/test/clock";
 const useSWRAuth = vi.hoisted(() => vi.fn());
 const trackEvent = vi.hoisted(() => vi.fn());
 const phone = vi.hoisted(() => ({ value: false }));
+const acknowledgeStaffNotice = vi.hoisted(() => vi.fn());
+const invalidate = vi.hoisted(() => vi.fn());
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({ data: { user: { id: "account-a" } } }),
 }));
-vi.mock("~/lib/swr", () => ({ useSWRAuth }));
+vi.mock("~/lib/swr", () => ({
+  useSWRAuth,
+  useInvalidateMatching: () => invalidate,
+}));
+vi.mock("~/lib/staff-notices-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/staff-notices-api")>()),
+  acknowledgeStaffNotice,
+}));
+vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
+  useApiErrorDisplay: () => ({ show: vi.fn() }),
+}));
 vi.mock("~/lib/analytics", () => ({ trackEvent }));
 vi.mock("~/lib/tenant-path", () => ({
   useTenantAwarePath: () => (path: string) => `/schule${path}`,
@@ -57,14 +77,32 @@ function overviewOf(overview: Partial<DayChangesOverview>) {
   return { date: "2026-09-09", failedSources: [], entries: [], ...overview };
 }
 
-function serve(overview: Partial<DayChangesOverview>) {
+function serve(
+  overview: Partial<DayChangesOverview>,
+  mutate: () => Promise<unknown> = vi.fn(),
+) {
   useSWRAuth.mockReturnValue({
     data: overviewOf(overview),
     error: undefined,
     isLoading: false,
-    mutate: vi.fn(),
+    mutate,
   });
 }
+
+const elternabend = (acknowledged: boolean) =>
+  change({
+    kind: "staff_notice",
+    section: acknowledged ? "school" : "you",
+    link: { target: "staff_notices", staffId: null },
+    notice: {
+      id: "5",
+      title: "Elternabend",
+      body: "Bitte Stühle stellen.",
+      important: true,
+      requiresAcknowledgement: true,
+      acknowledged,
+    },
+  });
 
 /** Die Texte der Zeilen eines Abschnitts in ihrer Reihenfolge. */
 function rowTexts(region: HTMLElement): string[] {
@@ -188,6 +226,64 @@ describe("DayChangesBlock", () => {
 
     expect(screen.getByText("Finn ist heute nicht da.")).toBeInTheDocument();
     expect(trackEvent).toHaveBeenCalledWith("day_changes_show_all");
+  });
+
+  it("bestätigt einen Hinweis der Leitung in der Übersicht und rückt ihn nach „Schule“", async () => {
+    acknowledgeStaffNotice.mockResolvedValue(undefined);
+    const refreshed = vi.fn(() => {
+      serve({ entries: [elternabend(true)] });
+      return Promise.resolve();
+    });
+    serve({ entries: [elternabend(false), absent("Clara")] }, refreshed);
+    const { rerender } = render(<DayChangesBlock />);
+
+    const mine = within(screen.getByRole("region", { name: "Betrifft dich" }));
+    expect(
+      mine.getByRole("link", { name: /Elternabend.*Wichtig/ }),
+    ).toHaveAttribute("href", "/schule/tagesinformationen");
+    expect(mine.getByText("Bitte Stühle stellen.")).toBeInTheDocument();
+
+    fireEvent.click(
+      mine.getByRole("button", { name: "Elternabend: zur Kenntnis nehmen" }),
+    );
+    await waitFor(() => expect(refreshed).toHaveBeenCalled());
+    expect(acknowledgeStaffNotice).toHaveBeenCalledWith("5");
+    expect(invalidate).toHaveBeenCalled();
+    const matcher = invalidate.mock.calls.at(-1)?.[0];
+    expect(matcher).toEqual(expect.any(Function));
+    expect(matcher("staff-notices-today:account-a")).toBe(true);
+    expect(matcher("staff-notices:account-a")).toBe(true);
+    expect(matcher("staff-notice-acknowledgements-5")).toBe(true);
+    expect(trackEvent).not.toHaveBeenCalled();
+
+    rerender(<DayChangesBlock />);
+    const school = within(screen.getByRole("region", { name: "Schule" }));
+    expect(school.getByText("Zur Kenntnis genommen")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "Betrifft dich" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /zur Kenntnis nehmen/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("erfasst den Klick auf einen Hinweis nur mit seiner Art", () => {
+    serve({ entries: [elternabend(false)] });
+    render(<DayChangesBlock />);
+    fireEvent.click(screen.getByRole("link", { name: /Elternabend/ }));
+    expect(trackEvent).toHaveBeenCalledWith("day_changes_entry_clicked", {
+      day_change_kind: "staff_notice",
+    });
+  });
+
+  it("nennt eine ausgefallene Quelle der Hinweise", () => {
+    serve({ failedSources: ["notices"] });
+    render(<DayChangesBlock />);
+    expect(
+      screen.getByText(
+        "Hinweise der Leitung konnten gerade nicht geladen werden.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("erfasst beim Klick auf einen Eintrag nur seine Art", () => {
