@@ -1,6 +1,7 @@
 import type {
   enrichedInstance,
   materializeResponse,
+  templateResponse,
 } from "~/lib/contract/timetable.generated";
 
 /**
@@ -64,6 +65,35 @@ export function buildMaterializeResponse(
     instance_staff_created: 0,
     warnings: null,
     duration_ms: 0,
+    ...overrides,
+  };
+}
+
+/** Builds a Regeltermin of the contract (`templateResponse`). */
+export function buildTemplateResponse(
+  overrides?: Partial<templateResponse>,
+): templateResponse {
+  return {
+    id: "1",
+    name: "Regeltermin",
+    type: "care",
+    category_id: "1",
+    category_name: "",
+    is_open: false,
+    max_participants: null,
+    target_group_type: "none",
+    targets: null,
+    include_closing_days: false,
+    enrollment_count: 0,
+    supervisor_count: 0,
+    required_staff_count: 0,
+    assigned_staff_count: 0,
+    student_ids: null,
+    staff_ids: null,
+    schedules: null,
+    weekday_assignments: null,
+    protected_student_assignments: null,
+    manual_roster_confirmed: false,
     ...overrides,
   };
 }

@@ -16,9 +16,26 @@ import type {
   AttendanceResponse as WireAttendance,
   BulkCancelResult as WireBulkCancel,
   bulkCancelRequest,
+  bookingLeftoversResponse,
   BulkSubstitutionResponse as WireBulkSubstitution,
   CancelInstanceRequest,
+  combinedOfferingCountsResponse as WireCombinedOfferingCounts,
   conflictAcksResponse,
+  convertInstanceToSeriesRequest,
+  convertInstanceToSeriesResponse as WireConvertInstanceToSeries,
+  createTemplateRequest,
+  createTemplateResponse as WireCreateTemplate,
+  endTemplateRequest,
+  endTemplateResponse as WireEndTemplate,
+  keptStudentTemplateDaysRequest,
+  listTemplatesResponse as WireTemplates,
+  manualRosterRequest,
+  offeringGapAckRequest,
+  offeringSourcesResponse as WireOfferingSources,
+  splitTemplateRequest,
+  splitTemplateResponse as WireSplitTemplate,
+  templateResponse as WireTemplate,
+  updateTemplateRequest,
   createInstanceRequest,
   editedInWindowResponse as WireEditedInWindow,
   GuardianNoticeReachResponse as WireGuardianNoticeReach,
@@ -52,18 +69,10 @@ import {
   type PlanFilter,
 } from "./plan-filter";
 import type {
-  BackendCreateTemplateResult,
-  BackendConvertInstanceToSeriesResult,
-  BackendEndTemplateResult,
-  BackendSplitTemplateResult,
   MoveStaffInput,
   MoveStaffResponse,
   StaffPoolResponse,
-  BackendCombinedOfferingCountsResponse,
-  BackendOfferingSourcesResponse,
   CombinedOfferingCounts,
-  BackendTimetableTemplate,
-  BackendTemplatesResponse,
   OfferingSourceOption,
   AttendancePatchBody,
   AttendanceResponse,
@@ -137,11 +146,7 @@ import {
   type OfferingSelection,
   type RosterDeviation,
 } from "./roster-deviation";
-import {
-  mapBookingLeftovers,
-  type BackendBookingLeftoversResponse,
-  type BookingLeftover,
-} from "./booking-leftover";
+import { mapBookingLeftovers, type BookingLeftover } from "./booking-leftover";
 import {
   mapOfferingGaps,
   type BackendOfferingGapsResponse,
@@ -271,12 +276,12 @@ class TimetableService {
         Accept: "application/json",
       },
       credentials: "include",
-      body: JSON.stringify(body),
+      body: JSON.stringify(body satisfies createTemplateRequest),
     });
-    const raw = await unwrap<BackendCreateTemplateResult>(response);
+    const raw = await unwrap<WireCreateTemplate>(response);
     logger.info("template_created", {
       template_id: raw.template_id,
-      schedules: raw.schedule_ids.length,
+      schedules: raw.schedule_ids?.length ?? 0,
       instances_created: raw.instances_created,
     });
     return mapCreateTemplateResult(raw);
@@ -296,19 +301,19 @@ class TimetableService {
           Accept: "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(body),
+        body: JSON.stringify(body satisfies convertInstanceToSeriesRequest),
       },
     );
-    const raw = await unwrap<BackendConvertInstanceToSeriesResult>(response);
+    const raw = await unwrap<WireConvertInstanceToSeries>(response);
     logger.info("instance_converted_to_series", {
       instance_id: raw.linked_instance_id,
       template_id: raw.template_id,
     });
     return {
-      templateId: String(raw.template_id),
-      timeframeId: String(raw.timeframe_id),
-      scheduleIds: (raw.schedule_ids ?? []).map(String),
-      linkedInstanceId: String(raw.linked_instance_id),
+      templateId: raw.template_id,
+      timeframeId: raw.timeframe_id,
+      scheduleIds: raw.schedule_ids ?? [],
+      linkedInstanceId: raw.linked_instance_id,
     };
   }
 
@@ -330,7 +335,7 @@ class TimetableService {
         credentials: "include",
       },
     );
-    const raw = await unwrap<BackendOfferingSourcesResponse>(response);
+    const raw = await unwrap<WireOfferingSources>(response);
     return mapOfferingSourceOptions(raw);
   }
 
@@ -355,7 +360,7 @@ class TimetableService {
         credentials: "include",
       },
     );
-    const raw = await unwrap<BackendCombinedOfferingCountsResponse>(response);
+    const raw = await unwrap<WireCombinedOfferingCounts>(response);
     return mapCombinedOfferingCounts(raw);
   }
 
@@ -371,7 +376,7 @@ class TimetableService {
       },
     );
 
-    const raw = await unwrap<BackendTemplatesResponse>(response);
+    const raw = await unwrap<WireTemplates>(response);
     return mapTemplates(raw);
   }
 
@@ -394,7 +399,7 @@ class TimetableService {
         credentials: "include",
       },
     );
-    const raw = await unwrap<BackendTimetableTemplate>(response);
+    const raw = await unwrap<WireTemplate>(response);
     return mapTemplates({ templates: [raw] }).templates[0]!;
   }
 
@@ -441,7 +446,7 @@ class TimetableService {
       },
     );
     return mapBookingLeftovers(
-      await unwrap<BackendBookingLeftoversResponse>(response),
+      await unwrap<bookingLeftoversResponse>(response),
     );
   }
 
@@ -466,7 +471,7 @@ class TimetableService {
           weekdays: leftover.weekdays,
           booking_ended_on: leftover.bookingEndedOn,
           kept,
-        }),
+        } satisfies keptStudentTemplateDaysRequest),
       },
     );
     await unwrap<unknown>(response);
@@ -511,7 +516,7 @@ class TimetableService {
         body: JSON.stringify({
           period_id: Number(periodId),
           acknowledged,
-        }),
+        } satisfies offeringGapAckRequest),
       },
     );
     await unwrap<unknown>(response);
@@ -616,7 +621,7 @@ class TimetableService {
           Accept: "application/json",
         },
         credentials: "include",
-        body: JSON.stringify({ confirmed }),
+        body: JSON.stringify({ confirmed } satisfies manualRosterRequest),
       },
     );
     await unwrap<unknown>(response);
@@ -642,10 +647,10 @@ class TimetableService {
           Accept: "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(body),
+        body: JSON.stringify(body satisfies splitTemplateRequest),
       },
     );
-    const raw = await unwrap<BackendSplitTemplateResult>(response);
+    const raw = await unwrap<WireSplitTemplate>(response);
     logger.info("template_split", {
       old_template_id: raw.old_template_id,
       new_template_id: raw.new_template_id,
@@ -673,10 +678,10 @@ class TimetableService {
           Accept: "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(body),
+        body: JSON.stringify(body satisfies endTemplateRequest),
       },
     );
-    const raw = await unwrap<BackendEndTemplateResult>(response);
+    const raw = await unwrap<WireEndTemplate>(response);
     logger.info("template_ended", {
       template_id: raw.template_id,
       effective_date: raw.effective_date,
@@ -818,10 +823,10 @@ class TimetableService {
           Accept: "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(body),
+        body: JSON.stringify(body satisfies updateTemplateRequest),
       },
     );
-    const raw = await unwrap<BackendTimetableTemplate>(response);
+    const raw = await unwrap<WireTemplate>(response);
     return mapTemplates({ templates: [raw] }).templates[0]!;
   }
 
