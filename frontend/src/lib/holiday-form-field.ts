@@ -2,10 +2,22 @@
 // Träger-Portal baut sie, die öffentliche Ferienanmeldung zeigt sie.
 
 import type {
-  FormLegalBlock,
-  FormField,
-  FormFieldType,
+  FormLegalBlock as WireFormLegalBlock,
+  HolidayFormField as WireHolidayFormField,
+} from "./contract/shared.generated";
+import { requiredEnum } from "./contract/known-enum";
+import {
+  LEGAL_BLOCK_DISPLAY_MODES,
+  LEGAL_BLOCK_KINDS,
+  LEGAL_BLOCK_SOURCES,
+  type FormLegalBlock,
+  type FormField,
+  type FormFieldType,
 } from "./enrollment-form-schema-api";
+import {
+  formFieldFromContract,
+  translationsFromContract,
+} from "./form-field-contract";
 
 /**
  * A question of the holiday form: a form field of the online registration
@@ -36,13 +48,24 @@ export const HOLIDAY_FORM_FIELD_TYPES = [
  * The building block „Anschrift“ of a version (#5625): whether the form asks
  * for street, postal code and city of the parent who registers.
  */
-export type HolidayAddressRequirement = "off" | "optional" | "required";
+const HOLIDAY_ADDRESS_REQUIREMENTS = ["off", "optional", "required"] as const;
 
-/** Reads the wire value; anything unknown asks for no address. */
-export function holidayAddressRequirement(
-  value: string | null | undefined,
+export type HolidayAddressRequirement =
+  (typeof HOLIDAY_ADDRESS_REQUIREMENTS)[number];
+
+/**
+ * Reads the wire value. Go answers "" for a period without a saved version,
+ * which asks for no address; an unknown value fails the read, because the
+ * editor would save "off" in its place and parents would skip a required
+ * address the backend then refuses.
+ */
+function holidayAddressRequirement(
+  value: string,
+  field: string,
 ): HolidayAddressRequirement {
-  return value === "optional" || value === "required" ? value : "off";
+  return value === ""
+    ? "off"
+    : requiredEnum(HOLIDAY_ADDRESS_REQUIREMENTS, value, field);
 }
 
 /**
@@ -50,13 +73,23 @@ export function holidayAddressRequirement(
  * answer allergies and medication of each child. A required field takes
  * „Keine“ as its answer.
  */
-export type HolidayHealthRequirement = "optional" | "required";
+const HOLIDAY_HEALTH_REQUIREMENTS = ["optional", "required"] as const;
 
-/** Reads the wire value; anything unknown keeps the fields optional. */
-export function holidayHealthRequirement(
-  value: string | null | undefined,
+export type HolidayHealthRequirement =
+  (typeof HOLIDAY_HEALTH_REQUIREMENTS)[number];
+
+/**
+ * Reads the wire value. "" (a period without a saved version) keeps the
+ * fields optional; an unknown value fails the read like an unknown address
+ * requirement.
+ */
+function holidayHealthRequirement(
+  value: string,
+  field: string,
 ): HolidayHealthRequirement {
-  return value === "required" ? value : "optional";
+  return value === ""
+    ? "optional"
+    : requiredEnum(HOLIDAY_HEALTH_REQUIREMENTS, value, field);
 }
 
 /** One version of the holiday form, as a registration uses it. */
@@ -70,18 +103,102 @@ export interface HolidayFormVersion {
   readonly healthRequirement?: HolidayHealthRequirement;
 }
 
-export type HolidayLegalBlockWire = Omit<FormLegalBlock, "attachments"> & {
-  attachments?: { label: string; document_url: string; document_id?: string }[];
-};
-/** Stored document IDs stay IDs until a reader chooses its authorized route. */
-export function holidayLegalBlocks(
-  blocks: readonly HolidayLegalBlockWire[] | null | undefined,
-): FormLegalBlock[] {
-  return (blocks ?? []).map((block) => ({
-    ...block,
-    attachments: block.attachments?.map((a) => ({
-      label: a.label,
-      document_url: a.document_id ?? "",
-    })),
+/**
+ * The questions of a version. A type, target or rule this build does not
+ * know fails the read: the editor saves the whole form back, and parents
+ * could skip a required question the backend then refuses.
+ */
+export function holidayFormFieldsFromContract(
+  fields: readonly WireHolidayFormField[] | null,
+  at: string,
+): HolidayFormField[] {
+  return (fields ?? []).map((field, index) => ({
+    ...formFieldFromContract(field, `${at}.${index}`),
+    health: field.health,
+    share_with_host: field.share_with_host,
   }));
+}
+
+/**
+ * The legal blocks of a version. Stored document IDs stay IDs until a
+ * reader chooses its authorized route, so an attachment carries its ID as
+ * `document_url`. An unknown kind, source or display mode fails the read
+ * for the same reasons as an unknown field type.
+ */
+function holidayLegalBlocksFromContract(
+  blocks: readonly WireFormLegalBlock[] | null,
+  at: string,
+): FormLegalBlock[] {
+  return (blocks ?? []).map((block, index) => {
+    const {
+      kind,
+      source,
+      display_mode: displayMode,
+      attachments,
+      translations,
+      ...rest
+    } = block;
+    const path = `${at}.${index}`;
+    return {
+      ...rest,
+      kind: requiredEnum(LEGAL_BLOCK_KINDS, kind, `${path}.kind`),
+      ...(source === undefined
+        ? {}
+        : {
+            source: requiredEnum(LEGAL_BLOCK_SOURCES, source, `${path}.source`),
+          }),
+      ...(displayMode === undefined
+        ? {}
+        : {
+            display_mode: requiredEnum(
+              LEGAL_BLOCK_DISPLAY_MODES,
+              displayMode,
+              `${path}.display_mode`,
+            ),
+          }),
+      ...(attachments === undefined
+        ? {}
+        : {
+            attachments: attachments.map((a) => ({
+              label: a.label,
+              document_url: a.document_id ?? "",
+            })),
+          }),
+      ...(translations === undefined
+        ? {}
+        : { translations: translationsFromContract(translations) }),
+    };
+  });
+}
+
+/** The parts of a version every holiday form answer carries. */
+interface WireHolidayFormVersion {
+  readonly legal_blocks: readonly WireFormLegalBlock[] | null;
+  readonly version: number;
+  readonly fields: readonly WireHolidayFormField[] | null;
+  readonly address_requirement: string;
+  readonly health_requirement: string;
+}
+
+/** One version of the holiday form; `at` names it in a read error. */
+export function holidayFormVersionFromContract(
+  form: WireHolidayFormVersion,
+  at: string,
+): Required<HolidayFormVersion> {
+  return {
+    legalBlocks: holidayLegalBlocksFromContract(
+      form.legal_blocks,
+      `${at}.legal_blocks`,
+    ),
+    version: form.version,
+    fields: holidayFormFieldsFromContract(form.fields, `${at}.fields`),
+    addressRequirement: holidayAddressRequirement(
+      form.address_requirement,
+      `${at}.address_requirement`,
+    ),
+    healthRequirement: holidayHealthRequirement(
+      form.health_requirement,
+      `${at}.health_requirement`,
+    ),
+  };
 }
