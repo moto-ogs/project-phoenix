@@ -10,10 +10,24 @@ import {
 } from "~/lib/api-error";
 import type { MailOutcome } from "~/lib/email-delivery-status";
 import type {
+  AbsenceRebookingResult,
+  CompTimeBalancePreview as CompTimeBalancePreviewWire,
   ExternalStaffResponse,
   FormerStaffResponse,
+  ScheduleEntryResponse,
+  ScheduleResponse,
   StaffRecordResponse,
+  StammdatenResponse,
 } from "~/lib/contract/staff.generated";
+import type {
+  StaffAbsenceResponse,
+  StaffVacationOpening as StaffVacationOpeningWire,
+  VacationQuotaSummary,
+} from "~/lib/contract/shared.generated";
+import type {
+  ModelResponse,
+  StaffFactResponse,
+} from "~/lib/contract/work-time-models.generated";
 import {
   EXTERNAL_ACCOUNT_STATUS_VALUES,
   ROLE_FORM_VALUES,
@@ -739,53 +753,36 @@ export interface StaffSchedule {
   keptByTraeger?: boolean;
 }
 
-interface BackendScheduleEntry {
-  week_index: number;
-  day_of_week: number;
-  target_minutes: number;
-  start_time?: string | null;
+const SCHEDULE_MODES: readonly StaffSchedule["mode"][] = ["template", "custom"];
+
+function mapScheduleEntries(
+  entries: readonly ScheduleEntryResponse[] | null,
+): ScheduleEntry[] {
+  return (entries ?? []).map((e) => ({
+    weekIndex: e.week_index,
+    dayOfWeek: e.day_of_week,
+    targetMinutes: e.target_minutes,
+    startTime: e.start_time,
+  }));
 }
 
-interface BackendScheduleModel {
-  id: number | string;
-  name: string;
-  rotation_length: number;
-  rotation_anchor_date: string;
-}
-
-interface BackendScheduleResponse {
-  mode: "template" | "custom";
-  model: BackendScheduleModel | null;
-  rotation_length: number;
-  rotation_anchor_date: string;
-  entries: BackendScheduleEntry[];
-  weekly_totals: number[];
-  valid_from?: string;
-  kept_by_traeger?: boolean;
-}
-
-function mapScheduleResponse(data: BackendScheduleResponse): StaffSchedule {
+function mapScheduleResponse(data: ScheduleResponse): StaffSchedule {
   return {
-    mode: data.mode ?? "custom",
+    mode: knownEnum(SCHEDULE_MODES, data.mode) ?? "custom",
     model: data.model
       ? {
-          id: data.model.id.toString(),
+          id: data.model.id,
           name: data.model.name,
           rotationLength: data.model.rotation_length,
           rotationAnchorDate: data.model.rotation_anchor_date,
         }
       : null,
-    rotationLength: data.rotation_length ?? 1,
-    rotationAnchorDate: data.rotation_anchor_date ?? "",
-    entries: (data.entries ?? []).map((e) => ({
-      weekIndex: e.week_index,
-      dayOfWeek: e.day_of_week,
-      targetMinutes: e.target_minutes,
-      startTime: e.start_time ?? undefined,
-    })),
+    rotationLength: data.rotation_length,
+    rotationAnchorDate: data.rotation_anchor_date,
+    entries: mapScheduleEntries(data.entries),
     weeklyTotals: data.weekly_totals ?? [],
     validFrom: (data.valid_from ?? "").slice(0, 10),
-    keptByTraeger: data.kept_by_traeger === true,
+    keptByTraeger: data.kept_by_traeger,
   };
 }
 
@@ -814,7 +811,7 @@ class StaffScheduleService {
   async getSchedule(staffId: string): Promise<StaffSchedule> {
     const response = await sessionFetch(`/api/staff/${staffId}/schedule`);
     const json = (await response.json()) as {
-      data: BackendScheduleResponse;
+      data: ScheduleResponse;
     };
     return mapScheduleResponse(json.data);
   }
@@ -844,7 +841,7 @@ class StaffScheduleService {
       body: JSON.stringify(body),
     });
     const json = (await response.json()) as {
-      data: BackendScheduleResponse;
+      data: ScheduleResponse;
     };
     return mapScheduleResponse(json.data);
   }
@@ -871,17 +868,6 @@ export interface WorkTimeModel {
   assignedStaffCount?: number;
 }
 
-interface BackendWorkTimeModel {
-  id: number | string;
-  name: string;
-  rotation_length: number;
-  rotation_anchor_date: string;
-  entries: BackendScheduleEntry[];
-  weekly_totals: number[];
-  archived_at?: string | null;
-  assigned_staff_count?: number;
-}
-
 interface WorkTimeModelInput {
   name: string;
   rotationLength: number;
@@ -903,18 +889,13 @@ function workTimeModelBody(input: WorkTimeModelInput) {
   };
 }
 
-function mapWorkTimeModel(m: BackendWorkTimeModel): WorkTimeModel {
+function mapWorkTimeModel(m: ModelResponse): WorkTimeModel {
   return {
-    id: m.id.toString(),
+    id: m.id,
     name: m.name,
     rotationLength: m.rotation_length,
     rotationAnchorDate: m.rotation_anchor_date,
-    entries: (m.entries ?? []).map((e) => ({
-      weekIndex: e.week_index,
-      dayOfWeek: e.day_of_week,
-      targetMinutes: e.target_minutes,
-      startTime: e.start_time ?? undefined,
-    })),
+    entries: mapScheduleEntries(m.entries),
     weeklyTotals: m.weekly_totals ?? [],
     archivedAt: m.archived_at ?? null,
     ...(m.assigned_staff_count === undefined
@@ -939,14 +920,6 @@ export interface StaffWorkTimeFact {
   closedThrough: string | null;
 }
 
-interface BackendStaffWorkTimeFact {
-  staff_id: number | string;
-  work_time_model_id: number | string | null;
-  has_schedule: boolean;
-  soll_kept_by_traeger: boolean;
-  closed_through: string | null;
-}
-
 interface WorkTimeModelAssignmentResult {
   assignedStaffIds: string[];
   unchangedStaffIds: string[];
@@ -961,15 +934,21 @@ async function readWorkTimeModel(
   if (!response.ok) {
     throw await apiErrorFromResponse(response, fallback);
   }
-  const json = (await response.json()) as { data: BackendWorkTimeModel };
+  const json = (await response.json()) as { data: ModelResponse };
   return mapWorkTimeModel(json.data);
 }
 
 class WorkTimeModelService {
   async list(): Promise<WorkTimeModel[]> {
     const response = await sessionFetch(`/api/work-time-models`);
-    const json = (await response.json()) as { data: BackendWorkTimeModel[] };
-    return (json.data ?? []).map(mapWorkTimeModel);
+    if (!response.ok) {
+      throw await apiErrorFromResponse(
+        response,
+        "Vorlagen konnten nicht geladen werden",
+      );
+    }
+    const json = (await response.json()) as { data: ModelResponse[] };
+    return json.data.map(mapWorkTimeModel);
   }
 
   /** Für die Katalogseite: archivierte Vorlagen und die Nutzungszahl. */
@@ -983,10 +962,8 @@ class WorkTimeModelService {
         "Vorlagen konnten nicht geladen werden",
       );
     }
-    const json = (await response.json()) as {
-      data: BackendWorkTimeModel[] | null;
-    };
-    return (json.data ?? []).map(mapWorkTimeModel);
+    const json = (await response.json()) as { data: ModelResponse[] };
+    return json.data.map(mapWorkTimeModel);
   }
 
   async create(input: WorkTimeModelInput): Promise<WorkTimeModel> {
@@ -1039,18 +1016,13 @@ class WorkTimeModelService {
         "Die Zuordnungen konnten nicht geladen werden",
       );
     }
-    const json = (await response.json()) as {
-      data: BackendStaffWorkTimeFact[] | null;
-    };
-    return (json.data ?? []).map((fact) => ({
-      staffId: fact.staff_id.toString(),
-      workTimeModelId:
-        fact.work_time_model_id === null
-          ? null
-          : fact.work_time_model_id.toString(),
+    const json = (await response.json()) as { data: StaffFactResponse[] };
+    return json.data.map((fact) => ({
+      staffId: fact.staff_id,
+      workTimeModelId: fact.work_time_model_id,
       hasSchedule: fact.has_schedule,
       sollKeptByTraeger: fact.soll_kept_by_traeger,
-      closedThrough: fact.closed_through ?? null,
+      closedThrough: fact.closed_through,
     }));
   }
 
@@ -1212,7 +1184,8 @@ export interface StaffAbsenceRow {
   half_day: boolean;
   start_half_day?: boolean;
   end_half_day?: boolean;
-  note: string;
+  /** Go omits an empty note (`omitempty`). */
+  note?: string;
   status: string;
   approved_by?: string | null;
   approved_at?: string | null;
@@ -1289,23 +1262,19 @@ export interface StaffVacationOpening {
   decided_at: string;
 }
 
-interface BackendStaffVacationOpening extends Omit<
-  StaffVacationOpening,
-  "id" | "staff_id" | "decided_by"
-> {
-  id: number | string;
-  staff_id: number | string;
-  decided_by: number | string;
-}
-
 function mapStaffVacationOpening(
-  data: BackendStaffVacationOpening,
+  data: StaffVacationOpeningWire,
 ): StaffVacationOpening {
   return {
-    ...data,
-    id: data.id.toString(),
-    staff_id: data.staff_id.toString(),
-    decided_by: data.decided_by.toString(),
+    id: data.id,
+    staff_id: data.staff_id,
+    year: data.year,
+    effective_date: data.effective_date,
+    taken_before_days: data.taken_before_days,
+    entered_remaining_days: data.entered_remaining_days,
+    note: data.note,
+    decided_by: data.decided_by,
+    decided_at: data.decided_at,
   };
 }
 
@@ -1321,21 +1290,19 @@ export interface StaffVacationQuotaSummary {
   opening?: StaffVacationOpening | null;
 }
 
-interface BackendStaffVacationQuotaSummary extends Omit<
-  StaffVacationQuotaSummary,
-  "opening"
-> {
-  opening?: BackendStaffVacationOpening | null;
-}
-
 function mapStaffVacationQuotaSummary(
-  data: BackendStaffVacationQuotaSummary,
+  data: VacationQuotaSummary,
 ): StaffVacationQuotaSummary {
   return {
-    ...data,
-    opening: data.opening
-      ? mapStaffVacationOpening(data.opening)
-      : data.opening,
+    staff_id: data.staff_id,
+    year: data.year,
+    entitled_days: data.entitled_days,
+    carryover_days: data.carryover_days,
+    taken_before_days: data.taken_before_days,
+    taken_days: data.taken_days,
+    reserved_days: data.reserved_days,
+    remaining_days: data.remaining_days,
+    opening: data.opening ? mapStaffVacationOpening(data.opening) : undefined,
   };
 }
 
@@ -1386,34 +1353,6 @@ export interface AbsenceRebooking {
   applied: boolean;
 }
 
-interface BackendAbsenceRebooking {
-  absences: StaffAbsenceRow[] | null;
-  days: number;
-  balance_delta_minutes: number;
-  allowances?: {
-    year: number;
-    remaining_days: number;
-    booking_days: number;
-  }[];
-  allowance_exceeded: boolean;
-  vacation?: {
-    year: number;
-    remaining_before: number;
-    remaining_after: number;
-  }[];
-  vacation_exceeded: boolean;
-  applied: boolean;
-}
-
-interface BackendCompTimeBalancePreview {
-  current_balance_minutes: number;
-  deduction_minutes: number;
-  realized_deduction_minutes: number;
-  future_commitment_minutes: number;
-  future_adjustment_minutes: number;
-  projected_balance_minutes: number;
-}
-
 class StaffAbsenceService {
   async getAbsences(
     staffId: string,
@@ -1451,7 +1390,7 @@ class StaffAbsenceService {
       );
     }
     const json = (await response.json()) as {
-      data: BackendStaffVacationQuotaSummary;
+      data: VacationQuotaSummary;
     };
     return mapStaffVacationQuotaSummary(json.data);
   }
@@ -1481,7 +1420,7 @@ class StaffAbsenceService {
       );
     }
     const json = (await response.json()) as {
-      data: BackendStaffVacationQuotaSummary;
+      data: VacationQuotaSummary;
     };
     return mapStaffVacationQuotaSummary(json.data);
   }
@@ -1512,7 +1451,7 @@ class StaffAbsenceService {
       throw await readStaffAPIError(response, "Übernahme fehlgeschlagen");
     }
     const json = (await response.json()) as {
-      data: BackendStaffVacationOpening;
+      data: StaffVacationOpeningWire;
     };
     return mapStaffVacationOpening(json.data);
   }
@@ -1722,7 +1661,7 @@ class StaffAbsenceService {
       );
     }
     const json = (await response.json()) as {
-      data: BackendCompTimeBalancePreview;
+      data: CompTimeBalancePreviewWire;
     };
     return {
       currentBalanceMinutes: json.data.current_balance_minutes,
@@ -1767,10 +1706,12 @@ class StaffAbsenceService {
         "Die Art konnte nicht geändert werden.",
       );
     }
-    const json = (await response.json()) as { data: BackendAbsenceRebooking };
+    const json = (await response.json()) as { data: AbsenceRebookingResult };
     const data = json.data;
     return {
-      absences: data.absences ?? [],
+      absences: (data.absences ?? []).filter(
+        (absence): absence is StaffAbsenceResponse => absence !== null,
+      ),
       days: data.days,
       balanceDeltaMinutes: data.balance_delta_minutes,
       allowances: (data.allowances ?? []).map((item) => ({
@@ -2422,47 +2363,16 @@ export interface StaffFinancialPlain {
   socialSecurityNumber: string | null;
 }
 
-interface BackendStammdaten {
-  staff_id: number | string;
-  person: {
-    first_name: string;
-    last_name: string;
-    birthday: string | null;
-    gender: StammdatenGender | null;
-  };
-  kontakt: {
-    address_street: string | null;
-    address_postal_code: string | null;
-    address_city: string | null;
-    phone: string | null;
-    email: string | null;
-    emergency_contact_name: string | null;
-    emergency_contact_phone: string | null;
-  };
-  arbeitsvertrag: {
-    entry_date: string | null;
-    contract_end_date: string | null;
-    probation_end_date: string | null;
-    weekly_hours: number | null;
-    employment_type: string | null;
-  };
-  qualifikationen: {
-    id?: string;
-    type_id?: string | null;
-    name: string;
-    acquired_on: string | null;
-    expires_on: string | null;
-  }[];
-}
+const GENDERS: readonly StammdatenGender[] = ["female", "male", "diverse"];
 
-function mapStammdatenResponse(data: BackendStammdaten): StaffStammdaten {
+function mapStammdatenResponse(data: StammdatenResponse): StaffStammdaten {
   return {
-    staffId: data.staff_id.toString(),
+    staffId: data.staff_id,
     person: {
       firstName: data.person.first_name,
       lastName: data.person.last_name,
       birthday: data.person.birthday,
-      gender: data.person.gender,
+      gender: knownEnum(GENDERS, data.person.gender ?? undefined) ?? null,
     },
     kontakt: {
       addressStreet: data.kontakt.address_street,
@@ -2482,7 +2392,7 @@ function mapStammdatenResponse(data: BackendStammdaten): StaffStammdaten {
     },
     qualifikationen: (data.qualifikationen ?? []).map((q) => ({
       id: q.id ?? null,
-      typeId: q.type_id ?? null,
+      typeId: q.type_id,
       name: q.name,
       acquiredOn: q.acquired_on,
       expiresOn: q.expires_on,
@@ -2510,7 +2420,7 @@ class StaffStammdatenService {
         `Failed to fetch stammdaten: ${response.statusText}`,
       );
     }
-    const json = (await response.json()) as { data: BackendStammdaten };
+    const json = (await response.json()) as { data: StammdatenResponse };
     return mapStammdatenResponse(json.data);
   }
 
