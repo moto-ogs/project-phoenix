@@ -6,7 +6,7 @@ import {
   render as renderPlain,
   screen,
 } from "@testing-library/react";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactElement, ReactNode } from "react";
 import { SWRConfig } from "~/lib/swr/testing";
 
@@ -161,11 +161,6 @@ async function renderAndTransfer() {
 }
 
 describe("TransferDeviceModal pending lock (#6533)", () => {
-  beforeAll(async () => {
-    // Finish loading the real error presenter before timing its visible alert.
-    await import("~/lib/error-presentation");
-  });
-
   beforeEach(() => {
     vi.clearAllMocks();
   });

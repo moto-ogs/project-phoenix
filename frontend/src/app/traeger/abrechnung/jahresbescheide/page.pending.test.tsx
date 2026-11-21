@@ -12,7 +12,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type { CareNoticeRun } from "~/lib/traeger-care-notices-api";
 import {
@@ -89,10 +89,10 @@ async function openDialog(): Promise<HTMLElement> {
 
 /** Renders the page, opens the dialog and starts a run that waits. */
 async function startRun() {
-  const view = renderPage();
-  const dialog = await openDialog();
   const answer = deferred<CareNoticeRun>();
   api.startCareNoticeRun.mockReturnValueOnce(answer.promise);
+  const view = renderPage();
+  const dialog = await openDialog();
   fireEvent.click(
     within(dialog).getByRole("button", { name: "Vorschau öffnen" }),
   );
@@ -102,17 +102,8 @@ async function startRun() {
 }
 
 describe("TraegerJahresbescheidePage start pending (#6593)", () => {
-  beforeAll(async () => {
-    // Load the real lazy chunks before measuring dialog and error transitions.
-    await Promise.all([
-      import("~/components/traeger/care-notice-run-start-modal"),
-      import("~/lib/error-presentation"),
-    ]);
-  });
-
   beforeEach(() => {
     vi.clearAllMocks();
-    api.startCareNoticeRun.mockReset();
     api.fetchCareNoticeRuns.mockResolvedValue({
       runs: [],
       suggestedYear: 2027,
