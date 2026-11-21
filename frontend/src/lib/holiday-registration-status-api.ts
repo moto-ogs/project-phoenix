@@ -3,11 +3,15 @@
 // Nachnamen und Geburtsdaten.
 
 import { unavailableApiError } from "~/lib/api-error";
+import { requiredDay } from "~/lib/contract/required-day";
+import type { HolidayRegistrationStatusResponse as WireHolidayRegistrationStatus } from "~/lib/contract/traeger-holiday-registrations.generated";
 import { readEnrollmentError } from "~/lib/enrollment-api-error";
 import { createLogger } from "~/lib/logger";
-import type {
-  HolidayPlacement,
-  HolidayRegistrationEntryStatus,
+import {
+  entryStatus,
+  knownHolidayPlacement,
+  type HolidayPlacement,
+  type HolidayRegistrationEntryStatus,
 } from "~/lib/parent-holiday-registration-entries";
 
 const logger = createLogger({ component: "HolidayRegistrationStatusApi" });
@@ -27,7 +31,8 @@ export interface HolidayRegistrationStatusWeek {
   readonly startsAt: string;
   readonly endsAt: string;
   readonly hostSchoolName: string;
-  readonly placement: HolidayPlacement;
+  /** undefined: a placement this build does not know. */
+  readonly placement: HolidayPlacement | undefined;
   /** The child eats lunch in the week (#5631). */
   readonly lunch?: boolean;
 }
@@ -54,63 +59,39 @@ export interface HolidayRegistrationStatus {
   readonly children: readonly HolidayRegistrationStatusChild[];
 }
 
-interface BackendStatusWeek {
-  first_day: string;
-  last_day: string;
-  time_model_name?: string | null;
-  starts_at?: string | null;
-  ends_at?: string | null;
-  host_school_name?: string | null;
-  placement?: string | null;
-  lunch?: boolean;
-}
-
-interface BackendHolidayRegistrationStatus {
-  traeger_name: string;
-  period_name: string;
-  first_day?: string | null;
-  last_day?: string | null;
-  registration_closes_on: string;
-  binding: boolean;
-  allocation_mode?: string | null;
-  submitted_at: string;
-  status: string;
-  children?:
-    { first_name: string; weeks?: BackendStatusWeek[] | null }[] | null;
-}
-
-function statusOf(value: string): HolidayRegistrationEntryStatus {
-  return value === "confirmed" || value === "cancelled" ? value : "received";
-}
-
-function placementOf(value: string | null | undefined): HolidayPlacement {
-  return value === "waitlisted" || value === "pending" ? value : "placed";
-}
-
 function holidayRegistrationStatusFromBackend(
-  body: BackendHolidayRegistrationStatus,
+  body: WireHolidayRegistrationStatus,
 ): HolidayRegistrationStatus {
   return {
     traegerName: body.traeger_name,
     periodName: body.period_name,
     firstDay: body.first_day ?? "",
     lastDay: body.last_day ?? "",
-    registrationClosesOn: body.registration_closes_on,
+    registrationClosesOn: requiredDay(
+      body.registration_closes_on,
+      "HolidayRegistrationStatus.registration_closes_on",
+    ),
     binding: body.binding,
     allocationMode:
       body.allocation_mode === "criteria" ? "criteria" : "arrival",
     submittedAt: body.submitted_at,
-    status: statusOf(body.status),
+    status: entryStatus(body.status),
     children: (body.children ?? []).map((child) => ({
       firstName: child.first_name,
       weeks: (child.weeks ?? []).map((week) => ({
-        firstDay: week.first_day,
-        lastDay: week.last_day,
-        timeModelName: week.time_model_name ?? "",
-        startsAt: week.starts_at ?? "",
-        endsAt: week.ends_at ?? "",
-        hostSchoolName: week.host_school_name ?? "",
-        placement: placementOf(week.placement),
+        firstDay: requiredDay(
+          week.first_day,
+          "HolidayRegistrationStatusWeek.first_day",
+        ),
+        lastDay: requiredDay(
+          week.last_day,
+          "HolidayRegistrationStatusWeek.last_day",
+        ),
+        timeModelName: week.time_model_name,
+        startsAt: week.starts_at,
+        endsAt: week.ends_at,
+        hostSchoolName: week.host_school_name,
+        placement: knownHolidayPlacement(week.placement),
         ...(week.lunch ? { lunch: true } : {}),
       })),
     })),
@@ -139,7 +120,7 @@ export async function fetchHolidayRegistrationStatus(
     );
   }
   const body = (await response.json()) as {
-    data: BackendHolidayRegistrationStatus;
+    data: WireHolidayRegistrationStatus;
   };
   return holidayRegistrationStatusFromBackend(body.data);
 }

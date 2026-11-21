@@ -29,10 +29,8 @@ import {
   type HolidayRegistrationStatusWeek,
 } from "~/lib/holiday-registration-status-api";
 import { createLogger } from "~/lib/logger";
-import {
-  HOLIDAY_PLACEMENT_BADGES,
-  HOLIDAY_REGISTRATION_STATUS_TONES,
-} from "./holiday-registration-badges";
+import { HolidayPlacementBadge } from "./holiday-placement-badge";
+import { HOLIDAY_REGISTRATION_STATUS_TONES } from "./holiday-registration-badges";
 
 const logger = createLogger({ component: "HolidayRegistrationStatusView" });
 
@@ -378,12 +376,7 @@ function WeekRow({
           <p className="mt-0.5 text-sm text-gray-600">{details.join(" · ")}</p>
         ) : null}
       </div>
-      {active ? (
-        <StatusBadge
-          label={tr(HOLIDAY_PLACEMENT_BADGES[week.placement].key)}
-          tone={HOLIDAY_PLACEMENT_BADGES[week.placement].tone}
-        />
-      ) : null}
+      {active ? <HolidayPlacementBadge placement={week.placement} /> : null}
     </li>
   );
 }
