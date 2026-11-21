@@ -22719,6 +22719,8 @@
     {
       "name": "Kind",
       "values": [
+        "appointment_cancelled",
+        "appointment_changed",
         "group_substitution",
         "group_substitution_count",
         "staff_absent",
@@ -22729,6 +22731,7 @@
     {
       "name": "LinkTarget",
       "values": [
+        "calendar",
         "group_handovers",
         "own_absences",
         "staff_absences",
@@ -22798,6 +22801,7 @@
     {
       "name": "Source",
       "values": [
+        "appointments",
         "notices",
         "staff"
       ]
@@ -45872,6 +45876,50 @@
       ]
     },
     {
+      "name": "DayAppointment",
+      "go_type": "daychangesview.DayAppointment",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "occurrence_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "location",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "location_changed",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "time_changed",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "DayArrivalException",
       "go_type": "classday.DayArrivalException",
       "fields": [
@@ -48687,6 +48735,14 @@
             "kind": "ref",
             "nullable": true,
             "ref": "DayNotice"
+          }
+        },
+        {
+          "name": "appointment",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "DayAppointment"
           }
         }
       ]

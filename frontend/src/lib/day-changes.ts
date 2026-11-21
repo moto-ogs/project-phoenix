@@ -5,6 +5,7 @@
  */
 import { bffJson } from "~/lib/bff-fetch";
 import type {
+  DayAppointment,
   DayNotice,
   Entry,
   Kind,
@@ -33,6 +34,21 @@ export interface DayChangeNotice {
   readonly acknowledged: boolean;
 }
 
+/**
+ * Ein Termin aus dem eigenen Kalender, der heute anders ist (#7663). Titel
+ * und Ort schreibt, wer den Termin angelegt hat; die neue Uhrzeit steht in
+ * `startsAt` und `endsAt` des Eintrags.
+ */
+interface DayChangeAppointment {
+  readonly id: string;
+  readonly occurrenceDate: string | null;
+  readonly title: string;
+  /** Der Ort, an dem der Termin heute stattfindet. */
+  readonly location: string | null;
+  readonly locationChanged: boolean;
+  readonly timeChanged: boolean;
+}
+
 export interface DayChange {
   readonly kind: Kind | (string & {});
   readonly section: Section | (string & {});
@@ -56,6 +72,8 @@ export interface DayChange {
   readonly count: number | null;
   /** Nur bei der Art `staff_notice`. */
   readonly notice?: DayChangeNotice | null;
+  /** Nur bei den Arten `appointment_cancelled` und `appointment_changed`. */
+  readonly appointment?: DayChangeAppointment | null;
 }
 
 export interface DayChangesOverview {
@@ -74,6 +92,20 @@ function mapNotice(notice: DayNotice | null): DayChangeNotice | null {
     important: notice.priority === "important",
     requiresAcknowledgement: notice.requires_acknowledgement,
     acknowledged: notice.acknowledged,
+  };
+}
+
+function mapAppointment(
+  appointment: DayAppointment | null,
+): DayChangeAppointment | null {
+  if (!appointment) return null;
+  return {
+    id: appointment.id,
+    occurrenceDate: appointment.occurrence_date,
+    title: appointment.title,
+    location: appointment.location,
+    locationChanged: appointment.location_changed,
+    timeChanged: appointment.time_changed,
   };
 }
 
@@ -98,6 +130,7 @@ function mapEntry(entry: Entry): DayChange {
       : null,
     count: entry.count,
     notice: mapNotice(entry.notice ?? null),
+    appointment: mapAppointment(entry.appointment ?? null),
   };
 }
 
