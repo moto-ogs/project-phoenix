@@ -51,8 +51,7 @@ let restoreFetch: (() => void) | null = null;
  * every refusal of it, whichever client sent the request: the session of
  * another school than this subdomain (#5130) or of another account than this
  * tab. Many clients read only `response.ok` and never build an ApiError, so
- * the report in apiErrorFromBody misses them. Axios runs on XHR; its
- * interceptor adds the header and its errors reach apiErrorFromBody.
+ * the report in apiErrorFromBody misses them.
  * SSE also uses fetch, so this observes the actual stream refusal (#5374).
  * Where the session-end barrier is installed (#5399), every request to the
  * own BFF passes it: a logout here or in another tab of this origin aborts

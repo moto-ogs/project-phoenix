@@ -25,8 +25,8 @@ export type ApiErrorResponse = ProblemBody;
 
 /**
  * Generic domain API error handler: every failure leaves as an ApiError, so
- * the shared display path reads its status and code. An Axios failure keeps
- * the envelope of its response; anything without a response is a server
+ * the shared display path reads its status and code. A failure that carries
+ * a response keeps its envelope; anything without a response is a server
  * fault.
  * @param error - The caught error
  * @param context - Description of the failed operation

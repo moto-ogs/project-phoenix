@@ -468,9 +468,8 @@ All tabs of a portal also share one account: another account that signs in
 in tab B replaces tab A's session before tab A hears of it (#5183). Every
 browser request to the tab's own `/api/` therefore names the account its
 `SessionProvider` shows in `X-Moto-Session-Account`, set centrally by
-`SessionAccountBinding` (mounted first in every portal's providers), the
-fetch observer and the Axios interceptor of `api-transport.ts`; another
-origin never gets it. Every portal's route wrapper
+`SessionAccountBinding` (mounted first in every portal's providers) and the
+fetch observer; another origin never gets it. Every portal's route wrapper
 (`createResponseAwareAuth`, so `tenantPortal.withAuth` too) refuses a header that
 names another account than the cookie with 409
 `identity.session_account_mismatch` before the route runs

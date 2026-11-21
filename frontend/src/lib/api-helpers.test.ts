@@ -599,7 +599,7 @@ describe("handleDomainApiError", () => {
     ).toBe(error);
   });
 
-  it("keeps status and envelope of an Axios response", () => {
+  it("keeps status and envelope of a failure that carries a response", () => {
     const error = Object.assign(new Error("Request failed"), {
       response: {
         status: 409,

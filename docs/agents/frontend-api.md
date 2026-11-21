@@ -14,12 +14,12 @@ checklist. Local values belong in `.env.local` using `.env.example` as the templ
 
 | Variable                           | Scope           | Purpose                                                       |
 | ---------------------------------- | --------------- | ------------------------------------------------------------- |
-| `NEXT_PUBLIC_API_URL`              | Client + Server | Browser-accessible backend URL (axios `baseURL`)              |
+| `NEXT_PUBLIC_API_URL`              | Client + Server | Public backend URL; validated, read by no frontend code       |
 | `API_URL`                          | Server only     | Backend URL for route handlers (Docker: `http://server:8080`) |
 | `NEXTAUTH_URL` / `NEXTAUTH_SECRET` | Server          | NextAuth base URL + JWT secret                                |
 | `SKIP_ENV_VALIDATION`              | Build           | `true` skips env validation (Docker builds)                   |
 
-**`getServerApiUrl()`** (`lib/server-api-url.ts`) returns the startup-validated `process.env.API_URL` — no fallback chain. Route handlers must use it; never `NEXT_PUBLIC_API_URL` on the server.
+**`getServerApiUrl()`** (`lib/server-api-url.ts`) returns the startup-validated `process.env.API_URL` — no fallback chain; never `NEXT_PUBLIC_API_URL` on the server. Every server call to the backend goes through `sendBackend` (`lib/backend-client.server.ts`), its only reader: base URL, bearer, client identity, timeout, log line and metric in one place. Browser code calls only the BFF under `/api/`.
 
 ### Server-Only Import Isolation (`.server.ts`)
 
