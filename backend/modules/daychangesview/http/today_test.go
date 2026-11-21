@@ -257,7 +257,9 @@ func TestDayChangesQueryBudget(t *testing.T) {
 		}
 		baseline = n
 		counter.Reset()
-		overview, _ := read(t, router, account.ID, tenantID, "users:read", "vacation:approve")
+		// Without users:read neither the Kinder source (#7665) nor the
+		// notices read; children_test.go measures both with users:read.
+		overview, _ := read(t, router, account.ID, tenantID, "vacation:approve")
 		require.Len(t, overview.Entries, 2*n)
 		measured := counter.Measurement(counter.Queries())
 		if round > 0 {

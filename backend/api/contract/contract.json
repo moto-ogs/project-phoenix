@@ -22546,6 +22546,13 @@
       ]
     },
     {
+      "name": "ChildStatus",
+      "values": [
+        "excused",
+        "sick"
+      ]
+    },
+    {
       "name": "DayPlanningReason",
       "values": [
         "arrival_exception",
@@ -22642,6 +22649,11 @@
         "activity_lead_changed",
         "activity_reinstated",
         "activity_room_changed",
+        "child_absent",
+        "child_goes_alone",
+        "child_pickup_changed",
+        "child_pickup_note",
+        "child_summary",
         "group_substitution",
         "group_substitution_count",
         "staff_absent",
@@ -22658,7 +22670,8 @@
         "staff_absences",
         "staff_list",
         "staff_member",
-        "staff_notices"
+        "staff_notices",
+        "student"
       ]
     },
     {
@@ -22723,6 +22736,7 @@
       "name": "Source",
       "values": [
         "activities",
+        "children",
         "notices",
         "staff"
       ]
@@ -39651,6 +39665,52 @@
       ]
     },
     {
+      "name": "Child",
+      "go_type": "daychangesview.Child",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "enum",
+            "nullable": true,
+            "ref": "ChildStatus"
+          }
+        },
+        {
+          "name": "pickup_time",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "note",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "ChildAttendance",
       "go_type": "traegerview.ChildAttendance",
       "fields": [
@@ -39756,6 +39816,42 @@
           "name": "can_grant",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildCounts",
+      "go_type": "daychangesview.ChildCounts",
+      "fields": [
+        {
+          "name": "sick",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "excused",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "pickup_changed",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "goes_alone",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "pickup_note",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -40036,6 +40132,34 @@
       ]
     },
     {
+      "name": "ChildItem",
+      "go_type": "daychangesview.ChildItem",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "enum",
+            "ref": "Kind"
+          }
+        },
+        {
+          "name": "child",
+          "schema": {
+            "kind": "ref",
+            "ref": "Child"
+          }
+        },
+        {
+          "name": "link",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "Link"
+          }
+        }
+      ]
+    },
+    {
       "name": "ChildParticipationResponse",
       "go_type": "mealplan.ChildParticipationResponse",
       "fields": [
@@ -40208,6 +40332,36 @@
           "optional": true,
           "schema": {
             "kind": "date"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildSummary",
+      "go_type": "daychangesview.ChildSummary",
+      "fields": [
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "counts",
+          "schema": {
+            "kind": "ref",
+            "ref": "ChildCounts"
+          }
+        },
+        {
+          "name": "items",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ChildItem"
+            }
           }
         }
       ]
@@ -48648,6 +48802,22 @@
             "kind": "ref",
             "nullable": true,
             "ref": "DayNotice"
+          }
+        },
+        {
+          "name": "child",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "Child"
+          }
+        },
+        {
+          "name": "child_summary",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "ChildSummary"
           }
         },
         {
@@ -61752,6 +61922,13 @@
         },
         {
           "name": "staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "student_id",
           "optional": true,
           "schema": {
             "kind": "id"
