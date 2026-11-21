@@ -1,5 +1,6 @@
 import { ApiError, apiErrorFromResponse } from "./api-error";
 import type {
+  assignmentRequest,
   SubstitutionAssignmentResult,
   SubstitutionOverviewResult,
 } from "./contract/substitutions.generated";
@@ -21,12 +22,7 @@ import {
   type SubstitutionProxyEnvelope,
   unwrapSubstitutionProxyEnvelope,
 } from "./substitution-helpers";
-import {
-  mapApplyDeviations,
-  mapBulkSubstitution,
-  prepareApplyDeviationsBody,
-  prepareBulkSubstitutionBody,
-} from "./timetable-helpers";
+import { mapApplyDeviations, mapBulkSubstitution } from "./timetable-helpers";
 import type {
   ApplyDeviationsInput,
   ApplyDeviationsResponse,
@@ -89,10 +85,40 @@ class SubstitutionService {
       body: JSON.stringify({
         type: "schedule_substitution",
         schedule_substitution: {
-          instance_id: Number(instanceId),
-          ...prepareApplyDeviationsBody(input),
+          instance_id: instanceId,
+          understaffed_ack: input.understaffedAck,
+          understaffed_note: input.understaffedAck
+            ? input.understaffedNote || undefined
+            : undefined,
+          absences: input.absences?.length
+            ? input.absences.map((item) => ({
+                staff_id: item.staffId,
+                reason: item.reason,
+                instance_ids: item.instanceIds,
+              }))
+            : undefined,
+          substitutions: input.substitutions?.length
+            ? input.substitutions.map((item) => ({
+                absent_staff_id: item.absentStaffId,
+                substitute_staff_id: item.substituteStaffId,
+                reason: item.reason,
+                instance_ids: item.instanceIds,
+              }))
+            : undefined,
+          substitution_removals: input.substitutionRemovals?.length
+            ? input.substitutionRemovals.map((item) => ({
+                staff_id: item.staffId,
+                instance_ids: item.instanceIds,
+              }))
+            : undefined,
+          presences: input.presences?.length
+            ? input.presences.map((item) => ({
+                staff_id: item.staffId,
+                instance_ids: item.instanceIds,
+              }))
+            : undefined,
         },
-      }),
+      } satisfies assignmentRequest),
     });
     if (!response.ok) throw await substitutionError(response);
     const envelope =
@@ -114,9 +140,14 @@ class SubstitutionService {
       body: JSON.stringify({
         type: "schedule_substitution",
         schedule_substitution: {
-          whole_days: prepareBulkSubstitutionBody(input),
+          whole_days: {
+            absent_staff_id: input.absentStaffId,
+            substitute_staff_id: input.substituteStaffId || undefined,
+            dates: input.dates,
+            reason: input.reason || undefined,
+          },
         },
-      }),
+      } satisfies assignmentRequest),
     });
     if (!response.ok) throw await substitutionError(response);
     const envelope =
