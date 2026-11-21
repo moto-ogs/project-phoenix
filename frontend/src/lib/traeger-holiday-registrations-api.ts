@@ -1,8 +1,3 @@
-import {
-  holidayAddressRequirement,
-  holidayLegalBlocks,
-  type HolidayLegalBlockWire,
-} from "~/lib/holiday-form-field";
 /**
  * Client of the review of the holiday registrations in the Träger portal
  * (#4663): the list of a holiday period with its filters, one registration
@@ -16,20 +11,50 @@ import {
   type DebtorNumberFormat,
   debtorNumberFormatOf,
 } from "~/lib/debtor-number-format";
+import {
+  holidayAddressRequirement,
+  holidayLegalBlocks,
+  type HolidayFormField,
+  type HolidayFormVersion,
+  type HolidayLegalBlockWire,
+} from "~/lib/holiday-form-field";
 import { apiErrorFromBody, transportFetch } from "./api-error";
-import type { MailOutcome } from "./email-delivery-status";
+import { knownEnum, requiredEnum } from "./contract/known-enum";
+import { requiredDay } from "./contract/required-day";
+import type {
+  HolidayBookingChange as WireBookingChange,
+  HolidayCriterionCheck as WireCheck,
+  HolidayPeriodForm as WireForm,
+  HolidayRegistrationBooking as WireBooking,
+  HolidayRegistrationChild as WireChild,
+  HolidayRegistrationDetail as WireDetail,
+  HolidayRegistrationMailProblem as WireMailProblem,
+} from "./contract/shared.generated";
+import type {
+  HolidayBookingChoice,
+  HolidayCapacityRequest,
+  HolidayConfirmationSettings as WireConfirmationSettings,
+  HolidayPlaceChange,
+  HolidayRebookingRequest,
+} from "./contract/traeger-holiday-contributions.generated";
+import type {
+  HolidayCriteriaCheckRequest,
+  HolidayKnownChildrenResponse,
+  HolidayMailProblemsResponse,
+  HolidayRegistrationEditRequest,
+  HolidayRegistrationHealthDetail as WireHealthDetail,
+  HolidayRegistrationList as WireList,
+  HolidayRegistrationSummary as WireSummary,
+  HolidayWeekPlaces as WireWeekPlaces,
+  HolidayWishRequest,
+} from "./contract/traeger-holiday-periods.generated";
+import { knownMailOutcome, type MailOutcome } from "./email-delivery-status";
 import { filenameFromDisposition } from "./file-download";
-import type { HolidayConsentTexts as WireHolidayConsentTexts } from "./contract/shared.generated";
 import {
   consentTextsFromBackend,
   type HolidayConsentTexts,
 } from "./holiday-consent-texts";
-import type {
-  HolidayFormField,
-  HolidayFormVersion,
-} from "./holiday-form-field";
 import { traegerRequest } from "./traeger-api";
-import type { DebtorNumberFormat as WireDebtorNumberFormat } from "./contract/traeger-holiday-contributions.generated";
 
 export type HolidayRegistrationStatus = "received" | "confirmed" | "cancelled";
 
@@ -42,21 +67,61 @@ export type HolidayRegistrationStatus = "received" | "confirmed" | "cancelled";
  */
 export type HolidayRegistrationAction = "freeze" | "reopen";
 
-type HolidayRegistrationEventAction =
-  | HolidayRegistrationAction
-  | "confirm"
-  | "cancel"
-  | "rebook"
-  | "debtor_number"
-  | "edit"
-  | "proof_upload"
-  | "sibling_merge"
-  | "sibling_split"
-  | "sibling_cancel"
-  | "promote"
-  | "wish"
-  | "allocate"
-  | "criteria_check";
+const EVENT_ACTIONS = [
+  "freeze",
+  "reopen",
+  "confirm",
+  "cancel",
+  "rebook",
+  "debtor_number",
+  "edit",
+  "proof_upload",
+  "sibling_merge",
+  "sibling_split",
+  "sibling_cancel",
+  "promote",
+  "wish",
+  "allocate",
+  "criteria_check",
+] as const satisfies readonly string[];
+
+type HolidayRegistrationEventAction = (typeof EVENT_ACTIONS)[number];
+
+const STATUSES: readonly HolidayRegistrationStatus[] = [
+  "received",
+  "confirmed",
+  "cancelled",
+];
+const PLACEMENTS: readonly HolidayPlacement[] = [
+  "placed",
+  "waitlisted",
+  "pending",
+];
+const DECIDED_PLACEMENTS = ["placed", "waitlisted"] as const;
+const WISHES = ["yes", "no"] as const;
+const WISH_SOURCES = ["account", "office"] as const;
+const CONTACT_KINDS: readonly HolidayRegistrationContact["kind"][] = [
+  "emergency",
+  "pickup",
+];
+const CHECK_VALUES = ["yes", "no"] as const;
+const STATED_VALUES = ["yes", "no", "unknown"] as const;
+const CRITERION_SCOPES = ["family", "child"] as const;
+const MAIL_KINDS: readonly HolidayRegistrationMailKind[] = [
+  "holiday_registration_received",
+  "holiday_registration_accepted",
+  "holiday_place_granted",
+  "holiday_closure_notice",
+  "holiday_parent_account_offer",
+];
+const MAIL_STATES: readonly HolidayRegistrationMailState[] = [
+  "failed",
+  "blocked",
+  "unknown",
+  "complained",
+  "unsubscribed",
+];
+const BOOKING_UNITS = ["week", "day"] as const;
 
 /** The filter of the list and the export. Empty values match everything. */
 export interface HolidayRegistrationFilter {
@@ -230,19 +295,6 @@ export interface HolidayRegistrationHealthDetail {
   readonly children: readonly HolidayRegistrationHealth[];
 }
 
-interface BackendHealthDetail {
-  custom_data?: Record<string, unknown> | null;
-  children?:
-    | {
-        child_id: number;
-        allergies: string;
-        medication: string;
-        health_notes: string;
-        custom_data?: Record<string, unknown> | null;
-      }[]
-    | null;
-}
-
 export interface HolidayRegistrationContact {
   readonly kind: "emergency" | "pickup";
   readonly name: string;
@@ -379,228 +431,238 @@ export interface HolidayRegistrationDetail extends HolidayRegistrationSummary {
   readonly mails?: readonly HolidayRegistrationMail[];
 }
 
-interface BackendCheck {
-  criterion_id: number;
-  child_id: number | null;
-  checked: HolidayCriterionCheckValue;
-}
-
-interface BackendBooking {
-  week_id: number;
-  week_starts_on: string;
-  week_ends_on: string;
-  host_school_id: number;
-  time_model_id: number;
-  time_model_name: string;
-  placement?: HolidayPlacement;
-  waitlist_position?: number | null;
-  promoted_at?: string | null;
-  days?: string[] | null;
-  lunch?: boolean;
-  lunch_days?: number;
-  lunch_price_cents?: number;
-}
-
-interface BackendChild {
-  id: number;
-  first_name: string;
-  last_name: string;
-  birth_date: string;
-  home_school_id: number | null;
-  guest_school_name: string;
-  bookings?: BackendBooking[] | null;
-  duplicate_registration_ids?: number[] | null;
-  holiday_wish?: HolidayWish;
-  holiday_wish_source?: HolidayWishSource;
-  holiday_wish_check?: boolean;
-}
-
-interface BackendSummary {
-  id: number;
-  status: HolidayRegistrationStatus;
-  frozen: boolean;
-  submitted_at: string;
-  guardian_first_name: string;
-  guardian_last_name: string;
-  guardian_email: string;
-  guardian_phone: string;
-  benefits_declared?: boolean;
-  debtor_number?: string;
-  deletes_on?: string | null;
-  health_deletes_on?: string | null;
-  mail_problems?: HolidayRegistrationMailProblem[] | null;
-  children?: BackendChild[] | null;
-}
-
-interface BackendList {
-  registrations?: BackendSummary[] | null;
-  total: number;
-  status_counts?: Partial<Record<HolidayRegistrationStatus, number>> | null;
-}
-
-interface BackendBookingChange {
-  week_id: number;
-  time_model_id: number;
-  days?: string[] | null;
-  lunch?: boolean;
-}
-
-interface BackendDetail extends BackendSummary {
-  guardian_address?: {
-    street: string;
-    postal_code: string;
-    city: string;
-  } | null;
-  second_guardian?: {
-    first_name: string;
-    last_name: string;
-    email: string;
-    phone: string;
-  } | null;
-  contacts?: HolidayRegistrationContact[] | null;
-  privacy_consent_at: string;
-  health_consent_at: string | null;
-  binding_confirmed_at: string | null;
-  custody_confirmed_at?: string | null;
-  declaration_name?: string | null;
-  consent_version?: number | null;
-  consent_texts?: WireHolidayConsentTexts | null;
-  benefits_proofs?:
-    | {
-        id: number;
-        filename: string;
-        size_bytes: number;
-        content_type: string;
-        uploaded_at: string;
-      }[]
+/**
+ * The detail as the contract decodes it, with the form questions and legal
+ * blocks in the shape of the online registration's form schema: their open
+ * enums follow with the form schema client, not here.
+ */
+type DetailWire = Omit<WireDetail, "form"> & {
+  form:
+    | (Omit<WireForm, "fields" | "legal_blocks"> & {
+        fields: HolidayFormField[] | null;
+        legal_blocks: HolidayLegalBlockWire[] | null;
+      })
     | null;
-  history?:
-    | {
-        action: HolidayRegistrationEventAction;
-        occurred_at: string;
-        details?: {
-          from?: HolidayRegistrationStatus;
-          child_id?: number;
-          before?: BackendBookingChange[] | null;
-          after?: BackendBookingChange[] | null;
-          debtor_number?: { before: string; after: string } | null;
-          fields?: string[] | null;
-          siblings?: number[] | null;
-          wish?: HolidayWish;
-          week_ids?: number[] | null;
-          placement?: "placed" | "waitlisted" | null;
-          reason?: string | null;
-          checks?: BackendCheck[] | null;
-        } | null;
-      }[]
-    | null;
-  legal_acceptances?: Record<string, string> | null;
-  form?: {
-    version: number;
-    fields?: HolidayFormField[] | null;
-    address_requirement?: string | null;
-    legal_blocks?: HolidayLegalBlockWire[] | null;
-  } | null;
-  custom_data?: Record<string, unknown> | null;
-  child_custom_data?:
-    { child_id: number; custom_data?: Record<string, unknown> | null }[] | null;
-  criteria?:
-    | {
-        criterion_id: number;
-        name: string;
-        question: string;
-        scope: "family" | "child";
-        child_id: number | null;
-        stated: "yes" | "no" | "unknown";
-        checked: HolidayCriterionCheckValue;
-        checked_at: string | null;
-      }[]
-    | null;
-  mails?:
-    | {
-        kind: HolidayRegistrationMailKind;
-        outcome: MailOutcome;
-        created_at?: string | null;
-      }[]
-    | null;
+};
+
+/** The days of a list the decoder may leave null, without the empty ones. */
+function presentDays(days: readonly (string | null)[] | null | undefined) {
+  return (days ?? []).filter((day): day is string => day !== null);
 }
 
-function checksFromBackend(
-  checks: BackendCheck[] | null | undefined,
-): HolidayCriterionCheck[] {
-  return (checks ?? []).map((check) => ({
-    criterionId: String(check.criterion_id),
-    childId: check.child_id === null ? null : String(check.child_id),
-    checked: check.checked,
-  }));
+/**
+ * A registration whose status or placement this build does not know drops
+ * out of the list (#2353): the actions of the office and the bulk
+ * confirmation decide on both, and a rebooking sends every booking back.
+ */
+function knownRegistration(registration: WireSummary): boolean {
+  return (
+    knownEnum(STATUSES, registration.status) !== undefined &&
+    (registration.children ?? []).every((child) =>
+      (child.bookings ?? []).every(
+        (booking) => knownEnum(PLACEMENTS, booking.placement) !== undefined,
+      ),
+    )
+  );
 }
 
+function bookingFromBackend(booking: WireBooking): HolidayRegistrationBooking {
+  const days = presentDays(booking.days);
+  return {
+    weekId: booking.week_id,
+    weekStartsOn: requiredDay(
+      booking.week_starts_on,
+      "holiday_registration_booking.week_starts_on",
+    ),
+    weekEndsOn: requiredDay(
+      booking.week_ends_on,
+      "holiday_registration_booking.week_ends_on",
+    ),
+    hostSchoolId: booking.host_school_id,
+    timeModelId: booking.time_model_id,
+    timeModelName: booking.time_model_name,
+    placement: requiredEnum(
+      PLACEMENTS,
+      booking.placement,
+      "holiday_registration_booking.placement",
+    ),
+    waitlistPosition: booking.waitlist_position ?? null,
+    promotedAt: booking.promoted_at ?? null,
+    ...(days.length > 0 ? { days } : {}),
+    lunch: booking.lunch,
+    lunchDays: booking.lunch_days,
+    lunchPriceCents: booking.lunch_price_cents,
+  };
+}
+
+function childFromBackend(child: WireChild): HolidayRegistrationChild {
+  return {
+    id: child.id,
+    firstName: child.first_name,
+    lastName: child.last_name,
+    birthDate: requiredDay(
+      child.birth_date,
+      "holiday_registration_child.birth_date",
+    ),
+    homeSchoolId: child.home_school_id,
+    guestSchoolName: child.guest_school_name,
+    bookings: (child.bookings ?? []).map(bookingFromBackend),
+    duplicateRegistrationIds: child.duplicate_registration_ids ?? [],
+    // Go writes an empty wish when it is unknown; the office decides it
+    // itself, nothing sends this value back.
+    holidayWish: knownEnum(WISHES, child.holiday_wish) ?? "",
+    holidayWishSource: knownEnum(WISH_SOURCES, child.holiday_wish_source) ?? "",
+    holidayWishCheck: child.holiday_wish_check,
+  };
+}
+
+/** Mail problems of a kind or state this build does not know drop out. */
+function mailProblemsFromBackend(
+  problems: readonly WireMailProblem[] | null | undefined,
+): HolidayRegistrationMailProblem[] {
+  return (problems ?? []).flatMap((problem) => {
+    const kind = knownEnum(MAIL_KINDS, problem.kind);
+    const state = knownEnum(MAIL_STATES, problem.state);
+    return kind && state ? [{ kind, state }] : [];
+  });
+}
+
+/** Only for a registration `knownRegistration` let through. */
 function summaryFromBackend(
-  registration: BackendSummary,
+  registration: WireSummary,
 ): HolidayRegistrationSummary {
   return {
-    id: String(registration.id),
-    status: registration.status,
+    id: registration.id,
+    status: requiredEnum(
+      STATUSES,
+      registration.status,
+      "holiday_registration.status",
+    ),
     frozen: registration.frozen,
     submittedAt: registration.submitted_at,
     guardianFirstName: registration.guardian_first_name,
     guardianLastName: registration.guardian_last_name,
     guardianEmail: registration.guardian_email,
     guardianPhone: registration.guardian_phone,
-    benefitsDeclared: registration.benefits_declared ?? false,
-    debtorNumber: registration.debtor_number ?? "",
-    deletesOn: registration.deletes_on ?? null,
-    healthDeletesOn: registration.health_deletes_on ?? null,
-    mailProblems: (registration.mail_problems ?? []).map((problem) => ({
-      kind: problem.kind,
-      state: problem.state,
-    })),
-    children: (registration.children ?? []).map((child) => ({
-      id: String(child.id),
-      firstName: child.first_name,
-      lastName: child.last_name,
-      birthDate: child.birth_date,
-      homeSchoolId:
-        child.home_school_id === null ? null : String(child.home_school_id),
-      guestSchoolName: child.guest_school_name,
-      bookings: (child.bookings ?? []).map((booking) => ({
-        weekId: String(booking.week_id),
-        weekStartsOn: booking.week_starts_on,
-        weekEndsOn: booking.week_ends_on,
-        hostSchoolId: String(booking.host_school_id),
-        timeModelId: String(booking.time_model_id),
-        timeModelName: booking.time_model_name,
-        placement: booking.placement ?? "placed",
-        waitlistPosition: booking.waitlist_position ?? null,
-        promotedAt: booking.promoted_at ?? null,
-        ...(booking.days?.length ? { days: booking.days } : {}),
-        lunch: booking.lunch ?? false,
-        lunchDays: booking.lunch_days ?? 0,
-        lunchPriceCents: booking.lunch_price_cents ?? 0,
-      })),
-      duplicateRegistrationIds: (child.duplicate_registration_ids ?? []).map(
-        String,
-      ),
-      holidayWish: child.holiday_wish ?? "",
-      holidayWishSource: child.holiday_wish_source ?? "",
-      holidayWishCheck: child.holiday_wish_check ?? false,
-    })),
+    benefitsDeclared: registration.benefits_declared,
+    debtorNumber: registration.debtor_number,
+    deletesOn: registration.deletes_on,
+    healthDeletesOn: registration.health_deletes_on,
+    mailProblems: mailProblemsFromBackend(registration.mail_problems),
+    children: (registration.children ?? []).map(childFromBackend),
   };
 }
 
-function changesFromBackend(
-  changes: BackendBookingChange[] | null | undefined,
-): HolidayBookingChange[] {
-  return (changes ?? []).map((change) => ({
-    weekId: String(change.week_id),
-    timeModelId: String(change.time_model_id),
-    ...(change.days?.length ? { days: change.days } : {}),
-    ...(change.lunch ? { lunch: true } : {}),
-  }));
+/** A check with a value this build does not know drops out. */
+function checksFromBackend(
+  checks: readonly WireCheck[],
+): HolidayCriterionCheck[] {
+  return checks.flatMap((check) => {
+    const checked =
+      check.checked === null ? null : knownEnum(CHECK_VALUES, check.checked);
+    if (checked === undefined) return [];
+    return [
+      { criterionId: check.criterion_id, childId: check.child_id, checked },
+    ];
+  });
 }
 
+function changesFromBackend(
+  changes: readonly WireBookingChange[] | undefined,
+): HolidayBookingChange[] {
+  return (changes ?? []).map((change) => {
+    const days = presentDays(change.days);
+    return {
+      weekId: change.week_id,
+      timeModelId: change.time_model_id,
+      ...(days.length > 0 ? { days } : {}),
+      ...(change.lunch ? { lunch: true } : {}),
+    };
+  });
+}
+
+/**
+ * The history. An entry this build cannot name drops out (#2353): an
+ * unknown action, a decision or a wish it would have to guess.
+ */
+function historyFromBackend(
+  history: DetailWire["history"],
+): HolidayRegistrationEvent[] {
+  return (history ?? []).flatMap((event) => {
+    const action = knownEnum(EVENT_ACTIONS, event.action);
+    const details = event.details;
+    const placement =
+      details.placement === undefined
+        ? undefined
+        : knownEnum(DECIDED_PLACEMENTS, details.placement);
+    const wish =
+      details.wish === undefined ? "" : knownEnum(WISHES, details.wish);
+    if (
+      !action ||
+      (details.placement !== undefined && !placement) ||
+      wish === undefined
+    ) {
+      return [];
+    }
+    return [
+      {
+        action,
+        occurredAt: event.occurred_at,
+        from: knownEnum(STATUSES, details.from) ?? "",
+        childId: details.child_id ?? "",
+        before: changesFromBackend(details.before),
+        after: changesFromBackend(details.after),
+        debtorNumber: details.debtor_number ?? null,
+        fields: details.fields ?? [],
+        siblings: details.siblings ?? [],
+        wish,
+        // Only an allocation and a check carry these (#4700).
+        ...(details.week_ids ? { weekIds: details.week_ids } : {}),
+        ...(placement ? { placement } : {}),
+        ...(details.reason ? { reason: details.reason } : {}),
+        ...(details.checks
+          ? { checks: checksFromBackend(details.checks) }
+          : {}),
+      },
+    ];
+  });
+}
+
+/** A criterion with a scope or answer this build does not know drops out. */
+function criteriaFromBackend(
+  criteria: DetailWire["criteria"],
+): HolidayRegistrationCriterion[] {
+  return (criteria ?? []).flatMap((criterion) => {
+    const scope = knownEnum(CRITERION_SCOPES, criterion.scope);
+    const stated = knownEnum(STATED_VALUES, criterion.stated);
+    const checked =
+      criterion.checked === null
+        ? null
+        : knownEnum(CHECK_VALUES, criterion.checked);
+    if (!scope || !stated || checked === undefined) return [];
+    return [
+      {
+        criterionId: criterion.criterion_id,
+        name: criterion.name,
+        question: criterion.question,
+        scope,
+        childId: criterion.child_id,
+        stated,
+        checked,
+        checkedAt: criterion.checked_at,
+      },
+    ];
+  });
+}
+
+/**
+ * One registration. Its status, the placements and the contact kinds are
+ * required (#2353): the office acts on the status, a rebooking sends every
+ * booking back and a change of the contacts saves both lists whole, so a
+ * value this build does not know fails the read instead of being guessed.
+ */
 function detailFromBackend(
-  registration: BackendDetail,
+  registration: DetailWire,
 ): HolidayRegistrationDetail {
   return {
     ...summaryFromBackend(registration),
@@ -619,46 +681,33 @@ function detailFromBackend(
           phone: registration.second_guardian.phone,
         }
       : null,
-    contacts: registration.contacts ?? [],
+    contacts: (registration.contacts ?? []).map((contact) => ({
+      kind: requiredEnum(
+        CONTACT_KINDS,
+        contact.kind,
+        "holiday_registration_contact.kind",
+      ),
+      name: contact.name,
+      phone: contact.phone,
+      relationship: contact.relationship,
+    })),
     privacyConsentAt: registration.privacy_consent_at,
     healthConsentAt: registration.health_consent_at,
     bindingConfirmedAt: registration.binding_confirmed_at,
-    custodyConfirmedAt: registration.custody_confirmed_at ?? null,
-    declarationName: registration.declaration_name ?? "",
-    consentVersion: registration.consent_version ?? 0,
+    custodyConfirmedAt: registration.custody_confirmed_at,
+    declarationName: registration.declaration_name,
+    consentVersion: registration.consent_version,
     consentTexts: registration.consent_texts
       ? consentTextsFromBackend(registration.consent_texts)
       : null,
     benefitsProofs: (registration.benefits_proofs ?? []).map((proof) => ({
-      id: String(proof.id),
+      id: proof.id,
       filename: proof.filename,
       sizeBytes: proof.size_bytes,
       contentType: proof.content_type,
       uploadedAt: proof.uploaded_at,
     })),
-    history: (registration.history ?? []).map((event) => ({
-      action: event.action,
-      occurredAt: event.occurred_at,
-      from: event.details?.from ?? "",
-      childId: event.details?.child_id ? String(event.details.child_id) : "",
-      before: changesFromBackend(event.details?.before),
-      after: changesFromBackend(event.details?.after),
-      debtorNumber: event.details?.debtor_number ?? null,
-      fields: event.details?.fields ?? [],
-      siblings: (event.details?.siblings ?? []).map(String),
-      wish: event.details?.wish ?? "",
-      // Only an allocation and a check carry these (#4700).
-      ...(event.details?.week_ids
-        ? { weekIds: event.details.week_ids.map(String) }
-        : {}),
-      ...(event.details?.placement
-        ? { placement: event.details.placement }
-        : {}),
-      ...(event.details?.reason ? { reason: event.details.reason } : {}),
-      ...(event.details?.checks
-        ? { checks: checksFromBackend(event.details.checks) }
-        : {}),
-    })),
+    history: historyFromBackend(registration.history),
     legalAcceptances: registration.legal_acceptances ?? {},
     form: {
       legalBlocks: holidayLegalBlocks(registration.form?.legal_blocks),
@@ -671,25 +720,18 @@ function detailFromBackend(
     answers: registration.custom_data ?? {},
     childAnswers: Object.fromEntries(
       (registration.child_custom_data ?? []).map((entry) => [
-        String(entry.child_id),
+        entry.child_id,
         entry.custom_data ?? {},
       ]),
     ),
-    criteria: (registration.criteria ?? []).map((criterion) => ({
-      criterionId: String(criterion.criterion_id),
-      name: criterion.name,
-      question: criterion.question,
-      scope: criterion.scope,
-      childId: criterion.child_id === null ? null : String(criterion.child_id),
-      stated: criterion.stated,
-      checked: criterion.checked,
-      checkedAt: criterion.checked_at,
-    })),
-    mails: (registration.mails ?? []).map((mail) => ({
-      kind: mail.kind,
-      outcome: mail.outcome,
-      createdAt: mail.created_at ?? null,
-    })),
+    criteria: criteriaFromBackend(registration.criteria),
+    mails: (registration.mails ?? []).flatMap((mail) => {
+      const kind = knownEnum(MAIL_KINDS, mail.kind);
+      const outcome = knownMailOutcome(mail.outcome);
+      return kind && outcome
+        ? [{ kind, outcome, createdAt: mail.created_at ?? null }]
+        : [];
+    }),
   };
 }
 
@@ -725,7 +767,7 @@ export async function uploadHolidayProof(
     { method: "POST", body, credentials: "include" },
   );
   const payload = (await response.json().catch(() => null)) as {
-    data?: BackendDetail;
+    data?: DetailWire;
   } | null;
   if (!response.ok || !payload?.data) {
     throw apiErrorFromBody(
@@ -758,11 +800,13 @@ export async function fetchHolidayRegistrations(
   periodId: string,
   filter: HolidayRegistrationFilter,
 ): Promise<HolidayRegistrationList> {
-  const list = await traegerRequest<BackendList>(
+  const list = await traegerRequest<WireList>(
     `${registrationsPath(periodId)}${holidayRegistrationQuery(filter)}`,
   );
   return {
-    registrations: (list.registrations ?? []).map(summaryFromBackend),
+    registrations: (list.registrations ?? [])
+      .filter(knownRegistration)
+      .map(summaryFromBackend),
     total: list.total,
     statusCounts: {
       received: list.status_counts?.received ?? 0,
@@ -778,7 +822,7 @@ export async function fetchHolidayRegistration(
   registrationId: string,
 ): Promise<HolidayRegistrationDetail> {
   return detailFromBackend(
-    await traegerRequest<BackendDetail>(
+    await traegerRequest<DetailWire>(
       registrationPath(periodId, registrationId),
     ),
   );
@@ -798,16 +842,11 @@ export async function fetchHolidayKnownChildren(
   const query = registrationId
     ? `?registration_id=${encodeURIComponent(registrationId)}`
     : "";
-  const known = await traegerRequest<{
-    children?: { child_id: number; school_id: number }[] | null;
-  } | null>(
+  const known = await traegerRequest<HolidayKnownChildrenResponse>(
     `/api/traeger/holiday-periods/${encodeURIComponent(periodId)}/registrations/known-children${query}`,
   );
   return new Map(
-    (known?.children ?? []).map((child) => [
-      String(child.child_id),
-      String(child.school_id),
-    ]),
+    (known.children ?? []).map((child) => [child.child_id, child.school_id]),
   );
 }
 
@@ -819,23 +858,13 @@ export async function fetchHolidayKnownChildren(
 export async function fetchHolidayRegistrationMailProblems(
   periodId: string,
 ): Promise<ReadonlyMap<string, readonly HolidayRegistrationMailProblem[]>> {
-  const answer = await traegerRequest<{
-    registrations?:
-      | {
-          registration_id: number;
-          mail_problems?: HolidayRegistrationMailProblem[] | null;
-        }[]
-      | null;
-  } | null>(
+  const answer = await traegerRequest<HolidayMailProblemsResponse>(
     `/api/traeger/holiday-periods/${encodeURIComponent(periodId)}/registrations/mail-problems`,
   );
   return new Map(
-    (answer?.registrations ?? []).map((registration) => [
-      String(registration.registration_id),
-      (registration.mail_problems ?? []).map((problem) => ({
-        kind: problem.kind,
-        state: problem.state,
-      })),
+    (answer.registrations ?? []).map((registration) => [
+      registration.registration_id,
+      mailProblemsFromBackend(registration.mail_problems),
     ]),
   );
 }
@@ -848,13 +877,13 @@ export async function fetchHolidayRegistrationHealth(
   periodId: string,
   registrationId: string,
 ): Promise<HolidayRegistrationHealthDetail> {
-  const health = await traegerRequest<BackendHealthDetail>(
+  const health = await traegerRequest<WireHealthDetail>(
     `${registrationPath(periodId, registrationId)}/health`,
   );
   return {
     answers: health.custom_data ?? {},
     children: (health.children ?? []).map((child) => ({
-      childId: String(child.child_id),
+      childId: child.child_id,
       allergies: child.allergies,
       medication: child.medication,
       healthNotes: child.health_notes,
@@ -896,7 +925,7 @@ export async function changeHolidayRegistration(
   action: HolidayRegistrationAction,
 ): Promise<HolidayRegistrationDetail> {
   return detailFromBackend(
-    await traegerRequest<BackendDetail>(
+    await traegerRequest<DetailWire>(
       `${registrationPath(periodId, registrationId)}/${action}`,
       { method: "POST", body: {} },
     ),
@@ -913,7 +942,7 @@ export async function checkHolidayRegistrationCriteria(
   checks: readonly HolidayCriterionCheck[],
 ): Promise<HolidayRegistrationDetail> {
   return detailFromBackend(
-    await traegerRequest<BackendDetail>(
+    await traegerRequest<DetailWire>(
       `${registrationPath(periodId, registrationId)}/criteria`,
       {
         method: "PUT",
@@ -923,7 +952,7 @@ export async function checkHolidayRegistrationCriteria(
             child_id: check.childId === null ? null : Number(check.childId),
             checked: check.checked,
           })),
-        },
+        } satisfies HolidayCriteriaCheckRequest,
       },
     ),
   );
@@ -940,9 +969,9 @@ export async function setHolidayChildWish(
   wish: "yes" | "no",
 ): Promise<HolidayRegistrationDetail> {
   return detailFromBackend(
-    await traegerRequest<BackendDetail>(
+    await traegerRequest<DetailWire>(
       `${registrationPath(periodId, registrationId)}/children/${encodeURIComponent(childId)}/holiday-wish`,
-      { method: "PUT", body: { wish } },
+      { method: "PUT", body: { wish } satisfies HolidayWishRequest },
     ),
   );
 }
@@ -955,20 +984,20 @@ export async function rebookHolidayChild(
   bookings: readonly HolidayBookingChange[],
 ): Promise<HolidayRegistrationDetail> {
   return detailFromBackend(
-    await traegerRequest<BackendDetail>(
+    await traegerRequest<DetailWire>(
       `/api/traeger/holiday-contributions/${encodeURIComponent(periodId)}/registrations/${encodeURIComponent(registrationId)}/children/${encodeURIComponent(childId)}/bookings`,
       {
         method: "PUT",
         body: {
-          bookings: bookings.map((booking) => ({
+          bookings: bookings.map((booking): HolidayBookingChoice => ({
             week_id: Number(booking.weekId),
             time_model_id: Number(booking.timeModelId),
             ...(booking.days && booking.days.length > 0
-              ? { days: booking.days }
+              ? { days: [...booking.days] }
               : {}),
             ...(booking.lunch ? { lunch: true } : {}),
           })),
-        },
+        } satisfies HolidayRebookingRequest,
       },
     ),
   );
@@ -1037,11 +1066,19 @@ function personBody(person: HolidayRegistrationPersonEdit) {
   };
 }
 
+function contactBody(contact: HolidayRegistrationContactEdit) {
+  return {
+    name: contact.name,
+    phone: contact.phone,
+    relationship: contact.relationship,
+  };
+}
+
 /** The request body; the field names are those of the public form. */
 function holidayRegistrationEditBody(
   edit: HolidayRegistrationEdit,
-): Record<string, unknown> {
-  const body: Record<string, unknown> = {};
+): HolidayRegistrationEditRequest {
+  const body: HolidayRegistrationEditRequest = {};
   if (edit.guardians) {
     body.guardian = personBody(edit.guardians.guardian);
     const address = edit.guardians.address;
@@ -1067,15 +1104,15 @@ function holidayRegistrationEditBody(
           ? Number(edit.child.homeSchoolId)
           : 0,
         guest_school_name: edit.child.guestSchoolName,
-        custom_data: edit.child.answers,
+        custom_data: { ...edit.child.answers },
       },
     ];
   }
   if (edit.contacts) {
-    body.emergency_contacts = edit.contacts.emergency;
-    body.pickup_persons = edit.contacts.pickup;
+    body.emergency_contacts = edit.contacts.emergency.map(contactBody);
+    body.pickup_persons = edit.contacts.pickup.map(contactBody);
   }
-  if (edit.answers) body.custom_data = edit.answers;
+  if (edit.answers) body.custom_data = { ...edit.answers };
   return body;
 }
 
@@ -1086,7 +1123,7 @@ export async function editHolidayRegistration(
   edit: HolidayRegistrationEdit,
 ): Promise<HolidayRegistrationDetail> {
   return detailFromBackend(
-    await traegerRequest<BackendDetail>(
+    await traegerRequest<DetailWire>(
       `${registrationPath(periodId, registrationId)}/details`,
       { method: "PUT", body: holidayRegistrationEditBody(edit) },
     ),
@@ -1186,16 +1223,14 @@ export interface HolidayConfirmationSettings {
 }
 
 export async function fetchHolidayConfirmationSettings(): Promise<HolidayConfirmationSettings> {
-  const settings = await traegerRequest<{
-    debtor_number_required: boolean;
-    debtor_number_format?: WireDebtorNumberFormat | null;
-    cost_bearers?: { id: number; name: string }[] | null;
-  }>("/api/traeger/holiday-contributions/confirmation-settings");
+  const settings = await traegerRequest<WireConfirmationSettings>(
+    "/api/traeger/holiday-contributions/confirmation-settings",
+  );
   return {
     debtorNumberRequired: settings.debtor_number_required,
     debtorNumberFormat: debtorNumberFormatOf(settings.debtor_number_format),
     costBearers: (settings.cost_bearers ?? []).map((bearer) => ({
-      id: String(bearer.id),
+      id: bearer.id,
       name: bearer.name,
     })),
   };
@@ -1205,7 +1240,8 @@ export async function fetchHolidayConfirmationSettings(): Promise<HolidayConfirm
 interface HolidayWaitlistEntry {
   readonly position: number;
   readonly registrationId: string;
-  readonly registrationStatus: HolidayRegistrationStatus;
+  /** Undefined for a status this build does not know. */
+  readonly registrationStatus: HolidayRegistrationStatus | undefined;
   readonly submittedAt: string;
   readonly childId: string;
   readonly childFirstName: string;
@@ -1238,61 +1274,43 @@ export interface HolidayWeekPlaces {
   readonly days?: readonly { readonly date: string; readonly placed: number }[];
 }
 
-interface BackendWeekPlaces {
-  week_id: number;
-  starts_on: string;
-  ends_on: string;
-  host_school_id: number;
-  capacity: number | null;
-  placed: number;
-  pending?: number;
-  booking_unit?: "week" | "day";
-  days?: { date: string; placed: number }[] | null;
-  waitlist?:
-    | {
-        position: number;
-        registration_id: number;
-        registration_status: HolidayRegistrationStatus;
-        submitted_at: string;
-        child_id: number;
-        child_first_name: string;
-        child_last_name: string;
-        time_model_name: string;
-        deferred?: boolean;
-        days?: string[] | null;
-      }[]
-    | null;
-}
-
 /** The places and waiting lists of every week of a period (#4699). */
 export async function fetchHolidayWeekPlaces(
   periodId: string,
 ): Promise<readonly HolidayWeekPlaces[]> {
-  const weeks = await traegerRequest<BackendWeekPlaces[] | null>(
+  const weeks = await traegerRequest<WireWeekPlaces[]>(
     `/api/traeger/holiday-periods/${encodeURIComponent(periodId)}/places`,
   );
-  return (weeks ?? []).map((week) => ({
-    weekId: String(week.week_id),
-    startsOn: week.starts_on,
-    endsOn: week.ends_on,
-    hostSchoolId: String(week.host_school_id),
+  return weeks.map((week) => ({
+    weekId: week.week_id,
+    startsOn: requiredDay(week.starts_on, "holiday_week_places.starts_on"),
+    endsOn: requiredDay(week.ends_on, "holiday_week_places.ends_on"),
+    hostSchoolId: week.host_school_id,
     capacity: week.capacity,
     placed: week.placed,
-    pending: week.pending ?? 0,
-    bookingUnit: week.booking_unit ?? "week",
-    days: week.days ?? [],
-    waitlist: (week.waitlist ?? []).map((entry) => ({
-      position: entry.position,
-      registrationId: String(entry.registration_id),
-      registrationStatus: entry.registration_status,
-      submittedAt: entry.submitted_at,
-      childId: String(entry.child_id),
-      childFirstName: entry.child_first_name,
-      childLastName: entry.child_last_name,
-      timeModelName: entry.time_model_name,
-      deferred: entry.deferred ?? false,
-      ...(entry.days?.length ? { days: entry.days } : {}),
+    pending: week.pending,
+    // Go sets the unit on every week; "week" is its default.
+    bookingUnit: knownEnum(BOOKING_UNITS, week.booking_unit) ?? "week",
+    days: (week.days ?? []).map((day) => ({
+      date: requiredDay(day.date, "holiday_day_places.date"),
+      placed: day.placed,
     })),
+    waitlist: (week.waitlist ?? []).map((entry) => {
+      const days = presentDays(entry.days);
+      return {
+        position: entry.position,
+        registrationId: entry.registration_id,
+        // Only shown; an unknown status shows „–“.
+        registrationStatus: knownEnum(STATUSES, entry.registration_status),
+        submittedAt: entry.submitted_at,
+        childId: entry.child_id,
+        childFirstName: entry.child_first_name,
+        childLastName: entry.child_last_name,
+        timeModelName: entry.time_model_name,
+        deferred: entry.deferred,
+        ...(days.length > 0 ? { days } : {}),
+      };
+    }),
   }));
 }
 
@@ -1306,9 +1324,9 @@ export async function setHolidayWeekCapacity(
   weekId: string,
   capacity: number | null,
 ): Promise<{ readonly movedUp: readonly string[] }> {
-  const change = await traegerRequest<{ moved_up?: number[] | null }>(
+  const change = await traegerRequest<HolidayPlaceChange>(
     `/api/traeger/holiday-contributions/${encodeURIComponent(periodId)}/weeks/${encodeURIComponent(weekId)}/capacity`,
-    { method: "PUT", body: { capacity } },
+    { method: "PUT", body: { capacity } satisfies HolidayCapacityRequest },
   );
-  return { movedUp: (change.moved_up ?? []).map(String) };
+  return { movedUp: change.moved_up ?? [] };
 }
