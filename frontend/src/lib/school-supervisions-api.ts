@@ -141,7 +141,7 @@ export const schoolSupervisionsApi = {
       await transportFetch(
         `${base}/${instanceId}/complete`,
         jsonRequest("POST", {
-          confirmed_present_student_ids: confirmedPresentStudentIds.map(Number),
+          confirmed_present_student_ids: confirmedPresentStudentIds,
         } satisfies CompleteOperationRequest),
       ),
     );
