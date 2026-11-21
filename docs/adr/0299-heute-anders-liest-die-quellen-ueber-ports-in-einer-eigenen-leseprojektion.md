@@ -218,3 +218,31 @@ Projektion nutzt „change“.
   zwei weitere (`ROLLBACK TO`, `RELEASE`) und einen neuen `SAVEPOINT`.
 - Die Namen der Quelle Personal liest die Wurzel jetzt ohne das
   Beschäftigungsprofil: Die Übersicht braucht nur Mitgliedschaft und Person.
+
+## Nachtrag 2026-11-20: Quelle Schließtage (#7664)
+
+- Die Quelle `closing_days` liest über School Calendars `ListClosingDays`
+  die Schließtage der Schule und die ihres aktuellen Trägers
+  ([ADR 0194](0194-schliessstage-lesen-die-aktuelle-schulzugehoerigkeit.md))
+  in einer Anweisung. Jeder Schließtag ist ein ganztägiger Eintrag unter
+  „Schule“ und steht dort vor allen anderen Einträgen. Der Name des
+  Schließtags ist der Text, den Schule oder Träger ihm gegeben haben; er ist
+  kein Grund einer Person.
+- Rechte-Regel: Ein Konto sieht die Schließtage, wenn es sie im Staff-Portal
+  schon lesen darf: `schedules:read` oder `schedules:manage` (Stundenplan,
+  Kalender) oder `time_tracking:own` oder `time_tracking:manage`
+  (Zeiterfassung), sonst Admin. Der Link auf „Schuljahr und Kalender“ kommt
+  nur mit `schedules:manage`, dem Recht dieser Seite.
+- Live: Anlegen, Ändern und Löschen eines Schließtags der Schule senden über
+  den bestehenden After-Commit-Haken der Stundenplan-Route das inhaltslose
+  `staffing_deviation_changed` (Quelle `closing_days`). Ein neuer Haken oder
+  ein neues Event hätte das schrumpfende Register der After-Commit-Haken
+  wachsen lassen. Ein Schließtag des Trägers hat noch kein Signal; die
+  Übersicht gleicht ihn beim Fokus und nach erneuter Verbindung ab.
+- Budget: Die Quellen teilen sich einen Savepoint (wie im Nachtrag zu #7667).
+  Die Personal-Quelle liest die heute vertretenen Gruppen aus den
+  Gruppenübergaben des Tages statt aus einer eigenen Lesung der Vertretungen
+  der Sitzung. Damit bleibt das Budget des Endpunkts bei 19 Anweisungen,
+  gemessen mit einem Konto, das die Schließtage liest.
+- Klassenausflug und Stundenplanänderung einer Klasse passen nicht mehr ins
+  Budget, ohne es zu erhöhen. Sie kommen in einem Folge-Ticket.

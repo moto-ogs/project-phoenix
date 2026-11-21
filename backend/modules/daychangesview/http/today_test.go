@@ -460,7 +460,8 @@ func TestDayChangesQueryBudget(t *testing.T) {
 		counter.Reset()
 		// Without users:read neither the Kinder source (#7665) nor the
 		// notices read; children_test.go measures both with users:read. The
-		// Dienstplan right keeps its source in this budget.
+		// Dienstplan right keeps its source in this budget and reads the
+		// closing days too (#7661, #7664).
 		overview, _ := read(t, router, account.ID, tenantID, "vacation:approve", "time_tracking:manage")
 		require.Len(t, overview.Entries, 3*n)
 		measured := counter.Measurement(counter.Queries())

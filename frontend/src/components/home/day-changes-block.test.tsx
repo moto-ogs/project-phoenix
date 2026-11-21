@@ -359,6 +359,44 @@ describe("DayChangesBlock", () => {
     ).toBeInTheDocument();
   });
 
+  it("nennt eine ausgefallene Quelle der Schließtage", () => {
+    serve({ failedSources: ["closing_days"] });
+    render(<DayChangesBlock />);
+    expect(
+      screen.getByText("Schließtage konnten gerade nicht geladen werden."),
+    ).toBeInTheDocument();
+  });
+
+  it("zeigt Schul- und Träger-Schließtage mit Link zum Kalender", () => {
+    serve({
+      entries: [
+        change({
+          kind: "closing_day",
+          link: { target: "calendar_periods", staffId: null },
+          closing: { name: "Pädagogischer Tag", traeger: false },
+        }),
+        change({
+          kind: "closing_day",
+          link: { target: "calendar_periods", staffId: null },
+          closing: { name: "Brückentag", traeger: true },
+        }),
+      ],
+    });
+    render(<DayChangesBlock />);
+
+    const school = within(screen.getByRole("region", { name: "Schule" }));
+    expect(
+      school.getByRole("link", {
+        name: "Die OGS ist heute geschlossen: Pädagogischer Tag.",
+      }),
+    ).toHaveAttribute("href", "/schule/calendar-periods");
+    expect(
+      school.getByRole("link", {
+        name: "Der Träger hat die OGS heute geschlossen: Brückentag.",
+      }),
+    ).toHaveAttribute("href", "/schule/calendar-periods");
+  });
+
   it("erfasst beim Klick auf einen Eintrag nur seine Art", () => {
     serve({ entries: [absent("Ben Kollege", "you")] });
     render(<DayChangesBlock />);

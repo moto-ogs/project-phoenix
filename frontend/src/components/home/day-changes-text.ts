@@ -219,6 +219,15 @@ function activityLeadChangedText(change: DayChange): string {
     : `Bei ${name} sind ${namesOf(absent)} heute nicht da.`;
 }
 
+function closingDayText(change: DayChange): string {
+  const closing = change.closing;
+  const name = closing?.name.trim();
+  if (!closing || !name) return "";
+  return closing.traeger
+    ? `Der Träger hat die OGS heute geschlossen: ${name}.`
+    : `Die OGS ist heute geschlossen: ${name}.`;
+}
+
 /** Der Satz je Art. Eine unbekannte Art zeigt die Übersicht nicht. */
 const DAY_CHANGE_TEXTS: Readonly<
   Record<string, (change: DayChange) => string>
@@ -245,6 +254,7 @@ const DAY_CHANGE_TEXTS: Readonly<
   activity_room_changed: (change) =>
     `${activityName(change, true)} ist heute in einem anderen Raum.`,
   activity_lead_changed: activityLeadChangedText,
+  closing_day: closingDayText,
 };
 
 export function dayChangeText(change: DayChange): string | null {
@@ -304,6 +314,7 @@ const SOURCE_FAILURE_TEXTS: Readonly<Record<string, string>> = {
   notices: "Hinweise der Leitung konnten gerade nicht geladen werden.",
   activities:
     "Änderungen an Angeboten und AGs konnten gerade nicht geladen werden.",
+  closing_days: "Schließtage konnten gerade nicht geladen werden.",
 };
 
 export function sourceFailureText(source: string): string {
@@ -342,6 +353,8 @@ export function dayChangeLinkHref(link: DayChangeLink | null): string | null {
       return link.studentId ? `/students/${link.studentId}` : null;
     case "staff_notices":
       return "/tagesinformationen";
+    case "calendar_periods":
+      return "/calendar-periods";
     case "day_plan":
       // Die Zeile ersetzt den Weg durch den Tagesplan der Person
       // (useDayPlanHref); das hier ist der Weg der Betreuung.

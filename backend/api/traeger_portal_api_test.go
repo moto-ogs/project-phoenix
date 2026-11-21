@@ -28,7 +28,9 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
+	schoolCalendarHTTP "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http"
 	presenceCompose "github.com/moto-ogs/project-phoenix/modules/studentpresence/compose"
+	timetableHTTP "github.com/moto-ogs/project-phoenix/modules/timetable/http"
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -68,6 +70,17 @@ func newTraegerPortalAt(t *testing.T, today func() calendar.Date, now func() tim
 	require.NoError(t, err)
 	routes := traegerPortalRoutesOn(t, db, auth.Auth, unit, owners.HolidayTestSchoolCalendar{}, today, now)
 	return db, &traegerPortalHandler{Handler: testpkg.SessionVerifier(routes), mail: mail}, auth.Auth, unit
+}
+
+func newTraegerPortalWithStaffing(t *testing.T, staffing timetableHTTP.StaffingAnnouncer) (*bun.DB, *traegerPortalHandler) {
+	t.Helper()
+	db := testpkg.SetupTestDB(t)
+	unit := testpkg.TenantRuntime(t, db)
+	mail := testpkg.NewCapturingMailer()
+	auth, err := NewAuthTestModule(testpkg.NewDatabase(t, db), unit, WithAuthTestMailer(mail))
+	require.NoError(t, err)
+	routes := traegerPortalRoutesOnWithStaffing(t, db, auth.Auth, unit, owners.HolidayTestSchoolCalendar{}, calendar.TodayDate, time.Now, newTraegerClosingDayStaffingQueue(staffing, slog.Default()))
+	return db, &traegerPortalHandler{Handler: testpkg.SessionVerifier(routes), mail: mail}
 }
 
 // traegerPortalOn composes Identity & Access over db with a capturing
@@ -125,6 +138,10 @@ func traegerPortalRoutes(t *testing.T, db *bun.DB, identity TraegerPortalIdentit
 // the contract and billing routes compare their stamps with PostgreSQL's
 // now(), as before #7104.
 func traegerPortalRoutesOn(t *testing.T, db *bun.DB, identity TraegerPortalIdentity, unit tenant.UnitOfWork, days owners.HolidayTestSchoolCalendar, today func() calendar.Date, now func() time.Time) http.Handler {
+	return traegerPortalRoutesOnWithStaffing(t, db, identity, unit, days, today, now, nil)
+}
+
+func traegerPortalRoutesOnWithStaffing(t *testing.T, db *bun.DB, identity TraegerPortalIdentity, unit tenant.UnitOfWork, days owners.HolidayTestSchoolCalendar, today func() calendar.Date, now func() time.Time, staffing schoolCalendarHTTP.StaffingChangeQueue) http.Handler {
 	t.Helper()
 	database := testpkg.NewDatabase(t, db)
 	organizations, err := owners.NewOrganizationTenancy(database)
@@ -161,7 +178,7 @@ func traegerPortalRoutesOn(t *testing.T, db *bun.DB, identity TraegerPortalIdent
 	require.NoError(t, err)
 	mountParentBillingRoutes(router, router, organizations, settings, schoolSettings.Settings, presence, delivery.Module, providerBlockOutcomes{delivery.EmailOutcomes}, testHealthCipher(), bankCipher, days, today, now, slog.Default())
 	mountTraegerClosingDayRoutes(router, owners.NewTraegerCalendarSchools(organizations, schoolSettings.Settings), organizations,
-		owners.HolidayClosureMail{Delivery: delivery.Module, TraegerMails: delivery.TraegerMails}, days, closureTestHolidays{}, now)
+		owners.HolidayClosureMail{Delivery: delivery.Module, TraegerMails: delivery.TraegerMails}, days, closureTestHolidays{}, staffing, now)
 	mountHolidayClosureNotificationRoutes(router, router, organizations,
 		owners.HolidayClosureMail{Delivery: delivery.Module, TraegerMails: delivery.TraegerMails}, days, closureTestHolidays{}, slog.Default(), now)
 	mountCareContractRoutes(router, router, organizations, settings, schoolSettings.Settings, delivery.Module, providerBlockOutcomes{delivery.EmailOutcomes}, audit.DataAccessLog,

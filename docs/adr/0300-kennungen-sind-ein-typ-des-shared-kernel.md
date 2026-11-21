@@ -109,4 +109,3 @@ Entscheidung:
 Folgen: PyrePortal ist nicht betroffen, weil die IoT-Typen kein `ident.ID`
 tragen. Tests, die Fachtypen direkt mit `encoding/json` kodieren, sehen
 wieder Zahlen; Tests über den Router sehen Strings.
-

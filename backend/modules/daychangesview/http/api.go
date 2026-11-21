@@ -32,7 +32,7 @@ func RouteContracts() []common.RouteContract {
 		Response: daychangesview.Overview{},
 		Enums: []common.EnumContract{
 			{Type: daychangesview.Section(""), Values: []string{string(daychangesview.SectionYou), string(daychangesview.SectionSchool)}},
-			{Type: daychangesview.Source(""), Values: []string{string(daychangesview.SourceStaff), string(daychangesview.SourceChildren), string(daychangesview.SourceNotices), string(daychangesview.SourceActivities)}},
+			{Type: daychangesview.Source(""), Values: []string{string(daychangesview.SourceStaff), string(daychangesview.SourceChildren), string(daychangesview.SourceNotices), string(daychangesview.SourceClosingDays), string(daychangesview.SourceActivities)}},
 			{Type: daychangesview.SourceState(""), Values: []string{string(daychangesview.SourceLoaded), string(daychangesview.SourceFailed)}},
 			{Type: daychangesview.Kind(""), Values: []string{
 				string(daychangesview.KindStaffAbsent), string(daychangesview.KindStaffAbsentCount),
@@ -42,6 +42,7 @@ func RouteContracts() []common.RouteContract {
 				string(daychangesview.KindChildGoesAlone), string(daychangesview.KindChildPickupNote),
 				string(daychangesview.KindChildSummary),
 				string(daychangesview.KindStaffNotice),
+				string(daychangesview.KindClosingDay),
 				string(daychangesview.KindActivityCancelled), string(daychangesview.KindActivityReinstated),
 				string(daychangesview.KindActivityRoomChanged), string(daychangesview.KindActivityLeadChanged),
 			}},
@@ -54,7 +55,7 @@ func RouteContracts() []common.RouteContract {
 				string(daychangesview.LinkStaffAbsences), string(daychangesview.LinkStaffMember), string(daychangesview.LinkOwnAbsences),
 				string(daychangesview.LinkStaffList), string(daychangesview.LinkGroupHandovers),
 				string(daychangesview.LinkOwnShiftPlan), string(daychangesview.LinkShiftPlan), string(daychangesview.LinkStudent),
-				string(daychangesview.LinkStaffNotices), string(daychangesview.LinkDayPlan),
+				string(daychangesview.LinkStaffNotices), string(daychangesview.LinkCalendarPeriods), string(daychangesview.LinkDayPlan),
 			}},
 			{Type: daychangesview.NoticePriority(""), Values: []string{
 				string(daychangesview.NoticeInfo), string(daychangesview.NoticeImportant),

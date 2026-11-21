@@ -22654,6 +22654,7 @@
         "child_pickup_changed",
         "child_pickup_note",
         "child_summary",
+        "closing_day",
         "group_substitution",
         "group_substitution_count",
         "shift_cancelled",
@@ -22667,6 +22668,7 @@
     {
       "name": "LinkTarget",
       "values": [
+        "calendar_periods",
         "day_plan",
         "group_handovers",
         "own_absences",
@@ -22743,6 +22745,7 @@
       "values": [
         "activities",
         "children",
+        "closing_days",
         "notices",
         "staff"
       ]
@@ -46018,6 +46021,24 @@
       ]
     },
     {
+      "name": "DayClosing",
+      "go_type": "daychangesview.DayClosing",
+      "fields": [
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "traeger",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "DayHandover",
       "go_type": "classday.DayHandover",
       "fields": [
@@ -48808,6 +48829,14 @@
             "kind": "ref",
             "nullable": true,
             "ref": "DayNotice"
+          }
+        },
+        {
+          "name": "closing",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "DayClosing"
           }
         },
         {

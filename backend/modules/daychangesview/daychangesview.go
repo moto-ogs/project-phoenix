@@ -34,6 +34,9 @@ const (
 	SourceChildren Source = "children"
 	// SourceNotices is Hinweise der Leitung: the notices that apply today.
 	SourceNotices Source = "notices"
+	// SourceClosingDays is Schule: the closing days of the school and of its
+	// current Träger (#7664).
+	SourceClosingDays Source = "closing_days"
 	// SourceActivities is Stundenplan: cancelled, reinstated, moved and
 	// covered activity blocks (#7662).
 	SourceActivities Source = "activities"
@@ -85,6 +88,9 @@ const (
 	KindChildSummary Kind = "child_summary"
 	// KindStaffNotice: a Hinweis der Leitung applies today.
 	KindStaffNotice Kind = "staff_notice"
+	// KindClosingDay: the school is closed today, by its own closing day or
+	// one of its Träger (#7664).
+	KindClosingDay Kind = "closing_day"
 	// KindActivityCancelled: an activity block does not take place today.
 	KindActivityCancelled Kind = "activity_cancelled"
 	// KindActivityReinstated: its cancellation was taken back.
@@ -136,6 +142,9 @@ const (
 	LinkStudent LinkTarget = "student"
 	// LinkStaffNotices is the page of the Hinweise der Leitung.
 	LinkStaffNotices LinkTarget = "staff_notices"
+	// LinkCalendarPeriods is the page of the school year with the closing
+	// days.
+	LinkCalendarPeriods LinkTarget = "calendar_periods"
 	// LinkDayPlan is the day plan of today, where the blocks stand.
 	LinkDayPlan LinkTarget = "day_plan"
 )
@@ -219,6 +228,14 @@ type DayNotice struct {
 	Acknowledged            bool           `json:"acknowledged"`
 }
 
+// DayClosing is a closing day of the day. Name is the school's or the
+// Träger's own name for it ("Pädagogischer Tag"); Traeger marks one the
+// Träger planned.
+type DayClosing struct {
+	Name    string `json:"name"`
+	Traeger bool   `json:"traeger"`
+}
+
 // BlockRoom is the room an entry names.
 type BlockRoom struct {
 	ID   int64  `json:"id,string"`
@@ -260,6 +277,8 @@ type SourceEntry struct {
 	ChildSummary *ChildSummary
 	// Notice is set on KindStaffNotice only.
 	Notice *DayNotice
+	// Closing is set on KindClosingDay only.
+	Closing *DayClosing
 	// Activity is set on the activity kinds (#7662). Room is where the block
 	// takes place, PreviousRoom where its series plans it when it moved.
 	Activity     *BlockActivity
@@ -279,13 +298,14 @@ type Entry struct {
 	// StartsAt and EndsAt are instants; the frontend shows the school's wall
 	// clock (a shift's time, #7661) and folds a change whose end has passed into
 	// "erledigt" (#7660).
-	StartsAt *time.Time `json:"starts_at"`
-	EndsAt   *time.Time `json:"ends_at"`
-	People   []Person   `json:"people"`
-	Group    *Group     `json:"group"`
-	Link     *Link      `json:"link"`
-	Count    *int       `json:"count"`
-	Notice   *DayNotice `json:"notice"`
+	StartsAt *time.Time  `json:"starts_at"`
+	EndsAt   *time.Time  `json:"ends_at"`
+	People   []Person    `json:"people"`
+	Group    *Group      `json:"group"`
+	Link     *Link       `json:"link"`
+	Count    *int        `json:"count"`
+	Notice   *DayNotice  `json:"notice"`
+	Closing  *DayClosing `json:"closing"`
 	// Child is set on the child kinds, ChildSummary on child_summary.
 	Child        *Child        `json:"child"`
 	ChildSummary *ChildSummary `json:"child_summary"`
@@ -337,6 +357,12 @@ type StaffNotices interface {
 	StaffNotices(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
 }
 
+// ClosingDays is the Schule port for the closing days: those of the school
+// and of its current Träger that cover the day, as the caller may see them.
+type ClosingDays interface {
+	ClosingDays(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
+}
+
 // Isolation runs source reads so that a failure leaves the request's
 // transaction usable (a savepoint). It returns the source's own error
 // unchanged and reports a failure of the isolation itself as fatal.
@@ -358,6 +384,7 @@ type Dependencies struct {
 	Staff     StaffChanges
 	Children  ChildChanges
 	Notices   StaffNotices
+	Closing   ClosingDays
 	// Activities is the Stundenplan source (#7662).
 	Activities ActivityChanges
 	Logger     *slog.Logger
@@ -385,7 +412,7 @@ type view struct {
 
 // New builds the projection.
 func New(deps Dependencies) (Query, error) {
-	if deps.Today == nil || deps.Isolation == nil || deps.Staff == nil || deps.Children == nil || deps.Notices == nil || deps.Activities == nil {
+	if deps.Today == nil || deps.Isolation == nil || deps.Staff == nil || deps.Children == nil || deps.Notices == nil || deps.Closing == nil || deps.Activities == nil {
 		return nil, ErrDependencies
 	}
 	logger := deps.Logger
@@ -401,6 +428,7 @@ func New(deps Dependencies) (Query, error) {
 			{source: SourceStaff, read: deps.Staff.StaffChanges},
 			{source: SourceChildren, read: deps.Children.ChildChanges},
 			{source: SourceNotices, read: deps.Notices.StaffNotices},
+			{source: SourceClosingDays, read: deps.Closing.ClosingDays},
 			{source: SourceActivities, read: deps.Activities.ActivityChanges},
 		},
 	}, nil
@@ -483,7 +511,7 @@ func toEntry(entry SourceEntry) Entry {
 		Kind: entry.Kind, Section: section, AllDay: entry.StartsAt == nil, HalfDay: entry.HalfDay,
 		Since: entry.Since, Until: entry.Until, StartsAt: entry.StartsAt, EndsAt: entry.EndsAt,
 		People: people, Group: entry.Group, Link: entry.Link, Count: entry.Count, Notice: entry.Notice,
-		Child: entry.Child, ChildSummary: entry.ChildSummary,
+		Closing: entry.Closing, Child: entry.Child, ChildSummary: entry.ChildSummary,
 		Activity: entry.Activity, Room: entry.Room, PreviousRoom: entry.PreviousRoom,
 	}
 }
@@ -518,6 +546,9 @@ func sortEntries(entries []Entry) {
 
 func rank(entry Entry) int {
 	switch {
+	// The school is closed: that stands above every other change (#7664).
+	case entry.Kind == KindClosingDay:
+		return -2
 	case entry.Notice != nil && entry.Notice.RequiresAcknowledgement && !entry.Notice.Acknowledged:
 		return -1
 	case entry.Count != nil || entry.ChildSummary != nil:

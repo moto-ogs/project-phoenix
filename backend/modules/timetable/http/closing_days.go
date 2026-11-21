@@ -14,6 +14,13 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
+// closingDayChangeSource names a saved closing day in the tenant-wide
+// staffing_deviation_changed signal (#7664). Series skip a closing day when
+// they plan, and the open pages that show the day („Heute anders“, the
+// planner, the calendar periods) refetch on that signal. It carries no
+// content and runs after the commit.
+const closingDayChangeSource = "closing_days"
+
 // ClosingDayRequest represents a create/update request for a closing day
 // range (#1418 3b).
 type ClosingDayRequest struct {
@@ -129,6 +136,7 @@ func (rs *Resource) createClosingDay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	rs.broadcastStaffingDeviationChanged(r.Context(), closingDayChangeSource)
 	common.Respond(w, r, http.StatusCreated, mapClosingDayToResponse(day), "Closing day created successfully")
 }
 
@@ -170,6 +178,7 @@ func (rs *Resource) updateClosingDay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	rs.broadcastStaffingDeviationChanged(r.Context(), closingDayChangeSource)
 	common.Respond(w, r, http.StatusOK, mapClosingDayToResponse(updated), "Closing day updated successfully")
 }
 
@@ -194,6 +203,7 @@ func (rs *Resource) deleteClosingDay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	rs.broadcastStaffingDeviationChanged(r.Context(), closingDayChangeSource)
 	common.Respond(w, r, http.StatusOK, nil, "Closing day deleted successfully")
 }
 

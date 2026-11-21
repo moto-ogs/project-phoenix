@@ -33,8 +33,8 @@ import (
 
 // dayChangesCaller is the Identity & Access read of the caller's staff
 // record and own groups. The groups the caller covers on the day come from
-// the day's Gruppenübergaben the source reads anyway (#7661): one read less,
-// and the same day as the overview.
+// the day's Gruppenübergaben the source reads anyway (#7661, #7664): one
+// read less, and the same day as the overview.
 type dayChangesCaller interface {
 	CurrentStaffID(ctx context.Context) (int64, bool, error)
 	MyGroupIDs(ctx context.Context) ([]int64, error)
@@ -97,6 +97,8 @@ type DayChangesSources struct {
 	Students  dayChangesStudents
 	// Notices is Timetable's read of the Hinweise der Leitung (#7667).
 	Notices dayChangesNoticeReads
+	// ClosingDays is School Calendar's read of the closing days (#7664).
+	ClosingDays dayChangesClosingDayReads
 	// Blocks is Timetable's read of the day's changed blocks (#7662).
 	Blocks dayChangesBlocks
 	Today  func() calendar.Date
@@ -114,6 +116,9 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 	if sources.Notices == nil {
 		return nil, fmt.Errorf("%w: notice source", daychangesview.ErrDependencies)
 	}
+	if sources.ClosingDays == nil {
+		return nil, fmt.Errorf("%w: closing day source", daychangesview.ErrDependencies)
+	}
 	if sources.Blocks == nil {
 		return nil, fmt.Errorf("%w: timetable source", daychangesview.ErrDependencies)
 	}
@@ -123,6 +128,7 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 		Staff:      dayChangesStaff{sources: sources},
 		Children:   dayChangesChildren{sources: sources},
 		Notices:    dayChangesNotices{reads: sources.Notices},
+		Closing:    dayChangesClosingDays{reads: sources.ClosingDays},
 		Activities: dayChangesActivities{sources: sources},
 		Logger:     sources.Logger,
 	})
