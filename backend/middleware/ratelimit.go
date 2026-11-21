@@ -38,7 +38,7 @@ type RateLimiter struct {
 	exemptPrefixes    []string
 	exemptRequests    []func(*http.Request) bool
 	exemptLoopback    bool
-	now               func() time.Time // token clock; nil is the wall clock
+	Now               func() time.Time // token clock; nil is the wall clock
 	refusalsOnly      bool
 	alwaysSpends      func(*http.Request) bool
 }
@@ -79,17 +79,11 @@ func NewSharedRateLimiter(store RateLimitStore, requestsPerMinute, burst int) *R
 	}
 }
 
-// SetClock replaces the clock the token buckets refill by. Tests that spend
-// a whole burst stop it, so a slow runner cannot refill a token mid-burst.
-func (rl *RateLimiter) SetClock(now func() time.Time) {
-	rl.now = now
-}
-
 func (rl *RateLimiter) clock() time.Time {
-	if rl.now == nil {
+	if rl.Now == nil {
 		return time.Now()
 	}
-	return rl.now()
+	return rl.Now()
 }
 
 // SetLogger sets the security logger for the rate limiter

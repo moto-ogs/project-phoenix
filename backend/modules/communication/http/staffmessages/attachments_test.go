@@ -16,9 +16,11 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	staffmessaging "github.com/moto-ogs/project-phoenix/modules/communication/http/staffmessages"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
+	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 )
@@ -39,7 +41,12 @@ func setupAttachmentFixture(t *testing.T) groupFixture {
 	require.NoError(t, setSetting(testpkg.TenantContext(tenantID), settings.KeyStaffMessagingEnabled, true))
 	tenantRouter := chi.NewRouter()
 	tenantRouter.Mount("/api/staff-messages", module.TenantStaffMessagingRouterWithAttachmentsForTests())
-	return groupFixture{db: db, tenantRouter: tenantRouter, tenantID: tenantID}
+	schoolRouter := chi.NewRouter()
+	attachments := api.NewMessageAttachmentRoutesForTests(module.Attachments)
+	attachmentRouter := chi.NewRouter()
+	api.ProtectedSchoolRoutes(attachmentRouter, attachments.Register)
+	schoolRouter.Mount("/school-staff-messages", attachmentRouter)
+	return groupFixture{db: db, tenantRouter: tenantRouter, schoolRouter: schoolRouter, tenantID: tenantID}
 }
 
 func testPNG(t *testing.T, width, height int) []byte {
@@ -60,9 +67,13 @@ func (f groupFixture) upload(t *testing.T, who groupPerson, filename string, con
 	_, err = part.Write(content)
 	require.NoError(t, err)
 	require.NoError(t, writer.Close())
-	req := httptest.NewRequest(http.MethodPost, "/api/staff-messages/attachments", &body)
+	router, path := f.tenantRouter, "/api/staff-messages/attachments"
+	if who.claims.Scope == tenant.ScopeSchool {
+		router, path = f.schoolRouter, "/school-staff-messages/attachments"
+	}
+	req := httptest.NewRequest(http.MethodPost, path, &body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-	return testutil.ExecuteWithAuth(t, f.tenantRouter, req, who.claims)
+	return testutil.ExecuteWithAuth(t, router, req, who.claims)
 }
 
 func TestStaffMessageCarriesUploadedPhotoForParticipantsOnly(t *testing.T) {
@@ -74,6 +85,12 @@ func TestStaffMessageCarriesUploadedPhotoForParticipantsOnly(t *testing.T) {
 	thread := decodeData[staffmessaging.ThreadDetailResponse](t, opened.Body.Bytes())
 
 	photo := testPNG(t, 40, 30)
+	teacher := f.person(t, "Lena", "lehrkraft")
+	schoolUpload := f.upload(t, teacher, "schule.png", photo)
+	require.Equal(t, http.StatusCreated, schoolUpload.Code, schoolUpload.Body.String())
+	schoolAttachment := decodeData[attachmentWire](t, schoolUpload.Body.Bytes())
+	require.Equal(t, "schule.png", schoolAttachment.Filename)
+	require.Equal(t, "image/png", schoolAttachment.ContentType)
 	uploaded := f.upload(t, anna, "ausflug.png", photo)
 	require.Equal(t, http.StatusCreated, uploaded.Code, uploaded.Body.String())
 	attachment := decodeData[attachmentWire](t, uploaded.Body.Bytes())

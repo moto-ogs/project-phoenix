@@ -36,7 +36,7 @@ func TestPublicLinkLimitsAreNeverTighterThanTheGeneralLimiter(t *testing.T) {
 func stoppedClockRateLimiter(limit, burst int) *customMiddleware.RateLimiter {
 	limiter := customMiddleware.NewRateLimiter(limit, burst)
 	stopped := time.Date(2026, time.November, 20, 12, 0, 0, 0, time.UTC)
-	limiter.SetClock(func() time.Time { return stopped })
+	limiter.Now = func() time.Time { return stopped }
 	return limiter
 }
 

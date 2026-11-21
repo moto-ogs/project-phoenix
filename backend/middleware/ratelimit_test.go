@@ -196,7 +196,7 @@ func TestRateLimiterRefillsByItsClock(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2026, time.November, 20, 12, 0, 0, 0, time.UTC)
 	limiter := NewRateLimiter(60, 1)
-	limiter.SetClock(func() time.Time { return now })
+	limiter.Now = func() time.Time { return now }
 	handler := limiter.Middleware()(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	}))
