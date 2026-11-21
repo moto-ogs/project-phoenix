@@ -4,11 +4,11 @@
 // student_documents:legal, rest → users:update) and returns only what the
 // caller may see plus the caller's visible categories.
 
+import type * as wire from "~/lib/contract/students.generated";
 import { bffJson } from "./bff-fetch";
 import {
   mapAccidentReport,
   type AccidentReportDetails,
-  type BackendAccidentReport,
 } from "./student-accident-reports-api";
 
 interface StudentDocumentCategoryOption {
@@ -38,36 +38,10 @@ export interface StudentDocumentList {
   visibleCategories: StudentDocumentCategoryOption[];
 }
 
-interface BackendStudentDocument {
-  id: number | string;
-  student_id: number | string;
-  category: string;
-  category_label: string;
-  filename: string;
-  size_bytes: number;
-  content_type: string;
-  uploaded_at: string;
-  sensitive: boolean;
-  has_file: boolean;
-  accident_report?: BackendAccidentReport;
-}
-
-interface BackendStudentDocumentCategory {
-  value: string;
-  label: string;
-  sensitive: boolean;
-}
-
-interface BackendStudentDocumentList {
-  student_id: number | string;
-  documents: BackendStudentDocument[];
-  visible_categories: BackendStudentDocumentCategory[];
-}
-
-function mapDocument(data: BackendStudentDocument): StudentDocument {
+function mapDocument(data: wire.StudentDocumentResponse): StudentDocument {
   return {
-    id: data.id.toString(),
-    studentId: data.student_id.toString(),
+    id: data.id,
+    studentId: data.student_id,
     category: data.category,
     categoryLabel: data.category_label,
     filename: data.filename,
@@ -89,12 +63,12 @@ function documentsPath(studentId: string, documentId?: string): string {
 
 class StudentDocumentsService {
   async list(studentId: string): Promise<StudentDocumentList> {
-    const list = await bffJson<BackendStudentDocumentList>(
+    const list = await bffJson<wire.StudentDocumentListResponse>(
       documentsPath(studentId),
     );
     return {
-      documents: list.documents.map(mapDocument),
-      visibleCategories: list.visible_categories,
+      documents: (list.documents ?? []).map(mapDocument),
+      visibleCategories: list.visible_categories ?? [],
     };
   }
 

@@ -50,7 +50,7 @@ describe("student-companion-api", () => {
     it("fetches the companion list and maps ids to strings", async () => {
       mockSessionFetch.mockResolvedValueOnce(
         Response.json({
-          success: true,
+          status: "success",
           data: [
             {
               // The backend serializes the int64 id as a JSON number …
@@ -89,7 +89,7 @@ describe("student-companion-api", () => {
 
     it("returns an empty array for a null list or a 204", async () => {
       mockSessionFetch
-        .mockResolvedValueOnce(Response.json({ success: true, data: null }))
+        .mockResolvedValueOnce(Response.json({ status: "success", data: null }))
         .mockResolvedValueOnce(new Response(null, { status: 204 }));
 
       await expect(fetchStudentCompanions("42")).resolves.toEqual([]);

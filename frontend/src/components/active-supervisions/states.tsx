@@ -11,24 +11,12 @@ import { SectionCard } from "~/components/ui/section-card";
 import type { FormErrorInput } from "~/components/ui/form-error";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { ConfirmationModal } from "~/components/ui/modal";
-import { UnclaimedRooms } from "~/components/active/unclaimed-rooms";
 import { SCHULHOF_SUPERVISE_TOOLTIP } from "~/components/active-supervisions/supervision-action-hints";
 import { useSetBreadcrumb } from "~/lib/breadcrumb-context";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { Alert } from "~/components/ui/alert";
 import { useNFCEnabled } from "~/lib/tenant-context";
 import { roomsConcept } from "~/lib/concepts/rooms";
-
-interface MinimalActiveGroup {
-  id: string;
-  room?: { name?: string };
-}
-
-interface EmptyRoomsViewProps {
-  readonly onClaimed: () => void;
-  readonly cachedActiveGroups: MinimalActiveGroup[];
-  readonly currentStaffId: string | undefined;
-}
 
 interface SchulhofSuperviseButtonProps {
   readonly isToggling: boolean;
@@ -103,22 +91,10 @@ export function NoActiveSupervisionAccessView() {
 }
 
 // Suche und Filter stehen in der Kopfkarte der Seite; diese Ansicht trägt
-// nur noch die freien Räume und den Leerzustand.
-export function EmptyRoomsView({
-  onClaimed,
-  cachedActiveGroups,
-  currentStaffId,
-}: EmptyRoomsViewProps) {
+// nur noch den Leerzustand.
+export function EmptyRoomsView() {
   return (
     <>
-      <UnclaimedRooms
-        onClaimed={onClaimed}
-        activeGroups={
-          cachedActiveGroups.length > 0 ? cachedActiveGroups : undefined
-        }
-        currentStaffId={currentStaffId}
-      />
-
       {/* Der Zustand sitzt auf einer Fläche, nicht frei auf dem Grund. Die
           Hülle trägt nur das Ziel der Tour „Eine Aufsicht starten“ (#3748)
           und ist eine Flex-Spalte, damit die Fläche weiter wachsen darf. */}

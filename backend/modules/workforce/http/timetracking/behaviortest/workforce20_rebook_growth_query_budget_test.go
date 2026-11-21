@@ -37,7 +37,7 @@ func TestWorkforce20RebookGrowth(t *testing.T) {
 				require.Len(t, result.Data.Allowances, 1)
 				require.Equal(t, float64(n), result.Data.Allowances[0].BookingDays)
 				for i, row := range result.Data.Absences {
-					require.Equal(t, f.Absences[i], row.ID)
+					require.Equal(t, f.Absences[i], int64(row.ID))
 					require.Equal(t, "other", row.AbsenceType)
 					require.Equal(t, strconv.FormatInt(f.TypeID, 10), row.AbsenceTypeID)
 				}
@@ -80,10 +80,10 @@ func TestWorkforce20RebookGrowth(t *testing.T) {
 type workforce20RebookResponse struct {
 	Data struct {
 		Absences []struct {
-			ID               int64  `json:"id"`
-			AbsenceType      string `json:"absence_type"`
-			AbsenceTypeID    string `json:"absence_type_id"`
-			AbsenceTypeLabel string `json:"absence_type_label"`
+			ID               testpkg.ID `json:"id"`
+			AbsenceType      string     `json:"absence_type"`
+			AbsenceTypeID    string     `json:"absence_type_id"`
+			AbsenceTypeLabel string     `json:"absence_type_label"`
 		} `json:"absences"`
 		Days                float64 `json:"days"`
 		BalanceDeltaMinutes int     `json:"balance_delta_minutes"`

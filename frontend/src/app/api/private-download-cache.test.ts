@@ -66,8 +66,8 @@ const routes: Array<
   [
     "student export",
     "POST",
-    async () => (await import("./students/export/route")).POST,
-    {},
+    async () => (await import("./[...path]/route")).POST,
+    { path: ["students", "export"] },
   ],
   [
     "staff streaming export",
@@ -218,8 +218,10 @@ describe("private file responses (#5119)", () => {
         },
       }),
     );
-    const { POST } = await import("./students/export/route");
-    const response = await call(POST, "POST", {});
+    const { POST } = await import("./[...path]/route");
+    const response = await call(POST, "POST", {
+      path: ["students", "export"],
+    });
     expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
     expect(response.headers.get("Content-Type")).toBe(contentType);

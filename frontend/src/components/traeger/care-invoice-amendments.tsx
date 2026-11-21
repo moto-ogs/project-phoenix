@@ -32,6 +32,7 @@ import { MealPositionLine } from "./care-run-meals";
 import { formatEuro } from "./contribution-format";
 import type { CareAmendmentDraft } from "./care-invoice-amendment-modal";
 import { InvoiceLine } from "./invoice-line";
+import { labelOf } from "~/lib/label-of";
 
 /** "08.11.2026, 16:20" in Berlin time; date and time never part at a line end. */
 function formatInstant(value: string): string {
@@ -268,7 +269,7 @@ export function CareAmendedInvoiceCard({
             >
               <InvoiceLine
                 title={share.costBearerName}
-                detail={`übernimmt · ${COST_SHARE_KIND_LABELS[share.kind]}`}
+                detail={`übernimmt · ${labelOf(COST_SHARE_KIND_LABELS, share.kind, "Kostenträger")}`}
                 amount={formatEuro(-share.amountCents)}
                 amountClassName="text-moto-blue-strong"
               />
@@ -305,7 +306,7 @@ export function CareAmendedInvoiceCard({
   );
 }
 
-const KIND_LABELS: Record<CareAmendment["kind"], string> = {
+const KIND_LABELS: Record<NonNullable<CareAmendment["kind"]>, string> = {
   amount: "Betrag geändert",
   add_position: "Position hinzugefügt",
   remove_position: "Position entfernt",
@@ -318,6 +319,8 @@ const CONFLICT_TEXTS: Record<NonNullable<CareAmendment["conflict"]>, string> = {
   position_missing:
     "Diese Position gibt es nicht mehr. Die Änderung gilt nicht.",
   negative_total: "Die Rechnung käme unter 0 €. Die Änderung gilt nicht.",
+  other:
+    "Die Änderung gilt nicht. Lade die Seite neu, dann siehst du den Grund.",
 };
 
 /** "77,50 € → 70,00 €", the old and the new value of a change. */
@@ -343,6 +346,9 @@ function changeText(amendment: CareAmendment): string {
           ? `${value.address.street}, ${value.address.city}`
           : "ohne Anschrift";
       return `${place(before)} → ${place(after)}`;
+    }
+    case undefined: {
+      return formatEuro(amendment.amountCents);
     }
   }
 }
@@ -388,7 +394,7 @@ export function CareAmendmentHistoryCard({
                     <span
                       className={`font-semibold ${active ? "text-gray-900" : "text-gray-500 line-through"}`}
                     >
-                      {KIND_LABELS[amendment.kind]}
+                      {labelOf(KIND_LABELS, amendment.kind, "Änderung")}
                     </span>
                     {amendment.carriedFromNumber !== null ? (
                       <StatusBadge
@@ -439,7 +445,7 @@ export function CareAmendmentHistoryCard({
                       type="button"
                       variant="surface"
                       size="compact"
-                      aria-label={`${KIND_LABELS[amendment.kind]} zurücknehmen`}
+                      aria-label={`${labelOf(KIND_LABELS, amendment.kind, "Änderung")} zurücknehmen`}
                       tooltip="Öffnet ein Fenster, um die Änderung mit Grund zurückzunehmen."
                       onClick={() => onDraft({ kind: "revoke", amendment })}
                     >

@@ -8,65 +8,16 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 import ts from "typescript";
-import { describe, expect, it, vi } from "vitest";
-import { PROXY_ROUTES } from "~/test/proxy-routes.table";
+import { describe, expect, it } from "vitest";
 
 /**
- * Table test for every pure proxy route: a `route.ts` whose only top-level
- * code is `export const METHOD = proxyX(endpoint, options?)`. The proxy
- * factories, auth and error handling are tested once in
- * `src/lib/route-wrapper-proxy.test.ts`, `src/lib/route-wrapper.test.ts` and the
- * portal wrapper tests; per route only the portal, the backend path (with the
- * route params encoded) and the options (`raw`, `forwardQuery`, `maxBodyBytes`)
- * can differ. Those live in
- * capability-local JSON files under `src/test/proxy-routes/` fragments. The loader
- * rejects duplicate identities; a new pure proxy route without an expectation fails.
- *
- * The register only shrinks (#2352): `scripts/check-proxy-routes.mjs` fails a
- * pull request that adds a row. A backend route is registered in the contract
- * and answered by the portal's catalog proxy instead of a new route file.
- * The register is empty now, so any pure proxy route file fails here.
+ * A portal forwards its backend routes through one catalog proxy (#2352,
+ * ADR 0270). A `route.ts` whose only top-level code is
+ * `export const METHOD = proxyX(endpoint, options?)` has no place any more:
+ * register the backend route in the contract instead
+ * (docs/agents/frontend-api.md, "Generated contract"). A route with code of
+ * its own (session, upload, file answer, stream) is not affected.
  */
-
-type Portal =
-  "tenant" | "operator" | "parent" | "school" | "caterer" | "traeger";
-type Factory = "get" | "post" | "put" | "patch" | "delete";
-
-interface ProxyDescriptor {
-  portal: Portal;
-  factory: Factory;
-  endpoint: string | ((params: Record<string, unknown>) => string);
-  options?: ProxyOptions;
-}
-
-interface ProxyOptions {
-  raw?: boolean;
-  forwardQuery?: readonly string[];
-  maxBodyBytes?: number;
-}
-
-const proxyFactories = (portal: Portal) => {
-  const make =
-    (factory: Factory) =>
-    (endpoint: ProxyDescriptor["endpoint"], options?: ProxyOptions) =>
-      ({ portal, factory, endpoint, options }) satisfies ProxyDescriptor;
-  return {
-    proxyGet: make("get"),
-    proxyPost: make("post"),
-    proxyPut: make("put"),
-    proxyPatch: make("patch"),
-    proxyDelete: make("delete"),
-  };
-};
-
-vi.mock("~/lib/route-wrapper.server", () => proxyFactories("tenant"));
-vi.mock("~/lib/operator/route-wrapper.server", () =>
-  proxyFactories("operator"),
-);
-vi.mock("~/lib/parent/route-wrapper.server", () => proxyFactories("parent"));
-vi.mock("~/lib/school/route-wrapper.server", () => proxyFactories("school"));
-vi.mock("~/lib/caterer/route-wrapper.server", () => proxyFactories("caterer"));
-vi.mock("~/lib/traeger/route-wrapper.server", () => proxyFactories("traeger"));
 
 const appDir = path.resolve(__dirname, "..");
 const PROXY_CALL = /^proxy(Get|Post|Put|Patch|Delete)$/;
@@ -117,30 +68,6 @@ function isPureProxyRoute(file: string): boolean {
   return proxies > 0;
 }
 
-/** Each dynamic segment `[name]` gets `name/1`, so the path shows its encoding. */
-function sampleParams(route: string): Record<string, string> {
-  const params: Record<string, string> = {};
-  for (const [, name] of route.matchAll(/\[([^\]]+)\]/g)) {
-    if (name) params[name] = `${name}/1`;
-  }
-  return params;
-}
-
-function describeExport(route: string, method: string, value: unknown) {
-  const proxy = value as ProxyDescriptor;
-  const endpoint =
-    typeof proxy.endpoint === "function"
-      ? proxy.endpoint(sampleParams(route))
-      : proxy.endpoint;
-  const options = proxy.options ?? {};
-  const flags = [
-    options.raw ? "raw" : "",
-    options.forwardQuery ? `query=${options.forwardQuery.join(",")}` : "",
-    options.maxBodyBytes === undefined ? "" : `max=${options.maxBodyBytes}`,
-  ].filter(Boolean);
-  return [`${method} ${proxy.portal} ${endpoint}`, ...flags].join(" ");
-}
-
 const pureRoutes = readdirSync(appDir, { recursive: true, encoding: "utf8" })
   .filter((file) => path.basename(file) === "route.ts")
   .filter((file) => isPureProxyRoute(path.join(appDir, file)))
@@ -148,8 +75,8 @@ const pureRoutes = readdirSync(appDir, { recursive: true, encoding: "utf8" })
   .sort();
 
 describe("pure proxy routes", () => {
-  // Anchor for the empty register: the detector still finds a pass-through
-  // file and passes over a route with code of its own.
+  // The detector finds a pass-through file and passes over a route with code
+  // of its own.
   it.each([
     [
       'import { proxyGet } from "~/lib/route-wrapper.server";\nexport const GET = proxyGet("/api/x");\n',
@@ -170,22 +97,7 @@ describe("pure proxy routes", () => {
     }
   });
 
-  it("has exactly one table row per pure proxy route", () => {
-    expect(Object.keys(PROXY_ROUTES).sort()).toEqual(pureRoutes);
-  });
-
-  it.each(pureRoutes)("%s", async (route) => {
-    const routeModule = (await import(
-      path.join(appDir, route, "route.ts")
-    )) as Record<string, unknown>;
-
-    const actual = Object.entries(routeModule).map(([method, value]) => {
-      expect((value as ProxyDescriptor).factory).toBe(
-        method === "DELETE" ? "delete" : method.toLowerCase(),
-      );
-      return describeExport(route, method, value);
-    });
-
-    expect(actual.sort()).toEqual([...(PROXY_ROUTES[route] ?? [])].sort());
+  it("finds no pass-through route file", () => {
+    expect(pureRoutes).toEqual([]);
   });
 });

@@ -63,7 +63,6 @@
     "@sentry/nextjs": "^11.11.0",
     "@simplewebauthn/browser": "^14.0.0",
     "@t3-oss/env-nextjs": "^0.13.11",
-    "axios": "^1.21.0",
     "browser-image-compression": "^2.0.2",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",

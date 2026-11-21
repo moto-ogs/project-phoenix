@@ -871,6 +871,51 @@ describe("StaffCalendarPage", () => {
   });
 
   // Die Lehrkräfte erreicht ein Termin in moto schule (#4798).
+  // #2353: a failed recipient list is an error at the choice, not
+  // "Keine Treffer" in every group.
+  it("shows a failed recipient list as an error instead of no matches", async () => {
+    mockUseSWRAuth.mockImplementation((key: unknown) => {
+      const cacheKey = typeof key === "string" ? key : "";
+      if (cacheKey.startsWith("calendar-recipient-options")) {
+        return {
+          data: undefined,
+          error: new ApiError("recipients failed", 500, {
+            code: "general.server",
+            instance: "req-recipients",
+          }),
+          isLoading: false,
+          mutate: vi.fn(),
+        };
+      }
+      if (cacheKey.startsWith("staff-calendar")) {
+        return {
+          data: calendarResponse,
+          error: null,
+          isLoading: false,
+          mutate: mockMutate,
+        };
+      }
+      return {
+        data: undefined,
+        error: null,
+        isLoading: false,
+        mutate: vi.fn(),
+      };
+    });
+
+    render(<StaffCalendarPage />);
+    fireEvent.click(screen.getByRole("button", { name: "Neuer Termin" }));
+
+    expect(
+      await screen.findByText(
+        catalogText("general.server", "die Empfängerauswahl"),
+      ),
+    ).toBeInTheDocument();
+    for (const empty of screen.queryAllByText("Keine Treffer")) {
+      expect(empty).not.toBeVisible();
+    }
+  });
+
   it("invites all teachers as one target", async () => {
     render(<StaffCalendarPage />);
 

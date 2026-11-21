@@ -4212,6 +4212,33 @@ describe("StudentSearchPage", () => {
       ).toBeGreaterThan(0);
     });
 
+    // #2353: a failed group list is an error above the children, not a
+    // school without groups in the filter.
+    it("shows failed filter options as an error instead of empty filters", async () => {
+      const swrModule = await import("~/lib/swr");
+      vi.mocked(swrModule.useImmutableSWR).mockImplementation(
+        () =>
+          ({
+            data: undefined,
+            isLoading: false,
+            error: new ApiError("groups failed", 500, {
+              code: "general.server",
+              instance: "req-groups",
+            }),
+          }) as ReturnType<typeof swrModule.useImmutableSWR>,
+      );
+
+      render(<StudentSearchPage />);
+
+      expect(
+        await screen.findByText(
+          catalogText("general.server", "die Filterauswahl"),
+        ),
+      ).toBeInTheDocument();
+      // The children stay listed; only the filter choice is missing.
+      expect(screen.getAllByText(/^Max\b/).length).toBeGreaterThan(0);
+    });
+
     it("shows the room filter even without a room deep-link", async () => {
       render(<StudentSearchPage />);
 
@@ -4245,10 +4272,10 @@ describe("StudentSearchPage", () => {
       render(<StudentSearchPage />);
 
       await waitFor(() => {
-        expect(roomService.getRooms).toHaveBeenCalledWith(
-          { page: 1, pageSize: 1000 },
-          { strict: true },
-        );
+        expect(roomService.getRooms).toHaveBeenCalledWith({
+          page: 1,
+          pageSize: 1000,
+        });
       });
     });
 

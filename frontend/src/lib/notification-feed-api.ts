@@ -9,11 +9,7 @@ import {
   type NotificationFeedPage,
   type NotificationFeedPageWire,
 } from "./notification-feed-helpers";
-
-interface ProxyResponse<T> {
-  success: boolean;
-  data: T;
-}
+import type { ApiResponse } from "./api-envelope";
 
 interface UnreadCountWire {
   unread_count: number;
@@ -41,26 +37,26 @@ function notificationFeedApi(basePath: string): NotificationFeedApi {
         limit: String(NOTIFICATION_FEED_PAGE_SIZE),
       });
       if (cursor) query.set("cursor", cursor);
-      const response = await authFetch<ProxyResponse<NotificationFeedPageWire>>(
+      const response = await authFetch<ApiResponse<NotificationFeedPageWire>>(
         `${basePath}?${query.toString()}`,
       );
       return mapNotificationFeedPage(response.data);
     },
     async fetchUnreadCount() {
-      const response = await authFetch<ProxyResponse<UnreadCountWire>>(
+      const response = await authFetch<ApiResponse<UnreadCountWire>>(
         `${basePath}/unread-count`,
       );
       return response.data.unread_count;
     },
     async markRead(id) {
-      const response = await authFetch<ProxyResponse<UnreadCountWire>>(
+      const response = await authFetch<ApiResponse<UnreadCountWire>>(
         `${basePath}/${encodeURIComponent(id)}/read`,
         { method: "POST" },
       );
       return response.data.unread_count;
     },
     async markAllRead() {
-      const response = await authFetch<ProxyResponse<UnreadCountWire>>(
+      const response = await authFetch<ApiResponse<UnreadCountWire>>(
         `${basePath}/read-all`,
         { method: "POST" },
       );
@@ -81,7 +77,7 @@ export async function fetchNotificationFeed(
     limit: String(NOTIFICATION_FEED_PAGE_SIZE),
   });
   if (cursor) query.set("cursor", cursor);
-  const response = await authFetch<ProxyResponse<NotificationFeedPageWire>>(
+  const response = await authFetch<ApiResponse<NotificationFeedPageWire>>(
     `${apiBase}?${query.toString()}`,
   );
   return mapNotificationFeedPage(response.data);
@@ -90,7 +86,7 @@ export async function fetchNotificationFeed(
 export async function fetchNotificationFeedUnreadCount(
   apiBase: string,
 ): Promise<number> {
-  const response = await authFetch<ProxyResponse<UnreadCountWire>>(
+  const response = await authFetch<ApiResponse<UnreadCountWire>>(
     `${apiBase}/unread-count`,
   );
   return response.data.unread_count;
@@ -101,7 +97,7 @@ export async function markNotificationFeedEntryRead(
   apiBase: string,
   id: string,
 ): Promise<number> {
-  const response = await authFetch<ProxyResponse<UnreadCountWire>>(
+  const response = await authFetch<ApiResponse<UnreadCountWire>>(
     `${apiBase}/${encodeURIComponent(id)}/read`,
     { method: "POST" },
   );
@@ -112,7 +108,7 @@ export async function markNotificationFeedEntryRead(
 export async function markAllNotificationFeedRead(
   apiBase: string,
 ): Promise<number> {
-  const response = await authFetch<ProxyResponse<UnreadCountWire>>(
+  const response = await authFetch<ApiResponse<UnreadCountWire>>(
     `${apiBase}/read-all`,
     { method: "POST" },
   );

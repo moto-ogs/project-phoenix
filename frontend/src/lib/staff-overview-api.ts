@@ -8,59 +8,12 @@
 // ~/lib/auth-utils); it is not a fallback path but a different audience.
 
 import { apiErrorFromResponse } from "./api-error";
+import type {
+  DashboardSummary as DashboardSummaryWire,
+  TimeTrackingOverview,
+  TimeTrackingOverviewRow,
+} from "./contract/staff.generated";
 import { sessionFetch } from "./session-cache";
-
-// ─── Wire shapes (backend snake_case) ────────────────────────────────────────
-
-export interface BackendDashboardSummary {
-  active_staff_count: number;
-  sick_today: number;
-  vacation_today: number;
-  currently_clocked_in: number;
-  expected_clocked_in: number;
-  period: {
-    soll_minutes: number;
-    ist_minutes: number;
-    /**
-     * NOT ist − soll. It is the sum of the per-staff month balances
-     * (Ist + Gutschriften + Buchungen − Soll bis heute): sick and vacation days
-     * are credited with the day's target, which is the whole premise of the
-     * Stundenkonto. Any label must say so, or the school leadership reads a
-     * different number than the Monatskarte shows.
-     */
-    delta_minutes: number;
-  };
-  /**
-   * Account balance, not a period quantity — identical for week and month.
-   * Never render it inside the period row.
-   */
-  saldo_school_total_minutes: number;
-  pending_requests_count: number;
-}
-
-export interface BackendTimeTrackingOverviewRow {
-  staff_id: number | string;
-  first_name: string;
-  last_name: string;
-  name: string;
-  /** "" when the staff member has no employment type recorded. */
-  employment_type: string;
-  soll_minutes: number;
-  /** False when no Soll is maintained for the month (#6887). */
-  has_target: boolean;
-  ist_minutes: number;
-  /** Frozen closing balance for an actively closed month, live otherwise. */
-  balance_minutes: number;
-  remaining_vacation_days: number;
-  /** Tage im Monat mit Hinweis zu Pause oder Tageslimit (#4804). */
-  labor_hint_days?: number;
-}
-
-export interface BackendTimeTrackingOverview {
-  year: number;
-  month: number;
-  rows: BackendTimeTrackingOverviewRow[];
-}
 
 // ─── Frontend shapes (camelCase, string ids) ─────────────────────────────────
 
@@ -74,7 +27,18 @@ export interface DashboardSummary {
   expectedClockedIn: number;
   sollMinutes: number;
   istMinutes: number;
+  /**
+   * NOT ist − soll. It is the sum of the per-staff month balances
+   * (Ist + Gutschriften + Buchungen − Soll bis heute): sick and vacation days
+   * are credited with the day's target, which is the whole premise of the
+   * Stundenkonto. Any label must say so, or the school leadership reads a
+   * different number than the Monatskarte shows.
+   */
   deltaMinutes: number;
+  /**
+   * Account balance, not a period quantity — identical for week and month.
+   * Never render it inside the period row.
+   */
   saldoSchoolTotalMinutes: number;
   pendingRequestsCount: number;
 }
@@ -102,7 +66,7 @@ export interface TimeAccountOverview {
 }
 
 export function mapDashboardSummary(
-  data: BackendDashboardSummary,
+  data: DashboardSummaryWire,
 ): DashboardSummary {
   return {
     activeStaffCount: data.active_staff_count,
@@ -119,10 +83,10 @@ export function mapDashboardSummary(
 }
 
 export function mapTimeAccountRow(
-  data: BackendTimeTrackingOverviewRow,
+  data: TimeTrackingOverviewRow,
 ): TimeAccountRow {
   return {
-    staffId: data.staff_id.toString(),
+    staffId: data.staff_id,
     firstName: data.first_name,
     lastName: data.last_name,
     name: data.name,
@@ -132,7 +96,7 @@ export function mapTimeAccountRow(
     istMinutes: data.ist_minutes,
     balanceMinutes: data.balance_minutes,
     remainingVacationDays: data.remaining_vacation_days,
-    laborHintDays: data.labor_hint_days ?? 0,
+    laborHintDays: data.labor_hint_days,
   };
 }
 
@@ -164,7 +128,7 @@ export const staffOverviewService = {
       `/api/staff/dashboard-summary?period=${period}`,
     );
     return mapDashboardSummary(
-      await readJson<BackendDashboardSummary>(
+      await readJson<DashboardSummaryWire>(
         response,
         "Einrichtungs-Übersicht konnte nicht geladen werden",
       ),
@@ -202,7 +166,7 @@ export const staffOverviewService = {
     const response = await sessionFetch(
       `/api/staff/time-tracking/overview${suffix ? `?${suffix}` : ""}`,
     );
-    const data = await readJson<BackendTimeTrackingOverview>(
+    const data = await readJson<TimeTrackingOverview>(
       response,
       "Zeitkonten konnten nicht geladen werden",
     );

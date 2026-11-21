@@ -82,7 +82,7 @@ func seedHolidayCriteria(rt *Runtime, auth AuthRef) ([]int64, error) {
 	var envelope struct {
 		Data struct {
 			Criteria []struct {
-				ID int64 `json:"id"`
+				ID apiID `json:"id"`
 			} `json:"criteria"`
 		} `json:"data"`
 	}
@@ -91,7 +91,7 @@ func seedHolidayCriteria(rt *Runtime, auth AuthRef) ([]int64, error) {
 	}
 	ids := make([]int64, len(envelope.Data.Criteria))
 	for i, criterion := range envelope.Data.Criteria {
-		ids[i] = criterion.ID
+		ids[i] = int64(criterion.ID)
 	}
 	return ids, nil
 }
@@ -112,9 +112,9 @@ func seedPublishedHolidayLink(rt *Runtime, auth AuthRef, periodID int64) (seedHo
 		Data struct {
 			PublicToken string `json:"public_token"`
 			Weeks       []struct {
-				ID         int64 `json:"id"`
+				ID         apiID `json:"id"`
 				TimeModels []struct {
-					ID int64 `json:"id"`
+					ID apiID `json:"id"`
 				} `json:"time_models"`
 			} `json:"weeks"`
 		} `json:"data"`
@@ -124,7 +124,7 @@ func seedPublishedHolidayLink(rt *Runtime, auth AuthRef, periodID int64) (seedHo
 		return seedHolidayLink{}, fmt.Errorf("the holiday period by criteria has no link or no bookable week")
 	}
 	week := envelope.Data.Weeks[0]
-	return seedHolidayLink{token: envelope.Data.PublicToken, weekID: week.ID, modelID: week.TimeModels[0].ID}, nil
+	return seedHolidayLink{token: envelope.Data.PublicToken, weekID: int64(week.ID), modelID: int64(week.TimeModels[0].ID)}, nil
 }
 
 // seedHolidayCriteriaRegistrations registers four families with their
@@ -180,7 +180,7 @@ func seedHolidayFirstAllocation(rt *Runtime, auth AuthRef, periodID int64) error
 		Data struct {
 			Weeks []struct {
 				Pending []struct {
-					BookingID int64  `json:"booking_id"`
+					BookingID apiID  `json:"booking_id"`
 					Proposal  string `json:"proposal"`
 				} `json:"pending"`
 			} `json:"weeks"`

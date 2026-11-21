@@ -7,9 +7,26 @@
  * kommen aus dem Bundesland jeder Schule; das Bundesland legt das moto-Team
  * fest, der Träger sieht es nur.
  */
+import { requiredDay } from "./contract/required-day";
+import type {
+  Calendar as WireCalendar,
+  ClosingDay as WireClosingDay,
+  TraegerClosingDayDeleted,
+  TraegerClosingDayRequest,
+} from "./contract/traeger-closing-days.generated";
+import type {
+  HolidayClosedDay as WireClosedDay,
+  HolidayClosureImpact as WireImpact,
+  HolidayClosurePreviewRequest,
+  HolidayClosureWeek as WireWeek,
+  NotifiedPending,
+  NotifyAllRequest,
+  Pending as WirePending,
+  TraegerNotice as WireTraegerNotice,
+} from "./contract/traeger-holiday-closures.generated";
 import {
-  type BackendHolidayClosureNotice,
   type HolidayClosureNotice,
+  type HolidayClosureNoticeWire,
   mapHolidayClosureNotice,
 } from "./holiday-closure-notices";
 import { traegerRequest } from "./traeger-api";
@@ -90,27 +107,6 @@ export interface PendingHolidayClosures extends HolidayClosureImpact {
   readonly notices: readonly TraegerHolidayClosureNotice[];
 }
 
-interface BackendHolidayClosureWeek {
-  week_id: number;
-  period_name: string;
-  starts_on: string;
-  ends_on: string;
-  host_school_id: number;
-  closed_days?: { date: string; reason: string }[] | null;
-  reopened_days?: { date: string; reason: string }[] | null;
-  children: number;
-  waitlisted: number;
-  families: number;
-}
-
-interface BackendHolidayClosureImpact {
-  weeks?: BackendHolidayClosureWeek[] | null;
-  children?: number;
-  families?: number;
-  token?: string;
-  keeps_contribution?: boolean;
-}
-
 export interface TraegerCalendarSchool {
   readonly id: string;
   readonly name: string;
@@ -135,63 +131,39 @@ export interface TraegerCalendar {
   readonly regions: readonly TraegerRegionHolidays[];
 }
 
-interface BackendClosingDay {
-  id: number;
-  start_date: string;
-  end_date: string;
-  reason: string;
-  school_ids?: number[] | null;
-}
-
-interface BackendCalendar {
-  closing_days?: BackendClosingDay[] | null;
-  schools?:
-    | {
-        id: number;
-        name: string;
-        federal_state: { code: string; name: string };
-      }[]
-    | null;
-  holidays?:
-    | {
-        region: { code: string; name: string };
-        holidays?: { date: string; name: string }[] | null;
-      }[]
-    | null;
-}
-
 const basePath = "/api/traeger/closing-days";
 
-function mapTraegerClosingDay(day: BackendClosingDay): TraegerClosingDay {
+function mapTraegerClosingDay(day: WireClosingDay): TraegerClosingDay {
   return {
-    id: String(day.id),
-    startDate: day.start_date,
-    endDate: day.end_date,
+    id: day.id,
+    startDate: requiredDay(day.start_date, "closing_day.start_date"),
+    endDate: requiredDay(day.end_date, "closing_day.end_date"),
     reason: day.reason,
-    schoolIds: (day.school_ids ?? []).map(String),
+    schoolIds: day.school_ids ?? [],
   };
 }
 
-function mapTraegerCalendar(
-  data: BackendCalendar | null | undefined,
-): TraegerCalendar {
+function mapTraegerCalendar(data: WireCalendar): TraegerCalendar {
   return {
-    closingDays: (data?.closing_days ?? []).map(mapTraegerClosingDay),
-    schools: (data?.schools ?? []).map((school) => ({
-      id: String(school.id),
+    closingDays: (data.closing_days ?? []).map(mapTraegerClosingDay),
+    schools: (data.schools ?? []).map((school) => ({
+      id: school.id,
       name: school.name,
       federalStateCode: school.federal_state.code,
       federalStateName: school.federal_state.name,
     })),
-    regions: (data?.holidays ?? []).map((region) => ({
+    regions: (data.holidays ?? []).map((region) => ({
       code: region.region.code,
       name: region.region.name,
-      holidays: region.holidays ?? [],
+      holidays: (region.holidays ?? []).map((holiday) => ({
+        date: requiredDay(holiday.date, "holiday.date"),
+        name: holiday.name,
+      })),
     })),
   };
 }
 
-function backendInput(input: TraegerClosingDayInput) {
+function backendInput(input: TraegerClosingDayInput): TraegerClosingDayRequest {
   return {
     start_date: input.startDate,
     end_date: input.endDate,
@@ -211,7 +183,12 @@ export interface TraegerClosingDayChange {
   readonly delete?: boolean;
 }
 
-function backendChange(change: TraegerClosingDayChange | undefined) {
+function backendChange(
+  change: TraegerClosingDayChange | undefined,
+): Pick<
+  HolidayClosurePreviewRequest,
+  "closing_day_id" | "previous" | "delete"
+> {
   if (!change) return {};
   return {
     closing_day_id: Number(change.closingDay.id),
@@ -224,56 +201,52 @@ function backendChange(change: TraegerClosingDayChange | undefined) {
   };
 }
 
-function mapSavedClosingDay(
-  day: BackendClosingDay & { notified_families?: number },
-): SavedTraegerClosingDay {
+function mapSavedClosingDay(day: WireClosingDay): SavedTraegerClosingDay {
   return {
     ...mapTraegerClosingDay(day),
-    notifiedFamilies: day.notified_families ?? 0,
+    notifiedFamilies: day.notified_families,
   };
 }
 
-function mapHolidayClosureWeek(
-  week: BackendHolidayClosureWeek,
-): HolidayClosureWeek {
+function closedDays(days: readonly WireClosedDay[] | null): HolidayClosedDay[] {
+  return (days ?? []).map((day) => ({
+    date: requiredDay(day.date, "holiday_closed_day.date"),
+    reason: day.reason,
+  }));
+}
+
+function mapHolidayClosureWeek(week: WireWeek): HolidayClosureWeek {
   return {
-    weekId: String(week.week_id),
+    weekId: week.week_id,
     periodName: week.period_name,
-    startsOn: week.starts_on,
-    endsOn: week.ends_on,
-    hostSchoolId: String(week.host_school_id),
-    closedDays: week.closed_days ?? [],
-    reopenedDays: week.reopened_days ?? [],
+    startsOn: requiredDay(week.starts_on, "holiday_closure_week.starts_on"),
+    endsOn: requiredDay(week.ends_on, "holiday_closure_week.ends_on"),
+    hostSchoolId: week.host_school_id,
+    closedDays: closedDays(week.closed_days),
+    reopenedDays: closedDays(week.reopened_days),
     children: week.children,
     waitlisted: week.waitlisted,
     families: week.families,
   };
 }
 
-type BackendTraegerNotice = BackendHolidayClosureNotice & {
-  weeks?: BackendHolidayClosureWeek[] | null;
-  children?: number;
-};
-
 function mapTraegerNotice(
-  notice: BackendTraegerNotice,
+  notice: WireTraegerNotice,
 ): TraegerHolidayClosureNotice {
   return {
     ...mapHolidayClosureNotice(notice),
     weeks: (notice.weeks ?? []).map(mapHolidayClosureWeek),
-    children: notice.children ?? 0,
+    children: notice.children,
   };
 }
 
-function mapHolidayClosureImpact(
-  data: BackendHolidayClosureImpact | null | undefined,
-): HolidayClosureImpact {
+function mapHolidayClosureImpact(data: WireImpact): HolidayClosureImpact {
   return {
-    weeks: (data?.weeks ?? []).map(mapHolidayClosureWeek),
-    children: data?.children ?? 0,
-    families: data?.families ?? 0,
-    token: data?.token ?? "",
-    keepsContribution: data?.keeps_contribution ?? true,
+    weeks: (data.weeks ?? []).map(mapHolidayClosureWeek),
+    children: data.children,
+    families: data.families,
+    token: data.token,
+    keepsContribution: data.keeps_contribution,
   };
 }
 
@@ -289,13 +262,13 @@ export async function previewTraegerClosingDayHolidayBookings(
   change?: TraegerClosingDayChange,
 ): Promise<HolidayClosureImpact> {
   return mapHolidayClosureImpact(
-    await traegerRequest<BackendHolidayClosureImpact>(
-      `${closuresPath}/preview`,
-      {
-        method: "POST",
-        body: { ...backendInput(input), ...backendChange(change) },
-      },
-    ),
+    await traegerRequest<WireImpact>(`${closuresPath}/preview`, {
+      method: "POST",
+      body: {
+        ...backendInput(input),
+        ...backendChange(change),
+      } satisfies HolidayClosurePreviewRequest,
+    }),
   );
 }
 
@@ -305,19 +278,12 @@ export async function previewTraegerClosingDayHolidayBookings(
  * jeder beauftragte Hinweis mit seinem Versandstand.
  */
 export async function fetchPendingHolidayClosures(): Promise<PendingHolidayClosures> {
-  const data = await traegerRequest<
-    | (BackendHolidayClosureImpact & {
-        notices?: BackendTraegerNotice[] | null;
-        retryable_mails?: number;
-        unknown_mails?: number;
-      })
-    | null
-  >(`${closuresPath}/pending`);
+  const data = await traegerRequest<WirePending>(`${closuresPath}/pending`);
   return {
     ...mapHolidayClosureImpact(data),
-    notices: (data?.notices ?? []).map(mapTraegerNotice),
-    retryableMails: data?.retryable_mails ?? 0,
-    unknownMails: data?.unknown_mails ?? 0,
+    notices: (data.notices ?? []).map(mapTraegerNotice),
+    retryableMails: data.retryable_mails,
+    unknownMails: data.unknown_mails,
   };
 }
 
@@ -331,7 +297,7 @@ export async function notifyTraegerHolidayClosureNotice(
   token: string,
 ): Promise<HolidayClosureNotice> {
   return mapHolidayClosureNotice(
-    await traegerRequest<BackendHolidayClosureNotice>(
+    await traegerRequest<HolidayClosureNoticeWire>(
       `${closuresPath}/pending/${encodeURIComponent(id)}/notify`,
       { method: "POST", body: { revision, token } },
     ),
@@ -342,11 +308,11 @@ export async function notifyTraegerHolidayClosureNotice(
 export async function notifyPendingHolidayClosures(
   token: string,
 ): Promise<number> {
-  const result = await traegerRequest<{ families?: number }>(
+  const result = await traegerRequest<NotifiedPending>(
     `${closuresPath}/pending/notify`,
-    { method: "POST", body: { token } },
+    { method: "POST", body: { token } satisfies NotifyAllRequest },
   );
-  return result?.families ?? 0;
+  return result.families;
 }
 
 /** Der Kalender des Trägers im Fenster [from, to]. */
@@ -356,7 +322,7 @@ export async function fetchTraegerCalendar(
 ): Promise<TraegerCalendar> {
   const query = new URLSearchParams({ from, to });
   return mapTraegerCalendar(
-    await traegerRequest<BackendCalendar>(`${basePath}?${query.toString()}`),
+    await traegerRequest<WireCalendar>(`${basePath}?${query.toString()}`),
   );
 }
 
@@ -364,7 +330,7 @@ export async function createTraegerClosingDay(
   input: TraegerClosingDayInput,
 ): Promise<SavedTraegerClosingDay> {
   return mapSavedClosingDay(
-    await traegerRequest<BackendClosingDay>(basePath, {
+    await traegerRequest<WireClosingDay>(basePath, {
       method: "POST",
       body: backendInput(input),
     }),
@@ -376,7 +342,7 @@ export async function updateTraegerClosingDay(
   input: TraegerClosingDayInput,
 ): Promise<SavedTraegerClosingDay> {
   return mapSavedClosingDay(
-    await traegerRequest<BackendClosingDay>(
+    await traegerRequest<WireClosingDay>(
       `${basePath}/${encodeURIComponent(id)}`,
       { method: "PUT", body: backendInput(input) },
     ),
@@ -395,9 +361,9 @@ export async function deleteTraegerClosingDay(
   const query = holidayBookingsToken
     ? `?${new URLSearchParams({ holiday_bookings_token: holidayBookingsToken }).toString()}`
     : "";
-  const result = await traegerRequest<{ notified_families?: number } | null>(
+  const result = await traegerRequest<TraegerClosingDayDeleted>(
     `${basePath}/${encodeURIComponent(id)}${query}`,
     { method: "DELETE" },
   );
-  return result?.notified_families ?? 0;
+  return result.notified_families;
 }

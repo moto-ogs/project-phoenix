@@ -1,6 +1,10 @@
 // Helper functions for time tracking data transformation and calculations
 
 import { expandClosingDaysToMap } from "~/lib/closing-day-helpers";
+import { knownEnum } from "~/lib/contract/known-enum";
+import type * as shared from "~/lib/contract/shared.generated";
+import type * as staffWire from "~/lib/contract/staff.generated";
+import type * as tt from "~/lib/contract/time-tracking.generated";
 import {
   berlinClockFromISO,
   berlinTodayISO,
@@ -8,131 +12,6 @@ import {
   parseISODate,
   toISODate,
 } from "~/lib/date-helpers";
-
-// Backend response types (snake_case, numbers for IDs)
-export interface BackendWorkSession {
-  // The history endpoints quote the int64 id (SessionResponse.MarshalJSON) so
-  // the block-edit lookup compares exact decimals; the single-session
-  // endpoints still serialize the raw model and send a number. `.toString()`
-  // below normalizes both to the canonical decimal string.
-  id: number | string;
-  staff_id: number;
-  date: string;
-  status: "present" | "home_office";
-  // Channel the row was created on (active.work_sessions.source, Issue #1368).
-  // Optional because pre-#1368 payloads predate the column.
-  source?: "app" | "nfc" | "unknown";
-  check_in_time: string;
-  check_out_time: string | null;
-  break_minutes: number;
-  notes: string;
-  auto_checked_out: boolean;
-  created_by: number;
-  updated_by: number | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface BackendWorkSessionBreak {
-  id: number | string;
-  session_id: number | string;
-  started_at: string;
-  ended_at: string | null;
-  duration_minutes: number;
-  planned_end_time: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface BackendWorkSessionHistory extends BackendWorkSession {
-  net_minutes: number;
-  is_overtime: boolean;
-  is_break_compliant: boolean;
-  rest_period_warning: string | null;
-  breaks: BackendWorkSessionBreak[] | null;
-  edit_count: number;
-  audit_count?: number;
-  pack_up_minutes?: number;
-  rounding_minutes?: number;
-}
-
-export interface BackendWeeklySummary {
-  week_number: number;
-  year: number;
-  total_net_minutes: number;
-  target_minutes: number | null;
-  delta_minutes: number | null;
-  session_count: number;
-  is_over_weekly_max: boolean;
-}
-
-// ArbZG-Sicht eines Arbeitstags (#4804): alle Blöcke, die an diesem
-// Berliner Tag eingestempelt wurden, gemeinsam bewertet. Die Instants nennen
-// bei laufender Arbeit (ohne laufende Pause), ab wann ein Hinweis gilt.
-export interface BackendWorkDayLaborHint {
-  date: string;
-  net_minutes: number;
-  break_minutes: number;
-  counted_break_minutes: number;
-  required_break_minutes: number;
-  is_break_too_short: boolean;
-  is_over_daily_max: boolean;
-  is_running: boolean;
-  over_daily_max_at: string | null;
-  break_too_short_at: string | null;
-  break_too_short_required_minutes: number;
-}
-
-export interface BackendHistoryResponse {
-  sessions: BackendWorkSessionHistory[];
-  weekly_summaries: BackendWeeklySummary[];
-  labor_days?: BackendWorkDayLaborHint[] | null;
-}
-
-export interface BackendWorkSessionEdit {
-  id: number | string;
-  session_id: number | string;
-  staff_id: number | string;
-  edited_by: number | string;
-  field_name: string;
-  old_value: string | null;
-  new_value: string | null;
-  notes: string | null;
-  created_at: string;
-  // Decorated by the service layer (WorkSessionEditView). Older clients of
-  // the audit endpoint may still see absent fields; we tolerate missing
-  // values for backwards compatibility.
-  editor_name?: string;
-  is_self_edit?: boolean;
-}
-
-// Backend absence response type (snake_case)
-export interface BackendStaffAbsence {
-  id: number;
-  staff_id: number;
-  absence_type: string;
-  /** School-defined Abwesenheitsart (#2403); absent for the standard types. */
-  absence_type_id?: string | null;
-  /** The school's own wording; empty for the standard types. */
-  absence_type_label?: string;
-  date_start: string;
-  date_end: string;
-  half_day: boolean;
-  start_half_day?: boolean;
-  end_half_day?: boolean;
-  note: string;
-  status: string;
-  approved_by: number | null;
-  approved_at: string | null;
-  created_by: number;
-  created_at: string;
-  updated_at: string;
-  duration_days: number;
-  working_days?: number | null;
-  decision_note?: string;
-  requested_at?: string;
-  substitute_staff_id?: number | null;
-}
 
 // Frontend absence type
 export type AbsenceType =
@@ -197,11 +76,11 @@ export function absenceDisplayLabel(absence: {
 }
 
 export function mapStaffAbsenceResponse(
-  data: BackendStaffAbsence,
+  data: shared.StaffAbsenceResponse,
 ): StaffAbsence {
   return {
-    id: data.id.toString(),
-    staffId: data.staff_id.toString(),
+    id: data.id,
+    staffId: data.staff_id,
     absenceType: data.absence_type as AbsenceType,
     absenceTypeId: data.absence_type_id ?? null,
     absenceTypeLabel: data.absence_type_label ?? "",
@@ -212,16 +91,16 @@ export function mapStaffAbsenceResponse(
     endHalfDay: data.end_half_day ?? data.half_day,
     note: data.note ?? "",
     status: data.status,
-    approvedBy: data.approved_by?.toString() ?? null,
+    approvedBy: data.approved_by ?? null,
     approvedAt: data.approved_at ?? null,
-    createdBy: data.created_by.toString(),
+    createdBy: data.created_by,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
     durationDays: data.duration_days,
     workingDays: data.working_days ?? null,
     decisionNote: data.decision_note ?? "",
     requestedAt: data.requested_at ?? data.created_at,
-    substituteStaffId: data.substitute_staff_id?.toString() ?? null,
+    substituteStaffId: data.substitute_staff_id ?? null,
   };
 }
 
@@ -256,7 +135,6 @@ export interface WorkSessionHistory extends WorkSession {
   netMinutes: number;
   isOvertime: boolean;
   isBreakCompliant: boolean;
-  restPeriodWarning: string | null;
   breaks: WorkSessionBreak[];
   editCount: number;
   auditCount?: number;
@@ -516,20 +394,54 @@ export interface WorkSessionEdit {
 /**
  * Maps backend work session response to frontend type
  */
-export function mapWorkSessionResponse(data: BackendWorkSession): WorkSession {
+const SESSION_STATUSES: readonly WorkSession["status"][] = [
+  "present",
+  "home_office",
+];
+const SESSION_SOURCES: readonly NonNullable<WorkSession["source"]>[] = [
+  "app",
+  "nfc",
+  "unknown",
+];
+const ADJUSTMENT_TYPES: readonly BalanceAdjustmentType[] = [
+  "payout",
+  "comp_time",
+  "reset",
+  "opening",
+];
+
+export function mapWorkSessionResponse(
+  data: Pick<
+    tt.SessionResponse,
+    | "id"
+    | "staff_id"
+    | "date"
+    | "status"
+    | "source"
+    | "check_in_time"
+    | "check_out_time"
+    | "break_minutes"
+    | "notes"
+    | "auto_checked_out"
+    | "created_by"
+    | "updated_by"
+    | "created_at"
+    | "updated_at"
+  >,
+): WorkSession {
   return {
-    id: data.id.toString(),
-    staffId: data.staff_id.toString(),
+    id: data.id,
+    staffId: data.staff_id,
     date: data.date.split("T")[0] ?? data.date,
-    status: data.status,
-    source: data.source,
+    status: knownEnum(SESSION_STATUSES, data.status) ?? "present",
+    source: knownEnum(SESSION_SOURCES, data.source) ?? "unknown",
     checkInTime: data.check_in_time,
     checkOutTime: data.check_out_time ?? null,
     breakMinutes: data.break_minutes,
     notes: data.notes ?? "",
     autoCheckedOut: data.auto_checked_out,
-    createdBy: data.created_by.toString(),
-    updatedBy: data.updated_by == null ? null : data.updated_by.toString(),
+    createdBy: data.created_by,
+    updatedBy: data.updated_by ?? null,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
   };
@@ -539,11 +451,11 @@ export function mapWorkSessionResponse(data: BackendWorkSession): WorkSession {
  * Maps backend break response to frontend type
  */
 export function mapWorkSessionBreakResponse(
-  data: BackendWorkSessionBreak,
+  data: shared.WorkSessionBreak,
 ): WorkSessionBreak {
   return {
-    id: data.id.toString(),
-    sessionId: data.session_id.toString(),
+    id: data.id,
+    sessionId: data.session_id,
     startedAt: data.started_at,
     endedAt: data.ended_at ?? null,
     durationMinutes: data.duration_minutes,
@@ -555,15 +467,16 @@ export function mapWorkSessionBreakResponse(
  * Maps backend work session history response to frontend type
  */
 export function mapWorkSessionHistoryResponse(
-  data: BackendWorkSessionHistory,
+  data: shared.HistorySessionResponse,
 ): WorkSessionHistory {
   return {
     ...mapWorkSessionResponse(data),
     netMinutes: data.net_minutes,
     isOvertime: data.is_overtime,
     isBreakCompliant: data.is_break_compliant,
-    restPeriodWarning: data.rest_period_warning ?? null,
-    breaks: (data.breaks ?? []).map(mapWorkSessionBreakResponse),
+    breaks: (data.breaks ?? [])
+      .filter((entry): entry is shared.WorkSessionBreak => entry !== null)
+      .map(mapWorkSessionBreakResponse),
     editCount: data.edit_count ?? 0,
     auditCount: data.audit_count ?? 0,
     packUpMinutes: data.pack_up_minutes ?? 0,
@@ -574,7 +487,7 @@ export function mapWorkSessionHistoryResponse(
 /**
  * Maps backend weekly summary to frontend type
  */
-function mapWeeklySummaryResponse(data: BackendWeeklySummary): WeeklySummary {
+function mapWeeklySummaryResponse(data: shared.WorkWeekSummary): WeeklySummary {
   return {
     weekNumber: data.week_number,
     year: data.year,
@@ -587,7 +500,7 @@ function mapWeeklySummaryResponse(data: BackendWeeklySummary): WeeklySummary {
 }
 
 export function mapWorkDayLaborHint(
-  data: BackendWorkDayLaborHint,
+  data: shared.WorkDayLaborHint,
 ): WorkDayLaborHint {
   return {
     date: data.date,
@@ -614,7 +527,7 @@ export interface HistoryResult {
  * Maps the full history response (sessions, weekly summaries, ArbZG hints)
  */
 export function mapHistoryResponse(
-  data: BackendHistoryResponse,
+  data: shared.HistoryResponse,
 ): HistoryResult {
   return {
     sessions: (data.sessions ?? []).map(mapWorkSessionHistoryResponse),
@@ -626,7 +539,7 @@ export function mapHistoryResponse(
 }
 
 export function mapWeeklySummaries(
-  data: readonly BackendWeeklySummary[] | null | undefined,
+  data: readonly shared.WorkWeekSummary[] | null | undefined,
 ): WeeklySummary[] {
   return (data ?? []).map(mapWeeklySummaryResponse);
 }
@@ -635,13 +548,13 @@ export function mapWeeklySummaries(
  * Maps backend work session edit response to frontend type
  */
 export function mapWorkSessionEditResponse(
-  data: BackendWorkSessionEdit,
+  data: shared.WorkSessionEditView,
 ): WorkSessionEdit {
   return {
-    id: data.id.toString(),
-    sessionId: data.session_id.toString(),
-    staffId: data.staff_id.toString(),
-    editedBy: data.edited_by.toString(),
+    id: data.id,
+    sessionId: data.session_id,
+    staffId: data.staff_id,
+    editedBy: data.edited_by,
     fieldName: data.field_name,
     oldValue: data.old_value ?? null,
     newValue: data.new_value ?? null,
@@ -752,9 +665,6 @@ export function calculateNetMinutes(
   }
 }
 
-/**
- * Backend shape of the Monatskarte aggregate (#1842).
- */
 // Poll interval for the current month's Monatskarte (admin tab and own
 // view). A running session keeps growing the Ist server-side, so a card
 // fetched once at mount would freeze at the check-in minute. Readers pass it
@@ -771,19 +681,6 @@ export const OPEN_MONTH_REFRESH_MS = 60_000;
  * split it into windows of at most this many days.
  */
 export const MAX_TARGET_RANGE_DAYS = 366;
-
-interface BackendDailyTarget {
-  date: string;
-  target_minutes: number;
-}
-
-export interface BackendDailyProjection extends BackendDailyTarget {
-  credit_minutes: number;
-  actual_minutes: number;
-  balance_minutes: number;
-  /** "override" on a Sonderarbeitszeit day (#3259). */
-  target_source?: string;
-}
 
 /**
  * Der servergerechnete Tageswert einer Zeile: Soll, Gutschrift, Ist und der
@@ -808,7 +705,7 @@ export interface DayProjection {
  * Tagesprojektion je Kalendertag, keyed nach ISO-Tag (YYYY-MM-DD).
  */
 export function mapDailyProjectionResponse(
-  data: BackendDailyProjection[] | null | undefined,
+  data: shared.DailyProjection[] | null | undefined,
 ): ReadonlyMap<string, DayProjection> {
   const projection = new Map<string, DayProjection>();
   for (const entry of data ?? []) {
@@ -823,30 +720,19 @@ export function mapDailyProjectionResponse(
   return projection;
 }
 
-export interface BackendHoliday {
-  date: string;
-  name: string;
-}
-
 /**
  * Gesetzliche Feiertage im Zeitraum, keyed nach ISO-Tag (YYYY-MM-DD),
  * Wert ist der Feiertagsname (#1418 3a). Quelle ist das Bundesland-Setting
  * des Tenants; an diesen Tagen liefert das Backend Soll = 0.
  */
 export function mapHolidaysResponse(
-  data: BackendHoliday[] | null | undefined,
+  data: tt.PublicHoliday[] | null | undefined,
 ): ReadonlyMap<string, string> {
   const holidays = new Map<string, string>();
   for (const entry of data ?? []) {
     holidays.set(entry.date.slice(0, 10), entry.name);
   }
   return holidays;
-}
-
-export interface BackendClosingDayRange {
-  start_date: string;
-  end_date: string;
-  reason: string;
 }
 
 /**
@@ -857,7 +743,7 @@ export interface BackendClosingDayRange {
  * Soll = 0 — die Map ist reine Anzeige, keine Rechengrundlage.
  */
 export function mapClosingDaysResponse(
-  data: BackendClosingDayRange[] | null | undefined,
+  data: tt.closingDayRangeResponse[] | null | undefined,
   from: string,
   to: string,
 ): ReadonlyMap<string, string> {
@@ -870,55 +756,6 @@ export function mapClosingDaysResponse(
     from,
     to,
   );
-}
-
-export interface BackendMonthSummary {
-  staff_id: number | string;
-  year: number;
-  month: number;
-  carry_in_minutes: number;
-  target_minutes: number;
-  target_minutes_to_date: number;
-  /** False when no Soll is maintained for the month (#6887). */
-  has_target: boolean;
-  actual_minutes: number;
-  credited_sick_minutes: number;
-  credited_vacation_minutes: number;
-  credited_training_minutes: number;
-  credited_other_minutes: number;
-  sick_days: number;
-  vacation_days: number;
-  training_days: number;
-  /** Absence workdays no maintained Soll governs; they credit nothing (#6889). */
-  sick_days_without_target: number;
-  vacation_days_without_target: number;
-  training_days_without_target: number;
-  other_days_without_target: number;
-  planned_shift_minutes?: number | null;
-  adjustment_minutes: number;
-  adjustments?: BackendBalanceAdjustment[] | null;
-  balance_minutes: number;
-  closing_balance_minutes: number;
-  is_closed?: boolean;
-  closed_at?: string | null;
-  closed_by?: number | string | null;
-  closed_by_traeger?: boolean;
-  close_reason?: string | null;
-  frozen_closing_balance_minutes?: number | null;
-  drift_minutes?: number | null;
-  carry_in_frozen?: boolean;
-  carry_in_frozen_from_month?: string | null;
-}
-
-/** One Stundenkonto transaction (#1420): payout / comp-time grant / reset. */
-export interface BackendBalanceAdjustment {
-  id: number | string;
-  type: string;
-  minutes_delta: number;
-  effective_date: string;
-  note: string;
-  decided_by: number | string;
-  decided_at: string;
 }
 
 export type BalanceAdjustmentType =
@@ -952,15 +789,16 @@ export function balanceAdjustmentTypeLabel(
 }
 
 export function mapBalanceAdjustmentResponse(
-  data: BackendBalanceAdjustment,
+  data: shared.AdjustmentView,
 ): BalanceAdjustment {
   return {
-    id: data.id.toString(),
-    type: data.type as BalanceAdjustmentType,
+    id: data.id,
+    // A type this build does not know shows as the neutral Übernahme.
+    type: knownEnum(ADJUSTMENT_TYPES, data.type) ?? "opening",
     minutesDelta: data.minutes_delta,
     effectiveDate: data.effective_date,
     note: data.note,
-    decidedBy: data.decided_by.toString(),
+    decidedBy: data.decided_by,
     decidedAt: data.decided_at,
   };
 }
@@ -1023,31 +861,6 @@ export interface MonthSummary {
   carryInFrozenFromMonth: string | null;
 }
 
-/**
- * One frozen Monatsabschluss row (#1417) as returned by
- * GET/POST /api/staff/time-tracking/month-close. The frozen values are what
- * the following month's Übertrag actually uses; the month itself keeps being
- * computed live and any divergence surfaces as drift on the MonthSummary.
- */
-export interface BackendMonthCloseSnapshot {
-  staff_id: number | string;
-  year: number;
-  month: number;
-  closing_balance_minutes: number;
-  carry_in_minutes: number;
-  target_minutes: number;
-  actual_minutes: number;
-  credited_minutes: number;
-  adjustment_minutes: number;
-  closed_at: string;
-  closed_by: number | string;
-  close_reason?: string;
-  source: string;
-  reopened_at?: string;
-  reopened_by?: number | string;
-  reopen_reason?: string;
-}
-
 export interface MonthCloseSnapshot {
   staffId: string;
   year: number;
@@ -1061,26 +874,18 @@ export interface MonthCloseSnapshot {
 }
 
 export function mapMonthCloseSnapshotResponse(
-  data: BackendMonthCloseSnapshot,
+  data: staffWire.StaffMonthBalanceSnapshot,
 ): MonthCloseSnapshot {
   return {
-    staffId: data.staff_id.toString(),
+    staffId: data.staff_id,
     year: data.year,
     month: data.month,
     closingBalanceMinutes: data.closing_balance_minutes,
     closedAt: data.closed_at,
-    closedBy: data.closed_by.toString(),
+    closedBy: data.closed_by,
     closeReason: data.close_reason ?? "",
     source: data.source,
   };
-}
-
-export interface BackendMonthCloseResult {
-  year: number;
-  month: number;
-  closed_staff: number;
-  skipped_staff: number;
-  snapshots?: BackendMonthCloseSnapshot[] | null;
 }
 
 export interface MonthCloseResult {
@@ -1091,7 +896,7 @@ export interface MonthCloseResult {
 }
 
 export function mapMonthCloseResultResponse(
-  data: BackendMonthCloseResult,
+  data: staffWire.MonthCloseResult,
 ): MonthCloseResult {
   return {
     year: data.year,
@@ -1102,10 +907,10 @@ export function mapMonthCloseResultResponse(
 }
 
 export function mapMonthSummaryResponse(
-  data: BackendMonthSummary,
+  data: shared.MonthSummary,
 ): MonthSummary {
   return {
-    staffId: data.staff_id.toString(),
+    staffId: data.staff_id,
     year: data.year,
     month: data.month,
     carryInMinutes: data.carry_in_minutes,
@@ -1131,7 +936,7 @@ export function mapMonthSummaryResponse(
     closingBalanceMinutes: data.closing_balance_minutes,
     isClosed: data.is_closed ?? false,
     closedAt: data.closed_at ?? null,
-    closedBy: data.closed_by != null ? data.closed_by.toString() : null,
+    closedBy: data.closed_by ?? null,
     closedByTraeger: data.closed_by_traeger ?? false,
     closeReason: data.close_reason ?? null,
     frozenClosingBalanceMinutes: data.frozen_closing_balance_minutes ?? null,

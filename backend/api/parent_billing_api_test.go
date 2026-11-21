@@ -23,7 +23,7 @@ import (
 const contributionRulesPath = "/traeger/contribution-rules"
 
 type contributionRuleBody struct {
-	ID                  int64   `json:"id"`
+	ID                  wireID  `json:"id"`
 	Kind                string  `json:"kind"`
 	ValidFrom           string  `json:"valid_from"`
 	ValidUntil          *string `json:"valid_until"`
@@ -45,7 +45,7 @@ type contributionLineBody struct {
 
 type contributionBody struct {
 	Children []struct {
-		ChildID    int64                  `json:"child_id"`
+		ChildID    wireID                 `json:"child_id"`
 		Position   int                    `json:"position"`
 		Lines      []contributionLineBody `json:"lines"`
 		TotalCents int64                  `json:"total_cents"`
@@ -60,7 +60,7 @@ type contributionBody struct {
 }
 
 type confirmationBody struct {
-	ID           int64            `json:"id"`
+	ID           wireID           `json:"id"`
 	Status       string           `json:"status"`
 	Contribution contributionBody `json:"contribution"`
 }
@@ -129,7 +129,7 @@ func quoteChildren(offer holidayOfferBody) []map[string]any {
 
 func (f reviewFixture) contribution(t *testing.T, registrationID int64) contributionBody {
 	t.Helper()
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayContributionPath(f.period.ID, registrationID), nil)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayContributionPath(int64(f.period.ID), registrationID), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	return decodeSchoolPortalData[contributionBody](t, rec.Body.Bytes())
 }
@@ -270,7 +270,7 @@ func TestConfirmationFreezesTheContributionAgainstLaterPriceAndRuleChanges(t *te
 	assert.False(t, preview.Frozen)
 	assert.Equal(t, int64(3375+9000), preview.TotalCents)
 
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(f.period.ID, f.siblings), map[string]any{})
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(f.period.ID), f.siblings), map[string]any{})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	confirmed := decodeSchoolPortalData[confirmationBody](t, rec.Body.Bytes())
 	assert.Equal(t, "confirmed", confirmed.Status)
@@ -279,7 +279,7 @@ func TestConfirmationFreezesTheContributionAgainstLaterPriceAndRuleChanges(t *te
 	assert.Equal(t, int64(3375+9000), confirmed.Contribution.TotalCents)
 
 	// The Träger raises every price and lowers the sibling discount.
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayPeriodPath(f.period.ID), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayPeriodPath(int64(f.period.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	period := decodeSchoolPortalData[holidayPeriodBody](t, rec.Body.Bytes())
 	for w := range period.Weeks {
@@ -287,7 +287,7 @@ func TestConfirmationFreezesTheContributionAgainstLaterPriceAndRuleChanges(t *te
 			period.Weeks[w].TimeModels[m].PriceCents *= 2
 		}
 	}
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayPeriodPath(f.period.ID), period)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayPeriodPath(int64(f.period.ID)), period)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	lower := siblingHalf()
 	lower["discount_basis_points"] = 1000
@@ -301,7 +301,7 @@ func TestConfirmationFreezesTheContributionAgainstLaterPriceAndRuleChanges(t *te
 	assert.Equal(t, confirmed.Contribution.Children[0].ChildID, frozen.Children[0].ChildID)
 	assert.Equal(t, int64(9000), f.contribution(t, f.again).TotalCents, "an open registration shows the new price")
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(f.period.ID, f.siblings), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(f.period.ID), f.siblings), nil)
 	require.Equal(t, http.StatusConflict, rec.Code, "a confirmed registration is not confirmed twice: %s", rec.Body.String())
 
 	var rows int
@@ -323,34 +323,34 @@ func TestBenefitsExemptionIsFrozenWithItsNoteOnlyWithARule(t *testing.T) {
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(f.period.PublicToken), declared)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	registration := decodeSchoolPortalData[struct {
-		ID int64 `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
-	detail := f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(registration, ""), nil))
+	detail := f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(int64(registration), ""), nil))
 	assert.Equal(t, int64(6750), detail.Children[0].Bookings[0].PriceCents)
 
 	// Without an exemption rule the statement changes nothing, and an
 	// exemption cannot be confirmed: the registration stays received.
-	assert.Equal(t, int64(6750+9000), f.contribution(t, registration).TotalCents)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(f.period.ID, registration), map[string]any{"benefits_exemption": true})
+	assert.Equal(t, int64(6750+9000), f.contribution(t, int64(registration)).TotalCents)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(f.period.ID), int64(registration)), map[string]any{"benefits_exemption": true})
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	code, _ := registrationRefusalOf(t, rec)
 	assert.Equal(t, "parent_billing.benefits_exemption_unavailable", code)
-	assert.Equal(t, "received", f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(registration, ""), nil)).Status,
+	assert.Equal(t, "received", f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(int64(registration), ""), nil)).Status,
 		"the refused confirmation was rolled back")
 
 	createContributionRule(t, f, billing, benefitsExemption())
-	preview := f.contribution(t, registration)
+	preview := f.contribution(t, int64(registration))
 	assert.True(t, preview.BenefitsExemption, "the preview follows the parents' statement")
 	assert.Equal(t, int64(0), preview.TotalCents)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayContributionPath(f.period.ID, registration)+"?benefits_exemption=false", nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayContributionPath(int64(f.period.ID), int64(registration))+"?benefits_exemption=false", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	withoutExemption := decodeSchoolPortalData[contributionBody](t, rec.Body.Bytes())
 	assert.False(t, withoutExemption.BenefitsExemption, "the preview follows the choice of the Träger-Büro")
 	assert.Equal(t, int64(6750+9000), withoutExemption.TotalCents)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayContributionPath(f.period.ID, registration)+"?benefits_exemption=perhaps", nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayContributionPath(int64(f.period.ID), int64(registration))+"?benefits_exemption=perhaps", nil)
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(f.period.ID, registration), map[string]any{"benefits_exemption": true})
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(f.period.ID), int64(registration)), map[string]any{"benefits_exemption": true})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	frozen := decodeSchoolPortalData[confirmationBody](t, rec.Body.Bytes()).Contribution
 	assert.True(t, frozen.BenefitsExemption)
@@ -362,7 +362,7 @@ func TestBenefitsExemptionIsFrozenWithItsNoteOnlyWithARule(t *testing.T) {
 
 	// The Träger-Büro confirms the siblings' registration without the
 	// exemption the parents did not state.
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(f.period.ID, f.siblings), map[string]any{"benefits_exemption": false})
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(f.period.ID), f.siblings), map[string]any{"benefits_exemption": false})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, int64(6750+9000), decodeSchoolPortalData[confirmationBody](t, rec.Body.Bytes()).Contribution.TotalCents)
 }
@@ -374,8 +374,8 @@ func TestHolidayContributionNeedsTheRightAndStaysWithItsTraeger(t *testing.T) {
 	foreign := newTraegerOffice(t, f.db, f.traeger, "Träger Grenze Beitrag Fremd", identityaccess.TraegerRoleAdministration)
 
 	for _, request := range []struct{ method, path string }{
-		{http.MethodGet, holidayContributionPath(f.period.ID, f.siblings)},
-		{http.MethodPost, holidayConfirmPath(f.period.ID, f.siblings)},
+		{http.MethodGet, holidayContributionPath(int64(f.period.ID), f.siblings)},
+		{http.MethodPost, holidayConfirmPath(int64(f.period.ID), f.siblings)},
 	} {
 		rec := traegerJSON(t, f.traeger, billing, request.method, request.path, nil)
 		assert.Equal(t, http.StatusForbidden, rec.Code, "%s %s without the right: %s", request.method, request.path, rec.Body.String())

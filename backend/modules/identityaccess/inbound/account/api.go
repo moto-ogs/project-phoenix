@@ -368,9 +368,6 @@ func (rs *Resource) mountRoleAndPermissionRoutes(r chi.Router) {
 	r.Route(pathPermissions, func(r chi.Router) {
 		r.With(requirePlatformScope, common.RequiresPermission("permissions:create")).Post("/", rs.createPermission)
 		r.With(common.RequiresPermission("permissions:read")).Get("/", rs.listPermissions)
-		r.Route("/{id}", func(r chi.Router) {
-			r.With(common.RequiresPermission("permissions:read")).Get("/", rs.getPermissionByID)
-		})
 	})
 }
 

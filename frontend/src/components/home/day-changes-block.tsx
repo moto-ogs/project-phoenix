@@ -35,6 +35,7 @@ import {
   type DayChangesOverview,
 } from "~/lib/day-changes";
 import { useCurrentTimestamp } from "~/lib/hooks/use-current-timestamp";
+import { useDayPlanHref } from "~/lib/hooks/use-day-plan-href";
 import { BELOW_SM, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
@@ -149,6 +150,9 @@ function DayChangesAnnouncer({
             entry.count,
             entry.child,
             entry.childSummary,
+            entry.activity?.title,
+            entry.roomName,
+            entry.previousRoomName,
             entry.notice
               ? [
                   entry.notice.id,
@@ -386,12 +390,12 @@ function dayChangeKeys(entries: readonly DayChange[]): string[] {
       return `${entry.section}:${entry.kind}:${entry.notice.id}`;
     }
     // Ein Kind (#7665) trägt seine ID, eine Zusammenfassung ohne Gruppe
-    // ihre Klasse.
+    // ihre Klasse; ein Termin seine ID.
     const people =
       entry.people.map((person) => person.staffId).join(",") ||
       (entry.child?.studentId ?? "");
     const where = entry.groupName ?? entry.childSummary?.schoolClass ?? "";
-    const base = `${entry.section}:${entry.kind}:${people}:${where}:${entry.startsAt ?? ""}`;
+    const base = `${entry.section}:${entry.kind}:${people}:${where}:${entry.startsAt ?? ""}:${entry.activity?.id ?? ""}`;
     const count = (seen.get(base) ?? 0) + 1;
     seen.set(base, count);
     return count === 1 ? base : `${base}#${count}`;
@@ -495,9 +499,18 @@ function DayChangeLinkRow({
   readonly muted?: boolean;
 }) {
   const tenantPath = useTenantAwarePath();
+  const dayPlanHref = useDayPlanHref();
   const text = dayChangeText(entry) ?? "";
   const span = dayChangeSpan(entry);
-  const href = dayChangeHref(entry);
+  const path = dayChangeHref(entry);
+  // Der Tagesplan heißt je Rolle anders (#7662): die Leitung ohne Gruppe
+  // plant im Betreuungsplan.
+  const href =
+    path === null
+      ? null
+      : entry.link?.target === "day_plan"
+        ? dayPlanHref
+        : tenantPath(path);
   // Eine lange Änderung, die vor heute begann, steht kompakt in einer Zeile
   // („… · seit 3.11.“), damit sie nicht jeden Tag die neuen verdrängt.
   const compact = entry.since !== null;
@@ -527,7 +540,7 @@ function DayChangeLinkRow({
       onClickCapture={href ? () => trackEntryClick(entry.kind) : undefined}
     >
       {href ? (
-        <ListRow href={tenantPath(href)} density="compact">
+        <ListRow href={href} density="compact">
           {body}
         </ListRow>
       ) : (

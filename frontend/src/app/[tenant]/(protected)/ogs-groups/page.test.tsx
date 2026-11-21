@@ -1288,7 +1288,7 @@ describe("OGSGroupPage", () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
-        success: true,
+        status: "success",
         data: {
           groups: [],
           students: [],

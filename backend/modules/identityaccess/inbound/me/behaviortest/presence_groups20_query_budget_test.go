@@ -92,7 +92,7 @@ func TestPresenceGroups20CallerQueryBudget(t *testing.T) {
 			require.Len(t, envelope.Data, n)
 			var ids []int64
 			for _, row := range envelope.Data {
-				id := int64(row["id"].(float64))
+				id := testpkg.JSONID(t, row["id"])
 				ids = append(ids, id)
 				want, err := json.Marshal(expected[route.key][id])
 				require.NoError(t, err)

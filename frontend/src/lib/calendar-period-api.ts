@@ -4,8 +4,11 @@ import { apiErrorFromBody, transportFetch } from "./api-error";
 // /api/timetable/periods (CRUD via SchedulesRead/Create/Update/Delete).
 
 import { createLogger } from "~/lib/logger";
+import type {
+  CalendarPeriodResponse,
+  bootstrapPeriodsResponse,
+} from "./contract/timetable.generated";
 import {
-  type BackendCalendarPeriod,
   type CalendarPeriod,
   type CalendarPeriodInput,
   type CalendarPeriodSaveResult,
@@ -46,7 +49,7 @@ class CalendarPeriodService {
       headers: { Accept: "application/json" },
       credentials: "include",
     });
-    const raw = await unwrap<BackendCalendarPeriod[]>(response);
+    const raw = await unwrap<CalendarPeriodResponse[] | null>(response);
     return mapPeriods(raw ?? []);
   }
 
@@ -56,7 +59,7 @@ class CalendarPeriodService {
       headers: { Accept: "application/json" },
       credentials: "include",
     });
-    const raw = await unwrap<BackendCalendarPeriod>(response);
+    const raw = await unwrap<CalendarPeriodResponse>(response);
     return mapPeriod(raw);
   }
 
@@ -76,10 +79,7 @@ class CalendarPeriodService {
       credentials: "include",
       body: JSON.stringify({}),
     });
-    const raw = await unwrap<{
-      periods: BackendCalendarPeriod[];
-      created: boolean;
-    }>(response);
+    const raw = await unwrap<bootstrapPeriodsResponse>(response);
     logger.info("periods_bootstrapped", {
       period_count: (raw.periods ?? []).length,
       created: raw.created,
@@ -100,7 +100,7 @@ class CalendarPeriodService {
       credentials: "include",
       body: JSON.stringify(body),
     });
-    const raw = await unwrap<BackendCalendarPeriod>(response);
+    const raw = await unwrap<CalendarPeriodResponse>(response);
     logger.info("period_created", {
       period_id: raw.id,
       period_type: raw.period_type,
@@ -122,7 +122,7 @@ class CalendarPeriodService {
       credentials: "include",
       body: JSON.stringify(body),
     });
-    const raw = await unwrap<BackendCalendarPeriod>(response);
+    const raw = await unwrap<CalendarPeriodResponse>(response);
     logger.info("period_updated", {
       period_id: raw.id,
       warning_count: (raw.warnings ?? []).length,

@@ -197,7 +197,7 @@ describe("useRoomDetail (via harness)", () => {
     mockFetch
       .mockResolvedValueOnce(
         okJson({
-          success: true,
+          status: "success",
           data: {
             id: "1001",
             name: "Schmetterlingsraum",
@@ -213,7 +213,7 @@ describe("useRoomDetail (via harness)", () => {
       )
       .mockResolvedValueOnce(
         okJson({
-          success: true,
+          status: "success",
           data: [
             {
               session_id: "7001",

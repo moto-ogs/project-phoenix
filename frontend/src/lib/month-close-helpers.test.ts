@@ -1,14 +1,18 @@
+import type * as shared from "~/lib/contract/shared.generated";
+import type * as staffWire from "~/lib/contract/staff.generated";
 import { describe, expect, it } from "vitest";
 import {
   mapMonthCloseResultResponse,
   mapMonthCloseSnapshotResponse,
   mapMonthSummaryResponse,
-  type BackendMonthCloseSnapshot,
-  type BackendMonthSummary,
 } from "./time-tracking-helpers";
 
-const summary: BackendMonthSummary = {
-  staff_id: 12,
+const summary: shared.MonthSummary = {
+  is_closed: false,
+  closed_by_traeger: false,
+  drift_minutes: 0,
+  carry_in_frozen: false,
+  staff_id: "12",
   year: 2026,
   month: 6,
   carry_in_minutes: 30,
@@ -34,8 +38,12 @@ const summary: BackendMonthSummary = {
   closing_balance_minutes: 90,
 };
 
-const snapshot: BackendMonthCloseSnapshot = {
-  staff_id: 12,
+const snapshot: staffWire.StaffMonthBalanceSnapshot = {
+  id: "",
+  created_at: "",
+  updated_at: "",
+  tenant_id: "1",
+  staff_id: "12",
   year: 2026,
   month: 6,
   closing_balance_minutes: 90,
@@ -45,7 +53,7 @@ const snapshot: BackendMonthCloseSnapshot = {
   credited_minutes: 0,
   adjustment_minutes: 0,
   closed_at: "2026-07-01T08:00:00Z",
-  closed_by: 4,
+  closed_by: "4",
   close_reason: "Lohnlauf",
   source: "manual",
 };
@@ -56,7 +64,7 @@ describe("month-close response mapping", () => {
       ...summary,
       is_closed: true,
       closed_at: "2026-07-01T08:00:00Z",
-      closed_by: 4,
+      closed_by: "4",
       close_reason: "Lohnlauf",
       frozen_closing_balance_minutes: 90,
       drift_minutes: -30,
@@ -114,6 +122,7 @@ describe("month-close response mapping", () => {
   it("maps the school-wide close result", () => {
     expect(
       mapMonthCloseResultResponse({
+        snapshots: null,
         year: 2026,
         month: 6,
         closed_staff: 19,

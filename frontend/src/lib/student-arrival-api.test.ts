@@ -25,7 +25,7 @@ import {
 } from "./student-arrival-api";
 
 function wrapped(data: unknown): Response {
-  return Response.json({ success: true, message: "ok", data });
+  return Response.json({ status: "success", message: "ok", data });
 }
 
 function failed(status: number, text = ""): Response {

@@ -49,21 +49,21 @@ func newRoomPlan() roomPlan {
 }
 
 func (p *roomPlan) openBlock(block dayBlock) {
-	p.blockRooms = append(p.blockRooms, block.RoomID)
+	p.blockRooms = append(p.blockRooms, int64(block.RoomID))
 	for _, id := range block.StudentIDs {
-		if _, taken := p.blockRoom[id]; !taken {
-			p.blockRoom[id] = block.RoomID
+		if _, taken := p.blockRoom[int64(id)]; !taken {
+			p.blockRoom[int64(id)] = int64(block.RoomID)
 		}
 	}
 }
 
 func (p *roomPlan) closeBlock(block dayBlock) {
-	if i := slices.Index(p.blockRooms, block.RoomID); i >= 0 {
+	if i := slices.Index(p.blockRooms, int64(block.RoomID)); i >= 0 {
 		p.blockRooms = slices.Delete(p.blockRooms, i, i+1)
 	}
 	for _, id := range block.StudentIDs {
-		if p.blockRoom[id] == block.RoomID {
-			delete(p.blockRoom, id)
+		if p.blockRoom[int64(id)] == int64(block.RoomID) {
+			delete(p.blockRoom, int64(id))
 		}
 	}
 }

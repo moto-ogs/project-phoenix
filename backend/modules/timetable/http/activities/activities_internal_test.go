@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/api/common"
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
 
 	httpadapter "github.com/moto-ogs/project-phoenix/modules/timetable/http/activities"
@@ -109,18 +110,18 @@ func TestBatchEnrollmentRequest_Fields(t *testing.T) {
 	t.Parallel()
 
 	req := httpadapter.BatchEnrollmentRequest{
-		StudentIDs: []int64{1, 2, 3},
+		StudentIDs: []common.JSONID{1, 2, 3},
 	}
 
 	assert.Len(t, req.StudentIDs, 3)
-	assert.Equal(t, int64(1), req.StudentIDs[0])
+	assert.Equal(t, int64(1), req.StudentIDs[0].Int64())
 }
 
 func TestBatchEnrollmentRequest_EmptyList(t *testing.T) {
 	t.Parallel()
 
 	req := httpadapter.BatchEnrollmentRequest{
-		StudentIDs: []int64{},
+		StudentIDs: []common.JSONID{},
 	}
 
 	assert.Empty(t, req.StudentIDs)

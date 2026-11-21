@@ -245,6 +245,10 @@ export default function TraegerFinanceExportsPage() {
   const runs = data?.runs.items;
   const datevNotices = useMemo<DatevHandoverNotices>(
     () => ({
+      onAttempt: () => {
+        setRefusal(null);
+        setNothingNew(null);
+      },
       onNothingNew: (run, taken) =>
         setNothingNew({ runLabel: run.label, taken }),
       onRefused: (run, problems) =>
@@ -405,7 +409,6 @@ export default function TraegerFinanceExportsPage() {
               runKind={refusal.runKind}
               runLabel={refusal.runLabel}
               problems={refusal.problems}
-              onDismiss={() => setRefusal(null)}
             />
           ) : null}
           <SectionCard

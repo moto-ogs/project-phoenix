@@ -202,16 +202,18 @@ describe("message attachment upload over the limit", () => {
   });
 });
 
-// The export's filter body stays bounded like the former route file's (1 MiB).
+// The export's filter body stays bounded by the contract's 1 MiB; the path
+// reaches the catch-all, as catalog-route-selection.test.ts asserts.
 describe("POST /api/students/export", () => {
   it("refuses a body over 1 MiB before the backend", async () => {
-    const { POST } = await import("./students/export/route");
+    const { POST } = await import("./[...path]/route");
     const response = await POST(
       new NextRequest("http://localhost:3000/api/students/export", {
         method: "POST",
         body: JSON.stringify({ title: "x".repeat(1024 * 1024) }),
         headers: { "content-type": "application/json" },
       }),
+      { params: Promise.resolve({ path: ["students", "export"] }) },
     );
 
     expect(response.status).toBe(413);

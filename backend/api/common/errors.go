@@ -93,14 +93,13 @@ const statusClientClosedRequest = 499
 
 // Validation error messages
 const (
-	MsgInvalidGroupID      = "invalid group ID"
-	MsgInvalidStudentID    = "invalid student ID"
-	MsgInvalidStaffID      = "invalid staff ID"
-	MsgInvalidActivityID   = "invalid activity ID"
-	MsgInvalidRoleID       = "invalid role ID"
-	MsgInvalidAccountID    = "invalid account ID"
-	MsgInvalidPermissionID = "invalid permission ID"
-	MsgInvalidWeekday      = "invalid weekday"
+	MsgInvalidGroupID    = "invalid group ID"
+	MsgInvalidStudentID  = "invalid student ID"
+	MsgInvalidStaffID    = "invalid staff ID"
+	MsgInvalidActivityID = "invalid activity ID"
+	MsgInvalidRoleID     = "invalid role ID"
+	MsgInvalidAccountID  = "invalid account ID"
+	MsgInvalidWeekday    = "invalid weekday"
 )
 
 // Not found messages

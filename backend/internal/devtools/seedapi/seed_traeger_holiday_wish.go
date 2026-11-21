@@ -62,9 +62,9 @@ func seedHolidayWishDecision(rt *Runtime, auth AuthRef, periodID int64, firstNam
 	var list struct {
 		Data struct {
 			Registrations []struct {
-				ID       int64 `json:"id"`
+				ID       apiID `json:"id"`
 				Children []struct {
-					ID        int64  `json:"id"`
+					ID        apiID  `json:"id"`
 					FirstName string `json:"first_name"`
 					LastName  string `json:"last_name"`
 					Check     bool   `json:"holiday_wish_check"`

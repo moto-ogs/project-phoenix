@@ -274,7 +274,7 @@ func inviteWeeklyProfileParent(ctx context.Context, rt *Runtime, step parentEnro
 	var response struct {
 		Data []struct {
 			Guardian struct {
-				ID    int64  `json:"id"`
+				ID    apiID  `json:"id"`
 				Email string `json:"email"`
 			} `json:"guardian"`
 		} `json:"data"`
@@ -285,7 +285,7 @@ func inviteWeeklyProfileParent(ctx context.Context, rt *Runtime, step parentEnro
 	var guardianID int64
 	for _, row := range response.Data {
 		if row.Guardian.Email == email {
-			guardianID = row.Guardian.ID
+			guardianID = int64(row.Guardian.ID)
 		}
 	}
 	if guardianID == 0 {
@@ -470,13 +470,13 @@ func linkDeveloperAdmin(ctx context.Context, primary, target *Runtime, state *Se
 	}
 	var tenants struct {
 		Data []struct {
-			TenantID int64 `json:"tenant_id"`
+			TenantID apiID `json:"tenant_id"`
 		} `json:"data"`
 	}
 	if err := parseJSON(raw, &tenants); err != nil {
 		return err
 	}
-	if len(tenants.Data) != 1 || tenants.Data[0].TenantID != target.Bootstrap.SchoolID {
+	if len(tenants.Data) != 1 || int64(tenants.Data[0].TenantID) != target.Bootstrap.SchoolID {
 		return fmt.Errorf("school admin is not isolated to own school")
 	}
 	_, err = target.Client.PostWithAuth(target.TenantAuth, "/auth/switch-tenant", map[string]any{"tenant_slug": primary.Bootstrap.TenantSlug})

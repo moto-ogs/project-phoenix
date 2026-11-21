@@ -92,6 +92,12 @@ export interface DayChange {
   readonly childSummary?: DayChangeChildSummary | null;
   /** Nur bei der Art `staff_notice`. */
   readonly notice?: DayChangeNotice | null;
+  /** Der Termin eines Eintrags der Quelle Stundenplan (#7662). */
+  readonly activity?: { readonly id: string; readonly title: string } | null;
+  /** Wo der Termin heute ist. */
+  readonly roomName?: string | null;
+  /** Wo der Termin sonst ist, wenn er heute in einem anderen Raum liegt. */
+  readonly previousRoomName?: string | null;
 }
 
 export interface DayChangesOverview {
@@ -176,6 +182,11 @@ function mapEntry(entry: Entry): DayChange {
       ? mapChildSummary(entry.child_summary)
       : null,
     notice: mapNotice(entry.notice ?? null),
+    activity: entry.activity
+      ? { id: entry.activity.id, title: entry.activity.title }
+      : null,
+    roomName: entry.room?.name ?? null,
+    previousRoomName: entry.previous_room?.name ?? null,
   };
 }
 

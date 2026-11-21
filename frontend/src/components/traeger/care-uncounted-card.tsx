@@ -18,6 +18,7 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import type { CareUncountedContract } from "~/lib/traeger-care-billing-api";
 import { traegerPath } from "~/lib/traeger-url";
 import { STATUS_LABELS, STATUS_TONES } from "./family-children-format";
+import { labelOf } from "~/lib/label-of";
 
 /** Rows shown before „N weitere anzeigen“. */
 const INITIAL_ROWS = 5;
@@ -75,8 +76,8 @@ export function CareUncountedCard({
                 <p className="flex flex-wrap items-center gap-2 text-sm font-semibold wrap-anywhere text-gray-900">
                   {`${contract.childFirstName} ${contract.childLastName}`.trim()}
                   <StatusBadge
-                    tone={STATUS_TONES[contract.status]}
-                    label={STATUS_LABELS[contract.status]}
+                    tone={labelOf(STATUS_TONES, contract.status, "gray")}
+                    label={labelOf(STATUS_LABELS, contract.status, "–")}
                   />
                 </p>
                 <p className="mt-0.5 text-sm wrap-anywhere text-gray-600">

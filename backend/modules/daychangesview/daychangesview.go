@@ -33,6 +33,9 @@ const (
 	SourceChildren Source = "children"
 	// SourceNotices is Hinweise der Leitung: the notices that apply today.
 	SourceNotices Source = "notices"
+	// SourceActivities is Stundenplan: cancelled, reinstated, moved and
+	// covered activity blocks (#7662).
+	SourceActivities Source = "activities"
 )
 
 // SourceState says whether a source answered. A source the caller lacks the
@@ -73,6 +76,14 @@ const (
 	KindChildSummary Kind = "child_summary"
 	// KindStaffNotice: a Hinweis der Leitung applies today.
 	KindStaffNotice Kind = "staff_notice"
+	// KindActivityCancelled: an activity block does not take place today.
+	KindActivityCancelled Kind = "activity_cancelled"
+	// KindActivityReinstated: its cancellation was taken back.
+	KindActivityReinstated Kind = "activity_reinstated"
+	// KindActivityRoomChanged: it lies in another room than its series plans.
+	KindActivityRoomChanged Kind = "activity_room_changed"
+	// KindActivityLeadChanged: somebody covers for a planned supervisor.
+	KindActivityLeadChanged Kind = "activity_lead_changed"
 )
 
 // ChildStatus is the status of an absent child, as on the detail page.
@@ -110,6 +121,8 @@ const (
 	LinkStudent LinkTarget = "student"
 	// LinkStaffNotices is the page of the Hinweise der Leitung.
 	LinkStaffNotices LinkTarget = "staff_notices"
+	// LinkDayPlan is the day plan of today, where the blocks stand.
+	LinkDayPlan LinkTarget = "day_plan"
 )
 
 // Person is somebody an entry names. The ID is the staff record.
@@ -191,6 +204,19 @@ type DayNotice struct {
 	Acknowledged            bool           `json:"acknowledged"`
 }
 
+// BlockRoom is the room an entry names.
+type BlockRoom struct {
+	ID   int64  `json:"id,string"`
+	Name string `json:"name"`
+}
+
+// BlockActivity is the activity block an entry concerns; its time of day
+// travels in StartsAt and EndsAt.
+type BlockActivity struct {
+	ID    int64  `json:"id,string"`
+	Title string `json:"title"`
+}
+
 // SourceEntry is what a source port returns: an entry without its section,
 // and whether the caller is involved. The source has applied its own
 // permission rule already; the projection never filters.
@@ -219,6 +245,11 @@ type SourceEntry struct {
 	ChildSummary *ChildSummary
 	// Notice is set on KindStaffNotice only.
 	Notice *DayNotice
+	// Activity is set on the activity kinds (#7662). Room is where the block
+	// takes place, PreviousRoom where its series plans it when it moved.
+	Activity     *BlockActivity
+	Room         *BlockRoom
+	PreviousRoom *BlockRoom
 }
 
 // Entry is one change to regular operation of the day.
@@ -242,6 +273,10 @@ type Entry struct {
 	// Child is set on the child kinds, ChildSummary on child_summary.
 	Child        *Child        `json:"child"`
 	ChildSummary *ChildSummary `json:"child_summary"`
+	// Activity, Room and PreviousRoom: see SourceEntry.
+	Activity     *BlockActivity `json:"activity"`
+	Room         *BlockRoom     `json:"room"`
+	PreviousRoom *BlockRoom     `json:"previous_room"`
 }
 
 // SourceStatus reports one source.
@@ -272,6 +307,13 @@ type ChildChanges interface {
 	ChildChanges(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
 }
 
+// ActivityChanges is the Stundenplan port: the activity blocks of the day
+// that do not run as planned, as the caller may see them on the day plan.
+// It carries no reason for a cancellation or an absence.
+type ActivityChanges interface {
+	ActivityChanges(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
+}
+
 // StaffNotices is the Hinweise der Leitung port: the notices that apply on
 // the day for the caller, with the caller's own acknowledgement. A caller who
 // may not read the notices gets none.
@@ -300,7 +342,9 @@ type Dependencies struct {
 	Staff     StaffChanges
 	Children  ChildChanges
 	Notices   StaffNotices
-	Logger    *slog.Logger
+	// Activities is the Stundenplan source (#7662).
+	Activities ActivityChanges
+	Logger     *slog.Logger
 }
 
 // Query reads the overview of the session's school.
@@ -325,7 +369,7 @@ type view struct {
 
 // New builds the projection.
 func New(deps Dependencies) (Query, error) {
-	if deps.Today == nil || deps.Isolation == nil || deps.Staff == nil || deps.Children == nil || deps.Notices == nil {
+	if deps.Today == nil || deps.Isolation == nil || deps.Staff == nil || deps.Children == nil || deps.Notices == nil || deps.Activities == nil {
 		return nil, ErrDependencies
 	}
 	logger := deps.Logger
@@ -341,6 +385,7 @@ func New(deps Dependencies) (Query, error) {
 			{source: SourceStaff, read: deps.Staff.StaffChanges},
 			{source: SourceChildren, read: deps.Children.ChildChanges},
 			{source: SourceNotices, read: deps.Notices.StaffNotices},
+			{source: SourceActivities, read: deps.Activities.ActivityChanges},
 		},
 	}, nil
 }
@@ -423,6 +468,7 @@ func toEntry(entry SourceEntry) Entry {
 		Since: entry.Since, Until: entry.Until, StartsAt: entry.StartsAt, EndsAt: entry.EndsAt,
 		People: people, Group: entry.Group, Link: entry.Link, Count: entry.Count, Notice: entry.Notice,
 		Child: entry.Child, ChildSummary: entry.ChildSummary,
+		Activity: entry.Activity, Room: entry.Room, PreviousRoom: entry.PreviousRoom,
 	}
 }
 

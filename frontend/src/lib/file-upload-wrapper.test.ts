@@ -13,8 +13,7 @@ interface ErrorResponse {
 }
 
 interface SuccessResponse<T> {
-  success: boolean;
-  message: string;
+  status: "success";
   data: T;
 }
 
@@ -630,13 +629,12 @@ describe("createFileUploadHandler", () => {
       }>;
 
       expect(data).toEqual({
-        success: true,
-        message: "Success",
+        status: "success",
         data: { userId: 123 },
       });
     });
 
-    it("preserves existing ApiResponse format", async () => {
+    it("wraps a result that names a success of its own", async () => {
       const handler = vi.fn().mockResolvedValue({
         success: true,
         message: "Custom message",
@@ -652,14 +650,16 @@ describe("createFileUploadHandler", () => {
       const context = { params: Promise.resolve({}) };
 
       const response = await wrappedHandler(request, context);
-      const data = (await response.json()) as SuccessResponse<{
-        userId: number;
-      }>;
+      const data = (await response.json()) as SuccessResponse<unknown>;
 
+      // The removed wrapper passed such a result on unwrapped (#2353).
       expect(data).toEqual({
-        success: true,
-        message: "Custom message",
-        data: { userId: 123 },
+        status: "success",
+        data: {
+          success: true,
+          message: "Custom message",
+          data: { userId: 123 },
+        },
       });
     });
 

@@ -85,7 +85,7 @@ func TestOwnChildDaysArePlannedWhenAnAccountWithoutStaffRecordPicksTheGroup(t *t
 		ID: int(account.ID), Sub: account.Email, TenantID: f.nord, Roles: []string{"admin"},
 		Permissions: []string{permissions.ConfigRead, permissions.UsersCreate, permissions.UsersRead},
 	})
-	rec := f.assign(t, token, f.offer.Weeks[0].ID, f.group)
+	rec := f.assign(t, token, int64(f.offer.Weeks[0].ID), f.group)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	transfer := decodeSchoolPortalData[enrollment.HolidayGuestTransfer](t, rec.Body.Bytes())
 	assert.Equal(t, 1, transfer.OwnChildren)

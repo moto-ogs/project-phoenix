@@ -112,14 +112,14 @@ func listedDepartureModes(t *testing.T, tc *testContext, claims sessiontoken.App
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 	var response struct {
 		Data []struct {
-			ID                   int64    `json:"id"`
-			DepartureModes       []string `json:"departure_modes"`
-			DepartureIsException bool     `json:"departure_is_exception"`
+			ID                   testpkg.ID `json:"id"`
+			DepartureModes       []string   `json:"departure_modes"`
+			DepartureIsException bool       `json:"departure_is_exception"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
 	for _, row := range response.Data {
-		if row.ID == studentID {
+		if int64(row.ID) == studentID {
 			assert.Equal(t, wantException, row.DepartureIsException)
 			return row.DepartureModes
 		}

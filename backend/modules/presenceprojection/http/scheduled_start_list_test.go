@@ -54,7 +54,7 @@ func TestStudentListCountsAScheduledChildOnlyFromItsCareStart(t *testing.T) {
 		require.Equal(t, http.StatusOK, response.Code, "Body: %s", response.Body.String())
 		var body struct {
 			Data []struct {
-				ID int64 `json:"id"`
+				ID testpkg.ID `json:"id"`
 			} `json:"data"`
 			Pagination struct {
 				TotalRecords int `json:"total_records"`
@@ -63,7 +63,7 @@ func TestStudentListCountsAScheduledChildOnlyFromItsCareStart(t *testing.T) {
 		require.NoError(t, json.Unmarshal(response.Body.Bytes(), &body))
 		ids := map[int64]bool{}
 		for _, row := range body.Data {
-			ids[row.ID] = true
+			ids[int64(row.ID)] = true
 		}
 		return ids, body.Pagination.TotalRecords
 	}

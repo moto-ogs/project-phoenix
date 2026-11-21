@@ -54,23 +54,23 @@ func TestHolidayRegistrationsGoAfterTheirRetentionAndInvoicesStay(t *testing.T) 
 	}
 	f.list(t, "")
 	setNumberRange(t, f, billing, "FE-{NNNN}")
-	run := billingRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
+	run := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
 	var lia int64
 	for _, document := range run.Documents {
-		if document.RegistrationID == f.siblings {
-			lia = document.Children[0].ChildID
+		if int64(document.RegistrationID) == f.siblings {
+			lia = int64(document.Children[0].ChildID)
 		}
 	}
 	require.NotZero(t, lia)
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/corrections"), map[string]any{
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/corrections"), map[string]any{
 		"registration_id": f.siblings, "child_id": lia, "total_cents": 3000, "reason": "Erste Woche krank, halber Beitrag",
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	run = billingRun(t, f, billing, run.ID)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(run))
+	run = billingRun(t, f, billing, int64(run.ID))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(run))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	brandTraeger(t, f)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/letters"), lettersBody("2099-01-15"))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/letters"), lettersBody("2099-01-15"))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 
 	invoices := func() []string {
@@ -186,7 +186,7 @@ func TestHolidayRegistrationsGoAfterTheirRetentionAndInvoicesStay(t *testing.T) 
 	listReads := afterThreeMonths["enrollment.holiday_registration_audit"] - siblingsTrail
 	assert.Positive(t, listReads, "the reads of the list stay while a registration of the period stays")
 	first := holidayRegistrationDeletionEntry{
-		HolidayPeriodID: f.period.ID, PeriodEndedOn: lastDay,
+		HolidayPeriodID: int64(f.period.ID), PeriodEndedOn: lastDay,
 		Registrations: 1, Children: 1, AuditEntries: againTrail, HealthRecords: 1,
 	}
 	assert.Equal(t, []holidayRegistrationDeletionEntry{first}, deletions(),
@@ -206,7 +206,7 @@ func TestHolidayRegistrationsGoAfterTheirRetentionAndInvoicesStay(t *testing.T) 
 		assert.Zero(t, rows, "%s is gone on the 366th day", table)
 	}
 	assert.Equal(t, []holidayRegistrationDeletionEntry{first, {
-		HolidayPeriodID: f.period.ID, PeriodEndedOn: lastDay,
+		HolidayPeriodID: int64(f.period.ID), PeriodEndedOn: lastDay,
 		Registrations: 1, Children: 2, AuditEntries: afterHealthRead["enrollment.holiday_registration_audit"],
 	}}, deletions(), "the second deletion stands in the log with its counts")
 	assert.Equal(t, issued, invoices(), "the issued invoices, positions, letters and the trail of the run stay unchanged")

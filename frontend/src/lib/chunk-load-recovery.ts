@@ -24,9 +24,11 @@ const CHUNK_LOAD_MESSAGE =
 
 export function isChunkLoadError(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
-  return (
-    error.name === "ChunkLoadError" || CHUNK_LOAD_MESSAGE.test(error.message)
-  );
+  if (error.name === "ChunkLoadError") return true;
+  // A runtime that throws a plain Error carries the failed chunk only in the
+  // text; no code or status exists for it.
+  // oxlint-disable-next-line error-path/no-error-text-match -- bundler runtime error, not an API error: its text is the only carrier
+  return CHUNK_LOAD_MESSAGE.test(error.message);
 }
 
 /**

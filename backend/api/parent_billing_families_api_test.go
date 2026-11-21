@@ -24,7 +24,7 @@ import (
 const billingFamiliesPath = "/traeger/billing-families"
 
 type billingFamilyBody struct {
-	ID                 int64    `json:"id"`
+	ID                 wireID   `json:"id"`
 	RecipientFirstName string   `json:"recipient_first_name"`
 	RecipientLastName  string   `json:"recipient_last_name"`
 	RecipientEmail     string   `json:"recipient_email"`
@@ -41,8 +41,8 @@ type billingFamilyBody struct {
 	CreditedCents    int64 `json:"credited_cents"`
 	OpenCents        int64 `json:"open_cents"`
 	Documents        []struct {
-		ID              int64    `json:"id"`
-		RunID           int64    `json:"run_id"`
+		ID              wireID   `json:"id"`
+		RunID           wireID   `json:"run_id"`
 		Kind            string   `json:"kind"`
 		Number          string   `json:"number"`
 		PeriodName      string   `json:"period_name"`
@@ -86,14 +86,14 @@ func releaseSecondPeriodFor(t *testing.T, f reviewFixture, billing, email string
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(second.PublicToken), siblingsRegistration(offer, email))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	registration := decodeSchoolPortalData[struct {
-		ID int64 `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes())
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(second.ID, registration.ID), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(second.ID), int64(registration.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	run := billingRun(t, f, billing, startBillingRun(t, f, billing, second.ID).ID)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(run))
+	run := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(second.ID)).ID))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(run))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	return run.ID
+	return int64(run.ID)
 }
 
 func TestBillingFamiliesShowEveryDocumentWhoPaysAndWhatIsOpen(t *testing.T) {
@@ -101,17 +101,17 @@ func TestBillingFamiliesShowEveryDocumentWhoPaysAndWhatIsOpen(t *testing.T) {
 	f := newReviewFixture(t, "Träger Familien Beträge")
 	billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
 	run := lettersOfRun(t, f, billing)
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/letters"), lettersBody("2099-01-15"))
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/letters"), lettersBody("2099-01-15"))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	released := correctedRun(t, f, billing, run.ID)
+	released := correctedRun(t, f, billing, int64(run.ID))
 	first, second := documentByNumber(t, released, "FE-0001"), documentByNumber(t, released, "FE-0002")
 	require.NotEqual(t, first.RegistrationID, second.RegistrationID)
 	child := second.Children[0]
 	require.Greater(t, child.TotalCents, int64(500))
 
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(run.ID, first.ID), map[string]any{"reason": "Anschrift falsch"})
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(int64(run.ID), int64(first.ID)), map[string]any{"reason": "Anschrift falsch"})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, creditPath(run.ID, second.ID),
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, creditPath(int64(run.ID), int64(second.ID)),
 		map[string]any{"child_id": child.ChildID, "amount_cents": 500, "reason": "Erster Tag krank"})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 
@@ -143,7 +143,7 @@ func TestBillingFamiliesShowEveryDocumentWhoPaysAndWhatIsOpen(t *testing.T) {
 	assert.Equal(t, "family", papa.Payments[0].Kind)
 	assert.Empty(t, papa.Documents, "the list carries no documents")
 
-	detail := billingFamily(t, f, billing, papa.ID)
+	detail := billingFamily(t, f, billing, int64(papa.ID))
 	assert.Equal(t, papa.OpenCents, detail.OpenCents)
 	require.Len(t, detail.Documents, 2)
 	credit, invoice := detail.Documents[0], detail.Documents[1]
@@ -160,18 +160,18 @@ func TestBillingFamiliesShowEveryDocumentWhoPaysAndWhatIsOpen(t *testing.T) {
 	assert.NotEmpty(t, invoice.PeriodName)
 	assert.Nil(t, invoice.RecipientEmail, "a document does not repeat the recipient")
 
-	evaDetail := billingFamily(t, f, billing, eva.ID)
+	evaDetail := billingFamily(t, f, billing, int64(eva.ID))
 	require.Len(t, evaDetail.Documents, 3)
 	statuses := map[string]string{}
 	runs := map[int64]bool{}
 	for _, document := range evaDetail.Documents {
 		statuses[document.Number] = document.Status
-		runs[document.RunID] = true
+		runs[int64(document.RunID)] = true
 	}
 	assert.Equal(t, "cancelled", statuses[first.Number])
 	assert.True(t, runs[secondRun], "the family reaches across runs")
 	// Any document of the family opens it.
-	assert.Equal(t, eva.ID, billingFamily(t, f, billing, evaDetail.Documents[0].ID).ID)
+	assert.Equal(t, eva.ID, billingFamily(t, f, billing, int64(evaDetail.Documents[0].ID)).ID)
 
 	// Every read stands in the trail of every run it showed.
 	var views []string

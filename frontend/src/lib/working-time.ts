@@ -45,7 +45,8 @@ export interface WorkingTimeRefusal {
   readonly reasonRequired: boolean;
 }
 
-interface BackendWorkingTimeWarning {
+/** A warning in the error details of `workforce.working_time_warning`; read defensively. */
+interface RawWorkingTimeWarning {
   kind?: unknown;
   date?: unknown;
   minutes?: unknown;
@@ -67,7 +68,7 @@ function isKind(value: unknown): value is WorkingTimeWarningKind {
 
 /** Liest einen Hinweis vom Backend; unbekannte Arten fallen weg. */
 function mapWorkingTimeWarning(
-  raw: BackendWorkingTimeWarning,
+  raw: RawWorkingTimeWarning,
 ): WorkingTimeWarning | null {
   if (!isKind(raw.kind) || typeof raw.date !== "string") return null;
   return {
@@ -82,7 +83,7 @@ function mapWorkingTimeWarning(
 export function mapWorkingTimeWarnings(raw: unknown): WorkingTimeWarning[] {
   if (!Array.isArray(raw)) return [];
   return raw
-    .map((item) => mapWorkingTimeWarning(item as BackendWorkingTimeWarning))
+    .map((item) => mapWorkingTimeWarning(item as RawWorkingTimeWarning))
     .filter((item): item is WorkingTimeWarning => item !== null);
 }
 

@@ -120,7 +120,6 @@ describe("adaptHistorySessionForMetrics", () => {
     netMinutes: 5,
     isOvertime: false,
     isBreakCompliant: true,
-    restPeriodWarning: null,
     breaks: [],
     editCount: 0,
     ...overrides,

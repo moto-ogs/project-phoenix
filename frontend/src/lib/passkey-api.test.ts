@@ -207,8 +207,7 @@ describe("passkey-api", () => {
     mockAuthenticatedSession();
     vi.mocked(global.fetch).mockResolvedValueOnce(
       jsonResponse(200, {
-        success: true,
-        message: "Success",
+        status: "success",
         data: {
           challenge_token: "challenge-token",
           masked_email: "a***@example.test",
@@ -235,8 +234,7 @@ describe("passkey-api", () => {
     vi.mocked(global.fetch)
       .mockResolvedValueOnce(
         jsonResponse(200, {
-          success: true,
-          message: "Success",
+          status: "success",
           data: {
             session_id: "registration-session",
             options: { publicKey: { challenge: "registration-challenge" } },
@@ -245,8 +243,7 @@ describe("passkey-api", () => {
       )
       .mockResolvedValueOnce(
         jsonResponse(200, {
-          success: true,
-          message: "Success",
+          status: "success",
           data: {
             id: "12",
             name: "MacBook",
@@ -293,7 +290,7 @@ describe("passkey-api", () => {
       created_at: "2026-06-15T10:00:00Z",
     };
     vi.mocked(global.fetch).mockResolvedValueOnce(
-      jsonResponse(200, { success: true, message: "Success", data: [passkey] }),
+      jsonResponse(200, { status: "success", data: [passkey] }),
     );
 
     await expect(listPasskeys("tenant")).resolves.toEqual([passkey]);
@@ -304,8 +301,7 @@ describe("passkey-api", () => {
     vi.mocked(global.fetch)
       .mockResolvedValueOnce(
         jsonResponse(200, {
-          success: true,
-          message: "Success",
+          status: "success",
           data: [
             {
               id: "7",

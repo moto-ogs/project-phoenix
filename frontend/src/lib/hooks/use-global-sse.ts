@@ -965,11 +965,13 @@ export function useGlobalSSE(): SSEHookState {
     // „Heute anders“ (#7659) lists the day's absences and substitutions. A
     // staffing deviation (staffing_deviation_changed rides the timetable
     // flag), a Gruppenübergabe (group_access_changed) or an absence or shift
-    // (staff_time_tracking_changed) rewrites it. A source of a later ticket
-    // adds its flag here. The burst debounce makes several events one reload;
-    // the reconnect reconcile sets every flag. The children (#7665): a status
-    // day, a parent's pickup change and a day departure announce
-    // student_updated; a staff Gehzeit or pickup note pickup_schedule_changed.
+    // (staff_time_tracking_changed) rewrites it. The activity blocks (#7662)
+    // ride the timetable flag too: instance_cancelled for a cancellation,
+    // staffing_deviation_changed for a reinstatement, a room or a substitute.
+    // The children (#7665): a status day, a parent's pickup change and a day
+    // departure announce student_updated; a staff Gehzeit or pickup note
+    // pickup_schedule_changed. The burst debounce makes several events one
+    // reload; the reconnect reconcile sets every flag.
     if (
       hasPendingTimetableEvent.current ||
       hasPendingGroupAccessEvent.current ||

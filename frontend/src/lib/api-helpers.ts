@@ -11,22 +11,13 @@ import {
 // Logger instance for API helpers
 const logger = createLogger({ component: "ApiHelpers" });
 
-/**
- * Type for API response to ensure consistent structure
- */
-export interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-}
-
 /** The error body of an API answer: the RFC 9457 envelope (ADR 0006). */
 export type ApiErrorResponse = ProblemBody;
 
 /**
  * Generic domain API error handler: every failure leaves as an ApiError, so
- * the shared display path reads its status and code. An Axios failure keeps
- * the envelope of its response; anything without a response is a server
+ * the shared display path reads its status and code. A failure that carries
+ * a response keeps its envelope; anything without a response is a server
  * fault.
  * @param error - The caught error
  * @param context - Description of the failed operation

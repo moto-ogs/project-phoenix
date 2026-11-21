@@ -37,15 +37,6 @@ describe("scrubEvent", () => {
     });
 
     expect(scrubClientEvent(network)).toBeNull();
-    expect(
-      scrubClientEvent(
-        makeEvent({
-          exception: {
-            values: [{ type: "AxiosError", value: "Network Error" }],
-          },
-        }),
-      ),
-    ).toBeNull();
     expect(scrubClientEvent(other)).toBe(other);
     expect(scrubEvent(network)).toBe(network);
   });

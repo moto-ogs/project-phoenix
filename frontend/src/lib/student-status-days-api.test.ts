@@ -39,7 +39,7 @@ describe("student-status-days-api", () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(
-        Response.json({ success: true, data: [backendDay] }),
+        Response.json({ status: "success", data: [backendDay] }),
       );
 
     const days = await fetchStudentStatusDays("42", "2026-05-25", "2026-05-29");
@@ -61,7 +61,7 @@ describe("student-status-days-api", () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(
-        Response.json({ success: true, data: [backendDay] }),
+        Response.json({ status: "success", data: [backendDay] }),
       );
 
     const days = await createStudentStatusDays("42", "sick", [
@@ -183,7 +183,7 @@ describe("student-status-days-api", () => {
   it("posts bulk class trip ranges with numeric student ids and reason", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       Response.json({
-        success: true,
+        status: "success",
         data: { student_count: 2, date_count: 3 },
       }),
     );
@@ -212,7 +212,7 @@ describe("student-status-days-api", () => {
   it("omits empty bulk reasons and throws fallback messages on failure", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       Response.json({
-        success: true,
+        status: "success",
         data: { student_count: 1, date_count: 1 },
       }),
     );
@@ -352,7 +352,9 @@ describe("student-status-days-api", () => {
     };
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(Response.json({ success: true, data: overview }));
+      .mockResolvedValueOnce(
+        Response.json({ status: "success", data: overview }),
+      );
 
     const result = await fetchStatusDayOverview("2026-05-25", "2026-05-29", {
       page: 1,

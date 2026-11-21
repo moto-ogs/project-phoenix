@@ -7,20 +7,43 @@
  * stay "YYYY-MM-DD".
  */
 
+import { knownEnum } from "./contract/known-enum";
+import { requiredDay } from "./contract/required-day";
+import type {
+  CareNotice as WireNotice,
+  CareNoticeLetter as WireLetter,
+  CareNoticeReference as WireReference,
+  CareNoticeRun as WireRun,
+  CareNoticeRunDetail as WireRunDetail,
+  CareNoticeRunList as WireRunList,
+  CareNoticeRunRequest,
+} from "./contract/traeger-care-notice-runs.generated";
 import { traegerRequest } from "./traeger-api";
+
+// Go does not register these sets; the contract types them as string. A value
+// this build does not know stays undefined instead of passing as a known one.
+const RUN_STATUS_VALUES = ["calculated", "released", "discarded"] as const;
+const NOTICE_KIND_VALUES = ["initial", "change"] as const;
+const LINE_KIND_VALUES = ["module", "reduction", "cost_share"] as const;
 
 const RUNS_PATH = "/api/traeger/care-notice-runs";
 
-export type CareNoticeRunStatus = "calculated" | "released" | "discarded";
-export type CareNoticeKind = "initial" | "change";
-type CareNoticeLineKind = "module" | "reduction" | "cost_share";
+export type CareNoticeRunStatus = (typeof RUN_STATUS_VALUES)[number];
+export type CareNoticeKind = (typeof NOTICE_KIND_VALUES)[number];
+
+/** The notice kind a value names, undefined when unknown. */
+export function knownNoticeKind(value: string): CareNoticeKind | undefined {
+  return knownEnum(NOTICE_KIND_VALUES, value);
+}
+type CareNoticeLineKind = (typeof LINE_KIND_VALUES)[number];
 
 export interface CareNoticeRun {
   readonly id: string;
   readonly year: number;
   readonly periodFrom: string;
   readonly periodUntil: string;
-  readonly status: CareNoticeRunStatus;
+  /** undefined: a status this build does not know. */
+  readonly status: CareNoticeRunStatus | undefined;
   readonly schoolIds: readonly string[];
   readonly noticeDate: string | null;
   readonly createdAt: string;
@@ -39,7 +62,7 @@ export interface CareNoticeRunList {
 
 /** One basis of calculation over a span of months with one monthly amount. */
 export interface CareNoticeLine {
-  readonly kind: CareNoticeLineKind;
+  readonly kind: CareNoticeLineKind | undefined;
   readonly label: string;
   readonly detail: string;
   readonly periodFrom: string;
@@ -84,7 +107,8 @@ export interface CareNotice {
   readonly id: string;
   readonly number: string;
   readonly issuedOn: string | null;
-  readonly kind: CareNoticeKind;
+  /** undefined: a kind this build does not know. */
+  readonly kind: CareNoticeKind | undefined;
   readonly contractId: string;
   readonly schoolId: string;
   readonly schoolName: string;
@@ -138,160 +162,52 @@ export interface CareNoticeLetter {
   } | null;
 }
 
-interface BackendRun {
-  id: number | string;
-  year: number;
-  period_from: string;
-  period_until: string;
-  status: CareNoticeRunStatus;
-  school_ids: (number | string)[] | null;
-  notice_date: string | null;
-  created_at: string;
-  issued_on: string | null;
-  notice_count: number | null;
-  total_cents: number | null;
-  discarded_at?: string | null;
-}
-
-interface BackendLine {
-  kind: CareNoticeLineKind;
-  label: string;
-  detail: string;
-  period_from: string;
-  period_until: string;
-  months: number;
-  quantity: number;
-  monthly_previous_cents: number;
-  monthly_cents: number;
-  annual_previous_cents: number;
-  annual_cents: number;
-  delta_cents: number;
-}
-
-interface BackendInstallment {
-  month: string;
-  due_on: string;
-  immediately_due: boolean;
-  previous_cents: number;
-  amount_cents: number;
-  delta_cents: number;
-}
-
-interface BackendReference {
-  id: number | string;
-  number: string;
-  issued_on: string | null;
-}
-
-interface BackendNotice {
-  id: number | string;
-  number: string;
-  issued_on: string | null;
-  kind: CareNoticeKind;
-  contract_id: number | string;
-  school_id: number | string;
-  school_name: string;
-  child_first_name: string;
-  child_last_name: string;
-  recipient: {
-    first_name?: string;
-    last_name?: string;
-    email?: string;
-    second_name?: string;
-    address?: { street: string; postal_code: string; city: string } | null;
-  } | null;
-  payment_method: string;
-  year: number;
-  period_from: string;
-  period_until: string;
-  lines: BackendLine[] | null;
-  installments: BackendInstallment[] | null;
-  previous_cents: number;
-  total_cents: number;
-  delta_cents: number;
-  amends: BackendReference | null;
-  amended_by: BackendReference | null;
-  legal_remedy: string;
-}
-
-interface BackendRunDetail extends BackendRun {
-  notices: BackendNotice[] | null;
-  unchanged: number;
-  billed: number;
-  unpriced: unknown[] | null;
-  duplicates: unknown[] | null;
-  preview_count: number;
-  preview_cents: number;
-  preview_delta_cents: number;
-  fingerprint: string;
-  number_pattern: string;
-  number_range_set: boolean;
-  legal_remedy_missing: boolean;
-}
-
-interface BackendLetter {
-  notice: BackendNotice;
-  sender_text: string;
-  footer_text: string;
-  contact_name: string;
-  contact_phone: string;
-  contact_email: string;
-  accent_color: string;
-  logo_data_url: string;
-  bank_account: {
-    account_holder: string;
-    iban: string;
-    bic: string;
-    bank_name: string;
-  } | null;
-}
-
-function runFromBackend(run: BackendRun): CareNoticeRun {
+function runFromBackend(run: WireRun): CareNoticeRun {
   return {
-    id: String(run.id),
+    id: run.id,
     year: run.year,
-    periodFrom: run.period_from,
-    periodUntil: run.period_until,
-    status: run.status,
-    schoolIds: (run.school_ids ?? []).map(String),
+    periodFrom: requiredDay(run.period_from, "care_notice_run.period_from"),
+    periodUntil: requiredDay(run.period_until, "care_notice_run.period_until"),
+    status: knownEnum(RUN_STATUS_VALUES, run.status),
+    schoolIds: run.school_ids ?? [],
     noticeDate: run.notice_date,
     createdAt: run.created_at,
     issuedOn: run.issued_on,
     noticeCount: run.notice_count,
     totalCents: run.total_cents,
-    discardedAt: run.discarded_at ?? null,
+    discardedAt: run.discarded_at,
   };
 }
 
 function referenceFromBackend(
-  reference: BackendReference | null,
+  reference: WireReference | null,
 ): CareNoticeReference | null {
   return reference
     ? {
-        id: String(reference.id),
+        id: reference.id,
         number: reference.number,
         issuedOn: reference.issued_on,
       }
     : null;
 }
 
-function noticeFromBackend(notice: BackendNotice): CareNotice {
-  const recipient = notice.recipient ?? {};
+function noticeFromBackend(notice: WireNotice): CareNotice {
+  const { recipient } = notice;
   return {
-    id: String(notice.id),
+    id: notice.id,
     number: notice.number,
     issuedOn: notice.issued_on,
-    kind: notice.kind,
-    contractId: String(notice.contract_id),
-    schoolId: String(notice.school_id),
+    kind: knownNoticeKind(notice.kind),
+    contractId: notice.contract_id,
+    schoolId: notice.school_id,
     schoolName: notice.school_name,
     childFirstName: notice.child_first_name,
     childLastName: notice.child_last_name,
     recipient: {
-      firstName: recipient.first_name ?? "",
-      lastName: recipient.last_name ?? "",
-      email: recipient.email ?? "",
-      secondName: recipient.second_name ?? "",
+      firstName: recipient.first_name,
+      lastName: recipient.last_name,
+      email: recipient.email,
+      secondName: recipient.second_name,
       address: recipient.address
         ? {
             street: recipient.address.street,
@@ -302,14 +218,17 @@ function noticeFromBackend(notice: BackendNotice): CareNotice {
     },
     paymentMethod: notice.payment_method,
     year: notice.year,
-    periodFrom: notice.period_from,
-    periodUntil: notice.period_until,
+    periodFrom: requiredDay(notice.period_from, "care_notice.period_from"),
+    periodUntil: requiredDay(notice.period_until, "care_notice.period_until"),
     lines: (notice.lines ?? []).map((line) => ({
-      kind: line.kind,
+      kind: knownEnum(LINE_KIND_VALUES, line.kind),
       label: line.label,
       detail: line.detail,
-      periodFrom: line.period_from,
-      periodUntil: line.period_until,
+      periodFrom: requiredDay(line.period_from, "care_notice_line.period_from"),
+      periodUntil: requiredDay(
+        line.period_until,
+        "care_notice_line.period_until",
+      ),
       months: line.months,
       quantity: line.quantity,
       monthlyPreviousCents: line.monthly_previous_cents,
@@ -319,8 +238,8 @@ function noticeFromBackend(notice: BackendNotice): CareNotice {
       deltaCents: line.delta_cents,
     })),
     installments: (notice.installments ?? []).map((installment) => ({
-      month: installment.month,
-      dueOn: installment.due_on,
+      month: requiredDay(installment.month, "care_notice_installment.month"),
+      dueOn: requiredDay(installment.due_on, "care_notice_installment.due_on"),
       immediatelyDue: installment.immediately_due,
       previousCents: installment.previous_cents,
       amountCents: installment.amount_cents,
@@ -335,7 +254,7 @@ function noticeFromBackend(notice: BackendNotice): CareNotice {
   };
 }
 
-function detailFromBackend(detail: BackendRunDetail): CareNoticeRunDetail {
+function detailFromBackend(detail: WireRunDetail): CareNoticeRunDetail {
   return {
     ...runFromBackend(detail),
     notices: (detail.notices ?? []).map(noticeFromBackend),
@@ -354,15 +273,14 @@ function detailFromBackend(detail: BackendRunDetail): CareNoticeRunDetail {
 }
 
 export async function fetchCareNoticeRuns(): Promise<CareNoticeRunList> {
-  const body = await traegerRequest<{
-    runs: BackendRun[] | null;
-    suggested_year: number;
-    suggested_month: string;
-  }>(RUNS_PATH);
+  const body = await traegerRequest<WireRunList>(RUNS_PATH);
   return {
     runs: (body.runs ?? []).map(runFromBackend),
     suggestedYear: body.suggested_year,
-    suggestedMonth: body.suggested_month,
+    suggestedMonth: requiredDay(
+      body.suggested_month,
+      "care_notice_runs.suggested_month",
+    ),
   };
 }
 
@@ -380,14 +298,14 @@ export async function startCareNoticeRun(
   input: CareNoticeRunStartInput,
 ): Promise<CareNoticeRun> {
   return runFromBackend(
-    await traegerRequest<BackendRun>(RUNS_PATH, {
+    await traegerRequest<WireRun>(RUNS_PATH, {
       method: "POST",
       body: {
         year: input.year,
         from_month: input.fromMonth,
         school_ids: input.schoolIds.map(Number),
         notice_date: input.noticeDate,
-      },
+      } satisfies CareNoticeRunRequest,
     }),
   );
 }
@@ -396,7 +314,7 @@ export async function fetchCareNoticeRun(
   runId: string,
 ): Promise<CareNoticeRunDetail> {
   return detailFromBackend(
-    await traegerRequest<BackendRunDetail>(
+    await traegerRequest<WireRunDetail>(
       `${RUNS_PATH}/${encodeURIComponent(runId)}`,
     ),
   );
@@ -410,7 +328,7 @@ export async function releaseCareNoticeRun(
   >,
 ): Promise<CareNoticeRunDetail> {
   return detailFromBackend(
-    await traegerRequest<BackendRunDetail>(
+    await traegerRequest<WireRunDetail>(
       `${RUNS_PATH}/${encodeURIComponent(run.id)}/release`,
       {
         method: "POST",
@@ -432,7 +350,7 @@ export async function discardCareNoticeRun(
   runId: string,
 ): Promise<CareNoticeRunDetail> {
   return detailFromBackend(
-    await traegerRequest<BackendRunDetail>(
+    await traegerRequest<WireRunDetail>(
       `${RUNS_PATH}/${encodeURIComponent(runId)}/discard`,
       { method: "POST" },
     ),
@@ -443,7 +361,7 @@ export async function fetchCareNoticeLetter(
   runId: string,
   contractId: string,
 ): Promise<CareNoticeLetter> {
-  const letter = await traegerRequest<BackendLetter>(
+  const letter = await traegerRequest<WireLetter>(
     `${RUNS_PATH}/${encodeURIComponent(runId)}/notices/${encodeURIComponent(contractId)}/letter`,
   );
   return {

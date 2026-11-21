@@ -76,7 +76,7 @@ export function recipientLine(recipient: {
 
 /** "fällig am 15.12.2026". */
 export function dueOnText(payment: InvoicePayment): string {
-  return `fällig am ${formatDate(payment.dueOn)}`;
+  return payment.dueOn ? `fällig am ${formatDate(payment.dueOn)}` : "";
 }
 
 /**
@@ -96,7 +96,7 @@ export function runDueDatesText(dates: readonly RunDueDate[]): string | null {
   return ordered
     .map(
       (due) =>
-        `${PAYMENT_METHOD_LABELS[due.paymentMethod]} am ${formatDate(due.dueOn)}`,
+        `${PAYMENT_METHOD_LABELS[due.paymentMethod]} am ${formatDate(due.dueOn ?? "")}`,
     )
     .join(" · ");
 }
@@ -105,9 +105,9 @@ export function runDueDatesText(dates: readonly RunDueDate[]): string | null {
 export function invoiceDueDatesText(
   payments: readonly (InvoicePayment | null | undefined)[],
 ): string | null {
-  const dates = new Map<string, RunDueDate>();
+  const dates = new Map<string, RunDueDate & { readonly dueOn: string }>();
   for (const payment of payments) {
-    if (payment?.dueOn) {
+    if (payment?.dueOn && payment.method) {
       dates.set(`${payment.method}:${payment.dueOn}`, {
         paymentMethod: payment.method,
         dueOn: payment.dueOn,

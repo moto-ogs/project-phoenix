@@ -164,11 +164,6 @@ vi.mock("~/components/sse/SSEErrorBoundary", () => ({
   ),
 }));
 
-// Mock UnclaimedRooms
-vi.mock("~/components/active/unclaimed-rooms", () => ({
-  UnclaimedRooms: () => <div data-testid="unclaimed-rooms" />,
-}));
-
 vi.mock("~/lib/activity-service", () => ({
   activityService: {
     getActivities: vi.fn(() => Promise.resolve([])),
@@ -548,29 +543,6 @@ describe("MeinRaumPage (Active Supervisions) (2/5)", () => {
       ).toBeInTheDocument();
     });
   });
-
-  it("shows unclaimed rooms component when user has groups to claim", async () => {
-    vi.mocked(useSWRAuth).mockReturnValue({
-      data: {
-        supervisedGroups: [],
-        unclaimedGroups: [{ id: "1", name: "Schulhof" }],
-        currentStaff: { id: "1" },
-        educationalGroups: [],
-        firstRoomVisits: [],
-        firstRoomId: null,
-      },
-      isLoading: false,
-      error: null,
-      mutate: mockMutate,
-      isValidating: false,
-    } as never);
-
-    render(<MeinRaumPage />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("unclaimed-rooms")).toBeInTheDocument();
-    });
-  });
 });
 
 describe("MeinRaumPage additional scenarios", () => {
@@ -768,7 +740,6 @@ describe("MeinRaumPage additional scenarios", () => {
     render(<MeinRaumPage />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("unclaimed-rooms")).toBeInTheDocument();
       expect(
         screen.getByText("Keine aktive Raum-Aufsicht"),
       ).toBeInTheDocument();
@@ -1968,7 +1939,9 @@ describe("EmptyRoomsView without children lists", () => {
     render(<MeinRaumPage />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("unclaimed-rooms")).toBeInTheDocument();
+      expect(
+        screen.getByText("Keine aktive Raum-Aufsicht"),
+      ).toBeInTheDocument();
     });
 
     // The search stands above the children lists; without one there is
@@ -2262,7 +2235,9 @@ describe("BFF dashboard data with students and Schulhof", () => {
     render(<MeinRaumPage />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("unclaimed-rooms")).toBeInTheDocument();
+      expect(
+        screen.getByText("Keine aktive Raum-Aufsicht"),
+      ).toBeInTheDocument();
     });
   });
 });

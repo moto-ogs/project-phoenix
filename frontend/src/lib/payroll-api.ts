@@ -4,39 +4,21 @@
 // route (savePayrollSetting) using the setting keys this status carries.
 
 import { apiErrorFromResponse } from "./api-error";
-import type { MailOutcome, MailOutcomeCounts } from "./email-delivery-status";
+import { knownEnum } from "./contract/known-enum";
+import type { PayrollStatus as PayrollStatusWire } from "./contract/settings.generated";
+import type {
+  PayrollDispatchOverview,
+  PayrollDispatchView as PayrollDispatchViewWire,
+  TargetCoverage,
+} from "./contract/staff.generated";
+import {
+  knownMailOutcome,
+  type MailOutcome,
+  type MailOutcomeCounts,
+} from "./email-delivery-status";
 import { sessionFetch } from "./session-cache";
 import { monthYearLabel } from "./time-account-links";
 import { transferFailureMessage } from "./sftp-export-api";
-
-interface BackendPayrollCategoryStatus {
-  id: string;
-  label: string;
-  number: string;
-  unit?: string;
-  unit_required: boolean;
-  setting_key: string;
-  unit_setting_key?: string;
-}
-
-interface BackendPayrollStatus {
-  categories: BackendPayrollCategoryStatus[];
-  beraternummer: string;
-  mandantennummer: string;
-  lodas_header_complete: boolean;
-  configured_categories: number;
-  total_categories: number;
-  staff_total: number;
-  staff_without_personnel_number: number;
-  dispatch?: BackendPayrollDispatchSettings;
-}
-
-interface BackendPayrollDispatchSettings {
-  auto: boolean;
-  channel: string;
-  format: string;
-  email: string;
-}
 
 interface PayrollCategoryStatus {
   id: string;
@@ -116,7 +98,7 @@ function dispatchFormat(value: string | undefined): PayrollDispatchFormat {
     : "csv";
 }
 
-export function mapPayrollStatus(data: BackendPayrollStatus): PayrollStatus {
+export function mapPayrollStatus(data: PayrollStatusWire): PayrollStatus {
   return {
     categories: (data.categories ?? []).map((cat) => ({
       id: cat.id,
@@ -134,13 +116,13 @@ export function mapPayrollStatus(data: BackendPayrollStatus): PayrollStatus {
     totalCategories: data.total_categories,
     staffTotal: data.staff_total,
     staffWithoutPersonnelNumber: data.staff_without_personnel_number,
-    // Die Vorgaben des Backends (aus, SFTP, CSV), falls ein älteres Backend
-    // den Block noch nicht liefert.
+    // Der Vertrag verlangt den Block; unbekannte Kanäle und Formate fallen
+    // auf die Vorgaben des Backends (SFTP, CSV) zurück.
     dispatch: {
-      auto: data.dispatch?.auto ?? false,
-      channel: dispatchChannel(data.dispatch?.channel),
-      format: dispatchFormat(data.dispatch?.format),
-      email: data.dispatch?.email ?? "",
+      auto: data.dispatch.auto,
+      channel: dispatchChannel(data.dispatch.channel),
+      format: dispatchFormat(data.dispatch.format),
+      email: data.dispatch.email,
     },
   };
 }
@@ -153,7 +135,7 @@ export async function fetchPayrollStatus(): Promise<PayrollStatus> {
       `Failed to fetch payroll status: ${response.statusText}`,
     );
   }
-  const json = (await response.json()) as { data: BackendPayrollStatus };
+  const json = (await response.json()) as { data: PayrollStatusWire };
   return mapPayrollStatus(json.data);
 }
 
@@ -204,25 +186,6 @@ export function duplicateLohnartNumbers(status: PayrollStatus): string[] {
 export type PayrollDispatchState =
   "pending" | "mailing" | "sent" | "blocked" | "failed";
 
-interface BackendPayrollDispatchView {
-  year: number;
-  month: number;
-  correction: boolean;
-  channel: string;
-  format: string;
-  recipient?: string;
-  state: PayrollDispatchState;
-  reason?: string;
-  attempts: number;
-  filename?: string;
-  created_at: string;
-  finished_at?: string;
-  download_expires_at?: string;
-  downloaded_at?: string;
-  link_mail?: MailOutcome;
-  notice_mails?: MailOutcomeCounts;
-}
-
 export interface PayrollDispatchView {
   year: number;
   month: number;
@@ -245,8 +208,29 @@ export interface PayrollDispatchView {
   noticeMails: MailOutcomeCounts | null;
 }
 
+const DISPATCH_STATES: readonly PayrollDispatchState[] = [
+  "pending",
+  "mailing",
+  "sent",
+  "blocked",
+  "failed",
+];
+
+/** Counts per outcome; an outcome this build does not know is left out. */
+function mailCounts(
+  counts: Readonly<Record<string, number>> | undefined,
+): MailOutcomeCounts | null {
+  if (!counts) return null;
+  const known: Partial<Record<MailOutcome, number>> = {};
+  for (const [key, count] of Object.entries(counts)) {
+    const outcome = knownMailOutcome(key);
+    if (outcome) known[outcome] = count;
+  }
+  return known;
+}
+
 function mapPayrollDispatch(
-  data: BackendPayrollDispatchView,
+  data: PayrollDispatchViewWire,
 ): PayrollDispatchView {
   return {
     year: data.year,
@@ -255,7 +239,8 @@ function mapPayrollDispatch(
     channel: dispatchChannel(data.channel),
     format: dispatchFormat(data.format),
     recipient: data.recipient ?? null,
-    state: data.state,
+    // An unknown state reads as failed: the screen asks the school to look.
+    state: knownEnum(DISPATCH_STATES, data.state) ?? "failed",
     reason: data.reason ?? null,
     attempts: data.attempts,
     filename: data.filename ?? null,
@@ -263,8 +248,8 @@ function mapPayrollDispatch(
     finishedAt: data.finished_at ?? null,
     downloadExpiresAt: data.download_expires_at ?? null,
     downloadedAt: data.downloaded_at ?? null,
-    linkMail: data.link_mail ?? null,
-    noticeMails: data.notice_mails ?? null,
+    linkMail: knownMailOutcome(data.link_mail) ?? null,
+    noticeMails: mailCounts(data.notice_mails),
   };
 }
 
@@ -283,16 +268,9 @@ export async function fetchPayrollDispatch(): Promise<PayrollDispatchView | null
     );
   }
   const json = (await response.json()) as {
-    data: { latest: BackendPayrollDispatchView | null };
+    data: PayrollDispatchOverview;
   };
   return json.data.latest ? mapPayrollDispatch(json.data.latest) : null;
-}
-
-interface BackendPayrollTargetCoverage {
-  year: number;
-  month: number;
-  staff_total: number;
-  staff_without_target: number;
 }
 
 /**
@@ -322,7 +300,7 @@ export async function fetchPayrollTargetCoverage(): Promise<PayrollTargetCoverag
     );
   }
   const json = (await response.json()) as {
-    data: BackendPayrollTargetCoverage;
+    data: TargetCoverage;
   };
   return {
     year: json.data.year,

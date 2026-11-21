@@ -12,11 +12,7 @@ import type {
   ClassArrivalExceptionInput,
   ClassArrivalExceptionList,
 } from "./student-arrival-api";
-
-interface ProxyResponse<T> {
-  success: boolean;
-  data: T;
-}
+import type { ApiResponse } from "./api-envelope";
 
 /** Antwort von GET /school/class-day/classes. */
 export interface ClassDayClasses {
@@ -46,7 +42,7 @@ export interface ClassDayClasses {
 }
 
 export async function fetchClassDayClassesSchool(): Promise<ClassDayClasses> {
-  const response = await authFetch<ProxyResponse<Partial<ClassDayClasses>>>(
+  const response = await authFetch<ApiResponse<Partial<ClassDayClasses>>>(
     "/api/school/class-day/classes",
   );
   return {
@@ -125,7 +121,7 @@ export async function fetchSchoolDaySchool(
   date: string,
 ): Promise<SchoolDayReport> {
   const params = new URLSearchParams({ date });
-  const response = await authFetch<ProxyResponse<SchoolDayReport>>(
+  const response = await authFetch<ApiResponse<SchoolDayReport>>(
     `/api/school/class-day/school-day?${params.toString()}`,
   );
   return response.data;
@@ -136,7 +132,7 @@ export async function fetchClassDaySchool(
   date: string,
 ): Promise<ClassDayReport> {
   const params = new URLSearchParams({ class: schoolClass, date });
-  const response = await authFetch<ProxyResponse<ClassDayReport>>(
+  const response = await authFetch<ApiResponse<ClassDayReport>>(
     `/api/school/class-day?${params.toString()}`,
   );
   // The catalog proxy hands student_id out as a string (ADR 0270); the view
@@ -163,7 +159,7 @@ export async function fetchClassArrivalExceptionsSchool(
   schoolClass: string,
 ): Promise<ClassArrivalExceptionList> {
   const params = new URLSearchParams({ class: schoolClass });
-  const response = await authFetch<ProxyResponse<ClassArrivalExceptionList>>(
+  const response = await authFetch<ApiResponse<ClassArrivalExceptionList>>(
     `/api/school/class-day/arrival-exceptions?${params.toString()}`,
   );
   return response.data;
@@ -174,7 +170,7 @@ export async function upsertClassArrivalExceptionSchool(
   date: string,
   input: ClassArrivalExceptionInput,
 ): Promise<ClassArrivalException> {
-  const response = await authFetch<ProxyResponse<ClassArrivalException>>(
+  const response = await authFetch<ApiResponse<ClassArrivalException>>(
     arrivalExceptionPath(schoolClass, date),
     { method: "PUT", body: input },
   );
@@ -199,7 +195,7 @@ export async function fetchClassBlockStartSchool(
   isoDate: string,
 ): Promise<string | null> {
   const params = new URLSearchParams({ class: schoolClass, date: isoDate });
-  const response = await authFetch<ProxyResponse<{ start?: string }>>(
+  const response = await authFetch<ApiResponse<{ start?: string }>>(
     `/api/school/class-day/arrival-exceptions/block-start?${params.toString()}`,
   );
   const start = response.data.start ?? "";
@@ -277,7 +273,7 @@ export async function reportClassTripSchool(
   schoolClass: string,
   input: ClassTripReportInput,
 ): Promise<ClassTripReportResult> {
-  const response = await authFetch<ProxyResponse<ClassTripReportResult>>(
+  const response = await authFetch<ApiResponse<ClassTripReportResult>>(
     `/api/school/class-day/class-trips/${encodeURIComponent(schoolClass)}`,
     {
       method: "POST",
@@ -461,7 +457,7 @@ export async function fetchSharedNotesSchool(
   schoolClass: string,
   studentId: string,
 ): Promise<StudentSharedNotes> {
-  const response = await authFetch<ProxyResponse<StudentSharedNotes>>(
+  const response = await authFetch<ApiResponse<StudentSharedNotes>>(
     `/api/school/class-day/shared-notes/${encodeURIComponent(schoolClass)}/students/${encodeURIComponent(studentId)}`,
   );
   return response.data;
@@ -617,7 +613,7 @@ function absenceListParams(query: AbsenceListQuery): URLSearchParams {
 export async function fetchAbsenceListSchool(
   query: AbsenceListQuery,
 ): Promise<AbsenceList> {
-  const response = await authFetch<ProxyResponse<BackendAbsenceList>>(
+  const response = await authFetch<ApiResponse<BackendAbsenceList>>(
     `/api/school/class-day/absence-list?${absenceListParams(query).toString()}`,
   );
   return mapAbsenceList(response.data);

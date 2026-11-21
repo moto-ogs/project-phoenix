@@ -58,7 +58,7 @@ vi.mock("~/components/ui/tenant-page-search-row", () => ({
 }));
 
 const mockCountsResponse = {
-  success: true,
+  status: "success",
   message: "Counts fetched",
   data: {
     students: 100,

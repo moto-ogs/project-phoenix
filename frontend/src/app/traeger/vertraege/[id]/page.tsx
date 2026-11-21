@@ -102,6 +102,7 @@ import {
 } from "~/lib/traeger-care-contracts-api";
 import { traegerPath } from "~/lib/traeger-url";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
+import { labelOf } from "~/lib/label-of";
 
 const logger = createLogger({ component: "TraegerVertragPage" });
 
@@ -465,7 +466,7 @@ function TraegerVertragView() {
         <>
           {contract ? (
             <StatusBadge
-              label={CONTRACT_STATUS_LABELS[contract.status]}
+              label={labelOf(CONTRACT_STATUS_LABELS, contract.status, "–")}
               tone={contractStatusTone(contract)}
             />
           ) : null}

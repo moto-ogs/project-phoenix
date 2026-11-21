@@ -41,7 +41,7 @@ func TestRebookBatchedTargetsPreserveVersionsOrderAndHalfDayRounding(t *testing.
 		require.Len(t, result.Data.Allowances, 1)
 		require.Equal(t, 1.5, result.Data.Allowances[0].BookingDays)
 		for i, absence := range result.Data.Absences {
-			require.Equal(t, f.Absences[len(f.Absences)-1-i], absence.ID)
+			require.Equal(t, f.Absences[len(f.Absences)-1-i], int64(absence.ID))
 		}
 		if dryRun {
 			require.Equal(t, before, f.AugustBalance(t))

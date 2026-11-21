@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -46,18 +47,18 @@ func (f *seedSharedTraegerRuns) serve(t *testing.T) func(w seedHTTPResponseWrite
 		case path == "POST /traeger/care-billing-runs/":
 			var start struct {
 				BillingMonth calendar.Date `json:"billing_month"`
-				SchoolIDs    []int64       `json:"school_ids"`
+				SchoolIDs    []apiID       `json:"school_ids"`
 			}
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&start))
-			f.started = append(f.started, start.SchoolIDs)
-			run := seedCareRunRef{ID: int64(10 + len(f.started)), BillingMonth: start.BillingMonth, Status: "calculated", SchoolIDs: start.SchoolIDs}
+			f.started = append(f.started, demoprofile.IDs(start.SchoolIDs))
+			run := seedCareRunRef{ID: apiID(10 + len(f.started)), BillingMonth: start.BillingMonth, Status: "calculated", SchoolIDs: start.SchoolIDs}
 			f.runs = append([]seedCareRunRef{run}, f.runs...)
-			f.preview[run.ID] = 2
+			f.preview[int64(run.ID)] = 2
 			_, _ = fmt.Fprintf(w, `{"data":{"id":%d}}`, run.ID)
 		case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/release"):
 			f.released = append(f.released, runID)
 			for i := range f.runs {
-				if f.runs[i].ID == runID {
+				if int64(f.runs[i].ID) == runID {
 					f.runs[i].Status = "released"
 				}
 			}
@@ -102,8 +103,8 @@ func TestSeedCareRunsBillTheSeededSchoolBesideLeftoverRunsOfOtherDemoSchools(t *
 	october, november := calendar.NewDate(2026, 10, 1), calendar.NewDate(2026, 11, 1)
 	traeger := &seedSharedTraegerRuns{
 		runs: []seedCareRunRef{
-			{ID: 4, BillingMonth: october, Status: "calculated", SchoolIDs: []int64{53, 59, 60}},
-			{ID: 3, BillingMonth: october, Status: "released", SchoolIDs: []int64{53, 59}},
+			{ID: 4, BillingMonth: october, Status: "calculated", SchoolIDs: []apiID{53, 59, 60}},
+			{ID: 3, BillingMonth: october, Status: "released", SchoolIDs: []apiID{53, 59}},
 		},
 		preview: map[int64]int{4: 0, 3: 0},
 	}

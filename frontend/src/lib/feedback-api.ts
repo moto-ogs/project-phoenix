@@ -1,19 +1,10 @@
+import type { FeedbackResponse } from "~/lib/contract/feedback.generated";
+import { knownEnum } from "~/lib/contract/known-enum";
 import { apiErrorFromResponse } from "./api-error";
 import { sessionFetch } from "./session-cache";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "FeedbackAPI" });
-
-interface BackendFeedbackEntry {
-  id: number | string;
-  value: "positive" | "neutral" | "negative";
-  day: string;
-  time: string;
-  student_id: number | string;
-  is_mensa_feedback: boolean;
-  created_at: string;
-  updated_at: string;
-}
 
 export interface FeedbackEntry {
   id: string;
@@ -22,15 +13,21 @@ export interface FeedbackEntry {
   is_mensa_feedback: boolean;
 }
 
-function mapFeedbackResponse(entry: BackendFeedbackEntry): FeedbackEntry {
+const FEEDBACK_VALUES: readonly FeedbackEntry["feedback_type"][] = [
+  "positive",
+  "neutral",
+  "negative",
+];
+
+function mapFeedbackResponse(entry: FeedbackResponse): FeedbackEntry {
   // Combine day + time into a timestamp
   // day is "2026-04-06", time is "15:30:23"
   const timestamp = `${entry.day}T${entry.time}`;
 
   return {
-    id: entry.id.toString(),
+    id: entry.id,
     timestamp,
-    feedback_type: entry.value,
+    feedback_type: knownEnum(FEEDBACK_VALUES, entry.value) ?? "neutral",
     is_mensa_feedback: entry.is_mensa_feedback,
   };
 }
@@ -56,7 +53,7 @@ export async function fetchStudentFeedback(
     }
 
     const responseData = (await response.json()) as {
-      data: BackendFeedbackEntry[];
+      data: FeedbackResponse[];
     };
     const entries = responseData.data ?? [];
     return entries.map(mapFeedbackResponse);

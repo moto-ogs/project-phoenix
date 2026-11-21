@@ -294,8 +294,6 @@ func ContractDocument() (contract.Document, error) {
 	}
 	// Appointments and the whole-day substitution keep their own day types.
 	options.Dates = []reflect.Type{reflect.TypeFor[appointments.Date](), reflect.TypeOf(substitutions.Day)}
-	// The timeframe list writes its instants through common.Time (RFC 3339).
-	options.Instants = []reflect.Type{reflect.TypeFor[common.Time]()}
 	return contract.Build(registrations, options)
 }
 
@@ -457,7 +455,6 @@ func staffPortalContractMounts() []contractMount {
 		{"/api/holiday-closure-notices", holidayClosureHTTP.SchoolRouteContracts()},
 		{"/api/rooms", roomsHTTP.RouteContracts()},
 		{"/api/activities", timetableActivitiesHTTP.RouteContracts()},
-		{"/api/schedules", timetableActivitiesHTTP.ScheduleRouteContracts()},
 		{"/api/traeger-documents", organizationTenancyTraeger.SchoolDocumentRouteContracts()},
 		{"/api/meal-caterer", catererPortalHTTP.SchoolRouteContracts()},
 		{"/api/class-list-entries", classListEntryRouteContracts()},

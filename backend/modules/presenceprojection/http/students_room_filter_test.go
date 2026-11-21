@@ -43,14 +43,14 @@ func TestListStudents_RoomFilter_ReturnsOnlyStudentsInRoom(t *testing.T) {
 
 	var resp struct {
 		Data []struct {
-			ID int64 `json:"id"`
+			ID testpkg.ID `json:"id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
 
 	ids := make(map[int64]struct{}, len(resp.Data))
 	for _, s := range resp.Data {
-		ids[s.ID] = struct{}{}
+		ids[int64(s.ID)] = struct{}{}
 	}
 
 	_, hasA1 := ids[studentInRoomA1.ID]
@@ -94,14 +94,14 @@ func TestListStudents_RoomFilter_IntersectsWithGroupFilter(t *testing.T) {
 
 	var resp struct {
 		Data []struct {
-			ID int64 `json:"id"`
+			ID testpkg.ID `json:"id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
 
 	ids := make(map[int64]struct{}, len(resp.Data))
 	for _, s := range resp.Data {
-		ids[s.ID] = struct{}{}
+		ids[int64(s.ID)] = struct{}{}
 	}
 
 	_, hasX := ids[studentInGroupX.ID]
@@ -163,14 +163,14 @@ func TestListStudents_LocationStateTransit_ReturnsCheckedInStudentsWithoutActive
 
 	var resp struct {
 		Data []struct {
-			ID int64 `json:"id"`
+			ID testpkg.ID `json:"id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
 
 	ids := make(map[int64]struct{}, len(resp.Data))
 	for _, s := range resp.Data {
-		ids[s.ID] = struct{}{}
+		ids[int64(s.ID)] = struct{}{}
 	}
 
 	_, hasTransit := ids[transitStudent.ID]
@@ -212,14 +212,14 @@ func TestListStudents_LocationStatePresent_ReturnsStudentsWithOpenAttendance(t *
 
 	var resp struct {
 		Data []struct {
-			ID int64 `json:"id"`
+			ID testpkg.ID `json:"id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
 
 	ids := make(map[int64]struct{}, len(resp.Data))
 	for _, s := range resp.Data {
-		ids[s.ID] = struct{}{}
+		ids[int64(s.ID)] = struct{}{}
 	}
 
 	_, hasTransit := ids[transitStudent.ID]
@@ -278,13 +278,13 @@ func TestListStudents_LocationStateTransitWithGroupID_IntersectsFilters(t *testi
 
 	var resp struct {
 		Data []struct {
-			ID int64 `json:"id"`
+			ID testpkg.ID `json:"id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
 
 	require.Len(t, resp.Data, 1)
-	assert.Equal(t, matchingTransitStudent.ID, resp.Data[0].ID)
+	assert.Equal(t, matchingTransitStudent.ID, int64(resp.Data[0].ID))
 }
 
 func TestListStudents_LocationStateTransit_InvalidFilters(t *testing.T) {
@@ -334,14 +334,14 @@ func TestListStudents_LocationStateTransit_EmptyReturnsEmpty(t *testing.T) {
 
 	var resp struct {
 		Data []struct {
-			ID int64 `json:"id"`
+			ID testpkg.ID `json:"id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
 
 	ids := make(map[int64]struct{}, len(resp.Data))
 	for _, s := range resp.Data {
-		ids[s.ID] = struct{}{}
+		ids[int64(s.ID)] = struct{}{}
 	}
 	_, hasBystander := ids[bystander.ID]
 	assert.False(t, hasBystander, "student without open attendance must not appear")

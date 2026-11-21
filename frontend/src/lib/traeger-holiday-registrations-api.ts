@@ -13,7 +13,6 @@ import {
  */
 
 import {
-  type BackendDebtorNumberFormat,
   type DebtorNumberFormat,
   debtorNumberFormatOf,
 } from "~/lib/debtor-number-format";
@@ -30,6 +29,7 @@ import type {
   HolidayFormVersion,
 } from "./holiday-form-field";
 import { traegerRequest } from "./traeger-api";
+import type { DebtorNumberFormat as WireDebtorNumberFormat } from "./contract/traeger-holiday-contributions.generated";
 
 export type HolidayRegistrationStatus = "received" | "confirmed" | "cancelled";
 
@@ -1188,7 +1188,7 @@ export interface HolidayConfirmationSettings {
 export async function fetchHolidayConfirmationSettings(): Promise<HolidayConfirmationSettings> {
   const settings = await traegerRequest<{
     debtor_number_required: boolean;
-    debtor_number_format?: BackendDebtorNumberFormat | null;
+    debtor_number_format?: WireDebtorNumberFormat | null;
     cost_bearers?: { id: number; name: string }[] | null;
   }>("/api/traeger/holiday-contributions/confirmation-settings");
   return {

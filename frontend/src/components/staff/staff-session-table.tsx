@@ -156,7 +156,6 @@ function splitSessionByBerlinDate(
     roundingMinutes: session.rounding_minutes,
     isOvertime: false,
     isBreakCompliant: true,
-    restPeriodWarning: null,
     breaks: (session.breaks ?? []).map((workBreak, index) => ({
       id: index.toString(),
       sessionId: session.id ?? "",

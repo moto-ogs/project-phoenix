@@ -61,7 +61,6 @@ const (
 	opGetGroup             = "get group"
 	opFindByCategory       = "find by category"
 	opFindGroup            = "find group"
-	opGetSchedule          = "get schedule"
 	opGetSupervisor        = "get supervisor"
 	opFindSupervisor       = "find supervisor"
 	opFindGroupSupervisors = "find group supervisors"

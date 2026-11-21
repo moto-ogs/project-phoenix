@@ -23,7 +23,7 @@ func TestCareContractVersionsAreListedAndEachHasItsPDFForTheTraegerOnly(t *testi
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	contract := decodeSchoolPortalData[careContractCreateBody](t, rec.Body.Bytes()).Created[0]
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, contractPath(contract.ID, ""), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, contractPath(int64(contract.ID), ""), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	detail := decodeSchoolPortalData[struct {
 		Versions []struct {
@@ -35,20 +35,20 @@ func TestCareContractVersionsAreListedAndEachHasItsPDFForTheTraegerOnly(t *testi
 	assert.Equal(t, 1, detail.Versions[0].Number)
 	assert.Equal(t, "abschluss", detail.Versions[0].Source)
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, contractPath(contract.ID, "/versions/1/document"), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, contractPath(int64(contract.ID), "/versions/1/document"), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.True(t, bytes.HasPrefix(rec.Body.Bytes(), []byte("%PDF")))
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, contractPath(contract.ID, "/versions/2/document"), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, contractPath(int64(contract.ID), "/versions/2/document"), nil)
 	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, contractPath(contract.ID, "/versions/null/document"), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, contractPath(int64(contract.ID), "/versions/null/document"), nil)
 	assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 
 	billing := traegerColleague(t, f.reviewFixture, identityaccess.TraegerRoleBilling)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, contractPath(contract.ID, "/versions/1/document"), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, contractPath(int64(contract.ID), "/versions/1/document"), nil)
 	assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
 
 	other := newTraegerOffice(t, f.db, f.traeger, "Träger Vertrag Versionen Fremd", identityaccess.TraegerRoleAdministration)
 	testpkg.OwnTraegerCareContracts(t, f.db, other.organization)
-	rec = traegerJSON(t, f.traeger, other.token, http.MethodGet, contractPath(contract.ID, "/versions/1/document"), nil)
+	rec = traegerJSON(t, f.traeger, other.token, http.MethodGet, contractPath(int64(contract.ID), "/versions/1/document"), nil)
 	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 }

@@ -439,7 +439,7 @@ export function ContractTermsFields({
           id="care-contract-term-kind"
           name="term_kind"
           options={TERM_ITEMS}
-          value={draft.termKind}
+          value={draft.termKind ?? ""}
           onChange={(value) => set("termKind", value as ContractTermKind)}
           error={formErrors.fieldError("term_kind")}
           ariaLabel="Laufzeit"
@@ -487,7 +487,7 @@ export function ContractTermsFields({
           id="care-contract-notice-to"
           name="notice_to"
           label="Kündigung wirkt"
-          value={draft.noticeTo}
+          value={draft.noticeTo ?? ""}
           options={NOTICE_OPTIONS}
           error={formErrors.fieldError("notice_to")}
           onChange={(value) => set("noticeTo", value as ContractNoticeTo)}

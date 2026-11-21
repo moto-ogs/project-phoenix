@@ -44,6 +44,7 @@ import {
   type HandoverFormat,
 } from "~/lib/traeger-export-handovers-api";
 import { traegerPath } from "~/lib/traeger-url";
+import { labelOf } from "~/lib/label-of";
 
 const logger = createLogger({ component: "ExportRecipientCards" });
 
@@ -577,7 +578,7 @@ function handoverColumns(
             {handover.fileName}
           </span>
           <span className="block text-sm text-gray-500">
-            {HANDOVER_FORMAT_LABELS[handover.format] ?? handover.format}
+            {labelOf(HANDOVER_FORMAT_LABELS, handover.format, "Datei")}
           </span>
         </span>
       ),

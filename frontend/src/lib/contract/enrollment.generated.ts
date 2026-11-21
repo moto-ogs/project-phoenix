@@ -2336,13 +2336,6 @@ export const routes = {
     portals: ["tenant"],
     response: success(z.array(FormSchemaResponseSchema)),
   },
-  "GET /api/enrollment/schema/{id}": {
-    method: "GET",
-    pattern: "/api/enrollment/schema/{id}",
-    portals: ["tenant"],
-    deprecated: true,
-    response: success(FormSchemaResponseSchema),
-  },
   "PATCH /api/enrollment/requests/{statusToken}": {
     method: "PATCH",
     pattern: "/api/enrollment/requests/{statusToken}",

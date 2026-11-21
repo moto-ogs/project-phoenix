@@ -132,10 +132,11 @@ function draftOf(target: CostShareTarget, today: string): Draft {
     };
   }
   return {
-    kind: share.kind,
+    // A kind or scope this build does not know: the form asks again.
+    kind: share.kind ?? null,
     costBearerId: share.costBearerId,
-    scope: share.scope,
-    scopeChosen: true,
+    scope: share.scope ?? "care",
+    scopeChosen: share.scope !== undefined,
     mode: share.shareBasisPoints === null ? "amount" : "percent",
     value:
       share.shareBasisPoints === null

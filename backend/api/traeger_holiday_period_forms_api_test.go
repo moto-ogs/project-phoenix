@@ -81,7 +81,7 @@ func TestTraegerBuildsTheFormOfAHolidayPeriodInVersions(t *testing.T) {
 	office := newTraegerOffice(t, f.db, f.traeger, "Träger Formular Bau", identityaccess.TraegerRoleAdministration)
 	period := createHolidayPeriod(t, f.traeger, office, januaryHolidays(office))
 
-	rec := traegerJSON(t, f.traeger, office.token, http.MethodGet, holidayFormPath(period.ID), nil)
+	rec := traegerJSON(t, f.traeger, office.token, http.MethodGet, holidayFormPath(int64(period.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	form := decodeSchoolPortalData[holidayFormBody](t, rec.Body.Bytes())
 	assert.Equal(t, 1, form.Version, "a new period starts with version 1")
@@ -97,7 +97,7 @@ func TestTraegerBuildsTheFormOfAHolidayPeriodInVersions(t *testing.T) {
 	assert.Equal(t, []string{"lebensmittelunvertraeglichkeiten", "tetanus_impfschutz", "foerderbedarf", "koerperliche_einschraenkungen"}, health)
 	assert.NotContains(t, rec.Body.String(), "created_by")
 
-	saved := saveHolidayForm(t, f, office, period.ID, questionsForm())
+	saved := saveHolidayForm(t, f, office, int64(period.ID), questionsForm())
 	assert.Equal(t, 2, saved.Version, "saving writes a new version")
 	keys := []string{}
 	for i, field := range saved.Fields {
@@ -112,24 +112,24 @@ func TestTraegerBuildsTheFormOfAHolidayPeriodInVersions(t *testing.T) {
 
 	reordered := questionsForm()
 	reordered[3], reordered[4] = reordered[4], reordered[3]
-	saved = saveHolidayForm(t, f, office, period.ID, reordered)
+	saved = saveHolidayForm(t, f, office, int64(period.ID), reordered)
 	assert.Equal(t, 3, saved.Version)
 	assert.Equal(t, "lieblingsessen", saved.Fields[3].Key)
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodGet, holidayFormPath(period.ID), nil)
+	rec = traegerJSON(t, f.traeger, office.token, http.MethodGet, holidayFormPath(int64(period.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, 3, decodeSchoolPortalData[holidayFormBody](t, rec.Body.Bytes()).Version)
-	assert.Equal(t, []int{1, 2, 3}, formVersions(t, f, period.ID), "every version stays")
+	assert.Equal(t, []int{1, 2, 3}, formVersions(t, f, int64(period.ID)), "every version stays")
 
 	readOnly := newTraegerOffice(t, f.db, f.traeger, "Träger Formular Lesend", identityaccess.TraegerRoleReadOnly)
 	foreign := newTraegerOffice(t, f.db, f.traeger, "Träger Formular Fremd", identityaccess.TraegerRoleAdministration)
 	for _, method := range []string{http.MethodGet, http.MethodPut} {
 		body := map[string]any{"fields": []map[string]any{}}
-		rec = traegerJSON(t, f.traeger, readOnly.token, method, holidayFormPath(period.ID), body)
+		rec = traegerJSON(t, f.traeger, readOnly.token, method, holidayFormPath(int64(period.ID)), body)
 		assert.Equal(t, http.StatusForbidden, rec.Code, "%s without the right: %s", method, rec.Body.String())
-		rec = traegerJSON(t, f.traeger, foreign.token, method, holidayFormPath(period.ID), body)
+		rec = traegerJSON(t, f.traeger, foreign.token, method, holidayFormPath(int64(period.ID)), body)
 		assert.Equal(t, http.StatusNotFound, rec.Code, "%s of another Träger: %s", method, rec.Body.String())
 	}
-	assert.Equal(t, []int{1, 2, 3}, formVersions(t, f, period.ID), "a refused save writes no version")
+	assert.Equal(t, []int{1, 2, 3}, formVersions(t, f, int64(period.ID)), "a refused save writes no version")
 }
 
 func TestTraegerHolidayFormRefusesWhatTheHolidayFormDoesNotOffer(t *testing.T) {
@@ -167,13 +167,13 @@ func TestTraegerHolidayFormRefusesWhatTheHolidayFormDoesNotOffer(t *testing.T) {
 		{"a select without options", []map[string]any{{"key": "wahl", "label": "Wahl", "type": "select"}},
 			"enrollment.form_field_options_invalid", "fields.0.options"},
 	} {
-		rec := traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayFormPath(period.ID), map[string]any{"fields": refused.fields})
+		rec := traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayFormPath(int64(period.ID)), map[string]any{"fields": refused.fields})
 		require.Equal(t, http.StatusBadRequest, rec.Code, "%s: %s", refused.name, rec.Body.String())
 		code, fields := registrationRefusalOf(t, rec)
 		assert.Equal(t, refused.code, code, refused.name)
 		assert.Equal(t, []string{refused.field}, fields, refused.name)
 	}
-	assert.Equal(t, []int{1}, formVersions(t, f, period.ID), "no refused form becomes a version")
+	assert.Equal(t, []int{1}, formVersions(t, f, int64(period.ID)), "no refused form becomes a version")
 }
 
 // threeChildren registers the siblings and a third child for the first week,
@@ -203,7 +203,7 @@ func TestHolidayRegistrationChecksTheAnswersAgainstItsForm(t *testing.T) {
 	f := newHolidayRegistrationFixture(t)
 	office := newTraegerOffice(t, f.db, f.traeger, "Träger Formular Antworten", identityaccess.TraegerRoleAdministration)
 	period := openHolidays(t, f, office)
-	saveHolidayForm(t, f, office, period.ID, questionsForm())
+	saveHolidayForm(t, f, office, int64(period.ID), questionsForm())
 	offer := holidayOffer(t, f, period.PublicToken)
 	rec := publicJSON(t, f.public, http.MethodGet, registrationPath(period.PublicToken), nil)
 	form := decodeSchoolPortalData[struct {
@@ -260,7 +260,7 @@ func TestHolidayRegistrationChecksTheAnswersAgainstItsForm(t *testing.T) {
 	rec = publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken), valid)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	id := decodeSchoolPortalData[struct {
-		ID int64 `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
 
 	var stored struct {
@@ -292,7 +292,7 @@ func TestHolidayRegistrationChecksTheAnswersAgainstItsForm(t *testing.T) {
 		// chance; the stored payload must not be plaintext JSON.
 		assert.False(t, json.Valid(children[i].HealthData), "health answers are stored sealed, not as plaintext JSON")
 		opened, err := testHealthCipher().Open(children[i].HealthData,
-			enrollment.HolidayChildHealthContext(children[i].OrganizationID, id, children[i].Position))
+			enrollment.HolidayChildHealthContext(children[i].OrganizationID, int64(id), children[i].Position))
 		require.NoError(t, err)
 		assert.JSONEq(t, fmt.Sprintf(`{"answers": {"tetanus_impfschutz": %q}}`, tetanus), string(opened))
 	}
@@ -338,7 +338,7 @@ func TestHolidayRegistrationKeepsItsFormVersionAndHealthAnswersStayInTheHealthRe
 		{"key": "darf_an_ausfluegen_teilnehmen", "label": "Darf an Ausflügen teilnehmen", "type": "boolean", "applies_to_child": true},
 		{"key": "lieblingsessen", "label": "Lieblingsessen", "type": "text", "applies_to_child": true},
 	}
-	saveHolidayForm(t, f.holidayRegistrationFixture, f.office, f.period.ID, fields)
+	saveHolidayForm(t, f.holidayRegistrationFixture, f.office, int64(f.period.ID), fields)
 	body := siblingsRegistration(f.offer, "antworten@example.org")
 	body["form_version"] = 2
 	body["custom_data"] = map[string]any{"familie_hinweis": "Familienhinweis-FAM"}
@@ -348,7 +348,7 @@ func TestHolidayRegistrationKeepsItsFormVersionAndHealthAnswersStayInTheHealthRe
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(f.period.PublicToken), body)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	id := decodeSchoolPortalData[struct {
-		ID int64 `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
 
 	var mail string
@@ -361,16 +361,16 @@ func TestHolidayRegistrationKeepsItsFormVersionAndHealthAnswersStayInTheHealthRe
 
 	relabelled := []map[string]any{fields[0], fields[2], fields[3]}
 	relabelled[2] = map[string]any{"key": "lieblingsessen", "label": "Lieblingsessen (neu)", "type": "text", "applies_to_child": true}
-	saveHolidayForm(t, f.holidayRegistrationFixture, f.office, f.period.ID, relabelled)
+	saveHolidayForm(t, f.holidayRegistrationFixture, f.office, int64(f.period.ID), relabelled)
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(id, ""), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(int64(id), ""), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	detail := decodeSchoolPortalData[struct {
 		reviewRegistration
 		Form            holidayFormBody `json:"form"`
 		CustomData      map[string]any  `json:"custom_data"`
 		ChildCustomData []struct {
-			ChildID    int64          `json:"child_id"`
+			ChildID    wireID         `json:"child_id"`
 			CustomData map[string]any `json:"custom_data"`
 		} `json:"child_custom_data"`
 	}](t, rec.Body.Bytes())
@@ -386,7 +386,7 @@ func TestHolidayRegistrationKeepsItsFormVersionAndHealthAnswersStayInTheHealthRe
 	assert.NotContains(t, detail.ChildCustomData[0].CustomData, "lebensmittelunvertraeglichkeiten", "the detail carries no health answer")
 	assert.Equal(t, "Spaghetti-ESSEN", detail.ChildCustomData[0].CustomData["lieblingsessen"], "the detail shows every other answer")
 	assert.Equal(t, false, detail.ChildCustomData[1].CustomData["darf_an_ausfluegen_teilnehmen"])
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(id, "/health"), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(int64(id), "/health"), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	health := decodeSchoolPortalData[enrollment.HolidayRegistrationHealthDetail](t, rec.Body.Bytes())
 	require.Len(t, health.Children, 2)
@@ -439,7 +439,7 @@ func TestHolidayAnswersStayWithTheTraeger(t *testing.T) {
 		assert.NotContains(t, rec.Body.String(), answer, "the participant list carries no answer")
 	}
 
-	require.Equal(t, http.StatusOK, f.assign(t, lead, week, f.group).Code)
+	require.Equal(t, http.StatusOK, f.assign(t, lead, int64(week), f.group).Code)
 	f.today.Store(calendar.NewDate(2099, 7, 6))
 	f.reconcile(t)
 	ben := f.roster(t, calendar.NewDate(2099, 7, 8))["Ben Muster"]
@@ -471,7 +471,7 @@ func TestConcurrentFormSavesWriteOneVersionEach(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			fields := []map[string]any{{"key": fmt.Sprintf("frage_%d", i), "label": "Frage", "type": "text"}}
-			rec := traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayFormPath(period.ID), map[string]any{"fields": fields})
+			rec := traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayFormPath(int64(period.ID)), map[string]any{"fields": fields})
 			codes <- rec.Code
 			if rec.Code == http.StatusOK {
 				versions <- decodeSchoolPortalData[holidayFormBody](t, rec.Body.Bytes()).Version
@@ -489,7 +489,7 @@ func TestConcurrentFormSavesWriteOneVersionEach(t *testing.T) {
 		got = append(got, version)
 	}
 	assert.ElementsMatch(t, []int{2, 3, 4, 5}, got, "each save gets a version of its own")
-	assert.Equal(t, []int{1, 2, 3, 4, 5}, formVersions(t, f, period.ID))
+	assert.Equal(t, []int{1, 2, 3, 4, 5}, formVersions(t, f, int64(period.ID)))
 }
 
 func TestHolidayExportKeepsAnswersWhenAQuestionChangesScope(t *testing.T) {
@@ -519,9 +519,9 @@ func TestHolidayExportKeepsAnswersWhenAQuestionChangesScope(t *testing.T) {
 		return rec.Body.String()
 	}
 
-	saveHolidayForm(t, f.holidayRegistrationFixture, f.office, f.period.ID, question(false))
+	saveHolidayForm(t, f.holidayRegistrationFixture, f.office, int64(f.period.ID), question(false))
 	register("familie-vorher@example.org", 2, "Familienantwort-vorher")
-	saveHolidayForm(t, f.holidayRegistrationFixture, f.office, f.period.ID, question(true))
+	saveHolidayForm(t, f.holidayRegistrationFixture, f.office, int64(f.period.ID), question(true))
 	register("kinder@example.org", 3, "",
 		map[string]any{"hinweis": "Antwort-Kind-eins"}, map[string]any{"hinweis": "Antwort-Kind-zwei"})
 	csv := export()
@@ -529,7 +529,7 @@ func TestHolidayExportKeepsAnswersWhenAQuestionChangesScope(t *testing.T) {
 	assert.Contains(t, csv, "Antwort-Kind-eins")
 	assert.Contains(t, csv, "Antwort-Kind-zwei")
 
-	saveHolidayForm(t, f.holidayRegistrationFixture, f.office, f.period.ID, question(false))
+	saveHolidayForm(t, f.holidayRegistrationFixture, f.office, int64(f.period.ID), question(false))
 	register("familie-nachher@example.org", 4, "Familienantwort-nachher")
 	csv = export()
 	assert.Contains(t, csv, "Familienantwort-vorher")
@@ -555,14 +555,14 @@ func TestHolidayExportKeepsHistoricalAnswerLabels(t *testing.T) {
 		rec := publicJSON(t, f.public, http.MethodPost, registrationPath(f.period.PublicToken), body)
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	}
-	saveHolidayForm(t, f.holidayRegistrationFixture, f.office, f.period.ID, fields)
+	saveHolidayForm(t, f.holidayRegistrationFixture, f.office, int64(f.period.ID), fields)
 	register(2, "historisch@example.org", "removed_key", "typed_key")
 	fields[0]["label"] = "Neue Frage"
 	fields[0]["options"] = []map[string]any{{"value": "option_key", "label": "Neue Auswahl"}}
 	fields[1]["options"] = []map[string]any{{"value": "replacement_key", "label": "Ersatz-Auswahl"}}
 	fields[2]["type"] = "text"
 	delete(fields[2], "options")
-	saveHolidayForm(t, f.holidayRegistrationFixture, f.office, f.period.ID, fields)
+	saveHolidayForm(t, f.holidayRegistrationFixture, f.office, int64(f.period.ID), fields)
 	register(3, "aktuell@example.org", "replacement_key", "Freitext")
 
 	req := httptest.NewRequest(http.MethodGet, f.path("/export?format=csv"), nil)
@@ -606,9 +606,9 @@ func TestHolidayExportExcludesHealthFieldsFromUnexportedVersions(t *testing.T) {
 		answerChildren(body, map[string]any{"child_note": "Kinderantwort-vertraulich"}, map[string]any{})
 		rec := publicJSON(t, f.public, http.MethodPost, registrationPath(f.period.PublicToken), body)
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-		return decodeSchoolPortalData[struct {
-			ID int64 `json:"id"`
-		}](t, rec.Body.Bytes()).ID
+		return int64(decodeSchoolPortalData[struct {
+			ID wireID `json:"id"`
+		}](t, rec.Body.Bytes()).ID)
 	}
 	export := func(filter string) string {
 		t.Helper()
@@ -630,19 +630,19 @@ func TestHolidayExportExcludesHealthFieldsFromUnexportedVersions(t *testing.T) {
 		}
 	}
 
-	saveHolidayForm(t, f.holidayRegistrationFixture, f.office, f.period.ID, fields)
+	saveHolidayForm(t, f.holidayRegistrationFixture, f.office, int64(f.period.ID), fields)
 	register(2, "vorher@example.org")
 	require.Contains(t, export(""), "Familienantwort-vertraulich", "the original classification permits export")
 	fields[0]["health"], fields[1]["health"] = true, true
 	fields[2]["label"] = "Abholung nachher"
 	fields = append(fields, map[string]any{"key": "new_question", "label": "Neue Frage", "type": "text"})
-	saveHolidayForm(t, f.holidayRegistrationFixture, f.office, f.period.ID, fields)
+	saveHolidayForm(t, f.holidayRegistrationFixture, f.office, int64(f.period.ID), fields)
 	assertProtected("") // No registration references the health-marked version yet.
 	newID := register(3, "nachher@example.org")
 	require.Equal(t, http.StatusOK, f.act(t, newID, "cancel").Code)
 	assertProtected("&status=received") // The health-marked version is filtered out.
 
 	// Removing the questions again must not erase their historical classification.
-	saveHolidayForm(t, f.holidayRegistrationFixture, f.office, f.period.ID, fields[2:])
+	saveHolidayForm(t, f.holidayRegistrationFixture, f.office, int64(f.period.ID), fields[2:])
 	assertProtected("&status=received")
 }

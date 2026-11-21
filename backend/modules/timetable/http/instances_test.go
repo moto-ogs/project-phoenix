@@ -237,9 +237,9 @@ func TestStartInstance_Success(t *testing.T) {
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	data, ok := resp["data"].(map[string]any)
 	require.True(t, ok)
-	assert.Equal(t, float64(7), data["instance_id"])
+	assert.Equal(t, int64(7), testpkg.JSONID(t, data["instance_id"]))
 	assert.Equal(t, "active", data["status"])
-	assert.Equal(t, float64(42), data["active_group_id"])
+	assert.Equal(t, int64(42), testpkg.JSONID(t, data["active_group_id"]))
 	// Warnings must always be an array, never null.
 	warnings, ok := data["warnings"].([]any)
 	require.True(t, ok, "warnings must be an array")
@@ -366,7 +366,7 @@ func TestCompleteInstance_Success(t *testing.T) {
 	var resp map[string]any
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	data := resp["data"].(map[string]any)
-	assert.Equal(t, float64(5), data["instance_id"])
+	assert.Equal(t, int64(5), testpkg.JSONID(t, data["instance_id"]))
 	assert.Equal(t, "completed", data["status"])
 	assert.Equal(t, "2026-04-20T12:30:00Z", data["completed_at"])
 }
@@ -550,7 +550,7 @@ func TestCancelInstance_Success(t *testing.T) {
 	var resp map[string]any
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 	data := resp["data"].(map[string]any)
-	assert.Equal(t, float64(11), data["instance_id"])
+	assert.Equal(t, int64(11), testpkg.JSONID(t, data["instance_id"]))
 	assert.Equal(t, "cancelled", data["status"])
 	assert.Equal(t, "2026-04-20T15:00:00Z", data["completed_at"])
 }

@@ -36,7 +36,7 @@ func (seedTestTraegerStep) Run(_ context.Context, rt *Runtime) error {
 	var created struct {
 		Data struct {
 			Organization struct {
-				ID int64 `json:"id"`
+				ID apiID `json:"id"`
 			} `json:"organization"`
 		} `json:"data"`
 	}

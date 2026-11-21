@@ -36,28 +36,28 @@ func TestEmptyHolidayRunIsDiscardedAndFreesItsPeriod(t *testing.T) {
 	t.Parallel()
 	f := newReviewFixture(t, "Träger leerer Ferienlauf")
 	billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
-	run := startBillingRun(t, f, billing, f.period.ID)
-	preview := billingRun(t, f, billing, run.ID)
+	run := startBillingRun(t, f, billing, int64(f.period.ID))
+	preview := billingRun(t, f, billing, int64(run.ID))
 	require.Empty(t, preview.Documents, "no registration is confirmed yet")
 	require.Zero(t, preview.Unbilled)
 
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/discard"), nil)
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/discard"), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	discarded := decodeSchoolPortalData[discardedHolidayRunBody](t, rec.Body.Bytes())
 	assert.Equal(t, "discarded", discarded.Status)
 	require.NotNil(t, discarded.DiscardedAt, "the run names when it was discarded")
 	assert.NotNil(t, discarded.Documents, "a discarded run shows an empty list, never null")
 	assert.Empty(t, discarded.Documents)
-	assert.Equal(t, "discarded", billingRun(t, f, billing, run.ID).Status, "the run stays, nothing is deleted")
-	assert.Contains(t, runActions(t, f, run.ID), "discard", "the trail names who discarded the run")
+	assert.Equal(t, "discarded", billingRun(t, f, billing, int64(run.ID)).Status, "the run stays, nothing is deleted")
+	assert.Contains(t, runActions(t, f, int64(run.ID)), "discard", "the trail names who discarded the run")
 
 	for _, change := range []struct {
 		method, path string
 		body         map[string]any
 	}{
-		{http.MethodPost, billingRunPath(run.ID, "/discard"), nil},
-		{http.MethodPost, billingRunPath(run.ID, "/release"), map[string]any{"document_count": 0, "total_cents": 0, "fingerprint": "x"}},
-		{http.MethodPost, billingRunPath(run.ID, "/corrections"), map[string]any{"registration_id": f.siblings, "child_id": 1, "total_cents": 100, "reason": "x"}},
+		{http.MethodPost, billingRunPath(int64(run.ID), "/discard"), nil},
+		{http.MethodPost, billingRunPath(int64(run.ID), "/release"), map[string]any{"document_count": 0, "total_cents": 0, "fingerprint": "x"}},
+		{http.MethodPost, billingRunPath(int64(run.ID), "/corrections"), map[string]any{"registration_id": f.siblings, "child_id": 1, "total_cents": 100, "reason": "x"}},
 		{http.MethodPut, fmt.Sprintf("%s/holiday/%d", runDueDatesPath, run.ID), map[string]any{"due_dates": []map[string]any{{"payment_method": "transfer", "due_on": "2027-01-15"}}}},
 	} {
 		rec := traegerJSON(t, f.traeger, billing, change.method, change.path, change.body)
@@ -71,7 +71,7 @@ func TestEmptyHolidayRunIsDiscardedAndFreesItsPeriod(t *testing.T) {
 		VALUES (?, ?, 'transfer', DATE '2027-01-15')`, f.office.organization, run.ID)
 	assert.Error(t, err, "no due date is added to a discarded run, for every role")
 
-	next := startBillingRun(t, f, billing, f.period.ID)
+	next := startBillingRun(t, f, billing, int64(f.period.ID))
 	assert.NotEqual(t, run.ID, next.ID, "the period is free for a new run")
 }
 
@@ -79,24 +79,24 @@ func TestHolidayRunWithContentIsNeverDiscarded(t *testing.T) {
 	t.Parallel()
 	f := newReviewFixture(t, "Träger Ferienlauf mit Inhalt")
 	billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
-	run := startBillingRun(t, f, billing, f.period.ID)
+	run := startBillingRun(t, f, billing, int64(f.period.ID))
 	refused := func(why string) {
 		t.Helper()
-		code, body := discardHolidayRun(t, f, billing, run.ID)
+		code, body := discardHolidayRun(t, f, billing, int64(run.ID))
 		assert.Equal(t, http.StatusConflict, code, "%s: %s", why, body)
 		assert.Contains(t, body, "parent_billing.billing_run_not_empty", why)
-		assert.Equal(t, "calculated", billingRun(t, f, billing, run.ID).Status, why)
+		assert.Equal(t, "calculated", billingRun(t, f, billing, int64(run.ID)).Status, why)
 	}
 
 	// A registration confirmed without its frozen contribution waits for it.
 	_, err := f.db.ExecContext(context.Background(),
 		`UPDATE enrollment.holiday_registrations SET status = 'confirmed' WHERE id = ?`, f.again)
 	require.NoError(t, err)
-	require.Equal(t, 1, billingRun(t, f, billing, run.ID).Unbilled)
+	require.Equal(t, 1, billingRun(t, f, billing, int64(run.ID)).Unbilled)
 	refused("a confirmed registration without its contribution")
 
 	require.Equal(t, http.StatusOK, f.act(t, f.siblings, "confirm").Code)
-	require.Len(t, billingRun(t, f, billing, run.ID).Documents, 1)
+	require.Len(t, billingRun(t, f, billing, int64(run.ID)).Documents, 1)
 	refused("an invoice")
 }
 
@@ -143,8 +143,8 @@ func TestHolidayRunDiscardWaitsForTheInvoicesOfItsPeriod(t *testing.T) {
 	t.Parallel()
 	f := newReviewFixture(t, "Träger Ferienlauf Verwerfen wartet")
 	billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
-	run := startBillingRun(t, f, billing, f.period.ID)
-	require.Empty(t, billingRun(t, f, billing, run.ID).Documents)
+	run := startBillingRun(t, f, billing, int64(f.period.ID))
+	require.Empty(t, billingRun(t, f, billing, int64(run.ID)).Documents)
 
 	change := holdPeriodBilling(t, f)
 	_, err := change.ExecContext(context.Background(),
@@ -156,28 +156,28 @@ func TestHolidayRunDiscardWaitsForTheInvoicesOfItsPeriod(t *testing.T) {
 	var body string
 	go func() {
 		defer close(done)
-		code, body = discardHolidayRun(t, f, billing, run.ID)
+		code, body = discardHolidayRun(t, f, billing, int64(run.ID))
 	}()
 	waitForPeriodBilling(t, f, done)
 	require.NoError(t, change.Commit())
 	<-done
 	assert.Equal(t, http.StatusConflict, code, body)
 	assert.Contains(t, body, "parent_billing.billing_run_not_empty")
-	assert.Equal(t, "calculated", billingRun(t, f, billing, run.ID).Status)
+	assert.Equal(t, "calculated", billingRun(t, f, billing, int64(run.ID)).Status)
 }
 
 func TestHolidayRunDiscardedTwiceAtOnceIsDiscardedOnce(t *testing.T) {
 	t.Parallel()
 	f := newReviewFixture(t, "Träger Ferienlauf Verwerfen parallel")
 	billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
-	run := startBillingRun(t, f, billing, f.period.ID)
+	run := startBillingRun(t, f, billing, int64(f.period.ID))
 	codes := make([]int, 2)
 	var wg sync.WaitGroup
 	for i := range codes {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			codes[i], _ = discardHolidayRun(t, f, billing, run.ID)
+			codes[i], _ = discardHolidayRun(t, f, billing, int64(run.ID))
 		}()
 	}
 	wg.Wait()

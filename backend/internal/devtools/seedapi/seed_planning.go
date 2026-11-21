@@ -11,12 +11,12 @@ import (
 type seedPlanningDemoStep struct{}
 
 type seedPlanningInstance struct {
-	ID              int64  `json:"id"`
+	ID              apiID  `json:"id"`
 	Title           string `json:"title"`
 	Status          string `json:"status"`
-	ActivityGroupID *int64 `json:"activity_group_id"`
+	ActivityGroupID *apiID `json:"activity_group_id"`
 	Staff           []struct {
-		StaffID int64 `json:"staff_id"`
+		StaffID apiID `json:"staff_id"`
 	} `json:"staff"`
 }
 
@@ -141,11 +141,11 @@ func selectRecurringPlanningInstances(instances []seedPlanningInstance, deviatio
 	var deviationID int64
 	for _, instance := range instances {
 		if instance.ID > 0 && instance.ActivityGroupID != nil && instance.Title == "Frühbetreuung" {
-			recurringIDs = append(recurringIDs, instance.ID)
+			recurringIDs = append(recurringIDs, int64(instance.ID))
 			if deviationID == 0 {
 				for _, staff := range instance.Staff {
-					if staff.StaffID == deviationStaffID {
-						deviationID = instance.ID
+					if int64(staff.StaffID) == deviationStaffID {
+						deviationID = int64(instance.ID)
 						break
 					}
 				}
@@ -310,13 +310,13 @@ func createSeedPlanningTrack(rt *Runtime) (int64, error) {
 	}
 	var response struct {
 		Data struct {
-			ID int64 `json:"id"`
+			ID apiID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &response); err != nil || response.Data.ID == 0 {
 		return 0, fmt.Errorf("parse planning track response")
 	}
-	return response.Data.ID, nil
+	return int64(response.Data.ID), nil
 }
 
 func createSeedPlanningTemplate(
@@ -501,7 +501,7 @@ func seedClassStudentIDs(fs *FixedSeeder, class string) []int64 {
 func confirmSeedManualRoster(rt *Runtime, created []byte) error {
 	var response struct {
 		Data struct {
-			TemplateID int64 `json:"template_id"`
+			TemplateID apiID `json:"template_id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(created, &response); err != nil || response.Data.TemplateID == 0 {

@@ -18,10 +18,10 @@ import {
 export const CHILD_STATUS_VALUES = ["excused", "sick"] as const;
 export type ChildStatus = (typeof CHILD_STATUS_VALUES)[number];
 
-export const KIND_VALUES = ["child_absent", "child_goes_alone", "child_pickup_changed", "child_pickup_note", "child_summary", "group_substitution", "group_substitution_count", "staff_absent", "staff_absent_count", "staff_notice"] as const;
+export const KIND_VALUES = ["activity_cancelled", "activity_lead_changed", "activity_reinstated", "activity_room_changed", "child_absent", "child_goes_alone", "child_pickup_changed", "child_pickup_note", "child_summary", "group_substitution", "group_substitution_count", "staff_absent", "staff_absent_count", "staff_notice"] as const;
 export type Kind = (typeof KIND_VALUES)[number];
 
-export const LINK_TARGET_VALUES = ["group_handovers", "own_absences", "staff_absences", "staff_list", "staff_member", "staff_notices", "student"] as const;
+export const LINK_TARGET_VALUES = ["day_plan", "group_handovers", "own_absences", "staff_absences", "staff_list", "staff_member", "staff_notices", "student"] as const;
 export type LinkTarget = (typeof LINK_TARGET_VALUES)[number];
 
 export const NOTICE_PRIORITY_VALUES = ["important", "info"] as const;
@@ -33,7 +33,7 @@ export type PersonRole = (typeof PERSON_ROLE_VALUES)[number];
 export const SECTION_VALUES = ["school", "you"] as const;
 export type Section = (typeof SECTION_VALUES)[number];
 
-export const SOURCE_VALUES = ["children", "notices", "staff"] as const;
+export const SOURCE_VALUES = ["activities", "children", "notices", "staff"] as const;
 export type Source = (typeof SOURCE_VALUES)[number];
 
 export const SOURCE_STATE_VALUES = ["failed", "loaded"] as const;
@@ -170,6 +170,28 @@ export const ChildSummarySchema: z.ZodType<ChildSummary, unknown> = object<Child
   items: nullable(arr(ChildItemSchema)),
 });
 
+/** Go: daychangesview.BlockActivity */
+export interface BlockActivity {
+  id: string;
+  title: string;
+}
+
+export const BlockActivitySchema: z.ZodType<BlockActivity, unknown> = object<BlockActivity>({
+  id: int64String,
+  title: str,
+});
+
+/** Go: daychangesview.BlockRoom */
+export interface BlockRoom {
+  id: string;
+  name: string;
+}
+
+export const BlockRoomSchema: z.ZodType<BlockRoom, unknown> = object<BlockRoom>({
+  id: int64String,
+  name: str,
+});
+
 /** Go: daychangesview.Entry */
 export interface Entry {
   kind: OpenEnum<Kind>;
@@ -187,6 +209,9 @@ export interface Entry {
   notice: DayNotice | null;
   child: Child | null;
   child_summary: ChildSummary | null;
+  activity: BlockActivity | null;
+  room: BlockRoom | null;
+  previous_room: BlockRoom | null;
 }
 
 export const EntrySchema: z.ZodType<Entry, unknown> = object<Entry>({
@@ -205,6 +230,9 @@ export const EntrySchema: z.ZodType<Entry, unknown> = object<Entry>({
   notice: nullable(DayNoticeSchema),
   child: nullable(ChildSchema),
   child_summary: nullable(ChildSummarySchema),
+  activity: nullable(BlockActivitySchema),
+  room: nullable(BlockRoomSchema),
+  previous_room: nullable(BlockRoomSchema),
 });
 
 /** Go: daychangesview.Overview */

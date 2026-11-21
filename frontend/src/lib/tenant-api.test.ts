@@ -123,6 +123,7 @@ describe("tenant-api", () => {
 
       expect(global.fetch).toHaveBeenCalledWith(
         "/api/tenant/resolve?slug=demo-school",
+        undefined,
       );
       expect(result).toEqual({
         careFacilityTerm: "OGS",
@@ -305,22 +306,28 @@ describe("tenant-api", () => {
       });
     });
 
-    it("returns null when tenant is not found", async () => {
+    // #2353: the caller shows the code and request ID, not a bare null.
+    it("rejects with the code and request ID when the tenant is not found", async () => {
       vi.mocked(global.fetch).mockResolvedValueOnce(
-        new Response("Not Found", { status: 404 }),
+        Response.json(
+          { status: 404, code: "general.input", instance: "req-404" },
+          { status: 404 },
+        ),
       );
 
-      const result = await resolveTenant("nonexistent");
-
-      expect(result).toBeNull();
+      await expect(resolveTenant("nonexistent")).rejects.toMatchObject({
+        status: 404,
+        requestId: "req-404",
+      });
     });
 
-    it("returns null on network error", async () => {
+    it("rejects as unavailable on a network error", async () => {
       vi.mocked(global.fetch).mockRejectedValueOnce(new Error("Network error"));
 
-      const result = await resolveTenant("demo-school");
-
-      expect(result).toBeNull();
+      await expect(resolveTenant("demo-school")).rejects.toMatchObject({
+        code: "general.unavailable",
+        noResponse: true,
+      });
     });
 
     it("passes through presenceMode=binary when the backend advertises it", async () => {
@@ -814,14 +821,15 @@ describe("tenant-api", () => {
       });
     });
 
-    it("returns empty array on error response", async () => {
+    // #2353: a failed list is an error; the switcher decides to stay silent.
+    it("rejects an error response instead of answering no schools", async () => {
       mockSessionFetch.mockResolvedValueOnce(
         new Response("Unauthorized", { status: 401 }),
       );
 
-      const result = await listAvailableTenants();
-
-      expect(result).toEqual([]);
+      await expect(listAvailableTenants()).rejects.toMatchObject({
+        status: 401,
+      });
     });
 
     it("returns empty array when data field is missing", async () => {
@@ -844,7 +852,7 @@ describe("tenant-api", () => {
 
   describe("switchTenant", () => {
     it("confirms a server-side switch without reading credentials", async () => {
-      const confirmation = { success: true };
+      const confirmation = { status: "success", data: null };
 
       mockSessionFetch.mockResolvedValueOnce(
         new Response(JSON.stringify(confirmation), {
@@ -996,7 +1004,7 @@ describe("tenant-api", () => {
   // --------------------------------------------------------------------------
 
   describe("performTenantSwitch", () => {
-    const confirmation = { success: true };
+    const confirmation = { status: "success", data: null };
 
     const mockSwrMutate = vi.fn().mockResolvedValue(undefined);
 
