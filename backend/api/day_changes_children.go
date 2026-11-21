@@ -41,10 +41,21 @@ type dayChangesStudents interface {
 type dayChangesChildren struct{ sources DayChangesSources }
 
 // childrenVisible is the rule of the child detail page: the status of a
-// child needs users:read. It reads the session only, no statement.
-func (dayChangesChildren) childrenVisible(ctx context.Context) bool {
+// child needs users:read and a verified staff record, unless the caller is
+// an admin.
+func (s dayChangesChildren) childrenVisible(ctx context.Context) (bool, error) {
 	granted := sessiontoken.PermissionsFromCtx(ctx)
-	return securityruntime.HasAdminWildcard(granted) || securityruntime.HasPermission(permissions.UsersRead, granted)
+	if securityruntime.HasAdminWildcard(granted) {
+		return true, nil
+	}
+	if !securityruntime.HasPermission(permissions.UsersRead, granted) {
+		return false, nil
+	}
+	_, staff, err := s.sources.Caller.CurrentStaffID(ctx)
+	if err != nil {
+		return false, fmt.Errorf("resolve caller staff: %w", err)
+	}
+	return staff, nil
 }
 
 // childChange is one thing different today for one child.
@@ -54,7 +65,11 @@ type childChange struct {
 }
 
 func (s dayChangesChildren) ChildChanges(ctx context.Context, day calendar.Date) ([]daychangesview.SourceEntry, error) {
-	if !s.childrenVisible(ctx) {
+	visible, err := s.childrenVisible(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !visible {
 		return nil, nil
 	}
 	changes, err := s.changes(ctx, day)

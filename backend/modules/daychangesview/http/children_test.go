@@ -110,8 +110,8 @@ func childText(child wireChild) string {
 
 // TestDayChangesChildrenSource is Seam 1 for the Kinder source (#7665): one
 // school with a group of the care staff, another group, a child without a
-// group, a lead without a group, an account without users:read and a second
-// school, read through the route against the test database.
+// group, a lead without a group, accounts without users:read or a staff
+// record, and a second school, read through the route against the test database.
 func TestDayChangesChildrenSource(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
@@ -195,6 +195,13 @@ func TestDayChangesChildrenSource(t *testing.T) {
 
 	t.Run("without users:read the source shows nothing and stays loaded", func(t *testing.T) {
 		overview, body := read(t, router, carerAccount.ID, tenantID)
+		assert.Empty(t, childLines(t, body))
+		assert.Equal(t, "loaded", sourceStatus(overview, "children"))
+	})
+
+	t.Run("account without a staff record sees no child data", func(t *testing.T) {
+		guest := testpkg.CreateTestAccount(t, db, "day-changes-guest@example.com")
+		overview, body := read(t, router, guest.ID, tenantID, "users:read")
 		assert.Empty(t, childLines(t, body))
 		assert.Equal(t, "loaded", sourceStatus(overview, "children"))
 	})
