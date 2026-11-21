@@ -515,8 +515,8 @@ func normalizeContractIdentifiers(value any) any {
 func checkEnrollmentCatalogGoldens(t *testing.T, api *goldenRuntime, token string, staffID int64) {
 	t.Helper()
 	// The phase reads back by its ID; a new schema is the school's active one
-	// and reads back through the active-schema route, the only schema read
-	// besides the version list.
+	// and reads back through the active-schema route, since no schema read by
+	// ID exists.
 	for _, scenario := range []struct{ name, path, body string }{
 		{"phase", "/api/enrollment/phases/", `{"name":"Contract Phase","kind":"school_year","service_start_date":"2030-08-01","service_end_date":"2031-07-31","care_overflow_mode":"waitlist","care_offering_selection_mode":"optional","is_active":true}`},
 		{"schema", "/api/enrollment/schema/", `{"name":"Contract Schema","fields":[]}`},
