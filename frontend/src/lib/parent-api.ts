@@ -1,11 +1,11 @@
 import type { ParentConferenceOffer } from "~/lib/parent-conferences";
 import type { MessageAttachment } from "~/lib/message-attachments";
 import {
-  type BackendHolidayRegistrationEntries,
   type HolidayRegistrationEntry,
   holidayRegistrationEntriesFromBackend,
 } from "~/lib/parent-holiday-registration-entries";
 import type { CareContractStatus } from "./traeger-care-contracts-api";
+import type { HolidayRegistrationEntriesResponse as WireHolidayRegistrationEntries } from "./contract/parent-me.generated";
 import {
   ApiError,
   transportFetch as fetchTransport,
@@ -1396,7 +1396,7 @@ export async function listHolidayOffers(): Promise<HolidayOffer[]> {
 export async function listHolidayRegistrationEntries(): Promise<
   HolidayRegistrationEntry[]
 > {
-  const body = await getJson<BackendHolidayRegistrationEntries | null>(
+  const body = await getJson<WireHolidayRegistrationEntries>(
     "/api/parent/me/holiday-registration-entries",
   );
   return holidayRegistrationEntriesFromBackend(body);
