@@ -1399,7 +1399,7 @@ describe("staff pool + move (#1884)", () => {
       "/api/timetable/instances/42/complete",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ confirmed_present_student_ids: [21, 22] }),
+        body: JSON.stringify({ confirmed_present_student_ids: ["21", "22"] }),
       }),
     );
     expect(fetchMock).toHaveBeenNthCalledWith(

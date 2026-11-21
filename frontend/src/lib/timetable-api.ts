@@ -899,7 +899,7 @@ class TimetableService {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          confirmed_present_student_ids: confirmedPresentStudentIds.map(Number),
+          confirmed_present_student_ids: confirmedPresentStudentIds,
         }),
       },
     );
