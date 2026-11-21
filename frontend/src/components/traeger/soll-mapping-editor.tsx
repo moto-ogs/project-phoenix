@@ -329,14 +329,17 @@ function ColumnRow({
 /** The field mapping of the Sollstellung, saved as a whole. */
 export function SollMappingEditor({
   settings,
+  mapping,
   onCancel,
   onSaved,
 }: Readonly<{
   settings: ExportSettings;
+  /** The stored mapping; the page shows a hint instead when it is null. */
+  mapping: SollMapping;
   onCancel: () => void;
   onSaved: (settings: ExportSettings) => void;
 }>) {
-  const [draft, setDraft] = useState<SollMapping>(settings.mapping);
+  const [draft, setDraft] = useState<SollMapping>(mapping);
   const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);

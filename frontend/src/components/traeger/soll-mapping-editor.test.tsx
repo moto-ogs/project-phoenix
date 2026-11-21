@@ -35,6 +35,7 @@ describe("SollMappingEditor", () => {
       <ToastProvider>
         <SollMappingEditor
           settings={settings}
+          mapping={settings.mapping!}
           onCancel={vi.fn()}
           onSaved={vi.fn()}
         />

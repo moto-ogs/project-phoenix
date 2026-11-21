@@ -130,6 +130,11 @@ describe("traeger-api", () => {
               updated_at: null,
             },
             file_numbers: { next: 9, started: true },
+            datev: {
+              ready: false,
+              missing_settings: null,
+              invalid_settings: null,
+            },
           },
         }),
       );
@@ -141,7 +146,7 @@ describe("traeger-api", () => {
       ["/api/traeger/finance-exports/settings", "GET"],
     ]);
     expect(settings.custom).toBe(false);
-    expect(settings.mapping.columns).toEqual([
+    expect(settings.mapping?.columns).toEqual([
       { field: "invoice_number", header: "Rechnung", value: "" },
     ]);
     expect(settings.nextFileNumber).toBe(9);
