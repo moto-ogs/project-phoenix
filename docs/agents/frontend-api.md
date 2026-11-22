@@ -340,12 +340,17 @@ slash is dropped and each parameter encoded.
   wrong MFA confirmation code or current password). Träger, moto schule and
   caterer: the error stays on the page. A parent client that reports refusals
   (`PARENT_ACCESS_REFUSED_EVENT`) catches the `ApiError` itself.
-- **No contract:** a backend route without a contract gets one first
-  (#7808); its client waits until then. A named `route.ts` the contract
-  cannot carry (`settings/values/[key]` purges the cached tenant lookup) is
-  called with `bffJsonUncontracted<T>(portal, method, path, options)`; each
-  caller is listed with its reason in `bff-fetch-uncontracted.test.ts`, and
-  the list only shrinks.
+- **Route files:** a route a named `route.ts` serves (`routeFileRoutes` in
+  `portals.generated.ts`, #7889: a cache purge, a flow cookie) is a route of
+  `bffJson` like a proxied one, with the backend's answer type. Not so the
+  sign-in, second factor, renewal and switch steps: their route file keeps
+  the tokens and answers the BFF's own `{ status, data }` (#7833), so the
+  helper excludes every route whose reason says so (a compile anchor fails
+  once the generator words it differently), and routes without the envelope
+  (`plain`). Such a step, and a BFF route without any Go route, is called
+  with `bffJsonUncontracted<T>(portal, method, path, options)`; each caller
+  is listed with its reason in `bff-fetch-uncontracted.test.ts`, and the
+  list only shrinks.
 - **Wait:** a refusal with `Retry-After` (429, 503) carries the wait as
   `retryAfterSeconds` on the `ApiError` (`apiErrorFromResponse`).
 - **Lists Go writes as `null`:** the generated type says so (`T[] | null`).
