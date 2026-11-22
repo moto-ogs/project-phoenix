@@ -177,6 +177,30 @@ describe("TraegerVertraegePage", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows a child an imported contract covers, held back, and does not count it as waiting", async () => {
+    api.fetchContractCandidates.mockResolvedValue([
+      CANDIDATE,
+      {
+        ...CANDIDATE,
+        requestChildId: "45",
+        childFirstName: "Noah",
+        templateIssue: "imported_contract",
+        importedContractId: "79",
+      },
+    ]);
+    renderPage();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Verträge erstellen \(1\)/ }),
+    );
+    expect(
+      await screen.findByText("Hat schon einen importierten Vertrag"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Der importierte Vertrag Nr\. 79 gilt für dieses Kind/),
+    ).toBeInTheDocument();
+  });
+
   it("withdraws cached contracts as soon as loading another page refuses access", async () => {
     api.fetchCareContracts.mockResolvedValueOnce({
       contracts: [SENT],

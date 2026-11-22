@@ -587,10 +587,13 @@ export default function TraegerVertraegePage() {
 
   // The count names the children waiting for a contract; the dialog lists
   // each of them, with the reason where a draft cannot be made yet.
+  // A child an imported contract covers has its contract: the dialog shows
+  // it with the reason, but it waits for nothing (#7760).
+  const waiting = candidates.filter(
+    (candidate) => candidate.templateIssue !== "imported_contract",
+  ).length;
   const createLabel =
-    candidates.length > 0
-      ? `Verträge erstellen (${candidates.length})`
-      : "Verträge erstellen";
+    waiting > 0 ? `Verträge erstellen (${waiting})` : "Verträge erstellen";
 
   return (
     <TenantPage
@@ -598,14 +601,14 @@ export default function TraegerVertraegePage() {
       info="Hier siehst du die Betreuungsverträge aus den angenommenen Anmeldungen deiner Schulen und die Verträge, die du aus einem anderen Programm importiert hast. moto übernimmt Kind, Eltern, Beginn und die gebuchten Module je Wochentag. Gilt der Vertrag bei der Annahme, entsteht er von selbst, wenn die Eltern im Anmeldeformular den Vertragsbedingungen zugestimmt haben. Sonst prüfst du den Entwurf und sendest ihn per Mail und in die Eltern-App."
       tabs={careContractTabs("vertraege")}
       stats={
-        total > 0 || candidates.length > 0 ? (
+        total > 0 || waiting > 0 ? (
           <TenantPageStats
             items={statusFigures(
               total,
               drafts,
               sentCount,
               activeCount,
-              candidates.length,
+              waiting,
             )}
           />
         ) : null
@@ -817,7 +820,7 @@ export default function TraegerVertraegePage() {
               }
               {...emptyText(
                 total,
-                candidates.length,
+                waiting,
                 data.modes.length > 0 &&
                   data.modes.every((school) => school.mode === "bei_annahme"),
                 emptySearchText(

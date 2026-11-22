@@ -137,3 +137,32 @@ func TestContractChildrenEndsAContractOnItsEarlierEnd(t *testing.T) {
 	assert.True(t, coveredByImport(c.reads(calendar.NewDate(2027, 7, 5)), children, coverToday)[c.key()],
 		"care booked in July is")
 }
+
+// A contract whose open-ended first version a later one superseded ends with
+// the later one, as the billing reads it: the superseded version holds only
+// until the next begins. An imported contract after that end is no second
+// contract of the same time.
+func TestContractChildrenEndsWithTheEffectiveVersionThatStartsLast(t *testing.T) {
+	t.Parallel()
+	c := newCoverFixture(t, "Träger Vertragsende abgelöst", nil)
+	end := calendar.NewDate(2027, 3, 31)
+	var children []ports.ContractChild
+	require.NoError(t, testpkg.WithinTraeger(c.ctx, c.org, func(txCtx context.Context) error {
+		versions, err := c.store.Versions(txCtx, c.org, c.imported)
+		if err != nil {
+			return err
+		}
+		next := versions[0]
+		next.Number, next.EffectiveFrom, next.EndsOn = 2, calendar.NewDate(2027, 3, 1), &end
+		if _, err := c.store.InsertVersion(txCtx, c.org, c.imported,
+			VersionStep{Supersede: versions[0].ID.Int64(), Status: carecontract.VersionEffective}, next); err != nil {
+			return err
+		}
+		children, err = c.store.ContractChildren(txCtx, c.org, []int64{c.school})
+		return err
+	}))
+	require.Len(t, children, 1)
+	require.NotNil(t, children[0].EndsOn, "the superseded open-ended version does not keep the contract open")
+	assert.Equal(t, end, *children[0].EndsOn)
+	assert.Equal(t, calendar.NewDate(2026, 8, 1), children[0].StartsOn)
+}

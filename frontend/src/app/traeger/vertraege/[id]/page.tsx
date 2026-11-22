@@ -252,6 +252,9 @@ function TraegerVertragView() {
   // After a write on a card: the contract, and the list with its state.
   const afterCardWrite = async () => {
     void invalidateFamily(traegerContractKeys.listFamily);
+    // A link or its removal changes which children an imported contract
+    // covers in „Verträge erstellen“.
+    void invalidateFamily(traegerContractKeys.candidates());
     await mutate();
   };
 

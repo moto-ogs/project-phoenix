@@ -342,7 +342,10 @@ export function CareContractChildLinkModal({
             </div>
             {!linked && block === null && !onlyDiffers ? (
               <p className="text-sm text-gray-700">
-                Name und Geburtsdatum passen. Eltern bekommen keine Nachricht.
+                {shown?.contract.birthDate && shown.student?.birthDate
+                  ? "Name und Geburtsdatum passen."
+                  : "Der Name passt. Ein Geburtsdatum fehlt, moto konnte es nicht vergleichen."}{" "}
+                Eltern bekommen keine Nachricht.
               </p>
             ) : null}
           </>

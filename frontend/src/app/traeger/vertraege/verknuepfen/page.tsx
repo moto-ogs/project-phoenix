@@ -129,6 +129,7 @@ export default function TraegerContractChildLinkPage() {
     // The list and every open contract show the new link.
     void invalidateFamily(traegerContractKeys.listFamily);
     void invalidateFamily(traegerContractKeys.detailFamily);
+    void invalidateFamily(traegerContractKeys.candidates());
   };
 
   const startOver = () => {

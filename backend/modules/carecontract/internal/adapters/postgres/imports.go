@@ -41,14 +41,14 @@ func (Store) ContractChildren(ctx context.Context, organizationID int64, schoolI
 	}
 	if err := db.NewRaw(`SELECT DISTINCT ON (c.id) c.id AS contract_id, c.school_id, c.status,
 			v.child_first_name, v.child_last_name, v.child_birth_date,
-			LEAST(c.ends_on, CASE WHEN eff.versions = 0 THEN v.ends_on WHEN eff.open THEN NULL ELSE eff.ends_on END) AS ends_on,
+			LEAST(c.ends_on, CASE WHEN eff.versions = 0 THEN v.ends_on ELSE eff.ends_on END) AS ends_on,
 			COALESCE(c.import_origin, '') AS import_origin, c.student_id, c.request_child_id,
 			COALESCE(eff.starts_on, (SELECT MIN(f.effective_from) FROM care_contract.contract_versions AS f
 				WHERE f.organization_id = c.organization_id AND f.contract_id = c.id)) AS starts_on
 		FROM care_contract.contracts AS c
 		JOIN care_contract.contract_versions AS v ON v.organization_id = c.organization_id AND v.contract_id = c.id
 		CROSS JOIN LATERAL (SELECT COUNT(*) AS versions, MIN(e.effective_from) AS starts_on,
-				COALESCE(bool_or(e.ends_on IS NULL), FALSE) AS open, MAX(e.ends_on) AS ends_on
+				(array_agg(e.ends_on ORDER BY e.effective_from DESC, e.version_number DESC))[1] AS ends_on
 			FROM care_contract.contract_versions AS e
 			WHERE e.organization_id = c.organization_id AND e.contract_id = c.id AND e.status IN `+effectiveStatusSQL+`) AS eff
 		WHERE c.organization_id = ? AND c.school_id = ANY(?)
