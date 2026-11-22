@@ -165,10 +165,10 @@ describe("import uploads through the catalog proxy (#2352)", () => {
     };
     expect(sent(first)).toEqual({
       columns,
-      school_id: 7,
+      school_id: "7",
       valid_from: "2026-09-01",
     });
-    expect(sent(second)).toEqual({ columns, school_id: 7, valid_from: null });
+    expect(sent(second)).toEqual({ columns, school_id: "7", valid_from: null });
     expect(result.mapping.validFrom).toBe("2026-11-22");
   });
 
