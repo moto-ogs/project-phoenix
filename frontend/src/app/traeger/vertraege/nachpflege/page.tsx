@@ -60,7 +60,7 @@ function ListRules() {
         <span className="font-normal">
           Namen als „Nachname, Vorname“, getrennt mit „ | “. Ein weiterer Name
           kommt dazu. Schreibst du einen Namen anders, ändert moto die
-          Schreibweise. Vor- oder Nachname muss dabei gleich bleiben. Keine
+          Schreibweise. Ändere je Liste nur einen Namen pro Vertrag. Keine
           Partei fällt weg, Mail-Adresse und Elternkonto bleiben.
         </span>
       </DataField>

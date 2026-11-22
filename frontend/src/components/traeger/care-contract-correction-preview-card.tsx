@@ -146,10 +146,10 @@ function footerText(run: ContractCorrectionRun): string {
   if (counts.invalid > 0) {
     const rows =
       counts.invalid === 1
-        ? "1 Zeile mit Fehler ändert moto nicht."
-        : `${counts.invalid} Zeilen mit Fehler ändert moto nicht.`;
+        ? "moto übernimmt 1 Zeile mit Fehler nicht."
+        : `moto übernimmt ${counts.invalid} Zeilen mit Fehler nicht.`;
     return counts.change > 0
-      ? `${rows} Die anderen kannst du jetzt ändern.`
+      ? `${rows} Die anderen Verträge kannst du jetzt ändern.`
       : `${rows} Korrigiere die Liste und lade sie noch einmal hoch.`;
   }
   if (counts.change === 0) {

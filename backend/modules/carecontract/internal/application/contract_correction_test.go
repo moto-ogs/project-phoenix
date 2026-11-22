@@ -70,9 +70,12 @@ func TestCorrectionAddsPartiesAndNeverRemovesOne(t *testing.T) {
 	assert.Equal(t, []ports.CorrectionParty{{FirstName: "Tom", LastName: "Beispiel"}}, added.correction.Adds)
 	assert.Equal(t, []string{"Eva Beispiel", "Tom Beispiel"}, added.row.After.Parties)
 
-	renamed := planCorrection(t, correctionSubject(), "7", "Lia Beispiel", "von der Heide, Eva Maria | Tom Beispiel", "", "", "vertrag.pdf")
+	renamed := planCorrection(t, correctionSubject(), "7", "Lia Beispiel", "von der Heide, Eva Maria", "", "", "vertrag.pdf")
 	assert.Equal(t, []ports.CorrectionParty{{ID: 70, FirstName: "Eva Maria", LastName: "von der Heide"}}, renamed.correction.Renames)
-	assert.Equal(t, []string{"Eva Maria von der Heide", "Tom Beispiel"}, renamed.row.After.Parties)
+	assert.Equal(t, []string{"Eva Maria von der Heide"}, renamed.row.After.Parties)
+	// A new spelling and a further name in one row do not tell who is who.
+	both := planCorrection(t, correctionSubject(), "7", "Lia Beispiel", "von der Heide, Eva Maria | Tom Beispiel", "", "", "vertrag.pdf")
+	assert.Equal(t, map[string]string{"parties": "party_unclear"}, correctionProblemCodes(both.row))
 
 	two := correctionSubject()
 	two.Parties = append(two.Parties, ports.CorrectionParty{ID: 71, FirstName: "Tom", LastName: "Beispiel"})
@@ -99,15 +102,16 @@ func TestCorrectionAddsPartiesAndNeverRemovesOne(t *testing.T) {
 	old := correctionSubject()
 	old.Parties = []ports.CorrectionParty{{ID: 70, FirstName: "Eva", LastName: "Mueller"}}
 	first := planCorrection(t, old, "7", "Lia Beispiel", "Müller, Tom | Müller, Eva", "", "", "vertrag.pdf")
-	require.Equal(t, carecontract.ContractCorrectionChange, first.row.Status, first.row.Problems)
-	assert.Equal(t, []ports.CorrectionParty{{ID: 70, FirstName: "Eva", LastName: "Müller"}}, first.correction.Renames)
-	assert.Equal(t, []ports.CorrectionParty{{FirstName: "Tom", LastName: "Müller"}}, first.correction.Adds)
+	assert.Equal(t, map[string]string{"parties": "party_unclear"}, correctionProblemCodes(first.row))
+	alone := planCorrection(t, old, "7", "Lia Beispiel", "Müller, Eva", "", "", "vertrag.pdf")
+	assert.Equal(t, []ports.CorrectionParty{{ID: 70, FirstName: "Eva", LastName: "Müller"}}, alone.correction.Renames)
 	other := planCorrection(t, old, "7", "Lia Beispiel", "Anders, Tom", "", "", "vertrag.pdf")
 	assert.Equal(t, map[string]string{"parties": "party_unclear"}, correctionProblemCodes(other.row))
-	// The same row again changes nothing, whichever party a name went to.
+	// The same row again changes nothing.
 	pair := correctionSubject()
-	pair.Parties = []ports.CorrectionParty{{ID: 70, FirstName: "Eva", LastName: "Beispiel"}, {ID: 71, FirstName: "Eva", LastName: "Beispiel Roth"}}
-	once := planCorrection(t, pair, "7", "Lia Beispiel", "Roth, Eva Beispiel | eva beispiel roth", "", "", "vertrag.pdf")
+	pair.Parties = append(pair.Parties, ports.CorrectionParty{ID: 71, FirstName: "Tomas", LastName: "Beispiel"})
+	once := planCorrection(t, pair, "7", "Lia Beispiel", "beispiel, eva | Tomas Beispiel-Roth", "", "", "vertrag.pdf")
+	require.Equal(t, carecontract.ContractCorrectionChange, once.row.Status, once.row.Problems)
 	for n := range pair.Parties {
 		for _, rename := range once.correction.Renames {
 			if rename.ID == pair.Parties[n].ID {
@@ -115,13 +119,22 @@ func TestCorrectionAddsPartiesAndNeverRemovesOne(t *testing.T) {
 			}
 		}
 	}
-	twice := planCorrection(t, pair, "7", "Lia Beispiel", "Roth, Eva Beispiel | eva beispiel roth", "", "", "vertrag.pdf")
+	twice := planCorrection(t, pair, "7", "Lia Beispiel", "beispiel, eva | Tomas Beispiel-Roth", "", "", "vertrag.pdf")
 	assert.Equal(t, carecontract.ContractCorrectionUnchanged, twice.row.Status, twice.correction.Renames)
+	// One person is never two parties, however the row writes the name.
+	same := correctionSubject()
+	same.Parties = append(same.Parties, ports.CorrectionParty{ID: 71, FirstName: "Eva", LastName: "Beispiel Roth"})
+	repeated := planCorrection(t, same, "7", "Lia Beispiel", "Roth, Eva Beispiel | eva beispiel roth", "", "", "vertrag.pdf")
+	assert.Equal(t, map[string]string{"parties": "party_repeated"}, correctionProblemCodes(repeated.row))
 	assert.True(t, namesChild("Weber, Anna Marie", "Anna Marie", "Weber"))
 	assert.True(t, namesChild("anna marie weber", "Anna Marie", "Weber"))
 	assert.False(t, namesChild("Marie Anna Weber", "Anna Marie", "Weber"), "the row names a sibling")
+	assert.False(t, namesChild("Martin, Paul", "Martin", "Paul"), "the comma names the last name")
+	assert.True(t, namesChild("paul, martin", "Martin", "Paul"))
+	doubled := planCorrection(t, correctionSubject(), "7", "Lia Beispiel", "Beispiel, Eva | eva beispiel", "", "", "vertrag.pdf")
+	assert.Equal(t, map[string]string{"parties": "party_repeated"}, correctionProblemCodes(doubled.row), "one person is never two parties")
 	either := planCorrection(t, old, "7", "Lia Beispiel", "Müller, Tom | Müller, Jan", "", "", "vertrag.pdf")
-	assert.Equal(t, map[string]string{"parties": "party_unclear"}, correctionProblemCodes(either.row), "two names equally like the party")
+	assert.Equal(t, map[string]string{"parties": "party_unclear"}, correctionProblemCodes(either.row), "two names for one party")
 }
 
 func TestCorrectionNamesItsContractUnambiguously(t *testing.T) {

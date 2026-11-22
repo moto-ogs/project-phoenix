@@ -83,8 +83,12 @@ const (
 	ContractCorrectionProblemPartyRemoved = "party_removed"
 	// ContractCorrectionProblemPartyUnclear is a row whose names do not tell
 	// which of them a party of the contract is: the party keeps its address
-	// and its account, so no name is written onto it by its place alone.
+	// and its account, so a name is written onto it only when it is the one
+	// party and the one name left over and the two share a word.
 	ContractCorrectionProblemPartyUnclear = "party_unclear"
+	// ContractCorrectionProblemPartyRepeated is a row that names one party
+	// twice.
+	ContractCorrectionProblemPartyRepeated = "party_repeated"
 	// ContractCorrectionProblemAfterNotice is a day of the conclusion after
 	// the day a termination or withdrawal of the contract was received.
 	ContractCorrectionProblemAfterNotice = "after_notice"

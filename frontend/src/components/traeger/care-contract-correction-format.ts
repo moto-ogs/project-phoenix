@@ -76,7 +76,8 @@ const PROBLEM_TEXTS: Partial<
     party_removed:
       "Eine Vertragspartei fehlt. Vorhandene Parteien bleiben im Vertrag.",
     party_unclear:
-      "moto erkennt nicht, welcher Name zu einer vorhandenen Vertragspartei gehört. Ändere zuerst nur ihre Schreibweise. Weitere Namen ergänzt du danach mit einer zweiten Liste.",
+      "moto erkennt nicht sicher, welcher Name zu welcher vorhandenen Vertragspartei gehört. Ändere in dieser Zeile nur einen Namen. Die anderen Namen schreibst du wie in der heruntergeladenen Liste. Einen weiteren Namen ergänzt du mit einer zweiten Liste.",
+    party_repeated: "Ein Name steht doppelt in der Zeile.",
   },
   method: {
     invalid:
