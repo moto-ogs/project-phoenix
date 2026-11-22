@@ -215,11 +215,12 @@ export function applyOptimisticSchemaUpdate(
 // --- API Functions ---
 
 /**
- * The schema as the screens read it: Go's nil lists arrive as null. The
+ * The schema as the screens read it, for every portal that loads one
+ * (school, operator): Go's nil lists arrive as null. The
  * value sets of a setting (type, policy, levels, source) are the registry's,
  * which the backend renders verbatim; this build narrows them as before.
  */
-function toSettingsSchema(schema: wire.SettingsSchema): SettingsSchema {
+export function toSettingsSchema(schema: wire.SettingsSchema): SettingsSchema {
   return {
     tabs: (schema.tabs ?? []).flatMap((tab) =>
       tab

@@ -10,7 +10,11 @@ import type { ErrorCode } from "./error-codes.generated";
 import { sessionFetch } from "./session-cache";
 
 /** A portal by the scope of its session token (`portalRoutes`). */
-export type Portal = Exclude<keyof typeof portalRoutes, "public">;
+/**
+ * A portal by the scope of its session token (`portalRoutes`); `public` are
+ * the routes without a session (links, password reset, invitations).
+ */
+export type Portal = keyof typeof portalRoutes;
 
 type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -204,6 +208,9 @@ const PORTALS: Readonly<Record<Portal, PortalRow>> = {
   school: { mount: "/school", bff: "/api/school", send: sendPlain },
   org: { mount: "/traeger", bff: "/api/traeger", send: sendPlain },
   caterer: { mount: "/caterer", bff: "/api/caterer", send: sendPlain },
+  // Without a session: no gate, no renewal, the error stays on the page.
+  // Its patterns name their portal themselves (`/caterer/invitations/…`).
+  public: { mount: "", bff: "/api", send: sendPlain },
   platform: {
     mount: "/operator",
     bff: "/api/operator",
@@ -237,9 +244,12 @@ export function bffPath(
     }
     return encodeURIComponent(value);
   });
-  const underMount = filled === mount || filled.startsWith(`${mount}/`);
+  const underMount =
+    mount !== "" && (filled === mount || filled.startsWith(`${mount}/`));
+  // A public pattern under /api (enrollment links) is its BFF path already.
+  const atBff = mount === "" && filled.startsWith(`${bff}/`);
   const path = (
-    bff + (underMount ? filled.slice(mount.length) : filled)
+    atBff ? filled : bff + (underMount ? filled.slice(mount.length) : filled)
   ).replace(/\/+$/, "");
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(query ?? {})) {

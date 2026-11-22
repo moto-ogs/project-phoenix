@@ -54,6 +54,23 @@ describe("bffPath", () => {
     );
   });
 
+  it("puts a public pattern below /api unless it is there already", () => {
+    expect(
+      bffPath("public", "/caterer/invitations/{schoolId}/{token}", {
+        schoolId: "3",
+        token: "t",
+      }),
+    ).toBe("/api/caterer/invitations/3/t");
+    expect(bffPath("public", "/auth/password-reset")).toBe(
+      "/api/auth/password-reset",
+    );
+    expect(
+      bffPath("public", "/api/enrollment/phases/public/{tenantSlug}", {
+        tenantSlug: "ogs",
+      }),
+    ).toBe("/api/enrollment/phases/public/ogs");
+  });
+
   it("encodes parameters and drops empty query values", () => {
     expect(
       bffPath(
@@ -368,6 +385,20 @@ describe("bffJson", () => {
       code: "general.permission",
     });
     expect(assign).toHaveBeenCalledWith("/parents/login");
+  });
+
+  it("sends a public route without a session", async () => {
+    mockTransportFetch.mockResolvedValueOnce(ok({ valid: true }));
+
+    await bffJson("public", "GET /traeger/invitations/{token}", {
+      params: { token: "abc" },
+    });
+
+    expect(mockTransportFetch).toHaveBeenCalledWith(
+      "/api/traeger/invitations/abc",
+      { method: "GET", credentials: "include", cache: "no-store" },
+    );
+    expect(mockSessionFetch).not.toHaveBeenCalled();
   });
 
   it("leaves Träger, moto schule and caterer on the page on a 401", async () => {
