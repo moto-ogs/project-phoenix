@@ -9,6 +9,10 @@ import { describe, expect, it } from "vitest";
 const UNCONTRACTED_CALLERS: Readonly<Record<string, string>> = {
   "lib/payroll-api.ts":
     "PUT settings/values/[key]: the route purges the cached tenant lookup",
+  "lib/staff-preview-api.ts":
+    "POST auth/staff-preview: a session step of the BFF, no backend route of its own",
+  "lib/tenant-api.ts":
+    "POST auth/switch-tenant: the session switch of the BFF (ADR 0270, sign-in steps)",
   "lib/settings-api.ts":
     "PUT/DELETE settings/values/[key]: the route purges the cached tenant lookup",
 };
