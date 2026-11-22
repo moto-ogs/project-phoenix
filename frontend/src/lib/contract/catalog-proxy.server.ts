@@ -18,7 +18,7 @@ import {
   type RouteContext,
 } from "~/lib/route-wrapper-utils.server";
 import { underOutsideHead } from "./catalog-outside-mounts";
-import { decodeContract } from "./client.server";
+import { commits, decodeContract } from "./client.server";
 import { fileAnswer, multipart } from "./runtime";
 
 /** A generated route entry, as `portalRoutes` lists it. */
@@ -35,6 +35,8 @@ export interface CatalogRoute {
   readonly defaultVariant?: string;
   /** Why the request runs only once, also after a session renewal. */
   readonly noRetryAfterRenewal?: string;
+  /** Why a POST commits nothing its caller asked for (a preview, a search). */
+  readonly noCommit?: string;
   /** The largest request body read; a larger one is answered 413. */
   readonly maxBodyBytes?: number;
   /** `multipart` for an upload; a JSON body names no runtime value. */
@@ -456,6 +458,7 @@ export function makeCatalogProxy(
       `${route.method} ${route.pattern}`,
       decoderOf(route, request),
       answer,
+      commits(route),
     );
     if (!result.ok) throw result.error.cause;
     const value = result.value as {

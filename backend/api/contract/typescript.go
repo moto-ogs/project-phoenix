@@ -348,6 +348,9 @@ func (w *tsWriter) route(out *strings.Builder, route Route) {
 	if route.NoRetryAfterRenewal != "" {
 		fmt.Fprintf(out, "    noRetryAfterRenewal: %q,\n", route.NoRetryAfterRenewal)
 	}
+	if route.NoCommit != "" {
+		fmt.Fprintf(out, "    noCommit: %q,\n", route.NoCommit)
+	}
 	if route.MaxBodyBytes > 0 {
 		fmt.Fprintf(out, "    maxBodyBytes: %d,\n", route.MaxBodyBytes)
 	}

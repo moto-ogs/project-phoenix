@@ -80,8 +80,8 @@ type CarePriceRequest struct {
 	ModuleName     string    `json:"module_name"`
 	Weekday        string    `json:"weekday"`
 	DaysPerWeek    *int      `json:"days_per_week"`
-	MonthlyCents   int64     `json:"monthly_cents"`
-	SiblingCents   *int64    `json:"sibling_cents"`
+	MonthlyCents   int64     `json:"monthly_cents" contract:"number"`
+	SiblingCents   *int64    `json:"sibling_cents" contract:"number"`
 	MealExtra      bool      `json:"meal_extra"`
 }
 

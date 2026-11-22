@@ -87,6 +87,9 @@ type Route struct {
 	NoRetryAfterRenewal string `json:"no_retry_after_renewal,omitempty"`
 	// MaxBodyBytes is the largest request body the proxy reads.
 	MaxBodyBytes int `json:"max_body_bytes,omitempty"`
+	// NoCommit says why a POST commits nothing its caller asked for; its
+	// unreadable answer may be retried like a GET's.
+	NoCommit string `json:"no_commit,omitempty"`
 	// File says the route answers a file instead of the envelope.
 	File bool `json:"file,omitempty"`
 	// Multipart says the request body is a multipart/form-data upload the

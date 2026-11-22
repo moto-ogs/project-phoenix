@@ -484,6 +484,7 @@ export const routes = {
     method: "POST",
     pattern: "/traeger/catalog/phases/{id}/preview",
     portals: ["org"],
+    noCommit: "the preview shows what publishing the phase would change and saves nothing",
     response: success(PreviewSchema),
   },
   "POST /traeger/catalog/phases/{id}/rollout": {

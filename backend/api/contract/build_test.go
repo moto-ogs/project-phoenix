@@ -52,7 +52,7 @@ type row struct {
 	Born     string         `json:"born,omitempty" contract:"date"`
 	Pickup   *string        `json:"pickup,omitempty" contract:"clock"`
 	// An amount in cent and a running number travel as plain numbers.
-	PriceCents int64            `json:"price_cents"`
+	PriceCents int64            `json:"price_cents" contract:"number"`
 	Next       int64            `json:"next" contract:"number"`
 	Image      []byte           `json:"image"`
 	BySchool   map[int64]string `json:"by_school"`
@@ -152,7 +152,7 @@ func TestBuildFollowsEncodingJSON(t *testing.T) {
 	assert.Equal(t, Schema{Kind: KindEnum, Ref: "mode"}, schema("mode"))
 	assert.Equal(t, Schema{Kind: KindEnum, Ref: "Status"}, schema("status"))
 	assert.Equal(t, KindInt, schema("count").Kind)
-	assert.Equal(t, Schema{Kind: KindInt}, schema("price_cents"), "an amount in cent is a number")
+	assert.Equal(t, Schema{Kind: KindInt}, schema("price_cents"), "an amount tagged contract:\"number\" is a number")
 	assert.Equal(t, Schema{Kind: KindInt}, schema("next"), "a running number tagged number stays a number")
 	assert.Equal(t, Schema{Kind: KindString, Nullable: true}, schema("image"), "[]byte renders base64, nil as null")
 	assert.Equal(t, KindMap, schema("by_school").Kind, "an integer key renders as its decimal string")
@@ -230,6 +230,9 @@ func TestBuildRejects(t *testing.T) {
 	uploadOnGet.Method = "GET"
 	uploadRetry := upload()
 	uploadRetry.NoRetryAfterRenewal = "stores the file twice"
+	commitsOnPut := post(body{})
+	commitsOnPut.Method = "PUT"
+	commitsOnPut.NoCommit = "a PUT changes"
 	strayCode := post(body{})
 	strayCode.TooLargeCode = "files.file_too_large"
 	jsonCache := get("/api/rows/", inner{})
@@ -286,6 +289,7 @@ func TestBuildRejects(t *testing.T) {
 		"an upload with a file response":             {[]Registration{uploadAndFile}, Options{Identifiers: identifiers}, "a multipart upload cannot answer a file"},
 		"an upload on a GET":                         {[]Registration{uploadOnGet}, Options{Identifiers: identifiers}, "is a POST, PUT or PATCH"},
 		"an upload that names a retry":               {[]Registration{uploadRetry}, Options{Identifiers: identifiers}, "is sent once"},
+		"a PUT that claims to commit nothing":        {[]Registration{commitsOnPut}, Options{Identifiers: identifiers}, "only a POST names NoCommit"},
 		"a too large code without an upload":         {[]Registration{strayCode}, Options{Identifiers: identifiers}, "TooLargeCode belongs to a multipart upload"},
 		"a private cache trait on a JSON route":      {[]Registration{jsonCache}, Options{Identifiers: identifiers}, "PrivateCache belongs to a file route of a session portal"},
 		"a cache trait on a public file":             {[]Registration{publicCache}, Options{Identifiers: identifiers}, "PrivateCache belongs to a file route of a session portal"},
@@ -494,7 +498,10 @@ func TestTypeScriptWritesTheProxyTraitsOfARoute(t *testing.T) {
 	once.NoRetryAfterRenewal = "a renewed session would mail the code twice"
 	once.MaxBodyBytes = 64 * 1024
 	plain := get("/api/rows/{id}", inner{})
-	doc, err := Build([]Registration{once, plain}, Options{Identifiers: identifiers})
+	preview := post(body{})
+	preview.Pattern = "/api/rows/preview"
+	preview.NoCommit = "a preview saves nothing"
+	doc, err := Build([]Registration{once, plain, preview}, Options{Identifiers: identifiers})
 	require.NoError(t, err)
 	encoded, err := json.Marshal(doc.Routes)
 	require.NoError(t, err)
@@ -506,6 +513,9 @@ func TestTypeScriptWritesTheProxyTraitsOfARoute(t *testing.T) {
 	assert.Contains(t, source, "    pattern: \"/api/rows/\",\n    portals: [\"tenant\"],\n    noRetryAfterRenewal: \"a renewed session would mail the code twice\",\n    maxBodyBytes: 65536,\n")
 	assert.Equal(t, 1, strings.Count(source, "noRetryAfterRenewal"))
 	assert.Equal(t, 1, strings.Count(source, "maxBodyBytes"))
+	assert.Contains(t, string(encoded), `"no_commit":"a preview saves nothing"`)
+	assert.Contains(t, source, "    pattern: \"/api/rows/preview\",\n    portals: [\"tenant\"],\n    noCommit: \"a preview saves nothing\",\n")
+	assert.Equal(t, 1, strings.Count(source, "noCommit"))
 }
 
 func fileRoute(pattern string) Registration {

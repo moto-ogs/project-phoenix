@@ -90,7 +90,7 @@ type BillingRun struct {
 	ReleasedAt      *time.Time     `json:"released_at"`
 	IssuedOn        *calendar.Date `json:"issued_on"`
 	DocumentCount   *int           `json:"document_count"`
-	TotalCents      *int64         `json:"total_cents"`
+	TotalCents      *int64         `json:"total_cents" contract:"number"`
 	// DiscardedAt is set once the Abrechnung discarded the empty run (#6628).
 	DiscardedAt *time.Time `json:"discarded_at"`
 }
@@ -99,9 +99,9 @@ type BillingRun struct {
 type BillingCorrection struct {
 	ID                 ident.ID  `json:"id"`
 	ChildID            ident.ID  `json:"child_id"`
-	AmountCents        int64     `json:"amount_cents"`
-	TotalBeforeCents   int64     `json:"total_before_cents"`
-	TotalAfterCents    int64     `json:"total_after_cents"`
+	AmountCents        int64     `json:"amount_cents" contract:"number"`
+	TotalBeforeCents   int64     `json:"total_before_cents" contract:"number"`
+	TotalAfterCents    int64     `json:"total_after_cents" contract:"number"`
 	Reason             string    `json:"reason"`
 	CreatedByAccountID *ident.ID `json:"created_by_account_id"`
 	CreatedAt          time.Time `json:"created_at"`
@@ -115,13 +115,13 @@ type BillingCorrection struct {
 // correction of the run, whose Note is its reason.
 type BillingPosition struct {
 	Kind                string         `json:"kind"`
-	AmountCents         int64          `json:"amount_cents"`
+	AmountCents         int64          `json:"amount_cents" contract:"number"`
 	WeekStartsOn        *calendar.Date `json:"week_starts_on"`
 	WeekEndsOn          *calendar.Date `json:"week_ends_on"`
 	TimeModelName       string         `json:"time_model_name"`
 	ChildRank           *int           `json:"child_rank"`
 	DiscountBasisPoints *int           `json:"discount_basis_points"`
-	DiscountCents       *int64         `json:"discount_cents"`
+	DiscountCents       *int64         `json:"discount_cents" contract:"number"`
 	Note                string         `json:"note"`
 	CostBearerID        *ident.ID      `json:"cost_bearer_id"`
 	CostBearerName      string         `json:"cost_bearer_name"`
@@ -165,7 +165,7 @@ type BillingChild struct {
 	Positions          []BillingPosition          `json:"positions"`
 	Corrections        []BillingCorrection        `json:"corrections"`
 	CarriedCorrections []BillingCarriedCorrection `json:"carried_corrections"`
-	TotalCents         int64                      `json:"total_cents"`
+	TotalCents         int64                      `json:"total_cents" contract:"number"`
 }
 
 // PostalAddress is the postal address of the recipient of an invoice: all
@@ -228,7 +228,7 @@ type BillingDocument struct {
 	ServiceFrom  calendar.Date  `json:"service_from"`
 	ServiceUntil calendar.Date  `json:"service_until"`
 	Children     []BillingChild `json:"children"`
-	TotalCents   int64          `json:"total_cents"`
+	TotalCents   int64          `json:"total_cents" contract:"number"`
 }
 
 // BillingRunDetail is a run with its invoices. A calculated run shows the
@@ -243,7 +243,7 @@ type BillingRunDetail struct {
 	BillingRun
 	Documents                       []BillingDocument `json:"documents"`
 	PreviewCount                    int               `json:"preview_count"`
-	PreviewCents                    int64             `json:"preview_cents"`
+	PreviewCents                    int64             `json:"preview_cents" contract:"number"`
 	Unbilled                        int               `json:"unbilled"`
 	MissingDebtorNumbers            int               `json:"missing_debtor_numbers"`
 	PaymentTextMissingDebtorNumbers int               `json:"payment_text_missing_debtor_numbers"`
