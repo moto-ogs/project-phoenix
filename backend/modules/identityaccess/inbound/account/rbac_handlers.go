@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The role and permission routes call the Identity & Access role
@@ -18,7 +19,7 @@ import (
 // toRoleResponse maps a role to its API response representation.
 func toRoleResponse(role identityaccess.Role) *RoleResponse {
 	return &RoleResponse{
-		ID:           role.ID,
+		ID:           ident.ID(role.ID),
 		Name:         role.Name,
 		Description:  role.Description,
 		IsSystem:     role.IsSystem,
@@ -32,7 +33,7 @@ func toRoleResponse(role identityaccess.Role) *RoleResponse {
 // toPermissionResponse maps a permission to its API response representation.
 func toPermissionResponse(permission identityaccess.Permission) *PermissionResponse {
 	return &PermissionResponse{
-		ID:          permission.ID,
+		ID:          ident.ID(permission.ID),
 		Name:        permission.Name,
 		Description: permission.Description,
 		Resource:    permission.Resource,

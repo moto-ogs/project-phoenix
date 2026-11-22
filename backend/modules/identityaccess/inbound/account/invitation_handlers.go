@@ -78,7 +78,7 @@ type SchoolInvitationResponse struct {
 	ResetWorkTime       bool                            `json:"reset_work_time"`
 	ID                  common.ID                       `json:"id"`
 	Email               string                          `json:"email"`
-	RoleID              int64                           `json:"role_id,string"`
+	RoleID              ident.ID                        `json:"role_id"`
 	RoleName            string                          `json:"role_name,omitempty"`
 	Token               string                          `json:"token,omitempty"`
 	ExpiresAt           time.Time                       `json:"expires_at"`
@@ -225,7 +225,7 @@ func toInvitationResponse(invitation identityaccess.SchoolInvitation) SchoolInvi
 		ResetMasterData:  invitation.ResetMasterData, ResetQualifications: invitation.ResetQualifications, ResetWorkTime: invitation.ResetWorkTime,
 		ID:              ident.ID(invitation.ID),
 		Email:           invitation.Email,
-		RoleID:          invitation.RoleID,
+		RoleID:          ident.ID(invitation.RoleID),
 		RoleName:        invitation.RoleName,
 		Token:           invitation.Token,
 		ExpiresAt:       invitation.ExpiresAt,

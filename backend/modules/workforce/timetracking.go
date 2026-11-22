@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // This file is the public time-tracking contract the web adapters consume
@@ -141,11 +142,13 @@ type SessionResponse struct {
 
 // MarshalJSON preserves exact history IDs and the calculated break-minute field.
 func (sr SessionResponse) MarshalJSON() ([]byte, error) {
+	// wire.Marshal keeps the identifiers of the breaks strings, as the
+	// answer writes them (ADR 0300).
 	type alias SessionResponse
 	if sr.WorkSession == nil {
-		return json.Marshal(alias(sr))
+		return wire.Marshal(alias(sr))
 	}
-	return json.Marshal(struct {
+	return wire.Marshal(struct {
 		alias
 		ID        string  `json:"id"`
 		TenantID  string  `json:"tenant_id"`

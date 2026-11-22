@@ -77,7 +77,7 @@ func TestAbsencePlanGaps_PreCascadeVacationIsShownAndTakenOver(t *testing.T) {
 
 	gaps := e.planGaps(t)
 	require.Len(t, gaps, 1, "only an approved absence has plan effect, and each row counts once")
-	assert.NotEqual(t, overlap, gaps[0].AbsenceID)
+	assert.NotEqual(t, overlap, gaps[0].AbsenceID.Int64())
 	assert.Equal(t, workforce.AbsencePlanGap{
 		AbsenceID: ident.ID(approved), StaffID: ident.ID(requester.staffID), AbsenceType: workforce.AbsenceTypeVacation,
 		DateStart: vacationDay.String(), DateEnd: vacationDay.String(), OpenShifts: 1, OpenBlocks: 1,

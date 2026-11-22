@@ -62,10 +62,10 @@ var ErrFamilyNotFound = errors.New("no document or number of the Träger names t
 // what its invoices asked for, what the cancellations took back, what the
 // credits took back, and what is still open.
 type BillingAmounts struct {
-	IssuedCents    int64 `json:"issued_cents"`
-	CancelledCents int64 `json:"cancelled_cents"`
-	CreditedCents  int64 `json:"credited_cents"`
-	OpenCents      int64 `json:"open_cents"`
+	IssuedCents    int64 `json:"issued_cents" contract:"number"`
+	CancelledCents int64 `json:"cancelled_cents" contract:"number"`
+	CreditedCents  int64 `json:"credited_cents" contract:"number"`
+	OpenCents      int64 `json:"open_cents" contract:"number"`
 }
 
 // BillingPayment is who pays an invoice: the family, a cost bearer by the
@@ -131,10 +131,10 @@ type BillingFamilyDocument struct {
 	Reason              string          `json:"reason"`
 	ChildNames          []string        `json:"child_names"`
 	DebtorNumber        string          `json:"debtor_number"`
-	TotalCents          int64           `json:"total_cents"`
+	TotalCents          int64           `json:"total_cents" contract:"number"`
 	Payment             *BillingPayment `json:"payment"`
 	Status              string          `json:"status"`
-	OpenCents           int64           `json:"open_cents"`
+	OpenCents           int64           `json:"open_cents" contract:"number"`
 	// PaymentMethod and DueOn are how and by when the invoice is paid
 	// (#4689); empty and nil on documents issued before.
 	PaymentMethod string         `json:"payment_method"`

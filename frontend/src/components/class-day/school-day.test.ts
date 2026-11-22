@@ -14,6 +14,7 @@ import {
 const zero: SchoolDayTotals = {
   students: 0,
   missing: 0,
+  unreported: 0,
   absent: 0,
   sick: 0,
   excused: 0,
@@ -29,6 +30,7 @@ const report: SchoolDayReport = {
   weekday: "wed",
   school_day: true,
   enrollment_known: true,
+  can_report_absences: false,
   totals: { ...zero, students: 3, missing: 1, sick: 1, staying: 1, leaving: 1 },
   classes: [
     {
@@ -87,7 +89,7 @@ describe("school day lists", () => {
 
   it("groups the children of a list by class and leaves out empty classes", () => {
     expect(schoolDayChildrenByClass(report, list("krank"))).toEqual([
-      { schoolClass: "1a", children: [report.classes[0]!.children[1]] },
+      { schoolClass: "1a", children: [report.classes![0]!.children![1]] },
     ]);
     expect(
       schoolDayChildrenByClass(report, list("kinder")).map(
@@ -149,7 +151,10 @@ describe("school day lists", () => {
     expect(unreported.count(withUnreported.totals)).toBe(1);
     expect(unreported.count(zero)).toBe(0);
     expect(schoolDayChildrenByClass(withUnreported, unreported)).toEqual([
-      { schoolClass: "4d", children: [withUnreported.classes[0]!.children[0]] },
+      {
+        schoolClass: "4d",
+        children: [withUnreported.classes![0]!.children![0]],
+      },
     ]);
   });
 });

@@ -337,6 +337,7 @@ export const routes = {
     method: "POST",
     pattern: "/traeger/sepa-mandates/imports/preview",
     portals: ["org"],
+    noCommit: "an import preview checks the file and saves no row of it",
     maxBodyBytes: 2359296,
     tooLargeCode: "parent_billing.sepa_import_file_too_large",
     request: multipart,

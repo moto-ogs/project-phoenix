@@ -141,3 +141,31 @@ Der Wächter gegen neue Zahl-Kennungen ist damit der Generator selbst;
 Vertrag. Bewusst gegen „expand, then contract“ in einem Release liegt
 zusätzlich: Ein offener Tab mit altem Bundle ruft `/api/tenant/resolve`, das
 es nicht mehr gibt, bis er neu lädt.
+
+## Nachtrag vom 2026-11-22: Eine Schreibweise für Kennungen
+
+Nach Phase 2 standen im Backend drei Schreibweisen für dieselbe Kennung:
+`common.ID` (in `http`-Rollen 428-mal), `ident.ID` (dort 311-mal, 75 Dateien
+mischten beide) und `int64` mit der JSON-Option `,string` (130 Felder). Wer
+eine Nachbardatei kopierte, erwischte oft den falschen Stil. Die Regel aus
+Punkt 1 („HTTP-Typen nutzen `common.ID`“) ließ sich zudem nicht überall
+halten: Mehrere `http`-Pakete dürfen `api/common` nicht importieren und
+schrieben deshalb `ident.ID` (#7808).
+
+Entscheidung:
+
+1. **`ident.ID` ist der einzige Name einer Kennung, in jeder Rolle.** Der
+   Alias `common.ID` entfällt; ohne ihn kompiliert der alte Name nicht mehr.
+   Punkt 1 gilt ohne den Halbsatz über HTTP-Typen.
+2. **Die JSON-Option `,string` macht keine Kennung.** Sie liest nur einen
+   String und wirkt nicht auf Listen. Der Generator lehnt sie auf einem
+   angemeldeten Typ ab, und `TestNoJSONStringOptionRatchet` (`backend/test`)
+   lehnt sie in jeder Go-Datei des Backends ab, ohne Ausnahmeliste.
+3. **Die Wire-Form bleibt.** Antworten schreiben `ident.ID` über
+   `wire.Marshal` als String, wie vorher `,string`; Anfragen lesen jetzt
+   zusätzlich eine Zahl. Zwei Typen gingen mit `,string` auch in
+   gespeichertes oder gehashtes JSON: der Anhang-Schnappschuss einer
+   Nachricht (`communication.ReservedMessageAttachments`), den die Antwort
+   unverändert weitergibt, und die Revision der Personen-Zusammenführung
+   (`staffpersonmerge`). Beide kodieren mit `wire.Marshal` und schreiben
+   dieselben Bytes wie vorher.

@@ -6,6 +6,9 @@ import (
 	"errors"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Message attachments (#6685): photos and files of a chat message. A file is
@@ -50,10 +53,10 @@ var (
 // conversation sees it. The three message tables store this value as their
 // attachments snapshot, so its JSON is the wire format too.
 type MessageAttachment struct {
-	ID          int64  `json:"id,string"`
-	Filename    string `json:"filename"`
-	SizeBytes   int64  `json:"size_bytes"`
-	ContentType string `json:"content_type"`
+	ID          ident.ID `json:"id"`
+	Filename    string   `json:"filename"`
+	SizeBytes   int64    `json:"size_bytes"`
+	ContentType string   `json:"content_type"`
 	// Width and Height are set for images, so a conversation reserves the
 	// picture's place before its bytes arrive.
 	Width  int `json:"width,omitempty"`
@@ -170,7 +173,7 @@ func HasMessageAttachments(ctx context.Context) bool {
 func ReservedMessageAttachments(ids []int64, locked []MessageAttachment) (json.RawMessage, error) {
 	byID := make(map[int64]MessageAttachment, len(locked))
 	for _, attachment := range locked {
-		byID[attachment.ID] = attachment
+		byID[attachment.ID.Int64()] = attachment
 	}
 	snapshot := make([]MessageAttachment, 0, len(ids))
 	for _, id := range ids {
@@ -181,7 +184,9 @@ func ReservedMessageAttachments(ids []int64, locked []MessageAttachment) (json.R
 		delete(byID, id)
 		snapshot = append(snapshot, attachment)
 	}
-	return json.Marshal(snapshot)
+	// The snapshot goes to the wire as stored, so it keeps the answer's
+	// form with identifiers as strings.
+	return wire.Marshal(snapshot)
 }
 
 // MessageAttachmentSnapshot returns the stored snapshot for the wire: nil

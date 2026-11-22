@@ -111,7 +111,7 @@ func classDayRow(row DayRosterRow, weekday string, facts classDayFacts) classday
 		FirstName:   row.FirstName,
 		LastName:    row.LastName,
 		ListEntry:   row.ListEntry,
-		ListEntryID: row.ListEntryID,
+		ListEntryID: ident.ID(row.ListEntryID),
 		// A child without an OGS place (#4803) is "Keine Betreuung" like a
 		// list entry, yet a student: its status day still shows.
 		WithoutCarePlace: row.WithoutCarePlace,

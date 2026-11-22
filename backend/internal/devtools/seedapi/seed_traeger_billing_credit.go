@@ -98,7 +98,7 @@ func seedCreditTarget(raw []byte) (int64, int64, error) {
 				History  []seedCreditHistoryLink `json:"history"`
 				Children []struct {
 					ChildID    apiID `json:"child_id"`
-					TotalCents int64 `json:"total_cents"`
+					TotalCents int64 `json:"total_cents" contract:"number"`
 				} `json:"children"`
 			} `json:"documents"`
 		} `json:"data"`

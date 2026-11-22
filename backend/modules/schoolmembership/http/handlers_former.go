@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // FormerStaffResponse is one former employment in the Ehemalige filter of
@@ -13,7 +14,7 @@ import (
 // it was created to the day the person left, the same period the invitation
 // dialog names (#3402).
 type FormerStaffResponse struct {
-	ID        int64         `json:"id,string"`
+	ID        ident.ID      `json:"id"`
 	FirstName string        `json:"first_name"`
 	LastName  string        `json:"last_name"`
 	StartedOn calendar.Date `json:"started_on"`
@@ -71,7 +72,7 @@ func (rs *Resource) listFormerStaff(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		responses = append(responses, FormerStaffResponse{
-			ID: staff.ID, FirstName: person.FirstName, LastName: person.LastName,
+			ID: ident.ID(staff.ID), FirstName: person.FirstName, LastName: person.LastName,
 			StartedOn: calendar.DateFromTime(staff.CreatedAt), EndedOn: calendar.DateFromTime(*staff.DeletedAt),
 		})
 	}

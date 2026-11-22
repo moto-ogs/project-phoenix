@@ -12,6 +12,7 @@ import (
 	enrollmentNative "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // classRosterInputs are the reads one class roster combines for an already
@@ -185,7 +186,7 @@ func (s *Reports) classListEntryRows(ctx context.Context, schoolClass string, al
 	rows := make([]enrollmentNative.ClassRosterRow, 0, len(entries))
 	for _, entry := range entries {
 		row := noCareRow(entry.SchoolClass)
-		row.ListEntry, row.ListEntryID = true, entry.ID
+		row.ListEntry, row.ListEntryID = true, ident.ID(entry.ID)
 		row.FirstName, row.LastName = entry.FirstName, entry.LastName
 		rows = append(rows, row)
 	}

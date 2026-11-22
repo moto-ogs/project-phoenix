@@ -36,14 +36,14 @@ type StaffResponse struct {
 	// IDs are bigints, and the Next.js proxy parses every JSON number before
 	// the mapper can preserve it. A rounded staff ID could address a different
 	// staff record when the caller sends it back.
-	ID int64 `json:"id,string"`
+	ID ident.ID `json:"id"`
 	// PersonID goes out as a decimal STRING. It is a bigint, and the staff
 	// screens send it back to identify the person they edit — as a JSON
 	// number it would be rounded past 2^53 by the JSON.parse in the Next.js
 	// proxy, before any mapper could preserve it, and the rounded value is a
 	// valid id for a different person (#2222). The request side takes either
 	// form (ident.ID), so no client breaks on this.
-	PersonID        int64                `json:"person_id,string"`
+	PersonID        ident.ID             `json:"person_id"`
 	StaffNotes      string               `json:"staff_notes,omitempty"`
 	Person          *StaffPersonResponse `json:"person,omitempty"`
 	IsTeacher       bool                 `json:"is_teacher"`
@@ -302,10 +302,10 @@ func newStaffPersonResponse(person *Person, email, avatar string) *StaffPersonRe
 func buildStaffResponse(access staffFieldAccess, staff schoolmembership.Staff, person *Person, isTeacher bool, data enrichment) StaffResponse {
 	isExternal := schoolmembership.ExternalCaregiver(staff.HasExternalCaregiverRecord, person != nil)
 	response := StaffResponse{
-		ID:               staff.ID,
+		ID:               ident.ID(staff.ID),
 		StartedOn:        calendar.DateFromTime(staff.CreatedAt),
 		EndedOn:          staffEndedOn(staff),
-		PersonID:         staff.PersonID,
+		PersonID:         ident.ID(staff.PersonID),
 		StaffNotes:       staff.StaffNotes,
 		IsTeacher:        isTeacher,
 		WasPresentToday:  data.present,

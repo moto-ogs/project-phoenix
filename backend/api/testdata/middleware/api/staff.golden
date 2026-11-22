@@ -61,7 +61,6 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	GET /api/staff/{id}/absences
 	GET /api/staff/{id}/avatar
 	GET /api/staff/{id}/documents
-	GET /api/staff/{id}/groups
 	GET /api/staff/{id}/payroll-number
 	GET /api/staff/{id}/schedule
 	GET /api/staff/{id}/school-classes

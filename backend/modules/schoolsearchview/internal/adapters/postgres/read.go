@@ -24,6 +24,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolsearchview"
 	"github.com/moto-ogs/project-phoenix/modules/transactionruntime/protocol"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/collation"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/uptrace/bun"
 )
 
@@ -385,27 +386,27 @@ func (r *Reader) Search(ctx context.Context, text, phoneKey, alternativeKey stri
 		switch row.Kind {
 		case kindChild:
 			result.Children = append(result.Children, schoolsearchview.SearchChild{
-				ID: row.ID, FirstName: row.A, LastName: row.B, SchoolClass: row.C, GroupName: row.D,
+				ID: ident.ID(row.ID), FirstName: row.A, LastName: row.B, SchoolClass: row.C, GroupName: row.D,
 				Match: schoolsearchview.SearchMatch{Field: schoolsearchview.MatchField(row.E), Text: row.F},
 			})
 		case kindContact:
 			contactIndex[row.ID] = len(result.Contacts)
 			result.Contacts = append(result.Contacts, schoolsearchview.SearchContact{
-				ID: row.ID, FirstName: row.A, LastName: row.B,
+				ID: ident.ID(row.ID), FirstName: row.A, LastName: row.B,
 				Match:    schoolsearchview.SearchMatch{Field: schoolsearchview.MatchField(row.E), Text: row.F},
 				Children: []schoolsearchview.SearchContactChild{},
 			})
 		case kindContactChild:
 			i := contactIndex[row.Ref]
 			result.Contacts[i].Children = append(result.Contacts[i].Children, schoolsearchview.SearchContactChild{
-				ID: row.ID, FirstName: row.A, LastName: row.B, SchoolClass: row.C, RelationshipType: row.D,
+				ID: ident.ID(row.ID), FirstName: row.A, LastName: row.B, SchoolClass: row.C, RelationshipType: row.D,
 			})
 		case kindStaff:
-			result.Staff = append(result.Staff, schoolsearchview.SearchStaff{ID: row.ID, FirstName: row.A, LastName: row.B})
+			result.Staff = append(result.Staff, schoolsearchview.SearchStaff{ID: ident.ID(row.ID), FirstName: row.A, LastName: row.B})
 		case kindRoom:
-			result.Rooms = append(result.Rooms, schoolsearchview.SearchRoom{ID: row.ID, Name: row.A, Building: row.B})
+			result.Rooms = append(result.Rooms, schoolsearchview.SearchRoom{ID: ident.ID(row.ID), Name: row.A, Building: row.B})
 		case kindGroup:
-			result.Groups = append(result.Groups, schoolsearchview.SearchGroup{ID: row.ID, Name: row.A})
+			result.Groups = append(result.Groups, schoolsearchview.SearchGroup{ID: ident.ID(row.ID), Name: row.A})
 		}
 	}
 	return result, nil
@@ -436,7 +437,7 @@ func (r *Reader) ChildrenByID(ctx context.Context, ids []int64, limit int) ([]sc
 	}
 	out := make([]schoolsearchview.SearchChild, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, schoolsearchview.SearchChild{ID: row.ID, FirstName: row.FirstName, LastName: row.LastName, SchoolClass: row.SchoolClass, GroupName: row.GroupName, GroupID: row.GroupID})
+		out = append(out, schoolsearchview.SearchChild{ID: ident.ID(row.ID), FirstName: row.FirstName, LastName: row.LastName, SchoolClass: row.SchoolClass, GroupName: row.GroupName, GroupID: row.GroupID})
 	}
 	return out, nil
 }

@@ -140,7 +140,7 @@ func (b *builder) enumName(enum EnumSpec) (string, error) {
 func (b *builder) route(rc Registration, options Options) (Route, error) {
 	route := Route{
 		Method: rc.Method, Pattern: rc.Pattern, Paginated: rc.Paginated, Deprecated: rc.Deprecated,
-		NoRetryAfterRenewal: rc.NoRetryAfterRenewal, MaxBodyBytes: rc.MaxBodyBytes,
+		NoRetryAfterRenewal: rc.NoRetryAfterRenewal, MaxBodyBytes: rc.MaxBodyBytes, NoCommit: rc.NoCommit,
 		File: rc.File, Multipart: rc.Multipart, TooLargeCode: rc.TooLargeCode, PublicFile: rc.PublicFile, PublicUpload: rc.PublicUpload,
 		FileCache: rc.FileCache, ConditionalGet: rc.ConditionalGet,
 		PrivateCache: rc.PrivateCache,
@@ -158,8 +158,8 @@ func (b *builder) route(rc Registration, options Options) (Route, error) {
 	if err := fileCacheTraits(rc, where); err != nil {
 		return route, err
 	}
-	if rc.PrivateCache && (!rc.File || slices.Contains(rc.Portals, PublicPortal)) {
-		return route, fmt.Errorf("%s: PrivateCache belongs to a file route of a session portal", where)
+	if err := retryTraits(rc, where); err != nil {
+		return route, err
 	}
 	if len(rc.Portals) == 0 {
 		return route, fmt.Errorf("%s names no portal", where)
@@ -198,6 +198,18 @@ func queryParams(params []QueryParam, where string) ([]QueryParam, error) {
 // multipartTraits refuses an upload the proxy cannot stream: one without a
 // bound, without the code of its refusal, beside a JSON body or file answer,
 // or with a retry trait although an upload is sent only once.
+// retryTraits checks the traits that decide what the proxy may repeat or
+// keep: NoCommit on a POST only, PrivateCache on a file of a session portal.
+func retryTraits(rc Registration, where string) error {
+	if rc.NoCommit != "" && rc.Method != "POST" {
+		return fmt.Errorf("%s: only a POST names NoCommit; a GET commits nothing anyway and a PUT, PATCH or DELETE changes", where)
+	}
+	if rc.PrivateCache && (!rc.File || slices.Contains(rc.Portals, PublicPortal)) {
+		return fmt.Errorf("%s: PrivateCache belongs to a file route of a session portal", where)
+	}
+	return nil
+}
+
 func multipartTraits(rc Registration, where string) error {
 	if !rc.Multipart {
 		if rc.TooLargeCode != "" {
@@ -430,7 +442,7 @@ func (b *builder) wrapped(t reflect.Type, where string) (Schema, error) {
 	at := where + "." + t.Name() + ".Value"
 	s, err := b.schema(sf.Type, at, true)
 	if errors.Is(err, errBareInt64) {
-		err = b.numericID(&s, t, sf.Name, false, at)
+		err = b.numericID(&s, t, at)
 	}
 	return s, err
 }

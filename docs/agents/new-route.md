@@ -54,9 +54,11 @@ Worked example, the same route from Go to the browser:
    lists every parameter the handler reads (`days` is `from`/`to` as
    `QueryDate`); the proxy drops the others. Identifiers are `common.ID`
    (`ident.ID` outside `http` roles), days are `calendar.Date`, closed value
-   sets go in `Enums`; the generator refuses a bare `int64`, a numeric
-   identifier in an answer and an answer whose shape depends on a query
-   parameter.
+   sets go in `Enums`. A count is an `int`; an amount or a count kept as
+   `int64` says so with `contract:"number"`. The generator refuses a bare
+   `int64`, the json option `,string`, a number under an identifier's name
+   (`id`, `*_id`, `*_ids`), a numeric identifier in an answer and an answer
+   whose shape depends on a query parameter.
 3. **Mount.** A new contracts function gets one row in the matching
    `*ContractMounts()` list of `backend/api/route_contracts.go`, e.g.
    `{"/api/activities", timetableActivitiesHTTP.RouteContracts()}`. This
@@ -122,6 +124,9 @@ Same steps; the contract names the body type, and the client sends it typed
 - A route without an answer body registers `NoData: true`.
 - A route whose body carries a password or a code names why it must not be
   sent twice in `NoRetryAfterRenewal`.
+- A POST that commits nothing its caller asked for (a preview, a search)
+  names why in `NoCommit`. When its answer does not match the contract, the
+  proxy then offers a retry; every other write asks to reload.
 - Classify the writing route for analytics (`.claude/rules/usage-analytics.md`).
 - After the write, the component refreshes its SWR family with
   `useInvalidateFamily`.

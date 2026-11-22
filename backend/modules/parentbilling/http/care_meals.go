@@ -48,7 +48,7 @@ type CareMealPriceRequest struct {
 	SchoolID    common.ID     `json:"school_id"`
 	ValidFrom   calendar.Date `json:"valid_from"`
 	Mode        string        `json:"mode"`
-	AmountCents int64         `json:"amount_cents"`
+	AmountCents int64         `json:"amount_cents" contract:"number"`
 }
 
 // Bind accepts the body; the Owner validates the price.
