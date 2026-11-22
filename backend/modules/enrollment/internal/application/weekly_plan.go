@@ -113,6 +113,11 @@ func (d *Decisions) approvedChildTargetScope(ctx context.Context, run *approvedC
 	// A child whose place waits for the Kinderkontingent (#4803) keeps its
 	// plan due: it gets no OGS times or way home before the place.
 	if !calendar.Date(planned.On).After(d.todayDate()) && !run.student.WithoutCarePlace {
+		// The edit applies the due plan as the tick would, with the same
+		// fallback for a plan stored without an author.
+		if updated, err = d.duePlanWithAuthor(ctx, run.request, run.child, updated); err != nil {
+			return allTargets, err
+		}
 		return withoutWeeklyPlan, d.applyPlannedWeeklyFields(ctx, run.request, run.child, run.student, run.input.ActorAccountID, updated)
 	}
 	if updated != *planned {
