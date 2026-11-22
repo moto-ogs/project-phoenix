@@ -14,8 +14,8 @@ func init() {
 		Version:     familyBillingOutlivesAContractVersion,
 		Description: "Elternabrechnung: Abweichung der Familie geht mit ihrem letzten Vertrag (#7862)",
 		DependsOn: []string{
-			careContractChildLinksVersion, // the last migration before this one
-			familyDebtorNumberVersion,     // the comments this one restates
+			traegerStaffShiftSeriesVersion, // the last migration before this one
+			familyDebtorNumberVersion,      // the comments this one restates
 		},
 	})
 	Migrations.MustRegister(familyBillingOutlivesAContractUp, familyBillingOutlivesAContractDown)
