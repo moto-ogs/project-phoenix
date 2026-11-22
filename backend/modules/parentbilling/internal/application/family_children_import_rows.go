@@ -417,14 +417,13 @@ func (c *familyImportCheck) reachedTargets(row *parentbilling.FamilyChildrenImpo
 		targets = c.targets(row, running, false)
 	}
 	if len(heard) > 0 {
+		// A witness takes over nothing, so it names no contract of the row.
 		contractID := row.ContractID
 		for _, target := range c.targets(row, heard, true) {
 			target.witness = true
 			targets = append(targets, target)
 		}
-		if len(running) > 0 {
-			row.ContractID = contractID
-		}
+		row.ContractID = contractID
 	}
 	return targets
 }
@@ -435,7 +434,15 @@ func (c *familyImportCheck) reachedTargets(row *parentbilling.FamilyChildrenImpo
 // rows (ADR 0305, #7863).
 func heardContracts(found, running []familyImportContract, from calendar.Date) []familyImportContract {
 	return slices.DeleteFunc(slices.Clone(found), func(contract familyImportContract) bool {
-		return contract.endedBefore(from) || slices.ContainsFunc(running, func(kept familyImportContract) bool { return kept.id == contract.id })
+		return !spansCover(contract.inForce, from) || slices.ContainsFunc(running, func(kept familyImportContract) bool { return kept.id == contract.id })
+	})
+}
+
+// spansCover tells whether one of the spans holds the day; a span without
+// an end runs on.
+func spansCover(spans []familyImportSpan, day calendar.Date) bool {
+	return slices.ContainsFunc(spans, func(span familyImportSpan) bool {
+		return span.from != "" && !day.Before(span.from) && (span.until == "" || !day.After(span.until))
 	})
 }
 

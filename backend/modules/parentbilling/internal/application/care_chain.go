@@ -61,6 +61,7 @@ type careContractPlace struct {
 // every reduction and the total of each draft.
 func applyCareChain(entries []*careChainEntry, in careChainInput) {
 	rules := careRulesInForce(in.rules, in.month)
+	shareBirthDates(entries)
 	for _, entry := range entries {
 		entry.initialize()
 	}
@@ -79,6 +80,24 @@ func applyCareChain(entries []*careChainEntry, in careChainInput) {
 	for _, entry := range entries {
 		entry.finish()
 		entry.applyCostShares(in)
+	}
+}
+
+// shareBirthDates gives every entry of a child the birth date one of its
+// entries knows, before a rule picks the entries at its schools: a draft
+// without one ranks by the date of an issued invoice, also at a school the
+// rule does not count (#7863).
+func shareBirthDates(entries []*careChainEntry) {
+	known := map[string]*calendar.Date{}
+	for _, entry := range entries {
+		if _, seen := known[entry.child]; !seen && entry.birthDate != nil {
+			known[entry.child] = entry.birthDate
+		}
+	}
+	for _, entry := range entries {
+		if entry.birthDate == nil {
+			entry.birthDate = known[entry.child]
+		}
 	}
 }
 
@@ -285,11 +304,6 @@ func rankFamilies(entries []*careChainEntry, rule *parentbilling.ContributionRul
 		if child == nil {
 			child = &rankedCareChild{key: entry.child, birthDate: entry.birthDate}
 			families[family][entry.child] = child
-		}
-		if child.birthDate == nil {
-			// Any entry may know the birth date, e.g. an issued contract
-			// outside the month when the draft names none (#7863).
-			child.birthDate = entry.birthDate
 		}
 		child.base += entry.base(rule)
 		child.entries = append(child.entries, entry)

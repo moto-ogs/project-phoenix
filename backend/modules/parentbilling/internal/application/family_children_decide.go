@@ -29,6 +29,9 @@ type importedChildren struct {
 	// child a second time, but whose number still speaks against the other
 	// rows of its family.
 	witness bool
+	// belongs limits a witness to the rows of the days its child was in the
+	// family; empty, it speaks against every row (#7863).
+	belongs []familyImportSpan
 }
 
 // previewChildrenFamily keys a row of a preview without a mail address and
@@ -54,7 +57,13 @@ func importedChildrenFamily(number parentbilling.ImportedFamilyChildren) string 
 func decideImportedChildren(rows []importedChildren, current func(family string, day calendar.Date) *parentbilling.FamilyChildCount,
 	day func(row importedChildren) calendar.Date,
 ) {
-	distinct := distinctImportedChildren(rows)
+	// The rows that speak, read before any row gets its status here.
+	byFamily := map[string][]importedChildren{}
+	for _, row := range rows {
+		if row.status == "" || row.status == parentbilling.ImportedChildrenConfirmationsDiffer {
+			byFamily[row.family] = append(byFamily[row.family], row)
+		}
+	}
 	for i := range rows {
 		row := &rows[i]
 		if row.status != "" || row.witness {
@@ -63,7 +72,7 @@ func decideImportedChildren(rows []importedChildren, current func(family string,
 		decisionDay := day(*row)
 		count := current(row.family, decisionDay)
 		switch {
-		case len(distinct[row.family]) > 1:
+		case importedRowsDiffer(byFamily[row.family], *row):
 			row.status = parentbilling.ImportedChildrenRowsDiffer
 		case count == nil || count.ConfirmedChildren == nil:
 			row.status = parentbilling.ImportedChildrenNew
@@ -90,21 +99,19 @@ func importedChildrenStart(from, decisionDay calendar.Date, count *parentbilling
 	return from
 }
 
-// distinctImportedChildren collects the numbers named for each family. A
-// conflict with stored confirmations on one day does not disqualify the
-// row's number as evidence against sibling rows elsewhere in the file.
-func distinctImportedChildren(rows []importedChildren) map[string]map[int]bool {
-	distinct := map[string]map[int]bool{}
-	for _, row := range rows {
-		if row.status != "" && row.status != parentbilling.ImportedChildrenConfirmationsDiffer {
-			continue
+// importedRowsDiffer tells whether another row of the row's family names
+// a different number. A conflict with stored confirmations on one day does
+// not disqualify a row's number as evidence against sibling rows elsewhere
+// in the file. A witness of a child that left speaks only against rows of
+// days it belonged to the family.
+func importedRowsDiffer(family []importedChildren, row importedChildren) bool {
+	for _, other := range family {
+		if other.number.Children != row.number.Children &&
+			(len(other.belongs) == 0 || spansCover(other.belongs, row.number.ValidFrom)) {
+			return true
 		}
-		if distinct[row.family] == nil {
-			distinct[row.family] = map[int]bool{}
-		}
-		distinct[row.family][row.number.Children] = true
 	}
-	return distinct
+	return false
 }
 
 // newImportedChildren are the numbers to store: each family once, from the
