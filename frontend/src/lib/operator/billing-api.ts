@@ -1,5 +1,5 @@
+import { bffJson } from "~/lib/bff-fetch";
 import { apiErrorFromResponse, transportFetch } from "../api-error";
-import { operatorFetch } from "./api-helpers";
 import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
 import { knownEnum } from "~/lib/contract/known-enum";
 import type * as operatorBillingContract from "~/lib/contract/operator-billing.generated";
@@ -111,9 +111,36 @@ function mapBillingKeyDayOverride(
   ];
 }
 
-function overridePath(scope: BillingKeyDayScope, id: string): string {
-  const segment = scope === "school" ? "schools" : "organizations";
-  return `/api/operator/billing/key-day-overrides/${segment}/${encodeURIComponent(id)}`;
+async function putOverride(
+  scope: BillingKeyDayScope,
+  id: string,
+  body: operatorBillingContract.updateBillingKeyDayRequest,
+) {
+  return scope === "school"
+    ? bffJson(
+        "platform",
+        "PUT /operator/billing/key-day-overrides/schools/{schoolId}",
+        { params: { schoolId: id }, body },
+      )
+    : bffJson(
+        "platform",
+        "PUT /operator/billing/key-day-overrides/organizations/{organizationId}",
+        { params: { organizationId: id }, body },
+      );
+}
+
+async function deleteOverride(scope: BillingKeyDayScope, id: string) {
+  return scope === "school"
+    ? bffJson(
+        "platform",
+        "DELETE /operator/billing/key-day-overrides/schools/{schoolId}",
+        { params: { schoolId: id } },
+      )
+    : bffJson(
+        "platform",
+        "DELETE /operator/billing/key-day-overrides/organizations/{organizationId}",
+        { params: { organizationId: id } },
+      );
 }
 
 /** YYYY-MM of a period (YYYY-MM-01). */
@@ -123,24 +150,16 @@ export function billingMonth(period: string): string {
 
 export const operatorBillingService = {
   async getKeyDay(): Promise<BillingKeyDay> {
-    const data =
-      await operatorFetch<operatorBillingContract.billingKeyDayResponse>(
-        "/api/operator/billing/key-day",
-      );
+    const data = await bffJson("platform", "GET /operator/billing/key-day");
     return mapBillingKeyDay(data);
   },
 
   async updateKeyDay(keyDay: number): Promise<BillingKeyDay> {
-    const data =
-      await operatorFetch<operatorBillingContract.billingKeyDayResponse>(
-        "/api/operator/billing/key-day",
-        {
-          method: "PUT",
-          body: {
-            key_day: keyDay,
-          } satisfies operatorBillingContract.updateBillingKeyDayRequest,
-        },
-      );
+    const data = await bffJson("platform", "PUT /operator/billing/key-day", {
+      body: {
+        key_day: keyDay,
+      } satisfies operatorBillingContract.updateBillingKeyDayRequest,
+    });
     return mapBillingKeyDay(data);
   },
 
@@ -150,16 +169,7 @@ export const operatorBillingService = {
     id: string,
     keyDay: number,
   ): Promise<BillingKeyDay> {
-    const data =
-      await operatorFetch<operatorBillingContract.billingKeyDayResponse>(
-        overridePath(scope, id),
-        {
-          method: "PUT",
-          body: {
-            key_day: keyDay,
-          } satisfies operatorBillingContract.updateBillingKeyDayRequest,
-        },
-      );
+    const data = await putOverride(scope, id, { key_day: keyDay });
     return mapBillingKeyDay(data);
   },
 
@@ -168,18 +178,15 @@ export const operatorBillingService = {
     scope: BillingKeyDayScope,
     id: string,
   ): Promise<BillingKeyDay> {
-    const data =
-      await operatorFetch<operatorBillingContract.billingKeyDayResponse>(
-        overridePath(scope, id),
-        { method: "DELETE" },
-      );
+    const data = await deleteOverride(scope, id);
     return mapBillingKeyDay(data);
   },
 
   async listKeyDateCounts(): Promise<BillingKeyDateCount[]> {
-    const data = await operatorFetch<
-      operatorBillingContract.billingKeyDateCountResponse[]
-    >("/api/operator/billing/key-date-counts");
+    const data = await bffJson(
+      "platform",
+      "GET /operator/billing/key-date-counts",
+    );
     return data.map(mapBillingKeyDateCount);
   },
 

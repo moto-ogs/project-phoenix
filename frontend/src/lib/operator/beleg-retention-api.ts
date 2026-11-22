@@ -1,5 +1,5 @@
 import type * as operatorOrganizationsContract from "~/lib/contract/operator-organizations.generated";
-import { operatorFetch } from "./api-helpers";
+import { bffJson } from "~/lib/bff-fetch";
 
 /** Belegarten des Trägers (#4720, ADR 0184), in Anzeigereihenfolge. */
 export const BELEG_TYPES = [
@@ -241,14 +241,13 @@ function mapSuspension(
   };
 }
 
-const base = (orgId: string) =>
-  `/api/operator/organizations/${encodeURIComponent(orgId)}/beleg-retention`;
-
 export const belegRetentionService = {
   async getOverview(orgId: string): Promise<BelegRetentionOverview> {
     return mapBelegRetentionOverview(
-      await operatorFetch<operatorOrganizationsContract.BelegRetentionOverview>(
-        base(orgId),
+      await bffJson(
+        "platform",
+        "GET /operator/organizations/{id}/beleg-retention",
+        { params: { id: orgId } },
       ),
     );
   },
@@ -256,33 +255,37 @@ export const belegRetentionService = {
     orgId: string,
     data: RecordInstructionRequest,
   ): Promise<void> {
-    await operatorFetch<unknown>(`${base(orgId)}/instructions`, {
-      method: "POST",
-      body: data,
-    });
+    await bffJson(
+      "platform",
+      "POST /operator/organizations/{id}/beleg-retention/instructions",
+      { params: { id: orgId }, body: data },
+    );
   },
   async recordSuspension(
     orgId: string,
     data: RecordSuspensionRequest,
   ): Promise<void> {
-    await operatorFetch<unknown>(`${base(orgId)}/suspensions`, {
-      method: "POST",
-      body: data,
-    });
+    await bffJson(
+      "platform",
+      "POST /operator/organizations/{id}/beleg-retention/suspensions",
+      { params: { id: orgId }, body: data },
+    );
   },
   async recordClarificationReview(
     orgId: string,
     data: RecordClarificationReviewRequest,
   ): Promise<void> {
-    await operatorFetch<unknown>(`${base(orgId)}/clarification-reviews`, {
-      method: "POST",
-      body: data,
-    });
+    await bffJson(
+      "platform",
+      "POST /operator/organizations/{id}/beleg-retention/clarification-reviews",
+      { params: { id: orgId }, body: data },
+    );
   },
   async liftSuspension(orgId: string, suspensionId: string): Promise<void> {
-    await operatorFetch<unknown>(
-      `${base(orgId)}/suspensions/${encodeURIComponent(suspensionId)}`,
-      { method: "DELETE" },
+    await bffJson(
+      "platform",
+      "DELETE /operator/organizations/{id}/beleg-retention/suspensions/{suspensionId}",
+      { params: { id: orgId, suspensionId } },
     );
   },
 };

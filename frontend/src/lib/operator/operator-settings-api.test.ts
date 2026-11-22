@@ -1,13 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Hoist mocks so vi.mock() below can reference them
-const { mockOperatorFetch } = vi.hoisted(() => ({
+const { mockBffJson, mockOperatorFetch } = vi.hoisted(() => ({
+  mockBffJson: vi.fn(),
   mockOperatorFetch: vi.fn(),
 }));
 
-vi.mock("./api-helpers", () => ({
-  operatorFetch: mockOperatorFetch,
-}));
+vi.mock("~/lib/bff-fetch", () => ({ bffJson: mockBffJson }));
+// The settings schema and the BFF's own value route stay on operatorFetch
+// until #7806 settles them.
+vi.mock("./api-helpers", () => ({ operatorFetch: mockOperatorFetch }));
 
 // Import after mocks are set up
 import {
@@ -33,16 +35,17 @@ describe("operator-settings-api", () => {
         blocking_children: [],
         planned_completions: [],
       };
-      mockOperatorFetch.mockResolvedValue(wire);
+      mockBffJson.mockResolvedValue(wire);
 
       await expect(fetchBookingAuthorityImpact(SCHOOL_ID)).resolves.toEqual({
         referenceDate: "2026-08-25",
         blockingChildren: [],
         plannedCompletions: [],
       });
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        `/api/operator/schools/${SCHOOL_ID}/settings/booking-authority-impact`,
-        { method: "GET" },
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "GET /operator/schools/{id}/settings/booking-authority-impact",
+        { params: { id: SCHOOL_ID } },
       );
     });
   });
@@ -157,21 +160,22 @@ describe("operator-settings-api", () => {
 
   describe("revealOperatorSettingValue", () => {
     it("returns string value on success", async () => {
-      mockOperatorFetch.mockResolvedValue({ value: "1234" });
+      mockBffJson.mockResolvedValue({ value: "1234" });
 
       const result = await revealOperatorSettingValue(
         SCHOOL_ID,
         "security.ogs_device_pin",
       );
       expect(result).toBe("1234");
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        `/api/operator/schools/${SCHOOL_ID}/settings/values/security.ogs_device_pin/reveal`,
-        { method: "GET" },
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "GET /operator/schools/{id}/settings/values/{key}/reveal",
+        { params: { id: SCHOOL_ID, key: "security.ogs_device_pin" } },
       );
     });
 
     it("returns null when value is not a string", async () => {
-      mockOperatorFetch.mockResolvedValue({ value: 1234 });
+      mockBffJson.mockResolvedValue({ value: 1234 });
 
       const result = await revealOperatorSettingValue(SCHOOL_ID, "foo.bar");
       expect(result).toBeNull();
@@ -181,7 +185,7 @@ describe("operator-settings-api", () => {
     // it (#2519).
     it("rethrows a failed request", async () => {
       const error = new ApiError("not found", 404);
-      mockOperatorFetch.mockRejectedValue(error);
+      mockBffJson.mockRejectedValue(error);
 
       await expect(
         revealOperatorSettingValue(SCHOOL_ID, "foo.bar"),
