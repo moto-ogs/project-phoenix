@@ -29,15 +29,15 @@ import {
   registerPasskey,
   revokePasskey,
   startPasskeyEnrollment,
-  type PasskeyCredentialSummary,
   type PasskeyScope,
 } from "~/lib/passkey-api";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import { passkeysConcept } from "~/lib/concepts/passkeys";
 import { Loading } from "~/components/ui/loading";
 
 const logger = createLogger({ component: "PasskeySettingsSection" });
 
-const NO_PASSKEYS: PasskeyCredentialSummary[] = [];
+const NO_PASSKEYS: sharedContract.PasskeyCredentialSummary[] = [];
 const subscribeNothing = () => () => undefined;
 
 interface PasskeySettingsSectionProps {
@@ -62,7 +62,7 @@ export function PasskeySettingsSection({
   // Ein Passkey ist ein Zugangsmittel: die Zeilenaktion öffnet erst die
   // Rückfrage (BAUARTEN-SPEC Bauart 2 Regel 6, #3109); entfernt wird im Dialog.
   const [revokeTarget, setRevokeTarget] =
-    useState<PasskeyCredentialSummary | null>(null);
+    useState<sharedContract.PasskeyCredentialSummary | null>(null);
   const toast = useToast();
   const enrollRef = useRef<HTMLDivElement>(null);
   const enrollErrors = useApiFormError(enrollRef);
@@ -154,7 +154,7 @@ export function PasskeySettingsSection({
     }
   };
 
-  const beginRevoke = (credential: PasskeyCredentialSummary) => {
+  const beginRevoke = (credential: sharedContract.PasskeyCredentialSummary) => {
     enrollErrors.clear();
     revokeErrors.clear();
     setRevokeTarget(credential);

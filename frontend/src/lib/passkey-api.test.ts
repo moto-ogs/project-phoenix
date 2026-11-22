@@ -187,12 +187,13 @@ describe("passkey-api", () => {
       )
       .mockResolvedValueOnce(
         jsonResponse(200, {
-          status: "authenticated",
-          access_token: "caterer-access",
-          refresh_token: "caterer-refresh",
+          status: "success",
+          data: { status: "authenticated" },
         }),
       )
-      .mockResolvedValueOnce(jsonResponse(200, []));
+      .mockResolvedValueOnce(
+        jsonResponse(200, { status: "success", data: [] }),
+      );
 
     await loginWithPasskey("caterer");
     await listPasskeys("caterer");
@@ -222,11 +223,7 @@ describe("passkey-api", () => {
     expect(result.masked_email).toBe("a***@example.test");
     expect(global.fetch).toHaveBeenCalledWith(
       "/api/auth/passkeys/enrollment/challenge",
-      expect.objectContaining({
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      }),
+      expect.objectContaining({ method: "POST" }),
     );
   });
 
@@ -321,18 +318,12 @@ describe("passkey-api", () => {
     expect(global.fetch).toHaveBeenNthCalledWith(
       1,
       "/api/auth/passkeys",
-      expect.objectContaining({
-        method: "GET",
-        body: undefined,
-      }),
+      expect.objectContaining({ method: "GET" }),
     );
     expect(global.fetch).toHaveBeenNthCalledWith(
       2,
       "/api/auth/passkeys/7",
-      expect.objectContaining({
-        method: "DELETE",
-        body: undefined,
-      }),
+      expect.objectContaining({ method: "DELETE" }),
     );
   });
 
@@ -358,7 +349,7 @@ describe("passkey-api", () => {
 
       await expect(startPasskeyEnrollment("tenant")).rejects.toMatchObject({
         status: 403,
-        message: "Passkey-Anfrage fehlgeschlagen (403).",
+        message: "Passkey-Anfrage fehlgeschlagen.",
         detail,
       });
     },
@@ -389,7 +380,7 @@ describe("passkey-api", () => {
     await expect(promise).rejects.toBeInstanceOf(ApiError);
     await expect(promise).rejects.toMatchObject({
       status: 502,
-      message: "Passkey-Anfrage fehlgeschlagen (502).",
+      message: "Passkey-Anfrage fehlgeschlagen.",
     });
   });
 });

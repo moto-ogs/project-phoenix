@@ -2180,7 +2180,14 @@ describe("SupervisionProvider school switch (#3375)", () => {
       wrapper: ({ children }: { children: ReactNode }) => (
         <SupervisionProvider
           initial={{
-            groups: [{ id: "1", name: "Schule 1" }],
+            groups: [
+              {
+                id: "1",
+                name: "Schule 1",
+                via_substitution: false,
+                is_personal: true,
+              },
+            ],
             supervised: [],
             openRooms: [],
             overviewOk: false,
@@ -2212,7 +2219,14 @@ describe("SupervisionProvider school switch (#3375)", () => {
       wrapper: ({ children }: { children: ReactNode }) => (
         <SupervisionProvider
           initial={{
-            groups: [{ id: "1", name: "Schule A" }],
+            groups: [
+              {
+                id: "1",
+                name: "Schule A",
+                via_substitution: false,
+                is_personal: true,
+              },
+            ],
             supervised: [],
             openRooms: [],
             overviewOk: false,
@@ -2292,7 +2306,14 @@ describe("SupervisionProvider school switch (#3375)", () => {
     const { rerender } = render(
       <SupervisionProvider
         initial={{
-          groups: [{ id: "1", name: "Schule 1" }],
+          groups: [
+            {
+              id: "1",
+              name: "Schule 1",
+              via_substitution: false,
+              is_personal: true,
+            },
+          ],
           supervised: [],
           openRooms: [],
           overviewOk: false,
@@ -2309,7 +2330,14 @@ describe("SupervisionProvider school switch (#3375)", () => {
     rerender(
       <SupervisionProvider
         initial={{
-          groups: [{ id: "1", name: "Schule 1" }],
+          groups: [
+            {
+              id: "1",
+              name: "Schule 1",
+              via_substitution: false,
+              is_personal: true,
+            },
+          ],
           supervised: [],
           openRooms: [],
           overviewOk: false,
@@ -2413,7 +2441,14 @@ describe("SupervisionProvider school switch (#3375)", () => {
       wrapper: ({ children }: { children: ReactNode }) => (
         <SupervisionProvider
           initial={{
-            groups: [{ id: "1", name: "Bestehende Gruppe" }],
+            groups: [
+              {
+                id: "1",
+                name: "Bestehende Gruppe",
+                via_substitution: false,
+                is_personal: true,
+              },
+            ],
             supervised: [],
             openRooms: [],
             overviewOk: false,

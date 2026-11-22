@@ -1,15 +1,15 @@
+import type * as studentsContract from "~/lib/contract/students.generated";
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { NavigationEducationalGroup } from "~/lib/usercontext-helpers";
 import GroupOverviewPage from "./page";
 
 const { supervision, replace } = vi.hoisted(() => ({
   supervision: {
     isLoadingGroups: false,
     groupsLoadFailed: false,
-    groups: [] as NavigationEducationalGroup[],
+    groups: [] as studentsContract.NavigationGroup[],
     refresh: vi.fn(),
   },
   replace: vi.fn(),
@@ -37,24 +37,26 @@ vi.mock("~/components/tenant/open-care-mode-guard", () => ({
   OpenCareModeGuard: ({ children }: { children: ReactNode }) => children,
 }));
 
-const mondgruppe: NavigationEducationalGroup = {
+const mondgruppe: studentsContract.NavigationGroup = {
   id: "1",
   name: "Mondgruppe",
   is_personal: true,
+  via_substitution: false,
   room_name: "Raum 101",
   leaders: ["Anna Berg", "Carla Dorn"],
 };
-const sonnengruppe: NavigationEducationalGroup = {
+const sonnengruppe: studentsContract.NavigationGroup = {
   id: "2",
   name: "Sonnengruppe",
   is_personal: true,
   via_substitution: true,
   room_name: "Raum 102",
 };
-const ahorn: NavigationEducationalGroup = {
+const ahorn: studentsContract.NavigationGroup = {
   id: "3",
   name: "Ahorngruppe",
   is_personal: false,
+  via_substitution: false,
   leaders: ["Bernd Ernst"],
 };
 

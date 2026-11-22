@@ -1,3 +1,4 @@
+import type * as studentsContract from "~/lib/contract/students.generated";
 import type * as meContract from "./contract/me.generated";
 import { describe, expect, it } from "vitest";
 import {
@@ -5,7 +6,6 @@ import {
   mapEducationalGroupResponse,
   mapNavigationEducationalGroupResponse,
   mapStaffResponse,
-  type NavigationEducationalGroup,
 } from "./usercontext-helpers";
 
 // The shapes the catalog proxy decodes (ADR 0270): IDs arrive as strings,
@@ -57,7 +57,7 @@ describe("usercontext-helpers", () => {
 
   describe("mapNavigationEducationalGroupResponse", () => {
     it("preserves string IDs and builds room data from the navigation view", () => {
-      const navigationGroup: NavigationEducationalGroup = {
+      const navigationGroup: studentsContract.NavigationGroup = {
         id: "12345",
         name: "Eulen",
         room_id: "77",

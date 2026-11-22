@@ -6,7 +6,6 @@ import { bffFile, bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
  * route (lib/contract): IDs arrive as strings.
  */
 
-import type { ApiResponse } from "~/lib/api-envelope";
 import { ApiError, apiErrorFromBody, transportFetch } from "./api-error";
 import { knownEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
@@ -145,22 +144,16 @@ export async function traegerLogin(input: {
   if (input.organizationId !== undefined) {
     body.organization_id = Number(input.organizationId);
   }
-  const response = await transportFetch(portalAuthPath("traeger", "login"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify(body),
-  });
-  const data = await readJson(response);
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      data,
-    );
-  }
-
-  return signInAnswer("traeger", (data as ApiResponse<unknown>).data);
+  // A sign-in step of the BFF without a session (`public`).
+  return signInAnswer(
+    "traeger",
+    await bffJsonUncontracted<unknown>(
+      "public",
+      "POST",
+      portalAuthPath("traeger", "login"),
+      { body },
+    ),
+  );
 }
 
 /** The schools of the signed-in person's Träger. */

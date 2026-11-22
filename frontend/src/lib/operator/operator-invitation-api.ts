@@ -1,4 +1,4 @@
-import { bffJson } from "~/lib/bff-fetch";
+import { bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
 import type * as operatorInvitationsContract from "~/lib/contract/operator-invitations.generated";
 import type {
   InvitationValidationBody,
@@ -13,8 +13,7 @@ import {
   mapOperatorInfo,
   mapInvitationValidation,
 } from "./operator-invitation-helpers";
-import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
-import type { ApiResponse } from "~/lib/api-envelope";
+import { ApiError } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import { OPERATOR_INVITATION_FLOW_HEADER } from "./operator-invitation-flow";
 
@@ -78,84 +77,67 @@ export async function reactivateOperator(id: string): Promise<void> {
 
 // --- Public (unauthenticated) API functions ---
 
+// The invitation flow's steps are BFF routes without a session (`public`):
+// the first keeps the token in the flow's cookie, the others read it there,
+// so the token never travels in a URL.
+
 export async function establishOperatorInvitationSession(
   token: string,
 ): Promise<string> {
-  const response = await transportFetch(
+  const { flow_id } = await bffJsonUncontracted<{ flow_id: string }>(
+    "public",
+    "POST",
     "/api/operator/auth/invitations/session",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token }),
-    },
+    { body: { token }, errorMessage: "Invitation session failed" },
   );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Invitation session failed (${response.status})`,
-    );
-  }
-  const { data } = (await response.json()) as ApiResponse<{ flow_id: string }>;
-  return data.flow_id;
+  return flow_id;
 }
 
 export async function validateOperatorInvitation(
   flowID: string,
 ): Promise<OperatorInvitationValidation> {
-  const response = await transportFetch(
-    "/api/operator/auth/invitations/validate",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        [OPERATOR_INVITATION_FLOW_HEADER]: flowID,
+  // The operator backend answers in the shared error envelope (#2507).
+  return mapInvitationValidation(
+    await bffJsonUncontracted<InvitationValidationBody>(
+      "public",
+      "POST",
+      "/api/operator/auth/invitations/validate",
+      {
+        body: {},
+        headers: { [OPERATOR_INVITATION_FLOW_HEADER]: flowID },
+        errorMessage: "Invitation validation failed",
       },
-      body: JSON.stringify({}),
-    },
+    ),
   );
-
-  if (!response.ok) {
-    // The operator backend answers in the shared error envelope (#2507).
-    throw await apiErrorFromResponse(
-      response,
-      `Invitation validation failed (${response.status})`,
-    );
-  }
-
-  const json = (await response.json()) as ApiResponse<InvitationValidationBody>;
-  return mapInvitationValidation(json.data);
 }
 
 export async function acceptOperatorInvitation(
   flowID: string,
   data: AcceptOperatorInvitationRequest,
 ): Promise<void> {
-  // Convert camelCase frontend shape to the snake_case the backend expects.
-  const response = await transportFetch(
-    "/api/operator/auth/invitations/accept",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        [OPERATOR_INVITATION_FLOW_HEADER]: flowID,
+  try {
+    // Convert camelCase frontend shape to the snake_case the backend expects.
+    await bffJsonUncontracted<unknown>(
+      "public",
+      "POST",
+      "/api/operator/auth/invitations/accept",
+      {
+        body: {
+          display_name: data.displayName,
+          password: data.password,
+          confirm_password: data.confirmPassword,
+        },
+        headers: { [OPERATOR_INVITATION_FLOW_HEADER]: flowID },
+        errorMessage: "Invitation accept failed",
       },
-      body: JSON.stringify({
-        display_name: data.displayName,
-        password: data.password,
-        confirm_password: data.confirmPassword,
-      }),
-    },
-  );
-
-  if (!response.ok) {
-    const error = await apiErrorFromResponse(
-      response,
-      `Invitation accept failed (${response.status})`,
     );
-    logger.warn("accept_invitation_failed", {
-      status: response.status,
-      code: error.code,
-    });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      logger.warn("accept_invitation_failed", {
+        status: error.status,
+        code: error.code,
+      });
+    }
     throw error;
   }
 }

@@ -1,4 +1,4 @@
-import type { NavigationEducationalGroup } from "~/lib/usercontext-helpers";
+import type * as studentsContract from "~/lib/contract/students.generated";
 
 /**
  * Pure derivation of the supervision navigation state from the backend
@@ -58,7 +58,7 @@ export interface SupervisedGroupPayload {
  * not succeed (non-OK response, network error, or not attempted).
  */
 export interface SupervisionSnapshot {
-  groups: NavigationEducationalGroup[] | null;
+  groups: studentsContract.NavigationGroup[] | null;
   supervised: SupervisedGroupPayload[] | null;
   /** Eigene laufende Aufsichten zusätzlich zur schulweiten Übersicht. */
   ownSupervised?: SupervisedGroupPayload[] | null;
@@ -99,8 +99,8 @@ export interface DerivedSupervision {
 }
 
 export function sortNavigationGroups(
-  groups: readonly NavigationEducationalGroup[],
-): NavigationEducationalGroup[] {
+  groups: readonly studentsContract.NavigationGroup[],
+): studentsContract.NavigationGroup[] {
   return [...groups].sort((a, b) => a.name.localeCompare(b.name, "de"));
 }
 
@@ -332,8 +332,8 @@ export function sameSupervision(
 }
 
 export function sameGroups(
-  prev: readonly NavigationEducationalGroup[],
-  next: readonly NavigationEducationalGroup[],
+  prev: readonly studentsContract.NavigationGroup[],
+  next: readonly studentsContract.NavigationGroup[],
 ): boolean {
   return (
     prev.length === next.length &&
