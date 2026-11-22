@@ -7,6 +7,7 @@
 import { ApiError } from "./api-error";
 import { bffFile, bffJson } from "./bff-fetch";
 import type * as studentsContract from "./contract/students.generated";
+import { knownEnum, requiredEnum } from "./contract/known-enum";
 import { createLogger } from "~/lib/logger";
 import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
 import type { RequestDiffEntry } from "~/lib/messaging-status";
@@ -14,31 +15,67 @@ import type { RequestDiffEntry } from "~/lib/messaging-status";
 const logger = createLogger({ component: "CareRequestReviewAPI" });
 
 /** Wochenplan, einzelner Tag oder Abholberechtigung (#4780). */
-type CareRequestKind =
-  "weekly_schedule" | "pickup_change" | "pickup_permission";
+const CARE_REQUEST_KINDS = [
+  "weekly_schedule",
+  "pickup_change",
+  "pickup_permission",
+] as const;
+type CareRequestKind = (typeof CARE_REQUEST_KINDS)[number];
 
-type CareRequestStatus =
-  "pending" | "approved" | "rejected" | "withdrawn" | "done" | "care_ended";
+const CARE_REQUEST_STATUSES = [
+  "pending",
+  "approved",
+  "rejected",
+  "withdrawn",
+  "done",
+  "care_ended",
+] as const;
+type CareRequestStatus = (typeof CARE_REQUEST_STATUSES)[number];
 
-// One care-schedule change request in the staff queue. Mirrors
-// api/students.CareRequestResponse.
-export interface StaffCareRequest {
-  readonly id: string;
-  readonly student_id: string;
-  readonly first_name: string;
-  readonly last_name: string;
+const CARE_KINDS = [
+  "arrival",
+  "pickup",
+  "departure_mode",
+  "pickup_person",
+] as const;
+
+/** A diff row; an unknown `care_kind` falls back to the German `label`. */
+function diffEntry(
+  entry: studentsContract.CareRequestDiffResponse,
+): RequestDiffEntry {
+  return { ...entry, care_kind: knownEnum(CARE_KINDS, entry.care_kind) };
+}
+
+/**
+ * One care-schedule change request in the staff queue: the generated
+ * response with its closed status and kind, and its lists Go may send as
+ * `null` read as empty (toStaffCareRequest).
+ */
+export type StaffCareRequest = Omit<
+  studentsContract.CareRequestResponse,
+  "status" | "request_kind" | "diff" | "affected_blocks"
+> & {
   readonly status: CareRequestStatus;
   readonly request_kind: CareRequestKind;
   readonly diff: readonly RequestDiffEntry[];
-  readonly request_reason?: string;
-  readonly decision_reason?: string;
-  readonly created_at: string;
-  readonly reviewed_at?: string;
   readonly affected_blocks: readonly studentsContract.AffectedCareBlock[];
-  readonly impact_available: boolean;
-  readonly impact_token: string;
-  /** Die Eltern haben die Anfrage unterschrieben (#4780). */
-  readonly signed?: boolean;
+};
+
+/** A status or kind this build does not know fails the read (ADR 0270). */
+export function toStaffCareRequest(
+  request: studentsContract.CareRequestResponse,
+): StaffCareRequest {
+  return {
+    ...request,
+    status: requiredEnum(CARE_REQUEST_STATUSES, request.status, "status"),
+    request_kind: requiredEnum(
+      CARE_REQUEST_KINDS,
+      request.request_kind,
+      "request_kind",
+    ),
+    diff: (request.diff ?? []).map(diffEntry),
+    affected_blocks: request.affected_blocks ?? [],
+  };
 }
 
 /**
@@ -89,21 +126,32 @@ export function decideCareScheduleChangeRequest(
  * snapshot existed (and withdrawals) omit it, and the payload-derived
  * requested summary (each entry's old side empty) is the fallback.
  */
-export interface StaffCareRequestHistoryEntry {
-  readonly id: string;
-  readonly student_id: string;
-  readonly first_name: string;
-  readonly last_name: string;
+export type StaffCareRequestHistoryEntry = Omit<
+  studentsContract.CareRequestHistoryResponse,
+  "status" | "request_kind" | "requested" | "diff"
+> & {
   readonly status: CareRequestStatus;
   readonly request_kind: CareRequestKind;
   readonly requested: readonly RequestDiffEntry[];
   /** Frozen decision-time diff; absent without a snapshot. */
   readonly diff?: readonly RequestDiffEntry[];
-  readonly decision_reason?: string;
-  readonly created_at: string;
-  readonly decided_at: string;
-  /** Absent for withdrawn rows (no reviewer). */
-  readonly decided_by_name?: string;
+};
+
+export function toStaffCareRequestHistoryEntry(
+  entry: studentsContract.CareRequestHistoryResponse,
+): StaffCareRequestHistoryEntry {
+  const { diff, ...rest } = entry;
+  return {
+    ...rest,
+    status: requiredEnum(CARE_REQUEST_STATUSES, entry.status, "status"),
+    request_kind: requiredEnum(
+      CARE_REQUEST_KINDS,
+      entry.request_kind,
+      "request_kind",
+    ),
+    requested: (entry.requested ?? []).map(diffEntry),
+    ...(diff ? { diff: diff.map(diffEntry) } : {}),
+  };
 }
 
 /**

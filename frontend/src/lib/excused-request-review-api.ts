@@ -7,26 +7,52 @@
 import { ApiError } from "./api-error";
 import { bffJson } from "./bff-fetch";
 import type * as studentsContract from "./contract/students.generated";
+import { requiredEnum } from "./contract/known-enum";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "ExcusedRequestReviewAPI" });
 
-type ExcusedRequestStatus = "pending" | "approved" | "rejected" | "withdrawn";
+const EXCUSED_REQUEST_STATUSES = [
+  "pending",
+  "approved",
+  "rejected",
+  "withdrawn",
+] as const;
+const ABSENCE_STATUSES = ["sick", "excused"] as const;
 
-// One absence request in the staff queue. Mirrors
-// api/students.StaffExcusedRequestResponse. `dates` are YYYY-MM-DD.
-export interface StaffExcusedRequest {
-  readonly id: string;
-  readonly student_id: string;
-  readonly first_name: string;
-  readonly last_name: string;
-  readonly absence_status: "sick" | "excused";
-  readonly status: ExcusedRequestStatus;
+type Narrowed = "status" | "absence_status" | "dates";
+
+interface ExcusedRequestFields {
+  readonly status: (typeof EXCUSED_REQUEST_STATUSES)[number];
+  readonly absence_status: (typeof ABSENCE_STATUSES)[number];
   readonly dates: readonly string[];
-  readonly note: string;
-  readonly reason?: string;
-  readonly created_at: string;
-  readonly reviewed_at?: string;
+}
+
+/** The generated request with its closed values; `dates` never `null`. */
+export type StaffExcusedRequest = Omit<
+  studentsContract.StaffExcusedRequestResponse,
+  Narrowed
+> &
+  ExcusedRequestFields;
+
+function excusedFields(
+  request: Pick<studentsContract.StaffExcusedRequestResponse, Narrowed>,
+): ExcusedRequestFields {
+  return {
+    status: requiredEnum(EXCUSED_REQUEST_STATUSES, request.status, "status"),
+    absence_status: requiredEnum(
+      ABSENCE_STATUSES,
+      request.absence_status,
+      "absence_status",
+    ),
+    dates: request.dates ?? [],
+  };
+}
+
+export function toStaffExcusedRequest(
+  request: studentsContract.StaffExcusedRequestResponse,
+): StaffExcusedRequest {
+  return { ...request, ...excusedFields(request) };
 }
 
 /**
@@ -74,8 +100,14 @@ export function decideExcusedAbsenceRequest(
  * One decided absence request in the staff history. Mirrors
  * api/students.StaffExcusedRequestHistoryResponse.
  */
-export interface StaffExcusedRequestHistoryEntry extends StaffExcusedRequest {
-  readonly decided_at: string;
-  /** Absent for withdrawn rows (no reviewer). */
-  readonly decided_by_name?: string;
+export type StaffExcusedRequestHistoryEntry = Omit<
+  studentsContract.StaffExcusedRequestHistoryResponse,
+  Narrowed
+> &
+  ExcusedRequestFields;
+
+export function toStaffExcusedRequestHistoryEntry(
+  entry: studentsContract.StaffExcusedRequestHistoryResponse,
+): StaffExcusedRequestHistoryEntry {
+  return { ...entry, ...excusedFields(entry) };
 }

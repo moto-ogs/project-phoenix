@@ -18,6 +18,99 @@ describe("change request list API", () => {
     vi.restoreAllMocks();
   });
 
+  const masterData = {
+    id: "5",
+    student_id: "42",
+    first_name: "Emma",
+    last_name: "Beispiel",
+    target: "student",
+    field_key: "phone",
+    new_value: "0123",
+    status: "pending",
+    created_at: "2026-09-01T08:00:00Z",
+  };
+  const openItem = {
+    request_type: "master_data",
+    occurred_at: "2026-09-01T08:00:00Z",
+    student_id: "42",
+    student_name: "Emma Beispiel",
+    expected_version: "v1",
+    urgent_today: false,
+    past: false,
+    bulk_eligible: true,
+    family_protected: false,
+    data: null,
+    master_data: masterData,
+  };
+  const answer = (items: unknown[]) =>
+    new Response(JSON.stringify({ data: { items } }), { status: 200 });
+
+  it("puts each row's projection of its kind under data (#7882)", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(answer([openItem]));
+
+    const page = await listAggregatedOpenRequests();
+
+    expect(page.items).toHaveLength(1);
+    expect(page.items[0]).toMatchObject({
+      request_type: "master_data",
+      student_name: "Emma Beispiel",
+      expected_version: "v1",
+      data: masterData,
+    });
+    expect(page.items[0]).not.toHaveProperty("master_data");
+  });
+
+  it("reads a correction's missing diff in the history as an empty list", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      answer([
+        {
+          request_type: "direct_correction",
+          occurred_at: "2026-09-02T08:00:00Z",
+          student_id: "42",
+          student_name: "Emma Beispiel",
+          expected_version: "v2",
+          family_protected: false,
+          direct_correction: {
+            id: "9",
+            student_id: "42",
+            student_name: "Emma Beispiel",
+            changed_at: "2026-09-02T08:00:00Z",
+            changed_by_name: "Frau Admin",
+            reason: "Korrektur",
+            diff: null,
+          },
+        },
+      ]),
+    );
+
+    const page = await listAggregatedRequestHistory();
+
+    expect(page.items[0]).toMatchObject({
+      request_type: "direct_correction",
+      data: { id: "9", diff: [] },
+    });
+  });
+
+  it("fails the load on a status this build does not know", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      answer([{ ...openItem, master_data: { ...masterData, status: "new" } }]),
+    );
+
+    await expect(listAggregatedOpenRequests()).rejects.toThrow(
+      "status has an unknown value",
+    );
+  });
+
+  it("fails the load on a row without the projection of its kind", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      answer([{ ...openItem, master_data: undefined }]),
+    );
+
+    await expect(listAggregatedOpenRequests()).rejects.toThrow(
+      "change request row without its master_data",
+    );
+  });
+
   it("loads open requests with trimmed search and type filters", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
@@ -58,7 +151,7 @@ describe("change request list API", () => {
     ).resolves.toEqual({ items: [], next_cursor: "next" });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/students/change-requests?view=history&status=approved&from=2026-08-01&to=2026-08-19&cursor=current",
+      "/api/students/change-requests/history?status=approved&from=2026-08-01&to=2026-08-19&cursor=current",
       { method: "GET" },
     );
   });
@@ -75,7 +168,7 @@ describe("change request list API", () => {
     ).resolves.toEqual({ items: [] });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/students/change-requests?view=history&student_id=42",
+      "/api/students/change-requests/history?student_id=42",
       { method: "GET" },
     );
   });

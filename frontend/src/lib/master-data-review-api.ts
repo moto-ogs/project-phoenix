@@ -7,26 +7,32 @@
 import { ApiError } from "~/lib/api-error";
 import { bffJson } from "~/lib/bff-fetch";
 import type * as studentsContract from "~/lib/contract/students.generated";
+import { requiredEnum } from "~/lib/contract/known-enum";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "MasterDataReviewAPI" });
 
-type ChangeRequestStatus = "auto_applied" | "pending" | "approved" | "rejected";
+const CHANGE_REQUEST_STATUSES = [
+  "auto_applied",
+  "pending",
+  "approved",
+  "rejected",
+] as const;
+type ChangeRequestStatus = (typeof CHANGE_REQUEST_STATUSES)[number];
 
-// One pending change request in the staff queue. Mirrors
-// api/students.MasterDataChangeRequestResponse.
-export interface StaffMasterDataChange {
-  readonly id: string;
-  readonly student_id: string;
-  readonly first_name: string;
-  readonly last_name: string;
-  readonly target: string;
-  readonly field_key: string;
-  readonly old_value?: unknown;
-  readonly new_value: unknown;
-  readonly status: ChangeRequestStatus;
-  readonly created_at: string;
-  readonly reviewed_at?: string;
+/** The generated change with its closed status. */
+export type StaffMasterDataChange = Omit<
+  studentsContract.MasterDataChangeRequestResponse,
+  "status"
+> & { readonly status: ChangeRequestStatus };
+
+export function toStaffMasterDataChange(
+  change: studentsContract.MasterDataChangeRequestResponse,
+): StaffMasterDataChange {
+  return {
+    ...change,
+    status: requiredEnum(CHANGE_REQUEST_STATUSES, change.status, "status"),
+  };
 }
 
 function logFailure(error: unknown): never {
@@ -65,9 +71,16 @@ export function decideMasterDataChangeRequest(
  * One decided Stammdaten change request in the staff history. Mirrors
  * api/students.MasterDataChangeRequestHistoryResponse.
  */
-export interface StaffMasterDataHistoryEntry extends StaffMasterDataChange {
-  readonly decided_at: string;
-  /** Absent for auto-applied rows (no reviewer). */
-  readonly decided_by_name?: string;
-  readonly review_reason?: string;
+export type StaffMasterDataHistoryEntry = Omit<
+  studentsContract.MasterDataChangeRequestHistoryResponse,
+  "status"
+> & { readonly status: ChangeRequestStatus };
+
+export function toStaffMasterDataHistoryEntry(
+  entry: studentsContract.MasterDataChangeRequestHistoryResponse,
+): StaffMasterDataHistoryEntry {
+  return {
+    ...entry,
+    status: requiredEnum(CHANGE_REQUEST_STATUSES, entry.status, "status"),
+  };
 }
