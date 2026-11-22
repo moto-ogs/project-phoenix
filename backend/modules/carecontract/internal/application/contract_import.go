@@ -171,15 +171,7 @@ func (i *ContractImports) evaluate(ctx context.Context, reviewer carecontract.Re
 	for n, school := range schools {
 		ids[n] = school.school.ID
 	}
-	if request.Apply {
-		// The lock a creation of a contract and a link run take (#7760): what
-		// the import finds as running is decided under it, so an import and a
-		// contract from an application of one child cannot both pass.
-		if err := i.store.LockChildLinks(ctx, organizationID); err != nil {
-			return nil, err
-		}
-	}
-	running, err := i.store.ContractChildren(ctx, organizationID, ids)
+	running, err := i.runningContracts(ctx, organizationID, ids, request.Apply)
 	if err != nil {
 		return nil, err
 	}
@@ -207,6 +199,20 @@ func (i *ContractImports) evaluate(ctx context.Context, reviewer carecontract.Re
 	shown := summarizeContractImport(result, candidates)
 	return shown, trail(ctx, i.store, organizationID, reviewer.AccountID, 0, 0, ActionRead,
 		map[string]any{"view": "import", "rows": len(candidates), "applied": result.Applied})
+}
+
+// runningContracts reads the children of the contracts at the schools. An
+// import that stores takes, before it reads, the lock a creation of a
+// contract and a link run take (#7760): what the import finds as running is
+// decided under it, so an import and a contract from an application of one
+// child cannot both pass.
+func (i *ContractImports) runningContracts(ctx context.Context, organizationID int64, schoolIDs []int64, apply bool) ([]ports.ContractChild, error) {
+	if apply {
+		if err := i.store.LockChildLinks(ctx, organizationID); err != nil {
+			return nil, err
+		}
+	}
+	return i.store.ContractChildren(ctx, organizationID, schoolIDs)
 }
 
 // summarizeContractImport puts the rows into the answer and counts them. It
