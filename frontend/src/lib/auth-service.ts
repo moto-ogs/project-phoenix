@@ -1,255 +1,56 @@
-import { createLogger } from "~/lib/logger";
-
-const logger = createLogger({ component: "AuthService" });
+import { bffJson } from "~/lib/bff-fetch";
 import {
   mapRoleResponse,
   mapPermissionResponse,
   type Role,
   type Permission,
-  type RoleWire,
-  type PermissionWire,
 } from "./auth-helpers";
-import { apiErrorFromText } from "./api-error";
-import type { ApiResponse } from "./api-envelope";
-
-type HttpMethod = "GET" | "PUT";
-
-interface AuthFetchOptions<TBackend, TFrontend> {
-  /** HTTP method (default: GET) */
-  method?: HttpMethod;
-  /** Request body (will be JSON stringified) */
-  body?: unknown;
-  /** Map backend response to frontend type. If omitted, returns void. */
-  mapper?: (data: TBackend) => TFrontend;
-  /** Custom error message prefix for logging */
-  errorPrefix?: string;
-  /** Extract data from nested response structure (default: extract from .data) */
-  extractData?: (response: unknown) => TBackend;
-}
 
 /**
- * Headers for browser-side fetch requests. The BFF routes authenticate
- * through the session cookie; the browser holds no token (#5005).
+ * Roles and permissions of the staff portal, through its catalog proxy
+ * (#2352): the answers arrive decoded, the lists as plain arrays.
  */
-const BROWSER_HEADERS: Record<string, string> = {
-  "Content-Type": "application/json",
-};
-
-/**
- * Execute fetch request in browser context.
- * Returns null for 204/empty responses (void endpoints).
- */
-async function executeBrowserFetch<TBackend>(
-  url: string,
-  method: HttpMethod,
-  headers: Record<string, string>,
-  body: unknown,
-  errorPrefix: string,
-): Promise<TBackend | null> {
-  const response = await fetch(url, {
-    method,
-    headers,
-    ...(body !== undefined && { body: JSON.stringify(body) }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    logger.error("api error during auth operation", {
-      operation: errorPrefix,
-      status: response.status,
-      error_text: errorText.substring(0, 200),
-    });
-    throw apiErrorFromText(
-      `${errorPrefix} failed: ${response.status}`,
-      response.status,
-      errorText,
-    );
-  }
-
-  if (response.status === 204) {
-    return null;
-  }
-
-  const text = await response.text();
-  if (!text) {
-    return null;
-  }
-
-  return JSON.parse(text) as TBackend;
-}
-
-/**
- * Generic helper for auth service API calls.
- * Calls the BFF route under /api; handles error handling and response mapping.
- */
-async function authFetch<TBackend, TFrontend = void>(
-  endpoint: string,
-  options: AuthFetchOptions<TBackend, TFrontend> = {},
-): Promise<TFrontend> {
-  const {
-    method = "GET",
-    body,
-    mapper,
-    errorPrefix = endpoint,
-    extractData,
-  } = options;
-
-  const url = `/api${endpoint}`;
-
-  try {
-    const responseData = await executeBrowserFetch<unknown>(
-      url,
-      method,
-      BROWSER_HEADERS,
-      body,
-      errorPrefix,
-    );
-
-    if (responseData === null) {
-      return undefined as TFrontend;
-    }
-
-    const backendData = extractData
-      ? extractData(responseData)
-      : (responseData as ApiResponse<TBackend>).data;
-
-    return mapper ? mapper(backendData) : (undefined as TFrontend);
-  } catch (error) {
-    logger.error("auth operation error", {
-      operation: errorPrefix,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    throw error;
-  }
-}
-
-/**
- * Helper for array responses that need mapping.
- */
-async function authFetchList<TBackend, TFrontend>(
-  endpoint: string,
-  mapper: (data: TBackend) => TFrontend,
-  options: Omit<AuthFetchOptions<TBackend[], TFrontend[]>, "mapper"> = {},
-): Promise<TFrontend[]> {
-  return authFetch<TBackend[], TFrontend[]>(endpoint, {
-    ...options,
-    mapper: (data) => data.map(mapper),
-  });
-}
-
-/**
- * Helper for void responses (PUT requests that don't return data).
- */
-async function authFetchVoid(
-  endpoint: string,
-  options: Omit<AuthFetchOptions<unknown, void>, "mapper"> = {},
-): Promise<void> {
-  await authFetch<unknown, void>(endpoint, options);
-}
-
-/**
- * Extract permissions from nested response structures.
- * Handles: { data: [] }, { data: { data: [] } }
- */
-function extractNestedPermissions(response: unknown): PermissionWire[] {
-  const data = response as {
-    data?: { data?: PermissionWire[] } | PermissionWire[];
-  };
-
-  if (
-    data?.data &&
-    typeof data.data === "object" &&
-    "data" in data.data &&
-    Array.isArray(data.data.data)
-  ) {
-    return data.data.data;
-  }
-  if (data?.data && Array.isArray(data.data)) {
-    return data.data;
-  }
-  logger.error("unexpected permissions response structure", {
-    response_type: typeof response,
-  });
-  throw new Error("Invalid response format from permissions API");
-}
-
-/**
- * Extract roles from nested response structures.
- * Handles: [], { data: [] }, { data: { data: [] } }
- */
-function extractNestedRoles(response: unknown): RoleWire[] {
-  if (Array.isArray(response)) {
-    return response as RoleWire[];
-  }
-
-  const data = response as {
-    data?: { data?: RoleWire[] } | RoleWire[];
-  };
-
-  if (
-    data?.data &&
-    typeof data.data === "object" &&
-    "data" in data.data &&
-    Array.isArray(data.data.data)
-  ) {
-    return data.data.data;
-  }
-  if (data?.data && Array.isArray(data.data)) {
-    return data.data;
-  }
-  logger.error("unexpected roles response structure", {
-    response_type: typeof response,
-  });
-  throw new Error("Invalid response format from roles API");
-}
-
 export const authService = {
   getRoles: async (filters?: { name?: string }): Promise<Role[]> => {
-    const params = new URLSearchParams();
-    if (filters?.name) params.append("name", filters.name);
-    const queryString = params.toString();
-    const endpoint = queryString ? `/auth/roles?${queryString}` : "/auth/roles";
-    return authFetchList<RoleWire, Role>(endpoint, mapRoleResponse, {
-      errorPrefix: "Get roles",
+    const roles = await bffJson("tenant", "GET /auth/roles/", {
+      query: { name: filters?.name || undefined },
+      errorMessage: "Get roles failed",
     });
+    return roles.map(mapRoleResponse);
   },
 
-  getRolePermissions: async (roleId: string): Promise<Permission[]> =>
-    authFetchList<PermissionWire, Permission>(
-      `/auth/roles/${roleId}/permissions`,
-      mapPermissionResponse,
-      {
-        extractData: extractNestedPermissions,
-        errorPrefix: "Get role permissions",
-      },
-    ),
+  getRolePermissions: async (roleId: string): Promise<Permission[]> => {
+    const permissions = await bffJson(
+      "tenant",
+      "GET /auth/roles/{roleId}/permissions/",
+      { params: { roleId }, errorMessage: "Get role permissions failed" },
+    );
+    return permissions.map(mapPermissionResponse);
+  },
 
   replaceRolePermissions: async (
     roleId: string,
     permissionIds: readonly string[],
-  ): Promise<void> =>
-    authFetchVoid(`/auth/roles/${roleId}/permissions`, {
-      method: "PUT",
-      body: { permission_ids: permissionIds },
-      errorPrefix: "Replace role permissions",
-    }),
+  ): Promise<void> => {
+    await bffJson("tenant", "PUT /auth/roles/{roleId}/permissions/", {
+      params: { roleId },
+      body: { permission_ids: [...permissionIds] },
+      errorMessage: "Replace role permissions failed",
+    });
+  },
 
   getPermissions: async (filters?: {
     resource?: string;
     action?: string;
   }): Promise<Permission[]> => {
-    const params = new URLSearchParams();
-    if (filters?.resource) params.append("resource", filters.resource);
-    if (filters?.action) params.append("action", filters.action);
-    const queryString = params.toString();
-    const endpoint = queryString
-      ? `/auth/permissions?${queryString}`
-      : "/auth/permissions";
-    return authFetchList<PermissionWire, Permission>(
-      endpoint,
-      mapPermissionResponse,
-      { errorPrefix: "Get permissions" },
-    );
+    const permissions = await bffJson("tenant", "GET /auth/permissions/", {
+      query: {
+        resource: filters?.resource || undefined,
+        action: filters?.action || undefined,
+      },
+      errorMessage: "Get permissions failed",
+    });
+    return permissions.map(mapPermissionResponse);
   },
 
   /**
@@ -259,20 +60,23 @@ export const authService = {
   replaceAccountRole: async (
     accountId: string,
     roleId: string,
-  ): Promise<void> =>
-    authFetchVoid(`/auth/accounts/${accountId}/roles`, {
-      method: "PUT",
+  ): Promise<void> => {
+    await bffJson("tenant", "PUT /auth/accounts/{accountId}/roles/", {
+      params: { accountId },
       body: { role_id: roleId },
-      errorPrefix: "Replace account role",
-    }),
+      errorMessage: "Replace account role failed",
+    });
+  },
 
-  getAccountRoles: async (accountId: string): Promise<Role[]> =>
-    authFetchList<RoleWire, Role>(
-      `/auth/accounts/${accountId}/roles`,
-      mapRoleResponse,
+  getAccountRoles: async (accountId: string): Promise<Role[]> => {
+    const roles = await bffJson(
+      "tenant",
+      "GET /auth/accounts/{accountId}/roles/",
       {
-        extractData: extractNestedRoles,
-        errorPrefix: "Get account roles",
+        params: { accountId },
+        errorMessage: "Get account roles failed",
       },
-    ),
+    );
+    return roles.map(mapRoleResponse);
+  },
 };

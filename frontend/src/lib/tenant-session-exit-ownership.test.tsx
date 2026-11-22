@@ -49,7 +49,8 @@ describe("tenant exit ownership through real cookie deletion", () => {
       started = resolve;
     });
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
-      if (input === "/api/auth/logout") return new Response("{}");
+      if (input === "/api/auth/logout")
+        return new Response(null, { status: 204 });
       if (input === "/api/auth/csrf") {
         if (!(init?.signal instanceof AbortSignal))
           throw new Error("missing cancellation signal");
@@ -165,7 +166,8 @@ describe("tenant exit ownership through real cookie deletion", () => {
         if (input === "/api/auth/csrf") return Response.json({ csrfToken });
         if (input === "/api/auth/signout")
           return Response.json({ url: "http://school-b.mfa.localhost:13845/" });
-        if (input === "/api/auth/logout") return new Response("{}");
+        if (input === "/api/auth/logout")
+          return new Response(null, { status: 204 });
         throw new Error("unexpected fixture request");
       });
     const page = renderHook(() => useNavigationGuard(true));
