@@ -104,6 +104,7 @@ func (c *StudentImportConfig) upsertArrivalSchedule(ctx context.Context, student
 	}
 	current := existing[0]
 	current.ExpectedArrival = arrival
+	current.CreatedBy, current.EnteredByTraeger = c.scheduleAuthor(ctx)
 	if strings.TrimSpace(sched.Notes) != "" {
 		current.Notes = importModels.OptionalCell(sched.Notes)
 	}
@@ -130,6 +131,7 @@ func (c *StudentImportConfig) upsertPickupSchedule(ctx context.Context, studentI
 	}
 	current := existing[0]
 	current.PickupTime = pickup
+	current.CreatedBy, current.EnteredByTraeger = c.scheduleAuthor(ctx)
 	if strings.TrimSpace(sched.Notes) != "" {
 		current.Notes = importModels.OptionalCell(sched.Notes)
 	}
@@ -137,4 +139,13 @@ func (c *StudentImportConfig) upsertPickupSchedule(ctx context.Context, studentI
 		return copyErrorf("Abholzeit für Wochentag %d aktualisieren: %w", sched.Weekday, err)
 	}
 	return nil
+}
+
+// scheduleAuthor names who an import writes a weekly time as: the importing
+// staff member, or the Träger-Büro without one (#7818). A changed time takes
+// its author like a new one, as saving the weekly plan does: whoever wrote
+// the time last is named, never an earlier author for a time they did not set.
+func (c *StudentImportConfig) scheduleAuthor(ctx context.Context) (int64, bool) {
+	importer := ImporterIDFromContext(ctx)
+	return importer, ports.EnteredByTraeger(ctx, importer)
 }

@@ -104,6 +104,37 @@ func TestTraegerSchoolSessionImportsStudentsWithWeeklyTimes(t *testing.T) {
 	assert.Zero(t, other)
 }
 
+// A time the Träger-Büro changes by import names the Träger-Büro, not the
+// staff member who imported the child first (#7818): whoever set the time
+// last is its author, as when the weekly plan is saved.
+func TestTraegerSchoolSessionImportTakesOverChangedWeeklyTimes(t *testing.T) {
+	t.Parallel()
+	tc := setupImportRoute(t)
+	router := tc.resource.Router()
+	header := "Vorname,Nachname,Klasse,Ankunft.Mo,Abholung.Mo\n"
+	_, staff := testpkg.CreateTestTeacherWithAccount(t, tc.db, "Import", "ZuerstPersonal")
+
+	first := testutil.ExecuteRequest(router, testutil.NewMultipartRequest(t, http.MethodPost, "/students/import",
+		"file", "personal.csv", header+"Ole,TraegerAendert,1a,08:00,15:30", adminBearer(t, staff.ID)))
+	require.Equal(t, http.StatusOK, first.Code, "staff import: %s", first.Body.String())
+	studentID := importedStudentID(t, tc, "TraegerAendert")
+	for _, table := range []string{"schedule.student_arrival_schedules", "schedule.student_pickup_schedules"} {
+		traeger, other := scheduleAuthors(t, tc, table, studentID)
+		require.Zero(t, traeger, table)
+		require.Equal(t, 1, other, table)
+	}
+
+	second := testutil.ExecuteRequest(router, newMultipartRequestWithMode(t, "/students/import",
+		"traeger.csv", header+"Ole,TraegerAendert,1a,08:30,16:00", "upsert", traegerImportBearer(t, tc)))
+	require.Equal(t, http.StatusOK, second.Code, "Träger import: %s", second.Body.String())
+	require.Contains(t, second.Body.String(), `"updated_count":1`)
+	for _, table := range []string{"schedule.student_arrival_schedules", "schedule.student_pickup_schedules"} {
+		traeger, other := scheduleAuthors(t, tc, table, studentID)
+		assert.Equal(t, 1, traeger, table)
+		assert.Zero(t, other, table)
+	}
+}
+
 // TestTraegerSchoolSessionImportsStudentsWithoutTimes pins that a plain
 // import of the Träger-Büro writes no schedule at all and succeeds.
 func TestTraegerSchoolSessionImportsStudentsWithoutTimes(t *testing.T) {
