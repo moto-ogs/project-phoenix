@@ -172,14 +172,13 @@ export function CareContractCorrectionPreviewCard({
       run.rows.filter((row) => matchesContractCorrectionFilter(row, filter)),
     [run.rows, filter],
   );
+  // The figures stand in the tiles above; short labels keep the four
+  // choices on one line on a phone.
   const filters: { value: ContractCorrectionFilter; label: string }[] = [
-    { value: "all", label: `Alle ${run.rows.length}` },
-    {
-      value: "change",
-      label: `${run.applied ? "Geändert" : "Wird geändert"} ${changing}`,
-    },
-    { value: "invalid", label: `Fehler ${counts.invalid}` },
-    { value: "unchanged", label: `Aktuell ${counts.unchanged}` },
+    { value: "all", label: "Alle" },
+    { value: "change", label: run.applied ? "Geändert" : "Änderung" },
+    { value: "invalid", label: "Fehler" },
+    { value: "unchanged", label: "Aktuell" },
   ];
 
   return (
@@ -268,7 +267,6 @@ export function CareContractCorrectionPreviewCard({
         <SegmentedControl
           ariaLabel="Zeilen zeigen"
           fullWidth
-          wrap
           items={filters}
           value={filter}
           onChange={setFilter}

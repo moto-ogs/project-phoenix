@@ -20,7 +20,9 @@ const EMPTY = "–";
 
 function PlainValue({ value }: Readonly<{ value: string }>) {
   return (
-    <span className={value === EMPTY ? "text-gray-500" : "text-gray-900"}>
+    <span
+      className={`whitespace-nowrap ${value === EMPTY ? "text-gray-500" : "text-gray-900"}`}
+    >
       {value}
     </span>
   );
@@ -41,16 +43,17 @@ export function ValueChange({
           {EMPTY}
         </span>
       ) : (
-        <del className="text-gray-500 line-through decoration-gray-400">
+        <del className="whitespace-nowrap text-gray-500 line-through decoration-gray-400">
           <span className="sr-only">Bisher: </span>
           {before}
         </del>
       )}
-      <ArrowRight
-        aria-hidden="true"
-        className="h-3.5 w-3.5 shrink-0 text-gray-500"
-      />
-      <ins className="font-semibold text-gray-900 no-underline">
+      {/* The arrow stays with the new value when the line breaks. */}
+      <ins className="inline-flex items-center gap-1.5 font-semibold whitespace-nowrap text-gray-900 no-underline">
+        <ArrowRight
+          aria-hidden="true"
+          className="h-3.5 w-3.5 shrink-0 text-gray-500"
+        />
         <span className="sr-only">Neu: </span>
         {after}
       </ins>
@@ -78,7 +81,7 @@ export function PartiesChange({
       <ul className="space-y-0.5">
         {names.map((name, n) => (
           // Two parties may share a name; the place keeps them apart.
-          <li key={`${n}-${name}`} className="wrap-anywhere text-gray-900">
+          <li key={`${n}-${name}`} className="whitespace-nowrap text-gray-900">
             {name}
           </li>
         ))}
@@ -90,7 +93,7 @@ export function PartiesChange({
       {partyChanges(before, after).map((party, n) => (
         <li key={`${n}-${party.before ?? ""}-${party.after ?? ""}`}>
           {party.before === null ? (
-            <ins className="inline-flex items-center gap-1 font-semibold wrap-anywhere text-gray-900 no-underline">
+            <ins className="inline-flex items-center gap-1 font-semibold whitespace-nowrap text-gray-900 no-underline">
               <Plus
                 aria-hidden="true"
                 className="text-moto-green-strong h-3.5 w-3.5 shrink-0"
