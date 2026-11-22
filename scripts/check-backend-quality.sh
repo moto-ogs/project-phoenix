@@ -59,8 +59,9 @@ case "${1:-quality}" in
     base=${2:?base revision is required}
     # The working tree, as backend-affected-packages.sh reads it: check-changed
     # lints uncommitted and untracked files too; the hook has a clean tree.
-    changed=$(git diff --name-only "$(git merge-base HEAD "$base")"; git ls-files --others --exclude-standard --full-name)
-    if printf '%s\n' "$changed" | grep -qE '^(backend/go\.(mod|sum)|backend/\.golangci.yml|scripts/(backend-affected-packages.*|backend-lint-packages.sh|check-backend-quality.sh))$'; then
+    merge_base=$(git merge-base HEAD "$base")
+    changed=$(git -C "$root" diff --no-renames --name-only "$merge_base" && git -C "$root" ls-files --others --exclude-standard)
+    if grep -qE '^(backend/go\.(mod|sum)|backend/\.golangci.yml|scripts/(backend-affected-packages.*|backend-lint-packages.sh|check-backend-quality.sh))$' <<< "$changed"; then
       output=./...
     else
       output=$("$root/scripts/backend-affected-packages.sh" "$base")
