@@ -65,6 +65,12 @@
       "legacy": "import.not_test_traeger"
     },
     {
+      "code": "import.staff_profile_required",
+      "class": "permission",
+      "parameters": [],
+      "legacy": "import.staff_profile_required"
+    },
+    {
       "code": "import.test_traeger_inactive",
       "class": "business_rejection",
       "parameters": [],

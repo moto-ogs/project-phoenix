@@ -108,7 +108,7 @@ func (c staffAbsenceCapability) CreateOwnAbsence(ctx context.Context, staffID in
 	if err != nil {
 		return nil, nil, err
 	}
-	return plannedAbsence(plan)(c.absence(absences.CreateOwnAbsence(ctx, staffID, actorAccountID, CreateAbsenceRequest(request))))
+	return plannedAbsence(plan)(c.absence(absences.CreateOwnAbsence(ctx, staffID, actorAccountID, legacyCreateAbsence(request))))
 }
 
 func (c staffAbsenceCapability) CreateAbsenceFor(ctx context.Context, subjectStaffID, createdByStaffID int64, actorAccountID *int64, request workforce.CreateAbsenceRequest) (*workforce.StaffAbsenceResponse, workforce.SickCascadePlan, error) {
@@ -116,7 +116,7 @@ func (c staffAbsenceCapability) CreateAbsenceFor(ctx context.Context, subjectSta
 	if err != nil {
 		return nil, nil, err
 	}
-	return plannedAbsence(plan)(c.absence(absences.CreateAbsenceFor(ctx, subjectStaffID, createdByStaffID, actorAccountID, CreateAbsenceRequest(request))))
+	return plannedAbsence(plan)(c.absence(absences.CreateAbsenceFor(ctx, subjectStaffID, createdByStaffID, actorAccountID, legacyCreateAbsence(request))))
 }
 
 func (c staffAbsenceCapability) UpdateAbsence(ctx context.Context, staffID int64, actorAccountID *int64, absenceID int64, request workforce.UpdateAbsenceRequest) (*workforce.StaffAbsenceResponse, workforce.SickCascadePlan, error) {
@@ -124,7 +124,21 @@ func (c staffAbsenceCapability) UpdateAbsence(ctx context.Context, staffID int64
 	if err != nil {
 		return nil, nil, err
 	}
-	return plannedAbsence(plan)(c.absence(absences.UpdateAbsence(ctx, staffID, actorAccountID, absenceID, UpdateAbsenceRequest(request))))
+	return plannedAbsence(plan)(c.absence(absences.UpdateAbsence(ctx, staffID, actorAccountID, absenceID, legacyUpdateAbsence(request))))
+}
+
+func legacyCreateAbsence(value workforce.CreateAbsenceRequest) CreateAbsenceRequest {
+	return CreateAbsenceRequest{
+		AbsenceType: value.AbsenceType, AbsenceTypeID: (*int64)(value.AbsenceTypeID), DateStart: value.DateStart,
+		DateEnd: value.DateEnd, HalfDay: value.HalfDay, Note: value.Note,
+	}
+}
+
+func legacyUpdateAbsence(value workforce.UpdateAbsenceRequest) UpdateAbsenceRequest {
+	return UpdateAbsenceRequest{
+		AbsenceType: value.AbsenceType, AbsenceTypeID: (*int64)(value.AbsenceTypeID), AbsenceTypeIDSet: value.AbsenceTypeIDSet,
+		DateStart: value.DateStart, DateEnd: value.DateEnd, HalfDay: value.HalfDay, Note: value.Note,
+	}
 }
 
 func (c staffAbsenceCapability) DeleteOwnAbsence(ctx context.Context, staffID int64, actorAccountID *int64, absenceID int64) (workforce.SickCascadePlan, error) {

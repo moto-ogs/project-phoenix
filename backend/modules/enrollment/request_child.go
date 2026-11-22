@@ -156,8 +156,14 @@ type WeeklyPlan struct {
 	// AuthorStaffID is the staff member the applied weekly rows name as their
 	// author: the approving reviewer, or the last confirmed edit's actor.
 	// Resolved when the plan is stored, so the start does not depend on that
-	// account still existing. 0 when it could not be resolved.
+	// account still existing. 0 for the Träger-Büro (ByTraeger), for a plan
+	// without weekly pickup or arrival rows, and for a plan stored before
+	// #7818, which the start resolves from the reviewer.
 	AuthorStaffID int64
+	// ByTraeger: the plan was stored in a session of the Träger-Büro by a
+	// person without a staff record of the school, so the start writes the
+	// weekly rows as the Träger-Büro (#7818). Never set beside AuthorStaffID.
+	ByTraeger bool
 }
 
 // DueClassSwitch is a planned class switch whose day has come, with the

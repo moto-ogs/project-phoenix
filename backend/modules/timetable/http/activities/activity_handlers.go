@@ -253,10 +253,9 @@ func (rs *Resource) createActivity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get current staff ID - required for created_by
-	staffID, _, err := rs.getStaffIDAndManagePermission(r)
-	if err != nil {
-		common.RenderError(w, r, common.ErrorForbidden(errors.New("only staff members can create activities")))
+	creator, refusal := rs.activityCreator(r)
+	if refusal != nil {
+		common.RenderError(w, r, refusal)
 		return
 	}
 
@@ -267,7 +266,7 @@ func (rs *Resource) createActivity(w http.ResponseWriter, r *http.Request) {
 		IsOpen:          req.IsOpen,
 		CategoryID:      req.CategoryID.Int64(),
 		PlannedRoomID:   (*int64)(req.PlannedRoomID),
-		CreatedBy:       &staffID,
+		CreatedBy:       creator,
 	}
 
 	schedules := activityRequestSchedules(req)
@@ -305,10 +304,9 @@ func (rs *Resource) quickCreateActivity(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Get current staff - required for created_by
-	staffID, found, err := rs.UserContextService.CurrentStaffID(r.Context())
-	if err != nil || !found {
-		common.RenderError(w, r, common.ErrorForbidden(errors.New("only staff members can create activities")))
+	creator, refusal := rs.activityCreator(r)
+	if refusal != nil {
+		common.RenderError(w, r, refusal)
 		return
 	}
 
@@ -319,11 +317,15 @@ func (rs *Resource) quickCreateActivity(w http.ResponseWriter, r *http.Request) 
 		IsOpen:          true, // Default to true for quick-create
 		CategoryID:      req.CategoryID.Int64(),
 		PlannedRoomID:   (*int64)(req.RoomID),
-		CreatedBy:       &staffID,
+		CreatedBy:       creator,
 	}
 
-	// Auto-assign creator as primary supervisor
-	supervisorIDs := []int64{staffID}
+	// Auto-assign a staff creator as primary supervisor; the Träger-Büro
+	// creates the activity without one and enters it afterwards (#7818).
+	var supervisorIDs []int64
+	if creator != nil {
+		supervisorIDs = []int64{*creator}
+	}
 
 	// Create the activity group with auto-assigned teacher supervision
 	var createdGroup *activityContract.Group
@@ -339,13 +341,15 @@ func (rs *Resource) quickCreateActivity(w http.ResponseWriter, r *http.Request) 
 
 	response := quickActivityResponse(createdGroup, req)
 
-	// The creator supervises the activity; their person names it.
-	firstName, lastName, err := rs.UserContextService.CurrentPersonName(r.Context())
-	if err != nil {
-		common.RenderError(w, r, common.ErrorInternalServer(err))
-		return
+	// A staff creator supervises the activity; their person names it.
+	if creator != nil {
+		firstName, lastName, err := rs.UserContextService.CurrentPersonName(r.Context())
+		if err != nil {
+			common.RenderError(w, r, common.ErrorInternalServer(err))
+			return
+		}
+		response.SupervisorName = fmt.Sprintf("%s %s", firstName, lastName)
 	}
-	response.SupervisorName = fmt.Sprintf("%s %s", firstName, lastName)
 
 	common.Respond(w, r, http.StatusCreated, response, msgActivityCreatedSuccess)
 }

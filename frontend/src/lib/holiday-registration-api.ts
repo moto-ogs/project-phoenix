@@ -1,17 +1,13 @@
 // Öffentliche Ferienanmeldung (#4661): der eine Link eines Ferienzeitraums
 // für alle Schulen des Trägers, ohne Elternkonto.
 
-import { unavailableApiError, type ApiError } from "~/lib/api-error";
+import { ApiError } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
 import { knownEnum } from "~/lib/contract/known-enum";
 import { requiredDay } from "~/lib/contract/required-day";
-import type { HolidayRegistrationFamilyResponse as WireHolidayRegistrationFamily } from "~/lib/contract/parent-holiday-registrations.generated";
-import type {
-  HolidayContribution as WireHolidayContribution,
-  HolidayQuoteRequest as WireHolidayQuoteRequest,
-} from "~/lib/contract/traeger-holiday-quotes.generated";
+import type { HolidayQuoteRequest as WireHolidayQuoteRequest } from "~/lib/contract/traeger-holiday-quotes.generated";
 import type {
   HolidayRegistrationRequest as WireHolidayRegistrationRequest,
-  HolidayRegistrationSubmitResponse as WireHolidayRegistrationSubmitResponse,
   PublicHolidayRegistrationOfferResponse as WireHolidayRegistrationOffer,
 } from "~/lib/contract/traeger-holiday-registrations.generated";
 import {
@@ -22,19 +18,15 @@ import {
   holidayFormVersionFromContract,
   type HolidayFormVersion,
 } from "~/lib/holiday-form-field";
-import { readEnrollmentError } from "~/lib/enrollment-api-error";
 import {
   contributionFromBackend,
   type HolidayContribution,
 } from "~/lib/holiday-contribution";
-import { type NewUploadValue, postUpload } from "~/lib/enrollment-uploads";
+import { type NewUploadValue, UPLOAD_FAILED } from "~/lib/enrollment-uploads";
 import {
   consentTextsFromBackend,
   type HolidayConsentTexts,
 } from "~/lib/holiday-consent-texts";
-import { createLogger } from "~/lib/logger";
-
-const logger = createLogger({ component: "HolidayRegistrationApi" });
 
 // Go does not register these sets; the contract types them as string. A value
 // this build does not know stays undefined instead of passing as a known one.
@@ -304,49 +296,15 @@ function offerFromBackend(
   };
 }
 
-// The link, its summary and the proof upload run through the Träger
-// proxy's public routes (#2352).
-function registrationPath(token: string): string {
-  return `/api/traeger/holiday-registrations/${encodeURIComponent(token)}`;
-}
-
-function uploadPath(token: string): string {
-  return `${registrationPath(token)}/uploads`;
-}
-
-async function request(input: string, init?: RequestInit): Promise<Response> {
-  try {
-    return await fetch(input, init);
-  } catch (cause) {
-    throw unavailableApiError(cause);
-  }
-}
-
-function readError(response: Response, fallback: string): Promise<ApiError> {
-  return readEnrollmentError(
-    response,
-    fallback,
-    logger,
-    "holiday_registration_api_failed",
-  );
-}
-
 export async function fetchHolidayRegistrationOffer(
   token: string,
 ): Promise<HolidayRegistrationOffer> {
-  const response = await request(registrationPath(token), {
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Ferienanmeldung konnte nicht geladen werden",
-    );
-  }
-  const body = (await response.json()) as {
-    data: WireHolidayRegistrationOffer;
-  };
-  return offerFromBackend(body.data);
+  return offerFromBackend(
+    await bffJson("public", "GET /traeger/holiday-registrations/{token}", {
+      params: { token },
+      errorMessage: "Ferienanmeldung konnte nicht geladen werden",
+    }),
+  );
 }
 
 /**
@@ -361,7 +319,16 @@ export function uploadHolidayProof(
 ): Promise<NewUploadValue> {
   const body = new FormData();
   body.append("file", file);
-  return postUpload(uploadPath(token), body, file, signal);
+  return bffJson(
+    "public",
+    "POST /traeger/holiday-registrations/{token}/uploads",
+    {
+      params: { token },
+      body,
+      signal,
+      errorMessage: UPLOAD_FAILED,
+    },
+  );
 }
 
 /**
@@ -390,27 +357,22 @@ export async function submitHolidayRegistration(
   token: string,
   payload: HolidayRegistrationPayload,
 ): Promise<HolidayRegistrationReceipt> {
-  const response = await request(registrationPath(token), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload satisfies WireHolidayRegistrationRequest),
-  });
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Ferienanmeldung konnte nicht gesendet werden",
-    );
-  }
-  const body = (await response.json().catch(() => null)) as {
-    data?: WireHolidayRegistrationSubmitResponse;
-  } | null;
+  const receipt = await bffJson(
+    "public",
+    "POST /traeger/holiday-registrations/{token}",
+    {
+      params: { token },
+      body: payload satisfies WireHolidayRegistrationRequest,
+      errorMessage: "Ferienanmeldung konnte nicht gesendet werden",
+    },
+  );
   return {
-    placements: (body?.data?.placements ?? []).map((entry) => ({
+    placements: (receipt.placements ?? []).map((entry) => ({
       childPosition: entry.child_position,
       weekId: entry.week_id,
       placement: knownHolidayPlacement(entry.placement),
     })),
-    statusToken: body?.data?.status_token ?? "",
+    statusToken: receipt.status_token ?? "",
   };
 }
 
@@ -434,28 +396,22 @@ export async function quoteHolidayContribution(
   benefitsDeclared: boolean,
   ageRanks: readonly number[] = [],
 ): Promise<HolidayContribution> {
-  const response = await request(
-    `/api/traeger/holiday-quotes/${encodeURIComponent(token)}`,
+  const contribution = await bffJson(
+    "public",
+    "POST /traeger/holiday-quotes/{token}",
     {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+      params: { token },
+      body: {
         children: children.map((bookings, index) => ({
           bookings,
           age_rank: ageRanks[index] ?? 0,
         })),
         benefits_declared: benefitsDeclared,
-      } satisfies WireHolidayQuoteRequest),
+      } satisfies WireHolidayQuoteRequest,
+      errorMessage: "Beitrag der Ferienanmeldung konnte nicht berechnet werden",
     },
   );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Beitrag der Ferienanmeldung konnte nicht berechnet werden",
-    );
-  }
-  const body = (await response.json()) as { data: WireHolidayContribution };
-  return contributionFromBackend(body.data);
+  return contributionFromBackend(contribution);
 }
 
 /** A child of the parent's account the registration can start from (#4662). */
@@ -530,20 +486,21 @@ export interface HolidayKnownFamily {
 export async function fetchHolidayRegistrationFamily(
   token: string,
 ): Promise<HolidayKnownFamily | null> {
-  const response = await request(
-    `/api/parent/holiday-registrations/${encodeURIComponent(token)}/family`,
-    { cache: "no-store" },
-  );
-  if (response.status === 401) return null;
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Bekannte Angaben konnten nicht geladen werden",
-    );
-  }
-  const { data } = (await response.json()) as {
-    data: WireHolidayRegistrationFamily;
-  };
+  const data = await bffJson(
+    "parent",
+    "GET /parent/holiday-registrations/{token}/family",
+    {
+      params: { token },
+      errorMessage: "Bekannte Angaben konnten nicht geladen werden",
+      // Without a parent session the BFF answers 401 with the class code:
+      // the form starts empty instead of sending the visitor to the login.
+      authRefusals: ["general.permission"],
+    },
+  ).catch((error: unknown) => {
+    if (error instanceof ApiError && error.status === 401) return null;
+    throw error;
+  });
+  if (data === null) return null;
   return {
     guardian: {
       firstName: data.guardian.first_name,

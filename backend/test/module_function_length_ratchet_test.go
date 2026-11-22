@@ -74,7 +74,8 @@ const moduleFuncLenThreshold = 60
 // additions or raises require a new-numbered ADR cited by the entry (ADR 0070).
 // ADR 0082: newly covered sources, measured at 722c5aa147; no headroom.
 var moduleFuncLenAllowlist = map[string]int{
-	"api/active_test_helpers.go:buildActiveTestModule":            185,
+	// Lowered by #7808: the cross-tenant visitor read left the presence wiring.
+	"api/active_test_helpers.go:buildActiveTestModule":            181,
 	"api/auth_test_helpers.go:NewAuthTestModule":                  164,
 	"api/calendar_test_helpers.go:NewCalendarTestModule":          63,
 	"api/guardian_invitation_test_helpers.go:lifecycleTestModule": 61,

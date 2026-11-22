@@ -24,6 +24,7 @@ var (
 type builder struct {
 	types        map[string]Object
 	names        map[reflect.Type]string
+	requestNames map[reflect.Type]string
 	enums        map[string]Enum
 	enumByType   map[reflect.Type]string
 	enumByField  map[string]string
@@ -33,17 +34,16 @@ type builder struct {
 	dates        map[reflect.Type]bool
 	instants     map[reflect.Type]bool
 	used         map[string]bool
-	requestTypes map[string]bool
 }
 
 // Build walks the registrations with reflection, following encoding/json.
 // Routes carry their full pattern.
 func Build(routes []Registration, options Options) (Document, error) {
 	b := &builder{
-		types: map[string]Object{}, names: map[reflect.Type]string{}, enums: map[string]Enum{},
+		types: map[string]Object{}, names: map[reflect.Type]string{}, requestNames: map[reflect.Type]string{}, enums: map[string]Enum{},
 		enumByType: map[reflect.Type]string{}, enumByField: map[string]string{},
 		deprecated: map[string]bool{}, used: map[string]bool{},
-		requestTypes: map[string]bool{}, identifiers: options.Identifiers, readers: options.Readers,
+		identifiers: options.Identifiers, readers: options.Readers,
 		dates: map[reflect.Type]bool{dateType: true}, instants: map[reflect.Type]bool{timeType: true},
 	}
 	for _, t := range options.Dates {
@@ -95,6 +95,18 @@ func (b *builder) routes(registrations []Registration, options Options) ([]Route
 		}
 		seen[route.Key()] = true
 		routes = append(routes, route)
+	}
+	// Bodies come after every answer, so a type that is both keeps its own
+	// name in the answers and its request role is named apart from it.
+	for i, rc := range registrations {
+		if rc.Request == nil {
+			continue
+		}
+		s, err := b.top(rc.Request, routes[i].Key(), true)
+		if err != nil {
+			return nil, err
+		}
+		routes[i].Request = &s
 	}
 	return routes, publicRoutesStandApart(routes)
 }
@@ -171,13 +183,6 @@ func (b *builder) route(rc Registration, options Options) (Route, error) {
 		return route, err
 	}
 	route.Query = query
-	if rc.Request != nil {
-		s, err := b.top(rc.Request, where, true)
-		if err != nil {
-			return route, err
-		}
-		route.Request = &s
-	}
 	return route, b.responses(&route, rc, options)
 }
 
@@ -337,7 +342,7 @@ func (b *builder) schema(t reflect.Type, where string, request bool) (Schema, er
 	case reflect.Bool:
 		return Schema{Kind: KindBool}, nil
 	case reflect.Int64, reflect.Uint64:
-		// The field decides: see numericID.
+		// The field decides: see bareInt64.
 		return Schema{Kind: KindInt}, errBareInt64
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32:
 		return Schema{Kind: KindInt}, nil
@@ -442,7 +447,7 @@ func (b *builder) wrapped(t reflect.Type, where string) (Schema, error) {
 	at := where + "." + t.Name() + ".Value"
 	s, err := b.schema(sf.Type, at, true)
 	if errors.Is(err, errBareInt64) {
-		err = b.numericID(&s, t, at)
+		err = bareInt64(at)
 	}
 	return s, err
 }
@@ -455,17 +460,22 @@ func (b *builder) object(t reflect.Type, where string, request bool) (string, er
 	if name == "" {
 		return "", fmt.Errorf("%s: anonymous struct is not supported", where)
 	}
-	if known, ok := b.names[t]; ok {
-		if b.requestTypes[known] != request {
-			return "", fmt.Errorf("%s: %s is used as a request and as a response", where, t)
+	names := b.names
+	if request {
+		names = b.requestNames
+		// A type an answer carries too is a request under a name of its own:
+		// a body has only optional fields, an answer its required ones.
+		if _, answered := b.names[t]; answered {
+			name += "Input"
 		}
+	}
+	if known, ok := names[t]; ok {
 		return known, nil
 	}
-	if existing, taken := b.types[name]; taken && existing.GoType != t.String() {
+	if existing, taken := b.types[name]; taken {
 		return "", fmt.Errorf("%s: type name %s is used by %s and %s", where, name, existing.GoType, t)
 	}
-	b.names[t] = name
-	b.requestTypes[name] = request
+	names[t] = name
 	// Reserved before the walk so that a recursive type terminates.
 	b.types[name] = Object{Name: name, GoType: t.String(), Request: request}
 	fields, err := b.fields(t, where+" "+name, request)

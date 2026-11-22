@@ -123,7 +123,11 @@ func feedbackHistoryWriterFor(options SeedOptions, rt *Runtime) FeedbackHistoryW
 func operatorFeedbackHistoryWriter(rt *Runtime) FeedbackHistoryWriter {
 	return func(_ context.Context, schoolID int64, entries []PastFeedback) (int, error) {
 		path := fmt.Sprintf("/operator/schools/%d/demo-feedback-history", schoolID)
-		raw, err := rt.Client.PostWithAuth(rt.OperatorAuth, path, map[string]any{"entries": entries})
+		body, err := textIDBody(map[string]any{"entries": entries})
+		if err != nil {
+			return 0, err
+		}
+		raw, err := rt.Client.PostWithAuth(rt.OperatorAuth, path, body)
 		if err != nil {
 			return 0, err
 		}

@@ -32,12 +32,12 @@ func TestOptionalFieldsTrackPresence(t *testing.T) {
 	assert.Nil(t, explicit.ChangeReason.Value)
 	assert.True(t, explicit.Cancelled.Present)
 	require.NotNil(t, explicit.OriginShiftID.Value)
-	assert.Equal(t, int64(9223372036854775807), *explicit.OriginShiftID.Value, "string ids keep every bigint digit")
+	assert.Equal(t, ident.ID(9223372036854775807), *explicit.OriginShiftID.Value, "string ids keep every bigint digit")
 
 	var numeric ShiftRequest
 	require.NoError(t, json.Unmarshal([]byte(`{"shift_type_id":5,"origin_shift_id":42}`), &numeric))
 	require.NotNil(t, numeric.ShiftTypeID.Value)
-	assert.Equal(t, int64(5), *numeric.ShiftTypeID.Value)
+	assert.Equal(t, ident.ID(5), *numeric.ShiftTypeID.Value)
 
 	var rejected CancellationRequest
 	assert.Error(t, json.Unmarshal([]byte(`{"cancelled":null}`), &rejected), "a null cancelled flag is never an implicit false")
@@ -70,12 +70,12 @@ func TestBuildMoveRequiresAnExplicitShiftType(t *testing.T) {
 	_, err := buildMove(9, MoveShiftRequest{SourceStaffID: 7, TargetStaffID: 8, Date: "2026-07-07", StartTime: "09:00", EndTime: "15:00"})
 	assert.EqualError(t, err, "shift_type_id is required")
 
-	typeID := int64(5)
-	input, err := buildMove(9, MoveShiftRequest{SourceStaffID: 7, TargetStaffID: 8, Date: "2026-07-07", StartTime: "09:00", EndTime: "15:00", BreakMinutes: 20, ShiftTypeID: optionalID{Present: true, Value: &typeID}})
+	typeID := ident.ID(5)
+	input, err := buildMove(9, MoveShiftRequest{SourceStaffID: 7, TargetStaffID: 8, Date: "2026-07-07", StartTime: "09:00", EndTime: "15:00", BreakMinutes: 20, ShiftTypeID: OptionalID{Present: true, Value: &typeID}})
 	require.NoError(t, err)
 	assert.Equal(t, int64(9), input.ShiftID)
 	assert.Equal(t, "15:00:00", input.EndTime)
-	assert.Equal(t, &typeID, input.ShiftTypeID)
+	assert.Equal(t, (*int64)(&typeID), input.ShiftTypeID)
 }
 
 func TestBuildCancellationRejectsPartialOriginEdits(t *testing.T) {
