@@ -644,6 +644,7 @@ export const routes = {
     method: "POST",
     pattern: "/traeger/staff-records/link-preview",
     portals: ["org"],
+    noCommit: "the preview shows which records a link would join and links nothing",
     request: requestBody<StaffLinkRequest>(),
     response: success(TraegerStaffLinkPreviewSchema),
   },

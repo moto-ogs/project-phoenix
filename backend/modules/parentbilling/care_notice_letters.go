@@ -75,7 +75,7 @@ type CareNoticeMailing struct {
 	RecipientFirstName string `json:"recipient_first_name"`
 	RecipientLastName  string `json:"recipient_last_name"`
 	RecipientEmail     string `json:"recipient_email"`
-	TotalCents         int64  `json:"total_cents"`
+	TotalCents         int64  `json:"total_cents" contract:"number"`
 	HasLetter          bool   `json:"has_letter"`
 	// SHA256 identifies the stored PDF; every download and every mail
 	// carries these bytes.

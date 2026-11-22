@@ -64,7 +64,7 @@ type CareMealTariff struct {
 	ValidFrom   calendar.Date  `json:"valid_from"`
 	ValidUntil  *calendar.Date `json:"valid_until"`
 	Mode        string         `json:"mode"`
-	AmountCents int64          `json:"amount_cents"`
+	AmountCents int64          `json:"amount_cents" contract:"number"`
 	CreatedAt   time.Time      `json:"created_at"`
 }
 
@@ -92,8 +92,8 @@ type CareMealPosition struct {
 	MealMonth   calendar.Date `json:"meal_month"`
 	Mode        string        `json:"mode"`
 	Quantity    int           `json:"quantity"`
-	UnitCents   int64         `json:"unit_cents"`
-	AmountCents int64         `json:"amount_cents"`
+	UnitCents   int64         `json:"unit_cents" contract:"number"`
+	AmountCents int64         `json:"amount_cents" contract:"number"`
 	// ReleaseVersion is the version of the school's release the position
 	// bills (#4686); a later version shows the office it changed.
 	ReleaseVersion int `json:"release_version"`
@@ -129,9 +129,9 @@ type CareMealChanged struct {
 	Month          calendar.Date `json:"month"`
 	InvoiceNumber  string        `json:"invoice_number"`
 	BilledQuantity int           `json:"billed_quantity"`
-	BilledCents    int64         `json:"billed_cents"`
+	BilledCents    int64         `json:"billed_cents" contract:"number"`
 	NewQuantity    int           `json:"new_quantity"`
-	NewCents       int64         `json:"new_cents"`
+	NewCents       int64         `json:"new_cents" contract:"number"`
 }
 
 // CareMealGap is an ended month a school bills its Mensa for that its

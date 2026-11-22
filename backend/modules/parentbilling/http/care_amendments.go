@@ -21,9 +21,9 @@ type CareAmendmentRequest struct {
 	Kind           string                `json:"kind"`
 	Fingerprint    string                `json:"fingerprint"`
 	Reason         string                `json:"reason"`
-	TotalCents     *int64                `json:"total_cents"`
+	TotalCents     *int64                `json:"total_cents" contract:"number"`
 	Label          string                `json:"label"`
-	AmountCents    *int64                `json:"amount_cents"`
+	AmountCents    *int64                `json:"amount_cents" contract:"number"`
 	PositionKey    string                `json:"position_key"`
 	Recipient      *RecipientNameRequest `json:"recipient"`
 	Address        *PostalAddressRequest `json:"address"`

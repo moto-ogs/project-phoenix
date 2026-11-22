@@ -59,7 +59,7 @@ type ContributionRuleRequest struct {
 	ValidUntil          *calendar.Date `json:"valid_until"`
 	SiblingFromChild    *int           `json:"sibling_from_child"`
 	DiscountBasisPoints *int           `json:"discount_basis_points"`
-	DiscountCents       *int64         `json:"discount_cents"`
+	DiscountCents       *int64         `json:"discount_cents" contract:"number"`
 	Note                string         `json:"note"`
 }
 

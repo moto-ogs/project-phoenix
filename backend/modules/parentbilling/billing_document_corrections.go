@@ -68,6 +68,6 @@ type BillingDocumentLink struct {
 	Kind       string        `json:"kind"`
 	Number     string        `json:"number"`
 	IssuedOn   calendar.Date `json:"issued_on"`
-	TotalCents int64         `json:"total_cents"`
+	TotalCents int64         `json:"total_cents" contract:"number"`
 	Reason     string        `json:"reason"`
 }

@@ -140,7 +140,7 @@ func (b *builder) enumName(enum EnumSpec) (string, error) {
 func (b *builder) route(rc Registration, options Options) (Route, error) {
 	route := Route{
 		Method: rc.Method, Pattern: rc.Pattern, Paginated: rc.Paginated, Deprecated: rc.Deprecated,
-		NoRetryAfterRenewal: rc.NoRetryAfterRenewal, MaxBodyBytes: rc.MaxBodyBytes,
+		NoRetryAfterRenewal: rc.NoRetryAfterRenewal, MaxBodyBytes: rc.MaxBodyBytes, NoCommit: rc.NoCommit,
 		File: rc.File, Multipart: rc.Multipart, TooLargeCode: rc.TooLargeCode, PublicFile: rc.PublicFile, PublicUpload: rc.PublicUpload,
 		FileCache: rc.FileCache, ConditionalGet: rc.ConditionalGet,
 		PrivateCache: rc.PrivateCache,
@@ -157,6 +157,9 @@ func (b *builder) route(rc Registration, options Options) (Route, error) {
 	}
 	if err := fileCacheTraits(rc, where); err != nil {
 		return route, err
+	}
+	if rc.NoCommit != "" && rc.Method != "POST" {
+		return route, fmt.Errorf("%s: only a POST names NoCommit; a GET commits nothing anyway and a PUT, PATCH or DELETE changes", where)
 	}
 	if rc.PrivateCache && (!rc.File || slices.Contains(rc.Portals, PublicPortal)) {
 		return route, fmt.Errorf("%s: PrivateCache belongs to a file route of a session portal", where)
@@ -430,7 +433,7 @@ func (b *builder) wrapped(t reflect.Type, where string) (Schema, error) {
 	at := where + "." + t.Name() + ".Value"
 	s, err := b.schema(sf.Type, at, true)
 	if errors.Is(err, errBareInt64) {
-		err = b.numericID(&s, t, sf.Name, at)
+		err = b.numericID(&s, t, at)
 	}
 	return s, err
 }

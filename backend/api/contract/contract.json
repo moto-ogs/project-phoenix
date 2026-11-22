@@ -14081,6 +14081,7 @@
         "ref": "ClassListImportResult"
       },
       "max_body_bytes": 10485760,
+      "no_commit": "an import preview checks the file and saves no row of it; only its audit entry is written",
       "multipart": true,
       "too_large_code": "import.file_too_large"
     },
@@ -14109,6 +14110,7 @@
         "ref": "OpeningBalanceImportResult"
       },
       "max_body_bytes": 10485760,
+      "no_commit": "an import preview checks the file and saves no row of it; only its audit entry is written",
       "multipart": true,
       "too_large_code": "import.file_too_large"
     },
@@ -14137,6 +14139,7 @@
         "ref": "StudentPreviewResponse"
       },
       "max_body_bytes": 10485760,
+      "no_commit": "an import preview checks the file and saves no row of it; only its audit entry is written",
       "multipart": true,
       "too_large_code": "import.file_too_large"
     },
@@ -14165,6 +14168,7 @@
         "ref": "StaffImportResult"
       },
       "max_body_bytes": 10485760,
+      "no_commit": "an import preview checks the file and saves no row of it; only its audit entry is written",
       "multipart": true,
       "too_large_code": "import.file_too_large"
     },
@@ -14416,7 +14420,8 @@
       "response": {
         "kind": "ref",
         "ref": "letterPreviewResponse"
-      }
+      },
+      "no_commit": "the preview renders the letter and sends nothing"
     },
     {
       "method": "POST",
@@ -14533,7 +14538,8 @@
       "response": {
         "kind": "ref",
         "ref": "SearchResult"
-      }
+      },
+      "no_commit": "a search reads; the query travels in the body"
     },
     {
       "method": "POST",
@@ -15104,7 +15110,8 @@
       "response": {
         "kind": "ref",
         "ref": "ArrivalScheduleStatusResponse"
-      }
+      },
+      "no_commit": "reads the arrival times of the children the body names"
     },
     {
       "method": "POST",
@@ -15149,7 +15156,8 @@
       "response": {
         "kind": "ref",
         "ref": "careExitPreviewResponse"
-      }
+      },
+      "no_commit": "the preview shows what a care end changes and saves nothing"
     },
     {
       "method": "POST",
@@ -15194,7 +15202,8 @@
       "response": {
         "kind": "ref",
         "ref": "careExitPreviewResponse"
-      }
+      },
+      "no_commit": "the preview shows what a care end changes and saves nothing"
     },
     {
       "method": "POST",
@@ -15349,7 +15358,8 @@
       "response": {
         "kind": "ref",
         "ref": "OfferingRequestPreviewResponse"
-      }
+      },
+      "no_commit": "the preview shows the decided offerings and saves nothing"
     },
     {
       "method": "POST",
@@ -15646,7 +15656,8 @@
       "response": {
         "kind": "ref",
         "ref": "pickupAdjustmentPreviewResponse"
-      }
+      },
+      "no_commit": "the preview shows the pickup times a change would set and saves nothing"
     },
     {
       "method": "POST",
@@ -16129,7 +16140,8 @@
       "response": {
         "kind": "ref",
         "ref": "OptionsResult"
-      }
+      },
+      "no_commit": "reads the choices for a list the body describes"
     },
     {
       "method": "POST",
@@ -16144,7 +16156,8 @@
       "response": {
         "kind": "ref",
         "ref": "ClassdayResult"
-      }
+      },
+      "no_commit": "builds the list the body describes and saves nothing"
     },
     {
       "method": "POST",
@@ -17644,7 +17657,8 @@
       "response": {
         "kind": "ref",
         "ref": "SEPAMandateText"
-      }
+      },
+      "no_commit": "renders the mandate text and grants no mandate"
     },
     {
       "method": "POST",
@@ -18065,7 +18079,8 @@
       "response": {
         "kind": "ref",
         "ref": "letterPreviewResponse"
-      }
+      },
+      "no_commit": "the preview renders the letter and sends nothing"
     },
     {
       "method": "POST",
@@ -18735,7 +18750,8 @@
       "response": {
         "kind": "ref",
         "ref": "Preview"
-      }
+      },
+      "no_commit": "the preview shows what publishing the phase would change and saves nothing"
     },
     {
       "method": "POST",
@@ -18818,6 +18834,7 @@
         "ref": "ContractImport"
       },
       "max_body_bytes": 2359296,
+      "no_commit": "an import preview checks the file and saves no row of it",
       "multipart": true,
       "too_large_code": "care_contract.import_file_too_large"
     },
@@ -18991,6 +19008,7 @@
         "ref": "FamilyChildrenImport"
       },
       "max_body_bytes": 2359296,
+      "no_commit": "an import preview checks the file and saves no row of it",
       "multipart": true,
       "too_large_code": "parent_billing.family_children_import_file_too_large"
     },
@@ -19097,7 +19115,8 @@
       "response": {
         "kind": "ref",
         "ref": "HolidayClosureImpact"
-      }
+      },
+      "no_commit": "the preview counts the bookings a closure would touch and saves nothing"
     },
     {
       "method": "POST",
@@ -19322,7 +19341,8 @@
       "response": {
         "kind": "ref",
         "ref": "SampleLetter"
-      }
+      },
+      "no_commit": "renders a sample letter and saves no template"
     },
     {
       "method": "POST",
@@ -19446,6 +19466,7 @@
         "ref": "SEPAMandateImport"
       },
       "max_body_bytes": 2359296,
+      "no_commit": "an import preview checks the file and saves no row of it",
       "multipart": true,
       "too_large_code": "parent_billing.sepa_import_file_too_large"
     },
@@ -19519,6 +19540,7 @@
         "ref": "StaffImport"
       },
       "max_body_bytes": 2162688,
+      "no_commit": "an import preview checks the file and saves no row of it",
       "multipart": true,
       "too_large_code": "workforce.traeger_staff_import_file_too_large"
     },
@@ -19565,7 +19587,8 @@
       "response": {
         "kind": "ref",
         "ref": "TraegerStaffLinkPreview"
-      }
+      },
+      "no_commit": "the preview shows which records a link would join and links nothing"
     },
     {
       "method": "POST",
