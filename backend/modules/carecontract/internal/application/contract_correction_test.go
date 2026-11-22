@@ -163,6 +163,9 @@ func TestCorrectionAddsPartiesAndNeverRemovesOne(t *testing.T) {
 	noble.Parties = []ports.CorrectionParty{{ID: 70, FirstName: "Jan", LastName: "von der Heide"}}
 	stranger := planCorrection(t, noble, "7", "Lia Beispiel", "von der Linden, Tim", "", "", "vertrag.pdf")
 	assert.Equal(t, map[string]string{"parties": "party_unclear"}, correctionProblemCodes(stranger.row))
+	noble.Parties = []ports.CorrectionParty{{ID: 70, FirstName: "João", LastName: "dos Santos"}}
+	stranger = planCorrection(t, noble, "7", "Lia Beispiel", "dos Reis, Pedro", "", "", "vertrag.pdf")
+	assert.Equal(t, map[string]string{"parties": "party_unclear"}, correctionProblemCodes(stranger.row))
 	born := correctionSubject()
 	born.Parties = []ports.CorrectionParty{{ID: 70, FirstName: "Eva", LastName: "Schmidt, geb. Müller"}}
 	again := planCorrection(t, born, "7", "Lia Beispiel", "Schmidt, geb. Müller, Eva | Schmidt, geborene Müller, Eva", "", "", "vertrag.pdf")

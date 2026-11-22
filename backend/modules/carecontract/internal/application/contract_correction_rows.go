@@ -571,8 +571,8 @@ func sharesNameWord(party, written ports.CorrectionParty) bool {
 
 // nameParticles are words many unrelated names share: they tell nothing
 // about who a person is.
-var nameParticles = []string{"von", "vom", "van", "der", "den", "dem", "de", "del", "della", "di", "da", "du", "la", "le",
-	"zu", "zur", "zum", "und", "ten", "ter", "el", "al", "geb", "geborene", "geborener", "verw", "dr", "prof"}
+var nameParticles = []string{"von", "vom", "van", "der", "den", "dem", "de", "del", "della", "dos", "das", "do", "di", "da", "du",
+	"la", "le", "zu", "zur", "zum", "und", "ten", "ter", "el", "al", "bin", "ben", "geb", "geborene", "geborener", "verw", "dr", "prof"}
 
 // personWords are the words of a name that tell who the person is: its
 // words without the particles, or all of them when it has no other.
