@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/portalauth"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The second factor of the Träger-Portal (ADR 0084, #4651). The e-mailed code
@@ -73,10 +74,10 @@ var (
 // RememberDevice asks to remember the browser at that Träger (#6955); the
 // enrollment confirm ignores it.
 type MFAVerifyRequest struct {
-	ChallengeToken string `json:"challenge_token"`
-	Code           string `json:"code"`
-	OrganizationID int64  `json:"organization_id,omitempty"`
-	RememberDevice bool   `json:"remember_device,omitempty"`
+	ChallengeToken string   `json:"challenge_token"`
+	Code           string   `json:"code"`
+	OrganizationID ident.ID `json:"organization_id,omitempty"`
+	RememberDevice bool     `json:"remember_device,omitempty"`
 }
 
 // Bind validates the request like the other portals' verify body.
@@ -106,7 +107,7 @@ func (rs *Resource) mfaVerify(w http.ResponseWriter, r *http.Request) {
 		portalauth.Render(w, r, err, portalauth.MFARules)
 		return
 	}
-	rs.completeTraegerExchange(w, r, verified, req.OrganizationID, req.RememberDevice)
+	rs.completeTraegerExchange(w, r, verified, int64(req.OrganizationID), req.RememberDevice)
 }
 
 // mfaResend mails a new code for the challenge and answers with the renewed
@@ -178,7 +179,7 @@ func (rs *Resource) mfaEnrollConfirm(w http.ResponseWriter, r *http.Request) {
 	}
 	// Setting the factor up remembers no device: the frontend offers the
 	// choice only at the code step of a sign-in.
-	rs.completeTraegerExchange(w, r, verified, req.OrganizationID, false)
+	rs.completeTraegerExchange(w, r, verified, int64(req.OrganizationID), false)
 }
 
 // completeTraegerExchange mints the Träger session once the second factor is

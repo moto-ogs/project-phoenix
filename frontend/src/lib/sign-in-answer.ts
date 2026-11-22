@@ -46,8 +46,8 @@ interface WireSignInAnswer {
   access_token?: string;
   challenge_token?: string;
   masked_email?: string;
-  organization_id?: number;
-  organizations?: { id: number; name: string }[];
+  organization_id?: string | number;
+  organizations?: { id: string | number; name: string }[];
   trusted_device_enabled?: boolean;
   trusted_device_days?: number;
 }

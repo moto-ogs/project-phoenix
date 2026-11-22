@@ -247,7 +247,7 @@ describe("traeger-api", () => {
     expect(result.rows[0]).toMatchObject({ status: undefined, sequence: "" });
   });
 
-  it("sends the chosen Träger as a number and returns only session status", async () => {
+  it("preserves a bigint Träger ID and returns only session status", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse(200, {
         status: "success",
@@ -258,7 +258,11 @@ describe("traeger-api", () => {
     );
 
     await expect(
-      traegerLogin({ email: "a@b.de", password: "pw", organizationId: "7" }),
+      traegerLogin({
+        email: "a@b.de",
+        password: "pw",
+        organizationId: "9007199254740993",
+      }),
     ).resolves.toEqual({
       status: "authenticated",
     });
@@ -267,7 +271,7 @@ describe("traeger-api", () => {
     expect(JSON.parse(init?.body as string)).toEqual({
       email: "a@b.de",
       password: "pw",
-      organization_id: 7,
+      organization_id: "9007199254740993",
     });
   });
 
@@ -277,7 +281,7 @@ describe("traeger-api", () => {
         status: "success",
         data: {
           status: "organization_selection_required",
-          organizations: [{ id: 7, name: "Träger Nord" }],
+          organizations: [{ id: "9007199254740993", name: "Träger Nord" }],
         },
       }),
     );
@@ -286,7 +290,7 @@ describe("traeger-api", () => {
       traegerLogin({ email: "a@b.de", password: "pw" }),
     ).resolves.toEqual({
       status: "organization_selection_required",
-      organizations: [{ id: "7", name: "Träger Nord" }],
+      organizations: [{ id: "9007199254740993", name: "Träger Nord" }],
     });
     const [, init] = fetchMock.mock.calls[0]!;
     expect(JSON.parse(init?.body as string)).not.toHaveProperty(

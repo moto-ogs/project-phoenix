@@ -34,6 +34,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -206,19 +207,18 @@ func traegerAccount(t *testing.T, db *bun.DB, password string) *testpkg.AccountF
 // traegerLoginAnswer reads both answer shapes: status is the login state of
 // a success and the HTTP status number of a refusal.
 type traegerLoginAnswer struct {
-	Status         any    `json:"status"`
-	AccessToken    string `json:"access_token"`
-	RefreshToken   string `json:"refresh_token"`
-	ChallengeToken string `json:"challenge_token"`
-	MaskedEmail    string `json:"masked_email"`
-	// The Träger sign-in is outside the contract and answers numbers.
-	OrganizationID int64 `json:"organization_id"`
+	Status         any      `json:"status"`
+	AccessToken    string   `json:"access_token"`
+	RefreshToken   string   `json:"refresh_token"`
+	ChallengeToken string   `json:"challenge_token"`
+	MaskedEmail    string   `json:"masked_email"`
+	OrganizationID ident.ID `json:"organization_id"`
 	// The remember-device offer of the code step (#6955).
 	TrustedDeviceEnabled *bool `json:"trusted_device_enabled"`
 	TrustedDeviceDays    *int  `json:"trusted_device_days"`
 	Organizations        []struct {
-		ID   int64  `json:"id"`
-		Name string `json:"name"`
+		ID   ident.ID `json:"id"`
+		Name string   `json:"name"`
 	} `json:"organizations"`
 	Code string `json:"code"`
 }

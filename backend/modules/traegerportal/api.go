@@ -38,12 +38,13 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/portalauth"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/tokenprimitives"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Organization is a Träger the person may choose at sign-in.
 type Organization struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 // AuthRuntime is the Träger-Portal's session port; the composition root binds
@@ -181,9 +182,9 @@ func (rs *Resource) RouterWithAuthRateLimiter(authRateLimiter func(http.Handler)
 // LoginRequest is the body of POST /traeger/auth/login. OrganizationID is the
 // Träger a member of several chose; zero lets the backend decide or ask.
 type LoginRequest struct {
-	Email          string `json:"email"`
-	Password       string `json:"password"`
-	OrganizationID int64  `json:"organization_id,omitempty"`
+	Email          string   `json:"email"`
+	Password       string   `json:"password"`
+	OrganizationID ident.ID `json:"organization_id,omitempty"`
 }
 
 // Bind normalizes and validates the request.
@@ -208,7 +209,7 @@ type LoginResponse struct {
 	MFAEnrollmentRequired bool           `json:"mfa_enrollment_required,omitempty"`
 	TrustedDeviceEnabled  *bool          `json:"trusted_device_enabled,omitempty"`
 	TrustedDeviceDays     *int           `json:"trusted_device_days,omitempty"`
-	OrganizationID        int64          `json:"organization_id,omitempty"`
+	OrganizationID        ident.ID       `json:"organization_id,omitempty"`
 	Organizations         []Organization `json:"organizations,omitempty"`
 }
 
@@ -223,7 +224,7 @@ func (rs *Resource) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	client := portalauth.ClientOf(r)
-	result, err := rs.auth.Login(r.Context(), req.Email, req.Password, client.IP, client.UserAgent, req.OrganizationID, common.TrustedDevice(r))
+	result, err := rs.auth.Login(r.Context(), req.Email, req.Password, client.IP, client.UserAgent, int64(req.OrganizationID), common.TrustedDevice(r))
 	if err != nil {
 		portalauth.Render(w, r, err, portalauth.LoginRules)
 		return
@@ -234,13 +235,13 @@ func (rs *Resource) login(w http.ResponseWriter, r *http.Request) {
 func loginResponse(result *identityaccess.TraegerLoginResult) LoginResponse {
 	organizations := make([]Organization, 0, len(result.Organizations))
 	for _, organization := range result.Organizations {
-		organizations = append(organizations, Organization(organization))
+		organizations = append(organizations, Organization{ID: ident.ID(organization.ID), Name: organization.Name})
 	}
 	response := LoginResponse{
 		Status: string(result.Status), AccessToken: result.AccessToken, RefreshToken: result.RefreshToken,
 		ChallengeToken: result.ChallengeToken, MaskedEmail: result.MaskedEmail,
 		MFAEnrollmentRequired: result.Status == identityaccess.TraegerLoginMFAEnrollmentRequired,
-		OrganizationID:        result.OrganizationID, Organizations: organizations,
+		OrganizationID:        ident.ID(result.OrganizationID), Organizations: organizations,
 	}
 	if result.Status == identityaccess.TraegerLoginMFARequired {
 		enabled, days := result.TrustedDeviceEnabled, result.TrustedDeviceDays
