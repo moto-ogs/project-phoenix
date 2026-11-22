@@ -63,7 +63,7 @@ export default function CatererAccountPage() {
       <TenantPasswordChangeModal
         isOpen={showPasswordModal}
         onClose={() => setShowPasswordModal(false)}
-        apiEndpoint="/api/caterer/account/password"
+        portal="caterer"
         // The change ended every session of the account, this one too. If the
         // logout request itself fails, the revoked session still opens
         // nothing; its next request ends it (#5194).

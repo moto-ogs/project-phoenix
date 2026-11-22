@@ -3,7 +3,8 @@
 // Role Entity Configuration
 
 import { defineEntityConfig, type SectionConfig } from "@/lib/database/types";
-import type { Role, RoleWire } from "@/lib/auth-helpers";
+import type { Role } from "@/lib/auth-helpers";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import {
   mapRoleResponse,
   getRoleDisplayName,
@@ -198,7 +199,8 @@ export const rolesConfig = defineEntityConfig<Role>({
         ? { template: data.template }
         : !data.isSystem && { base_role: data.baseRole }),
     }),
-    mapResponse: (data: unknown): Role => mapRoleResponse(data as RoleWire),
+    mapResponse: (data: unknown): Role =>
+      mapRoleResponse(data as sharedContract.RoleResponse),
   },
 
   labels: {

@@ -1,8 +1,8 @@
+import type * as meContract from "./contract/me.generated";
 import { describe, it, expect } from "vitest";
 import {
   mapProfileResponse,
   mapProfileUpdateRequest,
-  type ProfileWire,
   type ProfileUpdateRequest,
   type ProfileSettings,
 } from "./profile-helpers";
@@ -25,7 +25,7 @@ describe("profile-helpers", () => {
         },
       };
 
-      const backendProfile: ProfileWire = {
+      const backendProfile: meContract.ProfileResponse = {
         id: "123",
         first_name: "John",
         last_name: "Doe",
@@ -59,7 +59,7 @@ describe("profile-helpers", () => {
     });
 
     it("should handle invalid JSON string in settings", () => {
-      const backendProfile: ProfileWire = {
+      const backendProfile: meContract.ProfileResponse = {
         id: "789",
         first_name: "Invalid",
         last_name: "Settings",
@@ -77,7 +77,7 @@ describe("profile-helpers", () => {
     });
 
     it("should handle profile with no settings", () => {
-      const backendProfile: ProfileWire = {
+      const backendProfile: meContract.ProfileResponse = {
         id: "100",
         first_name: "No",
         last_name: "Settings",
@@ -94,7 +94,7 @@ describe("profile-helpers", () => {
     });
 
     it("should rewrite avatar path starting with /uploads/", () => {
-      const backendProfile: ProfileWire = {
+      const backendProfile: meContract.ProfileResponse = {
         id: "200",
         first_name: "Avatar",
         last_name: "Test",
@@ -112,7 +112,7 @@ describe("profile-helpers", () => {
     });
 
     it("should not rewrite avatar path not starting with /uploads/", () => {
-      const backendProfile: ProfileWire = {
+      const backendProfile: meContract.ProfileResponse = {
         id: "300",
         first_name: "External",
         last_name: "Avatar",
@@ -130,7 +130,7 @@ describe("profile-helpers", () => {
     });
 
     it("should handle null avatar", () => {
-      const backendProfile: ProfileWire = {
+      const backendProfile: meContract.ProfileResponse = {
         id: "400",
         first_name: "No",
         last_name: "Avatar",
@@ -148,7 +148,7 @@ describe("profile-helpers", () => {
     });
 
     it("should handle avatar path with no filename", () => {
-      const backendProfile: ProfileWire = {
+      const backendProfile: meContract.ProfileResponse = {
         id: "500",
         first_name: "Empty",
         last_name: "Path",
@@ -167,7 +167,7 @@ describe("profile-helpers", () => {
     });
 
     it("should handle missing optional fields", () => {
-      const backendProfile: ProfileWire = {
+      const backendProfile: meContract.ProfileResponse = {
         id: "600",
         first_name: "Minimal",
         last_name: "Profile",

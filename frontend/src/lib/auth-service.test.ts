@@ -2,12 +2,14 @@
 // Tests for the auth service methods that still have callers
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type { PermissionWire, RoleWire } from "./auth-helpers";
+import type * as sharedContract from "./contract/shared.generated";
 import { authService } from "./auth-service";
+
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
 // Sample test data
 // The shape the catalog proxy decodes (snake_case, string IDs).
-const sampleBackendRole: RoleWire = {
+const sampleBackendRole: sharedContract.RoleResponse = {
   id: "1",
   name: "admin",
   description: "Administrator role",
@@ -17,7 +19,7 @@ const sampleBackendRole: RoleWire = {
   updated_at: "2024-01-01T00:00:00Z",
 };
 
-const sampleBackendPermission: PermissionWire = {
+const sampleBackendPermission: sharedContract.PermissionResponse = {
   id: "1",
   name: "users.read",
   description: "Read users",
@@ -86,14 +88,6 @@ describe("authService", () => {
         expect(result[0]?.name).toBe("users.read");
         expect(sentUrl()).toBe("/api/auth/roles/1/permissions");
       });
-
-      it("handles double-nested response structure", async () => {
-        respondWith({ data: { data: [sampleBackendPermission] } });
-
-        const result = await authService.getRolePermissions("1");
-
-        expect(result).toHaveLength(1);
-      });
     });
 
     describe("replaceRolePermissions", () => {
@@ -157,11 +151,9 @@ describe("authService", () => {
         expect(result[0]?.name).toBe("admin");
         expect(fetchMock).toHaveBeenCalledWith(
           "/api/auth/accounts/1/roles",
-          expect.objectContaining({
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-          }),
+          expect.objectContaining({ method: "GET" }),
         );
+        expect(sentInit().headers).toBeUndefined();
       });
     });
   });

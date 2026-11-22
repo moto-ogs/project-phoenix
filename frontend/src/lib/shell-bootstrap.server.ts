@@ -1,3 +1,4 @@
+import type * as studentsContract from "~/lib/contract/students.generated";
 import type { Session } from "next-auth";
 import type { AccountTenantResponse } from "./contract/auth-account.generated";
 import { mapAccountTenant } from "~/lib/account-tenants";
@@ -28,7 +29,6 @@ import type {
 } from "~/lib/supervision-derive";
 import type { TenantInfo } from "~/lib/tenant-api";
 import { loadUserContext } from "~/lib/user-context.server";
-import type { NavigationEducationalGroup } from "~/lib/usercontext-helpers";
 
 const logger = createLogger({ component: "ShellBootstrap" });
 
@@ -139,11 +139,9 @@ async function loadSupervision(
 
   const [groups, supervision, openRooms] = await Promise.all([
     optional("groups", async (signal) => {
-      const response = await apiGet<Envelope<NavigationEducationalGroup[]>>(
-        "/api/students/ogs-group-navigation",
-        token,
-        { signal },
-      );
+      const response = await apiGet<
+        Envelope<studentsContract.NavigationGroup[]>
+      >("/api/students/ogs-group-navigation", token, { signal });
       return response.data;
     }),
     optional("supervised", loadSupervised),

@@ -77,6 +77,12 @@ vi.mock("~/components/ui/icons", () => ({
   ),
 }));
 
+// The staff portal sends through sessionFetch; the stub passes the answer on.
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 // Mock fetch
 global.fetch = vi.fn();
 
@@ -86,9 +92,10 @@ describe("PasswordChangeModal", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // The catalog proxy's answer to a route without data.
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
-      json: async () => ({}),
+      json: async () => ({ status: "success", data: null }),
     });
   });
 

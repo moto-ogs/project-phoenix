@@ -3,7 +3,8 @@
 // Permission Entity Configuration
 
 import { defineEntityConfig } from "@/lib/database/types";
-import type { Permission, PermissionWire } from "@/lib/auth-helpers";
+import type { Permission } from "@/lib/auth-helpers";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import { mapPermissionResponse } from "@/lib/auth-helpers";
 import {
   formatPermissionDisplay,
@@ -209,7 +210,7 @@ export const permissionsConfig = defineEntityConfig<Permission>({
 
   service: {
     mapResponse: (data: unknown): Permission =>
-      mapPermissionResponse(data as PermissionWire),
+      mapPermissionResponse(data as sharedContract.PermissionResponse),
   },
 
   labels: {
