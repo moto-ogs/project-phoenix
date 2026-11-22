@@ -6,6 +6,50 @@ describe("emailCodeFactorApi", () => {
 
   afterEach(() => {
     global.fetch = originalFetch;
+    vi.unstubAllGlobals();
+  });
+
+  describe.each([
+    { operation: "confirm", code: "identity.mfa_code_invalid" },
+    { operation: "disable", code: "identity.current_password_wrong" },
+  ])("parent $operation", ({ operation, code }) => {
+    const submit = () => {
+      const api = emailCodeFactorApi("parent");
+      return operation === "confirm"
+        ? api.confirm("challenge", "123456")
+        : api.disable("wrong password");
+    };
+
+    it("keeps a credential refusal on the settings form", async () => {
+      const assign = vi.fn();
+      vi.stubGlobal("window", { location: { assign } });
+      global.fetch = vi
+        .fn()
+        .mockResolvedValueOnce(
+          Response.json({ status: 401, code }, { status: 401 }),
+        );
+
+      await expect(submit()).rejects.toMatchObject({ status: 401, code });
+      expect(assign).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      Response.json(
+        { status: 401, code: "identity.invalid_credentials" },
+        { status: 401 },
+      ),
+      new Response(null, { status: 401 }),
+    ])(
+      "still redirects an unauthenticated session to login (%#)",
+      async (response) => {
+        const assign = vi.fn();
+        vi.stubGlobal("window", { location: { assign } });
+        global.fetch = vi.fn().mockResolvedValueOnce(response);
+
+        await expect(submit()).rejects.toMatchObject({ status: 401 });
+        expect(assign).toHaveBeenCalledWith("/parents/login");
+      },
+    );
   });
 
   it("reads the parent's state and start in the catalog proxy's envelope (#2352)", async () => {

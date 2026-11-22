@@ -332,9 +332,10 @@ slash is dropped and each parameter encoded.
   the session gate before the request and one renewal with a retry
   (`sessionFetch`), then sign-out; `authRefusals` names codes that refuse
   only the operation. Operator: to `/operator/login`. Parents: to
-  `/parents/login`. Träger, moto schule and caterer: the error stays on the
-  page. A parent client that reports refusals (`PARENT_ACCESS_REFUSED_EVENT`)
-  catches the `ApiError` itself.
+  `/parents/login`, except for the call's explicit `authRefusals` (e.g. a
+  wrong MFA confirmation code or current password). Träger, moto schule and
+  caterer: the error stays on the page. A parent client that reports refusals
+  (`PARENT_ACCESS_REFUSED_EVENT`) catches the `ApiError` itself.
 - **No contract:** a backend route without a contract gets one first
   (#7808); its client waits until then. A named `route.ts` the contract
   cannot carry (`settings/values/[key]` purges the cached tenant lookup) is

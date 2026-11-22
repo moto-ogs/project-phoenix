@@ -88,6 +88,7 @@ const parentFactor: EmailCodeFactorApi = {
   async disable(currentPassword) {
     await bffJson("parent", "POST /parent/me/mfa/disable", {
       body: { current_password: currentPassword },
+      authRefusals: ["identity.current_password_wrong"],
     });
   },
 };
@@ -104,7 +105,10 @@ async function confirmFactor(
     portal,
     "POST",
     path,
-    { body: { challenge_token: challengeToken, code } },
+    {
+      body: { challenge_token: challengeToken, code },
+      authRefusals: ["identity.mfa_code_invalid"],
+    },
   );
   return { sessionRenewed: data.session_renewed };
 }
