@@ -1,4 +1,4 @@
-import { bffJson } from "./bff-fetch";
+import { legacyBffJson } from "./bff-fetch";
 import { DEPARTURE_WEEKDAYS, type DepartureDayKey } from "./departure-plan";
 
 /**
@@ -204,7 +204,7 @@ export function notifyStudentCompanionDisplayChanged(): void {
 export async function fetchStudentCompanions(
   studentId: string,
 ): Promise<StudentCompanion[]> {
-  const raw = await bffJson<RawStudentCompanion[] | null>(
+  const raw = await legacyBffJson<RawStudentCompanion[] | null>(
     `/api/students/${encodeURIComponent(studentId)}/companions`,
   );
   return (raw ?? []).map((companion) => ({

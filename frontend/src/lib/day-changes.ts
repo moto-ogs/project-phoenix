@@ -3,7 +3,7 @@
  * heute. Das Backend liefert strukturierte Einträge ohne fertige Texte und
  * einen Status pro Quelle; die Texte baut `day-changes-text.ts`.
  */
-import { bffJson } from "~/lib/bff-fetch";
+import { legacyBffJson } from "~/lib/bff-fetch";
 import type {
   Child,
   ChildStatus,
@@ -238,5 +238,5 @@ function mapDayChanges(overview: Overview): DayChangesOverview {
 
 /** Liest die Übersicht der Sitzung über den Proxy des Staff-Portals. */
 export async function fetchDayChanges(): Promise<DayChangesOverview> {
-  return mapDayChanges(await bffJson<Overview>("/api/day-changes/today"));
+  return mapDayChanges(await legacyBffJson<Overview>("/api/day-changes/today"));
 }

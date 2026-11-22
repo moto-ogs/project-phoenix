@@ -1,4 +1,4 @@
-import { bffJson } from "~/lib/bff-fetch";
+import { legacyBffJson } from "~/lib/bff-fetch";
 import type {
   SchoolSearchRequest,
   SearchResult,
@@ -26,7 +26,7 @@ export async function searchSchool(
   query: string,
   signal?: AbortSignal,
 ): Promise<SchoolSearchResult> {
-  const result = await bffJson<SearchResult>("/api/search", {
+  const result = await legacyBffJson<SearchResult>("/api/search", {
     method: "POST",
     body: { query } satisfies SchoolSearchRequest,
     signal,

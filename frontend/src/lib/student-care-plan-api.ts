@@ -11,7 +11,7 @@
 
 import { knownEnum } from "~/lib/contract/known-enum";
 import type * as wire from "~/lib/contract/timetable.generated";
-import { bffJson } from "./bff-fetch";
+import { legacyBffJson } from "./bff-fetch";
 
 /** Arrival/pickup slot source — mirrors SlotSource* in the backend. */
 type CarePlanSlotSource = "schedule" | "exception" | "none";
@@ -143,7 +143,7 @@ export async function fetchStudentCarePlanDay(
   date: string,
 ): Promise<CarePlanDay> {
   return mapDay(
-    await bffJson<wire.StudentDayResponse>(
+    await legacyBffJson<wire.StudentDayResponse>(
       `/api/timetable/student/${encodeURIComponent(studentId)}/day?date=${date}`,
     ),
   );
@@ -156,7 +156,7 @@ export async function fetchStudentCarePlanWeek(
   to: string,
 ): Promise<CarePlanWeek> {
   return mapWeek(
-    await bffJson<wire.StudentWeekResponse>(
+    await legacyBffJson<wire.StudentWeekResponse>(
       `/api/timetable/student/${encodeURIComponent(studentId)}/week?from=${from}&to=${to}`,
     ),
   );
@@ -189,7 +189,7 @@ export async function fetchAttendanceCorrections(
   instanceId: string,
   studentId: string,
 ): Promise<AttendanceCorrection[]> {
-  const trail = await bffJson<{ corrections?: AttendanceCorrection[] }>(
+  const trail = await legacyBffJson<{ corrections?: AttendanceCorrection[] }>(
     `${correctionPath(instanceId, studentId)}/corrections`,
   );
   return trail.corrections ?? [];
@@ -200,7 +200,7 @@ export async function correctAttendance(
   studentId: string,
   correction: AttendanceCorrectionInput,
 ): Promise<void> {
-  await bffJson<unknown>(
+  await legacyBffJson<unknown>(
     `${correctionPath(instanceId, studentId)}/correction`,
     {
       method: "POST",

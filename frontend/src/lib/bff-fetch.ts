@@ -1,24 +1,316 @@
-import { apiErrorFromResponse } from "./api-error";
-import type { ApiResponse } from "./api-envelope";
+// The one browser call for a JSON route of the BFF, in every portal (#7806).
+// The route key names the registered Go route; its generated entry types
+// the path parameters, the query, the body and the answer. Decisions:
+// docs/agents/frontend-api.md#browser-calls.
+import type { z } from "zod";
+import { ApiError, apiErrorFromResponse, transportFetch } from "./api-error";
+import type { portalRoutes } from "./contract/portals.generated";
+import type { RequestBody } from "./contract/runtime";
+import type { ErrorCode } from "./error-codes.generated";
 import { sessionFetch } from "./session-cache";
 
-interface BffRequest {
-  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-  /** JSON-serialized, or sent as is when it is FormData. */
-  body?: unknown;
+/** A portal by the scope of its session token (`portalRoutes`). */
+export type Portal = Exclude<keyof typeof portalRoutes, "public">;
+
+type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+
+// A JSON route: its answer is one decoder. File answers and the response
+// variants of GET /api/students/ are not JSON routes of this helper.
+type JsonRoute<P extends Portal> = Extract<
+  (typeof portalRoutes)[P][number],
+  { response: z.ZodType }
+>;
+
+type KeyOf<R> = R extends {
+  method: infer M extends string;
+  pattern: infer T extends string;
+}
+  ? `${M} ${T}`
+  : never;
+
+/** A registered JSON route of the portal: `"GET /api/activities/categories"`. */
+export type RouteKey<P extends Portal> = KeyOf<JsonRoute<P>>;
+
+type RouteOf<P extends Portal, K extends RouteKey<P>> =
+  JsonRoute<P> extends infer R
+    ? R extends unknown
+      ? KeyOf<R> extends K
+        ? R
+        : never
+      : never
+    : never;
+
+type ParamNames<S extends string> =
+  S extends `${string}{${infer N}}${infer Rest}` ? N | ParamNames<Rest> : never;
+
+type QueryValue =
+  string | number | boolean | null | undefined | readonly (string | number)[];
+
+type Answer<R> = R extends { response: z.ZodType<infer O> } ? O : never;
+
+/**
+ * What the call resolves to: the `data` of the answer, a paginated list
+ * also its `pagination`; `null` for a route without data and for a 204.
+ */
+export type BffResult<R> =
+  Answer<R> extends { data: infer D; pagination: infer G }
+    ? { data: D; pagination: G }
+    : Answer<R> extends { data: infer D }
+      ? D
+      : never;
+
+type BodyOf<R> = R extends { request: RequestBody<infer B> }
+  ? { body: B }
+  : R extends { request: { kind: "multipart" } }
+    ? { body: FormData }
+    : { body?: never };
+
+type ParamsOf<R> = R extends { pattern: infer T extends string }
+  ? [ParamNames<T>] extends [never]
+    ? { params?: never }
+    : { params: Record<ParamNames<T>, string> }
+  : never;
+
+type QueryOf<R> = R extends { query: readonly (infer Q extends string)[] }
+  ? { query?: Partial<Record<Q, QueryValue>> }
+  : { query?: never };
+
+interface CallOptions {
   signal?: AbortSignal;
   headers?: Readonly<Record<string, string>>;
+  /**
+   * The ApiError's message, e.g. "Kategorie konnte nicht angelegt werden".
+   * The user reads the catalog text of the error's code; this text is the
+   * fallback a client and its tests already name.
+   */
+  errorMessage?: string;
+  /**
+   * Tenant only: a 401 with one of these codes refuses this operation and
+   * leaves the session as it is; it becomes an ApiError without a renewal.
+   */
+  authRefusals?: readonly ErrorCode[];
+}
+
+export type BffOptions<R> = CallOptions & BodyOf<R> & ParamsOf<R> & QueryOf<R>;
+
+type OptionalArg<R> =
+  object extends BffOptions<R>
+    ? [options?: BffOptions<R>]
+    : [options: BffOptions<R>];
+
+interface PortalRow {
+  /** Where the backend mounts the portal's routes. */
+  mount: string;
+  /** The BFF prefix of the portal's catalog proxy. */
+  bff: string;
+  /** Sends the request; owns the portal's answer to a 401. */
+  send: (
+    url: string,
+    init: RequestInit,
+    options: CallOptions,
+  ) => Promise<Response>;
+}
+
+const sendPlain = (url: string, init: RequestInit) =>
+  transportFetch(url, { ...init, credentials: "include", cache: "no-store" });
+
+function onLoginPage(path: string): boolean {
+  return window.location.pathname.startsWith(path);
 }
 
 /**
- * Calls a tenant BFF route and returns the `data` of its answer. Every
- * success has the backend's envelope `{ status, data }`; a failure
- * becomes an ApiError with the backend's code, field errors and request ID,
- * and a 204 resolves to undefined.
+ * Where the portals differ, and nowhere else. A 401 has reached the browser
+ * after the BFF renewed the session once:
+ * - tenant: the session gate and one renewal with a retry (`sessionFetch`),
+ *   then a sign-out;
+ * - operator (`platform`) and parents: a switch to the portal's login;
+ * - Träger (`org`), moto schule and caterer: the ApiError, as before.
  */
-export async function bffJson<T>(
+const PORTALS: Readonly<Record<Portal, PortalRow>> = {
+  tenant: {
+    mount: "/api",
+    bff: "/api",
+    send: (url, init, { authRefusals }) =>
+      sessionFetch(url, init, authRefusals ? { authRefusals } : {}),
+  },
+  parent: {
+    mount: "/parent",
+    bff: "/api/parent",
+    send: async (url, init) => {
+      const response = await sendPlain(url, init);
+      if (response.status === 401 && typeof window !== "undefined") {
+        window.location.assign("/parents/login");
+      }
+      return response;
+    },
+  },
+  school: { mount: "/school", bff: "/api/school", send: sendPlain },
+  org: { mount: "/traeger", bff: "/api/traeger", send: sendPlain },
+  caterer: { mount: "/caterer", bff: "/api/caterer", send: sendPlain },
+  platform: {
+    mount: "/operator",
+    bff: "/api/operator",
+    send: async (url, init) => {
+      const response = await sendPlain(url, init);
+      if (
+        response.status === 401 &&
+        typeof window !== "undefined" &&
+        !onLoginPage("/operator/login")
+      ) {
+        window.location.href = "/operator/login";
+        throw new ApiError("Session expired", 401);
+      }
+      return response;
+    },
+  },
+};
+
+/** The BFF path of a backend pattern, with its parameters filled in. */
+export function bffPath(
+  portal: Portal,
+  pattern: string,
+  params: Readonly<Record<string, string>> = {},
+  query?: Readonly<Record<string, QueryValue>>,
+): string {
+  const { mount, bff } = PORTALS[portal];
+  const filled = pattern.replaceAll(/\{([^}]+)\}/g, (_, name: string) => {
+    const value = params[name];
+    if (value === undefined || value === "") {
+      throw new Error(`bffJson: missing path parameter ${name} of ${pattern}`);
+    }
+    return encodeURIComponent(value);
+  });
+  const underMount = filled === mount || filled.startsWith(`${mount}/`);
+  const path = (
+    bff + (underMount ? filled.slice(mount.length) : filled)
+  ).replace(/\/+$/, "");
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(query ?? {})) {
+    if (value === undefined || value === null) continue;
+    for (const item of Array.isArray(value) ? value : [value]) {
+      search.append(key, String(item));
+    }
+  }
+  const qs = search.toString();
+  return qs ? `${path}?${qs}` : path;
+}
+
+async function call<T>(
+  portal: Portal,
+  method: Method,
   url: string,
-  { method = "GET", body, signal, headers }: BffRequest = {},
+  options: CallOptions & { body?: unknown },
+): Promise<T> {
+  const { body, signal, headers, errorMessage } = options;
+  const isForm = body instanceof FormData;
+  const init: RequestInit = {
+    method,
+    ...(signal && { signal }),
+    headers:
+      body === undefined || isForm
+        ? { ...headers }
+        : { "Content-Type": "application/json", ...headers },
+    ...(body !== undefined && { body: isForm ? body : JSON.stringify(body) }),
+  };
+  const response = await PORTALS[portal].send(url, init, options);
+  const message = (status: number) =>
+    errorMessage ?? `${method} ${url} failed (${status})`;
+  if (!response.ok) {
+    throw await apiErrorFromResponse(response, message(response.status));
+  }
+  if (response.status === 204) return null as T;
+  let answer: unknown;
+  try {
+    answer = await response.json();
+  } catch {
+    answer = undefined;
+  }
+  if (
+    answer === null ||
+    typeof answer !== "object" ||
+    !("data" in answer) ||
+    (answer as { status?: unknown }).status !== "success"
+  ) {
+    // The proxy decodes every answer, so this is a broken BFF route. A
+    // write may have happened: the person reloads before trying again.
+    throw new ApiError(message(502), 502, {
+      code:
+        method === "GET"
+          ? "general.unavailable"
+          : "general.write_answer_unreadable",
+    });
+  }
+  const { data, pagination } = answer as {
+    data: unknown;
+    pagination?: unknown;
+  };
+  return (
+    pagination === undefined ? (data ?? null) : { data, pagination }
+  ) as T;
+}
+
+/**
+ * Calls a registered JSON route through the portal's BFF and resolves to the
+ * `data` of its answer (a paginated list: `{ data, pagination }`; no data or
+ * a 204: `null`). A failure is an ApiError with the backend's code, field
+ * errors and request ID; an answer without `data` is a 502.
+ *
+ * ```ts
+ * const rows = await bffJson("tenant", "GET /api/students/{id}/partial-absences", {
+ *   params: { id: studentId },
+ *   query: { from, to },
+ * });
+ * ```
+ */
+export function bffJson<P extends Portal, K extends RouteKey<P>>(
+  portal: P,
+  route: K,
+  ...[options]: OptionalArg<RouteOf<P, K>>
+): Promise<BffResult<RouteOf<P, K>>> {
+  const space = route.indexOf(" ");
+  const method = route.slice(0, space) as Method;
+  const opts = (options ?? {}) as CallOptions & {
+    body?: unknown;
+    params?: Record<string, string>;
+    query?: Record<string, QueryValue>;
+  };
+  const url = bffPath(portal, route.slice(space + 1), opts.params, opts.query);
+  return call(portal, method, url, opts);
+}
+
+/**
+ * The same call for a BFF path no Go route registers: a named `route.ts`
+ * that aggregates backend reads (`app/api/activities/[id]/students`). The
+ * caller names the answer's type; every call site is listed with its reason
+ * in `bff-fetch-uncontracted.test.ts`, and the list only shrinks.
+ */
+export function bffJsonUncontracted<T>(
+  portal: Portal,
+  method: Method,
+  path: string,
+  options: CallOptions & { body?: unknown } = {},
+): Promise<T> {
+  return call(portal, method, path, options);
+}
+
+/**
+ * @deprecated The URL form of the first bffJson, kept only until its callers
+ * move to `bffJson(portal, route, …)` in the next PR of #7806. Do not add a
+ * caller.
+ */
+export async function legacyBffJson<T>(
+  url: string,
+  {
+    method = "GET",
+    body,
+    signal,
+    headers,
+  }: {
+    method?: Method;
+    body?: unknown;
+    signal?: AbortSignal;
+    headers?: Readonly<Record<string, string>>;
+  } = {},
 ): Promise<T> {
   const response = await sessionFetch(url, {
     method,
@@ -35,5 +327,5 @@ export async function bffJson<T>(
     );
   }
   if (response.status === 204) return undefined as T;
-  return ((await response.json()) as ApiResponse<T>).data;
+  return ((await response.json()) as { data: T }).data;
 }

@@ -1,4 +1,4 @@
-import { bffJson } from "./bff-fetch";
+import { legacyBffJson } from "./bff-fetch";
 
 /** Was das Entfernen eines Raums bewirkt (#6845). */
 export type RoomRemovalOutcome = "delete" | "archive" | "blocked";
@@ -25,7 +25,7 @@ export interface RoomRemovalImpact {
 export function fetchRoomRemovalImpact(
   roomId: string,
 ): Promise<RoomRemovalImpact> {
-  return bffJson<RoomRemovalImpact>(
+  return legacyBffJson<RoomRemovalImpact>(
     `/api/rooms/${encodeURIComponent(roomId)}/removal-impact`,
   );
 }
@@ -34,9 +34,8 @@ export function fetchRoomRemovalImpact(
 export async function removeRoom(
   roomId: string,
 ): Promise<Exclude<RoomRemovalOutcome, "blocked">> {
-  const result = await bffJson<{ outcome?: RoomRemovalOutcome } | undefined>(
-    `/api/rooms/${encodeURIComponent(roomId)}`,
-    { method: "DELETE" },
-  );
+  const result = await legacyBffJson<
+    { outcome?: RoomRemovalOutcome } | undefined
+  >(`/api/rooms/${encodeURIComponent(roomId)}`, { method: "DELETE" });
   return result?.outcome === "archive" ? "archive" : "delete";
 }

@@ -3,7 +3,7 @@ import {
   apiErrorFromBody,
   apiErrorFromResponse,
 } from "~/lib/api-error";
-import { bffJson } from "~/lib/bff-fetch";
+import { legacyBffJson } from "~/lib/bff-fetch";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { sessionFetch } from "~/lib/session-cache";
 import { knownEnum } from "~/lib/contract/known-enum";
@@ -151,7 +151,7 @@ export async function fetchStudentStatusDays(
   from: string,
   to: string,
 ): Promise<StudentStatusDay[]> {
-  const rows = await bffJson<StudentStatusDayResponse[]>(
+  const rows = await legacyBffJson<StudentStatusDayResponse[]>(
     `/api/students/${encodeURIComponent(studentId)}/status-days?from=${from}&to=${to}`,
   );
   return mapStatusDays(rows);
@@ -197,7 +197,7 @@ export async function fetchStatusDayOverview(
   if (filters.query.trim()) params.set("q", filters.query.trim());
   if (filters.status !== "all") params.set("status", filters.status);
   if (filters.groupId !== "all") params.set("group_id", filters.groupId);
-  const overview = await bffJson<statusDayOverviewResponse>(
+  const overview = await legacyBffJson<statusDayOverviewResponse>(
     `/api/students/status-days?${params}`,
   );
   return {
@@ -257,7 +257,7 @@ export async function deleteStudentStatusDay(
   studentId: string,
   statusDayId: string,
 ): Promise<void> {
-  await bffJson<unknown>(
+  await legacyBffJson<unknown>(
     `/api/students/${encodeURIComponent(studentId)}/status-days/${encodeURIComponent(statusDayId)}`,
     { method: "DELETE" },
   );

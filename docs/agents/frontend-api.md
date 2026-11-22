@@ -290,6 +290,48 @@ event carries the proxy-assigned `X-Request-ID`. `logger.error` records context
 and a breadcrumb, never an event. Uncaught Next.js exceptions use
 `onRequestError` in `src/instrumentation.ts`.
 
+### Browser calls
+
+Every JSON call of the browser to the BFF goes through one helper,
+`bffJson(portal, route, options)` (`lib/bff-fetch.ts`, #7806). `route` is the
+catalog key of a registered route; it must be in `portalRoutes[portal]`, and
+its generated entry types `params`, `query`, `body` and the answer. The
+import is type-only, so no decoder reaches the browser bundle: the portal's
+catalog proxy has decoded the answer already.
+
+| Portal | Example |
+|---|---|
+| Staff (`tenant`) | `bffJson("tenant", "GET /api/students/{id}/partial-absences", { params: { id }, query: { from, to } })` |
+| Parents (`parent`) | `bffJson("parent", "GET /parent/me/children")` |
+| moto schule (`school`) | `bffJson("school", "GET /school/calendar/my")` |
+| Träger (`org`) | `bffJson("org", "POST /traeger/absence-types/", { body })` |
+| Caterer (`caterer`) | `bffJson("caterer", "GET /caterer/schools/{schoolId}/orders", { params: { schoolId }, query: { from, to } })` |
+| Operator (`platform`) | `bffJson("platform", "GET /operator/stats")` |
+
+The path is the pattern below the portal's BFF prefix, a route outside the
+portal's mount (`/analytics-policy`) below the prefix as a whole; a trailing
+slash is dropped and each parameter encoded.
+
+- **Answer:** the `data` of the envelope; a paginated list resolves to
+  `{ data, pagination }`; a route without data and a 204 resolve to `null`.
+- **Missing `data`:** a 2xx answer that is not `{ status: "success", data }`
+  is an `ApiError` 502, `general.write_answer_unreadable` for a write (as
+  `decodeContract`). There is no fallback value.
+- **Failure:** an `ApiError` with the backend's code, field errors and
+  request ID. `errorMessage` sets its message, so a client keeps its text.
+- **401:** one table in `bff-fetch.ts` holds where the portals differ. Staff:
+  the session gate before the request and one renewal with a retry
+  (`sessionFetch`), then sign-out; `authRefusals` names codes that refuse
+  only the operation. Operator: to `/operator/login`. Parents: to
+  `/parents/login`. Träger, moto schule and caterer: the error stays on the
+  page. A parent client that reports refusals (`PARENT_ACCESS_REFUSED_EVENT`)
+  catches the `ApiError` itself.
+- **No contract:** a named `route.ts` the contract cannot carry is called
+  with `bffJsonUncontracted<T>(portal, method, path)`; each caller is listed
+  with its reason in `bff-fetch-uncontracted.test.ts`, and the list only
+  shrinks. A backend route without a contract gets one first (#7808).
+- Files and downloads keep their own path (`fetch` of the file URL).
+
 ### API clients and data mapping
 
 - `lib/{domain}-api.ts` — browser calls to the portal's BFF paths;
