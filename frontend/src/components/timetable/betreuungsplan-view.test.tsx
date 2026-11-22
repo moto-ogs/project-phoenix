@@ -2553,7 +2553,7 @@ describe("BetreuungsplanView", () => {
     );
     fireEvent.click(screen.getByText("detail-complete"));
     await stateChange.waitFor(() =>
-      expect(mockComplete).toHaveBeenCalledWith("42", []),
+      expect(mockComplete).toHaveBeenCalledWith("42"),
     );
     fireEvent.click(screen.getByText("detail-cancel"));
     await stateChange.waitFor(() =>
