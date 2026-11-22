@@ -232,6 +232,7 @@ func TestWeeklyRowsChangedComparesRowsNotAnswers(t *testing.T) {
 	}
 
 	assert.False(t, weeklyRowsChanged(run(map[string]any{"mon": "15:00", "tue": ""}), fields))
+	assert.False(t, weeklyRowsChanged(run(map[string]any{"mon": "15:00 "}), fields))
 	assert.True(t, weeklyRowsChanged(run(map[string]any{"mon": "15:30"}), fields))
 	assert.True(t, weeklyRowsChanged(run(map[string]any{"mon": "15:00", "tue": "14:00"}), fields))
 	assert.True(t, weeklyRowsChanged(run(map[string]any{}), fields))
@@ -242,4 +243,53 @@ func TestWeeklyRowsChangedComparesRowsNotAnswers(t *testing.T) {
 	}}
 	assert.False(t, weeklyRowsChanged(run(map[string]any{"mon": "08:30"}), arrival))
 	assert.True(t, weeklyRowsChanged(run(map[string]any{"tue": "15:00"}), arrival))
+}
+
+// An actor without an author of their own can only leave a stored author
+// standing. A plan that has none yet, because it carried no weekly answer so
+// far, gets none from them: their edit that adds one is refused, or the
+// start would have nobody to name (#7818).
+func TestEditedWeeklyPlanKeepsOnlyAStoredAuthor(t *testing.T) {
+	t.Parallel()
+
+	const schemaID int64 = 81
+	const childID int64 = 82
+	const actorAccountID int64 = 83
+	schema := &enrollmentNative.FormSchema{Fields: []enrollmentNative.FormField{{
+		Key: "pickup_times", Type: enrollmentNative.FormFieldWeekdaySchedule, AppliesToCh: true, Target: enrollmentNative.TargetSchedulePickup,
+	}}}
+	d := &Decisions{deps: DecisionDependencies{
+		Schemas: weeklyPlanSchemaFake{schema: schema},
+		People: PeopleDirectory{
+			Persons: reviewerPersonsFake{person: &Person{ID: actorAccountID}},
+			Staff:   reviewerStaffFake{err: errReviewerNotFound},
+		},
+		Runtime: Runtime{NotFound: func(err error) bool { return errors.Is(err, errReviewerNotFound) }},
+	}}
+	request := &enrollmentNative.Request{SchemaID: new(int64)}
+	*request.SchemaID = schemaID
+	edit := func(before, after map[string]any) *approvedChildSync {
+		previous := map[string]any{}
+		if before != nil {
+			previous["pickup_times"] = before
+		}
+		return &approvedChildSync{
+			input:    enrollmentNative.ApprovedChildSync{ActorAccountID: actorAccountID},
+			request:  request,
+			child:    &enrollmentNative.RequestChild{ID: childID, CustomData: formValues(map[string]any{"pickup_times": after})},
+			snapshot: map[string]any{"children": []any{map[string]any{"id": childID, "custom_data": previous}}},
+		}
+	}
+	times := map[string]any{"mon": "15:00"}
+
+	_, err := d.editedWeeklyPlanAuthor(context.Background(), edit(nil, map[string]any{}), enrollmentNative.WeeklyPlan{})
+	require.ErrorIs(t, err, enrollmentNative.ErrDecisionReviewerStaffRequired, "no stored author to keep")
+
+	traegerPlan := enrollmentNative.WeeklyPlan{ByTraeger: true}
+	kept, err := d.editedWeeklyPlanAuthor(context.Background(), edit(times, times), traegerPlan)
+	require.NoError(t, err)
+	assert.Equal(t, traegerPlan, kept)
+
+	_, err = d.editedWeeklyPlanAuthor(context.Background(), edit(times, map[string]any{"mon": "16:00"}), traegerPlan)
+	require.ErrorIs(t, err, enrollmentNative.ErrDecisionReviewerStaffRequired, "changed rows need the actor's own author")
 }

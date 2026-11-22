@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"time"
 
 	enrollmentNative "github.com/moto-ogs/project-phoenix/modules/enrollment"
 )
@@ -74,7 +75,11 @@ func (d *Decisions) editedWeeklyPlanAuthor(ctx context.Context, run *approvedChi
 		return plan, nil
 	}
 	author, err := d.resolveScheduleAuthor(ctx, scheduleAuthor{reviewerAccountID: run.input.ActorAccountID})
-	if errors.Is(err, enrollmentNative.ErrDecisionReviewerStaffRequired) && !weeklyRowsChanged(run, fields) {
+	// Without an author of their own the actor can only leave a stored
+	// author standing, and only for the rows it approved: a plan that has
+	// none yet (it carried no weekly answer so far) gets none from them.
+	stored := plan.AuthorStaffID > 0 || plan.ByTraeger
+	if errors.Is(err, enrollmentNative.ErrDecisionReviewerStaffRequired) && stored && !weeklyRowsChanged(run, fields) {
 		return plan, nil
 	}
 	if err != nil {
@@ -121,7 +126,18 @@ func weeklyRowsChanged(run *approvedChildSync, fields []enrollmentNative.FormFie
 // weekday only, so its time changes nothing.
 func sameWeeklyRows(target string, before, after map[string]string) bool {
 	if target == enrollmentNative.TargetSchedulePickup {
-		return maps.Equal(before, after)
+		return maps.EqualFunc(before, after, sameClockTime)
 	}
 	return maps.EqualFunc(before, after, func(string, string) bool { return true })
+}
+
+// sameClockTime compares two times of day as the dispatch reads them, so
+// 9:00 and 09:00 are one time; a value it cannot read only equals itself.
+func sameClockTime(left, right string) bool {
+	l, lErr := time.Parse("15:04", left)
+	r, rErr := time.Parse("15:04", right)
+	if lErr != nil || rErr != nil {
+		return left == right
+	}
+	return l.Equal(r)
 }
