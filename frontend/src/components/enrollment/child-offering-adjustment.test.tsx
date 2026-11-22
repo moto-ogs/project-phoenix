@@ -990,7 +990,7 @@ describe("ChildOfferingAdjustment", () => {
     const checkbox = await screen.findByRole("checkbox", {
       name: /Verpflichtender Ganztag/,
     });
-    expect(checkbox).toBeChecked();
+    await waitFor(() => expect(checkbox).toBeChecked());
     fireEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
     fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
 
