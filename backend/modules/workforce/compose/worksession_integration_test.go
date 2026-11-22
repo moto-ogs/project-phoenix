@@ -321,11 +321,11 @@ func TestWorkSessionBreaksFollowTheLegacyRowRules(t *testing.T) {
 	assert.EqualError(t, err, "session ID is required")
 
 	first, err := capability.CreateWorkSessionBreak(ctx, workforce.WorkSessionBreak{
-		SessionID: session.ID, StartedAt: time.Now().Add(-2 * time.Hour),
+		SessionID: ident.ID(session.ID), StartedAt: time.Now().Add(-2 * time.Hour),
 	})
 	require.NoError(t, err)
 	assert.NotZero(t, first.ID)
-	assert.Equal(t, testpkg.Tenant(t), first.TenantID)
+	assert.Equal(t, testpkg.Tenant(t), first.TenantID.Int64())
 	assert.True(t, first.IsActive())
 
 	active := true
@@ -337,13 +337,13 @@ func TestWorkSessionBreaksFollowTheLegacyRowRules(t *testing.T) {
 	// Ending stamps a running break exactly once; the stale second end is
 	// rejected and leaves the first stamp in place.
 	endedAt := time.Now().Add(-90 * time.Minute)
-	affected, err := capability.EndWorkSessionBreak(ctx, first.ID, endedAt, 30)
+	affected, err := capability.EndWorkSessionBreak(ctx, first.ID.Int64(), endedAt, 30)
 	require.NoError(t, err)
 	assert.EqualValues(t, 1, affected)
-	affected, err = capability.EndWorkSessionBreak(ctx, first.ID, endedAt.Add(time.Minute), 31)
+	affected, err = capability.EndWorkSessionBreak(ctx, first.ID.Int64(), endedAt.Add(time.Minute), 31)
 	require.NoError(t, err)
 	assert.Zero(t, affected)
-	stored, err := capability.FindWorkSessionBreak(ctx, first.ID)
+	stored, err := capability.FindWorkSessionBreak(ctx, first.ID.Int64())
 	require.NoError(t, err)
 	require.NotNil(t, stored.EndedAt)
 	assert.WithinDuration(t, endedAt, *stored.EndedAt, time.Second)
@@ -352,13 +352,13 @@ func TestWorkSessionBreaksFollowTheLegacyRowRules(t *testing.T) {
 	// An admin correction rewrites length and end regardless of state; a
 	// missing break is not an error, just nothing to rewrite.
 	newEnd := time.Now().Add(-80 * time.Minute)
-	affected, err = capability.SetWorkSessionBreakDuration(ctx, first.ID, 45, newEnd)
+	affected, err = capability.SetWorkSessionBreakDuration(ctx, first.ID.Int64(), 45, newEnd)
 	require.NoError(t, err)
 	assert.EqualValues(t, 1, affected)
-	affected, err = capability.SetWorkSessionBreakDuration(ctx, first.ID+1_000_000, 45, newEnd)
+	affected, err = capability.SetWorkSessionBreakDuration(ctx, first.ID.Int64()+1_000_000, 45, newEnd)
 	require.NoError(t, err)
 	assert.Zero(t, affected)
-	stored, err = capability.FindWorkSessionBreak(ctx, first.ID)
+	stored, err = capability.FindWorkSessionBreak(ctx, first.ID.Int64())
 	require.NoError(t, err)
 	assert.Equal(t, 45, stored.DurationMinutes)
 	assert.WithinDuration(t, newEnd, *stored.EndedAt, time.Second)
@@ -367,7 +367,7 @@ func TestWorkSessionBreaksFollowTheLegacyRowRules(t *testing.T) {
 	// groups breaks by session in start order.
 	plannedEnd := time.Now().Add(-10 * time.Minute)
 	second, err := capability.CreateWorkSessionBreak(ctx, workforce.WorkSessionBreak{
-		SessionID: session.ID, StartedAt: time.Now().Add(-40 * time.Minute), PlannedEndTime: &plannedEnd,
+		SessionID: ident.ID(session.ID), StartedAt: time.Now().Add(-40 * time.Minute), PlannedEndTime: &plannedEnd,
 	})
 	require.NoError(t, err)
 	expired, err := capability.ExpiredWorkSessionBreaks(ctx, time.Now())
@@ -383,8 +383,8 @@ func TestWorkSessionBreaksFollowTheLegacyRowRules(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, paged, 1)
 
-	require.NoError(t, capability.DeleteWorkSessionBreak(ctx, second.ID))
-	_, err = capability.FindWorkSessionBreak(ctx, second.ID)
+	require.NoError(t, capability.DeleteWorkSessionBreak(ctx, second.ID.Int64()))
+	_, err = capability.FindWorkSessionBreak(ctx, second.ID.Int64())
 	require.ErrorIs(t, err, workforce.ErrWorkSessionBreakNotFound)
 }
 
@@ -552,7 +552,7 @@ func TestWorkSessionAndBreakRollBackWithTheCallerTransaction(t *testing.T) {
 			return session.ID, failure
 		}
 		if _, err := capability.CreateWorkSessionBreak(txCtx, workforce.WorkSessionBreak{
-			SessionID: session.ID, StartedAt: day.BerlinMidnight().Add(12 * time.Hour),
+			SessionID: ident.ID(session.ID), StartedAt: day.BerlinMidnight().Add(12 * time.Hour),
 		}); err != nil {
 			return 0, err
 		}
@@ -618,12 +618,12 @@ func TestWorkSessionsAreTenantIsolated(t *testing.T) {
 	foreignSession, err := capability.CreateWorkSession(foreignCtx, testWorkSession(foreign.ID, today, time.Now().Add(-time.Hour)))
 	require.NoError(t, err)
 	assert.Equal(t, foreignTenantID, foreignSession.TenantID)
-	foreignBreak, err := capability.CreateWorkSessionBreak(foreignCtx, workforce.WorkSessionBreak{SessionID: foreignSession.ID, StartedAt: time.Now()})
+	foreignBreak, err := capability.CreateWorkSessionBreak(foreignCtx, workforce.WorkSessionBreak{SessionID: ident.ID(foreignSession.ID), StartedAt: time.Now()})
 	require.NoError(t, err)
 
 	_, err = capability.FindWorkSession(ctx, foreignSession.ID)
 	require.ErrorIs(t, err, workforce.ErrWorkSessionNotFound, "a foreign row is invisible, not an error of another kind")
-	_, err = capability.FindWorkSessionBreak(ctx, foreignBreak.ID)
+	_, err = capability.FindWorkSessionBreak(ctx, foreignBreak.ID.Int64())
 	require.ErrorIs(t, err, workforce.ErrWorkSessionBreakNotFound)
 
 	listed, err := capability.ListWorkSessions(ctx, workforce.WorkSessionFilter{StaffIDs: []int64{local.ID, foreign.ID}})
@@ -639,7 +639,7 @@ func TestWorkSessionsAreTenantIsolated(t *testing.T) {
 	closed, err := capability.CloseWorkSession(ctx, foreignSession.ID, time.Now(), false, workforce.WorkSessionCreditRule{})
 	require.NoError(t, err)
 	assert.False(t, closed, "a foreign block cannot be closed")
-	affected, err := capability.EndWorkSessionBreak(ctx, foreignBreak.ID, time.Now(), 5)
+	affected, err := capability.EndWorkSessionBreak(ctx, foreignBreak.ID.Int64(), time.Now(), 5)
 	require.NoError(t, err)
 	assert.Zero(t, affected, "a foreign break cannot be ended")
 

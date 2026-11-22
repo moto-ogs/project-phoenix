@@ -62,9 +62,9 @@ func TestGradeTransitionGrowthQueryBudget(t *testing.T) {
 		require.Len(t, rows, n)
 		actual := make([]int64, 0, n)
 		for _, row := range rows {
-			actual = append(actual, row.ID)
+			actual = append(actual, row.ID.Int64())
 			require.Equal(t, "draft", row.Status)
-			require.Equal(t, account.ID, row.CreatedBy)
+			require.Equal(t, account.ID, row.CreatedBy.Int64())
 		}
 		require.ElementsMatch(t, transitionIDs, actual)
 		var classes []string
@@ -75,7 +75,7 @@ func TestGradeTransitionGrowthQueryBudget(t *testing.T) {
 		}
 		var detail gradehttp.TransitionResponse
 		detailQ := get(fmt.Sprintf("/%d/", transition.ID), &detail)
-		require.Equal(t, transition.ID, detail.ID)
+		require.Equal(t, transition.ID, detail.ID.Int64())
 		require.Equal(t, "2030-2031", detail.AcademicYear)
 		require.Len(t, detail.Mappings, n)
 		for i, mapping := range detail.Mappings {
@@ -89,15 +89,15 @@ func TestGradeTransitionGrowthQueryBudget(t *testing.T) {
 		require.Len(t, history, n)
 		actualStudents := make([]int64, 0, n)
 		for _, row := range history {
-			actualStudents = append(actualStudents, row.StudentID)
-			require.Equal(t, transition.ID, row.TransitionID)
+			actualStudents = append(actualStudents, row.StudentID.Int64())
+			require.Equal(t, transition.ID, row.TransitionID.Int64())
 			require.Equal(t, "promoted", row.Action)
 			require.NotEmpty(t, row.PersonName)
 		}
 		require.ElementsMatch(t, studentIDs, actualStudents)
 		var preview gradehttp.TransitionPreviewResponse
 		previewQ := get(fmt.Sprintf("/%d/preview", transition.ID), &preview)
-		require.Equal(t, transition.ID, preview.TransitionID)
+		require.Equal(t, transition.ID, preview.TransitionID.Int64())
 		require.Equal(t, n, preview.TotalStudents)
 		require.Equal(t, n, preview.ToPromote)
 		require.Zero(t, preview.ToGraduate)

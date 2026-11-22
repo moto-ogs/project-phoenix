@@ -276,7 +276,7 @@ type NewRetentionInstruction struct {
 // NewRetentionSuspension is a suspension the moto team records.
 type NewRetentionSuspension struct {
 	BelegType   string
-	BelegID     int64
+	BelegID     ident.ID
 	Reason      string
 	Scope       string
 	Responsible string

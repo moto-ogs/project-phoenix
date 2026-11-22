@@ -1,9 +1,11 @@
 package grouplive
 
+import "github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 // PickupTime is today's effective Gehzeit of one child as the OGS group view
 // ships it.
 type PickupTime struct {
-	StudentID   int64     `json:"student_id,string"`
+	StudentID   ident.ID  `json:"student_id"`
 	Date        string    `json:"date"`
 	WeekdayName string    `json:"weekday_name"`
 	PickupTime  *string   `json:"pickup_time,omitempty"`
@@ -21,7 +23,7 @@ func pickupTimes(students []Student, pickups map[int64]Pickup) []PickupTime {
 		if !students[i].fullAccess {
 			continue
 		}
-		effective, ok := pickups[students[i].ID]
+		effective, ok := pickups[students[i].ID.Int64()]
 		if !ok {
 			continue
 		}

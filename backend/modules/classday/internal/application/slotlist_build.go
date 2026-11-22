@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/classday"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func (s *service) BuildList(ctx context.Context, params classday.Params) (*classday.ClassdayResult, error) {
@@ -199,7 +200,7 @@ func listSignature(r *classday.ClassdayResult) string {
 		fmt.Fprintf(&b,
 			"%d\x1f%s\x1f%s\x1f%s\x1f%s\x1f%d\x1f%s\x1f%s\x1f%s\x1f%s\x1f%t\x1f%t\x1f%t\x1f%t\x1f%s\x1e",
 			row.StudentID, row.Name, row.SchoolClass, row.GroupName,
-			groupIDSignatureField(row.GroupID), row.InstanceID, row.Slot,
+			groupIDSignatureField((*int64)(row.GroupID)), row.InstanceID, row.Slot,
 			row.RoomName, row.PickupTime, row.StatusLabel, row.Planned,
 			row.Present, row.Unplanned, row.Excused, row.GroupTitle)
 	}
@@ -235,7 +236,7 @@ func applyGrouping(rows []classday.SlotListRow, groupBy classday.GroupBy) {
 		switch groupBy {
 		case classday.GroupBySlot:
 			value = rows[i].Slot
-			value += slotSuffix[rows[i].InstanceID]
+			value += slotSuffix[rows[i].InstanceID.Int64()]
 		case classday.GroupByRoom:
 			value = rows[i].RoomName
 		case classday.GroupByClass:
@@ -304,12 +305,12 @@ func slotLabelInfos(rows []classday.SlotListRow) map[string]*slotLabelInfo {
 			li = &slotLabelInfo{room: map[int64]string{}, known: map[int64]struct{}{}}
 			byLabel[r.Slot] = li
 		}
-		if _, ok := li.known[r.InstanceID]; ok {
+		if _, ok := li.known[r.InstanceID.Int64()]; ok {
 			continue
 		}
-		li.known[r.InstanceID] = struct{}{}
-		li.ids = append(li.ids, r.InstanceID)
-		li.room[r.InstanceID] = r.RoomName
+		li.known[r.InstanceID.Int64()] = struct{}{}
+		li.ids = append(li.ids, r.InstanceID.Int64())
+		li.room[r.InstanceID.Int64()] = r.RoomName
 	}
 	return byLabel
 }
@@ -352,7 +353,7 @@ func availableOptions(rows []classday.SlotListRow) ([]classday.ClassdayGroupOpti
 	classSet := map[string]struct{}{}
 	for _, row := range rows {
 		if row.GroupID != nil && row.GroupName != "" {
-			groupByID[*row.GroupID] = row.GroupName
+			groupByID[(*row.GroupID).Int64()] = row.GroupName
 		}
 		if row.SchoolClass != "" {
 			classSet[row.SchoolClass] = struct{}{}
@@ -360,7 +361,7 @@ func availableOptions(rows []classday.SlotListRow) ([]classday.ClassdayGroupOpti
 	}
 	groups := make([]classday.ClassdayGroupOption, 0, len(groupByID))
 	for id, name := range groupByID {
-		groups = append(groups, classday.ClassdayGroupOption{ID: id, Name: name})
+		groups = append(groups, classday.ClassdayGroupOption{ID: ident.ID(id), Name: name})
 	}
 	sort.SliceStable(groups, func(i, j int) bool { return groups[i].Name < groups[j].Name })
 	classes := make([]string, 0, len(classSet))
@@ -399,10 +400,10 @@ func rowMatchesFilters(row *classday.SlotListRow, target classday.Target, instan
 	// InstanceIDs are a slot-list filter only; they are ignored for pickup
 	// cohorts (whose rows carry InstanceID 0), where a non-empty selection
 	// would otherwise drop every row (#1565 review).
-	if target == classday.TargetSlots && len(instanceSet) > 0 && !instanceSet[row.InstanceID] {
+	if target == classday.TargetSlots && len(instanceSet) > 0 && !instanceSet[row.InstanceID.Int64()] {
 		return false
 	}
-	if len(groupSet) > 0 && (row.GroupID == nil || !groupSet[*row.GroupID]) {
+	if len(groupSet) > 0 && (row.GroupID == nil || !groupSet[(*row.GroupID).Int64()]) {
 		return false
 	}
 	if len(classSet) > 0 {

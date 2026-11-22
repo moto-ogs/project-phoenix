@@ -126,13 +126,13 @@ func TestActiveGroupRepository_FindActiveSessionsOlderThanPreservesTenant(t *tes
 	boundary, err := testpkg.TenantQuery1(t, ctx, db, repo.FindActiveSessionsOlderThan, found.LastActivity)
 	require.NoError(t, err)
 	for _, row := range boundary {
-		require.NotEqual(t, group.ID, row.ID, "cutoff is exclusive")
+		require.NotEqual(t, group.ID, row.ID.Int64(), "cutoff is exclusive")
 	}
 	manual := testpkg.CreateTestActiveGroupForTenant(t, db, tenantID)
 	rows, err := testpkg.TenantQuery1(t, ctx, db, repo.FindActiveSessionsOlderThan, time.Now().Add(time.Hour))
 	require.NoError(t, err)
 	for i, row := range rows {
-		require.NotEqual(t, manual.ID, row.ID, "manual sessions do not expire through device cleanup")
+		require.NotEqual(t, manual.ID, row.ID.Int64(), "manual sessions do not expire through device cleanup")
 		if i > 0 {
 			require.False(t, rows[i-1].LastActivity.After(row.LastActivity))
 		}
