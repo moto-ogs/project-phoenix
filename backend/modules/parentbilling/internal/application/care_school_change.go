@@ -1,6 +1,7 @@
 package application
 
 import (
+	"maps"
 	"slices"
 	"strings"
 
@@ -52,26 +53,11 @@ func contractFamilies(byContract map[int64][]parentbilling.CareContractVersion, 
 // first part stood. joined names the joined children by their index in
 // the result.
 func joinSchoolChanges(children [][]int64, byContract map[int64][]parentbilling.CareContractVersion, families map[int64]string) (result [][]int64, joined []int) {
-	buckets := map[schoolChangeKey][]int{}
-	var keys []schoolChangeKey
-	for i, child := range children {
-		key, ok := schoolChangeKeyOf(child, byContract, families)
-		if !ok {
-			continue
-		}
-		if _, seen := buckets[key]; !seen {
-			keys = append(keys, key)
-		}
-		buckets[key] = append(buckets[key], i)
-	}
 	into := map[int]int{}
-	var firsts []int
-	for _, key := range keys {
-		parts := buckets[key]
+	for _, parts := range schoolChangeBuckets(children, byContract, families) {
 		if len(parts) < 2 || !oneAfterAnother(parts, children, byContract) {
 			continue
 		}
-		firsts = append(firsts, parts[0])
 		for _, part := range parts[1:] {
 			into[part] = parts[0]
 		}
@@ -89,11 +75,32 @@ func joinSchoolChanges(children [][]int64, byContract map[int64][]parentbilling.
 		result = append(result, slices.Clone(child))
 	}
 	for i := range children {
-		if _, part := into[i]; !part && slices.Contains(firsts, i) {
+		if _, part := into[i]; !part && slices.Contains(slices.Collect(maps.Values(into)), i) {
 			joined = append(joined, at[i])
 		}
 	}
 	return result, joined
+}
+
+// schoolChangeBuckets groups the children that may join by their key, in
+// the order of the children; a child that may join none is left out.
+func schoolChangeBuckets(children [][]int64, byContract map[int64][]parentbilling.CareContractVersion, families map[int64]string) [][]int {
+	index := map[schoolChangeKey]int{}
+	var buckets [][]int
+	for i, child := range children {
+		key, ok := schoolChangeKeyOf(child, byContract, families)
+		if !ok {
+			continue
+		}
+		at, seen := index[key]
+		if !seen {
+			at = len(buckets)
+			index[key] = at
+			buckets = append(buckets, nil)
+		}
+		buckets[at] = append(buckets[at], i)
+	}
+	return buckets
 }
 
 // schoolChangeKeyOf is the key a child may join others under; ok is false
@@ -146,12 +153,21 @@ func oneAfterAnother(parts []int, children [][]int64, byContract map[int64][]par
 func sharesSchoolOrDay(a, b []int64, byContract map[int64][]parentbilling.CareContractVersion) bool {
 	for _, left := range a {
 		for _, right := range b {
-			for _, l := range byContract[left] {
-				for _, r := range byContract[right] {
-					if l.SchoolID == r.SchoolID || (!l.From.After(r.Until) && !r.From.After(l.Until)) {
-						return true
-					}
-				}
+			if versionsMeet(byContract[left], byContract[right]) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// versionsMeet tells whether two contracts lie at the same school or have
+// versions in force on the same day.
+func versionsMeet(left, right []parentbilling.CareContractVersion) bool {
+	for _, l := range left {
+		for _, r := range right {
+			if l.SchoolID == r.SchoolID || (!l.From.After(r.Until) && !r.From.After(l.Until)) {
+				return true
 			}
 		}
 	}

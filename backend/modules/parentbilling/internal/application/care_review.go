@@ -122,21 +122,24 @@ func narrowMonth(month careMonth, schoolIDs []int64, exclusions map[parentbillin
 		}
 	}
 	narrowMeals(&review, month, inRun)
+	narrowChildren(&review, month, inRun)
+	return review
+}
+
+// narrowChildren keeps the held and the joined children with a contract at
+// a school of the run.
+func narrowChildren(review *reviewedMonth, month careMonth, inRun func(int64) bool) {
+	atRunSchool := func(contract parentbilling.CareDuplicateContract) bool { return inRun(contract.SchoolID.Int64()) }
 	for _, duplicate := range month.duplicates {
-		if slices.ContainsFunc(duplicate.Contracts, func(contract parentbilling.CareDuplicateContract) bool {
-			return inRun(contract.SchoolID.Int64())
-		}) {
+		if slices.ContainsFunc(duplicate.Contracts, atRunSchool) {
 			review.duplicates = append(review.duplicates, duplicate)
 		}
 	}
 	for _, child := range month.joined {
-		if slices.ContainsFunc(child.Contracts, func(contract parentbilling.CareDuplicateContract) bool {
-			return inRun(contract.SchoolID.Int64())
-		}) {
+		if slices.ContainsFunc(child.Contracts, atRunSchool) {
 			review.joined = append(review.joined, child)
 		}
 	}
-	return review
 }
 
 // namesContract tells whether the list names a contract already: a Mensa
