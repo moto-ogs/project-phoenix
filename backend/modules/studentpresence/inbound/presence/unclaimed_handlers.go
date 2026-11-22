@@ -23,9 +23,11 @@ func (rs *Resource) claimGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Taking over a supervision is the staff member's own: an account
-	// without a staff record is refused (403), a failed lookup is a 500.
-	staff, err := rs.extractStaffFromRequest(w, r)
+	// without a staff record is refused with the reason (403), a failed
+	// lookup is a 500.
+	staff, err := rs.resolveRequestStaff(r)
 	if err != nil {
+		renderStaffResolutionError(w, r, err, common.ErrorForbiddenWithCode(err, common.CodeTimetableNoStaffProfile))
 		return
 	}
 

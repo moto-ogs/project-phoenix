@@ -49,7 +49,15 @@ func dataImportHTTPRuntime(people peopledirectory.Capability, membership schoolm
 			staffID, err := staffForAccount(ctx, id)
 			return dataImportStaffID(ctx, staffID, err)
 		},
-		OpeningDecider: staffForAccount,
+		// The opening balance records who decided it, so it stays with staff,
+		// also in a session of the Träger-Büro (#7818).
+		OpeningDecider: func(ctx context.Context, accountID int64) (int64, error) {
+			staffID, err := staffForAccount(ctx, accountID)
+			if dataImportNoStaffRecord(err) {
+				return 0, fmt.Errorf("%w: %w", importapi.ErrStaffProfileRequired, err)
+			}
+			return staffID, err
+		},
 		ChildQuota: func(ctx context.Context) (importapi.ChildQuota, bool, error) {
 			// The module behind the capability also reads the Kinderkontingent
 			// (#3571); the capability interface stays as narrow as it is.
@@ -88,13 +96,19 @@ func markDataImportTraegerAuthor(next http.Handler) http.Handler {
 // (0); any other account without a staff record is refused (#7818). A
 // failed lookup stays an error of its own.
 func dataImportStaffID(ctx context.Context, staffID int64, err error) (int64, error) {
-	if !errors.Is(err, peopledirectory.ErrPersonNotFound) && !errors.Is(err, schoolmembership.ErrStaffNotFound) {
+	if !dataImportNoStaffRecord(err) {
 		return staffID, err
 	}
 	if careplan.EnteredByTraeger(ctx, 0) {
 		return 0, nil
 	}
 	return 0, fmt.Errorf("%w: %w", importapi.ErrStaffProfileRequired, err)
+}
+
+// dataImportNoStaffRecord reports a lookup that found no person or no staff
+// record for the account, as opposed to one that failed.
+func dataImportNoStaffRecord(err error) bool {
+	return errors.Is(err, peopledirectory.ErrPersonNotFound) || errors.Is(err, schoolmembership.ErrStaffNotFound)
 }
 
 var errDataImportChildQuotaReaderUnbound = errors.New("data import: child quota reader is not bound")

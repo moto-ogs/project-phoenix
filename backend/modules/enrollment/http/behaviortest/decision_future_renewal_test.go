@@ -679,6 +679,72 @@ func TestDecisionService_ApplyDueWeeklyPlans_AppliesTraegerPlanWithMark(t *testi
 	assert.Equal(t, 2, marked, "the start writes the weekly rows as the Träger-Büro")
 }
 
+// storedPlanAuthor is the author a planned weekly plan stores.
+type storedPlanAuthor struct {
+	Author    *int64 `bun:"weekly_plan_author"`
+	ByTraeger bool   `bun:"weekly_plan_by_traeger"`
+}
+
+func (r *futureRenewal) storedPlanAuthor(t *testing.T) storedPlanAuthor {
+	t.Helper()
+	var stored storedPlanAuthor
+	require.NoError(t, r.env.db.NewRaw(`
+		SELECT weekly_plan_author, weekly_plan_by_traeger FROM enrollment.request_children
+		WHERE tenant_id = ? AND id = ?`, testpkg.Tenant(t), r.childID).Scan(testpkg.Ctx(t), &stored))
+	return stored
+}
+
+// The author a Träger approval stored stands only for the answers it
+// approved (#7818). A school account without staff record and without the
+// mark may confirm an edit that leaves the weekly answers alone, but not one
+// that changes them: the start would write the new answers as the
+// Träger-Büro's. A staff member's change makes the plan theirs.
+func TestDecisionService_TraegerPlanChangedOnlyByAnAuthorOfItsOwn(t *testing.T) {
+	t.Parallel()
+
+	r := setupFutureRenewal(t)
+	ctx := testpkg.Ctx(t)
+	traegerAccount := testpkg.CreateTestAccount(t, r.env.db, "traeger-buero-plan")
+	_, err := testpkg.TenantQuery1(t, enrollmentNative.WithTraegerBueroReviewer(ctx), testpkg.SetupTestDB(t), r.env.decision.Decide, enrollmentAPI.DecideInput{
+		RequestID: r.requestID, ChildID: r.childID, Status: enrollmentNative.DecisionApproved, ReviewedBy: traegerAccount.ID,
+	})
+	require.NoError(t, err)
+	traegerPlan := storedPlanAuthor{ByTraeger: true}
+	require.Equal(t, traegerPlan, r.storedPlanAuthor(t))
+
+	applier := changeRequestApplierForTest(t, r.env)
+	staffless := testpkg.CreateTestAccount(t, r.env.db, "schule-ohne-personal")
+	_, err = applier.SyncApprovedChildData(ctx, SyncApprovedChildDataInput{
+		RequestID: r.requestID, ChildID: r.childID, ActorAccountID: staffless.ID,
+	})
+	require.NoError(t, err, "an edit that leaves the weekly answers alone keeps the approved author")
+	assert.Equal(t, traegerPlan, r.storedPlanAuthor(t))
+
+	child, err := ReadOwnerChildForTest(ctx, r.env.repos.Enrollment(), r.childID)
+	require.NoError(t, err)
+	child.CustomData.Set("pickup_times", map[string]any{"mon": "16:00"})
+	require.NoError(t, UpdateOwnerChildForTest(ctx, r.env.repos.Enrollment(), child))
+	changed := SyncApprovedChildDataInput{RequestID: r.requestID, ChildID: r.childID, ReplaceTargetedData: true, ChildDataChanged: true}
+
+	changed.ActorAccountID = staffless.ID
+	_, err = applier.SyncApprovedChildData(ctx, changed)
+	require.ErrorIs(t, err, enrollmentNative.ErrDecisionReviewerStaffRequired)
+	assert.Equal(t, traegerPlan, r.storedPlanAuthor(t), "the refused change keeps the plan and its mark")
+
+	changed.ActorAccountID = r.reviewerAccountID
+	_, err = applier.SyncApprovedChildData(ctx, changed)
+	require.NoError(t, err)
+	staffID := r.reviewerStaffID
+	assert.Equal(t, storedPlanAuthor{Author: &staffID}, r.storedPlanAuthor(t), "the staff member's change is staff-authored, the mark is gone")
+
+	assert.Equal(t, 1, r.applyDue(t, r.start))
+	rows, err := r.env.reposTimetable.StudentPickupSchedule.FindByStudentID(ctx, r.studentID)
+	require.NoError(t, err)
+	require.Len(t, rows, 1)
+	assert.Equal(t, r.reviewerStaffID, rows[0].CreatedBy)
+	assert.False(t, rows[0].EnteredByTraeger)
+}
+
 // revokedFutureRenewal approves an account-bound open-phase renewal of a
 // child in care whose weekly plan and class switch (2a → 3) wait for the
 // start, then removes the parent's relationship to the child (#6053).

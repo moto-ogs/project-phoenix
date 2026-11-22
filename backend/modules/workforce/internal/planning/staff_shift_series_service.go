@@ -240,10 +240,13 @@ func (s *staffShiftSeriesService) updateTodayOccurrence(
 	if input.Notes != nil {
 		updated.Notes = *input.Notes
 	}
+	// The occurrence keeps its author. The Träger-Büro changes it without a
+	// staff member, so no earlier staff editor stays named, and it marks
+	// the row as last changed by the Träger (#7818).
+	updated.UpdatedBy = nil
 	if input.ActorStaffID > 0 {
 		updated.UpdatedBy = &input.ActorStaffID
 	}
-	// The Träger-Büro marks the row it changes, keeping its author (#7818).
 	if account := input.TraegerAccountID; account > 0 {
 		updated.PlannedByTraeger = true
 		updated.TraegerAccountID = &account

@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -67,32 +68,19 @@ func (d *Decisions) renewalWeeklyPlanDay(phase *enrollmentNative.Phase, careRunn
 // planWeeklyPlan stores the day the request child's weekly plan applies, or
 // clears the plan when on is nil. The approval plans it like the approval of
 // a renewal whose care has started: a field without a value keeps its
-// target. The reviewer's staff membership is resolved now and stored as the
-// author of the rows the start writes, so the start does not depend on that
-// account months later. A Träger session without a staff record stores the
-// Träger-Büro as the author instead: the tick runs without that session.
-func (d *Decisions) planWeeklyPlan(ctx context.Context, requestChildID int64, on *enrollmentNative.Date, reviewedBy int64) error {
+// target. The author of the rows the start writes is resolved now and stored
+// with the plan (plannedWeeklyPlanAuthor), so the start depends neither on
+// that account months later nor on the session that approved it.
+func (d *Decisions) planWeeklyPlan(ctx context.Context, request *enrollmentNative.Request, child *enrollmentNative.RequestChild, on *enrollmentNative.Date, reviewedBy int64) error {
 	var plan *enrollmentNative.WeeklyPlan
 	if on != nil {
-		author := d.weeklyPlanAuthor(ctx, reviewedBy)
-		plan = &enrollmentNative.WeeklyPlan{RequestChildID: requestChildID, On: *on, AuthorStaffID: author.staffID, ByTraeger: author.byTraeger}
+		author, err := d.plannedWeeklyPlanAuthor(ctx, request, child, reviewedBy)
+		if err != nil {
+			return fmt.Errorf("decision: author of the planned weekly plan: %w", err)
+		}
+		plan = &enrollmentNative.WeeklyPlan{RequestChildID: child.ID, On: *on, AuthorStaffID: author.staffID, ByTraeger: author.byTraeger}
 	}
-	return d.storeWeeklyPlan(ctx, requestChildID, plan)
-}
-
-// weeklyPlanAuthor is the author the weekly rows of accountID's plan name:
-// its staff membership, the Träger-Büro for a marked request without one,
-// or neither. A missing author only matters once the start writes weekly
-// rows; the tick then reports the failure and keeps the plan due.
-func (d *Decisions) weeklyPlanAuthor(ctx context.Context, accountID int64) resolvedScheduleAuthor {
-	if accountID <= 0 {
-		return resolvedScheduleAuthor{}
-	}
-	author, err := d.resolveScheduleAuthor(ctx, scheduleAuthor{reviewerAccountID: accountID})
-	if err != nil {
-		return resolvedScheduleAuthor{}
-	}
-	return author
+	return d.storeWeeklyPlan(ctx, child.ID, plan)
 }
 
 func (d *Decisions) storeWeeklyPlan(ctx context.Context, requestChildID int64, plan *enrollmentNative.WeeklyPlan) error {
@@ -118,11 +106,11 @@ func (d *Decisions) approvedChildTargetScope(ctx context.Context, run *approvedC
 	if planned == nil {
 		return allTargets, nil
 	}
-	updated := *planned
-	updated.Replace = planned.Replace || run.input.ReplaceTargetedData
-	if author := d.weeklyPlanAuthor(ctx, run.input.ActorAccountID); author.staffID > 0 || author.byTraeger {
-		updated.AuthorStaffID, updated.ByTraeger = author.staffID, author.byTraeger
+	updated, err := d.editedWeeklyPlanAuthor(ctx, run, *planned)
+	if err != nil {
+		return allTargets, err
 	}
+	updated.Replace = planned.Replace || run.input.ReplaceTargetedData
 	// A child whose place waits for the Kinderkontingent (#4803) keeps its
 	// plan due: it gets no OGS times or way home before the place.
 	if !calendar.Date(planned.On).After(d.todayDate()) && !run.student.WithoutCarePlace {
@@ -210,7 +198,11 @@ func (d *Decisions) applyWeeklyPlan(ctx context.Context, plan enrollmentNative.W
 	// (the reviewer had no staff membership then) falls back to the reviewer
 	// as it is now.
 	if plan.AuthorStaffID == 0 && !plan.ByTraeger && child.ReviewedBy != nil {
-		plan.AuthorStaffID = d.weeklyPlanAuthor(ctx, *child.ReviewedBy).staffID
+		author, err := d.resolveScheduleAuthor(ctx, scheduleAuthor{reviewerAccountID: *child.ReviewedBy})
+		if err != nil && !errors.Is(err, enrollmentNative.ErrDecisionReviewerStaffRequired) {
+			return false, fmt.Errorf("weekly plan: resolve the reviewer as author: %w", err)
+		}
+		plan.AuthorStaffID = author.staffID
 	}
 	if err := d.applyPlannedWeeklyFields(ctx, request, child, student, 0, plan); err != nil {
 		return false, err

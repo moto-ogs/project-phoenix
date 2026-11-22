@@ -10,15 +10,20 @@ import (
 
 type Middleware = func(http.Handler) http.Handler
 
-// ErrStaffProfileRequired is what Runtime.StaffID wraps when the account has
-// no staff record at the school and the session is not one the Träger-Büro
-// opened (#7818). The import names its author, so such an account is refused
+// ErrStaffProfileRequired is what Runtime.StaffID and Runtime.OpeningDecider
+// wrap when the account has no staff record at the school and the route needs
+// one (#7818): StaffID accepts a session the Träger-Büro opened, the opening
+// balance decider never does. The import names its author, so such an account is refused
 // rather than treated as unauthenticated.
 var ErrStaffProfileRequired = errors.New("data import: account has no staff profile at this school")
 
-// codeImportStaffProfileRequired is the registered code of that refusal
-// (error-registry/import.json).
-const codeImportStaffProfileRequired = "import.staff_profile_required"
+// The registered codes of that refusal (error-registry/): the student import
+// names the importer, the opening balance import the staff member who
+// decided it.
+const (
+	codeImportStaffProfileRequired = "import.staff_profile_required"
+	codeWorkforceNoStaffProfile    = "workforce.no_staff_profile"
+)
 
 // Failure preserves the response envelope without coupling import handlers to
 // the common renderer or its implementation types.

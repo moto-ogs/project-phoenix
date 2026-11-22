@@ -153,7 +153,7 @@ func (rs *Resource) previewStudentImport(w http.ResponseWriter, r *http.Request)
 		if staffResolutionErr != nil {
 			err = staffResolutionErr
 		}
-		rs.runtime.Failure(w, r, staffFailure(err, "Import-Vorschau fehlgeschlagen"))
+		rs.runtime.Failure(w, r, staffFailure(err, codeImportStaffProfileRequired, "Import-Vorschau fehlgeschlagen"))
 		return
 	}
 
@@ -195,7 +195,7 @@ func (rs *Resource) importStudents(w http.ResponseWriter, r *http.Request) {
 		if staffResolutionErr != nil {
 			err = staffResolutionErr
 		}
-		rs.runtime.Failure(w, r, staffFailure(err, "Import fehlgeschlagen"))
+		rs.runtime.Failure(w, r, staffFailure(err, codeImportStaffProfileRequired, "Import fehlgeschlagen"))
 		return
 	}
 	result, err := rs.studentImportService.ImportBatches(r.Context(), request,
@@ -220,11 +220,11 @@ func (rs *Resource) importStudents(w http.ResponseWriter, r *http.Request) {
 }
 
 // staffFailure answers a failed import whose author could not be resolved
-// (#7818): an account without staff record is refused with its code; a
-// failed lookup or any other failure stays a server error.
-func staffFailure(err error, message string) Failure {
+// (#7818): an account without staff record is refused with the route's
+// code; a failed lookup or any other failure stays a server error.
+func staffFailure(err error, code, message string) Failure {
 	if errors.Is(err, ErrStaffProfileRequired) {
-		return Failure{Status: http.StatusForbidden, Cause: err, Code: codeImportStaffProfileRequired}
+		return Failure{Status: http.StatusForbidden, Cause: err, Code: code}
 	}
 	return Failure{Status: http.StatusInternalServerError, Cause: err, Message: message}
 }

@@ -92,6 +92,9 @@ func TestClaimGroupRefusesAccountWithoutStaffRecord(t *testing.T) {
 			rs.claimGroup(rr, req)
 
 			require.Equal(t, tc.status, rr.Code, rr.Body.String())
+			if tc.status == testutil.StatusForbidden {
+				assert.Contains(t, rr.Body.String(), `"code":"`+common.CodeTimetableNoStaffProfile+`"`)
+			}
 		})
 	}
 }

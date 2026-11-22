@@ -1,9 +1,14 @@
 package api
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"io"
+	"mime/multipart"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,6 +16,9 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/modules/dataimport"
+	dataImportCompose "github.com/moto-ogs/project-phoenix/modules/dataimport/compose"
+	importAPI "github.com/moto-ogs/project-phoenix/modules/dataimport/http"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -19,9 +27,16 @@ import (
 // no staff record at the school (#7818).
 func traegerImportBearer(t *testing.T, tc *testContext) testutil.RequestOption {
 	t.Helper()
-	account := testpkg.CreateTestAccount(t, tc.db, fmt.Sprintf("traeger-import-%d@example.com", testpkg.UniqueSuffix()))
+	return staffBearer(t, tc, true)
+}
+
+// staffBearer signs the admin session of an account without person and
+// staff record, opened through the Absprung or not.
+func staffBearer(t *testing.T, tc *testContext, viaTraeger bool) testutil.RequestOption {
+	t.Helper()
+	account := testpkg.CreateTestAccount(t, tc.db, fmt.Sprintf("staffless-import-%d@example.com", testpkg.UniqueSuffix()))
 	claims := testutil.AdminTestClaims(int(account.ID))
-	claims.ViaTraeger = true
+	claims.ViaTraeger = viaTraeger
 	return testutil.WithJWTBearer(testutil.MintTestJWT(t, claims))
 }
 
@@ -108,4 +123,46 @@ func assertStaffProfileRequired(t *testing.T, code int, body string) {
 	t.Helper()
 	assert.Equal(t, http.StatusForbidden, code, body)
 	assert.Contains(t, body, fmt.Sprintf("%q:%q", "code", common.CodeImportStaffProfileRequired))
+}
+
+// unusedOpeningBalances validates the Stichtag only: every request these
+// tests send is refused before an import is built.
+type unusedOpeningBalances struct{}
+
+func (unusedOpeningBalances) ValidateDate(raw string) (string, error) { return raw, nil }
+func (unusedOpeningBalances) ForUpload(string, string, int64) (dataimport.RowImporter[dataimport.OpeningBalanceImportRow], error) {
+	return nil, errors.New("opening balance import must not be built for a refused decider")
+}
+
+// TestOpeningBalancesRefuseAccountsWithoutStaffProfile pins #7818: the
+// opening balance records the staff member who decided it, so it stays with
+// staff, also in a session of the Träger-Büro. A session without staff
+// record is refused with its code, not treated as unauthenticated.
+func TestOpeningBalancesRefuseAccountsWithoutStaffProfile(t *testing.T) {
+	t.Parallel()
+	db, svc, people, membership := setupImportModule(t)
+	tc := &testContext{db: db}
+	router := importAPI.NewResource(importAPI.Dependencies{Students: svc.Import, Staff: svc.StaffImport, ClassList: svc.ClassListImport,
+		Files: dataImportCompose.NewFileDecoder(), Runtime: dataImportHTTPRuntime(people, membership, unusedOpeningBalances{})}).Router()
+	for _, viaTraeger := range []bool{true, false} {
+		for _, action := range []string{"preview", "import"} {
+			var body bytes.Buffer
+			form := multipart.NewWriter(&body)
+			file, err := form.CreateFormFile("file", "salden.csv")
+			require.NoError(t, err)
+			_, err = io.WriteString(file, "Personalnummer,Vorname,Nachname,Stundensaldo\nP-100,Anna,Lehmann,2\n")
+			require.NoError(t, err)
+			require.NoError(t, form.WriteField("effective_date", "2026-11-20"))
+			require.NoError(t, form.WriteField("note", "Übernahme"))
+			require.NoError(t, form.Close())
+			req := httptest.NewRequest(http.MethodPost, "/opening-balances/"+action, &body)
+			req.Header.Set("Content-Type", form.FormDataContentType())
+			staffBearer(t, tc, viaTraeger)(req)
+
+			rr := testutil.ExecuteRequest(router, req)
+
+			assert.Equal(t, http.StatusForbidden, rr.Code, "%s via_traeger=%v: %s", action, viaTraeger, rr.Body.String())
+			assert.Contains(t, rr.Body.String(), fmt.Sprintf("%q:%q", "code", common.CodeWorkforceNoStaffProfile))
+		}
+	}
 }

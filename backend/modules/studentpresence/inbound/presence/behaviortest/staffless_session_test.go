@@ -17,8 +17,8 @@ import (
 // production router and the real people directory: a valid school session
 // whose account has no person or no staff record at the school, a session the
 // Träger-Büro opened through the Absprung included, may neither check a child
-// in nor take over a supervision. Both answer 403, never 401, and the check-in
-// names its own code.
+// in nor take over a supervision. Both answer 403, never 401, each with its
+// own code.
 func TestStafflessSessionIsRefusedNotUnauthenticated(t *testing.T) {
 	t.Parallel()
 	tc, router := setupProtectedRouter(t)
@@ -47,5 +47,6 @@ func TestStafflessSessionIsRefusedNotUnauthenticated(t *testing.T) {
 
 		rr = testutil.ExecuteWithAuthPermissions(t, router, testutil.NewJSONRequest(t, "POST", fmt.Sprintf("/active/groups/%d/claim", activeGroup.ID), nil), claims, []string{"admin:*"})
 		require.Equalf(t, http.StatusForbidden, rr.Code, "%s claim: %s", name, rr.Body.String())
+		assert.Containsf(t, rr.Body.String(), `"code":"`+common.CodeTimetableNoStaffProfile+`"`, "%s claim", name)
 	}
 }

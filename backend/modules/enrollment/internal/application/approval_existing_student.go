@@ -257,7 +257,7 @@ func (d *Decisions) syncRenewalTargetedFields(ctx context.Context, request *enro
 	if err := d.linkAdditionalGuardians(ctx, request, existing.ID); err != nil {
 		return fmt.Errorf("decision: link additional guardians on existing student: %w", err)
 	}
-	return d.planWeeklyPlan(ctx, child.ID, weeklyPlanOn, reviewedBy)
+	return d.planWeeklyPlan(ctx, request, child, weeklyPlanOn, reviewedBy)
 }
 
 // reconcileExistingStudentCareRenewal closes a stale complete-withdrawal task
