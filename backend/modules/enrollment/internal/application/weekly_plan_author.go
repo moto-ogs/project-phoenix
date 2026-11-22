@@ -71,7 +71,11 @@ func (d *Decisions) editedWeeklyPlanAuthor(ctx context.Context, run *approvedChi
 	if err != nil {
 		return plan, err
 	}
-	if !weeklyPlanNeedsAuthor(run.request, run.child, fields) {
+	// An edit that leaves the weekly answers alone on a plan without any
+	// names nobody. Removing the last answer is a change like any other:
+	// under a replacing plan the start then clears the running rows.
+	changed := weeklyRowsChanged(run, fields)
+	if !changed && !weeklyPlanNeedsAuthor(run.request, run.child, fields) {
 		return plan, nil
 	}
 	author, err := d.resolveScheduleAuthor(ctx, scheduleAuthor{reviewerAccountID: run.input.ActorAccountID})
@@ -79,7 +83,7 @@ func (d *Decisions) editedWeeklyPlanAuthor(ctx context.Context, run *approvedChi
 	// author as it is, and only while the weekly answers write what they
 	// wrote before. That also holds for a plan stored without an author
 	// before plans kept one: the start still falls back to its reviewer.
-	if errors.Is(err, enrollmentNative.ErrDecisionReviewerStaffRequired) && !weeklyRowsChanged(run, fields) {
+	if errors.Is(err, enrollmentNative.ErrDecisionReviewerStaffRequired) && !changed {
 		return plan, nil
 	}
 	if err != nil {
@@ -93,10 +97,10 @@ func (d *Decisions) editedWeeklyPlanAuthor(ctx context.Context, run *approvedChi
 // arrival row against the snapshot it was made on: the rows, not the raw
 // answers, so a weekday added without a time changes nothing. An edit
 // without a snapshot (a direct correction of master data) changes no form
-// answer unless it says so.
+// answer unless it says so, and then only a weekly answer the child has.
 func weeklyRowsChanged(run *approvedChildSync, fields []enrollmentNative.FormField) bool {
 	if run.snapshot == nil {
-		return run.input.ChildDataChanged
+		return run.input.ChildDataChanged && weeklyPlanNeedsAuthor(run.request, run.child, fields)
 	}
 	previousChild := snapshotChildByID(run.snapshot, run.child.ID)
 	if previousChild == nil {

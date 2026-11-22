@@ -274,10 +274,14 @@ func TestEditedWeeklyPlanKeepsItsAuthorOnlyForUnchangedRows(t *testing.T) {
 		if before != nil {
 			previous["pickup_times"] = before
 		}
+		current := map[string]any{}
+		if after != nil {
+			current["pickup_times"] = after
+		}
 		return &approvedChildSync{
 			input:    enrollmentNative.ApprovedChildSync{ActorAccountID: actorAccountID},
 			request:  request,
-			child:    &enrollmentNative.RequestChild{ID: childID, CustomData: formValues(map[string]any{"pickup_times": after})},
+			child:    &enrollmentNative.RequestChild{ID: childID, CustomData: formValues(current)},
 			snapshot: map[string]any{"children": []any{map[string]any{"id": childID, "custom_data": previous}}},
 		}
 	}
@@ -285,6 +289,9 @@ func TestEditedWeeklyPlanKeepsItsAuthorOnlyForUnchangedRows(t *testing.T) {
 
 	_, err := d.editedWeeklyPlanAuthor(context.Background(), edit(nil, map[string]any{}), enrollmentNative.WeeklyPlan{})
 	require.ErrorIs(t, err, enrollmentNative.ErrDecisionReviewerStaffRequired, "a new answer needs an author")
+
+	_, err = d.editedWeeklyPlanAuthor(context.Background(), edit(times, nil), enrollmentNative.WeeklyPlan{ByTraeger: true})
+	require.ErrorIs(t, err, enrollmentNative.ErrDecisionReviewerStaffRequired, "removing the last answer is a change")
 
 	// A plan stored without an author before plans kept one stays as it is
 	// under an edit that leaves its weekly answer alone.
