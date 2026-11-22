@@ -7,16 +7,16 @@
  * stay "YYYY-MM-DD".
  */
 
+import { bffJson } from "~/lib/bff-fetch";
+
 import { apiErrorFromResponse, transportFetch } from "./api-error";
 import { knownEnum } from "./contract/known-enum";
 import type { ContractCorrectionValues as WireValues } from "./contract/shared.generated";
 import type {
-  ContractCorrectionEntry as WireLogEntry,
   ContractCorrectionRow as WireRow,
   ContractCorrectionRun as WireRun,
 } from "./contract/traeger-contract-corrections.generated";
 import { filenameFromDisposition } from "./file-download";
-import { readJson, traegerRequest } from "./traeger-api";
 
 const CORRECTIONS_PATH = "/api/traeger/contract-corrections";
 
@@ -186,7 +186,7 @@ function mapRun(run: WireRun): ContractCorrectionRun {
 }
 
 async function postCorrection(
-  path: string,
+  preview: boolean,
   request: ContractCorrectionRequest,
 ): Promise<ContractCorrectionRun> {
   const form = new FormData();
@@ -194,34 +194,26 @@ async function postCorrection(
   if (request.fingerprint) {
     form.append("fingerprint", request.fingerprint);
   }
-  const response = await transportFetch(path, {
-    method: "POST",
-    credentials: "include",
-    cache: "no-store",
-    body: form,
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Request failed (${response.status})`,
-    );
-  }
-  const data = await readJson(response);
-  return mapRun((data as { data: WireRun }).data);
+  const data = await (preview
+    ? bffJson("org", "POST /traeger/contract-corrections/preview", {
+        body: form,
+      })
+    : bffJson("org", "POST /traeger/contract-corrections/", { body: form }));
+  return mapRun(data);
 }
 
 /** Reads the filled-in list and answers every row; stores nothing. */
 export function previewContractCorrections(
   request: ContractCorrectionRequest,
 ): Promise<ContractCorrectionRun> {
-  return postCorrection(`${CORRECTIONS_PATH}/preview`, request);
+  return postCorrection(true, request);
 }
 
 /** Changes the contracts of the changing rows of the confirmed preview. */
 export function applyContractCorrections(
   request: ContractCorrectionRequest,
 ): Promise<ContractCorrectionRun> {
-  return postCorrection(CORRECTIONS_PATH, request);
+  return postCorrection(false, request);
 }
 
 /** The list of every imported contract to fill in, as a CSV file. */
@@ -247,7 +239,7 @@ export async function downloadContractCorrectionList(): Promise<ContractCorrecti
 export async function fetchContractCorrectionLog(): Promise<
   ContractCorrectionLogEntry[]
 > {
-  const entries = await traegerRequest<WireLogEntry[] | null>(CORRECTIONS_PATH);
+  const entries = await bffJson("org", "GET /traeger/contract-corrections/");
   return (entries ?? []).map((entry) => ({
     file: entry.file,
     accountId: entry.account_id,
