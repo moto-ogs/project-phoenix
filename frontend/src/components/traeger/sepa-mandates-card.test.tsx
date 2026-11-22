@@ -136,13 +136,27 @@ describe("SepaMandatesCard (#4695)", () => {
           <SepaMandateStatusCard contractId="42" />
         </TraegerResourceTestProvider>,
       );
-      expect(await screen.findByText("Neues Mandat nötig")).toBeVisible();
       expect(
-        screen.getByText(/Mit diesem Mandat kann nicht mehr abgebucht werden/),
+        await screen.findByText(
+          /Mit diesem Mandat kann nicht mehr abgebucht werden.*Widerrufe es/,
+        ),
       ).toBeVisible();
+      expect(screen.getByText("Neues Mandat nötig")).toBeVisible();
       expect(screen.queryByText("Gültig")).not.toBeInTheDocument();
     },
   );
+
+  it("names a used one-off mandate on the mandate page and how to replace it", async () => {
+    api.fetchSepaMandates.mockResolvedValue([
+      { ...MANDATE, kind: "one_off", lastCollectedOn: testClockDay(-30) },
+    ]);
+    renderCard();
+    expect(await screen.findByText("Verbraucht")).toBeVisible();
+    expect(
+      screen.getByText(/Das Mandat galt für eine Abbuchung/),
+    ).toBeVisible();
+    expect(screen.queryByText("Gültig")).not.toBeInTheDocument();
+  });
 
   it("calls a mandate valid until the day before it expires", async () => {
     api.fetchSepaMandates.mockResolvedValue([

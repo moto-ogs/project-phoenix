@@ -455,15 +455,28 @@ export default function GuardianFormModal({
         (p) => p.phoneNumber.trim() !== "",
       );
 
-      if (!hasEmail && !hasPhone && contactRequired(entry)) {
+      // Die Kontaktdaten gehören zur Person, nicht zu diesem Kind: Bei einem
+      // Geschwisterkind kann sie Notfallkontakt sein. Die letzte gespeicherte
+      // Kontaktmöglichkeit bleibt deshalb auch bei „Nur Abholung“ stehen.
+      const keepsStoredContact =
+        mode === "edit" &&
+        Boolean(initialData?.email ?? initialData?.phoneNumbers.length);
+      if (
+        !hasEmail &&
+        !hasPhone &&
+        (contactRequired(entry) || keepsStoredContact)
+      ) {
         const contactErrors = new Set<string>([`${entry.id}:email`]);
         for (const phone of entry.phoneNumbers) {
           contactErrors.add(`${entry.id}:phone:${phone.id}`);
         }
         setFieldErrors(contactErrors);
-        return entry.isEmergencyContact
-          ? `Ein Notfallkontakt braucht eine Telefonnummer oder E-Mail-Adresse${label}`
-          : `Mindestens eine Kontaktmöglichkeit ist erforderlich${label}`;
+        if (entry.isEmergencyContact) {
+          return `Ein Notfallkontakt braucht eine Telefonnummer oder E-Mail-Adresse${label}`;
+        }
+        return contactRequired(entry)
+          ? `Mindestens eine Kontaktmöglichkeit ist erforderlich${label}`
+          : `Lass eine Telefonnummer oder E-Mail-Adresse stehen: Die Person kann auch bei einem Geschwisterkind eingetragen sein${label}`;
       }
     }
 

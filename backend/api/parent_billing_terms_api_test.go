@@ -578,6 +578,15 @@ func TestFamilyPaymentMethodIsSetBeforeTheFirstInvoice(t *testing.T) {
 		FamilyPaymentMethod: "direct_debit", ContractID: wireID(contract), PaymentMethods: []string{}}, families[0],
 		"named by the party of its contract, not by its address")
 
+	// Saved again through the sibling's contract, the deviation stays with
+	// the contract it was set from: moved, it would go with that contract.
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyBillingPath, map[string]any{
+		"contract_id": sibling, "recipient_kind": "applicant", "payment_method": "direct_debit", "due_day": 10})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	families = listed()
+	require.Len(t, families, 1)
+	assert.Equal(t, wireID(contract), families[0].ContractID, "a save through another contract of the family does not move the deviation")
+
 	// Nothing else happened: no run, no invoice, no debit, and the mandate
 	// is the one the office recorded.
 	for table, want := range map[string]int{"parent_billing.care_runs": 0, "parent_billing.care_invoices": 0,

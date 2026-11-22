@@ -11,8 +11,9 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import { ApiError } from "~/lib/api-error";
 import { berlinTodayISO } from "~/lib/date-helpers";
 import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
-import { fetchSepaMandates, type SepaMandate } from "~/lib/traeger-sepa-api";
+import { fetchSepaMandates } from "~/lib/traeger-sepa-api";
 import { traegerPath } from "~/lib/traeger-url";
+import { mandateCollectable } from "./sepa-format";
 import { useFreshTraegerResource } from "./use-traeger-resource";
 
 /** The address of the mandate page of a contract's family. */
@@ -20,17 +21,6 @@ function sepaMandatePath(contractId: string): string {
   return traegerPath(
     `/traeger/abrechnung/lastschrift/${encodeURIComponent(contractId)}`,
   );
-}
-
-/**
- * Whether the mandate authorizes a collection today, as the billing checks
- * it: in force for the current creditor, not expired, and a one-off mandate
- * not used yet.
- */
-function collectableToday(mandate: SepaMandate | undefined): boolean {
-  if (!mandate?.creditorCurrent) return false;
-  if (mandate.expiresOn && mandate.expiresOn <= berlinTodayISO()) return false;
-  return !(mandate.kind === "one_off" && mandate.lastCollectedOn);
 }
 
 /** The mandates of a contract's family as the status card reads them. */
@@ -57,7 +47,9 @@ export function useSepaMandateStatus(contractId: string) {
      * Whether a direct debit can be collected today: a mandate in force
      * for the current creditor. null while loading or after a failed read.
      */
-    collectable: mandates ? collectableToday(inForce) : null,
+    collectable: mandates
+      ? Boolean(inForce && mandateCollectable(inForce, berlinTodayISO()))
+      : null,
   };
 }
 
@@ -100,7 +92,7 @@ export function SepaMandateStatusView({
         failed
           ? "Der Stand des Mandats konnte nicht geladen werden."
           : spent
-            ? "Mit diesem Mandat kann nicht mehr abgebucht werden: Es ist abgelaufen oder war nur für eine Abbuchung. Erfasse ein neues."
+            ? "Mit diesem Mandat kann nicht mehr abgebucht werden: Es ist verfallen oder galt nur für eine Abbuchung. Widerrufe es und erfasse ein neues."
             : inForce && !inForce.creditorCurrent
               ? "Das Mandat gilt für deine frühere Gläubiger-ID. Bis ein neues da ist, bekommt die Familie eine Rechnung zum Überweisen."
               : inForce

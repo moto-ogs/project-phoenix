@@ -1352,32 +1352,43 @@ describe("GuardianFormModal", () => {
       ).not.toBeInTheDocument();
     });
 
-    it("clears a stored e-mail address when the field is emptied in edit mode", async () => {
+    const storedPickup = (
+      phoneNumbers: GuardianWithRelationship["phoneNumbers"],
+    ): GuardianWithRelationship => ({
+      id: "guardian-7770",
+      firstName: "Oma",
+      lastName: "Abholung",
+      email: "falsch@example.com",
+      preferredContactMethod: "email",
+      languagePreference: "de",
+      hasAccount: false,
+      phoneNumbers,
+      relationshipType: "relative",
+      guardianRole: "pickup_only",
+      isEmergencyContact: false,
+      isPrimary: false,
+      canPickup: true,
+      emergencyPriority: 1,
+      relationshipId: "rel-7770",
+    });
+
+    it("clears a stored e-mail address when a phone number stays", async () => {
       mockOnSubmit.mockResolvedValue(undefined);
-      const initialData: GuardianWithRelationship = {
-        id: "guardian-7770",
-        firstName: "Oma",
-        lastName: "Abholung",
-        email: "falsch@example.com",
-        preferredContactMethod: "email",
-        languagePreference: "de",
-        hasAccount: false,
-        phoneNumbers: [],
-        relationshipType: "relative",
-        guardianRole: "pickup_only",
-        isEmergencyContact: false,
-        isPrimary: false,
-        canPickup: true,
-        emergencyPriority: 1,
-        relationshipId: "rel-7770",
-      };
       render(
         <GuardianFormModal
           isOpen={true}
           onClose={mockOnClose}
           onSubmit={mockOnSubmit}
           mode="edit"
-          initialData={initialData}
+          initialData={storedPickup([
+            {
+              id: "phone-1",
+              phoneNumber: "+49 30 123456",
+              phoneType: "mobile",
+              isPrimary: true,
+              priority: 1,
+            },
+          ])}
         />,
       );
 
@@ -1391,7 +1402,31 @@ describe("GuardianFormModal", () => {
         Array<{ guardianData: { email?: string }; phoneNumbers: unknown[] }>,
       ];
       expect(guardians[0]?.guardianData.email).toBe("");
-      expect(guardians[0]?.phoneNumbers).toEqual([]);
+      expect(guardians[0]?.phoneNumbers).toHaveLength(1);
+    });
+
+    it("keeps the last stored contact of a pickup person: a sibling may need it", async () => {
+      render(
+        <GuardianFormModal
+          isOpen={true}
+          onClose={mockOnClose}
+          onSubmit={mockOnSubmit}
+          mode="edit"
+          initialData={storedPickup([])}
+        />,
+      );
+
+      fireEvent.change(screen.getByDisplayValue("falsch@example.com"), {
+        target: { value: "" },
+      });
+      fireEvent.click(screen.getByText("Speichern"));
+
+      expect(
+        await screen.findByText(
+          /Lass eine Telefonnummer oder E-Mail-Adresse stehen/,
+        ),
+      ).toBeInTheDocument();
+      expect(mockOnSubmit).not.toHaveBeenCalled();
     });
 
     it("writes nothing for a field that was empty when the form opened", async () => {
