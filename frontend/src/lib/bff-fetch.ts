@@ -384,3 +384,19 @@ export async function bffFile<P extends Portal, K extends FileRouteKey<P>>(
     opts,
   );
 }
+
+/**
+ * The same call for a BFF path no Go route registers: a named `route.ts`
+ * whose behavior belongs to the BFF (`settings/values/[key]` purges the
+ * cached tenant lookup). The caller names the answer's type. Every caller is
+ * listed with its reason in `bff-fetch-uncontracted.test.ts`, and the list
+ * only shrinks; a backend route without a contract gets one instead (#7808).
+ */
+export function bffJsonUncontracted<T>(
+  portal: Portal,
+  method: Method,
+  path: string,
+  options: CallOptions & { body?: unknown } = {},
+): Promise<T> {
+  return call(portal, method, path, options);
+}

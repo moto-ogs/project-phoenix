@@ -333,7 +333,10 @@ slash is dropped and each parameter encoded.
   catches the `ApiError` itself.
 - **No contract:** a backend route without a contract gets one first
   (#7808); its client waits until then. A named `route.ts` the contract
-  cannot carry (`activities/[id]/students`) keeps its own call.
+  cannot carry (`settings/values/[key]` purges the cached tenant lookup) is
+  called with `bffJsonUncontracted<T>(portal, method, path, options)`; each
+  caller is listed with its reason in `bff-fetch-uncontracted.test.ts`, and
+  the list only shrinks.
 - **Files:** a route registered with `File: true` is called with
   `bffFile(portal, route, options)` from the same module: the same path,
   portal table and ApiError, resolving to the successful `Response` whose
