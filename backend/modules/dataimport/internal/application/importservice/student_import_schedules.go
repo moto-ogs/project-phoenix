@@ -103,6 +103,9 @@ func (c *StudentImportConfig) upsertArrivalSchedule(ctx context.Context, student
 		return copyErrorf("Ungültige Ankunftszeit '%s': %w", sched.ExpectedArrival, err)
 	}
 	current := existing[0]
+	if sameWeeklyEntry(current.ExpectedArrival, arrival, current.Notes, sched.Notes) {
+		return nil
+	}
 	current.ExpectedArrival = arrival
 	current.CreatedBy, current.EnteredByTraeger = c.scheduleAuthor(ctx)
 	if strings.TrimSpace(sched.Notes) != "" {
@@ -130,6 +133,9 @@ func (c *StudentImportConfig) upsertPickupSchedule(ctx context.Context, studentI
 		return copyErrorf("Ungültige Abholzeit '%s': %w", sched.PickupTime, err)
 	}
 	current := existing[0]
+	if sameWeeklyEntry(current.PickupTime, pickup, current.Notes, sched.Notes) {
+		return nil
+	}
 	current.PickupTime = pickup
 	current.CreatedBy, current.EnteredByTraeger = c.scheduleAuthor(ctx)
 	if strings.TrimSpace(sched.Notes) != "" {
@@ -139,6 +145,18 @@ func (c *StudentImportConfig) upsertPickupSchedule(ctx context.Context, studentI
 		return copyErrorf("Abholzeit für Wochentag %d aktualisieren: %w", sched.Weekday, err)
 	}
 	return nil
+}
+
+// sameWeeklyEntry reports whether an imported weekly time repeats the stored
+// one: same clock time and no other note. Such a row is left as it is, so a
+// re-import that changes something else keeps the author of the time. An
+// empty note cell keeps the stored note and counts as the same.
+func sameWeeklyEntry(stored, imported time.Time, storedNote *string, importedNote string) bool {
+	if stored.Hour() != imported.Hour() || stored.Minute() != imported.Minute() {
+		return false
+	}
+	note := importModels.OptionalCell(importedNote)
+	return note == nil || (storedNote != nil && *storedNote == *note)
 }
 
 // scheduleAuthor names who an import writes a weekly time as: the importing

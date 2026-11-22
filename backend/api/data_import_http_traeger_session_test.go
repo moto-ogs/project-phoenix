@@ -135,6 +135,43 @@ func TestTraegerSchoolSessionImportTakesOverChangedWeeklyTimes(t *testing.T) {
 	}
 }
 
+// TestImportKeepsAuthorOfUnchangedWeeklyTimes pins that a re-import which
+// repeats the stored times names nobody new, in both directions: the
+// Träger-Büro does not take over the times of staff, and staff does not take
+// over the times of the Träger-Büro.
+func TestImportKeepsAuthorOfUnchangedWeeklyTimes(t *testing.T) {
+	t.Parallel()
+	tc := setupImportRoute(t)
+	router := tc.resource.Router()
+	header := "Vorname,Nachname,Klasse,Ankunft.Mo,Abholung.Mo\n"
+	_, staff := testpkg.CreateTestTeacherWithAccount(t, tc.db, "Import", "GleicheZeiten")
+	tables := []string{"schedule.student_arrival_schedules", "schedule.student_pickup_schedules"}
+
+	for _, tt := range []struct {
+		name, lastName string
+		first, second  testutil.RequestOption
+		wantTraeger    int
+	}{
+		{"Träger repeats the times of staff", "PersonalBleibt", adminBearer(t, staff.ID), traegerImportBearer(t, tc), 0},
+		{"staff repeats the times of the Träger-Büro", "TraegerBleibt", traegerImportBearer(t, tc), adminBearer(t, staff.ID), 1},
+	} {
+		first := testutil.ExecuteRequest(router, testutil.NewMultipartRequest(t, http.MethodPost, "/students/import",
+			"file", "erst.csv", header+"Ida,"+tt.lastName+",1a,08:00,15:30", tt.first))
+		require.Equal(t, http.StatusOK, first.Code, "%s, first import: %s", tt.name, first.Body.String())
+		studentID := importedStudentID(t, tc, tt.lastName)
+
+		second := testutil.ExecuteRequest(router, newMultipartRequestWithMode(t, "/students/import",
+			"dann.csv", header+"Ida,"+tt.lastName+",1a,08:00,15:30", "upsert", tt.second))
+		require.Equal(t, http.StatusOK, second.Code, "%s, second import: %s", tt.name, second.Body.String())
+		require.Contains(t, second.Body.String(), `"updated_count":1`, tt.name)
+		for _, table := range tables {
+			traeger, other := scheduleAuthors(t, tc, table, studentID)
+			assert.Equal(t, tt.wantTraeger, traeger, "%s, %s", tt.name, table)
+			assert.Equal(t, 1-tt.wantTraeger, other, "%s, %s", tt.name, table)
+		}
+	}
+}
+
 // TestTraegerSchoolSessionImportsStudentsWithoutTimes pins that a plain
 // import of the Träger-Büro writes no schedule at all and succeeds.
 func TestTraegerSchoolSessionImportsStudentsWithoutTimes(t *testing.T) {
