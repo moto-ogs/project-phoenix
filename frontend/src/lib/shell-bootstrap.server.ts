@@ -1,8 +1,6 @@
 import type { Session } from "next-auth";
-import {
-  mapAccountTenant,
-  type AccountTenantBackend,
-} from "~/lib/account-tenants";
+import type { AccountTenantResponse } from "./contract/auth-account.generated";
+import { mapAccountTenant } from "~/lib/account-tenants";
 import { apiGet } from "~/lib/api-helpers.server";
 import {
   hasEffectiveAdminScope,
@@ -341,7 +339,7 @@ export async function loadShellBootstrap(
       return mapProfileResponse(result.value.data);
     }),
     optional("accountTenants", async (signal) => {
-      const response = await apiGet<Envelope<AccountTenantBackend[] | null>>(
+      const response = await apiGet<Envelope<AccountTenantResponse[] | null>>(
         "/auth/account/tenants",
         token,
         { signal },

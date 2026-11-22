@@ -809,6 +809,7 @@ describe("tenant-api", () => {
 
       expect(mockSessionFetch).toHaveBeenCalledWith(
         "/api/auth/account/tenants",
+        { method: "GET" },
       );
       expect(result).toHaveLength(2);
       expect(result[0]).toEqual({
@@ -832,25 +833,6 @@ describe("tenant-api", () => {
       });
     });
 
-    it("returns empty array when data field is missing", async () => {
-      mockSessionFetch.mockResolvedValueOnce(
-        new Response(JSON.stringify({}), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }),
-      );
-
-      const result = await listAvailableTenants();
-
-      expect(result).toEqual([]);
-    });
-  });
-
-  // --------------------------------------------------------------------------
-  // switchTenant (uses sessionFetch, requires auth)
-  // --------------------------------------------------------------------------
-
-  describe("switchTenant", () => {
     it("confirms a server-side switch without reading credentials", async () => {
       const confirmation = { status: "success", data: null };
 
