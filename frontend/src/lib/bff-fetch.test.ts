@@ -476,6 +476,24 @@ describe("bffJson", () => {
     expect(location.href).toBe("/operator/login");
   });
 
+  it("keeps the operator on the page for an operation's own refusal", async () => {
+    const location = { pathname: "/operator/account", href: "" };
+    vi.stubGlobal("window", { location });
+    mockFetch.mockResolvedValueOnce(
+      Response.json(
+        { status: 401, code: "identity.mfa_code_invalid" },
+        { status: 401 },
+      ),
+    );
+
+    await expect(
+      bffJson("platform", "GET /operator/stats", {
+        authRefusals: ["identity.mfa_code_invalid"],
+      }),
+    ).rejects.toMatchObject({ status: 401, code: "identity.mfa_code_invalid" });
+    expect(location.href).toBe("");
+  });
+
   it("sends parents to the login on a 401 and throws the backend's error", async () => {
     const assign = vi.fn();
     vi.stubGlobal("window", { location: { assign } });

@@ -186,8 +186,9 @@ interface CallOptions {
    */
   errorMessage?: string;
   /**
-   * Tenant and parent: a 401 with one of these codes refuses this operation
-   * and leaves the session as it is, without renewal or a login redirect.
+   * Tenant, parent and operator: a 401 with one of these codes refuses this
+   * operation and leaves the session as it is, without renewal or a login
+   * redirect.
    */
   authRefusals?: readonly ErrorCode[];
   /**
@@ -285,7 +286,7 @@ function onLoginPage(path: string): boolean {
  * - tenant: the session gate and one renewal with a retry (`sendTenant`),
  *   then a sign-out;
  * - operator (`platform`) and parents: a switch to the portal's login
- *   (parents keep operation-specific `authRefusals` on the page);
+ *   (operation-specific `authRefusals` stay on the page);
  * - Träger (`org`), moto schule and caterer: the ApiError, as before.
  */
 const PORTALS: Readonly<Record<Portal, PortalRow>> = {
@@ -311,12 +312,13 @@ const PORTALS: Readonly<Record<Portal, PortalRow>> = {
   platform: {
     mount: "/operator",
     bff: "/api/operator",
-    send: async (url, init) => {
+    send: async (url, init, { authRefusals }) => {
       const response = await sendPlain(url, init);
       if (
         response.status === 401 &&
         typeof window !== "undefined" &&
-        !onLoginPage("/operator/login")
+        !onLoginPage("/operator/login") &&
+        !(await isAuthRefusal(response, authRefusals))
       ) {
         window.location.href = "/operator/login";
         throw new ApiError("Session expired", 401);
