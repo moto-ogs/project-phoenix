@@ -144,9 +144,10 @@ type familyImportContract struct {
 	name     string
 	birth    *calendar.Date
 	firstDay calendar.Date
-	// lastDay is the last day the contract is in force among the versions
-	// read, the end of the page's window for one that runs on.
-	lastDay calendar.Date
+	// inForce are the times the contract's versions are in force, one per
+	// version; a version that runs on ends with the page's window. A time
+	// between two versions is covered by none.
+	inForce []familyImportSpan
 }
 
 // familyImportContracts are the contracts of the versions, each with the
@@ -156,7 +157,8 @@ func familyImportContracts(versions []parentbilling.CareContractVersion) []famil
 	contracts := make([]familyImportContract, 0, len(order))
 	for _, id := range order {
 		list := byContract[id]
-		newest, first, last := list[0], list[0].From, list[0].Until
+		newest, first := list[0], list[0].From
+		inForce := make([]familyImportSpan, 0, len(list))
 		for _, version := range list {
 			if version.From.After(newest.From) {
 				newest = version
@@ -164,13 +166,11 @@ func familyImportContracts(versions []parentbilling.CareContractVersion) []famil
 			if version.From.Before(first) {
 				first = version.From
 			}
-			if version.Until.After(last) {
-				last = version.Until
-			}
+			inForce = append(inForce, familyImportSpan{version.From, version.Until})
 		}
 		contracts = append(contracts, familyImportContract{id: id, schoolID: newest.SchoolID,
 			name:  foldFamilyImportName(newest.ChildFirstName) + "\x1f" + foldFamilyImportName(newest.ChildLastName),
-			birth: newest.ChildBirthDate, firstDay: first, lastDay: last})
+			birth: newest.ChildBirthDate, firstDay: first, inForce: inForce})
 	}
 	return contracts
 }
@@ -187,12 +187,12 @@ type familyImportTarget struct {
 	contractID int64
 	firstDay   calendar.Date
 	// inForce are the times the child's contracts of the family are in
-	// force, one per contract.
+	// force, one per version of a contract.
 	inForce []familyImportSpan
 }
 
-// familyImportSpan is the time one contract is in force, both days
-// included.
+// familyImportSpan is the time one version of a contract is in force, both
+// days included.
 type familyImportSpan struct{ from, until calendar.Date }
 
 // covers tells whether a contract of the child is in force in the family
@@ -409,7 +409,7 @@ func (c *familyImportCheck) targets(row *parentbilling.FamilyChildrenImportRow, 
 		case contract.firstDay.Before(targets[position].firstDay):
 			targets[position].contractID, targets[position].firstDay = contract.id, contract.firstDay
 		}
-		targets[position].inForce = append(targets[position].inForce, familyImportSpan{contract.firstDay, contract.lastDay})
+		targets[position].inForce = append(targets[position].inForce, contract.inForce...)
 	}
 	if !repeated {
 		row.ContractID = ident.ID(targets[0].contractID)

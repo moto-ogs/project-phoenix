@@ -211,6 +211,27 @@ func TestFamilyImportRowShowsEveryDayOfItsFamilies(t *testing.T) {
 		"the days the row shows are the days stored")
 }
 
+// The times a row's child is part of a family come from the versions of
+// its contracts, one each: a time between two versions of one contract is
+// covered by none (#7765).
+func TestFamilyImportTargetCoversOnlyTheVersionsOfTheContract(t *testing.T) {
+	t.Parallel()
+	version := func(from, until calendar.Date) parentbilling.CareContractVersion {
+		return parentbilling.CareContractVersion{ContractID: 1, SchoolID: schoolIspringen, ChildFirstName: "Mia", ChildLastName: "Beispiel", From: from, Until: until}
+	}
+	check := familyImportCheck{recipients: map[int64]parentbilling.CareRecipient{}, contracts: familyImportContracts([]parentbilling.CareContractVersion{
+		version(calendar.NewDate(2026, 8, 22), calendar.NewDate(2026, 11, 30)),
+		version(calendar.NewDate(2027, 1, 1), calendar.NewDate(2027, 8, 22)),
+	})}
+	row := parentbilling.FamilyChildrenImportRow{Line: 2, ChildFirstName: "Mia", ChildLastName: "Beispiel"}
+	targets := check.match(&row, schoolIspringen)
+	require.Len(t, targets, 1)
+	assert.True(t, targets[0].covers(calendar.NewDate(2026, 11, 30)), "the last day of the first version")
+	assert.False(t, targets[0].covers(calendar.NewDate(2026, 12, 1)), "the time between the versions")
+	assert.True(t, targets[0].covers(calendar.NewDate(2027, 1, 1)), "the first day of the second version")
+	assert.False(t, targets[0].covers(calendar.NewDate(2027, 8, 23)), "after the last version read")
+}
+
 // Without a day from the office the numbers count from the day of the
 // import, the one day the import itself proves; a mistyped year is refused.
 func TestFamilyImportMappingSettlesTheDay(t *testing.T) {
