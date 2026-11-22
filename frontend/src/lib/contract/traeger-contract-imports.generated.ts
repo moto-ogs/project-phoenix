@@ -224,6 +224,107 @@ export const ContractImportSchema: z.ZodType<ContractImport, unknown> = object<C
   rows: nullable(arr(ContractImportRowSchema)),
 });
 
+/** Go: carecontract.OfferingCorrectionCounts */
+export interface OfferingCorrectionCounts {
+  ready: number;
+  unchanged: number;
+  held: number;
+  invalid: number;
+  corrected: number;
+}
+
+export const OfferingCorrectionCountsSchema: z.ZodType<OfferingCorrectionCounts, unknown> = object<OfferingCorrectionCounts>({
+  ready: safeInt,
+  unchanged: safeInt,
+  held: safeInt,
+  invalid: safeInt,
+  corrected: safeInt,
+});
+
+/** Go: carecontract.OfferingCorrectionChange */
+export interface OfferingCorrectionChange {
+  weekdays: string[] | null;
+  from: string;
+  to: string;
+}
+
+export const OfferingCorrectionChangeSchema: z.ZodType<OfferingCorrectionChange, unknown> = object<OfferingCorrectionChange>({
+  weekdays: nullable(arr(str)),
+  from: str,
+  to: str,
+});
+
+/** Go: carecontract.OfferingCorrectionProblem */
+export interface OfferingCorrectionProblem {
+  line: number;
+  field: string;
+  code: string;
+}
+
+export const OfferingCorrectionProblemSchema: z.ZodType<OfferingCorrectionProblem, unknown> = object<OfferingCorrectionProblem>({
+  line: safeInt,
+  field: str,
+  code: str,
+});
+
+/** Go: carecontract.OfferingCorrectionContract */
+export interface OfferingCorrectionContract {
+  reference: string;
+  line: number;
+  contract_id?: string;
+  school_id?: string;
+  school_name: string;
+  child_first_name: string;
+  child_last_name: string;
+  status: string;
+  effective_from: string | null;
+  version_number?: number;
+  changes: OfferingCorrectionChange[] | null;
+  problems: OfferingCorrectionProblem[] | null;
+  hints: string[] | null;
+}
+
+export const OfferingCorrectionContractSchema: z.ZodType<OfferingCorrectionContract, unknown> = object<OfferingCorrectionContract>({
+  reference: str,
+  line: safeInt,
+  contract_id: optional(int64String),
+  school_id: optional(int64String),
+  school_name: str,
+  child_first_name: str,
+  child_last_name: str,
+  status: str,
+  effective_from: nullable(calendarDate),
+  version_number: optional(safeInt),
+  changes: nullable(arr(OfferingCorrectionChangeSchema)),
+  problems: nullable(arr(OfferingCorrectionProblemSchema)),
+  hints: nullable(arr(str)),
+});
+
+/** Go: carecontract.OfferingCorrection */
+export interface OfferingCorrection {
+  encoding: string;
+  delimiter: string;
+  headers: string[] | null;
+  missing_columns: string[] | null;
+  effective_from: string | null;
+  fingerprint?: string;
+  applied: boolean;
+  counts: OfferingCorrectionCounts;
+  contracts: OfferingCorrectionContract[] | null;
+}
+
+export const OfferingCorrectionSchema: z.ZodType<OfferingCorrection, unknown> = object<OfferingCorrection>({
+  encoding: str,
+  delimiter: str,
+  headers: nullable(arr(str)),
+  missing_columns: nullable(arr(str)),
+  effective_from: nullable(calendarDate),
+  fingerprint: optional(str),
+  applied: bool,
+  counts: OfferingCorrectionCountsSchema,
+  contracts: nullable(arr(OfferingCorrectionContractSchema)),
+});
+
 export const routes = {
   "GET /traeger/contract-imports/": {
     method: "GET",
@@ -239,6 +340,24 @@ export const routes = {
     tooLargeCode: "care_contract.import_file_too_large",
     request: multipart,
     response: success(ContractImportSchema),
+  },
+  "POST /traeger/contract-imports/offering-corrections": {
+    method: "POST",
+    pattern: "/traeger/contract-imports/offering-corrections",
+    portals: ["org"],
+    maxBodyBytes: 2359296,
+    tooLargeCode: "care_contract.import_file_too_large",
+    request: multipart,
+    response: success(OfferingCorrectionSchema),
+  },
+  "POST /traeger/contract-imports/offering-corrections/preview": {
+    method: "POST",
+    pattern: "/traeger/contract-imports/offering-corrections/preview",
+    portals: ["org"],
+    maxBodyBytes: 2359296,
+    tooLargeCode: "care_contract.import_file_too_large",
+    request: multipart,
+    response: success(OfferingCorrectionSchema),
   },
   "POST /traeger/contract-imports/preview": {
     method: "POST",

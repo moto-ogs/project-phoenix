@@ -43,6 +43,7 @@ import {
 import {
   CareContractVersions,
   plannedVersion,
+  plannedVersionText,
 } from "~/components/traeger/care-contract-versions";
 import { CareContractSignatureCard } from "~/components/traeger/care-contract-signature-card";
 import {
@@ -585,7 +586,7 @@ function TraegerVertragView() {
           {planned ? (
             <Alert
               type="info"
-              message={`Ab ${formatDate(planned.effectiveFrom)} gilt Version ${planned.number}. Eine Änderung der Betreuung ist freigegeben. Was sich ändert, steht unter „Versionen“.`}
+              message={plannedVersionText(planned)}
               action={
                 <ContractSectionJump
                   targetId={CONTRACT_VERSIONS_SECTION_ID}
@@ -615,6 +616,7 @@ function TraegerVertragView() {
                     </DataField>
                   ) : null}
                   <DataField label="Kind">{childName(contract)}</DataField>
+                  <DataField label="Vertrag Nr.">{contract.id}</DataField>
                   <DataField label="Geboren am">
                     {contract.version.childBirthDate
                       ? formatDate(contract.version.childBirthDate)
