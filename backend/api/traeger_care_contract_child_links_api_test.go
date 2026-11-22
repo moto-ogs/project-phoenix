@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	careContractCompose "github.com/moto-ogs/project-phoenix/modules/carecontract/compose"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
@@ -133,13 +134,18 @@ func unlinkPath(contractID, studentID int64) string {
 	return childLinkContractPath(contractID, fmt.Sprintf("?student_id=%d", studentID))
 }
 
-func (f childLinkFixture) candidates(t *testing.T) []int64 {
+// heldByImport are the application children the list of candidates holds
+// back because an imported contract covers them: shown with the reason, and
+// offered no second contract.
+func (f childLinkFixture) heldByImport(t *testing.T) []int64 {
 	t.Helper()
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, "/traeger/contracts/candidates", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	ids := []int64{}
 	for _, candidate := range decodeSchoolPortalData[[]careContractCandidateBody](t, rec.Body.Bytes()) {
-		ids = append(ids, int64(candidate.RequestChildID))
+		if candidate.TemplateIssue == carecontract.SkipImportedContract {
+			ids = append(ids, int64(candidate.RequestChildID))
+		}
 	}
 	return ids
 }
@@ -217,7 +223,7 @@ func TestCareContractChildLinkReachesTheCareAndTheBilling(t *testing.T) {
 	t.Parallel()
 	f := newChildLinkFixture(t, "Träger Kind verknüpfen Folgen")
 	token := f.office.token
-	assert.Contains(t, f.candidates(t), f.child, "the misspelt imported copy does not cover Lina")
+	assert.NotContains(t, f.heldByImport(t), f.child, "the misspelt imported copy does not cover Lina")
 	effects := f.sideEffects(t)
 
 	row := f.preview(t, f.linn, f.linaStudent)
@@ -234,7 +240,7 @@ func TestCareContractChildLinkReachesTheCareAndTheBilling(t *testing.T) {
 	assert.Equal(t, 1, f.count(t, `SELECT COUNT(*) FROM care_contract.contract_events WHERE contract_id = ? AND action = 'link_child'
 		AND (details->>'accepted_difference')::boolean`, f.linn))
 
-	assert.NotContains(t, f.candidates(t), f.child, "the linked imported contract covers Lina's booked care")
+	assert.Contains(t, f.heldByImport(t), f.child, "the linked imported contract covers Lina's booked care: held back, with the reason")
 	assert.Equal(t, effects, f.sideEffects(t), "a link sends nothing and starts no billing")
 
 	ctx := tenant.WithUnitOfWork(context.Background(), testpkg.TenantRuntime(t, f.db))
