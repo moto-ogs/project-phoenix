@@ -7,18 +7,12 @@
  * stay "YYYY-MM-DD".
  */
 
-import { bffJson } from "~/lib/bff-fetch";
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 
-import { apiErrorFromResponse, transportFetch } from "./api-error";
 import { knownEnum } from "./contract/known-enum";
-import type { ContractCorrectionValues as WireValues } from "./contract/shared.generated";
-import type {
-  ContractCorrectionRow as WireRow,
-  ContractCorrectionRun as WireRun,
-} from "./contract/traeger-contract-corrections.generated";
+import type * as sharedContract from "./contract/shared.generated";
+import type * as traegerContractCorrectionsContract from "./contract/traeger-contract-corrections.generated";
 import { filenameFromDisposition } from "./file-download";
-
-const CORRECTIONS_PATH = "/api/traeger/contract-corrections";
 
 /** Largest file the backend reads, in bytes. */
 export const MAX_CONTRACT_CORRECTION_FILE_BYTES = 2 * 1024 * 1024;
@@ -125,7 +119,7 @@ export interface ContractCorrectionList {
 
 /** The values of a contract as the correction and the contract name them. */
 export function correctionValuesFromBackend(
-  values: WireValues,
+  values: sharedContract.ContractCorrectionValues,
 ): ContractCorrectionValues {
   return {
     parties: values.parties ?? [],
@@ -145,7 +139,9 @@ export function correctionChangesFromBackend(
   });
 }
 
-function mapRow(row: WireRow): ContractCorrectionRow {
+function mapRow(
+  row: traegerContractCorrectionsContract.ContractCorrectionRow,
+): ContractCorrectionRow {
   return {
     line: row.line,
     status: knownEnum(ROW_STATUS_VALUES, row.status),
@@ -164,7 +160,9 @@ function mapRow(row: WireRow): ContractCorrectionRow {
   };
 }
 
-function mapRun(run: WireRun): ContractCorrectionRun {
+function mapRun(
+  run: traegerContractCorrectionsContract.ContractCorrectionRun,
+): ContractCorrectionRun {
   return {
     encoding: run.encoding,
     delimiter: run.delimiter,
@@ -218,16 +216,11 @@ export function applyContractCorrections(
 
 /** The list of every imported contract to fill in, as a CSV file. */
 export async function downloadContractCorrectionList(): Promise<ContractCorrectionList> {
-  const response = await transportFetch(`${CORRECTIONS_PATH}/list`, {
-    credentials: "include",
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Request failed (${response.status})`,
-    );
-  }
+  const response = await bffFile(
+    "org",
+    "GET /traeger/contract-corrections/list",
+    { errorMessage: "Request failed" },
+  );
   return {
     blob: await response.blob(),
     filename:

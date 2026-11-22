@@ -10,6 +10,11 @@ import { useActivityForm } from "~/hooks/useActivityForm";
 import { catalogText } from "~/test/error-catalog-text";
 
 // Mock all dependencies
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 vi.mock("~/hooks/useActivityForm", () => ({
   parseParticipantLimit: (value: string) =>
     value ? Number.parseInt(value, 10) : null,
@@ -137,7 +142,7 @@ describe("QuickCreateActivityModal", () => {
     });
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
-      json: async () => ({ id: "1", name: "New Activity" }),
+      json: async () => ({ data: { id: "1", name: "New Activity" } }),
     });
   });
 

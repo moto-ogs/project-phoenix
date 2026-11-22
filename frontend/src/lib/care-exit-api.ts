@@ -5,10 +5,14 @@
 // die Historie unverändert stehen. Die endgültige Löschung (student-api.ts)
 // bleibt daneben bestehen und ist strenger geschützt.
 
-import { apiErrorFromBody, transportFetch } from "./api-error";
+import { bffJson } from "./bff-fetch";
+import type * as studentsContract from "./contract/students.generated";
+import { knownEnum } from "./contract/known-enum";
+
+const CARE_EXIT_REASONS = ["moved_away", "no_care_needed", "other"] as const;
 
 /** Austrittsgründe. Nur "other" trägt einen Freitext. */
-export type CareExitReason = "moved_away" | "no_care_needed" | "other";
+export type CareExitReason = (typeof CARE_EXIT_REASONS)[number];
 
 export const CARE_EXIT_REASON_LABELS: Record<CareExitReason, string> = {
   moved_away: "Umzug",
@@ -83,81 +87,16 @@ export interface CareExitInput {
   reasonNote?: string;
 }
 
-interface WireImpact {
-  student_id: string;
-  first_name: string;
-  last_name: string;
-  school_class?: string;
-  planned_roster_rows: number;
-  activity_bookings: number;
-  open_parent_requests: number;
-  has_rfid_tag: boolean;
-  currently_present: boolean;
-  source_offerings?: Array<{ name: string; days?: string[] }>;
-  weekly_plans?: string[];
-  planned_ends_on?: string | null;
-  blocker?: string;
-}
+// Code, Feldfehler und Vorgangskennung reisen im ApiError weiter (#2513,
+// ADR 0006); die Meldung des Backends steht in dessen `detail`.
+const errorMessage = "Betreuung beenden: Anfrage fehlgeschlagen";
 
-interface WirePreview {
-  token: string;
-  last_care_day: string;
-  reason: CareExitReason;
-  reason_note?: string;
-  blocked: boolean;
-  students: WireImpact[];
-}
-
-interface WireEndedCare {
-  student_id: string;
-  first_name: string;
-  last_name: string;
-  school_class?: string;
-  last_care_day: string;
-  reason?: CareExitReason | null;
-  reason_note?: string | null;
-  recorded_at?: string | null;
-}
-
-interface Envelope<T> {
-  data: T;
-  message?: string;
-}
-
-// Eigener Fetch statt authFetch: Code, Details und Vorgangskennung der
-// Antwort müssen die aufrufende UI erreichen (ADR 0006). authFetch wirft nur
-// den generischen Statustext.
-async function request<T>(
-  url: string,
-  method: "GET" | "POST",
-  body?: unknown,
-): Promise<T> {
-  const response = await transportFetch(url, {
-    method,
-    credentials: "include",
-    cache: "no-store",
-    ...(body !== undefined && {
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    }),
-  });
-  const payload = (await response.json().catch(() => null)) as
-    (Envelope<unknown> & Record<string, unknown>) | null;
-  if (!response.ok) {
-    // Code, field errors and request ID travel on for the shared error path
-    // (#2513); the message is the envelope's diagnostic `detail`.
-    throw apiErrorFromBody(
-      `API error (${response.status})`,
-      response.status,
-      payload,
-    );
-  }
-  return payload as T;
-}
-
-function toWireInput(input: CareExitInput, token?: string) {
+/** Grund, Freitext und Vorschau-Stand; die Kinder nennt der Aufrufer. */
+function toWireExit(
+  input: CareExitInput,
+  token?: string,
+): studentsContract.careWithdrawalExitRequest {
   return {
-    student_ids: input.studentIds,
     last_care_day: input.lastCareDay,
     reason: input.reason,
     // Nur "Anderer Grund" trägt einen Freitext; das Backend weist eine
@@ -167,7 +106,16 @@ function toWireInput(input: CareExitInput, token?: string) {
   };
 }
 
-function mapImpact(wire: WireImpact): CareExitImpact {
+function toWireInput(
+  input: CareExitInput,
+  token?: string,
+): studentsContract.careExitRequest {
+  return { student_ids: input.studentIds, ...toWireExit(input, token) };
+}
+
+function mapImpact(
+  wire: studentsContract.careExitImpactResponse,
+): CareExitImpact {
   return {
     studentId: wire.student_id,
     firstName: wire.first_name,
@@ -208,20 +156,38 @@ export interface CareWithdrawalPage {
   pageSize: number;
 }
 
-interface WireCareWithdrawal {
-  id: string;
-  student_id?: string;
-  first_name?: string;
-  last_name?: string;
-  school_class?: string;
-  first_bookingless_day: string;
-  urgency: "planned" | "overdue";
-  state?: "pending" | "resolved";
-  outcome?: "care_ended" | "deleted";
-  resolved_at?: string;
+function mapPreview(
+  wire: studentsContract.careExitPreviewResponse,
+): CareExitPreview {
+  return {
+    token: wire.token,
+    lastCareDay: wire.last_care_day,
+    // Die Vorschau nennt den Grund der Anfrage; einen unbekannten liest
+    // diese Version als "Anderer Grund".
+    reason: knownEnum(CARE_EXIT_REASONS, wire.reason) ?? "other",
+    reasonNote: wire.reason_note ?? "",
+    blocked: wire.blocked,
+    students: (wire.students ?? []).map(mapImpact),
+  };
 }
 
-function mapCareWithdrawal(wire: WireCareWithdrawal): CareWithdrawalCompletion {
+function mapResult(
+  wire: studentsContract.careExitConfirmedResponse,
+): CareExitResult {
+  return {
+    studentsEnded: wire.students_ended,
+    rosterRowsRemoved: wire.roster_rows_removed,
+    bookingsEnded: wire.bookings_ended,
+  };
+}
+
+const WITHDRAWAL_URGENCIES = ["planned", "overdue"] as const;
+const WITHDRAWAL_STATES = ["pending", "resolved"] as const;
+const WITHDRAWAL_OUTCOMES = ["care_ended", "deleted"] as const;
+
+function mapCareWithdrawal(
+  wire: studentsContract.careWithdrawalResponse,
+): CareWithdrawalCompletion {
   return {
     id: wire.id,
     studentId: wire.student_id ?? "",
@@ -229,9 +195,10 @@ function mapCareWithdrawal(wire: WireCareWithdrawal): CareWithdrawalCompletion {
     lastName: wire.last_name ?? "",
     schoolClass: wire.school_class ?? "",
     firstBookinglessDay: wire.first_bookingless_day,
-    urgency: wire.urgency,
-    state: wire.state ?? "pending",
-    outcome: wire.outcome,
+    // Eine Dringlichkeit, die diese Version nicht kennt, gilt als geplant.
+    urgency: knownEnum(WITHDRAWAL_URGENCIES, wire.urgency) ?? "planned",
+    state: knownEnum(WITHDRAWAL_STATES, wire.state) ?? "pending",
+    outcome: knownEnum(WITHDRAWAL_OUTCOMES, wire.outcome),
     resolvedAt: wire.resolved_at,
   };
 }
@@ -245,34 +212,28 @@ export async function fetchCareWithdrawals(
     state?: "pending" | "resolved";
   } = {},
 ): Promise<CareWithdrawalPage> {
-  const query = new URLSearchParams();
-  if (params.search) query.set("search", params.search);
-  if (params.studentId) query.set("student_id", params.studentId);
-  if (params.page) query.set("page", String(params.page));
-  if (params.pageSize) query.set("page_size", String(params.pageSize));
-  if (params.state) query.set("state", params.state);
-  return fetchCareWithdrawalPage("/api/students/care-withdrawals", query);
+  return mapCareWithdrawalPage(
+    await bffJson("tenant", "GET /api/students/care-withdrawals", {
+      query: {
+        search: params.search || undefined,
+        student_id: params.studentId || undefined,
+        page: params.page || undefined,
+        page_size: params.pageSize || undefined,
+        state: params.state,
+      },
+      errorMessage,
+    }),
+  );
 }
 
-/** Eine Seite Abmeldungen von einer der beiden Listen-Routen. */
-async function fetchCareWithdrawalPage(
-  path: string,
-  query: URLSearchParams,
-): Promise<CareWithdrawalPage> {
-  const suffix = query.size > 0 ? `?${query.toString()}` : "";
-  const envelope = await request<
-    Envelope<{
-      items: WireCareWithdrawal[];
-      total: number;
-      page: number;
-      page_size: number;
-    }>
-  >(`${path}${suffix}`, "GET");
+function mapCareWithdrawalPage(
+  wire: studentsContract.careWithdrawalPageResponse,
+): CareWithdrawalPage {
   return {
-    items: envelope.data.items.map(mapCareWithdrawal),
-    total: envelope.data.total,
-    page: envelope.data.page,
-    pageSize: envelope.data.page_size,
+    items: (wire.items ?? []).map(mapCareWithdrawal),
+    total: wire.total,
+    page: wire.page,
+    pageSize: wire.page_size,
   };
 }
 
@@ -286,12 +247,15 @@ export async function fetchStudentCareWithdrawalHistory(
   studentId: string,
   params: { page?: number; pageSize?: number } = {},
 ): Promise<CareWithdrawalPage> {
-  const query = new URLSearchParams();
-  if (params.page) query.set("page", String(params.page));
-  if (params.pageSize) query.set("page_size", String(params.pageSize));
-  return fetchCareWithdrawalPage(
-    `/api/students/${encodeURIComponent(studentId)}/care-withdrawals`,
-    query,
+  return mapCareWithdrawalPage(
+    await bffJson("tenant", "GET /api/students/{id}/care-withdrawals", {
+      params: { id: studentId },
+      query: {
+        page: params.page || undefined,
+        page_size: params.pageSize || undefined,
+      },
+      errorMessage,
+    }),
   );
 }
 
@@ -306,19 +270,13 @@ export async function previewWithdrawalCareEnd(
   completionId: string,
   input: CareExitInput,
 ): Promise<CareExitPreview> {
-  const envelope = await request<Envelope<WirePreview>>(
-    `/api/students/care-withdrawals/${completionId}/care-end/preview`,
-    "POST",
-    toWireInput(input),
+  return mapPreview(
+    await bffJson(
+      "tenant",
+      "POST /api/students/care-withdrawals/{completionId}/care-end/preview",
+      { params: { completionId }, body: toWireExit(input), errorMessage },
+    ),
   );
-  return {
-    token: envelope.data.token,
-    lastCareDay: envelope.data.last_care_day,
-    reason: envelope.data.reason,
-    reasonNote: envelope.data.reason_note ?? "",
-    blocked: envelope.data.blocked,
-    students: (envelope.data.students ?? []).map(mapImpact),
-  };
 }
 
 export async function confirmWithdrawalCareEnd(
@@ -326,42 +284,29 @@ export async function confirmWithdrawalCareEnd(
   token: string,
   input: CareExitInput,
 ): Promise<CareExitResult> {
-  const envelope = await request<
-    Envelope<{
-      students_ended: number;
-      roster_rows_removed: number;
-      bookings_ended: number;
-    }>
-  >(
-    `/api/students/care-withdrawals/${completionId}/care-end`,
-    "POST",
-    toWireInput(input, token),
+  return mapResult(
+    await bffJson(
+      "tenant",
+      "POST /api/students/care-withdrawals/{completionId}/care-end",
+      {
+        params: { completionId },
+        body: toWireExit(input, token),
+        errorMessage,
+      },
+    ),
   );
-  return {
-    studentsEnded: envelope.data.students_ended,
-    rosterRowsRemoved: envelope.data.roster_rows_removed,
-    bookingsEnded: envelope.data.bookings_ended,
-  };
 }
 
 /** Fragt, was das Beenden bewirken würde. Ändert nichts. */
 export async function previewCareExit(
   input: CareExitInput,
 ): Promise<CareExitPreview> {
-  const envelope = await request<Envelope<WirePreview>>(
-    "/api/students/care-end/preview",
-    "POST",
-    toWireInput(input),
+  return mapPreview(
+    await bffJson("tenant", "POST /api/students/care-end/preview", {
+      body: toWireInput(input),
+      errorMessage,
+    }),
   );
-  const wire = envelope.data;
-  return {
-    token: wire.token,
-    lastCareDay: wire.last_care_day,
-    reason: wire.reason,
-    reasonNote: wire.reason_note ?? "",
-    blocked: wire.blocked,
-    students: (wire.students ?? []).map(mapImpact),
-  };
 }
 
 /**
@@ -372,28 +317,21 @@ export async function confirmCareExit(
   token: string,
   input: CareExitInput,
 ): Promise<CareExitResult> {
-  const envelope = await request<
-    Envelope<{
-      students_ended: number;
-      roster_rows_removed: number;
-      bookings_ended: number;
-    }>
-  >("/api/students/care-end", "POST", toWireInput(input, token));
-  return {
-    studentsEnded: envelope.data.students_ended,
-    rosterRowsRemoved: envelope.data.roster_rows_removed,
-    bookingsEnded: envelope.data.bookings_ended,
-  };
+  return mapResult(
+    await bffJson("tenant", "POST /api/students/care-end", {
+      body: toWireInput(input, token),
+      errorMessage,
+    }),
+  );
 }
 
 /** Storniert ein noch nicht wirksames Betreuungsende. */
 export async function cancelCareExit(studentIds: string[]): Promise<number> {
-  const envelope = await request<Envelope<{ students_cancelled: number }>>(
-    "/api/students/care-end/cancel",
-    "POST",
-    { student_ids: studentIds },
-  );
-  return envelope.data.students_cancelled;
+  const data = await bffJson("tenant", "POST /api/students/care-end/cancel", {
+    body: { student_ids: studentIds },
+    errorMessage,
+  });
+  return data.students_cancelled;
 }
 
 /**
@@ -406,11 +344,11 @@ export async function resumeCare(
   newStart: string,
   checked: boolean,
 ): Promise<void> {
-  await request<Envelope<unknown>>(
-    `/api/students/${studentId}/care-end/resume`,
-    "POST",
-    { new_start: newStart, checked },
-  );
+  await bffJson("tenant", "POST /api/students/{id}/care-end/resume", {
+    params: { id: studentId },
+    body: { new_start: newStart, checked },
+    errorMessage,
+  });
 }
 
 /** Lädt die Ansicht "Beendete Betreuungen". */
@@ -419,35 +357,28 @@ export async function fetchEndedCare(params: {
   page?: number;
   pageSize?: number;
 }): Promise<EndedCarePage> {
-  const query = new URLSearchParams();
-  if (params.search) query.set("search", params.search);
-  if (params.page) query.set("page", String(params.page));
-  if (params.pageSize) query.set("page_size", String(params.pageSize));
-  const suffix = query.toString() ? `?${query.toString()}` : "";
-
-  const envelope = await request<
-    Envelope<{
-      items: WireEndedCare[] | null;
-      total: number;
-      page: number;
-      page_size: number;
-    }>
-  >(`/api/students/ended-care${suffix}`, "GET");
-
+  const data = await bffJson("tenant", "GET /api/students/ended-care", {
+    query: {
+      search: params.search || undefined,
+      page: params.page || undefined,
+      page_size: params.pageSize || undefined,
+    },
+    errorMessage,
+  });
   return {
-    items: (envelope.data.items ?? []).map((wire) => ({
+    items: (data.items ?? []).map((wire) => ({
       studentId: wire.student_id,
       firstName: wire.first_name,
       lastName: wire.last_name,
       schoolClass: wire.school_class ?? "",
       lastCareDay: wire.last_care_day,
-      reason: wire.reason ?? null,
+      reason: knownEnum(CARE_EXIT_REASONS, wire.reason) ?? null,
       reasonNote: wire.reason_note ?? null,
       recordedAt: wire.recorded_at ?? null,
     })),
-    total: envelope.data.total,
-    page: envelope.data.page,
-    pageSize: envelope.data.page_size,
+    total: data.total,
+    page: data.page,
+    pageSize: data.page_size,
   };
 }
 

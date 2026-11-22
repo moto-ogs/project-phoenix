@@ -4,8 +4,8 @@ import { releasedRoomTargetedByUrl } from "./use-supervision-dashboard";
 
 describe("releasedRoomTargetedByUrl", () => {
   const rooms = [
-    { id: "fußball", room_id: "sporthalle" },
-    { id: "werkraum", room_id: "werkraum" },
+    { id: "fußball", roomId: "sporthalle" },
+    { id: "werkraum", roomId: "werkraum" },
   ];
   const openRoomIds = new Set(["sporthalle"]);
 

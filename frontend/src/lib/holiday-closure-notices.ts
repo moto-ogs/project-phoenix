@@ -7,10 +7,10 @@
  * Zahl der Familien, nie Namen oder Kontakte. IDs kommen als Strings heraus.
  */
 
-import { apiErrorFromBody, transportFetch } from "~/lib/api-error";
+import { bffJson } from "./bff-fetch";
 import { knownEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
-import type { NoticeResponse } from "./contract/holiday-closure-notices.generated";
+import type * as holidayClosureNoticesContract from "./contract/holiday-closure-notices.generated";
 import type * as sharedContract from "./contract/shared.generated";
 
 // Go meldet die Menge nicht an; der Vertrag führt sie als string.
@@ -61,12 +61,6 @@ export interface HolidayClosureNotice {
   readonly updatedAt: string;
 }
 
-/**
- * Ein Hinweis, wie die Schule und das Träger-Büro ihn bekommen; beide Routen
- * senden dieselbe Form.
- */
-export type HolidayClosureNoticeWire = NoticeResponse;
-
 function mapRange(
   range: sharedContract.Range | null,
 ): HolidayClosureRange | null {
@@ -78,8 +72,12 @@ function mapRange(
     : null;
 }
 
+/**
+ * Ein Hinweis, wie die Schule und das Träger-Büro ihn bekommen; beide Routen
+ * senden dieselbe Form.
+ */
 export function mapHolidayClosureNotice(
-  notice: HolidayClosureNoticeWire,
+  notice: holidayClosureNoticesContract.NoticeResponse,
 ): HolidayClosureNotice {
   return {
     id: notice.id,
@@ -119,38 +117,15 @@ export function isNoticeDone(
   return notice.status === "sent" || notice.status === "no_mail";
 }
 
-async function noticeRequest<T>(
-  path: string,
-  init: { method: string; body?: unknown } = { method: "GET" },
-): Promise<T> {
-  const response = await transportFetch(path, {
-    method: init.method,
-    credentials: "include",
-    cache: "no-store",
-    headers:
-      init.body === undefined
-        ? { Accept: "application/json" }
-        : { Accept: "application/json", "Content-Type": "application/json" },
-    body: init.body === undefined ? undefined : JSON.stringify(init.body),
-  });
-  const data: unknown = await response.json().catch(() => undefined);
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Anfrage fehlgeschlagen (HTTP ${response.status})`,
-      response.status,
-      data,
-    );
-  }
-  return (data as { data?: T } | undefined)?.data as T;
-}
-
-const schoolPath = "/api/holiday-closure-notices";
+const errorMessage = "Anfrage fehlgeschlagen";
 
 /** Die Hinweise der eigenen Schule. */
 export async function fetchHolidayClosureNotices(): Promise<
   HolidayClosureNotice[]
 > {
-  const data = await noticeRequest<HolidayClosureNoticeWire[]>(schoolPath);
+  const data = await bffJson("tenant", "GET /api/holiday-closure-notices/", {
+    errorMessage,
+  });
   return data.map(mapHolidayClosureNotice);
 }
 
@@ -165,9 +140,10 @@ export async function notifyHolidayClosureNotice(
   token: string,
 ): Promise<HolidayClosureNotice> {
   return mapHolidayClosureNotice(
-    await noticeRequest<HolidayClosureNoticeWire>(
-      `${schoolPath}/${encodeURIComponent(id)}/notify`,
-      { method: "POST", body: { revision, token } },
-    ),
+    await bffJson("tenant", "POST /api/holiday-closure-notices/{id}/notify", {
+      params: { id },
+      body: { revision, token },
+      errorMessage,
+    }),
   );
 }

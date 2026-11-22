@@ -248,7 +248,9 @@ function columns(
       key: "number",
       header: "Nr.",
       render: (registration) => registration.id,
-      sortValue: (registration) => Number(registration.id),
+      // A decimal int64 as text: padded to one length, the text order is
+      // the number order without losing digits above 2^53.
+      sortValue: (registration) => registration.id.padStart(20, "0"),
       // On a phone the status is the one value beside the name; the number
       // follows as a labelled line.
       stacked: "field",

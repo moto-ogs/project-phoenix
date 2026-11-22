@@ -1,9 +1,9 @@
 // #6594: Eine späte Antwort auf „Meldung zurücknehmen“ schließt nur ihre
 // eigene Rückfrage, nicht die inzwischen für ein anderes Kind geöffnete.
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { SchoolDayChild } from "~/lib/school-class-day-api";
 import { deferred } from "~/test/helpers/form-modal-pending";
 
 import {
@@ -13,7 +13,9 @@ import {
 
 const target = (studentId: string): AbsenceReportTarget => ({
   schoolClass: "2a",
-  child: { student_id: studentId } as unknown as SchoolDayChild,
+  child: {
+    student_id: studentId,
+  } as unknown as schoolClassDayContract.SchoolDayChild,
 });
 
 describe("useSchoolAbsenceReports withdraw", () => {

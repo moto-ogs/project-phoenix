@@ -9,6 +9,8 @@ vi.mock("next-auth/react", () => ({
   getSession: vi.fn(() => Promise.resolve({ user: { id: "1" } })),
 }));
 
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
+
 vi.mock("./auth-failure", () => ({
   handleAuthFailure: vi.fn(() => Promise.resolve(true)),
 }));
@@ -262,7 +264,8 @@ describe("api.ts helper functions", () => {
     it("calls fetch with correct URL and method", async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({}),
+        json: () =>
+          Promise.resolve({ status: "success", data: { outcome: "deleted" } }),
       });
 
       const { getSession } = await import("next-auth/react");
