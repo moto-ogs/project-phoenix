@@ -13,6 +13,14 @@ import { ToastProvider } from "~/contexts/ToastContext";
 import RoomDetailPage from "./page";
 
 vi.unmock("swr");
+vi.mock("~/lib/session-cache", async (importOriginal) => {
+  const plain = await import("~/test/mocks/plain-session-fetch");
+  return {
+    ...(await importOriginal<typeof import("~/lib/session-cache")>()),
+    requireTenantSession: plain.requireTenantSession,
+    renewTenantSession: plain.renewTenantSession,
+  };
+});
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
     data: {
@@ -73,11 +81,14 @@ describe("Raumseite mit echtem SWR und echtem useRoomDetail", () => {
     expect(
       view.container.querySelector(".animate-pulse.h-4.w-56"),
     ).toBeInTheDocument();
-    expect(fetch).toHaveBeenCalledWith("/api/rooms/7", expect.any(Object));
-    expect(fetch).toHaveBeenCalledWith(
-      "/api/rooms/7/history",
-      expect.any(Object),
-    );
+    // The staff session gate answers first; the two loads follow.
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith("/api/rooms/7", expect.any(Object));
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/rooms/7/history",
+        expect.any(Object),
+      );
+    });
     await act(async () => view.rerender(<RoomDetailPage />));
     expect(project).toHaveBeenCalledTimes(1);
   });

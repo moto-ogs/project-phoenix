@@ -6,6 +6,11 @@ import { RoomDetailContent } from "./room-detail-content";
 // Runs in `school-date-dom`: only forked processes apply a runtime TZ change.
 afterEach(() => vi.unstubAllEnvs());
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 vi.mock("./students-in-room-section", () => ({
   StudentsInRoomSection: () => null,
 }));

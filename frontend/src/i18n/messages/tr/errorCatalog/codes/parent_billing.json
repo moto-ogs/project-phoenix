@@ -100,6 +100,7 @@
   "sepa_mandate_invalid": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "sepa_mandate_not_found": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "sepa_mandate_in_force": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "sepa_mandate_contract_draft": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "sepa_mandate_reference_taken": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "sepa_mandate_revoked": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "direct_debit_without_mandate": "{object} değiştirilemedi. Güncel durumu kontrol edin.",

@@ -1,8 +1,5 @@
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 import { describe, expect, it } from "vitest";
-import type {
-  SchoolDayReport,
-  SchoolDayTotals,
-} from "~/lib/school-class-day-api";
 import {
   schoolDayChildrenByClass,
   type SchoolDayListKey,
@@ -11,7 +8,7 @@ import {
   visibleSchoolDayLists,
 } from "./school-day";
 
-const zero: SchoolDayTotals = {
+const zero: schoolClassDayContract.SchoolDayTotals = {
   students: 0,
   missing: 0,
   unreported: 0,
@@ -25,7 +22,7 @@ const zero: SchoolDayTotals = {
   changes: 0,
 };
 
-const report: SchoolDayReport = {
+const report: schoolClassDayContract.SchoolDayReport = {
   date: "2026-09-09",
   weekday: "wed",
   school_day: true,
@@ -104,7 +101,7 @@ describe("school day lists", () => {
   });
 
   it("hides the stays and goes-home split without an enrollment phase", () => {
-    const keys = (r: SchoolDayReport) =>
+    const keys = (r: schoolClassDayContract.SchoolDayReport) =>
       visibleSchoolDayLists(r).map((list) => list.key);
     expect(keys(report)).toContain("bleiben");
     expect(keys({ ...report, enrollment_known: false })).toEqual([
@@ -118,7 +115,7 @@ describe("school day lists", () => {
   });
 
   it("lists the children missing without a report (#4791)", () => {
-    const withUnreported: SchoolDayReport = {
+    const withUnreported: schoolClassDayContract.SchoolDayReport = {
       ...report,
       totals: { ...report.totals, unreported: 1 },
       classes: [

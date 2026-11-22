@@ -29,8 +29,8 @@ function makeGroup(overrides: Partial<OGSGroup> = {}): OGSGroup {
   return {
     id: "10",
     name: "Gruppe A",
-    room_name: "Raum 1",
-    room_id: "5",
+    roomName: "Raum 1",
+    roomId: "5",
     ...overrides,
   };
 }
@@ -44,7 +44,7 @@ describe("isStudentInGroupRoom", () => {
 
   it("returns false when group has no room_name", () => {
     const student = makeStudent({ current_location: "Anwesend - Raum 1" });
-    const group = makeGroup({ room_name: undefined });
+    const group = makeGroup({ roomName: undefined });
     expect(isStudentInGroupRoom(student, group)).toBe(false);
   });
 
@@ -60,37 +60,37 @@ describe("isStudentInGroupRoom", () => {
 
   it("returns true when student location matches group room name", () => {
     const student = makeStudent({ current_location: "Anwesend - Raum 1" });
-    const group = makeGroup({ room_name: "Raum 1" });
+    const group = makeGroup({ roomName: "Raum 1" });
     expect(isStudentInGroupRoom(student, group)).toBe(true);
   });
 
   it("matches room names case-insensitively", () => {
     const student = makeStudent({ current_location: "Anwesend - raum 1" });
-    const group = makeGroup({ room_name: "Raum 1" });
+    const group = makeGroup({ roomName: "Raum 1" });
     expect(isStudentInGroupRoom(student, group)).toBe(true);
   });
 
   it("returns false when student is in a different room", () => {
     const student = makeStudent({ current_location: "Anwesend - Raum 2" });
-    const group = makeGroup({ room_name: "Raum 1" });
+    const group = makeGroup({ roomName: "Raum 1" });
     expect(isStudentInGroupRoom(student, group)).toBe(false);
   });
 
   it("falls back to room_id matching when room name does not match", () => {
     const student = makeStudent({ current_location: "some location with 5" });
-    const group = makeGroup({ room_name: "Raum X", room_id: "5" });
+    const group = makeGroup({ roomName: "Raum X", roomId: "5" });
     expect(isStudentInGroupRoom(student, group)).toBe(true);
   });
 
   it("returns false when neither room name nor room_id matches", () => {
     const student = makeStudent({ current_location: "Anwesend - Raum 2" });
-    const group = makeGroup({ room_name: "Raum 1", room_id: "99" });
+    const group = makeGroup({ roomName: "Raum 1", roomId: "99" });
     expect(isStudentInGroupRoom(student, group)).toBe(false);
   });
 
   it("returns false when room name does not match and no room_id set", () => {
     const student = makeStudent({ current_location: "Anwesend - Raum 2" });
-    const group = makeGroup({ room_name: "Raum 1", room_id: undefined });
+    const group = makeGroup({ roomName: "Raum 1", roomId: undefined });
     expect(isStudentInGroupRoom(student, group)).toBe(false);
   });
 });
@@ -124,8 +124,8 @@ describe("attendance count helpers", () => {
   it("formats group labels with checked-in and total counts", () => {
     const group = makeGroup({
       name: "Eulen",
-      present_count: 12,
-      student_count: 18,
+      presentCount: 12,
+      studentCount: 18,
     });
 
     expect(formatGroupLabelWithAttendance(group)).toBe("Eulen 12/18");

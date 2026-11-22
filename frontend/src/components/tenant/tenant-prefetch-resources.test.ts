@@ -23,6 +23,15 @@ function context(permissions: string[], scope = "") {
   };
 }
 
+vi.mock("~/lib/session-cache", async (importOriginal) => {
+  const plain = await import("~/test/mocks/plain-session-fetch");
+  return {
+    ...(await importOriginal<typeof import("~/lib/session-cache")>()),
+    requireTenantSession: plain.requireTenantSession,
+    renewTenantSession: plain.renewTenantSession,
+  };
+});
+
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -190,8 +199,6 @@ it("uses the cold destination's exact entry fetcher for a parameterized supervis
   });
   expect(fetchMock).toHaveBeenCalledExactlyOnceWith(
     "/api/active/supervision-dashboard",
-    {
-      headers: { "Content-Type": "application/json" },
-    },
+    expect.objectContaining({ method: "GET" }),
   );
 });

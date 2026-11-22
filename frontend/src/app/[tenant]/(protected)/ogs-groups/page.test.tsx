@@ -2,6 +2,7 @@
  * Tests for OGS Groups Page
  * Tests the rendering states and user interactions of the OGS groups dashboard
  */
+import type * as studentsContract from "~/lib/contract/students.generated";
 import {
   render,
   screen,
@@ -63,6 +64,15 @@ vi.mock("~/lib/auth-utils", () => ({
 }));
 
 // Mock next-auth/react
+vi.mock("~/lib/session-cache", async (importOriginal) => {
+  const plain = await import("~/test/mocks/plain-session-fetch");
+  return {
+    ...(await importOriginal<typeof import("~/lib/session-cache")>()),
+    requireTenantSession: plain.requireTenantSession,
+    renewTenantSession: plain.renewTenantSession,
+  };
+});
+
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => ({
     data: { user: { token: "test-token", id: "7", tenantId: 1 } },
@@ -553,10 +563,7 @@ import { isHomeLocation } from "~/lib/location-helper";
 import { substitutionService } from "~/lib/substitution-api";
 import { ApiError, unavailableApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
-import type {
-  OgsLiveViewData,
-  OgsLiveWireStudent,
-} from "~/lib/ogs-group-live-api";
+import type { OgsLiveViewData } from "~/lib/ogs-group-live-api";
 import type { PresenceStudent } from "~/lib/presence-status";
 import OGSGroupPage from "./page";
 
@@ -597,11 +604,11 @@ function liveData(overrides: Partial<OgsLiveViewData> = {}): OgsLiveViewData {
 }
 
 function wireStudent(
-  overrides: Omit<Partial<OgsLiveWireStudent>, "id"> &
-    Pick<OgsLiveWireStudent, "first_name" | "last_name"> & {
+  overrides: Omit<Partial<studentsContract.Student>, "id"> &
+    Pick<studentsContract.Student, "first_name" | "last_name"> & {
       id: string | number;
     },
-): OgsLiveWireStudent {
+): studentsContract.Student {
   return {
     school_class: "",
     current_location: "",
@@ -2464,7 +2471,7 @@ describe("isStudentInGroupRoom (exported)", () => {
       actualIsStudentInGroupRoom(student, {
         id: "1",
         name: "G",
-        room_name: "R",
+        roomName: "R",
       }),
     ).toBe(false);
   });
@@ -2483,7 +2490,7 @@ describe("isStudentInGroupRoom (exported)", () => {
       actualIsStudentInGroupRoom(student, {
         id: "1",
         name: "G",
-        room_name: "ROOM 1",
+        roomName: "ROOM 1",
       }),
     ).toBe(true);
   });
@@ -2495,7 +2502,7 @@ describe("isStudentInGroupRoom (exported)", () => {
       actualIsStudentInGroupRoom(student, {
         id: "1",
         name: "G",
-        room_name: "Raum 99",
+        roomName: "Raum 99",
       }),
     ).toBe(false);
   });
@@ -2510,8 +2517,8 @@ describe("isStudentInGroupRoom (exported)", () => {
       actualIsStudentInGroupRoom(student, {
         id: "1",
         name: "G",
-        room_name: "X",
-        room_id: "42",
+        roomName: "X",
+        roomId: "42",
       }),
     ).toBe(true);
   });

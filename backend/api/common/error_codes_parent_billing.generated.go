@@ -127,6 +127,7 @@ const CodeParentBillingSepaImportChanged = "parent_billing.sepa_import_changed"
 const CodeParentBillingSepaImportFileInvalid = "parent_billing.sepa_import_file_invalid"
 const CodeParentBillingSepaImportFileTooLarge = "parent_billing.sepa_import_file_too_large"
 const CodeParentBillingSepaImportMappingInvalid = "parent_billing.sepa_import_mapping_invalid"
+const CodeParentBillingSepaMandateContractDraft = "parent_billing.sepa_mandate_contract_draft"
 const CodeParentBillingSepaMandateInForce = "parent_billing.sepa_mandate_in_force"
 const CodeParentBillingSepaMandateInvalid = "parent_billing.sepa_mandate_invalid"
 const CodeParentBillingSepaMandateNotFound = "parent_billing.sepa_mandate_not_found"
@@ -265,6 +266,7 @@ var errorCodeClassesParentBilling = []errorCodeClass{
 	{CodeParentBillingSepaImportFileInvalid, "input"},
 	{CodeParentBillingSepaImportFileTooLarge, "input"},
 	{CodeParentBillingSepaImportMappingInvalid, "input"},
+	{CodeParentBillingSepaMandateContractDraft, "business_rejection"},
 	{CodeParentBillingSepaMandateInForce, "business_rejection"},
 	{CodeParentBillingSepaMandateInvalid, "input"},
 	{CodeParentBillingSepaMandateNotFound, "business_rejection"},
