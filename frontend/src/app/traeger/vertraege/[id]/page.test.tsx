@@ -1,3 +1,4 @@
+import { testClockDay } from "~/test/clock";
 import {
   fireEvent,
   render,
@@ -37,6 +38,19 @@ vi.mock("~/lib/traeger-sepa-api", () => ({
   fetchSepaMandateHistory: vi.fn().mockResolvedValue([]),
   createSepaMandate: vi.fn(),
   revokeSepaMandate: vi.fn(),
+}));
+// The card „Empfänger und Zahlung“ of the family (#7770) has its own tests
+// (family-billing-status-card.test.tsx); here the family has no deviation.
+vi.mock("~/lib/traeger-billing-terms-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/traeger-billing-terms-api")>()),
+  fetchContractFamilyBilling: (contractId: string) =>
+    Promise.resolve({
+      contractId,
+      familyEmail: "",
+      partyName: "",
+      partyLastName: "",
+      family: null,
+    }),
 }));
 // The change requests of the parents (#5979) and the termination (#4682)
 // have their own tests; here no change waits and nobody gave notice.
@@ -379,6 +393,8 @@ describe("TraegerVertragPage", () => {
     expect(
       screen.getByText(/Die Eltern sehen den Vertrag erst/),
     ).toBeInTheDocument();
+    // A discarded draft would take the family's choice with it (#7770).
+    expect(screen.queryByText("Empfänger und Zahlung")).not.toBeInTheDocument();
 
     showTab("Kündigung");
     expect(
@@ -677,6 +693,10 @@ describe("TraegerVertragPage", () => {
     expect(
       screen.getByText(/Die Mail ging an erika@example.org/),
     ).toBeInTheDocument();
+    // A sent contract cannot be discarded: its family sets how it pays.
+    expect(
+      await screen.findByText("Empfänger und Zahlung"),
+    ).toBeInTheDocument();
     showTab("Unterschrift und Versand");
     expect(screen.getByText("Gesendet")).toBeInTheDocument();
     showTab("Versionen");
@@ -684,6 +704,37 @@ describe("TraegerVertragPage", () => {
     expect(
       screen.queryByRole("button", { name: /Vertrag senden/ }),
     ).not.toBeInTheDocument();
+  });
+
+  it("offers no payment card on a contract that is over", async () => {
+    // What is saved goes with the contract it was saved through, and a
+    // contract that is over is deleted first (#7770).
+    api.fetchCareContract.mockResolvedValue({
+      ...DRAFT,
+      status: "beendet",
+      documentFrozen: true,
+    });
+    renderPage();
+
+    expect(
+      await screen.findByText("E-Mail bei Vertragserstellung"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Empfänger und Zahlung")).not.toBeInTheDocument();
+  });
+
+  it("offers no payment card after the last day of a terminated contract", async () => {
+    api.fetchCareContract.mockResolvedValue({
+      ...DRAFT,
+      status: "gekuendigt",
+      endsOn: testClockDay(-1),
+      documentFrozen: true,
+    });
+    renderPage();
+
+    expect(
+      await screen.findByText("E-Mail bei Vertragserstellung"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Empfänger und Zahlung")).not.toBeInTheDocument();
   });
 
   it("keeps a concluded contract unchanged and allows resending", async () => {

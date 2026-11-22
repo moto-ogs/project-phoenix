@@ -15,6 +15,12 @@ const UNCONTRACTED_CALLERS: Readonly<Record<string, string>> = {
     "POST auth/switch-tenant: the session switch of the BFF (ADR 0270, sign-in steps)",
   "lib/settings-api.ts":
     "PUT/DELETE settings/values/[key]: the route purges the cached tenant lookup",
+  "lib/traeger-api.ts":
+    "POST traeger/auth/mfa/step-up/verify: a session step of the BFF, no backend route of its own",
+  "lib/traeger-holiday-form-api.ts":
+    "PUT traeger/holiday-periods/[id]/form: the contract leaves the editor's own body undescribed",
+  "lib/operator/operator-settings-api.ts":
+    "PUT/DELETE operator/provisioning/schools/[id]/settings/values/[key]: the route purges the cached tenant lookup",
 };
 
 const SRC = join(import.meta.dirname, "..");

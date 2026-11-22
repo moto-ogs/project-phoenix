@@ -30,6 +30,10 @@ vi.mock("@/lib/guardian-helpers", () => ({
     };
     return labels[code] ?? code.toUpperCase();
   },
+  isFullGuardianRole: (role?: string) =>
+    role === "primary_guardian" ||
+    role === "legal_guardian" ||
+    role === "co_guardian",
   PHONE_TYPE_LABELS: {
     mobile: "Mobil",
     home: "Telefon",
@@ -416,6 +420,38 @@ describe("GuardianList", () => {
       screen.queryByRole("button", { name: "Einladen" }),
     ).not.toBeInTheDocument();
     expect(rowMenuTriggers()).toHaveLength(1);
+  });
+
+  it("asks for an e-mail only from people meant for the parents app", () => {
+    const parent = {
+      ...mockGuardians[1]!,
+      id: "parent-7770",
+      firstName: "Eltern",
+      email: undefined,
+      accountStatus: "none" as const,
+      guardianRole: "legal_guardian" as const,
+    };
+    const pickup = {
+      ...mockGuardians[1]!,
+      id: "pickup-7770",
+      firstName: "Abholung",
+      email: undefined,
+      accountStatus: "none" as const,
+      guardianRole: "pickup_only" as const,
+    };
+    render(
+      <GuardianList
+        guardians={[parent, pickup]}
+        onInvite={vi.fn()}
+        onEdit={vi.fn()}
+      />,
+    );
+
+    // Anker: beide Karten stehen, der Hinweis genau einmal (bei den Eltern).
+    expect(rowMenuTriggers()).toHaveLength(2);
+    expect(
+      screen.getAllByText("Für die Einladung fehlt die E-Mail-Adresse."),
+    ).toHaveLength(1);
   });
 
   it("hides the invite action while an account holder's upgrade approval is pending", () => {

@@ -71,6 +71,26 @@ export function mandateExpired(mandate: SepaMandate, today: string): boolean {
   return mandate.expiresOn !== null && mandate.expiresOn <= today;
 }
 
+/** A one-off mandate that was collected once: it authorizes no further
+ * collection (#4697). */
+export function mandateUsedUp(mandate: SepaMandate): boolean {
+  return mandate.kind === "one_off" && mandate.lastCollectedOn !== null;
+}
+
+/** Whether the billing may collect with the mandate on the school day
+ * today, as the backend checks it (MandateCollectionGap). */
+export function mandateCollectable(
+  mandate: SepaMandate,
+  today: string,
+): boolean {
+  return (
+    !mandate.revokedOn &&
+    mandate.creditorCurrent &&
+    !mandateExpired(mandate, today) &&
+    !mandateUsedUp(mandate)
+  );
+}
+
 /** The state of a mandate as a badge on the school day today. */
 export function mandateState(
   mandate: SepaMandate,
@@ -86,6 +106,7 @@ export function mandateState(
   if (mandateExpired(mandate, today)) {
     return { label: "Verfallen", tone: "red" };
   }
+  if (mandateUsedUp(mandate)) return { label: "Verbraucht", tone: "red" };
   return { label: "Gültig", tone: "green" };
 }
 
@@ -96,7 +117,7 @@ export function mandateKindLabel(kind: MandateKind | undefined): string {
 
 /** What the next collection of a mandate is. */
 export function nextDebitLabel(mandate: SepaMandate): string {
-  if (mandate.revokedOn) return "–";
+  if (mandate.revokedOn || mandateUsedUp(mandate)) return "–";
   if (mandate.kind === "one_off") return "Einmalige Lastschrift";
   if (mandate.kind === undefined || mandate.sequence === undefined) return "–";
   return MANDATE_SEQUENCE_LABELS[mandate.sequence];

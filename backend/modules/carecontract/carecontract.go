@@ -337,6 +337,10 @@ type Party struct {
 	LastName   string `json:"last_name"`
 	Email      string `json:"email"`
 	HasAccount bool   `json:"has_account"`
+	// ContractDraft says the party's contract is still a draft. Only the
+	// billing reads (ContractBilling) fill it: a draft can be discarded, so
+	// nothing of the billing may hang on it (#7770).
+	ContractDraft bool `json:"-"`
 }
 
 // Mailing is one send of the contract with the state of its mail.

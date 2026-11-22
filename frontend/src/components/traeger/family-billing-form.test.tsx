@@ -290,3 +290,121 @@ describe("family billing request", () => {
     });
   });
 });
+
+describe("FamilyBillingForm without a run (#7770)", () => {
+  beforeEach(() => {
+    saveFamilyBilling.mockReset();
+  });
+
+  const STORED: FamilyBilling = {
+    id: "5",
+    familyEmail: "anna@example.org",
+    contractId: "42",
+    recipientKind: "payer",
+    secondFirstName: "",
+    secondLastName: "",
+    payerFirstName: "Carla",
+    payerLastName: "Muster",
+    payerEmail: "carla@example.org",
+    payerAddress: { street: "Weg 1", postalCode: "12345", city: "Ort" },
+    paymentMethod: "",
+    dueDay: 15,
+    debtorNumber: "10 4711",
+    updatedAt: "2026-09-01T10:00:00Z",
+  };
+
+  function renderWithoutRun(
+    props: Partial<Parameters<typeof FamilyBillingForm>[0]> = {},
+  ) {
+    const onSaved = vi.fn();
+    render(
+      <ToastProvider>
+        <FamilyBillingForm
+          target={{ ...target, withoutRun: true }}
+          existing={null}
+          onCancel={vi.fn()}
+          onSaved={onSaved}
+          {...props}
+        />
+      </ToastProvider>,
+    );
+    return { onSaved };
+  }
+
+  it("says that saving creates no invoice and collects nothing", () => {
+    renderWithoutRun();
+    // Anker: the intro of the form without a run.
+    expect(
+      screen.getByText(
+        "Gilt für alle neuen Rechnungen dieser Familie, auch für Geschwister. Speichern erstellt keine Rechnung und bucht nichts ab.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/ab dem nächsten Lauf/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Die Vorschau zeigt/)).not.toBeInTheDocument();
+  });
+
+  it("names what the Abrechnungsvorgaben take today in the payment hint", () => {
+    renderWithoutRun({ termsText: "Überweisung für alle Leistungen" });
+    expect(
+      screen.getByText(
+        /In den Abrechnungsvorgaben steht: Überweisung für alle Leistungen\./,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("warns on „Lastschrift“ when the family has no mandate in force", () => {
+    renderWithoutRun({ mandateInForce: false });
+    fireEvent.click(screen.getByRole("radio", { name: "Lastschrift" }));
+    expect(
+      screen.getByText(
+        "Diese Familie hat kein gültiges Mandat. Abgebucht wird erst, wenn du unten eins erfasst.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it.each([true, null])(
+    "does not warn on „Lastschrift“ with mandateInForce %s",
+    (mandateInForce) => {
+      renderWithoutRun({ mandateInForce });
+      fireEvent.click(screen.getByRole("radio", { name: "Lastschrift" }));
+      // Anker: „Lastschrift“ is chosen, the warning would stand now.
+      expect(screen.getByRole("radio", { name: "Lastschrift" })).toBeChecked();
+      expect(
+        screen.queryByText(/Diese Familie hat kein gültiges Mandat/),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it("keeps recipient, due day and number of the stored deviation when only the payment changes", async () => {
+    saveFamilyBilling.mockResolvedValue({
+      ...STORED,
+      paymentMethod: "direct_debit",
+    });
+    const { onSaved } = renderWithoutRun({
+      existing: STORED,
+      mandateInForce: true,
+    });
+    fireEvent.click(screen.getByRole("radio", { name: "Lastschrift" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(saveFamilyBilling).toHaveBeenCalledTimes(1));
+    expect(saveFamilyBilling).toHaveBeenCalledWith({
+      contractId: "42",
+      recipientKind: "payer",
+      secondFirstName: "",
+      secondLastName: "",
+      payerFirstName: "Carla",
+      payerLastName: "Muster",
+      payerEmail: "carla@example.org",
+      payerAddress: { street: "Weg 1", postalCode: "12345", city: "Ort" },
+      paymentMethod: "direct_debit",
+      dueDay: 15,
+      debtorNumber: "10 4711",
+    });
+    await waitFor(() =>
+      expect(onSaved).toHaveBeenCalledWith(
+        expect.objectContaining({ paymentMethod: "direct_debit" }),
+      ),
+    );
+  });
+});

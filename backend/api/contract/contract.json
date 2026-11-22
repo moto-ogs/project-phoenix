@@ -10310,6 +10310,12 @@
       "portals": [
         "org"
       ],
+      "query": [
+        {
+          "name": "numbers",
+          "kind": "bool"
+        }
+      ],
       "response": {
         "kind": "array",
         "elem": {
@@ -11433,6 +11439,17 @@
           "kind": "ref",
           "ref": "FamilyBilling"
         }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/family-billing/contracts/{id}",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ContractFamilyBilling"
       }
     },
     {
@@ -30588,6 +30605,18 @@
           }
         },
         {
+          "name": "family_payment_method",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contract_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
           "name": "issued_cents",
           "schema": {
             "kind": "int"
@@ -30713,6 +30742,18 @@
           "name": "holiday_only",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "family_payment_method",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contract_id",
+          "schema": {
+            "kind": "id"
           }
         },
         {
@@ -42576,6 +42617,44 @@
       ]
     },
     {
+      "name": "ContractFamilyBilling",
+      "go_type": "parentbilling.ContractFamilyBilling",
+      "fields": [
+        {
+          "name": "contract_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "family_email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "party_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "party_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "family",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "FamilyBilling"
+          }
+        }
+      ]
+    },
+    {
       "name": "ContractFamilyChildren",
       "go_type": "care.ContractFamilyChildren",
       "fields": [
@@ -50885,6 +50964,12 @@
       "name": "FamilyChildNumbers",
       "go_type": "parentbilling.FamilyChildNumbers",
       "fields": [
+        {
+          "name": "contract_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
         {
           "name": "family_email",
           "schema": {
