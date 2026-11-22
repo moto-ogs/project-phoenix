@@ -362,9 +362,17 @@ function TraegerVertragView() {
     ? contractSendBlockedReason(lastMail, isDraft)
     : undefined;
   const party = contract?.parties[0];
-  const planned = contract
+  const comingVersion = contract
     ? plannedVersion(contract.versions, today)
     : undefined;
+  // A contract that ends before the coming version starts never gets it.
+  const planned =
+    comingVersion &&
+    contract?.status === "gekuendigt" &&
+    contract.endsOn &&
+    contract.endsOn < comingVersion.effectiveFrom
+      ? undefined
+      : comingVersion;
   // An active or ended contract shows its versions, so the office sees where
   // an approved change will appear; a draft has only its first version.
   const showVersions =

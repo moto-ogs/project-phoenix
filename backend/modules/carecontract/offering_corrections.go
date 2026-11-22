@@ -79,9 +79,13 @@ const (
 	OfferingCorrectionProblemNotBooked = "not_booked"
 	// OfferingCorrectionProblemRepeated is a booking another row names too.
 	OfferingCorrectionProblemRepeated = "repeated"
+	// OfferingCorrectionProblemOverlapping is a module that is, on one
+	// weekday, the current module of one row and the target of another: the
+	// rows would move a booking twice or swap two bookings.
+	OfferingCorrectionProblemOverlapping = "overlapping"
 	// OfferingCorrectionProblemInactive is a target the Träger has switched
 	// off; OfferingCorrectionProblemOutsidePhase one whose phase does not run
-	// on the day.
+	// on the day or ends before the booking does.
 	OfferingCorrectionProblemInactive     = "inactive"
 	OfferingCorrectionProblemOutsidePhase = "outside_phase"
 	// OfferingCorrectionProblemNotOffered is a weekday the target does not

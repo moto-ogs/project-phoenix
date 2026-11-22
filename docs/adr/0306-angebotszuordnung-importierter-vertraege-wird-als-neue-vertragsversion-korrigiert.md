@@ -57,7 +57,12 @@ Er ergänzt [ADR 0232](0232-bestandsvertraege-kommen-aus-einer-datei-ohne-anmeld
    Vorschau (Fingerabdruck), sonst `care_contract.import_changed`. Beim
    Speichern liest sie die Verträge unter ihrer Zeilensperre. Eine Buchung,
    die ihr Ziel schon nennt, ergibt keine neue Version: Ein zweiter Lauf
-   derselben Datei ändert nichts.
+   derselben Datei ändert nichts. Damit das gilt, lehnt die Korrektur Zeilen
+   ab, die an einem Wochentag ein Modul zugleich als bisheriges und als
+   Zielmodul nennen (Kette oder Tausch).
+6a. **Das Ziel trägt die Buchung bis zu ihrem Ende.** Das Zielmodul muss am
+   Tag laufen, eingeschaltet sein, den Wochentag anbieten, und seine Phase
+   endet nicht vor der Buchung. Die Buchung wird nie gekürzt.
 7. **Nur Verträge ohne Anmeldungskind.** Ein Vertrag mit `request_child_id`
    folgt den Buchungen seiner Schule; der nächste Lauf von `AmendFromBookings`
    würde die Korrektur zurücknehmen. Die Korrektur lehnt ihn ab

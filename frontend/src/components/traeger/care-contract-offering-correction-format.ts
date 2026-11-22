@@ -115,10 +115,12 @@ function problemSentence(problem: OfferingCorrectionProblem): string {
       return "Der Vertrag bucht das bisherige Modul an diesem Tag nicht.";
     case "repeated":
       return "Diese Buchung steht schon in einer anderen Zeile.";
+    case "overlapping":
+      return "Ein Modul ist an diesem Tag zugleich bisheriges und neues Modul. Nenne je Buchung nur ihr Ziel.";
     case "inactive":
       return "Das neue Modul ist ausgeschaltet.";
     case "outside_phase":
-      return "Das neue Modul läuft am Tag bei „Gilt ab“ nicht. Sein Schuljahr passt nicht.";
+      return "Das neue Modul läuft nicht so lange wie die Buchung. Sein Schuljahr passt nicht.";
     case "not_offered":
       return "Das neue Modul läuft an diesem Wochentag nicht.";
     case "double_booked":

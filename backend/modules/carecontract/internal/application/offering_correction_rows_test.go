@@ -50,7 +50,7 @@ func correctionService(day string, offering int64, module, end string) carecontr
 func correctionContract(id int64, services ...carecontract.Service) ports.CorrectableContract {
 	return ports.CorrectableContract{ID: id, SchoolID: 1, Status: carecontract.StatusActive, NextNumber: 2,
 		Versions: []carecontract.Version{{ID: ident.ID(id * 100), Number: 1, Status: carecontract.VersionEffective,
-			EffectiveFrom: calendar.NewDate(2027, 8, 1), ChildFirstName: "Lia", ChildLastName: "Beispiel",
+			EffectiveFrom: calendar.NewDate(2027, 8, 1), EndsOn: importDay(2028, 7, 31), ChildFirstName: "Lia", ChildLastName: "Beispiel",
 			Source: carecontract.SourceImport, Services: services}}}
 }
 
@@ -150,15 +150,42 @@ func TestOfferingCorrectionMovesTwoBookingsOfOneWeekdayApart(t *testing.T) {
 	assert.Equal(t, []carecontract.Service{correctionService("mon", 12, "OGS Kurz", "14:00"), correctionService("mon", 13, "OGS Lang", "16:00")},
 		candidate.version.Version.Services)
 	assert.Nil(t, candidate.version.Version.PriceCents, "two modules have no single price")
+}
 
-	// A row may name the module another row moves a booking to: the early
-	// booking goes to the late module and the late one on, each with its
-	// own end time.
-	chain := correctionContract(3, correctionService("mon", 12, "OGS Kurz", "14:00"), correctionService("mon", 13, "OGS Lang", "16:00"))
-	candidate = correctionRows(t, chain, [3]string{"Mo", "OGS Kurz", "OGS Lang"}, [3]string{"Mo", "OGS Lang", "OGS Mo-Mi"})
-	require.NotNil(t, candidate.version, candidate.contract.Problems)
-	assert.Equal(t, []carecontract.Service{correctionService("mon", 13, "OGS Lang", "14:00"), correctionService("mon", 10, "OGS Mo-Mi", "16:00")},
-		candidate.version.Version.Services)
+// Rows that hand a module on (A to B, B to C) or swap two bookings would
+// change the contract again on every repeated run: the file is refused.
+func TestOfferingCorrectionRefusesRowsThatOverlap(t *testing.T) {
+	t.Parallel()
+	both := func(id int64) ports.CorrectableContract {
+		return correctionContract(id, correctionService("mon", 12, "OGS Kurz", "14:00"), correctionService("mon", 13, "OGS Lang", "16:00"))
+	}
+	chain := correctionRows(t, both(3), [3]string{"Mo", "OGS Kurz", "OGS Lang"}, [3]string{"Mo", "OGS Lang", "OGS Mo-Mi"})
+	assert.Nil(t, chain.version)
+	assert.Contains(t, problemCodes(chain), carecontract.OfferingCorrectionProblemOverlapping)
+	swap := correctionRows(t, both(4), [3]string{"Mo", "OGS Kurz", "OGS Lang"}, [3]string{"Mo", "OGS Lang", "OGS Kurz"})
+	assert.Nil(t, swap.version)
+	assert.Contains(t, problemCodes(swap), carecontract.OfferingCorrectionProblemOverlapping)
+	reversed := correctionRows(t, both(5), [3]string{"Mo", "OGS Lang", "OGS Mo-Mi"}, [3]string{"Mo", "OGS Kurz", "OGS Lang"})
+	assert.Nil(t, reversed.version)
+	assert.Contains(t, problemCodes(reversed), carecontract.OfferingCorrectionProblemOverlapping)
+
+	// A booking a row has just moved does not stand in for a module the
+	// contract never booked.
+	one := correctionContract(6, correctionService("mon", 12, "OGS Kurz", "14:00"))
+	unbooked := correctionRows(t, one, [3]string{"Mo", "OGS Kurz", "OGS Lang"}, [3]string{"Mo", "OGS Mo-Mi", "OGS Lang"})
+	assert.Nil(t, unbooked.version)
+	assert.Contains(t, problemCodes(unbooked), carecontract.OfferingCorrectionProblemNotBooked)
+}
+
+// The booking keeps its last day, so a target whose phase ends earlier
+// cannot take it.
+func TestOfferingCorrectionRefusesATargetThatEndsBeforeTheBooking(t *testing.T) {
+	t.Parallel()
+	contract := correctionContract(7, correctionService("mon", 12, "OGS Kurz", "14:00"))
+	contract.Versions[0].EndsOn = importDay(2028, 12, 31)
+	candidate := correctionRows(t, contract, [3]string{"Mo", "OGS Kurz", "OGS Lang"})
+	assert.Nil(t, candidate.version)
+	assert.Equal(t, []string{carecontract.OfferingCorrectionProblemOutsidePhase}, problemCodes(candidate))
 }
 
 func TestOfferingCorrectionRefusesWhatItCannotDecide(t *testing.T) {

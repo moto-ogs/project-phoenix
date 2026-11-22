@@ -63,7 +63,18 @@ function doneDescription(done: OfferingCorrectionResult): string {
     counts.invalid > 0 ? `${counts.invalid} nicht möglich` : null,
   ].filter(Boolean);
   const rest = left.length > 0 ? ` Unverändert: ${left.join(", ")}.` : "";
-  return `Die neuen Versionen gelten ab ${formatDate(done.effectiveFrom)}. Du findest sie beim Vertrag unter „Versionen“.${rest}`;
+  return `Die neuen Versionen gelten ab ${formatDate(done.effectiveFrom)}${laterStartText(done)}. Du findest sie beim Vertrag unter „Versionen“.${rest}`;
+}
+
+// A contract that begins after the chosen day changes from its own first
+// day: both summaries say so, as the preview does per contract.
+function laterStartText(result: OfferingCorrectionResult): string {
+  const later = result.contracts.some(
+    (contract) =>
+      (contract.status === "ready" || contract.status === "corrected") &&
+      contract.hints.includes("start_moved"),
+  );
+  return later ? ", bei späterem Vertragsbeginn ab dem ersten Vertragstag" : "";
 }
 
 export default function TraegerOfferingCorrectionPage() {
@@ -364,7 +375,7 @@ export default function TraegerOfferingCorrectionPage() {
             >
               <ul className="list-disc space-y-1.5 pl-5 text-sm text-gray-700">
                 <li>
-                  {`${contractCount(ready)} ${ready === 1 ? "bekommt" : "bekommen"} ab ${formatDate(result.effectiveFrom)} eine neue Version mit den neuen Modulen.`}
+                  {`${contractCount(ready)} ${ready === 1 ? "bekommt" : "bekommen"} ab ${formatDate(result.effectiveFrom)}${laterStartText(result)} eine neue Version mit den neuen Modulen.`}
                 </li>
                 <li>Wochentage und Endzeiten bleiben gleich.</li>
                 <li>Frühere Versionen bleiben beim Vertrag lesbar.</li>
