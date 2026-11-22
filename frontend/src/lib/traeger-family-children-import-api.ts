@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the numbers of the families from a file (#7356): the preview of
  * a CSV file with its column mapping and the import of the ready rows. Each
@@ -7,12 +8,8 @@
  * dates stay "YYYY-MM-DD".
  */
 
-import { apiErrorFromResponse, transportFetch } from "./api-error";
-import { readJson } from "./traeger-api";
 import { knownEnum } from "./contract/known-enum";
 import type * as traegerFamilyChildrenContract from "./contract/traeger-family-children.generated";
-
-const IMPORTS_PATH = "/api/traeger/family-children/imports";
 
 /** Largest file the backend reads, in bytes. */
 export const MAX_FAMILY_IMPORT_FILE_BYTES = 2 * 1024 * 1024;
@@ -163,7 +160,7 @@ function mapImportResult(
 }
 
 async function postImport(
-  path: string,
+  preview: boolean,
   request: FamilyImportRequest,
 ): Promise<FamilyImportResult> {
   const form = new FormData();
@@ -181,34 +178,24 @@ async function postImport(
   if (request.fingerprint) {
     form.append("fingerprint", request.fingerprint);
   }
-  const response = await transportFetch(path, {
-    method: "POST",
-    credentials: "include",
-    cache: "no-store",
-    body: form,
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Request failed (${response.status})`,
-    );
-  }
-  const data = await readJson(response);
-  return mapImportResult(
-    (data as { data: traegerFamilyChildrenContract.FamilyChildrenImport }).data,
-  );
+  const data = await (preview
+    ? bffJson("org", "POST /traeger/family-children/imports/preview", {
+        body: form,
+      })
+    : bffJson("org", "POST /traeger/family-children/imports", { body: form }));
+  return mapImportResult(data);
 }
 
 /** Reads the file and answers every row; stores nothing. */
 export function previewFamilyChildrenImport(
   request: FamilyImportRequest,
 ): Promise<FamilyImportResult> {
-  return postImport(`${IMPORTS_PATH}/preview`, request);
+  return postImport(true, request);
 }
 
 /** Takes over the ready rows of the confirmed preview. */
 export function applyFamilyChildrenImport(
   request: FamilyImportRequest,
 ): Promise<FamilyImportResult> {
-  return postImport(IMPORTS_PATH, request);
+  return postImport(false, request);
 }
