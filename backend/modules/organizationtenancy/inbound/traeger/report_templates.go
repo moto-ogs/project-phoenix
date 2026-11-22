@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ReportTemplateResource serves the report templates of the session's Träger
@@ -76,8 +77,8 @@ func (req *ReportTemplateRequest) input() organizationtenancy.TraegerReportTempl
 // ReportDistrictRequest assigns a school to a Sozialraum in a request; the
 // contract keeps a request type apart from the answer's (ADR 0270).
 type ReportDistrictRequest struct {
-	SchoolID common.ID `json:"school_id"`
-	District string    `json:"district"`
+	SchoolID ident.ID `json:"school_id"`
+	District string   `json:"district"`
 }
 
 func (rs *ReportTemplateResource) list(w http.ResponseWriter, r *http.Request) {

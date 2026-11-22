@@ -57,9 +57,9 @@ type attendanceDayRecord struct {
 	CheckInTime     time.Time  `json:"check_in_time"`
 	CheckOutTime    *time.Time `json:"check_out_time,omitempty"`
 	DurationMinutes *int       `json:"duration_minutes,omitempty"`
-	CheckedInBy     common.ID  `json:"checked_in_by"`
-	CheckedOutBy    *common.ID `json:"checked_out_by,omitempty"`
-	DeviceID        common.ID  `json:"device_id"`
+	CheckedInBy     ident.ID   `json:"checked_in_by"`
+	CheckedOutBy    *ident.ID  `json:"checked_out_by,omitempty"`
+	DeviceID        ident.ID   `json:"device_id"`
 	// CheckedInActor and CheckedOutActor name who recorded the day's arrival
 	// and pickup (#4761); inRow and outRow are the stays they come from.
 	CheckedInActor  *AttendanceActorResponse  `json:"checked_in_actor,omitempty"`
@@ -101,7 +101,7 @@ type attendanceSlotEntry struct {
 }
 
 type attendanceVisitEntry struct {
-	RoomID          *common.ID `json:"room_id,omitempty"`
+	RoomID          *ident.ID  `json:"room_id,omitempty"`
 	RoomName        string     `json:"room_name,omitempty"`
 	EntryTime       time.Time  `json:"entry_time"`
 	ExitTime        *time.Time `json:"exit_time,omitempty"`

@@ -27,8 +27,8 @@ const maxHandoverChildren = 200
 // PUT /school/class-day/handover/{schoolClass}/{date}: the children handed
 // over "da" and "nicht da", either list possibly empty.
 type ClassHandoverRequest struct {
-	PresentStudentIDs []common.ID `json:"present_student_ids"`
-	AbsentStudentIDs  []common.ID `json:"absent_student_ids"`
+	PresentStudentIDs []ident.ID `json:"present_student_ids"`
+	AbsentStudentIDs  []ident.ID `json:"absent_student_ids"`
 }
 
 // Bind implements render.Binder.

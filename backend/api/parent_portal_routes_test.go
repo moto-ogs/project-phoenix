@@ -11,11 +11,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun"
-
-	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	carePlanCompose "github.com/moto-ogs/project-phoenix/modules/careplan/compose"
 	"github.com/moto-ogs/project-phoenix/modules/communication"
@@ -29,10 +24,14 @@ import (
 	observabilityCompose "github.com/moto-ogs/project-phoenix/observability/compose"
 	deliveryPolicy "github.com/moto-ogs/project-phoenix/roots/communicationtest"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	portalCompose "github.com/moto-ogs/project-phoenix/workflows/parentportal/compose"
 	parentHTTP "github.com/moto-ogs/project-phoenix/workflows/parentportal/http"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
 )
 
 // The guardians' portal answers through one catalog proxy that checks every
@@ -221,7 +220,7 @@ func TestParentPortalAccountRoutesAnswerThroughTheParentMount(t *testing.T) {
 	var schools []parentHTTP.EnrollablePhaseResponse
 	r.call(t, http.MethodGet, "/parent/me/enrollable-schools", f.token, nil, &schools)
 	require.NotEmpty(t, schools, "the open phase of the child's school")
-	assert.Equal(t, common.ID(f.TenantID), schools[0].SchoolID)
+	assert.Equal(t, ident.ID(f.TenantID), schools[0].SchoolID)
 
 	var key parentHTTP.PushPublicKeyResponse
 	r.call(t, http.MethodGet, "/parent/me/push/public-key", f.token, nil, &key)

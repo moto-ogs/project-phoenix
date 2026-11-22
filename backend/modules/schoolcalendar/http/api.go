@@ -19,6 +19,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	calendarService "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -97,9 +98,9 @@ type updateAppointmentRequest struct {
 }
 
 type appointmentTargetRequest struct {
-	Type  string     `json:"type"`
-	ID    *common.ID `json:"id,omitempty"`
-	Value *string    `json:"value,omitempty"`
+	Type  string    `json:"type"`
+	ID    *ident.ID `json:"id,omitempty"`
+	Value *string   `json:"value,omitempty"`
 }
 
 func (target appointmentTargetRequest) serviceTarget() calendarService.AppointmentTarget {
