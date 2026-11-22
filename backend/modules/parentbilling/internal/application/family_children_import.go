@@ -185,32 +185,53 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 // counts, also when siblings name different days. A row the import leaves
 // out lends no day.
 func alignFamilyImportDays(candidates []familyImportCandidate) {
+	taken := takenFamilyImportRows(candidates)
 	earliest := map[string]calendar.Date{}
-	each := func(visit func(candidate *familyImportCandidate, row *importedChildren)) {
-		for i := range candidates {
-			if candidates[i].row.Status != parentbilling.FamilyImportReady {
-				continue
-			}
-			for k := range candidates[i].decided {
-				if row := &candidates[i].decided[k]; row.status == parentbilling.ImportedChildrenNew {
-					visit(&candidates[i], row)
-				}
-			}
-		}
-	}
-	each(func(_ *familyImportCandidate, row *importedChildren) {
+	for _, row := range taken {
 		if day, seen := earliest[row.family]; !seen || row.number.ValidFrom.Before(day) {
 			earliest[row.family] = row.number.ValidFrom
 		}
-	})
-	shown := map[*familyImportCandidate]bool{}
-	each(func(candidate *familyImportCandidate, row *importedChildren) {
+	}
+	for _, row := range taken {
 		row.number.ValidFrom = earliest[row.family]
-		if !shown[candidate] {
-			from := row.number.ValidFrom
-			candidate.row.ValidFrom, shown[candidate] = &from, true
+	}
+	for i := range candidates {
+		candidates[i].showDay()
+	}
+}
+
+// takenFamilyImportRows are the numbers the import stores: those to take
+// over of the ready rows.
+func takenFamilyImportRows(candidates []familyImportCandidate) []*importedChildren {
+	var taken []*importedChildren
+	for i := range candidates {
+		if candidates[i].row.Status != parentbilling.FamilyImportReady {
+			continue
 		}
-	})
+		for k := range candidates[i].decided {
+			if row := &candidates[i].decided[k]; row.status == parentbilling.ImportedChildrenNew {
+				taken = append(taken, row)
+			}
+		}
+	}
+	return taken
+}
+
+// showDay names on a ready row the day its number counts from: that of the
+// first family that takes it over. Any other row names none: a confirmed
+// number keeps its own validity, which the row does not name.
+func (c *familyImportCandidate) showDay() {
+	c.row.ValidFrom = nil
+	if c.row.Status != parentbilling.FamilyImportReady {
+		return
+	}
+	for _, row := range c.decided {
+		if row.status == parentbilling.ImportedChildrenNew {
+			from := row.number.ValidFrom
+			c.row.ValidFrom = &from
+			return
+		}
+	}
 }
 
 // familyImportRows are the numbers of the candidates per family, with the
@@ -238,16 +259,6 @@ func (c *familyImportCandidate) settle() {
 	if c.row.Status != "" {
 		return
 	}
-	// The day the number counts from, as decided for a family that takes
-	// it over: a renewed number starts after the confirmation that ran out,
-	// siblings share the earliest day their rows name.
-	for _, row := range c.decided {
-		if row.status == parentbilling.ImportedChildrenNew {
-			from := row.number.ValidFrom
-			c.row.ValidFrom = &from
-			break
-		}
-	}
 	has := func(status string) bool {
 		return slices.ContainsFunc(c.decided, func(row importedChildren) bool { return row.status == status })
 	}
@@ -274,11 +285,6 @@ func (c *familyImportCandidate) settle() {
 		c.row.Status = parentbilling.FamilyImportReady
 	default:
 		c.row.Status, c.row.ConfirmedChildren = parentbilling.FamilyImportSame, confirmed(parentbilling.ImportedChildrenSame)
-	}
-	// Only a number the import takes over counts from the row's day: a
-	// confirmed one keeps its own validity, which the row does not name.
-	if c.row.Status != parentbilling.FamilyImportReady {
-		c.row.ValidFrom = nil
 	}
 }
 
