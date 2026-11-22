@@ -11,10 +11,7 @@ import {
   type TraegerListFile,
   type TraegerListFormat,
 } from "./traeger-list-export";
-import type {
-  ArrivalPickupTimes as WireTimes,
-  ArrivalPickupWeekday as WireWeekday,
-} from "./contract/traeger-schools.generated";
+import type * as traegerSchoolsContract from "./contract/traeger-schools.generated";
 import { requiredDay } from "./contract/required-day";
 import type { TraegerSchool } from "./traeger-api";
 
@@ -77,7 +74,7 @@ function query(period: ArrivalPickupPeriod): string {
 }
 
 function heatmapOf(heatmap: {
-  readonly weekdays: WireWeekday[] | null;
+  readonly weekdays: traegerSchoolsContract.ArrivalPickupWeekday[] | null;
 }): ArrivalPickupHeatmap {
   return {
     weekdays: (heatmap.weekdays ?? []).map((row) => ({
@@ -108,7 +105,8 @@ export async function fetchTraegerArrivalPickupTimes(
       data,
     );
   }
-  const times = (data as { data: WireTimes }).data;
+  const times = (data as { data: traegerSchoolsContract.ArrivalPickupTimes })
+    .data;
   return {
     from: requiredDay(times.from, "arrival_pickup_times.from"),
     to: requiredDay(times.to, "arrival_pickup_times.to"),

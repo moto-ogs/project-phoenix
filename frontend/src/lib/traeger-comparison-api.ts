@@ -11,7 +11,7 @@ import {
   type TraegerListFile,
   type TraegerListFormat,
 } from "./traeger-list-export";
-import type { SchoolComparison as WireComparison } from "./contract/traeger-schools.generated";
+import type * as traegerSchoolsContract from "./contract/traeger-schools.generated";
 import { requiredDay } from "./contract/required-day";
 import type { TraegerSchool } from "./traeger-api";
 import { traegerRequest } from "./traeger-api";
@@ -84,7 +84,9 @@ function comparisonQuery(
   return params.toString();
 }
 
-function comparisonFromBackend(body: WireComparison): TraegerComparison {
+function comparisonFromBackend(
+  body: traegerSchoolsContract.SchoolComparison,
+): TraegerComparison {
   return {
     from: requiredDay(body.from, "comparison.from"),
     to: requiredDay(body.to, "comparison.to"),
@@ -109,7 +111,7 @@ export async function fetchTraegerComparison(
   query: ComparisonQuery,
 ): Promise<TraegerComparison> {
   return comparisonFromBackend(
-    await traegerRequest<WireComparison>(
+    await traegerRequest<traegerSchoolsContract.SchoolComparison>(
       `${COMPARISON_PATH}?${comparisonQuery(query)}`,
     ),
   );

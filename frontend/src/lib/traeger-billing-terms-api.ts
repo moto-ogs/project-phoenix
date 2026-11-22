@@ -7,25 +7,10 @@
  */
 
 import { knownEnum } from "./contract/known-enum";
-import type {
-  InvoiceMandate as WireInvoiceMandate,
-  InvoicePayment as WireInvoicePayment,
-  PostalAddress as WirePostalAddress,
-  RunDueDate as WireRunDueDate,
-} from "./contract/shared.generated";
-import type {
-  RunDueDatesRequest,
-  RunDueDatesResponse,
-} from "./contract/traeger-billing-run-due-dates.generated";
-import type {
-  BillingTermsResponse,
-  ServiceTermsRequest,
-} from "./contract/traeger-billing-terms.generated";
-import type {
-  FamilyBilling as WireFamilyBilling,
-  FamilyBillingRequest,
-  FamilyBillingResponse,
-} from "./contract/traeger-family-billing.generated";
+import type * as sharedContract from "./contract/shared.generated";
+import type * as traegerBillingRunDueDatesContract from "./contract/traeger-billing-run-due-dates.generated";
+import type * as traegerBillingTermsContract from "./contract/traeger-billing-terms.generated";
+import type * as traegerFamilyBillingContract from "./contract/traeger-family-billing.generated";
 import { traegerRequest } from "./traeger-api";
 
 // Go does not register these sets; the contract types them as string. A value
@@ -179,7 +164,7 @@ export interface InvoicePayment {
 }
 
 function invoiceMandateFromBackend(
-  mandate: WireInvoiceMandate | undefined,
+  mandate: sharedContract.InvoiceMandate | undefined,
 ): InvoiceMandate | null {
   if (!mandate) return null;
   return {
@@ -193,7 +178,9 @@ function invoiceMandateFromBackend(
 }
 
 // A service this build does not know has no form: its entry is left out.
-function termsFromBackend(body: BillingTermsResponse): BillingTerms {
+function termsFromBackend(
+  body: traegerBillingTermsContract.BillingTermsResponse,
+): BillingTerms {
   return {
     services: (body.services ?? []).flatMap((option) => {
       const service = knownEnum(BILLING_SERVICE_VALUES, option.service);
@@ -216,7 +203,9 @@ function termsFromBackend(body: BillingTermsResponse): BillingTerms {
   };
 }
 
-function addressFromBackend(address: WirePostalAddress): PostalAddress {
+function addressFromBackend(
+  address: sharedContract.PostalAddress,
+): PostalAddress {
   return {
     street: address.street,
     postalCode: address.postal_code,
@@ -224,7 +213,9 @@ function addressFromBackend(address: WirePostalAddress): PostalAddress {
   };
 }
 
-function familyFromBackend(family: WireFamilyBilling): FamilyBilling {
+function familyFromBackend(
+  family: traegerFamilyBillingContract.FamilyBilling,
+): FamilyBilling {
   return {
     id: family.id,
     familyEmail: family.family_email,
@@ -250,7 +241,7 @@ function familyFromBackend(family: WireFamilyBilling): FamilyBilling {
 
 // A due date for a payment method this build does not know is left out.
 export function runDueDatesFromBackend(
-  dates: readonly WireRunDueDate[] | null,
+  dates: readonly sharedContract.RunDueDate[] | null,
 ): RunDueDate[] {
   return (dates ?? []).flatMap((due) => {
     const paymentMethod = knownEnum(PAYMENT_METHOD_VALUES, due.payment_method);
@@ -259,7 +250,7 @@ export function runDueDatesFromBackend(
 }
 
 export function invoicePaymentFromBackend(
-  payment: WireInvoicePayment | null,
+  payment: sharedContract.InvoicePayment | null,
 ): InvoicePayment | null {
   if (!payment) return null;
   return {
@@ -280,7 +271,9 @@ const DUE_DATES_PATH = "/api/traeger/billing-run-due-dates";
 /** The terms of every service, the defaults where the Träger set none. */
 export async function fetchBillingTerms(): Promise<BillingTerms> {
   return termsFromBackend(
-    await traegerRequest<BillingTermsResponse>(TERMS_PATH),
+    await traegerRequest<traegerBillingTermsContract.BillingTermsResponse>(
+      TERMS_PATH,
+    ),
   );
 }
 
@@ -290,7 +283,7 @@ export async function saveServiceTerms(
   input: ServiceTermsInput,
 ): Promise<BillingTerms> {
   return termsFromBackend(
-    await traegerRequest<BillingTermsResponse>(
+    await traegerRequest<traegerBillingTermsContract.BillingTermsResponse>(
       `${TERMS_PATH}/${encodeURIComponent(service)}`,
       {
         method: "PUT",
@@ -298,7 +291,7 @@ export async function saveServiceTerms(
           payment_method: input.paymentMethod,
           due_days: input.dueDays,
           bundle_with: input.bundleWith,
-        } satisfies ServiceTermsRequest,
+        } satisfies traegerBillingTermsContract.ServiceTermsRequest,
       },
     ),
   );
@@ -306,14 +299,17 @@ export async function saveServiceTerms(
 
 /** The deviations of the families of the Träger. */
 export async function fetchFamilyBillings(): Promise<FamilyBilling[]> {
-  const families = await traegerRequest<WireFamilyBilling[]>(FAMILY_PATH);
+  const families =
+    await traegerRequest<traegerFamilyBillingContract.FamilyBilling[]>(
+      FAMILY_PATH,
+    );
   return families.map(familyFromBackend);
 }
 
 /** The request body of a deviation; exported for its test. */
 export function familyBillingBody(
   input: FamilyBillingInput,
-): FamilyBillingRequest {
+): traegerFamilyBillingContract.FamilyBillingRequest {
   const both = input.recipientKind === "both";
   const payer = input.recipientKind === "payer";
   return {
@@ -345,10 +341,14 @@ export function familyBillingBody(
 export async function saveFamilyBilling(
   input: FamilyBillingInput,
 ): Promise<FamilyBilling | null> {
-  const body = await traegerRequest<FamilyBillingResponse>(FAMILY_PATH, {
-    method: "PUT",
-    body: familyBillingBody(input),
-  });
+  const body =
+    await traegerRequest<traegerFamilyBillingContract.FamilyBillingResponse>(
+      FAMILY_PATH,
+      {
+        method: "PUT",
+        body: familyBillingBody(input),
+      },
+    );
   return body.family ? familyFromBackend(body.family) : null;
 }
 
@@ -361,17 +361,18 @@ export async function saveRunDueDates(
   runId: string,
   dates: readonly RunDueDate[],
 ): Promise<RunDueDate[]> {
-  const body = await traegerRequest<RunDueDatesResponse>(
-    `${DUE_DATES_PATH}/${kind}/${encodeURIComponent(runId)}`,
-    {
-      method: "PUT",
-      body: {
-        due_dates: dates.map((due) => ({
-          payment_method: due.paymentMethod,
-          due_on: due.dueOn,
-        })),
-      } satisfies RunDueDatesRequest,
-    },
-  );
+  const body =
+    await traegerRequest<traegerBillingRunDueDatesContract.RunDueDatesResponse>(
+      `${DUE_DATES_PATH}/${kind}/${encodeURIComponent(runId)}`,
+      {
+        method: "PUT",
+        body: {
+          due_dates: dates.map((due) => ({
+            payment_method: due.paymentMethod,
+            due_on: due.dueOn,
+          })),
+        } satisfies traegerBillingRunDueDatesContract.RunDueDatesRequest,
+      },
+    );
   return runDueDatesFromBackend(body.due_dates);
 }
