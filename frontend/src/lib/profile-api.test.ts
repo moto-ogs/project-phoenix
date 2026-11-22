@@ -1,9 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type {
-  Profile,
-  ProfileUpdateRequest,
-  ProfileWire,
-} from "./profile-helpers";
+import type * as meContract from "./contract/me.generated";
+import type { Profile, ProfileUpdateRequest } from "./profile-helpers";
 
 // Mock dependencies before importing the module under test
 vi.mock("./session-cache", () => {
@@ -55,7 +52,7 @@ const mockedMapProfileResponse = vi.mocked(mapProfileResponse);
 const mockedMapProfileUpdateRequest = vi.mocked(mapProfileUpdateRequest);
 
 // Sample data
-const sampleProfileWire: ProfileWire = {
+const sampleProfileWire: meContract.ProfileResponse = {
   id: "123",
   first_name: "Max",
   last_name: "Mustermann",

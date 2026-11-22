@@ -95,9 +95,6 @@ vi.mock("~/components/enrollment/phase-expiry-warnings", () => ({
 vi.mock("~/components/home/roster-deviation-todos", () => ({
   RosterDeviationTodos: () => null,
 }));
-vi.mock("~/components/home/staff-notices-block", () => ({
-  StaffNoticesBlock: () => <div data-testid="staff-notices-block" />,
-}));
 vi.mock("~/components/home/day-changes-block", () => ({
   DayChangesBlock: () => <div data-testid="day-changes-block" />,
 }));
@@ -239,7 +236,7 @@ describe("Startseite — Abfragen nicht platzierter Bausteine", () => {
 
   it("fragt die Betriebszahlen nicht, wenn kein Baustein daraus lebt", async () => {
     layoutState.blocks = [
-      { key: "section.staff_notices", span: 2, col: 0, row: 0 },
+      { key: "section.day_changes", span: 2, col: 0, row: 0 },
     ];
     layoutState.overrides = {
       "tile.students_present": false,
@@ -437,7 +434,7 @@ describe("Startseite — Abfragen nicht platzierter Bausteine", () => {
 
   it("stellt einen verpflichtenden Baustein auf, auch wenn er entfernt wurde", async () => {
     layoutState.blocks = [
-      { key: "section.staff_notices", span: 2, col: 0, row: 0 },
+      { key: "section.day_changes", span: 2, col: 0, row: 0 },
     ];
     layoutState.overrides = { "tile.students_sick": false };
     layoutState.policies = { "tile.students_sick": "required" };

@@ -14,7 +14,7 @@ import {
   mapValidation,
   type GuardianInvitationValidation,
 } from "~/lib/guardian-invitation-api";
-import { routes as invitationRoutes } from "~/lib/contract/auth-guardian-invitations.generated";
+import { routes } from "~/lib/contract/auth-guardian-invitations.generated";
 import { contractGet } from "~/lib/contract/client.server";
 import { loginImageSrc } from "~/lib/tenant-api";
 import { createLogger } from "~/lib/logger";
@@ -53,7 +53,7 @@ function invitationFailure(
 async function fetchInvitationServer(
   token: string,
 ): Promise<ValidationOutcome> {
-  const route = invitationRoutes["GET /auth/guardian-invitations/{token}"];
+  const route = routes["GET /auth/guardian-invitations/{token}"];
   try {
     const result = await contractGet(
       `${route.method} ${route.pattern}`,

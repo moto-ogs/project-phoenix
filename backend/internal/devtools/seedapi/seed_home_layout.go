@@ -34,7 +34,7 @@ func (seedHomeLayoutStep) Run(_ context.Context, rt *Runtime) error {
 	}
 	if _, err := rt.Client.Put("/api/settings/home-layout/policies", map[string]any{
 		"policies": map[string]string{
-			"section.staff_notices":   "required",
+			"section.day_changes":     "required",
 			"section.recent_activity": "disabled",
 		},
 	}); err != nil {

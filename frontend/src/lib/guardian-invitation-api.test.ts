@@ -115,8 +115,10 @@ describe("guardian invitation API", () => {
         [confirmPasswordKey]: credential,
       }),
     ).rejects.toMatchObject({
-      message: "plain failure",
+      // A plain-text body stays a diagnostic (#7806).
+      message: "Einladung konnte nicht angenommen werden.",
       status: 500,
+      code: "general.server",
     });
   });
 

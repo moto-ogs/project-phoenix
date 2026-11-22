@@ -7,6 +7,7 @@ import type {
   PhoneNumberResponse,
 } from "~/lib/contract/guardians.generated";
 import type * as guardiansContract from "~/lib/contract/guardians.generated";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 
 // Phone Number Types
 export type PhoneType = "mobile" | "home" | "work" | "other";
@@ -162,39 +163,43 @@ export interface GuardianFormData {
   notes?: string;
 }
 
-// Snake-case guardian payload sent together with a new student to
-// POST /api/students (backend `GuardianInput`). Used when creating a child and
-// its guardians in one atomic request, mirroring the guardian fields managed on
-// the student detail page.
-export interface StudentGuardianPayload {
-  // When set, links an EXISTING guardian profile to the new student instead of
-  // creating one (sibling case, #1513). The profile fields below are then
-  // carried only for local display in the create modal's summary list — the
-  // backend ignores them and never mutates the existing profile.
-  guardian_profile_id?: string;
-  first_name: string;
-  last_name: string;
-  email?: string;
-  address_street?: string;
-  address_city?: string;
-  address_postal_code?: string;
-  preferred_contact_method?: string;
-  language_preference?: string;
-  notes?: string;
-  relationship_type: string;
-  guardian_role?: GuardianRole;
-  is_primary: boolean;
-  is_emergency_contact: boolean;
-  can_pickup: boolean;
-  pickup_notes?: string;
-  emergency_priority: number;
-  phone_numbers: Array<{
-    phone_number: string;
-    phone_type?: PhoneType;
-    label?: string;
-    is_primary: boolean;
-  }>;
-}
+// A guardian sent together with a new student to POST /api/students (backend
+// `NewStudentGuardian`), when a child and its guardians are created in one
+// atomic request: the generated type with the fields the create modal always
+// fills. With `guardian_profile_id` it links an EXISTING guardian profile to
+// the new student instead of creating one (sibling case, #1513); the profile
+// fields are then carried only for the modal's summary list, the backend
+// ignores them and never mutates the existing profile.
+export type StudentGuardianPayload = Omit<
+  sharedContract.NewStudentGuardian,
+  | "guardian_profile_id"
+  | "relationship_type"
+  | "guardian_role"
+  | "phone_numbers"
+> &
+  Required<
+    Pick<
+      sharedContract.NewStudentGuardian,
+      | "first_name"
+      | "last_name"
+      | "is_primary"
+      | "is_emergency_contact"
+      | "can_pickup"
+      | "emergency_priority"
+    >
+  > & {
+    guardian_profile_id?: string;
+    relationship_type: string;
+    guardian_role?: GuardianRole;
+    phone_numbers: Array<
+      Required<
+        Pick<sharedContract.NewGuardianPhone, "phone_number" | "is_primary">
+      > &
+        Pick<sharedContract.NewGuardianPhone, "label"> & {
+          phone_type?: PhoneType;
+        }
+    >;
+  };
 
 // Student-Guardian Link Request
 export interface StudentGuardianLinkRequest {

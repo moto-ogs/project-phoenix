@@ -633,7 +633,7 @@ describe("CareOfferingsEditor", () => {
       expect(mocks.updateCareOffering).toHaveBeenCalledWith(
         "target",
         expect.objectContaining({
-          phase_id: 11,
+          phase_id: "11",
           auto_add_trigger_offering_ids: [],
         }),
       );
@@ -648,7 +648,7 @@ describe("CareOfferingsEditor", () => {
         id: "req",
         name: "Mittagessen",
         is_required: true,
-        capacity: null,
+        capacity: undefined,
       }),
     );
 
@@ -886,7 +886,7 @@ describe("CareOfferingsEditor", () => {
     mocks.listCareOfferings.mockResolvedValue([
       offering({ id: "offer-1", name: "Regelbetreuung", capacity: 10 }),
       offering({ id: "offer-2", name: "Randstunde", capacity: 5 }),
-      offering({ id: "offer-3", name: "Frühbetreuung", capacity: null }),
+      offering({ id: "offer-3", name: "Frühbetreuung", capacity: undefined }),
     ]);
     mocks.fetchCareOfferingBookingStats.mockResolvedValue({
       "offer-1": {
@@ -1480,7 +1480,7 @@ describe("CareOfferingsEditor", () => {
       expect(mocks.updateCareOffering).toHaveBeenCalledWith(
         "offer-1",
         expect.objectContaining({
-          activity_group_id: 12,
+          activity_group_id: "12",
           is_active: false,
         }),
       ),
@@ -1637,7 +1637,7 @@ describe("CareOfferingsEditor", () => {
     ]);
     mocks.listCalendarPeriods.mockResolvedValue([calendarPeriod()]);
     mocks.updateCareOffering.mockResolvedValue(
-      offering({ phase_id: "11", activity_group_id: null }),
+      offering({ phase_id: "11", activity_group_id: undefined }),
     );
     mocks.getTemplates.mockResolvedValue({
       templates: [
@@ -1703,7 +1703,7 @@ describe("CareOfferingsEditor", () => {
       expect(mocks.updateCareOffering).toHaveBeenCalledWith(
         "offer-1",
         expect.objectContaining({
-          phase_id: 11,
+          phase_id: "11",
           activity_group_id: null,
         }),
       );
@@ -1849,8 +1849,8 @@ describe("CareOfferingsEditor", () => {
       expect(mocks.updateCareOffering).toHaveBeenCalledWith(
         "offer-1",
         expect.objectContaining({
-          phase_id: 11,
-          activity_group_id: 8,
+          phase_id: "11",
+          activity_group_id: "8",
         }),
       ),
     );

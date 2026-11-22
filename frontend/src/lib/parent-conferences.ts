@@ -34,16 +34,17 @@ export type ParentConferenceOffer = Omit<
   readonly free_slots: readonly sharedContract.ParentConferenceWindow[];
 };
 
-/** What the form sends; the backend reads it as ParentConferenceRequest. */
-export interface ParentConferenceRequest {
-  readonly school_class: string;
-  readonly date: string;
-  readonly start_time: string;
-  readonly end_time: string;
-  readonly slot_minutes: number;
-  readonly breaks: readonly sharedContract.ParentConferenceWindow[];
-  readonly location?: string;
-}
+/** What the form sends: the generated request with every field it fills. */
+export type ParentConferenceRequest = Required<
+  Pick<
+    schoolCalendarContract.ParentConferenceRequest,
+    "school_class" | "start_time" | "end_time" | "slot_minutes"
+  >
+> & {
+  date: string;
+  breaks: sharedContract.ParentConferenceWindow[];
+  location?: string;
+};
 
 // Go always sets the day of a Sprechtag; the contract types calendar.Date as
 // nullable.
@@ -86,7 +87,7 @@ export async function createSchoolParentConference(
 ): Promise<ParentConference> {
   return mapConference(
     await bffJson("school", "POST /school/calendar/parent-conferences", {
-      body: { ...request, breaks: [...request.breaks] },
+      body: request,
     }),
   );
 }
@@ -101,7 +102,7 @@ export async function updateSchoolParentConference(
       "PUT /school/calendar/parent-conferences/{conferenceId}",
       {
         params: { conferenceId: id },
-        body: { ...request, breaks: [...request.breaks] },
+        body: request,
       },
     ),
   );

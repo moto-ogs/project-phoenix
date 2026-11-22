@@ -54,10 +54,8 @@ import {
   sendWithExistingChildChoice,
   type ExistingChildChoiceSubject,
 } from "~/components/enrollment/existing-child-choice";
-import {
-  type CareOfferingBookingStats,
-  fetchCareOfferingBookingStats,
-} from "~/lib/care-offering-booking-stats";
+import { fetchCareOfferingBookingStats } from "~/lib/care-offering-booking-stats";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useFreshSWR, useInvalidateFamily, useSWRAuth } from "~/lib/swr";
@@ -67,7 +65,10 @@ import { Loading } from "~/components/ui/loading";
 
 const logger = createLogger({ component: "PhaseEnrollmentActions" });
 
-const NO_STATS: Record<string, CareOfferingBookingStats> = {};
+const NO_STATS: Record<
+  string,
+  enrollmentContract.CareOfferingBookingStatsResponse
+> = {};
 
 export function LateInviteModal({
   isOpen,

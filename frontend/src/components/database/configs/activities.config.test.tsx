@@ -134,7 +134,7 @@ describe("activitiesConfig", () => {
     expect(mapped).toEqual({
       name: "Test Activity",
       max_participants: 25,
-      category_id: 3,
+      category_id: "3",
     });
   });
 
@@ -150,8 +150,22 @@ describe("activitiesConfig", () => {
     expect(mapped).toEqual({
       name: "Test Activity",
       max_participants: 25,
-      category_id: 3,
-      supervisor_ids: [42],
+      category_id: "3",
+      supervisor_ids: ["42"],
+    });
+  });
+
+  it("keeps identifiers beyond 2^53 exact (#7806)", () => {
+    const data: Partial<Activity> = {
+      name: "Test Activity",
+      max_participant: 25,
+      ag_category_id: "9007199254740993",
+      supervisor_id: "9007199254740995",
+    };
+
+    expect(activitiesConfig.service?.mapRequest?.(data)).toMatchObject({
+      category_id: "9007199254740993",
+      supervisor_ids: ["9007199254740995"],
     });
   });
 
@@ -166,7 +180,7 @@ describe("activitiesConfig", () => {
     expect(mapped).toEqual({
       name: "Test Activity",
       max_participants: null,
-      category_id: 3,
+      category_id: "3",
     });
   });
 

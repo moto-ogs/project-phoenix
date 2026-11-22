@@ -19,7 +19,8 @@ import { markLogoutNotRevoked } from "~/lib/login-session-notice";
 import { clearPersonalStorage } from "~/lib/personal-storage";
 import { createLogger } from "~/lib/logger";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
-import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
+import { ApiError } from "~/lib/api-error";
+import { bffJsonUncontracted } from "~/lib/bff-fetch";
 import { unsubscribePushSilently } from "~/lib/push-api";
 import { getSessionPersonName, hasPermission } from "~/lib/auth-utils";
 import { getSmartRedirectPath } from "~/lib/redirect-utils";
@@ -111,21 +112,28 @@ async function revokeSessionFamily(
   signal?: AbortSignal,
 ): Promise<void> {
   markLogoutNotRevoked(false);
-  const response = await transportFetch(path, {
-    method: "POST",
-    signal: signal
-      ? AbortSignal.any([signal, AbortSignal.timeout(5000)])
-      : AbortSignal.timeout(5000),
-  });
+  // A session step of the BFF: through `public`, so a 401 neither renews the
+  // session nor opens the login.
+  try {
+    await bffJsonUncontracted<null>("public", "POST", path, {
+      signal: signal
+        ? AbortSignal.any([signal, AbortSignal.timeout(5000)])
+        : AbortSignal.timeout(5000),
+      errorMessage: "Logout failed",
+    });
+  } catch (error) {
+    signal?.throwIfAborted();
+    // Without an answer the session stays, with a retry.
+    if (!(error instanceof ApiError) || error.noResponse) throw error;
+    if (error.status === 401) return;
+    logger.warn("logout_not_revoked", {
+      status: error.status,
+      code: error.code,
+    });
+    markLogoutNotRevoked(true);
+    return;
+  }
   signal?.throwIfAborted();
-  if (response.ok || response.status === 401) return;
-  const refusal = await apiErrorFromResponse(response, "Logout failed");
-  signal?.throwIfAborted();
-  logger.warn("logout_not_revoked", {
-    status: response.status,
-    code: refusal.code,
-  });
-  markLogoutNotRevoked(true);
 }
 
 interface ShellUser {

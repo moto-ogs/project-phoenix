@@ -52,14 +52,14 @@ describe("fetchStudentFeedback", () => {
     expect(result[0]).toEqual({
       id: "10",
       timestamp: "2026-04-01T15:30:23",
-      feedback_type: "positive",
-      is_mensa_feedback: false,
+      feedbackType: "positive",
+      isMensaFeedback: false,
     });
     expect(result[1]).toEqual({
       id: "11",
       timestamp: "2026-04-02T14:10:05",
-      feedback_type: "negative",
-      is_mensa_feedback: true,
+      feedbackType: "negative",
+      isMensaFeedback: true,
     });
   });
 
