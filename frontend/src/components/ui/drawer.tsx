@@ -44,6 +44,25 @@ const Drawer = ({
 );
 Drawer.displayName = "Drawer";
 
+/**
+ * Ein Blatt, das über einem offenen Blatt aufgeht (vaul `NestedRoot`): Das
+ * untere rückt etwas nach hinten und bleibt offen. Nur innerhalb von `Drawer`.
+ */
+const DrawerNested = ({
+  shouldScaleBackground = false,
+  direction = "bottom",
+  ...props
+}: DrawerRootProps) => (
+  <DrawerDirectionContext.Provider value={direction}>
+    <DrawerPrimitive.NestedRoot
+      shouldScaleBackground={shouldScaleBackground}
+      direction={direction}
+      {...props}
+    />
+  </DrawerDirectionContext.Provider>
+);
+DrawerNested.displayName = "DrawerNested";
+
 const DrawerPortal = DrawerPrimitive.Portal;
 
 /**
@@ -213,6 +232,7 @@ const DrawerClose = DrawerPrimitive.Close;
 
 export {
   Drawer,
+  DrawerNested,
   DrawerClose,
   DrawerContent,
   DrawerHeader,
