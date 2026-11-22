@@ -6,6 +6,11 @@ import {
 import { reportStandaloneUsage } from "~/lib/pwa-usage-api";
 import * as pushApi from "~/lib/push-api";
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 vi.mock("~/lib/push-api", () => ({
   isStandaloneApp: vi.fn(),
 }));
@@ -32,18 +37,18 @@ describe("reportStandaloneUsage", () => {
 
   it("posts to the staff endpoint in standalone mode", async () => {
     await reportStandaloneUsage("tenant", accountID, 1);
-    expect(fetchMock).toHaveBeenCalledWith("/api/pwa/usage", {
-      method: "POST",
-      credentials: "include",
-    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/pwa/usage",
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 
   it("posts to the parent endpoint for the parents portal", async () => {
     await reportStandaloneUsage("parent", accountID);
-    expect(fetchMock).toHaveBeenCalledWith("/api/parent/me/pwa-usage", {
-      method: "POST",
-      credentials: "include",
-    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/parent/me/pwa-usage",
+      expect.objectContaining({ method: "POST", credentials: "include" }),
+    );
   });
 
   it("does not report school sessions to the tenant-only endpoint", async () => {

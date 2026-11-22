@@ -4,6 +4,7 @@
  * geladen sind und nicht die ganze Anmeldungs-API mitziehen sollen.
  */
 
+import { bffJson } from "~/lib/bff-fetch";
 import { mutate } from "~/lib/swr";
 import { shellResourceKeys } from "~/lib/swr/shell-keys";
 
@@ -35,15 +36,11 @@ export function announceEnrollmentReadChange() {
  */
 export async function fetchUnreadEnrollmentCount(): Promise<number> {
   try {
-    const response = await fetch(
-      "/api/enrollment/admin/requests/unread-count",
-      { cache: "no-store" },
+    const counts = await bffJson(
+      "tenant",
+      "GET /api/enrollment/admin/requests/unread-count",
     );
-    if (!response.ok) return 0;
-    const envelope = (await response.json()) as {
-      data?: { unread_count?: number };
-    };
-    return envelope.data?.unread_count ?? 0;
+    return counts?.unread_count ?? 0;
   } catch {
     return 0;
   }
