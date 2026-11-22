@@ -462,7 +462,7 @@ func sortedKeys[V any](m map[string]V) []string {
 func (w *tsWriter) tsType(s Schema, request bool) string {
 	var t string
 	switch s.Kind {
-	case KindString, KindDate, KindInstant, KindClock, KindID, KindLaxID:
+	case KindString, KindDate, KindInstant, KindClock, KindID:
 		t = "string"
 	case KindBool:
 		t = "boolean"

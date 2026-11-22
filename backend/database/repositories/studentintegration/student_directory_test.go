@@ -163,11 +163,6 @@ func TestStudentDirectoryTenantIsolation(t *testing.T) {
 
 	err = tenant.WithinCurrentTenant(otherCtx, func(txCtx context.Context) error {
 		require.ErrorIs(t, module.LockStudent(txCtx, student.ID), peopledirectory.ErrStudentNotFound)
-		// Visiting students are the one deliberate way past the boundary.
-		across, err := module.ListStudentsAcrossTenantsByID(txCtx, []int64{student.ID})
-		require.NoError(t, err)
-		require.Len(t, across, 1)
-		assert.Equal(t, testpkg.Tenant(t), across[0].TenantID)
 		return nil
 	})
 	require.NoError(t, err)

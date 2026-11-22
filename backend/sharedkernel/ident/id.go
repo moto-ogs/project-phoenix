@@ -12,8 +12,8 @@ import (
 
 // ID is an int64 identifier that travels to a client as a JSON string. A JSON
 // number beyond 2^53 is rounded by JavaScript to the identifier of a
-// different row. It reads a decimal string or a JSON number, so a client that
-// still sends numbers keeps working.
+// different row. It reads a decimal string or, for one release, a JSON number
+// (see UnmarshalJSON).
 //
 // encoding/json writes an ID as a JSON number, as it writes an int64: stored
 // JSON (audit details, outbox payloads, snapshots, fingerprints) keeps the
@@ -32,6 +32,14 @@ func (id ID) String() string { return strconv.FormatInt(int64(id), 10) }
 // with strconv, so digits beyond float64 precision survive, and anything that
 // is not a plain integer is rejected instead of being coerced to zero. null
 // leaves the value unchanged.
+//
+// The JSON number is the one-release compatibility for deployed clients:
+// browser tabs of the frontend before #7808 still send numbers in many
+// bodies, and a reader of strings only would break them at the deploy
+// (expand, then contract; ADR 0270). Every client of this repository sends
+// strings since #7808, and the kiosk device API keeps its own int64 fields
+// (contract:"number"). After the next release, this reader takes only a
+// decimal string.
 func (id *ID) UnmarshalJSON(data []byte) error {
 	trimmed := strings.TrimSpace(string(data))
 	if trimmed == "null" {

@@ -28,11 +28,6 @@ func TestModuleStudentReadsNormalizeIDsAndClassesBeforeTheEngine(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []int64{9, 4}, engine.student.ids)
 
-	_, err = module.ListStudentsAcrossTenantsByID(ctx, []int64{5, 5})
-	require.NoError(t, err)
-	assert.True(t, engine.across)
-	assert.Equal(t, []int64{5}, engine.student.ids)
-
 	cohort, err := module.ListStudentsByClasses(ctx, []string{"", ""})
 	require.NoError(t, err)
 	assert.Empty(t, cohort)

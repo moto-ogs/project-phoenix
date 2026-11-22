@@ -23,6 +23,7 @@ GET /api/students/care-withdrawals -> basis
 GET /api/students/care-withdrawals/{completionId}/deletion-impact -> basis
 GET /api/students/change-requests -> basis
 GET /api/students/change-requests/access -> basis
+GET /api/students/change-requests/history -> basis
 GET /api/students/change-requests/pending-count -> basis
 GET /api/students/change-requests/rss-feed/ -> basis
 GET /api/students/child-quota -> basis
