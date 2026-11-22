@@ -106,7 +106,7 @@ func careScheduleImpactToken(t *testing.T, handler http.Handler, token string, s
 				Data struct {
 					ID          string `json:"id"`
 					ImpactToken string `json:"impact_token"`
-				} `json:"data"`
+				} `json:"care_schedule"`
 			} `json:"items"`
 		} `json:"data"`
 	}

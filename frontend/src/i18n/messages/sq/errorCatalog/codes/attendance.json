@@ -1,4 +1,5 @@
 {
+  "checkin_staff_profile_required": "Vetëm stafi i shkollës mund t'i regjistrojë fëmijët në hyrje dhe në dalje. Llogaria juaj nuk ka profil stafi në këtë shkollë.",
   "log_disabled": "Nuk keni qasje te: {object}. Kontaktoni shkollën.",
   "web_disabled": "Nuk keni qasje te: {object}. Kontaktoni shkollën."
 }

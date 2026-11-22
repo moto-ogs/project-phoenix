@@ -178,6 +178,7 @@ type StaffShiftSeries struct {
 	IncludeSchoolBreaks bool
 	CreatedBy           int64
 	UpdatedBy           *int64
+	PlannedByTraeger    bool
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
 }
@@ -185,12 +186,13 @@ type StaffShiftSeries struct {
 // StaffShiftSeriesException is one deliberately removed occurrence of a
 // series: re-plans and splits never regenerate the date.
 type StaffShiftSeriesException struct {
-	ID        int64
-	TenantID  int64
-	SeriesID  int64
-	Date      string
-	CreatedBy int64
-	CreatedAt time.Time
+	ID               int64
+	TenantID         int64
+	SeriesID         int64
+	Date             string
+	CreatedBy        int64
+	PlannedByTraeger bool
+	CreatedAt        time.Time
 }
 
 // ShiftType is a tenant-defined label and color for planned shifts.
@@ -270,7 +272,7 @@ func ValidateStaffShiftSeries(series StaffShiftSeries) error {
 	if err := validateSeriesValidity(series.ValidFrom, series.ValidUntil); err != nil {
 		return err
 	}
-	if series.CreatedBy <= 0 {
+	if series.CreatedBy <= 0 && !series.PlannedByTraeger {
 		return invalidSeries("created by is required")
 	}
 	return nil
@@ -317,13 +319,17 @@ func validateSeriesValidity(validFromValue, validUntilValue string) error {
 	return nil
 }
 
-// ValidateStaffShiftSeriesException requires a series and a calendar day.
+// ValidateStaffShiftSeriesException requires a series, a calendar day and
+// an author: a staff member or the mark of the Träger-Büro.
 func ValidateStaffShiftSeriesException(exception StaffShiftSeriesException) error {
 	if exception.SeriesID <= 0 {
 		return invalidSeries("series ID is required")
 	}
 	if exception.Date == "" {
 		return invalidSeries("date is required")
+	}
+	if exception.CreatedBy <= 0 && !exception.PlannedByTraeger {
+		return invalidSeries("created by is required")
 	}
 	_, err := parseShiftDate(exception.Date, "date", invalidSeries)
 	return err

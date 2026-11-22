@@ -70,12 +70,6 @@ func TestListPersonsByIDDeduplicatesAndSkipsEmptyInput(t *testing.T) {
 	if len(engine.listed) != 2 || engine.listed[0] != 3 || engine.listed[1] != 1 || engine.across {
 		t.Fatalf("expected deduplicated tenant-scoped list, got %v across=%v", engine.listed, engine.across)
 	}
-	if _, err := module.ListPersonsAcrossTenantsByID(context.Background(), []int64{5, 5}); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(engine.listed) != 1 || !engine.across {
-		t.Fatalf("expected the cross-tenant engine call, got %v across=%v", engine.listed, engine.across)
-	}
 	if _, err := module.ListPersonsByTenantIDs(context.Background(), []int64{7, 7}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

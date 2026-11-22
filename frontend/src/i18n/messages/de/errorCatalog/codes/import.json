@@ -9,5 +9,6 @@
   "import_batch_failed": "{object} konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
   "mode_forbidden": "Bestehende Einträge darfst du nicht ändern. Bitte wähle „Nur neue anlegen“ oder frage die Leitung.",
   "not_test_traeger": "Das geht nur bei einem Test-Träger. Echte Träger bekommen keine Beispieldaten.",
+  "staff_profile_required": "Kinder importieren kann nur jemand mit Personalprofil. Dein Konto hat an dieser Schule noch keins. Bitte lass dir von der Verwaltung der Schule eins anlegen.",
   "test_traeger_inactive": "Der Test-Träger ist deaktiviert. Bitte aktiviere ihn zuerst."
 }

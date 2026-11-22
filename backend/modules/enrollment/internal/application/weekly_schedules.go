@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -12,18 +13,40 @@ import (
 )
 
 // scheduleAuthor is the author of the weekly rows a dispatch writes: a staff
-// member resolved earlier, or else the staff membership of the reviewing
-// account.
+// member resolved earlier, the Träger-Büro resolved earlier, or else the
+// staff membership of the reviewing account.
 type scheduleAuthor struct {
 	staffID           int64
+	byTraeger         bool
 	reviewerAccountID int64
 }
 
-func (d *Decisions) resolveScheduleAuthor(ctx context.Context, author scheduleAuthor) (int64, error) {
+// resolvedScheduleAuthor names the rows' author: a staff member, or the
+// Träger-Büro with staffID 0 (#7818).
+type resolvedScheduleAuthor struct {
+	staffID   int64
+	byTraeger bool
+}
+
+// resolveScheduleAuthor resolves who the weekly rows name. A reviewer with a
+// staff record of the school always writes as that staff member. A reviewer
+// without one writes as the Träger-Büro only in a request the Träger-Büro
+// marked; a failed lookup stays a failure and never becomes the Träger-Büro.
+func (d *Decisions) resolveScheduleAuthor(ctx context.Context, author scheduleAuthor) (resolvedScheduleAuthor, error) {
 	if author.staffID > 0 {
-		return author.staffID, nil
+		return resolvedScheduleAuthor{staffID: author.staffID}, nil
 	}
-	return d.resolveReviewerStaffID(ctx, author.reviewerAccountID)
+	if author.byTraeger {
+		return resolvedScheduleAuthor{byTraeger: true}, nil
+	}
+	staffID, err := d.resolveReviewerStaffID(ctx, author.reviewerAccountID)
+	if errors.Is(err, enrollment.ErrDecisionReviewerStaffRequired) && enrollment.TraegerBueroReviewer(ctx) {
+		return resolvedScheduleAuthor{byTraeger: true}, nil
+	}
+	if err != nil {
+		return resolvedScheduleAuthor{}, err
+	}
+	return resolvedScheduleAuthor{staffID: staffID}, nil
 }
 
 // dispatchWeekdaySchedule inserts one pickup or arrival schedule row per
@@ -33,32 +56,46 @@ func (d *Decisions) dispatchWeekdaySchedule(ctx context.Context, raw any, studen
 	if (isPickup && d.deps.PickupSchedules == nil) || (!isPickup && d.deps.ArrivalSchedules == nil) {
 		return nil
 	}
-	var sched enrollment.WeekdaySchedule
-	if err := decodeStructured(raw, &sched); err != nil {
-		return fmt.Errorf("decode weekday_schedule: %w", err)
-	}
-	if err := sched.Validate(); err != nil {
-		return fmt.Errorf("%w: %w", enrollment.ErrDecisionInvalidData, err)
-	}
-	createdBy, err := d.resolveScheduleAuthor(ctx, author)
+	rows, err := weekdayScheduleRows(raw)
 	if err != nil {
 		return err
 	}
-	for day, hhmm := range sched {
-		hhmm = strings.TrimSpace(hhmm)
-		if hhmm == "" {
-			continue
-		}
-		if err := d.writeWeekdaySchedule(ctx, studentID, day, hhmm, createdBy, isPickup); err != nil {
+	// An answer needs its author even when it names no time: under a
+	// replacing dispatch it has already cleared the running rows.
+	rowAuthor, err := d.resolveScheduleAuthor(ctx, author)
+	if err != nil {
+		return err
+	}
+	for day, hhmm := range rows {
+		if err := d.writeWeekdaySchedule(ctx, studentID, day, hhmm, rowAuthor, isPickup); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (d *Decisions) writeWeekdaySchedule(ctx context.Context, studentID int64, day, hhmm string, createdBy int64, isPickup bool) error {
+// weekdayScheduleRows is the rows a weekly pickup or arrival answer writes:
+// its weekdays with a time. A weekday left empty writes nothing.
+func weekdayScheduleRows(raw any) (map[string]string, error) {
+	var sched enrollment.WeekdaySchedule
+	if err := decodeStructured(raw, &sched); err != nil {
+		return nil, fmt.Errorf("decode weekday_schedule: %w", err)
+	}
+	if err := sched.Validate(); err != nil {
+		return nil, fmt.Errorf("%w: %w", enrollment.ErrDecisionInvalidData, err)
+	}
+	rows := make(map[string]string, len(sched))
+	for day, hhmm := range sched {
+		if hhmm = strings.TrimSpace(hhmm); hhmm != "" {
+			rows[day] = hhmm
+		}
+	}
+	return rows, nil
+}
+
+func (d *Decisions) writeWeekdaySchedule(ctx context.Context, studentID int64, day, hhmm string, author resolvedScheduleAuthor, isPickup bool) error {
 	if !isPickup {
-		if err := d.deps.ArrivalSchedules.CreateArrivalSchedule(ctx, studentID, offeringContract.DayNumber(day), createdBy); err != nil {
+		if err := d.deps.ArrivalSchedules.CreateArrivalSchedule(ctx, studentID, offeringContract.DayNumber(day), author.staffID, author.byTraeger); err != nil {
 			return fmt.Errorf("create arrival %s: %w", day, err)
 		}
 		return nil
@@ -67,7 +104,7 @@ func (d *Decisions) writeWeekdaySchedule(ctx context.Context, studentID int64, d
 	if err != nil {
 		return fmt.Errorf("parse %s time %q: %w", day, hhmm, err)
 	}
-	if err := d.deps.PickupSchedules.UpsertPickupSchedule(ctx, studentID, offeringContract.DayNumber(day), calendar.NormalizeWallClock(t), createdBy); err != nil {
+	if err := d.deps.PickupSchedules.UpsertPickupSchedule(ctx, studentID, offeringContract.DayNumber(day), calendar.NormalizeWallClock(t), author.staffID, author.byTraeger); err != nil {
 		return fmt.Errorf("upsert pickup %s: %w", day, err)
 	}
 	return nil

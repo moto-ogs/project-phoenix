@@ -11,12 +11,12 @@ const model = (fields, route = {}) => ({
   enums: [],
   types: [{ name: "Row", go_type: "rows.Row", fields }],
 });
-const base = model([field("id", "lax_id"), field("name", "string"), field("nick", "string", { optional: true }), field("old", "string", { deprecated: true })]);
+const base = model([field("id", "id"), field("name", "string"), field("nick", "string", { optional: true }), field("old", "string", { deprecated: true })]);
 const withFields = (change) => model(change(structuredClone(base.types[0].fields)));
 
-test("additions, a dropped deprecated field and string identifiers are compatible", () => {
+test("additions and a dropped deprecated field are compatible", () => {
   const head = withFields((fields) => [
-    { ...fields[0], schema: { kind: "id" } },
+    fields[0],
     fields[1],
     { ...fields[2], optional: false },
     field("added", "string"),
@@ -40,12 +40,22 @@ test("every change that breaks a reader of the base is named", () => {
   for (const [name, head, message] of cases) {
     assert.ok(breakingChanges(base, head).includes(message), `${name}: ${JSON.stringify(breakingChanges(base, head))}`);
   }
-  const named = model([field("id", "lax_id"), field("name", "enum"), field("nick", "clock", { optional: true }), field("old", "string", { deprecated: true })]);
+  const named = model([field("id", "id"), field("name", "enum"), field("nick", "clock", { optional: true }), field("old", "string", { deprecated: true })]);
   assert.deepEqual(breakingChanges(base, named), [], "naming the form of a string keeps the wire");
   assert.ok(breakingChanges(named, base).includes("GET /api/rows/[].name: enum became string"));
-  const stringBase = model([field("id", "id")]);
-  assert.deepEqual(breakingChanges(model([field("id", "lax_id")]), stringBase), [], "a lax reader may become a strict identifier");
-  assert.deepEqual(breakingChanges(stringBase, model([field("id", "lax_id")])), ["GET /api/rows/[].id: id became lax_id"]);
+});
+
+test("a request identifier may become an id, an answer's may not", () => {
+  const body = (kind) => {
+    const route = model([field("id", kind)], { method: "POST", request: { kind: "ref", ref: "Row" }, response: undefined, no_data: true });
+    route.types[0].request = true;
+    return route;
+  };
+  for (const kind of ["string", "lax_id"]) {
+    assert.deepEqual(breakingChanges(body(kind), body("id")), [], `Go reads a ${kind} identifier as an id`);
+  }
+  assert.deepEqual(breakingChanges(body("id"), body("string")), ["POST /api/rows/ request.id: id became string"]);
+  assert.deepEqual(breakingChanges(model([field("id", "string")]), model([field("id", "id")])), ["GET /api/rows/[].id: string became id"]);
 });
 
 test("a deprecated route may leave and a variant may not", () => {

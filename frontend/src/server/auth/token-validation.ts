@@ -4,6 +4,25 @@ import type { ErrorCode } from "~/lib/error-codes.generated";
 import { decodeJwtPayload, type JwtPayload } from "./jwt-payload";
 import { acceptsScope, type ValidationPortal } from "./portals";
 
+/**
+ * The backend answers the claims' identifiers as strings (ADR 0300, #7808);
+ * the session keeps the access token's own claim shape, whose school,
+ * Träger and preview admin are numbers.
+ */
+function claimShape(answer: JwtPayload | null): JwtPayload | null {
+  if (!answer || typeof answer !== "object") return null;
+  const numeric = (value: unknown) =>
+    typeof value === "string" && /^\d+$/.test(value) ? Number(value) : value;
+  return {
+    ...answer,
+    tenant_id: numeric(answer.tenant_id) as JwtPayload["tenant_id"],
+    org_id: numeric(answer.org_id) as JwtPayload["org_id"],
+    acting_admin_id: numeric(
+      answer.acting_admin_id,
+    ) as JwtPayload["acting_admin_id"],
+  };
+}
+
 /** Only backend-verified claims may cross a client token-handoff boundary. */
 export async function validateSessionToken(
   accessToken: string,
@@ -27,7 +46,7 @@ export async function validateSessionToken(
       timeout: "session",
     });
     if (!response.ok) return null;
-    const claims = (await response.json()) as JwtPayload;
+    const claims = claimShape((await response.json()) as JwtPayload | null);
     if (
       !claims ||
       !claims.id ||

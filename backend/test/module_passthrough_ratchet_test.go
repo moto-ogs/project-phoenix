@@ -255,7 +255,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// Raised by ADR 0077: the caterer flows. Lowered by #7081: one name for
 	// the operator's resend of a code. Lowered by #4496: revoking a caterer
 	// invitation also stops its unsent mail.
-	"modules/identityaccess": 201, // #2352: dead caller session and invitation reads removed (-4)
+	"modules/identityaccess": 200, // #2352: dead caller session and invitation reads removed (-4); Lowered by #7808: the test-only address change left (-1)
 	"modules/mealplan":       1,
 	// Raised by ADR 0112: the Träger logo read of the Träger-Portal.
 	// Raised by ADR 0172: the document contact read without an account (+1).
@@ -272,7 +272,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// Raised by ADR 0209: the billing lock B of the holiday allocation
 	// workflow, which validates the Träger and maps the lock error (+1).
 	"modules/parentbilling":    12,
-	"modules/peopledirectory":  198, // #6840: DeletePerson checks live profiles (-1); #7104: the rosters and the retention read the owner's clock (-2); #2352: dead guardian lists removed (-2); #7808: the group routes read no persons (-2)
+	"modules/peopledirectory":  195, // #6840: DeletePerson checks live profiles (-1); #7104: the rosters and the retention read the owner's clock (-2); #2352: dead guardian lists removed (-2); #7808: the group routes read no persons (-2); Lowered by #7808: the test-only cross-tenant visitor reads left (-3)
 	"modules/requestreview":    15,
 	"modules/schedulerruntime": 4,
 	// Raised by ADR 0073: the feed cleanup keeps only the staff feed tombstones.

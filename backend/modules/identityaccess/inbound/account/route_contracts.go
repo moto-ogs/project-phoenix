@@ -119,3 +119,38 @@ func PublicRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/tenant/resolve", Portals: portals, Query: []common.QueryParam{{Name: "slug", Kind: common.QueryString}}, Response: TenantResolveResponse{}},
 	}
 }
+
+// SessionRouteContracts registers the staff portal's session steps below
+// /auth (#7808): sign-in, second factor, passkey sign-in, renewal, check,
+// switch, preview and sign-out, and the invitation accept that signs the
+// owner in. Each answer carries or ends tokens, so only the portal's route
+// file reads it and no proxy allowlist names the route.
+func SessionRouteContracts() []common.RouteContract {
+	portals := []common.PortalScope{common.PortalTenant}
+	step := func(pattern string, request, response any) common.RouteContract {
+		return common.RouteContract{
+			Method: "POST", Pattern: pattern, Portals: portals, RouteFile: common.RouteFileSession,
+			Request: request, Response: response, NoData: response == nil, Plain: response != nil,
+		}
+	}
+	accept := step("/invitations/{token}/accept", AcceptInvitationRequest{}, AcceptInvitationResponse{})
+	accept.Plain = false
+	accept.RouteFile = "the route file attaches the signed-in owner's session to the accept"
+	end := step("/staff-preview/end", StaffPreviewEndRequest{}, nil)
+	return []common.RouteContract{
+		step("/login", LoginRequest{}, portalauth.LoginResponse{}),
+		step("/logout", nil, nil),
+		step("/refresh", nil, portalauth.TokenResponse{}),
+		step("/session/validate", SessionValidationRequest{}, SessionClaimsResponse{}),
+		step("/mfa/enroll/start", nil, portalauth.EnrollStartResponse{}),
+		step("/mfa/enroll/confirm", common.MFAVerifyRequest{}, portalauth.TokenResponse{}),
+		step("/mfa/resend", common.MFAResendRequest{}, common.MFAResendResponse{}),
+		step("/mfa/verify", common.MFAVerifyRequest{}, portalauth.TokenResponse{}),
+		step("/passkeys/login/options", passkeyLoginOptionsRequest{}, identityaccess.PasskeyCeremonyOptions{}),
+		step("/passkeys/login/verify", common.PasskeyVerifyRequest{}, portalauth.LoginResponse{}),
+		step("/switch-tenant", SwitchTenantRequest{}, portalauth.TokenResponse{}),
+		step("/staff-preview", StaffPreviewStartRequest{}, StaffPreviewStartResponse{}),
+		end,
+		accept,
+	}
+}

@@ -10,11 +10,11 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
-// planExportRequest is the shared body of both plan export routes (#2079).
+// PlanExportRequest is the shared body of both plan export routes (#2079).
 // Dates are "YYYY-MM-DD"; the service widens them to whole weeks.
-type planExportRequest struct {
-	From     string `json:"from"`
-	To       string `json:"to"`
+type PlanExportRequest struct {
+	From     string `json:"from" contract:"date"`
+	To       string `json:"to" contract:"date"`
 	Template string `json:"template"`
 	Variant  string `json:"variant"`
 	Format   string `json:"format"`
@@ -24,7 +24,7 @@ type planExportRequest struct {
 // Dienstplan week. It reads the same overview projection the screen does, so
 // the permission set matches GET /overview exactly.
 func (rs *Resource) exportPlan(w http.ResponseWriter, r *http.Request) {
-	var req planExportRequest
+	var req PlanExportRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		rs.invalid(w, r, errors.New("invalid JSON body"))
 		return

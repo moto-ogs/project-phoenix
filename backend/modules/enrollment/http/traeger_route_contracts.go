@@ -33,11 +33,7 @@ func HolidayPeriodRouteContracts() []common.RouteContract {
 		{Method: "PUT", Pattern: "/{id}", Portals: traegerPortal, Request: HolidayPeriodRequest{}, Response: capability.HolidayPeriod{}},
 		{Method: "POST", Pattern: "/{id}/publish", Portals: traegerPortal, Response: capability.HolidayPeriod{}},
 		{Method: "GET", Pattern: "/{id}/form", Portals: traegerPortal, Response: capability.HolidayFormEditor{}},
-		// The body is the editor's own form (fields, legal blocks), the same
-		// Enrollment types the answer carries; a type the generator walks
-		// once as a request and once as a response it refuses, so the body
-		// stays unregistered here.
-		{Method: "PUT", Pattern: "/{id}/form", Portals: traegerPortal, Response: capability.HolidayFormEditor{}},
+		{Method: "PUT", Pattern: "/{id}/form", Portals: traegerPortal, Request: HolidayPeriodFormRequest{}, Response: capability.HolidayFormEditor{}},
 		{Method: "POST", Pattern: "/{id}/form/documents", Portals: traegerPortal, Multipart: true,
 			MaxBodyBytes: maxEnrollmentLegalDocumentBody, TooLargeCode: common.CodeEnrollmentLegalDocumentInvalid,
 			Response: capability.HolidayFormDocument{}},

@@ -247,7 +247,7 @@ describe("traeger-api", () => {
     expect(result.rows[0]).toMatchObject({ status: undefined, sequence: "" });
   });
 
-  it("sends the chosen Träger as a number and returns only session status", async () => {
+  it("preserves a bigint Träger ID and returns only session status", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse(200, {
         status: "success",
@@ -258,7 +258,11 @@ describe("traeger-api", () => {
     );
 
     await expect(
-      traegerLogin({ email: "a@b.de", password: "pw", organizationId: "7" }),
+      traegerLogin({
+        email: "a@b.de",
+        password: "pw",
+        organizationId: "9007199254740993",
+      }),
     ).resolves.toEqual({
       status: "authenticated",
     });
@@ -267,17 +271,17 @@ describe("traeger-api", () => {
     expect(JSON.parse(init?.body as string)).toEqual({
       email: "a@b.de",
       password: "pw",
-      organization_id: 7,
+      organization_id: "9007199254740993",
     });
   });
 
-  it("maps the choice of Träger with string IDs", async () => {
+  it("maps the choice of Träger", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse(200, {
         status: "success",
         data: {
           status: "organization_selection_required",
-          organizations: [{ id: 7, name: "Träger Nord" }],
+          organizations: [{ id: "9007199254740993", name: "Träger Nord" }],
         },
       }),
     );
@@ -286,7 +290,7 @@ describe("traeger-api", () => {
       traegerLogin({ email: "a@b.de", password: "pw" }),
     ).resolves.toEqual({
       status: "organization_selection_required",
-      organizations: [{ id: "7", name: "Träger Nord" }],
+      organizations: [{ id: "9007199254740993", name: "Träger Nord" }],
     });
     const [, init] = fetchMock.mock.calls[0]!;
     expect(JSON.parse(init?.body as string)).not.toHaveProperty(
@@ -302,7 +306,7 @@ describe("traeger-api", () => {
           status: "mfa_required",
           challenge_token: "challenge",
           masked_email: "a***@b.de",
-          organization_id: 7,
+          organization_id: "7",
           trusted_device_enabled: true,
           trusted_device_days: 90,
         },
@@ -327,7 +331,7 @@ describe("traeger-api", () => {
           status: "mfa_required",
           challenge_token: "challenge",
           masked_email: "a***@b.de",
-          organization_id: 7,
+          organization_id: "7",
         },
       }),
     );
@@ -346,7 +350,7 @@ describe("traeger-api", () => {
           access_token: "enrollment",
           masked_email: "a***@b.de",
           mfa_enrollment_required: true,
-          organization_id: 7,
+          organization_id: "7",
         },
       }),
     );

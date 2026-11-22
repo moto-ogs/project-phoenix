@@ -6,10 +6,23 @@ import {
   success,
 } from "./runtime";
 import {
+  EnrollStartResponseSchema,
+  LoginResponseSchema,
+  MFAResendResponseSchema,
+  TokenResponseSchema,
   TrustedDeviceDTOSchema,
+  type MFAResendRequest,
+  type MFAVerifyRequest,
   type PasswordResetConfirmRequest,
   type PasswordResetRequest,
 } from "./shared.generated";
+
+/** Go: schoolportal.SchoolLoginRequest */
+export interface SchoolLoginRequest {
+  email?: string;
+  password?: string;
+  tenant_slug?: string;
+}
 
 export const routes = {
   "DELETE /school/auth/mfa/trusted-devices/{deviceId}": {
@@ -23,6 +36,50 @@ export const routes = {
     pattern: "/school/auth/mfa/trusted-devices",
     portals: ["school"],
     response: success(z.array(TrustedDeviceDTOSchema)),
+  },
+  "POST /school/auth/login": {
+    method: "POST",
+    pattern: "/school/auth/login",
+    portals: ["school"],
+    routeFile: "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+    plain: true,
+    request: requestBody<SchoolLoginRequest>(),
+    response: LoginResponseSchema,
+  },
+  "POST /school/auth/mfa/enroll/confirm": {
+    method: "POST",
+    pattern: "/school/auth/mfa/enroll/confirm",
+    portals: ["school"],
+    routeFile: "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+    plain: true,
+    request: requestBody<MFAVerifyRequest>(),
+    response: TokenResponseSchema,
+  },
+  "POST /school/auth/mfa/enroll/start": {
+    method: "POST",
+    pattern: "/school/auth/mfa/enroll/start",
+    portals: ["school"],
+    routeFile: "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+    plain: true,
+    response: EnrollStartResponseSchema,
+  },
+  "POST /school/auth/mfa/resend": {
+    method: "POST",
+    pattern: "/school/auth/mfa/resend",
+    portals: ["school"],
+    routeFile: "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+    plain: true,
+    request: requestBody<MFAResendRequest>(),
+    response: MFAResendResponseSchema,
+  },
+  "POST /school/auth/mfa/verify": {
+    method: "POST",
+    pattern: "/school/auth/mfa/verify",
+    portals: ["school"],
+    routeFile: "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+    plain: true,
+    request: requestBody<MFAVerifyRequest>(),
+    response: TokenResponseSchema,
   },
   "POST /school/auth/password-reset": {
     method: "POST",

@@ -35,6 +35,13 @@ type ArrivalPlans interface {
 }
 
 // ArrivalExceptions manages dated deviations from the weekly plan.
+//
+// resolveStaffID names the staff member who takes over a day a guardian set.
+// It is called only for such a takeover and answers (0, nil) when the caller
+// has no staff record of the school; an error means the lookup failed and is
+// returned as a failure, never as a refusal (#7818). Without a staff member
+// the takeover needs the mark of WithTraegerBueroAuthor, or it is refused
+// with ErrCareExceptionStaffProfileRequired.
 type ArrivalExceptions interface {
 	GetStudentArrivalExceptionByID(ctx context.Context, exceptionID int64) (*ArrivalException, error)
 	GetStudentArrivalExceptionForDate(ctx context.Context, studentID int64, date calendar.Date) (*ArrivalException, error)

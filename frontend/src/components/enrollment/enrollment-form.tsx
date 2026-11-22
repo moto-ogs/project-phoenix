@@ -188,8 +188,8 @@ interface PropsBase {
   readonly lateInviteToken?: string;
   /** Status-link authorization for file uploads while editing a request. */
   readonly statusToken?: string;
-  /** Authenticated parent-portal upload route for restricted phases. */
-  readonly uploadEndpoint?: string;
+  /** Uploads through the parent portal's session (restricted phases). */
+  readonly viaParentPortal?: boolean;
   readonly previewMode?: boolean;
   readonly previewSchema?: PublicFormSchema | null;
   /**
@@ -268,7 +268,7 @@ export function EnrollmentForm({
   prefetchedData,
   lateInviteToken,
   statusToken,
-  uploadEndpoint,
+  viaParentPortal,
   previewMode = false,
   previewSchema,
   previewOfferings,
@@ -348,7 +348,7 @@ export function EnrollmentForm({
     phaseId: phaseID,
     lateInviteToken,
     statusToken,
-    uploadEndpoint,
+    viaParentPortal,
     locale: contentLocale,
     previewMode,
   });

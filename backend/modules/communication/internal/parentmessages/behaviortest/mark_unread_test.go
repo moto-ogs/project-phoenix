@@ -64,7 +64,7 @@ func assertTeamUnread(t *testing.T, f *fixture, accountID int64, expected int) {
 // fixture's staff account (A) has read.
 func startReadThread(t *testing.T, f *fixture) int64 {
 	t.Helper()
-	started, err := testpkg.TenantQuery4(t, adminCtx(t, f.staffAccount), f.db, f.svc.StartThread, f.chain.StudentID, f.chain.AccountID, "Hallo", "")
+	started, err := sendFirstMessage(t, adminCtx(t, f.staffAccount), f.db, f.svc, f.chain.StudentID, f.chain.AccountID, "Hallo", "")
 	require.NoError(t, err)
 	createGuardianMessage(t, f.db, f.chain, started.ThreadID, "Frage")
 	_, err = testpkg.TenantQuery1(t, adminCtx(t, f.staffAccount), f.db, f.svc.GetThread, started.ThreadID)
@@ -245,7 +245,7 @@ func TestMarkUnread_KeepsParentReadReceipt(t *testing.T) {
 	repos := api.NewParentMessagingSuiteRepositories(testpkg.NewDatabase(t, f.db))
 	staffCtx := adminCtx(t, f.staffAccount)
 	guardianCtx := adminCtx(t, f.chain.AccountID)
-	started, err := testpkg.TenantQuery4(t, staffCtx, f.db, f.svc.StartThread, f.chain.StudentID, f.chain.AccountID, "Hallo", "")
+	started, err := sendFirstMessage(t, staffCtx, f.db, f.svc, f.chain.StudentID, f.chain.AccountID, "Hallo", "")
 	require.NoError(t, err)
 	threadID := started.ThreadID
 	// Append the guardian question the way the parent side does, so the thread

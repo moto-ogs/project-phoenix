@@ -25,8 +25,8 @@ import (
 // routes speak the same shape. Dates are "YYYY-MM-DD"; the service widens
 // them to whole weeks.
 type betreuungsplanExportRequest struct {
-	From     string `json:"from"`
-	To       string `json:"to"`
+	From     string `json:"from" contract:"date"`
+	To       string `json:"to" contract:"date"`
 	Template string `json:"template"`
 	Variant  string `json:"variant"`
 	Format   string `json:"format"`

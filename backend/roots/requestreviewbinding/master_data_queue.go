@@ -65,7 +65,7 @@ func masterDataPendingRow(item *masterdatarequests.ReviewItem) requestreview.Row
 		BulkIneligibleText:   item.BulkIneligibleText,
 		ConflictKeys:         item.Request.ConflictKeys(),
 		CurrentValueChanged:  item.CurrentValueChanged,
-		Data:                 requestreview.ToMasterDataChangeRequestResponse(item),
+		Payload:              requestreview.Payload{MasterData: new(requestreview.ToMasterDataChangeRequestResponse(item))},
 	}
 }
 
@@ -81,6 +81,6 @@ func masterDataHistoryRow(item *masterdatarequests.HistoryItem) requestreview.Ro
 		Status:      item.Request.Status,
 		DecidedAt:   requestreview.HistoryDecidedAt(item.Request.ReviewedAt, item.Request.UpdatedAt),
 		CanCorrect:  item.Request.CanCorrect(),
-		Data:        requestreview.ToMasterDataHistoryResponse(item),
+		Payload:     requestreview.Payload{MasterDataHistory: new(requestreview.ToMasterDataHistoryResponse(item))},
 	}
 }

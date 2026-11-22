@@ -1,8 +1,4 @@
-import { ApiError, unavailableApiError } from "~/lib/api-error";
-import { readEnrollmentError } from "~/lib/enrollment-api-error";
-import { createLogger } from "~/lib/logger";
-
-const logger = createLogger({ component: "EnrollmentUploads" });
+import { bffJson } from "~/lib/bff-fetch";
 
 /** File kinds a `file` form field may accept (backend FileType*). */
 export type EnrollmentFileType = "pdf" | "jpg" | "png";
@@ -164,10 +160,14 @@ export function formatUploadSize(bytes: number, locale = "de"): string {
   return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(mb)} MB`;
 }
 
+/** The message of a failed upload; the user reads the catalog text. */
+export const UPLOAD_FAILED = "Datei konnte nicht hochgeladen werden";
+
 /**
- * Uploads one file for a `file` field of the public enrollment form. The
- * route is anonymous like the submit; the answer's token is single-use and
- * claimed by the submission.
+ * Uploads one file for a `file` field of the enrollment form. The public
+ * route is anonymous like the submit; a restricted phase in the parents
+ * portal uploads through the parent's session (`viaParentPortal`). The
+ * answer's token is single-use and claimed by the submission.
  */
 export async function uploadEnrollmentFile(params: {
   tenantSlug: string;
@@ -176,7 +176,7 @@ export async function uploadEnrollmentFile(params: {
   file: File;
   lateInviteToken?: string;
   statusToken?: string;
-  uploadEndpoint?: string;
+  viaParentPortal?: boolean;
   signal?: AbortSignal;
 }): Promise<NewUploadValue> {
   // The upload endpoint verifies the same authorization context as the form:
@@ -191,56 +191,19 @@ export async function uploadEnrollmentFile(params: {
     body.append("status_token", params.statusToken.trim());
   }
   body.append("file", params.file);
-  return postUpload(
-    params.uploadEndpoint ??
-      `/api/enrollment/${encodeURIComponent(params.tenantSlug)}/uploads`,
+  const options = {
+    params: { tenantSlug: params.tenantSlug },
     body,
-    params.file,
-    params.signal,
-  );
-}
-
-/**
- * Posts one multipart upload and reads the single-use token of the stored
- * file. The proof of benefits of the holiday registration (#5238) uses the
- * same answer.
- */
-async function postUpload(
-  url: string,
-  body: FormData,
-  file: File,
-  signal?: AbortSignal,
-): Promise<NewUploadValue> {
-  let response: Response;
-  try {
-    response = await fetch(url, { method: "POST", body, signal });
-  } catch (cause) {
-    throw unavailableApiError(cause);
-  }
-  if (!response.ok) {
-    throw await readEnrollmentError(
-      response,
-      "Datei konnte nicht hochgeladen werden",
-      logger,
-      "enrollment_upload_failed",
-    );
-  }
-  const raw = (await response.json().catch(() => null)) as {
-    data?: Partial<NewUploadValue>;
-  } | null;
-  const data = raw?.data;
-  if (!data || typeof data.token !== "string" || data.token === "") {
-    // A success without a token is a server fault.
-    throw new ApiError("Enrollment upload returned no token", 500);
-  }
-  return {
-    token: data.token,
-    filename: typeof data.filename === "string" ? data.filename : file.name,
-    size_bytes:
-      typeof data.size_bytes === "number" ? data.size_bytes : file.size,
-    content_type:
-      typeof data.content_type === "string" ? data.content_type : file.type,
+    signal: params.signal,
+    errorMessage: UPLOAD_FAILED,
   };
+  return params.viaParentPortal
+    ? bffJson(
+        "parent",
+        "POST /parent/enrollments/{tenantSlug}/uploads",
+        options,
+      )
+    : bffJson("public", "POST /api/enrollment/{tenantSlug}/uploads", options);
 }
 
 /** Address of the staff download proxy for one stored upload. */

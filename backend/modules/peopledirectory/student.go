@@ -134,10 +134,6 @@ type StudentQuery interface {
 	// trimmed and case-insensitive; an empty class has no children. It reads
 	// in the caller's school transaction and fails without one.
 	ListStudentNamesByClass(context.Context, string) ([]StudentName, error)
-	// ListStudentsAcrossTenantsByID resolves visiting students (holiday care
-	// at a partner school) in a separate admin transaction. Callers must
-	// already hold a reference to the student (an open visit).
-	ListStudentsAcrossTenantsByID(context.Context, []int64) ([]Student, error)
 	// ListStudentsByClasses returns the non-alumni students of the given
 	// classes ordered by class, then id.
 	ListStudentsByClasses(context.Context, []string) ([]Student, error)

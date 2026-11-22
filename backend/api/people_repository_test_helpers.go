@@ -182,7 +182,6 @@ func NewParentMessagingSuiteRepositories(db transactionruntime.Database, clocks 
 type PresenceSuiteRepositories struct {
 	ActiveGroup      studentpresence.SessionRecords
 	GroupSupervisor  studentpresence.SupervisionRecords
-	CrossTenant      owners.CrossTenantQuery
 	SessionStartLock interface {
 		LockSessionStart(context.Context, int64) error
 	}
@@ -201,7 +200,6 @@ func NewPresenceSuiteRepositories(db transactionruntime.Database, clocks ...func
 	return &PresenceSuiteRepositories{
 		ActiveGroup:      sessions,
 		GroupSupervisor:  owners.NewGroupSupervisionRecords(sessions, groups),
-		CrossTenant:      owners.NewCrossTenantQuery(presence, students, groups),
 		SessionStartLock: presence,
 	}
 }
