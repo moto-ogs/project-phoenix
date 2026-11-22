@@ -40,22 +40,12 @@ func (seedTraegerSchoolChangeStep) Run(ctx context.Context, rt *Runtime) error {
 	if rt == nil || rt.Client == nil || rt.Bootstrap == nil || rt.Bootstrap.AdminEmail == "" || rt.Adapter == nil {
 		return fmt.Errorf("the school change seed prerequisites are not available")
 	}
-	manual := rt.AdditionalProfiles[ManualProfileKey]
-	if manual == nil || manual.Organization.ID != rt.Bootstrap.OrganizationID {
-		fmt.Println("  Schulwechsel: no second school of the Träger; no child changes its school")
-		return nil
-	}
-	today, err := rt.historyToday()
-	if err != nil {
+	manual, today, ok, err := seedSchoolChangeDay(rt)
+	if err != nil || !ok {
 		return err
 	}
 	month := calendar.NewDate(today.Year(), today.Month(), 1)
 	change := today.AddDays(1)
-	if change.Month() != today.Month() {
-		// The change must lie within the month the open run bills.
-		fmt.Println("  Schulwechsel: the month ends today; no child changes its school")
-		return nil
-	}
 	auth, err := seedTraegerSession(rt)
 	if err != nil {
 		return err
@@ -89,6 +79,27 @@ func (seedTraegerSchoolChangeStep) Run(ctx context.Context, rt *Runtime) error {
 	fmt.Printf("  Schulwechsel: %s %s changes on %s from contract %d to contract %d at the Demo-Schule Manuell\n",
 		old.firstName, old.lastName, change, old.id, contractID)
 	return nil
+}
+
+// seedSchoolChangeDay answers the second school of the Träger and the day
+// the old contract ends; ok is false without that school or on the last day
+// of a month, when the change would fall into the next month.
+func seedSchoolChangeDay(rt *Runtime) (*SeedProfile, calendar.Date, bool, error) {
+	manual := rt.AdditionalProfiles[ManualProfileKey]
+	if manual == nil || manual.Organization.ID != rt.Bootstrap.OrganizationID {
+		fmt.Println("  Schulwechsel: no second school of the Träger; no child changes its school")
+		return nil, "", false, nil
+	}
+	today, err := rt.historyToday()
+	if err != nil {
+		return nil, "", false, err
+	}
+	if today.AddDays(1).Month() != today.Month() {
+		// The change must lie within the month the open run bills.
+		fmt.Println("  Schulwechsel: the month ends today; no child changes its school")
+		return nil, "", false, nil
+	}
+	return manual, today, true, nil
 }
 
 // seedSchoolChangeRun prices the modules of the Demo-Schule Manuell from

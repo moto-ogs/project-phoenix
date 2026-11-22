@@ -127,7 +127,7 @@ func schoolChangeBuckets(parts []schoolChangePart) [][]int {
 	var buckets [][]int
 	for i, part := range parts {
 		for _, person := range part.persons {
-			if strings.HasSuffix(person, "\x1f") {
+			if birthless(person) {
 				continue
 			}
 			at, seen := index[person]
@@ -141,17 +141,24 @@ func schoolChangeBuckets(parts []schoolChangePart) [][]int {
 	}
 	for i, part := range parts {
 		for _, person := range part.persons {
-			if !strings.HasSuffix(person, "\x1f") {
-				continue
-			}
-			for key, at := range index {
-				if strings.HasPrefix(key, person) && !slices.Contains(buckets[at], i) {
-					buckets[at] = append(buckets[at], i)
-				}
+			if birthless(person) {
+				addToBucketsOfName(buckets, index, person, i)
 			}
 		}
 	}
 	return buckets
+}
+
+// birthless tells whether a spelled person carries no date of birth.
+func birthless(person string) bool { return strings.HasSuffix(person, "\x1f") }
+
+// addToBucketsOfName puts a child into every bucket of the name, once.
+func addToBucketsOfName(buckets [][]int, index map[string]int, name string, child int) {
+	for key, at := range index {
+		if strings.HasPrefix(key, name) && !slices.Contains(buckets[at], child) {
+			buckets[at] = append(buckets[at], child)
+		}
+	}
 }
 
 // bucketJoins tells whether the children of a bucket are one child: each
