@@ -343,7 +343,6 @@ jobs:
       - name: Build frontend merge integration
         working-directory: frontend
         env:
-          NEXT_PUBLIC_API_URL: "http://localhost:8080"
           SKIP_ENV_VALIDATION: "true"
           API_URL: "http://localhost:8080"
           NEXT_PUBLIC_OPERATOR_HOSTNAME: "operator.localhost:3000"
@@ -399,7 +398,6 @@ jobs:
       # Only for the approval label step below.
       pull-requests: read
     env:
-      NEXT_PUBLIC_API_URL: "http://localhost:8080"
       SKIP_ENV_VALIDATION: "true"
       API_URL: "http://localhost:8080"
       NEXT_PUBLIC_OPERATOR_HOSTNAME: "operator.localhost:3000"

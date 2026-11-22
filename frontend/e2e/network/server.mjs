@@ -379,7 +379,6 @@ const env = {
   NODE_ENV: "development",
   NEXT_TELEMETRY_DISABLED: "1",
   API_URL: `http://127.0.0.1:${apiPort}`,
-  NEXT_PUBLIC_API_URL: `http://127.0.0.1:${apiPort}`,
   NEXTAUTH_URL: `http://localhost:${frontendPort}`,
   NEXTAUTH_SECRET: randomBytes(32).toString("hex"),
   AUTH_JWT_EXPIRY: "15m",

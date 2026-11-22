@@ -9,7 +9,6 @@ const validBuildEnv = {
   NEXT_PUBLIC_APP_ENV: "production",
   API_URL: "http://server:8080",
   TENANT_DOMAIN: "moto-app.de",
-  NEXT_PUBLIC_API_URL: "https://api.moto-app.de",
   NEXT_PUBLIC_TENANT_DOMAIN: "moto-app.de",
   NEXT_PUBLIC_POSTHOG_KEY: "",
   NEXT_PUBLIC_OPERATOR_HOSTNAME: "operator.moto-app.de",
@@ -41,10 +40,10 @@ describe("env validation", () => {
     expect(() =>
       validateBuildEnv({
         ...validBuildEnv,
-        NEXT_PUBLIC_API_URL: "",
+        NEXT_PUBLIC_TENANT_DOMAIN: "",
       }),
     ).toThrow(
-      "Frontend build env validation failed: NEXT_PUBLIC_API_URL: Invalid URL",
+      "Frontend build env validation failed: NEXT_PUBLIC_TENANT_DOMAIN:",
     );
   });
 
