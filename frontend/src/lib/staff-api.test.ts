@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type { StaffFilters } from "./staff-api";
 import type { StaffRecordResponse } from "./contract/staff.generated";
 import { ApiError } from "./api-error";
 import { suppressConsole } from "~/test/helpers/console";
@@ -115,7 +114,7 @@ const sampleActiveGroups = [
 ];
 
 describe("staff-api", () => {
-  const consoleSpies = suppressConsole("error", "warn");
+  suppressConsole("error", "warn");
   let originalFetch: typeof fetch;
 
   beforeEach(() => {

@@ -1,23 +1,15 @@
 // Staff API service for fetching all staff members and their supervision status
 
-import type * as shared from "~/lib/contract/shared.generated";
 import type * as staffWire from "~/lib/contract/staff.generated";
 import type { RoleForm } from "~/lib/position-title";
 import { bffJson } from "./bff-fetch";
 import type { ActiveGroupResponse } from "~/lib/contract/active.generated";
-import { createLogger } from "~/lib/logger";
-import {
-  ApiError,
-  apiErrorFromResponse,
-  apiErrorFromText,
-} from "~/lib/api-error";
+import { ApiError } from "~/lib/api-error";
 import {
   knownMailOutcome,
   type MailOutcome,
 } from "~/lib/email-delivery-status";
 import type {
-  AbsenceRebookingResult,
-  CompTimeBalancePreview as CompTimeBalancePreviewWire,
   ExternalStaffResponse,
   FormerStaffResponse,
   MinimalStaffProfileResponse,
@@ -32,17 +24,12 @@ import type {
   StaffVacationOpening as StaffVacationOpeningWire,
   VacationQuotaSummary,
 } from "~/lib/contract/shared.generated";
-import type {
-  ModelResponse,
-  StaffFactResponse,
-} from "~/lib/contract/work-time-models.generated";
+import type { ModelResponse } from "~/lib/contract/work-time-models.generated";
 import {
   EXTERNAL_ACCOUNT_STATUS_VALUES,
   ROLE_FORM_VALUES,
 } from "~/lib/staff-wire-enums";
 import { knownEnum } from "~/lib/contract/known-enum";
-
-const logger = createLogger({ component: "StaffAPI" });
 
 /**
  * Adresse des Profilbilds einer Kollegin, `undefined` ohne hochgeladenes Bild
