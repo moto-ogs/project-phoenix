@@ -1,5 +1,8 @@
 import type { SchoolInvitationResponse } from "./contract/auth-invitations.generated";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
+
 import type {
   InvitationAcceptRequest,
   CreateInvitationRequest,
@@ -93,29 +96,6 @@ describe("invitation-api", () => {
   });
 
   describe("validateInvitation", () => {
-    it("validates invitation successfully with direct data response", async () => {
-      global.fetch = vi.fn().mockResolvedValueOnce({
-        ok: true,
-        json: async () => sampleBackendValidation,
-      });
-
-      const result = await validateInvitation("test-token-123");
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        "/api/auth/invitations/test-token-123",
-        // transportFetch hands fetch an explicit init.
-        undefined,
-      );
-      expect(result).toEqual({
-        email: "teacher@example.com",
-        roleName: "Teacher",
-        firstName: "John",
-        lastName: "Doe",
-        position: "Math Teacher",
-        expiresAt: "2025-12-31T23:59:59Z",
-      });
-    });
-
     it("validates invitation successfully with wrapped data response", async () => {
       global.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
@@ -131,15 +111,17 @@ describe("invitation-api", () => {
     it("handles URL encoding of token", async () => {
       global.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
-        json: async () => sampleBackendValidation,
+        json: async () => ({
+          status: "success",
+          data: sampleBackendValidation,
+        }),
       });
 
       await validateInvitation("token with spaces & special=chars");
 
       expect(global.fetch).toHaveBeenCalledWith(
         "/api/auth/invitations/token%20with%20spaces%20%26%20special%3Dchars",
-        // transportFetch hands fetch an explicit init.
-        undefined,
+        { method: "GET", credentials: "include", cache: "no-store" },
       );
     });
 
@@ -158,7 +140,7 @@ describe("invitation-api", () => {
       );
     });
 
-    it("throws error with text error message when validation fails", async () => {
+    it("keeps a plain-text refusal as diagnostics, not as the message", async () => {
       global.fetch = vi.fn().mockResolvedValueOnce({
         ok: false,
         status: 410,
@@ -168,9 +150,10 @@ describe("invitation-api", () => {
 
       vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
-      await expect(validateInvitation("expired-token")).rejects.toThrow(
-        "Invitation expired",
-      );
+      await expect(validateInvitation("expired-token")).rejects.toMatchObject({
+        status: 410,
+        message: "Einladung konnte nicht geprüft werden.",
+      });
     });
 
     it("uses fallback message when response body is empty", async () => {
@@ -443,7 +426,6 @@ describe("invitation-api", () => {
           "Content-Type": "application/json",
         },
         body: expect.any(String),
-        credentials: "include",
       });
       const init = vi.mocked(global.fetch).mock.calls[0]![1]!;
       expect(JSON.parse(init.body as string)).toEqual({
@@ -518,7 +500,7 @@ describe("invitation-api", () => {
       const result = await listPendingInvitations();
 
       expect(global.fetch).toHaveBeenCalledWith("/api/auth/invitations", {
-        credentials: "include",
+        method: "GET",
       });
       expect(result).toHaveLength(1);
       expect(result[0]?.email).toBe("teacher@example.com");
@@ -559,7 +541,7 @@ describe("invitation-api", () => {
     it("resends invitation successfully", async () => {
       global.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ status: "success" }),
+        json: async () => ({ status: "success", data: { message: "sent" } }),
       });
 
       await resendInvitation("123");
@@ -568,7 +550,6 @@ describe("invitation-api", () => {
         "/api/auth/invitations/123/resend",
         {
           method: "POST",
-          credentials: "include",
         },
       );
     });
@@ -608,14 +589,13 @@ describe("invitation-api", () => {
     it("revokes invitation successfully", async () => {
       global.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ status: "success" }),
+        json: async () => ({ status: "success", data: null }),
       });
 
       await revokeInvitation("123");
 
       expect(global.fetch).toHaveBeenCalledWith("/api/auth/invitations/123", {
         method: "DELETE",
-        credentials: "include",
       });
     });
 

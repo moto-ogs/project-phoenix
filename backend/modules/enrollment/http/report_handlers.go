@@ -2,7 +2,6 @@ package enrollmenthttp
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -15,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type careUsageExportRequest struct {
@@ -52,21 +52,21 @@ type classRosterExportRequest struct {
 }
 
 type classRosterExportFiltersRequest struct {
-	PhaseID     json.RawMessage `json:"phase_id"`
-	SchoolClass string          `json:"school_class"`
-	AllClasses  bool            `json:"all_classes"`
+	PhaseID     ident.ID `json:"phase_id"`
+	SchoolClass string   `json:"school_class"`
+	AllClasses  bool     `json:"all_classes"`
 }
 
 type careUsageExportFiltersRequest struct {
-	PhaseID         string   `json:"phase_id"`
-	Status          string   `json:"status,omitempty"`
-	CareOfferingID  string   `json:"care_offering_id,omitempty"`
-	CareOfferingIDs []string `json:"care_offering_ids,omitempty"`
-	DayCount        *int     `json:"day_count,omitempty"`
-	GradeLevel      *int16   `json:"grade_level,omitempty"`
-	Weekday         string   `json:"weekday,omitempty"`
-	PickupTime      string   `json:"pickup_time,omitempty"`
-	Search          string   `json:"search,omitempty"`
+	PhaseID         ident.ID   `json:"phase_id"`
+	Status          string     `json:"status,omitempty"`
+	CareOfferingID  ident.ID   `json:"care_offering_id,omitempty"`
+	CareOfferingIDs []ident.ID `json:"care_offering_ids,omitempty"`
+	DayCount        *int       `json:"day_count,omitempty"`
+	GradeLevel      *int16     `json:"grade_level,omitempty"`
+	Weekday         string     `json:"weekday,omitempty"`
+	PickupTime      string     `json:"pickup_time,omitempty"`
+	Search          string     `json:"search,omitempty"`
 }
 
 type CareUsageReportResponse struct {
@@ -412,12 +412,11 @@ func parseClassRosterExportRequest(r *http.Request) (lists.Format, capability.Cl
 	default:
 		return "", capability.ClassRosterFilters{}, fmt.Errorf("unsupported export format %q (use pdf, docx or xlsx)", format)
 	}
-	phaseID, err := parseClassRosterPhaseID(body.Filters.PhaseID)
-	if err != nil {
-		return "", capability.ClassRosterFilters{}, err
+	if body.Filters.PhaseID <= 0 {
+		return "", capability.ClassRosterFilters{}, errors.New("phase_id must be positive")
 	}
 	filters := capability.ClassRosterFilters{
-		PhaseID:     phaseID,
+		PhaseID:     body.Filters.PhaseID.Int64(),
 		SchoolClass: strings.TrimSpace(body.Filters.SchoolClass),
 		AllClasses:  body.Filters.AllClasses,
 	}
@@ -430,27 +429,8 @@ func parseClassRosterExportRequest(r *http.Request) (lists.Format, capability.Cl
 	return format, filters, nil
 }
 
-func parseClassRosterPhaseID(raw json.RawMessage) (int64, error) {
-	if len(raw) == 0 || string(raw) == "null" {
-		return 0, errors.New("phase_id is required")
-	}
-	var asString string
-	if err := json.Unmarshal(raw, &asString); err == nil {
-		phaseID, parseErr := strconv.ParseInt(strings.TrimSpace(asString), 10, 64)
-		if parseErr != nil || phaseID <= 0 {
-			return 0, errors.New("phase_id must be positive")
-		}
-		return phaseID, nil
-	}
-	var asNumber int64
-	if err := json.Unmarshal(raw, &asNumber); err == nil && asNumber > 0 {
-		return asNumber, nil
-	}
-	return 0, errors.New("phase_id must be positive")
-}
-
 func (req careUsageExportFiltersRequest) toServiceFilters() (capability.CareUsageFilters, error) {
-	phaseID, err := parseRequiredPositiveInt64(req.PhaseID, "filters.phase_id")
+	phaseID, err := requiredPositiveID(req.PhaseID, "filters.phase_id")
 	if err != nil {
 		return capability.CareUsageFilters{}, err
 	}
@@ -463,8 +443,8 @@ func (req careUsageExportFiltersRequest) toServiceFilters() (capability.CareUsag
 		PickupTime: req.PickupTime,
 		Search:     req.Search,
 	}
-	if strings.TrimSpace(req.CareOfferingID) != "" {
-		careOfferingID, err := parseRequiredPositiveInt64(req.CareOfferingID, "filters.care_offering_id")
+	if req.CareOfferingID != 0 {
+		careOfferingID, err := requiredPositiveID(req.CareOfferingID, "filters.care_offering_id")
 		if err != nil {
 			return capability.CareUsageFilters{}, err
 		}
@@ -474,8 +454,8 @@ func (req careUsageExportFiltersRequest) toServiceFilters() (capability.CareUsag
 	if req.CareOfferingIDs != nil {
 		filters.CareOfferingIDsSet = true
 	}
-	for _, raw := range req.CareOfferingIDs {
-		careOfferingID, err := parseRequiredPositiveInt64(raw, "filters.care_offering_ids")
+	for _, id := range req.CareOfferingIDs {
+		careOfferingID, err := requiredPositiveID(id, "filters.care_offering_ids")
 		if err != nil {
 			return capability.CareUsageFilters{}, err
 		}
@@ -484,16 +464,14 @@ func (req careUsageExportFiltersRequest) toServiceFilters() (capability.CareUsag
 	return filters, nil
 }
 
-func parseRequiredPositiveInt64(raw, field string) (int64, error) {
-	value := strings.TrimSpace(raw)
-	if value == "" {
+func requiredPositiveID(id ident.ID, field string) (int64, error) {
+	switch {
+	case id == 0:
 		return 0, fmt.Errorf("%s is required", field)
-	}
-	id, err := strconv.ParseInt(value, 10, 64)
-	if err != nil || id <= 0 {
+	case id < 0:
 		return 0, fmt.Errorf("%s must be positive", field)
 	}
-	return id, nil
+	return id.Int64(), nil
 }
 
 func toCareUsageReportResponse(report *capability.CareUsageReport) *CareUsageReportResponse {

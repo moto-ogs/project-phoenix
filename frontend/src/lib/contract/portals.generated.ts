@@ -12,14 +12,19 @@ import { routes as authGuardianInvitations } from "./auth-guardian-invitations.g
 import { routes as authHolidayParentSetups } from "./auth-holiday-parent-setups.generated";
 import { routes as authInvitations } from "./auth-invitations.generated";
 import { routes as authLinkToTenant } from "./auth-link-to-tenant.generated";
+import { routes as authLogin } from "./auth-login.generated";
+import { routes as authLogout } from "./auth-logout.generated";
 import { routes as authMfa } from "./auth-mfa.generated";
 import { routes as authPasskeys } from "./auth-passkeys.generated";
 import { routes as authPassword } from "./auth-password.generated";
 import { routes as authPasswordReset } from "./auth-password-reset.generated";
 import { routes as authPermissions } from "./auth-permissions.generated";
+import { routes as authRefresh } from "./auth-refresh.generated";
 import { routes as authRegister } from "./auth-register.generated";
 import { routes as authRoles } from "./auth-roles.generated";
+import { routes as authSession } from "./auth-session.generated";
 import { routes as authStaffPreview } from "./auth-staff-preview.generated";
+import { routes as authSwitchTenant } from "./auth-switch-tenant.generated";
 import { routes as authTenant } from "./auth-tenant.generated";
 import { routes as authTenants } from "./auth-tenants.generated";
 import { routes as birthdays } from "./birthdays.generated";
@@ -130,6 +135,8 @@ import { routes as traegerCareTimeOverruns } from "./traeger-care-time-overruns.
 import { routes as traegerCatalog } from "./traeger-catalog.generated";
 import { routes as traegerClosingDays } from "./traeger-closing-days.generated";
 import { routes as traegerContractChanges } from "./traeger-contract-changes.generated";
+import { routes as traegerContractChildLinks } from "./traeger-contract-child-links.generated";
+import { routes as traegerContractCorrections } from "./traeger-contract-corrections.generated";
 import { routes as traegerContractImports } from "./traeger-contract-imports.generated";
 import { routes as traegerContractNotices } from "./traeger-contract-notices.generated";
 import { routes as traegerContractTemplates } from "./traeger-contract-templates.generated";
@@ -328,6 +335,15 @@ export const portalRoutes = {
     traegerClosingDays["PUT /traeger/closing-days/{id}"],
     traegerContractChanges["GET /traeger/contract-changes/{id}"],
     traegerContractChanges["POST /traeger/contract-changes/{id}/requests/{requestId}/decide"],
+    traegerContractChildLinks["DELETE /traeger/contract-child-links/{contractId}"],
+    traegerContractChildLinks["POST /traeger/contract-child-links/"],
+    traegerContractChildLinks["POST /traeger/contract-child-links/preview"],
+    traegerContractChildLinks["POST /traeger/contract-child-links/{contractId}/preview"],
+    traegerContractChildLinks["PUT /traeger/contract-child-links/{contractId}"],
+    traegerContractCorrections["GET /traeger/contract-corrections/"],
+    traegerContractCorrections["GET /traeger/contract-corrections/list"],
+    traegerContractCorrections["POST /traeger/contract-corrections/"],
+    traegerContractCorrections["POST /traeger/contract-corrections/preview"],
     traegerContractImports["GET /traeger/contract-imports/"],
     traegerContractImports["POST /traeger/contract-imports/"],
     traegerContractImports["POST /traeger/contract-imports/offering-corrections"],
@@ -1508,6 +1524,7 @@ export const portalRoutes = {
     students["GET /api/students/care-withdrawals/{completionId}/deletion-impact"],
     students["GET /api/students/change-requests"],
     students["GET /api/students/change-requests/access"],
+    students["GET /api/students/change-requests/history"],
     students["GET /api/students/change-requests/pending-count"],
     students["GET /api/students/change-requests/rss-feed/"],
     students["GET /api/students/child-quota"],
@@ -1757,5 +1774,77 @@ export const portalRoutes = {
     workTimeModels["POST /api/work-time-models/{id}/assignments"],
     workTimeModels["POST /api/work-time-models/{id}/restore"],
     workTimeModels["PUT /api/work-time-models/{id}"],
+  ],
+} as const;
+
+/** The routes each portal's own route files serve; its proxy serves none of them. */
+export const routeFileRoutes = {
+  caterer: [
+    catererAccount["POST /caterer/account/mfa/confirm"],
+    catererAuth["POST /caterer/auth/login"],
+    catererAuth["POST /caterer/auth/mfa/resend"],
+    catererAuth["POST /caterer/auth/mfa/verify"],
+    catererAuth["POST /caterer/auth/passkeys/login/options"],
+    catererAuth["POST /caterer/auth/passkeys/login/verify"],
+  ],
+  org: [
+    traegerAuth["POST /traeger/auth/login"],
+    traegerAuth["POST /traeger/auth/mfa/enroll/confirm"],
+    traegerAuth["POST /traeger/auth/mfa/enroll/start"],
+    traegerAuth["POST /traeger/auth/mfa/resend"],
+    traegerAuth["POST /traeger/auth/mfa/step-up/verify"],
+    traegerAuth["POST /traeger/auth/mfa/verify"],
+  ],
+  parent: [
+    parentAuth["POST /parent/auth/login"],
+    parentAuth["POST /parent/auth/mfa/resend"],
+    parentAuth["POST /parent/auth/mfa/verify"],
+    parentMe["POST /parent/me/mfa/confirm"],
+  ],
+  platform: [
+    operatorAuth["POST /operator/auth/invitations/accept"],
+    operatorAuth["POST /operator/auth/invitations/validate"],
+    operatorAuth["POST /operator/auth/login"],
+    operatorAuth["POST /operator/auth/logout"],
+    operatorAuth["POST /operator/auth/mfa/enroll/confirm"],
+    operatorAuth["POST /operator/auth/mfa/enroll/start"],
+    operatorAuth["POST /operator/auth/mfa/resend"],
+    operatorAuth["POST /operator/auth/mfa/verify"],
+    operatorAuth["POST /operator/auth/passkeys/login/options"],
+    operatorAuth["POST /operator/auth/passkeys/login/verify"],
+    operatorAuth["POST /operator/auth/refresh"],
+    operatorSchools["DELETE /operator/schools/{id}/settings/values/{key}"],
+    operatorSchools["PUT /operator/schools/{id}/settings/values/{key}"],
+  ],
+  school: [
+    schoolAuth["POST /school/auth/login"],
+    schoolAuth["POST /school/auth/mfa/enroll/confirm"],
+    schoolAuth["POST /school/auth/mfa/enroll/start"],
+    schoolAuth["POST /school/auth/mfa/resend"],
+    schoolAuth["POST /school/auth/mfa/verify"],
+  ],
+  tenant: [
+    authInvitations["POST /auth/invitations/{token}/accept"],
+    authLogin["POST /auth/login"],
+    authLogout["POST /auth/logout"],
+    authMfa["POST /auth/mfa/enroll/confirm"],
+    authMfa["POST /auth/mfa/enroll/start"],
+    authMfa["POST /auth/mfa/resend"],
+    authMfa["POST /auth/mfa/verify"],
+    authPasskeys["POST /auth/passkeys/login/options"],
+    authPasskeys["POST /auth/passkeys/login/verify"],
+    authRefresh["POST /auth/refresh"],
+    authSession["POST /auth/session/validate"],
+    authStaffPreview["POST /auth/staff-preview"],
+    authStaffPreview["POST /auth/staff-preview/end"],
+    authSwitchTenant["POST /auth/switch-tenant"],
+    display["GET /api/display/dashboard"],
+    enrollment["GET /api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}"],
+    enrollment["GET /api/enrollment/me/profile"],
+    settings["DELETE /api/settings/login-image"],
+    settings["DELETE /api/settings/values/{key}"],
+    settings["GET /api/settings/login-image"],
+    settings["POST /api/settings/login-image"],
+    settings["PUT /api/settings/values/{key}"],
   ],
 } as const;

@@ -20,7 +20,7 @@ import {
   ReviewDiffPanel,
 } from "~/components/students/request-review-card";
 import { ButtonLink } from "~/components/ui/button";
-import type { EnrollmentChangeRequest } from "~/lib/change-request-list-api";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import {
   buildEnrollmentChangeRequestDiffGroups,
   formatEnrollmentChangeRequestValue,
@@ -39,16 +39,15 @@ export function EnrollmentRequestItem({
   view,
   grouped = false,
 }: Readonly<{
-  row: EnrollmentChangeRequest;
+  row: enrollmentContract.ChangeRequestReviewEntry;
   view: "open" | "history";
   grouped?: boolean;
 }>) {
   const tenantPath = useTenantAwarePath();
   const meta = enrollmentChangeRequestStatusMeta(row.status);
-  const childNames =
-    row.child_names.length > 0
-      ? row.child_names.join(", ")
-      : (row.guardian_name ?? "Anmeldung");
+  const childNames = row.child_names?.length
+    ? row.child_names.join(", ")
+    : (row.guardian_name ?? "Anmeldung");
   const parentNote = row.parent_note?.trim();
 
   // Dieselbe Aufbereitung wie in der Detailansicht — ein zweiter Vergleich
@@ -56,9 +55,9 @@ export function EnrollmentRequestItem({
   const rows = useMemo(
     () =>
       buildEnrollmentChangeRequestDiffGroups({
-        baseSnapshot: row.base_snapshot,
-        proposedSnapshot: row.proposed_snapshot,
-        diff: row.diff,
+        baseSnapshot: row.base_snapshot ?? {},
+        proposedSnapshot: row.proposed_snapshot ?? {},
+        diff: row.diff ?? {},
       }).flatMap((group) => group.rows),
     [row.base_snapshot, row.proposed_snapshot, row.diff],
   );

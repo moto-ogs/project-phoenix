@@ -28,6 +28,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Bitte prüfe dieses Feld.",
     },
     codes: {
+      "attendance.checkin_staff_profile_required":
+        "Kinder ein- und auschecken kann nur das Personal der Schule. Dein Konto hat an dieser Schule kein Personalprofil.",
       "attendance.log_disabled":
         "Der Anwesenheitsverlauf ist an dieser Schule ausgeschaltet.",
       "attendance.web_disabled":
@@ -50,6 +52,12 @@ export const ERROR_CATALOG = {
         "Die Schule lässt diese Änderung gerade nicht zu. Bitte sprich mit der Schule.",
       "care_contract.change_not_found":
         "Diesen Änderungswunsch gibt es nicht mehr. Bitte lade die Seite neu.",
+      "care_contract.child_link_changed":
+        "Die Angaben haben sich seit der Prüfung geändert. Prüfe sie noch einmal.",
+      "care_contract.child_link_not_imported":
+        "Nur importierte Verträge lassen sich hier verknüpfen. Dieser Vertrag gehört zum Kind seiner Anmeldung.",
+      "care_contract.child_link_refused":
+        "Der Vertrag kann so nicht mit dieser Kinderakte verknüpft werden. Prüfe die Angaben noch einmal.",
       "care_contract.contract_input_invalid":
         "Bitte wähle mindestens einen und höchstens 200 Einträge aus.",
       "care_contract.contract_not_draft":
@@ -862,6 +870,8 @@ export const ERROR_CATALOG = {
         "Bestehende Einträge darfst du nicht ändern. Bitte wähle „Nur neue anlegen“ oder frage die Leitung.",
       "import.not_test_traeger":
         "Das geht nur bei einem Test-Träger. Echte Träger bekommen keine Beispieldaten.",
+      "import.staff_profile_required":
+        "Kinder importieren kann nur jemand mit Personalprofil. Dein Konto hat an dieser Schule noch keins. Bitte lass dir von der Verwaltung der Schule eins anlegen.",
       "import.test_traeger_inactive":
         "Der Test-Träger ist deaktiviert. Bitte aktiviere ihn zuerst.",
       "iot.activity_capacity_exceeded":
@@ -1180,6 +1190,8 @@ export const ERROR_CATALOG = {
         "Die Datei ist zu groß. Erlaubt sind 2 MB und 5.000 Zeilen.",
       "parent_billing.sepa_import_mapping_invalid":
         "Bitte ordne zuerst alle Pflichtspalten zu.",
+      "parent_billing.sepa_mandate_contract_draft":
+        "Der Vertrag ist noch ein Entwurf. Trage das Mandat ein, sobald der Vertrag versendet ist.",
       "parent_billing.sepa_mandate_in_force":
         "Die Familie hat schon ein gültiges Mandat. Bitte widerrufe es zuerst.",
       "parent_billing.sepa_mandate_invalid":
@@ -2186,6 +2198,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Please check this field.",
     },
     codes: {
+      "attendance.checkin_staff_profile_required":
+        "Only the school's staff can check children in and out. Your account has no staff profile at this school.",
       "calendar.federal_state_missing":
         "No federal state is set for the school yet, so the public holidays are missing. The school management can set it in the settings.",
       "calendar.occurrence_unavailable":
@@ -2200,6 +2214,12 @@ export const ERROR_CATALOG = {
         "The school does not allow this change right now. Please talk to the school.",
       "care_contract.change_not_found":
         "This change request no longer exists. Please reload the page.",
+      "care_contract.child_link_changed":
+        "The details have changed since the check. Please check them again.",
+      "care_contract.child_link_not_imported":
+        "Only imported contracts can be linked here. This contract belongs to the child of its application.",
+      "care_contract.child_link_refused":
+        "The contract cannot be linked to this child record like this. Please check the details again.",
       "care_contract.contract_input_invalid":
         "Please select at least one and at most 200 entries.",
       "care_contract.contract_not_draft":
@@ -2700,6 +2720,8 @@ export const ERROR_CATALOG = {
         "Another account signed in in another window. moto will reload this page shortly.",
       "identity.session_tenant_mismatch":
         "The school was changed in another window. moto will switch this page back shortly. Please try again afterwards.",
+      "import.staff_profile_required":
+        "Only someone with a staff profile can import children. Your account does not have one at this school yet. Please ask the school's administration to create one for you.",
       "meals.billing_month_attendance_expired":
         "Attendance records for this month may already have been deleted. The month can no longer be released reliably. Please contact your provider.",
       "meals.child_not_enrolled":
@@ -2964,6 +2986,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Проверьте это поле.",
     },
     codes: {
+      "attendance.checkin_staff_profile_required":
+        "Отмечать приход и уход детей может только персонал школы. У вашей учётной записи в этой школе нет профиля персонала.",
       "calendar.federal_state_missing":
         "Для школы ещё не указана федеральная земля. Поэтому нет праздничных дней. Руководство может указать её в настройках.",
       "calendar.occurrence_unavailable":
@@ -3421,6 +3445,8 @@ export const ERROR_CATALOG = {
         "В другом окне выполнен вход в другой аккаунт. moto сейчас перезагрузит эту страницу.",
       "identity.session_tenant_mismatch":
         "Школа была изменена в другом окне. moto сейчас переключит эту страницу обратно. Попробуйте ещё раз чуть позже.",
+      "import.staff_profile_required":
+        "Импортировать детей может только сотрудник с профилем персонала. У вашей учётной записи в этой школе его пока нет. Попросите администрацию школы создать его.",
       "meals.billing_month_attendance_expired":
         "Данные о посещаемости за этот месяц могли быть удалены. Надёжно подтвердить месяц больше нельзя. Обратитесь к организации, управляющей продлёнкой.",
       "meals.child_not_enrolled":
@@ -3604,6 +3630,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Kontrolloni këtë fushë.",
     },
     codes: {
+      "attendance.checkin_staff_profile_required":
+        "Vetëm stafi i shkollës mund t'i regjistrojë fëmijët në hyrje dhe në dalje. Llogaria juaj nuk ka profil stafi në këtë shkollë.",
       "calendar.federal_state_missing":
         "Për shkollën nuk është vendosur ende landi federal. Prandaj mungojnë ditët e festave. Drejtuesit mund ta vendosin te cilësimet.",
       "calendar.occurrence_unavailable":
@@ -4074,6 +4102,8 @@ export const ERROR_CATALOG = {
         "Një llogari tjetër u identifikua në një dritare tjetër. moto do ta ringarkojë këtë faqe së shpejti.",
       "identity.session_tenant_mismatch":
         "Shkolla u ndryshua në një dritare tjetër. moto do ta kthejë këtë faqe së shpejti. Ju lutemi provoni përsëri pak më vonë.",
+      "import.staff_profile_required":
+        "Fëmijët mund t'i importojë vetëm dikush me profil stafi. Llogaria juaj nuk ka ende një të tillë në këtë shkollë. Ju lutemi kërkoni nga administrata e shkollës ta krijojë.",
       "meals.billing_month_attendance_expired":
         "Të dhënat e pranisë për këtë muaj mund të jenë fshirë. Muaji nuk mund të miratohet më me siguri. Ju lutemi kontaktoni ofruesin tuaj.",
       "meals.child_not_enrolled":
@@ -4260,6 +4290,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Sprawdź to pole.",
     },
     codes: {
+      "attendance.checkin_staff_profile_required":
+        "Dzieci może meldować i wymeldowywać tylko personel szkoły. Pana/Pani konto nie ma w tej szkole profilu pracownika.",
       "calendar.federal_state_missing":
         "Dla szkoły nie ustawiono jeszcze kraju związkowego. Dlatego brakuje dni świątecznych. Kierownictwo może go ustawić w ustawieniach.",
       "calendar.occurrence_unavailable":
@@ -4717,6 +4749,8 @@ export const ERROR_CATALOG = {
         "W innym oknie zalogowało się inne konto. moto zaraz odświeży tę stronę.",
       "identity.session_tenant_mismatch":
         "Szkoła została zmieniona w innym oknie. moto zaraz przełączy tę stronę z powrotem. Spróbuj ponownie za chwilę.",
+      "import.staff_profile_required":
+        "Dzieci może importować tylko osoba z profilem pracownika. Pana/Pani konto nie ma go jeszcze w tej szkole. Proszę poprosić administrację szkoły o jego utworzenie.",
       "meals.billing_month_attendance_expired":
         "Dane o obecności z tego miesiąca mogły już zostać usunięte. Nie można bezpiecznie zatwierdzić miesiąca. Prosimy skontaktować się z organem prowadzącym.",
       "meals.child_not_enrolled":
@@ -4901,6 +4935,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Bu alanı kontrol edin.",
     },
     codes: {
+      "attendance.checkin_staff_profile_required":
+        "Çocukların giriş ve çıkışını yalnızca okul personeli kaydedebilir. Hesabınızın bu okulda personel profili yok.",
       "calendar.federal_state_missing":
         "Okul için henüz eyalet belirlenmedi. Bu yüzden resmi tatiller eksik. Yönetim bunu ayarlardan girebilir.",
       "calendar.occurrence_unavailable":
@@ -5365,6 +5401,8 @@ export const ERROR_CATALOG = {
         "Başka bir pencerede başka bir hesapla giriş yapıldı. moto bu sayfayı birazdan yeniden yükleyecek.",
       "identity.session_tenant_mismatch":
         "Okul başka bir pencerede değiştirildi. moto bu sayfayı birazdan geri geçirecek. Lütfen biraz sonra tekrar deneyin.",
+      "import.staff_profile_required":
+        "Çocukları yalnızca personel profili olan biri içe aktarabilir. Hesabınızın bu okulda henüz bir profili yok. Lütfen okul yönetiminden bir profil oluşturmasını isteyin.",
       "meals.billing_month_attendance_expired":
         "Bu aya ait devam kayıtları silinmiş olabilir. Ay artık güvenilir biçimde onaylanamaz. Lütfen hizmet sağlayıcınızla iletişime geçin.",
       "meals.child_not_enrolled":
@@ -5550,6 +5588,8 @@ export const ERROR_CATALOG = {
       fieldCheck: "Перевірте це поле.",
     },
     codes: {
+      "attendance.checkin_staff_profile_required":
+        "Відмічати прихід і вихід дітей може лише персонал школи. Ваш обліковий запис не має профілю персоналу в цій школі.",
       "calendar.federal_state_missing":
         "Для школи ще не вказано федеральну землю. Тому бракує святкових днів. Керівництво може вказати її в налаштуваннях.",
       "calendar.occurrence_unavailable":
@@ -6006,6 +6046,8 @@ export const ERROR_CATALOG = {
         "В іншому вікні увійшов інший обліковий запис. moto зараз перезавантажить цю сторінку.",
       "identity.session_tenant_mismatch":
         "Школу змінено в іншому вікні. moto зараз перемкне цю сторінку назад. Спробуйте ще раз трохи пізніше.",
+      "import.staff_profile_required":
+        "Імпортувати дітей може лише працівник із профілем персоналу. Ваш обліковий запис у цій школі його ще не має. Попросіть адміністрацію школи створити його.",
       "meals.billing_month_attendance_expired":
         "Дані про відвідування за цей місяць могли бути видалені. Надійно підтвердити місяць уже неможливо. Зверніться до організації, що керує групою продовженого дня.",
       "meals.child_not_enrolled":

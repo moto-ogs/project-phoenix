@@ -13,10 +13,10 @@ import type { ReactNode } from "react";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { InsetPanel } from "~/components/ui/inset-panel";
 import {
-  type CareOfferingBookingStats,
   formatOfferingOccupancy,
   offeringIsFull,
 } from "~/lib/care-offering-booking-stats";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 
 /**
  * - `available`: the person can tick the row.
@@ -68,7 +68,9 @@ export function OfferingRowShell({
  */
 export function OfferingOccupancyLine({
   stats,
-}: Readonly<{ stats: CareOfferingBookingStats | undefined }>) {
+}: Readonly<{
+  stats: enrollmentContract.CareOfferingBookingStatsResponse | undefined;
+}>) {
   const label = formatOfferingOccupancy(stats);
   if (!label) return null;
   return (

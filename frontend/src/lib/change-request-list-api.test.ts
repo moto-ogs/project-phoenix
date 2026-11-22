@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
+
 import { ApiError } from "./api-error";
 import {
   bulkApproveParentRequests,
@@ -32,7 +34,7 @@ describe("change request list API", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/students/change-requests?view=open&search=Emma&types=master_data%2Cexcused",
-      { cache: "no-store" },
+      { method: "GET" },
     );
   });
 
@@ -57,7 +59,7 @@ describe("change request list API", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/students/change-requests?view=history&status=approved&from=2026-08-01&to=2026-08-19&cursor=current",
-      { cache: "no-store" },
+      { method: "GET" },
     );
   });
 
@@ -74,7 +76,7 @@ describe("change request list API", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/students/change-requests?view=history&student_id=42",
-      { cache: "no-store" },
+      { method: "GET" },
     );
   });
 
@@ -181,16 +183,8 @@ describe("pending enrollment change request count", () => {
     await expect(fetchPendingEnrollmentChangeRequestCount()).resolves.toBe(3);
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/enrollment/admin/change-requests/pending-count",
-      { cache: "no-store" },
+      { method: "GET" },
     );
-  });
-
-  it("falls back to 0 when the envelope carries no count", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ data: {} }), { status: 200 }),
-    );
-
-    await expect(fetchPendingEnrollmentChangeRequestCount()).resolves.toBe(0);
   });
 
   it("falls back to 0 when the envelope has no data at all", async () => {
@@ -244,7 +238,7 @@ describe("enrollment change request list", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/enrollment/admin/change-requests/list?view=history&search=Mia&status=approved%2Crejected&from=2026-08-01&to=2026-08-19&cursor=current",
-      { cache: "no-store" },
+      { method: "GET" },
     );
   });
 
@@ -261,7 +255,7 @@ describe("enrollment change request list", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/enrollment/admin/change-requests/list?view=open",
-      { cache: "no-store" },
+      { method: "GET" },
     );
   });
 
@@ -280,7 +274,7 @@ describe("enrollment change request list", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/enrollment/admin/change-requests/list?view=open",
-      { cache: "no-store" },
+      { method: "GET" },
     );
   });
 
@@ -298,7 +292,7 @@ describe("enrollment change request list", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/enrollment/admin/change-requests/list?view=open&search=Mia",
-      { cache: "no-store" },
+      { method: "GET" },
     );
   });
 

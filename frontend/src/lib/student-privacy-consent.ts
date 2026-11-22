@@ -6,21 +6,21 @@
 import { ApiError } from "./api-error";
 import { bffJson } from "./bff-fetch";
 import { createLogger } from "./logger";
+import type { Student } from "./student-helpers";
 
 const logger = createLogger({ component: "StudentPrivacyConsent" });
 
-/** The two consent fields a student form edits. */
-export interface ConsentPair {
-  privacy_consent_accepted: boolean;
-  /** Null only as the form holds an emptied field; the backend refuses it. */
-  data_retention_days: number | null;
-}
-
 /** A form sends the pair only when the person changed it. */
-export interface ConsentPairInput {
-  privacy_consent_accepted?: boolean;
-  data_retention_days?: number | null;
-}
+export type ConsentPairInput = Pick<
+  Student,
+  "privacy_consent_accepted" | "data_retention_days"
+>;
+
+/**
+ * The two consent fields a student form edits. `data_retention_days` is null
+ * only as the form holds an emptied field; the backend refuses it.
+ */
+export type ConsentPair = Required<ConsentPairInput>;
 
 // The policy version the backend states as its default
 // (studentpresence defaultPrivacyPolicyVersion).

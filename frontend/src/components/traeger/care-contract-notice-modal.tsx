@@ -77,10 +77,16 @@ export function RecordNoticeModal({
   onClose: () => void;
   contractId: string;
   options: ContractNoticeOptions;
-  concludedAt: string;
+  /** null: the day of the conclusion is unknown (#7767), no lower bound. */
+  concludedAt: string | null;
   onRecorded: (next: ContractNoticeOptions) => void;
 }>) {
   const today = berlinTodayISO();
+  // No declaration is older than the conclusion; an unknown day bounds none.
+  const earliest =
+    concludedAt === null
+      ? undefined
+      : parseISODate(berlinTodayISO(new Date(concludedAt)));
   const [kind, setKind] = useState<NoticeKind>("kuendigung");
   const [terminationKind, setTerminationKind] =
     useState<TerminationKind>("ordentlich");
@@ -249,7 +255,7 @@ export function RecordNoticeModal({
               setDispatchedOn("");
             }}
             maxDate={parseISODate(today)}
-            minDate={parseISODate(berlinTodayISO(new Date(concludedAt)))}
+            minDate={earliest}
             hideClearButton
             required
             invalid={Boolean(formErrors.fieldError("received_on"))}
@@ -379,9 +385,7 @@ export function RecordNoticeModal({
                     onChange={(date) =>
                       setDispatchedOn(date ? toISODate(date) : "")
                     }
-                    minDate={parseISODate(
-                      berlinTodayISO(new Date(concludedAt)),
-                    )}
+                    minDate={earliest}
                     maxDate={parseISODate(
                       choices.withdrawalUntil &&
                         choices.withdrawalUntil < receivedOn

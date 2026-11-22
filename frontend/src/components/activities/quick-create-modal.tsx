@@ -12,7 +12,7 @@ import {
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
 import { InsetPanel } from "~/components/ui/inset-panel";
-import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
 import { Button } from "~/components/ui/button";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { Checkbox } from "~/components/ui/checkbox";
@@ -21,6 +21,7 @@ import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Input } from "~/components/ui/input";
 import { SpinnerIcon } from "~/components/ui/icons";
 import { createLogger } from "~/lib/logger";
+import { useShellAuthSafe } from "~/lib/shell-auth-context";
 import { Info } from "lucide-react";
 import { SectionCard } from "~/components/ui/section-card";
 import { Loading } from "~/components/ui/loading";
@@ -60,6 +61,9 @@ export function QuickCreateActivityModal({
   onSuccess,
 }: QuickCreateActivityModalProps) {
   const { success: toastSuccess } = useToast();
+  // Das Träger-Büro hat an der Schule keinen Mitarbeitereintrag und wird
+  // deshalb nicht als Leitung eingetragen (#7818).
+  const viaTraeger = useShellAuthSafe()?.isViaTraeger === true;
   const save = useFormModalPending(isOpen);
   const isSubmitting = save.pending;
 
@@ -117,30 +121,14 @@ export function QuickCreateActivityModal({
     await save.run(async (op) => {
       try {
         // Prepare the request data
-        const requestData = {
-          name: form.name.trim(),
-          category_id: Number.parseInt(form.category_id, 10),
-          max_participants: parseParticipantLimit(form.max_participants),
-        };
-
-        // Call the quick-create API endpoint
-        const response = await transportFetch("/api/activities/quick-create", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
+        await bffJson("tenant", "POST /api/activities/quick-create", {
+          body: {
+            name: form.name.trim(),
+            category_id: form.category_id,
+            max_participants: parseParticipantLimit(form.max_participants),
           },
-          credentials: "include",
-          body: JSON.stringify(requestData),
+          errorMessage: "activity quick-create failed",
         });
-
-        if (!response.ok) {
-          throw await apiErrorFromResponse(
-            response,
-            `activity quick-create failed (${response.status})`,
-          );
-        }
-
-        await response.json();
 
         toastSuccess(`Die Aktivität „${form.name.trim()}“ ist angelegt.`);
 
@@ -194,7 +182,11 @@ export function QuickCreateActivityModal({
         disabled={
           isSubmitting || loading || !form.name.trim() || !form.category_id
         }
-        tooltip="Legt die Aktivität sofort an und trägt dich als Leitung ein."
+        tooltip={
+          viaTraeger
+            ? "Die Aktivität wird ohne Leitung angelegt. Du kannst sie danach eintragen."
+            : "Legt die Aktivität sofort an und trägt dich als Leitung ein."
+        }
         disabledReason={quickCreateBlockedReason(
           isSubmitting || loading,
           form.name.trim() !== "",

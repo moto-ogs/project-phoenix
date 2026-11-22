@@ -30,10 +30,8 @@ import {
   availableCareOfferings,
   careOfferingAvailabilityReason,
 } from "~/lib/care-offering-availability";
-import {
-  type CareOfferingBookingStats,
-  fetchCareOfferingBookingStats,
-} from "~/lib/care-offering-booking-stats";
+import { fetchCareOfferingBookingStats } from "~/lib/care-offering-booking-stats";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import { materializeCareSelection } from "~/lib/care-offering-selection";
 import { announceChangeRequestsChanged } from "~/lib/change-requests-refresh";
 import { changeHistoryConcept } from "~/lib/concepts/changeHistory";
@@ -57,7 +55,10 @@ import { weekdayShortLabel, weekdayShortList } from "~/lib/weekdays";
 const logger = createLogger({ component: "ChildOfferingAdjustment" });
 
 const NO_OFFERINGS: CareOffering[] = [];
-const NO_STATS: Record<string, CareOfferingBookingStats> = {};
+const NO_STATS: Record<
+  string,
+  enrollmentContract.CareOfferingBookingStatsResponse
+> = {};
 const NO_ADJUSTMENTS: AdminOfferingAdjustment[] = [];
 
 /**
@@ -89,7 +90,7 @@ function BlockedOfferingRow({
   gradeLevelMax: number | null;
   booked: boolean;
   automaticDays: readonly string[];
-  stats: CareOfferingBookingStats | undefined;
+  stats: enrollmentContract.CareOfferingBookingStatsResponse | undefined;
   onRemove: () => void;
 }>) {
   const reason = careOfferingAvailabilityReason(
@@ -200,8 +201,10 @@ export function ChildOfferingAdjustment({
     () => fetchCareOfferingBookingStats(phaseId),
     { keepPreviousData: false },
   );
-  const bookingStats: Record<string, CareOfferingBookingStats> =
-    statsRead.data ?? NO_STATS;
+  const bookingStats: Record<
+    string,
+    enrollmentContract.CareOfferingBookingStatsResponse
+  > = statsRead.data ?? NO_STATS;
   const historyRead = useSWRAuth(
     enrollmentKeys.offeringAdjustments(requestId, child.id),
     () => listAdminChildOfferingAdjustments(requestId, child.id),

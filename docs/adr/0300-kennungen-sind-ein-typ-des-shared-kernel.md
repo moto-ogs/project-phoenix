@@ -169,3 +169,28 @@ Entscheidung:
    unverändert weitergibt, und die Revision der Personen-Zusammenführung
    (`staffpersonmerge`). Beide kodieren mit `wire.Marshal` und schreiben
    dieselben Bytes wie vorher.
+
+## Nachtrag vom 2026-11-22: Keine Zahl-Kennung an der Client-Naht
+
+Nach dem Generator blieben Kennungen als Zahl dort, wo er nicht hinsieht:
+vier Request-Typen mit eigenem Leser für Zahl oder String (Art `lax_id`),
+Körper, die ein Handler selbst decodiert, Demo-Routen des Seeders und
+Antworten außerhalb des Vertrags (#7808).
+
+Entscheidung:
+
+1. **Die Art `lax_id` und `ReadsLaxIDs` entfallen.** Diese Felder sind
+   `ident.ID`, das String und Zahl liest; ein eigener Leser macht aus einem
+   `int64` keine Kennung mehr. `scripts/check-contract-compat.mjs` lässt in
+   einem Request `string` oder `lax_id` der Basis zu `id` werden.
+2. **`TestNoNumericIdentifierRatchet` (`backend/test`)** lehnt in jeder
+   Struktur von `api/` und jeder `http`- und `inbound`-Rolle ein Feld `id`,
+   `*_id` oder `*_ids` mit Ganzzahltyp ab. Nur die Kiosk-Geräte-API
+   (`/api/iot/*`, `POST`/`DELETE /api/students/{id}/rfid`) behält Zahlen und
+   markiert sie mit `contract:"number"`, weil PyrePortal v1.11.5 sie als Zahl
+   liest; anderswo lehnt der Test die Marke ab. Eine weitere Ausnahmeliste
+   gibt es nicht.
+3. **`ident.ID` liest eine Zahl noch einen Release lang.** Offene Tabs des
+   vorigen Frontends senden in vielen Körpern Zahlen; ein strenger Leser
+   bräche sie beim Deploy (ADR 0270, „expand, then contract“). Nach dem
+   nächsten Release liest `ident.ID.UnmarshalJSON` nur noch einen String.

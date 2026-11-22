@@ -35,7 +35,7 @@ func (q offeringQueue) Open(ctx context.Context, filter requestreview.QueueFilte
 		row := item.Request
 		rows = append(rows, requestreview.Row{Type: requestreview.TypeOffering, SortTime: row.CreatedAt, ID: row.ID, StudentID: row.StudentID, StudentName: item.StudentName, SubmittedBy: row.SubmittedBy, Status: row.Status,
 			Version: excusedrequests.ParentRequestVersion(row.UpdatedAt), UrgentToday: careplan.OfferingReviewUrgentOn(*item, day), Past: careplan.OfferingReviewPastOn(*item, day),
-			BulkIneligibleReason: "single_only", BulkIneligibleText: "Angebote müssen einzeln geprüft werden.", ConflictKeys: careplan.OfferingReviewConflictKeys(*item), Data: ToOfferingRequestResponse(item),
+			BulkIneligibleReason: "single_only", BulkIneligibleText: "Angebote müssen einzeln geprüft werden.", ConflictKeys: careplan.OfferingReviewConflictKeys(*item), Payload: requestreview.Payload{Offering: new(ToOfferingRequestResponse(item))},
 		})
 	}
 	return rows, careQueueCursor(cursor), nil
@@ -49,7 +49,7 @@ func (q offeringQueue) History(ctx context.Context, filter requestreview.QueueFi
 	for _, item := range items {
 		row := item.Request
 		rows = append(rows, requestreview.Row{Type: requestreview.TypeOffering, SortTime: row.UpdatedAt, ID: row.ID, StudentID: row.StudentID, StudentName: item.StudentName, SubmittedBy: row.SubmittedBy, Status: row.Status,
-			Version: excusedrequests.ParentRequestVersion(row.UpdatedAt), DecidedAt: requestreview.HistoryDecidedAt(row.ReviewedAt, row.UpdatedAt), Data: ToOfferingRequestHistoryResponse(item),
+			Version: excusedrequests.ParentRequestVersion(row.UpdatedAt), DecidedAt: requestreview.HistoryDecidedAt(row.ReviewedAt, row.UpdatedAt), Payload: requestreview.Payload{OfferingHistory: new(ToOfferingRequestHistoryResponse(item))},
 		})
 	}
 	return rows, careQueueCursor(cursor), nil

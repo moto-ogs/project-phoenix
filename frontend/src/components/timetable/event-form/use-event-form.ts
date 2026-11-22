@@ -135,10 +135,12 @@ export interface GroupOption {
 
 const MAX_SUPPORTED_TARGET_GRADE_LEVEL = 13;
 
+/** The room of a Dienst without a room (#3822): the backend reads "0" as none. */
+const NO_ROOM_ID = "0";
+
 /** A stored row's ID: a positive decimal, not a blank or a draft key. */
 function isPersistedID(id: string | undefined): id is string {
-  const numeric = Number(id);
-  return Boolean(id) && Number.isFinite(numeric) && numeric > 0;
+  return id !== undefined && /^[1-9]\d*$/.test(id);
 }
 /**
  * Advisory probes (Dienstplan coverage, double bookings) never block the
@@ -495,8 +497,8 @@ export function useEventForm({
     () =>
       (roomRead.data ?? [])
         .map((room): RoomOption => ({
-          id: Number(room.id),
-          name: room.name ?? room.room_name ?? `Raum ${room.id}`,
+          id: room.id,
+          name: room.name,
           building: room.building ?? undefined,
         }))
         .sort(byName),
@@ -506,7 +508,7 @@ export function useEventForm({
     () =>
       (groupRead.data ?? [])
         .map((group): GroupOption => ({
-          id: String(group.id),
+          id: group.id,
           name: group.name,
         }))
         .sort(byName),
@@ -621,7 +623,7 @@ export function useEventForm({
   const [expanded, setExpanded] = useState(variant === "full");
   // Validated room id stashed while the Dreifach-Frage dialog (US-5) is open.
   const [pendingSeriesEdit, setPendingSeriesEdit] = useState<{
-    roomId: number;
+    roomId: string;
   } | null>(null);
   const [selectedInstanceScope, setSelectedInstanceScope] =
     useState<SeriesEditScope | null>(null);
@@ -640,7 +642,7 @@ export function useEventForm({
     /** How many dates of the edited series fall on closing days. */
     closingDayCount: number;
     scope: "all" | "following";
-    roomId: number;
+    roomId: string;
     template: TimetableTemplate;
     periodEnd: string | undefined;
     // The RESOLVED series template id (#2187): after a split chain
@@ -1460,7 +1462,7 @@ export function useEventForm({
     });
   };
 
-  const validateForm = (): { roomId: number; categoryId?: number } | null => {
+  const validateForm = (): { roomId: string; categoryId?: string } | null => {
     const errors: Record<string, string> = {};
     if (form.title.trim() === "") {
       errors.title = "Bitte einen Titel eingeben.";
@@ -1487,22 +1489,19 @@ export function useEventForm({
     }
     // Ein Dienst (#3822) darf ohne Raum stattfinden, z. B. die Busaufsicht;
     // 0 heißt dann "kein Raum".
-    const parsedRoomId = Number.parseInt(form.roomId, 10);
-    const hasRoom = Number.isFinite(parsedRoomId) && parsedRoomId > 0;
-    const roomId = hasRoom ? parsedRoomId : 0;
+    const hasRoom = isPersistedID(form.roomId);
+    const roomId = hasRoom ? form.roomId : NO_ROOM_ID;
     if (!hasRoom && form.type !== "duty") {
       errors.roomId = "Bitte einen Raum auswählen.";
     }
-    let categoryId: number | undefined;
+    let categoryId: string | undefined;
     if (isSeriesFlow) {
-      const parsedCategoryId = Number.parseInt(form.categoryId, 10);
-      if (!Number.isFinite(parsedCategoryId) || parsedCategoryId <= 0) {
+      if (!isPersistedID(form.categoryId)) {
         errors.categoryId = "Bitte eine Kategorie auswählen.";
       } else {
-        categoryId = parsedCategoryId;
+        categoryId = form.categoryId;
       }
-      const calendarPeriodId = Number.parseInt(form.calendarPeriodId, 10);
-      if (!Number.isFinite(calendarPeriodId) || calendarPeriodId <= 0) {
+      if (!isPersistedID(form.calendarPeriodId)) {
         errors.calendarPeriodId = "Bitte einen Planungszeitraum auswählen.";
       }
       // #2135: the picked Datum is the series start for new series; it must
@@ -1684,13 +1683,13 @@ export function useEventForm({
     ? form.listKind
     : (initialInstance?.rawListKind ?? form.listKind);
 
-  const instanceBody = (roomId: number, activityGroupId?: string) =>
+  const instanceBody = (roomId: string, activityGroupId?: string) =>
     ({
       date: form.date,
       title: form.title.trim(),
       start_time: form.startTime,
       end_time: form.endTime,
-      room_id: String(roomId),
+      room_id: roomId,
       notes: form.notes.trim() || undefined,
       // Ein Dienst hat keine Kinder und gehört in keine Tagesliste (#3822).
       list_kind:
@@ -1702,8 +1701,8 @@ export function useEventForm({
     }) satisfies CreateInstanceBody;
 
   const seriesBody = (
-    roomId: number,
-    categoryId: number,
+    roomId: string,
+    categoryId: string,
   ): CreateTemplateBody => {
     const body = seriesBodyFields(roomId, categoryId);
     if (form.type !== "duty") return body;
@@ -1730,8 +1729,8 @@ export function useEventForm({
   };
 
   const seriesBodyFields = (
-    roomId: number,
-    categoryId: number,
+    roomId: string,
+    categoryId: string,
   ): CreateTemplateBody => ({
     name: form.title.trim(),
     type: form.type,
@@ -1739,8 +1738,8 @@ export function useEventForm({
     weekdays: form.weekdays,
     start_time: form.startTime,
     end_time: form.endTime,
-    room_id: String(roomId),
-    category_id: String(categoryId),
+    room_id: roomId,
+    category_id: categoryId,
     planning_track_id: form.planningTrackId || null,
     notes: form.seriesNotes.trim() || undefined,
     education_group_id:
@@ -2041,7 +2040,7 @@ export function useEventForm({
    */
   const templateBodyFromForm = (
     template: TimetableTemplate,
-    roomId: number,
+    roomId: string,
   ): UpdateTemplateBody => {
     const firstSchedule = template.schedules[0];
     const calendarPeriodId =
@@ -2107,7 +2106,7 @@ export function useEventForm({
       weekdays: weekdays.length > 0 ? weekdays : [1],
       start_time: form.startTime,
       end_time: form.endTime,
-      room_id: String(roomId),
+      room_id: roomId,
       category_id: template.categoryId,
       planning_track_id: form.planningTrackId || null,
       // Preserve the series' own Wochennotiz verbatim — an instance-scope edit
@@ -2740,7 +2739,7 @@ export function useEventForm({
   const performSeriesEdit = async (
     op: FormModalOperation,
     typedScope: "all" | "following",
-    roomId: number,
+    roomId: string,
     template: TimetableTemplate,
     periodEnd: string | undefined,
     seriesTemplateId: string,
@@ -2754,7 +2753,7 @@ export function useEventForm({
       ? chainPreservedScalars(template)
       : { preserved: {}, edited: false };
     const body = scopedSeries
-      ? seriesBody(roomId, Number(form.categoryId))
+      ? seriesBody(roomId, form.categoryId)
       : chainResolved
         ? {
             ...templateBodyFromForm(template, roomId),
@@ -2938,7 +2937,7 @@ export function useEventForm({
       seriesTemplateId,
     }: {
       typedScope: "all" | "following";
-      roomId: number;
+      roomId: string;
       template: TimetableTemplate;
       periodEnd: string | undefined;
       seriesTemplateId: string;
@@ -3072,7 +3071,7 @@ export function useEventForm({
   async function selectScope(
     op: FormModalOperation,
     scope: string,
-    pendingOverride?: { roomId: number },
+    pendingOverride?: { roomId: string },
   ) {
     if (!isSeriesEditScope(scope)) return;
     const pending = pendingOverride ?? pendingSeriesEdit;
@@ -3120,7 +3119,7 @@ export function useEventForm({
         findPeriod(templateCalendarPeriodId)?.endDate ??
         findPeriod(form.calendarPeriodId)?.endDate;
       const body = scopedSeries
-        ? seriesBody(pending.roomId, Number(form.categoryId))
+        ? seriesBody(pending.roomId, form.categoryId)
         : templateBodyFromForm(template, pending.roomId);
       const scopeFrom =
         typedScope === "following" ? initialInstance.date : berlinTodayISO();

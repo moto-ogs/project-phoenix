@@ -104,6 +104,6 @@ func TestBreakCorrectionDecodesExactStringIDs(t *testing.T) {
 	for _, id := range []string{`"9007199254740993"`, `9007199254740993`} {
 		var request workforce.SessionUpdateRequest
 		require.NoError(t, json.Unmarshal([]byte(`{"breaks":[{"id":`+id+`,"duration_minutes":45}]}`), &request))
-		require.Equal(t, int64(9007199254740993), request.Breaks[0].ID)
+		require.Equal(t, ident.ID(9007199254740993), request.Breaks[0].ID)
 	}
 }

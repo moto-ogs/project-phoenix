@@ -24,17 +24,27 @@ import {
   type StatusBadgeTone,
 } from "~/components/ui/status-badge";
 import { HISTORY_STATUS_META } from "~/components/students/requests/request-copy";
-import {
-  fetchCareScheduleChangeRequest,
-  type StaffCareRequestDetail,
-} from "~/lib/care-request-review-api";
+import { fetchCareScheduleChangeRequest } from "~/lib/care-request-review-api";
+import type * as studentsContract from "~/lib/contract/students.generated";
+import { knownEnum } from "~/lib/contract/known-enum";
 import { ApiError, wireErrorCode } from "~/lib/api-error";
 import { formatChatDateTime, formatDate } from "~/lib/date-helpers";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { useSWRAuth } from "~/lib/swr";
 import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
-import { DEPARTURE_MODE_LABELS } from "~/lib/departure-plan";
+import {
+  DEPARTURE_MODE_LABELS,
+  type DepartureMode,
+} from "~/lib/departure-plan";
+
+const DEPARTURE_MODES = Object.keys(DEPARTURE_MODE_LABELS) as DepartureMode[];
+
+/** The label of a known Abholart; an unknown one shows nothing. */
+function departureModeLabel(mode: string): string | undefined {
+  const known = knownEnum(DEPARTURE_MODES, mode);
+  return known === undefined ? undefined : DEPARTURE_MODE_LABELS[known];
+}
 
 // Die Historie kennt nur entschiedene Anfragen; hier kommt der offene Status
 // dazu, mit demselben Wort wie in der Arbeitsliste.
@@ -45,7 +55,7 @@ const PENDING_META: { label: string; tone: StatusBadgeTone } = {
 
 const CLOSED_STATUS_META: Partial<
   Record<
-    StaffCareRequestDetail["status"],
+    string,
     {
       label: string;
       tone: StatusBadgeTone;
@@ -68,7 +78,10 @@ const CLOSED_STATUS_META: Partial<
 
 type LoadState =
   | { readonly kind: "loading" }
-  | { readonly kind: "loaded"; readonly detail: StaffCareRequestDetail }
+  | {
+      readonly kind: "loaded";
+      readonly detail: studentsContract.CareRequestDetailResponse;
+    }
   | { readonly kind: "gone" }
   | { readonly kind: "forbidden" }
   | { readonly kind: "failed" };
@@ -208,7 +221,9 @@ export function PickupRequestDetailModal({
 }
 
 /** „Anfrage: Abholzeit“, „Anfrage: Abholart“ oder beides (#3945). */
-function detailTitle(pickup: StaffCareRequestDetail["pickup_change"]): string {
+function detailTitle(
+  pickup: studentsContract.CareRequestDetailResponse["pickup_change"],
+): string {
   if (pickup?.pickup_person && !pickup.pickup_time && !pickup.departure_mode)
     return "Anfrage: Abholperson";
   if (pickup?.departure_mode && pickup.pickup_time)
@@ -217,7 +232,9 @@ function detailTitle(pickup: StaffCareRequestDetail["pickup_change"]): string {
   return "Anfrage: Abholzeit";
 }
 
-function DetailBody({ detail }: Readonly<{ detail: StaffCareRequestDetail }>) {
+function DetailBody({
+  detail,
+}: Readonly<{ detail: studentsContract.CareRequestDetailResponse }>) {
   const closedMeta = CLOSED_STATUS_META[detail.status];
   const meta = HISTORY_STATUS_META[detail.status] ?? closedMeta ?? PENDING_META;
   // Nur Abholzeit-Hinweise öffnen dieses Fenster; ein Antrag ohne lesbaren
@@ -254,12 +271,12 @@ function DetailBody({ detail }: Readonly<{ detail: StaffCareRequestDetail }>) {
           {pickup?.departure_mode && (
             <>
               <DataField label="Gewünschte Abholart">
-                {DEPARTURE_MODE_LABELS[pickup.departure_mode]}
+                {departureModeLabel(pickup.departure_mode)}
               </DataField>
               <DataField label="Abholart vorher">
                 {pickup.previous_departure_modes?.length
                   ? pickup.previous_departure_modes
-                      .map((mode) => DEPARTURE_MODE_LABELS[mode])
+                      .map(departureModeLabel)
                       .join(", ")
                   : "Keine Angabe"}
               </DataField>
@@ -271,7 +288,7 @@ function DetailBody({ detail }: Readonly<{ detail: StaffCareRequestDetail }>) {
             </DataField>
           )}
           {detail.request_kind === "pickup_permission" &&
-            detail.requested.map((entry) => (
+            (detail.requested ?? []).map((entry) => (
               <DataField key={entry.label} label={entry.label} fullWidth>
                 {entry.new}
               </DataField>

@@ -85,7 +85,7 @@ func TestSeedTraegerBueroStepAssignsTheSchoolAdminThroughTheOperatorRoute(t *tes
 	}, operatorInvitations, "the operator invites a person without a moto account, with several roles at once")
 	login := requests["/traeger/auth/login"]
 	assert.Empty(t, login.authorization, "the Träger sign-in carries no session")
-	assert.Equal(t, map[string]any{"email": "admin@example.test", "password": "Geheim1234%", "organization_id": float64(12)}, login.body)
+	assert.Equal(t, map[string]any{"email": "admin@example.test", "password": "Geheim1234%", "organization_id": "12"}, login.body)
 	name := requests["/traeger/profile/name"]
 	assert.Equal(t, "Bearer traeger-token", name.authorization, "the admin names themselves with the Träger session")
 	assert.Equal(t, map[string]any{"name": "Sabine Hartmann"}, name.body)

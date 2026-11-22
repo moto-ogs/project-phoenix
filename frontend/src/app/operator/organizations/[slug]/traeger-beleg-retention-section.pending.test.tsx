@@ -12,7 +12,7 @@ vi.mock("next-auth/react", () => ({
 
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
@@ -133,6 +133,11 @@ function renderSection() {
 const failure = () => new ApiError("kaputt", 500, { code: "general.server" });
 
 describe("TraegerBelegRetentionSection pending lock (#6533)", () => {
+  beforeAll(async () => {
+    // Assert error handling independently of the lazy catalog's load time.
+    await import("~/lib/error-presentation");
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getOverview.mockResolvedValue(overview);

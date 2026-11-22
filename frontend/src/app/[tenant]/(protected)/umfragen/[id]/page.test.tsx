@@ -197,6 +197,8 @@ describe("Umfrage, Objektseite (#4781)", () => {
   });
 
   it("„Wiederholen“ nach einem Speicherfehler speichert den jetzt sichtbaren Entwurf (#6503)", async () => {
+    // Load the real error presenter before testing the retry, not its chunk timing.
+    await import("~/lib/error-presentation");
     state.search = "bearbeiten=1";
     state.survey = survey({ status: "draft", published_at: undefined });
     updateSurvey

@@ -1,4 +1,4 @@
-import { bffJson } from "~/lib/bff-fetch";
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the billing runs in the Träger portal (#4668): the runs of a
  * holiday period with their preview, corrections with a reason, the release
@@ -13,7 +13,6 @@ import {
   knownMailOutcome,
   knownMailProviderBlock,
 } from "~/lib/email-delivery-status";
-import { apiErrorFromBody, transportFetch } from "./api-error";
 import { knownEnum } from "./contract/known-enum";
 import type * as traegerBillingRunsContract from "./contract/traeger-billing-runs.generated";
 import type * as traegerNumberRangesContract from "./contract/traeger-number-ranges.generated";
@@ -437,9 +436,6 @@ function detailFromBackend(
   };
 }
 
-const RUNS_PATH = "/api/traeger/billing-runs";
-const runPath = (id: string) => `${RUNS_PATH}/${encodeURIComponent(id)}`;
-
 /** The runs of the Träger, newest first. */
 export async function fetchBillingRuns(): Promise<BillingRun[]> {
   const runs = await bffJson("org", "GET /traeger/billing-runs/");
@@ -660,31 +656,12 @@ export interface BillingFile {
   readonly filename: string;
 }
 
-/** Reads a file of the Träger API; a refusal keeps its error code. */
+/** Reads a file asked through `bffFile`; a refusal is its ApiError. */
 export async function billingFile(
-  path: string,
-  init: RequestInit,
+  file: Promise<Response>,
   fallbackName: string,
 ): Promise<BillingFile> {
-  const response = await transportFetch(path, {
-    credentials: "include",
-    cache: "no-store",
-    ...init,
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    let body: unknown = null;
-    try {
-      body = text ? (JSON.parse(text) as unknown) : null;
-    } catch {
-      body = null;
-    }
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      body,
-    );
-  }
+  const response = await file;
   return {
     blob: await response.blob(),
     filename: filenameFromDisposition(response) ?? fallbackName,
@@ -697,12 +674,10 @@ export async function previewBillingLetter(
   input: BillingLettersInput,
 ): Promise<BillingFile> {
   return billingFile(
-    `${runPath(runId)}/letters/preview`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(lettersBody(input)),
-    },
+    bffFile("org", "POST /traeger/billing-runs/{id}/letters/preview", {
+      params: { id: runId },
+      body: lettersBody(input),
+    }),
     "vorschau.pdf",
   );
 }
@@ -713,8 +688,11 @@ export async function downloadBillingLetter(
   documentId: string,
 ): Promise<BillingFile> {
   return billingFile(
-    `${runPath(runId)}/documents/${encodeURIComponent(documentId)}/letter`,
-    {},
+    bffFile(
+      "org",
+      "GET /traeger/billing-runs/{id}/documents/{documentID}/letter",
+      { params: { id: runId, documentID: documentId } },
+    ),
     "bestaetigung.pdf",
   );
 }
@@ -722,8 +700,9 @@ export async function downloadBillingLetter(
 /** All stored letters of the run in one PDF to print (#4670). */
 export async function printBillingLetters(runId: string): Promise<BillingFile> {
   return billingFile(
-    `${runPath(runId)}/letters/print`,
-    {},
+    bffFile("org", "GET /traeger/billing-runs/{id}/letters/print", {
+      params: { id: runId },
+    }),
     "bestaetigungsschreiben.pdf",
   );
 }
@@ -836,8 +815,10 @@ export async function downloadBillingRunOverview(
   format: BillingRunExportFormat,
 ): Promise<BillingFile> {
   return billingFile(
-    `${runPath(id)}/export?format=${format}`,
-    {},
+    bffFile("org", "GET /traeger/billing-runs/{id}/export", {
+      params: { id },
+      query: { format },
+    }),
     `abrechnungsanordnung.${format}`,
   );
 }
@@ -852,8 +833,11 @@ export async function downloadCostTakeoverList(
   format: BillingRunExportFormat,
 ): Promise<BillingFile> {
   return billingFile(
-    `${runPath(id)}/cost-takeovers/${encodeURIComponent(costBearerId)}/export?format=${format}`,
-    {},
+    bffFile(
+      "org",
+      "GET /traeger/billing-runs/{id}/cost-takeovers/{costBearerId}/export",
+      { params: { id, costBearerId }, query: { format } },
+    ),
     `kostenuebernahme.${format}`,
   );
 }

@@ -78,9 +78,17 @@ type Conclusion interface {
 	AmendFromBookings(ctx context.Context, organizationID int64) (AmendmentRun, error)
 }
 
+// Concluded is how and when a contract was concluded. A contract from an
+// import (#4723) carries TakenOver: its conclusion happened before moto and
+// comes from the file or from a correction (#7767), so Method names whether
+// it was concluded online (MethodElectronic) or on paper. DateUnknown tells
+// that no proof names the day: At then is the instant the takeover recorded
+// and no date of the conclusion; nothing shows or counts from it.
 type Concluded struct {
-	Method string    `json:"method"`
-	At     time.Time `json:"at"`
+	Method      string    `json:"method"`
+	At          time.Time `json:"at"`
+	DateUnknown bool      `json:"date_unknown"`
+	TakenOver   bool      `json:"taken_over"`
 }
 
 // SchoolConclusion is how the contracts of one school of the Träger come

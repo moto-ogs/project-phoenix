@@ -313,7 +313,7 @@ function MeinRaumPageContent() {
   const occupiedRoomIds = useMemo(
     () =>
       occupiedRoomIdsForSpontaneousStart({
-        ownSupervisionRoomIds: allRooms.map((room) => room.room_id),
+        ownSupervisionRoomIds: allRooms.map((room) => room.roomId),
         openRooms,
       }),
     [allRooms, openRooms],
@@ -328,7 +328,7 @@ function MeinRaumPageContent() {
     currentOpenRoom !== null && !currentOpenRoom.isUserSupervising;
   useSetBreadcrumb({
     activeSupervisionName:
-      currentOpenRoom?.name ?? currentRoom?.name ?? currentRoom?.room_name,
+      currentOpenRoom?.name ?? currentRoom?.name ?? currentRoom?.roomName,
     activeSupervisionIsSharedRoom: isSharedRoomView || undefined,
   });
 
@@ -363,11 +363,11 @@ function MeinRaumPageContent() {
     if (room) {
       router.push(`/active-supervisions?session=${sessionId}`);
       memory.write("supervision-last-session", sessionId);
-      if (room.room_id) {
-        memory.write("sidebar-last-room", room.room_id);
+      if (room.roomId) {
+        memory.write("sidebar-last-room", room.roomId);
       }
-      if (room.room_name) {
-        memory.write("sidebar-last-room-name", room.room_name);
+      if (room.roomName) {
+        memory.write("sidebar-last-room-name", room.roomName);
       }
       void dashboard.switchToRoom(sessionId);
     }
@@ -389,15 +389,12 @@ function MeinRaumPageContent() {
   // wie viele Kinder in ihr geführt werden. Beides steht schon im geladenen
   // Dashboard-Zustand.
   const supervisionName =
-    currentOpenRoom?.name ??
-    currentRoom?.name ??
-    currentRoom?.room_name ??
-    null;
+    currentOpenRoom?.name ?? currentRoom?.name ?? currentRoom?.roomName ?? null;
   // Die Zahl kommt aus derselben Quelle wie früher der Zähler im Kopf: der
   // gemeldeten Belegung, ersatzweise den geladenen Kindern.
   const supervisionCount =
     currentOpenRoom?.studentCount ??
-    currentRoom?.student_count ??
+    currentRoom?.studentCount ??
     students.length;
   // Dazu Raum und wer die Aufsicht hat, für eigene Aufsichten wie für offene
   // Räume (#4354). Die Blockkarte darunter nennt den Raum dann nicht mehr.
@@ -405,8 +402,8 @@ function MeinRaumPageContent() {
   const headFacts = supervisionHeadFacts({
     title: supervisionName,
     currentRoom: currentRoom && {
-      room_name:
-        currentRoom.room_name ??
+      roomName:
+        currentRoom.roomName ??
         currentTimetableRoster?.instance.roomName ??
         undefined,
       supervisorNames: currentRoom.supervisorNames,
@@ -417,7 +414,7 @@ function MeinRaumPageContent() {
   // zeigt jeder Abschnitt seine eigene (#3634).
   const supervisionOccupancy: Occupancy = {
     count: supervisionCount,
-    limit: currentOpenRoom ? null : (currentRoom?.participant_limit ?? null),
+    limit: currentOpenRoom ? null : (currentRoom?.participantLimit ?? null),
   };
   const supervisionOverbookedHint = overbookedHintFor(
     supervisionOccupancy,
@@ -511,7 +508,7 @@ function MeinRaumPageContent() {
       canCreateExternalCaregiver={hasPermission(session, "users:create")}
       canGrantExternalView={canGrantExternalViewAccess(session)}
       currentStaffId={currentStaffId}
-      defaultRoomId={currentRoom?.room_id ?? currentOpenRoom?.roomId}
+      defaultRoomId={currentRoom?.roomId ?? currentOpenRoom?.roomId}
       disabled={dashboard.spontaneousStartAvailability?.available === false}
       disabledReason={spontaneousStartBlockedReason}
       isStarting={actions.isStartingSpontaneous}

@@ -110,3 +110,66 @@ func TestCatererFactorRoutesAnswerUnderTheirMount(t *testing.T) {
 	require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
 	assert.Equal(t, "secret", svc.disablePassword)
 }
+
+// sessionSignInStub mints sessions for the caterer's sign-in steps.
+type sessionSignInStub struct{ identityaccess.CatererSignIn }
+
+func (sessionSignInStub) VerifyCatererMFA(context.Context, identityaccess.CatererMFAVerification) (identityaccess.CatererSession, error) {
+	return identityaccess.CatererSession{AccessToken: "access", RefreshToken: "refresh"}, nil
+}
+
+func (sessionSignInStub) ResendCatererMFA(context.Context, string, net.IP) (string, error) {
+	return "renewed", nil
+}
+
+func (sessionSignInStub) BeginCatererPasskeyLogin(context.Context, string) (identityaccess.PasskeyCeremonyOptions, error) {
+	return identityaccess.PasskeyCeremonyOptions{SessionID: "login", Options: map[string]string{"challenge": "login"}}, nil
+}
+
+func (sessionSignInStub) FinishCatererPasskeyLogin(context.Context, identityaccess.AccountPasskeyLoginFinish) (identityaccess.PasskeyLoginResult, error) {
+	return identityaccess.PasskeyLoginResult{AccessToken: "access", RefreshToken: "refresh"}, nil
+}
+
+type confirmStub struct{ secondFactorStub }
+
+func (*confirmStub) ConfirmCatererMFA(context.Context, identityaccess.CatererMFAConfirmation) (identityaccess.CatererSession, error) {
+	return identityaccess.CatererSession{AccessToken: "access", RefreshToken: "refresh"}, nil
+}
+
+// The caterer's session steps answer their tokens without the envelope to
+// the portal's route file (#7808); each answer is held to its registered
+// route under the /caterer mount.
+func TestCatererSessionStepsAnswerTheirTokensUnderTheirMount(t *testing.T) {
+	t.Parallel()
+	routes := catererauth.NewResource(sessionSignInStub{}, &confirmStub{})
+	caterer := chi.NewRouter()
+	routes.MountSignIn(caterer)
+	caterer.Group(func(r chi.Router) {
+		r.Use(func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				claims := routetest.Claims{ID: 41, Scope: "caterer"}
+				next.ServeHTTP(w, r.WithContext(routetest.WithAuthenticatedContext(r.Context(), claims, nil)))
+			})
+		})
+		routes.MountCredentialChecks(r)
+	})
+	router := chi.NewRouter()
+	router.Mount("/caterer", caterer)
+	tokens := `{"access_token":"access","refresh_token":"refresh"}`
+	for path, want := range map[string]string{
+		"/caterer/auth/mfa/verify":             tokens,
+		"/caterer/account/mfa/confirm":         tokens,
+		"/caterer/auth/mfa/resend":             `{"challenge_token":"renewed"}`,
+		"/caterer/auth/passkeys/login/options": `{"session_id":"login","options":{"challenge":"login"}}`,
+		"/caterer/auth/passkeys/login/verify":  `{"status":"authenticated","access_token":"access","refresh_token":"refresh"}`,
+	} {
+		req := httptest.NewRequest(http.MethodPost, path,
+			bytes.NewBufferString(`{"challenge_token":"challenge","code":"123456","session_id":"login","response":{"id":"assertion"}}`))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Origin", "https://caterer.localhost")
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusOK, rec.Code, "%s: %s", path, rec.Body.String())
+		assert.JSONEq(t, want, rec.Body.String(), path)
+	}
+}

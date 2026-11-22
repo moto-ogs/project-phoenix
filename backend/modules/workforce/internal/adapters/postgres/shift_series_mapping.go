@@ -25,7 +25,7 @@ func staffShiftSeriesFromDomain(value domain.StaffShiftSeries) (*staffShiftSerie
 		ValidFrom: calendarDate(value.ValidFrom), ValidUntil: optionalCalendarDate(value.ValidUntil),
 		SeriesRootID: value.SeriesRootID, RetainedOccurrenceShiftID: value.RetainedOccurrenceShiftID,
 		IncludeSchoolBreaks: value.IncludeSchoolBreaks, CreatedBy: value.CreatedBy, UpdatedBy: value.UpdatedBy,
-		CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
+		PlannedByTraeger: value.PlannedByTraeger, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
 	}, nil
 }
 
@@ -41,6 +41,6 @@ func staffShiftSeriesToDomain(row staffShiftSeriesRow) domain.StaffShiftSeries {
 		ValidFrom: string(row.ValidFrom), ValidUntil: calendarDateString(row.ValidUntil),
 		SeriesRootID: row.SeriesRootID, RetainedOccurrenceShiftID: row.RetainedOccurrenceShiftID,
 		IncludeSchoolBreaks: row.IncludeSchoolBreaks, CreatedBy: row.CreatedBy, UpdatedBy: row.UpdatedBy,
-		CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
+		PlannedByTraeger: row.PlannedByTraeger, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
 	}
 }

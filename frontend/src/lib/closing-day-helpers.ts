@@ -20,12 +20,6 @@ export interface ClosingDay {
 }
 
 /** Create/update payload — matches ClosingDayRequest on the backend. */
-export interface ClosingDayInput {
-  start_date: string;
-  end_date: string;
-  reason: string;
-}
-
 export function mapClosingDay(data: ClosingDayResponse): ClosingDay {
   return {
     id: data.id,

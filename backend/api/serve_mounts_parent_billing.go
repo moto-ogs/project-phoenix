@@ -249,7 +249,8 @@ func (c parentBillingCareContracts) Recipients(ctx context.Context, organization
 	}
 	recipients := make(map[int64]parentbilling.CareRecipient, len(parties))
 	for contractID, party := range parties {
-		recipients[contractID] = parentbilling.CareRecipient{FirstName: party.FirstName, LastName: party.LastName, Email: party.Email}
+		recipients[contractID] = parentbilling.CareRecipient{FirstName: party.FirstName, LastName: party.LastName, Email: party.Email,
+			ContractDraft: party.ContractDraft}
 	}
 	return recipients, nil
 }

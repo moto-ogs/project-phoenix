@@ -2,14 +2,14 @@
   "sites": [
     {
       "build": "production",
-      "evidence": "func (p AttendanceRoutePeople) FindByAccountID(ctx context.Context, id int64) (int64, bool, error) {\n\trow, err := p.source.FindByAccountID(ctx, id)\n\tif row == nil {\n\t\treturn 0, false, err\n\t}\n\treturn row.ID.Int64(), true, err\n}",
+      "evidence": "func (p AttendanceRoutePeople) FindByAccountID(ctx context.Context, id int64) (int64, bool, error) {\n\trow, err := p.source.FindByAccountID(ctx, id)\n\tif peoplePorts.IsPersonNotFound(err) {\n\t\treturn 0, false, nil\n\t}\n\tif row == nil {\n\t\treturn 0, false, err\n\t}\n\treturn row.ID.Int64(), true, err\n}",
       "form": "unclassified-evidence",
       "id": "api/AttendanceRoutePeople.FindByAccountID",
       "owner": "roots"
     },
     {
       "build": "production",
-      "evidence": "func (p AttendanceRoutePeople) GetStaffByPersonID(ctx context.Context, id int64) (int64, int64, bool, error) {\n\trow, err := p.source.StaffRows().FindByPersonID(ctx, id)\n\tif row == nil {\n\t\treturn 0, 0, false, err\n\t}\n\treturn row.ID.Int64(), row.TenantID.Int64(), true, err\n}",
+      "evidence": "func (p AttendanceRoutePeople) GetStaffByPersonID(ctx context.Context, id int64) (int64, int64, bool, error) {\n\trow, err := p.source.StaffRows().FindByPersonID(ctx, id)\n\tif isRepositoryNotFound(err) {\n\t\treturn 0, 0, false, nil\n\t}\n\tif row == nil {\n\t\treturn 0, 0, false, err\n\t}\n\treturn row.ID.Int64(), row.TenantID.Int64(), true, err\n}",
       "form": "unclassified-evidence",
       "id": "api/AttendanceRoutePeople.GetStaffByPersonID",
       "owner": "roots"
@@ -544,6 +544,13 @@
       "evidence": "func (m careContractModes) ConclusionMode(ctx context.Context, _ int64) (string, error) {\n\tmode, err := m.settings.ResolveString(ctx, configModels.KeyCareContractConclusionMode)\n\tif err != nil {\n\t\treturn \"\", err\n\t}\n\tif mode != carecontract.ModeSendLater \u0026\u0026 mode != carecontract.ModeOnAcceptance {\n\t\treturn \"\", fmt.Errorf(\"care contract: unknown conclusion mode %q\", mode)\n\t}\n\treturn mode, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/careContractModes.ConclusionMode",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (c careContractSchoolChildren) SchoolChildren(ctx context.Context, ids []int64) ([]carecontract.SchoolChild, error) {\n\tfound, err := c.records.StudentRecordIdentities(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tchildren := make([]carecontract.SchoolChild, len(found))\n\tfor i, record := range found {\n\t\tchildren[i] = carecontract.SchoolChild{StudentID: record.StudentID, FirstName: record.FirstName, LastName: record.LastName, BirthDate: record.Birthday}\n\t}\n\treturn children, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "api/careContractSchoolChildren.SchoolChildren",
       "owner": "roots"
     },
     {
@@ -1192,7 +1199,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (c parentBillingCareContracts) Recipients(ctx context.Context, organizationID int64, contractIDs []int64) (map[int64]parentbilling.CareRecipient, error) {\n\tparties, err := c.contracts.BillingRecipients(ctx, organizationID, contractIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\trecipients := make(map[int64]parentbilling.CareRecipient, len(parties))\n\tfor contractID, party := range parties {\n\t\trecipients[contractID] = parentbilling.CareRecipient{FirstName: party.FirstName, LastName: party.LastName, Email: party.Email}\n\t}\n\treturn recipients, nil\n}",
+      "evidence": "func (c parentBillingCareContracts) Recipients(ctx context.Context, organizationID int64, contractIDs []int64) (map[int64]parentbilling.CareRecipient, error) {\n\tparties, err := c.contracts.BillingRecipients(ctx, organizationID, contractIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\trecipients := make(map[int64]parentbilling.CareRecipient, len(parties))\n\tfor contractID, party := range parties {\n\t\trecipients[contractID] = parentbilling.CareRecipient{FirstName: party.FirstName, LastName: party.LastName, Email: party.Email, ContractDraft: party.ContractDraft}\n\t}\n\treturn recipients, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/parentBillingCareContracts.Recipients",
       "owner": "roots"
@@ -4020,13 +4027,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (q activeSchoolQuery) ListSchoolsByID(ctx context.Context, ids []int64) ([]presenceservice.School, error) {\n\tschools, err := q.schools.ListSchoolsByID(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]presenceservice.School, 0, len(schools))\n\tfor _, school := range schools {\n\t\tresult = append(result, presenceservice.School{ID: school.ID.Int64(), Slug: school.Slug})\n\t}\n\treturn result, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/activeSchoolQuery.ListSchoolsByID",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
       "evidence": "func (a announcementApplicants) PendingAnnouncementApplicants(ctx context.Context) ([]audienceRows.PendingAnnouncementApplicant, error) {\n\trows, err := a.source.PendingAnnouncementApplicants(ctx)\n\treturn applicantRows(rows), err\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/announcementApplicants.PendingAnnouncementApplicants",
@@ -6743,7 +6743,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p parentMandateParties) Recipients(ctx context.Context, organizationID int64, contractIDs []int64) (map[int64]parentbilling.CareRecipient, error) {\n\tparties, err := p.billing.BillingRecipients(ctx, organizationID, contractIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\trecipients := make(map[int64]parentbilling.CareRecipient, len(parties))\n\tfor contractID, party := range parties {\n\t\trecipients[contractID] = parentbilling.CareRecipient{FirstName: party.FirstName, LastName: party.LastName, Email: party.Email}\n\t}\n\treturn recipients, nil\n}",
+      "evidence": "func (p parentMandateParties) Recipients(ctx context.Context, organizationID int64, contractIDs []int64) (map[int64]parentbilling.CareRecipient, error) {\n\tparties, err := p.billing.BillingRecipients(ctx, organizationID, contractIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\trecipients := make(map[int64]parentbilling.CareRecipient, len(parties))\n\tfor contractID, party := range parties {\n\t\trecipients[contractID] = parentbilling.CareRecipient{FirstName: party.FirstName, LastName: party.LastName, Email: party.Email, ContractDraft: party.ContractDraft}\n\t}\n\treturn recipients, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/parentMandateParties.Recipients",
       "owner": "roots"

@@ -108,13 +108,13 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/active-supervisions/spontaneous-activity-start.tsx",
-    lines: [296],
+    lines: [294],
     reason: "Startkachel mit Symbol, Titel und Beschreibung: Kachel",
   },
   {
     rule: "no-hand-rolled-button",
     file: "src/components/calendar/personal-calendar.tsx",
-    lines: [1107],
+    lines: [1114],
     reason: "Termin-Block im Kalenderraster: Kalenderzelle",
   },
   {
@@ -178,7 +178,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/calendar/personal-calendar.tsx",
-    lines: [1056],
+    lines: [1063],
     reason: "Termin-Block in der Wochenansicht: Kalenderzelle",
   },
   // #5574: hellgraue Fläche als gewählter Zustand einer Auswahl oder

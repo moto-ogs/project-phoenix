@@ -220,6 +220,33 @@ func TestAbsenceTypesRouteRejectsWritesWithoutManage(t *testing.T) {
 	}
 }
 
+// An allowance change stays staff-only: it records its staff member. A valid
+// session without a staff record is refused with its code (403), not as a
+// missing login (401, before #7818), also when it came through the
+// Träger-Portal.
+func TestAbsenceTypesAllowanceRefusesSessionsWithoutStaffRecord(t *testing.T) {
+	t.Parallel()
+	db, router := setupAbsenceTypesRoute(t)
+	staff := testpkg.CreateTestStaff(t, db, "Rena", "Kontingent")
+	path := fmt.Sprintf("/1/allowances/%d", staff.ID)
+
+	for name, viaTraeger := range map[string]bool{"staffless account": false, "Träger session": true} {
+		account := testpkg.CreateTestAccount(t, db, "ohne-personalakte")
+		claims := testutil.AdminTestClaimsForTenant(int(account.ID), testpkg.Tenant(t))
+		claims.ViaTraeger = viaTraeger
+		request := testutil.NewAuthenticatedRequest(t, http.MethodPut, path, map[string]any{
+			"year": 2026, "entitled_days": 2, "reason": "Tariflicher Anspruch",
+		}, testutil.WithJWTBearer(testutil.MintTestJWT(t, claims)))
+		rec := testutil.ExecuteRequest(router, request)
+		require.Equal(t, http.StatusForbidden, rec.Code, "%s: %s", name, rec.Body.String())
+		var refusal struct {
+			Code string `json:"code"`
+		}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &refusal))
+		assert.Equal(t, "workforce.no_staff_profile", refusal.Code, name)
+	}
+}
+
 func setupAbsenceTypesRoute(t *testing.T, clocks ...func() time.Time) (*testpkg.DB, chi.Router) {
 	t.Helper()
 	db := testpkg.SetupTestDB(t)

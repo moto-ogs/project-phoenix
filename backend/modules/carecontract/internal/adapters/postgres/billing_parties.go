@@ -38,8 +38,9 @@ func (Store) PartiesOf(ctx context.Context, organizationID int64, contractIDs []
 	for _, row := range rows {
 		if row.PartyID == nil {
 			// A contract without a party (ADR 0232) still is a contract of
-			// the Träger: it is named with no party.
-			parties[row.ContractID] = []carecontract.Party{}
+			// the Träger: it is named with an empty party that keeps only
+			// whether it is a draft (#7862).
+			parties[row.ContractID] = []carecontract.Party{{ContractDraft: row.Draft}}
 			continue
 		}
 		parties[row.ContractID] = append(parties[row.ContractID], carecontract.Party{

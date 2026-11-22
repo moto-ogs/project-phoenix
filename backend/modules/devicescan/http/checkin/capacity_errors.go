@@ -54,9 +54,12 @@ var (
 	ErrActivityCapacityExceeded = errors.New("activity capacity exceeded")
 )
 
+// The identifiers of the kiosk device API stay JSON numbers and say so with
+// contract:"number": PyrePortal v1.11.5 reads them as numbers (#7808).
+
 // RoomCapacityExceededError represents detailed information about a capacity exceeded error
 type RoomCapacityExceededError struct {
-	RoomID           int64  `json:"room_id"`
+	RoomID           int64  `json:"room_id" contract:"number"`
 	RoomName         string `json:"room_name"`
 	CurrentOccupancy int    `json:"current_occupancy"`
 	MaxCapacity      int    `json:"max_capacity"`
@@ -94,7 +97,7 @@ func ErrorRoomCapacityExceeded(roomID int64, roomName string, currentOccupancy, 
 
 // ActivityCapacityExceededError represents detailed information about an activity capacity exceeded error
 type ActivityCapacityExceededError struct {
-	ActivityID       int64  `json:"activity_id"`
+	ActivityID       int64  `json:"activity_id" contract:"number"`
 	ActivityName     string `json:"activity_name"`
 	CurrentOccupancy int    `json:"current_occupancy"`
 	MaxCapacity      int    `json:"max_capacity"`
@@ -175,10 +178,10 @@ func ErrorActivityCapacityExceededNoDetails() render.Renderer {
 // breaking the optional-field contract and feeding clients a bogus
 // timestamp. A nil pointer is omitted correctly.
 type StudentAlreadyActiveError struct {
-	StudentID       int64      `json:"student_id"`
-	ExistingVisitID int64      `json:"existing_visit_id,omitempty"`
+	StudentID       int64      `json:"student_id" contract:"number"`
+	ExistingVisitID int64      `json:"existing_visit_id,omitempty" contract:"number"`
 	EntryTime       *time.Time `json:"entry_time,omitempty"`
-	RoomID          *int64     `json:"room_id,omitempty"`
+	RoomID          *int64     `json:"room_id,omitempty" contract:"number"`
 	RoomName        string     `json:"room_name,omitempty"`
 }
 

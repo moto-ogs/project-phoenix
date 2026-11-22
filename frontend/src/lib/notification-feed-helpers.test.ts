@@ -6,7 +6,7 @@ import {
 } from "./notification-feed-helpers";
 
 const wire = {
-  id: 9007199254740,
+  id: "9007199254740",
   type: "instance_cancelled",
   title: "Termin abgesagt",
   body: "„Fußball-AG“ am Fr., 20.11., um 14:00 Uhr fällt aus.",
