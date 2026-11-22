@@ -16032,7 +16032,9 @@ export const webAttendanceTopic = function webAttendanceTopic(
         ? []
         : [
             "Unter `Anmelden in` stehen Räume mit laufender Aufsicht, offene Räume und laufende Aktivitäten. Einen Raum ohne Aufsicht kannst du nicht wählen. Die App startet keine Aufsicht.",
-            "Mit `Mehrere` und einem Raum kommen nur abwesende Kinder in den Raum. Kinder, die schon da sind, bleiben, wo sie sind.",
+            "Mit `Mehrere` und einem Raum meldet `In … anmelden` nur abwesende Kinder in den Raum an. Kinder, die schon da sind, bleiben, wo sie sind.",
+            "Soll ein Kind, das schon angemeldet ist, in den Raum? Wähle `Mehrere`, markiere das Kind und wähle `In … holen`. Den Knopf siehst du als Leitung oder wenn du die Aufsicht im Zielraum hast. Sonst holst du das Kind auf der Seite des Raums.",
+            "In `Direkt` meldet ein Tipp ein angemeldetes Kind immer ab, auch wenn ein Raum gewählt ist.",
           ]),
       "Der Knopf mit `Alle` lässt kranke und entschuldigte Kinder aus. Das gilt auch für Kinder auf Klassenfahrt oder mit „Kommt heute nicht“. Die Leiste nennt ihre Zahl.",
       "Im Hinweis `Noch nicht angemeldet` zeigt `Nur „Schule“ zeigen` die Kinder, die laut Tagesplan noch in der Schule sind und heute noch nicht da waren.",

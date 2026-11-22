@@ -2,7 +2,7 @@
 
 import { BELOW_MD } from "~/lib/hooks/use-media-query";
 import { useEffect, type ReactNode } from "react";
-import { CheckSquare, LogIn, LogOut, X } from "lucide-react";
+import { ArrowRightLeft, CheckSquare, LogIn, LogOut, X } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { SelectionBar } from "~/components/ui/selection-bar";
 import { SegmentedControl } from "~/components/ui/segmented-control";
@@ -16,6 +16,14 @@ import {
   type SelectAllControl,
 } from "~/components/students/school-checkin-select-all";
 import { SpinnerIcon } from "~/components/ui/icons";
+import {
+  checkInBlockedReason,
+  directModeHint,
+  pullBlockedReason,
+  pullHint,
+  type CheckinBulkTarget,
+} from "~/components/students/school-checkin-bulk-target";
+import type { CheckinBulkAction } from "~/lib/hooks/use-school-checkin-mode";
 import { FIXED_LAYER_SHIFT } from "~/components/ui/hooks/useFixedLayersFollowViewport";
 
 const CHECKIN_BAR_OFFSET_VAR = "--moto-checkin-bar-offset";
@@ -27,6 +35,8 @@ const CHECKIN_SELECTION_BAR_OFFSET = "9.5rem";
 const CHECKIN_SELECTION_LEFT_OUT_BAR_OFFSET = "11.75rem";
 // The „Anmelden in“ row (#6953) adds a 44 px select and its gap.
 const CHECKIN_TARGET_ROW_OFFSET = "3.25rem";
+// „In … holen“ is a row of its own under the buttons: 44 px and its gap.
+const CHECKIN_PULL_ROW_OFFSET = "3.125rem";
 
 interface SchoolCheckinModeMobileProps {
   /** Whether the page is currently in check-in/out mode. */
@@ -43,12 +53,14 @@ interface SchoolCheckinModeMobileProps {
   /** Currently marked students while the selection sub-mode is on. */
   readonly selectedCount?: number;
   readonly onClearSelection?: () => void;
-  readonly onBulkAction?: (action: "in" | "out") => void;
-  readonly runningAction?: "in" | "out" | null;
+  readonly onBulkAction?: (action: CheckinBulkAction) => void;
+  readonly runningAction?: CheckinBulkAction | null;
   /** „Alle N auswählen“ for the children on screen (#4762). */
   readonly selectAll?: SelectAllControl;
   /** „Anmelden in“ (#6953): where a check-in puts the children. */
   readonly targetPicker?: ReactNode;
+  /** The chosen target and what the marked children allow there. */
+  readonly bulkTarget?: CheckinBulkTarget | null;
   /**
    * Locks the trigger, e.g. while a bulk request is in flight (#2359): the
    * hook ignores mode exits during a run, so "Fertig" mirrors that as a
@@ -84,6 +96,7 @@ export function SchoolCheckinModeMobile({
   runningAction = null,
   selectAll,
   targetPicker,
+  bulkTarget = null,
   disabled = false,
 }: SchoolCheckinModeMobileProps) {
   const attendanceWebEnabled = useAttendanceWebEnabled();
@@ -94,10 +107,17 @@ export function SchoolCheckinModeMobile({
       ? CHECKIN_SELECTION_LEFT_OUT_BAR_OFFSET
       : CHECKIN_SELECTION_BAR_OFFSET
     : CHECKIN_BAR_OFFSET;
+  const checkInBlocked = checkInBlockedReason(bulkTarget, selectedCount);
   const hasTargetRow = targetPicker !== undefined && targetPicker !== null;
-  const barOffset = hasTargetRow
-    ? `calc(${baseOffset} + ${CHECKIN_TARGET_ROW_OFFSET})`
-    : baseOffset;
+  const hasPullRow = selectionActive && bulkTarget?.pullCount !== undefined;
+  const extraRows = [
+    hasTargetRow ? CHECKIN_TARGET_ROW_OFFSET : null,
+    hasPullRow ? CHECKIN_PULL_ROW_OFFSET : null,
+  ].filter((row) => row !== null);
+  const barOffset =
+    extraRows.length > 0
+      ? `calc(${[baseOffset, ...extraRows].join(" + ")})`
+      : baseOffset;
 
   useEffect(() => {
     if (!attendanceWebEnabled || !isActive) return;
@@ -170,9 +190,7 @@ export function SchoolCheckinModeMobile({
         count={selectedCount}
         busy={disabled && runningAction !== null}
         label="An- und Abmelde-Modus aktiv"
-        description={
-          selectionActive ? null : "Jeder Tipp meldet sofort an oder ab."
-        }
+        description={selectionActive ? null : directModeHint(bulkTarget)}
         actions={
           <Button
             type="button"
@@ -270,11 +288,16 @@ export function SchoolCheckinModeMobile({
               className="max-[359px]:w-full"
               onClick={() => onBulkAction?.("in")}
               disabled={
-                selectedCount === 0 || disabled || onBulkAction === undefined
+                selectedCount === 0 ||
+                disabled ||
+                onBulkAction === undefined ||
+                checkInBlocked !== undefined
               }
               tooltip={CHECKIN_HINTS.checkIn}
               disabledReason={
-                selectedCount === 0 ? CHECKIN_HINTS.noneSelected : undefined
+                selectedCount === 0
+                  ? CHECKIN_HINTS.noneSelected
+                  : checkInBlocked
               }
             >
               {runningAction === "in" ? (
@@ -306,6 +329,30 @@ export function SchoolCheckinModeMobile({
               Abmelden
             </Button>
           </div>
+        ) : null}
+
+        {hasPullRow ? (
+          <Button
+            type="button"
+            variant="surface"
+            size="compact"
+            className="mt-1.5 w-full"
+            onClick={() => onBulkAction?.("pull")}
+            disabled={
+              bulkTarget.pullCount === 0 ||
+              disabled ||
+              onBulkAction === undefined
+            }
+            tooltip={pullHint(bulkTarget.roomName)}
+            disabledReason={pullBlockedReason(bulkTarget, selectedCount)}
+          >
+            {runningAction === "pull" ? (
+              <SpinnerIcon className="size-3.5" />
+            ) : (
+              <ArrowRightLeft className="size-3.5" aria-hidden />
+            )}
+            In {bulkTarget.roomName} holen
+          </Button>
         ) : null}
 
         {leftOut ? (

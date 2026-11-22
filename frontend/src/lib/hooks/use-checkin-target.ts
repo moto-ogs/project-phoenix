@@ -141,6 +141,12 @@ export interface CheckinTargetState {
   readonly target: TargetRoomOption | null;
   /** "" picks "Anwesend (ohne Raum)", otherwise an option's value. */
   readonly setTargetValue: (value: string) => void;
+  /**
+   * Whether the person may bring children who are already present into the
+   * chosen target: an administrator, or the supervisor of the target's
+   * session, as on the room page. The backend checks it again.
+   */
+  readonly canPullPresent: boolean;
   /** The remembered target that is gone, until the person chooses again. */
   readonly lostTargetName: string | null;
   /** Reloads the targets, e.g. after the backend refused a stale choice. */
@@ -188,6 +194,15 @@ export function useCheckinTarget(enabled: boolean): CheckinTargetState {
     available ? checkinTargetKeys.activities() : null,
     () => fetchActivities(),
   );
+  const ownActiveGroupIds = useMemo(
+    () =>
+      new Set(
+        listOf(supervisions.data)
+          .filter((supervision) => supervision.isActive)
+          .map((supervision) => supervision.activeGroupId),
+      ),
+    [supervisions.data],
+  );
   const options = useMemo(() => {
     if (!available) return [];
     const activityNames = new Map(
@@ -199,11 +214,6 @@ export function useCheckinTarget(enabled: boolean): CheckinTargetState {
         ? { ...group, actualGroup: { id: group.groupId, name } }
         : group;
     });
-    const own = new Set(
-      listOf(supervisions.data)
-        .filter((supervision) => supervision.isActive)
-        .map((supervision) => supervision.activeGroupId),
-    );
     return buildTargetRoomOptions(
       namedGroups,
       listOf(roomList.data),
@@ -211,14 +221,14 @@ export function useCheckinTarget(enabled: boolean): CheckinTargetState {
       // An arriving child needs a running supervision, also for admins
       // (#6953): the app starts none. Admins still see every such session.
       "supervised",
-      own,
+      ownActiveGroupIds,
     );
   }, [
     activities.data,
     available,
     groups.data,
+    ownActiveGroupIds,
     roomList.data,
-    supervisions.data,
   ]);
 
   const loaded =
@@ -287,12 +297,20 @@ export function useCheckinTarget(enabled: boolean): CheckinTargetState {
     await Promise.all([refreshGroups(), refreshRooms(), refreshSupervisions()]);
   }, [refreshGroups, refreshRooms, refreshSupervisions]);
 
+  const target = available ? resolved.target : null;
+  const canPullPresent =
+    target !== null &&
+    (showAllTargets ||
+      (target.kind === "session" &&
+        ownActiveGroupIds.has(target.activeGroupId)));
+
   return {
     available,
     options,
     loading,
     loadError,
-    target: available ? resolved.target : null,
+    target,
+    canPullPresent,
     setTargetValue,
     lostTargetName: available ? lostTargetName : null,
     refresh,

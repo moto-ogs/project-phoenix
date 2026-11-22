@@ -109,7 +109,11 @@ export function StudentSelectionScope({
           checkinEnabled
             ? {
                 onAction: bulkCheckin.handleBulkAction,
-                runningAction: bulkCheckin.runningBulkAction,
+                // The table offers Anmelden and Abmelden only.
+                runningAction:
+                  bulkCheckin.runningBulkAction === "pull"
+                    ? null
+                    : bulkCheckin.runningBulkAction,
                 isRunning: schoolCheckin.isBulkRunning,
               }
             : undefined
