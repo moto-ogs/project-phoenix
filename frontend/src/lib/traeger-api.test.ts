@@ -267,17 +267,17 @@ describe("traeger-api", () => {
     expect(JSON.parse(init?.body as string)).toEqual({
       email: "a@b.de",
       password: "pw",
-      organization_id: 7,
+      organization_id: "7",
     });
   });
 
-  it("maps the choice of Träger with string IDs", async () => {
+  it("maps the choice of Träger", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse(200, {
         status: "success",
         data: {
           status: "organization_selection_required",
-          organizations: [{ id: 7, name: "Träger Nord" }],
+          organizations: [{ id: "7", name: "Träger Nord" }],
         },
       }),
     );
@@ -302,7 +302,7 @@ describe("traeger-api", () => {
           status: "mfa_required",
           challenge_token: "challenge",
           masked_email: "a***@b.de",
-          organization_id: 7,
+          organization_id: "7",
           trusted_device_enabled: true,
           trusted_device_days: 90,
         },
@@ -327,7 +327,7 @@ describe("traeger-api", () => {
           status: "mfa_required",
           challenge_token: "challenge",
           masked_email: "a***@b.de",
-          organization_id: 7,
+          organization_id: "7",
         },
       }),
     );
@@ -346,7 +346,7 @@ describe("traeger-api", () => {
           access_token: "enrollment",
           masked_email: "a***@b.de",
           mfa_enrollment_required: true,
-          organization_id: 7,
+          organization_id: "7",
         },
       }),
     );

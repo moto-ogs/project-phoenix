@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -31,7 +32,7 @@ const traegerTrustedDevicesPath = "/traeger/auth/mfa/trusted-devices"
 // cookie.
 func traegerLoginWithDevice(t *testing.T, router http.Handler, email, password string, organizationID int64, cookie string) (int, traegerLoginAnswer) {
 	t.Helper()
-	body, err := json.Marshal(map[string]any{"email": email, "password": password, "organization_id": organizationID})
+	body, err := json.Marshal(map[string]any{"email": email, "password": password, "organization_id": strconv.FormatInt(organizationID, 10)})
 	require.NoError(t, err)
 	req := httptest.NewRequest(http.MethodPost, "/traeger/auth/login", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -122,7 +123,7 @@ func TestTraegerRemembersTheDeviceOnlyWhenAsked(t *testing.T) {
 	assert.Equal(t, 90, *login.TrustedDeviceDays, "the registry default lifetime")
 
 	rec := traegerRequest(t, portal, "/traeger/auth/mfa/verify", map[string]any{
-		"challenge_token": login.ChallengeToken, "code": lastTraegerCode(t, portal, account.Email), "organization_id": organization,
+		"challenge_token": login.ChallengeToken, "code": lastTraegerCode(t, portal, account.Email), "organization_id": strconv.FormatInt(organization, 10),
 	})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Empty(t, traegerDeviceCookie(rec), "without the choice no device is remembered")
@@ -206,7 +207,7 @@ func TestTraegerDeviceOpensOnlyItsPortalAndItsTraeger(t *testing.T) {
 	assert.Equal(t, "authenticated", own.Status)
 
 	code, secondSession := traegerPost(t, portal, "/traeger/auth/mfa/verify", "", map[string]any{
-		"challenge_token": other.ChallengeToken, "code": lastTraegerCode(t, portal, account.Email), "organization_id": second,
+		"challenge_token": other.ChallengeToken, "code": lastTraegerCode(t, portal, account.Email), "organization_id": strconv.FormatInt(second, 10),
 	})
 	require.Equal(t, http.StatusOK, code)
 	code, devices := traegerDevices(t, portal, secondSession.AccessToken, nil)
