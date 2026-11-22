@@ -1,5 +1,5 @@
 import { knownEnum } from "~/lib/contract/known-enum";
-import type { PhaseResponseOverviewResponse as WirePhaseResponseOverview } from "~/lib/contract/enrollment.generated";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import { createLogger } from "~/lib/logger";
 import type { Translations } from "~/lib/enrollment-translations";
 import {
@@ -503,7 +503,7 @@ export interface PhaseResponseOverview {
 }
 
 export function mapPhaseResponseOverview(
-  data: WirePhaseResponseOverview,
+  data: enrollmentContract.PhaseResponseOverviewResponse,
 ): PhaseResponseOverview {
   return {
     applicable: data.applicable,
@@ -538,6 +538,8 @@ export async function getPhaseResponseOverview(
     throw await readError(response, "Rücklauf konnte nicht geladen werden");
   }
   return mapPhaseResponseOverview(
-    await readEnrollmentJSON<WirePhaseResponseOverview>(response),
+    await readEnrollmentJSON<enrollmentContract.PhaseResponseOverviewResponse>(
+      response,
+    ),
   );
 }

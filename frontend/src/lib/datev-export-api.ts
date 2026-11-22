@@ -4,7 +4,7 @@
 // code path, so they cannot disagree.
 
 import { bffJson } from "./bff-fetch";
-import type { DatevExportReport as DatevExportReportWire } from "./contract/staff.generated";
+import type * as staffContract from "./contract/staff.generated";
 
 export type DatevFormat = "datev_lodas" | "datev_lug";
 
@@ -22,7 +22,9 @@ export interface DatevExportReport {
   openMonth: boolean;
 }
 
-function mapDatevExportReport(data: DatevExportReportWire): DatevExportReport {
+function mapDatevExportReport(
+  data: staffContract.DatevExportReport,
+): DatevExportReport {
   return {
     lineCount: data.line_count,
     staffExported: data.staff_exported,

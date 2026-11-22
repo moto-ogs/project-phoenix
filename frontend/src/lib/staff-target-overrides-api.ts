@@ -1,5 +1,5 @@
 import { bffJson } from "./bff-fetch";
-import type { StaffTargetOverride as StaffTargetOverrideWire } from "./contract/staff.generated";
+import type * as staffContract from "./contract/staff.generated";
 
 // Sonderarbeitszeit (#3259): for every Monday to Friday in [startDate,
 // endDate] the staff member's daily Soll is dailyMinutes, or with
@@ -27,7 +27,7 @@ type StaffTargetOverrideInput = {
 );
 
 function mapStaffTargetOverride(
-  row: StaffTargetOverrideWire,
+  row: staffContract.StaffTargetOverride,
 ): StaffTargetOverride {
   return {
     id: row.id,

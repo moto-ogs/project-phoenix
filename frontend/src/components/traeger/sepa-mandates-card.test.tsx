@@ -11,7 +11,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type { SepaMandate } from "~/lib/traeger-sepa-api";
-import { traegerRequest } from "~/lib/traeger-api";
 import { deferred } from "~/test/helpers/form-modal-pending";
 import { SepaMandateStatusCard } from "./sepa-mandate-status-card";
 import TraegerSepaMandatePage from "~/app/traeger/abrechnung/lastschrift/[contractId]/page";
@@ -32,9 +31,10 @@ vi.mock("~/lib/traeger-sepa-api", async (importOriginal) => ({
 }));
 vi.mock("~/lib/traeger-url", () => ({ traegerPath: (path: string) => path }));
 vi.mock("~/lib/traeger-api", () => ({
-  traegerRequest: vi.fn(),
   fetchTraegerBuero: () => Promise.resolve({ members: [] }),
 }));
+const bffJson = vi.hoisted(() => vi.fn());
+vi.mock("~/lib/bff-fetch", () => ({ bffJson }));
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ contractId: "42" }),
@@ -213,7 +213,7 @@ describe("SepaMandatesCard (#4695)", () => {
     api.fetchSepaMandateHistory.mockImplementation(
       original.fetchSepaMandateHistory,
     );
-    vi.mocked(traegerRequest).mockResolvedValue([
+    bffJson.mockResolvedValue([
       {
         id: 1,
         action: "create",
@@ -243,8 +243,10 @@ describe("SepaMandatesCard (#4695)", () => {
     expect(
       await screen.findByText("Datei: ogs-connect.csv · Zeile 4"),
     ).toBeInTheDocument();
-    expect(traegerRequest).toHaveBeenCalledWith(
-      "/api/traeger/sepa-mandates/9/history",
+    expect(bffJson).toHaveBeenCalledWith(
+      "org",
+      "GET /traeger/sepa-mandates/{id}/history",
+      { params: { id: "9" } },
     );
     expect(screen.getAllByText(/^Datei:/)).toHaveLength(1);
   });

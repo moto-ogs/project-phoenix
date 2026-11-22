@@ -3,7 +3,7 @@ import { fetchBillingFamily } from "./traeger-billing-families-api";
 import { fetchContributionRules } from "./traeger-contributions-api";
 
 const request = vi.hoisted(() => vi.fn());
-vi.mock("./traeger-api", () => ({ traegerRequest: request }));
+vi.mock("~/lib/bff-fetch", () => ({ bffJson: request }));
 afterEach(() => request.mockReset());
 
 const FAMILY = {

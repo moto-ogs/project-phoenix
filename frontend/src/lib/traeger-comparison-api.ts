@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the Träger's school comparison (#4715, ADR 0245): for a window
  * and a choice of schools, eight key figures per school, their average over
@@ -14,7 +15,6 @@ import {
 import type * as traegerSchoolsContract from "./contract/traeger-schools.generated";
 import { requiredDay } from "./contract/required-day";
 import type { TraegerSchool } from "./traeger-api";
-import { traegerRequest } from "./traeger-api";
 import type { UtilizationWindow } from "./traeger-utilization-api";
 
 const COMPARISON_PATH = "/api/traeger/schools/comparison";
@@ -72,16 +72,12 @@ function knownValues(values: Record<string, number> | null): ComparisonValues {
   return result;
 }
 
-function comparisonQuery(
-  query: ComparisonQuery,
-  metrics?: readonly ComparisonMetric[],
-): string {
-  const params = new URLSearchParams({ from: query.from, to: query.to });
-  if (query.schoolIds.length > 0) {
-    params.set("schools", query.schoolIds.join(","));
-  }
-  if (metrics && metrics.length > 0) params.set("metrics", metrics.join(","));
-  return params.toString();
+function comparisonQuery(query: ComparisonQuery) {
+  return {
+    from: query.from,
+    to: query.to,
+    schools: query.schoolIds.join(",") || undefined,
+  };
 }
 
 function comparisonFromBackend(
@@ -111,9 +107,9 @@ export async function fetchTraegerComparison(
   query: ComparisonQuery,
 ): Promise<TraegerComparison> {
   return comparisonFromBackend(
-    await traegerRequest<traegerSchoolsContract.SchoolComparison>(
-      `${COMPARISON_PATH}?${comparisonQuery(query)}`,
-    ),
+    await bffJson("org", "GET /traeger/schools/comparison", {
+      query: comparisonQuery(query),
+    }),
   );
 }
 

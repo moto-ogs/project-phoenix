@@ -7,9 +7,9 @@
  */
 
 import { knownEnum } from "./contract/known-enum";
-import type { ContractNoticeOptions as ParentNoticeOptions } from "./contract/parent-me.generated";
+import type * as parentMeContract from "./contract/parent-me.generated";
 import { requiredDay } from "./contract/required-day";
-import type { NoticeOptions as OfficeNoticeOptions } from "./contract/traeger-contract-notices.generated";
+import type * as traegerContractNoticesContract from "./contract/traeger-contract-notices.generated";
 import {
   type CareContractStatus,
   knownContractStatus,
@@ -125,7 +125,9 @@ export interface NoticeDeclaration {
  * The options as the office route or the parents' route sends them; only
  * the parents' route names the Träger, only the office's the decided end.
  */
-export type NoticeOptionsWire = OfficeNoticeOptions | ParentNoticeOptions;
+export type NoticeOptionsWire =
+  | traegerContractNoticesContract.NoticeOptions
+  | parentMeContract.ContractNoticeOptions;
 
 export function noticeOptionsFromBackend(
   row: NoticeOptionsWire,

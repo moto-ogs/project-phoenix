@@ -5,10 +5,8 @@ import {
   mapTimeAccountRow,
   staffOverviewService,
 } from "./staff-overview-api";
-import {
-  type DashboardSummary as DashboardSummaryWire,
-  routes,
-} from "./contract/staff.generated";
+import { routes } from "./contract/staff.generated";
+import type * as staffContract from "./contract/staff.generated";
 
 const sessionFetch = vi.hoisted(() => vi.fn());
 vi.mock("./session-cache", () => ({ sessionFetch }));
@@ -20,7 +18,7 @@ function jsonResponse(data: unknown): Response {
   } as unknown as Response;
 }
 
-const summaryFixture: DashboardSummaryWire = {
+const summaryFixture: staffContract.DashboardSummary = {
   active_staff_count: 18,
   sick_today: 2,
   vacation_today: 1,
@@ -98,7 +96,9 @@ describe("staffOverviewService", () => {
     await staffOverviewService.getDashboardSummary("week");
 
     expect(sessionFetch).toHaveBeenCalledWith(
-      "/api/staff/dashboard-summary?period=week", { method: "GET" });
+      "/api/staff/dashboard-summary?period=week",
+      { method: "GET" },
+    );
   });
 
   it.each([{ year: 2026 }, { month: 7 }])(
@@ -119,7 +119,9 @@ describe("staffOverviewService", () => {
     await staffOverviewService.getTimeAccounts();
 
     expect(sessionFetch).toHaveBeenCalledWith(
-      "/api/staff/time-tracking/overview", { method: "GET" });
+      "/api/staff/time-tracking/overview",
+      { method: "GET" },
+    );
   });
 
   it("forwards month, employment type and saldo bounds", async () => {

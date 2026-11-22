@@ -12,54 +12,29 @@ import { ApiError, apiErrorFromBody, transportFetch } from "./api-error";
 
 import type { PatchAttendanceRequest } from "./contract/shared.generated";
 import type {
-  ApplyDeviationsResponse as WireApplyDeviations,
-  AttendanceResponse as WireAttendance,
-  BulkCancelResult as WireBulkCancel,
   bulkCancelRequest,
   bookingLeftoversResponse,
-  BulkSubstitutionResponse as WireBulkSubstitution,
   CancelInstanceRequest,
-  combinedOfferingCountsResponse as WireCombinedOfferingCounts,
   conflictAcksResponse,
   convertInstanceToSeriesRequest,
-  convertInstanceToSeriesResponse as WireConvertInstanceToSeries,
   createTemplateRequest,
-  createTemplateResponse as WireCreateTemplate,
   endTemplateRequest,
-  endTemplateResponse as WireEndTemplate,
   keptStudentTemplateDaysRequest,
-  listTemplatesResponse as WireTemplates,
   manualRosterRequest,
   offeringGapAckRequest,
-  offeringSourcesResponse as WireOfferingSources,
   splitTemplateRequest,
-  splitTemplateResponse as WireSplitTemplate,
-  templateResponse as WireTemplate,
   updateTemplateRequest,
   createInstanceRequest,
-  editedInWindowResponse as WireEditedInWindow,
-  GuardianNoticeReachResponse as WireGuardianNoticeReach,
   InstanceParticipantsResponse,
-  InstanceStatusResponse as WireInstanceStatus,
   materializeRequest,
-  materializeResponse as WireMaterialize,
   moveStaffRequest,
-  MoveStaffResponse as WireMoveStaff,
-  PlannedConflictsResponse as WireConflictCheck,
   replanWeekRequest,
-  replanWeekResponse as WireReplanWeek,
   ShiftCoverageRequest,
-  ShiftCoverageResponse as WireShiftCoverage,
-  StaffPoolResponse as WireStaffPool,
-  StartInstanceResponse as WireStartInstance,
-  DeviationHistoryResponse as WireDeviationHistory,
-  enrichedInstance as WireInstance,
-  GapsResponse as WireGaps,
   offeringPreviewResponse,
   rosterDeviationsResponse,
   updateInstanceRequest,
-  weeklyInstancesResponse as WireWeeklyInstances,
 } from "./contract/timetable.generated";
+import type * as timetableContract from "./contract/timetable.generated";
 import { hasSessionAccess } from "./session-access";
 import { getCachedSession } from "./session-cache";
 import { createLogger } from "./logger";
@@ -227,7 +202,8 @@ class TimetableService {
       },
     );
 
-    const raw = await unwrap<WireWeeklyInstances>(response);
+    const raw =
+      await unwrap<timetableContract.weeklyInstancesResponse>(response);
     return mapWeeklyInstances(raw);
   }
 
@@ -252,7 +228,7 @@ class TimetableService {
       credentials: "include",
       body: JSON.stringify(body satisfies createInstanceRequest),
     });
-    const raw = await unwrap<WireInstance>(response);
+    const raw = await unwrap<timetableContract.enrichedInstance>(response);
     logger.info("instance_created", {
       instance_id: raw.id,
       is_spontaneous: raw.is_spontaneous,
@@ -278,7 +254,8 @@ class TimetableService {
       credentials: "include",
       body: JSON.stringify(body satisfies createTemplateRequest),
     });
-    const raw = await unwrap<WireCreateTemplate>(response);
+    const raw =
+      await unwrap<timetableContract.createTemplateResponse>(response);
     logger.info("template_created", {
       template_id: raw.template_id,
       schedules: raw.schedule_ids?.length ?? 0,
@@ -304,7 +281,8 @@ class TimetableService {
         body: JSON.stringify(body satisfies convertInstanceToSeriesRequest),
       },
     );
-    const raw = await unwrap<WireConvertInstanceToSeries>(response);
+    const raw =
+      await unwrap<timetableContract.convertInstanceToSeriesResponse>(response);
     logger.info("instance_converted_to_series", {
       instance_id: raw.linked_instance_id,
       template_id: raw.template_id,
@@ -335,7 +313,8 @@ class TimetableService {
         credentials: "include",
       },
     );
-    const raw = await unwrap<WireOfferingSources>(response);
+    const raw =
+      await unwrap<timetableContract.offeringSourcesResponse>(response);
     return mapOfferingSourceOptions(raw);
   }
 
@@ -360,7 +339,8 @@ class TimetableService {
         credentials: "include",
       },
     );
-    const raw = await unwrap<WireCombinedOfferingCounts>(response);
+    const raw =
+      await unwrap<timetableContract.combinedOfferingCountsResponse>(response);
     return mapCombinedOfferingCounts(raw);
   }
 
@@ -376,7 +356,7 @@ class TimetableService {
       },
     );
 
-    const raw = await unwrap<WireTemplates>(response);
+    const raw = await unwrap<timetableContract.listTemplatesResponse>(response);
     return mapTemplates(raw);
   }
 
@@ -399,7 +379,7 @@ class TimetableService {
         credentials: "include",
       },
     );
-    const raw = await unwrap<WireTemplate>(response);
+    const raw = await unwrap<timetableContract.templateResponse>(response);
     return mapTemplates({ templates: [raw] }).templates[0]!;
   }
 
@@ -650,7 +630,7 @@ class TimetableService {
         body: JSON.stringify(body satisfies splitTemplateRequest),
       },
     );
-    const raw = await unwrap<WireSplitTemplate>(response);
+    const raw = await unwrap<timetableContract.splitTemplateResponse>(response);
     logger.info("template_split", {
       old_template_id: raw.old_template_id,
       new_template_id: raw.new_template_id,
@@ -681,7 +661,7 @@ class TimetableService {
         body: JSON.stringify(body satisfies endTemplateRequest),
       },
     );
-    const raw = await unwrap<WireEndTemplate>(response);
+    const raw = await unwrap<timetableContract.endTemplateResponse>(response);
     logger.info("template_ended", {
       template_id: raw.template_id,
       effective_date: raw.effective_date,
@@ -722,7 +702,8 @@ class TimetableService {
       headers: { Accept: "application/json" },
       credentials: "include",
     });
-    const raw = await unwrap<WireConflictCheck>(response);
+    const raw =
+      await unwrap<timetableContract.PlannedConflictsResponse>(response);
     return mapConflictCheckResult(raw);
   }
 
@@ -800,7 +781,7 @@ class TimetableService {
         week_pattern: params.weekPattern,
       } satisfies ShiftCoverageRequest),
     });
-    const raw = await unwrap<WireShiftCoverage>(response);
+    const raw = await unwrap<timetableContract.ShiftCoverageResponse>(response);
     return mapShiftCoverageCheckResult(raw);
   }
 
@@ -820,7 +801,7 @@ class TimetableService {
         body: JSON.stringify(body satisfies updateTemplateRequest),
       },
     );
-    const raw = await unwrap<WireTemplate>(response);
+    const raw = await unwrap<timetableContract.templateResponse>(response);
     return mapTemplates({ templates: [raw] }).templates[0]!;
   }
 
@@ -852,7 +833,7 @@ class TimetableService {
         body: JSON.stringify(body satisfies updateInstanceRequest),
       },
     );
-    const raw = await unwrap<WireInstance>(response);
+    const raw = await unwrap<timetableContract.enrichedInstance>(response);
     return mapInstance(raw);
   }
 
@@ -878,11 +859,10 @@ class TimetableService {
    * caller can surface them.
    */
   async start(instanceId: string): Promise<StartInstanceResult> {
-    return this.lifecycle<WireStartInstance, StartInstanceResult>(
-      instanceId,
-      "start",
-      mapStartInstanceResult,
-    );
+    return this.lifecycle<
+      timetableContract.StartInstanceResponse,
+      StartInstanceResult
+    >(instanceId, "start", mapStartInstanceResult);
   }
 
   /**
@@ -908,15 +888,16 @@ class TimetableService {
         }),
       },
     );
-    return mapInstanceStatusResult(await unwrap<WireInstanceStatus>(response));
+    return mapInstanceStatusResult(
+      await unwrap<timetableContract.InstanceStatusResponse>(response),
+    );
   }
 
   async reopen(instanceId: string): Promise<StartInstanceResult> {
-    return this.lifecycle<WireStartInstance, StartInstanceResult>(
-      instanceId,
-      "reopen",
-      mapStartInstanceResult,
-    );
+    return this.lifecycle<
+      timetableContract.StartInstanceResponse,
+      StartInstanceResult
+    >(instanceId, "reopen", mapStartInstanceResult);
   }
 
   /**
@@ -937,12 +918,10 @@ class TimetableService {
         message: guardianNotice.message,
       };
     }
-    return this.lifecycle<WireInstanceStatus, InstanceStatusResult>(
-      instanceId,
-      "cancel",
-      mapInstanceStatusResult,
-      body,
-    );
+    return this.lifecycle<
+      timetableContract.InstanceStatusResponse,
+      InstanceStatusResult
+    >(instanceId, "cancel", mapInstanceStatusResult, body);
   }
 
   /**
@@ -951,11 +930,10 @@ class TimetableService {
    * planned again and its staff hear "findet doch statt".
    */
   async reinstate(instanceId: string): Promise<InstanceStatusResult> {
-    return this.lifecycle<WireInstanceStatus, InstanceStatusResult>(
-      instanceId,
-      "reinstate",
-      mapInstanceStatusResult,
-    );
+    return this.lifecycle<
+      timetableContract.InstanceStatusResponse,
+      InstanceStatusResult
+    >(instanceId, "reinstate", mapInstanceStatusResult);
   }
 
   /**
@@ -974,7 +952,7 @@ class TimetableService {
       },
     );
     return mapGuardianNoticeReach(
-      await unwrap<WireGuardianNoticeReach>(response),
+      await unwrap<timetableContract.GuardianNoticeReachResponse>(response),
     );
   }
 
@@ -1026,7 +1004,7 @@ class TimetableService {
       body: JSON.stringify(body),
     });
 
-    const raw = await unwrap<WireMaterialize>(response);
+    const raw = await unwrap<timetableContract.materializeResponse>(response);
     logger.info("materialize_completed", {
       from: raw.from,
       to: raw.to,
@@ -1063,7 +1041,7 @@ class TimetableService {
       },
     );
 
-    const raw = await unwrap<WireReplanWeek>(response);
+    const raw = await unwrap<timetableContract.replanWeekResponse>(response);
     logger.info("week_replanned", {
       from: raw.from,
       to: raw.to,
@@ -1104,7 +1082,7 @@ class TimetableService {
       },
     );
 
-    const raw = await unwrap<WireBulkCancel>(response);
+    const raw = await unwrap<timetableContract.BulkCancelResult>(response);
     if (!dryRun) {
       logger.info("instances_bulk_cancelled", {
         from: raw.from,
@@ -1145,7 +1123,8 @@ class TimetableService {
       },
     );
 
-    const raw = await unwrap<WireEditedInWindow>(response);
+    const raw =
+      await unwrap<timetableContract.editedInWindowResponse>(response);
     return mapEditedInWindowResult(raw);
   }
 
@@ -1157,7 +1136,7 @@ class TimetableService {
       credentials: "include",
     });
 
-    const raw = await unwrap<WireGaps>(response);
+    const raw = await unwrap<timetableContract.GapsResponse>(response);
     return mapGaps(raw);
   }
 
@@ -1181,7 +1160,8 @@ class TimetableService {
       },
     );
 
-    const raw = await unwrap<WireDeviationHistory>(response);
+    const raw =
+      await unwrap<timetableContract.DeviationHistoryResponse>(response);
     return mapDeviationHistory(raw);
   }
 
@@ -1211,7 +1191,8 @@ class TimetableService {
       },
     );
 
-    const raw = await unwrap<WireApplyDeviations>(response);
+    const raw =
+      await unwrap<timetableContract.ApplyDeviationsResponse>(response);
     logger.info("deviations_applied", {
       instance_id: instanceId,
       cancelled: raw.cancelled,
@@ -1240,7 +1221,8 @@ class TimetableService {
       body: JSON.stringify(body),
     });
 
-    const raw = await unwrap<WireBulkSubstitution>(response);
+    const raw =
+      await unwrap<timetableContract.BulkSubstitutionResponse>(response);
     const result = mapBulkSubstitution(raw);
     logger.info("bulk_substitution_applied", {
       dates: input.dates.length,
@@ -1264,7 +1246,7 @@ class TimetableService {
         credentials: "include",
       },
     );
-    const raw = await unwrap<WireStaffPool>(response);
+    const raw = await unwrap<timetableContract.StaffPoolResponse>(response);
     return mapStaffPool(raw);
   }
 
@@ -1322,7 +1304,7 @@ class TimetableService {
         body: JSON.stringify(body),
       },
     );
-    const raw = await unwrap<WireMoveStaff>(response);
+    const raw = await unwrap<timetableContract.MoveStaffResponse>(response);
     logger.info("staff_moved", {
       target_instance_id: instanceId,
       action: raw.action,
@@ -1348,7 +1330,7 @@ class TimetableService {
       },
     );
 
-    const raw = await unwrap<WireAttendance>(response);
+    const raw = await unwrap<timetableContract.AttendanceResponse>(response);
     return mapAttendance(raw);
   }
 }
