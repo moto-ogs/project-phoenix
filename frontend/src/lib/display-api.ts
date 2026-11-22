@@ -3,12 +3,8 @@ import { apiErrorFromResponse, transportFetch } from "./api-error";
 // Admin CRUD goes through the portal's catalog proxy under /api/display;
 // the public dashboard fetch is token-only.
 
-import type {
-  InfoDisplayCreatedResponse,
-  InfoDisplayResponse,
-  InfoDisplayTokenResponse,
-  InfoDisplayWriteRequest,
-} from "~/lib/contract/display.generated";
+import { bffJson } from "~/lib/bff-fetch";
+import type * as displayContract from "~/lib/contract/display.generated";
 import type { InfoDisplay } from "~/lib/display-helpers";
 import { mapDisplayResponse } from "~/lib/display-helpers";
 
@@ -89,27 +85,12 @@ export async function fetchDisplayDashboard(
 }
 
 // ---------------------------------------------------------------------------
-// Admin CRUD (session-authenticated)
+// Admin CRUD (session-authenticated, tenant routes under /api/display)
 // ---------------------------------------------------------------------------
-//
-// The management routes go through the portal's catalog proxy under
-// /api/display (#7563), where the backend answers in the shared envelope.
-
-async function readData<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    // Code, Feldfehler und Vorgangskennung kommen aus dem Fehlerumschlag.
-    throw await apiErrorFromResponse(
-      response,
-      `display request failed (${response.status})`,
-    );
-  }
-  return ((await response.json()) as { data: T }).data;
-}
 
 export async function listDisplays(): Promise<InfoDisplay[]> {
-  const response = await transportFetch("/api/display", { cache: "no-store" });
-  const displays = await readData<InfoDisplayResponse[] | null>(response);
-  return (displays ?? []).map(mapDisplayResponse);
+  const displays = await bffJson("tenant", "GET /api/display/");
+  return displays.map(mapDisplayResponse);
 }
 
 export interface DisplayWithToken {
@@ -118,12 +99,9 @@ export interface DisplayWithToken {
 }
 
 export async function createDisplay(name: string): Promise<DisplayWithToken> {
-  const response = await transportFetch("/api/display", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name } satisfies InfoDisplayWriteRequest),
+  const data = await bffJson("tenant", "POST /api/display/", {
+    body: { name },
   });
-  const data = await readData<InfoDisplayCreatedResponse>(response);
   return { display: mapDisplayResponse(data.display), token: data.token };
 }
 
@@ -131,41 +109,25 @@ export async function updateDisplay(
   id: string,
   changes: { name?: string; isActive?: boolean },
 ): Promise<InfoDisplay> {
-  const body: InfoDisplayWriteRequest = {
+  const body: displayContract.InfoDisplayWriteRequest = {
     ...(changes.name !== undefined ? { name: changes.name } : {}),
     ...(changes.isActive !== undefined ? { is_active: changes.isActive } : {}),
   };
-  const response = await transportFetch(
-    `/api/display/${encodeURIComponent(id)}`,
-    {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    },
+  return mapDisplayResponse(
+    await bffJson("tenant", "PATCH /api/display/{id}", {
+      params: { id },
+      body,
+    }),
   );
-  return mapDisplayResponse(await readData<InfoDisplayResponse>(response));
 }
 
 export async function regenerateDisplayToken(id: string): Promise<string> {
-  const response = await transportFetch(
-    `/api/display/${encodeURIComponent(id)}/regenerate`,
-    { method: "POST" },
-  );
-  const data = await readData<InfoDisplayTokenResponse>(response);
+  const data = await bffJson("tenant", "POST /api/display/{id}/regenerate", {
+    params: { id },
+  });
   return data.token;
 }
 
 export async function deleteDisplay(id: string): Promise<void> {
-  const response = await transportFetch(
-    `/api/display/${encodeURIComponent(id)}`,
-    {
-      method: "DELETE",
-    },
-  );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `display delete failed (${response.status})`,
-    );
-  }
+  await bffJson("tenant", "DELETE /api/display/{id}", { params: { id } });
 }
