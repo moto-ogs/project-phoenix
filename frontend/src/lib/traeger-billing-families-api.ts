@@ -382,9 +382,10 @@ export function withFamilyChildren(
     const known = byEmail.get(family.familyEmail);
     return {
       ...family,
-      // The contract of the family's deviation wins; a family without one
-      // takes a contract of its children.
-      contractId: family.contractId || known?.contractId || "",
+      // The family's longest-running contract wins: what is saved goes with
+      // the contract it was saved through. A family without a contract in
+      // force keeps the contract of its deviation.
+      contractId: known?.contractId || family.contractId || "",
       ...(perChild ? { children: known?.children ?? [] } : {}),
     };
   });

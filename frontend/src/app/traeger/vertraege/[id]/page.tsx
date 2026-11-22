@@ -703,10 +703,12 @@ function TraegerVertragView() {
               {/* How the family pays is set here before the first invoice
                   (#7770); a mandate alone does not choose the debit. Also
                   for an imported contract without a party: it is a family
-                  of its own. Not on a draft: what is saved goes with the
-                  contract it was set from, and a discarded draft would take
-                  the family's choice with it. */}
-              {isDraft ? null : (
+                  of its own. What is saved goes with the contract it was
+                  set from: not on a draft, which can be discarded, and not
+                  on a contract that is over, which is deleted first. */}
+              {isDraft ||
+              contract.status === "beendet" ||
+              contract.status === "widerrufen" ? null : (
                 <FamilyBillingStatusCard contractId={contract.id} />
               )}
               {party?.email ? (

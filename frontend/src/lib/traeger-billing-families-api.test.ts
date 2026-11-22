@@ -159,15 +159,22 @@ describe("the family's own payment method and contract (#7770)", () => {
     ],
   };
 
-  it("keeps the contract of the family's own deviation", () => {
+  it("opens a family by its longest-running contract, not the one of its deviation", () => {
+    // What is saved goes with the contract it was saved through; the
+    // deviation's own contract may be over (#7770).
     const [family] = withFamilyChildren(
       [{ ...LISTED, contractId: "42" }],
       [CHILDREN],
     );
     expect(family).toMatchObject({
-      contractId: "42",
+      contractId: "9",
       children: CHILDREN.children,
     });
+    const [withoutContractInForce] = withFamilyChildren(
+      [{ ...LISTED, contractId: "42" }],
+      [],
+    );
+    expect(withoutContractInForce?.contractId).toBe("42");
   });
 
   it("takes the contract of the children entry when the family has none", () => {

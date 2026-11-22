@@ -83,7 +83,7 @@ func (f *BillingFamilies) contractChildren(ctx context.Context, organizationID i
 		}
 		if i, seen := at[parentbilling.ChildDebtorNumberKey(family, key)]; seen {
 			if until[id].After(children[i].until) {
-				children[i].until = until[id]
+				children[i].until, children[i].contractID = until[id], id
 			}
 			continue
 		}
@@ -113,6 +113,34 @@ func contractSpans(versions []parentbilling.CareContractVersion) (map[int64]pare
 	return first, until, ids
 }
 
+// familyList collects the families of the list of children by address.
+type familyList struct {
+	families []parentbilling.FamilyChildNumbers
+	at       map[string]int
+	// until is the last day of the contract each family is opened by.
+	until map[string]calendar.Date
+}
+
+// add answers the place of the family and lists it at its first contract.
+// The family is opened by its contract that runs longest: what is saved
+// through it goes with it, so it should be the last one to go (#7770).
+func (l *familyList) add(family string, contractID int64, last calendar.Date, recipient parentbilling.CareRecipient) int {
+	i, ok := l.at[family]
+	if !ok {
+		l.families = append(l.families, parentbilling.FamilyChildNumbers{ContractID: ident.ID(contractID), FamilyEmail: family,
+			RecipientFirstName: recipient.FirstName, RecipientLastName: recipient.LastName, Children: []parentbilling.FamilyChild{}})
+		l.at[family], l.until[family] = len(l.families)-1, last
+		return l.at[family]
+	}
+	if l.families[i].RecipientLastName == "" {
+		l.families[i].RecipientFirstName, l.families[i].RecipientLastName = recipient.FirstName, recipient.LastName
+	}
+	if last.After(l.until[family]) {
+		l.families[i].ContractID, l.until[family] = ident.ID(contractID), last
+	}
+	return i
+}
+
 // familyChildNumbers lists the families of the contracts and of the
 // numbers with their children, by address, and answers the numbers it
 // shows, for the trail.
@@ -120,18 +148,11 @@ func familyChildNumbers(contracts []contractChild, numbers []parentbilling.Child
 	[]parentbilling.FamilyChildNumbers, []parentbilling.ChildDebtorNumber,
 ) {
 	families := []parentbilling.FamilyChildNumbers{}
-	at := map[string]int{}
-	add := func(family string, contractID int64, recipient parentbilling.CareRecipient) int {
-		if i, ok := at[family]; ok {
-			if families[i].RecipientLastName == "" {
-				families[i].RecipientFirstName, families[i].RecipientLastName = recipient.FirstName, recipient.LastName
-			}
-			return i
-		}
-		families = append(families, parentbilling.FamilyChildNumbers{ContractID: ident.ID(contractID), FamilyEmail: family,
-			RecipientFirstName: recipient.FirstName, RecipientLastName: recipient.LastName, Children: []parentbilling.FamilyChild{}})
-		at[family] = len(families) - 1
-		return at[family]
+	listed := familyList{at: map[string]int{}, until: map[string]calendar.Date{}}
+	add := func(family string, contractID int64, last calendar.Date, recipient parentbilling.CareRecipient) int {
+		i := listed.add(family, contractID, last, recipient)
+		families = listed.families
+		return i
 	}
 	byKey := make(map[string]parentbilling.ChildDebtorNumber, len(numbers))
 	for _, number := range numbers {
@@ -140,7 +161,7 @@ func familyChildNumbers(contracts []contractChild, numbers []parentbilling.Child
 	shown := map[string]bool{}
 	var read []parentbilling.ChildDebtorNumber
 	for _, contract := range contracts {
-		i := add(contract.family, contract.contractID, contract.recipient)
+		i := add(contract.family, contract.contractID, contract.until, contract.recipient)
 		child := contract.child
 		key := parentbilling.ChildDebtorNumberKey(contract.family, parentbilling.ChildKey(child.FirstName, child.LastName, child.BirthDate))
 		if number, ok := byKey[key]; ok {
@@ -154,7 +175,7 @@ func familyChildNumbers(contracts []contractChild, numbers []parentbilling.Child
 		if shown[number.Key()] {
 			continue
 		}
-		i := add(number.FamilyEmail, 0, parentbilling.CareRecipient{})
+		i := add(number.FamilyEmail, 0, "", parentbilling.CareRecipient{})
 		families[i].Children = append(families[i].Children, parentbilling.FamilyChild{FirstName: number.ChildFirstName,
 			LastName: number.ChildLastName, BirthDate: number.ChildBirthDate, DebtorNumber: number.DebtorNumber})
 		read = append(read, number)

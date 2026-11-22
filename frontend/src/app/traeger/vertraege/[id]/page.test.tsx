@@ -704,6 +704,22 @@ describe("TraegerVertragPage", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("offers no payment card on a contract that is over", async () => {
+    // What is saved goes with the contract it was saved through, and a
+    // contract that is over is deleted first (#7770).
+    api.fetchCareContract.mockResolvedValue({
+      ...DRAFT,
+      status: "beendet",
+      documentFrozen: true,
+    });
+    renderPage();
+
+    expect(
+      await screen.findByText("E-Mail bei Vertragserstellung"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Empfänger und Zahlung")).not.toBeInTheDocument();
+  });
+
   it("keeps a concluded contract unchanged and allows resending", async () => {
     api.fetchCareContract.mockResolvedValue({
       ...DRAFT,
