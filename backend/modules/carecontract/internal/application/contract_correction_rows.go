@@ -411,13 +411,22 @@ func writtenCorrectionParties(entry correctionEntry, stored []ports.CorrectionPa
 			if at < 0 {
 				continue
 			}
-			if free[at].FirstName == "" {
-				wanted[n] = ports.CorrectionParty{LastName: name}
-			}
+			wanted[n] = withStoredBoundary(name, free[at])
 			claimed[n], free = true, slices.Delete(free, at, at+1)
 		}
 	}
 	return wanted
+}
+
+// withStoredBoundary splits a name written as the list to download writes
+// party, in any case, where that party's last name ends: neither a last nor
+// a first name with a comma of its own moves the boundary.
+func withStoredBoundary(name string, party ports.CorrectionParty) ports.CorrectionParty {
+	written, last := []rune(name), len([]rune(joinWords(party.LastName)))
+	if party.FirstName == "" || last > len(written) {
+		return ports.CorrectionParty{LastName: name}
+	}
+	return ports.CorrectionParty{LastName: string(written[:last]), FirstName: joinWords(strings.TrimPrefix(string(written[last:]), ","))}
 }
 
 // matchCorrectionParties pairs the parties of the contract with the names of

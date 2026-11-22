@@ -165,6 +165,15 @@ func TestCorrectionSheetReadsBackAsUnchanged(t *testing.T) {
 	assert.Equal(t, []ports.CorrectionParty{{ID: 91, LastName: "ROTH, geb. Klein"}}, recased.correction.Renames)
 	assert.Equal(t, []ports.CorrectionParty{{FirstName: "Anna", LastName: "Neu"}}, recased.correction.Adds)
 
+	// A first name with a comma keeps its boundary too.
+	double := correctionSubject()
+	double.Parties = []ports.CorrectionParty{{ID: 95, FirstName: "Eva, Maria", LastName: "Schmidt"}}
+	beside := planCorrection(t, double, "7", "Lia Beispiel", "Neu, Anna | Schmidt, Eva, Maria", "", "", "vertrag.pdf")
+	assert.Empty(t, beside.correction.Renames)
+	assert.Equal(t, []ports.CorrectionParty{{FirstName: "Anna", LastName: "Neu"}}, beside.correction.Adds)
+	shouted := planCorrection(t, double, "7", "Lia Beispiel", "Neu, Anna | SCHMIDT, Eva, Maria", "", "", "vertrag.pdf")
+	assert.Equal(t, []ports.CorrectionParty{{ID: 95, FirstName: "Eva, Maria", LastName: "SCHMIDT"}}, shouted.correction.Renames)
+
 	index, missing := resolveCorrectionColumns(sheet.Headers)
 	require.Empty(t, missing)
 	check := newCorrectionCheck([]ports.CorrectionSubject{subject, unknown, comma})
