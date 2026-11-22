@@ -6,6 +6,7 @@ import {
 } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type * as studentsContract from "~/lib/contract/students.generated";
 
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
@@ -119,7 +120,7 @@ describe("CareRequestReviewItem", () => {
   });
 
   it("renders the weekly diff plus summary and approves without requiring a reason", async () => {
-    mockDecide.mockResolvedValue(row({ status: "approved" }));
+    mockDecide.mockResolvedValue(decided(row({ status: "approved" })));
     const onDecided = vi.fn();
 
     render(<CareRequestReviewItem row={row()} onDecided={onDecided} />);
@@ -294,7 +295,7 @@ describe("CareRequestReviewItem", () => {
   });
 
   it("requires a reason before rejecting", async () => {
-    mockDecide.mockResolvedValue(row({ status: "rejected" }));
+    mockDecide.mockResolvedValue(decided(row({ status: "rejected" })));
     const onDecided = vi.fn();
 
     render(<CareRequestReviewItem row={row()} onDecided={onDecided} />);
@@ -330,7 +331,7 @@ describe("CareRequestReviewItem", () => {
   });
 
   it("shows the parent's mandatory reason for a pickup change and reports the pickup notice", async () => {
-    mockDecide.mockResolvedValue(row({ status: "approved" }));
+    mockDecide.mockResolvedValue(decided(row({ status: "approved" })));
     const onDecided = vi.fn();
 
     render(<CareRequestReviewItem row={pickupRow()} onDecided={onDecided} />);
@@ -406,7 +407,7 @@ describe("CareRequestReviewItem", () => {
   ])(
     "approves a day request without a time leg ($care_kind)",
     async (entry) => {
-      mockDecide.mockResolvedValue(pickupRow({ status: "approved" }));
+      mockDecide.mockResolvedValue(decided(pickupRow({ status: "approved" })));
       const onDecided = vi.fn();
       render(
         <CareRequestReviewItem
@@ -525,7 +526,7 @@ describe("CareRequestReviewItem", () => {
   it("offers the proof of a signed pickup permission", async () => {
     vi.mocked(downloadCareRequestProofPdf).mockResolvedValue(undefined);
     mockDecide.mockResolvedValue(
-      row({ request_kind: "pickup_permission", status: "approved" }),
+      decided(row({ request_kind: "pickup_permission", status: "approved" })),
     );
     const onDecided = vi.fn();
     render(
@@ -590,3 +591,14 @@ describe("CareRequestReviewItem", () => {
     );
   });
 });
+
+/** The decide route's answer: the generated type of the row. */
+function decided(
+  request: StaffCareRequest,
+): studentsContract.CareRequestResponse {
+  return {
+    ...request,
+    diff: [...request.diff],
+    affected_blocks: [...request.affected_blocks],
+  };
+}

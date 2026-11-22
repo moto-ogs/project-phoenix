@@ -51,6 +51,7 @@ function item(): ParentAnnouncement {
       version: { id: "12", version_no: 2, content_hash: "ab".repeat(32) },
       children: [
         {
+          earlier_consent: null,
           student_id: "5",
           first_name: "Mia",
           last_name: "Muster",

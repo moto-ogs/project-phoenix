@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Das Stundenkonto einer Personalakte über alle Schulen und der
  * Monatsabschluss des Trägers (#4711, ADR 0243).
@@ -10,9 +11,6 @@
  */
 import type * as traegerStaffRecordsContract from "~/lib/contract/traeger-staff-records.generated";
 import { knownEnum } from "~/lib/contract/known-enum";
-import { traegerRequest } from "~/lib/traeger-api";
-
-const RECORDS = "/api/traeger/staff-records";
 
 /**
  * Wie der Monat beim Träger steht. `open`: ein Vertrag deckt den Monat ab,
@@ -101,18 +99,16 @@ function mapTraegerTimeAccount(
   };
 }
 
-const accountPath = (recordId: string) =>
-  `${RECORDS}/${encodeURIComponent(recordId)}/time-account`;
-
 export async function fetchTraegerTimeAccount(
   recordId: string,
   year: number,
   month: number,
 ): Promise<TraegerTimeAccount> {
   return mapTraegerTimeAccount(
-    await traegerRequest<traegerStaffRecordsContract.TraegerTimeAccount>(
-      `${accountPath(recordId)}?year=${year}&month=${month}`,
-    ),
+    await bffJson("org", "GET /traeger/staff-records/{id}/time-account", {
+      params: { id: recordId },
+      query: { year, month },
+    }),
   );
 }
 
@@ -122,10 +118,13 @@ async function changeMonth(
   input: { year: number; month: number; reason: string },
 ): Promise<TraegerTimeAccount> {
   return mapTraegerTimeAccount(
-    await traegerRequest<traegerStaffRecordsContract.TraegerTimeAccount>(
-      `${accountPath(recordId)}/${action}`,
+    await bffJson(
+      "org",
+      action === "close"
+        ? "POST /traeger/staff-records/{id}/time-account/close"
+        : "POST /traeger/staff-records/{id}/time-account/reopen",
       {
-        method: "POST",
+        params: { id: recordId },
         body: {
           year: input.year,
           month: input.month,

@@ -8,8 +8,8 @@ import type {
   ActiveGroup,
   CallerGroupRow,
   NavigationResponse,
-  SchoolSwitches as WireSchoolSwitches,
 } from "~/lib/contract/me.generated";
+import type * as meContract from "~/lib/contract/me.generated";
 import { knownEnum } from "~/lib/contract/known-enum";
 import type {
   EducationalGroup,
@@ -25,7 +25,7 @@ const PARENT_INVITE_MODES: readonly ParentInviteMode[] = [
   "staff_approval",
 ];
 
-function mapSchoolSwitches(data: WireSchoolSwitches): SchoolSwitches {
+function mapSchoolSwitches(data: meContract.SchoolSwitches): SchoolSwitches {
   return {
     parentNewsEnabled: data.parent_news_enabled,
     // A mode a newer backend adds stays undefined instead of a guess.

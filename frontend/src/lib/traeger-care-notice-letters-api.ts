@@ -1,3 +1,4 @@
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the stored originals of the Jahresbescheide (#6347): the office
  * stores the PDF of every issued notice once, then sends it by mail and to
@@ -10,7 +11,6 @@ import {
   knownMailOutcome,
   knownMailProviderBlock,
 } from "~/lib/email-delivery-status";
-import type * as sharedContract from "./contract/shared.generated";
 import type * as traegerCareNoticeRunsContract from "./contract/traeger-care-notice-runs.generated";
 import {
   type BillingFile,
@@ -22,9 +22,6 @@ import {
   type CareNoticeKind,
   knownNoticeKind,
 } from "./traeger-care-notices-api";
-import { traegerRequest } from "./traeger-api";
-
-const RUNS_PATH = "/api/traeger/care-notice-runs";
 
 export interface CareNoticeMailing {
   readonly noticeId: string;
@@ -128,22 +125,14 @@ function lettersFromBackend(
   };
 }
 
-function lettersPath(runId: string): string {
-  return `${RUNS_PATH}/${encodeURIComponent(runId)}/letters`;
-}
-
-function noticePath(runId: string, contractId: string): string {
-  return `${RUNS_PATH}/${encodeURIComponent(runId)}/notices/${encodeURIComponent(contractId)}`;
-}
-
 /** The originals of a released run with the state of every mail. */
 export async function fetchCareNoticeLetters(
   runId: string,
 ): Promise<CareNoticeLetters> {
   return lettersFromBackend(
-    await traegerRequest<traegerCareNoticeRunsContract.CareNoticeLetters>(
-      lettersPath(runId),
-    ),
+    await bffJson("org", "GET /traeger/care-notice-runs/{id}/letters", {
+      params: { id: runId },
+    }),
   );
 }
 
@@ -152,12 +141,9 @@ export async function createCareNoticeLetters(
   runId: string,
 ): Promise<CareNoticeLetters> {
   return lettersFromBackend(
-    await traegerRequest<traegerCareNoticeRunsContract.CareNoticeLetters>(
-      lettersPath(runId),
-      {
-        method: "POST",
-      },
-    ),
+    await bffJson("org", "POST /traeger/care-notice-runs/{id}/letters", {
+      params: { id: runId },
+    }),
   );
 }
 
@@ -165,9 +151,10 @@ export async function createCareNoticeLetters(
 export async function mailCareNoticeLetters(
   runId: string,
 ): Promise<CareNoticeSeries> {
-  const series = await traegerRequest<sharedContract.BillingLetterSeries>(
-    `${lettersPath(runId)}/mail`,
-    { method: "POST" },
+  const series = await bffJson(
+    "org",
+    "POST /traeger/care-notice-runs/{id}/letters/mail",
+    { params: { id: runId } },
   );
   return {
     queued: series.queued,
@@ -183,11 +170,10 @@ export async function mailCareNoticeLetter(
   contractId: string,
 ): Promise<CareNoticeMailing> {
   return mailingFromBackend(
-    await traegerRequest<traegerCareNoticeRunsContract.CareNoticeMailing>(
-      `${noticePath(runId, contractId)}/mail`,
-      {
-        method: "POST",
-      },
+    await bffJson(
+      "org",
+      "POST /traeger/care-notice-runs/{id}/notices/{contractID}/mail",
+      { params: { id: runId, contractID: contractId } },
     ),
   );
 }
@@ -198,8 +184,13 @@ export async function downloadCareNoticePDF(
   contractId: string,
 ): Promise<BillingFile> {
   return billingFile(
-    `${noticePath(runId, contractId)}/pdf`,
-    {},
+    bffFile(
+      "org",
+      "GET /traeger/care-notice-runs/{id}/notices/{contractID}/pdf",
+      {
+        params: { id: runId, contractID: contractId },
+      },
+    ),
     "gebuehrenbescheid.pdf",
   );
 }
@@ -210,8 +201,10 @@ export async function printCareNoticeLetters(
   withoutEmailOnly = false,
 ): Promise<BillingFile> {
   return billingFile(
-    `${lettersPath(runId)}/print${withoutEmailOnly ? "?only=without_email" : ""}`,
-    {},
+    bffFile("org", "GET /traeger/care-notice-runs/{id}/letters/print", {
+      params: { id: runId },
+      query: { only: withoutEmailOnly ? "without_email" : undefined },
+    }),
     "jahresbescheide.pdf",
   );
 }

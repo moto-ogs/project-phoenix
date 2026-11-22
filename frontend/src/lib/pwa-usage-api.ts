@@ -5,6 +5,8 @@
  * swallowed into a debug log, never surfaced to the user.
  */
 
+import { ApiError } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
 import { createLogger } from "~/lib/logger";
 import {
   mayWritePersonalStorage,
@@ -15,12 +17,6 @@ import { isStandaloneApp, type PushPortal } from "~/lib/push-api";
 const logger = createLogger({ component: "PwaUsageApi" });
 
 const SESSION_REPORTED_KEY_PREFIX = "moto-pwa-usage-reported.";
-
-function reportPath(portal: PushPortal): string {
-  if (portal === "parent") return "/api/parent/me/pwa-usage";
-  if (portal === "tenant") return "/api/pwa/usage";
-  return "";
-}
 
 /**
  * Reports standalone usage for the current session. No-op outside standalone
@@ -36,8 +32,7 @@ export async function reportStandaloneUsage(
 
   // School sessions have no PWA-usage API route. Do not send their school JWT
   // to the tenant-only endpoint, which rejects that scope.
-  const path = reportPath(portal);
-  if (!path) return;
+  if (portal !== "parent" && portal !== "tenant") return;
 
   const sessionKey = `${SESSION_REPORTED_KEY_PREFIX}${portal}.${accountID}.${tenantID ?? "parent"}`;
   try {
@@ -50,17 +45,9 @@ export async function reportStandaloneUsage(
   // account switch, also in another tab, it must not come back (#5000).
   const owner = personalStorageOwner({ id: accountID, tenantId: tenantID });
   try {
-    const response = await fetch(path, {
-      method: "POST",
-      credentials: "include",
-    });
-    if (!response.ok) {
-      logger.debug("pwa_usage_report_rejected", {
-        portal,
-        status: response.status,
-      });
-      return;
-    }
+    await (portal === "parent"
+      ? bffJson("parent", "POST /parent/me/pwa-usage")
+      : bffJson("tenant", "POST /api/pwa/usage"));
     if (!mayWritePersonalStorage(owner)) return;
     try {
       sessionStorage.setItem(sessionKey, "1");
@@ -70,6 +57,7 @@ export async function reportStandaloneUsage(
   } catch (err: unknown) {
     logger.debug("pwa_usage_report_failed", {
       portal,
+      status: err instanceof ApiError ? err.status : undefined,
       error: err instanceof Error ? err.message : String(err),
     });
   }

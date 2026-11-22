@@ -265,7 +265,23 @@
       "target_owner": "care-contract"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingTermContracts.Recipients",
+      "binding_digest": "1c07bc5b593be4d2e948ef7dddba3b44",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.Recipients",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",
+      "target_owner": "care-contract"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingCareContracts.VersionsInForce",
+      "binding_digest": "c416e12e4458d0427960188977f89e06",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.VersionsInForce",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.VersionsInForce",
+      "target_owner": "care-contract"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingTermContracts.VersionsInForce",
       "binding_digest": "c416e12e4458d0427960188977f89e06",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.VersionsInForce",
       "source_owner": "parent-billing",
@@ -802,7 +818,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.Recipients",
-      "binding_digest": "07058974f2251c1c4ab9ac133ce07606",
+      "binding_digest": "5e68355a47f522b9f22affe8d5241e5d",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling/internal/application.CareLetterRecipients.Recipients",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",

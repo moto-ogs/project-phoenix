@@ -3,7 +3,7 @@ package presence
 import (
 	"time"
 
-	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Route path constants
@@ -35,9 +35,9 @@ const ()
 // intentionally omits `omitempty` so clients always see the field and are
 // forced to handle the null case explicitly.
 type ActiveGroupResponse struct {
-	ID              common.ID               `json:"id"`
-	GroupID         *common.ID              `json:"group_id"`
-	RoomID          common.ID               `json:"room_id"`
+	ID              ident.ID                `json:"id"`
+	GroupID         *ident.ID               `json:"group_id"`
+	RoomID          ident.ID                `json:"room_id"`
 	StartTime       time.Time               `json:"start_time"`
 	EndTime         *time.Time              `json:"end_time,omitempty"`
 	IsActive        bool                    `json:"is_active"`
@@ -51,8 +51,8 @@ type ActiveGroupResponse struct {
 
 // GroupSupervisorSimple represents simplified supervisor info for active group response
 type GroupSupervisorSimple struct {
-	StaffID common.ID `json:"staff_id"`
-	Role    string    `json:"role,omitempty"`
+	StaffID ident.ID `json:"staff_id"`
+	Role    string   `json:"role,omitempty"`
 }
 
 // RoomSimple represents simplified room info for active group response.
@@ -62,16 +62,16 @@ type GroupSupervisorSimple struct {
 // active group. omitempty keeps responses unchanged for rooms with no color
 // override; clients fall back to the OTHER_ROOM blue.
 type RoomSimple struct {
-	ID    common.ID `json:"id"`
-	Name  string    `json:"name"`
-	Color *string   `json:"color,omitempty"`
+	ID    ident.ID `json:"id"`
+	Name  string   `json:"name"`
+	Color *string  `json:"color,omitempty"`
 }
 
 // VisitResponse represents a visit API response
 type VisitResponse struct {
-	ID              common.ID  `json:"id"`
-	StudentID       common.ID  `json:"student_id"`
-	ActiveGroupID   common.ID  `json:"active_group_id"`
+	ID              ident.ID   `json:"id"`
+	StudentID       ident.ID   `json:"student_id"`
+	ActiveGroupID   ident.ID   `json:"active_group_id"`
 	CheckInTime     time.Time  `json:"check_in_time"`
 	CheckOutTime    *time.Time `json:"check_out_time,omitempty"`
 	IsActive        bool       `json:"is_active"`
@@ -83,9 +83,9 @@ type VisitResponse struct {
 
 // SupervisorResponse represents a group supervisor API response
 type SupervisorResponse struct {
-	ID              common.ID  `json:"id"`
-	StaffID         common.ID  `json:"staff_id"`
-	ActiveGroupID   common.ID  `json:"active_group_id"`
+	ID              ident.ID   `json:"id"`
+	StaffID         ident.ID   `json:"staff_id"`
+	ActiveGroupID   ident.ID   `json:"active_group_id"`
 	StartTime       time.Time  `json:"start_time"`
 	EndTime         *time.Time `json:"end_time,omitempty"`
 	IsActive        bool       `json:"is_active"`
@@ -172,5 +172,5 @@ type TrackingIndicatorsResponse struct {
 
 // TrackingIndicatorsRequest is the request body for POST /tracking-indicators
 type TrackingIndicatorsRequest struct {
-	StudentIDs []common.ID `json:"student_ids"`
+	StudentIDs []ident.ID `json:"student_ids"`
 }

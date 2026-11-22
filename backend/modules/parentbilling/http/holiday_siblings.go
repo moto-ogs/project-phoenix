@@ -20,7 +20,7 @@ import (
 // /traeger/holiday-contributions/{periodId}/sibling-groups: the
 // registrations to merge as siblings.
 type HolidaySiblingMergeRequest struct {
-	RegistrationIDs []common.ID `json:"registration_ids"`
+	RegistrationIDs []ident.ID `json:"registration_ids"`
 }
 
 // Bind accepts the body; the Owner checks the registrations.

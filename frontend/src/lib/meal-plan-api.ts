@@ -3,9 +3,10 @@
 // and delete a day; the feature is gated per tenant by the backend.
 
 import type * as wire from "~/lib/contract/meal-plan.generated";
-import { apiErrorFromResponse } from "./api-error";
+import { ApiError } from "./api-error";
+import { bffFile, bffJson } from "./bff-fetch";
+import { knownEnum } from "./contract/known-enum";
 import { downloadBlob, filenameFromDisposition } from "./file-download";
-import { sessionFetch } from "./session-cache";
 import { parseISODate, toISODate } from "./date-helpers";
 import { createLogger } from "~/lib/logger";
 import {
@@ -72,45 +73,30 @@ function mapEntry(entry: wire.MealPlanWeekEntryResponse): MealPlanEntry {
   };
 }
 
-function unwrap(
-  data: { data: unknown } | unknown[],
-): wire.MealPlanWeekEntryResponse[] {
-  if (Array.isArray(data)) return data as wire.MealPlanWeekEntryResponse[];
-  if (data && typeof data === "object" && "data" in data) {
-    return (data.data as wire.MealPlanWeekEntryResponse[]) ?? [];
-  }
-  return [];
-}
-
 /** Fetch the Monday-Friday entries for the week containing weekStart (ISO). */
 export async function getMealPlanWeek(
   weekStart: string,
 ): Promise<MealPlanEntry[]> {
-  const response = await sessionFetch(
-    `/api/meal-plan?week_start=${encodeURIComponent(weekStart)}`,
-    { credentials: "include" },
-  );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "meal plan load failed");
-  }
-  const data = (await response.json()) as { data: unknown } | unknown[];
-  return unwrap(data).map(mapEntry);
+  const entries = await bffJson("tenant", "GET /api/meal-plan/", {
+    query: { week_start: weekStart },
+    errorMessage: "meal plan load failed",
+  });
+  return entries.map(mapEntry);
 }
 
 /** Replace all dishes for one day (empty list clears the day). */
 export async function setDay(date: string, dishes: DishInput[]): Promise<void> {
-  const response = await sessionFetch(
-    `/api/meal-plan/${encodeURIComponent(date)}`,
-    {
-      method: "PUT",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ dishes }),
-    },
-  );
-  if (!response.ok) {
-    logger.error("meal_set_day_failed", { status: response.status });
-    throw await apiErrorFromResponse(response, "meal plan day save failed");
+  try {
+    await bffJson("tenant", "PUT /api/meal-plan/{date}", {
+      params: { date },
+      body: { dishes },
+      errorMessage: "meal plan day save failed",
+    });
+  } catch (error) {
+    logger.error("meal_set_day_failed", {
+      status: error instanceof ApiError ? error.status : undefined,
+    });
+    throw error;
   }
 }
 
@@ -131,18 +117,10 @@ export async function getDailyMealParticipants(
   date: string,
   includeOthers = false,
 ): Promise<DailyMealList> {
-  const response = await sessionFetch(
-    `/api/meal-plan/participants?date=${encodeURIComponent(date)}${includeOthers ? "&include=all" : ""}`,
-    { credentials: "include" },
-  );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "meal participants load failed");
-  }
-  const json = (await response.json()) as {
-    data?: wire.DailyListResponse;
-  };
-  const data = json.data;
-  if (!data) throw new Error("Meal participant response is missing data");
+  const data = await bffJson("tenant", "GET /api/meal-plan/participants", {
+    query: { date, include: includeOthers ? "all" : undefined },
+    errorMessage: "meal participants load failed",
+  });
   return {
     date: data.date,
     cutoffTime: data.cutoff_time,
@@ -163,19 +141,18 @@ export async function getChildMealSchedule(
   studentId: string,
   date: string,
 ): Promise<ChildMealSchedule> {
-  const response = await sessionFetch(
-    `/api/meal-plan/participation/${encodeURIComponent(studentId)}?from=${encodeURIComponent(date)}&to=${encodeURIComponent(date)}`,
-    { credentials: "include" },
+  const schedule = await bffJson(
+    "tenant",
+    "GET /api/meal-plan/participation/{studentId}",
+    {
+      params: { studentId },
+      query: { from: date, to: date },
+      errorMessage: "meal schedule load failed",
+    },
   );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "meal schedule load failed");
-  }
-  const json = (await response.json()) as {
-    data?: { weekdays: number[]; effective_from?: string };
-  };
   return {
-    weekdays: json.data?.weekdays ?? [],
-    effectiveFrom: json.data?.effective_from ?? null,
+    weekdays: schedule.weekdays ?? [],
+    effectiveFrom: schedule.effective_from ?? null,
   };
 }
 
@@ -185,18 +162,15 @@ export async function setChildMealDay(
   date: string,
   participating: boolean,
 ): Promise<void> {
-  const response = await sessionFetch(
-    `/api/meal-plan/participation/${encodeURIComponent(studentId)}/days/${encodeURIComponent(date)}`,
+  await bffJson(
+    "tenant",
+    "PUT /api/meal-plan/participation/{studentId}/days/{date}",
     {
-      method: "PUT",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ participating }),
+      params: { studentId, date },
+      body: { participating },
+      errorMessage: "meal day change failed",
     },
   );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "meal day change failed");
-  }
 }
 
 /** The school returns a child's day to the regular days. */
@@ -204,13 +178,11 @@ export async function clearChildMealDay(
   studentId: string,
   date: string,
 ): Promise<void> {
-  const response = await sessionFetch(
-    `/api/meal-plan/participation/${encodeURIComponent(studentId)}/days/${encodeURIComponent(date)}`,
-    { method: "DELETE", credentials: "include" },
+  await bffJson(
+    "tenant",
+    "DELETE /api/meal-plan/participation/{studentId}/days/{date}",
+    { params: { studentId, date }, errorMessage: "meal day reset failed" },
   );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "meal day reset failed");
-  }
 }
 
 /** The school sets a child's regular days from a day on. */
@@ -219,84 +191,64 @@ export async function replaceChildMealSchedule(
   weekdays: number[],
   effectiveFrom: string,
 ): Promise<void> {
-  const response = await sessionFetch(
-    `/api/meal-plan/participation/${encodeURIComponent(studentId)}/schedule`,
+  await bffJson(
+    "tenant",
+    "PUT /api/meal-plan/participation/{studentId}/schedule",
     {
-      method: "PUT",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ weekdays, effective_from: effectiveFrom }),
+      params: { studentId },
+      body: { weekdays, effective_from: effectiveFrom },
+      errorMessage: "meal schedule change failed",
     },
   );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "meal schedule change failed");
-  }
 }
 
 /** Kitchen list of every school day in the week containing weekStart. */
 export async function getWeeklyMealParticipants(
   weekStart: string,
 ): Promise<WeeklyMealList> {
-  const response = await sessionFetch(
-    `/api/meal-plan/participants/week?week_start=${encodeURIComponent(weekStart)}`,
-    { credentials: "include" },
-  );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      "weekly meal participants load failed",
-    );
-  }
-  const json = (await response.json()) as {
-    data?: {
-      week_start: string;
-      days: Array<{
-        date: string;
-        closed?: boolean;
-        participants: wire.DailyParticipantResponse[];
-      }>;
-    };
-  };
-  const data = json.data;
-  if (!data)
-    throw new Error("Weekly meal participant response is missing data");
+  const data = await bffJson("tenant", "GET /api/meal-plan/participants/week", {
+    query: { week_start: weekStart },
+    errorMessage: "weekly meal participants load failed",
+  });
   return {
     weekStart: data.week_start,
-    days: data.days.map((day) => ({
+    days: (data.days ?? []).map((day) => ({
       date: day.date,
-      closed: day.closed === true,
-      participants: day.participants.map(dailyParticipant),
+      closed: day.closed,
+      participants: (day.participants ?? []).map(dailyParticipant),
     })),
   };
-}
-
-async function downloadMealList(path: string, filename: string): Promise<void> {
-  const response = await sessionFetch(path, { credentials: "include" });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      "meal participants export failed",
-    );
-  }
-  downloadBlob(await response.blob(), filename);
 }
 
 export async function downloadDailyMealParticipants(
   date: string,
   format: "pdf" | "xlsx",
 ): Promise<void> {
-  await downloadMealList(
-    `/api/meal-plan/participants/export?date=${encodeURIComponent(date)}&format=${format}`,
-    `mittagessen-${date}.${format}`,
+  const response = await bffFile(
+    "tenant",
+    "GET /api/meal-plan/participants/export",
+    {
+      query: { date, format },
+      errorMessage: "meal participants export failed",
+    },
   );
+  downloadBlob(await response.blob(), `mittagessen-${date}.${format}`);
 }
 
 export async function downloadWeeklyMealParticipants(
   weekStart: string,
   format: "pdf" | "xlsx",
 ): Promise<void> {
-  await downloadMealList(
-    `/api/meal-plan/participants/week/export?week_start=${encodeURIComponent(weekStart)}&format=${format}`,
+  const response = await bffFile(
+    "tenant",
+    "GET /api/meal-plan/participants/week/export",
+    {
+      query: { week_start: weekStart, format },
+      errorMessage: "meal participants export failed",
+    },
+  );
+  downloadBlob(
+    await response.blob(),
     `mittagessen-woche-${weekStart}.${format}`,
   );
 }
@@ -320,7 +272,10 @@ export function workWeekDates(mondayISO: string): string[] {
 }
 
 /** Where a day's order stands (#3873). */
-type MealOrderStatus = "open" | "ordered" | "confirmed" | "unordered";
+const ORDER_STATUSES = ["open", "ordered", "confirmed", "unordered"] as const;
+type MealOrderStatus = (typeof ORDER_STATUSES)[number];
+const RHYTHMS = ["daily", "weekly"] as const;
+const DETAILS = ["total", "by_class"] as const;
 
 export interface MealOrderDay {
   date: string;
@@ -345,46 +300,25 @@ export async function getMealOrders(
   from: string,
   to: string,
 ): Promise<MealOrders> {
-  const response = await sessionFetch(
-    `/api/meal-plan/orders?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
-    { credentials: "include" },
-  );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "meal orders load failed");
-  }
-  const json = (await response.json()) as {
-    data?: {
-      rhythm: "daily" | "weekly";
-      detail: "total" | "by_class";
-      days: Array<{
-        date: string;
-        closed: boolean;
-        deadline: string;
-        status: MealOrderStatus;
-        confirmed_at?: string;
-        total: number;
-        classes: { school_class: string; count: number }[];
-        changes: { sequence: number; school_class: string; delta: number }[];
-      }>;
-    };
-  };
-  const data = json.data;
-  if (!data) throw new Error("Meal orders response is missing data");
+  const data = await bffJson("tenant", "GET /api/meal-plan/orders", {
+    query: { from, to },
+    errorMessage: "meal orders load failed",
+  });
   return {
-    rhythm: data.rhythm,
-    detail: data.detail,
-    days: data.days.map((day) => ({
+    rhythm: knownEnum(RHYTHMS, data.rhythm) ?? "daily",
+    detail: knownEnum(DETAILS, data.detail) ?? "total",
+    days: (data.days ?? []).map((day) => ({
       date: day.date,
       closed: day.closed,
       deadline: day.deadline,
-      status: day.status,
+      status: knownEnum(ORDER_STATUSES, day.status) ?? "open",
       confirmedAt: day.confirmed_at ?? null,
       total: day.total,
-      classes: day.classes.map((count) => ({
+      classes: (day.classes ?? []).map((count) => ({
         schoolClass: count.school_class,
         count: count.count,
       })),
-      changes: day.changes.map((change) => ({
+      changes: (day.changes ?? []).map((change) => ({
         sequence: change.sequence,
         schoolClass: change.school_class,
         delta: change.delta,
@@ -398,13 +332,11 @@ export async function downloadMealMonth(
   month: string,
   format: "pdf" | "xlsx",
 ): Promise<void> {
-  const response = await sessionFetch(
-    `/api/meal-plan/orders/month/export?month=${encodeURIComponent(month)}&format=${format}`,
-    { credentials: "include" },
+  const response = await bffFile(
+    "tenant",
+    "GET /api/meal-plan/orders/month/export",
+    { query: { month, format }, errorMessage: "meal month export failed" },
   );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "meal month export failed");
-  }
   const blob = await response.blob();
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -425,14 +357,14 @@ export async function downloadMealDeliveries(
   to: string,
   format: "pdf" | "xlsx" | "csv",
 ): Promise<void> {
-  const params = new URLSearchParams({ from, to, format });
-  const response = await sessionFetch(
-    `/api/meal-caterer/orders/export?${params.toString()}`,
-    { credentials: "include" },
+  const response = await bffFile(
+    "tenant",
+    "GET /api/meal-caterer/orders/export",
+    {
+      query: { from, to, format },
+      errorMessage: "meal delivery export failed",
+    },
   );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "meal delivery export failed");
-  }
   downloadBlob(
     await response.blob(),
     filenameFromDisposition(response) ??

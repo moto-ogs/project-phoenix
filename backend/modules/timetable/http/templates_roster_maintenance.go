@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
@@ -36,8 +35,8 @@ type templateRosterMaintenanceResponse struct {
 }
 
 type templateRosterMaintenanceOfferingResponse struct {
-	ID   common.ID `json:"id"`
-	Name string    `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 // attachRosterMaintenance fills RosterMaintenance on every template with a

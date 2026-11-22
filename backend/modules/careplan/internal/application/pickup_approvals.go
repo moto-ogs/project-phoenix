@@ -138,6 +138,7 @@ func (s *PickupApprovals) applyPickupPerson(ctx context.Context, input carereque
 	note, err := s.Exceptions.CreateNote(ctx, careplan.PickupNote{
 		TenantID: input.TenantID, StudentID: input.StudentID, NoteDate: careplan.Date(change.Date),
 		Content: DayCollectorNote(change.PickupPerson.Name), CreatedBy: staffID,
+		EnteredByTraeger: careplan.EnteredByTraeger(ctx, staffID),
 	})
 	if err != nil {
 		return 0, "", fmt.Errorf("schedule: save approved day collector: %w", err)
@@ -164,7 +165,8 @@ func (s *PickupApprovals) saveApprovedDeparture(ctx context.Context, studentID i
 		return 0, carerequests.ErrPickupChangeConflict
 	}
 	id, err := s.Exceptions.SaveDeparture(ctx, careplan.DepartureException{
-		StudentID: studentID, ExceptionDate: careplan.Date(date), DepartureMode: mode, Reason: &reason, CreatedBy: &staffID,
+		StudentID: studentID, ExceptionDate: careplan.Date(date), DepartureMode: mode, Reason: &reason,
+		CreatedBy: optionalStaff(staffID), EnteredByTraeger: careplan.EnteredByTraeger(ctx, staffID),
 	})
 	if err != nil {
 		return 0, fmt.Errorf("schedule: save approved departure exception: %w", err)
@@ -221,7 +223,7 @@ func (s *PickupApprovals) SaveApprovedException(ctx context.Context, tenantID, s
 		existing.PickupTime = &clock
 		existing.Reason = &reason
 		existing.Source = careplan.ExceptionSourceStaff
-		existing.CreatedBy = staffID
+		existing.CreatedBy, existing.EnteredByTraeger = staffID, careplan.EnteredByTraeger(ctx, staffID)
 		existing.CreatedByGuardian = nil
 		if existing.ExcusedFrom != nil {
 			excused := calendar.NormalizeWallClock(*existing.ExcusedFrom)
@@ -235,6 +237,7 @@ func (s *PickupApprovals) SaveApprovedException(ctx context.Context, tenantID, s
 	id, err := s.Exceptions.Create(ctx, careplan.PickupException{
 		TenantID: tenantID, StudentID: studentID, ExceptionDate: careplan.Date(date),
 		PickupTime: &pickup, Reason: &reason, Source: careplan.ExceptionSourceStaff, CreatedBy: staffID,
+		EnteredByTraeger: careplan.EnteredByTraeger(ctx, staffID),
 	})
 	if err != nil {
 		if s.Exceptions.IsUniqueViolation(err) {

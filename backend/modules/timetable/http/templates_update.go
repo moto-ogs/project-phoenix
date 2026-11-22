@@ -22,16 +22,16 @@ type updateTemplateRequest struct {
 	Weekdays        []int         `json:"weekdays"`
 	StartTime       string        `json:"start_time"`
 	EndTime         string        `json:"end_time"`
-	RoomID          common.ID     `json:"room_id"`
-	CategoryID      common.ID     `json:"category_id"`
+	RoomID          ident.ID      `json:"room_id"`
+	CategoryID      ident.ID      `json:"category_id"`
 	PlanningTrackID NullableInt64 `json:"planning_track_id"`
 	MaxParticipants NullableInt   `json:"max_participants"`
 	// RequiredStaff is the optional manual Personalbedarf override (#1839);
 	// omitted/null clears the override (derive from the Betreuungsschlüssel).
-	RequiredStaff    *int       `json:"required_staff,omitempty"`
-	WeekPattern      *int       `json:"week_pattern,omitempty"`
-	CalendarPeriodID *common.ID `json:"calendar_period_id,omitempty"`
-	EducationGroupID *common.ID `json:"education_group_id,omitempty"`
+	RequiredStaff    *int      `json:"required_staff,omitempty"`
+	WeekPattern      *int      `json:"week_pattern,omitempty"`
+	CalendarPeriodID *ident.ID `json:"calendar_period_id,omitempty"`
+	EducationGroupID *ident.ID `json:"education_group_id,omitempty"`
 	// Zielgruppe fields — see createTemplateRequest for the full contract.
 	TargetGroupType   string                  `json:"target_group_type,omitempty"`
 	TargetGradeLevel  *int16                  `json:"target_grade_level,omitempty"`
@@ -56,10 +56,10 @@ type updateTemplateRequest struct {
 	Notes *string `json:"notes,omitempty"`
 	// IncludeClosingDays sets the series' closing-day opt-in (#3594);
 	// omitted keeps the stored value.
-	IncludeClosingDays *bool       `json:"include_closing_days,omitempty"`
-	StudentIDs         []common.ID `json:"student_ids,omitempty"`
-	StaffIDs           []common.ID `json:"staff_ids,omitempty"`
-	PrimaryStaffID     *common.ID  `json:"primary_staff_id,omitempty"`
+	IncludeClosingDays *bool      `json:"include_closing_days,omitempty"`
+	StudentIDs         []ident.ID `json:"student_ids,omitempty"`
+	StaffIDs           []ident.ID `json:"staff_ids,omitempty"`
+	PrimaryStaffID     *ident.ID  `json:"primary_staff_id,omitempty"`
 	// WeekdayAssignments overrides the shared roster for individual weekdays
 	// (#2129); omitted/empty resets the series to one shared roster.
 	WeekdayAssignments []weekdayAssignmentRequest `json:"weekday_assignments,omitempty"`
@@ -74,8 +74,8 @@ type updateTemplateRequest struct {
 	// student_ids / staff_ids above describe THIS segment and may legitimately
 	// differ from a predecessor's roster, so they are not its target set.
 	// Without a scope, series_roster_from mirrors nothing.
-	SeriesRosterScopeStudentIDs []common.ID `json:"series_roster_scope_student_ids,omitempty"`
-	SeriesRosterScopeStaffIDs   []common.ID `json:"series_roster_scope_staff_ids,omitempty"`
+	SeriesRosterScopeStudentIDs []ident.ID `json:"series_roster_scope_student_ids,omitempty"`
+	SeriesRosterScopeStaffIDs   []ident.ID `json:"series_roster_scope_staff_ids,omitempty"`
 	// SeriesRosterScopeWeekdays narrows the mirroring to the weekdays this
 	// edit describes. A series that staffs each weekday separately (#2129) is
 	// edited one weekday at a time, so the predecessor's other weekdays must

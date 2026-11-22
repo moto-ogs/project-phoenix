@@ -10,8 +10,8 @@ import (
 )
 
 type assignTransitStudentsRequest struct {
-	StudentIDs    []common.ID `json:"student_ids"`
-	ActiveGroupID common.ID   `json:"active_group_id"`
+	StudentIDs    []ident.ID `json:"student_ids"`
+	ActiveGroupID ident.ID   `json:"active_group_id"`
 }
 
 func (rs *Resource) assignTransitStudents(w http.ResponseWriter, r *http.Request) {

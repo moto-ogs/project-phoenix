@@ -84,9 +84,7 @@ describe("fetchSettingsSchema", () => {
   it("throws on 500 (server error)", async () => {
     mockSessionFetch.mockResolvedValue(mockResponse(500));
 
-    await expect(fetchSettingsSchema()).rejects.toThrow(
-      "Einstellungen konnten nicht geladen werden (500)",
-    );
+    await expect(fetchSettingsSchema()).rejects.toMatchObject({ status: 500 });
     mockSessionFetch.mockResolvedValue(mockResponse(500));
     await expect(fetchSettingsSchema()).rejects.toMatchObject({
       status: 500,
@@ -125,7 +123,7 @@ describe("saveSettingValue", () => {
 
   it("resolves on success", async () => {
     mockSessionFetch.mockResolvedValue(
-      mockResponse(200, { status: "success" }),
+      mockResponse(200, { status: "success", data: null }),
     );
 
     await expect(saveSettingValue("test.key", 5)).resolves.toBeUndefined();
@@ -482,6 +480,7 @@ describe("fetchDevicePinSetupReason", () => {
     await expect(fetchDevicePinSetupReason()).resolves.toBe("missing");
     expect(mockSessionFetch).toHaveBeenCalledWith(
       "/api/settings/device-pin-status",
+      { method: "GET" },
     );
 
     mockSessionFetch.mockResolvedValueOnce(

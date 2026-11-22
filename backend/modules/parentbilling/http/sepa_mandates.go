@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -61,7 +62,6 @@ func (rs *SEPAMandateResource) MandateRouter(protectedTraegerRoutes func(chi.Rou
 		billing.Get("/imports", rs.importLog)
 		billing.Post("/imports", rs.applyImport)
 		billing.Post("/imports/preview", rs.previewImport)
-		billing.Put("/{id}", rs.changeMandate)
 		billing.Post("/{id}/revoke", rs.revokeMandate)
 		billing.Get("/{id}/history", rs.history)
 		billing.Get("/{id}/collections", rs.collections)
@@ -82,7 +82,7 @@ func (req *SEPACreditorRequest) Bind(*http.Request) error { return nil }
 // SEPAMandateRequest is the body of POST /traeger/sepa-mandates: the
 // mandate of the family of a contract of the Träger.
 type SEPAMandateRequest struct {
-	ContractID    common.ID     `json:"contract_id"`
+	ContractID    ident.ID      `json:"contract_id"`
 	Reference     string        `json:"reference"`
 	SignedOn      calendar.Date `json:"signed_on"`
 	Kind          string        `json:"kind"`
@@ -94,18 +94,6 @@ type SEPAMandateRequest struct {
 
 // Bind accepts the body; the Owner validates the mandate.
 func (req *SEPAMandateRequest) Bind(*http.Request) error { return nil }
-
-// SEPAMandateChangeRequest is the body of PUT /traeger/sepa-mandates/{id};
-// an empty IBAN keeps the stored one.
-type SEPAMandateChangeRequest struct {
-	AccountHolder string `json:"account_holder"`
-	IBAN          string `json:"iban"`
-	BIC           string `json:"bic"`
-	Sequence      string `json:"sequence"`
-}
-
-// Bind accepts the body; the Owner validates the change.
-func (req *SEPAMandateChangeRequest) Bind(*http.Request) error { return nil }
 
 // SEPAMandateRevokeRequest is the body of POST
 // /traeger/sepa-mandates/{id}/revoke: the day the revocation arrived.
@@ -193,25 +181,6 @@ func (rs *SEPAMandateResource) createMandate(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	common.Respond(w, r, http.StatusCreated, mandate, "SEPA mandate created successfully")
-}
-
-func (rs *SEPAMandateResource) changeMandate(w http.ResponseWriter, r *http.Request) {
-	reviewer, id, ok := mandateKey(w, r)
-	if !ok {
-		return
-	}
-	req := &SEPAMandateChangeRequest{}
-	if err := render.Bind(r, req); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(errors.New("the body is no mandate change"), common.CodeParentBillingSepaMandateInvalid))
-		return
-	}
-	mandate, err := rs.mandates.ChangeSEPAMandate(r.Context(), reviewer, id, capability.SEPAMandateChange(*req))
-	if err != nil {
-		tenant.MarkRollback(r.Context())
-		renderMandateError(w, r, err, common.CodeParentBillingSepaMandateInvalid)
-		return
-	}
-	common.Respond(w, r, http.StatusOK, mandate, "SEPA mandate changed successfully")
 }
 
 func (rs *SEPAMandateResource) revokeMandate(w http.ResponseWriter, r *http.Request) {

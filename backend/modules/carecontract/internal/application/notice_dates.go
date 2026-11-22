@@ -77,25 +77,35 @@ func noticeDates(terms carecontract.TemplateInput, receivedOn calendar.Date, con
 // Without that proof it ends 12 months and 14 days after the conclusion
 // (§ 356 Abs. 3 BGB), and a late notice never reaches beyond that either. A
 // contract signed on paper before has none: it was signed at the office and
-// is no distance contract (§ 312c BGB). A last day on a Saturday, a Sunday or
-// a statutory holiday of the school's federal state moves to the next
-// working day (§ 193 BGB, #6350); holidays holds those of
+// is no distance contract (§ 312c BGB). A contract from an import has none
+// either until moto provided the notice (#7767): moto knows neither what the
+// program before told the parents nor, with an unknown day, when the
+// conclusion was, so it dates no period from them. A last day on a
+// Saturday, a Sunday or a statutory holiday of the school's federal state
+// moves to the next working day (§ 193 BGB, #6350); holidays holds those of
 // withdrawalWindow.
 func withdrawalUntil(concluded *carecontract.Concluded, informedAt *time.Time, holidays map[calendar.Date]bool) *calendar.Date {
 	if !hasWithdrawalPeriod(concluded, informedAt) {
 		return nil
 	}
-	start := calendar.DateFromTime(concluded.At)
-	expiry := nextWorkingDay(addMonths(start, 12).AddDays(carecontract.WithdrawalDays), holidays)
+	start, known := conclusionDay(concluded)
+	// A contract from an import counts from moto's own notice alone: the day
+	// of its conclusion comes from a file or a correction and moves no
+	// period.
+	known = known && !concluded.TakenOver
 	if informedAt == nil {
+		expiry := nextWorkingDay(addMonths(start, 12).AddDays(carecontract.WithdrawalDays), holidays)
 		return &expiry
 	}
-	if informed := calendar.DateFromTime(*informedAt); informed.After(start) {
+	if informed := calendar.DateFromTime(*informedAt); !known || informed.After(start) {
 		start = informed
 	}
 	last := nextWorkingDay(start.AddDays(carecontract.WithdrawalDays), holidays)
-	if last.After(expiry) {
-		last = expiry
+	if known {
+		expiry := nextWorkingDay(addMonths(calendar.DateFromTime(concluded.At), 12).AddDays(carecontract.WithdrawalDays), holidays)
+		if last.After(expiry) {
+			last = expiry
+		}
 	}
 	return &last
 }
@@ -103,16 +113,33 @@ func withdrawalUntil(concluded *carecontract.Concluded, informedAt *time.Time, h
 // hasWithdrawalPeriod tells whether withdrawalUntil names a day, so that a
 // contract without a period reads no holidays.
 func hasWithdrawalPeriod(concluded *carecontract.Concluded, informedAt *time.Time) bool {
-	return concluded != nil && (informedAt != nil || concluded.Method != carecontract.MethodPaper)
+	if concluded == nil {
+		return false
+	}
+	return informedAt != nil || (concluded.Method != carecontract.MethodPaper && !concluded.TakenOver)
+}
+
+// conclusionDay is the day a contract was concluded; known is false for a
+// contract whose day no proof names (#7767): nothing counts from the instant
+// it keeps.
+func conclusionDay(concluded *carecontract.Concluded) (calendar.Date, bool) {
+	if concluded == nil || concluded.DateUnknown {
+		return calendar.Date(""), false
+	}
+	return calendar.DateFromTime(concluded.At), true
 }
 
 // withdrawalWindow spans every day withdrawalUntil may move past for a
-// contract concluded at concludedAt: from the conclusion to a week after
-// the latest end, 12 months and 14 days later. No run of Saturday, Sunday
-// and statutory holidays is longer than four days; a later end of a late
-// notice is cut back to that latest end anyway.
-func withdrawalWindow(concludedAt time.Time) (calendar.Date, calendar.Date) {
-	start := calendar.DateFromTime(concludedAt)
+// contract: from the conclusion to a week after the latest end, 12 months
+// and 14 days later. No run of Saturday, Sunday and statutory holidays is
+// longer than four days; a later end of a late notice is cut back to that
+// latest end anyway. A contract whose day of conclusion is unknown counts
+// from the provision of the notice, which hasWithdrawalPeriod then demands.
+func withdrawalWindow(concluded *carecontract.Concluded, informedAt *time.Time) (calendar.Date, calendar.Date) {
+	start, known := conclusionDay(concluded)
+	if (!known || concluded.TakenOver) && informedAt != nil {
+		start = calendar.DateFromTime(*informedAt)
+	}
 	return start, addMonths(start, 12).AddDays(carecontract.WithdrawalDays + 7)
 }
 

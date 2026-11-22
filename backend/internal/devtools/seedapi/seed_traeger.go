@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedTraegerInvitees are the colleagues the seeded Träger-Büro has invited
@@ -162,8 +163,8 @@ func seedHolidayParticipantList(rt *Runtime) (int64, error) {
 	}
 	var envelope struct {
 		Data []struct {
-			ID           apiID `json:"id"`
-			Participants int   `json:"participants"`
+			ID           ident.ID `json:"id"`
+			Participants int      `json:"participants"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
@@ -606,9 +607,9 @@ func seedHolidayRegistration(published []byte, homeSchool int64) (string, map[st
 		Data struct {
 			PublicToken string `json:"public_token"`
 			Weeks       []struct {
-				ID         apiID `json:"id"`
+				ID         ident.ID `json:"id"`
 				TimeModels []struct {
-					ID apiID `json:"id"`
+					ID ident.ID `json:"id"`
 				} `json:"time_models"`
 			} `json:"weeks"`
 		} `json:"data"`
@@ -708,7 +709,7 @@ func seedTraegerSchoolIDs(client *Client, auth AuthRef) ([]int64, error) {
 	}
 	var envelope struct {
 		Data []struct {
-			ID apiID `json:"id"`
+			ID ident.ID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil || len(envelope.Data) == 0 {

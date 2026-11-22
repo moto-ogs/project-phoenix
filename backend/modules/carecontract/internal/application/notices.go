@@ -267,7 +267,8 @@ func (n *Notices) newNotice(ctx context.Context, record ContractRecord, state po
 // the period at the contract's school (§ 355 Abs. 1 BGB, #6350).
 func (n *Notices) dateWithdrawal(ctx context.Context, notice *ports.NewNotice, record ContractRecord, state ports.NoticeState,
 	input carecontract.NoticeInput, received calendar.Date) error {
-	dispatched, err := withdrawalDispatch(input.DispatchedOn, received, calendar.DateFromTime(record.Concluded.At))
+	concluded, _ := conclusionDay(record.Concluded)
+	dispatched, err := withdrawalDispatch(input.DispatchedOn, received, concluded)
 	if err != nil {
 		return err
 	}
@@ -318,17 +319,18 @@ func withdrawalDispatch(dispatched, received, concluded calendar.Date) (calendar
 	if dispatched.IsZero() {
 		dispatched = received
 	}
-	if dispatched.After(received) || dispatched.Before(concluded) {
+	if dispatched.After(received) || (!concluded.IsZero() && dispatched.Before(concluded)) {
 		return calendar.Date(""), &carecontract.ValidationError{Fields: map[string]string{"dispatched_on": "out_of_range"}}
 	}
 	return dispatched, nil
 }
 
 // receivedOn is the day the declaration reached the Träger: not before the
-// conclusion and not in the future.
+// conclusion, where its day is known (#7767), and not in the future.
 func (n *Notices) receivedOn(record ContractRecord, received calendar.Date) (calendar.Date, error) {
 	today := n.today()
-	if received.IsZero() || received.After(today) || received.Before(calendar.DateFromTime(record.Concluded.At)) {
+	concluded, known := conclusionDay(record.Concluded)
+	if received.IsZero() || received.After(today) || (known && received.Before(concluded)) {
 		return calendar.Date(""), &carecontract.ValidationError{Fields: map[string]string{"received_on": "out_of_range"}}
 	}
 	return received, nil

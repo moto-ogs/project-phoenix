@@ -50,8 +50,9 @@ func TestBillingLetterSendPushesTheInboxOncePerLetter(t *testing.T) {
 		assert.JSONEq(t, `{"deferred":true}`, string(notice.Recipient), "the devices are found when the worker sends")
 		assert.Equal(t, fmt.Sprintf("parent-billing-document:%d", notice.RelatedID), notice.IdempotencyKey)
 		var payload struct {
-			OrganizationID wireID `json:"organization_id"`
-			DocumentID     wireID `json:"document_id"`
+			// The outbox stores JSON with numbers (#7761).
+			OrganizationID int64  `json:"organization_id"`
+			DocumentID     int64  `json:"document_id"`
 			RecipientEmail string `json:"recipient_email"`
 		}
 		require.NoError(t, json.Unmarshal(notice.Payload, &payload))
@@ -59,7 +60,7 @@ func TestBillingLetterSendPushesTheInboxOncePerLetter(t *testing.T) {
 		assert.Equal(t, notice.RelatedID, int64(payload.DocumentID))
 		var recipient string
 		for _, mailing := range mailings {
-			if mailing.DocumentID == payload.DocumentID {
+			if int64(mailing.DocumentID) == payload.DocumentID {
 				recipient = mailing.RecipientEmail
 			}
 		}

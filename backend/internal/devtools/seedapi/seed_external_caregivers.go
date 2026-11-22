@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // defaultSeedExternalPassword is the demo password of the external
@@ -112,15 +114,15 @@ func createSeedExternalCaregiver(rt *Runtime, external seedExternalCaregiver) (i
 	}
 	var resp struct {
 		Data struct {
-			ID              any    `json:"id"`
-			InvitationToken string `json:"invitation_token"`
+			ID              ident.ID `json:"id"`
+			InvitationToken string   `json:"invitation_token"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &resp); err != nil {
 		return 0, fmt.Errorf("decode external caregiver: %w", err)
 	}
-	id, err := parseSeedID(resp.Data.ID)
-	if err != nil || id == 0 {
+	id := int64(resp.Data.ID)
+	if id == 0 {
 		return 0, fmt.Errorf("external caregiver response has no id")
 	}
 	if external.Outcome != externalSupervisorAccepted {
@@ -166,8 +168,8 @@ func seededExternalCaregivers(rt *Runtime) (map[string]int64, error) {
 	}
 	var envelope struct {
 		Data []struct {
-			ID         any  `json:"id"`
-			IsExternal bool `json:"is_external"`
+			ID         ident.ID `json:"id"`
+			IsExternal bool     `json:"is_external"`
 			Person     *struct {
 				FirstName string `json:"first_name"`
 				LastName  string `json:"last_name"`
@@ -182,11 +184,7 @@ func seededExternalCaregivers(rt *Runtime) (map[string]int64, error) {
 		if !staff.IsExternal || staff.Person == nil {
 			continue
 		}
-		id, err := parseSeedID(staff.ID)
-		if err != nil {
-			return nil, fmt.Errorf("decode existing external caregiver id: %w", err)
-		}
-		existing[staff.Person.FirstName+" "+staff.Person.LastName] = id
+		existing[staff.Person.FirstName+" "+staff.Person.LastName] = int64(staff.ID)
 	}
 	return existing, nil
 }

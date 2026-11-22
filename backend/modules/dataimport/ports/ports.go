@@ -105,6 +105,13 @@ type (
 // importing staff member).
 const ScheduleSourceStaff = careplan.ScheduleSourceStaff
 
+// EnteredByTraeger reports whether a weekly time the import writes in ctx
+// with the author staffID carries the mark of the Träger-Büro (#7818): the
+// HTTP edge marks a session the Träger-Büro opened without a staff record.
+func EnteredByTraeger(ctx context.Context, staffID int64) bool {
+	return careplan.EnteredByTraeger(ctx, staffID)
+}
+
 // StudentSchedules is the Care Plan slice for the weekly arrival and pickup
 // schedules a row may carry.
 type StudentSchedules interface {

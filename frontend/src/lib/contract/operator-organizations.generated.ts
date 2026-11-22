@@ -27,6 +27,7 @@ import {
   type Organization,
   type School,
   type TraegerStaffRelease,
+  type setSchoolSettingRequest,
 } from "./shared.generated";
 
 /** Go: traegerstaff.withdrawnReleaseResponse */
@@ -432,11 +433,6 @@ export interface recordTraegerErasureOrderRecordsRequest {
   records_choice?: string;
   records_handed_over_on?: string;
   records_export_sha256?: string;
-}
-
-/** Go: operator.setSchoolSettingRequest */
-export interface setSchoolSettingRequest {
-  value?: unknown | null;
 }
 
 export const routes = {

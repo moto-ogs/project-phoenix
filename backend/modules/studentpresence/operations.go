@@ -333,21 +333,6 @@ type SessionActivitySummary struct {
 	IsOpen          bool
 }
 
-// VisitsFromAnotherSchool reports whether a child of the home school is a
-// visitor at the hosting school: only a child of another school is.
-func VisitsFromAnotherSchool(homeTenantID, hostingTenantID int64) bool {
-	return homeTenantID != hostingTenantID
-}
-
-// CrossTenantStudent is a child hosted from another school.
-type CrossTenantStudent struct {
-	StudentID  int64
-	FirstName  string
-	LastName   string
-	GroupName  string
-	HomeTenant string
-}
-
 // DashboardAnalytics aggregates the tenant's presence for the dashboard.
 type DashboardAnalytics struct {
 	StudentsPresent      int

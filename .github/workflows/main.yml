@@ -259,8 +259,6 @@ jobs:
             frontend-test-infra:
               - 'scripts/test-frontend-changed.mjs'
               - 'scripts/test-frontend-changed.test.mjs'
-              - 'scripts/test-changed.sh'
-              - 'scripts/test-changed_test.sh'
             frontend-runner-tests:
               - 'scripts/**'
               - 'frontend/scripts/**'

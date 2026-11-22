@@ -6,9 +6,10 @@
 
 import { normalizeCareFacilityTerm } from "~/lib/care-facility-term-value";
 import { apiErrorFromResponse, transportFetch } from "./api-error";
-import { clearSessionCache, sessionFetch } from "./session-cache";
+import { bffJson, bffJsonUncontracted } from "./bff-fetch";
+import { clearSessionCache } from "./session-cache";
 import { clearPersonalStorage } from "./personal-storage";
-import { mapAccountTenant, type AccountTenantBackend } from "./account-tenants";
+import { mapAccountTenant } from "./account-tenants";
 import { parseBookedModules, type ModuleKey } from "./modules";
 
 export interface TenantSettings {
@@ -512,15 +513,8 @@ function delay(ms: number): Promise<void> {
  */
 export async function listAvailableTenants(): Promise<TenantSummary[]> {
   // The backend path, through the staff portal's catalog proxy (#2352).
-  const response = await sessionFetch("/api/auth/account/tenants");
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Failed to list tenants: ${response.statusText}`,
-    );
-  }
-  const json = (await response.json()) as { data?: AccountTenantBackend[] };
-  return (json.data ?? []).map(mapAccountTenant);
+  const tenants = await bffJson("tenant", "GET /auth/account/tenants");
+  return tenants.map(mapAccountTenant);
 }
 
 /** Switch server-side, then clear cross-tenant caches before navigation. */
@@ -551,23 +545,21 @@ export async function performTenantSwitch(
  * the slug 404s for schools where slug != subdomain (#1975).
  */
 export async function switchTenant(subdomain: string): Promise<void> {
-  const response = await sessionFetch(
+  // The switch is a session step of the BFF (app/api/auth/switch-tenant).
+  // The UI branches on the code: identity.tenant_access_denied (401, no
+  // access to that school) or identity.use_school_portal (a teacher account
+  // that belongs in the school portal).
+  await bffJsonUncontracted<unknown>(
+    "tenant",
+    "POST",
     "/api/auth/switch-tenant",
     {
-      method: "POST",
-      body: JSON.stringify({ tenant_slug: subdomain }),
-    },
-    {
+      body: { tenant_slug: subdomain },
+      errorMessage: "Failed to switch tenant",
       authRefusals: [
         "identity.tenant_access_denied",
         "identity.mfa_session_required",
       ],
     },
   );
-  if (!response.ok) {
-    // The switch UI branches on the code: identity.tenant_access_denied
-    // (401, no access to that school) or identity.use_school_portal (a
-    // teacher account that belongs in the school portal).
-    throw await apiErrorFromResponse(response, "Failed to switch tenant");
-  }
 }

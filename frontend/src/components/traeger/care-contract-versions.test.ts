@@ -4,6 +4,7 @@ import type { ContractVersion } from "~/lib/traeger-care-contracts-api";
 import {
   changedWeekdays,
   plannedVersion,
+  plannedVersionText,
   versionPhase,
 } from "./care-contract-versions";
 
@@ -128,6 +129,23 @@ describe("versionPhase", () => {
     ];
     expect(plannedVersion(versions, "2026-09-09")?.number).toBe(2);
     expect(plannedVersion(versions, "2027-03-01")).toBeUndefined();
+  });
+
+  it("names a new assignment of the modules as a coming change (#7764)", () => {
+    const versions = [
+      version({ number: 1, source: "import", validUntil: "2026-09-30" }),
+      version({
+        number: 2,
+        source: "angebotskorrektur",
+        effectiveFrom: "2026-10-01",
+      }),
+    ];
+    const planned = plannedVersion(versions, "2026-09-09");
+    expect(planned?.number).toBe(2);
+    expect(plannedVersionText(planned!)).toBe(
+      "Ab 01.10.2026 gilt Version 2. Die Buchungen gehören dann zu anderen Modulen. Was sich ändert, steht unter „Versionen“.",
+    );
+    expect(plannedVersion(versions, "2026-10-01")).toBeUndefined();
   });
 });
 

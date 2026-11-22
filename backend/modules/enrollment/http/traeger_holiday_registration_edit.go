@@ -33,11 +33,11 @@ type HolidayRegistrationEditRequest struct {
 }
 
 type holidayChildEditRequest struct {
-	ID              common.ID                 `json:"id"`
+	ID              ident.ID                  `json:"id"`
 	FirstName       string                    `json:"first_name"`
 	LastName        string                    `json:"last_name"`
 	BirthDate       calendar.Date             `json:"birth_date"`
-	HomeSchoolID    common.ID                 `json:"home_school_id"`
+	HomeSchoolID    ident.ID                  `json:"home_school_id"`
 	GuestSchoolName string                    `json:"guest_school_name"`
 	CustomData      capability.HolidayAnswers `json:"custom_data"`
 }

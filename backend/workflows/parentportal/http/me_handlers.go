@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -191,17 +192,17 @@ func (rs *Resource) listMyChildren(w http.ResponseWriter, r *http.Request) {
 
 // EnrollablePhaseResponse is the wire shape for /me/enrollable-schools.
 // Mirrors the workflow enrollable-phase projection; identifiers travel as
-// strings (common.ID).
+// strings (ident.ID).
 type EnrollablePhaseResponse struct {
-	SchoolID   common.ID `json:"school_id"`
-	SchoolName string    `json:"school_name"`
-	SchoolSlug string    `json:"school_slug"`
+	SchoolID   ident.ID `json:"school_id"`
+	SchoolName string   `json:"school_name"`
+	SchoolSlug string   `json:"school_slug"`
 	// SchoolSubdomain is the identifier the picker must put in enrollment
 	// links: both /auth/tenant/resolve and /api/parent/enrollments/{tenantSlug}/*
 	// resolve tenants by subdomain (#1663).
-	SchoolSubdomain string    `json:"school_subdomain"`
-	PhaseID         common.ID `json:"phase_id"`
-	PhaseName       string    `json:"phase_name"`
+	SchoolSubdomain string   `json:"school_subdomain"`
+	PhaseID         ident.ID `json:"phase_id"`
+	PhaseName       string   `json:"phase_name"`
 	// PhaseNameTranslations maps locale → translated phase name (#3377).
 	PhaseNameTranslations map[string]string `json:"phase_name_translations,omitempty"`
 	PhaseKind             string            `json:"phase_kind"`
@@ -233,11 +234,11 @@ func (rs *Resource) listEnrollableSchools(w http.ResponseWriter, r *http.Request
 	out := make([]EnrollablePhaseResponse, 0, len(phases))
 	for _, p := range phases {
 		out = append(out, EnrollablePhaseResponse{
-			SchoolID:              common.ID(p.SchoolID),
+			SchoolID:              ident.ID(p.SchoolID),
 			SchoolName:            p.SchoolName,
 			SchoolSlug:            p.SchoolSlug,
 			SchoolSubdomain:       p.SchoolSubdomain,
-			PhaseID:               common.ID(p.PhaseID),
+			PhaseID:               ident.ID(p.PhaseID),
 			PhaseName:             p.PhaseName,
 			PhaseNameTranslations: p.PhaseNameTranslations,
 			PhaseKind:             p.PhaseKind,

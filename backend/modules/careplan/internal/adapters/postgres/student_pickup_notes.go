@@ -14,16 +14,17 @@ import (
 // pickupNoteRow is either dated (NoteDate) or recurring on a weekday
 // (Weekday, #3369); chk_pickup_note_date_or_weekday enforces exactly one.
 type pickupNoteRow struct {
-	bun.BaseModel `bun:"table:student_pickup_notes,alias:student_pickup_note"`
-	ID            int64         `bun:"id,pk,autoincrement"`
-	TenantID      int64         `bun:"tenant_id,notnull"`
-	CreatedAt     time.Time     `bun:"created_at,nullzero,notnull"`
-	UpdatedAt     time.Time     `bun:"updated_at,nullzero,notnull"`
-	StudentID     int64         `bun:"student_id,notnull"`
-	NoteDate      *calendarDate `bun:"note_date,type:date"`
-	Weekday       *int          `bun:"weekday"`
-	Content       string        `bun:"content,notnull"`
-	CreatedBy     int64         `bun:"created_by,notnull"`
+	bun.BaseModel    `bun:"table:student_pickup_notes,alias:student_pickup_note"`
+	ID               int64         `bun:"id,pk,autoincrement"`
+	TenantID         int64         `bun:"tenant_id,notnull"`
+	CreatedAt        time.Time     `bun:"created_at,nullzero,notnull"`
+	UpdatedAt        time.Time     `bun:"updated_at,nullzero,notnull"`
+	StudentID        int64         `bun:"student_id,notnull"`
+	NoteDate         *calendarDate `bun:"note_date,type:date"`
+	Weekday          *int          `bun:"weekday"`
+	Content          string        `bun:"content,notnull"`
+	CreatedBy        int64         `bun:"created_by,nullzero"`
+	EnteredByTraeger bool          `bun:"entered_by_traeger,notnull,default:false"`
 }
 
 func (s *Store) FindPickupNote(ctx context.Context, id int64) (careplan.PickupNote, bool, domain.OperationStats, error) {
@@ -223,7 +224,7 @@ func (s *Store) DeletePickupNotesByStudent(ctx context.Context, id int64) (domai
 }
 
 func pickupNoteFromPublic(v careplan.PickupNote) pickupNoteRow {
-	row := pickupNoteRow{ID: v.ID, TenantID: v.TenantID, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, StudentID: v.StudentID, Content: v.Content, CreatedBy: v.CreatedBy}
+	row := pickupNoteRow{ID: v.ID, TenantID: v.TenantID, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, StudentID: v.StudentID, Content: v.Content, CreatedBy: v.CreatedBy, EnteredByTraeger: v.EnteredByTraeger}
 	if v.Weekday != 0 {
 		weekday := v.Weekday
 		row.Weekday = &weekday
@@ -235,7 +236,7 @@ func pickupNoteFromPublic(v careplan.PickupNote) pickupNoteRow {
 }
 
 func pickupNoteToPublic(v pickupNoteRow) careplan.PickupNote {
-	note := careplan.PickupNote{ID: v.ID, TenantID: v.TenantID, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, StudentID: v.StudentID, Content: v.Content, CreatedBy: v.CreatedBy}
+	note := careplan.PickupNote{ID: v.ID, TenantID: v.TenantID, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, StudentID: v.StudentID, Content: v.Content, CreatedBy: v.CreatedBy, EnteredByTraeger: v.EnteredByTraeger}
 	if v.NoteDate != nil {
 		note.NoteDate = careplan.Date(*v.NoteDate)
 	}

@@ -4,14 +4,10 @@
 // the permission (like the time-accounts overview) so no request fires
 // without it.
 
-import { apiErrorFromResponse } from "./api-error";
+import { bffJson } from "./bff-fetch";
 import { knownEnum } from "./contract/known-enum";
-import type {
-  AuditLogEvent as AuditLogEventWire,
-  AuditLogPage as AuditLogPageWire,
-} from "./contract/staff.generated";
+import type * as staffContract from "./contract/staff.generated";
 import { createLogger } from "./logger";
-import { sessionFetch } from "./session-cache";
 
 const logger = createLogger({ component: "StaffAuditLogApi" });
 
@@ -30,7 +26,9 @@ export type AuditLogSource =
   | "personnel_number";
 
 /** An event of a source this build can describe. */
-export type KnownAuditLogEvent = AuditLogEventWire & { source: AuditLogSource };
+export type KnownAuditLogEvent = staffContract.AuditLogEvent & {
+  source: AuditLogSource;
+};
 
 // ─── Frontend shapes ─────────────────────────────────────────────────────────
 
@@ -69,7 +67,9 @@ export const auditLogSourceLabels: Record<AuditLogSource, string> = {
 
 const SOURCES = Object.keys(auditLogSourceLabels) as AuditLogSource[];
 
-function isKnown(event: AuditLogEventWire | null): event is KnownAuditLogEvent {
+function isKnown(
+  event: staffContract.AuditLogEvent | null,
+): event is KnownAuditLogEvent {
   if (event === null) return false;
   if (knownEnum(SOURCES, event.source)) return true;
   // A source a newer backend added: this build has no sentence for it.
@@ -126,18 +126,20 @@ export function buildAuditLogQuery(query: AuditLogQuery): string {
 export const staffAuditLogService = {
   /** Requires time_tracking:manage. */
   async getAuditLog(query: AuditLogQuery = {}): Promise<AuditLogPage> {
-    const suffix = buildAuditLogQuery(query);
-    const response = await sessionFetch(
-      `/api/staff/time-tracking/audit-log${suffix ? `?${suffix}` : ""}`,
+    const page = await bffJson(
+      "tenant",
+      "GET /api/staff/time-tracking/audit-log",
+      {
+        query: Object.fromEntries(
+          new URLSearchParams(buildAuditLogQuery(query)),
+        ),
+        errorMessage: "Failed to fetch audit log",
+      },
     );
-    if (!response.ok) {
-      throw await apiErrorFromResponse(response, "Failed to fetch audit log");
-    }
-    const json = (await response.json()) as { data: AuditLogPageWire };
     return {
-      events: (json.data.events ?? []).filter(isKnown).map(mapAuditLogEvent),
-      nextCursor: json.data.next_cursor ?? null,
-      retentionCutoff: json.data.retention_cutoff,
+      events: (page.events ?? []).filter(isKnown).map(mapAuditLogEvent),
+      nextCursor: page.next_cursor ?? null,
+      retentionCutoff: page.retention_cutoff,
     };
   },
 };

@@ -1,13 +1,11 @@
 package owners
 
 import (
-	"log/slog"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	facilitiesModule "github.com/moto-ogs/project-phoenix/modules/facilities"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
-	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	peopleCompose "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
@@ -47,13 +45,10 @@ type StructureRows struct {
 	ExternalCaregivers EducationExternalCaregivers
 }
 
-// PresencePeopleReads are Student Presence's reads of the students, the
-// visitors and the schools.
+// PresencePeopleReads are Student Presence's reads of the students.
 type PresencePeopleReads struct {
-	StudentDisplay      presenceservice.StudentDisplayReader
-	CrossTenantStudents presenceservice.CrossTenantRepo
-	PresenceSchools     presenceservice.SchoolQuery
-	PresenceStudents    presenceservice.PresenceStudents
+	StudentDisplay   presenceservice.StudentDisplayReader
+	PresenceStudents presenceservice.PresenceStudents
 }
 
 // TimetableCareRows are Care Plan's schedule rows in Timetable's retained
@@ -100,16 +95,12 @@ func BuildStructureRows(
 	}
 }
 
-// BuildPresencePeopleReads binds Student Presence's student, visitor and
-// school reads to the People Directory, School Structure and Organisation &
-// Tenancy, on the root's clock now.
-func BuildPresencePeopleReads(db transactionruntime.Database, logger *slog.Logger, persons peopledirectory.Capability, groups schoolstructure.Query, organizations organizationtenancy.Query, people PeopleRows, now func() time.Time) PresencePeopleReads {
-	presence := NewLoggedStudentPresence(db, logger, now)
+// BuildPresencePeopleReads binds Student Presence's student reads to the
+// People Directory and School Structure.
+func BuildPresencePeopleReads(db transactionruntime.Database, persons peopledirectory.Capability, groups schoolstructure.Query, people PeopleRows) PresencePeopleReads {
 	return PresencePeopleReads{
-		StudentDisplay:      StudentDisplayProjection{Students: persons, Groups: groups},
-		CrossTenantStudents: NewCrossTenantQuery(presence, persons, groups),
-		PresenceSchools:     NewActiveSchoolQuery(organizations),
-		PresenceStudents:    PresenceStudents(db, people.Students),
+		StudentDisplay:   StudentDisplayProjection{Students: persons, Groups: groups},
+		PresenceStudents: PresenceStudents(db, people.Students),
 	}
 }
 

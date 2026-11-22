@@ -141,7 +141,7 @@ func (p staffShiftPlanning) ApplyCancellation(ctx context.Context, input workfor
 	request := CancelShiftInput{
 		PreserveSeriesOverride: input.PreserveSeriesOverride,
 		ShiftID:                input.ShiftID, Cancelled: input.Cancelled, ChangeReason: input.ChangeReason,
-		ActorStaffID: input.ActorStaffID, ApplyOriginEdits: input.ApplyOriginEdits,
+		ActorStaffID: input.ActorStaffID, TraegerAccountID: input.TraegerAccountID, ApplyOriginEdits: input.ApplyOriginEdits,
 		BreakMinutes: input.BreakMinutes, ShiftTypeID: input.ShiftTypeID, WorkingTime: input.WorkingTime,
 	}
 	if input.ApplyOriginEdits {
@@ -222,7 +222,8 @@ func (p staffShiftPlanning) SplitSeries(ctx context.Context, input workforce.Spl
 		Weekdays: weekdays, StartTime: start, EndTime: end, BreakMinutes: input.BreakMinutes,
 		ShiftTypeID: input.ShiftTypeID, ShiftTypeIDSet: input.ShiftTypeIDSet, Notes: input.Notes,
 		ValidUntil: validUntil, ValidUntilSet: input.ValidUntilSet, WeekPattern: input.WeekPattern,
-		IncludeSchoolBreaks: input.IncludeSchoolBreaks, ActorStaffID: input.ActorStaffID, WorkingTime: input.WorkingTime,
+		IncludeSchoolBreaks: input.IncludeSchoolBreaks, ActorStaffID: input.ActorStaffID, TraegerAccountID: input.TraegerAccountID,
+		WorkingTime: input.WorkingTime,
 	})
 	if err != nil {
 		return workforce.StaffShiftSeriesResult{}, mapPlanningError(err)
@@ -344,12 +345,18 @@ func seriesInputToModel(input workforce.StaffShiftSeriesInput) (*StaffShiftSerie
 		}
 		weekdays = append(weekdays, int16(weekday)) // #nosec G115 -- range checked above
 	}
-	return &StaffShiftSeries{
+	series := &StaffShiftSeries{
 		StaffID: input.StaffID, Weekdays: weekdays, StartTime: start, EndTime: end, BreakMinutes: input.BreakMinutes,
 		ShiftTypeID: input.ShiftTypeID, Notes: input.Notes, CalendarPeriodID: input.CalendarPeriodID,
 		WeekPattern: input.WeekPattern, ValidFrom: validFrom, ValidUntil: validUntil,
 		IncludeSchoolBreaks: input.IncludeSchoolBreaks,
-	}, nil
+	}
+	// The Träger-Büro plans without a staff member of the school (#7818).
+	if account := input.TraegerAccountID; account > 0 {
+		series.PlannedByTraeger = true
+		series.TraegerAccountID = &account
+	}
+	return series, nil
 }
 
 func plannedShiftToCapability(shift *workforce.ShiftRecord) workforce.PlannedShift {
@@ -398,7 +405,8 @@ func seriesToCapability(series *StaffShiftSeries) workforce.StaffShiftSeries {
 		ShiftTypeID: series.ShiftTypeID, Notes: series.Notes, CalendarPeriodID: series.CalendarPeriodID,
 		WeekPattern: series.WeekPattern, ValidFrom: series.ValidFrom.String(), SeriesRootID: series.SeriesRootID,
 		RetainedOccurrenceShiftID: series.RetainedOccurrenceShiftID, IncludeSchoolBreaks: series.IncludeSchoolBreaks,
-		CreatedBy: series.CreatedBy, UpdatedBy: series.UpdatedBy, CreatedAt: series.CreatedAt, UpdatedAt: series.UpdatedAt,
+		CreatedBy: series.CreatedBy, UpdatedBy: series.UpdatedBy, PlannedByTraeger: series.PlannedByTraeger,
+		CreatedAt: series.CreatedAt, UpdatedAt: series.UpdatedAt,
 	}
 	if series.ValidUntil != nil {
 		value.ValidUntil = series.ValidUntil.String()

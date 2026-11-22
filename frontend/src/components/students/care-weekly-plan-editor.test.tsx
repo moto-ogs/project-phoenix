@@ -1,3 +1,4 @@
+import type * as studentsContract from "~/lib/contract/students.generated";
 import { schoolDateCases, setSchoolDateClock } from "~/test/school-date-cases";
 import { afterEach as restoreZoneAfterEach, vi as zoneVi } from "vitest";
 restoreZoneAfterEach(() => zoneVi.unstubAllEnvs());
@@ -13,7 +14,6 @@ import { ApiError } from "~/lib/api-error";
 import { setTestClock, releaseFakeTimers } from "~/test/clock";
 import { preloadDayPicker } from "~/components/ui/lazy-day-picker";
 import { CareWeeklyPlanEditForm } from "./care-weekly-plan-editor";
-import type { PickupAdjustmentPreview } from "~/lib/pickup-schedule-api";
 import { catalogText } from "~/test/error-catalog-text";
 
 const toastSuccess = vi.fn();
@@ -162,7 +162,9 @@ function save(): void {
   fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 }
 
-function decisionPreview(token: string): PickupAdjustmentPreview {
+function decisionPreview(
+  token: string,
+): studentsContract.pickupAdjustmentPreviewResponse {
   const catalogItem = (id: string, name: string) => ({
     offering_id: id,
     name,

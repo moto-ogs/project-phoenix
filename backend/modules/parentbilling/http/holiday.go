@@ -94,7 +94,7 @@ func (rs *HolidayResource) QuoteRouter() chi.Router {
 // one per child (#7007). An empty body confirms without any of them.
 type HolidayConfirmRequest struct {
 	BenefitsExemption  bool                                       `json:"benefits_exemption"`
-	CostBearerID       common.ID                                  `json:"cost_bearer_id"`
+	CostBearerID       ident.ID                                   `json:"cost_bearer_id"`
 	DebtorNumber       string                                     `json:"debtor_number"`
 	FamilyDebtorNumber string                                     `json:"family_debtor_number"`
 	ChildDebtorNumbers []capability.HolidayChildDebtorNumberInput `json:"child_debtor_numbers"`
@@ -182,8 +182,8 @@ func (rs *HolidayResource) setChildDebtorNumbers(w http.ResponseWriter, r *http.
 }
 
 type holidayQuoteBookingRequest struct {
-	WeekID      common.ID       `json:"week_id"`
-	TimeModelID common.ID       `json:"time_model_id"`
+	WeekID      ident.ID        `json:"week_id"`
+	TimeModelID ident.ID        `json:"time_model_id"`
 	Days        []calendar.Date `json:"days"`
 	Lunch       bool            `json:"lunch"`
 }

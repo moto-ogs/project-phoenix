@@ -1,12 +1,12 @@
 package careplanhttp
 
 import (
+	"context"
 	errors "errors"
 	http "net/http"
 	strconv "strconv"
 	time "time"
 
-	common "github.com/moto-ogs/project-phoenix/api/common"
 	careplan "github.com/moto-ogs/project-phoenix/modules/careplan"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
@@ -14,50 +14,50 @@ import (
 
 // PickupScheduleResponse represents a pickup schedule in API responses
 type PickupScheduleResponse struct {
-	ID          common.ID `json:"id"`
-	StudentID   common.ID `json:"student_id"`
-	Weekday     int       `json:"weekday"`
-	WeekdayName string    `json:"weekday_name"`
-	PickupTime  string    `json:"pickup_time"` // HH:MM format
-	Notes       *string   `json:"notes,omitempty"`
+	ID          ident.ID `json:"id"`
+	StudentID   ident.ID `json:"student_id"`
+	Weekday     int      `json:"weekday"`
+	WeekdayName string   `json:"weekday_name"`
+	PickupTime  string   `json:"pickup_time"` // HH:MM format
+	Notes       *string  `json:"notes,omitempty"`
 	// Source marks the row's provenance: "staff" (manually maintained) or
 	// "care_offering" (booking-derived Angebots-Gehzeit).
-	Source           string    `json:"source"`
-	CareOfferingID   *string   `json:"care_offering_id,omitempty"`
-	CareOfferingName string    `json:"care_offering_name,omitempty"`
-	CreatedBy        common.ID `json:"created_by"`
-	CreatedAt        string    `json:"created_at"`
-	UpdatedAt        string    `json:"updated_at"`
+	Source           string   `json:"source"`
+	CareOfferingID   *string  `json:"care_offering_id,omitempty"`
+	CareOfferingName string   `json:"care_offering_name,omitempty"`
+	CreatedBy        ident.ID `json:"created_by"`
+	CreatedAt        string   `json:"created_at"`
+	UpdatedAt        string   `json:"updated_at"`
 }
 
 // PickupExceptionResponse represents a pickup exception in API responses
 type PickupExceptionResponse struct {
-	ID            common.ID `json:"id"`
-	StudentID     common.ID `json:"student_id"`
-	ExceptionDate string    `json:"exception_date"` // YYYY-MM-DD format
-	PickupTime    *string   `json:"pickup_time,omitempty"`
-	Reason        *string   `json:"reason,omitempty"`
-	Source        string    `json:"source"` // "staff" or "guardian" (parent-set)
+	ID            ident.ID `json:"id"`
+	StudentID     ident.ID `json:"student_id"`
+	ExceptionDate string   `json:"exception_date"` // YYYY-MM-DD format
+	PickupTime    *string  `json:"pickup_time,omitempty"`
+	Reason        *string  `json:"reason,omitempty"`
+	Source        string   `json:"source"` // "staff" or "guardian" (parent-set)
 	// ExcusedFrom (HH:MM) is the partial-absence cutoff carried by this
 	// exception; ExcusedAuto marks it as derived from a pulled-forward pickup
 	// time (#2360) rather than a manual staff decision.
-	ExcusedFrom *string   `json:"excused_from,omitempty"`
-	ExcusedAuto bool      `json:"excused_auto"`
-	CreatedBy   common.ID `json:"created_by"`
-	CreatedAt   string    `json:"created_at"`
-	UpdatedAt   string    `json:"updated_at"`
+	ExcusedFrom *string  `json:"excused_from,omitempty"`
+	ExcusedAuto bool     `json:"excused_auto"`
+	CreatedBy   ident.ID `json:"created_by"`
+	CreatedAt   string   `json:"created_at"`
+	UpdatedAt   string   `json:"updated_at"`
 }
 
 // PickupNoteResponse represents a pickup note in API responses
 type PickupNoteResponse struct {
-	ID        common.ID `json:"id"`
-	StudentID common.ID `json:"student_id"`
-	NoteDate  string    `json:"note_date,omitempty"` // YYYY-MM-DD format; empty for a recurring note
-	Weekday   int       `json:"weekday,omitempty"`   // 1-5; set for a recurring weekday note (#3369)
-	Content   string    `json:"content"`
-	CreatedBy common.ID `json:"created_by"`
-	CreatedAt string    `json:"created_at"`
-	UpdatedAt string    `json:"updated_at"`
+	ID        ident.ID `json:"id"`
+	StudentID ident.ID `json:"student_id"`
+	NoteDate  string   `json:"note_date,omitempty"` // YYYY-MM-DD format; empty for a recurring note
+	Weekday   int      `json:"weekday,omitempty"`   // 1-5; set for a recurring weekday note (#3369)
+	Content   string   `json:"content"`
+	CreatedBy ident.ID `json:"created_by"`
+	CreatedAt string   `json:"created_at"`
+	UpdatedAt string   `json:"updated_at"`
 }
 
 // PickupDataResponse represents combined pickup data
@@ -91,7 +91,7 @@ type BulkPickupScheduleRequest struct {
 }
 
 type BulkPickupSchedulePatchRequest struct {
-	StudentIDs         []common.ID                    `json:"student_ids"`
+	StudentIDs         []ident.ID                     `json:"student_ids"`
 	Schedules          []careplan.PickupScheduleInput `json:"schedules"`
 	ConfirmedException bool                           `json:"confirmed_exception"`
 }
@@ -227,16 +227,17 @@ func validatePickupScheduleItems(items []PickupScheduleRequest) error {
 // via their Bind): the parse error below is intentionally discarded because the
 // time format is already guaranteed valid at that point. Mapping unvalidated
 // items here would silently persist a zero time.
-func toPickupScheduleModels(items []PickupScheduleRequest, studentID, staffID int64) []*careplan.PickupSchedule {
+func toPickupScheduleModels(ctx context.Context, items []PickupScheduleRequest, studentID, staffID int64) []*careplan.PickupSchedule {
 	schedules := make([]*careplan.PickupSchedule, 0, len(items))
 	for _, s := range items {
 		pickupTime, _ := parseTimeOnly(s.PickupTime)
 		schedules = append(schedules, &careplan.PickupSchedule{
-			StudentID:  studentID,
-			Weekday:    s.Weekday,
-			PickupTime: pickupTime,
-			Notes:      s.Notes,
-			CreatedBy:  staffID,
+			StudentID:        studentID,
+			Weekday:          s.Weekday,
+			PickupTime:       pickupTime,
+			Notes:            s.Notes,
+			CreatedBy:        staffID,
+			EnteredByTraeger: careplan.EnteredByTraeger(ctx, staffID),
 		})
 	}
 	return schedules
@@ -343,4 +344,8 @@ func (rs *Resource) verifyNoteOwnership(w http.ResponseWriter, r *http.Request, 
 var (
 	errPersonNotFoundForAccount = errors.New("person not found for account")
 	errUserNotStaff             = errors.New("user is not a staff member")
+	errNoSessionAccount         = errors.New("no valid JWT claims found")
+	// errScheduleUpdatePermissionRequired refuses weekly schedules attached to
+	// a new child without the right to edit Betreuungszeiten.
+	errScheduleUpdatePermissionRequired = errors.New("users:update permission required to create student schedules")
 )

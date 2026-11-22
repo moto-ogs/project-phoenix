@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
+
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 import { ApiError } from "./api-error";
 import {
   inviteGuardianToStudent,
@@ -196,11 +198,6 @@ describe("guardian-api related accounts", () => {
         requestedByEmail: "k@x.de",
       });
       expect(cap.url).toBe("/api/guardians/invitations/pending-approval");
-    });
-
-    it("returns an empty array when data is missing", async () => {
-      mockFetch(okJson({ status: "success" }));
-      expect(await listPendingApprovals()).toEqual([]);
     });
 
     it("throws on a non-ok response", async () => {

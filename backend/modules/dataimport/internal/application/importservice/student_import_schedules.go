@@ -34,6 +34,7 @@ func (c *StudentImportConfig) createArrivalSchedules(ctx context.Context, studen
 		if _, err := c.Schedules.CreateArrivalSchedule(ctx, ports.ArrivalSchedule{
 			StudentID: studentID, Weekday: sched.Weekday, ExpectedArrival: arrival,
 			Notes: importModels.OptionalCell(sched.Notes), CreatedBy: ImporterIDFromContext(ctx),
+			EnteredByTraeger: ports.EnteredByTraeger(ctx, ImporterIDFromContext(ctx)),
 		}); err != nil {
 			return fmt.Errorf("create arrival schedule (weekday %d): %w", sched.Weekday, err)
 		}
@@ -54,6 +55,7 @@ func (c *StudentImportConfig) createPickupSchedules(ctx context.Context, student
 		if _, err := c.Schedules.CreatePickupSchedule(ctx, ports.PickupSchedule{
 			StudentID: studentID, Weekday: sched.Weekday, PickupTime: pickup,
 			Notes: importModels.OptionalCell(sched.Notes), CreatedBy: ImporterIDFromContext(ctx), Source: ports.ScheduleSourceStaff,
+			EnteredByTraeger: ports.EnteredByTraeger(ctx, ImporterIDFromContext(ctx)),
 		}); err != nil {
 			return fmt.Errorf("create pickup schedule (weekday %d): %w", sched.Weekday, err)
 		}
@@ -101,7 +103,11 @@ func (c *StudentImportConfig) upsertArrivalSchedule(ctx context.Context, student
 		return copyErrorf("Ungültige Ankunftszeit '%s': %w", sched.ExpectedArrival, err)
 	}
 	current := existing[0]
+	if sameWeeklyEntry(current.ExpectedArrival, arrival, current.Notes, sched.Notes) {
+		return nil
+	}
 	current.ExpectedArrival = arrival
+	current.CreatedBy, current.EnteredByTraeger = c.scheduleAuthor(ctx)
 	if strings.TrimSpace(sched.Notes) != "" {
 		current.Notes = importModels.OptionalCell(sched.Notes)
 	}
@@ -127,7 +133,11 @@ func (c *StudentImportConfig) upsertPickupSchedule(ctx context.Context, studentI
 		return copyErrorf("Ungültige Abholzeit '%s': %w", sched.PickupTime, err)
 	}
 	current := existing[0]
+	if sameWeeklyEntry(current.PickupTime, pickup, current.Notes, sched.Notes) {
+		return nil
+	}
 	current.PickupTime = pickup
+	current.CreatedBy, current.EnteredByTraeger = c.scheduleAuthor(ctx)
 	if strings.TrimSpace(sched.Notes) != "" {
 		current.Notes = importModels.OptionalCell(sched.Notes)
 	}
@@ -135,4 +145,25 @@ func (c *StudentImportConfig) upsertPickupSchedule(ctx context.Context, studentI
 		return copyErrorf("Abholzeit für Wochentag %d aktualisieren: %w", sched.Weekday, err)
 	}
 	return nil
+}
+
+// sameWeeklyEntry reports whether an imported weekly time repeats the stored
+// one: same clock time and no other note. Such a row is left as it is, so a
+// re-import that changes something else keeps the author of the time. An
+// empty note cell keeps the stored note and counts as the same.
+func sameWeeklyEntry(stored, imported time.Time, storedNote *string, importedNote string) bool {
+	if stored.Hour() != imported.Hour() || stored.Minute() != imported.Minute() {
+		return false
+	}
+	note := importModels.OptionalCell(importedNote)
+	return note == nil || (storedNote != nil && *storedNote == *note)
+}
+
+// scheduleAuthor names who an import writes a weekly time as: the importing
+// staff member, or the Träger-Büro without one (#7818). A changed time takes
+// its author like a new one, as saving the weekly plan does: whoever wrote
+// the time last is named, never an earlier author for a time they did not set.
+func (c *StudentImportConfig) scheduleAuthor(ctx context.Context) (int64, bool) {
+	importer := ImporterIDFromContext(ctx)
+	return importer, ports.EnteredByTraeger(ctx, importer)
 }

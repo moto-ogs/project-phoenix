@@ -109,6 +109,7 @@ func PublicRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalPublic}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/invitations/{token}", Portals: portals, Response: InvitationValidationResponse{}},
+		{Method: "GET", Pattern: "/guardian-invitations/{token}", Portals: portals, Response: GuardianInvitationValidateResponse{}},
 		{Method: "POST", Pattern: "/guardian-invitations/{token}/accept", Portals: portals, Request: AcceptGuardianInvitationRequest{}, Response: AcceptGuardianInvitationResponse{}, MaxBodyBytes: publicLinkBodyBytes},
 		{Method: "GET", Pattern: "/holiday-parent-setups/{token}", Portals: portals, Response: HolidayParentSetupResponse{}},
 		{Method: "POST", Pattern: "/holiday-parent-setups/{token}", Portals: portals, Request: CompleteHolidayParentSetupRequest{}, Response: CompleteHolidayParentSetupResponse{}, MaxBodyBytes: publicLinkBodyBytes},
@@ -116,5 +117,40 @@ func PublicRouteContracts() []common.RouteContract {
 		// The school layout and the login resolve the school before a
 		// session exists (#2342).
 		{Method: "GET", Pattern: "/tenant/resolve", Portals: portals, Query: []common.QueryParam{{Name: "slug", Kind: common.QueryString}}, Response: TenantResolveResponse{}},
+	}
+}
+
+// SessionRouteContracts registers the staff portal's session steps below
+// /auth (#7808): sign-in, second factor, passkey sign-in, renewal, check,
+// switch, preview and sign-out, and the invitation accept that signs the
+// owner in. Each answer carries or ends tokens, so only the portal's route
+// file reads it and no proxy allowlist names the route.
+func SessionRouteContracts() []common.RouteContract {
+	portals := []common.PortalScope{common.PortalTenant}
+	step := func(pattern string, request, response any) common.RouteContract {
+		return common.RouteContract{
+			Method: "POST", Pattern: pattern, Portals: portals, RouteFile: common.RouteFileSession,
+			Request: request, Response: response, NoData: response == nil, Plain: response != nil,
+		}
+	}
+	accept := step("/invitations/{token}/accept", AcceptInvitationRequest{}, AcceptInvitationResponse{})
+	accept.Plain = false
+	accept.RouteFile = "the route file attaches the signed-in owner's session to the accept"
+	end := step("/staff-preview/end", StaffPreviewEndRequest{}, nil)
+	return []common.RouteContract{
+		step("/login", LoginRequest{}, portalauth.LoginResponse{}),
+		step("/logout", nil, nil),
+		step("/refresh", nil, portalauth.TokenResponse{}),
+		step("/session/validate", SessionValidationRequest{}, SessionClaimsResponse{}),
+		step("/mfa/enroll/start", nil, portalauth.EnrollStartResponse{}),
+		step("/mfa/enroll/confirm", common.MFAVerifyRequest{}, portalauth.TokenResponse{}),
+		step("/mfa/resend", common.MFAResendRequest{}, common.MFAResendResponse{}),
+		step("/mfa/verify", common.MFAVerifyRequest{}, portalauth.TokenResponse{}),
+		step("/passkeys/login/options", passkeyLoginOptionsRequest{}, identityaccess.PasskeyCeremonyOptions{}),
+		step("/passkeys/login/verify", common.PasskeyVerifyRequest{}, portalauth.LoginResponse{}),
+		step("/switch-tenant", SwitchTenantRequest{}, portalauth.TokenResponse{}),
+		step("/staff-preview", StaffPreviewStartRequest{}, StaffPreviewStartResponse{}),
+		end,
+		accept,
 	}
 }

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -17,6 +16,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -33,7 +33,7 @@ type ChangeRequestResponse struct {
 	CreatedAt         time.Time                      `json:"created_at"`
 	UpdatedAt         time.Time                      `json:"updated_at"`
 	ReviewedAt        *time.Time                     `json:"reviewed_at,omitempty"`
-	ReviewedBy        *common.ID                     `json:"reviewed_by_account_id,omitempty"`
+	ReviewedBy        *ident.ID                      `json:"reviewed_by_account_id,omitempty"`
 	Request           *AdminRequestSummary           `json:"request,omitempty"`
 	Messages          []ChangeRequestMessageResponse `json:"messages,omitempty"`
 	// RosterImpacts answer an approval that changed bookings (#5102).
@@ -41,12 +41,12 @@ type ChangeRequestResponse struct {
 }
 
 type ChangeRequestMessageResponse struct {
-	ID              string     `json:"id"`
-	AuthorType      string     `json:"author_type"`
-	AuthorAccountID *common.ID `json:"author_account_id,omitempty"`
-	Body            string     `json:"body"`
-	InternalOnly    bool       `json:"internal_only"`
-	CreatedAt       time.Time  `json:"created_at"`
+	ID              string    `json:"id"`
+	AuthorType      string    `json:"author_type"`
+	AuthorAccountID *ident.ID `json:"author_account_id,omitempty"`
+	Body            string    `json:"body"`
+	InternalOnly    bool      `json:"internal_only"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
 type CreateChangeRequestRequest struct {
@@ -351,6 +351,10 @@ func mapChangeRequestError(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, capability.ErrChangeRequestNotAllowed),
 		errors.Is(err, capability.ErrEditNotAllowed):
 		common.RenderError(w, r, common.ErrorForbiddenWithCode(err, common.CodeEnrollmentChangeRequestNotAllowed))
+	case errors.Is(err, capability.ErrDecisionReviewerStaffRequired):
+		// Approving changed weekly times writes them in the reviewer's name
+		// (#7818): without a staff record the reason is said, not a 500.
+		common.RenderError(w, r, common.ErrorForbiddenWithCode(err, common.CodeEnrollmentApprovalStaffProfileRequired))
 	case errors.Is(err, capability.ErrChangeRequestParentNotPermitted):
 		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeEnrollmentChangeRequestParentNotPermitted))
 	case errors.Is(err, capability.ErrChangeRequestConflict):

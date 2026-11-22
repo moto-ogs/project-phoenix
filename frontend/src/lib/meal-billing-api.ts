@@ -5,8 +5,7 @@
 
 import { knownEnum } from "~/lib/contract/known-enum";
 import type * as wire from "~/lib/contract/meal-billing-months.generated";
-import { apiErrorFromResponse } from "./api-error";
-import { sessionFetch } from "./session-cache";
+import { bffJson } from "./bff-fetch";
 
 export type MealBillingStatus = "running" | "open" | "released" | "expired";
 
@@ -57,20 +56,6 @@ interface MealBillingRelease {
   readonly mealCount: number;
 }
 
-const PATH = "/api/meal-billing-months";
-
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await sessionFetch(path, {
-    credentials: "include",
-    ...init,
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "meal billing request failed");
-  }
-  const body = (await response.json()) as { data: T };
-  return body.data;
-}
-
 const STATUSES: readonly MealBillingStatus[] = [
   "running",
   "open",
@@ -117,7 +102,9 @@ function monthFromBackend(
 
 /** The current month and the eleven before it, the latest first. */
 export async function fetchMealBillingMonths(): Promise<MealBillingSummary[]> {
-  const body = await request<wire.BillingMonthSummary[]>(PATH);
+  const body = await bffJson("tenant", "GET /api/meal-billing-months/", {
+    errorMessage: "meal billing request failed",
+  });
   return body.map((summary) => ({
     month: summary.month,
     status: status(summary.status),
@@ -131,9 +118,10 @@ export async function fetchMealBillingMonth(
   month: string,
 ): Promise<MealBillingMonth> {
   return monthFromBackend(
-    await request<wire.BillingMonthResponse>(
-      `${PATH}/${encodeURIComponent(month)}`,
-    ),
+    await bffJson("tenant", "GET /api/meal-billing-months/{month}", {
+      params: { month },
+      errorMessage: "meal billing request failed",
+    }),
   );
 }
 
@@ -149,18 +137,15 @@ export async function releaseMealBillingMonth(
   reason = "",
 ): Promise<MealBillingMonth> {
   return monthFromBackend(
-    await request<wire.BillingMonthResponse>(
-      `${PATH}/${encodeURIComponent(month.month)}/release`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          child_count: month.childCount,
-          meal_count: month.mealCount,
-          fingerprint: month.fingerprint,
-          reason,
-        }),
+    await bffJson("tenant", "POST /api/meal-billing-months/{month}/release", {
+      params: { month: month.month },
+      body: {
+        child_count: month.childCount,
+        meal_count: month.mealCount,
+        fingerprint: month.fingerprint,
+        reason,
       },
-    ),
+      errorMessage: "meal billing request failed",
+    }),
   );
 }

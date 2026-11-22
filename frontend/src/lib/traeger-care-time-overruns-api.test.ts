@@ -7,7 +7,7 @@ import {
 import { fetchCareRules } from "./traeger-care-reductions-api";
 
 const request = vi.hoisted(() => vi.fn());
-vi.mock("./traeger-api", () => ({ traegerRequest: request }));
+vi.mock("~/lib/bff-fetch", () => ({ bffJson: request }));
 afterEach(() => request.mockReset());
 
 const FIGURES = {

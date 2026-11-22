@@ -39,9 +39,6 @@ export interface OfferingSuggestionQuery {
   gradeLevels: number[];
 }
 
-// Wire type: the decoded response of the catalog proxy (#2353).
-export type OfferingSuggestionWire = offeringSuggestionEnvelope;
-
 function appendRoster(params: URLSearchParams, roster: DraftRoster): void {
   const weekdays = Object.keys(roster)
     .map(Number)
@@ -100,7 +97,7 @@ const offeringRef = (offering: templateRosterMaintenanceOfferingResponse) => ({
 });
 
 export function mapOfferingSuggestion(
-  raw: OfferingSuggestionWire,
+  raw: offeringSuggestionEnvelope,
 ): OfferingSuggestion | null {
   const suggestion = raw.suggestion;
   if (!suggestion) return null;

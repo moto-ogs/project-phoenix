@@ -11,20 +11,29 @@ vi.mock("./session-cache", () => {
   return {
     getCachedSession,
     clearSessionCache: vi.fn(),
+    // The real sessionFetch's gate and transport, without its renewal.
     sessionFetch: vi.fn(async (url: string, init?: RequestInit) => {
-      // Same gate as the real sessionFetch (hasSessionAccess, #5005).
-      const session = (await getCachedSession()) as {
-        user?: { id?: string };
-        error?: string;
-      } | null;
+      const { ApiError, transportFetch, unavailableApiError } =
+        await vi.importActual<typeof import("./api-error")>("./api-error");
+      let session: { user?: { id?: string }; error?: string } | null;
+      try {
+        session = (await getCachedSession()) as typeof session;
+      } catch (error) {
+        throw error instanceof ApiError ? error : unavailableApiError(error);
+      }
       if (!session?.user || session.error)
-        throw new Error("No authentication token available");
-      return fetch(url, {
+        throw new ApiError("Authentication required", 401, {
+          code: "general.permission",
+        });
+      return transportFetch(url, {
         ...init,
-        headers: {
-          "Content-Type": "application/json",
-          ...(init?.headers as Record<string, string> | undefined),
-        },
+        headers:
+          init?.body instanceof FormData
+            ? init.headers
+            : {
+                "Content-Type": "application/json",
+                ...(init?.headers as Record<string, string> | undefined),
+              },
       });
     }),
   };
@@ -138,9 +147,7 @@ describe("profile-api", () => {
     it("throws error when no token is available", async () => {
       mockedGetSession.mockResolvedValue(null);
 
-      await expect(fetchProfile()).rejects.toThrow(
-        "No authentication token available",
-      );
+      await expect(fetchProfile()).rejects.toThrow("Authentication required");
     });
 
     it("throws error when session has no user", async () => {
@@ -148,9 +155,7 @@ describe("profile-api", () => {
         expires: "2099-01-01",
       } as never);
 
-      await expect(fetchProfile()).rejects.toThrow(
-        "No authentication token available",
-      );
+      await expect(fetchProfile()).rejects.toThrow("Authentication required");
     });
 
     it("throws error when the session was stripped", async () => {
@@ -160,9 +165,7 @@ describe("profile-api", () => {
         expires: "2099-01-01",
       } as never);
 
-      await expect(fetchProfile()).rejects.toThrow(
-        "No authentication token available",
-      );
+      await expect(fetchProfile()).rejects.toThrow("Authentication required");
     });
 
     it("throws error when response is not ok", async () => {
@@ -177,41 +180,8 @@ describe("profile-api", () => {
         code: "general.input",
       });
       expect(consoleErrorSpy).toHaveBeenCalledWith("failed to fetch profile", {
-        error: expect.stringContaining("HTTP error! status: 404") as unknown,
+        error: expect.any(String) as unknown,
       });
-    });
-
-    it("throws error when the response status is not success", async () => {
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            status: "error",
-            message: "Profile not found",
-            data: null,
-          }),
-      });
-      global.fetch = mockFetch;
-
-      await expect(fetchProfile()).rejects.toMatchObject({
-        status: 500,
-        code: "general.server",
-        message: "Profile not found",
-      });
-    });
-
-    it("throws error when the response status is not success, with no message", async () => {
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            status: "error",
-            data: null,
-          }),
-      });
-      global.fetch = mockFetch;
-
-      await expect(fetchProfile()).rejects.toThrow("Failed to fetch profile");
     });
 
     it("throws generic error when fetch fails", async () => {
@@ -262,7 +232,7 @@ describe("profile-api", () => {
       mockedGetSession.mockResolvedValue(null);
 
       await expect(updateProfile(sampleUpdateRequest)).rejects.toThrow(
-        "No authentication token available",
+        "Authentication required",
       );
     });
 
@@ -279,24 +249,7 @@ describe("profile-api", () => {
         code: "general.input",
       });
       expect(consoleErrorSpy).toHaveBeenCalledWith("failed to update profile", {
-        error: expect.stringContaining("HTTP error! status: 400") as unknown,
-      });
-    });
-
-    it("throws error when the response status is not success", async () => {
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            status: "error",
-            message: "Validation error",
-            data: null,
-          }),
-      });
-      global.fetch = mockFetch;
-
-      await expect(updateProfile(sampleUpdateRequest)).rejects.toMatchObject({
-        code: "general.server",
+        error: expect.any(String) as unknown,
       });
     });
 
@@ -356,7 +309,7 @@ describe("profile-api", () => {
       mockedGetSession.mockResolvedValue(null);
 
       await expect(uploadAvatar(mockFile)).rejects.toThrow(
-        "No authentication token available",
+        "Authentication required",
       );
     });
 
@@ -376,7 +329,7 @@ describe("profile-api", () => {
         code: "general.input",
       });
       expect(consoleErrorSpy).toHaveBeenCalledWith("failed to upload avatar", {
-        error: expect.stringContaining("HTTP error! status: 400") as unknown,
+        error: expect.any(String) as unknown,
       });
     });
 
@@ -388,24 +341,9 @@ describe("profile-api", () => {
       });
       global.fetch = mockFetch;
 
-      await expect(uploadAvatar(mockFile)).rejects.toThrow(
-        "HTTP error! status: 500",
-      );
-    });
-
-    it("throws error when the response status is not success", async () => {
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            status: "error",
-            message: "Upload failed",
-            data: null,
-          }),
+      await expect(uploadAvatar(mockFile)).rejects.toMatchObject({
+        status: 500,
       });
-      global.fetch = mockFetch;
-
-      await expect(uploadAvatar(mockFile)).rejects.toThrow("Upload failed");
     });
 
     it("preserves error message when fetch throws Error", async () => {

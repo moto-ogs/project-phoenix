@@ -94,7 +94,9 @@ describe("caterer second factor (#4497)", () => {
   it("uses the caterer MFA and trusted-device routes", async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(Response.json({ status: "authenticated" }))
+      .mockResolvedValueOnce(
+        Response.json({ status: "success", data: { status: "authenticated" } }),
+      )
       .mockResolvedValueOnce(Response.json({ challenge_token: "renewed" }))
       .mockResolvedValueOnce(Response.json([]))
       .mockResolvedValueOnce(new Response(null, { status: 204 }));
@@ -146,6 +148,49 @@ describe("caterer second factor (#4497)", () => {
       "/api/parent/me/mfa/trusted-devices/3",
     ]);
   });
+});
+
+describe("Träger organization IDs", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it.each(["verify", "enroll/confirm"] as const)(
+    "preserves a bigint ID in %s",
+    async (step) => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        Response.json({
+          status: "success",
+          data: { status: "authenticated" },
+        }),
+      );
+      vi.stubGlobal("fetch", fetchMock);
+
+      const organizationId = "9007199254740993";
+      const result =
+        step === "verify"
+          ? await verifyMFA("traeger", {
+              challengeToken: "challenge",
+              code: "123456",
+              rememberDevice: true,
+              organizationId,
+            })
+          : await enrollConfirm(
+              "traeger",
+              "enrollment",
+              "123456",
+              "challenge",
+              organizationId,
+            );
+
+      expect(result).toEqual({ status: "authenticated" });
+      const [url, init] = fetchMock.mock.calls[0]!;
+      expect(url).toBe(`/api/traeger/auth/mfa/${step}`);
+      expect(JSON.parse(init.body as string)).toMatchObject({
+        organization_id: organizationId,
+      });
+    },
+  );
 });
 
 it("all portal MFA results exclude completed session credentials", () => {

@@ -37,6 +37,7 @@ function row(
     children: 2,
     contractId: "31",
     validFrom: "2026-08-01",
+    laterValidFrom: [],
     confirmedChildren: null,
     problems: [],
     repeatsLine: null,
@@ -58,8 +59,10 @@ function preview(
         child_birth_date: "",
         school: "",
         children: "Anzahl Kinder",
+        valid_from: "",
       },
       schoolId: "1",
+      validFrom: "2026-08-01",
     },
     unmapped: [],
     schools: [
@@ -156,6 +159,18 @@ describe("Kinderzahl nachtragen", () => {
     expect(
       screen.getByRole("link", { name: "Zur Kinderzahl" }),
     ).toHaveAttribute("href", "/traeger/abrechnung/kinderzahl");
+  });
+
+  it("names every day a row's number counts from", async () => {
+    await choose(
+      preview({
+        rows: [row(2, { laterValidFrom: ["2026-11-01", "2026-11-16"] })],
+      }),
+    );
+    expect(
+      screen.getAllByText("Für weitere Verträge ab 01.11.2026 und 16.11.2026")
+        .length,
+    ).toBeGreaterThan(0);
   });
 
   it("asks for the school of a file without that column", async () => {

@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"slices"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // codeAlreadyCheckedIn is the registered error code of a check-in for a staff
@@ -19,10 +21,10 @@ const shiftLead = 5 * time.Minute
 
 // plannedShift is the part of a planned shift the clock-in needs.
 type plannedShift struct {
-	StaffID   apiID  `json:"staff_id"`
-	StartTime string `json:"start_time"`
-	EndTime   string `json:"end_time"`
-	Cancelled bool   `json:"cancelled"`
+	StaffID   ident.ID `json:"staff_id"`
+	StartTime string   `json:"start_time"`
+	EndTime   string   `json:"end_time"`
+	Cancelled bool     `json:"cancelled"`
 }
 
 type staffClockInAction struct{}

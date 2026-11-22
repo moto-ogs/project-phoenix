@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Abwesenheitsarten und Kontingente des Trägers (#4710, ADR 0089 §10 mit
  * Nachtrag, ADR 0236).
@@ -11,10 +12,6 @@
  */
 import type * as traegerAbsenceTypesContract from "~/lib/contract/traeger-absence-types.generated";
 import type * as traegerStaffRecordsContract from "~/lib/contract/traeger-staff-records.generated";
-import { traegerRequest } from "~/lib/traeger-api";
-
-const TYPES = "/api/traeger/absence-types";
-const RECORDS = "/api/traeger/staff-records";
 
 /** Wie eine Schule eine Art des Trägers führt. */
 export interface TraegerAbsenceTypeSchool {
@@ -157,10 +154,7 @@ function typeBody(
 }
 
 export async function fetchTraegerAbsenceTypes(): Promise<TraegerAbsenceTypeList> {
-  const data =
-    await traegerRequest<traegerAbsenceTypesContract.TraegerAbsenceTypeList>(
-      TYPES,
-    );
+  const data = await bffJson("org", "GET /traeger/absence-types/");
   return {
     released: data.release !== null,
     schoolCount: (data.schools ?? []).length,
@@ -172,13 +166,9 @@ export async function createTraegerAbsenceType(
   input: TraegerAbsenceTypeInput,
 ): Promise<TraegerAbsenceType> {
   return mapType(
-    await traegerRequest<traegerAbsenceTypesContract.TraegerAbsenceType>(
-      TYPES,
-      {
-        method: "POST",
-        body: typeBody(input),
-      },
-    ),
+    await bffJson("org", "POST /traeger/absence-types/", {
+      body: typeBody(input),
+    }),
   );
 }
 
@@ -187,13 +177,10 @@ export async function updateTraegerAbsenceType(
   input: TraegerAbsenceTypeInput,
 ): Promise<TraegerAbsenceType> {
   return mapType(
-    await traegerRequest<traegerAbsenceTypesContract.TraegerAbsenceType>(
-      `${TYPES}/${encodeURIComponent(id)}`,
-      {
-        method: "PUT",
-        body: typeBody(input),
-      },
-    ),
+    await bffJson("org", "PUT /traeger/absence-types/{id}", {
+      params: { id },
+      body: typeBody(input),
+    }),
   );
 }
 
@@ -201,10 +188,11 @@ export async function fetchTraegerAbsenceAccounts(
   recordId: string,
   year: number,
 ): Promise<readonly TraegerAbsenceAccount[]> {
-  const data =
-    await traegerRequest<traegerStaffRecordsContract.TraegerAbsenceAccounts>(
-      `${RECORDS}/${encodeURIComponent(recordId)}/absence-accounts?year=${year}`,
-    );
+  const data = await bffJson(
+    "org",
+    "GET /traeger/staff-records/{id}/absence-accounts",
+    { params: { id: recordId }, query: { year } },
+  );
   return (data.accounts ?? []).map(mapAccount);
 }
 
@@ -213,10 +201,11 @@ export async function setTraegerAbsenceAllowance(
   typeId: string,
   input: { year: number; entitledDays: number; reason: string },
 ): Promise<void> {
-  await traegerRequest<unknown>(
-    `${RECORDS}/${encodeURIComponent(recordId)}/absence-accounts/${encodeURIComponent(typeId)}`,
+  await bffJson(
+    "org",
+    "PUT /traeger/staff-records/{id}/absence-accounts/{typeId}",
     {
-      method: "PUT",
+      params: { id: recordId, typeId },
       body: {
         year: input.year,
         entitled_days: input.entitledDays,

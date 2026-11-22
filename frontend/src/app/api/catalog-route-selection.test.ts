@@ -1,4 +1,4 @@
-import { readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { getRouteMatcher } from "next/dist/shared/lib/router/utils/route-matcher";
 import { getRouteRegex } from "next/dist/shared/lib/router/utils/route-regex";
@@ -9,7 +9,10 @@ import {
   CATALOG_PUBLIC_OUTSIDE_MOUNTS,
   underOutsideHead,
 } from "~/lib/contract/catalog-outside-mounts";
-import { portalRoutes } from "~/lib/contract/portals.generated";
+import {
+  portalRoutes,
+  routeFileRoutes,
+} from "~/lib/contract/portals.generated";
 
 /**
  * A registered route reaches its portal's catalog proxy only when no route
@@ -32,50 +35,37 @@ const BFF_PREFIX: Record<SessionPortal, [string, string]> = {
   platform: ["/operator", "/api/operator"],
 };
 
+const apiDir = path.dirname(new URL(import.meta.url).pathname);
+const routeFilePaths = readdirSync(apiDir, {
+  recursive: true,
+  encoding: "utf8",
+}).filter((file) => path.basename(file) === "route.ts");
+
+const bffRoute = (file: string) =>
+  ["/api", ...path.dirname(file).split(path.sep)]
+    .filter((segment) => segment !== ".")
+    .join("/");
+
 /**
  * Literal route files that hand a path Next would give another file to a
- * portal's catalog proxy: `/api/auth/…` belongs to Auth.js otherwise.
+ * portal's catalog proxy: `/api/auth/…` belongs to Auth.js otherwise. A
+ * hand-off is a route file that calls `catalogProxyUnder` with the portal's
+ * routes; the file itself says in a comment why it stands there.
  */
-const HAND_OFFS: Record<string, SessionPortal> = {
-  "/api/auth/invitations/[[...path]]": "tenant",
-  "/api/auth/guardian-invitations/[...path]": "tenant",
-  "/api/auth/holiday-parent-setups/[...path]": "tenant",
-  "/api/auth/tenants": "tenant",
-  "/api/auth/tenant/resolve": "tenant",
-  "/api/auth/roles/[[...path]]": "tenant",
-  "/api/auth/permissions/[[...path]]": "tenant",
-  "/api/auth/accounts/[accountId]/[...path]": "tenant",
-  "/api/auth/mfa/trusted-devices/[[...path]]": "tenant",
-  "/api/auth/passkeys/[[...path]]": "tenant",
-  "/api/auth/account/[...path]": "tenant",
-  "/api/auth/link-to-tenant/[[...path]]": "tenant",
-  "/api/auth/register/[[...path]]": "tenant",
-  "/api/auth/staff-preview/[...path]": "tenant",
-  "/api/auth/password-reset/[[...path]]": "tenant",
-  "/api/auth/password/[[...path]]": "tenant",
-  "/api/caterer/auth/mfa/trusted-devices/[[...path]]": "caterer",
-  "/api/caterer/auth/passkeys/[[...path]]": "caterer",
-  "/api/caterer/auth/password-reset/[[...path]]": "caterer",
-  "/api/parent/auth/password-reset/[[...path]]": "parent",
-  "/api/school/auth/mfa/[...path]": "school",
-  "/api/school/auth/password-reset/[[...path]]": "school",
-  "/api/traeger/auth/mfa/[...path]": "org",
-  "/api/traeger/auth/password-reset/[[...path]]": "org",
-  "/api/operator/auth/email-confirm/[[...path]]": "platform",
-  "/api/operator/auth/mfa/[...path]": "platform",
-  "/api/operator/auth/passkeys/[[...path]]": "platform",
-};
+const handOffFiles = routeFilePaths.flatMap((file) => {
+  const source = readFileSync(path.join(apiDir, file), "utf8");
+  if (!source.includes("catalogProxyUnder(")) return [];
+  const portal = /portalRoutes\.(\w+)/.exec(source)?.[1] ?? "";
+  return [{ route: bffRoute(file), portal, source }];
+});
 
-const apiDir = path.dirname(new URL(import.meta.url).pathname);
-const routeFiles = getSortedRoutes(
-  readdirSync(apiDir, { recursive: true, encoding: "utf8" })
-    .filter((file) => path.basename(file) === "route.ts")
-    .map((file) =>
-      ["/api", ...path.dirname(file).split(path.sep)]
-        .filter((segment) => segment !== ".")
-        .join("/"),
-    ),
-).map((route) => ({ route, match: getRouteMatcher(getRouteRegex(route)) }));
+const HAND_OFFS: Record<string, SessionPortal> = Object.fromEntries(
+  handOffFiles.map(({ route, portal }) => [route, portal as SessionPortal]),
+);
+
+const routeFiles = getSortedRoutes(routeFilePaths.map(bffRoute)).map(
+  (route) => ({ route, match: getRouteMatcher(getRouteRegex(route)) }),
+);
 
 const isParam = (segment: string) => /^[[{]/.test(segment);
 
@@ -155,6 +145,21 @@ const cases = Object.entries(portalRoutes).flatMap(([name, routes]) =>
   }),
 );
 
+describe("hand-off route file", () => {
+  it.each(handOffFiles)(
+    "$route hands an Auth.js path to a session portal and says why",
+    ({ route, portal, source }) => {
+      expect(Object.keys(BFF_PREFIX)).toContain(portal);
+      expect(route, "Next gives only /auth/ paths to Auth.js").toMatch(
+        /\/auth\//,
+      );
+      expect(source, "a comment names why the file stands there").toMatch(
+        /\/\*[\s\S]*?\*\/|^\s*\/\/ /m,
+      );
+    },
+  );
+});
+
 describe("registered route beside a portal's mount", () => {
   it.each(cases)("$portal $pattern has a BFF path", ({ portal, bff }) => {
     // A pattern outside the mount needs an entry in
@@ -215,6 +220,33 @@ describe("route file in front of a portal's catalog proxy", () => {
       expect(catchAlls, `${selected} answers ${sample}`).toContain(selected);
     },
   );
+});
+
+/**
+ * A route its portal's own route file serves (`RouteFile`, #7808) stands in
+ * no proxy allowlist, so no catch-all ever forwards it: a sign-in step's
+ * tokens reach the browser only through the route file that turns them into
+ * the session cookie. Which file serves it, route-backend-paths.test.ts
+ * checks.
+ */
+describe("route served by its portal's own route file", () => {
+  const proxied = new Set(
+    Object.values(portalRoutes).flatMap((routes) =>
+      routes.map((route) => `${route.method} ${route.pattern}`),
+    ),
+  );
+  const cases = Object.values(routeFileRoutes).flatMap((routes) =>
+    routes.map((route) => `${route.method} ${route.pattern}`),
+  );
+
+  it("lists the session steps among them", () => {
+    expect(cases).toContain("POST /auth/login");
+    expect(cases).toContain("POST /operator/auth/refresh");
+  });
+
+  it.each(cases)("%s is in no proxy allowlist", (routeKey) => {
+    expect(proxied.has(routeKey)).toBe(false);
+  });
 });
 
 /**

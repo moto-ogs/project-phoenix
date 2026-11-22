@@ -24,6 +24,8 @@ export const traegerBillingKeys = {
   familiesFamily: "traeger-billing-family-",
   families: () => "traeger-billing-family-list",
   familyChildren: () => "traeger-billing-family-children",
+  // The families with a contract alone, without children and numbers (#7770).
+  familyContracts: () => "traeger-billing-family-contracts",
   family: (id: string) =>
     `traeger-billing-family-detail-${encodeURIComponent(id)}`,
   // Finanz-Exporte (#4693, #4694, #4821).

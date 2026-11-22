@@ -84,8 +84,13 @@ func (g *GuardianProfile) Validate() error {
 	// Note: Contact method validation (email or phone) is done at the service/handler level
 	// because phone numbers are in a separate table and may not be loaded here
 
+	// An empty address is NULL; the tenant-unique email index allows only
+	// one "" per school.
+	if g.Email != nil && strings.TrimSpace(*g.Email) == "" {
+		g.Email = nil
+	}
 	// Validate email format if provided
-	if g.Email != nil && *g.Email != "" {
+	if g.Email != nil {
 		*g.Email = strings.TrimSpace(strings.ToLower(*g.Email))
 		if _, err := mail.ParseAddress(*g.Email); err != nil {
 			return errors.New("invalid email format")

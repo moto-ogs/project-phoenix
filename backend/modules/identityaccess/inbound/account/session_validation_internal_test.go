@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/stretchr/testify/require"
 )
@@ -18,11 +19,12 @@ import (
 type sessionValidationStub struct {
 	AccountSessions
 
-	err error
+	claims identityaccess.SessionClaims
+	err    error
 }
 
 func (s *sessionValidationStub) ValidateSessionTokens(context.Context, string, string, string) (identityaccess.SessionClaims, error) {
-	return identityaccess.SessionClaims{}, s.err
+	return s.claims, s.err
 }
 
 func (s *sessionValidationStub) RefreshTokenWithAudit(context.Context, string, string, string, string) (string, string, error) {
@@ -97,4 +99,19 @@ func TestValidateSession_AnswersRefusalsAsTheRefresh(t *testing.T) {
 			}
 		})
 	}
+}
+
+// The validated claims keep the access token's claim names; their
+// identifiers travel as strings like every answer's (ADR 0300, #7808).
+func TestValidateSessionAnswersTheClaimsWithStringIdentifiers(t *testing.T) {
+	t.Parallel()
+	rs := &Resource{Sessions: &sessionValidationStub{claims: identityaccess.SessionClaims{
+		AccountID: 5, Email: "a@test.local", Scope: "tenant", TenantID: 9007199254740993, ExpiresAt: 1795382896,
+	}}}
+	rr := httptest.NewRecorder()
+	testutil.ServeAtRoute(rr, httptest.NewRequest(http.MethodPost, "/auth/session/validate",
+		strings.NewReader(`{"access_token":"a","portal":"tenant"}`)), "/auth/session/validate", rs.validateSession)
+
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	require.JSONEq(t, `{"id":"5","sub":"a@test.local","scope":"tenant","tenant_id":"9007199254740993","exp":1795382896}`, rr.Body.String())
 }

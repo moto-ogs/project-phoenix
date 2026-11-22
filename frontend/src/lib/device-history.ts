@@ -14,8 +14,8 @@ import {
   getDeviceStatusDisplayName,
   getDeviceTypeDisplayName,
 } from "./iot-helpers";
-import type { LifecycleEventResponse as WireSchoolHistoryEntry } from "./contract/iot.generated";
-import type { deviceHistoryResponse as WireOperatorHistoryEntry } from "./contract/operator-devices.generated";
+import type * as iotContract from "./contract/iot.generated";
+import type * as operatorDevicesContract from "./contract/operator-devices.generated";
 
 /** What happened to the device; the backend's closed set. */
 type DeviceHistoryAction =
@@ -53,7 +53,9 @@ export interface DeviceHistoryEntry {
  * portal's entry names the person, the operator's the school.
  */
 export function mapDeviceHistoryEntry(
-  raw: WireSchoolHistoryEntry | WireOperatorHistoryEntry,
+  raw:
+    | iotContract.LifecycleEventResponse
+    | operatorDevicesContract.deviceHistoryResponse,
 ): DeviceHistoryEntry {
   const actorName = "actor_name" in raw ? raw.actor_name?.trim() : undefined;
   return {
@@ -86,7 +88,8 @@ export async function fetchDeviceHistory(
     );
   }
   const body = (await response.json()) as
-    WireSchoolHistoryEntry[] | { data: WireSchoolHistoryEntry[] };
+    | iotContract.LifecycleEventResponse[]
+    | { data: iotContract.LifecycleEventResponse[] };
   const rows = Array.isArray(body) ? body : body.data;
   return rows.map(mapDeviceHistoryEntry);
 }

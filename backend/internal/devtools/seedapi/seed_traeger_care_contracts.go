@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedTraegerCareContractsStep gives the demo Träger its care contracts
@@ -36,11 +38,11 @@ var seedCareContractTemplate = map[string]any{
 }
 
 type seedCareContractCandidate struct {
-	SchoolID       apiID  `json:"school_id"`
-	RequestChildID apiID  `json:"request_child_id"`
-	TemplateIssue  string `json:"template_issue"`
-	ChildFirstName string `json:"child_first_name"`
-	ChildLastName  string `json:"child_last_name"`
+	SchoolID       ident.ID `json:"school_id"`
+	RequestChildID ident.ID `json:"request_child_id"`
+	TemplateIssue  string   `json:"template_issue"`
+	ChildFirstName string   `json:"child_first_name"`
+	ChildLastName  string   `json:"child_last_name"`
 }
 
 // seedChangedCare names the child whose parents changed the care with an
@@ -90,8 +92,8 @@ func seedCareContractTemplates(client *Client, auth AuthRef) (int, error) {
 	}
 	var envelope struct {
 		Data []struct {
-			SchoolID   apiID           `json:"school_id"`
-			OfferingID apiID           `json:"offering_id"`
+			SchoolID   ident.ID        `json:"school_id"`
+			OfferingID ident.ID        `json:"offering_id"`
 			Active     bool            `json:"active"`
 			Template   json.RawMessage `json:"template"`
 		} `json:"data"`
@@ -214,8 +216,8 @@ func seedCareContractSends(client *Client, auth AuthRef) (int, error) {
 	var envelope struct {
 		Data struct {
 			Contracts []struct {
-				ID     apiID  `json:"id"`
-				Status string `json:"status"`
+				ID     ident.ID `json:"id"`
+				Status string   `json:"status"`
 			} `json:"contracts"`
 			Counts map[string]int `json:"counts"`
 		} `json:"data"`

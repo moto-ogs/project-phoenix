@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the Personal-Import of the Träger (#4724, ADR 0089 section 5):
  * the preview of a CSV file with its column mapping, the import of the new
@@ -8,12 +9,8 @@
  * dates stay "YYYY-MM-DD".
  */
 
-import { apiErrorFromResponse, transportFetch } from "./api-error";
 import type * as traegerStaffRecordImportsContract from "./contract/traeger-staff-record-imports.generated";
 import { knownEnum } from "./contract/known-enum";
-import { readJson, traegerRequest } from "./traeger-api";
-
-const IMPORTS_PATH = "/api/traeger/staff-record-imports";
 
 /** Largest file the backend reads, in bytes. */
 export const MAX_STAFF_IMPORT_FILE_BYTES = 2 * 1024 * 1024;
@@ -173,7 +170,7 @@ function mapResult(
 }
 
 async function postImport(
-  path: string,
+  preview: boolean,
   request: StaffImportRequest,
 ): Promise<StaffImportResult> {
   const form = new FormData();
@@ -187,44 +184,31 @@ async function postImport(
   if (request.fingerprint) {
     form.append("fingerprint", request.fingerprint);
   }
-  const response = await transportFetch(path, {
-    method: "POST",
-    credentials: "include",
-    cache: "no-store",
-    body: form,
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Request failed (${response.status})`,
-    );
-  }
-  const data = await readJson(response);
-  return mapResult(
-    (data as { data: traegerStaffRecordImportsContract.StaffImport }).data,
-  );
+  const data = await (preview
+    ? bffJson("org", "POST /traeger/staff-record-imports/preview", {
+        body: form,
+      })
+    : bffJson("org", "POST /traeger/staff-record-imports/", { body: form }));
+  return mapResult(data);
 }
 
 /** Reads the file and answers every row; stores nothing. */
 export function previewStaffImport(
   request: StaffImportRequest,
 ): Promise<StaffImportResult> {
-  return postImport(`${IMPORTS_PATH}/preview`, request);
+  return postImport(true, request);
 }
 
 /** Takes over the new and complete rows of the confirmed preview. */
 export function applyStaffImport(
   request: StaffImportRequest,
 ): Promise<StaffImportResult> {
-  return postImport(IMPORTS_PATH, request);
+  return postImport(false, request);
 }
 
 /** The imports of the Träger, newest first. */
 export async function fetchStaffImportLog(): Promise<StaffImportLogEntry[]> {
-  const entries =
-    await traegerRequest<traegerStaffRecordImportsContract.StaffImportEntry[]>(
-      IMPORTS_PATH,
-    );
+  const entries = await bffJson("org", "GET /traeger/staff-record-imports/");
   return entries.map((entry) => ({
     file: entry.file,
     accountId: entry.account_id,

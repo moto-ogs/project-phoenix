@@ -94,17 +94,17 @@ func (req *createOrganizationRequest) Bind(_ *http.Request) error {
 }
 
 type createSchoolRequest struct {
-	OrganizationID common.ID `json:"organization_id"`
-	Name           string    `json:"name"`
-	Slug           string    `json:"slug"`
-	Subdomain      string    `json:"subdomain"`
-	Address        string    `json:"address,omitempty"`
-	City           string    `json:"city,omitempty"`
-	Zip            string    `json:"zip,omitempty"`
-	Phone          string    `json:"phone,omitempty"`
-	Email          string    `json:"email,omitempty"`
-	FederalState   string    `json:"federal_state"`
-	Hidden         bool      `json:"hidden,omitempty"`
+	OrganizationID ident.ID `json:"organization_id"`
+	Name           string   `json:"name"`
+	Slug           string   `json:"slug"`
+	Subdomain      string   `json:"subdomain"`
+	Address        string   `json:"address,omitempty"`
+	City           string   `json:"city,omitempty"`
+	Zip            string   `json:"zip,omitempty"`
+	Phone          string   `json:"phone,omitempty"`
+	Email          string   `json:"email,omitempty"`
+	FederalState   string   `json:"federal_state"`
+	Hidden         bool     `json:"hidden,omitempty"`
 }
 
 func (req *createSchoolRequest) Bind(_ *http.Request) error {
@@ -147,9 +147,9 @@ type inviteSchoolAdminRequest struct {
 }
 
 type operatorInvitationResponse struct {
-	ID               common.ID  `json:"id"`
+	ID               ident.ID   `json:"id"`
 	Email            string     `json:"email"`
-	RoleID           common.ID  `json:"role_id"`
+	RoleID           ident.ID   `json:"role_id"`
 	RoleName         string     `json:"role_name,omitempty"`
 	Token            *string    `json:"token,omitempty"`
 	ExpiresAt        time.Time  `json:"expires_at"`
@@ -157,7 +157,7 @@ type operatorInvitationResponse struct {
 	LastName         *string    `json:"last_name,omitempty"`
 	Position         *string    `json:"position,omitempty"`
 	CaregiverEnabled bool       `json:"caregiver_enabled"`
-	CreatedBy        common.ID  `json:"created_by"`
+	CreatedBy        ident.ID   `json:"created_by"`
 	Creator          string     `json:"creator,omitempty"`
 	DeliveryStatus   string     `json:"delivery_status"`
 	EmailSentAt      *time.Time `json:"email_sent_at,omitempty"`
@@ -174,14 +174,14 @@ func (req *inviteSchoolAdminRequest) Bind(_ *http.Request) error {
 }
 
 type createSchoolAccountRequest struct {
-	Email            string     `json:"email"`
-	FirstName        string     `json:"first_name"`
-	LastName         string     `json:"last_name"`
-	Password         string     `json:"password"`
-	ConfirmPassword  string     `json:"confirm_password"`
-	RoleID           *common.ID `json:"role_id,omitempty"`
-	Position         string     `json:"position,omitempty"`
-	CaregiverEnabled bool       `json:"caregiver_enabled,omitempty"`
+	Email            string    `json:"email"`
+	FirstName        string    `json:"first_name"`
+	LastName         string    `json:"last_name"`
+	Password         string    `json:"password"`
+	ConfirmPassword  string    `json:"confirm_password"`
+	RoleID           *ident.ID `json:"role_id,omitempty"`
+	Position         string    `json:"position,omitempty"`
+	CaregiverEnabled bool      `json:"caregiver_enabled,omitempty"`
 }
 
 type updateCaregiverCapabilityRequest struct {
@@ -484,7 +484,7 @@ func (rs *ProvisioningResource) ListSystemRoles(w http.ResponseWriter, r *http.R
 	common.Respond(w, r, http.StatusOK, roles, "System roles retrieved successfully")
 }
 
-func jsonIDPointer(id *common.ID) *int64 {
+func jsonIDPointer(id *ident.ID) *int64 {
 	if id == nil {
 		return nil
 	}
@@ -629,11 +629,11 @@ func (rs *ProvisioningResource) ListOrganizationDevices(w http.ResponseWriter, r
 }
 
 type createDeviceRequest struct {
-	SchoolID   common.ID `json:"school_id"`
-	DeviceID   string    `json:"device_id"`
-	DeviceType string    `json:"device_type"`
-	Name       string    `json:"name,omitempty"`
-	APIKey     string    `json:"api_key,omitempty"`
+	SchoolID   ident.ID `json:"school_id"`
+	DeviceID   string   `json:"device_id"`
+	DeviceType string   `json:"device_type"`
+	Name       string   `json:"name,omitempty"`
+	APIKey     string   `json:"api_key,omitempty"`
 }
 
 func (req *createDeviceRequest) Bind(_ *http.Request) error {
@@ -658,7 +658,7 @@ type setDeviceAPIKeyRequest struct {
 }
 
 type transferDeviceRequest struct {
-	TargetSchoolID common.ID `json:"target_school_id"`
+	TargetSchoolID ident.ID `json:"target_school_id"`
 }
 
 func (req *transferDeviceRequest) Bind(_ *http.Request) error {

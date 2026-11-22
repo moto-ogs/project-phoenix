@@ -6,10 +6,10 @@ import (
 	strings "strings"
 	time "time"
 
-	common "github.com/moto-ogs/project-phoenix/api/common"
 	absencerecords "github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
 	studentpresence "github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Constants for date formats
@@ -30,17 +30,17 @@ type CreateStudentStatusDaysRequest struct {
 const maxStudentStatusDayCreateDays = 366
 
 type BulkCreateStudentStatusDaysRequest struct {
-	StudentIDs []common.ID `json:"student_ids"`
-	Status     string      `json:"status"`
-	From       string      `json:"from"`
-	To         string      `json:"to"`
-	Reason     string      `json:"reason,omitempty"`
+	StudentIDs []ident.ID `json:"student_ids"`
+	Status     string     `json:"status"`
+	From       string     `json:"from"`
+	To         string     `json:"to"`
+	Reason     string     `json:"reason,omitempty"`
 }
 
 // PrivacyConsentResponse represents a privacy consent response
 type PrivacyConsentResponse struct {
-	ID                common.ID              `json:"id"`
-	StudentID         common.ID              `json:"student_id"`
+	ID                ident.ID               `json:"id"`
+	StudentID         ident.ID               `json:"student_id"`
 	PolicyVersion     string                 `json:"policy_version"`
 	Accepted          bool                   `json:"accepted"`
 	AcceptedAt        *time.Time             `json:"accepted_at,omitempty"`

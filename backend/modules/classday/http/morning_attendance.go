@@ -27,9 +27,9 @@ const maxMorningAttendanceMarks = 200
 // with an OGS record, list_entry_id (a JSON string, like the day row) a
 // class-list-only entry; exactly one is set.
 type MorningAttendanceMarkRequest struct {
-	StudentID   common.ID `json:"student_id,omitempty"`
-	ListEntryID ident.ID  `json:"list_entry_id,omitempty"`
-	Status      string    `json:"status"`
+	StudentID   ident.ID `json:"student_id,omitempty"`
+	ListEntryID ident.ID `json:"list_entry_id,omitempty"`
+	Status      string   `json:"status"`
 }
 
 // MorningAttendanceRequest is the body of

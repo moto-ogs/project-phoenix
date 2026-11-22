@@ -58,9 +58,15 @@ type StaffShiftSeries struct {
 	IncludeSchoolBreaks bool   `json:"include_school_breaks"`
 	CreatedBy           int64  `json:"created_by"`
 	UpdatedBy           *int64 `json:"updated_by,omitempty"`
+	// PlannedByTraeger marks a series the Träger-Büro planned in a school
+	// session opened through the Träger-Portal (#7818); CreatedBy is then 0
+	// and its occurrences carry the mark as well.
+	PlannedByTraeger bool `json:"planned_by_traeger"`
 	// WorkingTime confirms the working-time warnings of the occurrences this
-	// write materializes (#4708); it is not stored.
-	WorkingTime workforce.WorkingTimeConfirmation `json:"-"`
+	// write materializes (#4708) and TraegerAccountID names the Träger-Büro
+	// account behind it in their Änderungsprotokoll; neither is stored.
+	WorkingTime      workforce.WorkingTimeConfirmation `json:"-"`
+	TraegerAccountID *int64                            `json:"-"`
 }
 
 // Validate ensures series data is consistent. Period-dependent rules
@@ -88,7 +94,7 @@ func (s *StaffShiftSeries) Validate() error {
 	if s.ValidUntil != nil && !s.ValidUntil.After(s.ValidFrom) {
 		return errors.New("valid until must be after valid from")
 	}
-	if s.CreatedBy <= 0 {
+	if s.CreatedBy <= 0 && !s.PlannedByTraeger {
 		return errors.New("created by is required")
 	}
 	return nil
@@ -141,4 +147,7 @@ type StaffShiftSeriesException struct {
 	SeriesID  int64         `json:"series_id"`
 	Date      calendar.Date `json:"date"`
 	CreatedBy int64         `json:"created_by"`
+	// PlannedByTraeger stands for the author of an occurrence of a series
+	// the Träger-Büro planned (#7818); CreatedBy is then 0.
+	PlannedByTraeger bool `json:"planned_by_traeger"`
 }

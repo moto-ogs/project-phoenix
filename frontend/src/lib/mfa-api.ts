@@ -1,3 +1,4 @@
+import type { ApiResponse } from "./api-envelope";
 import { ApiError, apiErrorFromBody, transportFetch } from "./api-error";
 import {
   portalAuthAnswer,
@@ -11,12 +12,6 @@ export type LoginScope = PortalKey;
 
 export interface MFAResult {
   status: "authenticated";
-}
-
-interface OperatorEnvelope<T> {
-  status: string;
-  data: T;
-  message?: string;
 }
 
 function mfaUrl(scope: LoginScope, suffix: string): string {
@@ -79,7 +74,22 @@ async function postJson<T>(
   return data as T;
 }
 
-/** A portal's auth step; its envelope comes from the portal table. */
+/**
+ * A sign-in step the BFF answers itself (password, code, enrollment
+ * confirmation): every portal's answer is `{ status, data }`.
+ */
+async function postSignInStep<T>(
+  scope: LoginScope,
+  step: "login" | "mfa/verify" | "mfa/enroll/confirm",
+  body: unknown,
+  options: PostJsonOptions = {},
+): Promise<T> {
+  return (
+    await postJson<ApiResponse<T>>(portalAuthPath(scope, step), body, options)
+  ).data;
+}
+
+/** A step the BFF forwards as the backend answers it (resend). */
 async function postStep<T>(
   scope: LoginScope,
   step: EnvelopableAuthStep,
@@ -115,7 +125,10 @@ export async function login(
         }
       : { email: params.email, password: params.password };
 
-  return signInAnswer(scope, await postStep<unknown>(scope, "login", payload));
+  return signInAnswer(
+    scope,
+    await postSignInStep<unknown>(scope, "login", payload),
+  );
 }
 
 interface VerifyParams {
@@ -129,7 +142,7 @@ interface VerifyParams {
 // The Träger-Portal names the Träger the login resolved when it redeems the
 // code; the other portals have no such field.
 function organizationField(organizationId?: string) {
-  return organizationId ? { organization_id: Number(organizationId) } : {};
+  return organizationId ? { organization_id: organizationId } : {};
 }
 
 export async function verifyMFA(
@@ -142,7 +155,7 @@ export async function verifyMFA(
     remember_device: params.rememberDevice,
     ...organizationField(params.organizationId),
   };
-  return postStep<MFAResult>(scope, "mfa/verify", payload);
+  return postSignInStep<MFAResult>(scope, "mfa/verify", payload);
 }
 
 interface ResendParams {
@@ -214,7 +227,7 @@ export async function enrollConfirm(
     remember_device: false,
     ...organizationField(organizationId),
   };
-  return postStep<MFAResult>(scope, "mfa/enroll/confirm", payload, {
+  return postSignInStep<MFAResult>(scope, "mfa/enroll/confirm", payload, {
     bearerToken,
   });
 }
@@ -398,7 +411,7 @@ function operatorGlobalMFAUrl(accountId: string): string {
 export async function operatorAdminGetGlobalMFAOverride(
   accountId: string,
 ): Promise<MFAAdminState> {
-  const envelope = await postJson<OperatorEnvelope<MFAAdminState>>(
+  const envelope = await postJson<ApiResponse<MFAAdminState>>(
     operatorGlobalMFAUrl(accountId),
     undefined,
     { method: "GET" },

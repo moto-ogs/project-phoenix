@@ -1,3 +1,4 @@
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Einsatzplanung des Trägers über alle Standorte (#4708, ADR 0242).
  *
@@ -12,19 +13,17 @@ import {
   downloadTraegerList,
   type TraegerListFile,
   type TraegerListFormat,
+  listExportQuery,
 } from "./traeger-list-export";
 import type * as sharedContract from "~/lib/contract/shared.generated";
 import type * as traegerStaffPlanningContract from "~/lib/contract/traeger-staff-planning.generated";
 import { requiredDay } from "~/lib/contract/required-day";
-import { traegerRequest } from "~/lib/traeger-api";
 import {
   mapWorkingTimeWarnings,
   workingTimeBody,
   type WorkingTimeConfirmation,
   type WorkingTimeWarning,
 } from "~/lib/working-time";
-
-const BASE = "/api/traeger/staff-planning";
 
 /** Die Werte, gegen die moto die Woche prüft, alle in Minuten. */
 export interface TraegerPlanningRules {
@@ -211,17 +210,13 @@ function shiftBody(
   };
 }
 
-const recordPath = (recordId: string) =>
-  `${BASE}/records/${encodeURIComponent(recordId)}`;
-
 /** Die Woche, in der `weekStart` liegt, Montag bis Sonntag. */
 export async function fetchTraegerPlanningWeek(
   weekStart: string,
 ): Promise<TraegerPlanningWeek> {
-  const week =
-    await traegerRequest<traegerStaffPlanningContract.TraegerPlanningWeek>(
-      `${BASE}?week=${encodeURIComponent(weekStart)}`,
-    );
+  const week = await bffJson("org", "GET /traeger/staff-planning/", {
+    query: { week: weekStart },
+  });
   return mapPlanningWeek(week);
 }
 
@@ -233,18 +228,22 @@ export function downloadTraegerPlanningWeek(
   weekStart: string,
   format: TraegerListFormat,
 ): Promise<TraegerListFile> {
-  return downloadTraegerList(`${BASE}/export`, format, { week: weekStart });
+  return downloadTraegerList(
+    bffFile("org", "GET /traeger/staff-planning/export", {
+      query: listExportQuery(format, { week: weekStart }),
+    }),
+  );
 }
 
 export async function planTraegerShift(
   recordId: string,
   input: TraegerPlanShiftInput,
 ): Promise<TraegerPlanningShift> {
-  const shift =
-    await traegerRequest<traegerStaffPlanningContract.TraegerPlanningShift>(
-      `${recordPath(recordId)}/shifts`,
-      { method: "POST", body: shiftBody(input) },
-    );
+  const shift = await bffJson(
+    "org",
+    "POST /traeger/staff-planning/records/{id}/shifts",
+    { params: { id: recordId }, body: shiftBody(input) },
+  );
   return mapPlanningShift(shift);
 }
 
@@ -253,11 +252,11 @@ export async function changeTraegerShift(
   shiftId: string,
   input: TraegerPlanShiftInput,
 ): Promise<TraegerPlanningShift> {
-  const shift =
-    await traegerRequest<traegerStaffPlanningContract.TraegerPlanningShift>(
-      `${recordPath(recordId)}/shifts/${encodeURIComponent(shiftId)}`,
-      { method: "PUT", body: shiftBody(input) },
-    );
+  const shift = await bffJson(
+    "org",
+    "PUT /traeger/staff-planning/records/{id}/shifts/{shiftId}",
+    { params: { id: recordId, shiftId }, body: shiftBody(input) },
+  );
   return mapPlanningShift(shift);
 }
 
@@ -266,9 +265,10 @@ export async function removeTraegerShift(
   schoolId: string,
   shiftId: string,
 ): Promise<void> {
-  await traegerRequest<null>(
-    `${recordPath(recordId)}/schools/${encodeURIComponent(schoolId)}/shifts/${encodeURIComponent(shiftId)}`,
-    { method: "DELETE" },
+  await bffJson(
+    "org",
+    "DELETE /traeger/staff-planning/records/{id}/schools/{schoolId}/shifts/{shiftId}",
+    { params: { id: recordId, schoolId, shiftId } },
   );
 }
 
@@ -276,9 +276,10 @@ export async function removeTraegerShift(
 export async function fetchTraegerFutureShifts(): Promise<
   TraegerFutureShifts[]
 > {
-  const schools = await traegerRequest<
-    traegerStaffPlanningContract.TraegerFutureShifts[]
-  >(`${BASE}/future-shifts`);
+  const schools = await bffJson(
+    "org",
+    "GET /traeger/staff-planning/future-shifts",
+  );
   return schools.map((school) => ({
     schoolId: school.school_id,
     schoolName: school.school_name,

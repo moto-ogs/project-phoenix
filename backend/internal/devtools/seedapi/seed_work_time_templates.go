@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedWorkTimeTemplateAssignees is how many staff members get the full-time
@@ -102,7 +104,7 @@ func postSeedWorkTimeTemplate(rt *Runtime, template seedWorkTimeTemplate, anchor
 	}
 	var payload struct {
 		Data struct {
-			ID apiID `json:"id"`
+			ID ident.ID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(resp, &payload); err != nil {

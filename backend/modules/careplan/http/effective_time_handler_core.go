@@ -11,6 +11,7 @@ import (
 
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const dateFormatISO = "2006-01-02"
@@ -192,8 +193,8 @@ func verifyCareOwnership[T any](
 }
 
 type BulkEffectiveTimeRequest struct {
-	StudentIDs []common.ID `json:"student_ids"`
-	Date       *string     `json:"date,omitempty"`
+	StudentIDs []ident.ID `json:"student_ids"`
+	Date       *string    `json:"date,omitempty"`
 }
 
 func (r *BulkEffectiveTimeRequest) Bind(_ *http.Request) error {

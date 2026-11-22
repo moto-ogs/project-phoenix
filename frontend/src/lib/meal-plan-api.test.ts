@@ -40,6 +40,7 @@ describe("getWeeklyMealParticipants", () => {
           days: [
             {
               date: "2026-09-07",
+              closed: false,
               participants: [
                 {
                   student_id: "42",
@@ -110,23 +111,6 @@ describe("getMealPlanWeek", () => {
     expect(out[2]?.note).toBeNull();
   });
 
-  it("accepts a bare array response shape", async () => {
-    mockedFetch.mockResolvedValue(
-      jsonResponse([
-        { date: "2026-07-06", position: 0, dish: "Reis", note: null },
-      ]),
-    );
-    const out = await getMealPlanWeek("2026-07-06");
-    expect(out).toHaveLength(1);
-    expect(out[0]?.dish).toBe("Reis");
-  });
-
-  it("returns an empty list for an unexpected object shape", async () => {
-    mockedFetch.mockResolvedValue(jsonResponse({ unexpected: true }));
-    const out = await getMealPlanWeek("2026-07-06");
-    expect(out).toEqual([]);
-  });
-
   it("throws an ApiError with the status class on a non-OK response", async () => {
     mockedFetch.mockResolvedValue(
       new Response("boom", { status: 500, statusText: "Server Error" }),
@@ -145,7 +129,7 @@ describe("getMealPlanWeek", () => {
       return jsonResponse({ data: [] });
     });
     await getMealPlanWeek("2026 07 06");
-    expect(seenURL).toContain("week_start=2026%2007%2006");
+    expect(seenURL).toContain("week_start=2026+07+06");
   });
 });
 
@@ -156,7 +140,7 @@ describe("setDay", () => {
     mockedFetch.mockImplementation(async (url: string, init?: RequestInit) => {
       seenURL = url;
       seenInit = init;
-      return jsonResponse({});
+      return jsonResponse({ status: "success", data: null });
     });
 
     await setDay("2026-07-06", [{ dish: "Nudeln", note: "vegetarisch" }]);

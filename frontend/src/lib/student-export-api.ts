@@ -1,5 +1,4 @@
-import { apiErrorFromResponse } from "~/lib/api-error";
-import { sessionFetch } from "~/lib/session-cache";
+import { bffFile } from "~/lib/bff-fetch";
 import { berlinTodayISO, formatDate } from "~/lib/date-helpers";
 import {
   downloadBlob,
@@ -441,14 +440,10 @@ export async function exportStudents(
   request: StudentExportRequest,
   printTarget?: Window,
 ): Promise<void> {
-  const response = await sessionFetch("/api/students/export", {
-    method: "POST",
-    body: JSON.stringify(request),
+  const response = await bffFile("tenant", "POST /api/students/export", {
+    body: request,
+    errorMessage: "Export fehlgeschlagen",
   });
-
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "Export fehlgeschlagen");
-  }
 
   const blob = await response.blob();
   if (printTarget) {
