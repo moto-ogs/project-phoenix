@@ -470,6 +470,10 @@ Personal. Je Bereich gilt:
 | Kalender: eigene Termine, Einladungen, Kalender-Abo | Bleibt Personal vorbehalten. Alles dort ist persönlich oder hängt an der Person, die einlädt. |
 | Fehlzeiten-Kontingente und Anfangssalden | Bleiben Personal vorbehalten. Sie wirken auf die Abrechnung und nennen, wer entschieden hat. |
 
+Dass Check-in, Aufsicht übernehmen, spontaner Start und Kalender dem
+Personal im Schul-Portal vorbehalten bleiben und für den Absprung nicht
+geöffnet werden, hat Yannick Wenger am 22.11.2026 bestätigt.
+
 Wo ein Weg Personal vorbehalten bleibt, sagt die Antwort das: 403 mit einem
 eigenen Code (`attendance.checkin_staff_profile_required`,
 `import.staff_profile_required`, `workforce.no_staff_profile`,

@@ -1,15 +1,15 @@
 package enrollmenthttp
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/api/testutil/routetest"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
-	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 )
 
 // Only a session the Träger-Büro opened through the Absprung marks the
@@ -22,9 +22,10 @@ func TestMarkTraegerBueroReviewerFollowsTheClaim(t *testing.T) {
 		handler := markTraegerBueroReviewer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 			marked = capability.TraegerBueroReviewer(r.Context())
 		}))
-		claims := sessiontoken.AppClaims{ViaTraeger: viaTraeger}
+		claims := testutil.AdminTestClaims(1)
+		claims.ViaTraeger = viaTraeger
 		req := httptest.NewRequest(http.MethodPost, "/admin/requests/1/children/2/decide", nil)
-		req = req.WithContext(context.WithValue(req.Context(), sessiontoken.CtxClaims, claims))
+		routetest.WithClaims(t, claims)(req)
 		handler.ServeHTTP(httptest.NewRecorder(), req)
 		assert.Equal(t, viaTraeger, marked, "via_traeger=%v", viaTraeger)
 	}
