@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 import { ApiError } from "./api-error";
 
 import {
@@ -28,6 +33,19 @@ function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
     ...init,
   });
 }
+
+const APPOINTMENT = {
+  id: "15",
+  title: "Planning",
+  start_date: "2026-01-06",
+  end_date: "2026-01-06",
+  start_time: "10:00",
+  end_time: "11:00",
+  all_day: false,
+  delivery_mode: "informational",
+  overview_visibility: "organizer",
+  notify_guardians: false,
+};
 
 describe("personal calendar API", () => {
   let fetchMock: ReturnType<typeof vi.fn>;
@@ -61,7 +79,7 @@ describe("personal calendar API", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "/api/calendar/my?from=2026-01-05&to=2026-01-11",
-      expect.objectContaining({ credentials: "include" }),
+      expect.objectContaining({ method: "GET" }),
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
@@ -174,19 +192,21 @@ describe("personal calendar API", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "/api/calendar/appointments/12%2Fnext/overview",
-      expect.objectContaining({ credentials: "include" }),
+      expect.objectContaining({ method: "GET" }),
     );
   });
 
-  it("returns unwrapped plain responses and 204 responses", async () => {
+  it("reads recipient options and 204 responses", async () => {
     fetchMock
       .mockResolvedValueOnce(
         jsonResponse({
-          staff: [],
-          parents: [],
-          groups: [],
-          classes: [],
-          students: [],
+          data: {
+            staff: [],
+            parents: [],
+            groups: [],
+            classes: [],
+            students: [],
+          },
         }),
       )
       .mockResolvedValueOnce(new Response(null, { status: 204 }));
@@ -211,13 +231,29 @@ describe("personal calendar API", () => {
 
   it("edits, cancels, deletes and reads appointment detail", async () => {
     fetchMock
-      .mockResolvedValueOnce(jsonResponse({ data: { appointment: {} } }))
-      .mockResolvedValueOnce(jsonResponse({ data: { appointment: {} } }))
+      .mockResolvedValueOnce(
+        jsonResponse({ data: { appointment: APPOINTMENT } }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ data: { appointment: APPOINTMENT } }),
+      )
       .mockResolvedValueOnce(jsonResponse({ data: { status: "cancelled" } }))
       .mockResolvedValueOnce(jsonResponse({ data: { status: "deleted" } }))
       .mockResolvedValueOnce(jsonResponse({ data: { status: "cancelled" } }));
 
-    await getStaffAppointmentDetail("15");
+    await expect(getStaffAppointmentDetail("15")).resolves.toEqual({
+      appointment: {
+        title: "Planning",
+        description: undefined,
+        location: undefined,
+        all_day: false,
+        notify_guardians: false,
+        start_date: "2026-01-06",
+        end_date: "2026-01-06",
+        overview_visibility: "organizer",
+        delivery_mode: "informational",
+      },
+    });
     await updateStaffAppointment("15", {
       title: "New",
       start_date: "2026-01-06",
@@ -233,7 +269,7 @@ describe("personal calendar API", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "/api/calendar/appointments/15",
-      expect.objectContaining({ credentials: "include" }),
+      expect.objectContaining({ method: "GET" }),
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
@@ -327,12 +363,28 @@ describe("personal calendar API", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "/api/calendar/feed",
-      expect.objectContaining({ credentials: "include" }),
+      expect.objectContaining({ method: "GET" }),
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
       "/api/calendar/feed/rotate",
       expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  // The edit form saves what it prefilled: a detail it cannot read whole
+  // fails instead of saving a guessed visibility back.
+  it("fails the detail read on an unknown overview visibility", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        data: {
+          appointment: { ...APPOINTMENT, overview_visibility: "everyone" },
+        },
+      }),
+    );
+
+    await expect(getStaffAppointmentDetail("15")).rejects.toThrow(
+      "overview_visibility has an unknown value",
     );
   });
 
