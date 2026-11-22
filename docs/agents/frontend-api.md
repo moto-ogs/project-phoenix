@@ -330,7 +330,8 @@ slash is dropped and each parameter encoded.
   (`/caterer/…` → `/api/caterer/…`), one under `/api` stays as it is.
 - **401:** one table in `bff-fetch.ts` holds where the portals differ. Staff:
   the session gate before the request and one renewal with a retry
-  (`sessionFetch`), then sign-out; `authRefusals` names codes that refuse
+  (`requireTenantSession`, `renewTenantSession` in `lib/session-cache.ts`),
+  then sign-out; `authRefusals` names codes that refuse
   only the operation. Operator: to `/operator/login`. Parents: to
   `/parents/login`, except for the call's explicit `authRefusals` (e.g. a
   wrong MFA confirmation code or current password). Träger, moto schule and
@@ -348,16 +349,21 @@ slash is dropped and each parameter encoded.
   Read it as an empty list where the screen needs one, once, in the client
   (`slot-lists-api.ts` derives `WithLists<…>` from the generated type); do not
   copy the answer into a hand-written type.
-- **Guards:** `fetchWithAuth`, `authFetch` and `operatorFetch` are gone.
-  `old-fetch-helpers.test.ts` lists the files that still import
-  `sessionFetch` for JSON or `traegerRequest`, each with its blocker; a new
-  importer fails, and the list only shrinks. `scripts/backend-wire-types.mjs`
+- **One transport:** `bff-fetch.ts` holds the only `fetch` of browser code
+  that talks to the BFF; nothing else exports a fetch helper. The old
+  helpers (`fetchWithAuth`, `authFetch`, `operatorFetch`, `traegerRequest`,
+  `sessionFetch`, `transportFetch`) are gone. `old-fetch-helpers.test.ts`
+  fails on a raw `fetch(` in browser code outside its infrastructure list
+  (log shipping, the SSE stream, the session renewal, Auth.js endpoints, a
+  static file), each entry with its reason. `scripts/backend-wire-types.mjs`
   finds hand-written wire types by their form (two `snake_case` fields of
   their own, a generated type imported under another name, a type that only
   renames a generated one); its baseline only shrinks.
-- **Tests:** a client test that stubs `fetch` mocks the session gate with
+- **Tests:** a client test stubs the global `fetch` and mocks the session
+  gate with
   `vi.mock("~/lib/session-cache", () => import("~/test/mocks/plain-session-fetch"))`;
-  answers of a paginated route carry `pagination` (`pagedJson`).
+  answers of a paginated route carry `pagination` (`pagedJson`), plain
+  answer objects become Responses through `plainResponse`/`plainFetch`.
 - **Files:** a route registered with `File: true` is called with
   `bffFile(portal, route, options)` from the same module: the same path,
   portal table and ApiError, resolving to the successful `Response` whose
