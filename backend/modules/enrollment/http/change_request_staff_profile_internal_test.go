@@ -8,7 +8,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 )
 
@@ -23,5 +22,5 @@ func TestChangeRequestApprovalWithoutStaffProfileNamesTheReason(t *testing.T) {
 	mapChangeRequestError(rr, req, fmt.Errorf("sync approved child: %w", capability.ErrDecisionReviewerStaffRequired))
 
 	assert.Equal(t, http.StatusForbidden, rr.Code)
-	assert.Contains(t, rr.Body.String(), common.CodeEnrollmentApprovalStaffProfileRequired)
+	assert.Contains(t, rr.Body.String(), `"code":"enrollment.approval_staff_profile_required"`)
 }

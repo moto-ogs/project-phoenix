@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 
@@ -193,23 +192,8 @@ func (d *Decisions) applyWeeklyPlan(ctx context.Context, plan enrollmentNative.W
 	if err != nil {
 		return false, fmt.Errorf("weekly plan: load request: %w", err)
 	}
-	// The tick is the system actor; the stored staff ID or the stored mark of
-	// the Träger-Büro authors weekly rows. A plan stored without an author
-	// (the reviewer had no staff membership then) falls back to the reviewer
-	// as it is now.
-	// Only a plan with a weekly answer names an author at all.
-	if plan.AuthorStaffID == 0 && !plan.ByTraeger && child.ReviewedBy != nil {
-		fields, err := d.weeklyPlanSchemaFields(ctx, request)
-		if err != nil {
-			return false, err
-		}
-		if weeklyPlanNeedsAuthor(request, child, fields) {
-			author, err := d.resolveScheduleAuthor(ctx, scheduleAuthor{reviewerAccountID: *child.ReviewedBy})
-			if err != nil && !errors.Is(err, enrollmentNative.ErrDecisionReviewerStaffRequired) {
-				return false, fmt.Errorf("weekly plan: resolve the reviewer as author: %w", err)
-			}
-			plan.AuthorStaffID = author.staffID
-		}
+	if plan, err = d.duePlanWithAuthor(ctx, request, child, plan); err != nil {
+		return false, err
 	}
 	if err := d.applyPlannedWeeklyFields(ctx, request, child, student, 0, plan); err != nil {
 		return false, err

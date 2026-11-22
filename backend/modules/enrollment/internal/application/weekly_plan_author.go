@@ -141,3 +141,24 @@ func sameClockTime(left, right string) bool {
 	}
 	return l.Equal(r)
 }
+
+// duePlanWithAuthor names the author the tick applies a due plan with. The
+// tick is the system actor; the stored staff ID or the stored mark of the
+// Träger-Büro authors weekly rows. A plan stored without an author before
+// plans kept one (#7818) falls back to the reviewer as it is now, and only
+// when it carries a weekly answer: no other plan names an author.
+func (d *Decisions) duePlanWithAuthor(ctx context.Context, request *enrollmentNative.Request, child *enrollmentNative.RequestChild, plan enrollmentNative.WeeklyPlan) (enrollmentNative.WeeklyPlan, error) {
+	if plan.AuthorStaffID != 0 || plan.ByTraeger || child.ReviewedBy == nil {
+		return plan, nil
+	}
+	fields, err := d.weeklyPlanSchemaFields(ctx, request)
+	if err != nil || !weeklyPlanNeedsAuthor(request, child, fields) {
+		return plan, err
+	}
+	author, err := d.resolveScheduleAuthor(ctx, scheduleAuthor{reviewerAccountID: *child.ReviewedBy})
+	if err != nil && !errors.Is(err, enrollmentNative.ErrDecisionReviewerStaffRequired) {
+		return plan, fmt.Errorf("weekly plan: resolve the reviewer as author: %w", err)
+	}
+	plan.AuthorStaffID = author.staffID
+	return plan, nil
+}
