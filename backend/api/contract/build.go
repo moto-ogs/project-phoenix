@@ -158,11 +158,8 @@ func (b *builder) route(rc Registration, options Options) (Route, error) {
 	if err := fileCacheTraits(rc, where); err != nil {
 		return route, err
 	}
-	if rc.NoCommit != "" && rc.Method != "POST" {
-		return route, fmt.Errorf("%s: only a POST names NoCommit; a GET commits nothing anyway and a PUT, PATCH or DELETE changes", where)
-	}
-	if rc.PrivateCache && (!rc.File || slices.Contains(rc.Portals, PublicPortal)) {
-		return route, fmt.Errorf("%s: PrivateCache belongs to a file route of a session portal", where)
+	if err := retryTraits(rc, where); err != nil {
+		return route, err
 	}
 	if len(rc.Portals) == 0 {
 		return route, fmt.Errorf("%s names no portal", where)
@@ -201,6 +198,18 @@ func queryParams(params []QueryParam, where string) ([]QueryParam, error) {
 // multipartTraits refuses an upload the proxy cannot stream: one without a
 // bound, without the code of its refusal, beside a JSON body or file answer,
 // or with a retry trait although an upload is sent only once.
+// retryTraits checks the traits that decide what the proxy may repeat or
+// keep: NoCommit on a POST only, PrivateCache on a file of a session portal.
+func retryTraits(rc Registration, where string) error {
+	if rc.NoCommit != "" && rc.Method != "POST" {
+		return fmt.Errorf("%s: only a POST names NoCommit; a GET commits nothing anyway and a PUT, PATCH or DELETE changes", where)
+	}
+	if rc.PrivateCache && (!rc.File || slices.Contains(rc.Portals, PublicPortal)) {
+		return fmt.Errorf("%s: PrivateCache belongs to a file route of a session portal", where)
+	}
+	return nil
+}
+
 func multipartTraits(rc Registration, where string) error {
 	if !rc.Multipart {
 		if rc.TooLargeCode != "" {
