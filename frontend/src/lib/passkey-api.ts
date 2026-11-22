@@ -88,8 +88,8 @@ async function requestLoginOptions(
 /**
  * The operator's registration options. bffJson's operator row sends every 401
  * to the login and takes no `authRefusals` yet (#7806 closing PR), so a wrong
- * code would end at the login instead of the form: this step keeps its own
- * call until the helper can refuse it in place.
+ * code would end at the login instead of the form. Verification below keeps
+ * its own call for the same reason when a registration ceremony expires.
  */
 async function operatorRegisterOptions(
   body: sharedContract.PasskeyRegisterOptionsRequest,
@@ -109,6 +109,27 @@ async function operatorRegisterOptions(
   // The catalog proxy has decoded the answer into its envelope.
   const answer = (await response.json()) as {
     data: sharedContract.PasskeyCeremonyOptions;
+  };
+  return answer.data;
+}
+
+async function operatorRegisterVerify(
+  body: sharedContract.PasskeyRegisterVerifyRequest,
+): Promise<sharedContract.PasskeyCredentialSummary> {
+  const response = await transportFetch(
+    "/api/operator/auth/passkeys/register/verify",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(body),
+    },
+  );
+  if (!response.ok) {
+    throw await apiErrorFromResponse(response, PASSKEY_ERROR);
+  }
+  const answer = (await response.json()) as {
+    data: sharedContract.PasskeyCredentialSummary;
   };
   return answer.data;
 }
@@ -209,16 +230,17 @@ function registerVerify(
   scope: PasskeyScope,
   body: sharedContract.PasskeyRegisterVerifyRequest,
 ): Promise<sharedContract.PasskeyCredentialSummary> {
-  const options = { body, errorMessage: PASSKEY_ERROR };
+  // An expired ceremony refuses registration, not the signed-in session.
+  const options = {
+    body,
+    errorMessage: PASSKEY_ERROR,
+    authRefusals: ["identity.passkey_login_failed"] as const,
+  };
   switch (scope) {
     case "tenant":
       return bffJson("tenant", "POST /auth/passkeys/register/verify", options);
     case "operator":
-      return bffJson(
-        "platform",
-        "POST /operator/auth/passkeys/register/verify",
-        options,
-      );
+      return operatorRegisterVerify(body);
     case "caterer":
       return bffJson(
         "caterer",

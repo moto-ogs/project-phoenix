@@ -273,6 +273,58 @@ describe("passkey-api", () => {
     },
   );
 
+  it.each(["tenant", "operator", "caterer"] as const)(
+    "returns an expired registration ceremony in %s without renewal, retry, or navigation",
+    async (scope) => {
+      mockAuthenticatedSession();
+      mockStartRegistration.mockResolvedValue({ id: "registration-id" });
+      const path = scope === "tenant" ? "/settings" : `/${scope}/settings`;
+      const location = { pathname: path, href: path };
+      vi.stubGlobal("window", { location });
+      vi.mocked(global.fetch)
+        .mockResolvedValueOnce(
+          jsonResponse(200, {
+            status: "success",
+            data: {
+              session_id: "expired-registration-session",
+              options: { challenge: "registration-challenge" },
+            },
+          }),
+        )
+        .mockImplementation(async () =>
+          jsonResponse(401, { code: "identity.passkey_login_failed" }),
+        );
+
+      await expect(
+        registerPasskey(scope, { code: "123456", name: "Laptop" }),
+      ).rejects.toMatchObject({
+        status: 401,
+        code: "identity.passkey_login_failed",
+      });
+
+      expect(mockStartRegistration).toHaveBeenCalledExactlyOnceWith({
+        optionsJSON: { challenge: "registration-challenge" },
+      });
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+      expect(global.fetch).toHaveBeenNthCalledWith(
+        2,
+        scope === "tenant"
+          ? "/api/auth/passkeys/register/verify"
+          : `/api/${scope}/auth/passkeys/register/verify`,
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({
+            session_id: "expired-registration-session",
+            name: "Laptop",
+            response: { id: "registration-id" },
+          }),
+        }),
+      );
+      expect(location.href).toBe(path);
+      expect(mockHandleAuthFailure).not.toHaveBeenCalled();
+    },
+  );
+
   it("runs registration through options, WebAuthn, and verify", async () => {
     mockAuthenticatedSession();
     mockStartRegistration.mockResolvedValue({ id: "registration-id" });

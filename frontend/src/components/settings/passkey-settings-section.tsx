@@ -140,10 +140,12 @@ export function PasskeySettingsSection({
       logger.warn("passkey_registration_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
-      // Ein falscher Code kommt als 401: das ist keine abgelaufene Sitzung,
-      // also kein Sprung zur Anmeldung.
+      // A wrong code or expired ceremony refuses registration, not the session.
       void enrollErrors.show(
-        credentialError(err, ["identity.mfa_code_invalid"]),
+        credentialError(err, [
+          "identity.mfa_code_invalid",
+          "identity.passkey_login_failed",
+        ]),
         {
           object: "das Hinzufügen des Passkeys",
           retry: () => latestFinishRef.current(),
