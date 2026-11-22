@@ -365,7 +365,6 @@ jobs:
           AUTH_JWT_REFRESH_EXPIRY: "168h"
           NEXTAUTH_URL: "http://localhost:3000"
           NEXTAUTH_SECRET: "ci-guide-render-throwaway-secret"
-          NEXT_PUBLIC_API_URL: ${{ steps.api_url.outputs.url }}
           NEXT_PUBLIC_OPERATOR_HOSTNAME: "operator.localhost:3000"
           NEXT_PUBLIC_PARENTS_HOSTNAME: "parents.localhost:3000"
           NEXT_PUBLIC_SCHOOL_HOSTNAME: "schule.localhost:3000"
@@ -394,7 +393,6 @@ jobs:
           build-args: |
             NEXT_PUBLIC_APP_ENV=${{ needs.check-environment.outputs.environment }}
             API_URL=http://server:8080
-            NEXT_PUBLIC_API_URL=${{ steps.api_url.outputs.url }}
             NEXT_PUBLIC_OPERATOR_HOSTNAME=${{ steps.operator_hostname.outputs.hostname }}
             NEXT_PUBLIC_PARENTS_HOSTNAME=${{ steps.parents_hostname.outputs.hostname }}
             NEXT_PUBLIC_SCHOOL_HOSTNAME=${{ steps.school_hostname.outputs.hostname }}

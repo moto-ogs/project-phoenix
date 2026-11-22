@@ -29,7 +29,6 @@ See `.env.example` for all required variables. Key ones:
 | Variable              | Purpose                                                                    |
 | --------------------- | -------------------------------------------------------------------------- |
 | `API_URL`             | Backend URL the server calls (required)                                    |
-| `NEXT_PUBLIC_API_URL` | Public backend URL (required; `.env.example` uses `http://localhost:8080`) |
 | `NEXTAUTH_URL`        | Frontend URL for auth callbacks                                            |
 | `NEXTAUTH_SECRET`     | JWT signing secret (`openssl rand -base64 32`)                             |
 | `SKIP_ENV_VALIDATION` | Set `true` for Docker builds                                               |
