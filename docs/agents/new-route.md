@@ -150,8 +150,9 @@ screen moves into the Go handler. A file whose only code forwards to the
 backend fails `app/api/proxy-routes.test.ts`; a file whose backend paths
 the contract registers, all of them, fails `app/api/route-backend-paths.test.ts`,
 and a file in front of a registered path fails
-`app/api/catalog-route-selection.test.ts`. A new backend route without a
-contract and a new numeric identifier fail `scripts/check-contract-shrink.mjs`;
+`app/api/catalog-route-selection.test.ts`. A bare `int64` in an answer stops
+`gencontract` (ADR 0300). A new backend route without a
+contract fails `scripts/check-contract-shrink.mjs`;
 a route the contract cannot carry (a sign-in step, a device or webhook
 endpoint) needs a new ADR that names its catalog line. A named route builds its
 handlers from its portal's route wrapper (`frontend/src/lib/route-wrapper.server.ts`,

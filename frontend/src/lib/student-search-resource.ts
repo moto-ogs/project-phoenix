@@ -48,6 +48,12 @@ export function buildStudentSearchFilters(
   };
 }
 
+// The search view shows every match at once: it has no pagination control,
+// and the grouping modes, the counts and the export selection all read the
+// rendered list. A selection larger than one backend page is walked here;
+// otherwise every child past the first page is unreachable (#2218 review).
+// The bound stops a bad total from looping forever: 20 pages are far beyond
+// any OGS, and the page names a cut-off result instead of hiding it.
 const MAX_STUDENT_SEARCH_PAGES = 20;
 
 /** Same bounded page walk for the destination and navigation intent. */

@@ -86,8 +86,8 @@ export async function fetchPickupExtensions(
       credentials: "include",
     },
   );
-  // The BFF route unwraps the backend envelope and wraps its own around the
-  // result: { success, message, data: { tasks } } (#3776).
+  // The catalog proxy answers the backend's envelope with the decoded data:
+  // { status, data: { tasks }, message } (#3776).
   const responseData = await readData<{
     data: wire.pickupExtensionsResponse;
   }>(response);
