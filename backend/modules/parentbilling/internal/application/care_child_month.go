@@ -161,28 +161,89 @@ func childKeys(byContract map[int64][]parentbilling.CareContractVersion, childre
 			}
 		}
 	}
-	var unrecorded []int64
+	attachIssued(keys, childIndex{byRecord: byRecord, byPerson: byPerson, personless: personless}, byContract, issued)
+	return keys
+}
+
+// childIndex finds the child of a contract by its record or by the name
+// and date of birth its records or its contracts without a record carry.
+type childIndex struct {
+	byRecord   map[int64]string
+	byPerson   map[string][]string
+	personless map[string][]string
+}
+
+// attachIssued keys the contracts an issued invoice bills outside the
+// versions in force as E1 would group them with the contracts in force,
+// without regrouping those: a record known in force keeps its child and
+// lends it the name the issued contract spells; a new record joins the
+// one child in force without a record of its name and date of birth when
+// no other record carries them; a contract without a record goes by
+// unrecordedKey.
+func attachIssued(keys map[int64]string, index childIndex, byContract map[int64][]parentbilling.CareContractVersion,
+	issued map[int64]parentbilling.CareContractChild,
+) {
+	recorded, unrecorded := outsideInForce(byContract, issued)
+	records := recordsByPerson(byContract, issued, recorded)
+	for _, contractID := range recorded {
+		child := issued[contractID]
+		key, known := index.byRecord[*child.StudentID]
+		if !known {
+			key = newRecordKey(child, records, index.personless)
+		}
+		addRecordKey(index.byRecord, index.byPerson, child, key)
+		keys[contractID] = key
+	}
+	for _, contractID := range unrecorded {
+		keys[contractID] = unrecordedKey(personOf(issued[contractID]), index.byPerson, index.personless)
+	}
+}
+
+// outsideInForce splits the issued contracts outside the versions in force
+// into those with a record and those without, each sorted.
+func outsideInForce(byContract map[int64][]parentbilling.CareContractVersion, issued map[int64]parentbilling.CareContractChild) (recorded, unrecorded []int64) {
 	for _, contractID := range slices.Sorted(maps.Keys(issued)) {
 		if _, inForce := byContract[contractID]; inForce {
 			continue
 		}
-		child := issued[contractID]
-		if child.StudentID == nil {
+		if issued[contractID].StudentID == nil {
 			unrecorded = append(unrecorded, contractID)
-			continue
+		} else {
+			recorded = append(recorded, contractID)
 		}
-		key, known := byRecord[*child.StudentID]
-		if !known {
-			key = fmt.Sprintf("student:%019d", *child.StudentID)
-			addRecordKey(byRecord, byPerson, child, key)
+	}
+	return recorded, unrecorded
+}
+
+// recordsByPerson names per name and date of birth the records the
+// contracts in force and the issued contracts with a record carry.
+func recordsByPerson(byContract map[int64][]parentbilling.CareContractVersion, issued map[int64]parentbilling.CareContractChild,
+	recorded []int64,
+) map[string][]int64 {
+	records := map[string][]int64{}
+	note := func(child parentbilling.CareContractChild) {
+		if person := personOf(child); child.StudentID != nil && !slices.Contains(records[person], *child.StudentID) {
+			records[person] = append(records[person], *child.StudentID)
 		}
-		keys[contractID] = key
 	}
-	for _, contractID := range unrecorded {
-		child := issued[contractID]
-		keys[contractID] = unrecordedKey(personOf(child), byPerson, personless)
+	for _, versions := range byContract {
+		note(childOfVersion(versions[0]))
 	}
-	return keys
+	for _, contractID := range recorded {
+		note(issued[contractID])
+	}
+	return records
+}
+
+// newRecordKey is the child of an issued contract whose record no contract
+// in force names: the one child in force without a record of its name and
+// date of birth when its record is the only one of them (E1), else its own.
+func newRecordKey(child parentbilling.CareContractChild, records map[string][]int64, personless map[string][]string) string {
+	person := personOf(child)
+	if found := personless[person]; len(records[person]) == 1 && len(found) == 1 {
+		return found[0]
+	}
+	return fmt.Sprintf("student:%019d", *child.StudentID)
 }
 
 // unrecordedKey is the child of a contract without a record (E1): the one

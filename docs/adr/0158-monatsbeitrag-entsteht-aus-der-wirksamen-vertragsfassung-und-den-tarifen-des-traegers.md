@@ -269,10 +269,13 @@ der Vertrag an der neuen Schule nichts; er zählt das Kind an seiner Schule
 (ADR 0305, Nachtrag #7863). Unter „anteilig“ rechnet jeder Vertrag seine
 Tage ab. Verträge, die nur eine ausgestellte Rechnung des Monats in die Kette
 bringen (#7863), legen nichts zusammen und verhindern nichts: Sie kommen erst
-nach der Gruppierung der laufenden Verträge dazu, zum Kind ihres Datensatzes
-oder ohne Datensatz zum einen Kind, dessen Datensätze ihren Namen und ihr
-Geburtsdatum tragen, sonst zum Kind der laufenden Verträge ohne Datensatz
-mit diesem Namen und Geburtsdatum. So gruppieren E2 bis E4 und die Geschwisterregel die
+nach der Gruppierung der laufenden Verträge dazu, wie E1 sie mit ihnen
+gruppiert hätte: zum Kind ihres Datensatzes, dem sie auch ihre Schreibweise
+des Namens leihen; ein Datensatz, den kein laufender Vertrag nennt, zum einen
+laufenden Kind ohne Datensatz mit Namen und Geburtsdatum, wenn kein anderer
+Datensatz sie trägt; ohne Datensatz zum einen Kind, dessen Datensätze ihren
+Namen und ihr Geburtsdatum tragen, sonst zum Kind der laufenden Verträge ohne
+Datensatz mit diesem Namen und Geburtsdatum. So gruppieren E2 bis E4 und die Geschwisterregel die
 laufenden Verträge gleich; der Monat berechnet die Gruppierung einmal. Der Schlüssel eines Kindes in der Kette hängt nur
 an seinen eigenen Verträgen (kleinste Vertragsnummer); ein Zusammenlegen in
 einer Familie ändert die Reihenfolge gleichrangiger Kinder einer anderen

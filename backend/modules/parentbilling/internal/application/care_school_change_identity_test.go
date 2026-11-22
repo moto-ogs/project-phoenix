@@ -376,3 +376,68 @@ func TestCareIssuedContractWithoutRecordJoinsTheChildWithoutRecord(t *testing.T)
 	keys := childKeys(byContract, childrenOf(byContract, order, contractFamilies(byContract, nil)), issued)
 	assert.Equal(t, keys[301], keys[302])
 }
+
+// Contracts an issued invoice bills outside the versions in force join the
+// children in force as E1 groups them (#7863, #7874), without regrouping
+// the contracts in force.
+func TestCareIssuedContractsJoinTheChildrenInForceAsE1Does(t *testing.T) {
+	t.Parallel()
+	birth := ptr(day(t, noahBirth))
+	inForce := func(contract int64, student *int64, first string) parentbilling.CareContractVersion {
+		version := sjrVersion(t, contract, schoolIspringen, 1, billingMonth, "2027-01-31", mon1400)
+		version.StudentID, version.ChildFirstName, version.ChildBirthDate = student, first, birth
+		return version
+	}
+	identity := func(student *int64, first string) parentbilling.CareContractChild {
+		return parentbilling.CareContractChild{StudentID: student, FirstName: first, LastName: "Beispiel", BirthDate: birth}
+	}
+	cases := []struct {
+		name     string
+		inForce  []parentbilling.CareContractVersion
+		issued   map[int64]parentbilling.CareContractChild
+		same     [][]int64
+		separate [][2]int64
+	}{
+		{
+			// The record in force is spelled „Benjamin“, the issued contract
+			// of that record „Ben“: a contract „Ben“ without a record joins
+			// that record.
+			name:    "a known record lends the name its issued contract spells",
+			inForce: []parentbilling.CareContractVersion{inForce(401, ptr(int64(9401)), "Benjamin")},
+			issued:  map[int64]parentbilling.CareContractChild{402: identity(ptr(int64(9401)), "Ben"), 403: identity(nil, "Ben")},
+			same:    [][]int64{{401, 402, 403}},
+		},
+		{
+			// The child in force has no record; the issued contract has the
+			// only record of its name and date of birth.
+			name:    "a new record joins the child in force without a record",
+			inForce: []parentbilling.CareContractVersion{inForce(411, nil, "Ben")},
+			issued:  map[int64]parentbilling.CareContractChild{412: identity(ptr(int64(9412)), "Ben")},
+			same:    [][]int64{{411, 412}},
+		},
+		{
+			// Two records of that name and date of birth: the issued one
+			// stays apart.
+			name:     "a second record of the name stays apart",
+			inForce:  []parentbilling.CareContractVersion{inForce(421, ptr(int64(9421)), "Ben"), inForce(422, nil, "Ben")},
+			issued:   map[int64]parentbilling.CareContractChild{423: identity(ptr(int64(9423)), "Ben")},
+			same:     [][]int64{{421, 422}},
+			separate: [][2]int64{{421, 423}},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			byContract, order := versionsByContract(tc.inForce)
+			keys := childKeys(byContract, childrenOf(byContract, order, contractFamilies(byContract, nil)), tc.issued)
+			for _, group := range tc.same {
+				for _, contractID := range group[1:] {
+					assert.Equal(t, keys[group[0]], keys[contractID], "contract %d", contractID)
+				}
+			}
+			for _, pair := range tc.separate {
+				assert.NotEqual(t, keys[pair[0]], keys[pair[1]])
+			}
+		})
+	}
+}
