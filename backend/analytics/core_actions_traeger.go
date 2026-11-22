@@ -246,6 +246,13 @@ var traegerCoreActions = map[RouteKey]CoreAction{
 	// to the Träger like the import; the preview stores nothing.
 	{http.MethodPost, "/traeger/contract-imports/offering-corrections"}:         notCaptured,
 	{http.MethodPost, "/traeger/contract-imports/offering-corrections/preview"}: notCaptured,
+	// The link of imported contracts to child records (#7760) belongs to the
+	// Träger; the previews store nothing.
+	{http.MethodPost, "/traeger/contract-child-links/"}:                     notCaptured,
+	{http.MethodPost, "/traeger/contract-child-links/preview"}:              notCaptured,
+	{http.MethodPost, "/traeger/contract-child-links/{contractId}/preview"}: notCaptured,
+	{http.MethodPut, "/traeger/contract-child-links/{contractId}"}:          notCaptured,
+	{http.MethodDelete, "/traeger/contract-child-links/{contractId}"}:       notCaptured,
 	// Withdrawal and termination (#4682): the Träger-Büro records a
 	// declaration it received and sets the end of an extraordinary
 	// termination it checked; the parents' own one in the parents portal.

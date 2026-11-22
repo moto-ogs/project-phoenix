@@ -52,6 +52,7 @@ const TEMPLATE_ISSUE_VALUES = [
   "recipient_missing",
   "mail_blocked",
   "mail_stopped",
+  "imported_contract",
 ] as const;
 const ACCEPTANCE_ISSUE_VALUES = [
   "acceptance_missing",
@@ -214,6 +215,8 @@ export interface ContractCandidate extends CandidateKey {
    * conclusion at the acceptance could conclude (#4680); null otherwise.
    */
   readonly mailBlock: (typeof MAIL_BLOCK_VALUES)[number] | "other" | null;
+  /** The imported contract that names the child (issue imported_contract). */
+  readonly importedContractId: string | null;
 }
 
 /**
@@ -273,6 +276,10 @@ export interface CareContractSummary {
   readonly concluded: ContractConclusion | null;
   /** Last day of a terminated contract (#4682); null otherwise. */
   readonly endsOn: string | null;
+  /** The child record the contract is linked to; null without one (#7760). */
+  readonly studentId: string | null;
+  /** Taken over from a file, not made from an application (ADR 0232). */
+  readonly imported: boolean;
 }
 
 export interface CareContractList {
@@ -528,6 +535,7 @@ function candidateFromBackend(
     ),
     renewal: row.renewal,
     mailBlock: optionalReason(MAIL_BLOCK_VALUES, row.mail_block),
+    importedContractId: row.imported_contract_id ?? null,
   };
 }
 
@@ -557,6 +565,8 @@ function summaryFromBackend(
         }
       : null,
     endsOn: row.ends_on,
+    studentId: row.student_id,
+    imported: row.imported,
   };
 }
 

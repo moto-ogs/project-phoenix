@@ -29,8 +29,15 @@ const { api, mockPush, mockReplace } = vi.hoisted(() => ({
   mockReplace: vi.fn(),
 }));
 
+const links = vi.hoisted(() => ({
+  previewContractChildLink: vi.fn(),
+  linkContractChild: vi.fn(),
+  unlinkContractChild: vi.fn(),
+}));
+
 vi.unmock("swr");
 vi.mock("~/lib/traeger-care-contracts-api", () => api);
+vi.mock("~/lib/traeger-contract-child-links-api", () => links);
 // The SEPA mandate card of the family (#4695) answers 403 without the right
 // „Abrechnung“; these tests cover the contract and keep it empty.
 vi.mock("~/lib/traeger-sepa-api", () => ({
@@ -133,6 +140,8 @@ const DRAFT: CareContractDetail = {
   sentAt: null,
   concluded: null,
   endsOn: null,
+  studentId: null,
+  imported: false,
   version: {
     number: 1,
     effectiveFrom: "2027-08-01",
@@ -1281,6 +1290,134 @@ describe("TraegerVertragPage", () => {
       expect(screen.queryByText(reloadText)).not.toBeInTheDocument();
       expect(api.fetchCareContract).toHaveBeenCalledTimes(2);
       expect(api.resendCareContract).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("Kinderakte eines importierten Vertrags (#7760)", () => {
+    const IMPORTED: CareContractDetail = {
+      ...DRAFT,
+      status: "aktiv",
+      imported: true,
+      concluded: { method: "papier", at: "2026-09-01T08:00:00Z" },
+    };
+
+    it("names the contract number and what an unlinked import misses", async () => {
+      api.fetchCareContract.mockResolvedValue(IMPORTED);
+      renderPage();
+      expect(await screen.findByText("Nicht verknüpft")).toBeInTheDocument();
+      expect(screen.getByText("Vertrag Nr.")).toBeInTheDocument();
+      expect(
+        screen.getByText(/fehlen der Soll-Ist-Vergleich/),
+      ).toBeInTheDocument();
+      links.previewContractChildLink.mockResolvedValueOnce({
+        line: 1,
+        status: "ready",
+        contractId: "7",
+        studentId: "12",
+        schoolName: "OGS Am Lindenhof",
+        contract: { firstName: "Lina", lastName: "Muster", birthDate: null },
+        student: { firstName: "Lina", lastName: "Muster", birthDate: null },
+        problems: [],
+        repeatsLine: null,
+        otherContractId: null,
+        fingerprint: "fp-12",
+      });
+      links.linkContractChild.mockResolvedValueOnce({});
+      api.fetchCareContract.mockResolvedValue({ ...IMPORTED, studentId: "12" });
+      fireEvent.click(
+        screen.getByRole("button", { name: "Mit Kinderakte verknüpfen" }),
+      );
+      fireEvent.change(await screen.findByLabelText(/Nummer der Kinderakte/), {
+        target: { value: "12" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Prüfen" }));
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Verknüpfen" }),
+      );
+      expect(
+        await screen.findByText(
+          "Der Vertrag ist jetzt mit der Kinderakte verknüpft.",
+        ),
+      ).toBeInTheDocument();
+      expect(await screen.findByText("Nr. 12")).toBeInTheDocument();
+      expect(links.linkContractChild).toHaveBeenCalledWith(
+        "7",
+        "12",
+        false,
+        "fp-12",
+      );
+    });
+
+    it("unlinks after a confirmation that says what stays", async () => {
+      api.fetchCareContract.mockResolvedValue({ ...IMPORTED, studentId: "12" });
+      renderPage();
+      expect(await screen.findByText("Nr. 12")).toBeInTheDocument();
+      const [menu] = screen.getAllByRole("button", {
+        name: "Weitere Aktionen",
+      });
+      fireEvent.click(menu!);
+      fireEvent.click(
+        screen.getByRole("menuitem", { name: /Verknüpfung lösen/ }),
+      );
+      expect(
+        await screen.findByText(/Schon ausgestellte Rechnungen bleiben/),
+      ).toBeInTheDocument();
+      links.unlinkContractChild.mockResolvedValueOnce(undefined);
+      api.fetchCareContract.mockResolvedValue(IMPORTED);
+      fireEvent.click(
+        screen.getByRole("button", { name: "Verknüpfung lösen" }),
+      );
+      expect(
+        await screen.findByText(
+          "Die Verknüpfung mit der Kinderakte ist gelöst.",
+        ),
+      ).toBeInTheDocument();
+      expect(links.unlinkContractChild).toHaveBeenCalledWith("7", "12");
+      expect(await screen.findByText("Nicht verknüpft")).toBeInTheDocument();
+    });
+
+    it("shows the contract again when another child record was linked since", async () => {
+      api.fetchCareContract.mockResolvedValue({ ...IMPORTED, studentId: "12" });
+      renderPage();
+      expect(await screen.findByText("Nr. 12")).toBeInTheDocument();
+      const [menu] = screen.getAllByRole("button", {
+        name: "Weitere Aktionen",
+      });
+      fireEvent.click(menu!);
+      fireEvent.click(
+        screen.getByRole("menuitem", { name: /Verknüpfung lösen/ }),
+      );
+      await screen.findByText(/Schon ausgestellte Rechnungen bleiben/);
+      links.unlinkContractChild.mockRejectedValueOnce(
+        new ApiError("Request failed (409)", 409, {
+          code: "care_contract.child_link_changed",
+        }),
+      );
+      api.fetchCareContract.mockResolvedValue({ ...IMPORTED, studentId: "13" });
+      fireEvent.click(
+        screen.getByRole("button", { name: "Verknüpfung lösen" }),
+      );
+      expect(
+        await screen.findByText(
+          catalogText("care_contract.child_link_changed", "die Verknüpfung"),
+        ),
+      ).toBeInTheDocument();
+      expect(links.unlinkContractChild).toHaveBeenCalledWith("7", "12");
+      expect(await screen.findByText("Nr. 13")).toBeInTheDocument();
+      expect(
+        screen.queryByText(/Schon ausgestellte Rechnungen bleiben/),
+      ).not.toBeInTheDocument();
+    });
+
+    it("offers nothing for a contract from an application", async () => {
+      api.fetchCareContract.mockResolvedValue({ ...DRAFT, studentId: "3" });
+      renderPage();
+      // Anker: the contract data are on screen.
+      expect(await screen.findByText("Vertrag Nr.")).toBeInTheDocument();
+      expect(screen.queryByText("Kinderakte")).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Mit Kinderakte verknüpfen" }),
+      ).not.toBeInTheDocument();
     });
   });
 });

@@ -29,11 +29,16 @@ func (seedTraegerCareContractImportStep) Run(_ context.Context, rt *Runtime) err
 	if err != nil {
 		return err
 	}
-	imported, err := seedImportedCareContracts(rt.Client, auth, rt.Bootstrap.SchoolID)
+	imported, module, err := seedImportedCareContracts(rt.Client, auth, rt.Bootstrap.SchoolID)
 	if err != nil {
 		return err
 	}
 	fmt.Printf("  Träger care contract import: %d contracts taken over\n", imported)
+	linked, err := seedCareContractChildLink(rt, auth, module)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("  Träger care contract child links: %d contracts linked\n", linked)
 	return nil
 }
 
@@ -48,10 +53,10 @@ const seedImportTries = 6
 // like every contract of this step, so a school seeded later leaves those
 // of the other demo schools alone. A repeated seed finds the children again
 // and takes over nothing.
-func seedImportedCareContracts(client *Client, auth AuthRef, school int64) (int, error) {
+func seedImportedCareContracts(client *Client, auth AuthRef, school int64) (int, seedImportModule, error) {
 	raw, err := client.GetWithAuth(auth, "/traeger/contract-templates/")
 	if err != nil {
-		return 0, fmt.Errorf("read the contract templates for the import: %w", err)
+		return 0, seedImportModule{}, fmt.Errorf("read the contract templates for the import: %w", err)
 	}
 	var templates struct {
 		Data []struct {
@@ -63,7 +68,7 @@ func seedImportedCareContracts(client *Client, auth AuthRef, school int64) (int,
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &templates); err != nil {
-		return 0, fmt.Errorf("read the contract templates for the import: %w", err)
+		return 0, seedImportModule{}, fmt.Errorf("read the contract templates for the import: %w", err)
 	}
 	today := calendar.TodayDate()
 	start := calendar.NewDate(today.Year(), today.Month()+1, 1).Format("02.01.2006")
@@ -77,10 +82,16 @@ func seedImportedCareContracts(client *Client, auth AuthRef, school int64) (int,
 		}
 		imported, ready, err := seedCareContractImport(client, auth, offering.SchoolName, offering.OfferingName, start)
 		if err != nil || ready {
-			return imported, err
+			return imported, seedImportModule{school: offering.SchoolName, module: offering.OfferingName, start: start}, err
 		}
 	}
-	return 0, nil
+	return 0, seedImportModule{}, nil
+}
+
+// seedImportModule is the school, the module and the first day the import
+// of the seed took; empty when no module took the file.
+type seedImportModule struct {
+	school, module, start string
 }
 
 // seedCareContractImport previews the file for one module like the office

@@ -2,6 +2,7 @@ package carecontracthttp
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
@@ -58,6 +59,7 @@ func contractTable(filter carecontract.ContractFilter, contracts []carecontract.
 			contract.ID.String(), contract.ChildLastName, contract.ChildFirstName, contract.SchoolName, contract.ModulesText,
 			contract.PartyName, contract.PartyEmail, contract.EffectiveFrom.Format("02.01.2006"),
 			contractStatusLabels[contract.Status], contractStatusDay(contract),
+			childRecordNumber(contract),
 		})
 	}
 	filters := []string{schoolFilterLabel(filter.SchoolID, schoolName)}
@@ -76,9 +78,21 @@ func contractTable(filter carecontract.ContractFilter, contracts []carecontract.
 			{ID: "last_name", Label: "Nachname"}, {ID: "first_name", Label: "Vorname"}, {ID: "school", Label: "Betreuungsort"},
 			{ID: "modules", Label: "Module"}, {ID: "party", Label: "Eltern"}, {ID: "email", Label: "E-Mail"},
 			{ID: "start", Label: "Beginn"}, {ID: "status", Label: "Status"}, {ID: "status_day", Label: "Seit"},
+			// With the contract's number, what a file names to link imported
+			// contracts to child records (#7760).
+			{ID: "child_record", Label: "Kinderakte"},
 		},
 		Rows: rows, Footer: common.ListPersonalDataFooter, Filename: "betreuungsvertraege",
 	}
+}
+
+// childRecordNumber is the number of the child record the contract is
+// linked to, empty without one.
+func childRecordNumber(contract carecontract.ContractSummary) string {
+	if contract.StudentID == nil {
+		return ""
+	}
+	return strconv.FormatInt(contract.StudentID.Int64(), 10)
 }
 
 // contractStatusDay is the day the status names: the end of a terminated

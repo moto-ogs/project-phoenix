@@ -161,6 +161,7 @@ export const TEMPLATE_ISSUE_LABELS: Record<TemplateIssue, string> = {
   recipient_missing: "E-Mail-Adresse der Eltern fehlt",
   mail_blocked: "Mail-Adresse gesperrt",
   mail_stopped: "Mails gestoppt",
+  imported_contract: "Hat schon einen importierten Vertrag",
   other: "Entwurf noch nicht möglich",
 };
 
@@ -274,3 +275,15 @@ export const TERMINATION_KIND_LABELS = {
   sonderkuendigung: "Sonderkündigung",
   ausserordentlich: "Außerordentlich, aus wichtigem Grund",
 } as const;
+
+/**
+ * Why a child an imported contract covers gets no second contract, and what
+ * the office checks if that is wrong (#7760).
+ */
+export function importedContractReason(contractId: string | null): string {
+  const contract =
+    contractId === null
+      ? "Ein importierter Vertrag"
+      : `Der importierte Vertrag Nr. ${contractId}`;
+  return `${contract} gilt für dieses Kind in derselben Zeit. Deshalb entsteht hier kein zweiter. Stimmt das nicht, prüfe dort die Kinderakte und das Vertragsende.`;
+}

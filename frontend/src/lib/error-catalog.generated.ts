@@ -50,6 +50,12 @@ export const ERROR_CATALOG = {
         "Die Schule lässt diese Änderung gerade nicht zu. Bitte sprich mit der Schule.",
       "care_contract.change_not_found":
         "Diesen Änderungswunsch gibt es nicht mehr. Bitte lade die Seite neu.",
+      "care_contract.child_link_changed":
+        "Die Angaben haben sich seit der Prüfung geändert. Prüfe sie noch einmal.",
+      "care_contract.child_link_not_imported":
+        "Nur importierte Verträge lassen sich hier verknüpfen. Dieser Vertrag gehört zum Kind seiner Anmeldung.",
+      "care_contract.child_link_refused":
+        "Der Vertrag kann so nicht mit dieser Kinderakte verknüpft werden. Prüfe die Angaben noch einmal.",
       "care_contract.contract_input_invalid":
         "Bitte wähle mindestens einen und höchstens 200 Einträge aus.",
       "care_contract.contract_not_draft":
@@ -2200,6 +2206,12 @@ export const ERROR_CATALOG = {
         "The school does not allow this change right now. Please talk to the school.",
       "care_contract.change_not_found":
         "This change request no longer exists. Please reload the page.",
+      "care_contract.child_link_changed":
+        "The details have changed since the check. Please check them again.",
+      "care_contract.child_link_not_imported":
+        "Only imported contracts can be linked here. This contract belongs to the child of its application.",
+      "care_contract.child_link_refused":
+        "The contract cannot be linked to this child record like this. Please check the details again.",
       "care_contract.contract_input_invalid":
         "Please select at least one and at most 200 entries.",
       "care_contract.contract_not_draft":

@@ -122,6 +122,29 @@ func CorrectionRouteContracts() []common.RouteContract {
 	}
 }
 
+// ChildLinkRouteContracts registers the link of imported contracts to child
+// records (#7760), with patterns relative to /traeger/contract-child-links.
+// The preview and the run of a file take the upload of the import.
+func ChildLinkRouteContracts() []common.RouteContract {
+	upload := func(pattern string) common.RouteContract {
+		return common.RouteContract{Method: "POST", Pattern: pattern, Portals: traegerPortal, Multipart: true,
+			MaxBodyBytes: carecontract.MaxContractImportFileBytes + importFormOverhead,
+			TooLargeCode: common.CodeCareContractImportFileTooLarge, Response: carecontract.ChildLinking{}}
+	}
+	preview := upload("/preview")
+	preview.NoCommit = "a link preview checks the file and links no contract"
+	return []common.RouteContract{
+		upload("/"),
+		preview,
+		{Method: "POST", Pattern: "/{contractId}/preview", Portals: traegerPortal, Request: ChildLinkPreviewRequest{}, Response: carecontract.ChildLinkRow{},
+			NoCommit: "a link preview compares the contract with the child record and links nothing"},
+		{Method: "PUT", Pattern: "/{contractId}", Portals: traegerPortal, Request: ChildLinkRequest{}, Response: carecontract.ChildLinkRow{}},
+		// student_id is the child record the office saw on the contract.
+		{Method: "DELETE", Pattern: "/{contractId}", Portals: traegerPortal, NoData: true,
+			Query: []common.QueryParam{{Name: "student_id", Kind: common.QueryID}}},
+	}
+}
+
 // The bodies the link reads: the drawn signature as base64 PNG, and a number.
 const (
 	signBodyBytes           = 400 << 10

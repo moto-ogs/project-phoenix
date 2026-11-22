@@ -391,6 +391,11 @@
       "reason": "ADR 0153 (#4680): Consumer-port adapter that resolves care_contract.conclusion_mode of the school through the settings and refuses any value the Betreuungsvertrag does not know."
     },
     {
+      "decision": "0232",
+      "id": "api/careContractSchoolChildren.SchoolChildren",
+      "reason": "Consumer-port adapter of the Betreuungsvertrag (#7760, ADR 0067): it reads the child records a link of imported contracts names at People Directory in the school's tenant transaction and maps them onto the Betreuungsvertrag's SchoolChild; no forwarding without translation."
+    },
+    {
       "decision": "0075",
       "id": "api/catererNotificationFeed.Page",
       "reason": "ADR 0075 consumer-port adapter (#7147): translates Delivery's caterer bell page with each entry's school onto the caterer feed port of the HTTP adapter; the count and read-state calls reach Delivery's reader unchanged through the embedded interface. No decision or SQL."

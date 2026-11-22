@@ -317,7 +317,7 @@ const END_NOTICE_NOT_SENT_REASONS = {
   letterhead_missing:
     "Im Briefkopf fehlt der Absender. Trage ihn unter „Briefkopf und Vorlagen“ ein.",
   missing_student:
-    "Der Vertrag ist mit keinem Kind aus den „Kinderdaten“ der Schule verknüpft.",
+    "Der Vertrag ist mit keiner Kinderakte der Schule verknüpft.",
   no_permitted_address:
     "Keine Adresse des Vertrags gehört noch einer Bezugsperson, die für das Kind handeln darf.",
   unknown: "moto hat keine Adresse gefunden, an die die Mitteilung gehen darf.",
