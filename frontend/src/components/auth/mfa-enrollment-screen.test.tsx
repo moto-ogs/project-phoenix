@@ -59,7 +59,8 @@ function mockResponse(status: number, body: unknown): typeof global.fetch {
   );
 }
 
-const START = { challenge_token: "challenge-abc" };
+// The enrollment start route answers the BFF's `{ status, data }`.
+const START = { status: "success", data: { challenge_token: "challenge-abc" } };
 
 const props = {
   scope: "tenant" as const,

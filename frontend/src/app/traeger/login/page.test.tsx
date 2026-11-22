@@ -361,7 +361,12 @@ describe("TraegerLoginPage", () => {
       organizationId: "9007199254740993",
     });
     fetchMock
-      .mockResolvedValueOnce(jsonResponse({ challenge_token: "challenge" }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          status: "success",
+          data: { challenge_token: "challenge" },
+        }),
+      )
       .mockResolvedValueOnce(
         jsonResponse({ status: "success", data: { status: "authenticated" } }),
       );

@@ -114,8 +114,11 @@ describe("passkey-api", () => {
     vi.mocked(global.fetch)
       .mockResolvedValueOnce(
         jsonResponse(200, {
-          session_id: "login-session",
-          options: { publicKey: { challenge: "tenant-challenge" } },
+          status: "success",
+          data: {
+            session_id: "login-session",
+            options: { publicKey: { challenge: "tenant-challenge" } },
+          },
         }),
       )
       .mockResolvedValueOnce(
@@ -162,8 +165,11 @@ describe("passkey-api", () => {
     vi.mocked(global.fetch)
       .mockResolvedValueOnce(
         jsonResponse(200, {
-          session_id: "operator-login",
-          options: { challenge: "operator-challenge" },
+          status: "success",
+          data: {
+            session_id: "operator-login",
+            options: { challenge: "operator-challenge" },
+          },
         }),
       )
       .mockResolvedValueOnce(
@@ -194,8 +200,11 @@ describe("passkey-api", () => {
     vi.mocked(global.fetch)
       .mockResolvedValueOnce(
         jsonResponse(200, {
-          session_id: "caterer-login",
-          options: { challenge: "caterer-challenge" },
+          status: "success",
+          data: {
+            session_id: "caterer-login",
+            options: { challenge: "caterer-challenge" },
+          },
         }),
       )
       .mockResolvedValueOnce(

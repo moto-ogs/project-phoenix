@@ -12,11 +12,13 @@ const UNCONTRACTED_CALLERS: Readonly<Record<string, string>> = {
   "components/tenant/tenant-relogin.ts":
     "POST auth/logout: the BFF revokes the session family before Auth.js drops the cookie",
   "lib/mfa-api.ts":
-    "POST <portal>/auth/login, mfa/verify, mfa/enroll/confirm: sign-in steps whose route installs the session",
+    "POST <portal>/auth/login, mfa/verify, mfa/enroll/confirm: sign-in steps whose route installs the session; mfa/resend, mfa/enroll/start: steps before the session whose route forwards the challenge or enrollment proof (authStepProxy), and the backend answers them without the envelope (plain)",
   "lib/operator/operator-invitation-api.ts":
     "POST operator/auth/invitations/session, validate, accept: the route keeps the token in the flow's cookie",
   "lib/passkey-api.ts":
-    "POST <portal>/auth/passkeys/login/verify: a sign-in step whose route installs the session",
+    "POST <portal>/auth/passkeys/login/verify: a sign-in step whose route installs the session; passkeys/login/options: a step before the session (authStepProxy) whose backend answer has no envelope (plain)",
+  "lib/demo-access.ts":
+    "POST demo/access/status, sessions, reset: the demo routes exist only with APP_ENV=demo and carry the token in the body or the BFF's cookie, so they have no Go contract",
   "lib/portal-password-login.ts":
     "POST caterer/auth/login, parent/auth/login: sign-in steps whose route installs the session",
   "lib/shell-auth-context.tsx":

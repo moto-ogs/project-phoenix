@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { createPublicJsonProxy } from "./backend-proxy-route.server";
+import { envelopedBackendSuccess } from "./backend-proxy-response.server";
 
 /**
  * A login step before a session exists (MFA resend, enrollment start,
@@ -10,6 +11,10 @@ import { createPublicJsonProxy } from "./backend-proxy-route.server";
  * a session bearer or, on a public route, none. Teaching it to forward a
  * browser credential for these routes would give it a second credential path
  * for one-line files; a route file per step is the smaller boundary.
+ *
+ * The backend answers these steps without its envelope (`plain`); the BFF
+ * answers the browser `{ status: "success", data }` like every route (a 204
+ * stays bodyless, an error passes through unchanged).
  */
 export function authStepProxy(path: string, body: "optional-json" | "none") {
   return createPublicJsonProxy({
@@ -17,6 +22,8 @@ export function authStepProxy(path: string, body: "optional-json" | "none") {
     path,
     body,
     timeout: "login",
+    onSuccess: (response, request) =>
+      envelopedBackendSuccess(response, request),
     additionalHeaders: (request: NextRequest): Record<string, string> => {
       const proof = request.headers.get("authorization");
       return proof ? { Authorization: proof } : {};

@@ -49,8 +49,11 @@ describe("demo reset route", () => {
 
     expect(response.status).toBe(202);
     expect(await response.json()).toEqual({
-      entry_url:
-        "https://demo.example/demo#token=secret-token&restarted=1&role=lead",
+      status: "success",
+      data: {
+        entry_url:
+          "https://demo.example/demo#token=secret-token&restarted=1&role=lead",
+      },
     });
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
@@ -70,7 +73,10 @@ describe("demo reset route", () => {
     const response = await reset(request({ role: "hacker" }, "secret-token"));
 
     expect(await response.json()).toEqual({
-      entry_url: "https://demo.example/demo#token=secret-token&restarted=1",
+      status: "success",
+      data: {
+        entry_url: "https://demo.example/demo#token=secret-token&restarted=1",
+      },
     });
   });
 

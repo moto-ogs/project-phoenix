@@ -208,7 +208,10 @@ may return a Response as it is. No BFF route invents another success
 envelope (#2353); a sign-in step the BFF answers itself (password, code,
 enrollment confirmation, second factor) answers `successResponse` too (#7806). Public JSON routes use `createPublicJsonProxy`
 (`lib/backend-proxy-route.server.ts`), login steps before a session
-`authStepProxy` (`lib/auth-proxy.server.ts`). Do not move a route across
+`authStepProxy` (`lib/auth-proxy.server.ts`). A route that forwards a
+backend answer without the envelope (`plain`: `authStepProxy`, the demo
+access routes) wraps its success with `envelopedBackendSuccess`
+(`lib/backend-proxy-response.server.ts`); a 204 and an error pass through. Do not move a route across
 portal auth boundaries to share code. Streaming SSE uses its documented
 exception in [the SSE contract](realtime.md).
 

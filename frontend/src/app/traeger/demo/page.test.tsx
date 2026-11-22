@@ -13,9 +13,12 @@ vi.mock("next/image", () => ({
 const fetchMock = vi.fn();
 const assign = vi.fn();
 
+// A demo route answers a success in the BFF's `{ status, data }`; an error
+// is the backend's problem body.
 function json(status: number, body: unknown = {}) {
+  const answer = status < 300 ? { status: "success", data: body } : body;
   return Promise.resolve(
-    new Response(JSON.stringify(body), {
+    new Response(JSON.stringify(answer), {
       status,
       headers: { "Content-Type": "application/json" },
     }),

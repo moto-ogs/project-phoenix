@@ -1,13 +1,17 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { sendBackend } from "~/lib/backend-client.server";
 import { createLogger } from "~/lib/logger";
-import { forwardBackendResponse } from "~/lib/backend-proxy-response.server";
+import {
+  envelopedBackendSuccess,
+  forwardBackendResponse,
+} from "~/lib/backend-proxy-response.server";
 import { problemResponse } from "~/lib/api-helpers.server";
 
 const logger = createLogger({ component: "DemoAccessRoute" });
 
 // Forwards a demo token to the backend (#3462). The token comes in the POST
-// body and is never logged; the backend answer passes through unchanged.
+// body and is never logged. A success answers `{ status, data }`, an error
+// passes through unchanged.
 export async function forwardDemoToken(
   request: NextRequest,
   path: string,
@@ -26,7 +30,9 @@ export async function forwardDemoToken(
     const response = await sendBackend(demoBackendPath(path), token, {
       request,
     });
-    return forwardBackendResponse(response, request);
+    return response.ok
+      ? await envelopedBackendSuccess(response, request)
+      : forwardBackendResponse(response, request);
   } catch (error) {
     logger.error("demo_access_forward_failed", {
       error: error instanceof Error ? error.message : String(error),
