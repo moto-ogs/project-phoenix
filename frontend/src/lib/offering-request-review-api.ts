@@ -1,12 +1,12 @@
-import type * as studentsContract from "~/lib/contract/students.generated";
-import { ApiError, apiErrorFromBody, transportFetch } from "./api-error";
 /**
  * Staff client for the post-enrollment offering change-request review queue
- * (#1665). Calls the Next.js proxy routes under
- * /api/students/offering-change-requests which forward (with the tenant session
- * token) to the backend.
+ * (#1665): the registered routes under /api/students/offering-change-requests,
+ * through the tenant BFF.
  */
 
+import type * as studentsContract from "~/lib/contract/students.generated";
+import { ApiError } from "./api-error";
+import { bffJson } from "./bff-fetch";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "OfferingRequestReviewAPI" });
@@ -78,52 +78,34 @@ export interface StaffOfferingRequest {
   readonly reviewed_at?: string;
 }
 
-export interface OfferingRequestPreviewSelection {
-  readonly offering_id: string;
-  readonly new: string;
-  readonly removed?: boolean;
-}
+type WithLists<T, K extends keyof T> = Omit<T, K> & {
+  readonly [P in K]: NonNullable<T[P]>;
+};
 
-export interface OfferingRequestPreview {
-  readonly selections: readonly OfferingRequestPreviewSelection[];
-  readonly manual_planning_conflicts: readonly ManualPlanningConflict[];
-  readonly arrival_expectations_follow_bookings: boolean;
-}
+/** The review card's preview; Go may write its lists as `null`. */
+export type OfferingRequestPreview = Omit<
+  WithLists<
+    studentsContract.OfferingRequestPreviewResponse,
+    "selections" | "manual_planning_conflicts"
+  >,
+  "manual_planning_conflicts"
+> & {
+  readonly manual_planning_conflicts: readonly WithLists<
+    studentsContract.ManualPlanningConflictResponse,
+    "days"
+  >[];
+};
 
-interface ManualPlanningConflict {
-  readonly activity_group_id: string;
-  readonly activity_group_name: string;
-  readonly days: readonly string[];
-  readonly first_date: string;
-  readonly occurrence_count: number;
-}
-
-interface Envelope<T> {
-  readonly data?: T;
-}
-
-function unwrap<T>(json: Envelope<T>): T {
-  if (json && typeof json === "object" && "data" in json) {
-    return json.data as T;
+/** Logs a failed call; the ApiError keeps the backend's code and detail. */
+function logFailure(error: unknown): never {
+  if (error instanceof ApiError) {
+    logger.error("offering_request_review_request_failed", {
+      status: error.status,
+      message: error.message,
+      ...(error.code ? { code: error.code } : {}),
+    });
   }
-  return json as unknown as T;
-}
-
-async function readError(
-  response: Response,
-  fallback: string,
-): Promise<ApiError> {
-  const error = apiErrorFromBody(
-    fallback,
-    response.status,
-    await response.json().catch(() => undefined),
-  );
-  logger.error("offering_request_review_request_failed", {
-    status: response.status,
-    message: error.message,
-    ...(error.code ? { code: error.code } : {}),
-  });
-  return error;
+  throw error;
 }
 
 /**
@@ -140,34 +122,28 @@ export async function decideOfferingChangeRequest(
   completeWithdrawalConfirmed?: boolean,
   expectedVersion?: string,
 ): Promise<studentsContract.rosterImpactResponse | undefined> {
-  const response = await transportFetch(
-    `/api/students/offering-change-requests/${encodeURIComponent(requestId)}/decide`,
+  const answer = await bffJson(
+    "tenant",
+    "POST /api/students/offering-change-requests/{requestId}/decide",
     {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+      params: { requestId },
+      body: {
         approve,
         reason: reason ?? "",
-        excluded_offering_ids: excludedOfferingIds,
+        excluded_offering_ids: excludedOfferingIds
+          ? [...excludedOfferingIds]
+          : undefined,
         effective_from: effectiveFrom,
         ...(completeWithdrawalConfirmed
           ? { complete_withdrawal_confirmed: true }
           : {}),
         ...(expectedVersion ? { expected_version: expectedVersion } : {}),
-      }),
+      },
+      errorMessage: "Entscheidung konnte nicht gespeichert werden",
     },
-  );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Entscheidung konnte nicht gespeichert werden",
-    );
-  }
+  ).catch(logFailure);
   // Eine Freigabe meldet, was sie im Betreuungsplan bewirkt hat (#5102).
-  const body = (await response.json().catch(() => undefined)) as
-    | Envelope<{ roster_impact?: studentsContract.rosterImpactResponse }>
-    | undefined;
-  return body ? unwrap(body)?.roster_impact : undefined;
+  return answer?.roster_impact;
 }
 
 /** Materializes the review card with its current co-booking overrides. */
@@ -176,24 +152,25 @@ export async function previewOfferingChangeRequest(
   excludedOfferingIds: readonly string[],
   effectiveFrom?: string,
 ): Promise<OfferingRequestPreview> {
-  const response = await transportFetch(
-    `/api/students/offering-change-requests/${encodeURIComponent(requestId)}/preview`,
+  const answer = await bffJson(
+    "tenant",
+    "POST /api/students/offering-change-requests/{requestId}/preview",
     {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        excluded_offering_ids: excludedOfferingIds,
+      params: { requestId },
+      body: {
+        excluded_offering_ids: [...excludedOfferingIds],
         effective_from: effectiveFrom,
-      }),
+      },
+      errorMessage: "Vorschau konnte nicht aktualisiert werden",
     },
-  );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Vorschau konnte nicht aktualisiert werden",
-    );
-  }
-  return unwrap((await response.json()) as Envelope<OfferingRequestPreview>);
+  ).catch(logFailure);
+  return {
+    ...answer,
+    selections: answer.selections ?? [],
+    manual_planning_conflicts: (answer.manual_planning_conflicts ?? []).map(
+      (conflict) => ({ ...conflict, days: conflict.days ?? [] }),
+    ),
+  };
 }
 
 /**

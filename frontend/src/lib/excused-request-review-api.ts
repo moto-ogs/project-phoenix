@@ -1,10 +1,12 @@
-import { ApiError, apiErrorFromBody, transportFetch } from "./api-error";
 /**
- * Staff client for the parent absence-request review queue. Calls the Next.js proxy routes under
- * /api/students/excused-absence-requests which forward (with the tenant session
- * token) to the backend. Mirrors care-request-review-api.ts.
+ * Staff client for the parent absence-request review queue: the registered
+ * routes under /api/students/excused-absence-requests, through the tenant
+ * BFF. Mirrors care-request-review-api.ts.
  */
 
+import { ApiError } from "./api-error";
+import { bffJson } from "./bff-fetch";
+import type * as studentsContract from "./contract/students.generated";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "ExcusedRequestReviewAPI" });
@@ -25,78 +27,47 @@ export interface StaffExcusedRequest {
   readonly reason?: string;
   readonly created_at: string;
   readonly reviewed_at?: string;
-  /**
-   * Was für die beantragten Tage aktuell eingetragen ist (#2267), je Tag
-   * `YYYY-MM-DD` → `present | sick | excused | class_trip`. Damit die
-   * Entscheidung „Aktuell → Gewünscht" zeigen kann, statt nur den Wunsch.
-   */
-  readonly current_status_by_date?: Readonly<Record<string, string>>;
-}
-
-interface Envelope<T> {
-  readonly data?: T;
-}
-
-function unwrap<T>(json: Envelope<T>): T {
-  if (json && typeof json === "object" && "data" in json) {
-    return json.data as T;
-  }
-  return json as unknown as T;
 }
 
 /**
- * Turns a failed response into an ApiError. The backend's stable 409 `code`
- * (e.g. "students.change_request_not_pending") lets the review UI name the
- * concrete recovery action; `detail` stays diagnostics for the log.
+ * Logs a failed call. The backend's stable 409 `code` (e.g.
+ * "students.change_request_not_pending") travels on the ApiError and lets
+ * the review UI name the concrete recovery action.
  */
-async function readError(
-  response: Response,
-  fallback: string,
-): Promise<ApiError> {
-  let payload: unknown;
-  try {
-    payload = await response.json();
-  } catch {
-    // not JSON
+function logFailure(error: unknown): never {
+  if (error instanceof ApiError) {
+    logger.error("excused_request_review_request_failed", {
+      status: error.status,
+      message: error.message,
+      ...(error.code ? { code: error.code } : {}),
+    });
   }
-  const error = apiErrorFromBody(fallback, response.status, payload);
-  logger.error("excused_request_review_request_failed", {
-    status: response.status,
-    message: error.message,
-    ...(error.code ? { code: error.code } : {}),
-  });
-  return error;
+  throw error;
 }
 
 /** Approves (marks the child absent) or rejects one absence request. */
-export async function decideExcusedAbsenceRequest(
+export function decideExcusedAbsenceRequest(
   requestId: string,
   approve: boolean,
   reason?: string,
   expectedVersion?: string,
   /** Ersetzt die Teilentschuldigungen der Tage (#5698); nur nach Bestätigung. */
   replacePartialAbsences = false,
-): Promise<StaffExcusedRequest> {
-  const response = await transportFetch(
-    `/api/students/excused-absence-requests/${encodeURIComponent(requestId)}/decide`,
+): Promise<studentsContract.StaffExcusedRequestResponse> {
+  return bffJson(
+    "tenant",
+    "POST /api/students/excused-absence-requests/{requestId}/decide",
     {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+      params: { requestId },
+      body: {
         approve,
         reason: reason ?? "",
         ...(expectedVersion ? { expected_version: expectedVersion } : {}),
         ...(replacePartialAbsences ? { replace_partial_absences: true } : {}),
-      }),
+      },
+      errorMessage: "Entscheidung konnte nicht gespeichert werden",
     },
-  );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Entscheidung konnte nicht gespeichert werden",
-    );
-  }
-  return unwrap((await response.json()) as Envelope<StaffExcusedRequest>);
+  ).catch(logFailure);
 }
 
 /**

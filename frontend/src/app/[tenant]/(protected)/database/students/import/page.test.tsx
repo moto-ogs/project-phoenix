@@ -7,6 +7,8 @@ import {
 } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { sessionFetch } from "~/lib/session-cache";
+import { ApiError } from "~/lib/api-error";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { catalogText } from "~/test/error-catalog-text";
 
@@ -17,6 +19,13 @@ function render(ui: ReactElement) {
 import StudentImportPage from "./page";
 
 // Mock next-auth/react
+// The session gate of bffJson is a spy over the plain transport, so a case
+// can let it refuse an expired session.
+vi.mock("~/lib/session-cache", async () => {
+  const plain = await import("~/test/mocks/plain-session-fetch");
+  return { ...plain, sessionFetch: vi.fn(plain.sessionFetch) };
+});
+
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => ({
     data: { user: { id: "1" } },
@@ -236,7 +245,7 @@ describe("StudentImportPage", () => {
       expect(global.fetch).toHaveBeenCalledWith(
         "/api/import/students/template?format=xlsx",
         // The route reads the session cookie (#5005).
-        { credentials: "include" },
+        expect.objectContaining({ method: "GET" }),
       );
     });
   });
@@ -1111,6 +1120,12 @@ describe("StudentImportPage", () => {
       .spyOn(window.location, "assign")
       .mockImplementation(() => undefined);
     const useSession = await import("next-auth/react");
+    // The gate reads the session cookie and refuses the expired session.
+    vi.mocked(sessionFetch).mockRejectedValueOnce(
+      new ApiError("Authentication required", 401, {
+        code: "general.permission",
+      }),
+    );
     vi.mocked(useSession.useSession).mockReturnValueOnce({
       data: { user: { id: "1" }, error: "RefreshTokenError" },
       status: "authenticated",
@@ -1134,6 +1149,12 @@ describe("StudentImportPage", () => {
       .spyOn(window.location, "assign")
       .mockImplementation(() => undefined);
     const useSession = await import("next-auth/react");
+    // The gate reads the session cookie and refuses the expired session.
+    vi.mocked(sessionFetch).mockRejectedValueOnce(
+      new ApiError("Authentication required", 401, {
+        code: "general.permission",
+      }),
+    );
     vi.mocked(useSession.useSession).mockReturnValueOnce({
       data: { user: { id: "1" }, error: "RefreshTokenError" },
       status: "authenticated",
