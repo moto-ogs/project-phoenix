@@ -20,6 +20,6 @@ func createBreakFixture(t *testing.T, records timetracking.WorkSessionBreakRecor
 	t.Helper()
 	created, err := records.CreateWorkSessionBreak(ctx, timetracking.WorkSessionBreakToCapability(entry))
 	require.NoError(t, err)
-	entry.ID, entry.TenantID = created.ID, created.TenantID
+	entry.ID, entry.TenantID = created.ID.Int64(), created.TenantID.Int64()
 	entry.CreatedAt, entry.UpdatedAt = created.CreatedAt, created.UpdatedAt
 }

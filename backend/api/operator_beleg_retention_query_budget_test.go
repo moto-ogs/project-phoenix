@@ -19,6 +19,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -51,7 +52,7 @@ func TestOperatorBelegRetentionOverviewQueryBudget(t *testing.T) {
 		for suspensions < n {
 			require.NoError(t, tenant.WithinAdmin(ctx, func(adminCtx context.Context) error {
 				_, err := retention.RecordSuspension(adminCtx, organizationID, operatorID, parentbilling.NewRetentionSuspension{
-					BelegType: parentbilling.BelegCareNotice, BelegID: int64(suspensions + 1), Reason: "Prüfung",
+					BelegType: parentbilling.BelegCareNotice, BelegID: ident.ID(suspensions + 1), Reason: "Prüfung",
 					Scope: fmt.Sprintf("Bescheid %d", suspensions+1), Responsible: "Kämmerei",
 					ReviewOn: calendar.NewDate(2099, time.January, 1),
 				})

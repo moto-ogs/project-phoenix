@@ -16,6 +16,7 @@ import (
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	classListHTTP "github.com/moto-ogs/project-phoenix/modules/schoolmembership/http/classlistentries"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -165,7 +166,8 @@ func newHarness(t *testing.T) *harness {
 		},
 		Success: func(w http.ResponseWriter, r *http.Request, status int, data any, message string) {
 			render.Status(r, status)
-			payload, err := json.Marshal(data)
+			// The root answers through common.Respond, which writes with wire.Marshal.
+			payload, err := wire.Marshal(data)
 			require.NoError(t, err)
 			_ = render.Render(w, r, response{Status: "success", Data: payload, Message: message})
 		},

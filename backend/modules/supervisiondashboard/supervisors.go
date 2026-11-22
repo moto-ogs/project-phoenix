@@ -6,13 +6,14 @@ import (
 	"sort"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/collation"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // SessionSupervisor is one current supervisor of a session, named for the
 // page head (#4354).
 type SessionSupervisor struct {
-	StaffID int64  `json:"staff_id,string"`
-	Name    string `json:"name"`
+	StaffID ident.ID `json:"staff_id"`
+	Name    string   `json:"name"`
 }
 
 // nameSupervisors names the supervisors of every session tab and of every
@@ -28,12 +29,12 @@ func (s *service) nameSupervisors(ctx context.Context, projection *DashboardProj
 		return err
 	}
 	for i := range projection.Groups {
-		projection.Groups[i].Supervisors = namedSupervisors(groupSupervisors[projection.Groups[i].ID], names)
+		projection.Groups[i].Supervisors = namedSupervisors(groupSupervisors[projection.Groups[i].ID.Int64()], names)
 	}
 	for i := range projection.OpenRooms {
 		sessions := projection.OpenRooms[i].Sessions
 		for j := range sessions {
-			sessions[j].Supervisors = namedSupervisors(openRooms.sessionByID[sessions[j].ActiveGroupID].SupervisorStaffIDs, names)
+			sessions[j].Supervisors = namedSupervisors(openRooms.sessionByID[sessions[j].ActiveGroupID.Int64()].SupervisorStaffIDs, names)
 		}
 	}
 	return nil
@@ -46,7 +47,7 @@ func (s *service) groupSupervisorIDs(ctx context.Context, groups []DashboardGrou
 	}
 	ids := make([]int64, 0, len(groups))
 	for _, group := range groups {
-		ids = append(ids, group.ID)
+		ids = append(ids, group.ID.Int64())
 	}
 	loaded, err := s.deps.Sessions.SupervisorStaffIDs(ctx, ids)
 	if err != nil {
@@ -101,7 +102,7 @@ func namedSupervisors(staffIDs []int64, names map[int64]string) []SessionSupervi
 	var result []SessionSupervisor
 	for _, id := range staffIDs {
 		if name := names[id]; name != "" {
-			result = append(result, SessionSupervisor{StaffID: id, Name: name})
+			result = append(result, SessionSupervisor{StaffID: ident.ID(id), Name: name})
 		}
 	}
 	sort.SliceStable(result, func(i, j int) bool {

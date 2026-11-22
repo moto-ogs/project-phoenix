@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/daychangesview"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // dayShifts are the shifts relevant to the day, indexed for the rule.
@@ -59,23 +60,23 @@ func (b *staffEntryBuilder) shift(shift workforce.StaffShift, window dayShifts) 
 	if !ok {
 		return
 	}
-	people := []daychangesview.Person{{StaffID: shift.StaffID, Role: daychangesview.RoleOnDuty}}
+	people := []daychangesview.Person{{StaffID: ident.ID(shift.StaffID), Role: daychangesview.RoleOnDuty}}
 	if kind == daychangesview.KindShiftReplacement {
 		people[0].Role = daychangesview.RoleSubstitute
 		if origin, found := window.byID[*shift.OriginShiftID]; found {
-			people = append(people, daychangesview.Person{StaffID: origin.StaffID, Role: daychangesview.RoleReplaced})
+			people = append(people, daychangesview.Person{StaffID: ident.ID(origin.StaffID), Role: daychangesview.RoleReplaced})
 		}
 	}
 	involved := false
 	for i := range people {
-		people[i].IsSelf = b.viewer.selfID != 0 && people[i].StaffID == b.viewer.selfID
+		people[i].IsSelf = b.viewer.selfID != 0 && people[i].StaffID.Int64() == b.viewer.selfID
 		involved = involved || people[i].IsSelf
 	}
 	if !involved && !b.viewer.shiftPlan {
 		return
 	}
 	for _, person := range people {
-		b.staffIDs[person.StaffID] = true
+		b.staffIDs[person.StaffID.Int64()] = true
 	}
 	entry := daychangesview.SourceEntry{
 		Kind: kind, Involved: involved, People: people,
@@ -143,7 +144,7 @@ func (b *staffEntryBuilder) shiftLink(staffID int64, self bool) *daychangesview.
 		// time_tracking:own opens the own time tracking and the own Dienstplan.
 		return &daychangesview.Link{Target: daychangesview.LinkOwnShiftPlan}
 	case b.viewer.shiftPlan:
-		return &daychangesview.Link{Target: daychangesview.LinkShiftPlan, StaffID: &staffID}
+		return &daychangesview.Link{Target: daychangesview.LinkShiftPlan, StaffID: (*ident.ID)(&staffID)}
 	default:
 		return nil
 	}

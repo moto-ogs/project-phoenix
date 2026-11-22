@@ -8,6 +8,7 @@ import (
 
 	education "github.com/moto-ogs/project-phoenix/modules/schoolstructure/contract"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 )
@@ -23,9 +24,9 @@ func TestSubstitutionCapabilityKeepsTheExternalMarker(t *testing.T) {
 	external := testpkg.CreateTestExternalCaregiverRecord(t, db, "Trommeln").Staff
 	capability := api.SubstitutionCapability(substitutionContract{overview: func(context.Context, education.Caller, education.OverviewQuery) (*education.OverviewResult, error) {
 		return &education.OverviewResult{RunningSupervisions: []education.RunningSupervision{{
-			ID: caregiver.ID, AvailableTargets: []education.StaffRef{
-				{ID: caregiver.ID, FullName: "Interne Kraft"},
-				{ID: external.ID, FullName: "Extern Kursleitung", IsExternal: true, ExternalAccountStatus: "invitation_pending", ExternalOrganization: "Musikschule"},
+			ID: ident.ID(caregiver.ID), AvailableTargets: []education.StaffRef{
+				{ID: ident.ID(caregiver.ID), FullName: "Interne Kraft"},
+				{ID: ident.ID(external.ID), FullName: "Extern Kursleitung", IsExternal: true, ExternalAccountStatus: "invitation_pending", ExternalOrganization: "Musikschule"},
 			},
 		}}}, nil
 	}})
@@ -33,7 +34,7 @@ func TestSubstitutionCapabilityKeepsTheExternalMarker(t *testing.T) {
 	out, err := capability.Overview(testpkg.Ctx(t), workforce.SubstitutionCaller{TenantID: testpkg.Tenant(t), HasPermission: func(string) bool { return true }}, workforce.SubstitutionOverviewQuery{IncludeTargets: true})
 	require.NoError(t, err)
 	require.Equal(t, []workforce.StaffRef{
-		{ID: caregiver.ID, FullName: "Interne Kraft"},
-		{ID: external.ID, FullName: "Extern Kursleitung", IsExternal: true, ExternalAccountStatus: "invitation_pending", ExternalOrganization: "Musikschule"},
+		{ID: ident.ID(caregiver.ID), FullName: "Interne Kraft"},
+		{ID: ident.ID(external.ID), FullName: "Extern Kursleitung", IsExternal: true, ExternalAccountStatus: "invitation_pending", ExternalOrganization: "Musikschule"},
 	}, out.RunningSupervisions[0].AvailableTargets)
 }

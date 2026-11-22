@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/assert"
@@ -58,7 +59,7 @@ func TestClassListEntriesCompositionRunsTheCRUDAndAssignFlow(t *testing.T) {
 	// the quoted wire value.
 	var created struct {
 		Data struct {
-			ID int64 `json:"id,string"`
+			ID ident.ID `json:"id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &created))
@@ -150,7 +151,7 @@ func TestClassListEntriesCompositionRunsTheCRUDAndAssignFlow(t *testing.T) {
 		{Action: "created", NewValue: "Zoe Aalders (" + className + ")", ChangedBy: int64(claims.ID)},
 		{Action: "updated", OldValue: "Zoe Aalders (" + className + ")", NewValue: "Zoe Aalders (" + className + "-b)", ChangedBy: int64(claims.ID)},
 		{Action: "assigned", OldValue: "Zoe Aalders (" + className + "-b)", MatchedStudentID: &student.ID, ChangedBy: int64(claims.ID)},
-	}, classListEntryTrail(t, db, entryID))
+	}, classListEntryTrail(t, db, entryID.Int64()))
 }
 
 // The listing resolves the "Zuordnen" hints of all entries (#2382) from one
@@ -266,7 +267,7 @@ func TestClassListEntriesCompositionRemovesAnEntry(t *testing.T) {
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	var created struct {
 		Data struct {
-			ID int64 `json:"id,string"`
+			ID ident.ID `json:"id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &created))
@@ -279,7 +280,7 @@ func TestClassListEntriesCompositionRemovesAnEntry(t *testing.T) {
 	rec = testutil.ExecuteWithAuthPermissions(t, mounted, req, claims, []string{"users:read"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.NotContains(t, rec.Body.String(), fmt.Sprintf(`"id":"%d"`, created.Data.ID))
-	trail := classListEntryTrail(t, db, created.Data.ID)
+	trail := classListEntryTrail(t, db, created.Data.ID.Int64())
 	require.NotEmpty(t, trail)
 	assert.Equal(t, "deleted", trail[len(trail)-1].Action)
 }

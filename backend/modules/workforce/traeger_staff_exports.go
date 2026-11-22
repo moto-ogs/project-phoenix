@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The exports of the Personalverwaltung over all schools (#4712, ADR 0089
@@ -154,9 +155,9 @@ type TraegerExportMonth struct {
 // TraegerExportPerson is a person the export names: one left out for a
 // missing Personalnummer.
 type TraegerExportPerson struct {
-	RecordID  int64  `json:"record_id,string"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
+	RecordID  ident.ID `json:"record_id"`
+	FirstName string   `json:"first_name"`
+	LastName  string   `json:"last_name"`
 }
 
 // TraegerPayrollKindCount counts the contracts and lines of one kind.

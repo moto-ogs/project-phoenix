@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ErrForbiddenGroup indicates that the requested group is outside the
@@ -78,12 +79,12 @@ func New(deps Dependencies) Query {
 }
 
 type NavigationGroup struct {
-	ID              int64  `json:"id,string"`
-	Name            string `json:"name"`
-	RoomID          *int64 `json:"room_id,string,omitempty"`
-	RoomName        string `json:"room_name,omitempty"`
-	ViaSubstitution bool   `json:"via_substitution"`
-	IsPersonal      bool   `json:"is_personal"`
+	ID              ident.ID  `json:"id"`
+	Name            string    `json:"name"`
+	RoomID          *ident.ID `json:"room_id,omitempty"`
+	RoomName        string    `json:"room_name,omitempty"`
+	ViaSubstitution bool      `json:"via_substitution"`
+	IsPersonal      bool      `json:"is_personal"`
 	// Leaders names the group's assigned Gruppenleitung for the group
 	// selection (#4351). Only the navigation list fills it; the assignment
 	// is optional, so it is often empty.
@@ -91,7 +92,7 @@ type NavigationGroup struct {
 }
 
 type Student struct {
-	ID                 int64      `json:"id,string"`
+	ID                 ident.ID   `json:"id"`
 	FirstName          string     `json:"first_name"`
 	LastName           string     `json:"last_name"`
 	SchoolClass        string     `json:"school_class"`
@@ -127,13 +128,13 @@ type Student struct {
 }
 
 type RoomStatus struct {
-	InGroupRoom   bool   `json:"in_group_room"`
-	CurrentRoomID *int64 `json:"current_room_id,string,omitempty"`
+	InGroupRoom   bool      `json:"in_group_room"`
+	CurrentRoomID *ident.ID `json:"current_room_id,omitempty"`
 }
 
 type DayNote struct {
-	ID      int64  `json:"id,string"`
-	Content string `json:"content"`
+	ID      ident.ID `json:"id"`
+	Content string   `json:"content"`
 }
 
 type TrackingIndicators struct {
@@ -142,16 +143,16 @@ type TrackingIndicators struct {
 }
 
 type Transfer struct {
-	ID                int64  `json:"id,string"`
-	GroupID           int64  `json:"group_id,string"`
-	SubstituteStaffID int64  `json:"substitute_staff_id,string"`
-	SubstituteName    string `json:"substitute_name,omitempty"`
-	EndDate           string `json:"end_date"`
+	ID                ident.ID `json:"id"`
+	GroupID           ident.ID `json:"group_id"`
+	SubstituteStaffID ident.ID `json:"substitute_staff_id"`
+	SubstituteName    string   `json:"substitute_name,omitempty"`
+	EndDate           string   `json:"end_date"`
 }
 
 type Projection struct {
 	Groups             []NavigationGroup     `json:"groups"`
-	GroupID            *int64                `json:"group_id,string,omitempty"`
+	GroupID            *ident.ID             `json:"group_id,omitempty"`
 	Students           []Student             `json:"students"`
 	RoomStatus         map[string]RoomStatus `json:"room_status"`
 	PickupTimes        []PickupTime          `json:"pickup_times"`
@@ -400,7 +401,7 @@ func projectStudents(students []RosterStudent, presence PresenceSnapshot, fullAc
 	for _, model := range students {
 		location := presence.Location(model.ID, fullAccess)
 		student := Student{
-			ID: model.ID, FirstName: model.FirstName, LastName: model.LastName,
+			ID: ident.ID(model.ID), FirstName: model.FirstName, LastName: model.LastName,
 			SchoolClass: model.SchoolClass, Location: location.Name,
 			LocationSince: location.Since, RoomColor: location.RoomColor, fullAccess: fullAccess && canReadPlans,
 		}
@@ -432,7 +433,7 @@ func (s *service) applyStatusDays(ctx context.Context, state *buildState) error 
 		return fmt.Errorf("apply student status days: %w", err)
 	}
 	for i := range state.projected {
-		applyEffectiveStatus(&state.projected[i], statuses[state.projected[i].ID])
+		applyEffectiveStatus(&state.projected[i], statuses[state.projected[i].ID.Int64()])
 	}
 	return s.applyClassHandovers(ctx, state)
 }
@@ -448,7 +449,7 @@ func (s *service) applyClassHandovers(ctx context.Context, state *buildState) er
 		return fmt.Errorf("apply class handovers: %w", err)
 	}
 	for i := range state.projected {
-		if handover, ok := handovers[state.projected[i].ID]; ok {
+		if handover, ok := handovers[state.projected[i].ID.Int64()]; ok {
 			state.projected[i].ClassHandover = &handover
 		}
 	}
@@ -516,7 +517,7 @@ func (s *service) applyTeacherHints(ctx context.Context, state *buildState, ids 
 	}
 	for i := range state.projected {
 		if state.projected[i].fullAccess {
-			state.projected[i].TeacherHints = hints[state.projected[i].ID]
+			state.projected[i].TeacherHints = hints[state.projected[i].ID.Int64()]
 		}
 	}
 	return nil
@@ -550,7 +551,7 @@ func (s *service) applyAtSchool(state *buildState, student *Student, decision Da
 		CareDayEnd: state.careDayEnd,
 		Now:        s.deps.Calendar.Now(),
 	}
-	if pickup, ok := state.pickups[student.ID]; ok {
+	if pickup, ok := state.pickups[student.ID.Int64()]; ok {
 		inputs.PickupTime = pickup.PickupTime
 	}
 	if s.deps.Planning.AtSchoolBeforeCheckIn(inputs) {
@@ -563,7 +564,7 @@ func fullAccessIDs(students []Student) []int64 {
 	ids := make([]int64, 0, len(students))
 	for i := range students {
 		if students[i].fullAccess {
-			ids = append(ids, students[i].ID)
+			ids = append(ids, students[i].ID.Int64())
 		}
 	}
 	return ids
@@ -594,22 +595,22 @@ func (s *service) applyPlanning(state *buildState, pending map[int64]*pendingExc
 		// them restricted; tying the note to full access would hide exactly
 		// the request they own. loadPendingExcused already returns an empty
 		// map for anyone who may not review.
-		if request := pending[student.ID]; request != nil {
+		if request := pending[student.ID.Int64()]; request != nil {
 			note := request.Note
 			student.PendingExcusedNote = &note
 		}
 		if !student.fullAccess {
 			continue
 		}
-		attendance, _ := state.presence.Attendance(student.ID)
-		arrival, hasArrival := state.arrivals[student.ID]
-		pickup, hasPickup := state.pickups[student.ID]
+		attendance, _ := state.presence.Attendance(student.ID.Int64())
+		arrival, hasArrival := state.arrivals[student.ID.Int64()]
+		pickup, hasPickup := state.pickups[student.ID.Int64()]
 		inputs := DayInputs{
 			Present:      attendance.Present,
 			Sick:         student.Sick,
 			ClassTrip:    student.ClassTrip,
 			Excused:      student.Excused,
-			HasTimetable: state.timetable[student.ID],
+			HasTimetable: state.timetable[student.ID.Int64()],
 		}
 		if hasArrival {
 			inputs.Arrival = &arrival
@@ -706,7 +707,7 @@ func (s *service) finishProjection(ctx context.Context, state *buildState) (*Pro
 	selectedID := state.selected.ID
 	projection := &Projection{
 		Groups:             state.groups,
-		GroupID:            &selectedID,
+		GroupID:            (*ident.ID)(&selectedID),
 		Students:           state.projected,
 		RoomStatus:         map[string]RoomStatus{},
 		PickupTimes:        pickupTimes(state.projected, state.pickups),
@@ -775,12 +776,12 @@ func (s *service) loadTracking(ctx context.Context, studentIDs []int64) (Trackin
 func roomStatuses(students []Student, presence PresenceSnapshot, groupRoomID *int64) map[string]RoomStatus {
 	result := make(map[string]RoomStatus, len(students))
 	for i := range students {
-		key := strconv.FormatInt(students[i].ID, 10)
+		key := strconv.FormatInt(students[i].ID.Int64(), 10)
 		status := RoomStatus{}
 		if groupRoomID != nil && presence != nil {
-			if roomID := presence.CurrentRoomID(students[i].ID); roomID != nil {
+			if roomID := presence.CurrentRoomID(students[i].ID.Int64()); roomID != nil {
 				current := *roomID
-				status.CurrentRoomID = &current
+				status.CurrentRoomID = (*ident.ID)(&current)
 				status.InGroupRoom = current == *groupRoomID
 			}
 		}

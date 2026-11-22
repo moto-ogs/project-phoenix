@@ -625,11 +625,11 @@ func TestLoadPlanningTimesProjectsPickupException(t *testing.T) {
 
 	require.NoError(t, svc.loadPlanningTimes(context.Background(), projection, Caller{CanReadStudents: true}, []int64{42, 43}, true, date))
 	require.Len(t, projection.PickupTimes, 1)
-	assert.Equal(t, int64(42), projection.PickupTimes[0].StudentID)
+	assert.Equal(t, int64(42), projection.PickupTimes[0].StudentID.Int64())
 	assert.Equal(t, "15:30", *projection.PickupTimes[0].PickupTime)
 	assert.True(t, projection.PickupTimes[0].IsException)
 	require.Len(t, projection.ArrivalTimes, 1)
-	assert.Equal(t, int64(43), projection.ArrivalTimes[0].StudentID)
+	assert.Equal(t, int64(43), projection.ArrivalTimes[0].StudentID.Int64())
 	assert.Nil(t, projection.ArrivalTimes[0].ExpectedArrival, "a timeless exception keeps its time nil")
 	assert.Equal(t, "Zahnarzt", projection.ArrivalTimes[0].Notes)
 
@@ -792,7 +792,7 @@ func TestDashboardCapturesOneServerTimeSnapshot(t *testing.T) {
 	assert.Equal(t, projection.BusinessDay, arrivalDay)
 	assert.Equal(t, beforeMidnight, plannedInstant)
 	assert.Nil(t, projection.Schulhof, "no staff identity, no Schulhof workflow")
-	assert.Equal(t, int64Ptr(activeGroupID), projection.SelectedGroupID)
+	assert.Equal(t, int64Ptr(activeGroupID), (*int64)(projection.SelectedGroupID))
 	require.Len(t, projection.Visits, 1)
 	assert.True(t, projection.Capabilities.WebSpontaneousActivitiesEnabled)
 }
@@ -842,8 +842,8 @@ func TestDashboardSelectedGroupSectionsFollowAccess(t *testing.T) {
 	projection, err := newService(f).Dashboard(context.Background(), yardGroupID)
 
 	require.NoError(t, err)
-	assert.Equal(t, int64Ptr(77), projection.CurrentStaffID)
-	assert.Equal(t, int64Ptr(yardGroupID), projection.SelectedGroupID, "a supervised Schulhof session is selectable")
+	assert.Equal(t, int64Ptr(77), (*int64)(projection.CurrentStaffID))
+	assert.Equal(t, int64Ptr(yardGroupID), (*int64)(projection.SelectedGroupID), "a supervised Schulhof session is selectable")
 	require.Len(t, projection.Visits, 2)
 	assert.Equal(t, "Erika Muster", projection.Visits[0].StudentName)
 	assert.Equal(t, "08:05", *projection.Visits[0].ActualArrivalTime)
@@ -899,10 +899,10 @@ func TestProjectionWireShape(t *testing.T) {
 	projection := emptyProjection()
 	projection.BusinessDay = "2026-08-19"
 	projection.SpontaneousStartAvailability = SpontaneousStartAvailability{Available: true}
-	projection.Groups = []DashboardGroup{{ID: 11, Name: "Malen", RoomID: &roomID, RoomName: "Zebra", RoomColor: &color, IsCurrentUserSupervising: true, CanAssign: true, ParticipantLimit: intPtr(45), Supervisors: []SessionSupervisor{{StaffID: 7, Name: "Erika"}}}, {ID: 12, Name: "Adler"}}
-	projection.SelectedGroupID = int64Ptr(11)
+	projection.Groups = []DashboardGroup{{ID: 11, Name: "Malen", RoomID: (*ident.ID)(&roomID), RoomName: "Zebra", RoomColor: &color, IsCurrentUserSupervising: true, CanAssign: true, ParticipantLimit: intPtr(45), Supervisors: []SessionSupervisor{{StaffID: 7, Name: "Erika"}}}, {ID: 12, Name: "Adler"}}
+	projection.SelectedGroupID = (*ident.ID)(int64Ptr(11))
 	projection.UnclaimedGroups = []UnclaimedGroup{{ID: 13, RoomName: "Igel"}}
-	projection.CurrentStaffID = int64Ptr(7)
+	projection.CurrentStaffID = (*ident.ID)(int64Ptr(7))
 	projection.EducationalGroups = []EducationalGroup{{ID: 41, Name: "Bären", RoomName: "Igel"}}
 	projection.Schulhof = &SchulhofStatus{Exists: true, RoomName: "Schulhof", Supervisors: []Supervisor{{ID: 1, StaffID: 7, Name: "Erika", IsCurrentUser: true}}}
 	projection.OpenRooms = []OpenRoom{{RoomID: 31, Name: "Schulhof", IsUserSupervising: true, ActiveGroupIDs: []string{"11", "14"}, HasOccupyingSession: true, StudentCount: 1,

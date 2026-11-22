@@ -289,7 +289,7 @@ func (m morningAttendance) fillMorningAttendance(ctx context.Context, rows []cla
 
 func morningChild(row classday.DayRow) studentpresence.MorningAttendanceChild {
 	if row.ListEntry {
-		return studentpresence.MorningAttendanceChild{ClassListEntryID: row.ListEntryID}
+		return studentpresence.MorningAttendanceChild{ClassListEntryID: row.ListEntryID.Int64()}
 	}
 	return studentpresence.MorningAttendanceChild{StudentID: row.StudentID.Int64()}
 }

@@ -215,7 +215,7 @@ func TestAuthService_ListStaffPreviewCandidates(t *testing.T) {
 
 	ids := make(map[int64]identityaccess.StaffPreviewCandidate, len(candidates))
 	for _, c := range candidates {
-		ids[c.AccountID] = c
+		ids[c.AccountID.Int64()] = c
 	}
 
 	require.Contains(t, ids, eligible.ID, "staff with the user role must be selectable")
@@ -251,7 +251,7 @@ func TestAuthService_ListStaffPreviewCandidates_CustomLehrkraftRoleIsListed(t *t
 
 	listed := false
 	for _, candidate := range candidates {
-		if candidate.AccountID == customLehrkraft.ID {
+		if candidate.AccountID.Int64() == customLehrkraft.ID {
 			listed = true
 		}
 	}

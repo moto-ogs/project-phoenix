@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,7 +34,7 @@ func checkClassListEntryAdministration(t *testing.T, graph *goldenRuntime) {
 	require.Equal(t, http.StatusCreated, created.Code, created.Body.String())
 	var entry struct {
 		Data struct {
-			ID int64 `json:"id,string"`
+			ID ident.ID `json:"id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(created.Body.Bytes(), &entry))
@@ -56,5 +57,5 @@ func checkClassListEntryAdministration(t *testing.T, graph *goldenRuntime) {
 		{Action: "created", NewValue: "Rosa Wurzel (" + className + ")", ChangedBy: account.ID},
 		{Action: "updated", OldValue: "Rosa Wurzel (" + className + ")", NewValue: "Rosa Wurzel (" + className + "-b)", ChangedBy: account.ID},
 		{Action: "assigned", OldValue: "Rosa Wurzel (" + className + "-b)", MatchedStudentID: &student.ID, ChangedBy: account.ID},
-	}, classListEntryTrail(t, db, entry.Data.ID), "every write ran the audited path")
+	}, classListEntryTrail(t, db, entry.Data.ID.Int64()), "every write ran the audited path")
 }

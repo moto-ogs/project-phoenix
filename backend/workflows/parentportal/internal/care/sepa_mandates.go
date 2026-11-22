@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The SEPA mandate of the family in the parents portal (#4696, ADR 0171
@@ -103,7 +104,7 @@ type SEPAMandateProof struct {
 // SEPAMandateSummary is the family's mandate with the mask of its IBAN.
 type SEPAMandateSummary struct {
 	CollectionEligible bool              `json:"collection_eligible"`
-	ID                 int64             `json:"id,string"`
+	ID                 ident.ID          `json:"id"`
 	Reference          string            `json:"reference"`
 	SignedOn           calendar.Date     `json:"signed_on"`
 	Kind               string            `json:"kind"`

@@ -82,7 +82,7 @@ func hasSeededStaffPersonMerge(rt *Runtime, personID int64) (bool, error) {
 		Data []struct {
 			Keeper struct {
 				Person struct {
-					ID int64 `json:"id,string"`
+					ID apiID `json:"id"`
 				} `json:"person"`
 			} `json:"keeper"`
 		} `json:"data"`
@@ -91,7 +91,7 @@ func hasSeededStaffPersonMerge(rt *Runtime, personID int64) (bool, error) {
 		return false, fmt.Errorf("decode staff duplicate examples: %w", err)
 	}
 	for _, candidate := range existing.Data {
-		if candidate.Keeper.Person.ID == personID {
+		if int64(candidate.Keeper.Person.ID) == personID {
 			return true, nil
 		}
 	}
