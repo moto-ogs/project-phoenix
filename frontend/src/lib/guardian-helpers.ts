@@ -56,6 +56,33 @@ export const GUARDIAN_ROLE_OPTIONS: Array<{
   { value: "custom", label: "Individuell" },
 ];
 
+// Was die gewählte Rolle für die Eltern-App bedeutet. Abgeleitet aus
+// StudentGuardianPermissionSet (backend securityruntime): nur die drei vollen
+// Rollen bekommen Rechte; Sozialdienst lässt sich nie einladen.
+const FULL_ROLE_HINT =
+  "Bekommt nach einer Einladung vollen Zugang zur Eltern-App für dieses Kind.";
+
+export const GUARDIAN_ROLE_HINTS: Record<GuardianRole, string> = {
+  primary_guardian: FULL_ROLE_HINT,
+  legal_guardian: FULL_ROLE_HINT,
+  co_guardian: FULL_ROLE_HINT,
+  emergency_contact: "Wird im Notfall angerufen. Kein Zugang zur Eltern-App.",
+  pickup_only: "Darf das Kind abholen. Kein Zugang zur Eltern-App.",
+  social_worker:
+    "Fachkraft vom Sozialdienst. Kein Zugang zur Eltern-App, keine Einladung.",
+  custom:
+    "Kein Zugang zur Eltern-App. Abholung und Notfall legst du unten fest.",
+};
+
+// Rollen mit Zugang zur Eltern-App (backend IsFullGuardianRole).
+export function isFullGuardianRole(role: GuardianRole | undefined): boolean {
+  return (
+    role === "primary_guardian" ||
+    role === "legal_guardian" ||
+    role === "co_guardian"
+  );
+}
+
 function normalizeGuardianRole(value: unknown): GuardianRole {
   return GUARDIAN_ROLE_OPTIONS.some((option) => option.value === value)
     ? (value as GuardianRole)

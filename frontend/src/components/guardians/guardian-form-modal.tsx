@@ -97,6 +97,14 @@ function createEmptyPhone(isPrimary = false): PhoneEntry {
   };
 }
 
+// Eine reine Abholperson darf ohne E-Mail und Telefon gespeichert werden;
+// als Notfallkontakt muss sie erreichbar sein.
+function contactRequired(
+  entry: Pick<GuardianEntry, "guardianRole" | "isEmergencyContact">,
+): boolean {
+  return entry.guardianRole !== "pickup_only" || entry.isEmergencyContact;
+}
+
 // Create empty guardian entry
 // Exported for testing
 export function createEmptyEntry(): GuardianEntry {
@@ -447,13 +455,15 @@ export default function GuardianFormModal({
         (p) => p.phoneNumber.trim() !== "",
       );
 
-      if (!hasEmail && !hasPhone) {
+      if (!hasEmail && !hasPhone && contactRequired(entry)) {
         const contactErrors = new Set<string>([`${entry.id}:email`]);
         for (const phone of entry.phoneNumbers) {
           contactErrors.add(`${entry.id}:phone:${phone.id}`);
         }
         setFieldErrors(contactErrors);
-        return `Mindestens eine Kontaktmöglichkeit ist erforderlich${label}`;
+        return entry.isEmergencyContact
+          ? `Ein Notfallkontakt braucht eine Telefonnummer oder E-Mail-Adresse${label}`
+          : `Mindestens eine Kontaktmöglichkeit ist erforderlich${label}`;
       }
     }
 
@@ -474,16 +484,19 @@ export default function GuardianFormModal({
       isPrimary: boolean;
     }>;
   }> => {
+    // Beim Bearbeiten heißt ein geleertes Feld „löschen“: "" kommt im Backend
+    // an, undefined ließe den alten Wert stehen.
+    const cleared = mode === "edit" ? "" : undefined;
     return entries.map((entry) => ({
       id: entry.id,
       guardianData: {
         firstName: entry.firstName.trim(),
         lastName: entry.lastName.trim(),
-        email: entry.email.trim() || undefined,
-        addressStreet: entry.addressStreet.trim() || undefined,
-        addressCity: entry.addressCity.trim() || undefined,
-        addressPostalCode: entry.addressPostalCode.trim() || undefined,
-        notes: entry.notes.trim() || undefined,
+        email: entry.email.trim() || cleared,
+        addressStreet: entry.addressStreet.trim() || cleared,
+        addressCity: entry.addressCity.trim() || cleared,
+        addressPostalCode: entry.addressPostalCode.trim() || cleared,
+        notes: entry.notes.trim() || cleared,
         languagePreference: entry.languagePreference || "de",
       },
       relationshipData: {
@@ -732,6 +745,11 @@ export default function GuardianFormModal({
                       hint={PARENT_VISIBLE_HINTS.guardianContact}
                     />
                   </h3>
+                  <p className="mb-3 text-sm text-gray-600 md:mb-4">
+                    {contactRequired(entry)
+                      ? "Trage mindestens eine E-Mail-Adresse oder eine Telefonnummer ein."
+                      : "Bei „Nur Abholung“ sind E-Mail und Telefon freiwillig."}
+                  </p>
 
                   {/* Email */}
                   <div className="mb-4">

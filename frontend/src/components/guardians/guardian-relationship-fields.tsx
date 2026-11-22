@@ -3,6 +3,7 @@
 import { useId } from "react";
 
 import {
+  GUARDIAN_ROLE_HINTS,
   GUARDIAN_ROLE_OPTIONS,
   RELATIONSHIP_TYPES,
   type GuardianRole,
@@ -81,6 +82,7 @@ export function GuardianRoleSelect({
       id={id}
       value={value}
       options={GUARDIAN_ROLE_OPTIONS}
+      hint={GUARDIAN_ROLE_HINTS[value]}
       onChange={(next) => onChange(next as GuardianRole)}
       disabled={disabled}
     />

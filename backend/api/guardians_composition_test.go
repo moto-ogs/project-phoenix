@@ -75,6 +75,8 @@ type guardianCompositionContext struct {
 	pendingInvitation func(studentID, guardianID, requesterAccountID int64) int64
 	// invitationApproval reads the stored approval status of an invitation.
 	invitationApproval func(invitationID int64) string
+	// count runs a COUNT(*) query in the test tenant's database.
+	count func(query string, args ...any) int
 }
 
 type financialChangeRow struct {
@@ -218,6 +220,11 @@ func setupGuardiansCompositionRoute(t *testing.T, appEnvs ...string) *guardianCo
 			guardian := testpkg.CreateTestGuardianProfileForTenant(t, db, foreignTenantID, "Foreign", "Guardian", "foreign-guardian")
 			link := testpkg.CreateTestStudentGuardianLinkForTenant(t, db, foreignTenantID, student.ID, guardian.ID, "primary_guardian")
 			return student.ID, guardian.ID, link.ID
+		},
+		count: func(query string, args ...any) int {
+			var n int
+			require.NoError(t, db.NewRaw(query, args...).Scan(ctx, &n))
+			return n
 		},
 		persistedLink: func(linkID int64) persistedLinkState {
 			var row struct {
@@ -439,6 +446,23 @@ func TestGuardianComposition_UpdateGuardian(t *testing.T) {
 	data := dataObject(t, rr.Body.Bytes())
 	assert.Equal(t, "Updated", data["first_name"])
 	assert.Equal(t, "Test", data["last_name"], "fields left out of the partial update keep their value")
+}
+
+// Staff remove a wrong address by emptying the field (#7770): the profile
+// stores NULL, so a second cleared profile does not collide on the
+// tenant-unique e-mail index.
+func TestGuardianComposition_UpdateGuardianClearsEmail(t *testing.T) {
+	t.Parallel()
+	ctx := setupGuardiansCompositionRoute(t)
+	admin := testutil.AdminTestClaims(999)
+
+	for _, seed := range []string{"clear-first", "clear-second"} {
+		guardianID, _ := ctx.createGuardian(seed)
+		rr := ctx.do(t, admin, http.MethodPut, fmt.Sprintf("/%d", guardianID), map[string]any{"email": ""})
+		testutil.AssertSuccessResponse(t, rr, http.StatusOK)
+		assert.Nil(t, dataObject(t, rr.Body.Bytes())["email"])
+		assert.Equal(t, 1, ctx.count(`SELECT COUNT(*) FROM users.guardian_profiles WHERE id = ? AND email IS NULL`, guardianID))
+	}
 }
 
 // Model validation failures are user input, not server faults: they must
@@ -911,6 +935,53 @@ func TestGuardianComposition_BatchCreatesAndLinksGuardian(t *testing.T) {
 	linked := ctx.studentGuardians(t, studentID)
 	require.Len(t, linked, 1)
 	assert.Equal(t, "Atomic", linked[0].Guardian.FirstName)
+}
+
+// A pure pickup contact (#7770) is saved without phone and e-mail. It gets
+// no parent-portal permission, no account, no invitation and no mail.
+func TestGuardianComposition_BatchCreatesPickupContactWithoutContactData(t *testing.T) {
+	t.Parallel()
+	ctx := setupGuardiansCompositionRoute(t)
+	studentID, _ := ctx.createStudent("Pickup", "Child", "1a")
+	tenantID := testpkg.Tenant(t)
+
+	rr := ctx.do(t, testutil.AdminTestClaims(999), http.MethodPost, fmt.Sprintf("/students/%d/guardians/batch", studentID), map[string]any{
+		"guardians": []map[string]any{{
+			"first_name": "Oma", "last_name": "Abholung",
+			"relationship_type": "relative", "guardian_role": "pickup_only",
+			"can_pickup": true, "emergency_priority": 1,
+		}},
+	})
+	testutil.AssertSuccessResponse(t, rr, http.StatusCreated)
+
+	read := ctx.do(t, testutil.AdminTestClaims(999), http.MethodGet, fmt.Sprintf("/students/%d/guardians", studentID), nil)
+	require.Equal(t, http.StatusOK, read.Code, read.Body.String())
+	var response struct {
+		Data []struct {
+			Guardian struct {
+				ID           wireID  `json:"id"`
+				Email        *string `json:"email"`
+				PhoneNumbers []any   `json:"phone_numbers"`
+			} `json:"guardian"`
+			RelationshipID wireID `json:"relationship_id"`
+			GuardianRole   string `json:"guardian_role"`
+			CanPickup      bool   `json:"can_pickup"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(read.Body.Bytes(), &response))
+	require.Len(t, response.Data, 1)
+	contact := response.Data[0]
+	assert.Equal(t, "pickup_only", contact.GuardianRole)
+	assert.True(t, contact.CanPickup)
+	assert.True(t, contact.Guardian.Email == nil || *contact.Guardian.Email == "", "no e-mail address")
+	assert.Empty(t, contact.Guardian.PhoneNumbers)
+
+	guardianID, relationshipID := int64(contact.Guardian.ID), int64(contact.RelationshipID)
+	assert.Equal(t, 1, ctx.count(`SELECT COUNT(*) FROM auth.guardian_student_access WHERE relationship_id = ? AND permissions::text NOT LIKE '%parent_portal.%'`, relationshipID),
+		"the access row exists and carries no parent_portal permission")
+	assert.Equal(t, 1, ctx.count(`SELECT COUNT(*) FROM users.guardian_profiles WHERE id = ? AND account_id IS NULL AND email IS NULL`, guardianID))
+	assert.Zero(t, ctx.count(`SELECT COUNT(*) FROM auth.guardian_invitations WHERE guardian_profile_id = ?`, guardianID))
+	assert.Zero(t, ctx.count(`SELECT COUNT(*) FROM platform.email_outbox WHERE tenant_id = ?`, tenantID))
 }
 
 func TestGuardianComposition_BatchDuplicateEmailCarriesItsCode(t *testing.T) {

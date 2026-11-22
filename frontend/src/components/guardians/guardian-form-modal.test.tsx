@@ -1241,4 +1241,157 @@ describe("GuardianFormModal", () => {
     });
     expect(deleteButtons.length).toBeGreaterThan(0);
   });
+
+  describe("pickup-only contact without contact data (#7770)", () => {
+    function renderCreate() {
+      render(
+        <GuardianFormModal
+          isOpen={true}
+          onClose={mockOnClose}
+          onSubmit={mockOnSubmit}
+          mode="create"
+        />,
+      );
+      fireEvent.change(screen.getByPlaceholderText("Max"), {
+        target: { value: "Oma" },
+      });
+      fireEvent.change(screen.getByPlaceholderText("Mustermann"), {
+        target: { value: "Abholung" },
+      });
+    }
+
+    function chooseRole(name: string) {
+      fireEvent.click(screen.getByLabelText("Portalrolle"));
+      fireEvent.click(screen.getByRole("option", { name }));
+    }
+
+    it("saves a pickup-only person without e-mail and phone", async () => {
+      mockOnSubmit.mockResolvedValue(undefined);
+      renderCreate();
+      chooseRole("Nur Abholung");
+
+      fireEvent.click(screen.getByText("Hinzufügen"));
+
+      await waitFor(() => expect(mockOnSubmit).toHaveBeenCalledTimes(1));
+      const [guardians] = mockOnSubmit.mock.calls[0] as [
+        Array<{
+          guardianData: { email?: string };
+          relationshipData: { guardianRole: string };
+          phoneNumbers: unknown[];
+        }>,
+      ];
+      expect(guardians[0]?.relationshipData.guardianRole).toBe("pickup_only");
+      expect(guardians[0]?.guardianData.email).toBeUndefined();
+      expect(guardians[0]?.phoneNumbers).toEqual([]);
+    });
+
+    it("refuses a pickup-only emergency contact nobody can reach", async () => {
+      renderCreate();
+      chooseRole("Nur Abholung");
+      fireEvent.click(screen.getByLabelText("Als Notfallkontakt markieren"));
+
+      fireEvent.click(screen.getByText("Hinzufügen"));
+
+      expect(
+        await screen.findByText(
+          "Ein Notfallkontakt braucht eine Telefonnummer oder E-Mail-Adresse",
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText("max.mustermann@example.com"),
+      ).toHaveAttribute("aria-invalid", "true");
+      expect(screen.getByPlaceholderText("+49 170 1234567")).toHaveAttribute(
+        "aria-invalid",
+        "true",
+      );
+      expect(mockOnSubmit).not.toHaveBeenCalled();
+    });
+
+    it("requires a contact again after switching back to a full role", async () => {
+      renderCreate();
+      chooseRole("Nur Abholung");
+      expect(
+        screen.getByText(
+          "Bei „Nur Abholung“ sind E-Mail und Telefon freiwillig.",
+        ),
+      ).toBeInTheDocument();
+      chooseRole("Erziehungsberechtigte/r");
+      expect(
+        screen.getByText(
+          "Trage mindestens eine E-Mail-Adresse oder eine Telefonnummer ein.",
+        ),
+      ).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText("Hinzufügen"));
+
+      expect(
+        await screen.findByText(
+          "Mindestens eine Kontaktmöglichkeit ist erforderlich",
+        ),
+      ).toBeInTheDocument();
+      expect(mockOnSubmit).not.toHaveBeenCalled();
+    });
+
+    it("explains what the chosen role means for the parents app", () => {
+      renderCreate();
+      expect(
+        screen.getByText(
+          "Bekommt nach einer Einladung vollen Zugang zur Eltern-App für dieses Kind.",
+        ),
+      ).toBeInTheDocument();
+
+      chooseRole("Nur Abholung");
+
+      expect(
+        screen.getByText("Darf das Kind abholen. Kein Zugang zur Eltern-App."),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText(
+          "Bekommt nach einer Einladung vollen Zugang zur Eltern-App für dieses Kind.",
+        ),
+      ).not.toBeInTheDocument();
+    });
+
+    it("clears a stored e-mail address when the field is emptied in edit mode", async () => {
+      mockOnSubmit.mockResolvedValue(undefined);
+      const initialData: GuardianWithRelationship = {
+        id: "guardian-7770",
+        firstName: "Oma",
+        lastName: "Abholung",
+        email: "falsch@example.com",
+        preferredContactMethod: "email",
+        languagePreference: "de",
+        hasAccount: false,
+        phoneNumbers: [],
+        relationshipType: "relative",
+        guardianRole: "pickup_only",
+        isEmergencyContact: false,
+        isPrimary: false,
+        canPickup: true,
+        emergencyPriority: 1,
+        relationshipId: "rel-7770",
+      };
+      render(
+        <GuardianFormModal
+          isOpen={true}
+          onClose={mockOnClose}
+          onSubmit={mockOnSubmit}
+          mode="edit"
+          initialData={initialData}
+        />,
+      );
+
+      fireEvent.change(screen.getByDisplayValue("falsch@example.com"), {
+        target: { value: "" },
+      });
+      fireEvent.click(screen.getByText("Speichern"));
+
+      await waitFor(() => expect(mockOnSubmit).toHaveBeenCalledTimes(1));
+      const [guardians] = mockOnSubmit.mock.calls[0] as [
+        Array<{ guardianData: { email?: string }; phoneNumbers: unknown[] }>,
+      ];
+      expect(guardians[0]?.guardianData.email).toBe("");
+      expect(guardians[0]?.phoneNumbers).toEqual([]);
+    });
+  });
 });

@@ -173,7 +173,8 @@ export const GERMAN_PAGE_TITLES: Readonly<
     "/abrechnung/exporte/konten": "Konten und Kostenstellen",
     "/abrechnung/familien": "Familien",
     "/abrechnung/familien/:id": "Familie",
-    "/abrechnung/familien/zahlung/:contractId": "Empfänger und Zahlung",
+    "/abrechnung/familien/zahlung/:contractId":
+      "Empfänger und Zahlung der Familie",
     "/abrechnung/jahresbescheide": "Jahresbescheide",
     "/abrechnung/jahresbescheide/:id": "Jahreslauf",
     "/abrechnung/jahresbescheide/:id/bescheid/:contractId": "Jahresbescheid",

@@ -38,6 +38,19 @@ vi.mock("~/lib/traeger-sepa-api", () => ({
   createSepaMandate: vi.fn(),
   revokeSepaMandate: vi.fn(),
 }));
+// The card „Empfänger und Zahlung“ of the family (#7770) has its own tests
+// (family-billing-status-card.test.tsx); here the family has no deviation.
+vi.mock("~/lib/traeger-billing-terms-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/traeger-billing-terms-api")>()),
+  fetchContractFamilyBilling: (contractId: string) =>
+    Promise.resolve({
+      contractId,
+      familyEmail: "",
+      partyName: "",
+      partyLastName: "",
+      family: null,
+    }),
+}));
 // The change requests of the parents (#5979) and the termination (#4682)
 // have their own tests; here no change waits and nobody gave notice.
 vi.mock("~/lib/care-contract-changes-api", async (importOriginal) => ({
