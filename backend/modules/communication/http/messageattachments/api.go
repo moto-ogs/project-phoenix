@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/communication"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Units opens the tenant units of the attachment routes. The upload row
@@ -84,19 +85,19 @@ func (rs *Resource) upload(w http.ResponseWriter, r *http.Request) {
 // UploadResponse is a stored attachment as the upload answers it: the
 // attachment the next message names by its ID.
 type UploadResponse struct {
-	ID          common.ID `json:"id"`
-	Filename    string    `json:"filename"`
-	SizeBytes   int       `json:"size_bytes"`
-	ContentType string    `json:"content_type"`
-	Width       int       `json:"width,omitempty"`
-	Height      int       `json:"height,omitempty"`
+	ID          ident.ID `json:"id"`
+	Filename    string   `json:"filename"`
+	SizeBytes   int      `json:"size_bytes"`
+	ContentType string   `json:"content_type"`
+	Width       int      `json:"width,omitempty"`
+	Height      int      `json:"height,omitempty"`
 }
 
 // NewUploadResponse answers a stored attachment. A file is at most
 // MaxMessageAttachmentBytes, so its size fits an int.
 func NewUploadResponse(id int64, filename string, sizeBytes int64, contentType string, width, height int) UploadResponse {
 	return UploadResponse{
-		ID: common.ID(id), Filename: filename, SizeBytes: int(sizeBytes),
+		ID: ident.ID(id), Filename: filename, SizeBytes: int(sizeBytes),
 		ContentType: contentType, Width: width, Height: height,
 	}
 }

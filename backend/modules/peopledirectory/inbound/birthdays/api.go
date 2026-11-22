@@ -99,14 +99,14 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 }
 
 type celebrationResponse struct {
-	Kind        string    `json:"kind"`
-	ID          common.ID `json:"id"`
-	Name        string    `json:"name"`
-	GroupName   string    `json:"group_name,omitempty"`
-	SchoolClass string    `json:"school_class,omitempty"`
-	Date        string    `json:"date"`
-	Age         int       `json:"age,omitempty"`
-	IsToday     bool      `json:"is_today"`
+	Kind        string   `json:"kind"`
+	ID          ident.ID `json:"id"`
+	Name        string   `json:"name"`
+	GroupName   string   `json:"group_name,omitempty"`
+	SchoolClass string   `json:"school_class,omitempty"`
+	Date        string   `json:"date"`
+	Age         int      `json:"age,omitempty"`
+	IsToday     bool     `json:"is_today"`
 }
 
 type overviewResponse struct {

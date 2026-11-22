@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -59,7 +60,7 @@ func (rs *Resource) uploadChildMessageAttachment(w http.ResponseWriter, r *http.
 		return
 	}
 	common.Respond(w, r, http.StatusCreated, messageAttachmentResponse{
-		ID: common.ID(stored.Attachment.ID), Filename: stored.Attachment.Filename,
+		ID: ident.ID(stored.Attachment.ID), Filename: stored.Attachment.Filename,
 		// A file is at most maxMessageAttachmentBytes, so its size fits an int.
 		SizeBytes: int(stored.Attachment.SizeBytes), ContentType: stored.Attachment.ContentType,
 		Width: stored.Attachment.Width, Height: stored.Attachment.Height,
@@ -69,12 +70,12 @@ func (rs *Resource) uploadChildMessageAttachment(w http.ResponseWriter, r *http.
 // messageAttachmentResponse is a stored attachment as the upload answers it:
 // the attachment the guardian's next message names by its ID.
 type messageAttachmentResponse struct {
-	ID          common.ID `json:"id"`
-	Filename    string    `json:"filename"`
-	SizeBytes   int       `json:"size_bytes"`
-	ContentType string    `json:"content_type"`
-	Width       int       `json:"width,omitempty"`
-	Height      int       `json:"height,omitempty"`
+	ID          ident.ID `json:"id"`
+	Filename    string   `json:"filename"`
+	SizeBytes   int      `json:"size_bytes"`
+	ContentType string   `json:"content_type"`
+	Width       int      `json:"width,omitempty"`
+	Height      int      `json:"height,omitempty"`
 }
 
 // downloadChildMessageAttachment streams one file of the guardian's

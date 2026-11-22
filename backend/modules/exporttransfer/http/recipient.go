@@ -13,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/exporttransfer"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // journalLimit is how many handovers a page lists.
@@ -77,8 +78,8 @@ type FormatsRequest struct {
 // AssignmentRequest is one format of the body and its recipient, null for
 // the download.
 type AssignmentRequest struct {
-	Format      string     `json:"format"`
-	RecipientID *common.ID `json:"recipient_id"`
+	Format      string    `json:"format"`
+	RecipientID *ident.ID `json:"recipient_id"`
 }
 
 func (req *FormatsRequest) assignments() []exporttransfer.TraegerAssignment {
