@@ -44,8 +44,11 @@ type StaffShiftSeries struct {
 	// Detached: detached rows can also be ordinary one-off deviations, which
 	// subsequent permanent edits must not overwrite.
 	RetainedOccurrenceShiftID *int64 `bun:"retained_occurrence_shift_id" json:"-"`
-	CreatedBy                 int64  `bun:"created_by,notnull" json:"created_by"`
+	CreatedBy                 int64  `bun:"created_by,nullzero" json:"created_by"`
 	UpdatedBy                 *int64 `bun:"updated_by" json:"updated_by,omitempty"`
+	// PlannedByTraeger marks a series the Träger-Büro planned in a school
+	// session opened through the Träger-Portal (#7818); CreatedBy is then 0.
+	PlannedByTraeger bool `bun:"planned_by_traeger,notnull,default:false" json:"planned_by_traeger"`
 }
 
 // Week pattern values shared with the timetable recurrence primitives.
@@ -63,5 +66,8 @@ type StaffShiftSeriesException struct {
 	TenantModel
 	SeriesID  int64         `bun:"series_id,notnull" json:"series_id"`
 	Date      calendar.Date `bun:"date,notnull,type:date" json:"date"`
-	CreatedBy int64         `bun:"created_by,notnull" json:"created_by"`
+	CreatedBy int64         `bun:"created_by,nullzero" json:"created_by"`
+	// PlannedByTraeger stands for the author of an occurrence of a series
+	// the Träger-Büro planned (#7818); CreatedBy is then 0.
+	PlannedByTraeger bool `bun:"planned_by_traeger,notnull,default:false" json:"planned_by_traeger"`
 }

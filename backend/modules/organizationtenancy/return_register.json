@@ -24797,6 +24797,12 @@
           "type": "boolean",
           "udt": "bool",
           "nullable": true
+        },
+        {
+          "name": "weekly_plan_by_traeger",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -30953,7 +30959,7 @@
           "name": "created_by",
           "type": "bigint",
           "udt": "int8",
-          "nullable": false
+          "nullable": true
         },
         {
           "name": "updated_by",
@@ -30981,6 +30987,12 @@
         },
         {
           "name": "include_school_breaks",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
+        },
+        {
+          "name": "planned_by_traeger",
           "type": "boolean",
           "udt": "bool",
           "nullable": false
@@ -31098,7 +31110,7 @@
           "name": "created_by",
           "type": "bigint",
           "udt": "int8",
-          "nullable": false
+          "nullable": true
         },
         {
           "name": "created_at",
@@ -31110,6 +31122,12 @@
           "name": "updated_at",
           "type": "timestamp with time zone",
           "udt": "timestamptz",
+          "nullable": false
+        },
+        {
+          "name": "planned_by_traeger",
+          "type": "boolean",
+          "udt": "bool",
           "nullable": false
         }
       ],

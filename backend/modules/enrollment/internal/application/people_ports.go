@@ -334,14 +334,17 @@ type DepartureCompanions interface {
 	DeleteCompanionEdges(context.Context, []int64) error
 }
 
-// WeeklyPickupSchedules replaces a student's weekly pickup times.
+// WeeklyPickupSchedules replaces a student's weekly pickup times. A row
+// names its staff author in createdBy, or has createdBy 0 and
+// enteredByTraeger when the Träger-Büro wrote it (#7818).
 type WeeklyPickupSchedules interface {
 	DeletePickupSchedules(ctx context.Context, studentID int64) error
-	UpsertPickupSchedule(ctx context.Context, studentID int64, weekday int, pickupTime time.Time, createdBy int64) error
+	UpsertPickupSchedule(ctx context.Context, studentID int64, weekday int, pickupTime time.Time, createdBy int64, enteredByTraeger bool) error
 }
 
-// WeeklyArrivalSchedules replaces a student's weekly arrival days.
+// WeeklyArrivalSchedules replaces a student's weekly arrival days, with
+// the author of WeeklyPickupSchedules.
 type WeeklyArrivalSchedules interface {
 	DeleteArrivalSchedules(ctx context.Context, studentID int64) error
-	CreateArrivalSchedule(ctx context.Context, studentID int64, weekday int, createdBy int64) error
+	CreateArrivalSchedule(ctx context.Context, studentID int64, weekday int, createdBy int64, enteredByTraeger bool) error
 }

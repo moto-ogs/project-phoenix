@@ -10,17 +10,18 @@ import (
 )
 
 // EnrollmentPickupSchedules replaces a student's weekly pickup times; it is
-// the shape of Enrollment's weekly pickup port.
+// the shape of Enrollment's weekly pickup port. A row the Träger-Büro writes
+// has createdBy 0 and enteredByTraeger (#7818).
 type EnrollmentPickupSchedules interface {
 	DeletePickupSchedules(ctx context.Context, studentID int64) error
-	UpsertPickupSchedule(ctx context.Context, studentID int64, weekday int, pickupTime time.Time, createdBy int64) error
+	UpsertPickupSchedule(ctx context.Context, studentID int64, weekday int, pickupTime time.Time, createdBy int64, enteredByTraeger bool) error
 }
 
 // EnrollmentArrivalSchedules replaces a student's weekly arrival days; it is
 // the shape of Enrollment's weekly arrival port.
 type EnrollmentArrivalSchedules interface {
 	DeleteArrivalSchedules(ctx context.Context, studentID int64) error
-	CreateArrivalSchedule(ctx context.Context, studentID int64, weekday int, createdBy int64) error
+	CreateArrivalSchedule(ctx context.Context, studentID int64, weekday int, createdBy int64, enteredByTraeger bool) error
 }
 
 // NewEnrollmentPickupSchedules binds the weekly pickup times an enrollment
@@ -51,12 +52,13 @@ func (s enrollmentPickupSchedules) DeletePickupSchedules(ctx context.Context, st
 	return s.repo.DeleteByStudentID(ctx, studentID)
 }
 
-func (s enrollmentPickupSchedules) UpsertPickupSchedule(ctx context.Context, studentID int64, weekday int, pickupTime time.Time, createdBy int64) error {
+func (s enrollmentPickupSchedules) UpsertPickupSchedule(ctx context.Context, studentID int64, weekday int, pickupTime time.Time, createdBy int64, enteredByTraeger bool) error {
 	return s.repo.UpsertSchedule(ctx, &scheduleModels.StudentPickupSchedule{
-		StudentID:  studentID,
-		Weekday:    weekday,
-		PickupTime: pickupTime,
-		CreatedBy:  createdBy,
+		StudentID:        studentID,
+		Weekday:          weekday,
+		PickupTime:       pickupTime,
+		CreatedBy:        createdBy,
+		EnteredByTraeger: enteredByTraeger,
 	})
 }
 
@@ -68,10 +70,11 @@ func (s enrollmentArrivalSchedules) DeleteArrivalSchedules(ctx context.Context, 
 	return s.repo.DeleteByStudentID(ctx, studentID)
 }
 
-func (s enrollmentArrivalSchedules) CreateArrivalSchedule(ctx context.Context, studentID int64, weekday int, createdBy int64) error {
+func (s enrollmentArrivalSchedules) CreateArrivalSchedule(ctx context.Context, studentID int64, weekday int, createdBy int64, enteredByTraeger bool) error {
 	return s.repo.Create(ctx, &scheduleModels.StudentArrivalSchedule{
-		StudentID: studentID,
-		Weekday:   weekday,
-		CreatedBy: createdBy,
+		StudentID:        studentID,
+		Weekday:          weekday,
+		CreatedBy:        createdBy,
+		EnteredByTraeger: enteredByTraeger,
 	})
 }

@@ -34,12 +34,17 @@ type Middleware = func(http.Handler) http.Handler
 type FailureKind string
 
 const (
-	FailureInvalid      FailureKind = "invalid"
-	FailureNotFound     FailureKind = "not_found"
-	FailureConflict     FailureKind = "conflict"
-	FailureUnauthorized FailureKind = "unauthorized"
-	FailureInternal     FailureKind = "internal"
+	FailureInvalid   FailureKind = "invalid"
+	FailureNotFound  FailureKind = "not_found"
+	FailureConflict  FailureKind = "conflict"
+	FailureForbidden FailureKind = "forbidden"
+	FailureInternal  FailureKind = "internal"
 )
+
+// ErrNoStaffActor refuses an allowance change by a caller without a staff
+// record of the school: every change is recorded against a staff member,
+// also in a session opened through the Träger-Portal (#7818).
+var ErrNoStaffActor = errors.New("current staff member not found")
 
 // Runtime carries the HTTP-platform behavior this adapter must not own. Every
 // field is required, so missing production wiring fails at startup.
@@ -52,7 +57,8 @@ type Runtime struct {
 	Success       func(http.ResponseWriter, *http.Request, int, any, string)
 	Failure       func(http.ResponseWriter, *http.Request, FailureKind, error)
 	// ResolveActor identifies the staff member behind the request; an
-	// allowance change is recorded against that person.
+	// allowance change is recorded against that person. An error wrapping
+	// ErrNoStaffActor is the caller's (403), any other the server's.
 	ResolveActor func(context.Context) (int64, error)
 	// Permission names. Reading is open to anyone who may decide absences
 	// too, so the Leitung's approval views can render the school's wording.
@@ -414,12 +420,8 @@ func (rs *Resource) setAllowance(w http.ResponseWriter, r *http.Request) {
 		rs.runtime.Failure(w, r, FailureInvalid, err)
 		return
 	}
-	actorID, err := rs.runtime.ResolveActor(r.Context())
-	if err != nil || actorID <= 0 {
-		if err == nil {
-			err = errors.New("current staff member not found")
-		}
-		rs.runtime.Failure(w, r, FailureUnauthorized, err)
+	actorID, ok := rs.actor(w, r)
+	if !ok {
 		return
 	}
 	var req SetAllowanceRequest
@@ -436,6 +438,25 @@ func (rs *Resource) setAllowance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rs.runtime.Success(w, r, http.StatusOK, toAllowanceSummaryResponse(summary), "Kontingent gespeichert")
+}
+
+// actor resolves the staff member behind an allowance change or renders the
+// failure: a caller without a staff record is refused (403), a failed lookup
+// is the server's (500).
+func (rs *Resource) actor(w http.ResponseWriter, r *http.Request) (int64, bool) {
+	actorID, err := rs.runtime.ResolveActor(r.Context())
+	if err == nil && actorID <= 0 {
+		err = ErrNoStaffActor
+	}
+	if err != nil {
+		kind := FailureInternal
+		if errors.Is(err, ErrNoStaffActor) {
+			kind = FailureForbidden
+		}
+		rs.runtime.Failure(w, r, kind, err)
+		return 0, false
+	}
+	return actorID, true
 }
 
 // previewBlock names why a previewed booking is refused, "" when the error

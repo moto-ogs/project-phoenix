@@ -32,12 +32,11 @@ type Middleware = func(http.Handler) http.Handler
 type FailureKind string
 
 const (
-	FailureInvalid      FailureKind = "invalid"
-	FailureNotFound     FailureKind = "not_found"
-	FailureConflict     FailureKind = "conflict"
-	FailureUnauthorized FailureKind = "unauthorized"
-	FailureForbidden    FailureKind = "forbidden"
-	FailureInternal     FailureKind = "internal"
+	FailureInvalid   FailureKind = "invalid"
+	FailureNotFound  FailureKind = "not_found"
+	FailureConflict  FailureKind = "conflict"
+	FailureForbidden FailureKind = "forbidden"
+	FailureInternal  FailureKind = "internal"
 )
 
 // ClientMessageError is an internal failure whose cause must not reach the
@@ -50,26 +49,6 @@ type ClientMessageError struct {
 func (e *ClientMessageError) Error() string { return e.Message }
 func (e *ClientMessageError) Unwrap() error { return e.Cause }
 
-// Actor is the acting admin behind a write: the staff record every plan
-// change is attributed to and the account an audit entry names.
-type Actor struct {
-	StaffID   int64
-	AccountID *int64
-}
-
-// ErrNoStaffActor refuses a caller without a staff record: every plan change
-// is attributed to a staff member, so such a request is unauthorized.
-var ErrNoStaffActor = errors.New("staff record not found")
-
-// NewActor is the acting admin behind staffID; a caller without a staff
-// record (staffID <= 0) is ErrNoStaffActor.
-func NewActor(staffID int64, accountID *int64) (Actor, error) {
-	if staffID <= 0 {
-		return Actor{}, ErrNoStaffActor
-	}
-	return Actor{StaffID: staffID, AccountID: accountID}, nil
-}
-
 // Runtime carries the HTTP-platform behavior this adapter must not own. Every
 // field is required, so missing production wiring fails at startup.
 type Runtime struct {
@@ -78,8 +57,10 @@ type Runtime struct {
 	ParseID    func(*http.Request) (int64, error)
 	Success    func(http.ResponseWriter, *http.Request, int, any, string)
 	Failure    func(http.ResponseWriter, *http.Request, FailureKind, error)
-	// ResolveActor identifies the acting admin; a request without a staff
-	// record behind it is unauthorized.
+	// ResolveActor identifies the acting admin: a staff member, or the
+	// Träger-Büro in a session opened through the Träger-Portal. An error
+	// wrapping ErrNoStaffActor is the caller's (403), any other the
+	// server's.
 	ResolveActor func(context.Context) (Actor, error)
 	// MarkRollback discards the request's tenant transaction so a
 	// client-facing 4xx never commits a half-applied plan change.
@@ -452,16 +433,6 @@ func (rs *Resource) parseDateRange(w http.ResponseWriter, r *http.Request) (from
 	return from, to, true
 }
 
-// actor resolves the acting admin or renders the unauthorized failure.
-func (rs *Resource) actor(w http.ResponseWriter, r *http.Request) (Actor, bool) {
-	actor, err := rs.runtime.ResolveActor(r.Context())
-	if err != nil {
-		rs.runtime.Failure(w, r, FailureUnauthorized, err)
-		return Actor{}, false
-	}
-	return actor, true
-}
-
 func (rs *Resource) list(w http.ResponseWriter, r *http.Request) {
 	from, to, ok := rs.parseDateRange(w, r)
 	if !ok {
@@ -503,6 +474,7 @@ func (rs *Resource) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	input.ActorStaffID = actor.StaffID
+	input.TraegerAccountID = actor.traegerAccountID()
 	input.WorkingTime = req.Confirmation()
 
 	saved, err := rs.planning.CreateShift(r.Context(), workforce.CreateStaffShift{StaffShiftInput: input})
@@ -534,6 +506,7 @@ func (rs *Resource) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	input.ActorStaffID = actor.StaffID
+	input.TraegerAccountID = actor.traegerAccountID()
 	input.WorkingTime = req.Confirmation()
 
 	saved, err := rs.planning.UpdateShift(r.Context(), workforce.UpdateStaffShift{
@@ -704,6 +677,7 @@ func (rs *Resource) cancellation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	input.ActorStaffID = actor.StaffID
+	input.TraegerAccountID = actor.traegerAccountID()
 	input.WorkingTime = req.Confirmation()
 
 	result, err := rs.planning.ApplyCancellation(r.Context(), input)
