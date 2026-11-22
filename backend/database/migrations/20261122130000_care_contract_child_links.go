@@ -7,14 +7,13 @@ import (
 	"github.com/uptrace/bun"
 )
 
-const careContractChildLinksVersion = "20261122063317"
+const careContractChildLinksVersion = "20261122130000"
 
 func init() {
 	MigrationRegistry.Register(&Migration{
 		Version:     careContractChildLinksVersion,
 		Description: "Betreuungsvertrag: importierte Verträge mit der Kinderakte verknüpfen (#7760)",
 		DependsOn: []string{
-			roomHistoryStopsVersion,              // the newest migration on development
 			careContractImportsVersion,           // the imported contracts this one links
 			careContractNoticeEndDecisionVersion, // the newest list of trail actions
 		},

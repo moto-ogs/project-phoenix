@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedChildLinkCandidates are demo children of the seeded school the seed
@@ -20,10 +21,10 @@ var seedChildLinkCandidates = DemoStudents
 // seedChildRecord is a child record of the seeded school as the student list
 // names it.
 type seedChildRecord struct {
-	ID        apiID  `json:"id"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	Birthday  string `json:"birthday"`
+	ID        ident.ID `json:"id"`
+	FirstName string   `json:"first_name"`
+	LastName  string   `json:"last_name"`
+	Birthday  string   `json:"birthday"`
 }
 
 // seedCareContractChildLink takes over the contract of an existing child of
@@ -82,8 +83,8 @@ type seedImportRows struct {
 	Data struct {
 		Fingerprint string `json:"fingerprint"`
 		Rows        []struct {
-			Status     string `json:"status"`
-			ContractID apiID  `json:"contract_id"`
+			Status     string   `json:"status"`
+			ContractID ident.ID `json:"contract_id"`
 		} `json:"rows"`
 	} `json:"data"`
 }

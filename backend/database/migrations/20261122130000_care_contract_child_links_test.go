@@ -13,7 +13,7 @@ import (
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
-// TestCareContractChildLinksKeepTheirShape pins 20261122063317 (#7760) under
+// TestCareContractChildLinksKeepTheirShape pins 20261122130000 (#7760) under
 // the request role: it links an imported contract to a child record and
 // unlinks it, the trail records both, and the trail still refuses an action
 // it does not know.

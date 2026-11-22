@@ -132,7 +132,7 @@ Die Entscheidung ändert diese Register (ADR 0057 Punkt 5, ADR 0070):
 - **Abfragebudget**: `api.traeger.care_contract_child_links`; die Zahl hängt
   an der Zahl der Schulen, nicht an der Zahl der Zeilen.
 - **Verlauf**: `chk_contract_events_action` kennt `link_child` und
-  `unlink_child` (Migration `20261122063317`).
+  `unlink_child` (Migration `20261122130000`).
 
 ## Verworfene Optionen
 

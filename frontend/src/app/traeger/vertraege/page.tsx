@@ -639,6 +639,7 @@ export default function TraegerVertraegePage() {
             "Öffnet die neue Zuordnung der Module importierter Verträge aus einer CSV-Datei.",
           icon: <Repeat className="h-4 w-4" aria-hidden />,
           href: traegerPath("/traeger/vertraege/module-zuordnen"),
+          onClick: () => undefined,
         },
         {
           label: "Mit Kinderakten verknüpfen",
