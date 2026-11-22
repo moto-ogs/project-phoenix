@@ -401,7 +401,7 @@ func paymentOrder(kind string) string {
 // withFamilyRows adds to the families of the documents their own number and
 // whether they are known to the holiday care only (#6692), and lists the
 // families without a document: one the holiday care knows, or one with a
-// number of its own.
+// number or a payment method of its own (#7770).
 func withFamilyRows(details []parentbilling.BillingFamilyDetail, rows []parentbilling.FamilyBilling, contracts map[string]bool) []parentbilling.BillingFamily {
 	byKey := make(map[string]*parentbilling.FamilyBilling, len(rows))
 	for i := range rows {
@@ -414,7 +414,7 @@ func withFamilyRows(details []parentbilling.BillingFamilyDetail, rows []parentbi
 		listed[detail.FamilyEmail] = true
 	}
 	for _, row := range rows {
-		if listed[row.FamilyEmail] || (row.ContractID != 0 && row.DebtorNumber == "") {
+		if listed[row.FamilyEmail] || (row.ContractID != 0 && row.DebtorNumber == "" && row.PaymentMethod == "") {
 			continue
 		}
 		first, last := row.HolderFirstName, row.HolderLastName
@@ -425,6 +425,7 @@ func withFamilyRows(details []parentbilling.BillingFamilyDetail, rows []parentbi
 			RecipientFirstName: first, RecipientLastName: last, RecipientEmail: row.FamilyEmail,
 			DebtorNumbers: []string{}, Payments: []parentbilling.BillingPayment{}, PaymentMethods: []string{},
 			FamilyEmail: row.FamilyEmail, FamilyDebtorNumber: row.DebtorNumber, HolidayOnly: !contracts[row.FamilyEmail],
+			FamilyPaymentMethod: row.PaymentMethod, ContractID: row.ContractID,
 		})
 	}
 	return families
@@ -438,7 +439,7 @@ func withFamilyRow(family parentbilling.BillingFamily, documents []parentbilling
 	})
 	family.HolidayOnly = !care && !hasContract
 	if row != nil {
-		family.FamilyDebtorNumber = row.DebtorNumber
+		family.FamilyDebtorNumber, family.FamilyPaymentMethod, family.ContractID = row.DebtorNumber, row.PaymentMethod, row.ContractID
 	}
 	return family
 }

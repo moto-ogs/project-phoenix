@@ -176,6 +176,51 @@ func (t *BillingTerms) ListFamilyBilling(ctx context.Context, reviewer parentbil
 	return families, nil
 }
 
+// familyOfContract names the party a contract's invoice goes to and the key
+// of its family. A contract of another Träger is not among the recipients
+// and names no family: ErrFamilyUnknown.
+func (t *BillingTerms) familyOfContract(ctx context.Context, organizationID, contractID int64) (parentbilling.CareRecipient, string, error) {
+	if contractID <= 0 {
+		return parentbilling.CareRecipient{}, "", parentbilling.ErrFamilyUnknown
+	}
+	recipients, err := t.contracts.Recipients(ctx, organizationID, []int64{contractID})
+	if err != nil {
+		return parentbilling.CareRecipient{}, "", fmt.Errorf("parent billing: read the contract party: %w", err)
+	}
+	recipient, known := recipients[contractID]
+	key := parentbilling.ContractFamilyKey(recipient.Email, contractID)
+	if !known || key == "" {
+		return parentbilling.CareRecipient{}, "", parentbilling.ErrFamilyUnknown
+	}
+	return recipient, key, nil
+}
+
+// FamilyBillingOfContract reads the family of a contract with the deviation
+// it has, so the Abrechnung sets it without a run (#7770), and records the
+// read of a deviation in its trail. The deviation is the family's: a
+// sibling's contract answers the same one.
+func (t *BillingTerms) FamilyBillingOfContract(ctx context.Context, reviewer parentbilling.HolidayReviewer, contractID int64) (parentbilling.ContractFamilyBilling, error) {
+	if err := validReviewer(reviewer); err != nil {
+		return parentbilling.ContractFamilyBilling{}, err
+	}
+	recipient, key, err := t.familyOfContract(ctx, reviewer.OrganizationID, contractID)
+	if err != nil {
+		return parentbilling.ContractFamilyBilling{}, err
+	}
+	stored, err := t.store.FamilyBillingOf(ctx, reviewer.OrganizationID, key)
+	if err != nil {
+		return parentbilling.ContractFamilyBilling{}, err
+	}
+	if stored != nil {
+		if err := t.store.InsertFamilyBillingEvents(ctx, reviewer.OrganizationID, reviewer.AccountID, familyBillingRead,
+			[]parentbilling.FamilyBilling{*stored}); err != nil {
+			return parentbilling.ContractFamilyBilling{}, fmt.Errorf("parent billing: record the read of the family billing: %w", err)
+		}
+	}
+	return parentbilling.ContractFamilyBilling{ContractID: ident.ID(contractID), FamilyEmail: key,
+		PartyFirstName: recipient.FirstName, PartyLastName: recipient.LastName, Family: stored}, nil
+}
+
 // SaveFamilyBilling validates the deviation and stores it for the family of
 // the contract. A deviation that deviates in nothing removes the stored one,
 // so the family falls back to the registration and the terms; a family the
@@ -185,19 +230,9 @@ func (t *BillingTerms) SaveFamilyBilling(ctx context.Context, reviewer parentbil
 	if err := validReviewer(reviewer); err != nil {
 		return nil, err
 	}
-	if input.ContractID <= 0 {
-		return nil, parentbilling.ErrFamilyUnknown
-	}
-	recipients, err := t.contracts.Recipients(ctx, reviewer.OrganizationID, []int64{input.ContractID})
+	_, key, err := t.familyOfContract(ctx, reviewer.OrganizationID, input.ContractID)
 	if err != nil {
-		return nil, fmt.Errorf("parent billing: read the contract party: %w", err)
-	}
-	// A contract of another Träger is not among the recipients and names
-	// no family.
-	recipient, known := recipients[input.ContractID]
-	key := parentbilling.ContractFamilyKey(recipient.Email, input.ContractID)
-	if !known || key == "" {
-		return nil, parentbilling.ErrFamilyUnknown
+		return nil, err
 	}
 	stored, err := t.store.FamilyBillingOf(ctx, reviewer.OrganizationID, key)
 	if err != nil {

@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The debtor numbers of the children in the list of families (#7007). When
@@ -38,9 +39,11 @@ type ChildNumberStore interface {
 
 // contractChild is the child of a contract as the list names it.
 type contractChild struct {
-	family    string
-	recipient parentbilling.CareRecipient
-	child     parentbilling.FamilyChild
+	family string
+	// contractID is the contract the child was read from.
+	contractID int64
+	recipient  parentbilling.CareRecipient
+	child      parentbilling.FamilyChild
 	// until is the last day of the contract within the window read.
 	until calendar.Date
 }
@@ -85,7 +88,7 @@ func (f *BillingFamilies) contractChildren(ctx context.Context, organizationID i
 			continue
 		}
 		at[parentbilling.ChildDebtorNumberKey(family, key)] = len(children)
-		children = append(children, contractChild{family: family, recipient: recipient, until: until[id], child: parentbilling.FamilyChild{
+		children = append(children, contractChild{family: family, contractID: id, recipient: recipient, until: until[id], child: parentbilling.FamilyChild{
 			FirstName: version.ChildFirstName, LastName: version.ChildLastName, BirthDate: version.ChildBirthDate}})
 	}
 	return children, nil
@@ -118,15 +121,15 @@ func familyChildNumbers(contracts []contractChild, numbers []parentbilling.Child
 ) {
 	families := []parentbilling.FamilyChildNumbers{}
 	at := map[string]int{}
-	add := func(family string, recipient parentbilling.CareRecipient) int {
+	add := func(family string, contractID int64, recipient parentbilling.CareRecipient) int {
 		if i, ok := at[family]; ok {
 			if families[i].RecipientLastName == "" {
 				families[i].RecipientFirstName, families[i].RecipientLastName = recipient.FirstName, recipient.LastName
 			}
 			return i
 		}
-		families = append(families, parentbilling.FamilyChildNumbers{FamilyEmail: family, RecipientFirstName: recipient.FirstName,
-			RecipientLastName: recipient.LastName, Children: []parentbilling.FamilyChild{}})
+		families = append(families, parentbilling.FamilyChildNumbers{ContractID: ident.ID(contractID), FamilyEmail: family,
+			RecipientFirstName: recipient.FirstName, RecipientLastName: recipient.LastName, Children: []parentbilling.FamilyChild{}})
 		at[family] = len(families) - 1
 		return at[family]
 	}
@@ -137,7 +140,7 @@ func familyChildNumbers(contracts []contractChild, numbers []parentbilling.Child
 	shown := map[string]bool{}
 	var read []parentbilling.ChildDebtorNumber
 	for _, contract := range contracts {
-		i := add(contract.family, contract.recipient)
+		i := add(contract.family, contract.contractID, contract.recipient)
 		child := contract.child
 		key := parentbilling.ChildDebtorNumberKey(contract.family, parentbilling.ChildKey(child.FirstName, child.LastName, child.BirthDate))
 		if number, ok := byKey[key]; ok {
@@ -151,7 +154,7 @@ func familyChildNumbers(contracts []contractChild, numbers []parentbilling.Child
 		if shown[number.Key()] {
 			continue
 		}
-		i := add(number.FamilyEmail, parentbilling.CareRecipient{})
+		i := add(number.FamilyEmail, 0, parentbilling.CareRecipient{})
 		families[i].Children = append(families[i].Children, parentbilling.FamilyChild{FirstName: number.ChildFirstName,
 			LastName: number.ChildLastName, BirthDate: number.ChildBirthDate, DebtorNumber: number.DebtorNumber})
 		read = append(read, number)

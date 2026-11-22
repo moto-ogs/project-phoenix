@@ -100,6 +100,13 @@ type BillingFamily struct {
 	FamilyEmail        string `json:"family_email"`
 	FamilyDebtorNumber string `json:"family_debtor_number"`
 	HolidayOnly        bool   `json:"holiday_only"`
+	// FamilyPaymentMethod is the payment method the Abrechnung set for the
+	// family (#7770), empty while the terms of the services decide. It is
+	// what the next invoice takes; PaymentMethods are what issued invoices
+	// took. ContractID is the contract the deviation of the family was last
+	// saved for, 0 without one: it opens the family's recipient and payment.
+	FamilyPaymentMethod string   `json:"family_payment_method"`
+	ContractID          ident.ID `json:"contract_id"`
 	BillingAmounts
 }
 
@@ -159,8 +166,9 @@ type BillingFamilyDetail struct {
 // and runs in the Träger transaction of its Träger, which the caller opens;
 // every read is recorded in the trail of each run whose documents it shows.
 type BillingFamilies interface {
-	// ListBillingFamilies lists the families with an issued document or a
-	// number of their own (#6692), by name; the read of a number is recorded
+	// ListBillingFamilies lists the families with an issued document, a
+	// number of their own (#6692) or a payment method of their own (#7770),
+	// by name; the read of a number is recorded
 	// in the family's trail.
 	ListBillingFamilies(ctx context.Context, reviewer HolidayReviewer) ([]BillingFamily, error)
 	// BillingFamily reads one family by its ID with every document. An ID
