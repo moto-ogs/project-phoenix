@@ -102,29 +102,41 @@ const sharedFile = "shared.generated.ts"
 const portalsFile = "portals.generated.ts"
 
 // portalTable writes the routes each portal may reach: the allowlist of a
-// portal's proxy. A route that names no portal is in no list.
+// portal's proxy. A route that names no portal is in no list. A route its
+// portal's own route file serves stands in routeFileRoutes instead, never
+// in the allowlist (#7808).
 func portalTable(resources map[string][]Route) string {
 	byPortal := map[string][]string{}
+	byRouteFile := map[string][]string{}
 	var out strings.Builder
 	out.WriteString(tsHeader)
 	for _, resource := range sortedKeys(resources) {
 		fmt.Fprintf(&out, "import { routes as %s } from \"./%s.generated\";\n", resourceAlias(resource), resource)
 		for _, route := range resources[resource] {
+			table := byPortal
+			if route.RouteFile != "" {
+				table = byRouteFile
+			}
 			for _, portal := range route.Portals {
-				byPortal[portal] = append(byPortal[portal], fmt.Sprintf("%s[%q]", resourceAlias(resource), route.Key()))
+				table[portal] = append(table[portal], fmt.Sprintf("%s[%q]", resourceAlias(resource), route.Key()))
 			}
 		}
 	}
-	out.WriteString("\n/** The registered routes of each portal, by the scope of its session token. */\nexport const portalRoutes = {\n")
+	writeTable(&out, "The registered routes of each portal, by the scope of its session token.", "portalRoutes", byPortal)
+	writeTable(&out, "The routes each portal's own route files serve; its proxy serves none of them.", "routeFileRoutes", byRouteFile)
+	return out.String()
+}
+
+func writeTable(out *strings.Builder, doc, name string, byPortal map[string][]string) {
+	fmt.Fprintf(out, "\n/** %s */\nexport const %s = {\n", doc, name)
 	for _, portal := range sortedKeys(byPortal) {
-		fmt.Fprintf(&out, "  %s: [\n", portal)
+		fmt.Fprintf(out, "  %s: [\n", portal)
 		for _, entry := range byPortal[portal] {
-			fmt.Fprintf(&out, "    %s,\n", entry)
+			fmt.Fprintf(out, "    %s,\n", entry)
 		}
 		out.WriteString("  ],\n")
 	}
 	out.WriteString("} as const;\n")
-	return out.String()
 }
 
 // resourceAlias turns parent-me into parentMe.
@@ -372,6 +384,7 @@ func (w *tsWriter) route(out *strings.Builder, route Route) {
 	if route.PrivateCache {
 		out.WriteString("    privateCache: true,\n")
 	}
+	writeRouteFileTraits(out, route)
 	if len(route.Query) > 0 {
 		names := make([]string, len(route.Query))
 		for i, param := range route.Query {
@@ -391,9 +404,25 @@ func (w *tsWriter) route(out *strings.Builder, route Route) {
 	out.WriteString("  },\n")
 }
 
+// writeRouteFileTraits writes the traits of a route its portal's own route file
+// serves (#7808).
+func writeRouteFileTraits(out *strings.Builder, route Route) {
+	if route.RouteFile != "" {
+		fmt.Fprintf(out, "    routeFile: %q,\n", route.RouteFile)
+	}
+	if route.Plain {
+		out.WriteString("    plain: true,\n")
+	}
+}
+
 // response writes the route's answer: a decoder, the decoders of its
 // variants, or the marker of an answer without data.
 func (w *tsWriter) response(out *strings.Builder, route Route) {
+	if route.Plain {
+		// The data is the whole body.
+		fmt.Fprintf(out, "    response: %s,\n", w.zod(*route.Response))
+		return
+	}
 	wrap := envelopeHelper(route)
 	w.helpers[wrap] = true
 	if route.Variants != nil {

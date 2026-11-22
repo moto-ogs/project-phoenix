@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 
@@ -81,6 +82,13 @@ func (loaded *answerContract) observe(r *http.Request, status int, data any, env
 	}
 	pattern := routeContext.RoutePattern()
 	routes, whole := loaded.candidates(r.Method, pattern, data)
+	plain, isPlain := envelope.(PlainAnswer)
+	if isPlain {
+		// RenderJSON writes many answers outside the contract; only a route
+		// registered as Plain reads it as its data.
+		routes = slices.DeleteFunc(routes, func(route contractmodel.Route) bool { return !route.Plain })
+		envelope = plain.Value
+	}
 	if len(routes) == 0 {
 		return nil
 	}

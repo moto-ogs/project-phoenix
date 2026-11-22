@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/tokenprimitives"
 
 	"github.com/stretchr/testify/assert"
@@ -146,7 +147,7 @@ func TestOperatorMFAVerify_InvalidJSON_Returns400(t *testing.T) {
 	r := httptest.NewRequest(http.MethodPost, "/operator/mfa/verify", strings.NewReader("not-json"))
 	r.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
-	rs.Verify(rr, r)
+	testutil.ServeAtRoute(rr, r, "/operator/auth/mfa/verify", rs.Verify)
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
@@ -163,7 +164,7 @@ func TestOperatorMFAVerify_ServiceErrorMapsTo401(t *testing.T) {
 	r := opJSONReq(t, http.MethodPost, "/operator/mfa/verify",
 		identityoperator.MFAVerifyRequest{ChallengeToken: "tok", Code: "123456"})
 	rr := httptest.NewRecorder()
-	rs.Verify(rr, r)
+	testutil.ServeAtRoute(rr, r, "/operator/auth/mfa/verify", rs.Verify)
 
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 }
@@ -181,7 +182,7 @@ func TestOperatorMFAResend_Success_ReturnsRenewedToken(t *testing.T) {
 	r := opJSONReq(t, http.MethodPost, "/operator/mfa/resend",
 		identityoperator.MFAResendRequest{ChallengeToken: "tok"})
 	rr := httptest.NewRecorder()
-	rs.Resend(rr, r)
+	testutil.ServeAtRoute(rr, r, "/operator/auth/mfa/resend", rs.Resend)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 	var resp identityoperator.MFAResendResponse
@@ -196,7 +197,7 @@ func TestOperatorMFAResend_BindRejectsEmptyToken(t *testing.T) {
 
 	r := opJSONReq(t, http.MethodPost, "/operator/mfa/resend", identityoperator.MFAResendRequest{})
 	rr := httptest.NewRecorder()
-	rs.Resend(rr, r)
+	testutil.ServeAtRoute(rr, r, "/operator/auth/mfa/resend", rs.Resend)
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
@@ -213,7 +214,7 @@ func TestOperatorMFAResend_ServiceErrorMapsTo429(t *testing.T) {
 	r := opJSONReq(t, http.MethodPost, "/operator/mfa/resend",
 		identityoperator.MFAResendRequest{ChallengeToken: "tok"})
 	rr := httptest.NewRecorder()
-	rs.Resend(rr, r)
+	testutil.ServeAtRoute(rr, r, "/operator/auth/mfa/resend", rs.Resend)
 
 	assert.Equal(t, http.StatusTooManyRequests, rr.Code)
 }
@@ -225,7 +226,7 @@ func TestOperatorMFAEnrollStart_RequiresEnrollmentClaim(t *testing.T) {
 
 	r := opJSONReq(t, http.MethodPost, "/operator/mfa/enroll/start", nil)
 	rr := httptest.NewRecorder()
-	rs.EnrollStart(rr, r)
+	testutil.ServeAtRoute(rr, r, "/operator/auth/mfa/enroll/start", rs.EnrollStart)
 
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 }
@@ -239,7 +240,7 @@ func TestOperatorMFAEnrollStart_Success(t *testing.T) {
 
 	r := opWithEnrollmentClaims(opJSONReq(t, http.MethodPost, "/operator/mfa/enroll/start", nil), 42)
 	rr := httptest.NewRecorder()
-	rs.EnrollStart(rr, r)
+	testutil.ServeAtRoute(rr, r, "/operator/auth/mfa/enroll/start", rs.EnrollStart)
 
 	assert.Equal(t, http.StatusNoContent, rr.Code)
 }
@@ -252,7 +253,7 @@ func TestOperatorMFAEnrollConfirm_RequiresEnrollmentClaim(t *testing.T) {
 	r := opJSONReq(t, http.MethodPost, "/operator/mfa/enroll/confirm",
 		identityoperator.MFAEnrollConfirmRequest{Code: "123456"})
 	rr := httptest.NewRecorder()
-	rs.EnrollConfirm(rr, r)
+	testutil.ServeAtRoute(rr, r, "/operator/auth/mfa/enroll/confirm", rs.EnrollConfirm)
 
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 }
@@ -267,7 +268,7 @@ func TestOperatorMFAEnrollConfirm_WrongCodeReturns401(t *testing.T) {
 	r := opWithEnrollmentClaims(opJSONReq(t, http.MethodPost, "/operator/mfa/enroll/confirm",
 		identityoperator.MFAEnrollConfirmRequest{Code: "654321"}), 42)
 	rr := httptest.NewRecorder()
-	rs.EnrollConfirm(rr, r)
+	testutil.ServeAtRoute(rr, r, "/operator/auth/mfa/enroll/confirm", rs.EnrollConfirm)
 
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 }
@@ -292,7 +293,7 @@ func TestOperatorMFAEnrollConfirm_AlreadyEnrolledMintsSession(t *testing.T) {
 	r := opWithEnrollmentClaims(opJSONReq(t, http.MethodPost, "/operator/mfa/enroll/confirm",
 		identityoperator.MFAEnrollConfirmRequest{Code: "123456"}), 42)
 	rr := httptest.NewRecorder()
-	rs.EnrollConfirm(rr, r)
+	testutil.ServeAtRoute(rr, r, "/operator/auth/mfa/enroll/confirm", rs.EnrollConfirm)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 	var body struct {
@@ -330,7 +331,7 @@ func TestOperatorMFAEnrollConfirm_StaleCredentialRecordsAndMintsNothing(t *testi
 	r := opJSONReq(t, http.MethodPost, "/operator/mfa/enroll/confirm",
 		identityoperator.MFAEnrollConfirmRequest{Code: "123456"}).WithContext(ctx)
 	rr := httptest.NewRecorder()
-	rs.EnrollConfirm(rr, r)
+	testutil.ServeAtRoute(rr, r, "/operator/auth/mfa/enroll/confirm", rs.EnrollConfirm)
 
 	assert.Equal(t, identityaccess.OperatorMFAProof{OperatorID: 42, CredentialGeneration: 7}, enrolled,
 		"the enrollment is held to the generation of the enrollment token")

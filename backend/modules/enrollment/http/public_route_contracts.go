@@ -20,7 +20,7 @@ const (
 
 // PublicRouteContracts registers the parent-facing routes that reach the
 // backend without a session (#2352), relative to /api/enrollment. The form
-// bootstrap keeps its BFF file. The upload is a public upload of the form;
+// bootstrap is served by its route file (RouteFileContracts). The upload is a public upload of the form;
 // the backend counts the attempt by IP before it reads the body. The signature proof is a
 // public file at /requests/{statusToken}/signature-proof; the status read
 // forwards no format, so its ?format=pdf stays off the proxy.
@@ -69,5 +69,20 @@ func PublicHolidayRegistrationRouteContracts() []common.RouteContract {
 			PublicUpload: "the published link of a holiday period takes proofs of benefits; the backend limits attempts per IP and Träger"},
 		{Method: "GET", Pattern: "/{token}/documents/{documentId}", Portals: portals, File: true,
 			PublicFile: "the published link of a holiday period opens the form documents it lists"},
+	}
+}
+
+// RouteFileContracts registers the form bootstrap of the staff portal and
+// the signed-in person's autofill (#7808), relative to /api/enrollment. The
+// bootstrap's route file adds the autofill of a signed-in staff member to
+// the public form, so no proxy allowlist names either route.
+func RouteFileContracts() []common.RouteContract {
+	portals := []common.PortalScope{common.PortalTenant}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/form-bootstrap/public/{tenantSlug}/{phaseId}", Portals: portals,
+			RouteFile: "the route file adds the signed-in staff member's profile to the public form",
+			Query:     []common.QueryParam{{Name: "late_invite", Kind: common.QueryString}}, Response: PublicEnrollmentFormBootstrapResponse{}},
+		{Method: "GET", Pattern: "/me/profile", Portals: portals,
+			RouteFile: "read only by the form bootstrap's route file", Response: common.GuardianProfileResponse{}},
 	}
 }
