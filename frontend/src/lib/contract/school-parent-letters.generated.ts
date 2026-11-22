@@ -99,6 +99,7 @@ export const routes = {
     method: "POST",
     pattern: "/school/parent-letters/letter-preview",
     portals: ["school"],
+    noCommit: "the preview renders the letter and sends nothing",
     request: requestBody<letterPreviewRequest>(),
     response: success(letterPreviewResponseSchema),
   },

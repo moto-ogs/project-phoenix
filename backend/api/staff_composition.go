@@ -197,7 +197,6 @@ func newStaffResource(
 
 		RetryQueuedDocumentCleanups: staffAdmin.RetryQueuedStaffDocumentCleanups,
 
-		TeacherGroups:    staffTeacherGroups(runtime),
 		SchoolClasses:    runtime.SchoolClasses,
 		SetSchoolClasses: runtime.SetSchoolClasses,
 		ActiveCaregivers: staffRoleRows(runtime.ActiveCaregivers),
@@ -294,20 +293,6 @@ func staffPersonsLookup(runtime StaffMembershipRuntime) func(context.Context, []
 		result := make([]staffHTTP.Person, 0, len(persons))
 		for _, person := range persons {
 			result = append(result, toStaffHTTPPerson(person))
-		}
-		return result, nil
-	}
-}
-
-func staffTeacherGroups(runtime StaffMembershipRuntime) func(context.Context, int64) ([]staffHTTP.Group, error) {
-	return func(ctx context.Context, teacherID int64) ([]staffHTTP.Group, error) {
-		groups, err := runtime.TeacherGroups(ctx, teacherID)
-		if err != nil {
-			return nil, err
-		}
-		result := make([]staffHTTP.Group, 0, len(groups))
-		for _, group := range groups {
-			result = append(result, staffHTTP.Group{ID: group.ID, Name: group.Name})
 		}
 		return result, nil
 	}

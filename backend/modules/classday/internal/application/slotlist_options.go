@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func (s *service) ListOptions(ctx context.Context, requested classday.Date) (*classday.OptionsResult, error) {
@@ -73,7 +74,7 @@ func (s *service) optionSlots(ctx context.Context, instances []*slotInstance) ([
 			listKind = *inst.ListKind
 		}
 		slots = append(slots, classday.Slot{
-			InstanceID: inst.ID,
+			InstanceID: ident.ID(inst.ID),
 			Title:      inst.Title,
 			TimeRange:  fmt.Sprintf("%s\u2013%s", inst.StartTime.Format(timeLayout), inst.EndTime.Format(timeLayout)),
 			Status:     inst.Status,

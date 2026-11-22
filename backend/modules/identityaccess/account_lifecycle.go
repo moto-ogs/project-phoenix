@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Account lifecycle (#3225): the admin staff-view preview, staff offboarding,
@@ -94,7 +96,7 @@ type StaffPreviewSession struct {
 // picker. AccountID travels as a JSON string: an int64 ID must never pass
 // through a JavaScript number.
 type StaffPreviewCandidate struct {
-	AccountID int64    `json:"account_id,string"`
+	AccountID ident.ID `json:"account_id"`
 	FirstName string   `json:"first_name"`
 	LastName  string   `json:"last_name"`
 	Email     string   `json:"email"`

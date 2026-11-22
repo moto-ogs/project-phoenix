@@ -208,63 +208,6 @@ func decodeError(t *testing.T, recorder *httptest.ResponseRecorder) errorRespons
 	return body
 }
 
-func TestListPersonsForwardsFiltersAndPaginates(t *testing.T) {
-	t.Parallel()
-	tag := "ABC"
-	var accountID int64 = 99
-	var secondAccountID int64 = 100
-	directory := &fakeDirectory{persons: map[int64]peopledirectory.Person{
-		7: {ID: 7, FirstName: "Mia", LastName: "Muster", TagID: &tag, AccountID: &accountID},
-		8: {ID: 8, FirstName: "Noah", LastName: "Muster", AccountID: &secondAccountID},
-	}}
-	h := newHarness(t, directory)
-	h.permitted["users:read"] = true
-	h.accounts[accountID] = "mia@example.com"
-	h.accounts[secondAccountID] = "noah@example.com"
-
-	recorder := h.do(t, http.MethodGet, "/users?first_name=Mi&last_name=Mu&tag_id=ABC", nil)
-
-	require.Equal(t, http.StatusOK, recorder.Code)
-	assert.Equal(t, peopledirectory.PersonFilter{FirstNamePrefix: "Mi", LastNamePrefix: "Mu", TagID: "ABC", Page: 1, PageSize: 20}, directory.searched)
-	body := decode(t, recorder)
-	require.NotNil(t, body.Pagination)
-	assert.Equal(t, 2, body.Pagination.Total)
-	assert.Contains(t, string(body.Data), `"tag_id":"ABC"`)
-	assert.Contains(t, string(body.Data), `"email":"mia@example.com"`)
-	assert.Contains(t, string(body.Data), `"email":"noah@example.com"`)
-	require.Len(t, h.lookups, 1)
-	assert.ElementsMatch(t, []int64{accountID, secondAccountID}, h.lookups[0])
-	assert.Equal(t, 1, h.txCalls, "the protected group wraps the handler in the injected transaction middleware")
-}
-
-func TestListPersonsReportsClampedPageSize(t *testing.T) {
-	t.Parallel()
-	directory := &fakeDirectory{persons: map[int64]peopledirectory.Person{}}
-	h := newHarness(t, directory)
-	h.permitted["users:read"] = true
-	h.page = 2
-	h.pageSize = peopledirectory.MaxPageSize + 1
-
-	recorder := h.do(t, http.MethodGet, "/users", nil)
-
-	require.Equal(t, http.StatusOK, recorder.Code)
-	assert.Equal(t, peopledirectory.MaxPageSize, directory.searched.PageSize)
-	body := decode(t, recorder)
-	require.NotNil(t, body.Pagination)
-	assert.Equal(t, peopledirectory.MaxPageSize, body.Pagination.PageSize)
-	assert.Equal(t, 2, body.Pagination.Page)
-}
-
-func TestListPersonsWithoutPermissionIsForbidden(t *testing.T) {
-	t.Parallel()
-	h := newHarness(t, &fakeDirectory{persons: map[int64]peopledirectory.Person{}})
-
-	recorder := h.do(t, http.MethodGet, "/users", nil)
-
-	assert.Equal(t, http.StatusForbidden, recorder.Code)
-	assert.Zero(t, h.txCalls)
-}
-
 func TestGetPersonAddsAccountEmailAndMapsNotFound(t *testing.T) {
 	t.Parallel()
 	var accountID int64 = 99
@@ -289,39 +232,6 @@ func TestGetPersonAddsAccountEmailAndMapsNotFound(t *testing.T) {
 	assert.Equal(t, "invalid person ID", decodeError(t, nonPositive).Detail)
 	assert.Contains(t, h.observed, "Not Found:not_found")
 	assert.Contains(t, h.observed, "Bad Request:invalid_parameters")
-}
-
-func TestCreatePersonValidatesBodyAndForeignReferences(t *testing.T) {
-	t.Parallel()
-	directory := &fakeDirectory{persons: map[int64]peopledirectory.Person{}}
-	h := newHarness(t, directory)
-	h.permitted["users:create"] = true
-	h.accounts[5] = "five@example.com"
-	h.tags["AABB"] = true
-
-	missingName := h.do(t, http.MethodPost, "/users", map[string]any{"last_name": "Only"})
-	assert.Equal(t, http.StatusBadRequest, missingName.Code)
-	assert.Equal(t, string(usersHTTP.FailureInvalidRequest), decodeError(t, missingName).Kind)
-	assert.Contains(t, decodeError(t, missingName).Detail, "first_name")
-
-	unknownAccount := h.do(t, http.MethodPost, "/users", map[string]any{"first_name": "A", "last_name": "B", "account_id": 6})
-	assert.Equal(t, http.StatusNotFound, unknownAccount.Code)
-	assert.Equal(t, "account not found", decodeError(t, unknownAccount).Detail)
-
-	unknownTag := h.do(t, http.MethodPost, "/users", map[string]any{"first_name": "A", "last_name": "B", "tag_id": "zz:zz"})
-	assert.Equal(t, http.StatusNotFound, unknownTag.Code)
-	assert.Equal(t, "RFID card not found", decodeError(t, unknownTag).Detail)
-
-	created := h.do(t, http.MethodPost, "/users", map[string]any{"first_name": "A", "last_name": "B", "account_id": 5, "tag_id": "aa:bb"})
-	require.Equal(t, http.StatusCreated, created.Code)
-	require.NotNil(t, directory.created.AccountID)
-	assert.EqualValues(t, 5, *directory.created.AccountID)
-	assert.Contains(t, string(decode(t, created).Data), `"email":"five@example.com"`)
-
-	plain := h.do(t, http.MethodPost, "/users", map[string]any{"first_name": "No", "last_name": "Links"})
-	assert.Equal(t, http.StatusCreated, plain.Code)
-	assert.Nil(t, directory.created.AccountID)
-	assert.Nil(t, directory.created.TagID)
 }
 
 func TestUpdatePersonKeepsStoredLinksWhenBodyOmitsThem(t *testing.T) {

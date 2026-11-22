@@ -319,7 +319,7 @@ type Version struct {
 	// of its only module, nil when it has none or the contract has several
 	// modules (ADR 0088 section 2). The tariffs per weekday and module of
 	// #4684 price the rest.
-	PriceCents *int64        `json:"price_cents"`
+	PriceCents *int64        `json:"price_cents" contract:"number"`
 	Terms      TemplateInput `json:"terms"`
 	CreatedAt  time.Time     `json:"created_at"`
 	// Source tells where the version came from: SourceConclusion or

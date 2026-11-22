@@ -62,7 +62,6 @@ var staffRouteSurface = []string{
 	"GET /{id}/avatar",
 	"GET /{id}/documents",
 	"GET /{id}/documents/{documentId}/download",
-	"GET /{id}/groups",
 	"GET /{id}/payroll-number",
 	"GET /{id}/qualifications",
 	"GET /{id}/schedule",

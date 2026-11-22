@@ -32,7 +32,7 @@ type seedCareRunDetail struct {
 	ID           apiID  `json:"id"`
 	Status       string `json:"status"`
 	PreviewCount int    `json:"preview_count"`
-	PreviewCents int64  `json:"preview_cents"`
+	PreviewCents int64  `json:"preview_cents" contract:"number"`
 	Fingerprint  string `json:"fingerprint"`
 	// ExcludedCount and Invoices show the review of the open run (#5916).
 	ExcludedCount int `json:"excluded_count"`

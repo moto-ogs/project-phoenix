@@ -30,6 +30,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -421,7 +422,7 @@ func (b *staffEntryBuilder) absence(span staffAbsenceSpan) {
 	b.entries = append(b.entries, daychangesview.SourceEntry{
 		Kind: daychangesview.KindStaffAbsent, Involved: involved, HalfDay: span.half,
 		Since: since, Until: until,
-		People: []daychangesview.Person{{StaffID: span.staffID, Role: daychangesview.RoleAbsent, IsSelf: self}},
+		People: []daychangesview.Person{{StaffID: ident.ID(span.staffID), Role: daychangesview.RoleAbsent, IsSelf: self}},
 		Link:   b.absenceLink(span.staffID, self),
 	})
 }
@@ -433,9 +434,9 @@ func (b *staffEntryBuilder) absenceLink(staffID int64, self bool) *daychangesvie
 	case self:
 		return nil
 	case b.viewer.lead:
-		return &daychangesview.Link{Target: daychangesview.LinkStaffAbsences, StaffID: &staffID}
+		return &daychangesview.Link{Target: daychangesview.LinkStaffAbsences, StaffID: (*ident.ID)(&staffID)}
 	case b.viewer.staffRecords:
-		return &daychangesview.Link{Target: daychangesview.LinkStaffMember, StaffID: &staffID}
+		return &daychangesview.Link{Target: daychangesview.LinkStaffMember, StaffID: (*ident.ID)(&staffID)}
 	default:
 		return nil
 	}
@@ -451,17 +452,17 @@ func (b *staffEntryBuilder) handover(row workforce.GroupSubstitution) {
 		}
 		return
 	}
-	people := []daychangesview.Person{{StaffID: row.SubstituteStaffID, Role: daychangesview.RoleSubstitute, IsSelf: row.SubstituteStaffID == b.viewer.selfID}}
+	people := []daychangesview.Person{{StaffID: ident.ID(row.SubstituteStaffID), Role: daychangesview.RoleSubstitute, IsSelf: row.SubstituteStaffID == b.viewer.selfID}}
 	b.staffIDs[row.SubstituteStaffID] = true
 	if row.RegularStaffID != nil {
-		people = append(people, daychangesview.Person{StaffID: *row.RegularStaffID, Role: daychangesview.RoleReplaced, IsSelf: *row.RegularStaffID == b.viewer.selfID})
+		people = append(people, daychangesview.Person{StaffID: ident.ID(*row.RegularStaffID), Role: daychangesview.RoleReplaced, IsSelf: *row.RegularStaffID == b.viewer.selfID})
 		b.staffIDs[*row.RegularStaffID] = true
 	}
 	b.groupIDs[row.GroupID] = true
 	since, until := b.span(row.StartDate, row.EndDate)
 	entry := daychangesview.SourceEntry{
 		Kind: daychangesview.KindGroupSubstitution, Involved: involved, Since: since, Until: until,
-		People: people, Group: &daychangesview.Group{ID: row.GroupID},
+		People: people, Group: &daychangesview.Group{ID: ident.ID(row.GroupID)},
 	}
 	if b.viewer.groupHandovers {
 		entry.Link = &daychangesview.Link{Target: daychangesview.LinkGroupHandovers}
@@ -531,10 +532,10 @@ func (b *staffEntryBuilder) resolveNames(ctx context.Context, names dayChangesSt
 	}
 	for i := range b.entries {
 		for j := range b.entries[i].People {
-			b.entries[i].People[j].Name = staffNames[b.entries[i].People[j].StaffID]
+			b.entries[i].People[j].Name = staffNames[b.entries[i].People[j].StaffID.Int64()]
 		}
 		if group := b.entries[i].Group; group != nil {
-			group.Name = groupNames[group.ID]
+			group.Name = groupNames[group.ID.Int64()]
 		}
 	}
 	return nil

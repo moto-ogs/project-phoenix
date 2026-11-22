@@ -542,17 +542,7 @@
     },
     {
       "decision": "0090",
-      "id": "modules/peopledirectory/internal/application/GroupRoutePeople.FindPerson",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/peopledirectory/internal/application/GroupRoutePeople.GroupStudents",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/peopledirectory/internal/application/GroupRoutePeople.ListPersonsByID",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

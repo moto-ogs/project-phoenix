@@ -236,7 +236,7 @@ func (s *substitutionModule) listAssignableGroups(ctx context.Context, tenantID 
 		if row.TenantID != ident.ID(tenantID) {
 			return nil, ErrForbidden
 		}
-		groups = append(groups, GroupRef{ID: row.ID.Int64(), Name: row.Name})
+		groups = append(groups, GroupRef{ID: ident.ID(row.ID.Int64()), Name: row.Name})
 	}
 	sort.Slice(groups, func(i, j int) bool { return groups[i].Name < groups[j].Name })
 	return groups, nil
@@ -566,16 +566,16 @@ func (s *substitutionModule) listTargets(ctx context.Context, actor *Actor) ([]S
 	result := make([]StaffRef, 0, len(caregivers))
 	for _, caregiver := range caregivers {
 		if actor == nil || caregiver.StaffID != actor.StaffID {
-			result = append(result, StaffRef{ID: caregiver.StaffID, FullName: caregiver.FullName})
+			result = append(result, StaffRef{ID: ident.ID(caregiver.StaffID), FullName: caregiver.FullName})
 		}
 	}
 	return result, nil
 }
 
 func project(row *domain.GroupSubstitution, canEnd bool) GroupHandover {
-	result := GroupHandover{ID: row.ID, Type: TargetGroupHandover, CanEnd: canEnd,
+	result := GroupHandover{ID: ident.ID(row.ID), Type: TargetGroupHandover, CanEnd: canEnd,
 		Period: Period{StartDate: row.StartDate.String(), EndDate: row.EndDate.String()},
-		Group:  GroupRef{ID: row.GroupID}, Target: StaffRef{ID: row.SubstituteStaffID}}
+		Group:  GroupRef{ID: ident.ID(row.GroupID)}, Target: StaffRef{ID: ident.ID(row.SubstituteStaffID)}}
 	if row.Group != nil {
 		result.Group.Name = row.Group.Name
 	}
@@ -588,10 +588,10 @@ func project(row *domain.GroupSubstitution, canEnd bool) GroupHandover {
 func projectAssignment(row *domain.GroupSubstitution, group *domain.Group, target *domain.Caregiver) AssignmentResult {
 	period := &Period{StartDate: row.StartDate.String(), EndDate: row.EndDate.String()}
 	return AssignmentResult{
-		ID: row.ID, Type: TargetGroupHandover, CanEnd: true,
+		ID: ident.ID(row.ID), Type: TargetGroupHandover, CanEnd: true,
 		Period: period,
-		Group:  &GroupRef{ID: group.ID.Int64(), Name: group.Name},
-		Target: StaffRef{ID: target.StaffID, FullName: target.FullName},
+		Group:  &GroupRef{ID: ident.ID(group.ID.Int64()), Name: group.Name},
+		Target: StaffRef{ID: ident.ID(target.StaffID), FullName: target.FullName},
 	}
 }
 

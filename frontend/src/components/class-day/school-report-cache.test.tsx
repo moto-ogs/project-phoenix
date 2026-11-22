@@ -47,10 +47,16 @@ const report: ClassDayReport = {
   weekday: "wed",
   school_day: true,
   enrollment_known: true,
+  can_write_day_hints: false,
+  can_record_morning_attendance: false,
+  can_write_homework: false,
+  can_read_shared_notes: false,
+  can_hand_over: false,
+  can_report_absences: false,
   totals: { students: 1, staying: 1, leaving: 0, absent: 0, list_entries: 0 },
   rows: [
     {
-      student_id: 1,
+      student_id: "1",
       first_name: "Klara",
       last_name: "Klassentag",
       registered: true,

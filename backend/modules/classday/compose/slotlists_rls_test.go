@@ -61,7 +61,7 @@ func TestClassDayInputsEnforceRLS(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, result.Rows, 3, "both tenants have a populated roster and actual visits")
 		require.Len(t, result.Slots, 1)
-		require.Equal(t, fixtures[side].instanceID, result.Slots[0].InstanceID)
+		require.Equal(t, fixtures[side].instanceID, result.Slots[0].InstanceID.Int64())
 		require.NotNil(t, rowByStudent(result.Rows, fixtures[side].plannedID))
 		for _, foreignID := range []int64{fixtures[1-side].plannedID, fixtures[1-side].missingID, fixtures[1-side].walkInID} {
 			require.Nil(t, rowByStudent(result.Rows, foreignID))

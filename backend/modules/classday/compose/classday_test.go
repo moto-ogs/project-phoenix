@@ -1,12 +1,12 @@
 package compose_test
 
 import (
-	"encoding/json"
 	"testing"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/classday"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -58,23 +58,23 @@ func TestDayReportKeepsTheWireShape(t *testing.T) {
 		CanReportAbsences:  true,
 	}
 
-	got, err := json.Marshal(report)
+	got, err := wire.Marshal(report)
 	require.NoError(t, err)
 	assert.JSONEq(t, `{
 		"school_class": "4a", "date": "2026-08-05", "weekday": "wed", "school_day": true,
 		"phase_name": "Schuljahr 2026/27", "enrollment_known": true,
 		"totals": {"students": 3, "staying": 1, "leaving": 1, "absent": 1, "list_entries": 1},
 		"rows": [
-			{"student_id": 11, "first_name": "Klara", "last_name": "Klassentag", "group_name": "Delfine",
+			{"student_id": "11", "first_name": "Klara", "last_name": "Klassentag", "group_name": "Delfine",
 			 "registered": true, "stays_today": true, "offerings": ["Lernzeit"], "arrival": "11:45",
 			 "pickup": "15:00", "departure": "Abholung", "pickup_changed": true, "pickup_regular": "16:00",
 			 "reported_at": "2026-08-05T05:00:00Z",
 			 "day_hints": [{"body": "Hat Bauchweh", "author_name": "Frau Kurz", "own": true, "updated_at": "2026-08-05T05:00:00Z"}]},
-			{"student_id": 12, "first_name": "Nico", "last_name": "Krank", "registered": true, "stays_today": false,
+			{"student_id": "12", "first_name": "Nico", "last_name": "Krank", "registered": true, "stays_today": false,
 			 "offerings": [], "departure": "Keine Angabe", "status": "sick", "reported_at": "2026-08-05T05:00:00Z",
 			 "morning_attendance": {"status": "absent", "source": "report"}, "handover_absent": true,
 			 "status_by_school": true},
-			{"student_id": 0, "first_name": "Lisa", "last_name": "NurListe", "list_entry": true,
+			{"student_id": "0", "first_name": "Lisa", "last_name": "NurListe", "list_entry": true,
 			 "list_entry_id": "9007199254740993", "registered": false, "stays_today": false, "offerings": []}
 		],
 		"class_arrival_exception": {"arrival_time": "12:45", "reason": "Unterricht fällt aus", "origin": "school"},
@@ -89,7 +89,7 @@ func TestDayReportKeepsTheWireShape(t *testing.T) {
 	}`, string(got))
 
 	// The optionals stay omitted.
-	bare, err := json.Marshal(classday.DayReport{SchoolClass: "1b", Date: classday.Date("2026-08-08"), Rows: []classday.DayRow{}})
+	bare, err := wire.Marshal(classday.DayReport{SchoolClass: "1b", Date: classday.Date("2026-08-08"), Rows: []classday.DayRow{}})
 	require.NoError(t, err)
 	assert.NotContains(t, string(bare), "class_arrival_exception")
 	assert.NotContains(t, string(bare), "phase_name")

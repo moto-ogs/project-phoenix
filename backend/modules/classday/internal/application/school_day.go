@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/classday"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // SchoolDayReport builds the school-wide day overview (#4802): the numbers of
@@ -151,7 +152,7 @@ func buildSchoolDayReport(date calendar.Date, weekday string, enrollmentKnown bo
 // covering enrollment phase nobody is split.
 func schoolDayChild(row classday.DayRow, schoolDay, enrollmentKnown bool) classday.SchoolDayChild {
 	child := classday.SchoolDayChild{
-		StudentID: row.StudentID.Int64(), ListEntry: row.ListEntry, ListEntryID: row.ListEntryID,
+		StudentID: ident.ID(row.StudentID.Int64()), ListEntry: row.ListEntry, ListEntryID: row.ListEntryID,
 		WithoutCarePlace: row.WithoutCarePlace,
 		FirstName:        row.FirstName, LastName: row.LastName,
 	}

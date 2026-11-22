@@ -1,3 +1,4 @@
+import type { attendanceHistoryResponse } from "~/lib/contract/students.generated";
 import { describe, it, expect } from "vitest";
 import {
   mapAttendanceHistoryResponse,
@@ -5,11 +6,10 @@ import {
   formatDate,
   formatAttendanceSlotStatus,
   formatDuration,
-  type AttendanceHistoryWire,
 } from "./attendance-history-helpers";
 
 describe("mapAttendanceHistoryResponse", () => {
-  const raw: AttendanceHistoryWire = {
+  const raw: attendanceHistoryResponse = {
     student_id: "42",
     days: [
       {

@@ -115,12 +115,21 @@ func (b *builder) field(declaring, root reflect.Type, sf reflect.StructField, na
 	schema, err := b.schema(sf.Type, at, request)
 	format := sf.Tag.Get("contract")
 	switch {
+	case slices.Contains(options, "string"):
+		// ,string makes encoding/json read only a string, and it does not
+		// reach a list; ident.ID is the one identifier type (ADR 0300).
+		err = fmt.Errorf("%s: the json option ,string does not make an identifier. Use ident.ID (ADR 0300)", at)
 	case errors.Is(err, errBareInt64) && format == "number":
 		// A running number or a count kept as int64: a number, never an
 		// identifier.
 		err, format = nil, ""
 	case errors.Is(err, errBareInt64):
-		err = b.numericID(&schema, declaring, sf.Name, slices.Contains(options, "string"), at)
+		err = b.numericID(&schema, declaring, at)
+	}
+	if err == nil && namesIdentifier(name) && readsNumber(schema) {
+		// The name does not make an identifier, but a number under an
+		// identifier's name is one the type forgot (ADR 0300).
+		err = fmt.Errorf("%s: %q names an identifier but is a number. Use ident.ID", at, name)
 	}
 	if err == nil && !request && readsLax(schema) {
 		// An answer carries every identifier as a decimal string, and the
@@ -206,11 +215,11 @@ func readsLax(schema Schema) bool {
 	return schema.Kind == KindLaxID
 }
 
-// numericID decides a bare int64. With ,string it is an identifier that
-// travels as a string, and on a request type whose own UnmarshalJSON is
-// registered it reads a number or a string. A count is an int, an
-// identifier a common.ID (ADR 0270, ADR 0300).
-func (b *builder) numericID(schema *Schema, declaring reflect.Type, goField string, asString bool, at string) error {
+// numericID decides a bare int64: on a request type whose own UnmarshalJSON
+// is registered as ReadsLaxIDs it reads a number or a string. Otherwise an
+// identifier is an ident.ID and a count or an amount an int or an int64
+// tagged contract:"number" (ADR 0270, ADR 0300).
+func (b *builder) numericID(schema *Schema, declaring reflect.Type, at string) error {
 	leaf := schema
 	for leaf.Kind == KindArray {
 		leaf = leaf.Elem
@@ -218,17 +227,24 @@ func (b *builder) numericID(schema *Schema, declaring reflect.Type, goField stri
 	if leaf.Kind != KindInt {
 		return fmt.Errorf("%s: int64 inside a map is not supported", at)
 	}
-	switch {
-	case asString && leaf == schema:
-		leaf.Kind = KindID
-	case b.readers[declaring] == ReadsLaxIDs:
-		leaf.Kind = KindLaxID
-	case strings.HasSuffix(goField, "Cents"):
-		// An amount in whole cent is a number, never an identifier.
-	default:
-		return fmt.Errorf("%s: int64 does not say what it is. Use common.ID for an identifier and int for a count (ADR 0270)", at)
+	if b.readers[declaring] != ReadsLaxIDs {
+		return fmt.Errorf("%s: int64 does not say what it is. Use ident.ID for an identifier, and int or contract:\"number\" for a count or an amount (ADR 0270)", at)
 	}
+	leaf.Kind = KindLaxID
 	return nil
+}
+
+// namesIdentifier tells whether a JSON key is the name of an identifier.
+func namesIdentifier(name string) bool {
+	return name == "id" || strings.HasSuffix(name, "_id") || strings.HasSuffix(name, "_ids")
+}
+
+// readsNumber tells whether a value, or an element of it, is a plain number.
+func readsNumber(schema Schema) bool {
+	for (schema.Kind == KindArray || schema.Kind == KindMap) && schema.Elem != nil {
+		schema = *schema.Elem
+	}
+	return schema.Kind == KindInt || schema.Kind == KindNumber
 }
 
 // formats are the string forms a field names in its `contract` tag. A value

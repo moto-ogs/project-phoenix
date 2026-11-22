@@ -1,4 +1,6 @@
 import { bffJson } from "./bff-fetch";
+import { knownEnum } from "./contract/known-enum";
+import type { CompanionResponse } from "./contract/students.generated";
 import { DEPARTURE_WEEKDAYS, type DepartureDayKey } from "./departure-plan";
 
 /**
@@ -26,19 +28,10 @@ export const COMPANION_WEEKDAYS: {
 export const ALL_COMPANION_WEEKDAYS: CompanionWeekday[] =
   COMPANION_WEEKDAYS.map((day) => day.value);
 
-/** One companion as returned by the API. */
-export interface StudentCompanion {
-  /**
-   * Backend int64 id, carried as a string like every other id in the frontend
-   * (see the type-mapping rule in CLAUDE.md). It also travels back to the
-   * backend as a string — modeling it as a JS number would silently round ids
-   * above Number.MAX_SAFE_INTEGER into a DIFFERENT child's id.
-   */
-  companion_student_id: string;
-  first_name?: string;
-  last_name?: string;
+/** One companion of a child: a "läuft mit" link and its weekdays. */
+export type StudentCompanion = Omit<CompanionResponse, "weekdays"> & {
   weekdays: CompanionWeekday[];
-}
+};
 
 /**
  * One confirmed answer to "may we add 'Anderes Kind' to this child's own
@@ -113,13 +106,6 @@ export function companionsFingerprint(companions: StudentCompanion[]): string {
 }
 
 /** The companion entry as it arrives on the wire (backend int64 → JSON number). */
-interface RawStudentCompanion {
-  companion_student_id: number | string;
-  first_name?: string;
-  last_name?: string;
-  weekdays?: CompanionWeekday[];
-}
-
 /**
  * Consumers that want to be told when the stored "läuft mit" links may have
  * changed. Module-level and process-wide on purpose — see
@@ -204,14 +190,20 @@ export function notifyStudentCompanionDisplayChanged(): void {
 export async function fetchStudentCompanions(
   studentId: string,
 ): Promise<StudentCompanion[]> {
-  const raw = await bffJson<RawStudentCompanion[] | null>(
-    `/api/students/${encodeURIComponent(studentId)}/companions`,
+  const companions = await bffJson(
+    "tenant",
+    "GET /api/students/{id}/companions",
+    {
+      params: { id: studentId },
+    },
   );
-  return (raw ?? []).map((companion) => ({
-    companion_student_id: String(companion.companion_student_id),
-    first_name: companion.first_name,
-    last_name: companion.last_name,
-    weekdays: companion.weekdays ?? [],
+  return companions.map((companion) => ({
+    ...companion,
+    // A weekday this build does not know drops out.
+    weekdays: (companion.weekdays ?? []).flatMap((day) => {
+      const known = knownEnum(ALL_COMPANION_WEEKDAYS, day);
+      return known ? [known] : [];
+    }),
   }));
 }
 

@@ -4,14 +4,14 @@ import (
 	"reflect"
 )
 
-// Options carry the legacy register of ADR 0270 and the types the root
-// names. The register only shrinks: an entry leaves when its route is
-// migrated, and Build fails on an entry that no registration uses. Every
-// int64 on a registered type is a common.ID, a count tagged
-// contract:"number" or an amount in cent (#2342 phase 2, ADR 0300).
+// Options carry the types the root names and the one register of ADR 0270
+// point 3. Build fails on an entry that no registration uses. Every int64 on
+// a registered type is an ident.ID, or a count or an amount tagged
+// contract:"number" (ADR 0300).
 type Options struct {
 	// QueryVariants lists the routes whose response shape a query parameter
-	// selects, as "METHOD /pattern".
+	// selects, as "METHOD /pattern". It only shrinks: GET /api/students/ is
+	// the one named debt of ADR 0270 point 3, and no route joins it.
 	QueryVariants []string
 	// Identifiers maps the Go identifier types to KindID or KindLaxID. The
 	// root names them, so this package stays free of the HTTP packages. A
@@ -61,6 +61,9 @@ type Registration struct {
 	// common.RouteContract.
 	NoRetryAfterRenewal string
 	MaxBodyBytes        int
+	// NoCommit is the marker of common.RouteContract for a POST that commits
+	// nothing its caller asked for.
+	NoCommit string
 	// File, Multipart and TooLargeCode are the file traits of
 	// common.RouteContract.
 	File         bool
@@ -91,13 +94,4 @@ type EnumSpec struct {
 	Type   any
 	Fields []string
 	Values []string
-}
-
-// Legacy returns the registers of the routes registered today, with the
-// identifier types the root names.
-func Legacy(identifiers map[reflect.Type]string) Options {
-	return Options{
-		Identifiers:   identifiers,
-		QueryVariants: []string{"GET /api/students/"},
-	}
 }

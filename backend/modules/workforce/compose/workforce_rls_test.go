@@ -31,9 +31,9 @@ func TestWorkforceCutoverTablesEnforceRLS(t *testing.T) {
 			session, err := capability.CreateWorkSession(ctx, testWorkSession(staff.ID, day, day.BerlinMidnight().Add(8*time.Hour)))
 			require.NoError(t, err)
 			ids["active.work_sessions"] = session.ID
-			pause, err := capability.CreateWorkSessionBreak(ctx, workforce.WorkSessionBreak{SessionID: session.ID, StartedAt: session.CheckInTime.Add(time.Hour)})
+			pause, err := capability.CreateWorkSessionBreak(ctx, workforce.WorkSessionBreak{SessionID: ident.ID(session.ID), StartedAt: session.CheckInTime.Add(time.Hour)})
 			require.NoError(t, err)
-			ids["active.work_session_breaks"] = pause.ID
+			ids["active.work_session_breaks"] = pause.ID.Int64()
 			adjustment, err := capability.CreateStaffBalanceAdjustment(ctx, workforce.StaffBalanceAdjustment{StaffID: ident.ID(staff.ID), Type: workforce.BalanceAdjustmentTypeOpening, EffectiveDate: day.String(), DecidedBy: ident.ID(staff.ID)})
 			require.NoError(t, err)
 			ids["active.staff_balance_adjustments"] = adjustment.ID.Int64()

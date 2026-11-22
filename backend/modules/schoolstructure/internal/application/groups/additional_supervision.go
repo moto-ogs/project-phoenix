@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const additionalSupervisorRole = "additional_supervisor"
@@ -69,7 +70,7 @@ func (s *substitutionModule) withExternalTargets(ctx context.Context, caregivers
 	externals := make(map[int64]StaffRef, len(members))
 	for _, member := range members {
 		ref := StaffRef{
-			ID: member.StaffID, FullName: member.FullName, IsExternal: true,
+			ID: ident.ID(member.StaffID), FullName: member.FullName, IsExternal: true,
 			ExternalAccountStatus: member.AccountStatus, ExternalOrganization: member.Organization,
 		}
 		externals[member.StaffID] = ref
@@ -145,7 +146,7 @@ func projectRunningSupervision(
 	own bool,
 ) RunningSupervision {
 	result := RunningSupervision{
-		ID: groupID, Type: TargetAdditionalSupervision,
+		ID: ident.ID(groupID), Type: TargetAdditionalSupervision,
 		Supervisors: []StaffRef{}, AvailableTargets: []StaffRef{},
 		IsCurrentUserSupervising: own, CanAssign: access.admin || own,
 	}
@@ -163,7 +164,7 @@ func projectRunningSupervision(
 		participantIDs[supervisor.StaffID] = struct{}{}
 		external := externals[supervisor.StaffID]
 		result.Supervisors = append(result.Supervisors, StaffRef{
-			ID: supervisor.StaffID, FullName: supervisor.StaffName,
+			ID: ident.ID(supervisor.StaffID), FullName: supervisor.StaffName,
 			IsExternal: external.IsExternal, ExternalAccountStatus: external.ExternalAccountStatus,
 			ExternalOrganization: external.ExternalOrganization,
 		})
@@ -172,7 +173,7 @@ func projectRunningSupervision(
 		participantIDs[access.actor.StaffID] = struct{}{}
 	}
 	for _, caregiver := range caregivers {
-		if _, participating := participantIDs[caregiver.ID]; !participating {
+		if _, participating := participantIDs[caregiver.ID.Int64()]; !participating {
 			result.AvailableTargets = append(result.AvailableTargets, caregiver)
 		}
 	}
@@ -225,8 +226,8 @@ func (s *substitutionModule) assignAdditionalSupervision(
 }
 
 func additionalSupervisionResult(created *studentpresence.GroupSupervision, target *domain.Caregiver) *AssignmentResult {
-	return &AssignmentResult{ID: created.ID, Type: TargetAdditionalSupervision, ActiveGroupID: created.GroupID,
-		Target: StaffRef{ID: target.StaffID, FullName: target.FullName}}
+	return &AssignmentResult{ID: ident.ID(created.ID), Type: TargetAdditionalSupervision, ActiveGroupID: ident.ID(created.GroupID),
+		Target: StaffRef{ID: ident.ID(target.StaffID), FullName: target.FullName}}
 }
 
 // announceSupervisionChange wakes the open views after the supervisors of a
