@@ -140,6 +140,7 @@ func contractRegistrations() ([]contract.Registration, error) {
 	mounts = append(mounts, publicContractMounts()...)
 	mounts = append(mounts, staffPortalInvitationContractMounts()...)
 	mounts = append(mounts, secondFactorContractMounts()...)
+	mounts = append(mounts, outsideContractMounts()...)
 	catalog, err := RouteCatalog()
 	if err != nil {
 		return nil, err
@@ -229,6 +230,7 @@ func operatorContractMounts() []contractMount {
 	return []contractMount{
 		{"/operator", provisioningOperatorAPI.ProvisioningRouteContracts()},
 		{"/operator", identityOperatorAPI.RouteContracts()},
+		{"/operator", identityOperatorAPI.SessionRouteContracts()},
 		{"/operator/announcements", operatorAnnouncementsHTTP.RouteContracts()},
 		{"/operator/unregistered-tag-scans", unregisteredTagScanRouteContracts()},
 		// Data Import fills a test Träger; its http role names no contract types.
@@ -372,7 +374,10 @@ func contractRegistration(prefix string, route common.RouteContract) contract.Re
 		NoRetryAfterRenewal: route.NoRetryAfterRenewal, MaxBodyBytes: route.MaxBodyBytes, NoCommit: route.NoCommit,
 		File: route.File, Multipart: route.Multipart, TooLargeCode: route.TooLargeCode, PublicFile: route.PublicFile, PublicUpload: route.PublicUpload,
 		FileCache: route.FileCache, ConditionalGet: route.ConditionalGet,
-		PrivateCache: route.PrivateCache,
+		PrivateCache: route.PrivateCache, RouteFile: route.RouteFile, Plain: route.Plain,
+	}
+	if route.Outside != nil {
+		registration.Outside = &contract.OutsideSpec{Reason: string(route.Outside.Reason), Why: route.Outside.Why}
 	}
 	for _, portal := range route.Portals {
 		registration.Portals = append(registration.Portals, string(portal))
@@ -408,6 +413,7 @@ func traegerContractMounts() []contractMount {
 		{"/traeger/profile", traegerPortalHTTP.ProfileRouteContracts()},
 		{"/traeger/school-sessions", traegerPortalHTTP.SchoolSessionRouteContracts()},
 		{"/traeger/auth", traegerPortalHTTP.AuthRouteContracts()},
+		{"/traeger/auth", traegerPortalHTTP.SessionRouteContracts()},
 		{"/traeger/schools", traegerViewHTTP.SchoolRouteContracts()},
 		{"/traeger/organization", traegerViewHTTP.OrganizationRouteContracts()},
 		{"/traeger/access-log", traegerViewHTTP.AccessLogRouteContracts()},
@@ -678,8 +684,11 @@ func staffPortalCalendarContractMounts() []contractMount {
 		{Method: "PATCH", Pattern: "/{deviceId}/status", Portals: portals, Request: devicesAPI.DeviceStatusRequest{}, NoData: true},
 	}
 	// The info-point display management (#7563). The screens' own dashboard
-	// read authenticates with its display token and stays unregistered.
+	// read authenticates with its display token in a header, which only its
+	// route file sends (#7808).
 	displays := []common.RouteContract{
+		{Method: "GET", Pattern: "/dashboard", Portals: portals, Plain: true, Response: displayHTTP.DashboardResponse{},
+			RouteFile: "the wall display sends its display token in a header, no session; its route file forwards it"},
 		{Method: "GET", Pattern: "/", Portals: portals, Response: []displayHTTP.InfoDisplayResponse{}},
 		{Method: "POST", Pattern: "/", Portals: portals, Request: displayHTTP.InfoDisplayWriteRequest{}, Response: displayHTTP.InfoDisplayCreatedResponse{}},
 		{Method: "PATCH", Pattern: "/{id}", Portals: portals, Request: displayHTTP.InfoDisplayWriteRequest{}, Response: displayHTTP.InfoDisplayResponse{}},

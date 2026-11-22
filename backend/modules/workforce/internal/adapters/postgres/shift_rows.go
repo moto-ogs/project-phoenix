@@ -56,10 +56,12 @@ type staffShiftSeriesRow struct {
 	SeriesRootID              *int64        `bun:"series_root_id"`
 	RetainedOccurrenceShiftID *int64        `bun:"retained_occurrence_shift_id"`
 	IncludeSchoolBreaks       bool          `bun:"include_school_breaks,notnull,default:false"`
-	CreatedBy                 int64         `bun:"created_by,notnull"`
-	UpdatedBy                 *int64        `bun:"updated_by"`
-	CreatedAt                 time.Time     `bun:"created_at,nullzero,notnull"`
-	UpdatedAt                 time.Time     `bun:"updated_at,nullzero,notnull"`
+	// CreatedBy is NULL for a series the Träger-Büro planned (#7818).
+	CreatedBy        int64     `bun:"created_by,nullzero"`
+	UpdatedBy        *int64    `bun:"updated_by"`
+	PlannedByTraeger bool      `bun:"planned_by_traeger,notnull,default:false"`
+	CreatedAt        time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt        time.Time `bun:"updated_at,nullzero,notnull"`
 }
 
 type staffShiftSeriesExceptionRow struct {
@@ -68,9 +70,12 @@ type staffShiftSeriesExceptionRow struct {
 	TenantID      int64        `bun:"tenant_id,notnull"`
 	SeriesID      int64        `bun:"series_id,notnull"`
 	Date          calendarDate `bun:"date,notnull,type:date"`
-	CreatedBy     int64        `bun:"created_by,notnull"`
-	CreatedAt     time.Time    `bun:"created_at,nullzero,notnull"`
-	UpdatedAt     time.Time    `bun:"updated_at,nullzero,notnull"`
+	// CreatedBy is NULL for an occurrence of a series the Träger-Büro
+	// planned (#7818).
+	CreatedBy        int64     `bun:"created_by,nullzero"`
+	PlannedByTraeger bool      `bun:"planned_by_traeger,notnull,default:false"`
+	CreatedAt        time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt        time.Time `bun:"updated_at,nullzero,notnull"`
 }
 
 type shiftTypeRow struct {

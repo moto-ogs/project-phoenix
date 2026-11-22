@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchChildQuota } from "./child-quota-api";
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 function answer(status: number, body: unknown) {
   vi.stubGlobal(
     "fetch",

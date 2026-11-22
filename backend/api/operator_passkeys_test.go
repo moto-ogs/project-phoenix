@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/api/testutil/routetest"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	identityoperator "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/operator"
@@ -101,7 +102,7 @@ func TestOperatorPasskeyLoginHandlers(t *testing.T) {
 	w := httptest.NewRecorder()
 	req := operatorPasskeyJSONRequest("/auth/passkeys/login/options", `{}`)
 	req.Header.Set("X-Moto-Frontend-Origin", "https://operator.localhost")
-	rs.PasskeyLoginOptions(w, req)
+	testutil.ServeAtRoute(w, req, "/operator/auth/passkeys/login/options", rs.PasskeyLoginOptions)
 
 	require.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "https://operator.localhost", svc.beginLoginOrigin)
@@ -111,7 +112,7 @@ func TestOperatorPasskeyLoginHandlers(t *testing.T) {
 	req = operatorPasskeyJSONRequest("/auth/passkeys/login/verify", `{"session_id":"operator-login","response":{"id":"assertion"}}`)
 	req.Header.Set("User-Agent", "operator-agent")
 	req.RemoteAddr = "203.0.113.11:1234"
-	rs.PasskeyLoginVerify(w, req)
+	testutil.ServeAtRoute(w, req, "/operator/auth/passkeys/login/verify", rs.PasskeyLoginVerify)
 
 	require.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "operator-login", svc.finishLoginReq.SessionID)
@@ -246,12 +247,12 @@ func TestOperatorPasskeyHandlerErrors(t *testing.T) {
 
 	rs := identityoperator.NewPasskeyResource(nil)
 	w := httptest.NewRecorder()
-	rs.PasskeyLoginOptions(w, operatorPasskeyJSONRequest("/auth/passkeys/login/options", `{}`))
+	testutil.ServeAtRoute(w, operatorPasskeyJSONRequest("/auth/passkeys/login/options", `{}`), "/operator/auth/passkeys/login/options", rs.PasskeyLoginOptions)
 	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
 
 	rs = identityoperator.NewPasskeyResource(&operatorPasskeyServiceStub{})
 	w = httptest.NewRecorder()
-	rs.PasskeyLoginOptions(w, operatorPasskeyJSONRequest("/auth/passkeys/login/options", `{}`))
+	testutil.ServeAtRoute(w, operatorPasskeyJSONRequest("/auth/passkeys/login/options", `{}`), "/operator/auth/passkeys/login/options", rs.PasskeyLoginOptions)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
@@ -265,7 +266,7 @@ func TestOperatorPasskeyStoreFailuresAreNotClientErrors(t *testing.T) {
 	storeDown := errors.New("database error during consume operator passkey session: connection reset")
 	claims := routetest.Claims{ID: 41}
 	loginVerify := func(rs *identityoperator.PasskeyResource, w http.ResponseWriter) {
-		rs.PasskeyLoginVerify(w, operatorPasskeyJSONRequest("/auth/passkeys/login/verify", `{"session_id":"s","response":{"id":"a"}}`))
+		testutil.ServeAtRoute(w, operatorPasskeyJSONRequest("/auth/passkeys/login/verify", `{"session_id":"s","response":{"id":"a"}}`), "/operator/auth/passkeys/login/verify", rs.PasskeyLoginVerify)
 	}
 	registerVerify := func(rs *identityoperator.PasskeyResource, w http.ResponseWriter) {
 		req := operatorPasskeyJSONRequest("/auth/passkeys/register/verify", `{"session_id":"s","response":{"id":"a"}}`)

@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -92,6 +94,56 @@ func TestClassListAndOpeningBalanceRoutesAnswerWithinTheContract(t *testing.T) {
 				require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &answer))
 				require.Equal(t, 1, answer.Data.CreatedCount)
 				require.Equal(t, action == "preview", answer.Data.DryRun)
+			})
+		}
+	}
+}
+
+// TestOpeningBalanceDeciderLookupFailureIsAServerError pins #7818: a decider
+// lookup that fails is a 500, not a refusal of the caller; only a missing
+// staff record is the 403 with its code.
+func TestOpeningBalanceDeciderLookupFailureIsAServerError(t *testing.T) {
+	t.Parallel()
+	for name, decider := range map[string]error{
+		"lookup failed": errors.New("database unavailable"),
+		"no staff":      fmt.Errorf("%w: staff member not found", importAPI.ErrStaffProfileRequired),
+	} {
+		for _, action := range []string{"preview", "import"} {
+			t.Run(name+"/"+action, func(t *testing.T) {
+				t.Parallel()
+				responses := api.ImportHTTPResponsesForTests()
+				identity := func(next http.Handler) http.Handler { return next }
+				resource := importAPI.NewResource(importAPI.Dependencies{Files: answerFileDecoder{}, Runtime: importAPI.Runtime{
+					RequireAnyPermission: func(...string) importAPI.Middleware { return identity }, TemplateTransaction: identity,
+					WithinTenant: func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) },
+					TenantID:     func(context.Context) int64 { return 3 }, AccountID: func(context.Context) (int64, error) { return importAnswerAccountID, nil },
+					OpeningDecider:      func(context.Context, int64) (int64, error) { return 0, decider },
+					ValidateOpeningDate: func(raw string) (string, error) { return raw, nil },
+					OpeningImport: func(string, string, int64) (dataimport.RowImporter[dataimport.OpeningBalanceImportRow], error) {
+						return answerImporter[dataimport.OpeningBalanceImportRow]{t}, nil
+					},
+					Success: responses.Success, Failure: responses.Failure,
+				}})
+				var body bytes.Buffer
+				form := multipart.NewWriter(&body)
+				file, err := form.CreateFormFile("file", "list.csv")
+				require.NoError(t, err)
+				_, err = io.WriteString(file, "Personalnummer\n42\n")
+				require.NoError(t, err)
+				require.NoError(t, form.WriteField("effective_date", "2026-11-20"))
+				require.NoError(t, form.WriteField("note", "Takeover"))
+				require.NoError(t, form.Close())
+				req := httptest.NewRequest(http.MethodPost, "/opening-balances/"+action, &body)
+				req.Header.Set("Content-Type", form.FormDataContentType())
+				rec := httptest.NewRecorder()
+				resource.Router().ServeHTTP(rec, req)
+				if errors.Is(decider, importAPI.ErrStaffProfileRequired) {
+					require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
+					require.Contains(t, rec.Body.String(), `"code":"workforce.no_staff_profile"`)
+					return
+				}
+				require.Equal(t, http.StatusInternalServerError, rec.Code, rec.Body.String())
+				require.NotContains(t, rec.Body.String(), "no_staff_profile")
 			})
 		}
 	}

@@ -6,8 +6,7 @@
  * IDs kommen als Strings heraus.
  */
 
-import { apiErrorFromText, transportFetch } from "~/lib/api-error";
-import type * as guests from "~/lib/contract/holiday-guests.generated";
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 import type * as weeks from "~/lib/contract/holiday-weeks.generated";
 import { knownEnum } from "~/lib/contract/known-enum";
 import type * as shared from "~/lib/contract/shared.generated";
@@ -178,8 +177,6 @@ export function formatHolidayHostAnswer(
   return answer.value;
 }
 
-const BASE = "/api/holiday-weeks";
-
 function mapWeek(week: weeks.HostedHolidayWeek): HostedHolidayWeek {
   return {
     id: week.id,
@@ -249,22 +246,11 @@ function mapHolidayParticipantList(
   };
 }
 
-async function readData<T>(url: string, fallback: string): Promise<T> {
-  const response = await transportFetch(url, { cache: "no-store" });
-  if (!response.ok) {
-    throw apiErrorFromText(fallback, response.status, await response.text());
-  }
-  const body = (await response.json()) as { data?: T };
-  if (body.data === undefined) throw apiErrorFromText(fallback, 500, "");
-  return body.data;
-}
-
 /** Die Wochen, die die Schule ausrichtet und die noch nicht vorbei sind. */
 export async function fetchHostedHolidayWeeks(): Promise<HostedHolidayWeek[]> {
-  const hosted = await readData<weeks.HostedHolidayWeek[]>(
-    BASE,
-    "Ferienwochen konnten nicht geladen werden",
-  );
+  const hosted = await bffJson("tenant", "GET /api/holiday-weeks/", {
+    errorMessage: "Ferienwochen konnten nicht geladen werden",
+  });
   return hosted.map(mapWeek);
 }
 
@@ -273,10 +259,10 @@ export async function fetchHolidayParticipants(
   weekId: string,
 ): Promise<HolidayParticipantList> {
   return mapHolidayParticipantList(
-    await readData<weeks.HolidayParticipantListResponse>(
-      `${BASE}/${encodeURIComponent(weekId)}/participants`,
-      "Teilnehmerliste konnte nicht geladen werden",
-    ),
+    await bffJson("tenant", "GET /api/holiday-weeks/{weekId}/participants", {
+      params: { weekId },
+      errorMessage: "Teilnehmerliste konnte nicht geladen werden",
+    }),
   );
 }
 
@@ -289,17 +275,15 @@ export async function downloadHolidayParticipants(
   weekId: string,
   format: "csv" | "xlsx",
 ): Promise<void> {
-  const response = await transportFetch(
-    `${BASE}/${encodeURIComponent(weekId)}/participants/export?format=${format}`,
-    { cache: "no-store" },
+  const response = await bffFile(
+    "tenant",
+    "GET /api/holiday-weeks/{weekId}/participants/export",
+    {
+      params: { weekId },
+      query: { format },
+      errorMessage: "Die Datei konnte nicht erstellt werden",
+    },
   );
-  if (!response.ok) {
-    throw apiErrorFromText(
-      "Die Datei konnte nicht erstellt werden",
-      response.status,
-      await response.text(),
-    );
-  }
   const blob = await response.blob();
   downloadBlob(
     blob,
@@ -368,10 +352,10 @@ export interface HolidayGuestBadge {
  * Vor und nach ihrer Woche stehen Gäste in keiner Liste und haben keinen.
  */
 export async function fetchHolidayGuestBadges(): Promise<HolidayGuestBadge[]> {
-  const badges = await readData<guests.HolidayGuestBadge[]>(
-    "/api/holiday-guests",
-    "Die Hinweise zu den Feriengästen konnten nicht geladen werden",
-  );
+  const badges = await bffJson("tenant", "GET /api/holiday-guests/", {
+    errorMessage:
+      "Die Hinweise zu den Feriengästen konnten nicht geladen werden",
+  });
   return badges.map((badge) => ({
     studentId: badge.student_id,
     schoolName: badge.school_name,
@@ -406,10 +390,9 @@ export interface HolidayGuestGroup {
  * ersten Tag geordnet.
  */
 export async function fetchHolidayGuestGroups(): Promise<HolidayGuestGroup[]> {
-  const groups = await readData<guests.HolidayGuestGroup[]>(
-    "/api/holiday-guests/groups",
-    "Die Feriengruppen konnten nicht geladen werden",
-  );
+  const groups = await bffJson("tenant", "GET /api/holiday-guests/groups", {
+    errorMessage: "Die Feriengruppen konnten nicht geladen werden",
+  });
   return groups.map((group) => ({
     groupId: group.group_id,
     weekId: group.week_id,
@@ -485,24 +468,15 @@ export async function assignHolidayGuestGroup(
   weekId: string,
   groupId: string,
 ): Promise<HolidayGuestTransfer> {
-  const response = await transportFetch(
-    `${BASE}/${encodeURIComponent(weekId)}/guest-group`,
+  const data = await bffJson(
+    "tenant",
+    "PUT /api/holiday-weeks/{weekId}/guest-group",
     {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ group_id: groupId }),
+      params: { weekId },
+      body: { group_id: groupId },
+      errorMessage: "Die Feriengäste konnten nicht übernommen werden",
     },
   );
-  if (!response.ok) {
-    throw apiErrorFromText(
-      "Die Feriengäste konnten nicht übernommen werden",
-      response.status,
-      await response.text(),
-    );
-  }
-  const { data } = (await response.json()) as {
-    data: weeks.HolidayGuestTransfer;
-  };
   return { guests: data.guests, ownChildren: data.own_children };
 }
 
@@ -510,10 +484,10 @@ export async function assignHolidayGuestGroup(
 export async function fetchHolidayGuestSheet(
   studentId: string,
 ): Promise<HolidayGuestSheet> {
-  const sheet = await readData<guests.HolidayGuestSheet>(
-    `/api/holiday-guests/${encodeURIComponent(studentId)}`,
-    "Die Angaben zum Feriengast konnten nicht geladen werden",
-  );
+  const sheet = await bffJson("tenant", "GET /api/holiday-guests/{studentId}", {
+    params: { studentId },
+    errorMessage: "Die Angaben zum Feriengast konnten nicht geladen werden",
+  });
   return {
     studentId: sheet.student_id,
     startsOn: day(sheet.starts_on),
@@ -556,9 +530,14 @@ export interface HolidayStudentHealth {
 export async function fetchHolidayStudentHealth(
   studentId: string,
 ): Promise<HolidayStudentHealth[]> {
-  const entries = await readData<weeks.HolidayStudentHealth[]>(
-    `${BASE}/students/${encodeURIComponent(studentId)}/health`,
-    "Die Angaben aus der Ferienanmeldung konnten nicht geladen werden",
+  const entries = await bffJson(
+    "tenant",
+    "GET /api/holiday-weeks/students/{studentId}/health",
+    {
+      params: { studentId },
+      errorMessage:
+        "Die Angaben aus der Ferienanmeldung konnten nicht geladen werden",
+    },
   );
   return entries.map((entry) => ({
     weekId: entry.week_id,
@@ -608,9 +587,14 @@ export interface HolidayOwnChildAssignment {
 export async function fetchHolidayOwnChildAssignments(
   weekId: string,
 ): Promise<HolidayOwnChildAssignment[]> {
-  const entries = await readData<weeks.HolidayOwnChildAssignment[]>(
-    `${BASE}/${encodeURIComponent(weekId)}/own-children`,
-    "Die eigenen Kinder der Ferienwoche konnten nicht geladen werden",
+  const entries = await bffJson(
+    "tenant",
+    "GET /api/holiday-weeks/{weekId}/own-children",
+    {
+      params: { weekId },
+      errorMessage:
+        "Die eigenen Kinder der Ferienwoche konnten nicht geladen werden",
+    },
   );
   return entries.map((entry) => ({
     childId: entry.child_id,
@@ -659,9 +643,13 @@ export interface HolidayHomeSchoolBooking {
 export async function fetchHolidayHomeSchoolBookings(): Promise<
   HolidayHomeSchoolBooking[]
 > {
-  const entries = await readData<weeks.HolidayHomeSchoolBooking[]>(
-    `${BASE}/home-school-children`,
-    "Die Kinder in Ferienwochen anderer OGS konnten nicht geladen werden",
+  const entries = await bffJson(
+    "tenant",
+    "GET /api/holiday-weeks/home-school-children",
+    {
+      errorMessage:
+        "Die Kinder in Ferienwochen anderer OGS konnten nicht geladen werden",
+    },
   );
   return entries.map((entry) => ({
     childId: entry.child_id,
@@ -713,9 +701,14 @@ export interface HolidayStudentRegistration {
 export async function fetchHolidayStudentRegistrations(
   studentId: string,
 ): Promise<HolidayStudentRegistration[]> {
-  const entries = await readData<weeks.HolidayStudentRegistration[]>(
-    `${BASE}/students/${encodeURIComponent(studentId)}/registration`,
-    "Die Angaben aus der Ferienanmeldung konnten nicht geladen werden",
+  const entries = await bffJson(
+    "tenant",
+    "GET /api/holiday-weeks/students/{studentId}/registration",
+    {
+      params: { studentId },
+      errorMessage:
+        "Die Angaben aus der Ferienanmeldung konnten nicht geladen werden",
+    },
   );
   return entries.map((entry) => ({
     weekId: entry.week_id,

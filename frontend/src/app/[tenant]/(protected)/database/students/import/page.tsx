@@ -44,9 +44,9 @@ import {
 } from "~/contexts/ToastContext";
 import {
   downloadImportTemplate,
-  importResponseError,
-  postImportFile,
+  importFailureBody,
 } from "~/lib/import-request";
+import { bffJson } from "~/lib/bff-fetch";
 import type * as importContract from "~/lib/contract/import.generated";
 import { createLogger } from "~/lib/logger";
 
@@ -149,7 +149,7 @@ export default function StudentImportPage() {
   const [templateFormat, setTemplateFormat] = useState<"csv" | "xlsx">("xlsx");
   const [mode, setMode] = useState<ImportMode>("create");
 
-  const { data: session, status } = useSession({
+  const { status } = useSession({
     required: true,
     onUnauthenticated() {
       redirect("/");
@@ -175,8 +175,8 @@ export default function StudentImportPage() {
   const handleDownloadTemplate = async () => {
     try {
       await downloadImportTemplate(
-        `/api/import/students/template?format=${templateFormat}`,
-        session,
+        "GET /api/import/students/template",
+        templateFormat,
         templateFormat === "xlsx"
           ? "schueler-import-vorlage.xlsx"
           : "schueler-import-vorlage.csv",
@@ -211,19 +211,11 @@ export default function StudentImportPage() {
         formData.append("file", file);
         formData.append("mode", importMode);
 
-        const response = await postImportFile(
-          "/api/import/students/preview",
-          session,
-          formData,
+        const importData: importContract.StudentPreviewResponse = await bffJson(
+          "tenant",
+          "POST /api/import/students/preview",
+          { body: formData, errorMessage: "Student import preview failed" },
         );
-        const result = response.body;
-
-        if (!response.ok) {
-          throw importResponseError(response, "Student import preview failed");
-        }
-
-        // Transform backend response to display format
-        const importData = result.data as importContract.StudentPreviewResponse;
         const displayData: DisplayStudent[] = [];
 
         // Process errors (rows with issues)
@@ -305,7 +297,7 @@ export default function StudentImportPage() {
         if (generation === previewGeneration.current) setIsLoading(false);
       }
     },
-    [session, mode, importErrors],
+    [mode, importErrors],
   );
 
   // A new mode changes what the preview means, so the uploaded file is
@@ -331,14 +323,16 @@ export default function StudentImportPage() {
       formData.append("file", uploadedFile);
       formData.append("mode", mode);
 
-      const response = await postImportFile(
-        "/api/import/students/import",
-        session,
-        formData,
-      );
-      const result = response.body;
-
-      if (!response.ok) {
+      let importData: importContract.StudentPreviewResponse;
+      try {
+        importData = await bffJson(
+          "tenant",
+          "POST /api/import/students/import",
+          { body: formData, errorMessage: "Student import failed" },
+        );
+      } catch (error) {
+        // A stopped batch carries the rows already saved in its error body.
+        const result = importFailureBody(error);
         const interrupted =
           readImportBatchFailure<importContract.StudentImportError>(result);
         if (interrupted) {
@@ -368,10 +362,8 @@ export default function StudentImportPage() {
           await handleFileUpload(uploadedFile);
           return;
         }
-        throw importResponseError(response, "Student import failed");
+        throw error;
       }
-
-      const importData = result.data as importContract.StudentPreviewResponse;
       setImportResult(importData);
       setImportInterrupted(false);
 

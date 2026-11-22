@@ -13,6 +13,11 @@ import type { NavigationResponse } from "~/lib/contract/me.generated";
 import type { UserContextResponse } from "~/lib/user-context-types";
 import { USER_CONTEXT_SWR_KEY, useUserContext } from "./use-user-context";
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 // Der Nutzerkontext ist unveränderliches SWR mit Server-Seed. Ohne Eintrag im
 // Cache beantwortete die erste Invalidierung (Einstellungen, SSE-Ereignis)
 // den Abruf mit dem Seed statt mit Serverdaten (Review von #5116).

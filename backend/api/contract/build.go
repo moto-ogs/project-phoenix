@@ -60,11 +60,11 @@ func Build(routes []Registration, options Options) (Document, error) {
 			b.deprecated[field] = true
 		}
 	}
-	built, err := b.routes(routes, options)
+	built, lines, err := b.routes(routes, options)
 	if err != nil {
 		return Document{}, err
 	}
-	doc := Document{Routes: built}
+	doc := Document{Routes: built, Outside: lines}
 	if err := b.unused(options); err != nil {
 		return Document{}, err
 	}
@@ -77,38 +77,62 @@ func Build(routes []Registration, options Options) (Document, error) {
 	sort.Slice(doc.Types, func(i, j int) bool { return doc.Types[i].Name < doc.Types[j].Name })
 	sort.Slice(doc.Enums, func(i, j int) bool { return doc.Enums[i].Name < doc.Enums[j].Name })
 	sort.Slice(doc.Routes, func(i, j int) bool { return doc.Routes[i].Key() < doc.Routes[j].Key() })
+	sort.Slice(doc.Outside, func(i, j int) bool { return doc.Outside[i].Key() < doc.Outside[j].Key() })
 	return doc, nil
 }
 
-// routes builds every registration once and refuses what the public proxy
-// path cannot serve.
-func (b *builder) routes(registrations []Registration, options Options) ([]Route, error) {
+// routes builds every registration once, the lines outside the contract
+// apart, and refuses what the public proxy path cannot serve.
+func (b *builder) routes(registrations []Registration, options Options) ([]Route, []Outside, error) {
 	var routes []Route
+	var lines []Outside
+	// at is the index of each registration's route; -1 for an outside line.
+	at := make([]int, len(registrations))
 	seen := map[string]bool{}
-	for _, rc := range registrations {
-		route, err := b.route(rc, options)
-		if err != nil {
-			return nil, err
-		}
-		if seen[route.Key()] {
-			return nil, fmt.Errorf("%s is registered twice", route.Key())
-		}
-		seen[route.Key()] = true
-		routes = append(routes, route)
-	}
-	// Bodies come after every answer, so a type that is both keeps its own
-	// name in the answers and its request role is named apart from it.
 	for i, rc := range registrations {
-		if rc.Request == nil {
+		var key string
+		at[i] = len(routes)
+		if rc.Outside != nil {
+			at[i] = -1
+			line, err := outside(rc)
+			if err != nil {
+				return nil, nil, err
+			}
+			key, lines = line.Key(), append(lines, line)
+		} else {
+			route, err := b.route(rc, options)
+			if err != nil {
+				return nil, nil, err
+			}
+			key, routes = route.Key(), append(routes, route)
+		}
+		if seen[key] {
+			return nil, nil, fmt.Errorf("%s is registered twice", key)
+		}
+		seen[key] = true
+	}
+	if err := b.requests(registrations, routes, at); err != nil {
+		return nil, nil, err
+	}
+	return routes, lines, publicRoutesStandApart(routes)
+}
+
+// requests builds the bound bodies after every answer, so a type that is
+// both keeps its own name in the answers and its request role is named
+// apart from it. at is the index of each registration's route, -1 for a
+// line outside the contract.
+func (b *builder) requests(registrations []Registration, routes []Route, at []int) error {
+	for i, rc := range registrations {
+		if rc.Request == nil || at[i] < 0 {
 			continue
 		}
-		s, err := b.top(rc.Request, routes[i].Key(), true)
+		s, err := b.top(rc.Request, routes[at[i]].Key(), true)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		routes[i].Request = &s
+		routes[at[i]].Request = &s
 	}
-	return routes, publicRoutesStandApart(routes)
+	return nil
 }
 
 func (b *builder) registerEnums(rc Registration) error {
@@ -155,7 +179,7 @@ func (b *builder) route(rc Registration, options Options) (Route, error) {
 		NoRetryAfterRenewal: rc.NoRetryAfterRenewal, MaxBodyBytes: rc.MaxBodyBytes, NoCommit: rc.NoCommit,
 		File: rc.File, Multipart: rc.Multipart, TooLargeCode: rc.TooLargeCode, PublicFile: rc.PublicFile, PublicUpload: rc.PublicUpload,
 		FileCache: rc.FileCache, ConditionalGet: rc.ConditionalGet,
-		PrivateCache: rc.PrivateCache,
+		PrivateCache: rc.PrivateCache, RouteFile: rc.RouteFile, Plain: rc.Plain,
 	}
 	where := route.Key()
 	if rc.Method == "" || !strings.HasPrefix(rc.Pattern, "/") {
@@ -171,6 +195,9 @@ func (b *builder) route(rc Registration, options Options) (Route, error) {
 		return route, err
 	}
 	if err := retryTraits(rc, where); err != nil {
+		return route, err
+	}
+	if err := routeFileTraits(rc, where); err != nil {
 		return route, err
 	}
 	if len(rc.Portals) == 0 {

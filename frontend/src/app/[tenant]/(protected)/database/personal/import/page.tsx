@@ -40,9 +40,9 @@ import {
 } from "~/contexts/ToastContext";
 import {
   downloadImportTemplate,
-  importResponseError,
-  postImportFile,
+  importFailureBody,
 } from "~/lib/import-request";
+import { bffJson } from "~/lib/bff-fetch";
 import { hasPermission } from "~/lib/auth-utils";
 import { createCrudService } from "~/lib/database/service-factory";
 import { rolesConfig } from "~/components/database/configs/roles.config";
@@ -172,8 +172,8 @@ export default function StaffImportPage() {
   const handleDownloadTemplate = async () => {
     try {
       await downloadImportTemplate(
-        `/api/import/teachers/template?format=${templateFormat}`,
-        session,
+        "GET /api/import/teachers/template",
+        templateFormat,
         templateFormat === "xlsx"
           ? "mitarbeiter-import-vorlage.xlsx"
           : "mitarbeiter-import-vorlage.csv",
@@ -207,18 +207,11 @@ export default function StaffImportPage() {
         formData.append("file", file);
         formData.append("mode", importMode);
 
-        const response = await postImportFile(
-          "/api/import/teachers/preview",
-          session,
-          formData,
+        const importData: importContract.StaffImportResult = await bffJson(
+          "tenant",
+          "POST /api/import/teachers/preview",
+          { body: formData, errorMessage: "Staff import preview failed" },
         );
-        const result = response.body;
-
-        if (!response.ok) {
-          throw importResponseError(response, "Staff import preview failed");
-        }
-
-        const importData = result.data as importContract.StaffImportResult;
         const displayData: DisplayStaff[] = (importData.errors ?? []).map(
           toDisplayStaff,
         );
@@ -256,7 +249,7 @@ export default function StaffImportPage() {
         if (generation === previewGeneration.current) setIsLoading(false);
       }
     },
-    [session, mode, importErrors],
+    [mode, importErrors],
   );
 
   // A new mode changes what the preview means, so the uploaded file is
@@ -281,14 +274,16 @@ export default function StaffImportPage() {
       formData.append("file", uploadedFile);
       formData.append("mode", mode);
 
-      const response = await postImportFile(
-        "/api/import/teachers/import",
-        session,
-        formData,
-      );
-      const result = response.body;
-
-      if (!response.ok) {
+      let importData: importContract.StaffImportResult;
+      try {
+        importData = await bffJson(
+          "tenant",
+          "POST /api/import/teachers/import",
+          { body: formData, errorMessage: "Staff import failed" },
+        );
+      } catch (error) {
+        // A stopped batch carries the rows already saved in its error body.
+        const result = importFailureBody(error);
         const interrupted =
           readImportBatchFailure<importContract.StaffImportError>(result);
         if (interrupted) {
@@ -303,10 +298,8 @@ export default function StaffImportPage() {
           });
           return;
         }
-        throw importResponseError(response, "Staff import failed");
+        throw error;
       }
-
-      const importData = result.data as importContract.StaffImportResult;
       setImportResult(importData);
       setImportInterrupted(false);
 

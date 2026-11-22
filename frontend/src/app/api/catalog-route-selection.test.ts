@@ -9,7 +9,10 @@ import {
   CATALOG_PUBLIC_OUTSIDE_MOUNTS,
   underOutsideHead,
 } from "~/lib/contract/catalog-outside-mounts";
-import { portalRoutes } from "~/lib/contract/portals.generated";
+import {
+  portalRoutes,
+  routeFileRoutes,
+} from "~/lib/contract/portals.generated";
 
 /**
  * A registered route reaches its portal's catalog proxy only when no route
@@ -217,6 +220,33 @@ describe("route file in front of a portal's catalog proxy", () => {
       expect(catchAlls, `${selected} answers ${sample}`).toContain(selected);
     },
   );
+});
+
+/**
+ * A route its portal's own route file serves (`RouteFile`, #7808) stands in
+ * no proxy allowlist, so no catch-all ever forwards it: a sign-in step's
+ * tokens reach the browser only through the route file that turns them into
+ * the session cookie. Which file serves it, route-backend-paths.test.ts
+ * checks.
+ */
+describe("route served by its portal's own route file", () => {
+  const proxied = new Set(
+    Object.values(portalRoutes).flatMap((routes) =>
+      routes.map((route) => `${route.method} ${route.pattern}`),
+    ),
+  );
+  const cases = Object.values(routeFileRoutes).flatMap((routes) =>
+    routes.map((route) => `${route.method} ${route.pattern}`),
+  );
+
+  it("lists the session steps among them", () => {
+    expect(cases).toContain("POST /auth/login");
+    expect(cases).toContain("POST /operator/auth/refresh");
+  });
+
+  it.each(cases)("%s is in no proxy allowlist", (routeKey) => {
+    expect(proxied.has(routeKey)).toBe(false);
+  });
 });
 
 /**

@@ -40,9 +40,9 @@ import {
 } from "~/contexts/ToastContext";
 import {
   downloadImportTemplate,
-  importResponseError,
-  postImportFile,
+  importFailureBody,
 } from "~/lib/import-request";
+import { bffJson } from "~/lib/bff-fetch";
 import { hasPermission } from "~/lib/auth-utils";
 import {
   importBatchFailureMessage,
@@ -276,8 +276,8 @@ function OpeningBalanceImportPageContent() {
   const handleDownloadTemplate = useCallback(async () => {
     try {
       await downloadImportTemplate(
-        `/api/import/opening-balances/template?format=${templateFormat}`,
-        session,
+        "GET /api/import/opening-balances/template",
+        templateFormat,
         templateFormat === "xlsx"
           ? "eroeffnungssalden-import-vorlage.xlsx"
           : "eroeffnungssalden-import-vorlage.csv",
@@ -293,7 +293,7 @@ function OpeningBalanceImportPageContent() {
         retry: () => void handleDownloadTemplate(),
       });
     }
-  }, [session, templateFormat, showTemplateError]);
+  }, [templateFormat, showTemplateError]);
 
   const runPreview = useCallback(
     async (file: File) => {
@@ -305,18 +305,14 @@ function OpeningBalanceImportPageContent() {
       setPreviewStale(false);
 
       try {
-        const response = await postImportFile(
-          "/api/import/opening-balances/preview",
-          session,
-          buildFormData(file),
+        const result: importContract.OpeningBalanceImportResult = await bffJson(
+          "tenant",
+          "POST /api/import/opening-balances/preview",
+          {
+            body: buildFormData(file),
+            errorMessage: "Opening balance preview failed",
+          },
         );
-        const payload = response.body;
-        if (!response.ok) {
-          throw importResponseError(response, "Opening balance preview failed");
-        }
-
-        const result =
-          payload.data as importContract.OpeningBalanceImportResult;
         if (requestVersion !== previewRequestVersion.current) return;
         setPreviewResult(result);
         setPreviewRows(buildDisplayRows(result));
@@ -337,7 +333,7 @@ function OpeningBalanceImportPageContent() {
           setIsLoading(false);
       }
     },
-    [buildFormData, session, clearImportErrors, showImportError],
+    [buildFormData, clearImportErrors, showImportError],
   );
 
   const handleFileSelect = useCallback(
@@ -386,13 +382,19 @@ function OpeningBalanceImportPageContent() {
     setBatchNotice(null);
 
     try {
-      const response = await postImportFile(
-        "/api/import/opening-balances/import",
-        session,
-        buildFormData(uploadedFile),
-      );
-      const payload = response.body;
-      if (!response.ok) {
+      let result: importContract.OpeningBalanceImportResult;
+      try {
+        result = await bffJson(
+          "tenant",
+          "POST /api/import/opening-balances/import",
+          {
+            body: buildFormData(uploadedFile),
+            errorMessage: "Opening balance import failed",
+          },
+        );
+      } catch (error) {
+        // A stopped batch carries the rows already saved in its error body.
+        const payload = importFailureBody(error);
         const interrupted =
           readImportBatchFailure<importContract.OpeningBalanceImportError>(
             payload,
@@ -412,10 +414,8 @@ function OpeningBalanceImportPageContent() {
           });
           return;
         }
-        throw importResponseError(response, "Opening balance import failed");
+        throw error;
       }
-
-      const result = payload.data as importContract.OpeningBalanceImportResult;
       setImportResult(result);
       setImportInterrupted(false);
       setPreviewResult(null);
@@ -443,14 +443,7 @@ function OpeningBalanceImportPageContent() {
     } finally {
       setIsImporting(false);
     }
-  }, [
-    buildFormData,
-    session,
-    toast,
-    uploadedFile,
-    clearImportErrors,
-    showImportError,
-  ]);
+  }, [buildFormData, toast, uploadedFile, clearImportErrors, showImportError]);
 
   // Wiederholen übernimmt die Datei mit Stichtag und Begründung von dann.
   useLayoutEffect(() => {

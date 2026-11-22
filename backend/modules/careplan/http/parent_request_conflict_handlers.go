@@ -142,6 +142,7 @@ var resolveConflictErrorRenderer = common.RulesRenderer(parentRequestRules(
 	common.ErrorRule{Target: parentrequests.ErrNotFound, Render: common.ErrorNotFound},
 	common.ErrorRule{Match: isParentRequestMissing, Render: common.ErrorNotFound},
 	common.ErrorRule{Match: isParentRequestNotPending, Render: conflictWithCode(common.CodeStudentsChangeRequestNotPending)},
+	common.ErrorRule{Target: carerequests.ErrCareRequestStaffProfileRequired, Render: staffProfileRequired},
 	common.ErrorRule{Match: isParentRequestForbidden, Render: common.ErrorForbidden},
 	common.ErrorRule{Target: parentrequests.ErrForbidden, Render: common.ErrorForbidden},
 ), common.ErrorInternalServer)

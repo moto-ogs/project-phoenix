@@ -665,8 +665,9 @@ func TestPreviewImport_AccountWithoutPerson(t *testing.T) {
 
 	rr := testutil.ExecuteRequest(router, req)
 
-	assert.Equal(t, http.StatusUnauthorized, rr.Code,
-		"Expected 401 when account has no person record")
+	// #7818: an account that is neither staff nor the Träger-Büro is refused
+	// with a code, not treated as unauthenticated.
+	assertStaffProfileRequired(t, rr.Code, rr.Body.String())
 }
 
 func TestPreviewImport_PersonWithoutStaff(t *testing.T) {
@@ -687,8 +688,7 @@ func TestPreviewImport_PersonWithoutStaff(t *testing.T) {
 
 	rr := testutil.ExecuteRequest(router, req)
 
-	assert.Equal(t, http.StatusUnauthorized, rr.Code,
-		"Expected 401 when person has no staff record")
+	assertStaffProfileRequired(t, rr.Code, rr.Body.String())
 }
 
 func TestImportStudents_AccountWithoutPerson(t *testing.T) {
@@ -709,9 +709,7 @@ func TestImportStudents_AccountWithoutPerson(t *testing.T) {
 
 	rr := testutil.ExecuteRequest(router, req)
 
-	// Import handler wraps staff resolution in WithTenantTx, so failure returns 500
-	assert.Equal(t, http.StatusInternalServerError, rr.Code,
-		"Expected 500 when account has no person record in import")
+	assertStaffProfileRequired(t, rr.Code, rr.Body.String())
 }
 
 func TestImportStudents_PersonWithoutStaff(t *testing.T) {
@@ -732,9 +730,7 @@ func TestImportStudents_PersonWithoutStaff(t *testing.T) {
 
 	rr := testutil.ExecuteRequest(router, req)
 
-	// Import handler wraps staff resolution in WithTenantTx, so failure returns 500
-	assert.Equal(t, http.StatusInternalServerError, rr.Code,
-		"Expected 500 when person has no staff record in import")
+	assertStaffProfileRequired(t, rr.Code, rr.Body.String())
 }
 
 // =============================================================================

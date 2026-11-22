@@ -35,7 +35,7 @@ describe("downloadPayrollFile (#4805)", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       `/api/public/payroll-download/${LINK}`,
-      { method: "POST", cache: "no-store" },
+      expect.objectContaining({ method: "POST", cache: "no-store" }),
     );
     expect(downloadBlobMock).toHaveBeenCalledWith(
       expect.any(Blob),

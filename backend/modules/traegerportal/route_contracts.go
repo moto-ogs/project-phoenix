@@ -66,3 +66,24 @@ func InvitationRouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/{token}/accept", Portals: portals, Request: AcceptRequest{}, Response: AcceptResponse{}, MaxBodyBytes: invitationAcceptBodyBytes},
 	}
 }
+
+// SessionRouteContracts registers the Träger-Portal's sign-in, second
+// factor and step-up (#7808), relative to /traeger/auth. Each answer carries
+// tokens, so only the portal's route file reads it and no proxy allowlist
+// names the route.
+func SessionRouteContracts() []common.RouteContract {
+	step := func(pattern string, request, response any) common.RouteContract {
+		return common.RouteContract{
+			Method: "POST", Pattern: pattern, Portals: traegerPortal, RouteFile: common.RouteFileSession,
+			Request: request, Response: response, Plain: true,
+		}
+	}
+	return []common.RouteContract{
+		step("/login", TraegerLoginRequest{}, TraegerLoginResponse{}),
+		step("/mfa/verify", TraegerMFAVerifyRequest{}, portalauth.TokenResponse{}),
+		step("/mfa/resend", common.MFAResendRequest{}, common.MFAResendResponse{}),
+		step("/mfa/enroll/start", nil, portalauth.EnrollStartResponse{}),
+		step("/mfa/enroll/confirm", TraegerMFAVerifyRequest{}, portalauth.TokenResponse{}),
+		step("/mfa/step-up/verify", common.MFAVerifyRequest{}, portalauth.TokenResponse{}),
+	}
+}

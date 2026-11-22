@@ -206,7 +206,7 @@ func (rs *Resource) createStudentArrivalException(w http.ResponseWriter, r *http
 	tenantID := tenant.FromContext(r.Context())
 	exception, err := rs.ArrivalScheduleService.CreateOrReclaimException(
 		r.Context(), student.ID, exceptionDate, arrivalTime, req.Reason, staffID,
-		func() (int64, error) { return rs.getStaffIDFromJWT(r) },
+		rs.exceptionTakeoverStaffID(r),
 	)
 	if err != nil {
 		renderExceptionWriteError(w, r, err)
@@ -261,7 +261,7 @@ func (rs *Resource) updateStudentArrivalException(w http.ResponseWriter, r *http
 	tenantID := tenant.FromContext(r.Context())
 	exception, err := rs.ArrivalScheduleService.UpdateException(
 		r.Context(), exceptionID, student.ID, exceptionDate, req.Reason, arrivalTime, req.ClearExpectedArrival,
-		func() (int64, error) { return rs.getStaffIDFromJWT(r) },
+		rs.exceptionTakeoverStaffID(r),
 	)
 	if err != nil {
 		renderExceptionWriteError(w, r, err)

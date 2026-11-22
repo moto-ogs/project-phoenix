@@ -31,9 +31,9 @@ import {
 } from "~/contexts/ToastContext";
 import {
   downloadImportTemplate,
-  importResponseError,
-  postImportFile,
+  importFailureBody,
 } from "~/lib/import-request";
+import { bffJson } from "~/lib/bff-fetch";
 import { useRequirePermission } from "~/lib/hooks/use-require-permission";
 import {
   countAlreadyExistsRows,
@@ -103,7 +103,7 @@ export default function ClassListImportPage() {
   const latestImportRef = useRef<() => void>(() => undefined);
   const [templateFormat, setTemplateFormat] = useState<"csv" | "xlsx">("xlsx");
 
-  const { data: session, status } = useSession({
+  const { status } = useSession({
     required: true,
     onUnauthenticated() {
       redirect("/");
@@ -131,8 +131,8 @@ export default function ClassListImportPage() {
   const handleDownloadTemplate = async () => {
     try {
       await downloadImportTemplate(
-        `/api/import/class-list-entries/template?format=${templateFormat}`,
-        session,
+        "GET /api/import/class-list-entries/template",
+        templateFormat,
         templateFormat === "xlsx"
           ? "klassenliste-import-vorlage.xlsx"
           : "klassenliste-import-vorlage.csv",
@@ -164,18 +164,11 @@ export default function ClassListImportPage() {
         const formData = new FormData();
         formData.append("file", file);
 
-        const response = await postImportFile(
-          "/api/import/class-list-entries/preview",
-          session,
-          formData,
+        const importData: importContract.ClassListImportResult = await bffJson(
+          "tenant",
+          "POST /api/import/class-list-entries/preview",
+          { body: formData, errorMessage: "Class list preview failed" },
         );
-        const result = response.body;
-
-        if (!response.ok) {
-          throw importResponseError(response, "Class list preview failed");
-        }
-
-        const importData = result.data as importContract.ClassListImportResult;
         const displayData: DisplayEntry[] = (importData.errors ?? []).map(
           toDisplayEntry,
         );
@@ -208,7 +201,7 @@ export default function ClassListImportPage() {
         setIsLoading(false);
       }
     },
-    [session, importErrors],
+    [importErrors],
   );
 
   const handleImport = async () => {
@@ -222,14 +215,16 @@ export default function ClassListImportPage() {
       const formData = new FormData();
       formData.append("file", uploadedFile);
 
-      const response = await postImportFile(
-        "/api/import/class-list-entries/import",
-        session,
-        formData,
-      );
-      const result = response.body;
-
-      if (!response.ok) {
+      let importData: importContract.ClassListImportResult;
+      try {
+        importData = await bffJson(
+          "tenant",
+          "POST /api/import/class-list-entries/import",
+          { body: formData, errorMessage: "Class list import failed" },
+        );
+      } catch (error) {
+        // A stopped batch carries the rows already saved in its error body.
+        const result = importFailureBody(error);
         const interrupted =
           readImportBatchFailure<importContract.ClassListImportError>(result);
         if (interrupted) {
@@ -244,10 +239,8 @@ export default function ClassListImportPage() {
           });
           return;
         }
-        throw importResponseError(response, "Class list import failed");
+        throw error;
       }
-
-      const importData = result.data as importContract.ClassListImportResult;
       setImportResult(importData);
       setImportInterrupted(false);
 

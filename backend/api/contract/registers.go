@@ -74,6 +74,19 @@ type Registration struct {
 	FileCache      string
 	ConditionalGet bool
 	PrivateCache   bool
+
+	// RouteFile and Plain are the route file traits of
+	// common.RouteContract.
+	RouteFile string
+	Plain     bool
+	// Outside keeps the line out of the contract.
+	Outside *OutsideSpec
+}
+
+// OutsideSpec is the reason of a catalog line without a contract.
+type OutsideSpec struct {
+	Reason string
+	Why    string
 }
 
 // VariantSpec is a response whose shape a query parameter selects.
