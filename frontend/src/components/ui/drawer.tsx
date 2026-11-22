@@ -63,18 +63,23 @@ type DrawerOverlayProps = OmitEach<
 const DrawerOverlay = React.forwardRef<
   React.ComponentRef<typeof DrawerPrimitive.Overlay>,
   DrawerOverlayProps
->(({ className, layer = "sheet", ...props }: DrawerOverlayProps, ref) => (
-  <DrawerPrimitive.Overlay
-    ref={ref}
-    className={cn(
-      `fixed inset-0 ${Z_LAYER[layer]} ${FIXED_LAYER_SHIFT}`,
-      OVERLAY_BACKDROP_TINT_CLASS,
-      OVERLAY_BACKDROP_BLUR_CLASS,
-      className,
-    )}
-    {...props}
-  />
-));
+>(({ className, layer: layerProp, ...props }: DrawerOverlayProps, ref) => {
+  // Vaul distributes its props through a union and leaks `layer` as `any`.
+  // Narrow at the kit boundary before using it as a Z_LAYER key.
+  const layer: DrawerLayer = layerProp ?? "sheet";
+  return (
+    <DrawerPrimitive.Overlay
+      ref={ref}
+      className={cn(
+        `fixed inset-0 ${Z_LAYER[layer]} ${FIXED_LAYER_SHIFT}`,
+        OVERLAY_BACKDROP_TINT_CLASS,
+        OVERLAY_BACKDROP_BLUR_CLASS,
+        className,
+      )}
+      {...props}
+    />
+  );
+});
 DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName;
 
 // Position + shape per direction. Vaul handles the slide animation; we
@@ -115,11 +120,14 @@ const DrawerContent = React.forwardRef<
       className,
       children,
       fullScreen = false,
-      layer = "sheet",
+      layer: layerProp,
       ...props
     }: DrawerContentProps,
     ref,
   ) => {
+    // Vaul distributes its props through a union and leaks `layer` as `any`.
+    // Narrow at the kit boundary before using it as a Z_LAYER key.
+    const layer: DrawerLayer = layerProp ?? "sheet";
     const direction = React.useContext(DrawerDirectionContext);
     const sheetRef = React.useRef<HTMLDivElement | null>(null);
     useSheetAboveKeyboard(sheetRef, direction === "bottom");
