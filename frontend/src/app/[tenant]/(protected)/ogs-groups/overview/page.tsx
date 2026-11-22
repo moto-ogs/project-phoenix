@@ -1,5 +1,6 @@
 "use client";
 
+import type * as studentsContract from "~/lib/contract/students.generated";
 import { useEffect, useMemo } from "react";
 import { ChevronRight } from "lucide-react";
 import { RoleGuard } from "~/components/auth/role-guard";
@@ -19,7 +20,6 @@ import { useSupervision } from "~/lib/supervision-context";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useTenantRouter } from "~/lib/tenant-router";
 import GroupOverviewLoading from "./loading";
-import type { NavigationEducationalGroup } from "~/lib/usercontext-helpers";
 import { groupsConcept } from "~/lib/concepts/groups";
 import { roomsConcept } from "~/lib/concepts/rooms";
 import { staffConcept } from "~/lib/concepts/staff";
@@ -48,8 +48,8 @@ export default function GroupOverviewPage() {
 
 /** Eigene Gruppen zuerst; innerhalb beider Teile bleibt die Reihenfolge. */
 function ownGroupsFirst(
-  groups: readonly NavigationEducationalGroup[],
-): NavigationEducationalGroup[] {
+  groups: readonly studentsContract.NavigationGroup[],
+): studentsContract.NavigationGroup[] {
   const own = groups.filter(isOwnGroup);
   const other = groups.filter((group) => !isOwnGroup(group));
   return [...own, ...other];
@@ -149,7 +149,11 @@ function GroupOverviewContent() {
   );
 }
 
-function GroupMark({ group }: { readonly group: NavigationEducationalGroup }) {
+function GroupMark({
+  group,
+}: {
+  readonly group: studentsContract.NavigationGroup;
+}) {
   if (!isOwnGroup(group)) return null;
   if (group.via_substitution) {
     return <StatusBadge label="Vertretung" tone="blue" compact />;
@@ -161,7 +165,7 @@ function GroupTile({
   group,
   href,
 }: {
-  readonly group: NavigationEducationalGroup;
+  readonly group: studentsContract.NavigationGroup;
   readonly href: string;
 }) {
   const leaders = group.leaders ?? [];

@@ -535,8 +535,18 @@ describe("Sidebar", () => {
         overviewEnabled: false,
         supervisedRooms: [],
         groups: [
-          { id: "1", name: "Eulen", is_personal: true },
-          { id: "2", name: "Adler", is_personal: false },
+          {
+            id: "1",
+            name: "Eulen",
+            is_personal: true,
+            via_substitution: false,
+          },
+          {
+            id: "2",
+            name: "Adler",
+            is_personal: false,
+            via_substitution: false,
+          },
         ],
         refresh: vi.fn(),
       });
@@ -1247,8 +1257,18 @@ describe("Sidebar", () => {
         overviewEnabled: false,
         supervisedRooms: [],
         groups: [
-          { id: "1", name: "Eulen", is_personal: true },
-          { id: "2", name: "Adler", is_personal: false },
+          {
+            id: "1",
+            name: "Eulen",
+            is_personal: true,
+            via_substitution: false,
+          },
+          {
+            id: "2",
+            name: "Adler",
+            is_personal: false,
+            via_substitution: false,
+          },
         ],
         refresh: vi.fn(),
       });
@@ -1274,8 +1294,18 @@ describe("Sidebar", () => {
         overviewEnabled: false,
         supervisedRooms: [],
         groups: [
-          { id: "1", name: "Eulen", is_personal: true },
-          { id: "2", name: "Adler", is_personal: false },
+          {
+            id: "1",
+            name: "Eulen",
+            is_personal: true,
+            via_substitution: false,
+          },
+          {
+            id: "2",
+            name: "Adler",
+            is_personal: false,
+            via_substitution: false,
+          },
         ],
         refresh: vi.fn(),
       });
@@ -1306,8 +1336,18 @@ describe("Sidebar", () => {
         overviewEnabled: false,
         supervisedRooms: [],
         groups: [
-          { id: "1", name: "Eulen", is_personal: false },
-          { id: "2", name: "Adler", is_personal: false },
+          {
+            id: "1",
+            name: "Eulen",
+            is_personal: false,
+            via_substitution: false,
+          },
+          {
+            id: "2",
+            name: "Adler",
+            is_personal: false,
+            via_substitution: false,
+          },
         ],
         refresh: vi.fn(),
       });
@@ -1335,8 +1375,18 @@ describe("Sidebar", () => {
         overviewEnabled: false,
         supervisedRooms: [],
         groups: [
-          { id: "1", name: "Eulen", is_personal: true },
-          { id: "2", name: "Adler", is_personal: false },
+          {
+            id: "1",
+            name: "Eulen",
+            is_personal: true,
+            via_substitution: false,
+          },
+          {
+            id: "2",
+            name: "Adler",
+            is_personal: false,
+            via_substitution: false,
+          },
         ],
         refresh: vi.fn(),
       });
@@ -1399,7 +1449,10 @@ describe("Sidebar", () => {
           isLoadingSupervision: false,
           overviewEnabled: false,
           supervisedRooms: [],
-          groups,
+          groups: groups.map((group) => ({
+            via_substitution: false,
+            ...group,
+          })),
           refresh: vi.fn(),
         });
 
@@ -1436,7 +1489,14 @@ describe("Sidebar", () => {
         isLoadingSupervision: false,
         overviewEnabled: false,
         supervisedRooms: [],
-        groups: [{ id: "2", name: "Adler", is_personal: false }],
+        groups: [
+          {
+            id: "2",
+            name: "Adler",
+            is_personal: false,
+            via_substitution: false,
+          },
+        ],
         refresh: vi.fn(),
       });
 
@@ -1457,8 +1517,18 @@ describe("Sidebar", () => {
         overviewEnabled: false,
         supervisedRooms: [],
         groups: [
-          { id: "1", name: "Eulen", is_personal: true },
-          { id: "2", name: "Adler", is_personal: true },
+          {
+            id: "1",
+            name: "Eulen",
+            is_personal: true,
+            via_substitution: false,
+          },
+          {
+            id: "2",
+            name: "Adler",
+            is_personal: true,
+            via_substitution: false,
+          },
         ],
         refresh: vi.fn(),
       });
@@ -1482,8 +1552,18 @@ describe("Sidebar", () => {
         overviewEnabled: false,
         supervisedRooms: [],
         groups: [
-          { id: "1", name: "Eulen" },
-          { id: "2", name: "Adler" },
+          {
+            id: "1",
+            name: "Eulen",
+            via_substitution: false,
+            is_personal: true,
+          },
+          {
+            id: "2",
+            name: "Adler",
+            via_substitution: false,
+            is_personal: true,
+          },
         ],
         refresh: vi.fn(),
       });
@@ -1558,7 +1638,14 @@ describe("Sidebar", () => {
         isLoadingSupervision: false,
         overviewEnabled: false,
         supervisedRooms: [],
-        groups: [{ id: "1", name: "Eulen" }],
+        groups: [
+          {
+            id: "1",
+            name: "Eulen",
+            via_substitution: false,
+            is_personal: true,
+          },
+        ],
         refresh: vi.fn(),
       });
 
@@ -1745,7 +1832,14 @@ describe("Sidebar", () => {
         isLoadingSupervision: false,
         overviewEnabled: false,
         supervisedRooms: [],
-        groups: [{ id: "1", name: "Eulen" }],
+        groups: [
+          {
+            id: "1",
+            name: "Eulen",
+            via_substitution: false,
+            is_personal: true,
+          },
+        ],
         refresh: vi.fn(),
       });
 
@@ -1763,8 +1857,18 @@ describe("Sidebar", () => {
         overviewEnabled: false,
         supervisedRooms: [],
         groups: [
-          { id: "1", name: "Eulen" },
-          { id: "2", name: "Adler" },
+          {
+            id: "1",
+            name: "Eulen",
+            via_substitution: false,
+            is_personal: true,
+          },
+          {
+            id: "2",
+            name: "Adler",
+            via_substitution: false,
+            is_personal: true,
+          },
         ],
         refresh: vi.fn(),
       });
@@ -1832,8 +1936,18 @@ describe("Sidebar", () => {
         overviewEnabled: false,
         supervisedRooms: [],
         groups: [
-          { id: "1", name: "Eulen" },
-          { id: "2", name: "Adler" },
+          {
+            id: "1",
+            name: "Eulen",
+            via_substitution: false,
+            is_personal: true,
+          },
+          {
+            id: "2",
+            name: "Adler",
+            via_substitution: false,
+            is_personal: true,
+          },
         ],
         refresh: vi.fn(),
       });
@@ -1864,7 +1978,14 @@ describe("Sidebar", () => {
         isLoadingSupervision: false,
         overviewEnabled: false,
         supervisedRooms: [],
-        groups: [{ id: "2", name: "Adler", is_personal: false }],
+        groups: [
+          {
+            id: "2",
+            name: "Adler",
+            is_personal: false,
+            via_substitution: false,
+          },
+        ],
         refresh: vi.fn(),
       });
 
@@ -1965,8 +2086,18 @@ describe("Sidebar", () => {
         overviewEnabled: false,
         supervisedRooms: [],
         groups: [
-          { id: "1", name: "Eulen" },
-          { id: "2", name: "Adler" },
+          {
+            id: "1",
+            name: "Eulen",
+            via_substitution: false,
+            is_personal: true,
+          },
+          {
+            id: "2",
+            name: "Adler",
+            via_substitution: false,
+            is_personal: true,
+          },
         ],
         refresh: vi.fn(),
       });
@@ -2041,7 +2172,14 @@ describe("Sidebar", () => {
         isLoadingSupervision: false,
         overviewEnabled: false,
         supervisedRooms: [],
-        groups: [{ id: "1", name: "Eulen" }],
+        groups: [
+          {
+            id: "1",
+            name: "Eulen",
+            via_substitution: false,
+            is_personal: true,
+          },
+        ],
         refresh: vi.fn(),
       });
 
@@ -2117,7 +2255,11 @@ describe("Sidebar", () => {
         isLoadingSupervision: false,
         overviewEnabled: false,
         supervisedRooms: [],
-        groups,
+        groups: groups.map((group) => ({
+          via_substitution: false,
+          is_personal: true,
+          ...group,
+        })),
         refresh: vi.fn(),
       });
     }
@@ -2207,8 +2349,18 @@ describe("Sidebar", () => {
         overviewEnabled: false,
         supervisedRooms: [],
         groups: [
-          { id: "1", name: "Eulen" },
-          { id: "2", name: "Adler" },
+          {
+            id: "1",
+            name: "Eulen",
+            via_substitution: false,
+            is_personal: true,
+          },
+          {
+            id: "2",
+            name: "Adler",
+            via_substitution: false,
+            is_personal: true,
+          },
         ],
         refresh: vi.fn(),
       });
@@ -2440,7 +2592,14 @@ describe("Sidebar", () => {
         isLoadingSupervision: false,
         overviewEnabled: false,
         supervisedRooms: [],
-        groups: [{ id: "1", name: "Eulen" }],
+        groups: [
+          {
+            id: "1",
+            name: "Eulen",
+            via_substitution: false,
+            is_personal: true,
+          },
+        ],
         refresh: vi.fn(),
       });
 
@@ -2463,8 +2622,18 @@ describe("Sidebar", () => {
         overviewEnabled: false,
         supervisedRooms: [],
         groups: [
-          { id: "1", name: "Eulen" },
-          { id: "2", name: "Adler" },
+          {
+            id: "1",
+            name: "Eulen",
+            via_substitution: false,
+            is_personal: true,
+          },
+          {
+            id: "2",
+            name: "Adler",
+            via_substitution: false,
+            is_personal: true,
+          },
         ],
         refresh: vi.fn(),
       });
@@ -2866,7 +3035,9 @@ describe("Sidebar", () => {
         isLoadingSupervision: false,
         overviewEnabled: false,
         supervisedRooms: [{ id: "r1", name: "Raum A", groupId: "g1" }],
-        groups: [{ id: "1", name: "1a" }],
+        groups: [
+          { id: "1", name: "1a", via_substitution: false, is_personal: true },
+        ],
         refresh: vi.fn(),
       });
       render(<Sidebar />);
@@ -3659,7 +3830,14 @@ describe("Sidebar", () => {
         isLoadingSupervision: false,
         overviewEnabled: false,
         supervisedRooms: [{ id: "7", name: "Raum 7", groupId: "70" }],
-        groups: [{ id: "1", name: "Bären", is_personal: true }],
+        groups: [
+          {
+            id: "1",
+            name: "Bären",
+            is_personal: true,
+            via_substitution: false,
+          },
+        ],
         refresh: vi.fn(),
       });
     });

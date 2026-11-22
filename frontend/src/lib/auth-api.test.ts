@@ -2,6 +2,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { ApiError } from "./api-error";
 import { requestPasswordReset, confirmPasswordReset } from "./auth-api";
 
+/** A failed answer of the BFF, as the browser's fetch resolves it. */
+function failure(
+  status: number,
+  body: string,
+  headers: Record<string, string> = {},
+): Response {
+  return new Response(body, { status, headers });
+}
+
 describe("auth-api", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -13,7 +22,11 @@ describe("auth-api", () => {
 
   describe("requestPasswordReset", () => {
     it("posts the address to the reset endpoint", async () => {
-      global.fetch = vi.fn().mockResolvedValue({ ok: true });
+      global.fetch = vi
+        .fn()
+        .mockImplementation(() =>
+          Promise.resolve(new Response(null, { status: 204 })),
+        );
 
       await requestPasswordReset("tenant", "test@example.com");
 
@@ -23,19 +36,18 @@ describe("auth-api", () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ email: "test@example.com" }),
+        credentials: "include",
+        cache: "no-store",
       });
     });
 
     it("throws ApiError with JSON error message", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 429,
-        headers: new Headers({
+      global.fetch = vi.fn().mockResolvedValue(
+        failure(429, JSON.stringify({ detail: "Rate limit exceeded" }), {
           "Content-Type": "application/json",
           "Retry-After": "60",
         }),
-        json: () => Promise.resolve({ detail: "Rate limit exceeded" }),
-      });
+      );
 
       vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -44,33 +56,33 @@ describe("auth-api", () => {
       ).rejects.toThrow("Fehler beim Senden der Passwort-Zurücksetzen-E-Mail");
     });
 
-    it("throws ApiError with text error message", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 500,
-        headers: new Headers({
+    // A plain-text body (a proxy in front of the BFF) stays a diagnostic:
+    // the error keeps its status and the client's message (#7806).
+    it("throws ApiError with the status and fallback message for a text body", async () => {
+      global.fetch = vi.fn().mockResolvedValue(
+        failure(500, "Internal server error", {
           "Content-Type": "text/plain",
         }),
-        text: () => Promise.resolve("Internal server error"),
-      });
+      );
 
       vi.spyOn(console, "error").mockImplementation(() => {});
 
       await expect(
         requestPasswordReset("tenant", "test@example.com"),
-      ).rejects.toThrow("Internal server error");
+      ).rejects.toMatchObject({
+        status: 500,
+        code: "general.server",
+        message: "Fehler beim Senden der Passwort-Zurücksetzen-E-Mail",
+      });
     });
 
     it("throws ApiError with retryAfterSeconds from Retry-After header (numeric)", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 429,
-        headers: new Headers({
+      global.fetch = vi.fn().mockResolvedValue(
+        failure(429, JSON.stringify({ detail: "Too many requests" }), {
           "Content-Type": "application/json",
           "Retry-After": "120",
         }),
-        json: () => Promise.resolve({ detail: "Too many requests" }),
-      });
+      );
 
       vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -87,15 +99,12 @@ describe("auth-api", () => {
     it("throws ApiError with retryAfterSeconds from Retry-After header (date)", async () => {
       const futureDate = new Date(Date.now() + 30000); // 30 seconds from now
 
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 429,
-        headers: new Headers({
+      global.fetch = vi.fn().mockResolvedValue(
+        failure(429, JSON.stringify({ detail: "Too many requests" }), {
           "Content-Type": "application/json",
           "Retry-After": futureDate.toUTCString(),
         }),
-        json: () => Promise.resolve({ detail: "Too many requests" }),
-      });
+      );
 
       vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -111,13 +120,7 @@ describe("auth-api", () => {
     });
 
     it("handles response parse failure gracefully", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 500,
-        headers: new Headers({}),
-        json: () => Promise.reject(new Error("JSON parse error")),
-        text: () => Promise.reject(new Error("Text parse error")),
-      });
+      global.fetch = vi.fn().mockResolvedValue(failure(500, "{not json", {}));
 
       vi.spyOn(console, "error").mockImplementation(() => {});
       vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -138,7 +141,11 @@ describe("auth-api", () => {
     ] as const)(
       "%s posts the request and the confirmation under %s",
       async (portal, base) => {
-        global.fetch = vi.fn().mockResolvedValue({ ok: true });
+        global.fetch = vi
+          .fn()
+          .mockImplementation(() =>
+            Promise.resolve(new Response(null, { status: 204 })),
+          );
 
         await requestPasswordReset(portal, "person@example.com");
         await confirmPasswordReset(
@@ -174,12 +181,11 @@ describe("auth-api", () => {
     it("throws a typed ApiError carrying the backend status on failure", async () => {
       // The reset page shows the catalog text of the code; the status and
       // the backend's detail stay on the error for the log.
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 410,
-        headers: new Headers({ "Content-Type": "application/json" }),
-        json: () => Promise.resolve({ detail: "Token expired" }),
-      });
+      global.fetch = vi.fn().mockResolvedValue(
+        failure(410, JSON.stringify({ detail: "Token expired" }), {
+          "Content-Type": "application/json",
+        }),
+      );
 
       vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -202,14 +208,11 @@ describe("auth-api", () => {
 
   describe("parseRetryAfter (via buildApiError)", () => {
     it("handles null Retry-After header", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 429,
-        headers: new Headers({
+      global.fetch = vi.fn().mockResolvedValue(
+        failure(429, JSON.stringify({ detail: "Too many requests" }), {
           "Content-Type": "application/json",
         }),
-        json: () => Promise.resolve({ detail: "Too many requests" }),
-      });
+      );
 
       vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -222,15 +225,12 @@ describe("auth-api", () => {
     });
 
     it("handles negative numeric Retry-After (clamps to 0)", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 429,
-        headers: new Headers({
+      global.fetch = vi.fn().mockResolvedValue(
+        failure(429, JSON.stringify({ detail: "Too many requests" }), {
           "Content-Type": "application/json",
           "Retry-After": "-10",
         }),
-        json: () => Promise.resolve({ detail: "Too many requests" }),
-      });
+      );
 
       vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -246,15 +246,12 @@ describe("auth-api", () => {
     it("handles past date Retry-After (returns 0)", async () => {
       const pastDate = new Date(Date.now() - 30000); // 30 seconds in past
 
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 429,
-        headers: new Headers({
+      global.fetch = vi.fn().mockResolvedValue(
+        failure(429, JSON.stringify({ detail: "Too many requests" }), {
           "Content-Type": "application/json",
           "Retry-After": pastDate.toUTCString(),
         }),
-        json: () => Promise.resolve({ detail: "Too many requests" }),
-      });
+      );
 
       vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -268,15 +265,12 @@ describe("auth-api", () => {
     });
 
     it("handles invalid Retry-After value (not number or date)", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 429,
-        headers: new Headers({
+      global.fetch = vi.fn().mockResolvedValue(
+        failure(429, JSON.stringify({ detail: "Too many requests" }), {
           "Content-Type": "application/json",
           "Retry-After": "invalid-value",
         }),
-        json: () => Promise.resolve({ detail: "Too many requests" }),
-      });
+      );
 
       vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -291,19 +285,19 @@ describe("auth-api", () => {
 
   describe("buildApiError (via requestPasswordReset)", () => {
     it("reads structured fields from application/problem+json", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 409,
-        headers: new Headers({ "Content-Type": "application/problem+json" }),
-        json: () =>
-          Promise.resolve({
+      global.fetch = vi.fn().mockResolvedValue(
+        failure(
+          409,
+          JSON.stringify({
             detail: "Conflict",
             code: "identity.email_conflict",
             details: { account_id: "42" },
             errors: [{ field: "email", reason: "duplicate" }],
             instance: "request-auth-409",
           }),
-      });
+          { "Content-Type": "application/problem+json" },
+        ),
+      );
       vi.spyOn(console, "error").mockImplementation(() => {});
 
       await expect(
@@ -318,14 +312,11 @@ describe("auth-api", () => {
     });
 
     it("does not read a legacy message field as the diagnostic", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 400,
-        headers: new Headers({
+      global.fetch = vi.fn().mockResolvedValue(
+        failure(400, JSON.stringify({ message: "Email not found" }), {
           "Content-Type": "application/json",
         }),
-        json: () => Promise.resolve({ message: "Email not found" }),
-      });
+      );
 
       vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -335,14 +326,11 @@ describe("auth-api", () => {
     });
 
     it("uses fallback message for empty JSON response", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 500,
-        headers: new Headers({
+      global.fetch = vi.fn().mockResolvedValue(
+        failure(500, JSON.stringify({}), {
           "Content-Type": "application/json",
         }),
-        json: () => Promise.resolve({}),
-      });
+      );
 
       vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -352,14 +340,11 @@ describe("auth-api", () => {
     });
 
     it("uses fallback for empty text response", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 500,
-        headers: new Headers({
+      global.fetch = vi.fn().mockResolvedValue(
+        failure(500, "   ", {
           "Content-Type": "text/plain",
         }),
-        text: () => Promise.resolve("   "), // whitespace only
-      });
+      );
 
       vi.spyOn(console, "error").mockImplementation(() => {});
 

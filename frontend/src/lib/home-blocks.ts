@@ -33,7 +33,6 @@ import { HOME_BLOCK_MODULES, isScopeBooked } from "~/lib/module-register";
 import type { ModuleKey } from "~/lib/modules";
 import type { MotoConcept } from "~/lib/moto-concepts";
 import { activitiesConcept } from "~/lib/concepts/activities";
-import { announcementsConcept } from "~/lib/concepts/announcements";
 import { dayChangesConcept } from "~/lib/concepts/dayChanges";
 import { birthdaysConcept } from "~/lib/concepts/birthdays";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
@@ -191,7 +190,6 @@ export type HomeBlockKey =
   | "section.my_day"
   | "section.my_group"
   | "section.students"
-  | "section.staff_notices"
   | "section.day_flow"
   | "section.open_requests"
   | "section.reminders"
@@ -209,8 +207,8 @@ const PERMISSION = {
   /** GET /api/active/analytics/dashboard */
   analytics: "groups:read",
   /**
-   * GET /api/birthdays, GET /api/staff-notices/today, GET /api/students/ogs-group-live
-   * und GET /api/staff/dashboard-summary.
+   * GET /api/birthdays, GET /api/students/ogs-group-live und
+   * GET /api/staff/dashboard-summary.
    */
   usersRead: "users:read",
   /** GET /api/time-tracking/assignments */
@@ -371,16 +369,6 @@ export const HOME_BLOCKS: readonly HomeBlockDefinition[] = [
     available: (ctx) => !ctx.openCareGroupMode && ctx.detailed,
   },
   {
-    key: "section.staff_notices",
-    kind: "section",
-    label: "Hinweise der Leitung",
-    description: "Hinweise der Leitung, die heute gelten.",
-    concept: announcementsConcept,
-    spans: SECTION_SPANS,
-    permitted: (access) => access.has(PERMISSION.usersRead),
-    available: always,
-  },
-  {
     key: "section.reminders",
     kind: "section",
     label: "Erinnerungen",
@@ -428,7 +416,7 @@ export const HOME_BLOCKS: readonly HomeBlockDefinition[] = [
     kind: "section",
     label: "Personal heute",
     description:
-      "Wer in Aufsicht ist, wer fehlt und ob offene Anträge auf die Leitung warten.",
+      "Wie viele Kräfte in Aufsicht und eingestempelt sind und wie groß das Team ist. Wer fehlt, steht in „Heute anders“.",
     concept: staffConcept,
     spans: SECTION_SPANS,
     // GET /api/staff/dashboard-summary hängt an users:read; die Zahl der
@@ -581,13 +569,16 @@ export function homeBlockHeight(key: HomeBlockKey): number {
  *    Betreuungskraft ist der eigene Tag der interessante Ausschnitt, für die
  *    Leitung der ganze Ablauf. Wer beides ist, bekommt beides.
  *
- * Betreuung: der eigene Tag, die eigene Gruppe, die Hinweise der Leitung, was
- * in den nächsten Minuten ansteht — alles auf die Person zugeschnitten. Die
+ * Alle drei beginnen mit „Heute anders“: was heute anders läuft, samt der
+ * Hinweise der Leitung, die früher einen eigenen Baustein hatten (#7668).
+ *
+ * Betreuung: der eigene Tag, die eigene Gruppe, was in den nächsten Minuten
+ * ansteht — alles auf die Person zugeschnitten. Die
  * schulweite „Laufende Betreuung" steht im Hinzufügen-Menü: für die Kraft in
  * der Sternengruppe ist die Bärengruppe Rauschen.
  *
  * Leitung: die Lage der Schule in vier Zahlen, was auf eine Entscheidung
- * wartet, das Personal, die Hinweise, der Ablauf des Tages und die laufende
+ * wartet, das Personal, der Ablauf des Tages, die Nachrichten und die laufende
  * Betreuung.
  *
  * Geburtstage stehen in JEDER Standardansicht: wer diese Woche Geburtstag hat,
@@ -610,12 +601,9 @@ export const DEFAULT_LAYOUTS: Record<
     { key: "section.my_day", span: 4, col: 0, row: 2 },
     { key: "section.my_group", span: 2, col: 0, row: 5 },
     { key: "section.reminders", span: 2, col: 2, row: 5 },
-    // Steht allein in ihrer Reihe und wird deshalb breit gezogen
-    // (`widenIntoFreeCells`); fehlen die Erinnerungen, rückt sie nach oben.
-    { key: "section.staff_notices", span: 2, col: 0, row: 7 },
     // Volle Breite wie bei der Leitung: drei Zeilen hoch neben einer Liste
     // aus zwei Zeilen ließe darunter ein Loch (#3893).
-    { key: "section.birthdays", span: 4, col: 0, row: 9 },
+    { key: "section.birthdays", span: 4, col: 0, row: 7 },
   ],
   lead: [
     // „Heute anders“ ganz oben und über die volle Breite (#7659).
@@ -629,10 +617,10 @@ export const DEFAULT_LAYOUTS: Record<
     { key: "tile.students_sick", span: 1, col: 3, row: 2 },
     { key: "section.open_requests", span: 2, col: 0, row: 3 },
     { key: "section.staff_today", span: 2, col: 2, row: 3 },
-    { key: "section.staff_notices", span: 2, col: 0, row: 5 },
-    { key: "section.day_flow", span: 2, col: 2, row: 5 },
-    { key: "section.messages", span: 2, col: 0, row: 7 },
-    { key: "section.active_groups", span: 2, col: 2, row: 7 },
+    { key: "section.day_flow", span: 2, col: 0, row: 5 },
+    { key: "section.messages", span: 2, col: 2, row: 5 },
+    // Steht allein in ihrer Reihe und deshalb über die volle Breite.
+    { key: "section.active_groups", span: 4, col: 0, row: 7 },
     { key: "section.birthdays", span: 4, col: 0, row: 9 },
   ],
   // Die Vereinigung: erst der eigene Tag und die eigene Gruppe, dann die
@@ -649,9 +637,8 @@ export const DEFAULT_LAYOUTS: Record<
     { key: "tile.students_home", span: 1, col: 2, row: 7 },
     { key: "tile.students_sick", span: 1, col: 3, row: 7 },
     { key: "section.staff_today", span: 2, col: 0, row: 8 },
-    { key: "section.staff_notices", span: 2, col: 2, row: 8 },
-    { key: "section.day_flow", span: 2, col: 0, row: 10 },
-    { key: "section.birthdays", span: 4, col: 0, row: 12 },
+    { key: "section.day_flow", span: 2, col: 2, row: 8 },
+    { key: "section.birthdays", span: 4, col: 0, row: 10 },
   ],
 };
 

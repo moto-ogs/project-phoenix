@@ -3,8 +3,7 @@
 // (#4497) and the parents portal (#7051). The browser learns only whether a
 // second step follows. A refusal comes back as an ApiError with its code.
 
-import type { ApiResponse } from "~/lib/api-envelope";
-import { apiErrorFromResponse, transportFetch } from "./api-error";
+import { bffJsonUncontracted } from "./bff-fetch";
 import { portalAuthPath } from "./portal-paths";
 import { signInAnswer, type SignInAnswer } from "./sign-in-answer";
 
@@ -19,20 +18,17 @@ export async function portalPasswordLogin(
   email: string,
   password: string,
 ): Promise<PortalPasswordLoginResult> {
-  // The trusted-device cookie of this browser travels along (same origin),
-  // so a remembered device skips the code.
-  const response = await transportFetch(portalAuthPath(portal, "login"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ email, password }),
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, `${portal} login failed`);
-  }
+  // A sign-in step of the BFF without a session (`public`). The
+  // trusted-device cookie of this browser travels along (same origin), so a
+  // remembered device skips the code.
   const answer = signInAnswer(
     portal,
-    ((await response.json()) as ApiResponse<unknown>).data,
+    await bffJsonUncontracted<unknown>(
+      "public",
+      "POST",
+      portalAuthPath(portal, "login"),
+      { body: { email, password }, errorMessage: `${portal} login failed` },
+    ),
   );
   return answer.status === "mfa_required"
     ? answer

@@ -2,7 +2,15 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { catalogText } from "~/test/error-catalog-text";
+import { sessionFetch } from "~/lib/session-cache";
 import { TenantPasswordChangeModal } from "./tenant-password-change-modal";
+
+// The staff portal sends through sessionFetch; the stub passes the answer on
+// and records which refusals the call names.
+vi.mock("~/lib/session-cache", async () => {
+  const plain = await import("~/test/mocks/plain-session-fetch");
+  return { ...plain, sessionFetch: vi.fn(plain.sessionFetch) };
+});
 
 const originalFetch = global.fetch;
 
@@ -69,6 +77,12 @@ describe("TenantPasswordChangeModal (#2517)", () => {
       "true",
     );
     expect(assign).not.toHaveBeenCalled();
+    // The refusal leaves the session alone: no renewal, no sign-out.
+    expect(sessionFetch).toHaveBeenCalledWith(
+      "/api/auth/password",
+      expect.objectContaining({ method: "POST" }),
+      { authRefusals: ["identity.current_password_wrong"] },
+    );
   });
 
   it("still sends an expired session to the login screen", async () => {

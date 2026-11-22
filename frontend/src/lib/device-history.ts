@@ -3,7 +3,7 @@
 // Schulportal und Operator-Portal zeigen dieselben Einträge; nur das
 // Operator-Portal nennt die Schule, nur das Schulportal den Namen der
 // Person aus der Schule.
-import { apiErrorFromResponse, transportFetch } from "./api-error";
+import { bffJson } from "./bff-fetch";
 import {
   berlinTodayISO,
   formatStatusDate,
@@ -78,19 +78,10 @@ export function mapDeviceHistoryEntry(
 export async function fetchDeviceHistory(
   deviceId: string,
 ): Promise<DeviceHistoryEntry[]> {
-  const response = await transportFetch(
-    `/api/iot/${encodeURIComponent(deviceId)}/history`,
-  );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `device history failed (${response.status})`,
-    );
-  }
-  const body = (await response.json()) as
-    | iotContract.LifecycleEventResponse[]
-    | { data: iotContract.LifecycleEventResponse[] };
-  const rows = Array.isArray(body) ? body : body.data;
+  const rows = await bffJson("tenant", "GET /api/iot/{id}/history", {
+    params: { id: deviceId },
+    errorMessage: "device history failed",
+  });
   return rows.map(mapDeviceHistoryEntry);
 }
 
