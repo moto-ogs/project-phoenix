@@ -18,6 +18,13 @@ import (
 
 var enrollmentToday = calendar.NewDate(2030, 11, 22)
 
+// The child record and the application child of the plan's cases: the plan
+// is a pure function, so they name no stored row.
+const (
+	plannedStudent      int64 = 8
+	plannedRequestChild int64 = 5
+)
+
 // enrollmentSchool is a school with two care modules of the school year, a
 // module with fixed weekdays, and a module of the year after.
 func enrollmentSchool() schoolRead {
@@ -47,7 +54,7 @@ func importedService(day string, offering int64, name, end string) carecontract.
 // whose only version books the short module on Monday and Tuesday from 1
 // August 2030, without an end.
 func enrollableContract() carecontract.EnrollmentContract {
-	student := int64(8)
+	student := plannedStudent
 	return carecontract.EnrollmentContract{ID: 9, SchoolID: 4, Status: carecontract.StatusActive, StudentID: &student,
 		FirstFrom: *date(2030, 8, 1), NextNumber: 2, ChildFirstName: "Lina", ChildLastName: "Muster",
 		Versions: []carecontract.Version{{
@@ -237,7 +244,7 @@ func TestUnlinkedAndBoundContractsAreNotPlanned(t *testing.T) {
 	assert.Equal(t, carecontract.EnrollmentUnlinked, row.Status)
 	assert.Empty(t, row.Bookings)
 
-	bound, child := enrollableContract(), int64(5)
+	bound, child := enrollableContract(), plannedRequestChild
 	bound.RequestChildID = &child
 	row = planRow(bound)
 	assert.Equal(t, carecontract.EnrollmentDone, row.Status)
@@ -250,7 +257,7 @@ func TestUnlinkedAndBoundContractsAreNotPlanned(t *testing.T) {
 // child and stopped before the binding.
 func TestAChildWithAnApplicationIsBoundToItOnlyWhenItsBookingsAreTheContracts(t *testing.T) {
 	t.Parallel()
-	student := int64(8)
+	student := plannedStudent
 	application := func(child int64, days ...string) carecontract.Application {
 		return carecontract.Application{RequestChildID: child, StudentID: &student, Bookings: []carecontract.Booking{
 			{CareOfferingID: 1, Days: days, ValidFrom: date(2030, 8, 1), ValidUntil: date(2031, 8, 1)},
