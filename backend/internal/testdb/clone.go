@@ -181,8 +181,9 @@ func (h *CloneHandle) refreshKeeper(stop <-chan struct{}) bool {
 // SHARED lock — so the ~93 package binaries of a run clone concurrently
 // instead of queueing — and pins it with a keeper connection.
 //
-// It opens and closes a maintenance connection of its own. A test binary
-// holds one Maintenance for its whole life instead (#6962).
+// It opens and closes a maintenance connection of its own, so the clone's
+// slot ends with the call: this is for the lifecycle's own tests. A test
+// binary holds one Maintenance for its whole life instead (#6962).
 func CreateClone(ctx context.Context, cfg *Config, runID string) (*CloneHandle, error) {
 	maint := OpenMaintenance(cfg)
 	defer func() { _ = maint.close() }()
@@ -339,8 +340,12 @@ func (m *Maintenance) cloneSource(ctx context.Context, cfg *Config, source *Clon
 // DropClone drops one clone by name on the maintenance session; see the
 // package-level DropClone.
 func (m *Maintenance) DropClone(ctx context.Context, name string) error {
+	// A clone that could not be dropped still fills the server: its slot
+	// stays taken until this binary ends.
 	err := dropDatabase(ctx, m.db, name)
-	releaseCloneSlot(&m.slots, name)
+	if err == nil {
+		releaseCloneSlot(&m.slots, name)
+	}
 	return err
 }
 

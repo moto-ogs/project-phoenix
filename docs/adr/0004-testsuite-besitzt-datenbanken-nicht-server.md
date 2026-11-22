@@ -181,7 +181,10 @@ Frontend-only-Pushes und reine Backend-Teständerungen starten seinen
   Binaries alle Plätze halten. Scheitert ein Klon trotzdem mit 53100, räumt
   er unter der exklusiven Lebenszyklus-Sperre ab, was keine lebende Sitzung
   schützt, und versucht es einmal neu. Der GC beim Start bleibt beim
-  `pg_try_advisory_lock`.
+  `pg_try_advisory_lock`. Das setzt voraus, dass der Server noch Verbindungen
+  zur Wartungsdatenbank annimmt; ein Server, der schon den Verbindungsaufbau
+  mit `could not write init file` ablehnt, erholt sich erst mit dem
+  Leerlauf-Stopp.
 
   Gemessen auf einem eigenen Server derselben Größe: drei gleichzeitige Läufe
   grün in 122 bis 130 s, höchstens 24 Klone, tmpfs-Spitze 76 %; ein Lauf allein

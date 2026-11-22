@@ -91,7 +91,8 @@ func TestCreateCloneRetriesAfterDiskFullOnceDeadClonesAreGone(t *testing.T) {
 	templateCfg, err := EnsureTemplate(ctx, cfg, WithBuild(fakeBuild(&builds)), WithMigrationsHash("cloneslots"))
 	require.NoError(t, err)
 
-	killed := ClonePrefix + SanitizeRunID("") + "_diskfull"
+	// Of this very run: a worktree's earlier, killed run shares its run ID.
+	killed := ClonePrefix + RunID() + "_diskfull"
 	createBareClone(t, ctx, cfg, killed)
 	t.Cleanup(func() { dropBareClone(t, cfg, killed) })
 

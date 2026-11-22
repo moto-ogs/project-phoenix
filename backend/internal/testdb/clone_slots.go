@@ -205,6 +205,8 @@ func isDiskFull(err error) bool {
 // retryAfterDiskFull runs create again after a disk_full failure, once the
 // dead clones are gone. The start GC only tries the lifecycle lock and is
 // skipped while others clone; here the full server is the reason to wait.
+// It spares no run: a worktree's run ID is stable, so the clones a killed
+// earlier run left behind carry this run's prefix.
 func (m *Maintenance) retryAfterDiskFull(ctx context.Context, cfg *Config, create func() (*CloneHandle, error)) (*CloneHandle, error) {
 	handle, err := create()
 	if !isDiskFull(err) {
@@ -214,7 +216,7 @@ func (m *Maintenance) retryAfterDiskFull(ctx context.Context, cfg *Config, creat
 	if lockErr != nil {
 		return nil, errors.Join(err, lockErr)
 	}
-	_, gcErr := gcLocked(ctx, conn, cfg.TemplateName(), ClonePrefix+RunID()+"_")
+	_, gcErr := gcLocked(ctx, conn, cfg.TemplateName())
 	unlock()
 	if gcErr != nil {
 		return nil, errors.Join(err, gcErr)
