@@ -578,16 +578,17 @@ func TestFamilyPaymentMethodIsSetBeforeTheFirstInvoice(t *testing.T) {
 		FamilyPaymentMethod: "direct_debit", ContractID: wireID(contract), PaymentMethods: []string{}}, families[0],
 		"named by the party of its contract, not by its address")
 
-	// Saved again through the sibling's contract, the deviation stays on
-	// the contract it hangs on: neither contract of the fixture runs on the
-	// test's day (the unit test of bindingContractOf covers running ones).
-	// A draft is refused: discarded, it would take the deviation along.
+	// Saved again through the sibling's contract, the deviation goes to
+	// it: no contract of the fixture runs yet on the test's day, and the
+	// sibling's is signed and starts later (the unit test of
+	// bindingContractOf covers running contracts). A draft is refused:
+	// discarded, it would take the deviation along.
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyBillingPath, map[string]any{
 		"contract_id": sibling, "recipient_kind": "applicant", "payment_method": "direct_debit", "due_day": 10})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	families = listed()
 	require.Len(t, families, 1)
-	assert.Equal(t, wireID(contract), families[0].ContractID, "the deviation does not follow the contract it is saved through")
+	assert.Equal(t, wireID(sibling), families[0].ContractID, "a signed contract that starts later takes the deviation when none runs")
 	draft := careContract(t, f.db, f.office.organization, school, "Lia", careMonth, sjrServices()...)
 	_, err = f.db.ExecContext(context.Background(), `UPDATE care_contract.contracts SET status = 'entwurf' WHERE id = ?`, draft)
 	require.NoError(t, err)
@@ -598,7 +599,7 @@ func TestFamilyPaymentMethodIsSetBeforeTheFirstInvoice(t *testing.T) {
 	require.Equal(t, http.StatusConflict, rec.Code, "a draft sets no deviation: %s", rec.Body.String())
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, fmt.Sprintf("%s/contracts/%d", familyBillingPath, draft), nil)
 	require.Equal(t, http.StatusNotFound, rec.Code, "a draft opens no deviation: %s", rec.Body.String())
-	assert.Equal(t, wireID(contract), listed()[0].ContractID, "the family's deviation stays where it was")
+	assert.Equal(t, wireID(sibling), listed()[0].ContractID, "the family's deviation stays where it was")
 
 	// Nothing else happened: no run, no invoice, no debit, and the mandate
 	// is the one the office recorded.

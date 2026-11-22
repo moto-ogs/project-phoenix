@@ -34,6 +34,7 @@ func TestDeviationHangsOnTheLongestRunningContract(t *testing.T) {
 		"equal ends: the one saved through":                    {[]familyContract{open6, open7}, 7, 6, 7},
 		"equal ends: else the one it hangs on":                 {[]familyContract{open6, open7, ended}, 1, 7, 7},
 		"equal ends: else the first":                           {[]familyContract{open6, open7, ended}, 1, 0, 6},
+		"none runs, saved through one that starts later":       {[]familyContract{ended, later}, 5, 1, 5},
 		"none runs: stays where it hangs":                      {[]familyContract{ended}, 9, 1, 1},
 		"none runs, saved through another one, nothing stored": {[]familyContract{ended}, 9, 0, 9},
 		"none runs and nothing stored: the one saved through":  {[]familyContract{ended}, 1, 0, 1},

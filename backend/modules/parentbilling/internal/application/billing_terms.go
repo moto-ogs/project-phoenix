@@ -312,10 +312,26 @@ func (t *BillingTerms) bindingContract(ctx context.Context, organizationID int64
 // ends last; a contract that only starts later does not count, it can
 // still be withdrawn. Among contracts ending on the same day (two without
 // an end look alike) the one saved through wins, then the one the
-// deviation hangs on. Without a running contract the deviation stays on
+// deviation hangs on. Without a running contract, a contract saved through
+// that is signed and starts later takes it; else the deviation stays on
 // the contract it hangs on, and a new one takes the contract saved
 // through: nothing tells an old contract from one that is only sent.
 func bindingContractOf(contracts []familyContract, saved, held int64, today calendar.Date) int64 {
+	if running := longestRunning(contracts, saved, held, today); running != 0 {
+		return running
+	}
+	startsLater := slices.ContainsFunc(contracts, func(contract familyContract) bool {
+		return contract.id == saved && contract.from.After(today)
+	})
+	if held != 0 && !startsLater {
+		return held
+	}
+	return saved
+}
+
+// longestRunning answers the contract that runs on the day and ends last,
+// 0 for none; among equal ends saved wins, then held, then the first.
+func longestRunning(contracts []familyContract, saved, held int64, today calendar.Date) int64 {
 	var last calendar.Date
 	for _, contract := range contracts {
 		if contract.runsOn(today) && contract.until.After(last) {
@@ -334,14 +350,7 @@ func bindingContractOf(contracts []familyContract, saved, held int64, today cale
 			best = contract.id
 		}
 	}
-	switch {
-	case best != 0:
-		return best
-	case held != 0:
-		return held
-	default:
-		return saved
-	}
+	return best
 }
 
 // runsOn tells whether the contract has started and has not ended.
