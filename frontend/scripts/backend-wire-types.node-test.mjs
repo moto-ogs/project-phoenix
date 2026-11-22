@@ -1,56 +1,84 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import test from "node:test";
 import {
   findBackendWireTypes,
   scanBackendWireTypes,
+  wireTypeKey,
 } from "./backend-wire-types.mjs";
 
-const SRC = join(fileURLToPath(new URL(".", import.meta.url)), "..", "src");
+const HERE = fileURLToPath(new URL(".", import.meta.url));
+const SRC = join(HERE, "..", "src");
+const BASELINE = JSON.parse(
+  readFileSync(join(HERE, "backend-wire-types-baseline.json"), "utf8"),
+);
 
-test("finds a hand-written wire interface and a wire type literal", () => {
+const summary = (findings) =>
+  findings.map((finding) => [finding.kind, finding.name, finding.fields]);
+
+test("finds a hand-written wire type by its shape, whatever its name", () => {
   const findings = findBackendWireTypes(
     "x.ts",
     `
-    export interface BackendGroup { id: number; room_id?: number }
-    type BackendRow = { nested: { created_at: string } };
+    export interface GroupRow { id: string; room_id: string; created_at: string }
+    type Page = { next_cursor: string | null; unread_count: number };
+    interface BackendRoom { room_name: string }
     `,
   );
-  assert.deepEqual(
-    findings.map((finding) => [finding.name, finding.fields]),
-    [
-      ["BackendGroup", ["room_id"]],
-      ["BackendRow", ["created_at"]],
-    ],
-  );
+  assert.deepEqual(summary(findings), [
+    ["shape", "GroupRow", ["room_id", "created_at"]],
+    ["shape", "Page", ["next_cursor", "unread_count"]],
+    ["shape", "BackendRoom", ["room_name"]],
+  ]);
 });
 
-test("passes infrastructure types and wire types with other names", () => {
+test("finds renamed and merely aliased generated types", () => {
   const findings = findBackendWireTypes(
     "x.ts",
     `
+    import type { GroupResponse as GroupWire } from "./contract/groups.generated";
+    import type * as roomsContract from "~/lib/contract/rooms.generated";
+    export type RoomWire = roomsContract.RoomResponse;
+    `,
+  );
+  assert.deepEqual(summary(findings), [
+    ["rename", "GroupWire", ["GroupResponse"]],
+    ["alias", "RoomWire", ["roomsContract.RoomResponse"]],
+  ]);
+});
+
+test("passes domain types, single snake fields and derived contract types", () => {
+  const findings = findBackendWireTypes(
+    "x.ts",
+    `
+    import type * as roomsContract from "~/lib/contract/rooms.generated";
+    interface Room { id: string; roomName: string }
+    interface Filter { group_id?: string; search: string }
+    type Rooms = Omit<roomsContract.RoomResponse, "floor"> & { floor: number };
     type BackendMethod = "GET" | "POST";
-    interface BackendCall { endpoint: string; timeoutMs: number }
-    export type BackendInput = Partial<Record<"id", string>>;
-    interface GroupWire { room_id: string }
     `,
   );
   assert.deepEqual(findings, []);
 });
 
 // Response and request types come from src/lib/contract/*.generated.ts
-// (#2353). A Backend* type with snake_case fields copies a wire shape the
-// generator owns: import the generated type instead, or name a shape that
-// is no wire type (an error body, a route outside the contract) after
-// what it is.
-test("frontend/src declares no hand-written Backend* wire type", () => {
-  const findings = scanBackendWireTypes(SRC);
+// (#2353, #7806): import the generated type, or derive from it. The
+// baseline lists the findings that stood when the guard came in; it only
+// shrinks. A new finding fails, and so does an entry without a finding, so
+// a fixed type leaves the baseline in the same change.
+test("frontend/src adds no hand-written wire type beyond the baseline", () => {
+  const found = new Set(scanBackendWireTypes(SRC).map(wireTypeKey));
+  const listed = new Set(BASELINE);
   assert.deepEqual(
-    findings.map(
-      (finding) =>
-        `${finding.file}:${finding.line} ${finding.name} (${finding.fields.slice(0, 3).join(", ")})`,
-    ),
+    [...found].filter((key) => !listed.has(key)).sort(),
     [],
+    "new hand-written wire types: import or derive the generated type",
+  );
+  assert.deepEqual(
+    [...listed].filter((key) => !found.has(key)).sort(),
+    [],
+    "fixed wire types: remove them from backend-wire-types-baseline.json",
   );
 });

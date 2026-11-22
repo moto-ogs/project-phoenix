@@ -39,15 +39,9 @@ describe("shiftTypeService requests", () => {
     await expect(shiftTypeService.getShiftTypes()).resolves.toEqual([
       mappedShiftType,
     ]);
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/shift-types");
-  });
-
-  it("maps a nullable list response to an empty list", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
-      Response.json({ data: null }, { status: 200 }),
-    );
-
-    await expect(shiftTypeService.getShiftTypes()).resolves.toEqual([]);
+    expect(mockSessionFetch).toHaveBeenCalledWith("/api/shift-types", {
+      method: "GET",
+    });
   });
 
   it("defaults a missing description to an empty string", async () => {
@@ -115,7 +109,7 @@ describe("shiftTypeService requests", () => {
     });
   });
 
-  it("includes category_ids (as numbers) when the mapping is managed (#1837)", async () => {
+  it("includes category_ids (as strings) when the mapping is managed (#1837)", async () => {
     mockSessionFetch.mockResolvedValueOnce(
       Response.json({ data: backendShiftType }, { status: 200 }),
     );
@@ -136,7 +130,7 @@ describe("shiftTypeService requests", () => {
         color: "#83CD2D",
         description: "",
         is_active: true,
-        category_ids: [3, 7],
+        category_ids: ["3", "7"],
       }),
     });
   });
@@ -231,6 +225,7 @@ describe("shiftTypeService requests", () => {
     ]);
     expect(mockSessionFetch).toHaveBeenCalledWith(
       "/api/shift-types?include_archived=true&with_usage=true",
+      { method: "GET" },
     );
   });
 

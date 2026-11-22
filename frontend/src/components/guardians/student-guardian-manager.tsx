@@ -408,6 +408,19 @@ export default function StudentGuardianManager({
 
     const { guardianData, relationshipData, phoneNumbers } = first;
 
+    const syncPhones = async () => {
+      if (!phoneNumbers) return;
+      await syncGuardianPhoneNumbers(
+        editingGuardian.id,
+        phoneNumbers,
+        editingGuardian.phoneNumbers ?? [],
+      );
+    };
+    // A cleared e-mail ("" deletes it) goes last: if a phone number is
+    // refused, the person keeps the address they could be reached by.
+    const clearsEmail = guardianData.email === "";
+    if (clearsEmail) await syncPhones();
+
     // Update guardian profile and relationship
     await updateGuardian(editingGuardian.id, guardianData);
     await updateStudentGuardianRelationship(
@@ -415,14 +428,7 @@ export default function StudentGuardianManager({
       relationshipData,
     );
 
-    // Sync phone numbers if provided
-    if (phoneNumbers) {
-      await syncGuardianPhoneNumbers(
-        editingGuardian.id,
-        phoneNumbers,
-        editingGuardian.phoneNumbers ?? [],
-      );
-    }
+    if (!clearsEmail) await syncPhones();
 
     // Reload guardians
     await guardiansAfterWrite.refresh();

@@ -8,15 +8,15 @@ import (
 	"testing"
 )
 
-// ID is an identifier field of a test's response or request struct. It reads
-// a JSON number or a decimal string and writes a JSON number, so an assertion
-// on a registered route holds before and after the route sends its
-// identifiers as strings (ADR 0270). A test that pins the wire form itself
-// decodes into int64 or string instead.
+// ID is an identifier field of a test's response or request struct. It
+// reads only a decimal string, the form every registered route answers with
+// (ADR 0300), and writes a JSON number, which a request may send. A route
+// outside the contract that still answers numbers is decoded into int64.
 type ID int64
 
-// UnmarshalJSON accepts a JSON number or a decimal string; null leaves the
-// value unchanged, as encoding/json does for an int64.
+// UnmarshalJSON accepts a decimal string; null leaves the value unchanged,
+// as encoding/json does for an int64. A JSON number fails, so a router test
+// notices an answer that sends an identifier as a number.
 func (id *ID) UnmarshalJSON(data []byte) error {
 	if bytes.Equal(data, []byte("null")) {
 		return nil
@@ -53,26 +53,16 @@ func IDsOf[T ~int64](ids []int64) []T {
 	return out
 }
 
-// JSONID reads an identifier out of a value decoded into any: a JSON number
-// (float64 or json.Number) or a decimal string. Any other value fails the
-// test, so a missing or null key still fails the assertion it feeds.
+// JSONID reads an identifier out of a value decoded into any: a decimal
+// string, as a registered route answers. A number or any other value fails
+// the test, so a missing or null key still fails the assertion it feeds.
 func JSONID(t testing.TB, value any) int64 {
 	t.Helper()
-	var raw []byte
-	switch v := value.(type) {
-	case float64:
-		if v != float64(int64(v)) {
-			t.Fatalf("identifier %v is no integer", v)
-		}
-		return int64(v)
-	case json.Number:
-		raw = []byte(v)
-	case string:
-		raw = strconv.AppendQuote(nil, v)
-	default:
-		t.Fatalf("identifier %#v is neither a JSON number nor a decimal string", value)
+	text, ok := value.(string)
+	if !ok {
+		t.Fatalf("identifier %#v is no decimal string", value)
 	}
-	id, err := parseJSONID(raw)
+	id, err := parseJSONID(strconv.AppendQuote(nil, text))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,16 +84,13 @@ func JSONIDs(t testing.TB, value any) []int64 {
 }
 
 func parseJSONID(data []byte) (int64, error) {
-	if len(data) > 0 && data[0] == '"' {
-		var raw string
-		if err := json.Unmarshal(data, &raw); err != nil {
-			return 0, err
-		}
-		data = []byte(raw)
+	var raw string
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return 0, fmt.Errorf("identifier %s is no decimal string", data)
 	}
-	parsed, err := strconv.ParseInt(string(data), 10, 64)
+	parsed, err := strconv.ParseInt(raw, 10, 64)
 	if err != nil {
-		return 0, fmt.Errorf("invalid id %s: %w", data, err)
+		return 0, fmt.Errorf("invalid id %q: %w", raw, err)
 	}
 	return parsed, nil
 }

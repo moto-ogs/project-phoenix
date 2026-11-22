@@ -1,0 +1,7 @@
+{
+  "scenario": "api.traeger.care_contract_child_links",
+  "max": 21,
+  "exact": true,
+  "description": "modules/carecontract — POST /traeger/contract-child-links/preview (#7760), a Träger with two schools:\nthe schools of the Träger; per school its tenant transaction and one read of the named child records;\nthe Träger transaction with one read of the contracts and one trail entry; per school that shows a\nchild record one access log entry. Flat in the number of rows of the file.",
+  "route": "POST /traeger/contract-child-links/preview"
+}

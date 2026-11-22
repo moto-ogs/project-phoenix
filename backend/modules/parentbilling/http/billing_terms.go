@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -56,6 +57,7 @@ func (rs *BillingTermsResource) FamilyRouter(protectedTraegerRoutes func(chi.Rou
 	protectedTraegerRoutes(r, func(r chi.Router, withTx common.Middleware) {
 		billing := r.With(rs.requireBilling, withTx)
 		billing.Get("/", rs.listFamilies)
+		billing.Get("/contracts/{id}", rs.familyOfContract)
 		billing.Put("/", rs.saveFamily)
 	})
 	return r
@@ -93,7 +95,7 @@ func (req *ServiceTermsRequest) Bind(*http.Request) error { return nil }
 // FamilyBillingRequest is the body of PUT /traeger/family-billing: the
 // deviation of the family of a contract of the Träger.
 type FamilyBillingRequest struct {
-	ContractID      common.ID             `json:"contract_id"`
+	ContractID      ident.ID              `json:"contract_id"`
 	RecipientKind   string                `json:"recipient_kind"`
 	SecondFirstName string                `json:"second_first_name"`
 	SecondLastName  string                `json:"second_last_name"`
@@ -200,6 +202,33 @@ func (rs *BillingTermsResource) listFamilies(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	common.Respond(w, r, http.StatusOK, families, "Family billing retrieved successfully")
+}
+
+// familyOfContract answers the family of a contract with its deviation, so
+// its payment method is set without an invoice (#7770). A contract of
+// another Träger names no family: 404.
+func (rs *BillingTermsResource) familyOfContract(w http.ResponseWriter, r *http.Request) {
+	reviewer, ok := reviewerOf(w, r)
+	if !ok {
+		return
+	}
+	contractID, err := common.ParseIDParam(r, "id")
+	if err != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeParentBillingFamilyBillingInvalid))
+		return
+	}
+	family, err := rs.terms.FamilyBillingOfContract(r.Context(), reviewer, contractID)
+	if errors.Is(err, capability.ErrFamilyUnknown) {
+		tenant.MarkRollback(r.Context())
+		common.RenderError(w, r, common.ErrorNotFoundWithCode(err, common.CodeParentBillingFamilyBillingNotFound))
+		return
+	}
+	if err != nil {
+		tenant.MarkRollback(r.Context())
+		renderTermsError(w, r, err, common.CodeParentBillingFamilyBillingInvalid)
+		return
+	}
+	common.Respond(w, r, http.StatusOK, family, "Family billing of the contract retrieved successfully")
 }
 
 func (rs *BillingTermsResource) saveFamily(w http.ResponseWriter, r *http.Request) {

@@ -47,6 +47,7 @@ func (s *Service) saveWeekdayPickupNotes(ctx context.Context, studentID, created
 		if !exists {
 			_, q, err := s.store.CreatePickupNote(ctx, careplan.PickupNote{
 				StudentID: studentID, Weekday: weekday, Content: content, CreatedBy: createdBy,
+				EnteredByTraeger: careplan.EnteredByTraeger(ctx, createdBy),
 			})
 			stats.Add(q)
 			if err != nil {

@@ -107,7 +107,8 @@ describe("passkey-api", () => {
       )
       .mockResolvedValueOnce(
         jsonResponse(200, {
-          status: "authenticated",
+          status: "success",
+          data: { status: "authenticated" },
         }),
       );
 
@@ -154,7 +155,8 @@ describe("passkey-api", () => {
       )
       .mockResolvedValueOnce(
         jsonResponse(200, {
-          status: "authenticated",
+          status: "success",
+          data: { status: "authenticated" },
         }),
       );
 

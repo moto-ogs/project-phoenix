@@ -1,3 +1,4 @@
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the daily attendance report of the Träger portal (#4717): the
  * Träger's schools in Mecklenburg-Vorpommern with the children present and
@@ -5,11 +6,11 @@
  * Figures only, never a child. Backend int64 IDs leave as strings.
  */
 
-import { apiErrorFromBody, transportFetch } from "./api-error";
 import {
   downloadTraegerList,
   type TraegerListFile,
   type TraegerListFormat,
+  listExportQuery,
 } from "./traeger-list-export";
 import type * as traegerSchoolsContract from "./contract/traeger-schools.generated";
 import { requiredDay } from "./contract/required-day";
@@ -68,20 +69,6 @@ export interface DailyAttendancePeriod {
   readonly to: string;
 }
 
-async function readJson(response: Response): Promise<unknown> {
-  const text = await response.text();
-  if (!text) return null;
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    return null;
-  }
-}
-
-function query(period: DailyAttendancePeriod): string {
-  return new URLSearchParams({ from: period.from, to: period.to }).toString();
-}
-
 function figuresOf(
   figures:
     | traegerSchoolsContract.DailyAttendanceDay
@@ -123,20 +110,9 @@ function daysOf(
 export async function fetchTraegerDailyAttendance(
   period: DailyAttendancePeriod,
 ): Promise<TraegerDailyAttendance> {
-  const response = await transportFetch(
-    `/api/traeger/schools/daily-attendance?${query(period)}`,
-    { credentials: "include", cache: "no-store" },
-  );
-  const data = await readJson(response);
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      data,
-    );
-  }
-  const report = (data as { data: traegerSchoolsContract.DailyAttendance })
-    .data;
+  const report = await bffJson("org", "GET /traeger/schools/daily-attendance", {
+    query: { from: period.from, to: period.to },
+  });
   return {
     from: requiredDay(report.from, "daily_attendance.from"),
     to: requiredDay(report.to, "daily_attendance.to"),
@@ -161,8 +137,8 @@ export function downloadTraegerDailyAttendance(
   format: TraegerListFormat,
 ): Promise<TraegerListFile> {
   return downloadTraegerList(
-    "/api/traeger/schools/daily-attendance/export",
-    format,
-    { from: period.from, to: period.to },
+    bffFile("org", "GET /traeger/schools/daily-attendance/export", {
+      query: listExportQuery(format, { from: period.from, to: period.to }),
+    }),
   );
 }

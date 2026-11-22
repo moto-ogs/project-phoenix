@@ -16,6 +16,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -132,8 +133,8 @@ const (
 // and empty for a Träger.
 type billingKeyDayOverrideResponse struct {
 	Scope            string    `json:"scope"`
-	ID               common.ID `json:"id"`
-	OrganizationID   common.ID `json:"organization_id"`
+	ID               ident.ID  `json:"id"`
+	OrganizationID   ident.ID  `json:"organization_id"`
 	Name             string    `json:"name"`
 	OrganizationName string    `json:"organization_name"`
 	KeyDay           int       `json:"key_day"`
@@ -145,15 +146,15 @@ func toBillingKeyDayOverrideResponses(overrides []organizationtenancy.BillingKey
 	result := make([]billingKeyDayOverrideResponse, 0, len(overrides))
 	for _, override := range overrides {
 		response := billingKeyDayOverrideResponse{
-			Scope: BillingKeyDayScopeOrganization, OrganizationID: common.ID(override.TraegerID),
+			Scope: BillingKeyDayScopeOrganization, OrganizationID: ident.ID(override.TraegerID),
 			Name: override.Name, OrganizationName: override.OrganizationName,
 			KeyDay: override.Day, NextKeyDate: override.NextKeyDate, UpdatedAt: override.UpdatedAt,
 		}
 		switch {
 		case override.SchoolID != nil:
-			response.Scope, response.ID = BillingKeyDayScopeSchool, common.ID(*override.SchoolID)
+			response.Scope, response.ID = BillingKeyDayScopeSchool, ident.ID(*override.SchoolID)
 		case override.OrganizationID != nil:
-			response.ID = common.ID(*override.OrganizationID)
+			response.ID = ident.ID(*override.OrganizationID)
 		}
 		result = append(result, response)
 	}

@@ -33,6 +33,8 @@ type PartialAbsenceInput struct {
 	FromTime  time.Time
 	Reason    string
 	StaffID   int64
+	// ByTraeger names the Träger-Büro as author; StaffID is then 0 (#7766).
+	ByTraeger bool
 }
 
 // PartialAbsenceService coordinates the existing pickup-exception and

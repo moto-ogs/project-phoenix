@@ -230,6 +230,9 @@ type Candidate struct {
 	// now (#4680): MailBlockStopped or MailBlockAddress. The contract then
 	// waits until the school corrects or clears the address.
 	MailBlock string `json:"mail_block,omitempty"`
+	// ImportedContractID is the imported contract that covers the child
+	// (TemplateIssue SkipImportedContract).
+	ImportedContractID ident.ID `json:"imported_contract_id,omitempty"`
 }
 
 // CreateResult answers a creation of several drafts: the created contracts
@@ -256,6 +259,10 @@ const (
 	SkipConclusionAutomatic = "conclusion_automatic"
 	SkipAcceptanceMissing   = "acceptance_missing"
 	SkipAcceptanceChanged   = "acceptance_changed"
+	// SkipImportedContract: an imported contract covers the child in the
+	// time of its booked care (#7760), by its child record or, linked to
+	// none, by its names; no second contract is created for that time.
+	SkipImportedContract = "imported_contract"
 )
 
 type ContractFilter struct {
@@ -291,6 +298,10 @@ type ContractSummary struct {
 	// EndsOn is the last day of a terminated contract (#4682); nil
 	// otherwise.
 	EndsOn *calendar.Date `json:"ends_on"`
+	// Imported tells a contract taken over from a file (ADR 0232) from one
+	// of an application: only an imported contract is linked to a child
+	// record by hand (ADR 0307).
+	Imported bool `json:"imported"`
 }
 
 // ContractList is the filtered list with the count of every status over all
@@ -322,8 +333,9 @@ type Version struct {
 	PriceCents *int64        `json:"price_cents" contract:"number"`
 	Terms      TemplateInput `json:"terms"`
 	CreatedAt  time.Time     `json:"created_at"`
-	// Source tells where the version came from: SourceConclusion or
-	// SourceBookingChange (#4681).
+	// Source tells where the version came from: SourceConclusion,
+	// SourceBookingChange (#4681), SourceImport (#4723) or
+	// SourceOfferingCorrection (#7764).
 	Source string `json:"source"`
 	// ValidUntil is the last day the version holds: the day before the next
 	// effective version starts, else its own end. Nil while it holds open
@@ -336,6 +348,10 @@ type Party struct {
 	LastName   string `json:"last_name"`
 	Email      string `json:"email"`
 	HasAccount bool   `json:"has_account"`
+	// ContractDraft says the party's contract is still a draft. Only the
+	// billing reads (ContractBilling) fill it: a draft can be discarded, so
+	// nothing of the billing may hang on it (#7770).
+	ContractDraft bool `json:"-"`
 }
 
 // Mailing is one send of the contract with the state of its mail.
@@ -389,6 +405,9 @@ type ContractDetail struct {
 	TermText   string `json:"term_text"`
 	NoticeText string `json:"notice_text"`
 	FeeText    string `json:"fee_text"`
+	// Corrections are the corrections of a contract from an import, newest
+	// first (#7767, contract_corrections.go); empty for every other.
+	Corrections []ContractCorrection `json:"corrections"`
 }
 
 // File is a rendered PDF.

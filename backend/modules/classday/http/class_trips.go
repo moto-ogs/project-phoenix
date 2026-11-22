@@ -28,9 +28,9 @@ import (
 
 // ClassTripRequest is the body of POST /school/class-day/class-trips/{schoolClass}.
 type ClassTripRequest struct {
-	From       string      `json:"from"`
-	To         string      `json:"to"`
-	StudentIDs []common.ID `json:"student_ids"`
+	From       string     `json:"from"`
+	To         string     `json:"to"`
+	StudentIDs []ident.ID `json:"student_ids"`
 	// ReturnTime is "HH:MM", only for a one-day outing.
 	ReturnTime *string `json:"return_time,omitempty"`
 	Reason     *string `json:"reason,omitempty"`

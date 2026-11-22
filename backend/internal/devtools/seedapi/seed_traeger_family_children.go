@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The children of the families (#5918): the Abrechnung confirms a number for
@@ -14,14 +15,14 @@ import (
 // placeholder sibling rule counts the family (seedCareReductions).
 
 type seedFamilyChild struct {
-	ContractID apiID `json:"contract_id"`
+	ContractID ident.ID `json:"contract_id"`
 }
 
 type seedFamilyChildrenSet struct {
 	Families []struct {
 		Children []seedFamilyChild `json:"children"`
 		Count    *struct {
-			ID apiID `json:"id"`
+			ID ident.ID `json:"id"`
 		} `json:"count"`
 	} `json:"families"`
 }

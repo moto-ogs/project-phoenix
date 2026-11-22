@@ -219,17 +219,3 @@ func absentInClass(ctx context.Context, counter AtSchoolCounter, sickIDs, excuse
 	}
 	return sickInClass, excusedInClass, nil
 }
-
-func (p PresenceOperations) CrossTenantStudents(ctx context.Context, hostingTenantID int64) ([]studentpresence.CrossTenantStudent, error) {
-	rows, err := p.active.GetCrossTenantStudents(ctx, hostingTenantID)
-	if err != nil {
-		return nil, err
-	}
-	result := make([]studentpresence.CrossTenantStudent, 0, len(rows))
-	for _, row := range rows {
-		result = append(result, studentpresence.CrossTenantStudent{
-			StudentID: row.StudentID, FirstName: row.FirstName, LastName: row.LastName, GroupName: row.GroupName, HomeTenant: row.HomeTenant,
-		})
-	}
-	return result, nil
-}

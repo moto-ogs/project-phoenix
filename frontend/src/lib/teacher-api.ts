@@ -1,14 +1,10 @@
 // This file contains the Teacher API service and related types
 
-import { sessionFetch } from "./session-cache";
-import {
-  ApiError,
-  apiErrorFromResponse,
-  apiErrorFromText,
-  wireErrorCode,
-} from "~/lib/api-error";
+import { bffJson } from "./bff-fetch";
+import { ApiError, wireErrorCode } from "~/lib/api-error";
+import type { SchoolIdentityResponse } from "./contract/shared.generated";
+import type { StaffRequest } from "./contract/staff.generated";
 import { createLogger } from "~/lib/logger";
-import type { StaffRecordResponse } from "./contract/staff.generated";
 import { mapTeacherResponse } from "./teacher-helpers";
 import type { Teacher } from "./teacher-types";
 
@@ -18,16 +14,6 @@ const logger = createLogger({ component: "TeacherAPI" });
 type CreateTeacherResult =
   | { status: "created"; data: TeacherWithCredentials }
   | { status: "account_exists"; email: string };
-
-/**
- * Extracts ID from potentially wrapped API response
- */
-function extractIdFromResponse(data: {
-  id?: string | number;
-  data?: { id?: string | number };
-}): string | number | undefined {
-  return data.id ?? data.data?.id;
-}
 
 /** The person fields the backend needs to provision a staff identity. */
 interface PersonIdentityFields {
@@ -44,32 +30,6 @@ interface PersonIdentityFields {
  * time it reaches us. They are converted exactly once, at the request boundary
  * that needs a number.
  */
-interface SchoolIdentity {
-  person_id: string;
-  staff_id: string;
-  teacher_id?: string;
-}
-
-interface AccountWithIdentityResponse {
-  id?: string | number;
-  school_identity?: SchoolIdentity | null;
-  data?: { id?: string | number; school_identity?: SchoolIdentity | null };
-}
-
-/**
- * Extracts the provisioned person/staff ids from an account response.
- *
- * Present whenever the request carried first_name and last_name: since #2222
- * the backend creates the person and staff record in the same transaction as
- * the account, so the client never has to stitch that chain together across
- * requests — a failure between them used to leave an account that held a role
- * and was not staff.
- */
-function extractSchoolIdentity(
-  data: AccountWithIdentityResponse,
-): SchoolIdentity | undefined {
-  return data.school_identity ?? data.data?.school_identity ?? undefined;
-}
 
 /**
  * Builds the POST /api/staff body, carrying person_id as a decimal string.
@@ -86,16 +46,16 @@ function extractSchoolIdentity(
  * Validated here as well, so a malformed id fails with a German message from
  * the screen that submitted it rather than as a route error.
  */
-function buildStaffRequestBody(
+function buildStaffRequestBody<F extends object>(
   personId: string,
-  fields: Record<string, unknown>,
-): string {
+  fields: F,
+): F & { person_id: string } {
   if (!/^\d+$/.test(personId)) {
     throw new Error(
       "Der Personal-Datensatz konnte nicht angelegt werden: ungültige Personen-ID.",
     );
   }
-  return JSON.stringify({ person_id: personId, ...fields });
+  return { person_id: personId, ...fields };
 }
 
 // Define Teacher interface aligned with staff API response structure
@@ -114,7 +74,7 @@ class TeacherService {
   async createTeacher(
     teacherData: Omit<Teacher, "id" | "name" | "created_at" | "updated_at"> & {
       password?: string;
-      role_id?: number;
+      role_id?: string;
       linkExisting?: boolean;
     },
   ): Promise<CreateTeacherResult> {
@@ -134,7 +94,7 @@ class TeacherService {
     // so the backend creates the person and staff record in the same
     // transaction (#2222) instead of us stitching the chain together across
     // three requests that can fail in the middle.
-    let identity: SchoolIdentity;
+    let identity: SchoolIdentityResponse;
     if (teacherData.linkExisting) {
       // Link existing account — password is NOT changed
       identity = await this.linkAccountToTenant(email, roleId, teacherData);
@@ -184,91 +144,69 @@ class TeacherService {
     username: string,
     name: string,
     password: string,
-    roleId: number,
+    roleId: string,
     identity: PersonIdentityFields,
   ): Promise<
-    | { status: "created"; identity: SchoolIdentity }
+    | { status: "created"; identity: SchoolIdentityResponse }
     | { status: "account_exists" }
   > {
-    const response = await sessionFetch("/api/auth/register", {
-      method: "POST",
-      credentials: "include",
-      body: JSON.stringify({
-        email,
-        username,
-        name,
-        password,
-        confirm_password: password,
-        role_id: roleId,
-        first_name: identity.first_name,
-        last_name: identity.last_name,
-        tag_id: identity.tag_id ?? null,
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await apiErrorFromResponse(
-        response,
-        `account registration failed (${response.status})`,
-      );
+    let account;
+    try {
+      account = await bffJson("tenant", "POST /auth/register", {
+        body: {
+          email,
+          username,
+          password,
+          confirm_password: password,
+          role_id: roleId,
+          first_name: identity.first_name,
+          last_name: identity.last_name,
+          tag_id: identity.tag_id ?? null,
+        },
+        errorMessage: "account registration failed",
+      });
+    } catch (error) {
       // Ein vorhandenes Konto wird zum Verknüpfen angeboten; erkannt am
       // Code, nie am Text (#2517).
-      if (wireErrorCode(error.code) === "identity.email_already_exists") {
+      if (
+        error instanceof ApiError &&
+        wireErrorCode(error.code) === "identity.email_already_exists"
+      ) {
         return { status: "account_exists" as const };
       }
       throw error;
     }
 
-    const data = (await response.json()) as AccountWithIdentityResponse;
-    if (!extractIdFromResponse(data)) {
-      logger.error("failed to get account ID from response");
-      throw new ApiError("account response without id", 500);
-    }
-
-    const identityIds = extractSchoolIdentity(data);
-    if (!identityIds) {
+    if (!account.school_identity) {
       logger.error("account created without school identity");
       // Eine 2xx-Antwort ohne Personaldatensatz ist ein Serverfehler. Ein
       // erneutes Anlegen erkennt das Konto und bietet das Verknüpfen an.
       throw new ApiError("account created without school identity", 500);
     }
 
-    return { status: "created" as const, identity: identityIds };
+    return { status: "created" as const, identity: account.school_identity };
   }
 
   /** Links an existing account to the current tenant. */
   private async linkAccountToTenant(
     email: string,
-    roleId: number,
+    roleId: string,
     identity: PersonIdentityFields,
-  ): Promise<SchoolIdentity> {
-    const response = await sessionFetch("/api/auth/link-to-tenant", {
-      method: "POST",
-      credentials: "include",
-      body: JSON.stringify({
+  ): Promise<SchoolIdentityResponse> {
+    const account = await bffJson("tenant", "POST /auth/link-to-tenant", {
+      body: {
         email,
         role_id: roleId,
         first_name: identity.first_name,
         last_name: identity.last_name,
         tag_id: identity.tag_id ?? null,
-      }),
+      },
+      errorMessage: "account link failed",
     });
-
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `account link failed (${response.status})`,
-      );
-    }
-
-    const data = (await response.json()) as AccountWithIdentityResponse;
-    const identityIds = extractSchoolIdentity(data);
-
-    if (!identityIds) {
+    if (!account.school_identity) {
       throw new ApiError("account link response without school identity", 500);
     }
-
-    return identityIds;
+    return account.school_identity;
   }
 
   /**
@@ -280,7 +218,7 @@ class TeacherService {
    * (RoleNeedsCaregiverProfile) und legt users.teachers nur für die
    * Betreuer-Stufe an. Das Formular kannte davon nur die Lehrkraft-Ausnahme und
    * schickte sonst is_teacher=true — eine Verwaltungsrolle bekam dadurch hier
-   * doch noch ein Betreuungsprofil, das EnsureSchoolIdentity eine Anfrage
+   * doch noch ein Betreuungsprofil, das EnsureSchoolIdentityResponse eine Anfrage
    * vorher bewusst weggelassen hatte. Die angelegte Identität ist die Antwort;
    * eine zweite Ableitung derselben Regel im Frontend würde nur wieder
    * auseinanderlaufen.
@@ -292,11 +230,9 @@ class TeacherService {
       role?: string | null;
       qualifications?: string | null;
     },
-    identity: SchoolIdentity,
+    identity: SchoolIdentityResponse,
   ): Promise<Teacher> {
-    const response = await sessionFetch("/api/staff", {
-      method: "POST",
-      credentials: "include",
+    const staff = await bffJson("tenant", "POST /api/staff/", {
       body: buildStaffRequestBody(identity.person_id, {
         is_teacher: Boolean(identity.teacher_id),
         staff_notes: teacherData.staff_notes?.trim() ?? "",
@@ -304,18 +240,9 @@ class TeacherService {
         role: teacherData.role?.trim() ?? "",
         qualifications: teacherData.qualifications?.trim() ?? "",
       }),
+      errorMessage: "staff create failed",
     });
-
-    if (!response.ok) {
-      // Code, Feldfehler und Vorgangskennung aus dem Umschlag (#2517).
-      throw await apiErrorFromResponse(
-        response,
-        `staff create failed (${response.status})`,
-      );
-    }
-
-    const json = (await response.json()) as { data: StaffRecordResponse };
-    return mapTeacherResponse(json.data);
+    return mapTeacherResponse(staff);
   }
 
   // Update an existing teacher
@@ -366,32 +293,23 @@ class TeacherService {
     // so the update names only the person fields (#2352).
     const personData = this.buildPersonUpdateData(teacherData);
 
-    const updateResponse = await sessionFetch(`/api/users/${personId}`, {
-      method: "PUT",
-      credentials: "include",
-      body: JSON.stringify(personData),
+    await bffJson("tenant", "PUT /api/users/{id}", {
+      params: { id: personId },
+      body: personData,
+      errorMessage: "Failed to update person",
     });
-
-    if (!updateResponse.ok) {
-      const errorText = await updateResponse.text();
-      throw apiErrorFromText(
-        `Failed to update person: ${errorText}`,
-        updateResponse.status,
-        errorText,
-      );
-    }
   }
 
   /** Builds person update payload from teacher data */
   private buildPersonUpdateData(teacherData: Partial<Teacher>): {
     first_name?: string;
     last_name?: string;
-    tag_id?: string | null;
+    tag_id?: string;
   } {
     const personData: {
       first_name?: string;
       last_name?: string;
-      tag_id?: string | null;
+      tag_id?: string;
     } = {};
 
     if (teacherData.first_name !== undefined) {
@@ -401,7 +319,8 @@ class TeacherService {
       personData.last_name = teacherData.last_name;
     }
     if (teacherData.tag_id !== undefined) {
-      personData.tag_id = teacherData.tag_id ?? null;
+      // Go reads null and "" alike for this field.
+      personData.tag_id = teacherData.tag_id ?? "";
     }
 
     return personData;
@@ -460,42 +379,23 @@ class TeacherService {
   /** Updates staff record via API */
   private async updateStaffRecord(
     id: string,
-    staffData: object,
+    staffData: StaffRequest,
   ): Promise<Teacher> {
-    const response = await sessionFetch(`/api/staff/${id}`, {
-      method: "PUT",
-      credentials: "include",
-      body: JSON.stringify(staffData),
+    const staff = await bffJson("tenant", "PUT /api/staff/{id}", {
+      params: { id },
+      body: staffData,
+      errorMessage: "Failed to update teacher",
     });
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => "");
-      const suffix = errorText ? ` - ${errorText}` : "";
-      throw apiErrorFromText(
-        `Failed to update teacher: ${response.statusText}${suffix}`,
-        response.status,
-        errorText,
-      );
-    }
-
-    const json = (await response.json()) as { data: StaffRecordResponse };
-    return mapTeacherResponse(json.data);
+    return mapTeacherResponse(staff);
   }
 
   // Delete a teacher
   async deleteTeacher(id: string): Promise<void> {
     try {
-      const response = await sessionFetch(`/api/staff/${id}`, {
-        method: "DELETE",
-        credentials: "include",
+      await bffJson("tenant", "DELETE /api/staff/{id}", {
+        params: { id },
+        errorMessage: "Failed to delete teacher",
       });
-
-      if (!response.ok) {
-        throw await apiErrorFromResponse(
-          response,
-          `Failed to delete teacher: ${response.statusText}`,
-        );
-      }
     } catch (error) {
       logger.error("error deleting teacher", {
         teacher_id: id,

@@ -15,6 +15,7 @@ describe("roster impact as the contract decodes it", () => {
           date: null,
           stored_time: "15:00",
           booked_time: "16:00",
+          reset_now: false,
         },
       ],
     });

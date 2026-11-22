@@ -13,6 +13,7 @@ import {
   changeTraegerMemberName,
   changeTraegerProfileName,
   fetchTraegerProfile,
+  fetchTraegerInvitation,
   createTraegerBankAccount,
   fetchTraegerMasterData,
   uploadTraegerLogo,
@@ -246,15 +247,22 @@ describe("traeger-api", () => {
     expect(result.rows[0]).toMatchObject({ status: undefined, sequence: "" });
   });
 
-  it("sends the chosen Träger as a number and returns only session status", async () => {
+  it("preserves a bigint Träger ID and returns only session status", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse(200, {
-        status: "authenticated",
+        status: "success",
+        data: {
+          status: "authenticated",
+        },
       }),
     );
 
     await expect(
-      traegerLogin({ email: "a@b.de", password: "pw", organizationId: "7" }),
+      traegerLogin({
+        email: "a@b.de",
+        password: "pw",
+        organizationId: "9007199254740993",
+      }),
     ).resolves.toEqual({
       status: "authenticated",
     });
@@ -263,15 +271,18 @@ describe("traeger-api", () => {
     expect(JSON.parse(init?.body as string)).toEqual({
       email: "a@b.de",
       password: "pw",
-      organization_id: 7,
+      organization_id: "9007199254740993",
     });
   });
 
-  it("maps the choice of Träger with string IDs", async () => {
+  it("maps the choice of Träger", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse(200, {
-        status: "organization_selection_required",
-        organizations: [{ id: 7, name: "Träger Nord" }],
+        status: "success",
+        data: {
+          status: "organization_selection_required",
+          organizations: [{ id: "9007199254740993", name: "Träger Nord" }],
+        },
       }),
     );
 
@@ -279,7 +290,7 @@ describe("traeger-api", () => {
       traegerLogin({ email: "a@b.de", password: "pw" }),
     ).resolves.toEqual({
       status: "organization_selection_required",
-      organizations: [{ id: "7", name: "Träger Nord" }],
+      organizations: [{ id: "9007199254740993", name: "Träger Nord" }],
     });
     const [, init] = fetchMock.mock.calls[0]!;
     expect(JSON.parse(init?.body as string)).not.toHaveProperty(
@@ -290,12 +301,15 @@ describe("traeger-api", () => {
   it("maps the second factor the login asks for", async () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse(200, {
-        status: "mfa_required",
-        challenge_token: "challenge",
-        masked_email: "a***@b.de",
-        organization_id: 7,
-        trusted_device_enabled: true,
-        trusted_device_days: 90,
+        status: "success",
+        data: {
+          status: "mfa_required",
+          challenge_token: "challenge",
+          masked_email: "a***@b.de",
+          organization_id: "7",
+          trusted_device_enabled: true,
+          trusted_device_days: 90,
+        },
       }),
     );
     await expect(
@@ -312,10 +326,13 @@ describe("traeger-api", () => {
     // An answer without the fields offers nothing to remember (#6955).
     fetchMock.mockResolvedValueOnce(
       jsonResponse(200, {
-        status: "mfa_required",
-        challenge_token: "challenge",
-        masked_email: "a***@b.de",
-        organization_id: 7,
+        status: "success",
+        data: {
+          status: "mfa_required",
+          challenge_token: "challenge",
+          masked_email: "a***@b.de",
+          organization_id: "7",
+        },
       }),
     );
     await expect(
@@ -327,11 +344,14 @@ describe("traeger-api", () => {
 
     fetchMock.mockResolvedValueOnce(
       jsonResponse(200, {
-        status: "mfa_enrollment_required",
-        access_token: "enrollment",
-        masked_email: "a***@b.de",
-        mfa_enrollment_required: true,
-        organization_id: 7,
+        status: "success",
+        data: {
+          status: "mfa_enrollment_required",
+          access_token: "enrollment",
+          masked_email: "a***@b.de",
+          mfa_enrollment_required: true,
+          organization_id: "7",
+        },
       }),
     );
     await expect(
@@ -486,6 +506,36 @@ describe("traeger-api", () => {
     });
     expect(fetchMock.mock.calls[0]![0]).toBe("/api/traeger/accounts");
   });
+
+  it.each([
+    {
+      operation: "preview",
+      request: () => fetchTraegerInvitation("tok/en"),
+      message: "traeger invitation preview failed",
+    },
+    {
+      operation: "acceptance",
+      request: () =>
+        acceptTraegerInvitation("tok/en", {
+          name: "Eva Müller",
+          password: "pw",
+        }),
+      message: "traeger invitation acceptance failed",
+    },
+  ])(
+    "keeps the token out of invitation $operation errors",
+    async ({ request, message }) => {
+      fetchMock.mockResolvedValue(
+        jsonResponse(401, { code: "identity.invalid_credentials" }),
+      );
+
+      await expect(request()).rejects.toMatchObject({
+        message,
+        status: 401,
+        code: "identity.invalid_credentials",
+      });
+    },
+  );
 
   it("accepts an invitation with the password and returns the address", async () => {
     fetchMock.mockResolvedValue(

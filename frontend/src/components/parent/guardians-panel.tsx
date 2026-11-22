@@ -82,6 +82,7 @@ import { enrollmentsConcept } from "~/lib/concepts/enrollments";
 import { peopleConcept } from "~/lib/concepts/people";
 import { permissionsConcept } from "~/lib/concepts/permissions";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
+import { knownEnum } from "~/lib/contract/known-enum";
 import {
   SALUTATIONS,
   type Salutation,
@@ -878,7 +879,7 @@ function GuardianRow({
     : t("guardians.relationships.contact");
   const email = displayEmail(g.email);
   const hasContact =
-    g.phones.length > 0 ||
+    (g.phones ?? []).length > 0 ||
     Boolean(email) ||
     Boolean(g.address_street ?? g.address_city ?? g.address_postal_code);
   const hasDetails = hasContact || Boolean(g.pickup_notes);
@@ -942,8 +943,8 @@ function GuardianRow({
                   compact
                   label={tPermission("pending", {
                     days:
-                      pendingPermission.weekdays.length > 0
-                        ? weekdayList(pendingPermission.weekdays)
+                      (pendingPermission.weekdays ?? []).length > 0
+                        ? weekdayList(pendingPermission.weekdays ?? [])
                         : tPermission("days.all"),
                   })}
                 />
@@ -961,7 +962,7 @@ function GuardianRow({
             <div className="mt-2 space-y-1.5 text-sm text-gray-600">
               {hasContact && (
                 <>
-                  {g.phones.map((p) => (
+                  {(g.phones ?? []).map((p) => (
                     <ContactLine
                       key={`${p.phone_number}-${p.phone_type}`}
                       icon={
@@ -1156,7 +1157,7 @@ function ContactModal({
   // Die Anrede wählt jede Person nur für sich selbst (#7362).
   const ownProfile = mode === "edit" && guardian?.is_self === true;
   const [salutation, setSalutation] = useState<Salutation | "">(
-    guardian?.salutation ?? "",
+    knownEnum(SALUTATIONS, guardian?.salutation) ?? "",
   );
   const [email, setEmail] = useState(guardian?.email ?? "");
   const [street, setStreet] = useState(guardian?.address_street ?? "");
@@ -1172,7 +1173,7 @@ function ContactModal({
   const [isEmergency, setIsEmergency] = useState(false);
   const [pickupNotes, setPickupNotes] = useState("");
   const [phones, setPhones] = useState<PhoneDraft[]>(
-    guardian && guardian.phones.length > 0
+    guardian?.phones && guardian.phones.length > 0
       ? guardian.phones.map((p) => ({
           id: `${guardian.guardian_profile_id}-${p.phone_number}-${p.phone_type}`,
           phone_number: p.phone_number,
@@ -1811,8 +1812,8 @@ function PickupModal({
                     type="info"
                     message={`${tPermission("pending", {
                       days:
-                        pendingPermission.weekdays.length > 0
-                          ? weekdayList(pendingPermission.weekdays)
+                        (pendingPermission.weekdays ?? []).length > 0
+                          ? weekdayList(pendingPermission.weekdays ?? [])
                           : tPermission("days.all"),
                     })}. ${tPermission("waitsForOgs")}`}
                   />

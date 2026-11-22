@@ -272,7 +272,7 @@ type HolidayRegistrationEntryChildResponse struct {
 // account. first_day and last_day span the care weeks and are null while
 // the period has none.
 type HolidayRegistrationEntryResponse struct {
-	ID          common.ID                               `json:"id"`
+	ID          ident.ID                                `json:"id"`
 	TraegerName string                                  `json:"traeger_name"`
 	PeriodName  string                                  `json:"period_name"`
 	FirstDay    *timezone.Date                          `json:"first_day"`

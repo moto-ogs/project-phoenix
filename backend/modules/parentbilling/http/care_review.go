@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
@@ -52,9 +53,9 @@ func (req *CareInvoiceDateRequest) Bind(*http.Request) error { return nil }
 // CareExclusionRequest is the body of POST …/exclusions: the invoice by its
 // contract and service ("care" or "meal", #6346) and the reason.
 type CareExclusionRequest struct {
-	ContractID common.ID `json:"contract_id"`
-	Service    string    `json:"service"`
-	Reason     string    `json:"reason"`
+	ContractID ident.ID `json:"contract_id"`
+	Service    string   `json:"service"`
+	Reason     string   `json:"reason"`
 }
 
 // Bind accepts the body; the Owner checks the service, the reason and the
@@ -64,8 +65,8 @@ func (req *CareExclusionRequest) Bind(*http.Request) error { return nil }
 // CareInclusionRequest is the body of POST …/inclusions: the excluded
 // invoice by its contract and service (#6346).
 type CareInclusionRequest struct {
-	ContractID common.ID `json:"contract_id"`
-	Service    string    `json:"service"`
+	ContractID ident.ID `json:"contract_id"`
+	Service    string   `json:"service"`
 }
 
 // Bind accepts the body; the Owner checks the service and the invoice.

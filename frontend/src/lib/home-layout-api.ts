@@ -1,4 +1,5 @@
-import { ApiError, apiErrorFromResponse } from "./api-error";
+import { ApiError } from "./api-error";
+import { bffJson } from "./bff-fetch";
 import { createLogger } from "./logger";
 import {
   sanitizeHomeBlockPlacements,
@@ -8,7 +9,6 @@ import {
   type HomeBlockPolicies,
   type HomeLayoutOverrides,
 } from "./home-blocks";
-import { sessionFetch } from "./session-cache";
 
 const logger = createLogger({ component: "HomeLayoutApi" });
 
@@ -20,15 +20,6 @@ export interface HomeLayoutState {
   policies: HomeBlockPolicies;
   /** Darf diese Person die Vorgabe der Schule ändern? */
   canManagePolicies: boolean;
-}
-
-interface HomeLayoutResponse {
-  data?: {
-    blocks?: unknown;
-    overrides?: unknown;
-    policies?: unknown;
-    can_manage_policies?: unknown;
-  } | null;
 }
 
 const EMPTY_STATE: HomeLayoutState = {
@@ -46,39 +37,28 @@ const EMPTY_STATE: HomeLayoutState = {
  * und SWR die Auswahl erneut laden kann.
  */
 export async function fetchHomeLayout(): Promise<HomeLayoutState> {
-  let response: Response;
+  let layout;
   try {
-    response = await sessionFetch("/api/settings/home-layout", {
-      method: "GET",
-    });
+    layout = await bffJson("tenant", "GET /api/settings/home-layout");
   } catch (error) {
-    if (error instanceof ApiError && error.status === 401) {
+    // Ohne Recht oder Sitzung zeigt die Startseite ihre Voreinstellung.
+    if (
+      error instanceof ApiError &&
+      (error.status === 401 || error.status === 403)
+    ) {
       return EMPTY_STATE;
     }
-    logger.error("fetch_home_layout_network_error", {
+    logger.error("fetch_home_layout_failed", {
+      status: error instanceof ApiError ? error.status : undefined,
       error: error instanceof Error ? error.message : String(error),
     });
     throw error;
   }
-
-  if (response.status === 401 || response.status === 403) {
-    return EMPTY_STATE;
-  }
-
-  if (!response.ok) {
-    logger.error("fetch_home_layout_failed", { status: response.status });
-    throw await apiErrorFromResponse(
-      response,
-      `home layout request failed (${response.status})`,
-    );
-  }
-
-  const result = (await response.json()) as HomeLayoutResponse;
   return {
-    blocks: sanitizeHomeBlockPlacements(result.data?.blocks),
-    overrides: sanitizeHomeLayoutOverrides(result.data?.overrides),
-    policies: sanitizeHomeBlockPolicies(result.data?.policies),
-    canManagePolicies: result.data?.can_manage_policies === true,
+    blocks: sanitizeHomeBlockPlacements(layout.blocks),
+    overrides: sanitizeHomeLayoutOverrides(layout.overrides),
+    policies: sanitizeHomeBlockPolicies(layout.policies),
+    canManagePolicies: layout.can_manage_policies === true,
   };
 }
 
@@ -87,27 +67,30 @@ export async function saveHomeLayout(
   overrides: HomeLayoutOverrides,
   blocks: readonly HomeBlockPlacement[],
 ): Promise<void> {
-  const response = await sessionFetch("/api/settings/home-layout", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ overrides, blocks }),
-  });
-
-  if (!response.ok) {
-    logger.error("save_home_layout_failed", { status: response.status });
-    throw await apiErrorFromResponse(response, "Home layout save failed");
+  try {
+    await bffJson("tenant", "PUT /api/settings/home-layout", {
+      body: { overrides, blocks: [...blocks] },
+      errorMessage: "Home layout save failed",
+    });
+  } catch (error) {
+    logger.error("save_home_layout_failed", {
+      status: error instanceof ApiError ? error.status : undefined,
+    });
+    throw error;
   }
 }
 
 /** Stellt die empfohlene Startseite wieder her. */
 export async function resetHomeLayout(): Promise<void> {
-  const response = await sessionFetch("/api/settings/home-layout", {
-    method: "DELETE",
-  });
-
-  if (!response.ok) {
-    logger.error("reset_home_layout_failed", { status: response.status });
-    throw await apiErrorFromResponse(response, "Home layout reset failed");
+  try {
+    await bffJson("tenant", "DELETE /api/settings/home-layout", {
+      errorMessage: "Home layout reset failed",
+    });
+  } catch (error) {
+    logger.error("reset_home_layout_failed", {
+      status: error instanceof ApiError ? error.status : undefined,
+    });
+    throw error;
   }
 }
 
@@ -115,19 +98,15 @@ export async function resetHomeLayout(): Promise<void> {
 export async function saveHomeBlockPolicies(
   policies: HomeBlockPolicies,
 ): Promise<void> {
-  const response = await sessionFetch("/api/settings/home-layout/policies", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ policies }),
-  });
-
-  if (!response.ok) {
-    logger.error("save_home_block_policies_failed", {
-      status: response.status,
+  try {
+    await bffJson("tenant", "PUT /api/settings/home-layout/policies", {
+      body: { policies },
+      errorMessage: "Home block policies save failed",
     });
-    throw await apiErrorFromResponse(
-      response,
-      "Home block policies save failed",
-    );
+  } catch (error) {
+    logger.error("save_home_block_policies_failed", {
+      status: error instanceof ApiError ? error.status : undefined,
+    });
+    throw error;
   }
 }

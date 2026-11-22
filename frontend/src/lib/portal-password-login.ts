@@ -3,8 +3,9 @@
 // (#4497) and the parents portal (#7051). The browser learns only whether a
 // second step follows. A refusal comes back as an ApiError with its code.
 
+import type { ApiResponse } from "~/lib/api-envelope";
 import { apiErrorFromResponse, transportFetch } from "./api-error";
-import { portalAuthAnswer, portalAuthPath } from "./portal-paths";
+import { portalAuthPath } from "./portal-paths";
 import { signInAnswer, type SignInAnswer } from "./sign-in-answer";
 
 /** The caterer's and the parents' sign-in never asks for a setup step. */
@@ -31,7 +32,9 @@ export async function portalPasswordLogin(
   }
   const answer = signInAnswer(
     portal,
-    portalAuthAnswer<unknown>(portal, "login", await response.json()),
+    ((await response.json()) as ApiResponse<unknown>).data,
   );
-  return answer.status === "mfa_required" ? answer : { status: "authenticated" };
+  return answer.status === "mfa_required"
+    ? answer
+    : { status: "authenticated" };
 }

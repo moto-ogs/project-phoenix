@@ -1,4 +1,5 @@
 import type { ErrorCode } from "~/lib/error-codes.generated";
+import { parseRetryAfter } from "~/lib/retry-after";
 
 /**
  * Types a wire code for comparison against registry codes, so a literal that
@@ -289,7 +290,16 @@ export async function apiErrorFromResponse(
   } catch {
     // Body already consumed or the stream broke: the status still classifies.
   }
-  return apiErrorFromText(message, response.status, text);
+  const error = apiErrorFromText(message, response.status, text);
+  // A refusal with a wait (429, 503) tells the screen when to try again.
+  let retryAfter: number | null = null;
+  try {
+    retryAfter = parseRetryAfter(response.headers.get("Retry-After"));
+  } catch {
+    // Without readable headers there is no wait to report.
+  }
+  if (retryAfter !== null) error.retryAfterSeconds = retryAfter;
+  return error;
 }
 
 /** Add wire fields without replacing the domain error's message or type. */

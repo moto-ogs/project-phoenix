@@ -10,6 +10,7 @@ export const codes = [
   "import.import_batch_failed",
   "import.mode_forbidden",
   "import.not_test_traeger",
+  "import.staff_profile_required",
   "import.test_traeger_inactive",
 ] as const;
 
@@ -24,6 +25,7 @@ export const classes = {
   "import.import_batch_failed": "server",
   "import.mode_forbidden": "permission",
   "import.not_test_traeger": "business_rejection",
+  "import.staff_profile_required": "permission",
   "import.test_traeger_inactive": "business_rejection",
 } as const;
 
@@ -38,5 +40,6 @@ export const parameters = {
   "import.import_batch_failed": [],
   "import.mode_forbidden": [],
   "import.not_test_traeger": [],
+  "import.staff_profile_required": [],
   "import.test_traeger_inactive": [],
 } as const;

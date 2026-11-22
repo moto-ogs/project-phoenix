@@ -8,6 +8,7 @@ import (
 	"slices"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedTraegerHolidayCriteriaStep plans a holiday period of the demo Träger
@@ -82,7 +83,7 @@ func seedHolidayCriteria(rt *Runtime, auth AuthRef) ([]int64, error) {
 	var envelope struct {
 		Data struct {
 			Criteria []struct {
-				ID apiID `json:"id"`
+				ID ident.ID `json:"id"`
 			} `json:"criteria"`
 		} `json:"data"`
 	}
@@ -112,9 +113,9 @@ func seedPublishedHolidayLink(rt *Runtime, auth AuthRef, periodID int64) (seedHo
 		Data struct {
 			PublicToken string `json:"public_token"`
 			Weeks       []struct {
-				ID         apiID `json:"id"`
+				ID         ident.ID `json:"id"`
 				TimeModels []struct {
-					ID apiID `json:"id"`
+					ID ident.ID `json:"id"`
 				} `json:"time_models"`
 			} `json:"weeks"`
 		} `json:"data"`
@@ -180,8 +181,8 @@ func seedHolidayFirstAllocation(rt *Runtime, auth AuthRef, periodID int64) error
 		Data struct {
 			Weeks []struct {
 				Pending []struct {
-					BookingID apiID  `json:"booking_id"`
-					Proposal  string `json:"proposal"`
+					BookingID ident.ID `json:"booking_id"`
+					Proposal  string   `json:"proposal"`
 				} `json:"pending"`
 			} `json:"weeks"`
 		} `json:"data"`

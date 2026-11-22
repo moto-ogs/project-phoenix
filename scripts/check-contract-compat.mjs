@@ -14,13 +14,13 @@ export const MODEL_PATH = "backend/api/contract/contract.json";
 const describe = (schema) => schema.elem ? `${schema.kind}<${describe(schema.elem)}>`
   : schema.kind === "ref" ? "object" : schema.kind;
 
-// Go reads a lax_id and an id as string or number, so a request field that
-// moves from lax_id to id is the one identifier change that breaks no client
-// (ADR 0300).
-const sameKind = (before, after) => before.kind === after.kind
-  || (before.kind === "lax_id" && after.kind === "id")
-  // Naming the form of a string narrows the type, not the wire.
-  || (before.kind === "string" && ["enum", "date", "clock"].includes(after.kind));
+// Naming the form of a string narrows the type, not the wire. In a request,
+// Go reads an id as a decimal string or a number, so a string identifier may
+// become an id; so may a lax_id, the request kind a base from before #7808
+// still names (ADR 0300).
+const sameKind = (before, after, request) => before.kind === after.kind
+  || (before.kind === "string" && ["enum", "date", "clock"].includes(after.kind))
+  || (request && after.kind === "id" && ["string", "lax_id"].includes(before.kind));
 
 export function breakingChanges(base, head) {
   const breaking = [];
@@ -31,13 +31,13 @@ export function breakingChanges(base, head) {
   // A response may gain fields and may turn optional into required. A reader
   // breaks when a field disappears, changes its kind, or starts to be null
   // or absent. Types are compared by shape, so renaming a Go type is free.
-  function compare(where, before, after) {
-    if (!sameKind(before, after)) {
+  function compare(where, before, after, request = false) {
+    if (!sameKind(before, after, request)) {
       breaking.push(`${where}: ${describe(before)} became ${describe(after)}`);
       return;
     }
     if (!before.nullable && after.nullable) breaking.push(`${where}: may now be null`);
-    if (before.elem) compare(`${where}[]`, before.elem, after.elem);
+    if (before.elem) compare(`${where}[]`, before.elem, after.elem, request);
     if (before.kind !== "ref") return;
     const pair = `${before.ref}>${after.ref}`;
     if (seen.has(pair)) return;
@@ -54,7 +54,7 @@ export function breakingChanges(base, head) {
         continue;
       }
       if (!beforeType.request && !field.optional && next.optional) breaking.push(`${at}: may now be absent`);
-      compare(at, field.schema, next.schema);
+      compare(at, field.schema, next.schema, Boolean(beforeType.request));
     }
   }
 
@@ -69,7 +69,7 @@ export function breakingChanges(base, head) {
     for (const portal of route.portals) {
       if (!next.portals.includes(portal)) breaking.push(`${key}: portal ${portal} removed`);
     }
-    if (route.request && next.request) compare(`${key} request`, route.request, next.request);
+    if (route.request && next.request) compare(`${key} request`, route.request, next.request, true);
     // A multipart upload and a JSON body are different requests: a client
     // of the base would send the other kind.
     if (Boolean(route.multipart) !== Boolean(next.multipart)) {

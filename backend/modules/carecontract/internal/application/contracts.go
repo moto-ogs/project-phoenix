@@ -233,11 +233,18 @@ func (c *Contracts) detail(ctx context.Context, reviewer carecontract.Reviewer, 
 	if err != nil {
 		return carecontract.ContractDetail{}, err
 	}
+	corrections := []carecontract.ContractCorrection{}
+	if record.Concluded != nil && record.Concluded.TakenOver {
+		// Only a contract from an import carries corrections (#7767).
+		if corrections, err = c.store.ContractCorrections(ctx, reviewer.OrganizationID, record.Summary.ID.Int64()); err != nil {
+			return carecontract.ContractDetail{}, err
+		}
+	}
 	detail := carecontract.ContractDetail{
 		ContractSummary: record.Summary, Version: current, Parties: record.Parties,
 		Mailings: mailings, DocumentFrozen: record.DocumentID != nil, Versions: versions,
 		TermText: TermText(current.Terms, contractEnd(versions, current)), NoticeText: NoticeText(current.Terms),
-		FeeText: feeText(current),
+		FeeText: feeText(current), Corrections: corrections,
 	}
 	return detail, c.addSignature(ctx, reviewer.OrganizationID, record, &detail)
 }

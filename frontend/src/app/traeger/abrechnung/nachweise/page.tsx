@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Nachweise der Verträge (#4685): welche Einkommensstufe ein Kind hat und ob
 // die Ermäßigung für Alleinerziehende gilt, mit Art des Nachweises,
 // Prüfdatum und Gültigkeit. Nur das Recht „Abrechnung“ sieht sie; jedes
@@ -30,7 +32,10 @@ import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { berlinTodayISO, formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
 import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 import {
   type CareEvidence,
@@ -255,7 +260,11 @@ export default function TraegerNachweisePage() {
 
   const exportItems = useTraegerListExportItems({
     download: (format) =>
-      downloadTraegerList("/api/traeger/care-evidences/export", format),
+      downloadTraegerList(
+        bffFile("org", "GET /traeger/care-evidences/export", {
+          query: listExportQuery(format),
+        }),
+      ),
     scope: "Alle Nachweise, ohne Suche. Jeder Download wird protokolliert.",
     fallbackName: "nachweise-ermaessigung",
     errorObject: "die Nachweise",

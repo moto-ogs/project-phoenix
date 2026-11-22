@@ -1,9 +1,7 @@
 package behavior_test
 
 import (
-	"fmt"
 	"testing"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	identityaccessCompose "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose"
@@ -31,8 +29,6 @@ func TestRoleCatalogWithoutLifecycle(t *testing.T) {
 
 	_, err = catalog.CreateRole(ctx, "unavailable", "", nil)
 	require.ErrorIs(t, err, identityaccess.ErrRoleAdministrationUnavailable)
-	_, err = catalog.CreatePermission(ctx, "unavailable", "", "unavailable", "read")
-	require.ErrorIs(t, err, identityaccess.ErrRoleAdministrationUnavailable)
 }
 
 func TestRoleCatalogDatabaseFailures(t *testing.T) {
@@ -46,45 +42,6 @@ func TestRoleCatalogDatabaseFailures(t *testing.T) {
 	require.ErrorContains(t, err, "database is closed")
 	_, err = catalog.ListPermissions(ctx, identityaccess.PermissionFilter{})
 	require.ErrorContains(t, err, "database is closed")
-}
-
-func TestPermissionPersistence_Create(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	repo := roleAdministrationOf(t, setupAuthService(t, db))
-	ctx := testpkg.Ctx(t)
-
-	t.Run("creates permission with valid data", func(t *testing.T) {
-		uniqueName := fmt.Sprintf("test_permission_%d", time.Now().UnixNano())
-		permission := identityaccess.Permission{
-			Name:        uniqueName,
-			Resource:    "test_resource",
-			Action:      "read",
-			Description: "Test permission",
-		}
-
-		permission, err := repo.CreatePermission(ctx, permission.Name, permission.Description, permission.Resource, permission.Action)
-		require.NoError(t, err)
-		assert.NotZero(t, permission.ID)
-		testpkg.OwnTestPermission(t, db, permission.ID)
-	})
-
-	t.Run("creates permission with different actions", func(t *testing.T) {
-		uniqueName := fmt.Sprintf("test_write_permission_%d", time.Now().UnixNano())
-		permission := identityaccess.Permission{
-			Name:        uniqueName,
-			Resource:    "test_resource",
-			Action:      "write",
-			Description: "Write permission",
-		}
-
-		permission, err := repo.CreatePermission(ctx, permission.Name, permission.Description, permission.Resource, permission.Action)
-		require.NoError(t, err)
-		assert.NotZero(t, permission.ID)
-		testpkg.OwnTestPermission(t, db, permission.ID)
-	})
 }
 
 func TestPermissionPersistence_FindByName(t *testing.T) {

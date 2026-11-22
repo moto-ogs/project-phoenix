@@ -4,12 +4,9 @@ import { knownEnum } from "~/lib/contract/known-enum";
 import type {
   GuardianPickerResponse,
   GuardianResponse,
-  GuardianWithRelationship as GuardianWithRelationshipWire,
-  PhoneNumberCreateRequest as PhoneNumberCreateWire,
   PhoneNumberResponse,
-  PhoneNumberUpdateRequest as PhoneNumberUpdateWire,
-  StudentGuardianLinkRequest as StudentGuardianLinkWire,
 } from "~/lib/contract/guardians.generated";
+import type * as guardiansContract from "~/lib/contract/guardians.generated";
 
 // Phone Number Types
 export type PhoneType = "mobile" | "home" | "work" | "other";
@@ -58,6 +55,33 @@ export const GUARDIAN_ROLE_OPTIONS: Array<{
   { value: "social_worker", label: "Sozialdienst" },
   { value: "custom", label: "Individuell" },
 ];
+
+// Was die gewählte Rolle für die Eltern-App bedeutet. Abgeleitet aus
+// StudentGuardianPermissionSet (backend securityruntime): nur die drei vollen
+// Rollen bekommen Rechte; Sozialdienst lässt sich nie einladen.
+const FULL_ROLE_HINT =
+  "Bekommt nach einer Einladung vollen Zugang zur Eltern-App für dieses Kind.";
+
+export const GUARDIAN_ROLE_HINTS: Record<GuardianRole, string> = {
+  primary_guardian: FULL_ROLE_HINT,
+  legal_guardian: FULL_ROLE_HINT,
+  co_guardian: FULL_ROLE_HINT,
+  emergency_contact: "Kein Zugang zur Eltern-App. Nur für den Notfall da.",
+  pickup_only: "Kein Zugang zur Eltern-App. Nur zum Abholen da.",
+  social_worker:
+    "Fachkraft vom Sozialdienst. Kein Zugang zur Eltern-App, keine Einladung.",
+  custom:
+    "Kein Zugang zur Eltern-App. Abholung und Notfall legst du unten fest.",
+};
+
+// Rollen mit Zugang zur Eltern-App (backend IsFullGuardianRole).
+export function isFullGuardianRole(role: GuardianRole | undefined): boolean {
+  return (
+    role === "primary_guardian" ||
+    role === "legal_guardian" ||
+    role === "co_guardian"
+  );
+}
 
 function normalizeGuardianRole(value: unknown): GuardianRole {
   return GUARDIAN_ROLE_OPTIONS.some((option) => option.value === value)
@@ -254,7 +278,7 @@ const ACCOUNT_STATUSES: readonly GuardianAccountStatus[] = [
  * lists leave such a link out.
  */
 export function mapGuardianWithRelationshipResponse(
-  data: GuardianWithRelationshipWire,
+  data: guardiansContract.GuardianWithRelationship,
 ): GuardianWithRelationship | null {
   const guardian = data.guardian;
   if (!guardian) return null;
@@ -282,7 +306,7 @@ export function mapGuardianWithRelationshipResponse(
 
 export function mapStudentGuardianLinkToBackend(
   data: StudentGuardianLinkRequest,
-): StudentGuardianLinkWire {
+): guardiansContract.StudentGuardianLinkRequest {
   return {
     guardian_profile_id: data.guardianProfileId,
     relationship_type: data.relationshipType,
@@ -358,7 +382,7 @@ export interface PhoneNumberUpdateRequest {
 // Map phone number create request to backend format
 export function mapPhoneNumberCreateToBackend(
   data: PhoneNumberCreateRequest,
-): PhoneNumberCreateWire {
+): guardiansContract.PhoneNumberCreateRequest {
   return {
     phone_number: data.phoneNumber,
     phone_type: data.phoneType,
@@ -370,8 +394,8 @@ export function mapPhoneNumberCreateToBackend(
 // Map phone number update request to backend format
 export function mapPhoneNumberUpdateToBackend(
   data: PhoneNumberUpdateRequest,
-): PhoneNumberUpdateWire {
-  const result: PhoneNumberUpdateWire = {};
+): guardiansContract.PhoneNumberUpdateRequest {
+  const result: guardiansContract.PhoneNumberUpdateRequest = {};
   if (data.phoneNumber !== undefined) result.phone_number = data.phoneNumber;
   if (data.phoneType !== undefined) result.phone_type = data.phoneType;
   if (data.label !== undefined) result.label = data.label;

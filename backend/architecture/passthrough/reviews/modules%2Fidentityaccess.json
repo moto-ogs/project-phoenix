@@ -197,11 +197,6 @@
     },
     {
       "decision": "0177",
-      "id": "modules/identityaccess/internal/application/AccountAdministration.UpdateManageableAccount",
-      "reason": "ADR 0177: the flow helper takes over nil guard, runtime binding and translation; ADR 0075 eligibility unchanged."
-    },
-    {
-      "decision": "0177",
       "id": "modules/identityaccess/internal/application/AccountAuthentication.CountExpiredTokens",
       "reason": "ADR 0177: the flow helper takes over nil guard, runtime binding and translation; ADR 0075 eligibility unchanged."
     },

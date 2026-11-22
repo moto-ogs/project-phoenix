@@ -71,7 +71,7 @@ describe("fetchHolidayRegistrationFamily (#4662)", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/parent/holiday-registrations/a%2Fb/family",
-      { cache: "no-store" },
+      expect.objectContaining({ cache: "no-store" }),
     );
     expect(family).toEqual({
       guardian: {

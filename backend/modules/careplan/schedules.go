@@ -81,25 +81,31 @@ type ArrivalSchedule struct {
 	ExpectedArrival time.Time
 	Notes           *string
 	CreatedBy       int64
-	Source          string
-	SourceClass     string
-	SourceLabel     string
+	// EnteredByTraeger marks a row a person of the Träger-Büro entered
+	// (#7766); CreatedBy is then 0.
+	EnteredByTraeger bool
+	Source           string
+	SourceClass      string
+	SourceLabel      string
 }
 
 // InheritsClassTime reports whether the care day has no manual arrival time.
 func (s *ArrivalSchedule) InheritsClassTime() bool { return s.ExpectedArrival.IsZero() }
 
 type ArrivalException struct {
-	ID                int64
-	TenantID          int64
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
-	StudentID         int64
-	ExceptionDate     Date
-	ExpectedArrival   *time.Time
-	Reason            *string
-	Source            string
-	CreatedBy         int64
+	ID              int64
+	TenantID        int64
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	StudentID       int64
+	ExceptionDate   Date
+	ExpectedArrival *time.Time
+	Reason          *string
+	Source          string
+	CreatedBy       int64
+	// EnteredByTraeger marks a row a person of the Träger-Büro entered
+	// (#7766); CreatedBy is then 0.
+	EnteredByTraeger  bool
 	CreatedByGuardian *int64
 }
 
@@ -112,40 +118,52 @@ type ArrivalNote struct {
 	NoteDate  Date
 	Content   string
 	CreatedBy int64
+	// EnteredByTraeger marks a row a person of the Träger-Büro entered
+	// (#7766); CreatedBy is then 0.
+	EnteredByTraeger bool
 }
 
 type PickupSchedule struct {
-	ID               int64
-	TenantID         int64
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
-	StudentID        int64
-	Weekday          int
-	PickupTime       time.Time
-	Notes            *string
-	CreatedBy        int64
+	ID         int64
+	TenantID   int64
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	StudentID  int64
+	Weekday    int
+	PickupTime time.Time
+	Notes      *string
+	CreatedBy  int64
+	// EnteredByTraeger marks a row a person of the Träger-Büro entered
+	// (#7766); CreatedBy is then 0.
+	EnteredByTraeger bool
 	Source           string
 	CareOfferingID   *int64
 	CareOfferingName string
 }
 
 type PickupException struct {
-	ID                    int64
-	TenantID              int64
-	CreatedAt             time.Time
-	UpdatedAt             time.Time
-	StudentID             int64
-	ExceptionDate         Date
-	PickupTime            *time.Time
-	Reason                *string
-	ExcusedFrom           *time.Time
-	ExcusedReason         *string
-	ExcusedCreatedBy      *int64
+	ID               int64
+	TenantID         int64
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	StudentID        int64
+	ExceptionDate    Date
+	PickupTime       *time.Time
+	Reason           *string
+	ExcusedFrom      *time.Time
+	ExcusedReason    *string
+	ExcusedCreatedBy *int64
+	// ExcusedByTraeger marks a partial absence the Träger-Büro entered;
+	// ExcusedCreatedBy is then nil.
+	ExcusedByTraeger      bool
 	ExcusedOwnsPickupTime bool
 	ExcusedAuto           bool
 	Source                string
 	CreatedBy             int64
-	CreatedByGuardian     *int64
+	// EnteredByTraeger marks a row a person of the Träger-Büro entered
+	// (#7766); CreatedBy is then 0.
+	EnteredByTraeger  bool
+	CreatedByGuardian *int64
 }
 
 // PickupNote is either dated (NoteDate) or recurring on a weekday (Weekday
@@ -161,6 +179,9 @@ type PickupNote struct {
 	Weekday   int
 	Content   string
 	CreatedBy int64
+	// EnteredByTraeger marks a row a person of the Träger-Büro entered
+	// (#7766); CreatedBy is then 0.
+	EnteredByTraeger bool
 }
 
 // StudentSchedulesQuery reads the weekly arrival and pickup plans of

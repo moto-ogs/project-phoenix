@@ -45,3 +45,21 @@ func NewCareContractImports(organizations HolidayOrganizations, settings Traeger
 		Fingerprint: securityruntime.Fingerprint,
 	}, today)
 }
+
+// mountCareContractCorrectionRoutes serves the correction of contracts from
+// an import (#7767) at /traeger/contract-corrections behind the right
+// "Verträge verwalten". today is the root's day clock.
+func mountCareContractCorrectionRoutes(root chi.Router, accessLog owners.DataAccessAppender, today func() calendar.Date) {
+	resource := careContractHTTP.NewCorrectionResource(NewCareContractCorrections(accessLog, today),
+		common.RequiresPermission(identityaccess.TraegerRightContractsManage), traegerListRenderer(NewSimpleListRenderer()))
+	root.Mount("/traeger/contract-corrections", resource.Router(ProtectedTraegerRoutes))
+}
+
+// NewCareContractCorrections binds the correction to the school's access log
+// and the fingerprint of a confirmed preview.
+func NewCareContractCorrections(accessLog owners.DataAccessAppender, today func() calendar.Date) carecontract.ContractCorrections {
+	return careContractCompose.NewContractCorrections(careContractCompose.CorrectionPorts{
+		Access: careContractAccessLog{log: accessLog}, Runtime: owners.CareContractRuntime{},
+		Fingerprint: securityruntime.Fingerprint,
+	}, today)
+}

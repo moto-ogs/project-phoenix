@@ -19,8 +19,7 @@ func NewNotices(contracts ContractPorts, notices NoticePorts, now func() time.Ti
 		application.NewContracts(store, rendering.NewRenderer(), contracts, clock, NewContractVersions()))
 }
 
-// NewParentNotices builds the declarations of the parents portal alone,
-// in its Träger unit; it needs no letterhead or access log.
+// NewParentNotices builds the declarations of the parents portal alone, in its Träger unit; it needs no letterhead or access log.
 func NewParentNotices(notices NoticePorts, now func() time.Time) carecontract.Notices {
 	store := storeOn(now)
 	return application.NewNotices(store, store, notices, application.Clock{Now: now}, nil)

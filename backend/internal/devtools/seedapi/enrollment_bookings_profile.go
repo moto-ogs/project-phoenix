@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const enrollmentBookingsProfileKey = "anmeldung-buchungen"
@@ -177,7 +179,7 @@ func seedBookingProfileAttendance(rt *Runtime, state *SeedState) error {
 	var response struct {
 		Data struct {
 			SeedDevice
-			ID apiID `json:"id"`
+			ID ident.ID `json:"id"`
 		} `json:"data"`
 	}
 	if err := parseJSON(raw, &response); err != nil {

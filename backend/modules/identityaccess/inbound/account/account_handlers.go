@@ -8,8 +8,6 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
-	"github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/portalauth"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Role Management Request/Response Types
@@ -104,79 +102,5 @@ func caregiverCapabilityErrorRenderer(err error) render.Renderer {
 }
 
 // Permission Management Endpoints
-
-// updateAccount handles updating an account. The write carries the
-// account-management boundary itself, so an account the caller may not
-// administer is reported as missing without a separate read.
-func (rs *Resource) updateAccount(w http.ResponseWriter, r *http.Request) {
-	id, ok := common.ParseInt64IDWithError(w, r, "accountId", common.MsgInvalidAccountID)
-	if !ok {
-		return
-	}
-
-	req := &UpdateAccountRequest{}
-	if err := render.Bind(r, req); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(err))
-		return
-	}
-
-	update := identityaccess.AccountIdentityUpdate{AccountID: id, Email: req.Email}
-	if req.Username != "" {
-		username := req.Username
-		update.Username = &username
-	}
-
-	if err := rs.Sessions.UpdateManageableAccount(r.Context(), update); err != nil {
-		common.RenderError(w, r, accountManagementErrorRenderer(err))
-		return
-	}
-
-	common.RespondNoContent(w, r)
-}
-
-var accountManagementErrorRenderer = common.UnwrapRenderer[*identityaccess.AuthenticationError](
-	[]common.ErrorRule{
-		{Target: identityaccess.ErrAccountNotFound, Render: common.ErrorNotFound},
-		{Target: identityaccess.ErrAccountSharedAcrossSchools, Render: portalauth.AccountSharedAcrossSchools},
-	},
-	common.ErrorInternalServer,
-)
-
-// listAccounts handles listing accounts
-func (rs *Resource) listAccounts(w http.ResponseWriter, r *http.Request) {
-	filter := identityaccess.AccountListFilter{Email: r.URL.Query().Get("email")}
-
-	switch r.URL.Query().Get("active") {
-	case "true":
-		active := true
-		filter.Active = &active
-	case "false":
-		active := false
-		filter.Active = &active
-	}
-
-	accounts, err := rs.Sessions.ListManageableAccounts(r.Context(), filter)
-	if err != nil {
-		common.RenderError(w, r, common.ErrorInternalServer(err))
-		return
-	}
-
-	common.Respond(w, r, http.StatusOK, accountResponses(accounts), "Accounts retrieved successfully")
-}
-
-// accountResponses is the account listing's wire shape: the identifying
-// fields only, never a role or a credential of another school.
-func accountResponses(accounts []identityaccess.ManagedAccount) []*AccountResponse {
-	responses := make([]*AccountResponse, 0, len(accounts))
-	for _, account := range accounts {
-		responses = append(responses, &AccountResponse{
-			ID:       ident.ID(account.ID),
-			Email:    account.Email,
-			Username: account.Username,
-			Active:   account.Active,
-		})
-	}
-	return responses
-}
 
 // Password Reset Endpoints

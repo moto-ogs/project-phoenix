@@ -16,6 +16,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests"
+	"github.com/moto-ogs/project-phoenix/modules/requestreview"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
@@ -124,6 +125,24 @@ func TestRequestReviewRuntimeEvidence(t *testing.T) {
 			var env aggListEnvelope
 			require.NoError(t, json.Unmarshal(body, &env))
 			require.Len(t, env.Data.Items, min(children*3, 25))
+		}},
+		{"history-path", "/change-requests/history?search=Runtime&limit=25", func(t *testing.T, body []byte, children int) {
+			var env struct {
+				Data requestreview.HistoryPage `json:"data"`
+			}
+			require.NoError(t, json.Unmarshal(body, &env))
+			require.Len(t, env.Data.Items, min(children*3, 25))
+			for _, item := range env.Data.Items {
+				// The history projection travels in the member of its type.
+				switch item.RequestType {
+				case requestreview.TypeMasterData:
+					require.NotNil(t, item.MasterData)
+				case requestreview.TypeExcused:
+					require.NotNil(t, item.Excused)
+				default:
+					t.Fatalf("the scenario decides no %s request", item.RequestType)
+				}
+			}
 		}},
 		{"pending-count", "/change-requests/pending-count", func(t *testing.T, body []byte, _ int) {
 			var env struct {

@@ -12,6 +12,7 @@ import (
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	studentpresence "github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	ident "github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	tenant "github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -35,9 +36,9 @@ type demoPresenceHistoryDayKey struct {
 
 // DemoPresenceHistoryDay is one finished care day of one child.
 type DemoPresenceHistoryDay struct {
-	StudentID int64                     `json:"student_id"`
+	StudentID ident.ID                  `json:"student_id"`
 	Date      calendar.Date             `json:"date"`
-	DeviceID  int64                     `json:"device_id"`
+	DeviceID  ident.ID                  `json:"device_id"`
 	CheckIn   time.Time                 `json:"check_in"`
 	CheckOut  time.Time                 `json:"check_out"`
 	Visit     *DemoPresenceHistoryVisit `json:"visit,omitempty"`
@@ -45,8 +46,8 @@ type DemoPresenceHistoryDay struct {
 
 // DemoPresenceHistoryVisit is the room visit of a day inside its session.
 type DemoPresenceHistoryVisit struct {
-	ActivityGroupID int64     `json:"activity_group_id"`
-	RoomID          int64     `json:"room_id"`
+	ActivityGroupID ident.ID  `json:"activity_group_id"`
+	RoomID          ident.ID  `json:"room_id"`
 	SessionStart    time.Time `json:"session_start"`
 	SessionEnd      time.Time `json:"session_end"`
 	Entry           time.Time `json:"entry"`
@@ -118,7 +119,7 @@ func DemoCareDaysHandler(read func(context.Context, int64, calendar.Date, calend
 		result := make([]demoCareDayResponse, 0, len(days))
 		for _, day := range days {
 			result = append(result, demoCareDayResponse{
-				StudentID: day.StudentID, Date: day.Date,
+				StudentID: ident.ID(day.StudentID), Date: day.Date,
 				Expected: day.Expected, NoPlan: day.NoPlan, Cancelled: day.Cancelled,
 				Arrival: demoClockMinutes(day.Arrival), Pickup: demoClockMinutes(day.Pickup),
 			})
@@ -128,7 +129,7 @@ func DemoCareDaysHandler(read func(context.Context, int64, calendar.Date, calend
 }
 
 type demoCareDayResponse struct {
-	StudentID int64         `json:"student_id"`
+	StudentID ident.ID      `json:"student_id"`
 	Date      calendar.Date `json:"date"`
 	Expected  bool          `json:"expected"`
 	NoPlan    bool          `json:"no_plan"`
@@ -164,15 +165,15 @@ func decodeDemoPresenceHistory(w http.ResponseWriter, r *http.Request) ([]studen
 	days := make([]studentpresence.PastPresenceDay, 0, len(body.Days))
 	seen := make(map[demoPresenceHistoryDayKey]struct{}, len(body.Days))
 	for _, day := range body.Days {
-		key := demoPresenceHistoryDayKey{studentID: day.StudentID, date: day.Date}
+		key := demoPresenceHistoryDayKey{studentID: day.StudentID.Int64(), date: day.Date}
 		if _, duplicate := seen[key]; duplicate {
-			return nil, fmt.Errorf("der Anwesenheitsverlauf enthält den Tag %s für Kind %d mehrfach", day.Date, day.StudentID)
+			return nil, fmt.Errorf("der Anwesenheitsverlauf enthält den Tag %s für Kind %d mehrfach", day.Date, day.StudentID.Int64())
 		}
 		seen[key] = struct{}{}
-		past := studentpresence.PastPresenceDay{StudentID: day.StudentID, Date: day.Date, DeviceID: day.DeviceID, CheckIn: day.CheckIn, CheckOut: day.CheckOut}
+		past := studentpresence.PastPresenceDay{StudentID: day.StudentID.Int64(), Date: day.Date, DeviceID: day.DeviceID.Int64(), CheckIn: day.CheckIn, CheckOut: day.CheckOut}
 		if visit := day.Visit; visit != nil {
 			past.Visit = &studentpresence.PastVisit{
-				ActivityGroupID: visit.ActivityGroupID, RoomID: visit.RoomID,
+				ActivityGroupID: visit.ActivityGroupID.Int64(), RoomID: visit.RoomID.Int64(),
 				SessionStart: visit.SessionStart, SessionEnd: visit.SessionEnd,
 				Entry: visit.Entry, Exit: visit.Exit,
 			}

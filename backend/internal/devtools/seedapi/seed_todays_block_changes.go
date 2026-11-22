@@ -7,6 +7,8 @@ import (
 	"slices"
 	"sort"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedTodaysBlockChangesStep gives "Heute anders" (#7662) today's changed
@@ -30,19 +32,19 @@ func (seedTodaysBlockChangesStep) Run(_ context.Context, rt *Runtime) error {
 // seedChangeableBlock is the part of a planner row the step reads and writes
 // back when it moves the block.
 type seedChangeableBlock struct {
-	ID              apiID  `json:"id"`
-	Title           string `json:"title"`
-	Status          string `json:"status"`
-	StartTime       string `json:"start_time"`
-	EndTime         string `json:"end_time"`
-	RoomID          apiID  `json:"room_id"`
-	ActivityGroupID *apiID `json:"activity_group_id"`
+	ID              ident.ID  `json:"id"`
+	Title           string    `json:"title"`
+	Status          string    `json:"status"`
+	StartTime       string    `json:"start_time"`
+	EndTime         string    `json:"end_time"`
+	RoomID          ident.ID  `json:"room_id"`
+	ActivityGroupID *ident.ID `json:"activity_group_id"`
 	Staff           []struct {
-		StaffID      apiID `json:"staff_id"`
-		IsAbsent     bool  `json:"is_absent"`
-		IsSubstitute bool  `json:"is_substitute"`
+		StaffID      ident.ID `json:"staff_id"`
+		IsAbsent     bool     `json:"is_absent"`
+		IsSubstitute bool     `json:"is_substitute"`
 	} `json:"staff"`
-	StudentIDs []apiID `json:"student_ids"`
+	StudentIDs []ident.ID `json:"student_ids"`
 }
 
 func seedTodaysBlockChanges(rt *Runtime, today seedDate, now time.Time) error {

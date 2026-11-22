@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
+
 import {
   fetchDisplayDashboard,
   listDisplays,

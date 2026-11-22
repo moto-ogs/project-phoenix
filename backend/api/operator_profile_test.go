@@ -235,14 +235,17 @@ func TestChangePassword_Success(t *testing.T) {
 		"new_password":     "newpass123",
 	}
 	jsonBody, _ := json.Marshal(body)
-	req := httptest.NewRequest(http.MethodPost, "/profile/password", bytes.NewReader(jsonBody))
+	// Under its production path, so the answer is held to its route (#7808).
+	req := httptest.NewRequest(http.MethodPost, "/operator/profile/password", bytes.NewReader(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	claims := routetest.Claims{ID: 123}
 	ctx := routetest.WithAuthenticatedContext(req.Context(), claims, nil)
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
 
-	resource.ChangePassword(rr, req)
+	router := chi.NewRouter()
+	router.Post("/operator/profile/password", resource.ChangePassword)
+	router.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.Contains(t, rr.Body.String(), "Password changed successfully")
@@ -664,11 +667,14 @@ func TestConfirmEmailChange_Success(t *testing.T) {
 		"token": testUUID,
 	}
 	jsonBody, _ := json.Marshal(body)
-	req := httptest.NewRequest(http.MethodPost, "/auth/email-confirm", bytes.NewReader(jsonBody))
+	// Under its production path, so the answer is held to its route (#7808).
+	req := httptest.NewRequest(http.MethodPost, "/operator/auth/email-confirm", bytes.NewReader(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	resource.ConfirmEmailChange(rr, req)
+	router := chi.NewRouter()
+	router.Post("/operator/auth/email-confirm", resource.ConfirmEmailChange)
+	router.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.Contains(t, rr.Body.String(), "Email changed successfully")

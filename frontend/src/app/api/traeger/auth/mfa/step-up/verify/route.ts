@@ -1,6 +1,7 @@
 import { forwardBackendResponse } from "~/lib/backend-proxy-response.server";
 import { problemResponse } from "~/lib/api-response-error.server";
 import { installLoginSession } from "~/lib/login-route.server";
+import { successResponse } from "~/lib/route-wrapper-utils.server";
 import { createLogger } from "~/lib/logger";
 import { captureBffException } from "~/lib/sentry-bff.server";
 import { traeger } from "~/lib/traeger/route-wrapper.server";
@@ -39,7 +40,9 @@ export const POST = traegerPortal.withAuth(async (request) => {
       throw new Error("Invalid step-up response");
     })) as Record<string, unknown>;
     const failure = await installLoginSession(request, data, traegerPortal);
-    return Response.json({ data: { session_renewed: failure === null } });
+    return Response.json(
+      successResponse({ session_renewed: failure === null }),
+    );
   } catch (error) {
     captureBffException(error, request);
     logger.error("traeger_step_up_verify_failed", {

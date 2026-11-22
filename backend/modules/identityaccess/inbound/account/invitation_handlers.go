@@ -30,7 +30,7 @@ type CreateSchoolInvitationRequest struct {
 	ResetQualifications bool                            `json:"reset_qualifications"`
 	ResetWorkTime       bool                            `json:"reset_work_time"`
 	Email               string                          `json:"email"`
-	RoleID              common.ID                       `json:"role_id"`
+	RoleID              ident.ID                        `json:"role_id"`
 	FirstName           string                          `json:"first_name"`
 	LastName            string                          `json:"last_name"`
 	Position            string                          `json:"position"`
@@ -54,7 +54,7 @@ func (req *CreateSchoolInvitationRequest) Bind(_ *http.Request) error {
 	return validation.ValidateStruct(req,
 		validation.Field(&req.Email, validation.Required, is.Email),
 		validation.Field(&req.RoleID, validation.Required, validation.By(func(value interface{}) error {
-			roleID, ok := value.(common.ID)
+			roleID, ok := value.(ident.ID)
 			if !ok || roleID.Int64() <= 0 {
 				return errors.New("role_id is required")
 			}
@@ -76,7 +76,7 @@ type SchoolInvitationResponse struct {
 	ResetMasterData     bool                            `json:"reset_master_data"`
 	ResetQualifications bool                            `json:"reset_qualifications"`
 	ResetWorkTime       bool                            `json:"reset_work_time"`
-	ID                  common.ID                       `json:"id"`
+	ID                  ident.ID                        `json:"id"`
 	Email               string                          `json:"email"`
 	RoleID              ident.ID                        `json:"role_id"`
 	RoleName            string                          `json:"role_name,omitempty"`
@@ -85,7 +85,7 @@ type SchoolInvitationResponse struct {
 	FirstName           *string                         `json:"first_name,omitempty"`
 	LastName            *string                         `json:"last_name,omitempty"`
 	Position            *string                         `json:"position,omitempty"`
-	CreatedBy           common.ID                       `json:"created_by"`
+	CreatedBy           ident.ID                        `json:"created_by"`
 	Creator             string                          `json:"creator,omitempty"`
 	DeliveryStatus      string                          `json:"delivery_status"`
 	EmailSentAt         *time.Time                      `json:"email_sent_at,omitempty"`
@@ -366,9 +366,9 @@ func (req *AcceptInvitationRequest) Bind(_ *http.Request) error {
 }
 
 type AcceptInvitationResponse struct {
-	AccountID       int64  `json:"account_id"`
-	Email           string `json:"email"`
-	TenantSubdomain string `json:"tenant_subdomain,omitempty"`
+	AccountID       ident.ID `json:"account_id"`
+	Email           string   `json:"email"`
+	TenantSubdomain string   `json:"tenant_subdomain,omitempty"`
 }
 
 var acceptInvitationErrorRules = []common.ErrorRule{
@@ -449,7 +449,7 @@ func (rs *Resource) acceptInvitation(w http.ResponseWriter, r *http.Request) {
 		slog.Int64("account_id", account.ID))
 
 	resp := AcceptInvitationResponse{
-		AccountID: account.ID,
+		AccountID: ident.ID(account.ID),
 		Email:     account.Email,
 	}
 	if rs.SchoolService != nil && rs.transactions != nil {

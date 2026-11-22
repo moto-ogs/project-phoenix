@@ -71,8 +71,6 @@ type testAuthService interface {
 	RegisterSchoolAccount(ctx context.Context, email, username, password string, roleID *int64, tenantID int64, identity *identityaccess.SchoolAccountIdentity) (*testpkg.AccountFixture, *identityaccess.SchoolIdentity, error)
 	LinkAccountToTenant(ctx context.Context, email string, roleID *int64, tenantID int64) (*testpkg.AccountFixture, error)
 	GetAccountByID(ctx context.Context, id int) (*testpkg.AccountFixture, error)
-	UpdateAccount(ctx context.Context, account *testpkg.AccountFixture) error
-	ListAccounts(ctx context.Context, filters map[string]any) ([]*testpkg.AccountFixture, error)
 	ActivateAccount(ctx context.Context, accountID int) error
 	DeactivateAccount(ctx context.Context, accountID int) error
 	ChangePassword(ctx context.Context, accountID int, currentPassword, newPassword string) error
@@ -151,27 +149,6 @@ func (s *fixtureOwnedAuthService) GetAccountByID(ctx context.Context, id int) (*
 	return managedAccountModel(account), nil
 }
 
-func (s *fixtureOwnedAuthService) UpdateAccount(ctx context.Context, account *testpkg.AccountFixture) error {
-	return s.administration.UpdateManageableAccount(ctx, identityaccess.AccountIdentityUpdate{
-		AccountID: account.ID, Email: account.Email, Username: account.Username,
-	})
-}
-
-func (s *fixtureOwnedAuthService) ListAccounts(ctx context.Context, filters map[string]any) ([]*testpkg.AccountFixture, error) {
-	var filter identityaccess.AccountListFilter
-	if email, ok := filters["email"].(string); ok {
-		filter.Email = email
-	}
-	if active, ok := filters["active"].(bool); ok {
-		filter.Active = &active
-	}
-	accounts, err := s.administration.ListManageableAccounts(ctx, filter)
-	if err != nil {
-		return nil, err
-	}
-	return managedAccountModels(accounts), nil
-}
-
 func (s *fixtureOwnedAuthService) ActivateAccount(ctx context.Context, accountID int) error {
 	return s.administration.ActivateAccount(ctx, int64(accountID))
 }
@@ -194,14 +171,6 @@ func managedAccountModel(account identityaccess.ManagedAccount) *testpkg.Account
 		Active:    account.Active,
 		LastLogin: account.LastLogin,
 	}
-}
-
-func managedAccountModels(accounts []identityaccess.ManagedAccount) []*testpkg.AccountFixture {
-	models := make([]*testpkg.AccountFixture, 0, len(accounts))
-	for _, account := range accounts {
-		models = append(models, managedAccountModel(account))
-	}
-	return models
 }
 
 func (s *fixtureOwnedAuthService) Register(
@@ -984,49 +953,6 @@ func TestAuthService_DeactivateAccount(t *testing.T) {
 }
 
 // =============================================================================
-// ListAccounts Tests
-// =============================================================================
-
-func TestAuthService_ListAccounts(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	service := setupAuthService(t, db)
-	ctx := testpkg.Ctx(t)
-
-	t.Run("returns accounts with no filters", func(t *testing.T) {
-		// ARRANGE
-		email, username := uniqueTestCredentials("list")
-		account, err := service.Register(ctx, email, username, testPassword, nil, 0)
-		require.NoError(t, err)
-		testpkg.EnsureAccountTenant(t, db, account.ID, testpkg.Tenant(t))
-
-		// ACT
-		result, err := service.ListAccounts(ctx, nil)
-
-		// ASSERT
-		require.NoError(t, err)
-		assert.NotEmpty(t, result)
-	})
-
-	t.Run("returns accounts with filters", func(t *testing.T) {
-		// ACT
-		filters := map[string]interface{}{
-			"active": true,
-		}
-		result, err := service.ListAccounts(ctx, filters)
-
-		// ASSERT
-		require.NoError(t, err)
-		// All returned accounts should be active
-		for _, acc := range result {
-			assert.True(t, acc.Active)
-		}
-	})
-}
-
-// =============================================================================
 // Token Cleanup Tests
 // =============================================================================
 
@@ -1512,37 +1438,6 @@ func TestAuthService_RemoveRoleFromAccount(t *testing.T) {
 	})
 }
 
-// =============================================================================
-// Permission Management Tests
-// =============================================================================
-
-func TestAuthService_CreatePermission(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	service := setupAuthService(t, db)
-	rbac := roleAdministrationOf(t, service)
-	ctx := testpkg.Ctx(t)
-
-	t.Run("creates permission successfully", func(t *testing.T) {
-		// ARRANGE
-		uniqueID := fmt.Sprintf("%d", time.Now().UnixNano())
-		name := fmt.Sprintf("test-perm-%s", uniqueID)
-		resource := fmt.Sprintf("resource-create-%s", uniqueID)
-
-		// ACT
-		perm, err := rbac.CreatePermission(ctx, name, "Test permission", resource, "read")
-
-		// ASSERT
-		require.NoError(t, err)
-		testpkg.OwnTestPermission(t, db, perm.ID)
-		assert.NotZero(t, perm)
-		assert.Greater(t, perm.ID, int64(0))
-		assert.Equal(t, name, perm.Name)
-	})
-}
-
 func TestAuthService_ListPermissions(t *testing.T) {
 	t.Parallel()
 
@@ -1581,15 +1476,10 @@ func TestAuthService_GetPermissionByName(t *testing.T) {
 
 	t.Run("returns permission when found", func(t *testing.T) {
 		// ARRANGE - create a permission with unique resource/action
-		uniqueID := fmt.Sprintf("%d", time.Now().UnixNano())
-		permName := fmt.Sprintf("test-perm-%s", uniqueID)
-		resource := fmt.Sprintf("res-%s", uniqueID)
-		permission, err := rbac.CreatePermission(ctx, permName, "Test permission", resource, "read")
-		require.NoError(t, err)
-		testpkg.OwnTestPermission(t, db, permission.ID)
+		permission := testpkg.CreateTestPermission(t, db, "test-perm", "res", "read")
 
 		// ACT
-		result, err := rbac.GetPermissionByName(ctx, permName)
+		result, err := rbac.GetPermissionByName(ctx, permission.Name)
 
 		// ASSERT
 		require.NoError(t, err)
@@ -1627,11 +1517,7 @@ func TestAuthService_AssignPermissionToRole(t *testing.T) {
 		role, err := rbac.CreateRole(ctx, roleName, "Test role", testpkg.StrPtr("user"))
 		require.NoError(t, err)
 
-		permName := fmt.Sprintf("roleperm-%s", uniqueID)
-		resource := fmt.Sprintf("role-res-%s", uniqueID)
-		permission, err := rbac.CreatePermission(ctx, permName, "Role permission", resource, "read")
-		require.NoError(t, err)
-		testpkg.OwnTestPermission(t, db, permission.ID)
+		permission := testpkg.CreateTestPermission(t, db, "roleperm", "role-res", "read")
 
 		// ACT
 		err = rbac.AssignPermissionToRole(ctx, role.ID, permission.ID)
@@ -1651,12 +1537,8 @@ func TestAuthService_ReplaceRolePermissions(t *testing.T) {
 	uniqueID := fmt.Sprintf("%d", time.Now().UnixNano())
 	role, err := rbac.CreateRole(ctx, "replace-permissions-"+uniqueID, "Test role", testpkg.StrPtr("user"))
 	require.NoError(t, err)
-	oldPermission, err := rbac.CreatePermission(ctx, "replace-old-"+uniqueID, "Old permission", "replace-old-"+uniqueID, "read")
-	require.NoError(t, err)
-	testpkg.OwnTestPermission(t, db, oldPermission.ID)
-	newPermission, err := rbac.CreatePermission(ctx, "replace-new-"+uniqueID, "New permission", "replace-new-"+uniqueID, "read")
-	require.NoError(t, err)
-	testpkg.OwnTestPermission(t, db, newPermission.ID)
+	oldPermission := testpkg.CreateTestPermission(t, db, "replace-old", "replace-old", "read")
+	newPermission := testpkg.CreateTestPermission(t, db, "replace-new", "replace-new", "read")
 	require.NoError(t, rbac.AssignPermissionToRole(ctx, role.ID, oldPermission.ID))
 
 	require.NoError(t, rbac.ReplaceRolePermissions(ctx, role.ID, []int64{newPermission.ID}))
@@ -1697,11 +1579,7 @@ func TestAuthService_RemovePermissionFromRole(t *testing.T) {
 		role, err := rbac.CreateRole(ctx, roleName, "Test role", testpkg.StrPtr("user"))
 		require.NoError(t, err)
 
-		permName := fmt.Sprintf("rolerem-%s", uniqueID)
-		resource := fmt.Sprintf("rolerem-res-%s", uniqueID)
-		permission, err := rbac.CreatePermission(ctx, permName, "To be removed from role", resource, "read")
-		require.NoError(t, err)
-		testpkg.OwnTestPermission(t, db, permission.ID)
+		permission := testpkg.CreateTestPermission(t, db, "rolerem", "rolerem-res", "read")
 
 		err = rbac.AssignPermissionToRole(ctx, role.ID, permission.ID)
 		require.NoError(t, err)
@@ -1730,11 +1608,7 @@ func TestAuthService_GetRolePermissions(t *testing.T) {
 		role, err := rbac.CreateRole(ctx, roleName, "Test role", testpkg.StrPtr("user"))
 		require.NoError(t, err)
 
-		permName := fmt.Sprintf("roleget-%s", uniqueID)
-		resource := fmt.Sprintf("roleget-res-%s", uniqueID)
-		permission, err := rbac.CreatePermission(ctx, permName, "Role permission", resource, "read")
-		require.NoError(t, err)
-		testpkg.OwnTestPermission(t, db, permission.ID)
+		permission := testpkg.CreateTestPermission(t, db, "roleget", "roleget-res", "read")
 
 		err = rbac.AssignPermissionToRole(ctx, role.ID, permission.ID)
 		require.NoError(t, err)
@@ -1745,43 +1619,6 @@ func TestAuthService_GetRolePermissions(t *testing.T) {
 		// ASSERT
 		require.NoError(t, err)
 		assert.NotEmpty(t, result)
-	})
-}
-
-// =============================================================================
-// Account Management Tests (Additional Coverage)
-// =============================================================================
-
-func TestAuthService_UpdateAccount(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	service := setupAuthService(t, db)
-	ctx := testpkg.Ctx(t)
-
-	t.Run("updates the address and leaves the account enabled", func(t *testing.T) {
-		// ARRANGE
-		email, username := uniqueTestCredentials("updateacct")
-		account, err := service.Register(ctx, email, username, testPassword, nil, 0)
-		require.NoError(t, err)
-		testpkg.EnsureAccountTenant(t, db, account.ID, testpkg.Tenant(t))
-
-		renamed, _ := uniqueTestCredentials("updateacct-renamed")
-		account.Email = renamed
-
-		// ACT
-		err = service.UpdateAccount(ctx, account)
-
-		// ASSERT
-		require.NoError(t, err)
-
-		updated, err := service.GetAccountByID(ctx, int(account.ID))
-		require.NoError(t, err)
-		assert.Equal(t, renamed, updated.Email)
-		// An identity update never disables an account: that is the
-		// deactivation command, which revokes the sessions with it (#3332).
-		assert.True(t, updated.Active)
 	})
 }
 

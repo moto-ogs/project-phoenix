@@ -3,7 +3,6 @@ package behavior_test
 import (
 	"context"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -13,59 +12,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
-
-// The address rule the retained account model applied on every write still
-// applies: an update normalizes it, so a capitalized input can never create
-// a second spelling of the same address.
-func TestUpdateManageableAccountNormalisesTheAddress(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-	administration := setupAuthFactory(t, db)
-	tenantID := testpkg.Tenant(t)
-
-	account := testpkg.CreateTestAccount(t, db, "update-normalised")
-	testpkg.MapAccountToTenant(t, db, account.ID, tenantID)
-
-	mixed := fmt.Sprintf("  Updated-%d@Test.Local  ", time.Now().UnixNano())
-	require.NoError(t, administration.UpdateManageableAccount(testpkg.Ctx(t), identityaccess.AccountIdentityUpdate{
-		AccountID: account.ID, Email: mixed,
-	}))
-
-	var stored string
-	require.NoError(t, db.NewSelect().
-		ColumnExpr("email").
-		TableExpr("auth.accounts").
-		Where("id = ?", account.ID).
-		Scan(context.Background(), &stored))
-	assert.Equal(t, strings.ToLower(strings.TrimSpace(mixed)), stored)
-}
-
-// An update without an address is refused before it writes: an account row
-// with an empty e-mail is one nobody can sign in to, because every lookup
-// matches on the address.
-func TestUpdateManageableAccountRefusesAnEmptyAddress(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-	administration := setupAuthFactory(t, db)
-	tenantID := testpkg.Tenant(t)
-
-	account := testpkg.CreateTestAccount(t, db, "update-nameless")
-	testpkg.MapAccountToTenant(t, db, account.ID, tenantID)
-
-	require.Error(t, administration.UpdateManageableAccount(testpkg.Ctx(t), identityaccess.AccountIdentityUpdate{
-		AccountID: account.ID,
-	}))
-
-	var stored string
-	require.NoError(t, db.NewSelect().
-		ColumnExpr("email").
-		TableExpr("auth.accounts").
-		Where("id = ?", account.ID).
-		Scan(context.Background(), &stored))
-	assert.Equal(t, account.Email, stored, "a refused update writes nothing")
-}
 
 // A password change is authorized by the current password, so a wrong one
 // leaves the stored credential exactly as it was.
@@ -107,15 +53,6 @@ func TestAccountAdministrationIgnoresErasedAccounts(t *testing.T) {
 
 	_, err = administration.FindManageableAccount(ctx, account.ID)
 	require.ErrorIs(t, err, identityaccess.ErrAccountNotFound)
-	listed, err := administration.ListManageableAccounts(ctx, identityaccess.AccountListFilter{})
-	require.NoError(t, err)
-	for _, listedAccount := range listed {
-		assert.NotEqual(t, account.ID, listedAccount.ID)
-	}
-
-	require.ErrorIs(t, administration.UpdateManageableAccount(ctx, identityaccess.AccountIdentityUpdate{
-		AccountID: account.ID, Email: "changed-after-erasure@test.local",
-	}), identityaccess.ErrAccountNotFound)
 	require.ErrorIs(t, administration.ActivateAccount(ctx, account.ID), identityaccess.ErrAccountNotFound)
 	require.ErrorIs(t, administration.DeactivateAccount(ctx, account.ID), identityaccess.ErrAccountNotFound)
 	require.ErrorIs(t, administration.ChangeAccountPassword(ctx, identityaccess.OwnPasswordChange{AccountID: account.ID, CurrentPassword: testPassword, NewPassword: testNewPassword}), identityaccess.ErrAccountNotFound)

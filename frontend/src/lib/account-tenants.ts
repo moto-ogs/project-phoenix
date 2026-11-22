@@ -1,19 +1,11 @@
-/** One row of GET /auth/account/tenants. */
-export interface AccountTenantBackend {
-  tenant_id: string;
-  slug: string;
-  name: string;
-  subdomain: string;
-  organization_id: string;
-  organization_name: string;
-}
+import type { AccountTenantResponse } from "./contract/auth-account.generated";
 
 /**
  * Pure mapper shared by the browser client (tenant-api) and the server-side
  * shell bootstrap; lives apart from tenant-api so the server layout does not
  * pull the session cache into its module graph.
  */
-export function mapAccountTenant(t: AccountTenantBackend) {
+export function mapAccountTenant(t: AccountTenantResponse) {
   return {
     tenantId: t.tenant_id,
     slug: t.slug,

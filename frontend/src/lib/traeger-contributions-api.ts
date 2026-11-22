@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the Elternabrechnung in the Träger portal (#4664): the
  * contribution rules of the Träger, the holiday contribution of a
@@ -17,7 +18,6 @@ import { requiredDay } from "./contract/required-day";
 import type * as sharedContract from "./contract/shared.generated";
 import type * as traegerContributionRulesContract from "./contract/traeger-contribution-rules.generated";
 import type * as traegerCostBearersContract from "./contract/traeger-cost-bearers.generated";
-import { traegerRequest } from "./traeger-api";
 
 // Go does not register the set; the contract types it as string.
 const RULE_KIND_VALUES = ["sibling", "benefits_exemption"] as const;
@@ -86,25 +86,18 @@ function ruleToBackend(
   };
 }
 
-const RULES_PATH = "/api/traeger/contribution-rules";
-
 /** The contribution rules of the Träger by kind and start. */
 export async function fetchContributionRules(): Promise<ContributionRule[]> {
-  const rules =
-    await traegerRequest<sharedContract.ContributionRule[]>(RULES_PATH);
+  const rules = await bffJson("org", "GET /traeger/contribution-rules/");
   return rulesFromBackend(rules);
 }
 
 export async function createContributionRule(
   rule: ContributionRuleInput,
 ): Promise<ContributionRule> {
-  const saved = await traegerRequest<sharedContract.ContributionRule>(
-    RULES_PATH,
-    {
-      method: "POST",
-      body: ruleToBackend(rule),
-    },
-  );
+  const saved = await bffJson("org", "POST /traeger/contribution-rules/", {
+    body: ruleToBackend(rule),
+  });
   return ruleFromBackend(saved, rule.kind);
 }
 
@@ -112,16 +105,16 @@ export async function updateContributionRule(
   id: string,
   rule: ContributionRuleInput,
 ): Promise<ContributionRule> {
-  const saved = await traegerRequest<sharedContract.ContributionRule>(
-    `${RULES_PATH}/${encodeURIComponent(id)}`,
-    { method: "PUT", body: ruleToBackend(rule) },
-  );
+  const saved = await bffJson("org", "PUT /traeger/contribution-rules/{id}", {
+    params: { id },
+    body: ruleToBackend(rule),
+  });
   return ruleFromBackend(saved, rule.kind);
 }
 
 export async function deleteContributionRule(id: string): Promise<void> {
-  await traegerRequest<unknown>(`${RULES_PATH}/${encodeURIComponent(id)}`, {
-    method: "DELETE",
+  await bffJson("org", "DELETE /traeger/contribution-rules/{id}", {
+    params: { id },
   });
 }
 
@@ -152,13 +145,21 @@ function costBearerFromBackend(bearer: sharedContract.CostBearer): CostBearer {
   };
 }
 
-const COST_BEARERS_PATH = "/api/traeger/cost-bearers";
-
 /** The cost bearers of the Träger by name. */
 export async function fetchCostBearers(): Promise<CostBearer[]> {
-  const bearers =
-    await traegerRequest<sharedContract.CostBearer[]>(COST_BEARERS_PATH);
+  const bearers = await bffJson("org", "GET /traeger/cost-bearers/");
   return bearers.map(costBearerFromBackend);
+}
+
+function costBearerBody(
+  bearer: CostBearerInput,
+): traegerCostBearersContract.CostBearerRequest {
+  return {
+    name: bearer.name,
+    address: bearer.address,
+    file_reference: bearer.fileReference,
+    active: bearer.active,
+  };
 }
 
 /** Creates a cost bearer, or changes the one id names. */
@@ -167,32 +168,20 @@ export async function saveCostBearer(
   bearer: CostBearerInput,
 ): Promise<CostBearer> {
   return costBearerFromBackend(
-    await traegerRequest<sharedContract.CostBearer>(
-      id ? `${COST_BEARERS_PATH}/${encodeURIComponent(id)}` : COST_BEARERS_PATH,
-      {
-        method: id ? "PUT" : "POST",
-        body: {
-          name: bearer.name,
-          address: bearer.address,
-          file_reference: bearer.fileReference,
-          active: bearer.active,
-        } satisfies traegerCostBearersContract.CostBearerRequest,
-      },
-    ),
+    await (id
+      ? bffJson("org", "PUT /traeger/cost-bearers/{id}", {
+          params: { id },
+          body: costBearerBody(bearer),
+        })
+      : bffJson("org", "POST /traeger/cost-bearers/", {
+          body: costBearerBody(bearer),
+        })),
   );
 }
 
 export async function deleteCostBearer(id: string): Promise<void> {
-  await traegerRequest<unknown>(
-    `${COST_BEARERS_PATH}/${encodeURIComponent(id)}`,
-    { method: "DELETE" },
-  );
+  await bffJson("org", "DELETE /traeger/cost-bearers/{id}", { params: { id } });
 }
-
-// The Elternabrechnung of a holiday registration, at the backend path the
-// catalog proxy forwards (#2352).
-const registrationPath = (periodId: string, registrationId: string) =>
-  `/api/traeger/holiday-contributions/${encodeURIComponent(periodId)}/registrations/${encodeURIComponent(registrationId)}`;
 
 /**
  * The frozen contribution of a registration, or what a confirmation would
@@ -205,15 +194,17 @@ export async function fetchHolidayContribution(
   benefitsExemption?: boolean,
   costBearerId?: string,
 ): Promise<HolidayContribution> {
-  const params = new URLSearchParams();
-  if (benefitsExemption !== undefined) {
-    params.set("benefits_exemption", String(benefitsExemption));
-  }
-  if (costBearerId) params.set("cost_bearer_id", costBearerId);
-  const query = params.size > 0 ? `?${params.toString()}` : "";
   return contributionFromBackend(
-    await traegerRequest<traegerHolidayContributionsContract.HolidayContributionResponse>(
-      `${registrationPath(periodId, registrationId)}${query}`,
+    await bffJson(
+      "org",
+      "GET /traeger/holiday-contributions/{periodId}/registrations/{registrationId}",
+      {
+        params: { periodId, registrationId },
+        query: {
+          benefits_exemption: benefitsExemption,
+          cost_bearer_id: costBearerId || undefined,
+        },
+      },
     ),
   );
 }
@@ -234,22 +225,24 @@ export async function confirmHolidayRegistration(
   familyDebtorNumber?: FamilyDebtorNumberChoice,
   childDebtorNumbers?: readonly HolidayChildDebtorNumberInput[],
 ): Promise<HolidayContribution> {
-  const confirmation = await traegerRequest<{
-    contribution: traegerHolidayContributionsContract.HolidayContributionResponse;
-  }>(`${registrationPath(periodId, registrationId)}/confirm`, {
-    method: "POST",
-    body: {
-      benefits_exemption: benefitsExemption,
-      debtor_number: debtorNumber,
-      ...(costBearerId ? { cost_bearer_id: costBearerId } : {}),
-      ...(familyDebtorNumber
-        ? { family_debtor_number: familyDebtorNumber }
-        : {}),
-      ...(childDebtorNumbers
-        ? { child_debtor_numbers: childNumbersToBackend(childDebtorNumbers) }
-        : {}),
+  const confirmation = await bffJson(
+    "org",
+    "POST /traeger/holiday-contributions/{periodId}/registrations/{registrationId}/confirm",
+    {
+      params: { periodId, registrationId },
+      body: {
+        benefits_exemption: benefitsExemption,
+        debtor_number: debtorNumber,
+        ...(costBearerId ? { cost_bearer_id: costBearerId } : {}),
+        ...(familyDebtorNumber
+          ? { family_debtor_number: familyDebtorNumber }
+          : {}),
+        ...(childDebtorNumbers
+          ? { child_debtor_numbers: childNumbersToBackend(childDebtorNumbers) }
+          : {}),
+      },
     },
-  });
+  );
   return contributionFromBackend(confirmation.contribution);
 }
 
@@ -262,9 +255,10 @@ export async function cancelHolidayRegistration(
   periodId: string,
   registrationId: string,
 ): Promise<void> {
-  await traegerRequest<{ id: number | string; status: string }>(
-    `${registrationPath(periodId, registrationId)}/cancel`,
-    { method: "POST", body: {} },
+  await bffJson(
+    "org",
+    "POST /traeger/holiday-contributions/{periodId}/registrations/{registrationId}/cancel",
+    { params: { periodId, registrationId } },
   );
 }
 
@@ -278,19 +272,19 @@ export async function changeHolidayDebtorNumber(
   debtorNumber: string,
   familyDebtorNumber?: FamilyDebtorNumberChoice,
 ): Promise<string> {
-  const changed =
-    await traegerRequest<traegerHolidayContributionsContract.HolidayDebtorNumber>(
-      `${registrationPath(periodId, registrationId)}/debtor-number`,
-      {
-        method: "PUT",
-        body: {
-          debtor_number: debtorNumber,
-          ...(familyDebtorNumber
-            ? { family_debtor_number: familyDebtorNumber }
-            : {}),
-        } satisfies traegerHolidayContributionsContract.HolidayDebtorNumberRequest,
-      },
-    );
+  const changed = await bffJson(
+    "org",
+    "PUT /traeger/holiday-contributions/{periodId}/registrations/{registrationId}/debtor-number",
+    {
+      params: { periodId, registrationId },
+      body: {
+        debtor_number: debtorNumber,
+        ...(familyDebtorNumber
+          ? { family_debtor_number: familyDebtorNumber }
+          : {}),
+      } satisfies traegerHolidayContributionsContract.HolidayDebtorNumberRequest,
+    },
+  );
   return changed.debtor_number;
 }
 
@@ -357,10 +351,11 @@ export async function fetchHolidayFamilyDebtorNumber(
   periodId: string,
   registrationId: string,
 ): Promise<HolidayFamilyDebtorNumbers> {
-  const family =
-    await traegerRequest<traegerHolidayContributionsContract.HolidayFamilyDebtorNumber>(
-      `${registrationPath(periodId, registrationId)}/family-debtor-number`,
-    );
+  const family = await bffJson(
+    "org",
+    "GET /traeger/holiday-contributions/{periodId}/registrations/{registrationId}/family-debtor-number",
+    { params: { periodId, registrationId } },
+  );
   return {
     debtorNumber: family.debtor_number,
     children: (family.children ?? []).map(childNumberFromBackend),
@@ -376,16 +371,16 @@ export async function setHolidayChildDebtorNumbers(
   registrationId: string,
   numbers: readonly HolidayChildDebtorNumberInput[],
 ): Promise<readonly HolidayChildDebtorNumber[]> {
-  const saved =
-    await traegerRequest<traegerHolidayContributionsContract.HolidayFamilyDebtorNumber>(
-      `${registrationPath(periodId, registrationId)}/child-debtor-numbers`,
-      {
-        method: "PUT",
-        body: {
-          children: childNumbersToBackend(numbers),
-        } satisfies traegerHolidayContributionsContract.HolidayChildDebtorNumbersRequest,
-      },
-    );
+  const saved = await bffJson(
+    "org",
+    "PUT /traeger/holiday-contributions/{periodId}/registrations/{registrationId}/child-debtor-numbers",
+    {
+      params: { periodId, registrationId },
+      body: {
+        children: childNumbersToBackend(numbers),
+      } satisfies traegerHolidayContributionsContract.HolidayChildDebtorNumbersRequest,
+    },
+  );
   return (saved.children ?? []).map(childNumberFromBackend);
 }
 

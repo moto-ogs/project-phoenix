@@ -8,6 +8,7 @@ import (
 	"slices"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedTraegerHolidayHomeSchoolStep plans a holiday week the second school of
@@ -106,9 +107,9 @@ func seedHomeSchoolPeriod(client *Client, auth AuthRef, today calendar.Date, hos
 		Data struct {
 			PublicToken string `json:"public_token"`
 			Weeks       []struct {
-				ID         apiID `json:"id"`
+				ID         ident.ID `json:"id"`
 				TimeModels []struct {
-					ID apiID `json:"id"`
+					ID ident.ID `json:"id"`
 				} `json:"time_models"`
 			} `json:"weeks"`
 		} `json:"data"`
@@ -172,7 +173,7 @@ func seedHomeSchoolStudent(rt *Runtime) error {
 		return fmt.Errorf("read the demo school's children at other schools: %w", err)
 	}
 	type booking struct {
-		StudentID *apiID `json:"student_id"`
+		StudentID *ident.ID `json:"student_id"`
 	}
 	var envelope struct {
 		Data []booking `json:"data"`

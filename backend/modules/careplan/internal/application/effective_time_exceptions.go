@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
@@ -228,7 +229,7 @@ func (c *effectiveTimeCore[S, E, N, D]) updateException(
 
 		fields := c.domain.ExceptionFields(fresh)
 
-		if err := prepareExceptionUpdate(&fields, studentID, date, clearValue, resolveStaffID); err != nil {
+		if err := prepareExceptionUpdate(txCtx, &fields, studentID, date, clearValue, resolveStaffID); err != nil {
 			return err
 		}
 		fields.ApplyTimePatch(date, reason, value, clearValue)
@@ -304,7 +305,7 @@ func (c *effectiveTimeCore[S, E, N, D]) deleteExceptionRow(ctx context.Context, 
 
 // reclaimedFields takes over a guardian's exception for a staff write, or
 // refuses the day.
-func (c *effectiveTimeCore[S, E, N, D]) reclaimedFields(existing E, fields domain.EffectiveExceptionFields, resolveStaffID func() (int64, error)) (domain.EffectiveExceptionFields, error) {
+func (c *effectiveTimeCore[S, E, N, D]) reclaimedFields(ctx context.Context, existing E, fields domain.EffectiveExceptionFields, resolveStaffID func() (int64, error)) (domain.EffectiveExceptionFields, error) {
 	previous := c.domain.ExceptionFields(existing)
 	if previous.Source != careplan.ExceptionSourceGuardian {
 		return fields, careplan.ErrCareExceptionDayConflict
@@ -313,16 +314,31 @@ func (c *effectiveTimeCore[S, E, N, D]) reclaimedFields(existing E, fields domai
 	if previous.ExcusedFrom != nil {
 		return fields, careplan.ErrCareExceptionContainsPartialAbsence
 	}
-	staffID, err := resolveStaffID()
-	if err != nil || staffID == 0 {
-		return fields, careplan.ErrCareExceptionStaffProfileRequired
+	staffID, err := exceptionTakeoverAuthor(ctx, resolveStaffID)
+	if err != nil {
+		return fields, err
 	}
 	fields.ID, fields.CreatedAt, fields.TenantID = previous.ID, previous.CreatedAt, previous.TenantID
-	fields.CreatedBy = staffID
+	fields.CreatedBy, fields.EnteredByTraeger = staffID, careplan.EnteredByTraeger(ctx, staffID)
 	return fields, nil
 }
 
-func prepareExceptionUpdate(fields *domain.EffectiveExceptionFields, studentID int64, date calendar.Date, clearValue bool, resolveStaffID func() (int64, error)) error {
+// exceptionTakeoverAuthor resolves the staff member who takes over a
+// guardian's exception. The resolver answers (0, nil) for a caller without a
+// staff record and an error only for a failed lookup (#7818): the failure
+// stays a server error, and only a missing author refuses the day.
+func exceptionTakeoverAuthor(ctx context.Context, resolveStaffID func() (int64, error)) (int64, error) {
+	staffID, err := resolveStaffID()
+	if err != nil {
+		return 0, fmt.Errorf("schedule: resolve staff to take over a guardian exception: %w", err)
+	}
+	if !careplan.HasScheduleAuthor(ctx, staffID) {
+		return 0, careplan.ErrCareExceptionStaffProfileRequired
+	}
+	return staffID, nil
+}
+
+func prepareExceptionUpdate(ctx context.Context, fields *domain.EffectiveExceptionFields, studentID int64, date calendar.Date, clearValue bool, resolveStaffID func() (int64, error)) error {
 	if fields.StudentID != studentID {
 		return careplan.ErrCareExceptionWrongStudent
 	}
@@ -332,12 +348,12 @@ func prepareExceptionUpdate(fields *domain.EffectiveExceptionFields, studentID i
 	if fields.Source != careplan.ExceptionSourceGuardian {
 		return nil
 	}
-	staffID, err := resolveStaffID()
-	if err != nil || staffID == 0 {
-		return careplan.ErrCareExceptionStaffProfileRequired
+	staffID, err := exceptionTakeoverAuthor(ctx, resolveStaffID)
+	if err != nil {
+		return err
 	}
 	fields.Source = careplan.ExceptionSourceStaff
-	fields.CreatedBy = staffID
+	fields.CreatedBy, fields.EnteredByTraeger = staffID, careplan.EnteredByTraeger(ctx, staffID)
 	fields.CreatedByGuardian = nil
 	return nil
 }

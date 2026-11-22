@@ -60,6 +60,16 @@ type DashboardTotals struct {
 	ActivitiesRunning int `json:"activities_running"`
 }
 
+// InactiveDashboardResponse answers a known but deactivated display: the
+// dashboard's shape with status inactive and nothing in it, so the screen
+// shows "Display deaktiviert".
+func InactiveDashboardResponse() DashboardResponse {
+	return DashboardResponse{
+		Status: "inactive", RoomOccupancy: []RoomOccupancy{}, RunningActivities: []RunningActivity{},
+		UpcomingActivities: []UpcomingActivity{}, PickupTimes: []PickupBucket{},
+	}
+}
+
 func NewDashboardResponse(payload devicefleet.Dashboard) DashboardResponse {
 	response := DashboardResponse{
 		Status: payload.Status, SchoolName: payload.SchoolName, DisplayName: payload.DisplayName,

@@ -100,6 +100,14 @@ type BillingFamily struct {
 	FamilyEmail        string `json:"family_email"`
 	FamilyDebtorNumber string `json:"family_debtor_number"`
 	HolidayOnly        bool   `json:"holiday_only"`
+	// FamilyPaymentMethod is the payment method the Abrechnung set for the
+	// family (#7770), empty while the terms of the services decide. It is
+	// what the next invoice takes; PaymentMethods are what issued invoices
+	// took. ContractID is a contract of the family, 0 without one: the one
+	// its deviation was last saved for, else the one of its latest monthly
+	// invoice. It opens the family's recipient and payment.
+	FamilyPaymentMethod string   `json:"family_payment_method"`
+	ContractID          ident.ID `json:"contract_id"`
 	BillingAmounts
 }
 
@@ -140,12 +148,15 @@ type BillingFamilyDocument struct {
 	PaymentMethod string         `json:"payment_method"`
 	DueOn         *calendar.Date `json:"due_on"`
 
-	RecipientFirstName string   `json:"-"`
-	RecipientLastName  string   `json:"-"`
-	RecipientEmail     string   `json:"-"`
-	FamilyKey          string   `json:"-"`
-	CostBearerNames    []string `json:"-"`
-	Exempt             bool     `json:"-"`
+	RecipientFirstName string `json:"-"`
+	RecipientLastName  string `json:"-"`
+	RecipientEmail     string `json:"-"`
+	FamilyKey          string `json:"-"`
+	// ContractID is the care contract of a monthly invoice, 0 on a holiday
+	// document: it names the family where no deviation does (#7770).
+	ContractID      int64    `json:"-"`
+	CostBearerNames []string `json:"-"`
+	Exempt          bool     `json:"-"`
 }
 
 // BillingFamilyDetail is a family with all its documents, the newest first.
@@ -159,8 +170,9 @@ type BillingFamilyDetail struct {
 // and runs in the Träger transaction of its Träger, which the caller opens;
 // every read is recorded in the trail of each run whose documents it shows.
 type BillingFamilies interface {
-	// ListBillingFamilies lists the families with an issued document or a
-	// number of their own (#6692), by name; the read of a number is recorded
+	// ListBillingFamilies lists the families with an issued document, a
+	// number of their own (#6692) or a payment method of their own (#7770),
+	// by name; the read of a number is recorded
 	// in the family's trail.
 	ListBillingFamilies(ctx context.Context, reviewer HolidayReviewer) ([]BillingFamily, error)
 	// BillingFamily reads one family by its ID with every document. An ID
@@ -178,8 +190,10 @@ type BillingFamilies interface {
 	// FamilyChildren lists every family with a contract or a number of a
 	// child, with its children and their numbers (#7007), whatever the
 	// Träger's scope, so numbers can be prepared before it changes. The read
-	// of every number is recorded in its trail.
-	FamilyChildren(ctx context.Context, reviewer HolidayReviewer) ([]FamilyChildNumbers, error)
+	// of every number is recorded in its trail. Without numbers it lists the
+	// families with a contract only, names no child and records no read: a
+	// list that shows one number per payer needs no more (#7770).
+	FamilyChildren(ctx context.Context, reviewer HolidayReviewer, numbers bool) ([]FamilyChildNumbers, error)
 	// SetChildDebtorNumber sets the number of a child of a family when the
 	// Träger keeps one per child (#7007); empty removes it. A child that is
 	// no child of a contract of the family and has no number is

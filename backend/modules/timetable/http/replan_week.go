@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // replanWeekRequest mirrors materializeRequest: both date fields optional,
@@ -23,7 +24,7 @@ type replanWeekRequest struct {
 	ToDate   *string `json:"to_date,omitempty"`
 	// ActivityGroupID optionally narrows the re-plan to one template's
 	// planned instances (WP-B3 template split). Omitted/null = whole grid.
-	ActivityGroupID *common.ID `json:"activity_group_id,omitempty"`
+	ActivityGroupID *ident.ID `json:"activity_group_id,omitempty"`
 }
 
 // Bind is a no-op. Same rationale as materializeRequest.Bind: date parsing

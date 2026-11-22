@@ -19,36 +19,9 @@ import { knownEnum } from "./contract/known-enum";
 import type {
   applyDeviationsRequest,
   bulkSubstitutionRequest,
-  ApplyDeviationsResponse as WireApplyDeviations,
-  AttendanceResponse as WireAttendance,
-  BulkCancelResult as WireBulkCancel,
-  combinedOfferingCountsResponse as WireCombinedOfferingCounts,
-  createTemplateResponse as WireCreateTemplate,
-  endTemplateResponse as WireEndTemplate,
-  listTemplatesResponse as WireTemplates,
-  offeringSourcesResponse as WireOfferingSources,
-  splitTemplateResponse as WireSplitTemplate,
-  BulkSubstitutionResponse as WireBulkSubstitution,
-  DeviationHistoryResponse as WireDeviationHistory,
-  editedInWindowResponse as WireEditedInWindow,
-  enrichedInstance as WireInstance,
-  GapInstance as WireGapInstance,
-  GapsResponse as WireGaps,
-  GuardianNoticeReachResponse as WireGuardianNoticeReach,
-  GuardianNoticeResponse as WireGuardianNotice,
-  InstanceStatusResponse as WireInstanceStatus,
-  materializeResponse as WireMaterialize,
-  MoveStaffResponse as WireMoveStaff,
-  PlannedConflictsResponse as WireConflictCheck,
-  replanWeekResponse as WireReplanWeek,
-  ShiftCoverageResponse as WireShiftCoverage,
-  ShiftCoverageWarning as WireShiftCoverageWarning,
-  StaffPoolResponse as WireStaffPool,
-  StartInstanceResponse as WireStartInstance,
-  SubstituteTimeConflict as WireSubstituteTimeConflict,
-  weeklyInstancesResponse as WireWeeklyInstances,
 } from "./contract/timetable.generated";
-import type { InstanceConflictWarning as WireConflictWarning } from "./contract/shared.generated";
+import type * as timetableContract from "./contract/timetable.generated";
+import type * as sharedContract from "./contract/shared.generated";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import {
@@ -614,7 +587,9 @@ function conflictKind(value: string): ConflictWarning["kind"] {
   return knownEnum(CONFLICT_KIND_VALUES, value) ?? "other";
 }
 
-function mapConflictWarning(warning: WireConflictWarning): ConflictWarning {
+function mapConflictWarning(
+  warning: sharedContract.InstanceConflictWarning,
+): ConflictWarning {
   return {
     kind: conflictKind(warning.kind),
     resourceId: warning.resource_id,
@@ -632,7 +607,9 @@ function mapConflictWarning(warning: WireConflictWarning): ConflictWarning {
  * Contract → frontend mapping. snake_case → camelCase; conflict_warnings
  * always present (defaults to []).
  */
-export function mapInstance(raw: WireInstance): EnrichedInstance {
+export function mapInstance(
+  raw: timetableContract.enrichedInstance,
+): EnrichedInstance {
   const staff: InstanceStaffSummary[] = (raw.staff ?? []).map((s) => ({
     staffId: s.staff_id,
     isPrimary: s.is_primary,
@@ -721,7 +698,7 @@ export function mapInstance(raw: WireInstance): EnrichedInstance {
 }
 
 export function mapWeeklyInstances(
-  raw: WireWeeklyInstances,
+  raw: timetableContract.weeklyInstancesResponse,
 ): WeeklyInstancesResponse {
   return {
     from: raw.from,
@@ -730,7 +707,9 @@ export function mapWeeklyInstances(
   };
 }
 
-export function mapMaterializeResult(raw: WireMaterialize): MaterializeResult {
+export function mapMaterializeResult(
+  raw: timetableContract.materializeResponse,
+): MaterializeResult {
   return {
     from: raw.from,
     to: raw.to,
@@ -747,7 +726,9 @@ export function mapMaterializeResult(raw: WireMaterialize): MaterializeResult {
   };
 }
 
-export function mapBulkCancelResult(raw: WireBulkCancel): BulkCancelResult {
+export function mapBulkCancelResult(
+  raw: timetableContract.BulkCancelResult,
+): BulkCancelResult {
   return {
     from: raw.from,
     to: raw.to,
@@ -762,7 +743,9 @@ export function mapBulkCancelResult(raw: WireBulkCancel): BulkCancelResult {
   };
 }
 
-export function mapReplanWeekResult(raw: WireReplanWeek): ReplanWeekResult {
+export function mapReplanWeekResult(
+  raw: timetableContract.replanWeekResponse,
+): ReplanWeekResult {
   return {
     from: raw.from,
     to: raw.to,
@@ -776,7 +759,7 @@ export function mapReplanWeekResult(raw: WireReplanWeek): ReplanWeekResult {
 }
 
 export function mapEditedInWindowResult(
-  raw: WireEditedInWindow,
+  raw: timetableContract.editedInWindowResponse,
 ): EditedInWindowResult {
   return {
     count: raw.count,
@@ -794,7 +777,7 @@ export function mapEditedInWindowResult(
   };
 }
 
-function mapGapInstance(gap: WireGapInstance): GapInstance {
+function mapGapInstance(gap: timetableContract.GapInstance): GapInstance {
   return {
     instanceId: gap.instance_id,
     date: gap.date,
@@ -834,7 +817,7 @@ export function deviationEventLabel(eventType: string): string {
 }
 
 export function mapDeviationHistory(
-  raw: WireDeviationHistory,
+  raw: timetableContract.DeviationHistoryResponse,
 ): DeviationHistoryResponse {
   const events: DeviationHistoryEvent[] = (raw.events ?? []).map((ev) => ({
     id: ev.id,
@@ -857,7 +840,7 @@ export function mapDeviationHistory(
   return { events };
 }
 
-export function mapGaps(raw: WireGaps): GapsResponse {
+export function mapGaps(raw: timetableContract.GapsResponse): GapsResponse {
   return {
     from: raw.from,
     to: raw.to,
@@ -878,7 +861,9 @@ export function staffLabel(
   return staffNames.get(staffId) ?? `Personal #${staffId}`;
 }
 
-export function mapAttendance(raw: WireAttendance): AttendanceResponse {
+export function mapAttendance(
+  raw: timetableContract.AttendanceResponse,
+): AttendanceResponse {
   return {
     id: raw.id,
     instanceId: raw.instance_id,
@@ -891,7 +876,7 @@ export function mapAttendance(raw: WireAttendance): AttendanceResponse {
 }
 
 function mapAffectedInstances(
-  items: WireApplyDeviations["affected_instances"],
+  items: timetableContract.ApplyDeviationsResponse["affected_instances"],
 ): ApplyDeviationsResponse["affectedInstances"] {
   return (items ?? []).map((item) => ({
     instanceId: item.instance_id,
@@ -902,7 +887,7 @@ function mapAffectedInstances(
 }
 
 function mapTimeConflicts(
-  conflicts: readonly WireSubstituteTimeConflict[] | null,
+  conflicts: readonly timetableContract.SubstituteTimeConflict[] | null,
 ): ApplyDeviationsResponse["warnings"] {
   return (conflicts ?? []).map((conflict) => ({
     instanceId: conflict.instance_id,
@@ -917,7 +902,7 @@ function mapTimeConflicts(
  * only the tenant route informs the families on a cancellation.
  */
 export function mapApplyDeviations(
-  raw: WireApplyDeviations,
+  raw: timetableContract.ApplyDeviationsResponse,
 ): ApplyDeviationsResponse {
   return {
     instanceId: raw.instance_id,
@@ -1000,8 +985,8 @@ export function prepareBulkSubstitutionBody(
 
 /** The substitution route leaves `days` out when it is empty. */
 export function mapBulkSubstitution(
-  raw: Pick<WireBulkSubstitution, "total_affected"> & {
-    days?: WireBulkSubstitution["days"];
+  raw: Pick<timetableContract.BulkSubstitutionResponse, "total_affected"> & {
+    days?: timetableContract.BulkSubstitutionResponse["days"];
   },
 ): BulkSubstitutionResponse {
   const days = (raw.days ?? []).map((day) => ({
@@ -1017,7 +1002,7 @@ export function mapBulkSubstitution(
 }
 
 export function mapStartInstanceResult(
-  raw: WireStartInstance,
+  raw: timetableContract.StartInstanceResponse,
 ): StartInstanceResult {
   return {
     instanceId: raw.instance_id,
@@ -1029,7 +1014,7 @@ export function mapStartInstanceResult(
 }
 
 export function mapInstanceStatusResult(
-  raw: WireInstanceStatus,
+  raw: timetableContract.InstanceStatusResponse,
 ): InstanceStatusResult {
   return {
     instanceId: raw.instance_id,
@@ -1041,7 +1026,7 @@ export function mapInstanceStatusResult(
 }
 
 function mapGuardianNoticeResult(
-  raw: WireGuardianNotice | undefined,
+  raw: timetableContract.GuardianNoticeResponse | undefined,
 ): GuardianNoticeResult | undefined {
   if (!raw) return undefined;
   return {
@@ -1052,7 +1037,7 @@ function mapGuardianNoticeResult(
 }
 
 export function mapGuardianNoticeReach(
-  raw: WireGuardianNoticeReach,
+  raw: timetableContract.GuardianNoticeReachResponse,
 ): GuardianNoticeReach {
   return {
     childCount: raw.child_count,
@@ -1061,7 +1046,7 @@ export function mapGuardianNoticeReach(
 }
 
 export function mapCreateTemplateResult(
-  raw: WireCreateTemplate,
+  raw: timetableContract.createTemplateResponse,
 ): CreateTemplateResult {
   return {
     templateId: raw.template_id,
@@ -1074,7 +1059,7 @@ export function mapCreateTemplateResult(
 }
 
 export function mapSplitTemplateResult(
-  raw: WireSplitTemplate,
+  raw: timetableContract.splitTemplateResponse,
 ): SplitTemplateResult {
   return {
     oldTemplateId: raw.old_template_id,
@@ -1085,7 +1070,9 @@ export function mapSplitTemplateResult(
   };
 }
 
-export function mapEndTemplateResult(raw: WireEndTemplate): EndTemplateResult {
+export function mapEndTemplateResult(
+  raw: timetableContract.endTemplateResponse,
+): EndTemplateResult {
   return {
     templateId: raw.template_id,
     effectiveDate: raw.effective_date,
@@ -1094,7 +1081,7 @@ export function mapEndTemplateResult(raw: WireEndTemplate): EndTemplateResult {
 }
 
 export function mapConflictCheckResult(
-  raw: WireConflictCheck,
+  raw: timetableContract.PlannedConflictsResponse,
 ): ConflictCheckResult {
   return {
     date: raw.date,
@@ -1111,7 +1098,7 @@ export function mapConflictCheckResult(
 }
 
 function mapCoverageWarning(
-  warning: WireShiftCoverageWarning,
+  warning: timetableContract.ShiftCoverageWarning,
 ): ShiftCoverageCheckResult["coverageWarnings"][number] {
   return {
     staffId: warning.staff_id,
@@ -1126,7 +1113,7 @@ function mapCoverageWarning(
 }
 
 export function mapShiftCoverageCheckResult(
-  raw: WireShiftCoverage,
+  raw: timetableContract.ShiftCoverageResponse,
 ): ShiftCoverageCheckResult {
   return {
     coverageWarnings: (raw.coverage_warnings ?? []).map(mapCoverageWarning),
@@ -1135,7 +1122,9 @@ export function mapShiftCoverageCheckResult(
 }
 
 /** #1884 Personalpool: Backend-Snake-Case auf das Frontend-Modell abbilden. */
-export function mapStaffPool(raw: WireStaffPool): StaffPoolResponse {
+export function mapStaffPool(
+  raw: timetableContract.StaffPoolResponse,
+): StaffPoolResponse {
   return {
     instanceId: raw.instance_id,
     title: raw.title,
@@ -1170,7 +1159,9 @@ export function mapStaffPool(raw: WireStaffPool): StaffPoolResponse {
 }
 
 /** #1884: Antwort des atomaren Personal-Moves abbilden. */
-export function mapMoveStaff(raw: WireMoveStaff): MoveStaffResponse {
+export function mapMoveStaff(
+  raw: timetableContract.MoveStaffResponse,
+): MoveStaffResponse {
   return {
     targetInstanceId: raw.target_instance_id,
     sourceInstanceId: raw.source_instance_id,
@@ -1180,7 +1171,9 @@ export function mapMoveStaff(raw: WireMoveStaff): MoveStaffResponse {
   };
 }
 
-type WireTemplate = NonNullable<WireTemplates["templates"]>[number];
+type WireTemplate = NonNullable<
+  timetableContract.listTemplatesResponse["templates"]
+>[number];
 
 function mapRosterMaintenance(
   raw: WireTemplate["roster_maintenance"],
@@ -1298,7 +1291,9 @@ function mapTemplate(template: WireTemplate): TimetableTemplate {
   };
 }
 
-export function mapTemplates(raw: WireTemplates): TemplatesResponse {
+export function mapTemplates(
+  raw: timetableContract.listTemplatesResponse,
+): TemplatesResponse {
   return { templates: (raw.templates ?? []).map(mapTemplate) };
 }
 
@@ -1307,7 +1302,7 @@ export function mapTemplates(raw: WireTemplates): TemplatesResponse {
  * arrive as JSON object strings and become numbers (0 = ohne Jahrgang).
  */
 export function mapCombinedOfferingCounts(
-  raw: WireCombinedOfferingCounts,
+  raw: timetableContract.combinedOfferingCountsResponse,
 ): CombinedOfferingCounts {
   const gradeCounts: Record<number, number> = {};
   for (const [grade, count] of Object.entries(raw.grade_counts ?? {})) {
@@ -1322,7 +1317,7 @@ export function mapCombinedOfferingCounts(
 }
 
 export function mapOfferingSourceOptions(
-  raw: WireOfferingSources,
+  raw: timetableContract.offeringSourcesResponse,
 ): OfferingSourceOption[] {
   return (raw.offerings ?? []).map((offering) => {
     const gradeCounts: Record<number, number> = {};

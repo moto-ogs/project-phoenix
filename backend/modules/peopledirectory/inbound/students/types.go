@@ -26,10 +26,13 @@ func (req *RFIDAssignmentRequest) Bind(_ *http.Request) error {
 	return nil
 }
 
+// The identifiers of the kiosk device API stay JSON numbers and say so with
+// contract:"number": PyrePortal v1.11.5 reads them as numbers (#7808).
+
 // RFIDAssignmentResponse represents an RFID tag assignment response
 type RFIDAssignmentResponse struct {
 	Success     bool    `json:"success"`
-	StudentID   int64   `json:"student_id"`
+	StudentID   int64   `json:"student_id" contract:"number"`
 	StudentName string  `json:"student_name"`
 	RFIDTag     string  `json:"rfid_tag"`
 	PreviousTag *string `json:"previous_tag,omitempty"`

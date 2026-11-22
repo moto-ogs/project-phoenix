@@ -946,12 +946,7 @@ function TimetablesContent() {
     () =>
       canFilterByRoom
         ? sortedFilterOptions(
-            new Map(
-              (filterRooms ?? []).map((room) => [
-                String(room.id),
-                room.name ?? room.room_name ?? "",
-              ]),
-            ),
+            new Map((filterRooms ?? []).map((room) => [room.id, room.name])),
           )
         : null,
     [canFilterByRoom, filterRooms],
@@ -1545,7 +1540,7 @@ function TimetablesContent() {
             toast.success(LIFECYCLE_SUCCESS.start);
           }
         } else if (action === "complete") {
-          await timetableService.complete(instanceId, []);
+          await timetableService.complete(instanceId);
           toast.success(LIFECYCLE_SUCCESS.complete);
         } else if (action === "reopen") {
           await timetableService.reopen(instanceId);

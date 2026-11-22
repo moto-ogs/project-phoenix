@@ -24,9 +24,9 @@ func TestLoginTraeger_SetsUpTheSecondFactorOnTheFirstSignIn(t *testing.T) {
 		case "/traeger/auth/login":
 			var login map[string]any
 			assert.NoError(t, json.NewDecoder(r.Body).Decode(&login))
-			assert.Equal(t, float64(12), login["organization_id"], "the login names the Träger")
+			assert.Equal(t, "12", login["organization_id"], "the login names the Träger as text")
 			_ = json.NewEncoder(w).Encode(map[string]any{
-				"status": "mfa_enrollment_required", "access_token": "enrollment-jwt", "organization_id": 12,
+				"status": "mfa_enrollment_required", "access_token": "enrollment-jwt", "organization_id": "12",
 			})
 		case "/traeger/auth/mfa/enroll/start":
 			assert.Equal(t, "Bearer enrollment-jwt", r.Header.Get("Authorization"))
@@ -44,7 +44,7 @@ func TestLoginTraeger_SetsUpTheSecondFactorOnTheFirstSignIn(t *testing.T) {
 	auth, err := newMailpitAdapter(api.URL, mailpit.URL).LoginTraeger(context.Background(), "traeger@test.de", "secret", 12)
 	require.NoError(t, err)
 	assert.Equal(t, AuthRef{Kind: AuthBearer, Label: "traeger", Token: "traeger-session"}, auth)
-	assert.Equal(t, map[string]any{"challenge_token": "enroll-challenge", "code": "424242", "organization_id": float64(12)}, confirm,
+	assert.Equal(t, map[string]any{"challenge_token": "enroll-challenge", "code": "424242", "organization_id": "12"}, confirm,
 		"the confirm redeems the started challenge with the mailed code for the Träger")
 }
 
@@ -60,7 +60,7 @@ func TestLoginTraeger_RedeemsTheMailedCodeOfAnEnrolledAccount(t *testing.T) {
 		switch r.URL.Path {
 		case "/traeger/auth/login":
 			_ = json.NewEncoder(w).Encode(map[string]any{
-				"status": "mfa_required", "challenge_token": "login-challenge", "masked_email": "t***@test.de", "organization_id": 7,
+				"status": "mfa_required", "challenge_token": "login-challenge", "masked_email": "t***@test.de", "organization_id": "7",
 			})
 		case "/traeger/auth/mfa/verify":
 			assert.Empty(t, r.Header.Get("Authorization"), "the verify carries no session")
@@ -75,7 +75,7 @@ func TestLoginTraeger_RedeemsTheMailedCodeOfAnEnrolledAccount(t *testing.T) {
 	auth, err := newMailpitAdapter(api.URL, mailpit.URL).LoginTraeger(context.Background(), "traeger@test.de", "secret", 0)
 	require.NoError(t, err)
 	assert.Equal(t, "traeger-session", auth.Token)
-	assert.Equal(t, map[string]any{"challenge_token": "login-challenge", "code": "135790", "organization_id": float64(7)}, verify,
+	assert.Equal(t, map[string]any{"challenge_token": "login-challenge", "code": "135790", "organization_id": "7"}, verify,
 		"the verify names the Träger the login resolved")
 }
 

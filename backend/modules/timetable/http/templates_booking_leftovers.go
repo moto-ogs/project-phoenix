@@ -24,12 +24,12 @@ import (
 )
 
 type bookingLeftoverResponse struct {
-	TemplateID     common.ID `json:"template_id"`
-	TemplateName   string    `json:"template_name"`
-	StudentID      common.ID `json:"student_id"`
-	StudentName    string    `json:"student_name"`
-	Weekdays       []int     `json:"weekdays"`
-	BookingEndedOn string    `json:"booking_ended_on"`
+	TemplateID     ident.ID `json:"template_id"`
+	TemplateName   string   `json:"template_name"`
+	StudentID      ident.ID `json:"student_id"`
+	StudentName    string   `json:"student_name"`
+	Weekdays       []int    `json:"weekdays"`
+	BookingEndedOn string   `json:"booking_ended_on"`
 	// From is the first day "Entfernen" changes, tomorrow at the earliest.
 	From string `json:"from"`
 	// Until is the day a later booking carries the Regeltermin again

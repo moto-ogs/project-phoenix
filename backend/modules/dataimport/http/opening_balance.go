@@ -131,10 +131,9 @@ func (rs *Resource) PreviewOpeningBalanceImport(w http.ResponseWriter, r *http.R
 		return svc.RecordAuditInTransaction(ctx, "opening_balance", reqCtx.Filename, result, reqCtx.AccountID, true, tenantID)
 	}); err != nil {
 		if deciderError != nil {
-			rs.runtime.Failure(w, r, Failure{Status: http.StatusUnauthorized, Cause: deciderError})
-			return
+			err = deciderError
 		}
-		rs.runtime.Failure(w, r, Failure{Status: http.StatusInternalServerError, Cause: err, Message: "Import-Vorschau fehlgeschlagen"})
+		rs.runtime.Failure(w, r, staffFailure(err, codeWorkforceNoStaffProfile, "Import-Vorschau fehlgeschlagen"))
 		return
 	}
 
@@ -160,10 +159,9 @@ func (rs *Resource) ImportOpeningBalances(w http.ResponseWriter, r *http.Request
 		return deciderError
 	}); err != nil {
 		if deciderError != nil {
-			rs.runtime.Failure(w, r, Failure{Status: http.StatusUnauthorized, Cause: deciderError})
-		} else {
-			rs.runtime.Failure(w, r, Failure{Status: http.StatusInternalServerError, Cause: err, Message: "Import fehlgeschlagen"})
+			err = deciderError
 		}
+		rs.runtime.Failure(w, r, staffFailure(err, codeWorkforceNoStaffProfile, "Import fehlgeschlagen"))
 		return
 	}
 	svc, err := rs.runtime.OpeningImport(reqCtx.EffectiveDate, reqCtx.Note, decidedBy)

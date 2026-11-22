@@ -17,22 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAbsenceRequestsDecodeLosslessCustomIDAndExplicitNull(t *testing.T) {
-	t.Parallel()
-
-	const id = "9007199254740993"
-
-	var create CreateAbsenceRequest
-	require.NoError(t, json.Unmarshal([]byte(`{"absence_type":"other","absence_type_id":"`+id+`"}`), &create))
-	require.NotNil(t, create.AbsenceTypeID)
-	assert.Equal(t, int64(9007199254740993), *create.AbsenceTypeID)
-
-	var update UpdateAbsenceRequest
-	require.NoError(t, json.Unmarshal([]byte(`{"absence_type":"sick","absence_type_id":null}`), &update))
-	assert.True(t, update.AbsenceTypeIDSet)
-	assert.Nil(t, update.AbsenceTypeID)
-}
-
 func TestLoadRebookedAbsencesOnlyMapsMissingRowsToNotFound(t *testing.T) {
 	t.Parallel()
 

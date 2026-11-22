@@ -1,7 +1,7 @@
 import type { FeedbackResponse } from "~/lib/contract/feedback.generated";
 import { knownEnum } from "~/lib/contract/known-enum";
-import { apiErrorFromResponse } from "./api-error";
-import { sessionFetch } from "./session-cache";
+import { ApiError } from "./api-error";
+import { bffJson } from "./bff-fetch";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "FeedbackAPI" });
@@ -35,29 +35,13 @@ function mapFeedbackResponse(entry: FeedbackResponse): FeedbackEntry {
 export async function fetchStudentFeedback(
   studentId: string,
 ): Promise<FeedbackEntry[]> {
-  const url = `/api/feedback/student/${studentId}`;
-
   try {
-    const response = await sessionFetch(url, {
-      method: "GET",
-      credentials: "include",
+    const entries = await bffJson("tenant", "GET /api/feedback/student/{id}", {
+      params: { id: studentId },
     });
-
-    if (!response.ok) {
-      if (response.status === 404) return [];
-      // The message is diagnosis only; callers read status and code.
-      throw await apiErrorFromResponse(
-        response,
-        `Failed to fetch feedback: ${response.status} ${response.statusText}`,
-      );
-    }
-
-    const responseData = (await response.json()) as {
-      data: FeedbackResponse[];
-    };
-    const entries = responseData.data ?? [];
     return entries.map(mapFeedbackResponse);
   } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return [];
     logger.error("fetch_student_feedback_failed", {
       error: error instanceof Error ? error.message : String(error),
       student_id: studentId,
