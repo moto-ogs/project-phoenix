@@ -62,7 +62,8 @@ func seriesToDomain(value workforce.StaffShiftSeries) domain.StaffShiftSeries {
 		Notes: value.Notes, CalendarPeriodID: value.CalendarPeriodID, WeekPattern: value.WeekPattern,
 		ValidFrom: value.ValidFrom, ValidUntil: value.ValidUntil, SeriesRootID: value.SeriesRootID,
 		RetainedOccurrenceShiftID: value.RetainedOccurrenceShiftID, IncludeSchoolBreaks: value.IncludeSchoolBreaks,
-		CreatedBy: value.CreatedBy, UpdatedBy: value.UpdatedBy, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
+		CreatedBy: value.CreatedBy, UpdatedBy: value.UpdatedBy, PlannedByTraeger: value.PlannedByTraeger,
+		CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
 	}
 }
 
@@ -73,7 +74,8 @@ func seriesToPublic(value domain.StaffShiftSeries) workforce.StaffShiftSeries {
 		Notes: value.Notes, CalendarPeriodID: value.CalendarPeriodID, WeekPattern: value.WeekPattern,
 		ValidFrom: value.ValidFrom, ValidUntil: value.ValidUntil, SeriesRootID: value.SeriesRootID,
 		RetainedOccurrenceShiftID: value.RetainedOccurrenceShiftID, IncludeSchoolBreaks: value.IncludeSchoolBreaks,
-		CreatedBy: value.CreatedBy, UpdatedBy: value.UpdatedBy, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
+		CreatedBy: value.CreatedBy, UpdatedBy: value.UpdatedBy, PlannedByTraeger: value.PlannedByTraeger,
+		CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
 	}
 }
 

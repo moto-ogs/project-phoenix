@@ -2,13 +2,51 @@
 import {
   noData,
   requestBody,
+  success,
 } from "./runtime";
 import {
+  LoginResponseSchema,
+  MFAResendResponseSchema,
+  TokenResponseSchema,
+  type MFAResendRequest,
+  type MFAVerifyRequest,
   type PasswordResetConfirmRequest,
   type PasswordResetRequest,
 } from "./shared.generated";
 
+/** Go: parentauth.parentLoginRequest */
+export interface parentLoginRequest {
+  email?: string;
+  password?: string;
+}
+
 export const routes = {
+  "POST /parent/auth/login": {
+    method: "POST",
+    pattern: "/parent/auth/login",
+    portals: ["parent"],
+    routeFile: "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+    request: requestBody<parentLoginRequest>(),
+    response: success(LoginResponseSchema),
+  },
+  "POST /parent/auth/mfa/resend": {
+    method: "POST",
+    pattern: "/parent/auth/mfa/resend",
+    portals: ["parent"],
+    routeFile: "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+    plain: true,
+    request: requestBody<MFAResendRequest>(),
+    response: MFAResendResponseSchema,
+  },
+  "POST /parent/auth/mfa/verify": {
+    method: "POST",
+    pattern: "/parent/auth/mfa/verify",
+    portals: ["parent"],
+    routeFile: "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+    plain: true,
+    request: requestBody<MFAVerifyRequest>(),
+    response: TokenResponseSchema,
+  },
   "POST /parent/auth/password-reset": {
     method: "POST",
     pattern: "/parent/auth/password-reset",

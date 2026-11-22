@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
@@ -313,13 +314,28 @@ func (c *effectiveTimeCore[S, E, N, D]) reclaimedFields(ctx context.Context, exi
 	if previous.ExcusedFrom != nil {
 		return fields, careplan.ErrCareExceptionContainsPartialAbsence
 	}
-	staffID, err := resolveStaffID()
-	if err != nil || !careplan.HasScheduleAuthor(ctx, staffID) {
-		return fields, careplan.ErrCareExceptionStaffProfileRequired
+	staffID, err := exceptionTakeoverAuthor(ctx, resolveStaffID)
+	if err != nil {
+		return fields, err
 	}
 	fields.ID, fields.CreatedAt, fields.TenantID = previous.ID, previous.CreatedAt, previous.TenantID
 	fields.CreatedBy, fields.EnteredByTraeger = staffID, careplan.EnteredByTraeger(ctx, staffID)
 	return fields, nil
+}
+
+// exceptionTakeoverAuthor resolves the staff member who takes over a
+// guardian's exception. The resolver answers (0, nil) for a caller without a
+// staff record and an error only for a failed lookup (#7818): the failure
+// stays a server error, and only a missing author refuses the day.
+func exceptionTakeoverAuthor(ctx context.Context, resolveStaffID func() (int64, error)) (int64, error) {
+	staffID, err := resolveStaffID()
+	if err != nil {
+		return 0, fmt.Errorf("schedule: resolve staff to take over a guardian exception: %w", err)
+	}
+	if !careplan.HasScheduleAuthor(ctx, staffID) {
+		return 0, careplan.ErrCareExceptionStaffProfileRequired
+	}
+	return staffID, nil
 }
 
 func prepareExceptionUpdate(ctx context.Context, fields *domain.EffectiveExceptionFields, studentID int64, date calendar.Date, clearValue bool, resolveStaffID func() (int64, error)) error {
@@ -332,9 +348,9 @@ func prepareExceptionUpdate(ctx context.Context, fields *domain.EffectiveExcepti
 	if fields.Source != careplan.ExceptionSourceGuardian {
 		return nil
 	}
-	staffID, err := resolveStaffID()
-	if err != nil || !careplan.HasScheduleAuthor(ctx, staffID) {
-		return careplan.ErrCareExceptionStaffProfileRequired
+	staffID, err := exceptionTakeoverAuthor(ctx, resolveStaffID)
+	if err != nil {
+		return err
 	}
 	fields.Source = careplan.ExceptionSourceStaff
 	fields.CreatedBy, fields.EnteredByTraeger = staffID, careplan.EnteredByTraeger(ctx, staffID)

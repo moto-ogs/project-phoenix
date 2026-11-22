@@ -176,22 +176,6 @@ func (req *PhoneNumberUpdateRequest) Bind(_ *http.Request) error {
 	return nil
 }
 
-// StudentWithRelationship is one child of a guardian.
-type StudentWithRelationship struct {
-	StudentID          int64   `json:"student_id"`
-	FirstName          string  `json:"first_name"`
-	LastName           string  `json:"last_name"`
-	SchoolClass        string  `json:"school_class"`
-	RelationshipID     int64   `json:"relationship_id"`
-	RelationshipType   string  `json:"relationship_type"`
-	GuardianRole       string  `json:"guardian_role"`
-	IsPrimary          bool    `json:"is_primary"`
-	IsEmergencyContact bool    `json:"is_emergency_contact"`
-	CanPickup          bool    `json:"can_pickup"`
-	PickupNotes        *string `json:"pickup_notes,omitempty"`
-	EmergencyPriority  int     `json:"emergency_priority"`
-}
-
 // GuardianWithRelationship is one guardian of a child. IsPayer is only
 // shown to callers with the financial permission; AccountStatus is the
 // portal-access state for the staff tab: active, active_no_access, pending

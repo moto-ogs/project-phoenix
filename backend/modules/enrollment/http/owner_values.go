@@ -14,33 +14,34 @@ import (
 // (ADR 0173).
 
 // CareOffering is a decoded care offering: the owner's value with its
-// availability rule decoded for rendering.
+// availability rule decoded for rendering. It is no answer itself:
+// toCareOfferingResponse renders it, so it carries no json tags.
 type CareOffering struct {
-	ID                        int64                         `json:"id"`
-	TenantID                  int64                         `json:"tenant_id"`
-	CreatedAt                 time.Time                     `json:"created_at"`
-	UpdatedAt                 time.Time                     `json:"updated_at"`
-	PhaseID                   int64                         `json:"phase_id"`
-	ActivityGroupID           *int64                        `json:"activity_group_id,omitempty"`
-	Name                      string                        `json:"name"`
-	Description               *string                       `json:"description,omitempty"`
-	DaysOfWeekMode            string                        `json:"days_of_week_mode"`
-	AvailableDays             []string                      `json:"available_days"`
-	IncludesHolidayCare       bool                          `json:"includes_holiday_care"`
-	IncludesLunch             bool                          `json:"includes_lunch"`
-	Capacity                  *int                          `json:"capacity,omitempty"`
-	PriceCents                *int                          `json:"price_cents,omitempty"`
-	IsActive                  bool                          `json:"is_active"`
-	IsRequired                bool                          `json:"is_required"`
-	CountsAsCare              bool                          `json:"counts_as_care"`
-	AutoAddGradeLevels        []int                         `json:"auto_add_grade_levels"`
-	AvailabilityRule          *CareOfferingAvailabilityRule `json:"availability_rule,omitempty"`
-	SortOrder                 int                           `json:"sort_order"`
-	SelectionGroup            string                        `json:"selection_group,omitempty"`
-	SelectionRule             string                        `json:"selection_rule"`
-	PickupTimes               map[string]string             `json:"pickup_times,omitempty"`
-	Translations              json.RawMessage               `json:"translations,omitempty"`
-	AutoAddTriggerOfferingIDs []int64                       `json:"auto_add_trigger_offering_ids,omitempty"`
+	ID                        int64
+	TenantID                  int64
+	CreatedAt                 time.Time
+	UpdatedAt                 time.Time
+	PhaseID                   int64
+	ActivityGroupID           *int64
+	Name                      string
+	Description               *string
+	DaysOfWeekMode            string
+	AvailableDays             []string
+	IncludesHolidayCare       bool
+	IncludesLunch             bool
+	Capacity                  *int
+	PriceCents                *int
+	IsActive                  bool
+	IsRequired                bool
+	CountsAsCare              bool
+	AutoAddGradeLevels        []int
+	AvailabilityRule          *CareOfferingAvailabilityRule
+	SortOrder                 int
+	SelectionGroup            string
+	SelectionRule             string
+	PickupTimes               map[string]string
+	Translations              json.RawMessage
+	AutoAddTriggerOfferingIDs []int64
 }
 
 // CareOfferingAvailabilityRule limits an offering to the children whose

@@ -192,18 +192,6 @@ type MessageableGuardianResponse struct {
 	LeadershipAvailable bool            `json:"leadership_available"`
 }
 
-// StartThreadRequest and OpenThreadRequest take an optional audience,
-// "team" (default) or "leadership" (#5200).
-type StartThreadRequest struct {
-	ClientMessageID   string `json:"client_message_id,omitempty"`
-	StudentID         string `json:"student_id"`
-	GuardianAccountID string `json:"guardian_account_id"`
-	Body              string `json:"body"`
-	Audience          string `json:"audience,omitempty"`
-	// AttachmentIDs names the uploads the message carries (#6685).
-	AttachmentIDs []string `json:"attachment_ids,omitempty"`
-}
-
 type ParentChatPostMessageRequest struct {
 	ClientMessageID      string `json:"client_message_id,omitempty"`
 	Body                 string `json:"body"`
@@ -212,6 +200,8 @@ type ParentChatPostMessageRequest struct {
 	AttachmentIDs []string `json:"attachment_ids,omitempty"`
 }
 
+// OpenThreadRequest takes an optional audience, "team" (default) or
+// "leadership" (#5200).
 type OpenThreadRequest struct {
 	StudentID         string `json:"student_id"`
 	GuardianAccountID string `json:"guardian_account_id"`

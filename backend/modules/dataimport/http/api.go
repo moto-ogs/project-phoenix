@@ -2,6 +2,7 @@ package importapi
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -150,10 +151,9 @@ func (rs *Resource) previewStudentImport(w http.ResponseWriter, r *http.Request)
 		return rs.studentImportService.RecordAuditInTransaction(ctx, "student", uploadResult.Filename, preview.result, accountID, true, tenantID)
 	}); err != nil {
 		if staffResolutionErr != nil {
-			rs.runtime.Failure(w, r, Failure{Status: http.StatusUnauthorized, Cause: staffResolutionErr})
-			return
+			err = staffResolutionErr
 		}
-		rs.runtime.Failure(w, r, Failure{Status: http.StatusInternalServerError, Cause: err, Message: "Import-Vorschau fehlgeschlagen"})
+		rs.runtime.Failure(w, r, staffFailure(err, codeImportStaffProfileRequired, "Import-Vorschau fehlgeschlagen"))
 		return
 	}
 
@@ -185,14 +185,17 @@ func (rs *Resource) importStudents(w http.ResponseWriter, r *http.Request) {
 	request := importModels.ImportRequest[importModels.StudentImportRow]{
 		Rows: uploadResult.Rows, Mode: mode, SkipInvalidRows: true,
 	}
+	var staffResolutionErr error
 	if err := rs.runtime.WithinTenant(r.Context(), func(ctx context.Context) error {
-		var err error
-		if request.UserID, err = rs.runtime.StaffID(ctx); err != nil {
-			return err
+		if request.UserID, staffResolutionErr = rs.runtime.StaffID(ctx); staffResolutionErr != nil {
+			return staffResolutionErr
 		}
 		return rs.admitStudentImport(ctx, request)
 	}); err != nil {
-		rs.runtime.Failure(w, r, Failure{Status: http.StatusInternalServerError, Cause: err, Message: "Import fehlgeschlagen"})
+		if staffResolutionErr != nil {
+			err = staffResolutionErr
+		}
+		rs.runtime.Failure(w, r, staffFailure(err, codeImportStaffProfileRequired, "Import fehlgeschlagen"))
 		return
 	}
 	result, err := rs.studentImportService.ImportBatches(r.Context(), request,
@@ -214,6 +217,16 @@ func (rs *Resource) importStudents(w http.ResponseWriter, r *http.Request) {
 		result.CreatedCount, result.UpdatedCount, result.ErrorCount)
 
 	rs.runtime.Success(w, r, http.StatusOK, importModels.NewStudentImportResult(result), message)
+}
+
+// staffFailure answers a failed import whose author could not be resolved
+// (#7818): an account without staff record is refused with the route's
+// code; a failed lookup or any other failure stays a server error.
+func staffFailure(err error, code, message string) Failure {
+	if errors.Is(err, ErrStaffProfileRequired) {
+		return Failure{Status: http.StatusForbidden, Cause: err, Code: code}
+	}
+	return Failure{Status: http.StatusInternalServerError, Cause: err, Message: message}
 }
 
 // codeImportBatchFailed is the registered code of a batch that stopped after

@@ -76,14 +76,17 @@ or write a `Backend*` interface for a registered route.
   generator rejects a bare `int64` and a response shape that
   depends on a query parameter. Every answer sends identifiers as strings,
   and the generated decoder (`int64String`) takes nothing else (ADR 0300).
-  The backend routes without a contract only shrink:
-  `scripts/check-contract-shrink.mjs <base>` fails on a new one. A route the contract cannot carry
-  (a sign-in step, a device or webhook endpoint) needs a new ADR that names
-  its catalog line.
-- In a request type an identifier is a `string`; Go still reads a JSON number
-  there. A request type with its own `UnmarshalJSON` needs an entry in
-  `Readers` (`backend/api/route_contracts.go`), or the generator stops;
-  `ReadsLaxIDs` is for a request only.
+  A sign-in step or another route its portal's route file serves is typed
+  too (`RouteFile`) and stays out of every proxy allowlist. The catalog
+  lines outside the contract (`Outside`: a device, webhook or protocol
+  endpoint) only shrink: `scripts/check-contract-shrink.mjs <base>` fails on
+  a new one unless a new ADR names its catalog line
+  ([new route](new-route.md#routes-outside-the-contract)).
+- In a request type an identifier is a `string`; for one release Go still
+  reads a JSON number there (`ident.ID`). A request type with its own
+  `UnmarshalJSON` needs an entry in `Readers`
+  (`backend/api/route_contracts.go`), or the generator stops; an own reader
+  does not make an `int64` an identifier.
 - Removing or renaming a registered field or route needs one release as
   deprecated (`DeprecatedFields`, `Deprecated`);
   `scripts/check-contract-compat.mjs <base>` fails otherwise.

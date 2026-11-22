@@ -2,10 +2,16 @@
 import { z } from "zod";
 import {
   noData,
+  requestBody,
   success,
 } from "./runtime";
 import {
+  EnrollStartResponseSchema,
+  MFAResendResponseSchema,
+  TokenResponseSchema,
   TrustedDeviceDTOSchema,
+  type MFAResendRequest,
+  type MFAVerifyRequest,
 } from "./shared.generated";
 
 export const routes = {
@@ -20,5 +26,40 @@ export const routes = {
     pattern: "/auth/mfa/trusted-devices",
     portals: ["tenant"],
     response: success(z.array(TrustedDeviceDTOSchema)),
+  },
+  "POST /auth/mfa/enroll/confirm": {
+    method: "POST",
+    pattern: "/auth/mfa/enroll/confirm",
+    portals: ["tenant"],
+    routeFile: "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+    plain: true,
+    request: requestBody<MFAVerifyRequest>(),
+    response: TokenResponseSchema,
+  },
+  "POST /auth/mfa/enroll/start": {
+    method: "POST",
+    pattern: "/auth/mfa/enroll/start",
+    portals: ["tenant"],
+    routeFile: "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+    plain: true,
+    response: EnrollStartResponseSchema,
+  },
+  "POST /auth/mfa/resend": {
+    method: "POST",
+    pattern: "/auth/mfa/resend",
+    portals: ["tenant"],
+    routeFile: "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+    plain: true,
+    request: requestBody<MFAResendRequest>(),
+    response: MFAResendResponseSchema,
+  },
+  "POST /auth/mfa/verify": {
+    method: "POST",
+    pattern: "/auth/mfa/verify",
+    portals: ["tenant"],
+    routeFile: "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+    plain: true,
+    request: requestBody<MFAVerifyRequest>(),
+    response: TokenResponseSchema,
   },
 } as const;

@@ -212,6 +212,11 @@ type loginImageResponse struct {
 	CanEdit       bool    `json:"can_edit"`
 }
 
+// loginImageUploadResponse names the stored login image.
+type loginImageUploadResponse struct {
+	LoginImageURL string `json:"login_image_url"`
+}
+
 // getLoginImage returns the current login image URL and edit permission for the tenant.
 func (rs *SettingsResource) getLoginImage(w http.ResponseWriter, r *http.Request) {
 	tenantID := rs.runtime.Actor(r.Context()).TenantID
@@ -271,7 +276,7 @@ func (rs *SettingsResource) uploadLoginImage(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	rs.runtime.Respond(w, r, http.StatusOK, map[string]string{"login_image_url": imageURL}, "Login image uploaded successfully")
+	rs.runtime.Respond(w, r, http.StatusOK, loginImageUploadResponse{LoginImageURL: imageURL}, "Login image uploaded successfully")
 }
 
 // deleteLoginImage removes the custom login page image for the tenant.

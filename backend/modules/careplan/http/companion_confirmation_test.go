@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/require"
 
 	careplanhttp "github.com/moto-ogs/project-phoenix/modules/careplan/http"
@@ -25,7 +26,7 @@ func TestCompanionConflictsConfirmed(t *testing.T) {
 	t.Run("exactly what was confirmed", func(t *testing.T) {
 		require.True(t, careplanhttp.CompanionConflictsConfirmedForTest(
 			[]careplan.CompanionConflict{{StudentID: tom, Weekdays: []string{"thu"}}},
-			[]careplanhttp.CompanionEntry{{CompanionStudentID: tom, Weekdays: []string{"thu"}}},
+			[]careplanhttp.CompanionEntry{{CompanionStudentID: ident.ID(tom), Weekdays: []string{"thu"}}},
 		))
 	})
 
@@ -35,14 +36,14 @@ func TestCompanionConflictsConfirmed(t *testing.T) {
 				{StudentID: tom, Weekdays: []string{"thu"}},
 				{StudentID: mia, Weekdays: []string{"thu"}},
 			},
-			[]careplanhttp.CompanionEntry{{CompanionStudentID: tom, Weekdays: []string{"thu"}}},
+			[]careplanhttp.CompanionEntry{{CompanionStudentID: ident.ID(tom), Weekdays: []string{"thu"}}},
 		))
 	})
 
 	t.Run("a weekday that appeared afterwards is not confirmed", func(t *testing.T) {
 		require.False(t, careplanhttp.CompanionConflictsConfirmedForTest(
 			[]careplan.CompanionConflict{{StudentID: tom, Weekdays: []string{"thu", "fri"}}},
-			[]careplanhttp.CompanionEntry{{CompanionStudentID: tom, Weekdays: []string{"thu"}}},
+			[]careplanhttp.CompanionEntry{{CompanionStudentID: ident.ID(tom), Weekdays: []string{"thu"}}},
 		))
 	})
 
@@ -50,8 +51,8 @@ func TestCompanionConflictsConfirmed(t *testing.T) {
 		require.True(t, careplanhttp.CompanionConflictsConfirmedForTest(
 			[]careplan.CompanionConflict{{StudentID: tom, Weekdays: []string{"thu"}}},
 			[]careplanhttp.CompanionEntry{
-				{CompanionStudentID: tom, Weekdays: []string{"thu"}},
-				{CompanionStudentID: mia, Weekdays: []string{"thu"}},
+				{CompanionStudentID: ident.ID(tom), Weekdays: []string{"thu"}},
+				{CompanionStudentID: ident.ID(mia), Weekdays: []string{"thu"}},
 			},
 		))
 	})

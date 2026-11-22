@@ -179,19 +179,25 @@ type StaffShiftSeries struct {
 	IncludeSchoolBreaks bool
 	CreatedBy           int64
 	UpdatedBy           *int64
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
+	// PlannedByTraeger marks a series the Träger-Büro planned in a school
+	// session opened through the Träger-Portal (#7818); CreatedBy is then 0.
+	PlannedByTraeger bool
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 // StaffShiftSeriesException is one deliberately removed occurrence of a
-// series; re-plans and splits never regenerate the date.
+// series; re-plans and splits never regenerate the date. It carries the
+// author of the occurrence: CreatedBy, or PlannedByTraeger for an
+// occurrence of a series the Träger-Büro planned (#7818).
 type StaffShiftSeriesException struct {
-	ID        int64
-	TenantID  int64
-	SeriesID  int64
-	Date      string
-	CreatedBy int64
-	CreatedAt time.Time
+	ID               int64
+	TenantID         int64
+	SeriesID         int64
+	Date             string
+	CreatedBy        int64
+	PlannedByTraeger bool
+	CreatedAt        time.Time
 }
 
 // ShiftType is a tenant-defined label and color for planned shifts

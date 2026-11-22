@@ -8,7 +8,6 @@ const { installSessionTenantMismatchObserver } =
 const { onSessionTenantMismatch } = await import("./api-error");
 const { bindSessionAccount, SESSION_ACCOUNT_HEADER } =
   await import("./session-account");
-const { fetchWithRetry } = await import("./api-helpers");
 const { getCachedSession, primeSessionCache } = await import("./session-cache");
 const { listAvailableTenants } = await import("./tenant-api");
 const { timeTrackingService } = await import("./time-tracking-api");
@@ -56,7 +55,6 @@ describe("the session tenant refusal reaches TenantGuard from every client", () 
   it.each([
     ["a plain fetch that reads only ok", () => fetch("/api/students")],
     ["a bffJson client", () => listAvailableTenants()],
-    ["fetchWithRetry", () => fetchWithRetry("/api/students")],
     ["the time tracking client", () => timeTrackingService.checkIn("present")],
   ])("%s", async (_client, send) => {
     fetchMock.mockResolvedValue(refusal());

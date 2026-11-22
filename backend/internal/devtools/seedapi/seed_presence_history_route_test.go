@@ -29,12 +29,16 @@ func TestOperatorPresenceHistoryWriterPostsChunksAsOperator(t *testing.T) {
 			w.WriteHeader(seedHTTPStatusNotFound)
 			return
 		}
+		var raw json.RawMessage
 		var body struct {
 			Days []presenceHistoryRouteDay `json:"days"`
 		}
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&raw))
+		require.NoError(t, json.Unmarshal(raw, &body))
 		if len(sizes) == 0 {
 			first = body.Days[0]
+			assert.Contains(t, string(raw), `"student_id":"1000"`, "identifiers travel as text")
+			assert.Contains(t, string(raw), `"room_id":"90"`)
 		}
 		sizes = append(sizes, len(body.Days))
 		auths = append(auths, r.Header.Get("Authorization"))

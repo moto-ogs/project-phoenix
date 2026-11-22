@@ -9,6 +9,13 @@ import {
   useOptionalSupervision,
 } from "./supervision-context";
 
+import { pagedJson } from "~/test/mocks/plain-session-fetch";
+
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 // renderHook updates result.current without a DOM mutation, so waitFor only
 // rechecks on its interval. Poll the same assertions more promptly; keep
 // Testing Library's timeout and real timers.
@@ -38,7 +45,7 @@ global.fetch = mockFetch;
 const defaultMockResponses = {
   groups: { data: [] },
   supervised: { data: [] },
-  openRooms: { data: [] },
+  openRooms: pagedJson([]),
   adminAll: { data: [] },
 };
 
@@ -977,7 +984,7 @@ describe("SupervisionProvider released-room handling", () => {
           },
         ],
       },
-      openRooms: { data: [{ id: 100, name: "Schulhof" }] },
+      openRooms: pagedJson([{ id: 100, name: "Schulhof" }]),
     });
 
     const { result } = renderHook(() => useSupervision(), {
@@ -998,7 +1005,7 @@ describe("SupervisionProvider released-room handling", () => {
   it("reaches a released room without any own supervision, and stays not-supervising", async () => {
     setupFetchMock({
       supervised: { data: [] },
-      openRooms: { data: [{ id: 100, name: "Schulhof" }] },
+      openRooms: pagedJson([{ id: 100, name: "Schulhof" }]),
     });
 
     const { result } = renderHook(() => useSupervision(), {
@@ -1024,7 +1031,7 @@ describe("SupervisionProvider released-room handling", () => {
     // client no longer guesses who may see what.
     setupFetchMock({
       supervised: { data: [] },
-      openRooms: { data: [{ id: 100, name: "Turnhalle" }] },
+      openRooms: pagedJson([{ id: 100, name: "Turnhalle" }]),
     });
 
     const { result } = renderHook(() => useSupervision(), {
@@ -1083,7 +1090,7 @@ describe("SupervisionProvider released-room handling", () => {
           },
         ],
       },
-      openRooms: { data: [] },
+      openRooms: pagedJson([]),
     });
 
     const { result } = renderHook(() => useSupervision(), {
@@ -1112,7 +1119,7 @@ describe("SupervisionProvider released-room handling", () => {
           },
         ],
       },
-      openRooms: { data: [{ id: 100, name: "Schulhof" }] },
+      openRooms: pagedJson([{ id: 100, name: "Schulhof" }]),
     });
 
     const { result } = renderHook(() => useSupervision(), {
@@ -1233,7 +1240,7 @@ describe("SupervisionProvider API response handling", () => {
       if (url.includes("is_open_room=true")) {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ data: [{ id: 100, name: "Schulhof" }] }),
+          json: async () => pagedJson([{ id: 100, name: "Schulhof" }]),
         });
       }
       if (url.includes("/api/students/ogs-group-navigation")) {
@@ -1800,7 +1807,7 @@ describe("SupervisionProvider error state change detection", () => {
       if (url.includes("is_open_room=true")) {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ data: [{ id: 42, name: "Turnhalle" }] }),
+          json: async () => pagedJson([{ id: 42, name: "Turnhalle" }]),
         });
       }
       return Promise.resolve({ ok: true, json: async () => ({}) });
@@ -1837,7 +1844,7 @@ describe("SupervisionProvider uncovered condition coverage", () => {
   it("keeps a released room id separate from a session id", async () => {
     setupFetchMock({
       supervised: { data: [] },
-      openRooms: { data: [{ id: 100, name: "Turnhalle" }] },
+      openRooms: pagedJson([{ id: 100, name: "Turnhalle" }]),
     });
 
     const { result } = renderHook(() => useSupervision(), {

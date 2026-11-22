@@ -199,7 +199,7 @@ function ParentEnrollFormPageContent({ params }: PageProps) {
               prefetchedData={loaded.prefetchedData}
               submitter={submitter}
               lateInviteToken={lateInviteToken ?? undefined}
-              uploadEndpoint={`/api/parent/enrollments/${encodeURIComponent(tenantSlug)}/uploads`}
+              viaParentPortal
               skipCaptcha
               localizedCopy
             />
