@@ -90,12 +90,13 @@ func importedChildrenStart(from, decisionDay calendar.Date, count *parentbilling
 	return from
 }
 
-// distinctImportedChildren collects per family the numbers its rows name,
-// those of a witness included.
+// distinctImportedChildren collects the numbers named for each family. A
+// conflict with stored confirmations on one day does not disqualify the
+// row's number as evidence against sibling rows elsewhere in the file.
 func distinctImportedChildren(rows []importedChildren) map[string]map[int]bool {
 	distinct := map[string]map[int]bool{}
 	for _, row := range rows {
-		if row.status != "" {
+		if row.status != "" && row.status != parentbilling.ImportedChildrenConfirmationsDiffer {
 			continue
 		}
 		if distinct[row.family] == nil {
