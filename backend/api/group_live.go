@@ -35,6 +35,7 @@ import (
 	settingsplatform "github.com/moto-ogs/project-phoenix/modules/settings"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -524,7 +525,7 @@ func (p groupLivePlanning) Pickups(ctx context.Context, studentIDs []int64, date
 func groupLivePickup(pickup *careplan.EffectivePickupTime) grouplive.Pickup {
 	notes := make([]grouplive.DayNote, 0, len(pickup.DayNotes))
 	for _, note := range pickup.DayNotes {
-		notes = append(notes, grouplive.DayNote{ID: note.ID, Content: note.Content})
+		notes = append(notes, grouplive.DayNote{ID: ident.ID(note.ID), Content: note.Content})
 	}
 	return grouplive.Pickup{
 		Date: grouplive.Date(pickup.Date.String()), WeekdayName: pickup.WeekdayName, PickupTime: pickup.PickupTime,

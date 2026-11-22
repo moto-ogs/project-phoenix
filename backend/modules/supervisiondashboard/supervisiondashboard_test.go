@@ -899,10 +899,10 @@ func TestProjectionWireShape(t *testing.T) {
 	projection := emptyProjection()
 	projection.BusinessDay = "2026-08-19"
 	projection.SpontaneousStartAvailability = SpontaneousStartAvailability{Available: true}
-	projection.Groups = []DashboardGroup{{ID: 11, Name: "Malen", RoomID: &roomID, RoomName: "Zebra", RoomColor: &color, IsCurrentUserSupervising: true, CanAssign: true, ParticipantLimit: intPtr(45), Supervisors: []SessionSupervisor{{StaffID: 7, Name: "Erika"}}}, {ID: 12, Name: "Adler"}}
-	projection.SelectedGroupID = int64Ptr(11)
+	projection.Groups = []DashboardGroup{{ID: 11, Name: "Malen", RoomID: (*ident.ID)(&roomID), RoomName: "Zebra", RoomColor: &color, IsCurrentUserSupervising: true, CanAssign: true, ParticipantLimit: intPtr(45), Supervisors: []SessionSupervisor{{StaffID: 7, Name: "Erika"}}}, {ID: 12, Name: "Adler"}}
+	projection.SelectedGroupID = (*ident.ID)(int64Ptr(11))
 	projection.UnclaimedGroups = []UnclaimedGroup{{ID: 13, RoomName: "Igel"}}
-	projection.CurrentStaffID = int64Ptr(7)
+	projection.CurrentStaffID = (*ident.ID)(int64Ptr(7))
 	projection.EducationalGroups = []EducationalGroup{{ID: 41, Name: "Bären", RoomName: "Igel"}}
 	projection.Schulhof = &SchulhofStatus{Exists: true, RoomName: "Schulhof", Supervisors: []Supervisor{{ID: 1, StaffID: 7, Name: "Erika", IsCurrentUser: true}}}
 	projection.OpenRooms = []OpenRoom{{RoomID: 31, Name: "Schulhof", IsUserSupervising: true, ActiveGroupIDs: []string{"11", "14"}, HasOccupyingSession: true, StudentCount: 1,

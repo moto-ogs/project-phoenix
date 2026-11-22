@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type parentEnrollmentSeedStep struct {
@@ -242,7 +244,7 @@ func (s parentEnrollmentSeedStep) acceptGuardianInvitation(rt *Runtime, token, p
 	}
 	var resp struct {
 		Data struct {
-			AccountID int64 `json:"account_id,string"` // a decimal string (#2352)
+			AccountID ident.ID `json:"account_id"` // a decimal string (#2352)
 		} `json:"data"`
 	}
 	if err := parseJSON(respBody, &resp); err != nil {
@@ -251,7 +253,7 @@ func (s parentEnrollmentSeedStep) acceptGuardianInvitation(rt *Runtime, token, p
 	if resp.Data.AccountID == 0 {
 		return 0, fmt.Errorf("guardian invitation accept response did not include account_id")
 	}
-	return resp.Data.AccountID, nil
+	return resp.Data.AccountID.Int64(), nil
 }
 
 func (s parentEnrollmentSeedStep) seedEnrollment(rt *Runtime, adminAuth AuthRef, parents []ParentCredentials, parentAuths map[string]AuthRef) (SeedEnrollmentState, error) {

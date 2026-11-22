@@ -7,11 +7,13 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // OpenRoom is one released room and every child currently recorded there.
 type OpenRoom struct {
-	RoomID            int64    `json:"room_id,string"`
+	RoomID            ident.ID `json:"room_id"`
 	Name              string   `json:"name"`
 	IsUserSupervising bool     `json:"is_user_supervising"`
 	ActiveGroupIDs    []string `json:"active_group_ids"`
@@ -31,7 +33,7 @@ type OpenRoom struct {
 // the room's students with its ActiveGroupID; StudentCount counts them, so
 // the room's count is the sum over its sessions.
 type OpenRoomSession struct {
-	ActiveGroupID int64 `json:"active_group_id,string"`
+	ActiveGroupID ident.ID `json:"active_group_id"`
 	// Title names the session: the block's title, else the activity's name.
 	// It stays empty for the room's own session of independent stays.
 	Title       string `json:"title"`
@@ -56,12 +58,12 @@ type OpenRoomSession struct {
 // OpenRoomBlock carries what the block roster needs beyond the session: the
 // instance to load and the caller's relation to it.
 type OpenRoomBlock struct {
-	InstanceID     int64  `json:"instance_id,string"`
-	StartTime      string `json:"start_time"`
-	EndTime        string `json:"end_time"`
-	IsSpontaneous  bool   `json:"is_spontaneous"`
-	IsUserAssigned bool   `json:"is_user_assigned"`
-	CanOperate     bool   `json:"can_operate"`
+	InstanceID     ident.ID `json:"instance_id"`
+	StartTime      string   `json:"start_time"`
+	EndTime        string   `json:"end_time"`
+	IsSpontaneous  bool     `json:"is_spontaneous"`
+	IsUserAssigned bool     `json:"is_user_assigned"`
+	CanOperate     bool     `json:"can_operate"`
 }
 
 // OpenRoomStudent reuses the selected session's visit projection.
@@ -266,7 +268,7 @@ func (s *service) assembleOpenRooms(in openRoomInputs, attendance map[int64]Atte
 			entries = append(entries, entry)
 		}
 		result = append(result, OpenRoom{
-			RoomID: room.ID, Name: room.Name, IsUserSupervising: supervising,
+			RoomID: ident.ID(room.ID), Name: room.Name, IsUserSupervising: supervising,
 			ActiveGroupIDs: ids, HasOccupyingSession: occupying,
 			StudentCount: len(students), Students: students,
 			Sessions: entries,
@@ -286,7 +288,7 @@ func (s *service) assembleOpenRooms(in openRoomInputs, attendance map[int64]Atte
 func openRoomSession(session RunningSession, blocks map[int64]SessionBlock, staffID *int64, adminScope bool) OpenRoomSession {
 	supervising := staffID != nil && slices.Contains(session.SupervisorStaffIDs, *staffID)
 	entry := OpenRoomSession{
-		ActiveGroupID:     session.ActiveGroupID,
+		ActiveGroupID:     ident.ID(session.ActiveGroupID),
 		Independent:       session.IndependentStays,
 		IsUserSupervising: supervising,
 		CanAssign:         adminScope || supervising,
@@ -298,7 +300,7 @@ func openRoomSession(session RunningSession, blocks map[int64]SessionBlock, staf
 	if block, found := blocks[session.ActiveGroupID]; found {
 		entry.Title = block.Title
 		entry.Block = &OpenRoomBlock{
-			InstanceID:     block.InstanceID,
+			InstanceID:     ident.ID(block.InstanceID),
 			StartTime:      block.StartTime,
 			EndTime:        block.EndTime,
 			IsSpontaneous:  block.IsSpontaneous,

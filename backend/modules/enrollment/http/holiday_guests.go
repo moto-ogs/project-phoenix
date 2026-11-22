@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -36,7 +37,7 @@ func NewHolidayHostGuestResource(participants *HolidayHostResource, guests capab
 }
 
 type HolidayGuestGroupRequest struct {
-	GroupID int64 `json:"group_id,string"`
+	GroupID ident.ID `json:"group_id"`
 }
 
 func (req *HolidayGuestGroupRequest) Bind(*http.Request) error {
@@ -56,7 +57,7 @@ func (rs *HolidayHostResource) assignGuestGroup(w http.ResponseWriter, r *http.R
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	transfer, err := rs.guests.AssignHolidayGuestGroup(r.Context(), host, weekID, request.GroupID)
+	transfer, err := rs.guests.AssignHolidayGuestGroup(r.Context(), host, weekID, request.GroupID.Int64())
 	if err != nil {
 		// The group and guest rows may already have been written. A 409
 		// must roll them back just like a server error.

@@ -47,7 +47,6 @@ type row struct {
 	Mode     mode           `json:"mode"`
 	Status   string         `json:"status"`
 	Count    int            `json:"count"`
-	Quoted   int64          `json:"quoted_id,string"`
 	Weights  map[string]int `json:"weights,omitempty"`
 	Hidden   string         `json:"-"`
 	Born     string         `json:"born,omitempty" contract:"date"`
@@ -157,7 +156,6 @@ func TestBuildFollowsEncodingJSON(t *testing.T) {
 	assert.Equal(t, Schema{Kind: KindInt}, schema("next"), "a running number tagged number stays a number")
 	assert.Equal(t, Schema{Kind: KindString, Nullable: true}, schema("image"), "[]byte renders base64, nil as null")
 	assert.Equal(t, KindMap, schema("by_school").Kind, "an integer key renders as its decimal string")
-	assert.Equal(t, KindID, schema("quoted_id").Kind)
 	assert.True(t, fields["nick"].Deprecated)
 	assert.NotContains(t, fields, "Hidden")
 	assert.Equal(t, []Enum{{Name: "Status", Values: []string{"off", "on"}}, {Name: "mode", Values: []string{"a", "b"}}}, doc.Enums)

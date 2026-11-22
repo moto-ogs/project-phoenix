@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const today Date = "2026-08-21"
@@ -357,7 +358,7 @@ const (
 )
 
 func twoGroups() []GroupRecord {
-	return []GroupRecord{{ID: appleGroupID, Name: "Äpfel", RoomID: new(int64(31))}, {ID: zebraGroupID, Name: "Zebra"}}
+	return []GroupRecord{{ID: appleGroupID, Name: "Äpfel", RoomID: (*int64)(new(ident.ID(31)))}, {ID: zebraGroupID, Name: "Zebra"}}
 }
 
 func TestGetReturnsEmptyProjectionWithoutVisibleGroups(t *testing.T) {
@@ -409,7 +410,7 @@ func TestGetSelectsPersonalGroupFirstInDirectoryOrder(t *testing.T) {
 	require.NotNil(t, got.GroupID)
 	assert.Equal(t, zebraGroupID, *got.GroupID, "the default selection prefers a personal group over the first sorted one")
 	assert.Equal(t, []NavigationGroup{
-		{ID: 1, Name: "Äpfel", RoomID: new(int64(31)), RoomName: "Raum A"},
+		{ID: 1, Name: "Äpfel", RoomID: (*ident.ID)(new(ident.ID(31))), RoomName: "Raum A"},
 		{ID: 2, Name: "Zebra", ViaSubstitution: true, IsPersonal: true},
 	}, got.Groups, "groups keep the directory order and carry rooms, substitution, and personal flags")
 	assert.Equal(t, 1, f.tenantGroupsCalls)
@@ -556,8 +557,8 @@ func TestGetProjectsRosterUnderFullAccess(t *testing.T) {
 		IsException: true, Notes: "Oma", DayNotes: []DayNote{{ID: 7, Content: "Klingeln"}},
 	}}, got.PickupTimes)
 	assert.Equal(t, map[string]RoomStatus{
-		"11": {InGroupRoom: true, CurrentRoomID: new(int64(31))},
-		"12": {InGroupRoom: false, CurrentRoomID: new(int64(32))},
+		"11": {InGroupRoom: true, CurrentRoomID: (*ident.ID)(new(ident.ID(31)))},
+		"12": {InGroupRoom: false, CurrentRoomID: (*ident.ID)(new(int64(32)))},
 	}, got.RoomStatus)
 	assert.Equal(t, TrackingIndicators{Labels: []string{"Hausaufgaben", "Mittag"}, Results: map[int64][]bool{11: {true, false}}}, got.TrackingIndicators)
 	assert.Equal(t, []Transfer{{ID: 5, GroupID: 1, SubstituteStaffID: 9, SubstituteName: "Vera Vertretung", EndDate: "2026-08-28"}}, got.Transfers)
@@ -715,7 +716,7 @@ func TestGetPassesPresenceAndPlansIntoTheDayDecision(t *testing.T) {
 
 	byID := map[int64]Student{}
 	for _, student := range got.Students {
-		byID[student.ID] = student
+		byID[student.ID.Int64()] = student
 	}
 	assert.Equal(t, "Zahnarzt", byID[absentID].DayPlanningLabel, "a timeless exception renders its note")
 	assert.Equal(t, "not_coming_today", byID[absentID].DayPlanningStatus)
@@ -769,7 +770,7 @@ func TestGetRedactsRestrictedCallersButKeepsTheReviewersNote(t *testing.T) {
 	assert.Nil(t, student.ActualArrivalTime)
 	assert.Equal(t, new("Arzttermin"), student.PendingExcusedNote, "the reviewer's note reaches a redacted child")
 	assert.Equal(t, []PickupTime{}, got.PickupTimes)
-	assert.Equal(t, map[string]RoomStatus{"11": {InGroupRoom: true, CurrentRoomID: new(int64(31))}}, got.RoomStatus,
+	assert.Equal(t, map[string]RoomStatus{"11": {InGroupRoom: true, CurrentRoomID: (*ident.ID)(new(ident.ID(31)))}}, got.RoomStatus,
 		"room status follows groups:read, not student access")
 }
 
@@ -932,7 +933,7 @@ func TestListGroupsToleratesMissingRoomNames(t *testing.T) {
 	got, err := newService(f).ListGroups(context.Background())
 	require.NoError(t, err, "the group list degrades to nameless rooms instead of failing")
 	assert.Equal(t, 0, f.accessCalls, "the group list never resolves student access")
-	assert.Equal(t, []NavigationGroup{{ID: 1, Name: "Äpfel", RoomID: new(int64(31)), IsPersonal: true}, {ID: 2, Name: "Zebra", IsPersonal: true}}, got)
+	assert.Equal(t, []NavigationGroup{{ID: 1, Name: "Äpfel", RoomID: new(ident.ID(31)), IsPersonal: true}, {ID: 2, Name: "Zebra", IsPersonal: true}}, got)
 
 	empty, err := newService(&fakes{caller: fullCaller}).ListGroups(context.Background())
 	require.NoError(t, err)
@@ -1059,15 +1060,15 @@ func TestProjectionSerializesAllIDsAsStrings(t *testing.T) {
 
 	id := int64(9223372036854775807)
 	projection := Projection{
-		Groups:      []NavigationGroup{{ID: id, RoomID: &id}},
-		GroupID:     &id,
-		Students:    []Student{{ID: id}},
-		RoomStatus:  map[string]RoomStatus{"student": {CurrentRoomID: &id}},
-		PickupTimes: []PickupTime{{StudentID: id, DayNotes: []DayNote{{ID: id}}}},
+		Groups:      []NavigationGroup{{ID: ident.ID(id), RoomID: (*ident.ID)(&id)}},
+		GroupID:     (*ident.ID)(&id),
+		Students:    []Student{{ID: ident.ID(id)}},
+		RoomStatus:  map[string]RoomStatus{"student": {CurrentRoomID: (*ident.ID)(&id)}},
+		PickupTimes: []PickupTime{{StudentID: ident.ID(id), DayNotes: []DayNote{{ID: ident.ID(id)}}}},
 		TrackingIndicators: TrackingIndicators{
 			Results: map[int64][]bool{id: {true}},
 		},
-		Transfers: []Transfer{{ID: id, GroupID: id, SubstituteStaffID: id}},
+		Transfers: []Transfer{{ID: ident.ID(id), GroupID: ident.ID(id), SubstituteStaffID: ident.ID(id)}},
 	}
 
 	body, err := json.Marshal(projection)
@@ -1124,8 +1125,8 @@ func TestProjectionWireGolden(t *testing.T) {
 
 	since := time.Date(2026, time.August, 21, 6, 30, 0, 0, time.UTC)
 	projection := Projection{
-		Groups:  []NavigationGroup{{ID: 1, Name: "Äpfel", RoomID: new(int64(31)), RoomName: "Raum A", IsPersonal: true}},
-		GroupID: new(appleGroupID),
+		Groups:  []NavigationGroup{{ID: 1, Name: "Äpfel", RoomID: new(ident.ID(31)), RoomName: "Raum A", IsPersonal: true}},
+		GroupID: (*ident.ID)(new(appleGroupID)),
 		Students: []Student{{
 			ID: 11, FirstName: "Ada", LastName: "Lovelace", SchoolClass: "2a", Location: "Raum A",
 			LocationSince: &since, RoomColor: new("#A3D977"), Excused: true, ExcusedSince: &since,
@@ -1133,7 +1134,7 @@ func TestProjectionWireGolden(t *testing.T) {
 			PendingExcusedNote: new("Zahnarzt"), ArrivalTime: new("07:45"), ArrivalIsException: true, ArrivalNotes: "später",
 			ActualArrivalTime: new("08:10"), PhotoURL: "/api/students/11/photo/ada.jpg",
 		}, {ID: 12, FirstName: "Bob", LastName: "Builder", SchoolClass: "2b", Location: "Abwesend"}},
-		RoomStatus:         map[string]RoomStatus{"11": {InGroupRoom: true, CurrentRoomID: new(int64(31))}, "12": {}},
+		RoomStatus:         map[string]RoomStatus{"11": {InGroupRoom: true, CurrentRoomID: new(ident.ID(31))}, "12": {}},
 		PickupTimes:        []PickupTime{{StudentID: 11, Date: string(today), WeekdayName: "Freitag", PickupTime: new("15:30"), IsException: true, Notes: "Oma", DayNotes: []DayNote{{ID: 7, Content: "Klingeln"}}}},
 		TrackingIndicators: TrackingIndicators{Labels: []string{"Mittag"}, Results: map[int64][]bool{11: {true}}},
 		Transfers:          []Transfer{{ID: 5, GroupID: 1, SubstituteStaffID: 9, SubstituteName: "Vera Vertretung", EndDate: "2026-08-28"}},

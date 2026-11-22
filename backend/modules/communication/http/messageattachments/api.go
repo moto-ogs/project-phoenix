@@ -69,14 +69,14 @@ func (rs *Resource) upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err := files.Save(r.Context(), prepared.TenantID, prepared.StoredName, parsed.Content); err != nil {
-		if discardErr := rs.units.DiscardMessageAttachment(r.Context(), prepared.Attachment.ID); discardErr != nil {
+		if discardErr := rs.units.DiscardMessageAttachment(r.Context(), prepared.Attachment.ID.Int64()); discardErr != nil {
 			err = errors.Join(err, discardErr)
 		}
 		common.RenderError(w, r, common.ErrorInternalServer(fmt.Errorf("write message attachment: %w", err)))
 		return
 	}
 	common.Respond(w, r, http.StatusCreated, NewUploadResponse(
-		prepared.Attachment.ID, prepared.Attachment.Filename, prepared.Attachment.SizeBytes,
+		prepared.Attachment.ID.Int64(), prepared.Attachment.Filename, prepared.Attachment.SizeBytes,
 		prepared.Attachment.ContentType, prepared.Attachment.Width, prepared.Attachment.Height,
 	), "Attachment stored")
 }

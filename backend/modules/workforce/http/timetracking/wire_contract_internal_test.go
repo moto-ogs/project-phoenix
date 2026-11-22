@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/require"
 )
 
@@ -15,7 +16,7 @@ func TestHistoryWirePreservesLargeIDsAndCalculatedFields(t *testing.T) {
 	response := workforce.HistoryResponse{Sessions: []*workforce.SessionResponse{{
 		WorkSession:  &workforce.WorkSession{ID: largeID, TenantID: largeID, StaffID: largeID, CreatedBy: largeID, UpdatedBy: new(largeID), BreakMinutes: 10},
 		BreakMinutes: 30, NetMinutes: 450, EditCount: 2, AuditCount: 3,
-		Breaks: []*workforce.WorkSessionBreak{{ID: largeID, TenantID: largeID, SessionID: largeID}},
+		Breaks: []*workforce.WorkSessionBreak{{ID: ident.ID(largeID), TenantID: ident.ID(largeID), SessionID: ident.ID(largeID)}},
 	}}}
 	raw, err := json.Marshal(response)
 	require.NoError(t, err)

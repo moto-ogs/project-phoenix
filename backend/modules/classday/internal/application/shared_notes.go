@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/classday/internal/ports"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // SharedNoteReader reads the live notes of one child the OGS released for the
@@ -99,7 +100,7 @@ func (n sharedNotes) StudentSharedNotes(ctx context.Context, in classday.SharedN
 	if student == nil || schoolstructure.NormalizeClass(student.SchoolClass) != schoolstructure.NormalizeClass(in.SchoolClass) {
 		return nil, classday.ErrSharedNoteStudentNotInClass
 	}
-	view := &classday.StudentSharedNotes{StudentID: student.ID, SchoolClass: student.SchoolClass, Notes: []classday.SharedNote{}}
+	view := &classday.StudentSharedNotes{StudentID: ident.ID(student.ID), SchoolClass: student.SchoolClass, Notes: []classday.SharedNote{}}
 	persons, err := n.students.PersonsByID(ctx, []int64{student.PersonID})
 	if err != nil {
 		return nil, fmt.Errorf("shared notes: load person: %w", err)
@@ -131,7 +132,7 @@ func (n sharedNotes) record(ctx context.Context, view *classday.StudentSharedNot
 		return err
 	}
 	studentID := view.StudentID
-	entry.StudentID = &studentID
+	entry.StudentID = (*int64)(&studentID)
 	entry.Metadata = map[string]any{
 		"school_class": view.SchoolClass,
 		"note_count":   len(view.Notes),
@@ -144,7 +145,7 @@ func (n sharedNotes) record(ctx context.Context, view *classday.StudentSharedNot
 
 func toSharedNote(note peopledirectory.StudentNote) classday.SharedNote {
 	return classday.SharedNote{
-		ID: note.ID, Kind: note.Kind, Category: note.Category, Body: note.Body,
+		ID: ident.ID(note.ID), Kind: note.Kind, Category: note.Category, Body: note.Body,
 		SubjectDate: note.Subject.Date, AuthorName: note.AuthorName, Edited: note.Edited(),
 		CreatedAt: note.CreatedAt, UpdatedAt: note.UpdatedAt,
 	}

@@ -62,7 +62,7 @@ func TestGradeTransitionGrowthQueryBudget(t *testing.T) {
 		require.Len(t, rows, n)
 		actual := make([]int64, 0, n)
 		for _, row := range rows {
-			actual = append(actual, row.ID)
+			actual = append(actual, row.ID.Int64())
 			require.Equal(t, "draft", row.Status)
 			require.Equal(t, account.ID, row.CreatedBy)
 		}
@@ -89,7 +89,7 @@ func TestGradeTransitionGrowthQueryBudget(t *testing.T) {
 		require.Len(t, history, n)
 		actualStudents := make([]int64, 0, n)
 		for _, row := range history {
-			actualStudents = append(actualStudents, row.StudentID)
+			actualStudents = append(actualStudents, row.StudentID.Int64())
 			require.Equal(t, transition.ID, row.TransitionID)
 			require.Equal(t, "promoted", row.Action)
 			require.NotEmpty(t, row.PersonName)

@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // enrichEntries filters by source/read access, resolves names/classes/groups,
@@ -190,12 +191,12 @@ func entryDisplayRows(filtered []mergedEntry, readableStudents map[int64]*people
 			}
 		}
 		rows = append(rows, classday.SlotListRow{
-			StudentID:   entry.StudentID,
+			StudentID:   ident.ID(entry.StudentID),
 			Name:        person.FullName(),
 			SchoolClass: student.SchoolClass,
 			GroupName:   groupName,
-			GroupID:     student.GroupID,
-			InstanceID:  entry.InstanceID,
+			GroupID:     (*ident.ID)(student.GroupID),
+			InstanceID:  ident.ID(entry.InstanceID),
 			Slot:        entry.SlotLabel,
 			RoomName:    entry.RoomName,
 			PickupTime:  entry.PickupTime,
@@ -330,20 +331,20 @@ func countRows(rows []classday.SlotListRow, source classday.Source) classday.Cou
 	unplanned := map[int64]struct{}{}
 	for _, row := range rows {
 		if row.Planned {
-			planned[row.StudentID] = struct{}{}
+			planned[row.StudentID.Int64()] = struct{}{}
 		}
 		if row.Present {
-			present[row.StudentID] = struct{}{}
+			present[row.StudentID.Int64()] = struct{}{}
 		}
 		switch {
 		case row.Planned && !row.Present && row.Excused:
 			// Registered sign-off: a justified absence, not an unexplained gap.
-			excused[row.StudentID] = struct{}{}
+			excused[row.StudentID.Int64()] = struct{}{}
 		case row.Planned && !row.Present:
-			missing[row.StudentID] = struct{}{}
+			missing[row.StudentID.Int64()] = struct{}{}
 		}
 		if row.Unplanned {
-			unplanned[row.StudentID] = struct{}{}
+			unplanned[row.StudentID.Int64()] = struct{}{}
 		}
 	}
 	counters := classday.Counters{

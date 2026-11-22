@@ -8,6 +8,8 @@ import (
 	"slices"
 	"strconv"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const enrollmentWeeklyProfileKey = "anmeldung-wochenplan"
@@ -418,8 +420,8 @@ func linkDeveloperAdminIdentity(ctx context.Context, primary, target *Runtime, s
 	var identity struct {
 		Data struct {
 			SchoolIdentity struct {
-				StaffID   int64 `json:"staff_id,string"`
-				TeacherID int64 `json:"teacher_id,string"`
+				StaffID   ident.ID `json:"staff_id"`
+				TeacherID ident.ID `json:"teacher_id"`
 			} `json:"school_identity"`
 		} `json:"data"`
 	}
@@ -429,7 +431,7 @@ func linkDeveloperAdminIdentity(ctx context.Context, primary, target *Runtime, s
 	if identity.Data.SchoolIdentity.StaffID == 0 {
 		return fmt.Errorf("developer admin staff identity missing")
 	}
-	state.Accounts.Admin = []AccountCredentials{{Key: "developer-admin", Email: admin.Email, Password: admin.Password, Name: admin.Name, StaffID: identity.Data.SchoolIdentity.StaffID, TeacherID: identity.Data.SchoolIdentity.TeacherID}}
+	state.Accounts.Admin = []AccountCredentials{{Key: "developer-admin", Email: admin.Email, Password: admin.Password, Name: admin.Name, StaffID: identity.Data.SchoolIdentity.StaffID.Int64(), TeacherID: identity.Data.SchoolIdentity.TeacherID.Int64()}}
 	return nil
 }
 

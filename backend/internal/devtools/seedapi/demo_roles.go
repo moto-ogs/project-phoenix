@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The reduced roles of the demo school profile (#3469). A visitor of the
@@ -122,7 +124,7 @@ func (s *FixedSeeder) seedDemoRoles(_ context.Context, definitions ...demoRoleDe
 		}
 		var role struct {
 			Data struct {
-				ID int64 `json:"id,string"`
+				ID ident.ID `json:"id"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(created, &role); err != nil {
@@ -134,7 +136,7 @@ func (s *FixedSeeder) seedDemoRoles(_ context.Context, definitions ...demoRoleDe
 		if _, err := s.client.Put(fmt.Sprintf("/auth/roles/%d/permissions", role.Data.ID), map[string]any{"permission_ids": ids}); err != nil {
 			return fmt.Errorf("grant permissions of demo role %s: %w", definition.Name, err)
 		}
-		s.roleIDs[definition.Name] = role.Data.ID
+		s.roleIDs[definition.Name] = role.Data.ID.Int64()
 	}
 	if s.verbose {
 		fmt.Printf("  ✓ %d demo roles created\n", len(definitions))
@@ -159,9 +161,9 @@ func (s *FixedSeeder) fetchPermissionIDs() (map[string]int64, error) {
 	}
 	var resp struct {
 		Data []struct {
-			ID       int64  `json:"id,string"`
-			Resource string `json:"resource"`
-			Action   string `json:"action"`
+			ID       ident.ID `json:"id"`
+			Resource string   `json:"resource"`
+			Action   string   `json:"action"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -169,7 +171,7 @@ func (s *FixedSeeder) fetchPermissionIDs() (map[string]int64, error) {
 	}
 	ids := make(map[string]int64, len(resp.Data))
 	for _, permission := range resp.Data {
-		ids[permission.Resource+":"+permission.Action] = permission.ID
+		ids[permission.Resource+":"+permission.Action] = permission.ID.Int64()
 	}
 	return ids, nil
 }

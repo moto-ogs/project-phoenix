@@ -476,7 +476,7 @@ func (f *mensaFixture) addPlannedPresent(t *testing.T, n int) {
 
 func rowByStudent(rows []classday.SlotListRow, studentID int64) *classday.SlotListRow {
 	for i := range rows {
-		if rows[i].StudentID == studentID {
+		if rows[i].StudentID.Int64() == studentID {
 			return &rows[i]
 		}
 	}
@@ -935,7 +935,7 @@ func TestBuildList_SlotFilter(t *testing.T) {
 		Date:        classday.Date(listDate.String()),
 		Target:      classday.TargetSlots,
 		Source:      classday.SourceReconciliation,
-		InstanceIDs: []int64{instanceID},
+		InstanceIDs: []int64{instanceID.Int64()},
 	})
 	require.NoError(t, err)
 	assert.Len(t, kept.Rows, 3)
@@ -947,7 +947,7 @@ func TestBuildList_SlotFilter(t *testing.T) {
 		Date:        classday.Date(listDate.String()),
 		Target:      classday.TargetSlots,
 		Source:      classday.SourceReconciliation,
-		InstanceIDs: []int64{instanceID + 99999},
+		InstanceIDs: []int64{(instanceID + 99999).Int64()},
 	})
 	require.NoError(t, err)
 	assert.Empty(t, dropped.Rows)
@@ -1037,7 +1037,7 @@ func TestBuildList_TimetablePresentStatusCountsAsActual(t *testing.T) {
 	require.Len(t, planned.Slots, 1)
 
 	isRepo := newBoundInstanceStudentRepository(f.db)
-	rows, err := isRepo.FindByInstanceID(ctx, planned.Slots[0].InstanceID)
+	rows, err := isRepo.FindByInstanceID(ctx, planned.Slots[0].InstanceID.Int64())
 	require.NoError(t, err)
 	patchedRow := false
 	for _, row := range rows {

@@ -23,6 +23,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	membershipCompose "github.com/moto-ogs/project-phoenix/modules/schoolmembership/compose"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -210,7 +211,7 @@ func TestStaffPersonMergeNeverOffersOrMergesNamesakeChildren(t *testing.T) {
 	_, err = h.db.NewRaw(`UPDATE users.staff_school_memberships SET deleted_at = NOW() WHERE tenant_id = ? AND id = ?`, h.schoolID, retired.ID).Exec(testpkg.Ctx(t))
 	require.NoError(t, err)
 	assert.Empty(t, h.preview(t))
-	rr := h.request(t, http.MethodPost, h.schoolID, staffpersonmerge.Request{SchoolConfirmed: true, Cases: []staffpersonmerge.Selection{{DonorID: second.PersonID, KeeperID: first.PersonID, Revision: "forged"}}})
+	rr := h.request(t, http.MethodPost, h.schoolID, staffpersonmerge.Request{SchoolConfirmed: true, Cases: []staffpersonmerge.Selection{{DonorID: ident.ID(second.PersonID), KeeperID: ident.ID(first.PersonID), Revision: "forged"}}})
 	assert.Equal(t, http.StatusConflict, rr.Code)
 	var live int
 	require.NoError(t, h.db.NewRaw(`SELECT count(*) FROM users.persons WHERE tenant_id = ? AND id IN (?,?) AND deleted_at IS NULL`, h.schoolID, first.PersonID, second.PersonID).Scan(testpkg.Ctx(t), &live))
@@ -680,7 +681,7 @@ func TestStaffPersonMergeWaitsForSameSchoolStaffCreation(t *testing.T) {
 		}
 	}
 	created := merge.startWriter(t, h.db, h.schoolID, "staff creation", createStaff(other.ID))
-	retiredDonor := merge.startWriter(t, h.db, h.schoolID, "donor staff creation", createStaff(input.Cases[0].DonorID))
+	retiredDonor := merge.startWriter(t, h.db, h.schoolID, "donor staff creation", createStaff(input.Cases[0].DonorID.Int64()))
 	awaitStaffMergeLockWaiters(t, h, created, retiredDonor)
 
 	merge.release()

@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"sort"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // StaffCredentials stores login credentials for a staff member
@@ -1314,8 +1316,8 @@ func (s *FixedSeeder) fetchRoles(_ context.Context) error {
 	var resp struct {
 		Status string `json:"status"`
 		Data   []struct {
-			ID   int64  `json:"id,string"`
-			Name string `json:"name"`
+			ID   ident.ID `json:"id"`
+			Name string   `json:"name"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -1323,7 +1325,7 @@ func (s *FixedSeeder) fetchRoles(_ context.Context) error {
 	}
 
 	for _, role := range resp.Data {
-		s.roleIDs[role.Name] = role.ID
+		s.roleIDs[role.Name] = role.ID.Int64()
 	}
 
 	if s.verbose {
@@ -1424,7 +1426,7 @@ func (s *FixedSeeder) seedStaffAccounts(ctx context.Context, result *FixedResult
 				ID apiID `json:"id"`
 				// int64 ids travel as JSON strings on this field.
 				SchoolIdentity *struct {
-					PersonID int64 `json:"person_id,string"`
+					PersonID ident.ID `json:"person_id"`
 				} `json:"school_identity"`
 			} `json:"data"`
 		}
@@ -1437,7 +1439,7 @@ func (s *FixedSeeder) seedStaffAccounts(ctx context.Context, result *FixedResult
 
 		// seedStaff later posts this id to /api/staff, which adopts the staff
 		// record created here instead of adding a second one.
-		s.personIDs[personKey] = account.Data.SchoolIdentity.PersonID
+		s.personIDs[personKey] = account.Data.SchoolIdentity.PersonID.Int64()
 		result.PersonCount++
 
 		// Store credentials for summary

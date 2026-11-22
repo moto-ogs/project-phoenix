@@ -93,7 +93,7 @@ func assertSlotRoomNames(t *testing.T, slots []classday.Slot, want map[int64]str
 	t.Helper()
 	got := make(map[int64]string, len(slots))
 	for _, slot := range slots {
-		got[slot.InstanceID] = slot.RoomName
+		got[slot.InstanceID.Int64()] = slot.RoomName
 	}
 	for id, name := range want {
 		require.Contains(t, got, id)

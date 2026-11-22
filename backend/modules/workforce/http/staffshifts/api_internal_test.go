@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -174,7 +175,7 @@ func TestWireFormatKeepsBigintIdentifiersAsStrings(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(encoded), `"id":"11"`)
 
-	encoded, err = json.Marshal(ShiftTypeMinutesResponse{ShiftTypeID: &shiftTypeID, PlannedMinutes: 60})
+	encoded, err = json.Marshal(ShiftTypeMinutesResponse{ShiftTypeID: (*ident.ID)(&shiftTypeID), PlannedMinutes: 60})
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"shift_type_id":"9007199254740993","planned_minutes":60}`, string(encoded))
 }

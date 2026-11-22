@@ -128,7 +128,7 @@ func TestSupervisionHandOverMovesOnlyTheRunningSupervision(t *testing.T) {
 	commit()
 
 	require.Equal(t, []int64{f.targetStaff}, f.currentSupervisors(t))
-	require.Equal(t, "supervisor", testpkg.GroupSupervisorRowByID(t, f.db, result.ID).Role,
+	require.Equal(t, "supervisor", testpkg.GroupSupervisorRowByID(t, f.db, result.ID.Int64()).Role,
 		"the target takes over the role the owner held")
 	owner := testpkg.GroupSupervisorRowByID(t, f.db, f.ownerRow)
 	require.NotNil(t, owner.EndDate, "the hand-over ends the owner's supervision instead of deleting it")
