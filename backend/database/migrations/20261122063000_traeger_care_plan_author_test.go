@@ -138,7 +138,7 @@ func TestTraegerCarePlanAuthorBackfillsCareExitSnapshots(t *testing.T) {
 // for a row only a care exit archived, and not at all once none is left.
 func TestTraegerCarePlanAuthorDownRefusesWhileTraegerEntriesExist(t *testing.T) {
 	t.Parallel()
-	db := testpkg.SetupIsolatedTestDB(t)
+	db := testpkg.SetupTestDB(t)
 	ctx := testpkg.Ctx(t)
 	tenantID := testpkg.Tenant(t)
 	student := testpkg.CreateTestStudent(t, db, "Lena", "Rueckweg", "1c")
@@ -146,7 +146,7 @@ func TestTraegerCarePlanAuthorDownRefusesWhileTraegerEntriesExist(t *testing.T) 
 		require.NoError(t, db.NewRaw(traegerCarePlanAuthorEntriesSQL).Scan(ctx, &count))
 		return count
 	}
-	require.Zero(t, marked(), "the isolated database starts without entries of the Träger-Büro")
+	require.Zero(t, marked(), "the test's own database starts without entries of the Träger-Büro")
 
 	_, err := db.ExecContext(ctx, `
 		INSERT INTO schedule.student_departure_exceptions (tenant_id, student_id, exception_date, departure_mode, entered_by_traeger)
