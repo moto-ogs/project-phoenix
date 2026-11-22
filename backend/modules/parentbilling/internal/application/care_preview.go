@@ -196,6 +196,7 @@ func chainCareMonth(result *careMonth, in careMonthInput, chained []*careChainEn
 		entry.invoice = &result.invoices[i]
 	}
 	chained = append(chained, issuedCareEntries(in.invoiced, childOf, byContract, in.issuedChildren)...)
+	knownBirthDates(chained, childOf, byContract)
 	result.billed = len(in.invoiced)
 	result.billedBySchool = make(map[int64]int)
 	result.feeNoticesBySchool = make(map[int64][]string)
@@ -261,6 +262,26 @@ func familyChildrenIn(counts []parentbilling.FamilyChildCount, recipients map[in
 		}
 	}
 	return children
+}
+
+// knownBirthDates gives an entry without a birth date the one any version
+// of its child's contracts of the month names, also of a contract that
+// bills nothing (#7863): the sibling order ranks by it.
+func knownBirthDates(entries []*careChainEntry, childOf map[int64]string, byContract map[int64][]parentbilling.CareContractVersion) {
+	known := map[string]*calendar.Date{}
+	for _, contractID := range slices.Sorted(maps.Keys(byContract)) {
+		child := childOf[contractID]
+		for _, version := range byContract[contractID] {
+			if _, seen := known[child]; !seen && version.ChildBirthDate != nil {
+				known[child] = version.ChildBirthDate
+			}
+		}
+	}
+	for _, entry := range entries {
+		if entry.birthDate == nil {
+			entry.birthDate = known[entry.child]
+		}
+	}
 }
 
 // issuedCareEntries keeps earlier invoices independent of current pricing.
