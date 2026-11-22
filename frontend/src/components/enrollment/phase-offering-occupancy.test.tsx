@@ -8,7 +8,7 @@ import {
 import { SessionProvider } from "next-auth/react";
 import { beforeEach, describe, expect, it, vi, afterEach } from "vitest";
 import type { CareOffering } from "~/lib/care-offering-api";
-import type { CareOfferingBookingStats } from "~/lib/care-offering-booking-stats";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 
 import { SWRConfig } from "~/lib/swr/testing";
 
@@ -71,9 +71,9 @@ function offering(overrides: Partial<CareOffering>): CareOffering {
 
 function stats(
   offeringId: string,
-  capacity: number | null,
+  capacity: number | undefined,
   booked: number,
-): CareOfferingBookingStats {
+): enrollmentContract.CareOfferingBookingStatsResponse {
   return {
     offering_id: offeringId,
     capacity,
@@ -103,7 +103,7 @@ describe("PhaseOfferingOccupancy (#4782)", () => {
     mocks.listCareOfferings.mockResolvedValue([
       offering({ id: "1", name: "Regelbetreuung", capacity: 10 }),
       offering({ id: "2", name: "Randstunde", capacity: 1 }),
-      offering({ id: "3", name: "Frühbetreuung", capacity: null }),
+      offering({ id: "3", name: "Frühbetreuung", capacity: undefined }),
       offering({
         id: "4",
         name: "Inaktive Randstunde",
@@ -114,7 +114,7 @@ describe("PhaseOfferingOccupancy (#4782)", () => {
     mocks.fetchCareOfferingBookingStats.mockResolvedValue({
       "1": stats("1", 10, 7),
       "2": stats("2", 1, 1),
-      "3": stats("3", null, 4),
+      "3": stats("3", undefined, 4),
       "4": stats("4", 5, 5),
     });
 

@@ -9,10 +9,7 @@
 import { mapRosterImpact, type RosterImpact } from "./roster-impact";
 import { knownEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
-import type {
-  ChangeDecisionRequest,
-  ContractChanges as WireContractChanges,
-} from "./contract/traeger-contract-changes.generated";
+import type * as traegerContractChangesContract from "./contract/traeger-contract-changes.generated";
 import type { OfferingRequestDiffLine } from "./offering-request-review-api";
 import type { Weekday } from "./traeger-care-contracts-api";
 
@@ -93,7 +90,7 @@ export interface ContractChangeDecision {
 }
 
 export function contractChangesFromBackend(
-  data: WireContractChanges,
+  data: traegerContractChangesContract.ContractChanges,
 ): ContractChanges {
   return {
     decidable: data.decidable,
@@ -133,7 +130,7 @@ export function contractChangesFromBackend(
 
 export function decisionBody(
   decision: ContractChangeDecision,
-): ChangeDecisionRequest {
+): traegerContractChangesContract.ChangeDecisionRequest {
   return {
     approve: decision.approve,
     reason: decision.reason.trim(),
