@@ -116,6 +116,21 @@ export function CalendarShell({
   );
 }
 
+/**
+ * Was im Blatt eines Kalenders beim Öffnen den Fokus bekommt
+ * (`ResponsivePanel` `initialFocus`): der gewählte Tag (beim Zeitraum der
+ * erste), sonst heute, sonst der Tag, den der Kalender mit der Tastatur
+ * erreicht. Lädt das Kalendermodul noch, nimmt das Blatt sein erstes
+ * bedienbares Element.
+ */
+export function focusChosenCalendarDay(sheet: HTMLElement): HTMLElement | null {
+  return (
+    sheet.querySelector<HTMLElement>("[data-selected] button") ??
+    sheet.querySelector<HTMLElement>("[data-today] button") ??
+    sheet.querySelector<HTMLElement>('[data-day] button[tabindex="0"]')
+  );
+}
+
 // Month names come from the active date-fns locale, never a hardcoded list, so
 // the dropdown matches the calendar grid in every language.
 function buildMonthLabels(locale: Locale): string[] {
