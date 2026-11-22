@@ -878,6 +878,8 @@ describe("OverflowMenu am Handy", () => {
     const sheet = await screen.findByRole("dialog", {
       name: "Weitere Aktionen",
     });
+    expect(sheet).toHaveAttribute("id");
+    expect(trigger).toHaveAttribute("aria-controls", sheet.id);
     expect(sheet).toContainElement(
       screen.getByRole("menu", { name: "Weitere Aktionen" }),
     );

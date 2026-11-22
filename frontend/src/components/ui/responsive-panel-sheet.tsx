@@ -12,6 +12,7 @@ import { FOCUSABLE_SELECTOR } from "./hooks/useScrollRegion";
 import { SCROLL_AREA_PROPS, useOverlay } from "./overlay-stack";
 
 export interface ResponsivePanelSheetProps {
+  readonly id: string;
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
   readonly label: string;
@@ -25,8 +26,9 @@ export interface ResponsivePanelSheetProps {
 const keepPointerInSheet = (event: ReactPointerEvent) =>
   event.stopPropagation();
 
-/** Der Telefon-Zweig von ResponsivePanel; er lädt Vaul nicht auf dem Desktop. */
+/** Der Telefon-Zweig von ResponsivePanel. */
 export function ResponsivePanelSheet({
+  id,
   open,
   onOpenChange,
   label,
@@ -49,6 +51,7 @@ export function ResponsivePanelSheet({
       shouldScaleBackground={false}
     >
       <DrawerContent
+        id={id}
         ref={sheetRef}
         layer="popover"
         // Name aus dem Titel, keine Beschreibung.

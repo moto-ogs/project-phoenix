@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode, type RefObject } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  type ReactNode,
+  type RefObject,
+} from "react";
 
 import { BELOW_SM, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { ResponsivePanelSheet } from "./responsive-panel-sheet";
@@ -25,6 +31,8 @@ interface ResponsivePanelProps {
   readonly onOpenChange: (open: boolean) => void;
   /** Name des Blatts als Dialog für Vorleseprogramme. */
   readonly label: string;
+  /** Stabile ID des Blatts für den Auslöser (`aria-controls`). */
+  readonly sheetId?: string;
   /** Der Auslöser; er steht auf jeder Breite gleich da. */
   readonly trigger: ReactNode;
   /** Bekommt den Fokus zurück, wenn das Blatt schließt. */
@@ -60,12 +68,15 @@ export function ResponsivePanel({
   open,
   onOpenChange,
   label,
+  sheetId,
   trigger,
   returnFocusRef,
   initialFocus,
   children,
 }: ResponsivePanelProps) {
   const asSheet = useResponsivePanelSheet();
+  const generatedSheetId = useId();
+  const dialogId = sheetId ?? generatedSheetId;
   const sheetOpen = open && asSheet;
 
   // Wechselt die Breite über `sm` (Telefon drehen), passt die offene
@@ -83,6 +94,7 @@ export function ResponsivePanel({
       {trigger}
       {asSheet ? (
         <ResponsivePanelSheet
+          id={dialogId}
           open={sheetOpen}
           onOpenChange={onOpenChange}
           label={label}

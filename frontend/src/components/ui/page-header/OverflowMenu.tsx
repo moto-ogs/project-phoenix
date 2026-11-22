@@ -191,6 +191,7 @@ export function OverflowMenu({
   const focusOnOpenRef = useRef(false);
   const openAnchorRef = useRef<{ top: number; left: number } | null>(null);
   const menuId = useId();
+  const sheetId = useId();
   // Menus stay inside a slide-over's focus scope.
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(
     null,
@@ -508,7 +509,7 @@ export function OverflowMenu({
       // Das Menü hängt am `body`; die Karte des Auslösers hebt sich dafür
       // nicht an, sonst deckt sie den Kopf des Menüs zu (globals.css).
       data-portaled-layer=""
-      aria-controls={isOpen ? menuId : undefined}
+      aria-controls={isOpen ? (asSheet ? sheetId : menuId) : undefined}
       className={
         triggerButton
           ? buttonClassName({
@@ -537,6 +538,7 @@ export function OverflowMenu({
         open={isOpen}
         onOpenChange={setIsOpen}
         label={ariaLabel}
+        sheetId={sheetId}
         returnFocusRef={triggerRef}
         initialFocus={initialSheetFocus}
         trigger={
