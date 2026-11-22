@@ -3,21 +3,27 @@
 import type * as shared from "~/lib/contract/shared.generated";
 import type * as staffWire from "~/lib/contract/staff.generated";
 import type { RoleForm } from "~/lib/position-title";
-import { sessionFetch } from "./session-cache";
+import { bffJson } from "./bff-fetch";
+import type { ActiveGroupResponse } from "~/lib/contract/active.generated";
 import { createLogger } from "~/lib/logger";
 import {
   ApiError,
   apiErrorFromResponse,
   apiErrorFromText,
 } from "~/lib/api-error";
-import type { MailOutcome } from "~/lib/email-delivery-status";
+import {
+  knownMailOutcome,
+  type MailOutcome,
+} from "~/lib/email-delivery-status";
 import type {
   AbsenceRebookingResult,
   CompTimeBalancePreview as CompTimeBalancePreviewWire,
   ExternalStaffResponse,
   FormerStaffResponse,
+  MinimalStaffProfileResponse,
   ScheduleEntryResponse,
   ScheduleResponse,
+  ScheduleUpdateRequest,
   StaffRecordResponse,
   StammdatenResponse,
 } from "~/lib/contract/staff.generated";
@@ -78,25 +84,6 @@ export type ExternalAccess = "none" | "view" | "supervise";
 
 /** The two levels an invitation can grant. */
 export type ExternalInvitationAccess = Exclude<ExternalAccess, "none">;
-
-interface ActiveSupervisionResponse {
-  id: number;
-  staff_id: number;
-  group_id: number;
-  role: string;
-  start_date: string;
-  end_date?: string;
-  is_active: boolean;
-  active_group?: {
-    id: number;
-    name: string;
-    room_id?: number;
-    room?: {
-      id: number;
-      name: string;
-    };
-  };
-}
 
 // Individual supervision entry for a staff member
 interface StaffSupervision {
@@ -163,7 +150,6 @@ interface ExternalStaffInput {
 }
 
 export interface StaffFilters {
-  search?: string;
   status?: "all" | "supervising" | "available";
   type?: "all" | "teachers" | "staff";
 }
@@ -188,94 +174,25 @@ export interface FormerStaff {
   endedOn: string;
 }
 
-/** Active group with supervisors and room info */
-interface ActiveGroupInfo {
-  supervisors?: Array<{
-    staff_id?: number | string;
-    role?: string;
-  }>;
-  room?: {
-    id: number | string;
-    name: string;
-  };
-}
-
-/** Supervised group entry for staff mapping */
-interface SupervisedGroupEntry {
-  group: ActiveGroupInfo;
-  role?: string;
-}
-
-/** Active group with ID for supervision mapping */
-interface ActiveGroupWithId extends ActiveGroupInfo {
-  id?: number | string;
-}
-
-/**
- * Supervised group entry with group ID
- */
-interface SupervisedGroupEntryWithId extends SupervisedGroupEntry {
-  groupId?: number | string;
-}
-
-/**
- * Extracts active groups from potentially wrapped API response
- */
-function extractActiveGroups(data: unknown): ActiveGroupWithId[] {
-  if (Array.isArray(data)) {
-    return data as ActiveGroupWithId[];
-  }
-
-  if (!data || typeof data !== "object" || !("data" in data)) {
-    throw invalidActiveGroupsResponse();
-  }
-
-  const wrappedData = (data as { data?: unknown }).data;
-
-  // Double wrapped - frontend wrapper around backend response
-  if (wrappedData && typeof wrappedData === "object" && "data" in wrappedData) {
-    const backendResponse = wrappedData as { data?: unknown };
-    if (Array.isArray(backendResponse.data)) {
-      return backendResponse.data as ActiveGroupWithId[];
-    }
-  }
-
-  // Single wrapped - just frontend wrapper
-  if (Array.isArray(wrappedData)) {
-    return wrappedData as ActiveGroupWithId[];
-  }
-  // The empty list of a Go nil slice; any other shape is a broken answer.
-  if (wrappedData === null) return [];
-
-  throw invalidActiveGroupsResponse();
-}
-
-function invalidActiveGroupsResponse(): ApiError {
-  return new ApiError("invalid active groups response", 500);
-}
-
 /**
  * Builds a map of staff_id to their supervised groups for O(1) lookup
  */
-function buildStaffGroupsMap(
-  activeGroups: ActiveGroupWithId[],
-): Record<string, SupervisedGroupEntryWithId[]> {
-  const map: Record<string, SupervisedGroupEntryWithId[]> = {};
+/** A group a staff member supervises right now, with the role there. */
+interface SupervisedGroupEntry {
+  group: ActiveGroupResponse;
+  role?: string;
+}
 
+function buildStaffGroupsMap(
+  activeGroups: readonly ActiveGroupResponse[],
+): Record<string, SupervisedGroupEntry[]> {
+  const map: Record<string, SupervisedGroupEntry[]> = {};
   for (const group of activeGroups) {
     for (const supervisor of group.supervisors ?? []) {
-      if (supervisor.staff_id !== undefined) {
-        const staffIdStr = supervisor.staff_id.toString();
-        map[staffIdStr] ??= [];
-        map[staffIdStr].push({
-          group,
-          role: supervisor.role,
-          groupId: group.id,
-        });
-      }
+      map[supervisor.staff_id] ??= [];
+      map[supervisor.staff_id]!.push({ group, role: supervisor.role });
     }
   }
-
   return map;
 }
 
@@ -303,7 +220,7 @@ const absenceLabels: Record<string, string> = {
  */
 function getSupervisionInfo(
   staffId: string | undefined,
-  staffGroupsMap: Record<string, SupervisedGroupEntryWithId[]>,
+  staffGroupsMap: Record<string, SupervisedGroupEntry[]>,
   wasPresentToday?: boolean,
   workStatus?: string,
   absenceType?: string,
@@ -321,12 +238,12 @@ function getSupervisionInfo(
 
   if (supervisedGroups) {
     isSupervising = true;
-    for (const { group, role, groupId } of supervisedGroups) {
+    for (const { group, role } of supervisedGroups) {
       if (group.room) {
         supervisions.push({
-          roomId: group.room.id.toString(),
+          roomId: group.room.id,
           roomName: group.room.name,
-          activeGroupId: groupId?.toString() ?? "",
+          activeGroupId: group.id,
         });
       }
       supervisionRole ??= role;
@@ -412,7 +329,7 @@ function mapStaffFields(staff: StaffRecord) {
  */
 function mapStaffMember(
   staff: StaffRecord,
-  staffGroupsMap: Record<string, SupervisedGroupEntryWithId[]>,
+  staffGroupsMap: Record<string, SupervisedGroupEntry[]>,
 ): Staff {
   const { isSupervising, currentLocation, supervisionRole, supervisions } =
     getSupervisionInfo(
@@ -459,19 +376,23 @@ function applyStaffFilters(staff: Staff[], filters?: StaffFilters): Staff[] {
  * quiet: the groups only add the current location to each staff row, and the
  * staff list itself must not fail because the location could not be read.
  */
-async function fetchActiveGroups(): Promise<ActiveGroupWithId[]> {
-  const response = await sessionFetch("/api/active/groups?active=true");
-  // Wer laufende Aufsichten nicht lesen darf, sieht die Liste ohne sie; das
-  // ist eine Verweigerung, kein Ausfall. Jeder andere Fehler bleibt einer,
-  // sonst stünde das ganze Personal ohne Aufsicht da (#2353).
-  if (response.status === 401 || response.status === 403) return [];
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Failed to fetch active groups: ${response.statusText}`,
-    );
+async function fetchActiveGroups(): Promise<ActiveGroupResponse[]> {
+  try {
+    return await bffJson("tenant", "GET /api/active/groups/", {
+      query: { active: true },
+    });
+  } catch (error) {
+    // Wer laufende Aufsichten nicht lesen darf, sieht die Liste ohne sie; das
+    // ist eine Verweigerung, kein Ausfall. Jeder andere Fehler bleibt einer,
+    // sonst stünde das ganze Personal ohne Aufsicht da (#2353).
+    if (
+      error instanceof ApiError &&
+      (error.status === 401 || error.status === 403)
+    ) {
+      return [];
+    }
+    throw error;
   }
-  return extractActiveGroups((await response.json()) as unknown);
 }
 
 /** Kopf der Personalakte aus dem Datensatz von GET /api/staff/{id}. */
@@ -511,53 +432,22 @@ function mapFormerStaff(entry: FormerStaffResponse): FormerStaff {
 // Staff service
 class StaffService {
   async getDocumentDirectory(): Promise<StaffDocumentDirectoryEntry[]> {
-    const response = await sessionFetch("/api/staff/documents-directory");
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `Failed to fetch document directory: ${response.statusText}`,
-      );
-    }
-    return ((await response.json()) as { data: StaffDocumentDirectoryEntry[] })
-      .data;
+    return bffJson("tenant", "GET /api/staff/documents-directory");
   }
 
   // Former employments of this school, for the Ehemalige filter (#3403).
   async getFormerStaff(): Promise<FormerStaff[]> {
-    const response = await sessionFetch("/api/staff/former");
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `Failed to fetch former staff: ${response.statusText}`,
-      );
-    }
-    const json = (await response.json()) as { data: FormerStaffResponse[] };
-    return json.data.map(mapFormerStaff);
+    const former = await bffJson("tenant", "GET /api/staff/former");
+    return former.map(mapFormerStaff);
   }
 
   // Get all staff members with their current supervision status. A failed
   // read rejects; it never arrives as an empty staff list (#1840, #2353).
   async getAllStaff(filters?: StaffFilters): Promise<Staff[]> {
-    const staffUrl = filters?.search
-      ? `/api/staff?search=${encodeURIComponent(filters.search)}`
-      : "/api/staff";
-
-    // Fetch staff and active groups in parallel
-    const [staffResponse, activeGroups] = await Promise.all([
-      sessionFetch(staffUrl),
+    const [staffList, activeGroups] = await Promise.all([
+      bffJson("tenant", "GET /api/staff/"),
       fetchActiveGroups(),
     ]);
-
-    if (!staffResponse.ok) {
-      throw await apiErrorFromResponse(
-        staffResponse,
-        `Failed to fetch staff: ${staffResponse.statusText}`,
-      );
-    }
-
-    const staffList = (
-      (await staffResponse.json()) as { data: StaffRecordResponse[] }
-    ).data;
     const staffGroupsMap = buildStaffGroupsMap(activeGroups);
 
     const mappedStaff = staffList.map((staff) =>
@@ -571,10 +461,8 @@ class StaffService {
   // `view` and `supervise` invite by email. The new entry is selectable
   // right away, with or without account.
   async createExternal(input: ExternalStaffInput): Promise<Staff> {
-    const response = await sessionFetch("/api/staff/externals", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const external = await bffJson("tenant", "POST /api/staff/externals", {
+      body: {
         first_name: input.firstName.trim(),
         last_name: input.lastName.trim(),
         organization: input.organization?.trim() ?? "",
@@ -583,16 +471,9 @@ class StaffService {
         ...(input.access === "none"
           ? {}
           : { email: input.email?.trim() ?? "" }),
-      }),
+      },
     });
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `Failed to create external caregiver: ${response.statusText}`,
-      );
-    }
-    const payload = (await response.json()) as { data: ExternalStaffResponse };
-    return mapStaffMember(payload.data, {});
+    return mapStaffMember(external, {});
   }
 
   // Invites an external caregiver who has no account yet (#4573) with the
@@ -603,126 +484,55 @@ class StaffService {
     email: string,
     access: ExternalInvitationAccess,
   ): Promise<Staff> {
-    const response = await sessionFetch(
-      `/api/staff/externals/${encodeURIComponent(id)}/invitation`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), access }),
-      },
+    const external = await bffJson(
+      "tenant",
+      "POST /api/staff/externals/{id}/invitation",
+      { params: { id }, body: { email: email.trim(), access } },
     );
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `Failed to invite external caregiver: ${response.statusText}`,
-      );
-    }
-    const payload = (await response.json()) as { data: ExternalStaffResponse };
-    return mapStaffMember(payload.data, {});
+    return mapStaffMember(external, {});
   }
 
   // Rohdaten von GET /api/staff/{id}. Kopf der Personalakte (mapStaffRecord)
   // und Konto-Reiter leiten ihre Abbildungen aus demselben Abruf ab (#4993).
   async getStaffRecord(id: string): Promise<StaffRecordResponse> {
-    const response = await sessionFetch(`/api/staff/${id}`);
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `Failed to fetch staff member: ${response.statusText}`,
-      );
-    }
-    const json = (await response.json()) as { data: StaffRecordResponse };
-    return json.data;
+    return bffJson("tenant", "GET /api/staff/{id}", { params: { id } });
   }
 
   async getFinancialProfile(id: string): Promise<Staff> {
-    return this.getMinimalProfile(
-      `/api/staff/financial-profile/${id}`,
+    return minimalProfile(
+      await bffJson("tenant", "GET /api/staff/financial-profile/{id}", {
+        params: { id },
+      }),
       "financial",
     );
   }
 
   async getDocumentProfile(id: string): Promise<Staff> {
-    return this.getMinimalProfile(
-      `/api/staff/documents-profile/${id}`,
+    return minimalProfile(
+      await bffJson("tenant", "GET /api/staff/documents-profile/{id}", {
+        params: { id },
+      }),
       "document",
     );
   }
+}
 
-  async getMinimalProfile(
-    url: string,
-    profileType: "financial" | "document",
-  ): Promise<Staff> {
-    const response = await sessionFetch(url);
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `Failed to fetch ${profileType} staff profile: ${response.statusText}`,
-      );
-    }
-    const json = (await response.json()) as {
-      data: Omit<
-        Pick<Staff, "id" | "name" | "firstName" | "lastName">,
-        "id"
-      > & {
-        id: number | string;
-        started_on?: string;
-        ended_on?: string | null;
-      };
-    };
-    return {
-      ...json.data,
-      id: json.data.id.toString(),
-      startedOn: json.data.started_on,
-      endedOn: json.data.ended_on,
-      hasRfid: false,
-      isTeacher: false,
-      isSupervising: false,
-      supervisions: [],
-      isFinancialProfile: profileType === "financial",
-      isLimitedProfile: true,
-    };
-  }
-
-  // Get active supervisions for a specific staff member
-  async getStaffSupervisions(
-    staffId: string,
-  ): Promise<ActiveSupervisionResponse[]> {
-    try {
-      const response = await sessionFetch(
-        `/api/active/supervisors/staff/${staffId}/active`,
-      );
-
-      if (!response.ok) {
-        throw await apiErrorFromResponse(
-          response,
-          `Failed to fetch staff supervisions: ${response.statusText}`,
-        );
-      }
-
-      const data = (await response.json()) as
-        ActiveSupervisionResponse[] | { data: ActiveSupervisionResponse[] };
-
-      if (Array.isArray(data)) {
-        return data;
-      } else if (
-        data &&
-        typeof data === "object" &&
-        "data" in data &&
-        Array.isArray(data.data)
-      ) {
-        return data.data;
-      }
-
-      return [];
-    } catch (error) {
-      logger.error("error fetching supervisions for staff", {
-        staff_id: staffId,
-        error: String(error),
-      });
-      return [];
-    }
-  }
+function minimalProfile(
+  profile: MinimalStaffProfileResponse,
+  profileType: "financial" | "document",
+): Staff {
+  const { started_on, ended_on, ...name } = profile;
+  return {
+    ...name,
+    startedOn: started_on,
+    endedOn: ended_on,
+    hasRfid: false,
+    isTeacher: false,
+    isSupervising: false,
+    supervisions: [],
+    isFinancialProfile: profileType === "financial",
+    isLimitedProfile: true,
+  };
 }
 
 // Work Schedule types and service
@@ -811,20 +621,20 @@ export type UpdateScheduleRequest =
 
 class StaffScheduleService {
   async getSchedule(staffId: string): Promise<StaffSchedule> {
-    const response = await sessionFetch(`/api/staff/${staffId}/schedule`);
-    const json = (await response.json()) as {
-      data: ScheduleResponse;
-    };
-    return mapScheduleResponse(json.data);
+    return mapScheduleResponse(
+      await bffJson("tenant", "GET /api/staff/{id}/schedule", {
+        params: { id: staffId },
+      }),
+    );
   }
 
   async updateSchedule(
     staffId: string,
     update: UpdateScheduleRequest,
   ): Promise<StaffSchedule> {
-    const body =
+    const body: ScheduleUpdateRequest =
       update.mode === "template"
-        ? { mode: "template", model_id: Number.parseInt(update.modelId, 10) }
+        ? { mode: "template", model_id: update.modelId }
         : {
             mode: "custom",
             rotation_length: update.rotationLength,
@@ -837,15 +647,12 @@ class StaffScheduleService {
             })),
             save_as_template: update.saveAsTemplate,
           };
-    const response = await sessionFetch(`/api/staff/${staffId}/schedule`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const json = (await response.json()) as {
-      data: ScheduleResponse;
-    };
-    return mapScheduleResponse(json.data);
+    return mapScheduleResponse(
+      await bffJson("tenant", "PUT /api/staff/{id}/schedule", {
+        params: { id: staffId },
+        body,
+      }),
+    );
   }
 }
 
@@ -929,97 +736,72 @@ interface WorkTimeModelAssignmentResult {
   validFrom: string;
 }
 
-async function readWorkTimeModel(
-  response: Response,
-  fallback: string,
-): Promise<WorkTimeModel> {
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, fallback);
-  }
-  const json = (await response.json()) as { data: ModelResponse };
-  return mapWorkTimeModel(json.data);
-}
-
 class WorkTimeModelService {
   async list(): Promise<WorkTimeModel[]> {
-    const response = await sessionFetch(`/api/work-time-models`);
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        "Vorlagen konnten nicht geladen werden",
-      );
-    }
-    const json = (await response.json()) as { data: ModelResponse[] };
-    return json.data.map(mapWorkTimeModel);
+    const models = await bffJson("tenant", "GET /api/work-time-models/", {
+      errorMessage: "Vorlagen konnten nicht geladen werden",
+    });
+    return models.map(mapWorkTimeModel);
   }
 
   /** Für die Katalogseite: archivierte Vorlagen und die Nutzungszahl. */
   async listWithUsage(): Promise<WorkTimeModel[]> {
-    const response = await sessionFetch(
-      `/api/work-time-models?with_usage=true`,
-    );
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        "Vorlagen konnten nicht geladen werden",
-      );
-    }
-    const json = (await response.json()) as { data: ModelResponse[] };
-    return json.data.map(mapWorkTimeModel);
+    const models = await bffJson("tenant", "GET /api/work-time-models/", {
+      query: { with_usage: true },
+      errorMessage: "Vorlagen konnten nicht geladen werden",
+    });
+    return models.map(mapWorkTimeModel);
   }
 
   async create(input: WorkTimeModelInput): Promise<WorkTimeModel> {
-    const response = await sessionFetch(`/api/work-time-models`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(workTimeModelBody(input)),
+    const model = await bffJson("tenant", "POST /api/work-time-models/", {
+      body: workTimeModelBody(input),
+      errorMessage: "Vorlage konnte nicht angelegt werden",
     });
-    return readWorkTimeModel(response, "Vorlage konnte nicht angelegt werden");
+    return mapWorkTimeModel(model);
   }
 
   async update(id: string, input: WorkTimeModelInput): Promise<WorkTimeModel> {
-    const response = await sessionFetch(`/api/work-time-models/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(workTimeModelBody(input)),
+    const model = await bffJson("tenant", "PUT /api/work-time-models/{id}", {
+      params: { id },
+      body: workTimeModelBody(input),
+      errorMessage: "Vorlage konnte nicht gespeichert werden",
     });
-    return readWorkTimeModel(
-      response,
-      "Vorlage konnte nicht gespeichert werden",
-    );
+    return mapWorkTimeModel(model);
   }
 
   async archive(id: string): Promise<WorkTimeModel> {
-    const response = await sessionFetch(`/api/work-time-models/${id}/archive`, {
-      method: "POST",
-    });
-    return readWorkTimeModel(
-      response,
-      "Vorlage konnte nicht aus der Auswahl genommen werden",
+    const model = await bffJson(
+      "tenant",
+      "POST /api/work-time-models/{id}/archive",
+      {
+        params: { id },
+        errorMessage: "Vorlage konnte nicht aus der Auswahl genommen werden",
+      },
     );
+    return mapWorkTimeModel(model);
   }
 
   async restore(id: string): Promise<WorkTimeModel> {
-    const response = await sessionFetch(`/api/work-time-models/${id}/restore`, {
-      method: "POST",
-    });
-    return readWorkTimeModel(
-      response,
-      "Vorlage konnte nicht wieder angeboten werden",
+    const model = await bffJson(
+      "tenant",
+      "POST /api/work-time-models/{id}/restore",
+      {
+        params: { id },
+        errorMessage: "Vorlage konnte nicht wieder angeboten werden",
+      },
     );
+    return mapWorkTimeModel(model);
   }
 
   /** Für den Zuordnungsdialog: Vorlage, Soll und Sperren je Person. */
   async staffFacts(): Promise<StaffWorkTimeFact[]> {
-    const response = await sessionFetch(`/api/work-time-models/staff-facts`);
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        "Die Zuordnungen konnten nicht geladen werden",
-      );
-    }
-    const json = (await response.json()) as { data: StaffFactResponse[] };
-    return json.data.map((fact) => ({
+    const facts = await bffJson(
+      "tenant",
+      "GET /api/work-time-models/staff-facts",
+      { errorMessage: "Die Zuordnungen konnten nicht geladen werden" },
+    );
+    return facts.map((fact) => ({
       staffId: fact.staff_id,
       workTimeModelId: fact.work_time_model_id,
       hasSchedule: fact.has_schedule,
@@ -1037,47 +819,30 @@ class WorkTimeModelService {
     staffIds: readonly string[],
     validFrom?: string,
   ): Promise<WorkTimeModelAssignmentResult> {
-    const response = await sessionFetch(
-      `/api/work-time-models/${id}/assignments`,
+    const result = await bffJson(
+      "tenant",
+      "POST /api/work-time-models/{id}/assignments",
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          staff_ids: staffIds.map(Number),
+        params: { id },
+        body: {
+          staff_ids: [...staffIds],
           ...(validFrom ? { valid_from: validFrom } : {}),
-        }),
+        },
+        errorMessage: "Die Vorlage konnte nicht zugeordnet werden",
       },
     );
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        "Die Vorlage konnte nicht zugeordnet werden",
-      );
-    }
-    const json = (await response.json()) as {
-      data: {
-        assigned_staff_ids: (number | string)[] | null;
-        unchanged_staff_ids: (number | string)[] | null;
-        valid_from: string;
-      };
-    };
     return {
-      assignedStaffIds: (json.data.assigned_staff_ids ?? []).map(String),
-      unchangedStaffIds: (json.data.unchanged_staff_ids ?? []).map(String),
-      validFrom: json.data.valid_from,
+      assignedStaffIds: result.assigned_staff_ids ?? [],
+      unchangedStaffIds: result.unchanged_staff_ids ?? [],
+      validFrom: result.valid_from,
     };
   }
 
   async remove(id: string): Promise<void> {
-    const response = await sessionFetch(`/api/work-time-models/${id}`, {
-      method: "DELETE",
+    await bffJson("tenant", "DELETE /api/work-time-models/{id}", {
+      params: { id },
+      errorMessage: "Vorlage konnte nicht gelöscht werden",
     });
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        "Vorlage konnte nicht gelöscht werden",
-      );
-    }
   }
 }
 
@@ -1127,6 +892,9 @@ export interface StaffHistoryDetails {
   laborDays: WorkDayLaborHint[];
 }
 
+const SESSION_STATUSES = ["present", "home_office"] as const;
+const SESSION_SOURCES = ["app", "nfc", "unknown"] as const;
+
 class StaffHistoryService {
   async getHistory(
     staffId: string,
@@ -1143,29 +911,21 @@ class StaffHistoryService {
     from: string,
     to: string,
   ): Promise<StaffHistoryDetails> {
-    const params = new URLSearchParams({ from, to });
-    const response = await sessionFetch(
-      `/api/staff/${staffId}/time-tracking/history?${params}`,
+    const history = await bffJson(
+      "tenant",
+      "GET /api/staff/{id}/time-tracking/history",
+      { params: { id: staffId }, query: { from, to } },
     );
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `Failed to fetch staff history: ${response.statusText}`,
-      );
-    }
-    // The wire row IS StaffHistorySession — the id arrives quoted, so there is
-    // nothing to convert and no number to round.
-    const json = (await response.json()) as {
-      data: {
-        sessions: StaffHistorySession[] | null;
-        weekly_summaries?: shared.WorkWeekSummary[] | null;
-        labor_days?: shared.WorkDayLaborHint[] | null;
-      };
-    };
     return {
-      sessions: json.data.sessions ?? [],
-      weeklySummaries: mapWeeklySummaries(json.data.weekly_summaries),
-      laborDays: (json.data.labor_days ?? []).map(mapWorkDayLaborHint),
+      sessions: (history.sessions ?? []).map((row) => ({
+        ...row,
+        status: knownEnum(SESSION_STATUSES, row.status),
+        source: knownEnum(SESSION_SOURCES, row.source),
+        check_out_time: row.check_out_time ?? null,
+        breaks: (row.breaks ?? []).filter((item) => item !== null),
+      })),
+      weeklySummaries: mapWeeklySummaries(history.weekly_summaries),
+      laborDays: (history.labor_days ?? []).map(mapWorkDayLaborHint),
     };
   }
 }
@@ -1227,20 +987,10 @@ export interface AbsencePlanGap {
   openBlocks: number;
 }
 
-interface AbsencePlanGapWire {
-  absence_id: number | string;
-  staff_id: number | string;
-  absence_type: string;
-  date_start: string;
-  date_end: string;
-  open_shifts: number;
-  open_blocks: number;
-}
-
-function mapAbsencePlanGap(row: AbsencePlanGapWire): AbsencePlanGap {
+function mapAbsencePlanGap(row: staffWire.AbsencePlanGap): AbsencePlanGap {
   return {
-    absenceId: String(row.absence_id),
-    staffId: String(row.staff_id),
+    absenceId: row.absence_id,
+    staffId: row.staff_id,
     absenceType: row.absence_type,
     dateStart: row.date_start,
     dateEnd: row.date_end,
@@ -1361,40 +1111,26 @@ class StaffAbsenceService {
     from: string,
     to: string,
   ): Promise<StaffAbsenceRow[]> {
-    const params = new URLSearchParams({ from, to });
-    const response = await sessionFetch(
-      `/api/staff/${staffId}/absences?${params}`,
-    );
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `Failed to fetch staff absences: ${response.statusText}`,
-      );
-    }
-    const json = (await response.json()) as {
-      data: StaffAbsenceRow[] | null;
-    };
-    return json.data ?? [];
+    const absences = await bffJson("tenant", "GET /api/staff/{id}/absences", {
+      params: { id: staffId },
+      query: { from, to },
+    });
+    return absences ?? [];
   }
 
   async getVacationQuota(
     staffId: string,
     year?: number,
   ): Promise<StaffVacationQuotaSummary> {
-    const qs = year ? `?year=${year}` : "";
-    const response = await sessionFetch(
-      `/api/staff/${staffId}/vacation/quota${qs}`,
+    const quota = await bffJson(
+      "tenant",
+      "GET /api/staff/{id}/vacation/quota",
+      {
+        params: { id: staffId },
+        query: { year: year || undefined },
+      },
     );
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `Failed to fetch quota: ${response.statusText}`,
-      );
-    }
-    const json = (await response.json()) as {
-      data: VacationQuotaSummary;
-    };
-    return mapStaffVacationQuotaSummary(json.data);
+    return mapStaffVacationQuotaSummary(quota);
   }
 
   async setVacationQuota(
@@ -1407,24 +1143,16 @@ class StaffAbsenceService {
       reason: string;
     },
   ): Promise<StaffVacationQuotaSummary> {
-    const response = await sessionFetch(
-      `/api/staff/${staffId}/vacation/quota`,
+    const quota = await bffJson(
+      "tenant",
+      "PUT /api/staff/{id}/vacation/quota",
       {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        params: { id: staffId },
+        body: payload,
+        errorMessage: "Der Urlaubsanspruch konnte nicht gespeichert werden.",
       },
     );
-    if (!response.ok) {
-      throw await readStaffAPIError(
-        response,
-        "Der Urlaubsanspruch konnte nicht gespeichert werden.",
-      );
-    }
-    const json = (await response.json()) as {
-      data: VacationQuotaSummary;
-    };
-    return mapStaffVacationQuotaSummary(json.data);
+    return mapStaffVacationQuotaSummary(quota);
   }
 
   // Vacation takeover (#2132): the admin enters the Resturlaub as of the
@@ -1437,103 +1165,60 @@ class StaffAbsenceService {
       note: string;
     },
   ): Promise<StaffVacationOpening> {
-    const response = await sessionFetch(
-      `/api/staff/${staffId}/vacation/opening`,
+    const opening = await bffJson(
+      "tenant",
+      "POST /api/staff/{id}/vacation/opening",
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        params: { id: staffId },
+        body: {
           effective_date: payload.effectiveDate,
           remaining_days: payload.remainingDays,
           note: payload.note,
-        }),
+        },
+        errorMessage: "Übernahme fehlgeschlagen",
       },
     );
-    if (!response.ok) {
-      throw await readStaffAPIError(response, "Übernahme fehlgeschlagen");
-    }
-    const json = (await response.json()) as {
-      data: StaffVacationOpeningWire;
-    };
-    return mapStaffVacationOpening(json.data);
+    return mapStaffVacationOpening(opening);
   }
 
   async deleteVacationOpening(staffId: string, year: number): Promise<void> {
-    const response = await sessionFetch(
-      `/api/staff/${staffId}/vacation/opening?year=${year}`,
-      { method: "DELETE" },
-    );
-    if (!response.ok) {
-      throw await readStaffAPIError(response, "Löschen fehlgeschlagen");
-    }
+    await bffJson("tenant", "DELETE /api/staff/{id}/vacation/opening", {
+      params: { id: staffId },
+      query: { year },
+      errorMessage: "Löschen fehlgeschlagen",
+    });
   }
 
-  async approve(
-    absenceId: number | string,
-    decisionNote?: string,
-  ): Promise<void> {
-    const response = await sessionFetch(
-      `/api/staff/absences/${absenceId}/approve`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ decision_note: decisionNote ?? "" }),
-      },
-    );
-    if (!response.ok) {
-      throw await readStaffAPIError(response, "Genehmigung fehlgeschlagen");
-    }
+  async approve(absenceId: string, decisionNote?: string): Promise<void> {
+    await bffJson("tenant", "POST /api/staff/absences/{absenceId}/approve", {
+      params: { absenceId },
+      body: { decision_note: decisionNote ?? "" },
+      errorMessage: "Genehmigung fehlgeschlagen",
+    });
   }
 
   // Abwesenheiten, die noch nicht im Plan stehen (#7021).
   async listPlanGaps(): Promise<AbsencePlanGap[]> {
-    const response = await sessionFetch(`/api/staff/absences/plan-gaps`);
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `Failed to fetch absence plan gaps: ${response.statusText}`,
-      );
-    }
-    const json = (await response.json()) as {
-      data: AbsencePlanGapWire[] | null;
-    };
-    return (json.data ?? []).map(mapAbsencePlanGap);
+    const gaps = await bffJson("tenant", "GET /api/staff/absences/plan-gaps");
+    return gaps.map(mapAbsencePlanGap);
   }
 
   // Übernimmt eine Abwesenheit in Dienstplan und Betreuungsplan (#7021).
   // false: Sie gilt nicht mehr (zurückgezogen oder gelöscht).
   async syncPlan(absenceId: string): Promise<boolean> {
-    const response = await sessionFetch(
-      `/api/staff/absences/${encodeURIComponent(absenceId)}/plan-sync`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: "{}",
-      },
+    const result = await bffJson(
+      "tenant",
+      "POST /api/staff/absences/{absenceId}/plan-sync",
+      { params: { absenceId } },
     );
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `Failed to sync absence plan: ${response.statusText}`,
-      );
-    }
-    const json = (await response.json()) as { data: { applied: boolean } };
-    return json.data.applied;
+    return result.applied;
   }
 
   // Tenant-wide open requests (status requested + question) for the /staff
   // inbox (#1419). Response rows carry only staff_id — callers join names
   // against the already-fetched staff list client-side.
   async listPending(): Promise<StaffAbsenceRow[]> {
-    const response = await sessionFetch(`/api/staff/absences/pending`);
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `Failed to fetch pending absences: ${response.statusText}`,
-      );
-    }
-    const json = (await response.json()) as { data: StaffAbsenceRow[] | null };
-    return json.data ?? [];
+    return (await bffJson("tenant", "GET /api/staff/absences/pending")) ?? [];
   }
 
   // Anfragen-Modul, Reiter Mitarbeitende (#2433): offene Anträge oder die
@@ -1543,23 +1228,13 @@ class StaffAbsenceService {
     view: "open" | "history",
     filters: { search?: string; types?: readonly string[] } = {},
   ): Promise<StaffAbsenceRequestRow[]> {
-    const params = new URLSearchParams({ view });
-    if (filters.search?.trim()) params.set("search", filters.search.trim());
-    if (filters.types && filters.types.length > 0)
-      params.set("types", filters.types.join(","));
-    const response = await sessionFetch(
-      `/api/staff/absences/requests?${params.toString()}`,
-    );
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `Failed to fetch absence requests: ${response.statusText}`,
-      );
-    }
-    const json = (await response.json()) as {
-      data: StaffAbsenceRequestRow[] | null;
-    };
-    return json.data ?? [];
+    return bffJson("tenant", "GET /api/staff/absences/requests", {
+      query: {
+        view,
+        search: filters.search?.trim() || undefined,
+        types: filters.types?.length ? filters.types.join(",") : undefined,
+      },
+    });
   }
 
   // Ob die Mails zu Entscheidungen und Rückfragen bei der Person ankamen
@@ -1569,53 +1244,33 @@ class StaffAbsenceService {
     absenceIds: readonly string[],
   ): Promise<Record<string, MailOutcome>> {
     if (absenceIds.length === 0) return {};
-    const params = new URLSearchParams({ ids: absenceIds.join(",") });
-    const response = await sessionFetch(
-      `/api/staff/absences/mails?${params.toString()}`,
-    );
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `Failed to fetch absence mails: ${response.statusText}`,
-      );
+    const mails = await bffJson("tenant", "GET /api/staff/absences/mails", {
+      query: { ids: absenceIds.join(",") },
+    });
+    const outcomes: Record<string, MailOutcome> = {};
+    for (const [id, outcome] of Object.entries(mails.absences ?? {})) {
+      const known = knownMailOutcome(outcome);
+      if (known) outcomes[id] = known;
     }
-    const json = (await response.json()) as {
-      data: { absences?: Record<string, MailOutcome> | null } | null;
-    };
-    return json.data?.absences ?? {};
+    return outcomes;
   }
 
   // Rückfrage: moves a requested absence into status "question" with a
   // mandatory note from the Leitung (#1419).
-  async question(
-    absenceId: number | string,
-    decisionNote: string,
-  ): Promise<void> {
-    const response = await sessionFetch(
-      `/api/staff/absences/${absenceId}/question`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ decision_note: decisionNote }),
-      },
-    );
-    if (!response.ok) {
-      throw await readStaffAPIError(response, "Rückfrage fehlgeschlagen");
-    }
+  async question(absenceId: string, decisionNote: string): Promise<void> {
+    await bffJson("tenant", "POST /api/staff/absences/{absenceId}/question", {
+      params: { absenceId },
+      body: { decision_note: decisionNote },
+      errorMessage: "Rückfrage fehlgeschlagen",
+    });
   }
 
-  async deny(absenceId: number | string, decisionNote: string): Promise<void> {
-    const response = await sessionFetch(
-      `/api/staff/absences/${absenceId}/deny`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ decision_note: decisionNote }),
-      },
-    );
-    if (!response.ok) {
-      throw await readStaffAPIError(response, "Ablehnung fehlgeschlagen");
-    }
+  async deny(absenceId: string, decisionNote: string): Promise<void> {
+    await bffJson("tenant", "POST /api/staff/absences/{absenceId}/deny", {
+      params: { absenceId },
+      body: { decision_note: decisionNote },
+      errorMessage: "Ablehnung fehlgeschlagen",
+    });
   }
 
   // Admin-side "Abwesenheit anlegen" (POST /api/staff/{id}/absences). A
@@ -1625,19 +1280,11 @@ class StaffAbsenceService {
     staffId: string,
     body: AdminCreateAbsenceBody,
   ): Promise<StaffAbsenceRow> {
-    const response = await sessionFetch(`/api/staff/${staffId}/absences`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+    return bffJson("tenant", "POST /api/staff/{id}/absences", {
+      params: { id: staffId },
+      body,
+      errorMessage: "Abwesenheit konnte nicht eingetragen werden",
     });
-    if (!response.ok) {
-      throw await readStaffAPIError(
-        response,
-        "Abwesenheit konnte nicht eingetragen werden",
-      );
-    }
-    const json = (await response.json()) as { data: StaffAbsenceRow };
-    return json.data;
   }
 
   // Stundenkonto projection for a planned Freizeitausgleich (#2873):
@@ -1648,30 +1295,26 @@ class StaffAbsenceService {
     staffId: string,
     args: { dateStart: string; dateEnd: string; halfDay: boolean },
   ): Promise<CompTimeBalancePreview> {
-    const params = new URLSearchParams({
-      date_start: args.dateStart,
-      date_end: args.dateEnd,
-      half_day: String(args.halfDay),
-    });
-    const response = await sessionFetch(
-      `/api/staff/${staffId}/time-tracking/comp-time-preview?${params}`,
+    const preview = await bffJson(
+      "tenant",
+      "GET /api/staff/{id}/time-tracking/comp-time-preview",
+      {
+        params: { id: staffId },
+        query: {
+          date_start: args.dateStart,
+          date_end: args.dateEnd,
+          half_day: args.halfDay,
+        },
+        errorMessage: "Die Saldo-Vorschau konnte nicht geladen werden.",
+      },
     );
-    if (!response.ok) {
-      throw await readStaffAPIError(
-        response,
-        "Die Saldo-Vorschau konnte nicht geladen werden.",
-      );
-    }
-    const json = (await response.json()) as {
-      data: CompTimeBalancePreviewWire;
-    };
     return {
-      currentBalanceMinutes: json.data.current_balance_minutes,
-      deductionMinutes: json.data.deduction_minutes,
-      realizedDeductionMinutes: json.data.realized_deduction_minutes,
-      futureCommitmentMinutes: json.data.future_commitment_minutes,
-      futureAdjustmentMinutes: json.data.future_adjustment_minutes,
-      projectedBalanceMinutes: json.data.projected_balance_minutes,
+      currentBalanceMinutes: preview.current_balance_minutes,
+      deductionMinutes: preview.deduction_minutes,
+      realizedDeductionMinutes: preview.realized_deduction_minutes,
+      futureCommitmentMinutes: preview.future_commitment_minutes,
+      futureAdjustmentMinutes: preview.future_adjustment_minutes,
+      projectedBalanceMinutes: preview.projected_balance_minutes,
     };
   }
 
@@ -1681,35 +1324,28 @@ class StaffAbsenceService {
   async rebookAbsences(
     staffId: string,
     args: {
-      absenceIds: readonly (number | string)[];
+      absenceIds: readonly string[];
       absenceType: string;
       absenceTypeId: string | null;
       reason: string;
       dryRun: boolean;
     },
   ): Promise<AbsenceRebooking> {
-    const response = await sessionFetch(
-      `/api/staff/${staffId}/absences/rebook`,
+    const data = await bffJson(
+      "tenant",
+      "POST /api/staff/{id}/absences/rebook",
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          absence_ids: args.absenceIds.map(String),
+        params: { id: staffId },
+        body: {
+          absence_ids: [...args.absenceIds],
           absence_type: args.absenceType,
           absence_type_id: args.absenceTypeId,
           reason: args.reason,
           dry_run: args.dryRun,
-        }),
+        },
+        errorMessage: "Die Art konnte nicht geändert werden.",
       },
     );
-    if (!response.ok) {
-      throw await readStaffAPIError(
-        response,
-        "Die Art konnte nicht geändert werden.",
-      );
-    }
-    const json = (await response.json()) as { data: AbsenceRebookingResult };
-    const data = json.data;
     return {
       absences: (data.absences ?? []).filter(
         (absence): absence is StaffAbsenceResponse => absence !== null,
@@ -1734,17 +1370,11 @@ class StaffAbsenceService {
 
   // Deletes an absence (DELETE /api/staff/{id}/absences/{absenceId}).
   // Deleting a `sick` absence reverses the plan cascade backend-side.
-  async deleteAbsence(
-    staffId: string,
-    absenceId: number | string,
-  ): Promise<void> {
-    const response = await sessionFetch(
-      `/api/staff/${staffId}/absences/${absenceId}`,
-      { method: "DELETE" },
-    );
-    if (!response.ok) {
-      throw await readStaffAPIError(response, "Löschen fehlgeschlagen");
-    }
+  async deleteAbsence(staffId: string, absenceId: string): Promise<void> {
+    await bffJson("tenant", "DELETE /api/staff/{id}/absences/{absenceId}", {
+      params: { id: staffId, absenceId },
+      errorMessage: "Löschen fehlgeschlagen",
+    });
   }
 }
 
@@ -1802,19 +1432,12 @@ class StaffSessionEditsService {
     staffId: string,
     sessionId: string,
   ): Promise<WorkSessionEdit[]> {
-    const response = await sessionFetch(
-      `/api/staff/${staffId}/time-tracking/sessions/${sessionId}/edits`,
+    const edits = await bffJson(
+      "tenant",
+      "GET /api/staff/{id}/time-tracking/sessions/{sessionId}/edits",
+      { params: { id: staffId, sessionId } },
     );
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `Failed to fetch session edits: ${response.statusText}`,
-      );
-    }
-    const json = (await response.json()) as {
-      data: shared.WorkSessionEditView[] | null;
-    };
-    return (json.data ?? []).map(mapWorkSessionEditResponse);
+    return (edits ?? []).map(mapWorkSessionEditResponse);
   }
 }
 
@@ -1826,21 +1449,16 @@ class StaffMonthSummaryService {
     year: number,
     month: number,
   ): Promise<MonthSummary> {
-    const params = new URLSearchParams({
-      year: String(year),
-      month: String(month),
-    });
-    const response = await sessionFetch(
-      `/api/staff/${staffId}/time-tracking/month-summary?${params}`,
+    return mapMonthSummaryResponse(
+      await bffJson(
+        "tenant",
+        "GET /api/staff/{id}/time-tracking/month-summary",
+        {
+          params: { id: staffId },
+          query: { year, month },
+        },
+      ),
     );
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `Failed to fetch month summary: ${response.statusText}`,
-      );
-    }
-    const json = (await response.json()) as { data: shared.MonthSummary };
-    return mapMonthSummaryResponse(json.data);
   }
 
   // Admin counterpart to timeTrackingService.getDailyProjection (#2443): Soll,
@@ -1851,20 +1469,13 @@ class StaffMonthSummaryService {
     from: string,
     to: string,
   ): Promise<ReadonlyMap<string, DayProjection>> {
-    const params = new URLSearchParams({ from, to });
-    const response = await sessionFetch(
-      `/api/staff/${staffId}/time-tracking/schedule-targets?${params}`,
+    return mapDailyProjectionResponse(
+      await bffJson(
+        "tenant",
+        "GET /api/staff/{id}/time-tracking/schedule-targets",
+        { params: { id: staffId }, query: { from, to } },
+      ),
     );
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `Failed to fetch daily projection: ${response.statusText}`,
-      );
-    }
-    const json = (await response.json()) as {
-      data: shared.DailyProjection[] | null;
-    };
-    return mapDailyProjectionResponse(json.data);
   }
 
   /**
@@ -1962,20 +1573,11 @@ class StaffSessionService {
     sessionId: string,
     payload: AdminSessionUpdatePayload,
   ): Promise<void> {
-    const response = await sessionFetch(
-      `/api/staff/${staffId}/time-tracking/sessions/${sessionId}`,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      },
+    await bffJson(
+      "tenant",
+      "PUT /api/staff/{id}/time-tracking/sessions/{sessionId}",
+      { params: { id: staffId, sessionId }, body: payload },
     );
-    if (!response.ok) {
-      throw await readStaffAPIError(
-        response,
-        `Failed to update session: ${response.statusText}`,
-      );
-    }
   }
 
   // POST admin "nachträgt" a session for a staff member who forgot to
@@ -1984,37 +1586,11 @@ class StaffSessionService {
     staffId: string,
     payload: AdminSessionPayload,
   ): Promise<void> {
-    const response = await sessionFetch(
-      `/api/staff/${staffId}/time-tracking/sessions`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      },
-    );
-    if (!response.ok) {
-      throw await readStaffAPIError(
-        response,
-        `Failed to create session: ${response.statusText}`,
-      );
-    }
+    await bffJson("tenant", "POST /api/staff/{id}/time-tracking/sessions", {
+      params: { id: staffId },
+      body: payload,
+    });
   }
-}
-
-// The ApiError keeps code, field errors and request ID for the shared error
-// display (#2511); its message is the envelope's diagnostic `detail`.
-async function readStaffAPIError(
-  response: Response,
-  fallback: string,
-): Promise<ApiError> {
-  const text = await response.text().catch(() => "");
-  try {
-    JSON.parse(text);
-  } catch {
-    // A plain-text body (proxy or gateway) is the best diagnostic there is.
-    if (text) return apiErrorFromText(text, response.status, text);
-  }
-  return apiErrorFromText(fallback, response.status, text);
 }
 
 // Stundenkonto lifecycle (#1420): payout / comp-time transactions and the
@@ -2025,20 +1601,12 @@ class StaffBalanceAdjustmentService {
     from: string,
     to: string,
   ): Promise<BalanceAdjustment[]> {
-    const params = new URLSearchParams({ from, to });
-    const response = await sessionFetch(
-      `/api/staff/${staffId}/time-tracking/adjustments?${params}`,
+    const adjustments = await bffJson(
+      "tenant",
+      "GET /api/staff/{id}/time-tracking/adjustments",
+      { params: { id: staffId }, query: { from, to } },
     );
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `Failed to fetch adjustments: ${response.statusText}`,
-      );
-    }
-    const json = (await response.json()) as {
-      data: staffWire.StaffBalanceAdjustment[] | null;
-    };
-    return (json.data ?? []).map(mapBalanceAdjustmentResponse);
+    return (adjustments ?? []).map(mapBalanceAdjustmentResponse);
   }
 
   // minutesDelta is signed and negative — payout and comp-time grants only
@@ -2052,36 +1620,32 @@ class StaffBalanceAdjustmentService {
       note: string;
     },
   ): Promise<BalanceAdjustment> {
-    const response = await sessionFetch(
-      `/api/staff/${staffId}/time-tracking/adjustments`,
+    const adjustment = await bffJson(
+      "tenant",
+      "POST /api/staff/{id}/time-tracking/adjustments",
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        params: { id: staffId },
+        body: {
           type: payload.type,
           minutes_delta: payload.minutesDelta,
           effective_date: payload.effectiveDate,
           note: payload.note,
-        }),
+        },
+        errorMessage: "Buchung fehlgeschlagen",
       },
     );
-    if (!response.ok) {
-      throw await readStaffAPIError(response, "Buchung fehlgeschlagen");
-    }
-    const json = (await response.json()) as {
-      data: staffWire.StaffBalanceAdjustment;
-    };
-    return mapBalanceAdjustmentResponse(json.data);
+    return mapBalanceAdjustmentResponse(adjustment);
   }
 
   async delete(staffId: string, adjustmentId: string): Promise<void> {
-    const response = await sessionFetch(
-      `/api/staff/${staffId}/time-tracking/adjustments/${adjustmentId}`,
-      { method: "DELETE" },
+    await bffJson(
+      "tenant",
+      "DELETE /api/staff/{id}/time-tracking/adjustments/{adjustmentId}",
+      {
+        params: { id: staffId, adjustmentId },
+        errorMessage: "Löschen fehlgeschlagen",
+      },
     );
-    if (!response.ok) {
-      throw await readStaffAPIError(response, "Löschen fehlgeschlagen");
-    }
   }
 
   // The backend computes the closing balance as of effectiveDate under a
@@ -2095,25 +1659,20 @@ class StaffBalanceAdjustmentService {
       note: string;
     },
   ): Promise<BalanceAdjustment> {
-    const response = await sessionFetch(
-      `/api/staff/${staffId}/time-tracking/reset`,
+    const adjustment = await bffJson(
+      "tenant",
+      "POST /api/staff/{id}/time-tracking/reset",
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        params: { id: staffId },
+        body: {
           effective_date: payload.effectiveDate,
           carryover_minutes: payload.carryoverMinutes,
           note: payload.note,
-        }),
+        },
+        errorMessage: "Reset fehlgeschlagen",
       },
     );
-    if (!response.ok) {
-      throw await readStaffAPIError(response, "Reset fehlgeschlagen");
-    }
-    const json = (await response.json()) as {
-      data: staffWire.StaffBalanceAdjustment;
-    };
-    return mapBalanceAdjustmentResponse(json.data);
+    return mapBalanceAdjustmentResponse(adjustment);
   }
 
   // Eröffnungssaldo (#2132): sets the Stundenkonto to a SIGNED target value
@@ -2127,25 +1686,20 @@ class StaffBalanceAdjustmentService {
       note: string;
     },
   ): Promise<BalanceAdjustment> {
-    const response = await sessionFetch(
-      `/api/staff/${staffId}/time-tracking/opening`,
+    const adjustment = await bffJson(
+      "tenant",
+      "POST /api/staff/{id}/time-tracking/opening",
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        params: { id: staffId },
+        body: {
           effective_date: payload.effectiveDate,
           balance_minutes: payload.balanceMinutes,
           note: payload.note,
-        }),
+        },
+        errorMessage: "Eröffnungssaldo fehlgeschlagen",
       },
     );
-    if (!response.ok) {
-      throw await readStaffAPIError(response, "Eröffnungssaldo fehlgeschlagen");
-    }
-    const json = (await response.json()) as {
-      data: staffWire.StaffBalanceAdjustment;
-    };
-    return mapBalanceAdjustmentResponse(json.data);
+    return mapBalanceAdjustmentResponse(adjustment);
   }
 }
 
@@ -2155,45 +1709,23 @@ class StaffBalanceAdjustmentService {
 class StaffMonthCloseService {
   /** Active snapshots of one month for the whole school; [] = not closed. */
   async getStatus(year: number, month: number): Promise<MonthCloseSnapshot[]> {
-    const params = new URLSearchParams({
-      year: String(year),
-      month: String(month),
-    });
-    const response = await sessionFetch(
-      `/api/staff/time-tracking/month-close?${params}`,
+    const snapshots = await bffJson(
+      "tenant",
+      "GET /api/staff/time-tracking/month-close",
+      { query: { year, month } },
     );
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `Failed to fetch month close status: ${response.statusText}`,
-      );
-    }
-    const json = (await response.json()) as {
-      data: staffWire.StaffMonthBalanceSnapshot[] | null;
-    };
-    return (json.data ?? []).map(mapMonthCloseSnapshotResponse);
+    return (snapshots ?? []).map(mapMonthCloseSnapshotResponse);
   }
 
   /** The staff whose month the Träger closes (#4711): a contract of the
    *  Träger covers the month, so the school's close leaves them out. */
   async getTraegerStaff(year: number, month: number): Promise<string[]> {
-    const params = new URLSearchParams({
-      year: String(year),
-      month: String(month),
-    });
-    const response = await sessionFetch(
-      `/api/staff/time-tracking/month-close/traeger-staff?${params}`,
+    const result = await bffJson(
+      "tenant",
+      "GET /api/staff/time-tracking/month-close/traeger-staff",
+      { query: { year, month } },
     );
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `Failed to fetch the staff the Träger closes: ${response.statusText}`,
-      );
-    }
-    const json = (await response.json()) as {
-      data: { staff_ids: (number | string)[] | null } | null;
-    };
-    return (json.data?.staff_ids ?? []).map(String);
+    return result.staff_ids ?? [];
   }
 
   /** Freezes the month for the whole school in one transaction. */
@@ -2202,25 +1734,19 @@ class StaffMonthCloseService {
     month: number;
     reason: string;
   }): Promise<MonthCloseResult> {
-    const response = await sessionFetch(
-      "/api/staff/time-tracking/month-close",
+    const result = await bffJson(
+      "tenant",
+      "POST /api/staff/time-tracking/month-close",
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body: {
           year: payload.year,
           month: payload.month,
           reason: payload.reason,
-        }),
+        },
+        errorMessage: "Monatsabschluss fehlgeschlagen",
       },
     );
-    if (!response.ok) {
-      throw await readStaffAPIError(response, "Monatsabschluss fehlgeschlagen");
-    }
-    const json = (await response.json()) as {
-      data: staffWire.MonthCloseResult;
-    };
-    return mapMonthCloseResultResponse(json.data);
+    return mapMonthCloseResultResponse(result);
   }
 
   /** Reopens one staff member's closed month; reason is mandatory. */
@@ -2228,21 +1754,19 @@ class StaffMonthCloseService {
     staffId: string,
     payload: { year: number; month: number; reason: string },
   ): Promise<void> {
-    const response = await sessionFetch(
-      `/api/staff/${staffId}/time-tracking/month-close/reopen`,
+    await bffJson(
+      "tenant",
+      "POST /api/staff/{id}/time-tracking/month-close/reopen",
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        params: { id: staffId },
+        body: {
           year: payload.year,
           month: payload.month,
           reason: payload.reason,
-        }),
+        },
+        errorMessage: "Wiedereröffnung fehlgeschlagen",
       },
     );
-    if (!response.ok) {
-      throw await readStaffAPIError(response, "Wiedereröffnung fehlgeschlagen");
-    }
   }
 }
 
@@ -2251,19 +1775,16 @@ class StaffMonthCloseService {
 // permission so no request fires without it.
 class StaffPayrollNumberService {
   async get(staffId: string): Promise<StaffPayrollNumber> {
-    const response = await sessionFetch(`/api/staff/${staffId}/payroll-number`);
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `Failed to fetch payroll number: ${response.statusText}`,
-      );
-    }
-    const json = (await response.json()) as {
-      data: { personnel_number: string | null; kept_by_traeger?: boolean };
-    };
+    const number = await bffJson(
+      "tenant",
+      "GET /api/staff/{id}/payroll-number",
+      {
+        params: { id: staffId },
+      },
+    );
     return {
-      personnelNumber: json.data.personnel_number,
-      keptByTraeger: json.data.kept_by_traeger ?? false,
+      personnelNumber: number.personnel_number,
+      keptByTraeger: number.kept_by_traeger ?? false,
     };
   }
 
@@ -2272,24 +1793,16 @@ class StaffPayrollNumberService {
     personnelNumber: string | null,
     note: string,
   ): Promise<string | null> {
-    const response = await sessionFetch(
-      `/api/staff/${staffId}/payroll-number`,
+    const number = await bffJson(
+      "tenant",
+      "PUT /api/staff/{id}/payroll-number",
       {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ personnel_number: personnelNumber, note }),
+        params: { id: staffId },
+        body: { personnel_number: personnelNumber, note },
+        errorMessage: "Personalnummer konnte nicht gespeichert werden",
       },
     );
-    if (!response.ok) {
-      throw await readStaffAPIError(
-        response,
-        "Personalnummer konnte nicht gespeichert werden",
-      );
-    }
-    const json = (await response.json()) as {
-      data: { personnel_number: string | null };
-    };
-    return json.data.personnel_number;
+    return number.personnel_number;
   }
 }
 
@@ -2402,49 +1915,36 @@ function mapStammdatenResponse(data: StammdatenResponse): StaffStammdaten {
   };
 }
 
-async function throwStammdatenError(
-  response: Response,
-  fallback: string,
-): Promise<never> {
-  throw await readStaffAPIError(response, fallback);
-}
-
 // Stammdaten (#1423): section-scoped master data of one staff member. The
 // non-sensitive sections ride on staff:stammdaten (#2906), the bank & tax
 // section is staff:financial only — callers gate rendering on the permission
 // so no request fires without it.
 class StaffStammdatenService {
   async get(staffId: string): Promise<StaffStammdaten> {
-    const response = await sessionFetch(`/api/staff/${staffId}/stammdaten`);
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `Failed to fetch stammdaten: ${response.statusText}`,
-      );
-    }
-    const json = (await response.json()) as { data: StammdatenResponse };
-    return mapStammdatenResponse(json.data);
+    return mapStammdatenResponse(
+      await bffJson("tenant", "GET /api/staff/{id}/stammdaten", {
+        params: { id: staffId },
+      }),
+    );
   }
 
   private async putSection(
     staffId: string,
-    section: string,
+    section:
+      | "person"
+      | "kontakt"
+      | "arbeitsvertrag"
+      | "qualifikationen"
+      | "bank-steuer",
     body: Record<string, unknown>,
   ): Promise<void> {
-    const response = await sessionFetch(
-      `/api/staff/${staffId}/stammdaten/${section}`,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      },
-    );
-    if (!response.ok) {
-      await throwStammdatenError(
-        response,
-        "Stammdaten konnten nicht gespeichert werden",
-      );
-    }
+    // One route per section; every request type of them takes `note`.
+    const route = `PUT /api/staff/{id}/stammdaten/${section}` as const;
+    await bffJson("tenant", route, {
+      params: { id: staffId },
+      body,
+      errorMessage: "Stammdaten konnten nicht gespeichert werden",
+    });
   }
 
   async updatePerson(
@@ -2511,55 +2011,30 @@ class StaffStammdatenService {
   }
 
   async getFinancial(staffId: string): Promise<StaffFinancialMasked> {
-    const response = await sessionFetch(
-      `/api/staff/${staffId}/stammdaten/bank-steuer`,
+    const financial = await bffJson(
+      "tenant",
+      "GET /api/staff/{id}/stammdaten/bank-steuer",
+      { params: { id: staffId } },
     );
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `Failed to fetch financial data: ${response.statusText}`,
-      );
-    }
-    const json = (await response.json()) as {
-      data: {
-        iban_masked: string | null;
-        tax_id_masked: string | null;
-        social_security_number_masked: string | null;
-        kept_by_traeger?: boolean;
-      };
-    };
     return {
-      ibanMasked: json.data.iban_masked,
-      taxIdMasked: json.data.tax_id_masked,
-      socialSecurityNumberMasked: json.data.social_security_number_masked,
-      keptByTraeger: json.data.kept_by_traeger ?? false,
+      ibanMasked: financial.iban_masked,
+      taxIdMasked: financial.tax_id_masked,
+      socialSecurityNumberMasked: financial.social_security_number_masked,
+      keptByTraeger: financial.kept_by_traeger ?? false,
     };
   }
 
   // POST: the reveal writes a GDPR access-log row server-side.
   async revealFinancial(staffId: string): Promise<StaffFinancialPlain> {
-    const response = await sessionFetch(
-      `/api/staff/${staffId}/stammdaten/bank-steuer/reveal`,
-      { method: "POST", headers: { "Content-Type": "application/json" } },
+    const financial = await bffJson(
+      "tenant",
+      "POST /api/staff/{id}/stammdaten/bank-steuer/reveal",
+      { params: { id: staffId } },
     );
-    if (!response.ok) {
-      throw apiErrorFromText(
-        `Failed to reveal financial data: ${response.statusText}`,
-        response.status,
-        await response.text().catch(() => ""),
-      );
-    }
-    const json = (await response.json()) as {
-      data: {
-        iban: string | null;
-        tax_id: string | null;
-        social_security_number: string | null;
-      };
-    };
     return {
-      iban: json.data.iban,
-      taxId: json.data.tax_id,
-      socialSecurityNumber: json.data.social_security_number,
+      iban: financial.iban,
+      taxId: financial.tax_id,
+      socialSecurityNumber: financial.social_security_number,
     };
   }
 
@@ -2599,32 +2074,18 @@ export const staffMonthCloseService = new StaffMonthCloseService();
  */
 export const staffPlannedExitService = {
   async plan(staffId: string, lastWorkingDay: string): Promise<string> {
-    const response = await sessionFetch(`/api/staff/${staffId}/planned-exit`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ last_working_day: lastWorkingDay }),
+    const exit = await bffJson("tenant", "PUT /api/staff/{id}/planned-exit", {
+      params: { id: staffId },
+      body: { last_working_day: lastWorkingDay },
+      errorMessage: "Der Austritt konnte nicht gespeichert werden",
     });
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        "Der Austritt konnte nicht gespeichert werden",
-      );
-    }
-    const json = (await response.json()) as {
-      data?: { last_working_day?: string };
-    };
-    return json.data?.last_working_day ?? lastWorkingDay;
+    return exit.last_working_day ?? lastWorkingDay;
   },
 
   async withdraw(staffId: string): Promise<void> {
-    const response = await sessionFetch(`/api/staff/${staffId}/planned-exit`, {
-      method: "DELETE",
+    await bffJson("tenant", "DELETE /api/staff/{id}/planned-exit", {
+      params: { id: staffId },
+      errorMessage: "Der Austritt konnte nicht zurückgenommen werden",
     });
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        "Der Austritt konnte nicht zurückgenommen werden",
-      );
-    }
   },
 };

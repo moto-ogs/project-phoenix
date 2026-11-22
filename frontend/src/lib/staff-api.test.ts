@@ -168,8 +168,8 @@ describe("staff-api", () => {
         statusText: "Forbidden",
       } as Response);
 
-      await expect(staffService.getDocumentDirectory()).rejects.toThrow(
-        "Failed to fetch document directory: Forbidden",
+      await expect(staffService.getDocumentDirectory()).rejects.toBeInstanceOf(
+        ApiError,
       );
     });
   });
@@ -183,7 +183,7 @@ describe("staff-api", () => {
         json: () =>
           Promise.resolve({
             data: {
-              id: 42,
+              id: "42",
               name: "Mila Muster",
               firstName: "Mila",
               lastName: "Muster",
@@ -220,9 +220,9 @@ describe("staff-api", () => {
         statusText: "Forbidden",
       } as Response);
 
-      await expect(staffService.getDocumentProfile("42")).rejects.toThrow(
-        "Failed to fetch document staff profile: Forbidden",
-      );
+      await expect(
+        staffService.getDocumentProfile("42"),
+      ).rejects.toBeInstanceOf(ApiError);
     });
   });
 
@@ -282,43 +282,13 @@ describe("staff-api", () => {
         if (url.includes("/api/active/groups")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([]),
+            json: () => Promise.resolve({ data: [] }),
           } as Response);
         }
         return Promise.reject(new Error(`Unexpected URL: ${url}`));
       });
 
-      await expect(staffService.getAllStaff()).rejects.toThrow(
-        "Failed to fetch staff: Internal Server Error",
-      );
-    });
-
-    it("applies search filter to URL", async () => {
-      const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-
-      mockFetch.mockImplementation((url: string) => {
-        if (url.includes("/api/staff")) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ data: [sampleBackendStaff] }),
-          } as Response);
-        }
-        if (url.includes("/api/active/groups")) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve([]),
-          } as Response);
-        }
-        return Promise.reject(new Error(`Unexpected URL: ${url}`));
-      });
-
-      const filters: StaffFilters = { search: "Max" };
-      await staffService.getAllStaff(filters);
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        "/api/staff?search=Max",
-        expect.any(Object),
-      );
+      await expect(staffService.getAllStaff()).rejects.toBeInstanceOf(ApiError);
     });
 
     it("filters staff by supervising status", async () => {
@@ -372,7 +342,7 @@ describe("staff-api", () => {
         if (url.includes("/api/active/groups")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([]),
+            json: () => Promise.resolve({ data: [] }),
           } as Response);
         }
         return Promise.reject(new Error(`Unexpected URL: ${url}`));
@@ -454,31 +424,37 @@ describe("staff-api", () => {
           new Response(JSON.stringify({ code: "general.server" }), {
             status: 500,
           }),
+        500,
       ],
       [
+        // An answer without data is unreadable: bffJson's 502 (#7806).
         "an unreadable body",
         () => new Response(JSON.stringify({ rows: [] }), { status: 200 }),
+        502,
       ],
-    ])("rejects when active groups fail with %s", async (_case, answer) => {
-      const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
+    ])(
+      "rejects when active groups fail with %s",
+      async (_case, answer, status) => {
+        const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
 
-      mockFetch.mockImplementation((url: string) => {
-        if (url.includes("/api/staff")) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ data: [sampleBackendStaff] }),
-          } as Response);
-        }
-        if (url.includes("/api/active/groups")) {
-          return Promise.resolve(answer());
-        }
-        return Promise.reject(new Error(`Unexpected URL: ${url}`));
-      });
+        mockFetch.mockImplementation((url: string) => {
+          if (url.includes("/api/staff")) {
+            return Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve({ data: [sampleBackendStaff] }),
+            } as Response);
+          }
+          if (url.includes("/api/active/groups")) {
+            return Promise.resolve(answer());
+          }
+          return Promise.reject(new Error(`Unexpected URL: ${url}`));
+        });
 
-      await expect(staffService.getAllStaff()).rejects.toMatchObject({
-        status: 500,
-      });
-    });
+        await expect(staffService.getAllStaff()).rejects.toMatchObject({
+          status,
+        });
+      },
+    );
 
     it("handles empty staff list", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
@@ -493,7 +469,7 @@ describe("staff-api", () => {
         if (url.includes("/api/active/groups")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([]),
+            json: () => Promise.resolve({ data: [] }),
           } as Response);
         }
         return Promise.reject(new Error(`Unexpected URL: ${url}`));
@@ -522,7 +498,7 @@ describe("staff-api", () => {
         if (url.includes("/api/active/groups")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([]),
+            json: () => Promise.resolve({ data: [] }),
           } as Response);
         }
         return Promise.reject(new Error(`Unexpected URL: ${url}`));
@@ -581,7 +557,7 @@ describe("staff-api", () => {
         if (url.includes("/api/active/groups")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([]), // No active supervisions
+            json: () => Promise.resolve({ data: [] }), // No active supervisions
           } as Response);
         }
         return Promise.reject(new Error(`Unexpected URL: ${url}`));
@@ -612,7 +588,7 @@ describe("staff-api", () => {
         if (url.includes("/api/active/groups")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([]),
+            json: () => Promise.resolve({ data: [] }),
           } as Response);
         }
         return Promise.reject(new Error(`Unexpected URL: ${url}`));
@@ -677,7 +653,7 @@ describe("staff-api", () => {
         if (url.includes("/api/active/groups")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([]),
+            json: () => Promise.resolve({ data: [] }),
           } as Response);
         }
         return Promise.reject(new Error(`Unexpected URL: ${url}`));
@@ -687,213 +663,6 @@ describe("staff-api", () => {
 
       expect(result[0]?.isSupervising).toBe(false);
       expect(result[0]?.currentLocation).toBe("Anwesend");
-    });
-  });
-
-  describe("staffService.getStaffSupervisions", () => {
-    it("fetches supervisions for a staff member", async () => {
-      const mockSupervisions = [
-        {
-          id: 1,
-          staff_id: 1,
-          group_id: 10,
-          role: "supervisor",
-          start_date: "2024-01-15T08:00:00Z",
-          is_active: true,
-          active_group: {
-            id: 10,
-            name: "Morning Session",
-            room_id: 5,
-            room: { id: 5, name: "Room A" },
-          },
-        },
-      ];
-
-      const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockSupervisions),
-      } as Response);
-
-      const result = await staffService.getStaffSupervisions("1");
-
-      expect(result).toHaveLength(1);
-      expect(result[0]?.id).toBe(1);
-      expect(result[0]?.role).toBe("supervisor");
-    });
-
-    it("handles wrapped response format", async () => {
-      const mockSupervisions = [
-        {
-          id: 1,
-          staff_id: 1,
-          group_id: 10,
-          role: "supervisor",
-          start_date: "2024-01-15T08:00:00Z",
-          is_active: true,
-        },
-      ];
-
-      const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ data: mockSupervisions }),
-      } as Response);
-
-      const result = await staffService.getStaffSupervisions("1");
-
-      expect(result).toHaveLength(1);
-    });
-
-    it("returns empty array on error", async () => {
-      const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockRejectedValueOnce(new Error("Network error"));
-
-      const result = await staffService.getStaffSupervisions("1");
-
-      expect(result).toEqual([]);
-      expect(consoleSpies.error).toHaveBeenCalledWith(
-        "error fetching supervisions for staff",
-        expect.objectContaining({
-          staff_id: "1",
-          error: expect.stringContaining("Network error") as unknown,
-        }),
-      );
-    });
-
-    it("returns empty array and logs error when no auth token available", async () => {
-      mockedGetSession.mockResolvedValue(null);
-
-      // Note: getStaffSupervisions catches the error and returns empty array
-      const result = await staffService.getStaffSupervisions("1");
-
-      expect(result).toEqual([]);
-      expect(consoleSpies.error).toHaveBeenCalledWith(
-        "error fetching supervisions for staff",
-        expect.objectContaining({
-          staff_id: "1",
-          error: expect.stringContaining("No authentication token") as unknown,
-        }),
-      );
-    });
-
-    it("returns empty array and logs error when response is not ok", async () => {
-      const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        statusText: "Not Found",
-      } as Response);
-
-      // Note: getStaffSupervisions catches the error and returns empty array
-      const result = await staffService.getStaffSupervisions("1");
-
-      expect(result).toEqual([]);
-      expect(consoleSpies.error).toHaveBeenCalledWith(
-        "error fetching supervisions for staff",
-        expect.objectContaining({
-          staff_id: "1",
-          error: expect.stringContaining(
-            "Failed to fetch staff supervisions",
-          ) as unknown,
-        }),
-      );
-    });
-
-    it("returns empty array for unexpected response format", async () => {
-      const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ unexpected: "format" }),
-      } as Response);
-
-      const result = await staffService.getStaffSupervisions("1");
-
-      expect(result).toEqual([]);
-    });
-  });
-
-  describe("extractActiveGroups edge cases", () => {
-    it("handles double-wrapped data (frontend wrapper around backend response)", async () => {
-      const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-
-      mockFetch.mockImplementation((url: string) => {
-        if (url.includes("/api/staff")) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ data: [sampleBackendStaff] }),
-          } as Response);
-        }
-        if (url.includes("/api/active/groups")) {
-          // Double wrapped: { data: { data: [...] } }
-          return Promise.resolve({
-            ok: true,
-            json: () =>
-              Promise.resolve({
-                data: { data: sampleActiveGroups },
-              }),
-          } as Response);
-        }
-        return Promise.reject(new Error(`Unexpected URL: ${url}`));
-      });
-
-      const result = await staffService.getAllStaff();
-
-      // Should handle double-wrapped and still find supervisions
-      expect(result[0]?.isSupervising).toBe(true);
-      // currentLocation shows time clock status
-      expect(result[0]?.currentLocation).toBe("Abwesend");
-      // Room info is in supervisions array
-      expect(result[0]?.supervisions).toHaveLength(2);
-    });
-
-    // #2353: an unreadable answer is an error, not "nobody supervises".
-    it("rejects non-array data", async () => {
-      const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-
-      mockFetch.mockImplementation((url: string) => {
-        if (url.includes("/api/staff")) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ data: [sampleBackendStaff] }),
-          } as Response);
-        }
-        if (url.includes("/api/active/groups")) {
-          // Return object without data array
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ data: "not-an-array" }),
-          } as Response);
-        }
-        return Promise.reject(new Error(`Unexpected URL: ${url}`));
-      });
-
-      await expect(staffService.getAllStaff()).rejects.toMatchObject({
-        status: 500,
-      });
-    });
-
-    it("handles null data property", async () => {
-      const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-
-      mockFetch.mockImplementation((url: string) => {
-        if (url.includes("/api/staff")) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ data: [sampleBackendStaff] }),
-          } as Response);
-        }
-        if (url.includes("/api/active/groups")) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ data: null }),
-          } as Response);
-        }
-        return Promise.reject(new Error(`Unexpected URL: ${url}`));
-      });
-
-      const result = await staffService.getAllStaff();
-
-      expect(result[0]?.isSupervising).toBe(false);
     });
   });
 
@@ -949,7 +718,7 @@ describe("staff-api", () => {
         if (url.includes("/api/active/groups")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([]),
+            json: () => Promise.resolve({ data: [] }),
           } as Response);
         }
         return Promise.reject(new Error(`Unexpected URL: ${url}`));
@@ -978,7 +747,7 @@ describe("staff-api", () => {
         if (url.includes("/api/active/groups")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([]),
+            json: () => Promise.resolve({ data: [] }),
           } as Response);
         }
         return Promise.reject(new Error(`Unexpected URL: ${url}`));
@@ -1005,7 +774,7 @@ describe("staff-api", () => {
         if (url.includes("/api/active/groups")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([]),
+            json: () => Promise.resolve({ data: [] }),
           } as Response);
         }
         return Promise.reject(new Error(`Unexpected URL: ${url}`));
@@ -1035,7 +804,7 @@ describe("staff-api", () => {
         if (url.includes("/api/active/groups")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([]),
+            json: () => Promise.resolve({ data: [] }),
           } as Response);
         }
         return Promise.reject(new Error(`Unexpected URL: ${url}`));
@@ -1097,7 +866,7 @@ describe("staff-api", () => {
         if (url.includes("/api/active/groups")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([]), // No supervision
+            json: () => Promise.resolve({ data: [] }), // No supervision
           } as Response);
         }
         return Promise.reject(new Error(`Unexpected URL: ${url}`));
@@ -1128,7 +897,7 @@ describe("staff-api", () => {
         if (url.includes("/api/active/groups")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve([]),
+            json: () => Promise.resolve({ data: [] }),
           } as Response);
         }
         return Promise.reject(new Error(`Unexpected URL: ${url}`));
@@ -1559,8 +1328,8 @@ describe("staff-api", () => {
         statusText: "Not Found",
       } as Response);
 
-      await expect(staffService.getStaffRecord("404")).rejects.toThrow(
-        "Failed to fetch staff member: Not Found",
+      await expect(staffService.getStaffRecord("404")).rejects.toBeInstanceOf(
+        ApiError,
       );
     });
   });
@@ -1624,7 +1393,25 @@ describe("staff-api", () => {
       expect(result.entries[0]?.startTime).toBe("09:00");
     });
 
-    it("sends template updates with numeric model id", async () => {
+    // The schedule read checked no status: a refusal surfaced as a
+    // TypeError from mapping an error body instead of the ApiError (#7806).
+    it("rejects a refused schedule read with the ApiError", async () => {
+      const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
+      mockFetch.mockResolvedValueOnce(
+        new Response(JSON.stringify({ code: "general.permission" }), {
+          status: 403,
+        }),
+      );
+
+      await expect(staffScheduleService.getSchedule("1")).rejects.toMatchObject(
+        {
+          status: 403,
+          code: "general.permission",
+        },
+      );
+    });
+
+    it("sends template updates with the model id as text", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -1640,7 +1427,7 @@ describe("staff-api", () => {
         "/api/staff/1/schedule",
         expect.objectContaining({
           method: "PUT",
-          body: JSON.stringify({ mode: "template", model_id: 5 }),
+          body: JSON.stringify({ mode: "template", model_id: "5" }),
         }),
       );
     });
@@ -1977,7 +1764,7 @@ describe("staff-api", () => {
 
       await expect(
         staffHistoryService.getHistory("1", "2026-06-01", "2026-06-07"),
-      ).rejects.toThrow("Failed to fetch staff history: Bad Gateway");
+      ).rejects.toBeInstanceOf(ApiError);
     });
   });
 
@@ -2032,7 +1819,7 @@ describe("staff-api", () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ data: null }),
+        json: () => Promise.resolve({ data: [] }),
       } as Response);
 
       const result = await staffAbsenceService.listRequests("open", {
@@ -2054,9 +1841,9 @@ describe("staff-api", () => {
         statusText: "Forbidden",
       } as Response);
 
-      await expect(staffAbsenceService.listRequests("open")).rejects.toThrow(
-        "Failed to fetch absence requests: Forbidden",
-      );
+      await expect(
+        staffAbsenceService.listRequests("open"),
+      ).rejects.toBeInstanceOf(ApiError);
     });
 
     it("loads absences and returns an empty array for null data", async () => {
@@ -2088,7 +1875,7 @@ describe("staff-api", () => {
 
       await expect(
         staffAbsenceService.getAbsences("1", "2026-06-01", "2026-06-07"),
-      ).rejects.toThrow("Failed to fetch staff absences: Forbidden");
+      ).rejects.toBeInstanceOf(ApiError);
     });
 
     it("loads vacation quota with and without year", async () => {
@@ -2126,9 +1913,9 @@ describe("staff-api", () => {
         statusText: "Not Found",
       } as Response);
 
-      await expect(staffAbsenceService.getVacationQuota("1")).rejects.toThrow(
-        "Failed to fetch quota: Not Found",
-      );
+      await expect(
+        staffAbsenceService.getVacationQuota("1"),
+      ).rejects.toBeInstanceOf(ApiError);
     });
 
     it("saves vacation quota", async () => {
@@ -2229,7 +2016,7 @@ describe("staff-api", () => {
 
     it("deletes a takeover for the given year", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValueOnce({ ok: true } as Response);
+      mockFetch.mockResolvedValueOnce({ ok: true, status: 204 } as Response);
 
       await staffAbsenceService.deleteVacationOpening("4", 2026);
 
@@ -2281,11 +2068,11 @@ describe("staff-api", () => {
     it("approves and denies absences with decision notes", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
       mockFetch
-        .mockResolvedValueOnce({ ok: true } as Response)
-        .mockResolvedValueOnce({ ok: true } as Response);
+        .mockResolvedValueOnce({ ok: true, status: 204 } as Response)
+        .mockResolvedValueOnce({ ok: true, status: 204 } as Response);
 
-      await staffAbsenceService.approve(7, "Passt");
-      await staffAbsenceService.deny(8, "Begründung");
+      await staffAbsenceService.approve("7", "Passt");
+      await staffAbsenceService.deny("8", "Begründung");
 
       expect(mockFetch).toHaveBeenNthCalledWith(
         1,
@@ -2317,11 +2104,11 @@ describe("staff-api", () => {
           text: () => Promise.resolve("Missing reason"),
         } as Response);
 
-      await expect(staffAbsenceService.approve(7)).rejects.toThrow(
-        "Quota exceeded",
+      await expect(staffAbsenceService.approve("7")).rejects.toBeInstanceOf(
+        ApiError,
       );
-      await expect(staffAbsenceService.deny(8, "")).rejects.toThrow(
-        "Missing reason",
+      await expect(staffAbsenceService.deny("8", "")).rejects.toBeInstanceOf(
+        ApiError,
       );
     });
 
@@ -2339,7 +2126,7 @@ describe("staff-api", () => {
           ),
       } as Response);
 
-      const failure = staffAbsenceService.approve(7);
+      const failure = staffAbsenceService.approve("7");
       await expect(failure).rejects.toBeInstanceOf(ApiError);
       await expect(failure).rejects.toMatchObject({
         code: "workforce.vacation_quota_exceeded",
@@ -2386,16 +2173,16 @@ describe("staff-api", () => {
         statusText: "Forbidden",
       } as Response);
 
-      await expect(staffAbsenceService.listPending()).rejects.toThrow(
-        "Failed to fetch pending absences: Forbidden",
+      await expect(staffAbsenceService.listPending()).rejects.toBeInstanceOf(
+        ApiError,
       );
     });
 
     it("submits a question with its mandatory decision note", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValueOnce({ ok: true } as Response);
+      mockFetch.mockResolvedValueOnce({ ok: true, status: 204 } as Response);
 
-      await staffAbsenceService.question(7, "Wer übernimmt die Frühschicht?");
+      await staffAbsenceService.question("7", "Wer übernimmt die Frühschicht?");
 
       expect(mockFetch).toHaveBeenCalledWith(
         "/api/staff/absences/7/question",
@@ -2421,10 +2208,10 @@ describe("staff-api", () => {
         } as Response);
 
       await expect(
-        staffAbsenceService.question(7, "Erste Frage"),
-      ).rejects.toThrow("Rückfrage nicht möglich");
+        staffAbsenceService.question("7", "Erste Frage"),
+      ).rejects.toBeInstanceOf(ApiError);
       await expect(
-        staffAbsenceService.question(8, "Zweite Frage"),
+        staffAbsenceService.question("8", "Zweite Frage"),
       ).rejects.toThrow("Rückfrage fehlgeschlagen");
     });
 
@@ -2477,7 +2264,7 @@ describe("staff-api", () => {
           date_start: "2026-07-14",
           date_end: "2026-07-14",
         }),
-      ).rejects.toThrow("overlapping absence");
+      ).rejects.toBeInstanceOf(ApiError);
     });
 
     // The catalog explains each refusal (#2514); the client keeps the code.
@@ -2533,7 +2320,7 @@ describe("staff-api", () => {
       } as Response);
 
       const result = await staffAbsenceService.rebookAbsences("4", {
-        absenceIds: [71, 72],
+        absenceIds: ["71", "72"],
         absenceType: "other",
         absenceTypeId: "12",
         reason: "",
@@ -2579,7 +2366,7 @@ describe("staff-api", () => {
           ),
       } as Response);
       const args = {
-        absenceIds: [71],
+        absenceIds: ["71"],
         absenceType: "other",
         absenceTypeId: "12",
         reason: "x",
@@ -2650,9 +2437,9 @@ describe("staff-api", () => {
 
     it("deletes an absence (#1843)", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValueOnce({ ok: true } as Response);
+      mockFetch.mockResolvedValueOnce({ ok: true, status: 204 } as Response);
 
-      await staffAbsenceService.deleteAbsence("1", 42);
+      await staffAbsenceService.deleteAbsence("1", "42");
 
       expect(mockFetch).toHaveBeenCalledWith(
         "/api/staff/1/absences/42",
@@ -2667,9 +2454,9 @@ describe("staff-api", () => {
         text: () => Promise.resolve("Nicht gefunden"),
       } as Response);
 
-      await expect(staffAbsenceService.deleteAbsence("1", 99)).rejects.toThrow(
-        "Nicht gefunden",
-      );
+      await expect(
+        staffAbsenceService.deleteAbsence("1", "99"),
+      ).rejects.toBeInstanceOf(ApiError);
     });
   });
 
@@ -2712,9 +2499,9 @@ describe("staff-api", () => {
         statusText: "Unauthorized",
       } as Response);
 
-      await expect(staffSessionEditsService.getEdits("1", "4")).rejects.toThrow(
-        "Failed to fetch session edits: Unauthorized",
-      );
+      await expect(
+        staffSessionEditsService.getEdits("1", "4"),
+      ).rejects.toBeInstanceOf(ApiError);
     });
   });
 
@@ -2731,8 +2518,8 @@ describe("staff-api", () => {
     it("updates and creates staff sessions", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
       mockFetch
-        .mockResolvedValueOnce({ ok: true } as Response)
-        .mockResolvedValueOnce({ ok: true } as Response);
+        .mockResolvedValueOnce({ ok: true, status: 204 } as Response)
+        .mockResolvedValueOnce({ ok: true, status: 204 } as Response);
 
       await staffSessionService.updateSession("1", "4", payload);
       await staffSessionService.createSession("1", payload);
@@ -2770,10 +2557,10 @@ describe("staff-api", () => {
 
       await expect(
         staffSessionService.updateSession("1", "4", payload),
-      ).rejects.toThrow("Invalid update");
+      ).rejects.toBeInstanceOf(ApiError);
       await expect(
         staffSessionService.createSession("1", payload),
-      ).rejects.toThrow("Failed to create session: Bad Request");
+      ).rejects.toBeInstanceOf(ApiError);
     });
 
     // The display path offers the request ID for a server failure (#2514).
@@ -2960,7 +2747,7 @@ describe("staff-api", () => {
 
     it("deletes an adjustment", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValueOnce({ ok: true } as Response);
+      mockFetch.mockResolvedValueOnce({ ok: true, status: 204 } as Response);
 
       await staffBalanceAdjustmentService.delete("4", "17");
 
@@ -3090,7 +2877,7 @@ describe("staff-api", () => {
 
       await expect(
         staffBalanceAdjustmentService.list("4", "2026-01-01", "2026-12-31"),
-      ).rejects.toThrow("Failed to fetch adjustments: Bad Gateway");
+      ).rejects.toBeInstanceOf(ApiError);
       await expect(
         staffBalanceAdjustmentService.create("4", {
           type: "payout",
@@ -3098,7 +2885,7 @@ describe("staff-api", () => {
           effectiveDate: "2026-07-31",
           note: "x",
         }),
-      ).rejects.toThrow("Ungültige Buchung");
+      ).rejects.toBeInstanceOf(ApiError);
       await expect(
         staffBalanceAdjustmentService.delete("4", "17"),
       ).rejects.toThrow("Löschen fehlgeschlagen");
@@ -3128,7 +2915,7 @@ describe("staff-api", () => {
           carryoverMinutes: 0,
           note: "x",
         }),
-      ).rejects.toThrow("Ungültiger Reset");
+      ).rejects.toMatchObject({ status: 400 });
     });
 
     // Eröffnungssaldo (#2132). The backend's stable error codes carry no German
@@ -3219,7 +3006,7 @@ describe("staff-api", () => {
         json: () =>
           Promise.resolve({
             data: {
-              id: 42,
+              id: "42",
               name: "Erika Musterfrau",
               firstName: "Erika",
               lastName: "Musterfrau",
@@ -3249,9 +3036,9 @@ describe("staff-api", () => {
         statusText: "Forbidden",
       } as Response);
 
-      await expect(staffService.getFinancialProfile("42")).rejects.toThrow(
-        "Failed to fetch financial staff profile: Forbidden",
-      );
+      await expect(
+        staffService.getFinancialProfile("42"),
+      ).rejects.toBeInstanceOf(ApiError);
     });
   });
 
@@ -3367,14 +3154,14 @@ describe("staff-api", () => {
         statusText: "Forbidden",
       } as Response);
 
-      await expect(staffStammdatenService.get("7")).rejects.toThrow(
-        "Failed to fetch stammdaten: Forbidden",
+      await expect(staffStammdatenService.get("7")).rejects.toBeInstanceOf(
+        ApiError,
       );
     });
 
     it("writes the person section in the backend wire shape", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValue({ ok: true } as Response);
+      mockFetch.mockResolvedValue({ ok: true, status: 204 } as Response);
 
       await staffStammdatenService.updatePerson(
         "7",
@@ -3401,7 +3188,7 @@ describe("staff-api", () => {
 
     it("writes the kontakt section in the backend wire shape", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValue({ ok: true } as Response);
+      mockFetch.mockResolvedValue({ ok: true, status: 204 } as Response);
 
       await staffStammdatenService.updateKontakt(
         "7",
@@ -3433,7 +3220,7 @@ describe("staff-api", () => {
 
     it("writes the arbeitsvertrag section in the backend wire shape", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValue({ ok: true } as Response);
+      mockFetch.mockResolvedValue({ ok: true, status: 204 } as Response);
 
       await staffStammdatenService.updateArbeitsvertrag(
         "7",
@@ -3461,7 +3248,7 @@ describe("staff-api", () => {
 
     it("sends the full qualification list with the row ids and kinds (#4808)", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValue({ ok: true } as Response);
+      mockFetch.mockResolvedValue({ ok: true, status: 204 } as Response);
 
       await staffStammdatenService.updateQualifikationen(
         "7",
@@ -3619,9 +3406,9 @@ describe("staff-api", () => {
         statusText: "Forbidden",
       } as Response);
 
-      await expect(staffStammdatenService.getFinancial("7")).rejects.toThrow(
-        "Failed to fetch financial data: Forbidden",
-      );
+      await expect(
+        staffStammdatenService.getFinancial("7"),
+      ).rejects.toBeInstanceOf(ApiError);
     });
 
     it("reveals the plaintext values via POST (audited server-side)", async () => {
@@ -3659,9 +3446,9 @@ describe("staff-api", () => {
         text: () => Promise.resolve(""),
       } as Response);
 
-      await expect(staffStammdatenService.revealFinancial("7")).rejects.toThrow(
-        "Failed to reveal financial data: Forbidden",
-      );
+      await expect(
+        staffStammdatenService.revealFinancial("7"),
+      ).rejects.toMatchObject({ status: 403 });
       await expect(
         staffStammdatenService.revealFinancial("7"),
       ).rejects.toMatchObject({ status: 403, code: "general.permission" });
@@ -3669,7 +3456,7 @@ describe("staff-api", () => {
 
     it("writes the bank & tax section in the backend wire shape", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValue({ ok: true } as Response);
+      mockFetch.mockResolvedValue({ ok: true, status: 204 } as Response);
 
       await staffStammdatenService.updateFinancial(
         "7",
