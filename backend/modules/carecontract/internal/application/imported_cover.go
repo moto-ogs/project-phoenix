@@ -66,7 +66,7 @@ func (in *Intake) claimUncovered(ctx context.Context, organizationID int64, read
 // nothing: the child gets its contract for the next phase as before.
 func coveredByImport(reads []schoolRead, children []ports.ContractChild, today calendar.Date) map[ContractKey]bool {
 	covered := map[ContractKey]bool{}
-	imported := runningImports(children, today)
+	imported := runningImports(children)
 	for _, read := range reads {
 		contracts := imported[read.school.ID]
 		if len(contracts) == 0 {
@@ -81,12 +81,16 @@ func coveredByImport(reads []schoolRead, children []ports.ContractChild, today c
 	return covered
 }
 
-// runningImports are the imported contracts that still hold on today, per
-// school.
-func runningImports(children []ports.ContractChild, today calendar.Date) map[int64][]ports.ContractChild {
+// runningImports are the imported contracts that hold or held, per school:
+// all but a withdrawn one, which never held, and an ended one without a last
+// day. A contract that ended before today still counts: a contract from an
+// application may begin in the past, and both would bill the days they
+// share. The time each contract holds decides in importCovers.
+func runningImports(children []ports.ContractChild) map[int64][]ports.ContractChild {
 	imported := map[int64][]ports.ContractChild{}
 	for _, child := range children {
-		if child.ImportOrigin != "" && holdsOn(child, today) {
+		held := child.Status != carecontract.StatusWithdrawn && (child.Status != carecontract.StatusEnded || child.EndsOn != nil)
+		if child.ImportOrigin != "" && held {
 			imported[child.SchoolID] = append(imported[child.SchoolID], child)
 		}
 	}

@@ -44,9 +44,9 @@ const FIELD = "student_id";
 function typedNumber(value: string): string | null {
   const trimmed = value.trim();
   // Ohne führende Nullen: so nennt auch die Antwort die Nummer.
-  return /^\d+$/.test(trimmed) && Number(trimmed) > 0
-    ? String(Number(trimmed))
-    : null;
+  // Als Text, damit auch eine sehr lange Nummer genau so ankommt.
+  const digits = trimmed.replace(/^0+/, "");
+  return /^\d+$/.test(trimmed) && digits !== "" ? digits : null;
 }
 
 function Side({

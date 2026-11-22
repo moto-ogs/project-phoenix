@@ -35,6 +35,7 @@ const accessViewImport = "care_contract_import"
 type ImportStore interface {
 	Templates(ctx context.Context, organizationID int64) ([]TemplateRow, error)
 	ContractChildren(ctx context.Context, organizationID int64, schoolIDs []int64) ([]ports.ContractChild, error)
+	LockChildLinks(ctx context.Context, organizationID int64) error
 	InsertImportedContracts(ctx context.Context, organizationID, accountID int64, contracts []ports.ImportedContract) (map[int]int64, error)
 	ContractImportEvents(ctx context.Context, organizationID int64) ([]carecontract.ContractImportEntry, error)
 	InsertEvents(ctx context.Context, organizationID int64, events []Event) error
@@ -169,6 +170,14 @@ func (i *ContractImports) evaluate(ctx context.Context, reviewer carecontract.Re
 	ids := make([]int64, len(schools))
 	for n, school := range schools {
 		ids[n] = school.school.ID
+	}
+	if request.Apply {
+		// The lock a creation of a contract and a link run take (#7760): what
+		// the import finds as running is decided under it, so an import and a
+		// contract from an application of one child cannot both pass.
+		if err := i.store.LockChildLinks(ctx, organizationID); err != nil {
+			return nil, err
+		}
 	}
 	running, err := i.store.ContractChildren(ctx, organizationID, ids)
 	if err != nil {

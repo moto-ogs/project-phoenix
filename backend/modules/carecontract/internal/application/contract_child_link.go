@@ -439,7 +439,7 @@ func newLinkDecision(pairs []linkPair, schools []carecontract.School, contracts 
 			continue
 		}
 		decision.byContract[pair.contractID] = append(decision.byContract[pair.contractID], pair)
-		if contract.ImportOrigin == "" || !holdsOn(contract, today) {
+		if contract.ImportOrigin == "" {
 			// A row that links nothing contests no child record.
 			continue
 		}
@@ -459,34 +459,38 @@ func holdChildLink(row *carecontract.ChildLinkRow, status, field, problem string
 }
 
 // decide answers one pair: invalid until the contract is an imported one of
-// the Träger and its school has the child record, then judged.
+// the Träger and its school has the child record, then judged. The second
+// answer is the school whose contract the row shows, 0 for an unknown one.
 func (d *linkDecision) decide(pair linkPair) (carecontract.ChildLinkRow, int64) {
 	row := carecontract.ChildLinkRow{Line: pair.line, ContractID: ident.ID(pair.contractID), StudentID: ident.ID(pair.studentID),
 		Problems: append([]carecontract.ChildLinkProblem{}, pair.problems...)}
 	contract, known := d.byID[pair.contractID]
+	// A row of a known contract shows the contract's child: its school logs it.
+	var shown int64
 	if known {
+		shown = contract.SchoolID
 		row.SchoolName = d.schoolNames[contract.SchoolID]
 		row.ContractChildFirstName, row.ContractChildLastName, row.ContractChildBirthDate = contract.FirstName, contract.LastName, contract.BirthDate
 	}
 	switch {
 	case len(row.Problems) > 0:
 		row.Status = carecontract.ChildLinkInvalid
-		return row, 0
+		return row, shown
 	case !known:
 		holdChildLink(&row, carecontract.ChildLinkInvalid, carecontract.ChildLinkFieldContract, carecontract.ChildLinkProblemUnknown)
-		return row, 0
+		return row, shown
 	case contract.ImportOrigin == "":
 		holdChildLink(&row, carecontract.ChildLinkInvalid, carecontract.ChildLinkFieldContract, carecontract.ChildLinkProblemNotImported)
-		return row, 0
+		return row, shown
 	}
 	student, found := d.students[contract.SchoolID][pair.studentID]
 	if !found {
 		holdChildLink(&row, carecontract.ChildLinkInvalid, carecontract.ChildLinkFieldChild, carecontract.ChildLinkProblemUnknown)
-		return row, 0
+		return row, shown
 	}
 	row.StudentFirstName, row.StudentLastName, row.StudentBirthDate = student.FirstName, student.LastName, student.BirthDate
 	d.judge(&row, pair, contract, student)
-	return row, contract.SchoolID
+	return row, shown
 }
 
 // judge decides a row whose contract and child record exist: a contract or a
@@ -633,24 +637,29 @@ func countChildLinkRow(counts *carecontract.ChildLinkCounts, row carecontract.Ch
 }
 
 // logSchools records in the access log of each school that the office saw
-// which of its child records a run names (ADR 0084 section 7): every row
-// that shows a child record of the school.
+// which of its contracts a run names (ADR 0084 section 7): every row that
+// shows the child of a contract of the school, with the child record where
+// the row shows one.
 func (l *ContractChildLinks) logSchools(ctx context.Context, reviewer carecontract.Reviewer, schools []carecontract.School,
 	rows []carecontract.ChildLinkRow, shownAt []int64) error {
 	for _, school := range schools {
 		var contracts, students []int64
 		for n, row := range rows {
-			if shownAt[n] == school.ID {
-				contracts, students = append(contracts, row.ContractID.Int64()), append(students, row.StudentID.Int64())
+			if shownAt[n] != school.ID {
+				continue
+			}
+			contracts = append(contracts, row.ContractID.Int64())
+			if row.StudentFirstName != "" || row.StudentLastName != "" {
+				students = append(students, row.StudentID.Int64())
 			}
 		}
-		if len(students) == 0 {
+		if len(contracts) == 0 {
 			continue
 		}
 		err := l.ports.Runtime.WithinSchool(ctx, school.ID, func(txCtx context.Context) error {
 			return l.ports.Access.RecordAccess(txCtx, carecontract.SchoolAccess{
 				OrganizationID: reviewer.OrganizationID, AccountID: reviewer.AccountID, Data: carecontract.SchoolAccessContracts,
-				View: accessViewChildLink, Rows: len(students), ContractIDs: contracts, StudentIDs: students,
+				View: accessViewChildLink, Rows: len(contracts), ContractIDs: contracts, StudentIDs: students,
 			})
 		})
 		if err != nil {

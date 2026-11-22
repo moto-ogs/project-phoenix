@@ -137,6 +137,22 @@ func TestDecideChildLinksHoldsBackContradictingRows(t *testing.T) {
 	assert.Equal(t, 2, same[1].RepeatsLine)
 }
 
+// Two ended imported contracts of one time cannot both be the child's: the
+// file holds both back, as it does for running ones.
+func TestDecideChildLinksHoldsBackEndedContractsOfOneTime(t *testing.T) {
+	t.Parallel()
+	ended := calendar.NewDate(2026, 7, 31)
+	contracts := []ports.ContractChild{
+		{ContractID: 31, SchoolID: linkSchoolNorth, Status: carecontract.StatusEnded, FirstName: "Mia", LastName: "Beispiel",
+			StartsOn: calendar.NewDate(2025, 8, 1), EndsOn: &ended, ImportOrigin: "mia-a"},
+		{ContractID: 32, SchoolID: linkSchoolNorth, Status: carecontract.StatusEnded, FirstName: "Mia", LastName: "Beispiel",
+			StartsOn: calendar.NewDate(2025, 9, 1), EndsOn: &ended, ImportOrigin: "mia-b"},
+	}
+	rows := decideOne(t, contracts, linkPair{line: 2, contractID: 31, studentID: linkMia}, linkPair{line: 3, contractID: 32, studentID: linkMia})
+	assert.Equal(t, carecontract.ChildLinkConflict, rows[0].Status)
+	assert.Equal(t, carecontract.ChildLinkConflict, rows[1].Status)
+}
+
 // Two imported contracts of one child that follow each other are both
 // linked by one file: they share no day.
 func TestDecideChildLinksLinksContractsThatFollowEachOther(t *testing.T) {
@@ -275,6 +291,8 @@ func TestCoveredByImportCoversTheChildOfARunningImportedContract(t *testing.T) {
 			imported(nil, "Mia", importDay(2018, 3, 5), nil, carecontract.StatusActive), false},
 		{"ends before the booked care starts (renewal)", application(81, linkPtr(linkMia), "Mia", nil, calendar.NewDate(2027, 8, 1)),
 			imported(linkPtr(linkMia), "Mia", nil, importDay(2027, 7, 31), carecontract.StatusActive), false},
+		{"ended before today, but the booked care began before its end", application(81, linkPtr(linkMia), "Mia", nil, calendar.NewDate(2026, 9, 1)),
+			imported(linkPtr(linkMia), "Mia", nil, importDay(2026, 10, 31), carecontract.StatusEnded), true},
 		{"withdrawn", application(81, linkPtr(linkMia), "Mia", nil, booked),
 			imported(linkPtr(linkMia), "Mia", nil, nil, carecontract.StatusWithdrawn), false},
 		{"ended", application(81, linkPtr(linkMia), "Mia", nil, booked),
