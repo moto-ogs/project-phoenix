@@ -744,6 +744,7 @@ export async function fetchTraegerInvitation(
 ): Promise<TraegerInvitationPreview> {
   const data = await bffJson("public", "GET /traeger/invitations/{token}", {
     params: { token },
+    errorMessage: "traeger invitation preview failed",
   });
   return {
     organizationName: data.organization_name,
@@ -769,6 +770,7 @@ export async function acceptTraegerInvitation(
     "POST /traeger/invitations/{token}/accept",
     {
       params: { token },
+      errorMessage: "traeger invitation acceptance failed",
       body: {
         name: input.name,
         password: input.password,
