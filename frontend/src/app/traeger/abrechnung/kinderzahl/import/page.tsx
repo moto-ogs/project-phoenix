@@ -67,7 +67,7 @@ function errorText(err: unknown): string {
 
 function doneDescription(done: FamilyImportResult): string {
   const { counts } = done;
-  return `${counts.same} schon bestätigt, ${familyImportOpenRows(counts)} nicht übernommen. Die Zahlen stehen unter Kinderzahl mit dem Stand „Bestätigt“. Beginnt eine Zahl erst später, steht dort „Gilt später“. Neue Monatsläufe rechnen damit.`;
+  return `${counts.same} schon bestätigt, ${familyImportOpenRows(counts)} nicht übernommen. Die Zahlen stehen unter Kinderzahl mit dem Stand „Bestätigt“. Beginnt eine Zahl erst später, steht dort bis dahin ein anderer Stand, zum Beispiel „Gilt später“ oder „Abgelaufen“. Neue Monatsläufe rechnen damit.`;
 }
 
 export default function TraegerKinderzahlImportPage() {

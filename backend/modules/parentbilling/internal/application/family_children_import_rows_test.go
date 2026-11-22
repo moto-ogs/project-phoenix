@@ -17,10 +17,17 @@ func TestFamilyImportRowsCountFromTheDayTheOfficeNames(t *testing.T) {
 	t.Parallel()
 	const school = int64(schoolIspringen)
 	fileDay, contractStart := calendar.NewDate(2026, 11, 1), calendar.NewDate(2025, 8, 1)
-	headers := []string{"Vorname", "Nachname", "Kinderzahl", "Gültig ab"}
+	// A plain „Gültig ab“ can be the contract's first day: moto maps no day
+	// column by itself there, the office chooses it.
+	assert.Equal(t, "Kinderzahl gilt ab",
+		suggestFamilyImportMapping([]string{"Vorname", "Nachname", "Kinderzahl", "Gültig ab", "Kinderzahl gilt ab"}).Columns.ValidFrom,
+		"the column that names the number goes before a plain „Gültig ab“")
+	assert.Empty(t, suggestFamilyImportMapping([]string{"Vorname", "Nachname", "Kinderzahl", "Gültig ab"}).Columns.ValidFrom,
+		"a plain „Gültig ab“ is not mapped by itself")
+	headers := []string{"Vorname", "Nachname", "Kinderzahl", "Kinderzahl gilt ab"}
 	schools := []parentbilling.CareSchool{{ID: ident.ID(school), Name: "Grundschule Nord"}}
 	mapping := suggestFamilyImportMapping(headers)
-	assert.Equal(t, "Gültig ab", mapping.Columns.ValidFrom, "moto maps the column by itself")
+	assert.Equal(t, "Kinderzahl gilt ab", mapping.Columns.ValidFrom, "moto maps the column by itself")
 	mapping.SchoolID, mapping.ValidFrom = ident.ID(school), &fileDay
 	index, err := resolveFamilyImportMapping(headers, mapping, schools)
 	require.NoError(t, err)

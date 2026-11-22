@@ -176,7 +176,7 @@ export function numberCountLabel(count: number): string {
 
 /** Eine Beispieldatei mit den Spalten, die moto von selbst erkennt. */
 export const FAMILY_IMPORT_SAMPLE = [
-  "Vorname;Nachname;Geburtsdatum;Schule;Kinder in der Familie;Gültig ab",
+  "Vorname;Nachname;Geburtsdatum;Schule;Kinder in der Familie;Kinderzahl gilt ab",
   "Mia;Beispiel;03.05.2018;Grundschule Nord;2;01.09.2026",
   "Ben;Muster;11.11.2019;Grundschule Nord;1;",
 ].join("\r\n");

@@ -41,8 +41,11 @@ var familyImportHeaderNames = map[string][]string{
 	parentbilling.FamilyImportFieldChildBirthDate: {"geburtsdatum", "geburtsdatumkind", "geburtsdatumdeskindes", "geburtstag", "gebdatum",
 		"geborenam", "birthdate", "dateofbirth"},
 	parentbilling.FamilyImportFieldSchool: {"schule", "schulname", "einrichtung", "standort", "betreuungsort", "ogs", "school"},
-	parentbilling.FamilyImportFieldValidFrom: {"gueltigab", "giltab", "kinderzahlgueltigab", "kinderzahlgiltab", "gueltigseit",
-		"stichtag", "validfrom"},
+	// Only names that speak of the number: a plain „Gültig ab“ can be the
+	// first day of the contract, and moto never backdates a number to it by
+	// itself (#7765). The office maps such a column on purpose.
+	parentbilling.FamilyImportFieldValidFrom: {"kinderzahlgiltab", "kinderzahlgueltigab", "kinderzahlgueltigseit", "kinderzahlab",
+		"kinderzahlstichtag", "stichtagkinderzahl", "stichtag"},
 }
 
 // familyImportIndex is a mapping resolved against a file: the position of
