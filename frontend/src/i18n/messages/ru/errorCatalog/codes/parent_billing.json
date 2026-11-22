@@ -100,6 +100,7 @@
   "sepa_mandate_invalid": "Не удалось сохранить: {object}. Проверьте введённые данные.",
   "sepa_mandate_not_found": "Не удалось изменить: {object}. Проверьте текущее состояние.",
   "sepa_mandate_in_force": "Не удалось изменить: {object}. Проверьте текущее состояние.",
+  "sepa_mandate_contract_draft": "Не удалось изменить: {object}. Проверьте текущее состояние.",
   "sepa_mandate_reference_taken": "Не удалось изменить: {object}. Проверьте текущее состояние.",
   "sepa_mandate_revoked": "Не удалось изменить: {object}. Проверьте текущее состояние.",
   "direct_debit_without_mandate": "Не удалось изменить: {object}. Проверьте текущее состояние.",
