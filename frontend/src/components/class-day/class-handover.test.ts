@@ -4,7 +4,7 @@ import { handoverLine, handoverRows, initialAbsentIds } from "./class-handover";
 
 function row(overrides: Partial<ClassDayRow>): ClassDayRow {
   return {
-    student_id: 1,
+    student_id: "1",
     first_name: "Kind",
     last_name: "Test",
     registered: true,
@@ -16,23 +16,27 @@ function row(overrides: Partial<ClassDayRow>): ClassDayRow {
 
 describe("class handover helpers (#4794)", () => {
   const rows = [
-    row({ student_id: 1 }),
+    row({ student_id: "1" }),
     row({
-      student_id: 2,
+      student_id: "2",
       morning_attendance: { status: "absent", source: "teacher" },
     }),
-    row({ student_id: 3, stays_today: false }),
-    row({ student_id: 0, list_entry: true, list_entry_id: "9" }),
-    row({ student_id: 4, handover_absent: true }),
+    row({ student_id: "3", stays_today: false }),
+    row({ student_id: "0", list_entry: true, list_entry_id: "9" }),
+    row({ student_id: "4", handover_absent: true }),
   ];
 
   it("hands over only the children going to the OGS", () => {
-    expect(handoverRows(rows).map((r) => r.student_id)).toEqual([1, 2, 4]);
+    expect(handoverRows(rows).map((r) => r.student_id)).toEqual([
+      "1",
+      "2",
+      "4",
+    ]);
   });
 
   it("prefills from the morning, or from the stored handover", () => {
-    expect([...initialAbsentIds(rows, false)]).toEqual([2]);
-    expect([...initialAbsentIds(rows, true)]).toEqual([4]);
+    expect([...initialAbsentIds(rows, false)]).toEqual(["2"]);
+    expect([...initialAbsentIds(rows, true)]).toEqual(["4"]);
   });
 
   it("takes unsaved morning marks into the prefill", () => {
@@ -41,7 +45,7 @@ describe("class handover helpers (#4794)", () => {
         "student-1": "absent",
         "student-2": "present",
       }),
-    ]).toEqual([1]);
+    ]).toEqual(["1"]);
   });
 
   it("states moment, Lehrkraft and absences in one line", () => {

@@ -135,13 +135,13 @@ func (r *HolidayChildDayLimitRefusal) Unwrap() []error {
 // negative.
 type HolidayContributionLine struct {
 	Kind                string         `json:"kind"`
-	AmountCents         int64          `json:"amount_cents"`
+	AmountCents         int64          `json:"amount_cents" contract:"number"`
 	WeekStartsOn        *calendar.Date `json:"week_starts_on"`
 	WeekEndsOn          *calendar.Date `json:"week_ends_on"`
 	TimeModelName       string         `json:"time_model_name"`
 	ChildRank           *int           `json:"child_rank"`
 	DiscountBasisPoints *int           `json:"discount_basis_points"`
-	DiscountCents       *int64         `json:"discount_cents"`
+	DiscountCents       *int64         `json:"discount_cents" contract:"number"`
 	Note                string         `json:"note"`
 	CostBearerID        *ident.ID      `json:"cost_bearer_id"`
 	CostBearerName      string         `json:"cost_bearer_name"`
@@ -162,7 +162,7 @@ type HolidayChildContribution struct {
 	ChildID    ident.ID                  `json:"child_id"`
 	Position   int                       `json:"position"`
 	Lines      []HolidayContributionLine `json:"lines"`
-	TotalCents int64                     `json:"total_cents"`
+	TotalCents int64                     `json:"total_cents" contract:"number"`
 }
 
 // HolidayContribution is the contribution of a registration or a quote.
@@ -173,7 +173,7 @@ type HolidayChildContribution struct {
 // bills the registration, which then keeps its debtor number (#5621).
 type HolidayContribution struct {
 	Children           []HolidayChildContribution `json:"children"`
-	TotalCents         int64                      `json:"total_cents"`
+	TotalCents         int64                      `json:"total_cents" contract:"number"`
 	ExemptionAvailable bool                       `json:"exemption_available"`
 	BenefitsExemption  bool                       `json:"benefits_exemption"`
 	CostBearerID       *ident.ID                  `json:"cost_bearer_id"`

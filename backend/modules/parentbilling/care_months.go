@@ -111,8 +111,8 @@ type CareTariff struct {
 	DaysPerWeek    *int           `json:"days_per_week"`
 	ValidFrom      calendar.Date  `json:"valid_from"`
 	ValidUntil     *calendar.Date `json:"valid_until"`
-	MonthlyCents   int64          `json:"monthly_cents"`
-	SiblingCents   *int64         `json:"sibling_cents"`
+	MonthlyCents   int64          `json:"monthly_cents" contract:"number"`
+	SiblingCents   *int64         `json:"sibling_cents" contract:"number"`
 	MealExtra      bool           `json:"meal_extra"`
 	CreatedAt      time.Time      `json:"created_at"`
 }
@@ -194,7 +194,7 @@ type CareRun struct {
 	ReleasedAt    *time.Time     `json:"released_at"`
 	IssuedOn      *calendar.Date `json:"issued_on"`
 	DocumentCount *int           `json:"document_count"`
-	TotalCents    *int64         `json:"total_cents"`
+	TotalCents    *int64         `json:"total_cents" contract:"number"`
 	MonthRule     string         `json:"month_rule"`
 	// FreeOfCharge is the free-month count saved by the release.
 	FreeOfCharge int `json:"free_of_charge"`
@@ -216,8 +216,8 @@ type CareRunList struct {
 // price and the part of it the position bills.
 type CareWeekdayPrice struct {
 	Weekday      string `json:"weekday"`
-	MonthlyCents int64  `json:"monthly_cents"`
-	AmountCents  int64  `json:"amount_cents"`
+	MonthlyCents int64  `json:"monthly_cents" contract:"number"`
+	AmountCents  int64  `json:"amount_cents" contract:"number"`
 }
 
 // CarePosition is one booked module of an invoice: the weekdays the
@@ -232,12 +232,12 @@ type CarePosition struct {
 	// DaysPerWeek and TierMonthlyCents are the scale step a module priced
 	// by days per week billed (#6196); nil for a price per weekday.
 	DaysPerWeek      *int   `json:"days_per_week,omitempty"`
-	TierMonthlyCents *int64 `json:"tier_monthly_cents,omitempty"`
+	TierMonthlyCents *int64 `json:"tier_monthly_cents,omitempty" contract:"number"`
 	// MealExtra says the price excludes the meal, which the Mensa bills.
 	MealExtra   bool  `json:"meal_extra,omitempty"`
-	AmountCents int64 `json:"amount_cents"`
+	AmountCents int64 `json:"amount_cents" contract:"number"`
 	// PayableCents preserves the rule chain allocation for later runs of the month.
-	PayableCents int64 `json:"payable_cents"`
+	PayableCents int64 `json:"payable_cents" contract:"number"`
 	// Key names the position for a change of the review (#6197).
 	Key string `json:"key,omitempty"`
 	// SiblingCents is what the position costs at the sibling prices of the
@@ -313,7 +313,7 @@ type CareInvoice struct {
 	// invoice the corrections its release stored. TotalCents adds the
 	// correction lines of the applied ones.
 	Amendments []CareAmendment `json:"amendments,omitempty"`
-	TotalCents int64           `json:"total_cents"`
+	TotalCents int64           `json:"total_cents" contract:"number"`
 }
 
 // CareUnpriced is a booked weekday of a module the price list has no price
@@ -415,7 +415,7 @@ type CareRunDetail struct {
 	// Jahresbescheid set to nothing for the month (ADR 0182).
 	FeeNoticeHeld  []CareFeeNoticeHold `json:"fee_notice_held"`
 	PreviewCount   int                 `json:"preview_count"`
-	PreviewCents   int64               `json:"preview_cents"`
+	PreviewCents   int64               `json:"preview_cents" contract:"number"`
 	NumberPattern  string              `json:"number_pattern"`
 	NumberRangeSet bool                `json:"number_range_set"`
 	// MealGaps and MealUnbilled are the Mensa of a calculated run (#4686):

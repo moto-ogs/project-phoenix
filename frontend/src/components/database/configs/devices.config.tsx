@@ -108,7 +108,13 @@ export const devicesConfig = defineEntityConfig<Device>({
   backUrl: "/database",
 
   api: {
-    basePath: "/api/iot",
+    routes: {
+      list: "GET /api/iot/",
+      get: "GET /api/iot/{id}",
+      create: "POST /api/iot/",
+      update: "PUT /api/iot/{id}",
+      delete: "DELETE /api/iot/{id}",
+    },
   },
 
   form: {

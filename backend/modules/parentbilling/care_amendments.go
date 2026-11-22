@@ -134,9 +134,9 @@ type CareRecipientName struct {
 // CareAmendmentValue is one side of a change: the total of an amount
 // change, the label and amount of a position, a recipient or an address.
 type CareAmendmentValue struct {
-	TotalCents  *int64             `json:"total_cents,omitempty"`
+	TotalCents  *int64             `json:"total_cents,omitempty" contract:"number"`
 	Label       string             `json:"label,omitempty"`
-	AmountCents *int64             `json:"amount_cents,omitempty"`
+	AmountCents *int64             `json:"amount_cents,omitempty" contract:"number"`
 	Recipient   *CareRecipientName `json:"recipient,omitempty"`
 	Address     *PostalAddress     `json:"address,omitempty"`
 }
@@ -158,7 +158,7 @@ type CareAmendment struct {
 	ID          ident.ID           `json:"id"`
 	Kind        string             `json:"kind"`
 	Label       string             `json:"label"`
-	AmountCents int64              `json:"amount_cents"`
+	AmountCents int64              `json:"amount_cents" contract:"number"`
 	PositionKey string             `json:"position_key,omitempty"`
 	Before      CareAmendmentValue `json:"before"`
 	After       CareAmendmentValue `json:"after"`

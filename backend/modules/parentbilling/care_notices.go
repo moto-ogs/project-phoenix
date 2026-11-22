@@ -79,7 +79,7 @@ type CareNoticeRun struct {
 	ReleasedAt  *time.Time     `json:"released_at"`
 	IssuedOn    *calendar.Date `json:"issued_on"`
 	NoticeCount *int           `json:"notice_count"`
-	TotalCents  *int64         `json:"total_cents"`
+	TotalCents  *int64         `json:"total_cents" contract:"number"`
 	// DiscardedAt is set once the Abrechnung discarded the empty run (#6626).
 	DiscardedAt *time.Time `json:"discarded_at"`
 }
@@ -106,11 +106,11 @@ type CareNoticeLine struct {
 	PeriodUntil          calendar.Date `json:"period_until"`
 	Months               int           `json:"months"`
 	Quantity             int           `json:"quantity"`
-	MonthlyPreviousCents int64         `json:"monthly_previous_cents"`
-	MonthlyCents         int64         `json:"monthly_cents"`
-	AnnualPreviousCents  int64         `json:"annual_previous_cents"`
-	AnnualCents          int64         `json:"annual_cents"`
-	DeltaCents           int64         `json:"delta_cents"`
+	MonthlyPreviousCents int64         `json:"monthly_previous_cents" contract:"number"`
+	MonthlyCents         int64         `json:"monthly_cents" contract:"number"`
+	AnnualPreviousCents  int64         `json:"annual_previous_cents" contract:"number"`
+	AnnualCents          int64         `json:"annual_cents" contract:"number"`
+	DeltaCents           int64         `json:"delta_cents" contract:"number"`
 }
 
 // CareNoticeInstallment is the rate of one month: due on the first of the
@@ -119,9 +119,9 @@ type CareNoticeInstallment struct {
 	Month          calendar.Date `json:"month"`
 	DueOn          calendar.Date `json:"due_on"`
 	ImmediatelyDue bool          `json:"immediately_due"`
-	PreviousCents  int64         `json:"previous_cents"`
-	AmountCents    int64         `json:"amount_cents"`
-	DeltaCents     int64         `json:"delta_cents"`
+	PreviousCents  int64         `json:"previous_cents" contract:"number"`
+	AmountCents    int64         `json:"amount_cents" contract:"number"`
+	DeltaCents     int64         `json:"delta_cents" contract:"number"`
 }
 
 // CareNoticeReference names another notice of the same contract.
@@ -157,9 +157,9 @@ type CareNotice struct {
 	PeriodUntil   calendar.Date           `json:"period_until"`
 	Lines         []CareNoticeLine        `json:"lines"`
 	Installments  []CareNoticeInstallment `json:"installments"`
-	PreviousCents int64                   `json:"previous_cents"`
-	TotalCents    int64                   `json:"total_cents"`
-	DeltaCents    int64                   `json:"delta_cents"`
+	PreviousCents int64                   `json:"previous_cents" contract:"number"`
+	TotalCents    int64                   `json:"total_cents" contract:"number"`
+	DeltaCents    int64                   `json:"delta_cents" contract:"number"`
 	Amends        *CareNoticeReference    `json:"amends"`
 	AmendedBy     *CareNoticeReference    `json:"amended_by"`
 	// LegalRemedy is the Rechtsbehelfsbelehrung the release copied from the
@@ -183,8 +183,8 @@ type CareNoticeRunDetail struct {
 	Unpriced           []CareUnpriced  `json:"unpriced"`
 	Duplicates         []CareDuplicate `json:"duplicates"`
 	PreviewCount       int             `json:"preview_count"`
-	PreviewCents       int64           `json:"preview_cents"`
-	PreviewDeltaCents  int64           `json:"preview_delta_cents"`
+	PreviewCents       int64           `json:"preview_cents" contract:"number"`
+	PreviewDeltaCents  int64           `json:"preview_delta_cents" contract:"number"`
 	Fingerprint        string          `json:"fingerprint"`
 	NumberPattern      string          `json:"number_pattern"`
 	NumberRangeSet     bool            `json:"number_range_set"`
@@ -264,5 +264,5 @@ type CareNoticeDue struct {
 	Month          calendar.Date `json:"month"`
 	DueOn          calendar.Date `json:"due_on"`
 	ImmediatelyDue bool          `json:"immediately_due"`
-	AmountCents    int64         `json:"amount_cents"`
+	AmountCents    int64         `json:"amount_cents" contract:"number"`
 }

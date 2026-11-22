@@ -134,7 +134,7 @@ function SharedNotes({
           title="Beobachtungen der OGS"
           description="Die OGS hat diese Notizen für dich freigegeben. Du kannst sie nur lesen."
         >
-          {data.notes.length === 0 ? (
+          {(data.notes ?? []).length === 0 ? (
             <EmptyState
               variant="compact"
               title="Keine Beobachtungen"
@@ -142,7 +142,7 @@ function SharedNotes({
             />
           ) : (
             <ul className="space-y-4">
-              {data.notes.map((note) => (
+              {(data.notes ?? []).map((note) => (
                 <li key={note.id} className="space-y-1">
                   <p className="text-sm whitespace-pre-line text-gray-900">
                     {note.body}

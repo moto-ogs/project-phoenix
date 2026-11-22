@@ -136,7 +136,7 @@ describe("planningTrackService", () => {
     });
   });
 
-  it("serializes the complete order as numeric ids", async () => {
+  it("serializes the complete order as string ids", async () => {
     sessionFetch.mockResolvedValueOnce(
       response({
         data: [{ id: "12", name: "Spät", color: "#5080D8", sort_order: 0 }],
@@ -157,7 +157,7 @@ describe("planningTrackService", () => {
       "/api/timetable/planning-tracks/order",
       expect.objectContaining({
         method: "PUT",
-        body: JSON.stringify({ ids: [12, 7] }),
+        body: JSON.stringify({ ids: ["12", "7"] }),
       }),
     );
   });

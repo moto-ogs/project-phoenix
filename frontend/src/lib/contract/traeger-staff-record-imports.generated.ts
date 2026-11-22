@@ -171,6 +171,7 @@ export const routes = {
     method: "POST",
     pattern: "/traeger/staff-record-imports/preview",
     portals: ["org"],
+    noCommit: "an import preview checks the file and saves no row of it",
     maxBodyBytes: 2162688,
     tooLargeCode: "workforce.traeger_staff_import_file_too_large",
     request: multipart,
