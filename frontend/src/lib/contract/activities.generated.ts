@@ -117,6 +117,19 @@ export const ActivityResponseSchema: z.ZodType<ActivityResponse, unknown> = obje
   updated_at: instant,
 });
 
+/** Go: httpadapter.EnrolledStudentResponse */
+export interface EnrolledStudentResponse {
+  id: string;
+  first_name: string;
+  last_name: string;
+}
+
+export const EnrolledStudentResponseSchema: z.ZodType<EnrolledStudentResponse, unknown> = object<EnrolledStudentResponse>({
+  id: int64String,
+  first_name: str,
+  last_name: str,
+});
+
 /** Go: httpadapter.ScheduleRequest */
 export interface ScheduleRequest {
   weekday?: number;
@@ -170,6 +183,28 @@ export const QuickActivityResponseSchema: z.ZodType<QuickActivityResponse, unkno
   status: str,
   message: str,
   created_at: instant,
+});
+
+/** Go: httpadapter.BatchEnrollmentRequest */
+export interface BatchEnrollmentRequest {
+  student_ids?: string[] | null;
+}
+
+/** Go: httpadapter.EnrollmentUpdateResponse */
+export interface EnrollmentUpdateResponse {
+  activity_id: string;
+  activity_name: string;
+  enrollment_count: number;
+  max_participants: number | null;
+  students_enrolled: string[] | null;
+}
+
+export const EnrollmentUpdateResponseSchema: z.ZodType<EnrollmentUpdateResponse, unknown> = object<EnrollmentUpdateResponse>({
+  activity_id: int64String,
+  activity_name: str,
+  enrollment_count: safeInt,
+  max_participants: nullable(safeInt),
+  students_enrolled: nullable(arr(int64String)),
 });
 
 /** Query of DELETE /api/activities/{id}/supervisors/{supervisorId} */
@@ -248,6 +283,12 @@ export const routes = {
     portals: ["tenant"],
     response: success(ActivityResponseSchema),
   },
+  "GET /api/activities/{id}/students": {
+    method: "GET",
+    pattern: "/api/activities/{id}/students",
+    portals: ["tenant"],
+    response: success(z.array(EnrolledStudentResponseSchema)),
+  },
   "POST /api/activities/": {
     method: "POST",
     pattern: "/api/activities/",
@@ -288,5 +329,12 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<ActivityRequest>(),
     response: success(ActivityResponseSchema),
+  },
+  "PUT /api/activities/{id}/students": {
+    method: "PUT",
+    pattern: "/api/activities/{id}/students",
+    portals: ["tenant"],
+    request: requestBody<BatchEnrollmentRequest>(),
+    response: success(EnrollmentUpdateResponseSchema),
   },
 } as const;
