@@ -39,6 +39,7 @@ import {
   CalendarMonthHeader,
   CalendarShell,
   focusChosenCalendarDay,
+  moveFocusToChosenDayOnLoad,
 } from "./calendar-shell";
 
 interface Preset {
@@ -254,6 +255,7 @@ export function DateRangePicker({
         {(inSheet) =>
           inSheet ? (
             <RangeCalendarInline
+              inSheet
               value={value}
               presets={presets}
               fromMin={fromMin}
@@ -474,6 +476,8 @@ interface RangeCalendarProps {
   readonly toMax?: Date;
   readonly modifiers?: Record<string, Matcher | Matcher[]>;
   readonly modifiersClassNames?: Record<string, string>;
+  /** Im Blatt: Fokus auf den Zeitraum, sobald das Raster geladen ist. */
+  readonly inSheet?: boolean;
 }
 
 export function RangeCalendarInline({
@@ -484,7 +488,9 @@ export function RangeCalendarInline({
   toMax,
   modifiers: extraModifiers,
   modifiersClassNames: extraModifiersClassNames,
+  inSheet = false,
 }: RangeCalendarProps) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const today = useBerlinToday();
   const [month, setMonth] = useState(value?.from ?? parseISODate(today));
   const isSingleMonth = useMediaQuery(BELOW_SM);
@@ -527,6 +533,7 @@ export function RangeCalendarInline({
 
   return (
     <div
+      ref={rootRef}
       className={`flex flex-col sm:flex-row ${hasPresets ? "" : "justify-center"}`}
     >
       {hasPresets && (
@@ -619,6 +626,11 @@ export function RangeCalendarInline({
           }}
           classNames={RANGE_CLASSNAMES}
           skeletonClassNames={RANGE_CLASSNAMES}
+          onGridReady={
+            inSheet
+              ? () => moveFocusToChosenDayOnLoad(rootRef.current)
+              : undefined
+          }
         />
       </div>
     </div>

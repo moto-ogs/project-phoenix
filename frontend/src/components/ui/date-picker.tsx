@@ -41,6 +41,7 @@ import {
   CalendarMonthHeader,
   CalendarShell,
   focusChosenCalendarDay,
+  moveFocusToChosenDayOnLoad,
   resolveCalendarLabels,
   type CalendarLabels,
 } from "./calendar-shell";
@@ -625,6 +626,7 @@ function DatePickerCalendar({
     value ?? defaultMonth ?? parseISODate(today),
   );
   const controlledMonthTime = value?.getTime();
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (controlledMonthTime === undefined) return;
@@ -633,6 +635,7 @@ function DatePickerCalendar({
 
   return (
     <div
+      ref={panelRef}
       data-date-picker-panel
       {...SCROLL_AREA_PROPS}
       className={getCalendarContainerClass(calendarLayout, compact, inSheet)}
@@ -646,6 +649,7 @@ function DatePickerCalendar({
         maxDate={maxDate}
         locale={locale}
         labels={labels}
+        inSheet={inSheet}
       />
       <CalendarShell
         mode="single"
@@ -656,6 +660,11 @@ function DatePickerCalendar({
         onMonthChange={setMonth}
         onSelect={(date: Date | undefined) => onChange(date ?? null)}
         locale={locale}
+        onGridReady={
+          inSheet
+            ? () => moveFocusToChosenDayOnLoad(panelRef.current)
+            : undefined
+        }
       />
     </div>
   );
@@ -671,9 +680,11 @@ function MultipleDatePickerCalendar({
 }: MultipleDatePickerCalendarProps) {
   const today = useBerlinToday();
   const [month, setMonth] = useState(values[0] ?? parseISODate(today));
+  const panelRef = useRef<HTMLDivElement>(null);
 
   return (
     <div
+      ref={panelRef}
       data-date-picker-panel
       {...SCROLL_AREA_PROPS}
       className={getCalendarContainerClass(calendarLayout, compact, inSheet)}
@@ -687,6 +698,11 @@ function MultipleDatePickerCalendar({
         onMonthChange={setMonth}
         onSelect={(dates: Date[] | undefined) => onChangeDates(dates ?? [])}
         locale={de}
+        onGridReady={
+          inSheet
+            ? () => moveFocusToChosenDayOnLoad(panelRef.current)
+            : undefined
+        }
       />
     </div>
   );

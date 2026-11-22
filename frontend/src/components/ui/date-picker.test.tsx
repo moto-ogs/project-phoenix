@@ -1276,6 +1276,35 @@ describe("DatePicker am Handy", () => {
     await waitFor(() => expect(day).toHaveFocus());
   });
 
+  it("öffnet Monat und Jahr im Blatt außerhalb des verschobenen Blatts und wählt darin", async () => {
+    const onChange = vi.fn();
+    render(
+      <DatePicker
+        value={new Date(2024, 0, 15)}
+        onChange={onChange}
+        ariaLabel="Geburtsdatum"
+        monthYearNavigation
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /^Geburtsdatum/ }));
+    const sheet = await screen.findByRole("dialog", { name: "Geburtsdatum" });
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Monat" }));
+    const months = screen.getByRole("listbox", { name: "Monat" });
+    // Das Blatt verschiebt seinen Inhalt per transform; die Liste hängt am
+    // body und läge sonst neben ihrem Auslöser.
+    expect(sheet).not.toContainElement(months);
+    // Die Monatsnamen sind in dieser Datei gemockt; der dritte ist der März.
+    fireEvent.click(screen.getAllByRole("option")[2]!);
+
+    expect(screen.getByTestId("day-picker")).toHaveAttribute(
+      "data-month",
+      new Date(2024, 2, 1).toISOString(),
+    );
+    expect(sheet).toBeInTheDocument();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it("schließt in einem Modal nur das Blatt", async () => {
     const onClose = vi.fn();
     const onChange = vi.fn();
