@@ -72,11 +72,15 @@ vi.mock("~/contexts/ToastContext", () => ({
   useApiLoadError: () => loadErrorApi,
 }));
 
-// Mock sessionFetch for the initial GET
-const mockSessionFetch = vi.fn<(url: string) => Promise<Response>>();
-vi.mock("~/lib/session-cache", () => ({
-  sessionFetch: (url: string) => mockSessionFetch(url),
-}));
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
+// The load (GET) and the writes (POST, DELETE) all go through fetch.
+const mockLoad = vi.fn<(url: string) => Promise<Response>>();
+const mockWrite =
+  vi.fn<(url: string, init?: RequestInit) => Promise<Response>>();
 
 // Mock loginImageSrc
 vi.mock("~/lib/tenant-api", () => ({
@@ -98,17 +102,21 @@ function jsonResponse(data: unknown, ok = true): Response {
 describe("PersonalizationTab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    globalThis.fetch = vi.fn();
+    globalThis.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
+      (init?.method ?? "GET") === "GET"
+        ? mockLoad(String(input))
+        : mockWrite(String(input), init),
+    ) as typeof fetch;
   });
 
   it("shows loading spinner initially", () => {
-    mockSessionFetch.mockReturnValue(new Promise(() => {})); // never resolves
+    mockLoad.mockReturnValue(new Promise(() => {})); // never resolves
     render(<PersonalizationTab />);
     expect(document.querySelector(".animate-spin")).not.toBeNull();
   });
 
   it("shows placeholder when no image is set", async () => {
-    mockSessionFetch.mockResolvedValue(
+    mockLoad.mockResolvedValue(
       jsonResponse({ data: { login_image_url: null, can_edit: true } }),
     );
 
@@ -119,7 +127,7 @@ describe("PersonalizationTab", () => {
   });
 
   it("renders current image when URL is present", async () => {
-    mockSessionFetch.mockResolvedValue(
+    mockLoad.mockResolvedValue(
       jsonResponse({
         data: {
           login_image_url: "/uploads/login-images/1_abc.jpg",
@@ -136,7 +144,7 @@ describe("PersonalizationTab", () => {
   });
 
   it("hides upload and delete buttons when can_edit is false", async () => {
-    mockSessionFetch.mockResolvedValue(
+    mockLoad.mockResolvedValue(
       jsonResponse({
         data: {
           login_image_url: "/uploads/login-images/1_abc.jpg",
@@ -155,7 +163,7 @@ describe("PersonalizationTab", () => {
   });
 
   it("shows upload button when can_edit is true", async () => {
-    mockSessionFetch.mockResolvedValue(
+    mockLoad.mockResolvedValue(
       jsonResponse({ data: { login_image_url: null, can_edit: true } }),
     );
 
@@ -166,7 +174,7 @@ describe("PersonalizationTab", () => {
   });
 
   it("shows delete button only when image exists and can_edit", async () => {
-    mockSessionFetch.mockResolvedValue(
+    mockLoad.mockResolvedValue(
       jsonResponse({
         data: {
           login_image_url: "/uploads/login-images/1_abc.jpg",
@@ -182,7 +190,7 @@ describe("PersonalizationTab", () => {
   });
 
   it("uploads image and shows success toast", async () => {
-    mockSessionFetch.mockResolvedValue(
+    mockLoad.mockResolvedValue(
       jsonResponse({ data: { login_image_url: null, can_edit: true } }),
     );
 
@@ -192,7 +200,7 @@ describe("PersonalizationTab", () => {
     });
 
     // Mock the upload POST
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+    mockWrite.mockResolvedValueOnce(
       jsonResponse({
         data: { login_image_url: "/uploads/login-images/1_new.jpg" },
       }),
@@ -213,7 +221,7 @@ describe("PersonalizationTab", () => {
   });
 
   it("shows error toast on upload failure", async () => {
-    mockSessionFetch.mockResolvedValue(
+    mockLoad.mockResolvedValue(
       jsonResponse({ data: { login_image_url: null, can_edit: true } }),
     );
 
@@ -222,7 +230,7 @@ describe("PersonalizationTab", () => {
       expect(screen.getByText("Bild auswählen")).toBeDefined();
     });
 
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+    mockWrite.mockResolvedValueOnce(
       jsonResponse({ error: "too large" }, false),
     );
 
@@ -242,7 +250,7 @@ describe("PersonalizationTab", () => {
   });
 
   it("deletes image and shows success toast", async () => {
-    mockSessionFetch.mockResolvedValue(
+    mockLoad.mockResolvedValue(
       jsonResponse({
         data: {
           login_image_url: "/uploads/login-images/1_abc.jpg",
@@ -256,7 +264,9 @@ describe("PersonalizationTab", () => {
       expect(screen.getByText("Bild entfernen")).toBeDefined();
     });
 
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce(jsonResponse(null));
+    mockWrite.mockResolvedValueOnce(
+      jsonResponse({ status: "success", data: null }),
+    );
 
     fireEvent.click(screen.getByText("Bild entfernen"));
 
@@ -269,7 +279,7 @@ describe("PersonalizationTab", () => {
   });
 
   it("shows error toast on delete failure", async () => {
-    mockSessionFetch.mockResolvedValue(
+    mockLoad.mockResolvedValue(
       jsonResponse({
         data: {
           login_image_url: "/uploads/login-images/1_abc.jpg",
@@ -283,7 +293,7 @@ describe("PersonalizationTab", () => {
       expect(screen.getByText("Bild entfernen")).toBeDefined();
     });
 
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+    mockWrite.mockResolvedValueOnce(
       jsonResponse({ error: "server error" }, false),
     );
 
@@ -305,8 +315,8 @@ describe("PersonalizationTab", () => {
       },
     } as ReturnType<typeof useTenant>);
 
-    // sessionFetch returns null (simulating fetch failure) — should still show initial from tenant
-    mockSessionFetch.mockResolvedValue(
+    // The load answers without an image (simulating fetch failure) — should still show initial from tenant
+    mockLoad.mockResolvedValue(
       jsonResponse({ data: { login_image_url: null, can_edit: false } }),
     );
 
@@ -321,7 +331,7 @@ describe("PersonalizationTab", () => {
   });
 
   it("shows read-only description when can_edit is false", async () => {
-    mockSessionFetch.mockResolvedValue(
+    mockLoad.mockResolvedValue(
       jsonResponse({ data: { login_image_url: null, can_edit: false } }),
     );
 
@@ -336,7 +346,7 @@ describe("PersonalizationTab", () => {
   // #3893: Ohne Recht und ohne Bild war die Karte leer, ohne Vorschau und
   // ohne Grund. Jetzt zeigt sie, was auf der Login-Seite steht.
   it("previews the moto logo when no image is set, also read-only", async () => {
-    mockSessionFetch.mockResolvedValue(
+    mockLoad.mockResolvedValue(
       jsonResponse({ data: { login_image_url: null, can_edit: false } }),
     );
 
@@ -353,7 +363,7 @@ describe("PersonalizationTab", () => {
   });
 
   it("shows editable description when can_edit is true", async () => {
-    mockSessionFetch.mockResolvedValue(
+    mockLoad.mockResolvedValue(
       jsonResponse({ data: { login_image_url: null, can_edit: true } }),
     );
 
@@ -364,7 +374,7 @@ describe("PersonalizationTab", () => {
   });
 
   it("rejects files larger than 2 MB", async () => {
-    mockSessionFetch.mockResolvedValue(
+    mockLoad.mockResolvedValue(
       jsonResponse({ data: { login_image_url: null, can_edit: true } }),
     );
 
@@ -387,11 +397,11 @@ describe("PersonalizationTab", () => {
       );
     });
     // Should NOT have called fetch for upload
-    expect(globalThis.fetch).not.toHaveBeenCalled();
+    expect(mockWrite).not.toHaveBeenCalled();
   });
 
   it("rejects files with invalid type", async () => {
-    mockSessionFetch.mockResolvedValue(
+    mockLoad.mockResolvedValue(
       jsonResponse({ data: { login_image_url: null, can_edit: true } }),
     );
 
@@ -413,11 +423,11 @@ describe("PersonalizationTab", () => {
         "Bitte wähle ein Bild im Format JPG, PNG oder WebP.",
       );
     });
-    expect(globalThis.fetch).not.toHaveBeenCalled();
+    expect(mockWrite).not.toHaveBeenCalled();
   });
 
   it("handles drag-and-drop upload", async () => {
-    mockSessionFetch.mockResolvedValue(
+    mockLoad.mockResolvedValue(
       jsonResponse({ data: { login_image_url: null, can_edit: true } }),
     );
 
@@ -442,7 +452,7 @@ describe("PersonalizationTab", () => {
   });
 
   it("handles drag over without errors", async () => {
-    mockSessionFetch.mockResolvedValue(
+    mockLoad.mockResolvedValue(
       jsonResponse({ data: { login_image_url: null, can_edit: true } }),
     );
 
@@ -459,7 +469,7 @@ describe("PersonalizationTab", () => {
   });
 
   it("processes file on drop", async () => {
-    mockSessionFetch.mockResolvedValue(
+    mockLoad.mockResolvedValue(
       jsonResponse({ data: { login_image_url: null, can_edit: true } }),
     );
 
@@ -468,7 +478,7 @@ describe("PersonalizationTab", () => {
       expect(screen.getByText("Bild hierher ziehen")).toBeDefined();
     });
 
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+    mockWrite.mockResolvedValueOnce(
       jsonResponse({
         data: { login_image_url: "/uploads/login-images/dropped.jpg" },
       }),
@@ -488,7 +498,7 @@ describe("PersonalizationTab", () => {
   });
 
   it("shows replace text when image exists and can_edit", async () => {
-    mockSessionFetch.mockResolvedValue(
+    mockLoad.mockResolvedValue(
       jsonResponse({
         data: {
           login_image_url: "/uploads/login-images/1_abc.jpg",
@@ -504,7 +514,7 @@ describe("PersonalizationTab", () => {
   });
 
   it("handles keyboard activation of dropzone", async () => {
-    mockSessionFetch.mockResolvedValue(
+    mockLoad.mockResolvedValue(
       jsonResponse({ data: { login_image_url: null, can_edit: true } }),
     );
 
@@ -523,9 +533,7 @@ describe("PersonalizationTab", () => {
   });
 
   it("handles non-ok fetch on mount gracefully", async () => {
-    mockSessionFetch.mockResolvedValue(
-      jsonResponse({ error: "server error" }, false),
-    );
+    mockLoad.mockResolvedValue(jsonResponse({ error: "server error" }, false));
 
     render(<PersonalizationTab />);
     // Anker: der Ladekreis steht da, solange die Antwort aussteht.
@@ -543,7 +551,7 @@ describe("PersonalizationTab", () => {
   });
 
   it("handles fetch exception on mount gracefully", async () => {
-    mockSessionFetch.mockRejectedValue(new Error("network down"));
+    mockLoad.mockRejectedValue(new Error("network down"));
 
     render(<PersonalizationTab />);
     // Anker: der Ladekreis steht da, solange die Antwort aussteht.

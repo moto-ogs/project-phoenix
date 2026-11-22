@@ -8,7 +8,10 @@ import {
   apiErrorFromResponse,
   unavailableApiError,
 } from "./api-error";
-import type { portalRoutes } from "./contract/portals.generated";
+import type {
+  portalRoutes,
+  routeFileRoutes,
+} from "./contract/portals.generated";
 import type { RequestBody } from "./contract/runtime";
 import type { ErrorCode } from "./error-codes.generated";
 import { renewTenantSession, requireTenantSession } from "./session-cache";
@@ -21,12 +24,48 @@ export type Portal = keyof typeof portalRoutes;
 
 type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
+/**
+ * The routes of a portal: those its catalog proxy forwards, and those a named
+ * `route.ts` serves (`routeFileRoutes`, a cache purge or a flow cookie
+ * around the backend's answer).
+ */
+type AnyRoute<P extends Portal> =
+  | (typeof portalRoutes)[P][number]
+  | (P extends keyof typeof routeFileRoutes
+      ? (typeof routeFileRoutes)[P][number]
+      : never);
+
+/**
+ * A sign-in, second factor, renewal or switch step: its route file keeps the
+ * tokens and answers the BFF's own `{ status, data }` (#7833). The generated
+ * answer is the backend's, not the browser's, so these steps are no routes
+ * of bffJson; their callers name the BFF's answer (bffJsonUncontracted).
+ */
+const SESSION_STEP =
+  "the answer carries or ends the tokens the portal's route file turns into its session cookie";
+
+type RouteFileReason = {
+  [
+    P in keyof typeof routeFileRoutes
+  ]: (typeof routeFileRoutes)[P][number] extends infer R
+    ? R extends { routeFile: infer T extends string }
+      ? T
+      : never
+    : never;
+}[keyof typeof routeFileRoutes];
+
+// Fails to compile once the generator words the reason differently, so the
+// session steps never slip into bffJson with the backend's answer type.
+const sessionStepAnchor: RouteFileReason = SESSION_STEP;
+void sessionStepAnchor;
+
 // A JSON route: its answer is one decoder, or one per variant that a query
-// parameter picks (GET /api/students/ and its `view`). File answers are not
-// JSON routes of this helper.
-type JsonRoute<P extends Portal> = Extract<
-  (typeof portalRoutes)[P][number],
-  { response: z.ZodType } | { variantParam: string }
+// parameter picks (GET /api/students/ and its `view`). File answers, the
+// session steps and answers without the envelope (`plain`) are not JSON
+// routes of this helper.
+type JsonRoute<P extends Portal> = Exclude<
+  Extract<AnyRoute<P>, { response: z.ZodType } | { variantParam: string }>,
+  { routeFile: typeof SESSION_STEP } | { plain: true }
 >;
 
 type KeyOf<R> = R extends {
@@ -37,7 +76,7 @@ type KeyOf<R> = R extends {
   : never;
 
 type FileRoute<P extends Portal> = Extract<
-  (typeof portalRoutes)[P][number],
+  AnyRoute<P>,
   { response: { kind: "file" } }
 >;
 

@@ -9,14 +9,10 @@ import { describe, expect, it } from "vitest";
 const UNCONTRACTED_CALLERS: Readonly<Record<string, string>> = {
   "lib/email-code-factor-api.ts":
     "POST caterer/account/mfa/confirm, parent/me/mfa/confirm: the route installs the renewed session",
-  "lib/payroll-api.ts":
-    "PUT settings/values/[key]: the route purges the cached tenant lookup",
   "lib/staff-preview-api.ts":
     "POST auth/staff-preview: a session step of the BFF, no backend route of its own",
   "lib/tenant-api.ts":
     "POST auth/switch-tenant: the session switch of the BFF (ADR 0270, sign-in steps)",
-  "lib/settings-api.ts":
-    "PUT/DELETE settings/values/[key]: the route purges the cached tenant lookup",
   "lib/traeger-api.ts":
     "POST traeger/auth/mfa/step-up/verify: a session step of the BFF, no backend route of its own",
   "lib/traeger-holiday-form-api.ts":

@@ -518,6 +518,12 @@ describe("bffJson", () => {
       });
       // @ts-expect-error: the route belongs to the Träger portal
       void bffJson("tenant", "GET /traeger/absence-types/");
+      // A route its own route.ts serves, with the backend's answer.
+      void bffJson("tenant", "GET /api/settings/login-image");
+      // @ts-expect-error: a session step answers the BFF's own shape
+      void bffJson("tenant", "POST /auth/login", { body: {} });
+      // @ts-expect-error: the wall display answers without the envelope
+      void bffJson("tenant", "GET /api/display/dashboard");
       // @ts-expect-error: the path parameter is missing
       void bffJson("tenant", "DELETE /api/activities/{id}");
       void bffJson("tenant", "GET /api/activities/categories", {

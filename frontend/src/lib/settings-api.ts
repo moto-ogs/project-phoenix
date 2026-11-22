@@ -1,5 +1,5 @@
 import { ApiError } from "./api-error";
-import { bffJson, bffJsonUncontracted } from "./bff-fetch";
+import { bffJson } from "./bff-fetch";
 import type * as wire from "./contract/shared.generated";
 import { createLogger } from "./logger";
 import { shellResourceKeys } from "./swr/shell-keys";
@@ -286,12 +286,11 @@ export async function saveSettingValue(
   value: unknown,
 ): Promise<void> {
   try {
-    await bffJsonUncontracted<unknown>(
-      "tenant",
-      "PUT",
-      `/api/settings/values/${encodeURIComponent(key)}`,
-      { body: { value }, errorMessage: `Setting ${key} could not be saved` },
-    );
+    await bffJson("tenant", "PUT /api/settings/values/{key}", {
+      params: { key },
+      body: { value },
+      errorMessage: `Setting ${key} could not be saved`,
+    });
   } catch (error) {
     logger.warn("save_setting_value_rejected", {
       key,
@@ -304,12 +303,10 @@ export async function saveSettingValue(
 /** Reset a setting to its default (#2517). Throws an ApiError on failure. */
 export async function clearSettingValue(key: string): Promise<void> {
   try {
-    await bffJsonUncontracted<unknown>(
-      "tenant",
-      "DELETE",
-      `/api/settings/values/${encodeURIComponent(key)}`,
-      { errorMessage: `Setting ${key} could not be reset` },
-    );
+    await bffJson("tenant", "DELETE /api/settings/values/{key}", {
+      params: { key },
+      errorMessage: `Setting ${key} could not be reset`,
+    });
   } catch (error) {
     logger.warn("clear_setting_value_rejected", {
       key,

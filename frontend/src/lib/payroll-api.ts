@@ -3,7 +3,7 @@
 // so no request fires without it. Values are written to the generic settings
 // route (savePayrollSetting) using the setting keys this status carries.
 
-import { bffJson, bffJsonUncontracted } from "./bff-fetch";
+import { bffJson } from "./bff-fetch";
 import { knownEnum } from "./contract/known-enum";
 import type * as settingsContract from "./contract/settings.generated";
 import type * as staffContract from "./contract/staff.generated";
@@ -143,12 +143,11 @@ export async function savePayrollSetting(
   key: string,
   value: PayrollSettingValue,
 ): Promise<void> {
-  await bffJsonUncontracted<unknown>(
-    "tenant",
-    "PUT",
-    `/api/settings/values/${encodeURIComponent(key)}`,
-    { body: { value }, errorMessage: `Saving ${key} failed` },
-  );
+  await bffJson("tenant", "PUT /api/settings/values/{key}", {
+    params: { key },
+    body: { value },
+    errorMessage: `Saving ${key} failed`,
+  });
 }
 
 /**
