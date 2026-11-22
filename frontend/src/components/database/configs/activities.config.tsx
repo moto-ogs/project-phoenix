@@ -11,8 +11,7 @@ import type {
   ActivityResponse,
   ActivitySupervisorResponse,
 } from "~/lib/contract/activities.generated";
-import { apiErrorFromResponse } from "~/lib/api-error";
-import { sessionFetch } from "~/lib/session-cache";
+import { bffJson } from "~/lib/bff-fetch";
 import { activitiesConcept } from "~/lib/concepts/activities";
 import { staffConcept } from "~/lib/concepts/staff";
 
@@ -103,14 +102,12 @@ function getActivityEmoji(activity: Activity): string {
 async function loadSupervisorOptions(): Promise<
   Array<{ value: string; label: string }>
 > {
-  const response = await sessionFetch("/api/activities/supervisors/available");
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "failed to load supervisors");
-  }
-  const result = (await response.json()) as {
-    data?: ActivitySupervisorResponse[] | null;
-  };
-  return (result.data ?? []).map(mapSupervisorOption).map((sup) => ({
+  const supervisors = await bffJson(
+    "tenant",
+    "GET /api/activities/supervisors/available",
+    { errorMessage: "failed to load supervisors" },
+  );
+  return supervisors.map(mapSupervisorOption).map((sup) => ({
     value: sup.id,
     label: sup.name,
   }));
@@ -127,7 +124,13 @@ export const activitiesConfig = defineEntityConfig<Activity>({
   backUrl: "/database",
 
   api: {
-    basePath: "/api/activities",
+    routes: {
+      list: "GET /api/activities/",
+      get: "GET /api/activities/{id}",
+      create: "POST /api/activities/",
+      update: "PUT /api/activities/{id}",
+      delete: "DELETE /api/activities/{id}",
+    },
     // Admin view keeps showing system activities (Schulhof Freispiel, WC) —
     // they are rendered greyed-out via isSystemActivity instead of hidden.
     listParams: { include_system: "true" },
@@ -157,32 +160,13 @@ export const activitiesConfig = defineEntityConfig<Activity>({
             options: async () => {
               // A failure throws the ApiError: the form shows the catalog
               // text with retry instead of an empty choice (#2517).
-              const response = await sessionFetch("/api/activities/categories");
-              if (!response.ok) {
-                throw await apiErrorFromResponse(
-                  response,
-                  "failed to load activity categories",
-                );
-              }
-              const result = (await response.json()) as
-                | { data?: Array<{ id: number | string; name: string }> }
-                | Array<{ id: number | string; name: string }>;
-
-              // Handle both wrapped and direct response formats
-              let categories: Array<{ id: number | string; name: string }>;
-              if (Array.isArray(result)) {
-                categories = result;
-              } else if (
-                result &&
-                typeof result === "object" &&
-                "data" in result
-              ) {
-                categories = result.data ?? [];
-              } else {
-                categories = [];
-              }
+              const categories = await bffJson(
+                "tenant",
+                "GET /api/activities/categories",
+                { errorMessage: "failed to load activity categories" },
+              );
               return categories.map((cat) => ({
-                value: String(cat.id),
+                value: cat.id,
                 label: cat.name,
               }));
             },
