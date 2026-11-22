@@ -202,6 +202,9 @@ type familyImportCheck struct {
 	contracts  []familyImportContract
 	recipients map[int64]parentbilling.CareRecipient
 	named      map[int64]int
+	// unnamed is set while a row is read that names its child for no later
+	// row.
+	unnamed bool
 }
 
 // problemOf notes what holds a row back: the field and the kind of problem.
@@ -230,7 +233,11 @@ func (c *familyImportCheck) candidate(cells []string, line int) familyImportCand
 		row.Status = parentbilling.FamilyImportInvalid
 		return candidate
 	}
+	// A row held back by its day names its child for no later row: a
+	// second row of the child with a sound day still counts.
+	c.unnamed = candidate.speaksOnly
 	candidate.targets = c.match(row, schoolID)
+	c.unnamed = false
 	if candidate.speaksOnly {
 		row.Status = parentbilling.FamilyImportInvalid
 	}
@@ -369,7 +376,7 @@ func (c *familyImportCheck) targets(row *parentbilling.FamilyChildrenImportRow, 
 	}
 	var targets []familyImportTarget
 	for _, contract := range found {
-		if !repeated {
+		if !repeated && !c.unnamed {
 			c.named[contract.id] = row.Line
 		}
 		family := parentbilling.ContractFamilyKey(c.recipients[contract.id].Email, contract.id)

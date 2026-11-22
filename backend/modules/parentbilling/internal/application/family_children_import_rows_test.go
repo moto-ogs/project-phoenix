@@ -114,6 +114,18 @@ func TestFamilyImportRowsCountFromTheDayTheOfficeNames(t *testing.T) {
 	assert.Equal(t, parentbilling.FamilyImportConflict, disagreeing[0].row.Status, "a sibling's row with a bad day names another number")
 	assert.Equal(t, parentbilling.FamilyImportInvalid, disagreeing[1].row.Status)
 	assert.Empty(t, newImportedChildren(disagreeing[0].decided), "nothing is stored for the family")
+	// The same child twice, first with a cell that is no day: the second
+	// row with a sound day and the same number is taken over.
+	check = familyImportCheck{index: index, schools: schools, recipients: map[int64]parentbilling.CareRecipient{},
+		contracts: familyImportContracts([]parentbilling.CareContractVersion{contract(1, "Mia")})}
+	twice := []familyImportCandidate{
+		check.candidate([]string{"Mia", "Beispiel", "2", "bald"}, 2),
+		check.candidate([]string{"Mia", "Beispiel", "2", "01.12.2026"}, 3),
+	}
+	decideFamilyImport(twice, map[string]*familyNumbers{}, calendar.NewDate(2026, 11, 22))
+	assert.Equal(t, parentbilling.FamilyImportInvalid, twice[0].row.Status)
+	require.Equal(t, parentbilling.FamilyImportReady, twice[1].row.Status, "the sound row of the child counts")
+	assert.Equal(t, calendar.NewDate(2026, 12, 1), *twice[1].row.ValidFrom)
 }
 
 // A file for the time after a confirmation that still holds today (#7765):

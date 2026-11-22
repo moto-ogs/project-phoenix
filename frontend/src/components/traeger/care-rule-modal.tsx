@@ -89,6 +89,9 @@ function siblingScopeSentence(
       : fromChild === 3
         ? "Das 1. und 2. Kind zahlen"
         : `Das 1. bis ${fromChild - 1}. Kind zahlen`;
+  if (countsFamilyChildren) {
+    return `Ab dem ${fromChild}. Kind zahlt die Familie weniger. Geschwister ohne Vertrag zählen zuerst, danach das Kind mit dem höchsten Beitrag.`;
+  }
   return `${full} den vollen Beitrag. Ab dem ${fromChild}. Kind zahlt die Familie weniger. Zuerst zählt das Kind mit dem höchsten Beitrag.`;
 }
 
