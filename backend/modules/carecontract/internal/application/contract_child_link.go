@@ -512,7 +512,7 @@ func (d *linkDecision) judge(row *carecontract.ChildLinkRow, pair linkPair, cont
 		holdChildLink(row, carecontract.ChildLinkConflict, carecontract.ChildLinkFieldChild, carecontract.ChildLinkProblemRepeated)
 		return
 	}
-	switch other := otherContract(d.contracts, contract, student, d.today); {
+	switch other := otherContract(d.contracts, contract, student); {
 	case contract.StudentID != nil && *contract.StudentID == pair.studentID:
 		row.Status = carecontract.ChildLinkLinked
 	case contract.StudentID != nil:
@@ -567,9 +567,9 @@ func (d *linkDecision) contestedChild(pair linkPair, contract ports.ContractChil
 // application of a child the school had not taken over yet, when it names
 // the child as the import compares children. A contract for the next phase
 // shares no day with this one and is none.
-func otherContract(contracts []ports.ContractChild, contract ports.ContractChild, student carecontract.SchoolChild, today calendar.Date) int64 {
+func otherContract(contracts []ports.ContractChild, contract ports.ContractChild, student carecontract.SchoolChild) int64 {
 	for _, other := range contracts {
-		if other.ContractID == contract.ContractID || other.SchoolID != contract.SchoolID || !holdsOn(other, today) ||
+		if other.ContractID == contract.ContractID || other.SchoolID != contract.SchoolID || !everHeld(other) ||
 			!periodsOverlap(contract.StartsOn, contract.EndsOn, other.StartsOn, other.EndsOn) {
 			continue
 		}
@@ -586,11 +586,12 @@ func otherContract(contracts []ports.ContractChild, contract ports.ContractChild
 	return 0
 }
 
-// holdsOn tells whether a contract still holds on day: neither withdrawn nor
-// ended, and its last day not before day.
-func holdsOn(child ports.ContractChild, day calendar.Date) bool {
-	return child.Status != carecontract.StatusWithdrawn && child.Status != carecontract.StatusEnded &&
-		(child.EndsOn == nil || !child.EndsOn.Before(day))
+// everHeld tells whether a contract holds or held: all but a withdrawn one,
+// which never held, and an ended one without a last day. A contract that
+// ended before today still counts where times are compared: billing reads
+// the past too.
+func everHeld(child ports.ContractChild) bool {
+	return child.Status != carecontract.StatusWithdrawn && (child.Status != carecontract.StatusEnded || child.EndsOn != nil)
 }
 
 // periodsOverlap tells whether two times share a day; a nil end is open.

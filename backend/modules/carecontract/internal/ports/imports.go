@@ -8,11 +8,12 @@ import (
 )
 
 // ContractChild is the child of a contract of the Träger, as its newest
-// version names it, with the last day the contract holds: the earlier of the
-// end of a termination and the end of that version, as the billing reads it
-// (VersionsInForce), nil when neither ends. ImportOrigin is the origin of a
-// contract an import stored, empty for one from an application. StartsOn is
-// the first day of its first version and StudentID the child record of the
+// version names it, with the time the contract holds as the billing reads it
+// (VersionsInForce): from the first day of its effective versions to the
+// earlier of the end of a termination and their last end, nil when neither
+// ends; a contract without an effective version, as a draft, takes its
+// newest version. ImportOrigin is the origin of a contract an import stored,
+// empty for one from an application. StudentID the child record of the
 // school it is linked to, nil without one (#7760). RequestChildID is the
 // application child of a contract from an application, nil for an imported
 // one: with it the read also gives the keys of the contracts.

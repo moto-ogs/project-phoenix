@@ -194,7 +194,9 @@ function TraegerVertragView() {
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [confirmingSend, setConfirmingSend] = useState(false);
   const [linkingChild, setLinkingChild] = useState(false);
-  const [confirmUnlink, setConfirmUnlink] = useState(false);
+  // The child record the dialog was opened for: the confirmation removes
+  // this link, not one a colleague stored meanwhile.
+  const [confirmUnlink, setConfirmUnlink] = useState<string | null>(null);
   const [unlinking, setUnlinking] = useState(false);
   const actionError = useApiErrorDisplay();
   const discardErrors = useApiFormError();
@@ -212,7 +214,7 @@ function TraegerVertragView() {
       setRecipientEmail("");
       setConfirmDiscard(false);
       setLinkingChild(false);
-      setConfirmUnlink(false);
+      setConfirmUnlink(null);
     }
   }
 
@@ -335,8 +337,8 @@ function TraegerVertragView() {
   };
 
   const unlinkChild = async () => {
-    // The child record the office saw; the dialog names it.
-    const studentId = contract?.studentId;
+    // The child record the office saw when it opened the dialog.
+    const studentId = confirmUnlink;
     if (!studentId) return;
     setUnlinking(true);
     try {
@@ -353,12 +355,12 @@ function TraegerVertragView() {
       ) {
         // Another child record is linked by now: show the contract as it
         // is, so the office decides again.
-        setConfirmUnlink(false);
+        setConfirmUnlink(null);
         await afterCardWrite();
       }
       return;
     }
-    setConfirmUnlink(false);
+    setConfirmUnlink(null);
     setUnlinking(false);
     success("Die Verknüpfung mit der Kinderakte ist gelöst.");
     await afterCardWrite();
@@ -492,7 +494,7 @@ function TraegerVertragView() {
       description:
         "moto fragt vorher nach, dann gehört der Vertrag zu keiner Kinderakte.",
       icon: <Unlink className="h-4 w-4" aria-hidden="true" />,
-      onClick: () => setConfirmUnlink(true),
+      onClick: () => setConfirmUnlink(contract?.studentId ?? null),
     });
   }
   if (isDraft) {
@@ -643,19 +645,19 @@ function TraegerVertragView() {
             />
           ) : null}
           <ConfirmationModal
-            isOpen={confirmUnlink}
+            isOpen={confirmUnlink !== null}
             title="Verknüpfung lösen?"
             confirmText="Verknüpfung lösen"
             confirmVariant="danger"
             confirmTooltip="Löst die Verknüpfung sofort, sonst ändert sich nichts."
             isConfirmLoading={unlinking}
             loadingText="Wird gelöst …"
-            onClose={() => setConfirmUnlink(false)}
+            onClose={() => setConfirmUnlink(null)}
             onConfirm={() => void unlinkChild()}
           >
             <p className="text-sm text-gray-700">
-              {contract?.studentId
-                ? `Der Vertrag ist dann nicht mehr mit der Kinderakte Nr. ${contract.studentId} verknüpft.`
+              {confirmUnlink
+                ? `Der Vertrag ist dann nicht mehr mit der Kinderakte Nr. ${confirmUnlink} verknüpft.`
                 : "Der Vertrag ist dann mit keiner Kinderakte mehr verknüpft."}{" "}
               Sonst ändert sich nichts: Vertrag, Eltern und Beitrag bleiben.
               Schon ausgestellte Rechnungen bleiben, wie sie sind. Eltern

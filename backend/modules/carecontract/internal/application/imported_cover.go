@@ -131,8 +131,7 @@ func importCoverage(reads []schoolRead, children []ports.ContractChild, today ca
 func runningImports(children []ports.ContractChild) map[int64][]ports.ContractChild {
 	imported := map[int64][]ports.ContractChild{}
 	for _, child := range children {
-		held := child.Status != carecontract.StatusWithdrawn && (child.Status != carecontract.StatusEnded || child.EndsOn != nil)
-		if child.ImportOrigin != "" && held {
+		if child.ImportOrigin != "" && everHeld(child) {
 			imported[child.SchoolID] = append(imported[child.SchoolID], child)
 		}
 	}

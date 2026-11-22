@@ -153,6 +153,22 @@ func TestDecideChildLinksHoldsBackEndedContractsOfOneTime(t *testing.T) {
 	assert.Equal(t, carecontract.ChildLinkConflict, rows[1].Status)
 }
 
+// The same holds across files: a contract that ended before today and is
+// linked to the child still counts where its time meets the new one's.
+func TestDecideChildLinksSeesAnEndedLinkedContractOfTheSameTime(t *testing.T) {
+	t.Parallel()
+	ended := calendar.NewDate(2026, 7, 31)
+	contracts := []ports.ContractChild{
+		{ContractID: 41, SchoolID: linkSchoolNorth, Status: carecontract.StatusEnded, FirstName: "Mia", LastName: "Beispiel",
+			StartsOn: calendar.NewDate(2025, 8, 1), EndsOn: &ended, ImportOrigin: "mia-a", StudentID: linkPtr(linkMia)},
+		{ContractID: 42, SchoolID: linkSchoolNorth, Status: carecontract.StatusEnded, FirstName: "Mia", LastName: "Beispiel",
+			StartsOn: calendar.NewDate(2025, 9, 1), EndsOn: &ended, ImportOrigin: "mia-b"},
+	}
+	row := decideOne(t, contracts, linkPair{line: 2, contractID: 42, studentID: linkMia})[0]
+	assert.Equal(t, carecontract.ChildLinkConflict, row.Status)
+	assert.Equal(t, ident.ID(41), row.OtherContractID)
+}
+
 // Two imported contracts of one child that follow each other are both
 // linked by one file: they share no day.
 func TestDecideChildLinksLinksContractsThatFollowEachOther(t *testing.T) {
