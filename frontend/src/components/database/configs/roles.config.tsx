@@ -69,7 +69,13 @@ export const rolesConfig = defineEntityConfig<Role>({
   backUrl: "/database",
 
   api: {
-    basePath: "/api/auth/roles",
+    routes: {
+      list: "GET /auth/roles/",
+      get: "GET /auth/roles/{id}/",
+      create: "POST /auth/roles/",
+      update: "PUT /auth/roles/{id}/",
+      delete: "DELETE /auth/roles/{id}/",
+    },
   },
 
   form: {
@@ -192,20 +198,7 @@ export const rolesConfig = defineEntityConfig<Role>({
         ? { template: data.template }
         : !data.isSystem && { base_role: data.baseRole }),
     }),
-    mapResponse: (data: unknown): Role => {
-      // Handle wrapped response format
-      let actualData = data;
-      if (
-        data &&
-        typeof data === "object" &&
-        "status" in data &&
-        "data" in data
-      ) {
-        actualData = (data as { status: string; data: unknown }).data;
-      }
-
-      return mapRoleResponse(actualData as RoleWire);
-    },
+    mapResponse: (data: unknown): Role => mapRoleResponse(data as RoleWire),
   },
 
   labels: {

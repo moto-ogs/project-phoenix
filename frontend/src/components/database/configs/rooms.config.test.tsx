@@ -22,7 +22,7 @@ describe("roomsConfig", () => {
   });
 
   it("has correct API configuration", () => {
-    expect(roomsConfig.api.basePath).toBe("/api/rooms");
+    expect(roomsConfig.api.routes.list).toBe("GET /api/rooms/");
   });
 
   it("has form sections configured", () => {

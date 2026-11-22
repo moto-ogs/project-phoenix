@@ -2,7 +2,8 @@
 // Comprehensive tests for activity API service
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type { Activity, UpdateActivityRequest } from "./activity-helpers";
+import type { Activity } from "./activity-helpers";
+import type { ActivityRequest } from "./contract/activities.generated";
 import { mapActivityResponse } from "./activity-helpers";
 import { buildBackendActivity } from "~/test/fixtures/activities";
 
@@ -139,12 +140,12 @@ describe("activity-api", () => {
   });
 
   describe("updateActivity", () => {
-    const updateRequest: UpdateActivityRequest = {
+    const updateRequest: ActivityRequest = {
       name: "Updated Activity",
       max_participants: 25,
       is_open: false,
-      category_id: 2,
-      supervisor_ids: [11],
+      category_id: "2",
+      supervisor_ids: ["11"],
     };
 
     it("updates activity in browser context", async () => {
@@ -207,8 +208,10 @@ describe("activity-api", () => {
         expires: "2099-01-01",
       });
 
-      const mockResponse = { ok: true };
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(mockResponse));
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce(new Response(null, { status: 204 })),
+      );
 
       await activityApi.deleteActivity("1");
 
@@ -278,25 +281,6 @@ describe("activity-api", () => {
       expect(result[0]?.id).toBe("7");
       expect(result[0]?.shiftTypeId).toBe("99");
     });
-
-    it("returns empty array for non-array response", async () => {
-      vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
-      });
-      vi.stubGlobal(
-        "fetch",
-        vi.fn().mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ data: null }),
-        }),
-      );
-
-      const result = await activityApi.getCategories();
-
-      expect(result).toEqual([]);
-    });
   });
 
   describe("getEnrolledStudents", () => {
@@ -330,21 +314,19 @@ describe("activity-api", () => {
       });
       vi.stubGlobal(
         "fetch",
-        vi
-          .fn()
-          .mockResolvedValueOnce(
-            new Response(
-              JSON.stringify({
-                status: 403,
-                code: "general.forbidden",
-                detail: "no",
-              }),
-              {
-                status: 403,
-                headers: { "Content-Type": "application/problem+json" },
-              },
-            ),
+        vi.fn().mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              status: 403,
+              code: "general.forbidden",
+              detail: "no",
+            }),
+            {
+              status: 403,
+              headers: { "Content-Type": "application/problem+json" },
+            },
           ),
+        ),
       );
 
       await expect(activityApi.getEnrolledStudents("1")).rejects.toMatchObject({
