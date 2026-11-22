@@ -268,13 +268,14 @@ Kind ihres Datensatzes. Dieselbe Gruppierung zählt die Kinder einer Familie
 in der Kinderzahl-Übersicht.
 
 **Sichtbar.** Hier entscheidet der Name, nicht eine Kinderakte. Die Prüfung
-eines berechneten Laufs zeigt jedes so zusammengelegte Kind unter „Ein Kind
+eines berechneten Monatslaufs und die Vorschau eines Bescheid-Laufs (ADR 0182,
+gleiche Monatsrechnung) zeigen jedes so zusammengelegte Kind unter „Ein Kind
 an zwei Schulen“ mit seinen Verträgen und Schulen in der Reihenfolge ihres
-Beginns (`CareRunDetail.joined_children`), für jeden Lauf mit einer dieser
-Schulen. Der Fingerabdruck der Prüfung enthält die Liste, wenn sie nicht leer
-ist; eine Änderung macht die Freigabe ungültig wie jede andere. Ein
-freigegebener Lauf zeigt die Liste nicht (E5 speichert sie nicht): Dort
-stehen nur seine Rechnungen.
+Beginns (`joined_children` an `CareRunDetail` und `CareNoticeRunDetail`), für
+jeden Lauf mit einer dieser Schulen. Beide Fingerabdrücke enthalten die
+Liste, wenn sie nicht leer ist; eine Änderung macht die Freigabe ungültig wie
+jede andere. Ein freigegebener Lauf zeigt die Liste nicht (E5 speichert sie
+nicht): Dort stehen nur seine Rechnungen.
 
 **Risiko.** Ein falsches Zusammenlegen bedeutet eine Rechnung zu wenig.
 Dafür müssten zwei Kinder einer Familie denselben Vor- und Nachnamen und

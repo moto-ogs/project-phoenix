@@ -17,8 +17,8 @@ import {
 } from "./runtime";
 import {
   BillingLetterSeriesSchema,
-  CareDuplicateContractSchema,
   CareDuplicateSchema,
+  CareJoinedChildSchema,
   CareRecipientSchema,
   CareSchoolSchema,
   CareUnpricedSchema,
@@ -26,7 +26,7 @@ import {
   PostalAddressSchema,
   RunDueDateSchema,
   type CareDuplicate,
-  type CareDuplicateContract,
+  type CareJoinedChild,
   type CareRecipient,
   type CareReleaseRequest,
   type CareSchool,
@@ -357,19 +357,6 @@ export const CareInvoiceSchema: z.ZodType<CareInvoice, unknown> = object<CareInv
   cost_shares: nullable(arr(CareInvoiceCostShareSchema)),
   amendments: optional(arr(CareAmendmentSchema)),
   total_cents: safeInt,
-});
-
-/** Go: parentbilling.CareJoinedChild */
-export interface CareJoinedChild {
-  child_first_name: string;
-  child_last_name: string;
-  contracts: CareDuplicateContract[] | null;
-}
-
-export const CareJoinedChildSchema: z.ZodType<CareJoinedChild, unknown> = object<CareJoinedChild>({
-  child_first_name: str,
-  child_last_name: str,
-  contracts: nullable(arr(CareDuplicateContractSchema)),
 });
 
 /** Go: parentbilling.CareUncountedContract */

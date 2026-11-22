@@ -36184,6 +36184,17 @@
           }
         },
         {
+          "name": "joined_children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "CareJoinedChild"
+            }
+          }
+        },
+        {
           "name": "preview_count",
           "schema": {
             "kind": "int"

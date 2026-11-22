@@ -74,8 +74,9 @@ func joinSchoolChanges(children [][]int64, byContract map[int64][]parentbilling.
 		at[i] = len(result)
 		result = append(result, slices.Clone(child))
 	}
+	firsts := slices.Sorted(maps.Values(into))
 	for i := range children {
-		if _, part := into[i]; !part && slices.Contains(slices.Collect(maps.Values(into)), i) {
+		if _, found := slices.BinarySearch(firsts, i); found {
 			joined = append(joined, at[i])
 		}
 	}
@@ -105,7 +106,7 @@ func schoolChangeBuckets(children [][]int64, byContract map[int64][]parentbillin
 
 // schoolChangeKeyOf is the key a child may join others under; ok is false
 // for a child without a contract in force, with two families, two names or
-// no date of birth, or of a family moto knows only by its contract.
+// no date of birth.
 func schoolChangeKeyOf(child []int64, byContract map[int64][]parentbilling.CareContractVersion, families map[int64]string) (schoolChangeKey, bool) {
 	var key schoolChangeKey
 	for _, contractID := range child {
@@ -114,7 +115,9 @@ func schoolChangeKeyOf(child []int64, byContract map[int64][]parentbilling.CareC
 			continue
 		}
 		head := versions[0]
-		if head.ChildBirthDate == nil || parentbilling.IsContractFamily(families[contractID]) {
+		// A family moto knows only by its contract is keyed by that
+		// contract (ContractFamilyKey), so it never meets another one.
+		if head.ChildBirthDate == nil {
 			return schoolChangeKey{}, false
 		}
 		own := schoolChangeKey{family: families[contractID],

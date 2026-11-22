@@ -177,18 +177,22 @@ type CareNotice struct {
 // months leave out as in the monthly run.
 type CareNoticeRunDetail struct {
 	CareNoticeRun
-	Notices            []CareNotice    `json:"notices"`
-	Unchanged          int             `json:"unchanged"`
-	Billed             int             `json:"billed"`
-	Unpriced           []CareUnpriced  `json:"unpriced"`
-	Duplicates         []CareDuplicate `json:"duplicates"`
-	PreviewCount       int             `json:"preview_count"`
-	PreviewCents       int64           `json:"preview_cents" contract:"number"`
-	PreviewDeltaCents  int64           `json:"preview_delta_cents" contract:"number"`
-	Fingerprint        string          `json:"fingerprint"`
-	NumberPattern      string          `json:"number_pattern"`
-	NumberRangeSet     bool            `json:"number_range_set"`
-	LegalRemedyMissing bool            `json:"legal_remedy_missing"`
+	Notices    []CareNotice    `json:"notices"`
+	Unchanged  int             `json:"unchanged"`
+	Billed     int             `json:"billed"`
+	Unpriced   []CareUnpriced  `json:"unpriced"`
+	Duplicates []CareDuplicate `json:"duplicates"`
+	// JoinedChildren are the children of a calculated run with a record at
+	// each of several schools its months bill as one (ADR 0158, Nachtrag
+	// Schulwechsel).
+	JoinedChildren     []CareJoinedChild `json:"joined_children"`
+	PreviewCount       int               `json:"preview_count"`
+	PreviewCents       int64             `json:"preview_cents" contract:"number"`
+	PreviewDeltaCents  int64             `json:"preview_delta_cents" contract:"number"`
+	Fingerprint        string            `json:"fingerprint"`
+	NumberPattern      string            `json:"number_pattern"`
+	NumberRangeSet     bool              `json:"number_range_set"`
+	LegalRemedyMissing bool              `json:"legal_remedy_missing"`
 }
 
 // CareNoticeLetter is a fee notice with the letterhead of the Träger, as

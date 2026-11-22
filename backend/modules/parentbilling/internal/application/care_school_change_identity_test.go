@@ -31,6 +31,9 @@ type identityContract struct {
 	booked      []parentbilling.CareContractService
 }
 
+// schoolNames are the names of the schools of the table.
+var schoolNames = map[int64]string{schoolIspringen: "Grundschule Ispringen", schoolBirkenfeld: "Grundschule Birkenfeld"}
+
 const (
 	noahBirkenfeldRecord int64 = 9601
 	noahIspringenRecord  int64 = 9602
@@ -146,6 +149,14 @@ func TestCareMonthCountsAChildWithARecordAtEachSchoolOnce(t *testing.T) {
 			children: 2,
 		},
 		{
+			// The same with the new school first: the pair that could join
+			// comes first, and still none joins.
+			name: "two candidates join none, whatever the order", contracts: []identityContract{mia, enters, leaves,
+				with(leaves, func(c *identityContract) { c.contract, c.student = contractLea+1, noahBirkenfeldRecord+10 })},
+			totals:   map[int64]int64{contractMia: 4000, contractNoah: 4500, contractLea + 1: 4500, contractLea: 3000},
+			children: 2,
+		},
+		{
 			// Within one school the record decides: a second record there
 			// is a second child, as before.
 			name: "two records at one school stay two children", contracts: []identityContract{mia,
@@ -170,6 +181,7 @@ func TestCareMonthCountsAChildWithARecordAtEachSchoolOnce(t *testing.T) {
 			for _, contract := range tc.contracts {
 				version := sjrVersion(t, contract.contract, contract.school, 1, contract.from, contract.until, contract.booked...)
 				version.StudentID = ptr(contract.student)
+				version.SchoolName = schoolNames[contract.school]
 				version.ChildFirstName, version.ChildLastName = contract.first, contract.last
 				if contract.birth != "" {
 					version.ChildBirthDate = ptr(day(t, contract.birth))
@@ -179,6 +191,11 @@ func TestCareMonthCountsAChildWithARecordAtEachSchoolOnce(t *testing.T) {
 			}
 			month, err := buildCareMonth(in)
 			require.NoError(t, err)
+			// A notice run computes the months the same way and names the
+			// joined child too, so the office sees it there as well.
+			notice, _, err := computeNoticeMonth(in, in.invoiced, nil, []int64{schoolIspringen, schoolBirkenfeld})
+			require.NoError(t, err)
+			assert.Equal(t, month.joined, notice.joined, "the notice preview names the same joined children")
 			assert.Empty(t, month.duplicates, "contracts one after the other are no duplicate")
 			assert.Empty(t, month.unpriced)
 			totals := map[int64]int64{}
@@ -229,7 +246,7 @@ func assertJoined(t *testing.T, month careMonth, joined bool) {
 	}
 	require.Len(t, month.joined, 1)
 	assert.Equal(t, []parentbilling.CareDuplicateContract{
-		{ContractID: ident.ID(contractNoah), SchoolID: ident.ID(schoolBirkenfeld), SchoolName: "Grundschule Ispringen"},
+		{ContractID: ident.ID(contractNoah), SchoolID: ident.ID(schoolBirkenfeld), SchoolName: "Grundschule Birkenfeld"},
 		{ContractID: ident.ID(contractLea), SchoolID: ident.ID(schoolIspringen), SchoolName: "Grundschule Ispringen"},
 	}, month.joined[0].Contracts, "both contracts, in the order they begin")
 	// A run of one of the two schools names him; a run of neither does not.

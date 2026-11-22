@@ -462,6 +462,21 @@ export interface CareJoinedChild {
   readonly contracts: CareDuplicate["contracts"];
 }
 
+/** Maps the joined children of a monthly or notice run. */
+export function joinedChildrenFromBackend(
+  children: readonly sharedContract.CareJoinedChild[] | null | undefined,
+): CareJoinedChild[] {
+  return (children ?? []).map((child) => ({
+    childFirstName: child.child_first_name,
+    childLastName: child.child_last_name,
+    contracts: (child.contracts ?? []).map((contract) => ({
+      contractId: id(contract.contract_id),
+      schoolId: id(contract.school_id),
+      schoolName: contract.school_name,
+    })),
+  }));
+}
+
 /**
  * An invoice of a monthly run whose family has no confirmed number of
  * children for the month (#7356): the sibling rule counts its children with
@@ -801,15 +816,7 @@ export function detailFromBackend(
       })),
     })),
     duplicateChildren: detail.duplicate_children,
-    joinedChildren: (detail.joined_children ?? []).map((child) => ({
-      childFirstName: child.child_first_name,
-      childLastName: child.child_last_name,
-      contracts: (child.contracts ?? []).map((contract) => ({
-        contractId: id(contract.contract_id),
-        schoolId: id(contract.school_id),
-        schoolName: contract.school_name,
-      })),
-    })),
+    joinedChildren: joinedChildrenFromBackend(detail.joined_children),
     uncountedFamilies: detail.uncounted_families,
     uncountedContracts: (detail.uncounted_contracts ?? []).map((contract) => ({
       contractId: id(contract.contract_id),

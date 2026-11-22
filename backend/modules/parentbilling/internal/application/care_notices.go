@@ -410,7 +410,8 @@ func logoMIME(logo []byte) string {
 // range the release uses.
 func (n *CareFeeNotices) detail(ctx context.Context, organizationID int64, run parentbilling.CareNoticeRun) (parentbilling.CareNoticeRunDetail, error) {
 	detail := parentbilling.CareNoticeRunDetail{CareNoticeRun: run, Notices: []parentbilling.CareNotice{},
-		Unpriced: []parentbilling.CareUnpriced{}, Duplicates: []parentbilling.CareDuplicate{}}
+		Unpriced: []parentbilling.CareUnpriced{}, Duplicates: []parentbilling.CareDuplicate{},
+		JoinedChildren: []parentbilling.CareJoinedChild{}}
 	if run.Status == parentbilling.RunDiscarded {
 		// A discarded run issued nothing and reads no contract again (#6626).
 		return detail, nil
@@ -428,6 +429,7 @@ func (n *CareFeeNotices) detail(ctx context.Context, organizationID int64, run p
 		}
 		detail.Notices, detail.Unchanged, detail.Billed = preview.notices, preview.unchanged, preview.billed
 		detail.Unpriced, detail.Duplicates = preview.unpriced, preview.duplicates
+		detail.JoinedChildren = preview.joined
 		detail.Fingerprint, detail.LegalRemedyMissing = preview.fingerprint, preview.legalRemedyMissing
 	}
 	for _, notice := range detail.Notices {

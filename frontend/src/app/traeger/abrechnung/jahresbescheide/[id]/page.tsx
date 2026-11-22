@@ -21,6 +21,7 @@ import {
   rateCountLabel,
 } from "~/components/traeger/care-notice-format";
 import { formatEuro } from "~/components/traeger/contribution-format";
+import { CareJoinedChildrenCard } from "~/components/traeger/care-joined-children-card";
 import { EmptyRunCard } from "~/components/traeger/empty-run-card";
 import {
   traegerExportScope,
@@ -490,6 +491,9 @@ export default function TraegerCareNoticeRunPage() {
               type="warning"
               message="Für einige Kinder fehlt ein Preis oder es gibt einen doppelten Vertrag. Für diese Monate bleibt ein bisheriger Bescheid gültig. Ohne bisherigen Bescheid bleiben sie offen. Der Monatslauf zeigt, was fehlt."
             />
+          ) : null}
+          {preview ? (
+            <CareJoinedChildrenCard childrenJoined={run.joinedChildren} />
           ) : null}
           <div className="grid gap-4 sm:grid-cols-3">
             <StatCard

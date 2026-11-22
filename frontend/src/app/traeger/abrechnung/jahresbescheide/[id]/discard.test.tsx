@@ -46,6 +46,7 @@ function run(
     billed: 0,
     unpricedCount: 0,
     duplicateCount: 0,
+    joinedChildren: [],
     previewCount: 0,
     previewCents: 0,
     previewDeltaCents: 0,
