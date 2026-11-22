@@ -484,7 +484,13 @@ export function useSetupTour<K extends string>(
     const { branch } = stop;
     if (stop.advance !== "click" && !branch) return undefined;
     const onClick = (event: MouseEvent) => {
-      if (!(event.target instanceof Node && target.contains(event.target))) {
+      // `mobileTarget` verlegt nur die Sprechblase auf den sichtbaren
+      // Auslöser. Die Handlung bleibt am eigentlichen Ziel, das bei einem
+      // ResponsivePanel im Blatt gerendert wird.
+      const clickTarget = findVisibleTarget(stop.target);
+      if (!(
+        event.target instanceof Node && clickTarget?.contains(event.target)
+      )) {
         return;
       }
       if (branch) {

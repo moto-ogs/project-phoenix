@@ -53,8 +53,9 @@ const DrawerPortal = DrawerPrimitive.Portal;
  */
 type DrawerLayer = Extract<ZLayer, "sheet" | "popover">;
 
-type DrawerOverlayProps = React.ComponentPropsWithoutRef<
-  typeof DrawerPrimitive.Overlay
+type DrawerOverlayProps = OmitEach<
+  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Overlay>,
+  "layer"
 > & {
   readonly layer?: DrawerLayer;
 };
@@ -95,8 +96,9 @@ const directionContentClasses: Record<DrawerDirection, string> = {
 const FULL_SCREEN_BOTTOM_CLASSES =
   "fixed inset-0 flex h-dvh max-h-dvh flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]";
 
-type DrawerContentProps = React.ComponentPropsWithoutRef<
-  typeof DrawerPrimitive.Content
+type DrawerContentProps = OmitEach<
+  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>,
+  "layer"
 > & {
   /** Nur von unten: das Blatt füllt den ganzen Bildschirm, ohne Rundung. */
   readonly fullScreen?: boolean;
