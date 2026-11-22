@@ -84,7 +84,7 @@
   "request_not_decided": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "request_not_past": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "request_past": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
-  "schedule_staff_profile_required": "Oraret e kujdesit mund t'i ndryshojë vetëm dikush me profil stafi. Llogaria juaj nuk ka ende një të tillë në këtë shkollë.",
+  "schedule_staff_profile_required": "Oraret e kujdesit mund t'i ndryshojë vetëm dikush me profil stafi. Llogaria juaj nuk ka ende një të tillë në këtë shkollë. Ju lutemi kërkoni nga administrata e shkollës ta krijojë.",
   "sick_excused_conflict": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "staff_profile_required": "Këtë orë e kanë vendosur prindërit. Vetëm dikush me profil stafi mund ta ndryshojë.",
   "staff_value_invalid": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",

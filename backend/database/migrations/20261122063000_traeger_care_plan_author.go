@@ -134,9 +134,14 @@ UPDATE users.student_care_exit_source_removals
 `
 
 // The shapes before this migration cannot hold a row without a staff author:
-// the down migration deletes what the Träger-Büro entered, as the down
-// migrations of 1.15.297 and 20261115180000 delete their author-less rows.
+// the down migration deletes what the Träger-Büro entered, live and archived
+// by a care exit, as the down migrations of 1.15.297 and 20261115180000
+// delete their author-less rows.
 const traegerCarePlanAuthorDownSQL = `
+DELETE FROM users.student_care_exit_source_removals
+	WHERE kind IN ('pickup_schedule', 'arrival_schedule', 'pickup_exception', 'arrival_exception', 'departure_exception')
+		AND jsonb_typeof(snapshot) = 'object'
+		AND (snapshot ->> 'entered_by_traeger' = 'true' OR snapshot ->> 'excused_by_traeger' = 'true');
 DELETE FROM schedule.student_arrival_schedules WHERE created_by IS NULL;
 DELETE FROM schedule.student_arrival_notes WHERE created_by IS NULL;
 DELETE FROM schedule.student_pickup_notes WHERE created_by IS NULL;

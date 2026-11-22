@@ -341,6 +341,28 @@ func TestTraegerSchoolSessionWritesCarePlanWithMark(t *testing.T) {
 		arrivals := traegerExec(t, tc, claims, http.MethodGet, staffBase+"/arrival-schedules", nil)
 		require.Equal(t, http.StatusOK, arrivals.Code, arrivals.Body.String())
 		assert.Contains(t, arrivals.Body.String(), `"expected_arrival":"11:30"`)
+
+		// A bulk change writes over the existing weekday row. Author and mark
+		// change together, in both directions: never a staff member and the
+		// mark on one row, never neither.
+		bulk := func(times map[string]string) map[string]any {
+			schedule := map[string]any{"weekday": 2}
+			for field, value := range times {
+				schedule[field] = value
+			}
+			return map[string]any{"student_ids": []int64{staffChild.ID}, "schedules": []map[string]any{schedule}}
+		}
+		rr = staffExec(http.MethodPost, "/pickup-schedules/bulk", bulk(map[string]string{"pickup_time": "16:10"}))
+		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+		assertStaffAuthored(t, tc, "student_pickup_schedules", staffChild.ID, teacher.StaffID, nil)
+		rr = staffExec(http.MethodPost, "/arrival-schedules/bulk", bulk(map[string]string{"expected_arrival": "11:40"}))
+		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+		assertStaffAuthored(t, tc, "student_arrival_schedules", staffChild.ID, teacher.StaffID, nil)
+
+		requireTraegerWrite(t, tc, claims, http.MethodPost, "/pickup-schedules/bulk", bulk(map[string]string{"pickup_time": "16:20"}), http.StatusOK)
+		assertTraegerAuthored(t, tc, "student_pickup_schedules", staffChild.ID, nil)
+		requireTraegerWrite(t, tc, claims, http.MethodPost, "/arrival-schedules/bulk", bulk(map[string]string{"expected_arrival": "11:50"}), http.StatusOK)
+		assertTraegerAuthored(t, tc, "student_arrival_schedules", staffChild.ID, nil)
 	})
 }
 

@@ -295,7 +295,7 @@ func (s *Store) UpsertArrivalSchedule(ctx context.Context, v careplan.ArrivalSch
 	row.TenantID, row.UpdatedAt = tid, s.currentTime()
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
-	err = db.NewInsert().Model(&row).ModelTableExpr(`schedule.student_arrival_schedules`).On("CONFLICT (tenant_id, student_id, weekday) DO UPDATE").Set("expected_arrival = EXCLUDED.expected_arrival").Set("notes = EXCLUDED.notes").Set("updated_at = EXCLUDED.updated_at").Returning("*").Scan(ctx)
+	err = db.NewInsert().Model(&row).ModelTableExpr(`schedule.student_arrival_schedules`).On("CONFLICT (tenant_id, student_id, weekday) DO UPDATE").Set("expected_arrival = EXCLUDED.expected_arrival").Set("notes = EXCLUDED.notes").Set("created_by = EXCLUDED.created_by").Set("entered_by_traeger = EXCLUDED.entered_by_traeger").Set("updated_at = EXCLUDED.updated_at").Returning("*").Scan(ctx)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {
 		return careplan.ArrivalSchedule{}, stats, fmt.Errorf("care plan postgres: upsert arrival schedule: %w", err)
@@ -549,7 +549,7 @@ func (s *Store) UpsertPickupSchedule(ctx context.Context, v careplan.PickupSched
 	row.TenantID, row.UpdatedAt = tid, s.currentTime()
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
-	err = db.NewInsert().Model(&row).ModelTableExpr(`schedule.student_pickup_schedules`).On("CONFLICT (tenant_id, student_id, weekday) DO UPDATE").Set("pickup_time = EXCLUDED.pickup_time").Set("notes = EXCLUDED.notes").Set("source = EXCLUDED.source").Set("care_offering_id = EXCLUDED.care_offering_id").Set("entered_by_traeger = student_pickup_schedules.entered_by_traeger OR (student_pickup_schedules.created_by IS NULL AND EXCLUDED.entered_by_traeger)").Set("created_by = COALESCE(student_pickup_schedules.created_by, EXCLUDED.created_by)").Set("updated_at = EXCLUDED.updated_at").Returning("*").Scan(ctx)
+	err = db.NewInsert().Model(&row).ModelTableExpr(`schedule.student_pickup_schedules`).On("CONFLICT (tenant_id, student_id, weekday) DO UPDATE").Set("pickup_time = EXCLUDED.pickup_time").Set("notes = EXCLUDED.notes").Set("source = EXCLUDED.source").Set("care_offering_id = EXCLUDED.care_offering_id").Set("created_by = EXCLUDED.created_by").Set("entered_by_traeger = EXCLUDED.entered_by_traeger").Set("updated_at = EXCLUDED.updated_at").Returning("*").Scan(ctx)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {
 		return careplan.PickupSchedule{}, stats, fmt.Errorf("care plan postgres: upsert pickup schedule: %w", err)
