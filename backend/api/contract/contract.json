@@ -89981,6 +89981,18 @@
               "ref": "DishRequest"
             }
           }
+        },
+        {
+          "name": "expected",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "DishRequest"
+            }
+          }
         }
       ]
     },

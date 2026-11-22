@@ -910,6 +910,8 @@ export const ERROR_CATALOG = {
         "Der Monat ist noch nicht vorbei. Du kannst ihn ab dem 1. des nächsten Monats freigeben.",
       "meals.child_not_enrolled":
         "{object} geht nicht. Das Kind ist an diesem Tag nicht in der Betreuung.",
+      "meals.day_changed":
+        "Jemand anderes hat den Speiseplan inzwischen geändert. Mit „Verwerfen“ siehst du den neuen Stand. Mit „Speichern“ ersetzt du ihn durch deine Änderungen.",
       "meals.day_closed":
         "{object} geht nicht. An diesem Tag ist die Schule geschlossen.",
       "meals.day_past": "{object} geht nicht mehr. Der Tag ist schon vorbei.",
@@ -2726,6 +2728,8 @@ export const ERROR_CATALOG = {
         "Attendance records for this month may already have been deleted. The month can no longer be released reliably. Please contact your provider.",
       "meals.child_not_enrolled":
         "{object} is not possible. The child is not in care on this day.",
+      "meals.day_changed":
+        "Someone else has changed the meal plan in the meantime. Choose “Verwerfen” to see the new version. Choose “Speichern” to replace it with your changes.",
       "meals.day_closed":
         "{object} is not possible. The school is closed on this day.",
       "meals.day_past":
@@ -3451,6 +3455,8 @@ export const ERROR_CATALOG = {
         "Данные о посещаемости за этот месяц могли быть удалены. Надёжно подтвердить месяц больше нельзя. Обратитесь к организации, управляющей продлёнкой.",
       "meals.child_not_enrolled":
         "Невозможно: {object}. В этот день ребёнок не находится под присмотром.",
+      "meals.day_changed":
+        "Кто-то другой уже изменил меню. Нажмите «Verwerfen», чтобы увидеть новую версию. Нажмите «Speichern», чтобы заменить её своими изменениями.",
       "meals.day_closed": "Невозможно: {object}. В этот день школа закрыта.",
       "meals.day_past": "Уже невозможно: {object}. Этот день уже прошёл.",
       "meals.delivery_range_too_long":
@@ -4108,6 +4114,8 @@ export const ERROR_CATALOG = {
         "Të dhënat e pranisë për këtë muaj mund të jenë fshirë. Muaji nuk mund të miratohet më me siguri. Ju lutemi kontaktoni ofruesin tuaj.",
       "meals.child_not_enrolled":
         "Nuk është e mundur: {object}. Fëmija nuk është në kujdes në këtë ditë.",
+      "meals.day_changed":
+        "Dikush tjetër e ka ndryshuar ndërkohë planin e ushqimit. Zgjidhni „Verwerfen” për të parë versionin e ri. Zgjidhni „Speichern” për ta zëvendësuar me ndryshimet tuaja.",
       "meals.day_closed":
         "Nuk është e mundur: {object}. Shkolla është e mbyllur në këtë ditë.",
       "meals.day_past": "Nuk është më e mundur: {object}. Dita ka kaluar.",
@@ -4755,6 +4763,8 @@ export const ERROR_CATALOG = {
         "Dane o obecności z tego miesiąca mogły już zostać usunięte. Nie można bezpiecznie zatwierdzić miesiąca. Prosimy skontaktować się z organem prowadzącym.",
       "meals.child_not_enrolled":
         "Nie można: {object}. Dziecko nie jest tego dnia pod opieką.",
+      "meals.day_changed":
+        "Ktoś inny zmienił w międzyczasie jadłospis. Wybierz „Verwerfen”, aby zobaczyć nową wersję. Wybierz „Speichern”, aby zastąpić ją swoimi zmianami.",
       "meals.day_closed":
         "Nie można: {object}. Tego dnia szkoła jest zamknięta.",
       "meals.day_past": "Już nie można: {object}. Ten dzień już minął.",
@@ -5407,6 +5417,8 @@ export const ERROR_CATALOG = {
         "Bu aya ait devam kayıtları silinmiş olabilir. Ay artık güvenilir biçimde onaylanamaz. Lütfen hizmet sağlayıcınızla iletişime geçin.",
       "meals.child_not_enrolled":
         "{object} mümkün değil. Çocuk bu gün bakımda değil.",
+      "meals.day_changed":
+        "Başka biri yemek planını bu arada değiştirdi. Yeni hâlini görmek için “Verwerfen”i seçin. Kendi değişikliklerinizle değiştirmek için “Speichern”i seçin.",
       "meals.day_closed": "{object} mümkün değil. Okul bu gün kapalı.",
       "meals.day_past": "{object} artık mümkün değil. Bu gün geçti.",
       "meals.delivery_range_too_long":
@@ -6052,6 +6064,8 @@ export const ERROR_CATALOG = {
         "Дані про відвідування за цей місяць могли бути видалені. Надійно підтвердити місяць уже неможливо. Зверніться до організації, що керує групою продовженого дня.",
       "meals.child_not_enrolled":
         "Неможливо: {object}. Цього дня дитина не перебуває під доглядом.",
+      "meals.day_changed":
+        "Хтось інший уже змінив меню. Натисніть «Verwerfen», щоб побачити нову версію. Натисніть «Speichern», щоб замінити її своїми змінами.",
       "meals.day_closed": "Неможливо: {object}. Цього дня школа зачинена.",
       "meals.day_past": "Уже неможливо: {object}. Цей день уже минув.",
       "meals.delivery_range_too_long":

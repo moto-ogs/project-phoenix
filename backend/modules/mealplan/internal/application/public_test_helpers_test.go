@@ -23,6 +23,16 @@ func (s seamStore) ReplaceDay(ctx context.Context, date domain.Date, values []me
 	return domain.OperationStats{}, s.e.Replace(ctx, date.String(), dishes)
 }
 
+func (s seamStore) LockDay(_ context.Context, date domain.Date) (domain.OperationStats, error) {
+	s.e.calls = append(s.e.calls, "lock "+date.String())
+	return domain.OperationStats{}, nil
+}
+
+func (s seamStore) FindWeek(_ context.Context, start, _ domain.Date) ([]domain.Entry, domain.OperationStats, error) {
+	s.e.calls = append(s.e.calls, "read "+start.String())
+	return s.e.stored, domain.OperationStats{}, nil
+}
+
 type seamTransaction struct{}
 
 func (seamTransaction) Run(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) }

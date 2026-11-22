@@ -449,6 +449,7 @@ func TestFullProductionRouterGolden(t *testing.T) {
 			t.Run("timetable staff routes", func(t *testing.T) { checkTimetableStaffRoutes(t, api) })
 			t.Run("meal plan read query budgets", func(t *testing.T) { checkMealPlanReadQueryBudgets(t, api) })
 			t.Run("meal plan allergens", func(t *testing.T) { checkMealPlanAllergens(t, api) })
+			t.Run("meal plan stale save", func(t *testing.T) { checkMealPlanStaleSave(t, api) })
 			t.Run("class list entry administration", func(t *testing.T) { checkClassListEntryAdministration(t, api) })
 			t.Run("request feed controls", func(t *testing.T) { checkRequestFeedControls(t, api) })
 			t.Run("substitution routes", func(t *testing.T) { checkSubstitutionRoutes(t, api) })

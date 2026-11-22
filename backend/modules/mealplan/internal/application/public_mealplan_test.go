@@ -7,14 +7,19 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/mealplan"
+	"github.com/moto-ogs/project-phoenix/modules/mealplan/internal/domain"
 )
 
 type recordingEngine struct {
 	available bool
 	replaced  mealplan.ReplaceDay
+	// stored is the day the store reads; calls lists lock, read and write.
+	stored []domain.Entry
+	calls  []string
 }
 
 func (e *recordingEngine) Replace(_ context.Context, date string, dishes []mealplan.Dish) error {
+	e.calls = append(e.calls, "write "+date)
 	e.replaced = mealplan.ReplaceDay{Date: mealplan.Date(date), Dishes: dishes}
 	return nil
 }
@@ -175,5 +180,47 @@ func TestModuleRejectsUnknownAllergensBeforeWriting(t *testing.T) {
 	}
 	if engine.replaced.Date != "" {
 		t.Fatalf("an invalid day reached the store: %#v", engine.replaced)
+	}
+}
+
+// A save with the day as its saver read it locks the day, compares the
+// stored day in stored form and refuses a day changed since; without a read
+// state it neither locks nor reads.
+func TestModuleComparesTheReadDayBeforeTheWrite(t *testing.T) {
+	t.Parallel()
+
+	date, dateErr := mealplan.ParseDate("2026-09-07")
+	if dateErr != nil {
+		t.Fatal(dateErr)
+	}
+	note := "mit Brot"
+	stored := []domain.Entry{{Date: domain.Date(date), Dish: "Suppe", Note: &note, Allergens: []string{"gluten", "milk"}}}
+	spaced := " mit Brot "
+	asRead := []mealplan.Dish{{Dish: " Suppe ", Note: &spaced, Allergens: []mealplan.Allergen{"milk", "gluten"}}, {Dish: " "}}
+	empty := []mealplan.Dish{}
+	tests := []struct {
+		name      string
+		expected  *[]mealplan.Dish
+		wantErr   error
+		wantCalls []string
+	}{
+		{"matching read state", &asRead, nil, []string{"lock 2026-09-07", "read 2026-09-07", "write 2026-09-07"}},
+		{"changed since read", &empty, mealplan.ErrDayChanged, []string{"lock 2026-09-07", "read 2026-09-07"}},
+		{"no read state", nil, nil, []string{"write 2026-09-07"}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			engine := &recordingEngine{available: true, stored: stored}
+			err := newTestModule(engine).ReplaceDay(context.Background(), mealplan.ReplaceDay{
+				Date: date, Dishes: []mealplan.Dish{{Dish: "Nudeln"}}, Expected: tc.expected,
+			})
+			if !errors.Is(err, tc.wantErr) {
+				t.Fatalf("ReplaceDay() error = %v, want %v", err, tc.wantErr)
+			}
+			if !slices.Equal(engine.calls, tc.wantCalls) {
+				t.Fatalf("store calls = %v, want %v", engine.calls, tc.wantCalls)
+			}
+		})
 	}
 }

@@ -40,11 +40,29 @@ func (s *Service) ReplaceDay(ctx context.Context, command mealplan.ReplaceDay) e
 		return mealplan.ErrInvalidMealDate
 	}
 
-	dishes := make([]mealplan.Dish, 0, len(command.Dishes))
-	for _, input := range command.Dishes {
+	dishes, err := normalizeDishes(command.Dishes)
+	if err != nil {
+		return err
+	}
+	var expected *[]mealplan.Dish
+	if command.Expected != nil {
+		read, err := normalizeDishes(*command.Expected)
+		if err != nil {
+			return err
+		}
+		expected = &read
+	}
+	return mapPublicError(s.replace(ctx, date, dishes, expected, command.AccountID))
+}
+
+// normalizeDishes trims the dishes as they are stored and drops the blank
+// ones; the read day of a save compares in the same form.
+func normalizeDishes(inputs []mealplan.Dish) ([]mealplan.Dish, error) {
+	dishes := make([]mealplan.Dish, 0, len(inputs))
+	for _, input := range inputs {
 		allergens, ok := mealplan.NormalizeAllergens(input.Allergens)
 		if !ok {
-			return mealplan.ErrInvalidAllergens
+			return nil, mealplan.ErrInvalidAllergens
 		}
 		dish := strings.TrimSpace(input.Dish)
 		if dish == "" {
@@ -52,7 +70,7 @@ func (s *Service) ReplaceDay(ctx context.Context, command mealplan.ReplaceDay) e
 		}
 		dishes = append(dishes, mealplan.Dish{Dish: dish, Note: trimOptional(input.Note), Allergens: allergens})
 	}
-	return mapPublicError(s.replace(ctx, date, dishes, command.AccountID))
+	return dishes, nil
 }
 
 func (s *Service) ClearDay(ctx context.Context, command mealplan.ClearDay) error {
@@ -60,7 +78,7 @@ func (s *Service) ClearDay(ctx context.Context, command mealplan.ClearDay) error
 	if err != nil {
 		return mealplan.ErrInvalidMealDate
 	}
-	return mapPublicError(s.replace(ctx, parsed, nil, command.AccountID))
+	return mapPublicError(s.replace(ctx, parsed, nil, nil, command.AccountID))
 }
 
 func (s *Service) RegistrationAvailable(ctx context.Context) (bool, error) {
@@ -374,6 +392,7 @@ var publicErrors = []struct{ from, to error }{
 	{ErrCutoffPassed, mealplan.ErrParticipationCutoff},
 	{ErrPastDay, mealplan.ErrPastDay},
 	{ErrDayClosed, mealplan.ErrDayClosed},
+	{ErrDayChanged, mealplan.ErrDayChanged},
 	{ErrStudentNotFound, mealplan.ErrStudentNotFound},
 	{ErrNotEnrolled, mealplan.ErrChildNotEnrolled},
 	{ErrInvalidCutoff, mealplan.ErrInvalidParticipation},

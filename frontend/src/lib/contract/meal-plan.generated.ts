@@ -219,6 +219,7 @@ export interface DishRequest {
 /** Go: mealplan.SetDayRequest */
 export interface SetDayRequest {
   dishes?: DishRequest[] | null;
+  expected?: DishRequest[] | null;
 }
 
 /** Query of GET /api/meal-plan/ */

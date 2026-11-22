@@ -2809,6 +2809,16 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/adapters/postgres.Store.LockDay",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan/internal/ports.Store.LockDay",
+      "reason": "Read-only target: meal-plan reaches tenant.TenantFromContext (tenant-runtime) through modules/mealplan/internal/adapters/postgres.Store.LockDay to key its own day lock. No persistent, lock or scope effect on tenant-runtime; reviewed with the meal plan stale-save check.",
+      "source_owner": "meal-plan",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/adapters/postgres.Store.LockOrders",
       "classification": "query",
       "effect": "query",

@@ -18,6 +18,8 @@ var (
 	ErrCutoffPassed         = errors.New("meal registration cutoff has passed")
 	// ErrPastDay refuses the school a change of a day already over.
 	ErrPastDay = errors.New("meal registration day is in the past")
+	// ErrDayChanged: the day was stored differently since the saver read it.
+	ErrDayChanged = errors.New("meal plan day changed since it was read")
 	// ErrDayClosed refuses a change of a day the school is closed.
 	ErrDayClosed = errors.New("meal registration day is closed")
 	// ErrStudentNotFound: the school does not know the child.
@@ -435,7 +437,9 @@ func (s *Service) weekEntries(ctx context.Context, monday domain.Date) (entries 
 // replace sets the dishes of a day; no dishes clear it. A change of a day
 // that already had a menu tells the families with a meal booked on it in the
 // same unit of work (#7145).
-func (s *Service) replace(ctx context.Context, date domain.Date, dishes []mealplan.Dish, actorAccountID int64) error {
+// replace writes a day. With expected set, the day is locked first and a
+// day stored differently since it was read is refused (ErrDayChanged).
+func (s *Service) replace(ctx context.Context, date domain.Date, dishes []mealplan.Dish, expected *[]mealplan.Dish, actorAccountID int64) error {
 	operation := "replace_day"
 	if len(dishes) == 0 {
 		operation = "clear_day"
@@ -444,13 +448,9 @@ func (s *Service) replace(ctx context.Context, date domain.Date, dishes []mealpl
 		if err := s.requireEnabled(txCtx); err != nil {
 			return domain.OperationStats{}, err
 		}
-		var stats domain.OperationStats
-		var before []domain.Entry
-		if s.notices != nil {
-			var err error
-			if before, stats, err = s.store.FindWeek(txCtx, date, date); err != nil {
-				return stats, err
-			}
+		before, stats, err := s.storedDay(txCtx, date, expected)
+		if err != nil {
+			return stats, err
 		}
 		write := func() (domain.OperationStats, error) { return s.store.ReplaceDay(txCtx, date, dishes) }
 		if len(dishes) == 0 {
@@ -464,6 +464,32 @@ func (s *Service) replace(ctx context.Context, date domain.Date, dishes []mealpl
 		noticed, err := s.noticeMenuChange(txCtx, date, before, dishes, actorAccountID)
 		return addStats(stats, noticed), err
 	})
+}
+
+// storedDay reads the day before a write when the menu-change notice or the
+// saver's read state needs it. A save with its read state holds the day's
+// lock until commit, so no other save slips in between check and write.
+func (s *Service) storedDay(txCtx context.Context, date domain.Date, expected *[]mealplan.Dish) ([]domain.Entry, domain.OperationStats, error) {
+	var stats domain.OperationStats
+	if expected != nil {
+		locked, err := s.store.LockDay(txCtx, date)
+		stats = addStats(stats, locked)
+		if err != nil {
+			return nil, stats, err
+		}
+	}
+	if s.notices == nil && expected == nil {
+		return nil, stats, nil
+	}
+	before, read, err := s.store.FindWeek(txCtx, date, date)
+	stats = addStats(stats, read)
+	if err != nil {
+		return nil, stats, err
+	}
+	if expected != nil && !sameMenu(before, *expected) {
+		return nil, stats, ErrDayChanged
+	}
+	return before, stats, nil
 }
 
 func (s *Service) requireEnabled(ctx context.Context) error {
