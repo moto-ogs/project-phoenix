@@ -160,7 +160,6 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 		}
 	}
 	decideImportedChildren(rows, current, func(importedChildren) calendar.Date { return today })
-	alignFamilyImportDays(rows)
 	var shown []parentbilling.FamilyChildTarget
 	seen := map[int64]bool{}
 	for i, row := range rows {
@@ -176,28 +175,42 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 	for i := range candidates {
 		candidates[i].settle()
 	}
+	alignFamilyImportDays(candidates)
 	return shown
 }
 
-// alignFamilyImportDays gives the rows of one family that take over a number
-// the day the family's number is stored from: the earliest its rows name
+// alignFamilyImportDays gives the ready rows of one family the day the
+// family's number is stored from: the earliest its ready rows name
 // (newImportedChildren). The preview then shows every row the day that
-// counts, also when siblings name different days.
-func alignFamilyImportDays(rows []importedChildren) {
+// counts, also when siblings name different days. A row the import leaves
+// out lends no day.
+func alignFamilyImportDays(candidates []familyImportCandidate) {
 	earliest := map[string]calendar.Date{}
-	taken := func(row importedChildren) bool {
-		return !row.witness && row.status == parentbilling.ImportedChildrenNew
+	each := func(visit func(candidate *familyImportCandidate, row *importedChildren)) {
+		for i := range candidates {
+			if candidates[i].row.Status != parentbilling.FamilyImportReady {
+				continue
+			}
+			for k := range candidates[i].decided {
+				if row := &candidates[i].decided[k]; row.status == parentbilling.ImportedChildrenNew {
+					visit(&candidates[i], row)
+				}
+			}
+		}
 	}
-	for _, row := range rows {
-		if day, seen := earliest[row.family]; taken(row) && (!seen || row.number.ValidFrom.Before(day)) {
+	each(func(_ *familyImportCandidate, row *importedChildren) {
+		if day, seen := earliest[row.family]; !seen || row.number.ValidFrom.Before(day) {
 			earliest[row.family] = row.number.ValidFrom
 		}
-	}
-	for i := range rows {
-		if taken(rows[i]) {
-			rows[i].number.ValidFrom = earliest[rows[i].family]
+	})
+	shown := map[*familyImportCandidate]bool{}
+	each(func(candidate *familyImportCandidate, row *importedChildren) {
+		row.number.ValidFrom = earliest[row.family]
+		if !shown[candidate] {
+			from := row.number.ValidFrom
+			candidate.row.ValidFrom, shown[candidate] = &from, true
 		}
-	}
+	})
 }
 
 // familyImportRows are the numbers of the candidates per family, with the
