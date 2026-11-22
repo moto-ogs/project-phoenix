@@ -225,7 +225,11 @@ export function CareContractOfferingCorrectionPreviewCard({
       key: "change",
       header: "Änderung",
       className: "lg:min-w-80",
-      render: (contract) => <ChangeCell contract={contract} />,
+      // On a phone the change and the note name themselves and take the
+      // full width; a contract without one has no line for it.
+      stackedLabel: false,
+      render: (contract) =>
+        contract.changes.length > 0 ? <ChangeCell contract={contract} /> : null,
     },
     {
       key: "effective",
@@ -236,7 +240,11 @@ export function CareContractOfferingCorrectionPreviewCard({
     {
       key: "notes",
       header: "Hinweis",
-      render: (contract) => <NotesCell contract={contract} />,
+      stackedLabel: false,
+      render: (contract) =>
+        correctionNotes(contract).length > 0 ? (
+          <NotesCell contract={contract} />
+        ) : null,
     },
   ];
 
