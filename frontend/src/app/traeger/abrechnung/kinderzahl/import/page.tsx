@@ -7,6 +7,7 @@
 // auf. Eine schon bestätigte Zahl überschreibt die Datei nie.
 
 import { CheckCircle, Download } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useCallback, useRef, useState } from "react";
 import {
   FAMILY_IMPORT_SAMPLE,
@@ -14,7 +15,6 @@ import {
   numberCountLabel,
 } from "~/components/traeger/family-children-import-format";
 import { FamilyChildrenImportMappingCard } from "~/components/traeger/family-children-import-mapping-card";
-import { FamilyChildrenImportValidFromCard } from "~/components/traeger/family-children-import-valid-from-card";
 import { FamilyChildrenImportPreviewCard } from "~/components/traeger/family-children-import-preview-card";
 import { importFormatLabel } from "~/components/traeger/sepa-import-format";
 import { Alert } from "~/components/ui/alert";
@@ -38,6 +38,19 @@ import {
   type FamilyImportResult,
 } from "~/lib/traeger-family-children-import-api";
 import { traegerPath } from "~/lib/traeger-url";
+
+// Die Karte mit dem Tag (#7765) bringt die Datumsauswahl mit. Sie lädt erst
+// nach, wenn eine Datei gelesen ist, damit die Seite selbst klein bleibt.
+const FamilyChildrenImportValidFromCard = dynamic(
+  () =>
+    import("~/components/traeger/family-children-import-valid-from-card").then(
+      (module) => module.FamilyChildrenImportValidFromCard,
+    ),
+  {
+    ssr: false,
+    loading: () => <SectionCard title="Ab wann gelten die Zahlen?" loading />,
+  },
+);
 
 const logger = createLogger({ component: "TraegerKinderzahlImportPage" });
 
