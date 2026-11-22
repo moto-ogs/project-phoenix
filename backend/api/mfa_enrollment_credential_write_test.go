@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -130,7 +131,7 @@ func TestTraegerEnrollmentConfirmAfterACredentialWriteRecordsNothing(t *testing.
 			code, start := traegerPost(t, portal, "/traeger/auth/mfa/enroll/start", login.AccessToken, map[string]any{})
 			require.Equal(t, http.StatusOK, code)
 			code, answer := traegerPost(t, portal, "/traeger/auth/mfa/enroll/confirm", login.AccessToken, map[string]any{
-				"challenge_token": start.ChallengeToken, "code": lastTraegerCode(t, portal, account.Email), "organization_id": organization,
+				"challenge_token": start.ChallengeToken, "code": lastTraegerCode(t, portal, account.Email), "organization_id": strconv.FormatInt(organization, 10),
 			})
 
 			enrolled, err := module.Auth.HasMFAEnrollment(context.Background(), account.ID)
