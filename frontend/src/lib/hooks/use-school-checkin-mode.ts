@@ -146,7 +146,7 @@ export function placementOutcome(
 export type CheckinBulkAction = SchoolCheckinAction | "pull";
 
 /** „3 Kinder sind jetzt in Mensa. 1 war schon dort.“ */
-function pullMessage(
+export function pullMessage(
   moved: number,
   alreadyThere: number,
   roomName: string,
