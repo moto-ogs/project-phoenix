@@ -21,8 +21,6 @@ type (
 	PresenceOption                     = presence.ServiceOption
 	PresenceSettingsResolver           = presence.SettingsResolver
 	GuardianWaker                      = presence.GuardianWaker
-	School                             = presence.School
-	SchoolQuery                        = presence.SchoolQuery
 	PresenceStudents                   = presence.PresenceStudents
 	AttendanceStaff                    = presence.AttendanceStaff
 	AttendanceStaffNames               = presence.AttendanceStaffNames
@@ -77,9 +75,6 @@ func NewPresenceCleanup(presenceRetention PresenceRetention, supervisors ports.G
 	return presence.NewCleanupService(presenceRetention, supervisors, deletions, settings, now)
 }
 
-// The student display and visitor reads the root binds over the People
-// Directory and School Structure (#4007).
-type (
-	StudentDisplayReader = presence.StudentDisplayReader
-	CrossTenantRepo      = presence.CrossTenantRepo
-)
+// StudentDisplayReader is the student display read the root binds over the
+// People Directory and School Structure (#4007).
+type StudentDisplayReader = presence.StudentDisplayReader

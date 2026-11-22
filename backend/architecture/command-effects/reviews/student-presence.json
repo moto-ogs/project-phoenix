@@ -2965,46 +2965,6 @@
       "target_owner": "people-directory"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListPersonsAcrossTenantsByID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/compose.Directory.ListPersonsAcrossTenantsByID; modules/peopledirectory/internal/application/capability_peopledirectory.go:111. May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListPersonsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListPersonsAcrossTenantsByID; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListPersonsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListPersonsAcrossTenantsByID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListPersonsAcrossTenantsByID; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListPersonsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListPersonsByAccount",
       "classification": "query",
       "effect": "query",
@@ -3922,46 +3882,6 @@
       "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListStudentRosterOverlapping; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentRosterOverlapping",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListStudentsAcrossTenantsByID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/compose.Directory.ListStudentsAcrossTenantsByID; modules/peopledirectory/internal/application/capability_student.go:30. May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListStudentsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListStudentsAcrossTenantsByID; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentsAcrossTenantsByID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListStudentsAcrossTenantsByID; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentsAcrossTenantsByID",
       "target_owner": "people-directory"
     },
     {
@@ -19142,129 +19062,6 @@
     },
     {
       "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CrossTenantQuery.FindCrossTenantStudents",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.CrossTenantRepo.FindCrossTenantStudents",
-      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through roots/owners.CrossTenantQuery.FindCrossTenantStudents. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CrossTenantQuery.FindCrossTenantStudents",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.CrossTenantRepo.FindCrossTenantStudents",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CrossTenantQuery.FindCrossTenantStudents",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.CrossTenantRepo.FindCrossTenantStudents",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CrossTenantQuery.FindCrossTenantStudents",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.CrossTenantRepo.FindCrossTenantStudents",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListPersonsAcrossTenantsByID; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListPersonsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CrossTenantQuery.FindCrossTenantStudents",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.CrossTenantRepo.FindCrossTenantStudents",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListStudentsAcrossTenantsByID; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CrossTenantQuery.FindCrossTenantStudents",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.CrossTenantRepo.FindCrossTenantStudents",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Query.ListPersonsAcrossTenantsByID; modules/peopledirectory/peopledirectory.go:128. May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListPersonsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CrossTenantQuery.FindCrossTenantStudents",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.CrossTenantRepo.FindCrossTenantStudents",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentQuery.ListStudentsAcrossTenantsByID; modules/peopledirectory/student.go:99. May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentQuery.ListStudentsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CrossTenantQuery.FindCrossTenantStudents",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.CrossTenantRepo.FindCrossTenantStudents",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Capability.ListGroupsByID; modules/schoolstructure.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Capability.ListGroupsByID",
-      "target_owner": "school-structure"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CrossTenantQuery.FindCrossTenantStudents",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.CrossTenantRepo.FindCrossTenantStudents",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Owner.ListGroupsByID; modules/schoolstructure.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Owner.ListGroupsByID",
-      "target_owner": "school-structure"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CrossTenantQuery.FindCrossTenantStudents",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.CrossTenantRepo.FindCrossTenantStudents",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolstructure.Query.ListGroupsByID; modules/schoolstructure/schoolstructure.go:24. May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Query.ListGroupsByID",
-      "target_owner": "school-structure"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CrossTenantQuery.FindCrossTenantStudents",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.CrossTenantRepo.FindCrossTenantStudents",
-      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through roots/owners.CrossTenantQuery.FindCrossTenantStudents. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CrossTenantQuery.FindCrossTenantStudents",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.CrossTenantRepo.FindCrossTenantStudents",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field whose typed values include a source the scan cannot follow (a parameter without a caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:function:modules/studentpresence/internal/application.Service.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.dataAccessAudit.Create",
       "classification": "platform",
       "effect": "mutation",
@@ -19871,36 +19668,6 @@
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.StudentProfileCommands.SetStudentLiveStatus",
       "target_owner": "care-plan"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.activeSchoolQuery.ListSchoolsByID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.SchoolQuery.ListSchoolsByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.ListSchoolsByID; modules/organizationtenancy.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListSchoolsByID",
-      "target_owner": "organization-tenancy"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.activeSchoolQuery.ListSchoolsByID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.SchoolQuery.ListSchoolsByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.ListSchoolsByID; modules/organizationtenancy.Query (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListSchoolsByID",
-      "target_owner": "organization-tenancy"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.activeSchoolQuery.ListSchoolsByID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.SchoolQuery.ListSchoolsByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.SchoolListQuery.ListSchoolsByID; modules/organizationtenancy/organizationtenancy.go:108. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolListQuery.ListSchoolsByID",
-      "target_owner": "organization-tenancy"
     },
     {
       "adr": "0098",

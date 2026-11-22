@@ -37,16 +37,6 @@ func (s *Service) ListStudentNamesByClass(ctx context.Context, schoolClass strin
 	return result, MapError(err)
 }
 
-func (s *Service) ListStudentsAcrossTenantsByID(ctx context.Context, ids []int64) ([]peopledirectory.Student, error) {
-	ids = peopledirectory.PositiveIDs(ids)
-	if len(ids) == 0 {
-		return []peopledirectory.Student{}, nil
-	}
-
-	values, err := s.students.ListAcrossTenantsByIDs(ctx, ids)
-	return nonNilStudents(values), MapError(err)
-}
-
 func (s *Service) ListStudentsByClasses(ctx context.Context, classes []string) ([]peopledirectory.Student, error) {
 	classes = peopledirectory.SchoolClasses(classes)
 	if len(classes) == 0 {

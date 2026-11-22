@@ -103,7 +103,6 @@ type CaregiverProfiles interface {
 // Statements use the caller's connection and scope; application flows own locking and transactions.
 type PermissionStore interface {
 	DeleteRolePermissions(ctx context.Context, roleID int64) error
-	CreatePermission(ctx context.Context, permission domain.ManagedPermission) (domain.ManagedPermission, error)
 	FindPermission(ctx context.Context, id int64) (domain.ManagedPermission, bool, error)
 	FindPermissionByName(ctx context.Context, name string) (domain.ManagedPermission, error)
 	ListPermissions(ctx context.Context, filter domain.PermissionFilter) ([]domain.ManagedPermission, error)

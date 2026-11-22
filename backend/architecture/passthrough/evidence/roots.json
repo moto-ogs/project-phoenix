@@ -4020,13 +4020,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (q activeSchoolQuery) ListSchoolsByID(ctx context.Context, ids []int64) ([]presenceservice.School, error) {\n\tschools, err := q.schools.ListSchoolsByID(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]presenceservice.School, 0, len(schools))\n\tfor _, school := range schools {\n\t\tresult = append(result, presenceservice.School{ID: school.ID.Int64(), Slug: school.Slug})\n\t}\n\treturn result, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/activeSchoolQuery.ListSchoolsByID",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
       "evidence": "func (a announcementApplicants) PendingAnnouncementApplicants(ctx context.Context) ([]audienceRows.PendingAnnouncementApplicant, error) {\n\trows, err := a.source.PendingAnnouncementApplicants(ctx)\n\treturn applicantRows(rows), err\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/announcementApplicants.PendingAnnouncementApplicants",

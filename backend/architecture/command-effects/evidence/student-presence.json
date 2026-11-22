@@ -2241,38 +2241,6 @@
       "target_owner": "people-directory"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListPersonsAcrossTenantsByID",
-      "binding_digest": "42cdb22c7de2422c3fba09a437ffc733",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListPersonsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "binding_digest": "039b5154b4dd451e21e1ef81ffbd5909",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "binding_digest": "5d4f0626a120109b74c9bae19e814c00",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListPersonsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListPersonsAcrossTenantsByID",
-      "binding_digest": "5d4f0626a120109b74c9bae19e814c00",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListPersonsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListPersonsByAccount",
       "binding_digest": "310809ac36db13b4ada4c9d2c827f32d",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsByAccount",
@@ -3006,38 +2974,6 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRosterOverlapping",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentRosterOverlapping",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListStudentsAcrossTenantsByID",
-      "binding_digest": "ea22fb6a6ff07b729bc7410d6070e3cd",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListStudentsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "binding_digest": "d87a6ce5d72469c49df8a92eac9f138b",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "binding_digest": "1a067d2c26eb7385500d72dd2684f492",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentsAcrossTenantsByID",
-      "binding_digest": "1a067d2c26eb7385500d72dd2684f492",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentsAcrossTenantsByID",
       "target_owner": "people-directory"
     },
     {
@@ -14201,102 +14137,6 @@
       "target_owner": "school-membership"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CrossTenantQuery.FindCrossTenantStudents",
-      "binding_digest": "4632fd2077b77c3801917c64f9aeab19",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.CrossTenantRepo.FindCrossTenantStudents",
-      "source_owner": "student-presence",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CrossTenantQuery.FindCrossTenantStudents",
-      "binding_digest": "e05cbfe8311d1a9c27660ab74deacfbd",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.CrossTenantRepo.FindCrossTenantStudents",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CrossTenantQuery.FindCrossTenantStudents",
-      "binding_digest": "5b6617a0448bdc52a366b2ba6c46726f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.CrossTenantRepo.FindCrossTenantStudents",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CrossTenantQuery.FindCrossTenantStudents",
-      "binding_digest": "ad02b0ec53baa45970b9d3dc51f1849c",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.CrossTenantRepo.FindCrossTenantStudents",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListPersonsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CrossTenantQuery.FindCrossTenantStudents",
-      "binding_digest": "c030a9b3cdec0f6189c20e0bf9781d2e",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.CrossTenantRepo.FindCrossTenantStudents",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CrossTenantQuery.FindCrossTenantStudents",
-      "binding_digest": "e5f39d97de4526d44c5b119fba8b8f47",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.CrossTenantRepo.FindCrossTenantStudents",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListPersonsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CrossTenantQuery.FindCrossTenantStudents",
-      "binding_digest": "1d9aba45f1e3e9ad90dc9b229269ba4c",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.CrossTenantRepo.FindCrossTenantStudents",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentQuery.ListStudentsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CrossTenantQuery.FindCrossTenantStudents",
-      "binding_digest": "09c5c922942ade483b08847aea51f3a8",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.CrossTenantRepo.FindCrossTenantStudents",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Capability.ListGroupsByID",
-      "target_owner": "school-structure"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CrossTenantQuery.FindCrossTenantStudents",
-      "binding_digest": "9fe2e61d4227a68fe3120d5891c319d5",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.CrossTenantRepo.FindCrossTenantStudents",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Owner.ListGroupsByID",
-      "target_owner": "school-structure"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CrossTenantQuery.FindCrossTenantStudents",
-      "binding_digest": "fe059461ed62b65a044de4587046b834",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.CrossTenantRepo.FindCrossTenantStudents",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Query.ListGroupsByID",
-      "target_owner": "school-structure"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CrossTenantQuery.FindCrossTenantStudents",
-      "binding_digest": "fd8633d781568aff14dfcae019bc6944",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.CrossTenantRepo.FindCrossTenantStudents",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CrossTenantQuery.FindCrossTenantStudents",
-      "binding_digest": "ae1242b6e0b56ef36ae63d75c756b563",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.CrossTenantRepo.FindCrossTenantStudents",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.dataAccessAudit.Create",
       "binding_digest": "6e75f134a6f244560b4335f4ffb4d6fc",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.DataAccessAudit.Create",
@@ -14743,30 +14583,6 @@
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.StudentProfileCommands.SetStudentLiveStatus",
       "target_owner": "care-plan"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.activeSchoolQuery.ListSchoolsByID",
-      "binding_digest": "bb4f1252e67c51ec97f59d54cc65a9e3",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.SchoolQuery.ListSchoolsByID",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListSchoolsByID",
-      "target_owner": "organization-tenancy"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.activeSchoolQuery.ListSchoolsByID",
-      "binding_digest": "ac8367d9ed742b76e3e26cbf09e42aef",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.SchoolQuery.ListSchoolsByID",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListSchoolsByID",
-      "target_owner": "organization-tenancy"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.activeSchoolQuery.ListSchoolsByID",
-      "binding_digest": "a34f09e78a95e4df11c9e0e96a88eeaf",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.SchoolQuery.ListSchoolsByID",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolListQuery.ListSchoolsByID",
-      "target_owner": "organization-tenancy"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.service.AssignTransitStudentsToActiveGroup",
