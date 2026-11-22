@@ -55,7 +55,7 @@ func seedTodaysBlockStaff(rt *Runtime, today seedDate, now time.Time) error {
 		return err
 	}
 	absent := int64(covered.Staff[0].StaffID)
-	standIn := blockStandIn(orderedSeedStaffIDs(rt.FixedSeeder), covered, absent)
+	standIn := blockStandIn(timeTrackingSeedStaffIDs(rt.FixedSeeder), covered, absent)
 	if standIn == 0 {
 		fmt.Printf("  %s misses one block, no stand-in for %s\n", missed.Title, covered.Title)
 		return postBlockDeviation(rt, covered, absent, 0)
