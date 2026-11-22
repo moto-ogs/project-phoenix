@@ -1,11 +1,6 @@
 import { knownEnum } from "~/lib/contract/known-enum";
 import { labelOf } from "~/lib/label-of";
-import type {
-  AnnouncementViewDetailResponse as WireAnnouncementViewDetail,
-  CreateAnnouncementRequest as WireCreateAnnouncementRequest,
-  OperatorAnnouncementResponse as WireAnnouncement,
-  UpdateAnnouncementRequest as WireUpdateAnnouncementRequest,
-} from "~/lib/contract/operator-announcements.generated";
+import type * as operatorAnnouncementsContract from "~/lib/contract/operator-announcements.generated";
 import { SYSTEM_ROLE_LABELS as ROLE_LABELS } from "~/lib/role-labels";
 
 export type { AnnouncementStats } from "~/lib/contract/operator-announcements.generated";
@@ -82,7 +77,7 @@ export interface AnnouncementViewDetail {
 }
 
 export function mapViewDetail(
-  data: WireAnnouncementViewDetail,
+  data: operatorAnnouncementsContract.AnnouncementViewDetailResponse,
 ): AnnouncementViewDetail {
   return {
     userId: data.user_id,
@@ -94,21 +89,25 @@ export function mapViewDetail(
   };
 }
 
-export type CreateAnnouncementRequest = WireCreateAnnouncementRequest & {
-  title: string;
-  content: string;
-  type: string;
-  severity: string;
-};
+export type CreateAnnouncementRequest =
+  operatorAnnouncementsContract.CreateAnnouncementRequest & {
+    title: string;
+    content: string;
+    type: string;
+    severity: string;
+  };
 
-export type UpdateAnnouncementRequest = WireUpdateAnnouncementRequest & {
-  title: string;
-  content: string;
-  type: string;
-  severity: string;
-};
+export type UpdateAnnouncementRequest =
+  operatorAnnouncementsContract.UpdateAnnouncementRequest & {
+    title: string;
+    content: string;
+    type: string;
+    severity: string;
+  };
 
-export function mapAnnouncement(data: WireAnnouncement): Announcement {
+export function mapAnnouncement(
+  data: operatorAnnouncementsContract.OperatorAnnouncementResponse,
+): Announcement {
   return {
     id: data.id,
     title: data.title,

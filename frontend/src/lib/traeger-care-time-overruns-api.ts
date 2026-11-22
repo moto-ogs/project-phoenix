@@ -3,10 +3,7 @@
 // Auswertung das Recht „Berichte lesen“, mit Namen „Verträge verwalten“.
 
 import { requiredDay } from "./contract/required-day";
-import type {
-  OverrunEvaluation as WireEvaluation,
-  OverrunFigures as WireFigures,
-} from "./contract/traeger-care-time-overruns.generated";
+import type * as traegerCareTimeOverrunsContract from "./contract/traeger-care-time-overruns.generated";
 import { traegerRequest } from "./traeger-api";
 
 const OVERRUNS_PATH = "/api/traeger/care-time-overruns";
@@ -57,7 +54,9 @@ export interface OverrunEvaluation {
   readonly children: readonly OverrunChild[];
 }
 
-function figuresFromBackend(figures: WireFigures): OverrunFigures {
+function figuresFromBackend(
+  figures: traegerCareTimeOverrunsContract.OverrunFigures,
+): OverrunFigures {
   return {
     children: figures.children,
     overrunDays: figures.overrun_days,
@@ -66,7 +65,9 @@ function figuresFromBackend(figures: WireFigures): OverrunFigures {
   };
 }
 
-function evaluationFromBackend(body: WireEvaluation): OverrunEvaluation {
+function evaluationFromBackend(
+  body: traegerCareTimeOverrunsContract.OverrunEvaluation,
+): OverrunEvaluation {
   return {
     from: requiredDay(body.from, "overrun_evaluation.from"),
     to: requiredDay(body.to, "overrun_evaluation.to"),
@@ -111,7 +112,7 @@ export async function fetchOverrunSummary(
   window: OverrunWindow,
 ): Promise<OverrunEvaluation> {
   return evaluationFromBackend(
-    await traegerRequest<WireEvaluation>(
+    await traegerRequest<traegerCareTimeOverrunsContract.OverrunEvaluation>(
       `${OVERRUNS_PATH}?${overrunQuery(window)}`,
     ),
   );
@@ -122,7 +123,7 @@ export async function fetchOverrunChildren(
   window: OverrunWindow,
 ): Promise<OverrunEvaluation> {
   return evaluationFromBackend(
-    await traegerRequest<WireEvaluation>(
+    await traegerRequest<traegerCareTimeOverrunsContract.OverrunEvaluation>(
       `${OVERRUNS_PATH}/children?${overrunQuery(window)}`,
     ),
   );

@@ -6,14 +6,7 @@
  * die Standardvorlage (Version 0).
  */
 import { traegerRequest } from "./traeger-api";
-import type {
-  SampleLetter,
-  Template as WireText,
-  TemplateRequest,
-  TraegerDocumentTemplate as WireVersion,
-  TraegerDocumentTemplateDetail as WireDetail,
-  TraegerDocumentTemplateSummary as WireSummary,
-} from "./contract/traeger-master-data.generated";
+import type * as traegerMasterDataContract from "./contract/traeger-master-data.generated";
 
 /** Die Dokumentarten, in der Reihenfolge des Backends. */
 export type DocumentTemplateKind =
@@ -219,7 +212,9 @@ const basePath = "/api/traeger/master-data/document-templates";
 const kindPath = (kind: DocumentTemplateKind) =>
   `${basePath}/${encodeURIComponent(kind)}`;
 
-function mapText(text: WireText): DocumentTemplateText {
+function mapText(
+  text: traegerMasterDataContract.Template,
+): DocumentTemplateText {
   return templateTextOf({
     subject: text.subject,
     salutation: text.salutation,
@@ -235,7 +230,7 @@ function mapText(text: WireText): DocumentTemplateText {
 
 /** A version of the kind the page asked for; its kind is that one. */
 function mapVersion(
-  version: WireVersion,
+  version: traegerMasterDataContract.TraegerDocumentTemplate,
   kind: DocumentTemplateKind,
 ): DocumentTemplateVersion {
   return {
@@ -247,7 +242,9 @@ function mapVersion(
   };
 }
 
-function requestBody(text: DocumentTemplateText): TemplateRequest {
+function requestBody(
+  text: DocumentTemplateText,
+): traegerMasterDataContract.TemplateRequest {
   const layout = invoiceLayoutOf(text);
   return {
     subject: text.subject,
@@ -266,7 +263,10 @@ function requestBody(text: DocumentTemplateText): TemplateRequest {
 export async function fetchDocumentTemplates(): Promise<
   DocumentTemplateSummary[]
 > {
-  const data = await traegerRequest<WireSummary[]>(basePath);
+  const data =
+    await traegerRequest<
+      traegerMasterDataContract.TraegerDocumentTemplateSummary[]
+    >(basePath);
   // A kind this build does not know has no page; it is left out.
   return data.flatMap((summary) => {
     const { kind } = summary;
@@ -287,7 +287,10 @@ export async function fetchDocumentTemplates(): Promise<
 export async function fetchDocumentTemplate(
   kind: DocumentTemplateKind,
 ): Promise<DocumentTemplateDetail> {
-  const data = await traegerRequest<WireDetail>(kindPath(kind));
+  const data =
+    await traegerRequest<traegerMasterDataContract.TraegerDocumentTemplateDetail>(
+      kindPath(kind),
+    );
   return {
     current: mapVersion(data.current, kind),
     standardTemplate: mapText(data.standard_template),
@@ -302,10 +305,13 @@ export async function saveDocumentTemplate(
   text: DocumentTemplateText,
 ): Promise<DocumentTemplateVersion> {
   return mapVersion(
-    await traegerRequest<WireVersion>(`${kindPath(kind)}/versions`, {
-      method: "POST",
-      body: requestBody(text),
-    }),
+    await traegerRequest<traegerMasterDataContract.TraegerDocumentTemplate>(
+      `${kindPath(kind)}/versions`,
+      {
+        method: "POST",
+        body: requestBody(text),
+      },
+    ),
     kind,
   );
 }
@@ -315,10 +321,13 @@ export async function previewDocumentTemplate(
   kind: DocumentTemplateKind,
   text: DocumentTemplateText,
 ): Promise<DocumentTemplatePreview> {
-  const data = await traegerRequest<SampleLetter>(`${kindPath(kind)}/preview`, {
-    method: "POST",
-    body: requestBody(text),
-  });
+  const data = await traegerRequest<traegerMasterDataContract.SampleLetter>(
+    `${kindPath(kind)}/preview`,
+    {
+      method: "POST",
+      body: requestBody(text),
+    },
+  );
   return {
     recipient: data.recipient ?? [],
     facts: data.facts ?? [],

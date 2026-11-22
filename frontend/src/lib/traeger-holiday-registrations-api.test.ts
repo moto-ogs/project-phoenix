@@ -1,16 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "./api-error";
-import type {
-  HolidayRegistrationBooking as WireBooking,
-  HolidayRegistrationDetail as WireDetail,
-  HolidayRegistrationEvent as WireEvent,
-} from "./contract/shared.generated";
-import type {
-  HolidayMailProblemsResponse,
-  HolidayRegistrationHealthDetail as WireHealthDetail,
-  HolidayRegistrationSummary as WireSummary,
-  HolidayWeekPlaces as WireWeekPlaces,
-} from "./contract/traeger-holiday-periods.generated";
+import type * as sharedContract from "./contract/shared.generated";
+import type * as traegerHolidayPeriodsContract from "./contract/traeger-holiday-periods.generated";
 import {
   changeHolidayRegistration,
   downloadHolidayRegistrationPdf,
@@ -48,7 +39,7 @@ const BACKEND_BOOKING = {
   lunch_days: 0,
   lunch_price_cents: 0,
   placement: "placed",
-} satisfies WireBooking;
+} satisfies sharedContract.HolidayRegistrationBooking;
 
 const BACKEND_SUMMARY = {
   id: "7",
@@ -65,13 +56,13 @@ const BACKEND_SUMMARY = {
   retention_days: 60,
   deletes_on: null,
   health_deletes_on: null,
-} satisfies WireSummary;
+} satisfies traegerHolidayPeriodsContract.HolidayRegistrationSummary;
 
 function event(
   action: string,
   occurredAt: string,
-  details: WireEvent["details"],
-): WireEvent {
+  details: sharedContract.HolidayRegistrationEvent["details"],
+): sharedContract.HolidayRegistrationEvent {
   return { action, occurred_at: occurredAt, actor_account_id: null, details };
 }
 
@@ -126,7 +117,7 @@ const BACKEND_DETAIL = {
     event("confirm", "2026-11-05T09:00:00Z", { from: "received" }),
   ],
   criteria: null,
-} satisfies WireDetail;
+} satisfies sharedContract.HolidayRegistrationDetail;
 
 describe("traeger-holiday-registrations-api", () => {
   const fetchMock = vi.fn<typeof fetch>();
@@ -669,7 +660,7 @@ describe("traeger-holiday-registrations-api", () => {
               ],
             },
           ],
-        } satisfies HolidayMailProblemsResponse,
+        } satisfies traegerHolidayPeriodsContract.HolidayMailProblemsResponse,
       }),
     );
 
@@ -717,7 +708,7 @@ describe("traeger-holiday-registrations-api", () => {
               custom_data: { tetanus: "ja" },
             },
           ],
-        } satisfies WireHealthDetail,
+        } satisfies traegerHolidayPeriodsContract.HolidayRegistrationHealthDetail,
       }),
     );
 
@@ -945,7 +936,7 @@ describe("traeger-holiday-registrations-api", () => {
       pending: 0,
       booking_unit: "week",
       days: null,
-    } satisfies WireWeekPlaces;
+    } satisfies traegerHolidayPeriodsContract.HolidayWeekPlaces;
     fetchMock.mockResolvedValue(jsonResponse(200, { data: [week] }));
 
     const [places] = await fetchHolidayWeekPlaces("5");

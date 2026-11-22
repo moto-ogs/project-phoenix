@@ -9,11 +9,7 @@
  */
 
 import { apiErrorFromResponse, transportFetch } from "./api-error";
-import type {
-  StaffImport as WireImport,
-  StaffImportEntry as WireLogEntry,
-  StaffImportRow as WireRow,
-} from "./contract/traeger-staff-record-imports.generated";
+import type * as traegerStaffRecordImportsContract from "./contract/traeger-staff-record-imports.generated";
 import { knownEnum } from "./contract/known-enum";
 import { readJson, traegerRequest } from "./traeger-api";
 
@@ -135,7 +131,9 @@ const knownFields = (values: readonly string[] | null): StaffImportField[] =>
     return field === undefined ? [] : [field];
   });
 
-function mapRow(row: WireRow): StaffImportRow {
+function mapRow(
+  row: traegerStaffRecordImportsContract.StaffImportRow,
+): StaffImportRow {
   return {
     line: row.line,
     status: knownEnum(STAFF_IMPORT_ROW_STATUS_VALUES, row.status),
@@ -157,7 +155,9 @@ function mapRow(row: WireRow): StaffImportRow {
   };
 }
 
-function mapResult(result: WireImport): StaffImportResult {
+function mapResult(
+  result: traegerStaffRecordImportsContract.StaffImport,
+): StaffImportResult {
   return {
     encoding: result.encoding,
     delimiter: result.delimiter,
@@ -200,7 +200,9 @@ async function postImport(
     );
   }
   const data = await readJson(response);
-  return mapResult((data as { data: WireImport }).data);
+  return mapResult(
+    (data as { data: traegerStaffRecordImportsContract.StaffImport }).data,
+  );
 }
 
 /** Reads the file and answers every row; stores nothing. */
@@ -219,7 +221,10 @@ export function applyStaffImport(
 
 /** The imports of the Träger, newest first. */
 export async function fetchStaffImportLog(): Promise<StaffImportLogEntry[]> {
-  const entries = await traegerRequest<WireLogEntry[]>(IMPORTS_PATH);
+  const entries =
+    await traegerRequest<traegerStaffRecordImportsContract.StaffImportEntry[]>(
+      IMPORTS_PATH,
+    );
   return entries.map((entry) => ({
     file: entry.file,
     accountId: entry.account_id,
