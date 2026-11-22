@@ -1190,6 +1190,8 @@ export const ERROR_CATALOG = {
         "Die Datei ist zu groß. Erlaubt sind 2 MB und 5.000 Zeilen.",
       "parent_billing.sepa_import_mapping_invalid":
         "Bitte ordne zuerst alle Pflichtspalten zu.",
+      "parent_billing.sepa_mandate_contract_draft":
+        "Der Vertrag ist noch ein Entwurf. Trage das Mandat ein, sobald der Vertrag versendet ist.",
       "parent_billing.sepa_mandate_in_force":
         "Die Familie hat schon ein gültiges Mandat. Bitte widerrufe es zuerst.",
       "parent_billing.sepa_mandate_invalid":
