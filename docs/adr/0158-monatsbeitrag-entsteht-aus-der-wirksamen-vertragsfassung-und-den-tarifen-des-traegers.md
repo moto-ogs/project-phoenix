@@ -275,7 +275,9 @@ zusammen mit denen, die nur eine ausgestellte Rechnung des Monats in die Kette
 bringen (#7863), für die Geschwisterregel, mit denselben Schlüsseln. Moto legt
 ein Kind nur zusammen, wenn jeder Teil auch in der zweiten Gruppierung ein
 Kind für sich ist (kein ausgestellter Vertrag verbindet ihn mit einem anderen
-laufenden Vertrag); dann ändert sich in beiden dasselbe. Das zusammengelegte
+laufenden Vertrag) und jede für ihn schon ausgestellte Rechnung die Familie
+des Wechsels festhält; dann ändert sich in beiden dasselbe, und kein Eintrag
+einer anderen Familie ändert seinen Schlüssel. Das zusammengelegte
 Kind behält den Schlüssel seines ersten Teils, kein anderes Kind ändert seinen
 Schlüssel, und gleichrangige Kinder behalten ihre Reihenfolge, auch gegenüber
 Rechnungen, die ein Lauf des Monats schon ausgestellt hat. Dieselbe Gruppierung zählt die Kinder einer Familie

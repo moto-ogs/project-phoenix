@@ -424,13 +424,36 @@ func TestCareSchoolChangeJoinsOnlyWhereTheChainAgrees(t *testing.T) {
 	recipients := map[int64]parentbilling.CareRecipient{801: {Email: familyEva}, 802: {Email: familyEva}, 803: {Email: familyOther}}
 	families := contractFamilies(byContract, recipients)
 
-	plain := groupCare(byContract, order, families, nil)
+	plain := groupCare(byContract, order, families, nil, nil)
 	require.Len(t, plain.joined, 1, "without the issued spelling the school change joins")
 	assert.Equal(t, plain.keys[801], plain.keys[802])
 
 	issued := map[int64]parentbilling.CareContractChild{804: {StudentID: ptr(int64(9801)), FirstName: "Ben", LastName: "Beispiel", BirthDate: birth}}
-	grouping := groupCare(byContract, order, families, issued)
+	grouping := groupCare(byContract, order, families, issued, nil)
 	assert.Empty(t, grouping.joined)
 	assert.NotEqual(t, grouping.keys[801], grouping.keys[802])
 	assert.Equal(t, chainKeys(byContract, chainChildren(byContract, order, issued)), grouping.keys, "the chain as before #7874")
+}
+
+// A school change joins only where every invoice already issued for a part
+// froze the family of the change: an invoice of another family keeps its
+// key, so its place among the children of that family stays (#7874).
+func TestCareSchoolChangeKeepsTheKeysOfAnotherFamilysInvoices(t *testing.T) {
+	t.Parallel()
+	birth := ptr(day(t, noahBirth))
+	version := func(contract, school, student int64, from, until string) parentbilling.CareContractVersion {
+		v := sjrVersion(t, contract, school, 1, from, until, mon1400)
+		v.StudentID, v.ChildFirstName, v.ChildBirthDate = ptr(student), "Noah", birth
+		return v
+	}
+	byContract, order := versionsByContract([]parentbilling.CareContractVersion{
+		version(811, schoolBirkenfeld, 9811, billingMonth, "2027-01-14"),
+		version(812, schoolIspringen, 9812, "2027-01-15", "2027-01-31"),
+	})
+	families := contractFamilies(byContract, map[int64]parentbilling.CareRecipient{811: {Email: familyEva}, 812: {Email: familyEva}})
+	same := groupCare(byContract, order, families, nil, map[int64]string{811: parentbilling.FamilyKey(familyEva)})
+	assert.Len(t, same.joined, 1, "an invoice of the same family joins")
+	other := groupCare(byContract, order, families, nil, map[int64]string{811: parentbilling.FamilyKey(familyOther)})
+	assert.Empty(t, other.joined, "an invoice of another family keeps the child apart")
+	assert.Equal(t, chainKeys(byContract, chainChildren(byContract, order, nil)), other.keys)
 }

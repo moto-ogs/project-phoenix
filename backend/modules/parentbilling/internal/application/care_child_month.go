@@ -101,39 +101,70 @@ type careGrouping struct {
 	joined   []int
 }
 
-// groupCare groups the contracts of a month by child.
+// groupCare groups the contracts of a month by child. issuedFamilies are
+// the families the issued invoices of the month froze, by contract.
 func groupCare(byContract map[int64][]parentbilling.CareContractVersion, order []int64, families map[int64]string,
-	issued map[int64]parentbilling.CareContractChild,
+	issued map[int64]parentbilling.CareContractChild, issuedFamilies map[int64]string,
 ) careGrouping {
-	chain := chainChildren(byContract, order, issued)
-	keys := chainKeys(byContract, chain)
+	chain := newCareChain(byContract, order, issued, families, issuedFamilies)
+	children, joined := joinSchoolChanges(groupCareChildren(contractChildrenOf(byContract), order), byContract, families, chain.aligned)
+	for _, first := range joined {
+		chain.join(children[first])
+	}
+	return careGrouping{children: children, keys: chain.keys, joined: joined}
+}
+
+// careChain is the grouping of the sibling chain (chainChildren) with its
+// keys and the place of every contract in it.
+type careChain struct {
+	byContract     map[int64][]parentbilling.CareContractVersion
+	children       [][]int64
+	keys           map[int64]string
+	place          map[int64]int
+	families       map[int64]string
+	issuedFamilies map[int64]string
+}
+
+func newCareChain(byContract map[int64][]parentbilling.CareContractVersion, order []int64, issued map[int64]parentbilling.CareContractChild,
+	families, issuedFamilies map[int64]string,
+) careChain {
+	children := chainChildren(byContract, order, issued)
 	place := map[int64]int{}
-	for i, child := range chain {
+	for i, child := range children {
 		for _, contractID := range child {
 			place[contractID] = i
 		}
 	}
-	// A part joins only where the chain sees it as one child of its own:
-	// then both groupings change in the same way.
-	aligned := func(part []int64) bool {
-		inForce := 0
-		for _, contractID := range chain[place[part[0]]] {
-			if _, ok := byContract[contractID]; ok {
-				inForce++
-			}
+	return careChain{byContract: byContract, children: children, keys: chainKeys(byContract, children), place: place,
+		families: families, issuedFamilies: issuedFamilies}
+}
+
+// aligned tells whether the chain sees a part of a school change as one
+// child of its own and every invoice issued for it froze the family of the
+// change: then both groupings change in the same way, and no entry of
+// another family changes its key.
+func (c careChain) aligned(part []int64) bool {
+	group := c.children[c.place[part[0]]]
+	inForce := 0
+	for _, contractID := range group {
+		if _, ok := c.byContract[contractID]; ok {
+			inForce++
 		}
-		return inForce == len(part) && !slices.ContainsFunc(part, func(contractID int64) bool { return place[contractID] != place[part[0]] })
-	}
-	children, joined := joinSchoolChanges(groupCareChildren(contractChildrenOf(byContract), order), byContract, families, aligned)
-	for _, first := range joined {
-		key := keys[children[first][0]]
-		for _, contractID := range children[first] {
-			for _, member := range chain[place[contractID]] {
-				keys[member] = key
-			}
+		if family, ok := c.issuedFamilies[contractID]; ok && family != c.families[part[0]] {
+			return false
 		}
 	}
-	return careGrouping{children: children, keys: keys, joined: joined}
+	return inForce == len(part) && !slices.ContainsFunc(part, func(contractID int64) bool { return c.place[contractID] != c.place[part[0]] })
+}
+
+// join gives the chain groups of a joined child the key of its first part.
+func (c careChain) join(child []int64) {
+	key := c.keys[child[0]]
+	for _, contractID := range child {
+		for _, member := range c.children[c.place[contractID]] {
+			c.keys[member] = key
+		}
+	}
 }
 
 func contractChildrenOf(byContract map[int64][]parentbilling.CareContractVersion) map[int64]parentbilling.CareContractChild {
@@ -180,7 +211,7 @@ func groupCareChildren(identities map[int64]parentbilling.CareContractChild, ord
 func childKeys(byContract map[int64][]parentbilling.CareContractVersion, order []int64, issued map[int64]parentbilling.CareContractChild,
 	families map[int64]string,
 ) map[int64]string {
-	return groupCare(byContract, order, families, issued).keys
+	return groupCare(byContract, order, families, issued, nil).keys
 }
 
 // chainChildren groups the contracts in force and any issued contracts with

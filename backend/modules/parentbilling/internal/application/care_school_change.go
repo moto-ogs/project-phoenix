@@ -29,8 +29,10 @@ import (
 //     another family or with another spelling on one of its contracts leaves
 //     all of them apart, whatever their order.
 //
-// Contracts outside the versions in force (issued invoices of the month,
-// #7863) neither join nor stop a join; childKeys adds them afterwards.
+// The sibling chain groups the issued contracts of the month too (#7863);
+// groupCare applies a join only where the chain sees every part as a child
+// of its own and every invoice issued for a part froze the family of the
+// change (careChain.aligned).
 
 // schoolChangePerson is a spelled name with its date of birth, empty
 // without one.

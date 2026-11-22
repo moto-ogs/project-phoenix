@@ -136,7 +136,7 @@ func buildCareMonth(in careMonthInput) (careMonth, error) {
 	}
 	// One grouping of the children for the billed days (E2), the
 	// duplicates (E3), the sibling chain and the review (ADR 0158 E1).
-	grouping := groupCare(byContract, order, contractFamilies(byContract, in.recipients), in.issuedChildIdentities())
+	grouping := groupCare(byContract, order, contractFamilies(byContract, in.recipients), in.issuedChildIdentities(), in.issuedFamilies())
 	children := grouping.children
 	entries := monthEntries(in.month, byContract, children)
 	duplicates, held := childMonthHolds(in.month, in.rule, byContract, children, entries)
@@ -180,6 +180,16 @@ func buildCareMonth(in careMonthInput) (careMonth, error) {
 	}
 	chainCareMonth(&result, in, chained, unbilled, childOf, byContract)
 	return result, nil
+}
+
+// issuedFamilies are the families the issued invoices of the month froze,
+// by contract.
+func (in careMonthInput) issuedFamilies() map[int64]string {
+	families := make(map[int64]string, len(in.invoiced))
+	for contractID, invoice := range in.invoiced {
+		families[contractID] = invoice.FamilyEmail
+	}
+	return families
 }
 
 // issuedChildIdentities excludes notices that this preview recomputes.
