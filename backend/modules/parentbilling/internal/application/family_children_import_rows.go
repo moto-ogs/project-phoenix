@@ -398,6 +398,15 @@ func (c *familyImportCheck) match(row *parentbilling.FamilyChildrenImportRow, sc
 	if speaksOnly {
 		return c.targets(row, found, speaksOnly)
 	}
+	return c.reachedTargets(row, found, from)
+}
+
+// reachedTargets names the families the row's number reaches from its day
+// and, as witnesses, those the child belonged to on that day but that a
+// renewal no longer reaches. Without any family it reaches, the contract
+// ended before the number could count (#7863).
+func (c *familyImportCheck) reachedTargets(row *parentbilling.FamilyChildrenImportRow, found []familyImportContract, from calendar.Date) []familyImportTarget {
+	field := parentbilling.FamilyImportFieldChildLastName
 	running := c.applicableContracts(slices.Clone(found), from)
 	heard := heardContracts(found, running, from)
 	var targets []familyImportTarget
@@ -405,7 +414,7 @@ func (c *familyImportCheck) match(row *parentbilling.FamilyChildrenImportRow, sc
 		problemOf(row, field, parentbilling.FamilyImportProblemContractEnded)
 		row.Status = parentbilling.FamilyImportInvalid
 	} else {
-		targets = c.targets(row, running, speaksOnly)
+		targets = c.targets(row, running, false)
 	}
 	if len(heard) > 0 {
 		contractID := row.ContractID
