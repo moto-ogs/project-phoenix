@@ -12,11 +12,14 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/devicescan"
 )
 
+// The identifiers of the kiosk device API stay JSON numbers and say so with
+// contract:"number": PyrePortal v1.11.5 reads them as numbers (#7808).
+
 // OpenRoomRequest books the child behind a card into a released room chosen
 // at the device the child leaves (#3067).
 type OpenRoomRequest struct {
 	StudentRFID string `json:"student_rfid"`
-	RoomID      int64  `json:"room_id"`
+	RoomID      int64  `json:"room_id" contract:"number"`
 }
 
 // Bind validates the open-room request.
@@ -30,12 +33,12 @@ func (req *OpenRoomRequest) Bind(_ *http.Request) error {
 // OpenRoomResponse is the booked independent stay. Moved is false when the
 // child already stayed in that room.
 type OpenRoomResponse struct {
-	StudentID     int64     `json:"student_id"`
+	StudentID     int64     `json:"student_id" contract:"number"`
 	StudentName   string    `json:"student_name"`
 	Action        string    `json:"action"`
-	RoomID        int64     `json:"room_id"`
+	RoomID        int64     `json:"room_id" contract:"number"`
 	RoomName      string    `json:"room_name"`
-	ActiveGroupID int64     `json:"active_group_id"`
+	ActiveGroupID int64     `json:"active_group_id" contract:"number"`
 	Moved         bool      `json:"moved"`
 	ProcessedAt   time.Time `json:"processed_at"`
 	Message       string    `json:"message"`

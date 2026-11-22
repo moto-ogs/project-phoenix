@@ -2897,38 +2897,6 @@
       "target_owner": ""
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListPersonsAcrossTenantsByID",
-      "binding_digest": "530e2a172e14393db374f35f9ae1916f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "source_owner": "people-directory",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListPersonsAcrossTenantsByID",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListPersonsAcrossTenantsByID",
-      "binding_digest": "530e2a172e14393db374f35f9ae1916f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "source_owner": "people-directory",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListPersonsAcrossTenantsByID",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListPersonsByAccount",
       "binding_digest": "a85d70be637aa98e5af50aac3ad3f6b0",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsByAccount",
@@ -3596,38 +3564,6 @@
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentRosterOverlapping",
       "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRosterOverlapping",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListStudentsAcrossTenantsByID",
-      "binding_digest": "530e2a172e14393db374f35f9ae1916f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "source_owner": "people-directory",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListStudentsAcrossTenantsByID",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentsAcrossTenantsByID",
-      "binding_digest": "530e2a172e14393db374f35f9ae1916f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "source_owner": "people-directory",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentsAcrossTenantsByID",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
       "source_owner": "people-directory",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
       "target_owner": ""
@@ -6745,22 +6681,6 @@
       "target_owner": ""
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.ListPersonsAcrossTenantsByID",
-      "binding_digest": "530e2a172e14393db374f35f9ae1916f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListPersonsAcrossTenantsByID",
-      "source_owner": "people-directory",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.ListPersonsAcrossTenantsByID",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListPersonsAcrossTenantsByID",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.ListPersonsByAccount",
       "binding_digest": "a85d70be637aa98e5af50aac3ad3f6b0",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListPersonsByAccount",
@@ -7092,22 +7012,6 @@
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.ListStudentRosterOverlapping",
       "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentRosterOverlapping",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.ListStudentsAcrossTenantsByID",
-      "binding_digest": "530e2a172e14393db374f35f9ae1916f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentsAcrossTenantsByID",
-      "source_owner": "people-directory",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.ListStudentsAcrossTenantsByID",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentsAcrossTenantsByID",
       "source_owner": "people-directory",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
       "target_owner": ""
@@ -8801,38 +8705,6 @@
       "target_owner": ""
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListPersonsAcrossTenantsByID",
-      "binding_digest": "530e2a172e14393db374f35f9ae1916f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListPersonsAcrossTenantsByID",
-      "source_owner": "people-directory",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListPersonsAcrossTenantsByID",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListPersonsAcrossTenantsByID",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "binding_digest": "530e2a172e14393db374f35f9ae1916f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListPersonsAcrossTenantsByID",
-      "source_owner": "people-directory",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListPersonsAcrossTenantsByID",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListPersonsByAccount",
       "binding_digest": "a85d70be637aa98e5af50aac3ad3f6b0",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListPersonsByAccount",
@@ -9468,38 +9340,6 @@
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentRosterOverlapping",
       "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListStudentRosterOverlapping",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListStudentsAcrossTenantsByID",
-      "binding_digest": "530e2a172e14393db374f35f9ae1916f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListStudentsAcrossTenantsByID",
-      "source_owner": "people-directory",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListStudentsAcrossTenantsByID",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListStudentsAcrossTenantsByID",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "binding_digest": "530e2a172e14393db374f35f9ae1916f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListStudentsAcrossTenantsByID",
-      "source_owner": "people-directory",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListStudentsAcrossTenantsByID",
       "source_owner": "people-directory",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
       "target_owner": ""
@@ -10204,38 +10044,6 @@
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentNamesByID",
       "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentQuery.ListStudentNamesByID",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListStudentsAcrossTenantsByID",
-      "binding_digest": "530e2a172e14393db374f35f9ae1916f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentQuery.ListStudentsAcrossTenantsByID",
-      "source_owner": "people-directory",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListStudentsAcrossTenantsByID",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentQuery.ListStudentsAcrossTenantsByID",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "binding_digest": "530e2a172e14393db374f35f9ae1916f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentQuery.ListStudentsAcrossTenantsByID",
-      "source_owner": "people-directory",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentQuery.ListStudentsAcrossTenantsByID",
       "source_owner": "people-directory",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
       "target_owner": ""

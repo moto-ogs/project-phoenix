@@ -354,7 +354,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		func() (err error) { feedback, err = BuildServeFeedback(db, feedbackSettings); return },
 		func() (err error) {
 			structure = BuildStructureRows(db, persons, people, peopleIdentity, rooms, membership, workTime)
-			presencePeople = BuildPresencePeopleReads(db, env.Logger, persons, groups, organizations, people, env.Now)
+			presencePeople = BuildPresencePeopleReads(db, persons, groups, people)
 			careRows = BuildTimetableCareRows(carePlan)
 			devices, err = NewDeviceFleet(db, env.Now)
 			return StepError("compose device fleet", err)

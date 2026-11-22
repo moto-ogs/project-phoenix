@@ -6,8 +6,7 @@ import { bffFile, bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
  * route (lib/contract): IDs arrive as strings.
  */
 
-import type { ApiResponse } from "~/lib/api-envelope";
-import { ApiError, apiErrorFromBody, transportFetch } from "./api-error";
+import { ApiError, apiErrorFromBody } from "./api-error";
 import { knownEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
 import type * as sharedContract from "./contract/shared.generated";
@@ -113,17 +112,6 @@ export interface TraegerSchoolsAlerts {
   readonly asOf: string;
 }
 
-/** Reads a JSON body; null for an empty or unreadable one. */
-async function readJson(response: Response): Promise<unknown> {
-  const text = await response.text();
-  if (!text) return null;
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    return null;
-  }
-}
-
 /**
  * Signs in at the Träger portal. Without `organizationId` a person who
  * belongs to several Träger gets the choice back instead of tokens. Every
@@ -143,24 +131,16 @@ export async function traegerLogin(input: {
   };
   if (input.ignoreTrustedDevice) body.ignore_trusted_device = true;
   if (input.organizationId !== undefined) {
-    body.organization_id = Number(input.organizationId);
+    body.organization_id = input.organizationId;
   }
-  const response = await transportFetch(portalAuthPath("traeger", "login"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify(body),
-  });
-  const data = await readJson(response);
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      data,
-    );
-  }
-
-  return signInAnswer("traeger", (data as ApiResponse<unknown>).data);
+  // A sign-in step of the BFF without a session (ADR 0270).
+  const data = await bffJsonUncontracted<unknown>(
+    "public",
+    "POST",
+    portalAuthPath("traeger", "login"),
+    { body, errorMessage: "Request failed" },
+  );
+  return signInAnswer("traeger", data);
 }
 
 /** The schools of the signed-in person's Träger. */
@@ -530,32 +510,6 @@ export interface TraegerInvitationPreview {
   /** The address has a moto account: the invitee confirms its password. */
   readonly requiresExistingPassword: boolean;
   readonly expiresAt: string;
-}
-
-/** Sends a request to a Träger BFF route and returns the `data` member. */
-export async function traegerRequest<T>(
-  path: string,
-  init: { method: string; body?: unknown } = { method: "GET" },
-): Promise<T> {
-  const response = await transportFetch(path, {
-    method: init.method,
-    credentials: "include",
-    cache: "no-store",
-    headers:
-      init.body === undefined
-        ? undefined
-        : { "Content-Type": "application/json" },
-    body: init.body === undefined ? undefined : JSON.stringify(init.body),
-  });
-  const data = await readJson(response);
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      data,
-    );
-  }
-  return (data as { data?: T } | null)?.data as T;
 }
 
 function mapInvitation(

@@ -64,7 +64,7 @@ function Harness({
   previewMode = false,
   lateInviteToken,
   statusToken,
-  uploadViaParentPortal,
+  viaParentPortal,
   initial = NO_FILES,
 }: Readonly<{
   field?: FormField;
@@ -72,7 +72,7 @@ function Harness({
   previewMode?: boolean;
   lateInviteToken?: string;
   statusToken?: string;
-  uploadViaParentPortal?: boolean;
+  viaParentPortal?: boolean;
   initial?: UploadValue[];
 }>) {
   const [value, setValue] = useState<UploadValue[]>(initial);
@@ -81,7 +81,7 @@ function Harness({
     phaseId,
     lateInviteToken,
     statusToken,
-    uploadViaParentPortal,
+    viaParentPortal,
     locale: "de",
     previewMode,
   });
@@ -282,7 +282,7 @@ describe("FileUploadInput", () => {
         ),
       );
     vi.stubGlobal("fetch", fetchMock);
-    const { container } = render(<Harness uploadViaParentPortal />);
+    const { container } = render(<Harness viaParentPortal />);
 
     pick(container, [new File(["%PDF-1.7"], "bescheid.pdf")]);
 

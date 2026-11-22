@@ -156,7 +156,6 @@ import {
   type EnrollmentFormValues,
 } from "~/components/enrollment/enrollment-form-validation";
 import { buildEnrollmentPayload } from "~/components/enrollment/enrollment-form-payload";
-import type * as parentEnrollmentsContract from "~/lib/contract/parent-enrollments.generated";
 import type * as sharedContract from "~/lib/contract/shared.generated";
 import type { CareOffering } from "~/lib/care-offering-api";
 
@@ -187,8 +186,8 @@ interface PropsBase {
   readonly lateInviteToken?: string;
   /** Status-link authorization for file uploads while editing a request. */
   readonly statusToken?: string;
-  /** Uploads through the parents portal: a signed-in parent (#1663). */
-  readonly uploadViaParentPortal?: boolean;
+  /** Uploads through the parent portal's session (restricted phases). */
+  readonly viaParentPortal?: boolean;
   readonly previewMode?: boolean;
   readonly previewSchema?: PublicFormSchema | null;
   /**
@@ -267,7 +266,7 @@ export function EnrollmentForm({
   prefetchedData,
   lateInviteToken,
   statusToken,
-  uploadViaParentPortal,
+  viaParentPortal,
   previewMode = false,
   previewSchema,
   previewOfferings,
@@ -347,7 +346,7 @@ export function EnrollmentForm({
     phaseId: phaseID,
     lateInviteToken,
     statusToken,
-    uploadViaParentPortal,
+    viaParentPortal,
     locale: contentLocale,
     previewMode,
   });
@@ -771,7 +770,7 @@ export function EnrollmentForm({
   };
 
   const adoptExistingChild = (
-    existing: parentEnrollmentsContract.GuardianProfileChild,
+    existing: sharedContract.GuardianProfileChild,
   ) => {
     // A stored grade the phase does not accept (#1663) would prefill a value
     // the select cannot show and fail the whole submit with
@@ -2345,11 +2344,9 @@ function SectionHeading({
 }
 
 interface ExistingChildrenPanelProps {
-  readonly existing: parentEnrollmentsContract.GuardianProfileChild[];
+  readonly existing: sharedContract.GuardianProfileChild[];
   readonly usedIDs: Set<string>;
-  readonly onAdopt: (
-    child: parentEnrollmentsContract.GuardianProfileChild,
-  ) => void;
+  readonly onAdopt: (child: sharedContract.GuardianProfileChild) => void;
   readonly tr: EnrollmentFormTranslator;
 }
 

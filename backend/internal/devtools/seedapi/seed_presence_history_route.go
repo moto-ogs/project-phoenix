@@ -2,11 +2,13 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // presenceHistoryRouteChunk is how many days one request carries. The route
@@ -53,7 +55,11 @@ func operatorPresenceHistoryWriter(rt *Runtime) PresenceHistoryWriter {
 		written := 0
 		for start := 0; start < len(days); start += presenceHistoryRouteChunk {
 			chunk := days[start:min(start+presenceHistoryRouteChunk, len(days))]
-			raw, err := rt.Client.PostWithAuth(rt.OperatorAuth, path, map[string]any{"days": presenceHistoryRouteDays(chunk)})
+			body, err := textIDBody(map[string]any{"days": presenceHistoryRouteDays(chunk)})
+			if err != nil {
+				return written, err
+			}
+			raw, err := rt.Client.PostWithAuth(rt.OperatorAuth, path, body)
 			if err != nil {
 				return written, err
 			}
@@ -69,6 +75,12 @@ func operatorPresenceHistoryWriter(rt *Runtime) PresenceHistoryWriter {
 		}
 		return written, nil
 	}
+}
+
+// textIDBody encodes a body with every ident.ID as a decimal string, as a
+// browser sends it (#7808).
+func textIDBody(body any) (json.RawMessage, error) {
+	return wire.Marshal(body)
 }
 
 func presenceHistoryRouteDays(days []PastPresenceDay) []presenceHistoryRouteDay {

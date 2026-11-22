@@ -163,6 +163,9 @@ export function formatUploadSize(bytes: number, locale = "de"): string {
   return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(mb)} MB`;
 }
 
+/** The message of a failed upload; the user reads the catalog text. */
+export const UPLOAD_FAILED = "Datei konnte nicht hochgeladen werden";
+
 /**
  * Uploads one file for a `file` field of the enrollment form. The public
  * route is anonymous like the submit; a signed-in parent uploads through the
@@ -195,7 +198,7 @@ export async function uploadEnrollmentFile(params: {
     params: { tenantSlug: params.tenantSlug },
     body,
     ...(params.signal && { signal: params.signal }),
-    errorMessage: "Datei konnte nicht hochgeladen werden",
+    errorMessage: UPLOAD_FAILED,
   };
   return params.viaParentPortal
     ? bffJson(

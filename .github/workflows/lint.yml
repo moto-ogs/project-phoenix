@@ -88,12 +88,13 @@ jobs:
           git fetch --no-tags --depth=1 origin "$BASE_SHA"
           node scripts/check-contract-compat.mjs "$BASE_SHA"
 
-      # Numeric identifiers and backend routes without a contract only shrink
-      # (#2353). The checkout is the merge of the PR into its base; its first
+      # Catalog lines outside the contract only shrink: a new Outside line
+      # needs a new ADR that names it (#2353, #7808). The checkout is the
+      # merge of the PR into its base; its first
       # parent is the base that merge was built on, while base.sha can be
       # older and would blame this PR for what landed on the base since.
       # Commits and trees suffice: the check reads only changed files' blobs.
-      - name: Refuse new numeric identifiers and routes without a contract
+      - name: Refuse new catalog lines outside the contract
         if: github.event_name == 'pull_request'
         run: |
           git fetch --no-tags --depth=2 origin "$GITHUB_SHA"

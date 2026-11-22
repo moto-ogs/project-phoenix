@@ -29,12 +29,11 @@ type CatererMFAResetNotice interface {
 	NotifyCatererMFAReset(ctx context.Context, message identityaccess.CatererMFAResetMail, resetKey string) error
 }
 
-// AccountSecurityNotice queues the mails that tell an account holder about
-// an administrator's change to their sign-in (#6862), in the transaction of
-// the change they report and keyed by it.
+// AccountSecurityNotice queues the mail that tells an account holder about
+// an administrator's reset of their second factor (#6862), in the
+// transaction of the reset and keyed by it.
 type AccountSecurityNotice interface {
 	NotifyMFAResetByAdmin(ctx context.Context, message identityaccess.MFAResetByAdminMail, resetKey string) error
-	NotifyLoginAddressChanged(ctx context.Context, message identityaccess.LoginAddressChangedMail, changeKey string) error
 }
 
 // OperatorActionLog appends an operator entry in the caller's transaction.

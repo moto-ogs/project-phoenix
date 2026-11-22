@@ -25,9 +25,11 @@ import {
   EventSchema,
   ParentConferenceWindowSchema,
   SigningViewSchema,
+  TokenResponseSchema,
   TrustedDeviceDTOSchema,
   type Event,
   type InvitationAnswer,
+  type MFAVerifyRequest,
   type ParentConferenceWindow,
   type SwitchOffRequest,
 } from "./shared.generated";
@@ -3272,6 +3274,15 @@ export const routes = {
     tooLargeCode: "files.file_too_large",
     request: multipart,
     response: success(messageAttachmentResponseSchema),
+  },
+  "POST /parent/me/mfa/confirm": {
+    method: "POST",
+    pattern: "/parent/me/mfa/confirm",
+    portals: ["parent"],
+    routeFile: "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+    plain: true,
+    request: requestBody<MFAVerifyRequest>(),
+    response: TokenResponseSchema,
   },
   "POST /parent/me/mfa/disable": {
     method: "POST",

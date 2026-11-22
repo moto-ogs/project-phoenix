@@ -81,8 +81,12 @@ func renderedAnswer(t *testing.T, route contract.Route, responseType reflect.Typ
 	}
 	fillRendered(data, top, shape, "", 0)
 	var envelope any = common.NewResponse(data.Interface(), "ok")
-	if route.Paginated {
+	switch {
+	case route.Paginated:
 		envelope = common.NewPaginatedResponse(data.Interface(), 1, 50, 1, "ok")
+	case route.Plain:
+		// A plain answer is the data itself (#7808).
+		envelope = data.Interface()
 	}
 	body, err := wire.Marshal(envelope)
 	require.NoError(t, err)

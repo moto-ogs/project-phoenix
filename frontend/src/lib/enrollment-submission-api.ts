@@ -2,7 +2,6 @@ import { ApiError } from "~/lib/api-error";
 import { bffFile, bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
 import { knownEnum, requiredEnum } from "~/lib/contract/known-enum";
 import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
-import type * as parentEnrollmentsContract from "~/lib/contract/parent-enrollments.generated";
 import type * as sharedContract from "~/lib/contract/shared.generated";
 import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
 import type {
@@ -155,9 +154,9 @@ export async function fetchPublicPhases(
  * gate.
  */
 export type MeProfileResponse = Omit<
-  parentEnrollmentsContract.GuardianProfileResponse,
+  sharedContract.GuardianProfileResponse,
   "children"
-> & { children: parentEnrollmentsContract.GuardianProfileChild[] };
+> & { children: sharedContract.GuardianProfileChild[] };
 
 /**
  * The configuration of one phase's form: the phase, the active schema, its
@@ -212,7 +211,7 @@ export function formConfigurationFromContract<
 }
 
 type BootstrapAnswer = sharedContract.PublicEnrollmentFormBootstrapResponse & {
-  profile?: parentEnrollmentsContract.GuardianProfileResponse | null;
+  profile?: sharedContract.GuardianProfileResponse | null;
 };
 
 export function bootstrapFromContract(

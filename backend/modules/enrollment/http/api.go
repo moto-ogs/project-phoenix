@@ -135,6 +135,8 @@ func (rs *Resource) Router(configureSession func(chi.Router)) chi.Router {
 	// Authenticated admin endpoints.
 	r.Group(func(r chi.Router) {
 		configureSession(r)
+		// After the session: the mark reads the authenticated claims.
+		r.Use(markTraegerBueroReviewer)
 
 		rs.mountConfigRoutes(r)
 		rs.mountPhaseRoutes(r)

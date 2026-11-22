@@ -41,19 +41,3 @@ type ManagedAccountRecord struct {
 	UpdatedAt    time.Time
 	LastLogin    *time.Time
 }
-
-// AccountListFilter narrows an account listing. An empty address and a nil
-// active flag list every account the caller may administer.
-type AccountListFilter struct {
-	// Email matches the stored address case-insensitively and in full.
-	Email  string
-	Active *bool
-}
-
-// AccountIdentityUpdate changes the address and, when Username is set, the
-// name of one account. A nil Username keeps the stored one.
-type AccountIdentityUpdate struct {
-	AccountID int64
-	Email     string
-	Username  *string
-}

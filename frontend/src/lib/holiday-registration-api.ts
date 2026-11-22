@@ -3,6 +3,7 @@
 
 import { ApiError } from "~/lib/api-error";
 import { bffJson } from "~/lib/bff-fetch";
+import { UPLOAD_FAILED } from "~/lib/enrollment-uploads";
 import { knownEnum } from "~/lib/contract/known-enum";
 import { requiredDay } from "~/lib/contract/required-day";
 import type * as parentHolidayRegistrationsContract from "~/lib/contract/parent-holiday-registrations.generated";
@@ -239,8 +240,8 @@ export function uploadHolidayProof(
     {
       params: { token },
       body,
-      ...(signal && { signal }),
-      errorMessage: "Datei konnte nicht hochgeladen werden",
+      signal,
+      errorMessage: UPLOAD_FAILED,
     },
   );
 }

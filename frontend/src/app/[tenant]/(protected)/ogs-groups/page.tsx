@@ -1,5 +1,8 @@
 "use client";
 
+import type * as studentsContract from "~/lib/contract/students.generated";
+import { knownEnum } from "~/lib/contract/known-enum";
+import { DAY_PLANNING_STATUS_VALUES } from "~/lib/student-wire";
 import { groupKeys } from "~/lib/swr/groups-keys";
 import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
 
@@ -127,7 +130,6 @@ import { fetchOgsGroupLive } from "~/lib/ogs-group-live-api";
 import type {
   GroupTransfer,
   OgsLiveViewData,
-  OgsLiveWireStudent,
   OgsPickupInfo,
 } from "~/lib/ogs-group-live-api";
 import { TrackingIndicators } from "~/components/students/tracking-indicators";
@@ -254,7 +256,7 @@ function useGroupTransferModal(
 
 // Maps the aggregated live-view wire student (backend "last_name" naming) to
 // the frontend Student shape the shared card components consume.
-function mapStudentForOgsPage(student: OgsLiveWireStudent): Student {
+function mapStudentForOgsPage(student: studentsContract.Student): Student {
   return {
     id: student.id,
     name: `${student.first_name} ${student.last_name}`.trim(),
@@ -273,7 +275,10 @@ function mapStudentForOgsPage(student: OgsLiveWireStudent): Student {
     arrival_time: student.arrival_time,
     arrival_is_exception: student.arrival_is_exception,
     arrival_notes: student.arrival_notes,
-    day_planning_status: student.day_planning_status,
+    day_planning_status: knownEnum(
+      DAY_PLANNING_STATUS_VALUES,
+      student.day_planning_status,
+    ),
     day_planning_reason: student.day_planning_reason,
     day_planning_label: student.day_planning_label,
     pending_excused_note: student.pending_excused_note,
@@ -312,10 +317,10 @@ function areOgsGroupsEqual(a: OGSGroup[], b: OGSGroup[]): boolean {
       !!other &&
       group.id === other.id &&
       group.name === other.name &&
-      group.room_id === other.room_id &&
-      group.room_name === other.room_name &&
-      group.student_count === other.student_count &&
-      group.present_count === other.present_count &&
+      group.roomId === other.roomId &&
+      group.roomName === other.roomName &&
+      group.studentCount === other.studentCount &&
+      group.presentCount === other.presentCount &&
       group.viaSubstitution === other.viaSubstitution &&
       group.isPersonal === other.isPersonal
     );
@@ -509,11 +514,11 @@ function OGSGroupPageContent() {
       .map((group) => ({
         id: group.id,
         name: group.name,
-        room_name: group.roomName,
-        room_id: group.roomId,
-        student_count: undefined as number | undefined,
-        present_count: undefined as number | undefined,
-        supervisor_name: undefined,
+        roomName: group.roomName,
+        roomId: group.roomId,
+        studentCount: undefined as number | undefined,
+        presentCount: undefined as number | undefined,
+        supervisorName: undefined,
         viaSubstitution: group.viaSubstitution,
         isPersonal: group.isPersonal,
       }))
@@ -521,8 +526,8 @@ function OGSGroupPageContent() {
 
     for (const group of ogsGroups) {
       if (group.id === dataGroupId) {
-        group.student_count = mappedStudents.length;
-        group.present_count = presentCount;
+        group.studentCount = mappedStudents.length;
+        group.presentCount = presentCount;
       }
     }
     setAllGroups((previousGroups) => {
@@ -532,8 +537,8 @@ function OGSGroupPageContent() {
         return previous
           ? {
               ...group,
-              student_count: previous.student_count,
-              present_count: previous.present_count,
+              studentCount: previous.studentCount,
+              presentCount: previous.presentCount,
             }
           : group;
       });
@@ -1399,11 +1404,11 @@ function OGSGroupPageContent() {
   let groupStats: ReactNode = "Keine Gruppe zugeordnet";
   if (currentGroup) {
     groupStats =
-      currentGroup.student_count === undefined ? null : (
+      currentGroup.studentCount === undefined ? null : (
         <TenantPageStats
           items={[
             {
-              value: `${currentGroup.present_count ?? 0} von ${currentGroup.student_count}`,
+              value: `${currentGroup.presentCount ?? 0} von ${currentGroup.studentCount}`,
               label: "da",
             },
             { value: groupAbsenceOverview.sickCount, label: "krank" },
@@ -1528,7 +1533,7 @@ function OGSGroupPageContent() {
                   ? {
                       id: currentGroup.id,
                       name: currentGroup.name,
-                      studentCount: currentGroup.student_count,
+                      studentCount: currentGroup.studentCount,
                     }
                   : null
               }

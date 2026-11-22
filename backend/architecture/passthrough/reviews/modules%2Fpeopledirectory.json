@@ -897,11 +897,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/peopledirectory/internal/application/Service.ListAcrossTenantsByIDs",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/peopledirectory/internal/application/Service.ListAllStudentIDs",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -1008,11 +1003,6 @@
     {
       "decision": "0090",
       "id": "modules/peopledirectory/internal/application/Service.ListStudentRosterOverlapping",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/peopledirectory/internal/application/Service.ListStudentsAcrossTenantsByID",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -1333,11 +1323,6 @@
     {
       "decision": "0090",
       "id": "modules/peopledirectory/internal/application/StudentService.Delete",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/peopledirectory/internal/application/StudentService.ListAcrossTenantsByIDs",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

@@ -4,6 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { announceEnrollmentReadChange } from "~/lib/enrollment-unread-api";
 import { useEnrollmentsUnread } from "./use-enrollments-unread";
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 // Seitenleiste, mobile Navigation und der Startseiten-Baustein „Offene
 // Anfragen“ zeigen denselben Zähler. Beim ersten Aufruf liefen dafür drei
 // gleiche Requests (#4989).
