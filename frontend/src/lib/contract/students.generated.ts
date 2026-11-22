@@ -576,6 +576,197 @@ export const studentDeleteImpactResponseSchema: z.ZodType<studentDeleteImpactRes
   preserved: studentDeletePreservedDataResponseSchema,
 });
 
+/** Go: requestreview.MasterDataChangeRequestResponse */
+export interface MasterDataChangeRequestResponse {
+  id: string;
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  target: string;
+  field_key: string;
+  old_value?: unknown | null;
+  new_value: unknown | null;
+  status: string;
+  created_at: string;
+  reviewed_at?: string;
+}
+
+export const MasterDataChangeRequestResponseSchema: z.ZodType<MasterDataChangeRequestResponse, unknown> = object<MasterDataChangeRequestResponse>({
+  id: str,
+  student_id: str,
+  first_name: str,
+  last_name: str,
+  target: str,
+  field_key: str,
+  old_value: optional(nullable(json)),
+  new_value: nullable(json),
+  status: str,
+  created_at: instant,
+  reviewed_at: optional(instant),
+});
+
+/** Go: requestreview.AffectedCareBlock */
+export interface AffectedCareBlock {
+  id: string;
+  title: string;
+  start_time: string;
+  end_time: string;
+}
+
+export const AffectedCareBlockSchema: z.ZodType<AffectedCareBlock, unknown> = object<AffectedCareBlock>({
+  id: str,
+  title: str,
+  start_time: str,
+  end_time: str,
+});
+
+/** Go: requestreview.CareRequestResponse */
+export interface CareRequestResponse {
+  id: string;
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  status: string;
+  request_kind: string;
+  diff: CareRequestDiffResponse[] | null;
+  request_reason?: string;
+  decision_reason?: string;
+  created_at: string;
+  reviewed_at?: string;
+  affected_blocks: AffectedCareBlock[] | null;
+  impact_available: boolean;
+  impact_token: string;
+  signed?: boolean;
+}
+
+export const CareRequestResponseSchema: z.ZodType<CareRequestResponse, unknown> = object<CareRequestResponse>({
+  id: str,
+  student_id: str,
+  first_name: str,
+  last_name: str,
+  status: str,
+  request_kind: str,
+  diff: nullable(arr(CareRequestDiffResponseSchema)),
+  request_reason: optional(str),
+  decision_reason: optional(str),
+  created_at: instant,
+  reviewed_at: optional(instant),
+  affected_blocks: nullable(arr(AffectedCareBlockSchema)),
+  impact_available: bool,
+  impact_token: str,
+  signed: optional(bool),
+});
+
+/** Go: requestreview.OfferingRequestDiffResponse */
+export interface OfferingRequestDiffResponse {
+  offering_id: string;
+  label: string;
+  old: string;
+  new: string;
+  automatic?: boolean;
+  automatic_days?: string;
+  rule_days?: string;
+  new_when_excluded?: string;
+  trigger_ids?: string[];
+  trigger_names?: string[];
+  optoutable?: boolean;
+  is_course?: boolean;
+}
+
+export const OfferingRequestDiffResponseSchema: z.ZodType<OfferingRequestDiffResponse, unknown> = object<OfferingRequestDiffResponse>({
+  offering_id: str,
+  label: str,
+  old: str,
+  new: str,
+  automatic: optional(bool),
+  automatic_days: optional(str),
+  rule_days: optional(str),
+  new_when_excluded: optional(str),
+  trigger_ids: optional(arr(str)),
+  trigger_names: optional(arr(str)),
+  optoutable: optional(bool),
+  is_course: optional(bool),
+});
+
+/** Go: requestreview.OfferingRequestUnchangedResponse */
+export interface OfferingRequestUnchangedResponse {
+  offering_id: string;
+  label: string;
+  days: string;
+}
+
+export const OfferingRequestUnchangedResponseSchema: z.ZodType<OfferingRequestUnchangedResponse, unknown> = object<OfferingRequestUnchangedResponse>({
+  offering_id: str,
+  label: str,
+  days: str,
+});
+
+/** Go: requestreview.OfferingRequestResponse */
+export interface OfferingRequestResponse {
+  id: string;
+  student_id: string;
+  student_name: string;
+  status: string;
+  effective_from: string;
+  earliest_effective_from?: string;
+  latest_effective_from?: string;
+  requested_effective_from?: string;
+  note?: string;
+  diff: OfferingRequestDiffResponse[] | null;
+  unchanged?: OfferingRequestUnchangedResponse[];
+  full_withdrawal?: boolean;
+  reason?: string;
+  created_at: string;
+  reviewed_at?: string;
+}
+
+export const OfferingRequestResponseSchema: z.ZodType<OfferingRequestResponse, unknown> = object<OfferingRequestResponse>({
+  id: str,
+  student_id: str,
+  student_name: str,
+  status: str,
+  effective_from: str,
+  earliest_effective_from: optional(str),
+  latest_effective_from: optional(str),
+  requested_effective_from: optional(str),
+  note: optional(str),
+  diff: nullable(arr(OfferingRequestDiffResponseSchema)),
+  unchanged: optional(arr(OfferingRequestUnchangedResponseSchema)),
+  full_withdrawal: optional(bool),
+  reason: optional(str),
+  created_at: instant,
+  reviewed_at: optional(instant),
+});
+
+/** Go: requestreview.StaffExcusedRequestResponse */
+export interface StaffExcusedRequestResponse {
+  id: string;
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  absence_status: string;
+  status: string;
+  dates: string[] | null;
+  note: string;
+  reason?: string;
+  created_at: string;
+  reviewed_at?: string;
+}
+
+export const StaffExcusedRequestResponseSchema: z.ZodType<StaffExcusedRequestResponse, unknown> = object<StaffExcusedRequestResponse>({
+  id: str,
+  student_id: str,
+  first_name: str,
+  last_name: str,
+  absence_status: str,
+  status: str,
+  dates: nullable(arr(str)),
+  note: str,
+  reason: optional(str),
+  created_at: instant,
+  reviewed_at: optional(instant),
+});
+
 /** Go: requestreview.Item */
 export interface Item {
   request_type: string;
@@ -595,11 +786,17 @@ export interface Item {
   current_value_changed?: boolean;
   current_status_by_date?: Record<string, string>;
   partial_absence_from_by_date?: Record<string, string>;
+  /** @deprecated leaves the contract with the next release */
   can_correct?: boolean;
   family_protected: boolean;
   submitted_by_name?: string;
   submitted_by_relationship?: string;
+  /** @deprecated leaves the contract with the next release */
   data: unknown | null;
+  master_data?: MasterDataChangeRequestResponse;
+  care_schedule?: CareRequestResponse;
+  offering?: OfferingRequestResponse;
+  excused?: StaffExcusedRequestResponse;
 }
 
 export const ItemSchema: z.ZodType<Item, unknown> = object<Item>({
@@ -625,6 +822,10 @@ export const ItemSchema: z.ZodType<Item, unknown> = object<Item>({
   submitted_by_name: optional(str),
   submitted_by_relationship: optional(str),
   data: nullable(json),
+  master_data: optional(MasterDataChangeRequestResponseSchema),
+  care_schedule: optional(CareRequestResponseSchema),
+  offering: optional(OfferingRequestResponseSchema),
+  excused: optional(StaffExcusedRequestResponseSchema),
 });
 
 /** Go: requestreview.Page */
@@ -660,6 +861,232 @@ export interface changeRequestAccessResponse {
 export const changeRequestAccessResponseSchema: z.ZodType<changeRequestAccessResponse, unknown> = object<changeRequestAccessResponse>({
   review_access: str,
   student: optional(studentReviewCoverageBodySchema),
+});
+
+/** Go: requestreview.MasterDataChangeRequestHistoryResponse */
+export interface MasterDataChangeRequestHistoryResponse {
+  id: string;
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  target: string;
+  field_key: string;
+  old_value?: unknown | null;
+  new_value: unknown | null;
+  status: string;
+  created_at: string;
+  reviewed_at?: string;
+  decided_at: string;
+  decided_by_name?: string;
+  review_reason?: string;
+}
+
+export const MasterDataChangeRequestHistoryResponseSchema: z.ZodType<MasterDataChangeRequestHistoryResponse, unknown> = object<MasterDataChangeRequestHistoryResponse>({
+  id: str,
+  student_id: str,
+  first_name: str,
+  last_name: str,
+  target: str,
+  field_key: str,
+  old_value: optional(nullable(json)),
+  new_value: nullable(json),
+  status: str,
+  created_at: instant,
+  reviewed_at: optional(instant),
+  decided_at: instant,
+  decided_by_name: optional(str),
+  review_reason: optional(str),
+});
+
+/** Go: requestreview.CareRequestHistoryResponse */
+export interface CareRequestHistoryResponse {
+  id: string;
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  status: string;
+  request_kind: string;
+  requested: CareRequestDiffResponse[] | null;
+  diff?: CareRequestDiffResponse[];
+  decision_reason?: string;
+  created_at: string;
+  decided_at: string;
+  decided_by_name?: string;
+  signed?: boolean;
+}
+
+export const CareRequestHistoryResponseSchema: z.ZodType<CareRequestHistoryResponse, unknown> = object<CareRequestHistoryResponse>({
+  id: str,
+  student_id: str,
+  first_name: str,
+  last_name: str,
+  status: str,
+  request_kind: str,
+  requested: nullable(arr(CareRequestDiffResponseSchema)),
+  diff: optional(arr(CareRequestDiffResponseSchema)),
+  decision_reason: optional(str),
+  created_at: instant,
+  decided_at: instant,
+  decided_by_name: optional(str),
+  signed: optional(bool),
+});
+
+/** Go: requestreview.OfferingRequestRequestedResponse */
+export interface OfferingRequestRequestedResponse {
+  offering_id: string;
+  label: string;
+  new: string;
+}
+
+export const OfferingRequestRequestedResponseSchema: z.ZodType<OfferingRequestRequestedResponse, unknown> = object<OfferingRequestRequestedResponse>({
+  offering_id: str,
+  label: str,
+  new: str,
+});
+
+/** Go: requestreview.OfferingRequestHistoryResponse */
+export interface OfferingRequestHistoryResponse {
+  id: string;
+  student_id: string;
+  student_name: string;
+  status: string;
+  effective_from: string;
+  earliest_effective_from?: string;
+  latest_effective_from?: string;
+  requested_effective_from?: string;
+  note?: string;
+  diff: OfferingRequestDiffResponse[] | null;
+  unchanged?: OfferingRequestUnchangedResponse[];
+  full_withdrawal?: boolean;
+  reason?: string;
+  created_at: string;
+  reviewed_at?: string;
+  decided_at: string;
+  decided_by_name?: string;
+  requested?: OfferingRequestRequestedResponse[];
+}
+
+export const OfferingRequestHistoryResponseSchema: z.ZodType<OfferingRequestHistoryResponse, unknown> = object<OfferingRequestHistoryResponse>({
+  id: str,
+  student_id: str,
+  student_name: str,
+  status: str,
+  effective_from: str,
+  earliest_effective_from: optional(str),
+  latest_effective_from: optional(str),
+  requested_effective_from: optional(str),
+  note: optional(str),
+  diff: nullable(arr(OfferingRequestDiffResponseSchema)),
+  unchanged: optional(arr(OfferingRequestUnchangedResponseSchema)),
+  full_withdrawal: optional(bool),
+  reason: optional(str),
+  created_at: instant,
+  reviewed_at: optional(instant),
+  decided_at: instant,
+  decided_by_name: optional(str),
+  requested: optional(arr(OfferingRequestRequestedResponseSchema)),
+});
+
+/** Go: requestreview.StaffExcusedRequestHistoryResponse */
+export interface StaffExcusedRequestHistoryResponse {
+  id: string;
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  absence_status: string;
+  status: string;
+  dates: string[] | null;
+  note: string;
+  reason?: string;
+  created_at: string;
+  reviewed_at?: string;
+  decided_at: string;
+  decided_by_name?: string;
+}
+
+export const StaffExcusedRequestHistoryResponseSchema: z.ZodType<StaffExcusedRequestHistoryResponse, unknown> = object<StaffExcusedRequestHistoryResponse>({
+  id: str,
+  student_id: str,
+  first_name: str,
+  last_name: str,
+  absence_status: str,
+  status: str,
+  dates: nullable(arr(str)),
+  note: str,
+  reason: optional(str),
+  created_at: instant,
+  reviewed_at: optional(instant),
+  decided_at: instant,
+  decided_by_name: optional(str),
+});
+
+/** Go: requestreview.DirectCorrectionResponse */
+export interface DirectCorrectionResponse {
+  id: string;
+  student_id: string;
+  student_name: string;
+  changed_at: string;
+  changed_by_name: string;
+  reason: string;
+  diff: OfferingRequestDiffResponse[] | null;
+}
+
+export const DirectCorrectionResponseSchema: z.ZodType<DirectCorrectionResponse, unknown> = object<DirectCorrectionResponse>({
+  id: str,
+  student_id: str,
+  student_name: str,
+  changed_at: instant,
+  changed_by_name: str,
+  reason: str,
+  diff: nullable(arr(OfferingRequestDiffResponseSchema)),
+});
+
+/** Go: requestreview.HistoryItem */
+export interface HistoryItem {
+  request_type: string;
+  occurred_at: string;
+  student_id: string;
+  student_name: string;
+  group_name?: string;
+  expected_version: string;
+  can_correct?: boolean;
+  family_protected: boolean;
+  submitted_by_name?: string;
+  submitted_by_relationship?: string;
+  master_data?: MasterDataChangeRequestHistoryResponse;
+  care_schedule?: CareRequestHistoryResponse;
+  offering?: OfferingRequestHistoryResponse;
+  excused?: StaffExcusedRequestHistoryResponse;
+  direct_correction?: DirectCorrectionResponse;
+}
+
+export const HistoryItemSchema: z.ZodType<HistoryItem, unknown> = object<HistoryItem>({
+  request_type: str,
+  occurred_at: instant,
+  student_id: str,
+  student_name: str,
+  group_name: optional(str),
+  expected_version: str,
+  can_correct: optional(bool),
+  family_protected: bool,
+  submitted_by_name: optional(str),
+  submitted_by_relationship: optional(str),
+  master_data: optional(MasterDataChangeRequestHistoryResponseSchema),
+  care_schedule: optional(CareRequestHistoryResponseSchema),
+  offering: optional(OfferingRequestHistoryResponseSchema),
+  excused: optional(StaffExcusedRequestHistoryResponseSchema),
+  direct_correction: optional(DirectCorrectionResponseSchema),
+});
+
+/** Go: requestreview.HistoryPage */
+export interface HistoryPage {
+  items: HistoryItem[] | null;
+  next_cursor?: string;
+}
+
+export const HistoryPageSchema: z.ZodType<HistoryPage, unknown> = object<HistoryPage>({
+  items: nullable(arr(HistoryItemSchema)),
+  next_cursor: optional(str),
 });
 
 /** Go: requestreviewhttp.ChangeRequestPendingCountResponse */
@@ -2396,58 +2823,6 @@ export interface DecideCareRequestBody {
   expected_version?: string;
 }
 
-/** Go: requestreview.AffectedCareBlock */
-export interface AffectedCareBlock {
-  id: string;
-  title: string;
-  start_time: string;
-  end_time: string;
-}
-
-export const AffectedCareBlockSchema: z.ZodType<AffectedCareBlock, unknown> = object<AffectedCareBlock>({
-  id: str,
-  title: str,
-  start_time: str,
-  end_time: str,
-});
-
-/** Go: requestreview.CareRequestResponse */
-export interface CareRequestResponse {
-  id: string;
-  student_id: string;
-  first_name: string;
-  last_name: string;
-  status: string;
-  request_kind: string;
-  diff: CareRequestDiffResponse[] | null;
-  request_reason?: string;
-  decision_reason?: string;
-  created_at: string;
-  reviewed_at?: string;
-  affected_blocks: AffectedCareBlock[] | null;
-  impact_available: boolean;
-  impact_token: string;
-  signed?: boolean;
-}
-
-export const CareRequestResponseSchema: z.ZodType<CareRequestResponse, unknown> = object<CareRequestResponse>({
-  id: str,
-  student_id: str,
-  first_name: str,
-  last_name: str,
-  status: str,
-  request_kind: str,
-  diff: nullable(arr(CareRequestDiffResponseSchema)),
-  request_reason: optional(str),
-  decision_reason: optional(str),
-  created_at: instant,
-  reviewed_at: optional(instant),
-  affected_blocks: nullable(arr(AffectedCareBlockSchema)),
-  impact_available: bool,
-  impact_token: str,
-  signed: optional(bool),
-});
-
 /** Go: careplanhttp.careWithdrawalExitRequest */
 export interface careWithdrawalExitRequest {
   last_care_day?: string;
@@ -2547,35 +2922,6 @@ export interface DecideExcusedRequestBody {
   replace_partial_absences?: boolean;
 }
 
-/** Go: requestreview.StaffExcusedRequestResponse */
-export interface StaffExcusedRequestResponse {
-  id: string;
-  student_id: string;
-  first_name: string;
-  last_name: string;
-  absence_status: string;
-  status: string;
-  dates: string[] | null;
-  note: string;
-  reason?: string;
-  created_at: string;
-  reviewed_at?: string;
-}
-
-export const StaffExcusedRequestResponseSchema: z.ZodType<StaffExcusedRequestResponse, unknown> = object<StaffExcusedRequestResponse>({
-  id: str,
-  student_id: str,
-  first_name: str,
-  last_name: str,
-  absence_status: str,
-  status: str,
-  dates: nullable(arr(str)),
-  note: str,
-  reason: optional(str),
-  created_at: instant,
-  reviewed_at: optional(instant),
-});
-
 /** Go: presenceprojectionhttp.studentExportFilters */
 export interface studentExportFilters {
   search?: string;
@@ -2614,35 +2960,6 @@ export interface DecideMasterDataChangeRequestBody {
   reason?: string;
   expected_version?: string;
 }
-
-/** Go: requestreview.MasterDataChangeRequestResponse */
-export interface MasterDataChangeRequestResponse {
-  id: string;
-  student_id: string;
-  first_name: string;
-  last_name: string;
-  target: string;
-  field_key: string;
-  old_value?: unknown | null;
-  new_value: unknown | null;
-  status: string;
-  created_at: string;
-  reviewed_at?: string;
-}
-
-export const MasterDataChangeRequestResponseSchema: z.ZodType<MasterDataChangeRequestResponse, unknown> = object<MasterDataChangeRequestResponse>({
-  id: str,
-  student_id: str,
-  first_name: str,
-  last_name: str,
-  target: str,
-  field_key: str,
-  old_value: optional(nullable(json)),
-  new_value: nullable(json),
-  status: str,
-  created_at: instant,
-  reviewed_at: optional(instant),
-});
 
 /** Go: careplanhttp.DecideOfferingRequestBody */
 export interface DecideOfferingRequestBody {
@@ -3358,6 +3675,18 @@ export interface GetStudentsChangeRequestsAccessQuery {
   student_id?: string;
 }
 
+/** Query of GET /api/students/change-requests/history */
+export interface GetStudentsChangeRequestsHistoryQuery {
+  cursor?: string;
+  from?: string;
+  limit?: number;
+  search?: string;
+  status?: string;
+  student_id?: string;
+  to?: string;
+  types?: string;
+}
+
 /** Query of GET /api/students/class-arrival-exceptions/{schoolClass} */
 export interface GetStudentsClassArrivalExceptionsSchoolClassQuery {
   from?: string;
@@ -3620,6 +3949,13 @@ export const routes = {
     portals: ["tenant"],
     query: ["student_id"],
     response: success(changeRequestAccessResponseSchema),
+  },
+  "GET /api/students/change-requests/history": {
+    method: "GET",
+    pattern: "/api/students/change-requests/history",
+    portals: ["tenant"],
+    query: ["cursor", "from", "limit", "search", "status", "student_id", "to", "types"],
+    response: success(HistoryPageSchema),
   },
   "GET /api/students/change-requests/pending-count": {
     method: "GET",
