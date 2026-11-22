@@ -108,16 +108,16 @@ case "$*" in
     exec "$0" test "$@"
     ;;
   test\ *)
+    if [ "${GOMAXPROCS-unset}" != "${PHX_FIXTURE_EXPECT_GOMAXPROCS:-1}" ]; then
+      echo "go test: expected GOMAXPROCS=${PHX_FIXTURE_EXPECT_GOMAXPROCS:-1}, got ${GOMAXPROCS-unset}" >&2
+      exit 1
+    fi
     if [[ "$*" = *' ./test -run '* ]]; then
       printf 'source:%s\n' "$*" >>"$TEST_CHANGED_CALL_LOG"
       exit "${PHX_FIXTURE_SOURCE_STATUS:-0}"
     fi
     if [ "${PHX_FIXTURE_EXPECT_GOGC+x}" = x ] && [ "${GOGC-unset}" != "$PHX_FIXTURE_EXPECT_GOGC" ]; then
       echo "go test: expected GOGC=$PHX_FIXTURE_EXPECT_GOGC, got ${GOGC-unset}" >&2
-      exit 1
-    fi
-    if [ "${GOMAXPROCS-unset}" != "${PHX_FIXTURE_EXPECT_GOMAXPROCS:-1}" ]; then
-      echo "go test: expected GOMAXPROCS=${PHX_FIXTURE_EXPECT_GOMAXPROCS:-1}, got ${GOMAXPROCS-unset}" >&2
       exit 1
     fi
     if [ "${PHX_TEST_TEMPLATE:-}" != phoenix_test_template_regression ]; then
@@ -306,7 +306,8 @@ export PHX_FIXTURE_OS=Darwin PHX_FIXTURE_CPUS=16 PHX_FIXTURE_RAM_GB=16
 # The fast path executes filesystem guards without requiring a DB bootstrap.
 # A violation fails the public wrapper even when no ordinary package exists
 # (for example, deletion of the last Go file in an unused package).
-PHX_FIXTURE_SOURCE_STATUS=6 PHX_FIXTURE_NO_BACKEND=1 run_wrapper test-changed.sh 6 --fast origin/development
+# Linux here: the source ratchets get the four-core budget too.
+PHX_FIXTURE_OS=Linux PHX_FIXTURE_EXPECT_GOMAXPROCS=4 PHX_FIXTURE_SOURCE_STATUS=6 PHX_FIXTURE_NO_BACKEND=1 run_wrapper test-changed.sh 6 --fast origin/development
 grep -q '^source:test -p 2 -parallel 8 -tags=testhooks -count=1 ./test -run ' "$call_log"
 grep -q 'TestHermeticTestPatterns' "$call_log"
 grep -q 'TestTransactionBoundaryRatchet' "$call_log"
