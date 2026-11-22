@@ -37,6 +37,7 @@ export function FamilyChildrenImportValidFromCard({
         </FieldLabel>
         <DatePicker
           id="family-import-valid-from"
+          ariaLabel="Kinderzahl gilt ab"
           value={
             mapping.validFrom ? parseISODate(mapping.validFrom) : undefined
           }
@@ -54,7 +55,7 @@ export function FamilyChildrenImportValidFromCard({
       </div>
       <p className="mt-3 text-sm text-gray-600">
         {ownDays
-          ? `Zeilen mit einem Tag in der Spalte „${mapping.columns.valid_from}“ behalten ihren Tag. Dieser Tag gilt für alle anderen Zeilen.`
+          ? `Zeilen mit einem Tag in der Spalte „${mapping.columns.valid_from}“ nehmen ihren Tag. Dieser Tag gilt für alle anderen Zeilen. Nennen Geschwister verschiedene Tage, gilt für die Familie der früheste. Die Vorschau zeigt dir den Tag je Zeile.`
           : "Der Tag gilt für alle Zeilen. Nennt deine Datei den Tag je Kind, ordne oben die Spalte „Gültig ab“ zu."}
       </p>
     </SectionCard>

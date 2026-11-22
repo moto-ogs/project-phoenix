@@ -139,6 +139,11 @@ export function FamilyChildrenImportPreviewCard({
                 {`ab ${formatDate(row.validFrom)}`}
               </span>
             ) : null}
+            {row.laterValidFrom ? (
+              <span className="block text-xs text-gray-500 tabular-nums">
+                {`Für einen weiteren Vertrag ab ${formatDate(row.laterValidFrom)}`}
+              </span>
+            ) : null}
           </span>
         ),
       sortValue: (row) => row.children ?? 0,

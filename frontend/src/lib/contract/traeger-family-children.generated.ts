@@ -170,6 +170,7 @@ export interface FamilyChildrenImportRow {
   children: number | null;
   contract_id?: string;
   valid_from: string | null;
+  later_valid_from: string | null;
   confirmed_children: number | null;
   problems: FamilyChildrenImportProblem[] | null;
   repeats_line?: number;
@@ -185,6 +186,7 @@ export const FamilyChildrenImportRowSchema: z.ZodType<FamilyChildrenImportRow, u
   children: nullable(safeInt),
   contract_id: optional(int64String),
   valid_from: nullable(calendarDate),
+  later_valid_from: nullable(calendarDate),
   confirmed_children: nullable(safeInt),
   problems: nullable(arr(FamilyChildrenImportProblemSchema)),
   repeats_line: optional(safeInt),

@@ -75,6 +75,11 @@ export interface FamilyImportRow {
   readonly contractId: string | null;
   /** The first day the number counts from. */
   readonly validFrom: string | null;
+  /**
+   * A second, later day: the child's contracts belong to two families and
+   * the number counts from a later day for one of them. Else null.
+   */
+  readonly laterValidFrom: string | null;
   /** The number the Abrechnung confirmed before, for "same" and "differs". */
   readonly confirmedChildren: number | null;
   readonly problems: readonly FamilyImportProblem[];
@@ -131,6 +136,7 @@ function mapRow(
     children: row.children,
     contractId: row.contract_id || null,
     validFrom: row.valid_from,
+    laterValidFrom: row.later_valid_from,
     confirmedChildren: row.confirmed_children,
     problems: (row.problems ?? []).map((problem) => ({
       field: knownEnum(FIELD_VALUES, problem.field),

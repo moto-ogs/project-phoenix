@@ -217,20 +217,32 @@ func takenFamilyImportRows(candidates []familyImportCandidate) []*importedChildr
 	return taken
 }
 
-// showDay names on a ready row the day its number counts from: that of the
-// first family that takes it over. Any other row names none: a confirmed
-// number keeps its own validity, which the row does not name.
+// showDay names on a ready row the days its number counts from: the
+// earliest of the families that take it over and, when they differ, the
+// latest too, so the preview hides no day the import stores. Any other row
+// names none: a confirmed number keeps its own validity, which the row does
+// not name.
 func (c *familyImportCandidate) showDay() {
-	c.row.ValidFrom = nil
+	c.row.ValidFrom, c.row.LaterValidFrom = nil, nil
 	if c.row.Status != parentbilling.FamilyImportReady {
 		return
 	}
+	var first, last *calendar.Date
 	for _, row := range c.decided {
-		if row.status == parentbilling.ImportedChildrenNew {
-			from := row.number.ValidFrom
-			c.row.ValidFrom = &from
-			return
+		if row.status != parentbilling.ImportedChildrenNew {
+			continue
 		}
+		from := row.number.ValidFrom
+		if first == nil || from.Before(*first) {
+			first = &from
+		}
+		if last == nil || from.After(*last) {
+			last = &from
+		}
+	}
+	c.row.ValidFrom = first
+	if first != nil && *last != *first {
+		c.row.LaterValidFrom = last
 	}
 }
 

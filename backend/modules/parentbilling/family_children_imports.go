@@ -143,9 +143,12 @@ type FamilyChildrenImportRow struct {
 	// ContractID is the contract of the child the number goes to and
 	// ValidFrom the day the number counts from: the row's own, else the
 	// file's; later when it renews a confirmation that ran out. Only a row
-	// the import takes over names it.
-	ContractID ident.ID       `json:"contract_id,omitempty"`
-	ValidFrom  *calendar.Date `json:"valid_from"`
+	// the import takes over names it. A child whose contracts belong to
+	// two families can get its number from two days: ValidFrom is then the
+	// earliest and LaterValidFrom the latest of them, else nil.
+	ContractID     ident.ID       `json:"contract_id,omitempty"`
+	ValidFrom      *calendar.Date `json:"valid_from"`
+	LaterValidFrom *calendar.Date `json:"later_valid_from"`
 	// ConfirmedChildren is the number the Abrechnung confirmed before, for
 	// FamilyImportSame and FamilyImportDiffers.
 	ConfirmedChildren *int                          `json:"confirmed_children"`

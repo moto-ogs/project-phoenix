@@ -37,6 +37,7 @@ function row(
     children: 2,
     contractId: "31",
     validFrom: "2026-08-01",
+    laterValidFrom: null,
     confirmedChildren: null,
     problems: [],
     repeatsLine: null,

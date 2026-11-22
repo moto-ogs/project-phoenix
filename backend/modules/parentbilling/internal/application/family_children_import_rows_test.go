@@ -39,6 +39,7 @@ func TestFamilyImportRowsCountFromTheDayTheOfficeNames(t *testing.T) {
 
 	require.Equal(t, parentbilling.FamilyImportReady, candidates[0].row.Status)
 	assert.Equal(t, calendar.NewDate(2026, 10, 15), *candidates[0].row.ValidFrom, "the row's own day goes before the day of the file")
+	assert.Nil(t, candidates[0].row.LaterValidFrom, "one family, one day")
 	require.Equal(t, parentbilling.FamilyImportReady, candidates[1].row.Status)
 	assert.Equal(t, fileDay, *candidates[1].row.ValidFrom, "a row without a day takes the day of the file, not the contract's first day")
 	assert.Equal(t, parentbilling.FamilyImportInvalid, candidates[2].row.Status, "a cell that is no day holds the row back")
@@ -73,6 +74,36 @@ func TestFamilyImportRowsCountFromTheDayTheOfficeNames(t *testing.T) {
 	numbers := newImportedChildren(kept)
 	require.Len(t, numbers, 1, "the family is stored once")
 	assert.Equal(t, calendar.NewDate(2026, 10, 15), numbers[0].ValidFrom)
+}
+
+// A child whose contracts belong to two families gives its number to both.
+// One family's confirmation ran out on 31.10.: its number is renewed from
+// 01.11., the other family's counts from the row's 15.10. The preview names
+// both days the import stores (#7765).
+func TestFamilyImportRowShowsBothDaysOfTwoFamilies(t *testing.T) {
+	t.Parallel()
+	const fresh, renewed = "neu@example.org", "abgelaufen@example.org"
+	rowDay, ended := calendar.NewDate(2026, 10, 15), calendar.NewDate(2026, 10, 31)
+	candidates := []familyImportCandidate{{
+		row:       parentbilling.FamilyChildrenImportRow{Line: 2, Children: ptr(2)},
+		targets:   []familyImportTarget{{family: fresh, contractID: 1}, {family: renewed, contractID: 2}},
+		validFrom: rowDay,
+	}}
+	numbers := map[string]*familyNumbers{renewed: {brought: []*parentbilling.FamilyChildCount{{
+		FamilyEmail: renewed, ConfirmedChildren: ptr(3), ValidFrom: ptr(calendar.NewDate(2026, 8, 1)), ValidUntil: &ended}}}}
+	decideFamilyImport(candidates, numbers, calendar.NewDate(2026, 11, 22))
+
+	row := candidates[0].row
+	require.Equal(t, parentbilling.FamilyImportReady, row.Status)
+	require.NotNil(t, row.ValidFrom)
+	assert.Equal(t, rowDay, *row.ValidFrom, "the earliest day the number counts from")
+	require.NotNil(t, row.LaterValidFrom, "the preview hides no day the import stores")
+	assert.Equal(t, ended.AddDays(1), *row.LaterValidFrom)
+	stored := map[string]calendar.Date{}
+	for _, number := range newImportedChildren(candidates[0].decided) {
+		stored[number.FamilyEmail] = number.ValidFrom
+	}
+	assert.Equal(t, map[string]calendar.Date{fresh: rowDay, renewed: ended.AddDays(1)}, stored, "the days the row shows are the days stored")
 }
 
 // Without a day from the office the numbers count from the day of the

@@ -50970,6 +50970,13 @@
           }
         },
         {
+          "name": "later_valid_from",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
           "name": "confirmed_children",
           "schema": {
             "kind": "int",

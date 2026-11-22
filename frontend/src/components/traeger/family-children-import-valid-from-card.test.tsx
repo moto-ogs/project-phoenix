@@ -69,14 +69,14 @@ describe("FamilyChildrenImportValidFromCard", () => {
     });
   });
 
-  it("says that rows with their own day keep it", () => {
+  it("says that rows with their own day take it and siblings share the earliest", () => {
     renderCard({
       ...mapping,
       columns: { ...mapping.columns, valid_from: "Stichtag" },
     });
     expect(
       screen.getByText(
-        /Zeilen mit einem Tag in der Spalte „Stichtag“ behalten ihren Tag\. Dieser Tag gilt für alle anderen Zeilen\./,
+        /Zeilen mit einem Tag in der Spalte „Stichtag“ nehmen ihren Tag\. Dieser Tag gilt für alle anderen Zeilen\. Nennen Geschwister verschiedene Tage, gilt für die Familie der früheste\./,
       ),
     ).toBeInTheDocument();
   });

@@ -42,7 +42,11 @@ Punkt 5 den Satz zum Beginn der Zahl.
    Schulen; sonst nur diese Kinder. Ohne gültige Bestätigung zählen die
    Vertragskinder, und der Monatslauf nennt die Familie wie bisher unter
    „Kinderzahl der Familie fehlt“. Beide Schalter bleiben unabhängig:
-   Birkenfeld setzt beide.
+   Birkenfeld setzt beide. Zur Familiengröße zählt jedes Kind mit Vertrag an
+   einer zählenden Schule, auch wenn der Teil der Regel bei ihm nichts kostet
+   (0 €, anderes Modul, noch kein Beleg). Im Rangmodus steht so ein Kind
+   hinter den gereihten Kindern und ändert nichts; bei der Größe würde sein
+   Fehlen die Familie unter die Schwelle drücken.
 3. **Wirkung, Reihenfolge und Höchstbetrag bleiben.** Anteil, Betrag, fester
    Preis und Preis laut Preisliste wirken je ermäßigtem Kind wie im
    Rangmodus. Die Ferienkette hat ihre eigene Regel und bleibt unberührt.
@@ -62,7 +66,9 @@ Punkt 5 den Satz zum Beginn der Zahl.
 6. **Unverändert aus ADR 0288:** Eine geltende bestätigte Zahl wird nie
    überschrieben, eine abgelaufene erneuert die Datei frühestens ab dem Tag
    nach ihrem Ende, die Vorschau wird per Fingerabdruck bestätigt. Der Tag
-   steht im Fingerabdruck.
+   steht im Fingerabdruck. Gehören die Verträge eines Kindes zu zwei Familien
+   und gilt die Zahl für sie ab verschiedenen Tagen, nennt die Zeile der
+   Vorschau beide Tage (`valid_from`, `later_valid_from`).
 7. **Der Vertragsimport bleibt.** Dort nennt die Datei den Vertragsbeginn
    selbst, je Zeile oder für alle Zeilen, und die Kinderzahl steht in
    derselben Zeile (ADR 0288 Punkt 4).

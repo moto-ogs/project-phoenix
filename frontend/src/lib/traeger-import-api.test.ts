@@ -43,8 +43,10 @@ describe("import uploads through the catalog proxy (#2352)", () => {
           child_birth_date: "",
           school: "",
           children: "",
+          valid_from: "",
         },
         schoolId,
+        validFrom: "",
       };
       const fetchMock = answer({
         ...base,
@@ -58,6 +60,7 @@ describe("import uploads through the catalog proxy (#2352)", () => {
       expect(JSON.parse(String(familyForm.get("mapping")))).toEqual({
         columns: mapping.columns,
         school_id: schoolId || "0",
+        valid_from: null,
       });
     },
   );

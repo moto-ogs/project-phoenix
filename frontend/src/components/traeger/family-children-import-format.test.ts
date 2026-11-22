@@ -12,6 +12,7 @@ const row: FamilyImportRow = {
   children: 2,
   contractId: "31",
   validFrom: null,
+  laterValidFrom: null,
   confirmedChildren: null,
   problems: [],
   repeatsLine: null,
