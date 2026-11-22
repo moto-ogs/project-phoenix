@@ -136,7 +136,7 @@ interface ExternalStaffInput {
   gender?: StammdatenGender;
 }
 
-export interface StaffFilters {
+interface StaffFilters {
   status?: "all" | "supervising" | "available";
   type?: "all" | "teachers" | "staff";
 }
