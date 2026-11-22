@@ -158,6 +158,44 @@ seinen eingebetteten/runtime-geladenen Assets oder CI-Workflow-Änderungen.
 Frontend-only-Pushes und reine Backend-Teständerungen starten seinen
 4-vCPU-Runner nicht.
 
+- **Klone warten auf einen Platz, statt den Server zu füllen (#7860,
+  22.11.2026).** Der geteilte lokale Server hält auf 2560 MB tmpfs rund 43
+  Klone. Ein Lauf über `api`, `database/migrations`,
+  `modules/dataimport/importtest` und `modules/organizationtenancy/compose`
+  braucht in der Spitze 19: je Binary den Package-Klon und bis zu zwei
+  isolierte Klone, im Migrations-Package acht (`PerTestDatabases` umgeht die
+  Zwei-Plätze-Grenze, `-parallel 8`), dazu ein Package-Template. Drei Läufe
+  verlangen 57; gemessen war der tmpfs bei 43 Klonen voll, alle drei Läufe rot
+  (SQLSTATE 53100) und der Server einmal im PANIC.
+
+  Jeder Klon belegt deshalb einen Platz: eine Advisory-Sperre auf der
+  Platz-Sitzung seines Binaries in der Wartungsdatenbank. Stirbt das Binary,
+  endet die Sitzung und die Plätze sind frei. Die Platzzahl folgt aus dem
+  Server: Der Client liest die tmpfs-Größe des Datenverzeichnisses
+  (`/proc/self/mountinfo` über `pg_read_file`) und rechnet (Größe − 640 MB) /
+  80 MB. Das sind 24 Plätze lokal und 94 in CI (8 GB), wo zwölf Binaries in der
+  Spitze rund 50 Klone halten und nie warten. Ein Server ohne tmpfs mit
+  Größenangabe bleibt unbegrenzt. Die letzten vier Plätze sind kurzlebigen
+  Klonen vorbehalten: Ein Binary hält den Platz seines Package-Klons, während
+  seine Tests auf isolierte Klone warten; ohne Vorbehalt könnten wartende
+  Binaries alle Plätze halten. Scheitert ein Klon trotzdem mit 53100, räumt
+  er unter der exklusiven Lebenszyklus-Sperre ab, was keine lebende Sitzung
+  schützt, und versucht es einmal neu. Der GC beim Start bleibt beim
+  `pg_try_advisory_lock`.
+
+  Gemessen auf einem eigenen Server derselben Größe: drei gleichzeitige Läufe
+  grün in 122 bis 130 s, höchstens 24 Klone, tmpfs-Spitze 76 %; ein Lauf allein
+  unverändert. Die Verbindungsgrenze ist nicht mitgeregelt: Die drei Läufe
+  hielten 221 von 300 Verbindungen.
+
+  Verworfen bleiben ein größerer tmpfs (verschiebt den Fehler, belegt auf Macs
+  die Docker-VM) und ein Server pro Lauf. Dessen Preis ist jetzt gemessen:
+  `TEST_DB_DSN` geht in den Go-Testcache-Schlüssel ein. Ein zweiter
+  unveränderter Lauf traf auf dem geteilten Server bei zwei der vier Packages
+  `(cached)`, auf einem Server pro Lauf (zufälliger Port, zufälliges Passwort)
+  bei keinem; `api` und `organizationtenancy/compose` laufen in beiden Fällen
+  neu.
+
 Abgewogen: Ein ephemerer Postgres pro Lauf hätte „Start = Ende" trivial wahr
 gemacht, kostet aber pro Lauf den Template-Neubau (~25s) oder einen eigenen
 Cache dafür; der langlebige Container mit Datenbank-GC liefert dieselbe
