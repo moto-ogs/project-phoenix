@@ -128,14 +128,14 @@ func importCoverage(reads []schoolRead, children []ports.ContractChild, today ca
 // day. A contract that ended before today still counts: a contract from an
 // application may begin in the past, and both would bill the days they
 // share. The time each contract holds decides in importCovers. An imported
-// contract bound to an application child (ADR 0309) is none of them: it
-// counts by its key like a contract from an application and covers no other
-// application of the child, so the child gets its contract for the next
-// phase as every other child does.
+// contract bound to an application child (ADR 0309) stays one of them: it
+// still holds for the time it names, so it holds back every other
+// application of the child whose care it overlaps, as before the binding.
+// Only the application it is bound to is its own (importCovers).
 func runningImports(children []ports.ContractChild) map[int64][]ports.ContractChild {
 	imported := map[int64][]ports.ContractChild{}
 	for _, child := range children {
-		if child.ImportOrigin != "" && child.RequestChildID == nil && everHeld(child) {
+		if child.ImportOrigin != "" && everHeld(child) {
 			imported[child.SchoolID] = append(imported[child.SchoolID], child)
 		}
 	}
@@ -143,7 +143,9 @@ func runningImports(children []ports.ContractChild) map[int64][]ports.ContractCh
 }
 
 // importCovers answers the imported contract that is the application
-// child's and holds on a day of its booked care.
+// child's and holds on a day of its booked care. A contract bound to this
+// application child is the application's own contract, not a second one
+// that covers it: its key says so (contractedKeys).
 func importCovers(read schoolRead, application carecontract.Application, contracts []ports.ContractChild, today calendar.Date) (int64, bool) {
 	care := bookedCare(read, application, today)
 	if len(care.services) == 0 {
@@ -152,7 +154,8 @@ func importCovers(read schoolRead, application carecontract.Application, contrac
 	from, until := care.effectiveFrom(application, today), bookedUntil(read, application, lastDay(care.until), today)
 	var named int64
 	for _, contract := range contracts {
-		if !importedContractOf(read.school.ID, application, contract) || !periodsOverlap(from, until, contract.StartsOn, contract.EndsOn) {
+		own := contract.RequestChildID != nil && *contract.RequestChildID == application.RequestChildID
+		if own || !importedContractOf(read.school.ID, application, contract) || !periodsOverlap(from, until, contract.StartsOn, contract.EndsOn) {
 			continue
 		}
 		if contract.StudentID != nil && application.StudentID != nil {

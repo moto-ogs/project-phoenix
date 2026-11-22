@@ -69,8 +69,21 @@ func planRow(contract carecontract.EnrollmentContract, applications ...carecontr
 	return planEnrollmentRow(enrollmentSchool(), contract, applications, map[int64]bool{}, enrollmentToday)
 }
 
+var schoolWeek = []string{"mon", "tue", "wed", "thu", "fri"}
+
+// moduleBooking is a booking of a module of enrollmentSchool with what the
+// plan read of it: its end time on the booked weekdays and its weekdays.
+func moduleBooking(offering int64, name, end string, from, until *calendar.Date, days ...string) carecontract.EnrollmentBooking {
+	ends := map[string]string{}
+	for _, day := range days {
+		ends[day] = end
+	}
+	return carecontract.EnrollmentBooking{CareOfferingID: ident.ID(offering), ModuleName: name, Days: days, ValidFrom: *from, ValidUntil: *until,
+		EndTimes: ends, AvailableDays: schoolWeek, DaysOfWeekMode: "parent_choice"}
+}
+
 func shortBooking(from, until *calendar.Date, days ...string) carecontract.EnrollmentBooking {
-	return carecontract.EnrollmentBooking{CareOfferingID: 1, ModuleName: "Kurzbetreuung", Days: days, ValidFrom: *from, ValidUntil: *until}
+	return moduleBooking(1, "Kurzbetreuung", "14:00", from, until, days...)
 }
 
 // Walk (i): one version without an end. The booking starts with the service
@@ -85,8 +98,10 @@ func TestAnOpenEndedContractIsBookedOverItsPhase(t *testing.T) {
 	assert.Equal(t, "Schuljahr 2030/31", row.PhaseName)
 	assert.Equal(t, []carecontract.EnrollmentBooking{shortBooking(date(2030, 8, 1), date(2031, 8, 1), "mon", "tue")}, row.Bookings)
 	assert.Empty(t, row.Changes)
-	assert.Equal(t, "31:wirksam", row.Timeline)
+	assert.Equal(t, "31:wirksam|new", row.Token, "the token names the timeline and that the school enrolls the child")
 	assert.Zero(t, row.RequestChildID, "the child gets a new enrollment")
+	assert.Equal(t, *date(2030, 8, 1), row.PhaseStart)
+	assert.Equal(t, *date(2031, 7, 31), row.PhaseEnd)
 }
 
 // Walk (ii): the version ends on 31 July, the day the phase ends. The
@@ -110,12 +125,10 @@ func TestAContractEndingWithTheSchoolYearIsBookedToItsEnd(t *testing.T) {
 	assert.Equal(t, *date(2031, 3, 1), row.Bookings[0].ValidUntil)
 }
 
-// Walk (iii): the version in force and a planned offering correction with
-// another module on other weekdays. The booking of today's version ends
-// where the planned one begins, and the planned one is a change.
-func TestAPlannedOfferingCorrectionBecomesAChange(t *testing.T) {
-	t.Parallel()
-	planned := func(end string) carecontract.EnrollmentContract {
+// plannedCorrection is enrollableContract with a planned offering correction
+// from 1 February 2031: the full-day module on other weekdays, ending at end.
+func plannedCorrection(end string) carecontract.EnrollmentContract {
+	return func(end string) carecontract.EnrollmentContract {
 		contract := enrollableContract()
 		contract.NextNumber = 3
 		contract.Versions = append(contract.Versions, carecontract.Version{
@@ -125,21 +138,51 @@ func TestAPlannedOfferingCorrectionBecomesAChange(t *testing.T) {
 			Terms: contract.Versions[0].Terms, Source: carecontract.SourceOfferingCorrection,
 		})
 		return contract
-	}
-	row := planRow(planned("16:30"))
-	assert.Equal(t, carecontract.EnrollmentReady, row.Status, "the end times are the module's")
+	}(end)
+}
+
+// Walk (iii): the version in force and a planned offering correction with
+// another module on other weekdays. The booking of today's version ends
+// where the planned one begins, and the planned one is a change. The silent
+// enrollment writes no dated change, so the row is held back until the
+// planned version holds.
+func TestAPlannedOfferingCorrectionHoldsTheRowBack(t *testing.T) {
+	t.Parallel()
+	row := planRow(plannedCorrection("16:30"))
+	assert.Equal(t, carecontract.EnrollmentHeld, row.Status)
+	assert.Equal(t, carecontract.EnrollmentReasonPlannedChange, row.Reason, "the bookings are the contract's, but the change is not written")
 	assert.Equal(t, []carecontract.EnrollmentBooking{shortBooking(date(2030, 8, 1), date(2031, 2, 1), "mon", "tue")}, row.Bookings)
 	assert.Equal(t, []carecontract.EnrollmentChange{{EffectiveFrom: *date(2031, 2, 1), Bookings: []carecontract.EnrollmentBooking{
-		{CareOfferingID: 2, ModuleName: "Ganztag", Days: []string{"mon", "wed", "fri"}, ValidFrom: *date(2031, 2, 1), ValidUntil: *date(2031, 8, 1)},
+		moduleBooking(2, "Ganztag", "16:30", date(2031, 2, 1), date(2031, 8, 1), "mon", "wed", "fri"),
 	}}}, row.Changes)
-	assert.Equal(t, "31:wirksam,32:wirksam", row.Timeline)
+	assert.Empty(t, row.Token, "a held row is not bound")
 
 	// The correction kept the end time of the old module: the bookings would
 	// make a version with the module's end time on its first day.
-	row = planRow(planned("14:00"))
+	row = planRow(plannedCorrection("14:00"))
 	assert.Equal(t, carecontract.EnrollmentHeld, row.Status)
 	assert.Equal(t, carecontract.EnrollmentReasonEndTime, row.Reason)
 	assert.Len(t, row.Changes, 1, "a held row still shows what was derived")
+
+	// Once the planned version holds, the child is enrolled with it.
+	later := planEnrollmentRow(enrollmentSchool(), plannedCorrection("16:30"), nil, map[int64]bool{}, *date(2031, 2, 3))
+	assert.Equal(t, carecontract.EnrollmentReady, later.Status)
+	assert.Equal(t, []carecontract.EnrollmentBooking{
+		moduleBooking(2, "Ganztag", "16:30", date(2030, 8, 1), date(2031, 8, 1), "mon", "wed", "fri")}, later.Bookings)
+
+	// A child whose accepted application carries the change already is bound
+	// to it: nothing is written for it.
+	student := plannedStudent
+	application := carecontract.Application{RequestChildID: plannedRequestChild, StudentID: &student, Bookings: []carecontract.Booking{
+		{CareOfferingID: 1, Days: []string{"mon", "tue"}, ValidFrom: date(2030, 8, 1), ValidUntil: date(2031, 2, 1)},
+		{CareOfferingID: 2, Days: []string{"mon", "wed", "fri"}, ValidFrom: date(2031, 2, 1), ValidUntil: date(2031, 8, 1)}}}
+	bound := planRow(plannedCorrection("16:30"), application)
+	assert.Equal(t, carecontract.EnrollmentReady, bound.Status)
+	assert.Equal(t, ident.ID(plannedRequestChild), bound.RequestChildID)
+	application.Bookings = application.Bookings[:1]
+	application.Bookings[0].ValidUntil = date(2031, 8, 1)
+	assert.Equal(t, carecontract.EnrollmentReasonHasApplication, planRow(plannedCorrection("16:30"), application).Reason,
+		"an application without the change is not the contract's")
 }
 
 // Walk (iv): the version started before the service of the phase. The
@@ -179,7 +222,7 @@ func TestOtherBookingsThanTheContractsAreNotProven(t *testing.T) {
 	contract := enrollableContract()
 	prove := func(offering int64, days ...string) string {
 		return provenBookings(enrollmentSchool(), contract, []carecontract.Booking{
-			{CareOfferingID: offering, Days: days, ValidFrom: date(2030, 8, 1), ValidUntil: date(2031, 8, 1)}}, *date(2031, 7, 31), enrollmentToday)
+			{CareOfferingID: offering, Days: days, ValidFrom: date(2030, 8, 1), ValidUntil: date(2031, 8, 1)}}, *date(2030, 8, 1), *date(2031, 7, 31), enrollmentToday)
 	}
 	assert.Empty(t, prove(1, "mon", "tue"))
 	assert.Equal(t, carecontract.EnrollmentReasonBookingsDiffer, prove(1, "mon", "tue", "wed"), "a further weekday")
@@ -266,6 +309,7 @@ func TestAChildWithAnApplicationIsBoundToItOnlyWhenItsBookingsAreTheContracts(t 
 	row := planRow(enrollableContract(), application(5, "mon", "tue"))
 	require.Equal(t, carecontract.EnrollmentReady, row.Status)
 	assert.Equal(t, ident.ID(5), row.RequestChildID, "the row names the application to bind")
+	assert.Equal(t, "31:wirksam|5", row.Token, "the token names the application child the binding is for")
 
 	row = planRow(enrollableContract(), application(5, "mon", "tue", "wed"))
 	assert.Equal(t, carecontract.EnrollmentHeld, row.Status)
@@ -306,4 +350,86 @@ func TestTheBookingsOfAReadyRowMakeNoVersionAfterTheBinding(t *testing.T) {
 	version, reason = nextVersion(enrollmentSchool(), application, amendable, enrollmentToday)
 	assert.Nil(t, version)
 	assert.Empty(t, reason)
+}
+
+// A version that started after the service start of its phase is booked
+// from the service start. The amendment sees no change on any day then, so
+// an end time that is not the module's shows only in the direct comparison
+// of the promised and the booked care: the row is held back, never ready.
+func TestAnEndTimeOfALaterVersionIsComparedDirectly(t *testing.T) {
+	t.Parallel()
+	contract := enrollableContract()
+	contract.FirstFrom, contract.Versions[0].EffectiveFrom = *date(2030, 10, 1), *date(2030, 10, 1)
+	for i := range contract.Versions[0].Services {
+		contract.Versions[0].Services[i].EndsAt = "15:00"
+	}
+	bookings := []carecontract.Booking{{CareOfferingID: 1, Days: []string{"mon", "tue"}, ValidFrom: date(2030, 8, 1), ValidUntil: date(2031, 8, 1)}}
+	amendable := AmendableContract{ID: contract.ID, Key: ContractKey{SchoolID: 4}, FirstFrom: contract.FirstFrom,
+		NextNumber: contract.NextNumber, Latest: contract.Versions[0], Versions: contract.Versions}
+	plan, _ := nextAmendment(enrollmentSchool(), carecontract.Application{Bookings: bookings}, amendable, enrollmentToday)
+	require.Nil(t, plan, "the amendment alone finds no version to write")
+
+	row := planRow(contract)
+	assert.Equal(t, carecontract.EnrollmentHeld, row.Status)
+	assert.Equal(t, carecontract.EnrollmentReasonEndTime, row.Reason, "promised until 15:00, the module ends at 14:00")
+
+	// The same holds for an accepted application of the child: from today on
+	// its care is not the contract's.
+	student := plannedStudent
+	held := planRow(contract, carecontract.Application{RequestChildID: plannedRequestChild, StudentID: &student, Bookings: bookings})
+	assert.Equal(t, carecontract.EnrollmentHeld, held.Status)
+	assert.Equal(t, carecontract.EnrollmentReasonHasApplication, held.Reason)
+
+	// A weekday or a module that differs is named as such.
+	assert.Equal(t, carecontract.EnrollmentReasonBookingsDiffer, comparedCare(enrollmentSchool(), enrollableContract(),
+		[]carecontract.Booking{{CareOfferingID: 1, Days: []string{"mon"}, ValidFrom: date(2030, 8, 1), ValidUntil: date(2031, 8, 1)}},
+		*date(2030, 8, 1), *date(2031, 7, 31), enrollmentToday), "a promised weekday without a booking")
+	assert.Equal(t, carecontract.EnrollmentReasonBookingsDiffer, comparedCare(enrollmentSchool(), enrollableContract(),
+		[]carecontract.Booking{{CareOfferingID: 1, Days: []string{"mon", "tue"}, ValidFrom: date(2030, 8, 1), ValidUntil: date(2031, 3, 1)}},
+		*date(2030, 8, 1), *date(2031, 7, 31), enrollmentToday), "a booking that ends before the promise")
+}
+
+// A module of the version in force whose last day has passed is not booked
+// and decides nothing: neither its phase nor its end time holds the row
+// back.
+func TestAModuleWhoseLastDayPassedDecidesNothing(t *testing.T) {
+	t.Parallel()
+	contract := enrollableContract()
+	old := importedService("wed", 4, "Ganztag 2031/32", "16:30")
+	old.LastDay = date(2030, 9, 30)
+	contract.Versions[0].Services = append(contract.Versions[0].Services, old)
+	row := planRow(contract)
+	assert.Equal(t, carecontract.EnrollmentReady, row.Status, "the old module is of another phase, but no longer promised")
+	assert.Equal(t, []carecontract.EnrollmentBooking{shortBooking(date(2030, 8, 1), date(2031, 8, 1), "mon", "tue")}, row.Bookings)
+
+	contract.Versions[0].Services[2].LastDay = date(2031, 1, 31)
+	assert.Equal(t, carecontract.EnrollmentReasonTwoPhases, planRow(contract).Reason, "a module that still runs counts")
+}
+
+// A run enrolled the child with both modules of the contract and stopped
+// before the binding. Since then the last day of one module has passed, so
+// the plan derives one booking only. The stored application still books
+// both: the plan proves what is stored, names the application and binds to
+// it, instead of comparing it with what it would derive today.
+func TestAStoredEnrollmentIsProvenWithItsOwnBookingsAfterAModuleEnded(t *testing.T) {
+	t.Parallel()
+	contract := enrollableContract()
+	early := importedService("wed", 2, "Ganztag", "16:30")
+	early.LastDay = date(2030, 12, 20)
+	contract.Versions[0].Services = append(contract.Versions[0].Services, early)
+
+	first := planRow(contract)
+	require.Equal(t, carecontract.EnrollmentReady, first.Status)
+	require.Len(t, first.Bookings, 2, "the first run books both modules")
+	student := plannedStudent
+	stored := carecontract.Application{RequestChildID: plannedRequestChild, StudentID: &student, Bookings: enrollmentBookings(first.Bookings)}
+
+	after := *date(2031, 1, 10)
+	derivedNow := planEnrollmentRow(enrollmentSchool(), contract, nil, map[int64]bool{}, after)
+	require.Len(t, derivedNow.Bookings, 1, "today only the module that still runs is derived")
+
+	rerun := planEnrollmentRow(enrollmentSchool(), contract, []carecontract.Application{stored}, map[int64]bool{}, after)
+	assert.Equal(t, carecontract.EnrollmentReady, rerun.Status)
+	assert.Equal(t, ident.ID(plannedRequestChild), rerun.RequestChildID)
+	assert.Equal(t, planToken(contract.Versions, plannedRequestChild), rerun.Token)
 }

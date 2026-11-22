@@ -94,8 +94,18 @@ func (f enrollmentFixture) plan(t *testing.T) carecontract.EnrollmentPlan {
 		read, err = f.enrollments.EnrollmentContracts(txCtx, f.reviewer, f.school.school.ID)
 		return err
 	}))
-	plan, err := f.enrollments.EnrollmentPlans(f.ctx, read)
-	require.NoError(t, err)
+	return f.planRead(t, read)
+}
+
+// planRead plans a read in the tenant transaction of the fixture's school.
+func (f enrollmentFixture) planRead(t *testing.T, read carecontract.EnrollmentRead) carecontract.EnrollmentPlan {
+	t.Helper()
+	var plan carecontract.EnrollmentPlan
+	require.NoError(t, testpkg.WithinTenantContext(t, f.ctx, f.db, f.school.school.ID, func(txCtx context.Context) error {
+		var err error
+		plan, err = f.enrollments.EnrollmentPlans(txCtx, read)
+		return err
+	}))
 	return plan
 }
 
@@ -110,10 +120,12 @@ func (f enrollmentFixture) bind(t *testing.T, bindings ...carecontract.Applicati
 	return results
 }
 
-// binding is the binding of the fixture's contract as its plan row names it.
+// binding is the binding of the fixture's contract as its plan row names
+// it, for the application child the school's enrollment answered as
+// enrolled.
 func (f enrollmentFixture) binding(row carecontract.EnrollmentPlanRow) carecontract.ApplicationBinding {
 	return carecontract.ApplicationBinding{ContractID: row.ContractID, StudentID: row.StudentID,
-		RequestChildID: ident.ID(f.requestChild), Timeline: row.Timeline}
+		RequestChildID: ident.ID(f.requestChild), Token: row.Token, Enrollment: carecontract.EnrollmentAnswerEnrolled}
 }
 
 // enroll gives the school the accepted application the enrollment made for
@@ -155,7 +167,11 @@ func TestAnImportedContractIsBoundAndThenFollowsItsBookings(t *testing.T) {
 	assert.Equal(t, carecontract.EnrollmentCounts{Ready: 1}, plan.Counts)
 	assert.Equal(t, ident.ID(f.student), row.StudentID)
 	assert.Equal(t, []carecontract.EnrollmentBooking{{CareOfferingID: 7, ModuleName: "Ganztag", Days: []string{"mon"},
-		ValidFrom: calendar.NewDate(2026, 8, 1), ValidUntil: calendar.NewDate(2099, 8, 1)}}, row.Bookings)
+		ValidFrom: calendar.NewDate(2026, 8, 1), ValidUntil: calendar.NewDate(2099, 8, 1), EndTimes: map[string]string{"mon": "16:00"},
+		AvailableDays: []string{"mon", "tue", "wed", "thu", "fri"}, DaysOfWeekMode: "parent_choice"}}, row.Bookings,
+		"the row carries what the plan read of the module")
+	assert.Equal(t, calendar.NewDate(2026, 8, 1), row.PhaseStart)
+	assert.Equal(t, calendar.NewDate(2099, 7, 31), row.PhaseEnd)
 	assert.Empty(t, f.amendable(t), "an imported contract that is not bound follows no bookings")
 
 	f.enroll(row)
@@ -197,9 +213,10 @@ func TestAnImportedContractIsBoundAndThenFollowsItsBookings(t *testing.T) {
 }
 
 // What the bound contract is to the other readers: it keeps its child
-// record, its summary says that it follows bookings, and it covers no other
-// application of the child.
-func TestABoundContractKeepsItsChildRecordAndCountsByItsKey(t *testing.T) {
+// record, its summary says that it follows bookings, and it still holds
+// back every other application of the child whose care it overlaps. Only
+// the application it is bound to is its own.
+func TestABoundContractKeepsItsChildRecordAndStillCoversOtherApplications(t *testing.T) {
 	t.Parallel()
 	f := newEnrollmentFixture(t, "Träger Anmeldung gebunden")
 	next := ContractKey{SchoolID: f.school.school.ID, RequestChildID: f.requestChild + 5}
@@ -233,7 +250,28 @@ func TestABoundContractKeepsItsChildRecordAndCountsByItsKey(t *testing.T) {
 	f.enroll(row)
 	require.Equal(t, carecontract.BindingBound, f.bind(t, f.binding(row))[0].Status)
 
-	assert.False(t, coveredByImport(nextYear(), children(), coverToday)[next], "bound, it counts by its key and covers no other application")
+	assert.Equal(t, f.imported, importCoverage(nextYear(), children(), coverToday)[next],
+		"bound and without an end, it still holds back a later application of the child")
+	own := ContractKey{SchoolID: f.school.school.ID, RequestChildID: f.requestChild}
+	assert.NotContains(t, importCoverage(f.reads(calendar.NewDate(2026, 12, 7)), children(), coverToday), own,
+		"the application it is bound to is its own, not one it covers")
+	// The list of candidates shows the later application held back with the
+	// imported contract, and the bound application as one with a contract.
+	var existing map[ContractKey]bool
+	var named map[ContractKey]int64
+	require.NoError(t, testpkg.WithinTraeger(f.ctx, f.org, func(txCtx context.Context) error {
+		var err error
+		reads := append(nextYear(), f.reads(calendar.NewDate(2026, 12, 7))...)
+		existing, named, err = f.conclusions.intake.contractedKeys(txCtx, f.org, reads)
+		return err
+	}))
+	assert.Equal(t, f.imported, named[next], "the later application is a candidate held back by the imported contract")
+	assert.True(t, existing[own])
+	assert.Zero(t, named[own])
+	candidates := []carecontract.Candidate{{SchoolID: ident.ID(next.SchoolID), RequestChildID: ident.ID(next.RequestChildID)}}
+	markNamedByImport(candidates, named)
+	assert.Equal(t, carecontract.SkipImportedContract, candidates[0].TemplateIssue)
+	assert.Equal(t, ident.ID(f.imported), candidates[0].ImportedContractID)
 	bound := summary()
 	assert.True(t, bound.FollowsBookings)
 	assert.True(t, bound.Imported, "it stays an imported contract")
@@ -269,7 +307,10 @@ func TestARunCutShortBeforeTheBindingIsFinishedByTheNext(t *testing.T) {
 	require.Equal(t, carecontract.EnrollmentReady, rerun.Status)
 	assert.Equal(t, ident.ID(f.requestChild), rerun.RequestChildID, "the row names the enrollment the first run made")
 	binding := carecontract.ApplicationBinding{ContractID: rerun.ContractID, StudentID: rerun.StudentID,
-		RequestChildID: rerun.RequestChildID, Timeline: rerun.Timeline}
+		RequestChildID: rerun.RequestChildID, Token: rerun.Token}
+	other := binding
+	other.RequestChildID++
+	assert.Equal(t, carecontract.BindingChanged, f.bind(t, other)[0].Status, "only the application the row proved is bound")
 	assert.Equal(t, carecontract.BindingBound, f.bind(t, binding)[0].Status)
 	assert.Equal(t, 1, f.count(t, `SELECT COUNT(*) FROM care_contract.contracts WHERE organization_id = ? AND request_child_id = ?`,
 		f.org, f.requestChild))
@@ -290,17 +331,33 @@ func TestAContractThatChangedSinceThePlanIsNotBound(t *testing.T) {
 	other.StudentID++
 	assert.Equal(t, carecontract.BindingChanged, f.bind(t, other)[0].Status, "another child record")
 	moved := f.binding(row)
-	moved.Timeline = "1:wirksam"
+	moved.Token = "1:wirksam|new"
 	assert.Equal(t, carecontract.BindingChanged, f.bind(t, moved)[0].Status, "another timeline")
+	// A row without an application child is bound only to what the school's
+	// enrollment answered as enrolled or existing: never to an application
+	// it only named (has_application), refused or found changed.
+	for _, answer := range []string{"", "has_application", "changed", "refused"} {
+		unconfirmed := f.binding(row)
+		unconfirmed.Enrollment = answer
+		assert.Equal(t, carecontract.BindingChanged, f.bind(t, unconfirmed)[0].Status, "enrollment answer %q", answer)
+	}
+	require.Zero(t, bound())
 	unknown := f.binding(row)
 	unknown.ContractID = ident.ID(f.contract)
 	assert.Equal(t, carecontract.BindingChanged, f.bind(t, unknown)[0].Status, "a contract from an application")
 
-	// Two contracts of one call that name one application child: the first
-	// takes it.
-	twice := f.bind(t, f.binding(row), f.binding(row))
-	assert.Equal(t, []string{carecontract.BindingBound, carecontract.BindingChanged}, []string{twice[0].Status, twice[1].Status})
+	// A contract named twice in one call is answered per row: the first row
+	// binds it, a second row for another application child is changed, and
+	// one for the same application child finds it bound. The call does not
+	// fail and writes the contract once.
+	second := f.binding(row)
+	second.RequestChildID++
+	twice := f.bind(t, f.binding(row), second, f.binding(row))
+	assert.Equal(t, []string{carecontract.BindingBound, carecontract.BindingChanged, carecontract.BindingDone},
+		[]string{twice[0].Status, twice[1].Status, twice[2].Status})
 	require.Equal(t, 1, bound())
+	assert.Equal(t, 1, f.count(t, `SELECT COUNT(*) FROM care_contract.contract_events WHERE organization_id = ? AND contract_id = ?
+		AND action = 'bind_application'`, f.org, f.imported), "one entry in the trail")
 	taken := f.binding(row)
 	taken.RequestChildID++
 	assert.Equal(t, carecontract.BindingChanged, f.bind(t, taken)[0].Status, "bound to another application child")
@@ -341,4 +398,20 @@ func TestTheStoreRefusesASecondContractOfAnApplicationChild(t *testing.T) {
 		return err
 	})
 	require.ErrorIs(t, err, carecontract.ErrContractExists)
+}
+
+// The plan answers the school whose tenant transaction the caller holds. A
+// read of another school is refused: it would be planned on the offerings
+// and applications of the wrong school.
+func TestThePlanRefusesAReadOfAnotherSchool(t *testing.T) {
+	t.Parallel()
+	f := newEnrollmentFixture(t, "Träger Anmeldung fremde Schule")
+	read := carecontract.EnrollmentRead{SchoolID: f.school.school.ID + 1}
+	err := testpkg.WithinTenantContext(t, f.ctx, f.db, f.school.school.ID, func(txCtx context.Context) error {
+		_, err := f.enrollments.EnrollmentPlans(txCtx, read)
+		return err
+	})
+	require.ErrorIs(t, err, carecontract.ErrSchoolOutsideTraeger)
+	_, err = f.enrollments.EnrollmentPlans(f.ctx, carecontract.EnrollmentRead{SchoolID: f.school.school.ID})
+	require.ErrorIs(t, err, carecontract.ErrSchoolOutsideTraeger, "without the tenant transaction of the school nothing is planned")
 }

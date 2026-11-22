@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 
@@ -28,6 +29,9 @@ type EnrollmentStore interface {
 	// LockChildLinks is the lock a link run and a creation of a contract
 	// take: under it nothing else decides what covers a child.
 	LockChildLinks(ctx context.Context, organizationID int64) error
+	// TransactionSchool is the school whose tenant transaction ctx carries;
+	// an error without one.
+	TransactionSchool(ctx context.Context) (int64, error)
 	// BindContractApplications binds each imported contract without an
 	// application child that still has the child record named, and answers
 	// the contracts it bound; ErrContractExists for an application child
@@ -88,9 +92,16 @@ func (e *ContractEnrollments) EnrollmentContracts(ctx context.Context, reviewer 
 }
 
 // EnrollmentPlans answers every contract of the read in the tenant
-// transaction of its school.
+// transaction of its school. The caller writes the read into the access
+// log of the school (carecontract.ContractEnrollments).
 func (e *ContractEnrollments) EnrollmentPlans(ctx context.Context, read carecontract.EnrollmentRead) (carecontract.EnrollmentPlan, error) {
 	plan := carecontract.EnrollmentPlan{SchoolID: ident.ID(read.SchoolID), Rows: []carecontract.EnrollmentPlanRow{}}
+	// The plan reads the school whose tenant transaction the caller holds:
+	// a read of another school would be planned on the wrong offerings and
+	// applications.
+	if school, err := e.store.TransactionSchool(ctx); err != nil || school != read.SchoolID {
+		return plan, errors.Join(carecontract.ErrSchoolOutsideTraeger, err)
+	}
 	students := []int64{}
 	for _, contract := range read.Contracts {
 		if contract.RequestChildID == nil && contract.StudentID != nil {
@@ -266,7 +277,10 @@ func newBindingCheck(contracts []carecontract.EnrollmentContract, children []por
 // decide answers one binding: done for a contract bound to the named
 // application child already, changed for one that is no longer the imported,
 // active, unbound contract with the child record and the timeline of the
-// plan, or whose application child has another contract, else bound.
+// plan, whose binding names another application child than the one its row
+// stands for, or whose application child has another contract, else bound.
+// A contract the call bound is bound for its later rows too: a second row
+// of it is done or changed, never a second write.
 func (c *bindingCheck) decide(binding carecontract.ApplicationBinding) string {
 	contract, known := c.contracts[binding.ContractID.Int64()]
 	requestChild := binding.RequestChildID.Int64()
@@ -277,9 +291,23 @@ func (c *bindingCheck) decide(binding carecontract.ApplicationBinding) string {
 		return carecontract.BindingDone
 	case contract.RequestChildID != nil, contract.Status != carecontract.StatusActive,
 		contract.StudentID == nil || *contract.StudentID != binding.StudentID.Int64(),
-		timelineToken(contract.Versions) != binding.Timeline, c.contracted[requestChild] != 0:
+		!plannedFor(contract, binding), c.contracted[requestChild] != 0:
 		return carecontract.BindingChanged
 	}
 	c.contracted[requestChild] = contract.ID
+	contract.RequestChildID = &requestChild
+	c.contracts[contract.ID] = contract
 	return carecontract.BindingBound
+}
+
+// plannedFor tells whether the binding names the application child the plan
+// row of the contract stands for, on the timeline the contract still has:
+// the accepted application the row proved, or, for a row without one, the
+// enrollment the school answered as enrolled or existing.
+func plannedFor(contract carecontract.EnrollmentContract, binding carecontract.ApplicationBinding) bool {
+	if binding.Token == planToken(contract.Versions, binding.RequestChildID.Int64()) {
+		return true
+	}
+	return binding.Token == planToken(contract.Versions, 0) &&
+		(binding.Enrollment == carecontract.EnrollmentAnswerEnrolled || binding.Enrollment == carecontract.EnrollmentAnswerExisting)
 }
