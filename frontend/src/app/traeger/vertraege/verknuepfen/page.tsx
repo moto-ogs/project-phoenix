@@ -12,6 +12,8 @@ import { useState } from "react";
 import {
   CHILD_LINK_SAMPLE,
   childLinkContractCount,
+  isSettledRow,
+  openRowCount,
 } from "~/components/traeger/care-contract-child-link-format";
 import { CareContractChildLinkMappingCard } from "~/components/traeger/care-contract-child-link-mapping-card";
 import { CareContractChildLinkPreviewCard } from "~/components/traeger/care-contract-child-link-preview-card";
@@ -56,10 +58,8 @@ const readChildLinks = (
 function doneDescription(done: ChildLinkResult): string {
   const { counts } = done;
   // Ein Vertrag aus einer Anmeldung gehört schon zu seinem Kind: nichts offen.
-  const settled = done.rows.filter((row) =>
-    row.problems.some((problem) => problem.code === "not_imported"),
-  ).length;
-  const open = counts.conflict + counts.invalid - settled;
+  const settled = done.rows.filter(isSettledRow).length;
+  const open = openRowCount(done);
   const parts = [
     `${counts.linked} ${counts.linked === 1 ? "Vertrag war" : "Verträge waren"} schon verknüpft`,
     `${open} ${open === 1 ? "Zeile ist" : "Zeilen sind"} offen`,

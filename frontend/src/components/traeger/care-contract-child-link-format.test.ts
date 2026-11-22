@@ -10,6 +10,8 @@ import {
   defaultChildLinkFilter,
   matchesChildLinkFilter,
   openChildLinkRowsCsv,
+  openChildLinkRows,
+  openRowCount,
 } from "./care-contract-child-link-format";
 
 function row(overrides: Partial<ChildLinkRow> = {}): ChildLinkRow {
@@ -200,5 +202,25 @@ describe("Texte der Verknüpfung mit der Kinderakte", () => {
     );
     expect(line).toContain("'=HYPERLINK(1) (ohne Geburtsdatum)");
     expect(line).toContain("Die Schule des Vertrags hat keine Kinderakte");
+  });
+});
+
+describe("offene Zeilen", () => {
+  it("zählt einen Vertrag aus einer Anmeldung nicht als offen", () => {
+    const settled = row({
+      status: "invalid",
+      problems: [{ field: "contract", code: "not_imported" }],
+    });
+    const unclear = row({
+      line: 3,
+      status: "conflict",
+      problems: [{ field: "child", code: "differs" }],
+    });
+    const result = {
+      counts: { ...COUNTS, conflict: 1, invalid: 1 },
+      rows: [settled, unclear],
+    } as unknown as Parameters<typeof openRowCount>[0];
+    expect(openRowCount(result)).toBe(1);
+    expect(openChildLinkRows(result)).toEqual([unclear]);
   });
 });

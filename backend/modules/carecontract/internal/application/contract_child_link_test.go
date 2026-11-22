@@ -195,6 +195,13 @@ func TestDecideChildLinksIgnoresRowsThatLinkNothing(t *testing.T) {
 		linkPair{line: 2, contractID: 12, studentID: linkMia},
 		linkPair{line: 3, contractID: 11, studentID: linkMia})
 	assert.Equal(t, carecontract.ChildLinkInvalid, rows[0].Status, "a contract from an application")
+	// Also with an empty child record, as the export of all contracts names
+	// it: the row says that the contract needs no link, not that a number
+	// is missing.
+	missing := linkPair{line: 4, contractID: 12}
+	missing.problems = linkProblem(carecontract.ChildLinkFieldChild, carecontract.ChildLinkProblemMissing)
+	assert.Equal(t, linkProblem(carecontract.ChildLinkFieldContract, carecontract.ChildLinkProblemNotImported),
+		decideOne(t, contracts, missing)[0].Problems)
 	assert.Equal(t, carecontract.ChildLinkReady, rows[1].Status)
 }
 
@@ -305,14 +312,11 @@ func TestCoveredByImportCoversTheChildOfARunningImportedContract(t *testing.T) {
 	// Only names: the candidate stays, held back, and names the contract.
 	coverage := importCoverage(read(application(81, linkPtr(linkMia), "Mia", nil, booked)),
 		[]ports.ContractChild{imported(nil, "Mia", nil, nil, carecontract.StatusActive)}, linkToday)
-	assert.Equal(t, importCover{contractID: 70, byName: true}, coverage[key])
+	assert.Equal(t, int64(70), coverage[key])
 	candidates := []carecontract.Candidate{{CandidateKey: carecontract.CandidateKey{SchoolID: linkSchoolNorth, RequestChildID: 81}}}
 	markNamedByImport(candidates, map[ContractKey]int64{key: 70})
 	assert.Equal(t, carecontract.SkipImportedContract, candidates[0].TemplateIssue)
 	assert.Equal(t, ident.ID(70), candidates[0].ImportedContractID)
-	linkedCover := importCoverage(read(application(81, linkPtr(linkMia), "Mia", nil, booked)),
-		[]ports.ContractChild{imported(linkPtr(linkMia), "Mia", nil, nil, carecontract.StatusActive)}, linkToday)
-	assert.False(t, linkedCover[key].byName, "a linked contract covers by the child record")
 	fromApplication := imported(linkPtr(linkMia), "Mia", nil, nil, carecontract.StatusActive)
 	fromApplication.ImportOrigin = ""
 	covered := coveredByImport(read(application(81, linkPtr(linkMia), "Mia", nil, booked)), []ports.ContractChild{fromApplication}, linkToday)

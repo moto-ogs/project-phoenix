@@ -474,14 +474,18 @@ func (d *linkDecision) decide(pair linkPair) (carecontract.ChildLinkRow, int64) 
 		row.ContractChildFirstName, row.ContractChildLastName, row.ContractChildBirthDate = contract.FirstName, contract.LastName, contract.BirthDate
 	}
 	switch {
+	case known && contract.ImportOrigin == "":
+		// A contract from an application has its child, whatever else the
+		// row says or leaves out: the export of all contracts names it with
+		// an empty child record before the school took the child over.
+		row.Problems = nil
+		holdChildLink(&row, carecontract.ChildLinkInvalid, carecontract.ChildLinkFieldContract, carecontract.ChildLinkProblemNotImported)
+		return row, shown
 	case len(row.Problems) > 0:
 		row.Status = carecontract.ChildLinkInvalid
 		return row, shown
 	case !known:
 		holdChildLink(&row, carecontract.ChildLinkInvalid, carecontract.ChildLinkFieldContract, carecontract.ChildLinkProblemUnknown)
-		return row, shown
-	case contract.ImportOrigin == "":
-		holdChildLink(&row, carecontract.ChildLinkInvalid, carecontract.ChildLinkFieldContract, carecontract.ChildLinkProblemNotImported)
 		return row, shown
 	}
 	student, found := d.students[contract.SchoolID][pair.studentID]

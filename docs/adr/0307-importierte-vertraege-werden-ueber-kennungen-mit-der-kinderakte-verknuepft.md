@@ -61,9 +61,10 @@ im Elternpostfach.
    weder von Hand noch beim Abschluss bei der Annahme. Der Vertrag gehört
    dem Kind, wenn er mit dessen Kinderakte verknüpft ist; solange er mit
    keiner verknüpft ist, gilt der Vergleich aus ADR 0232 Punkt 5 (gleicher Name, keine
-   zwei verschiedenen Geburtsdaten). Ein Kind, das nur so gedeckt ist, bleibt
-   in der Kandidatenliste sichtbar, zurückgehalten und mit dem genannten
-   Vertrag: Das Büro verknüpft ihn, danach entscheidet die Kinderakte. Auch
+   zwei verschiedenen Geburtsdaten). Ein Kind, das ein importierter
+   Vertrag deckt, bleibt in der Kandidatenliste sichtbar, zurückgehalten und
+   mit der Nummer des Vertrags: Das Büro sieht den Grund und kann
+   Verknüpfung oder Vertragsende berichtigen. Auch
    der Vertragsimport nimmt die Sperre, bevor er nach laufenden Verträgen
    sieht. Ein importierter Vertrag, der vor Beginn
    der gebuchten Betreuung endet, hindert nichts: Das Kind bekommt seinen

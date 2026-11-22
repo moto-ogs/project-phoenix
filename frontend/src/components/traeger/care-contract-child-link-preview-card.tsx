@@ -37,6 +37,7 @@ import {
   matchesChildLinkFilter,
   openChildLinkRows,
   openChildLinkRowsCsv,
+  openRowCount,
 } from "./care-contract-child-link-format";
 
 const UNKNOWN_STATUS = { label: "–", tone: "gray" } as const;
@@ -160,7 +161,7 @@ function NotesCell({ row }: Readonly<{ row: ChildLinkRow }>) {
 
 function footerText(result: ChildLinkResult): string {
   const { counts } = result;
-  const open = counts.conflict + counts.invalid;
+  const open = openRowCount(result);
   if (counts.ready === 0 && open === 0 && counts.linked > 0) {
     return "Alle Verträge der Datei sind schon verknüpft. Hier ist nichts zu tun.";
   }
@@ -315,7 +316,7 @@ export function CareContractChildLinkPreviewCard({
               disabledReason={
                 disabled
                   ? "Verknüpfen geht erst, wenn moto die Datei geprüft hat."
-                  : counts.linked > 0 && counts.conflict + counts.invalid === 0
+                  : counts.linked > 0 && openRowCount(result) === 0
                     ? "Alle Verträge der Datei sind schon verknüpft."
                     : "In der Datei ist keine Zeile bereit zum Verknüpfen."
               }

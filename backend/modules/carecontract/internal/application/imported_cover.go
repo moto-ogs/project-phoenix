@@ -17,11 +17,10 @@ import (
 // imported contract became a candidate for a second contract as soon as it
 // had an accepted application, and both were billed.
 //
-// named are those of them an imported contract covers only by its names,
-// with that contract: it is linked to no child record yet, so the names may
-// mean another child. The list of candidates shows such a child with the
-// contract instead of dropping it, so the office links the contract and the
-// names stop deciding.
+// named are those of them only an imported contract covers, with that
+// contract. The list of candidates shows such a child held back with the
+// contract instead of dropping it: the office sees why no contract is
+// offered, and can link the contract, correct it or end it.
 func (in *Intake) contractedKeys(ctx context.Context, organizationID int64, reads []schoolRead) (existing map[ContractKey]bool, named map[ContractKey]int64, err error) {
 	children, err := in.store.ContractChildren(ctx, organizationID, readSchoolIDs(reads))
 	if err != nil {
@@ -33,17 +32,17 @@ func (in *Intake) contractedKeys(ctx context.Context, organizationID int64, read
 			existing[ContractKey{SchoolID: child.SchoolID, RequestChildID: *child.RequestChildID}] = true
 		}
 	}
-	for key, cover := range importCoverage(reads, children, in.today()) {
-		if !existing[key] && cover.byName {
-			named[key] = cover.contractID
+	for key, contractID := range importCoverage(reads, children, in.today()) {
+		if !existing[key] {
+			named[key] = contractID
 		}
 		existing[key] = true
 	}
 	return existing, named, nil
 }
 
-// withoutNamed are the keys with a contract without those an imported
-// contract only names: the list of candidates keeps these children.
+// withoutNamed are the keys with a contract without those only an imported
+// contract covers: the list of candidates keeps these children.
 func withoutNamed(existing map[ContractKey]bool, named map[ContractKey]int64) map[ContractKey]bool {
 	kept := make(map[ContractKey]bool, len(existing))
 	for key := range existing {
@@ -54,10 +53,8 @@ func withoutNamed(existing map[ContractKey]bool, named map[ContractKey]int64) ma
 	return kept
 }
 
-// markNamedByImport holds back every candidate an imported contract names
-// and tells which: no contract is created for it until the office links the
-// imported contract to its child record. Then the child records decide, and
-// the child either has that contract or becomes a plain candidate.
+// markNamedByImport holds back every candidate an imported contract covers
+// and tells which: no second contract is created for the time they share.
 func markNamedByImport(candidates []carecontract.Candidate, named map[ContractKey]int64) {
 	for n := range candidates {
 		key := ContractKey{SchoolID: candidates[n].SchoolID.Int64(), RequestChildID: candidates[n].RequestChildID.Int64()}
@@ -107,17 +104,10 @@ func coveredByImport(reads []schoolRead, children []ports.ContractChild, today c
 	return covered
 }
 
-// importCover is the imported contract that covers an application child, and
-// whether only its names say that it is the child's.
-type importCover struct {
-	contractID int64
-	byName     bool
-}
-
 // importCoverage answers coveredByImport with the covering contract. A
 // contract linked to the child's record goes before one that only names it.
-func importCoverage(reads []schoolRead, children []ports.ContractChild, today calendar.Date) map[ContractKey]importCover {
-	covered := map[ContractKey]importCover{}
+func importCoverage(reads []schoolRead, children []ports.ContractChild, today calendar.Date) map[ContractKey]int64 {
+	covered := map[ContractKey]int64{}
 	imported := runningImports(children)
 	for _, read := range reads {
 		contracts := imported[read.school.ID]
@@ -151,27 +141,25 @@ func runningImports(children []ports.ContractChild) map[int64][]ports.ContractCh
 
 // importCovers answers the imported contract that is the application
 // child's and holds on a day of its booked care.
-func importCovers(read schoolRead, application carecontract.Application, contracts []ports.ContractChild, today calendar.Date) (importCover, bool) {
+func importCovers(read schoolRead, application carecontract.Application, contracts []ports.ContractChild, today calendar.Date) (int64, bool) {
 	care := bookedCare(read, application, today)
 	if len(care.services) == 0 {
-		return importCover{}, false
+		return 0, false
 	}
 	from, until := care.effectiveFrom(application, today), lastDay(care.until)
-	found := false
-	var cover importCover
+	var named int64
 	for _, contract := range contracts {
 		if !importedContractOf(read.school.ID, application, contract) || !periodsOverlap(from, until, contract.StartsOn, contract.EndsOn) {
 			continue
 		}
-		byName := contract.StudentID == nil || application.StudentID == nil
-		if !byName {
-			return importCover{contractID: contract.ContractID}, true
+		if contract.StudentID != nil && application.StudentID != nil {
+			return contract.ContractID, true
 		}
-		if !found {
-			found, cover = true, importCover{contractID: contract.ContractID, byName: true}
+		if named == 0 {
+			named = contract.ContractID
 		}
 	}
-	return cover, found
+	return named, named > 0
 }
 
 // importedContractOf tells whether an imported contract is the application

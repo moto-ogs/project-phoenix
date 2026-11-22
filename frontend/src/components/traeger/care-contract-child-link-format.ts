@@ -218,7 +218,9 @@ export function openChildLinkRows(
   result: ChildLinkResult,
 ): readonly ChildLinkRow[] {
   return result.rows.filter(
-    (row) => row.status === "conflict" || row.status === "invalid",
+    (row) =>
+      (row.status === "conflict" || row.status === "invalid") &&
+      !isSettledRow(row),
   );
 }
 
@@ -275,4 +277,21 @@ export function openChildLinkRowsCsv(rows: readonly ChildLinkRow[]): string {
       .join(";"),
   );
   return [header.join(";"), ...lines].join("\r\n");
+}
+
+/**
+ * A row of a contract from an application: it belongs to its child already,
+ * so there is nothing to link and nothing open.
+ */
+export function isSettledRow(row: ChildLinkRow): boolean {
+  return row.problems.some((problem) => problem.code === "not_imported");
+}
+
+/** The rows the office still has to look at: unclear or not possible. */
+export function openRowCount(result: ChildLinkResult): number {
+  return (
+    result.counts.conflict +
+    result.counts.invalid -
+    result.rows.filter(isSettledRow).length
+  );
 }
