@@ -69,6 +69,7 @@ afterEach(() => {
 
 function mkChild(id: string, schoolName: string): Child {
   return {
+    care_ended: false,
     student_id: id,
     tenant_id: "1",
     first_name: "Lara",
@@ -392,6 +393,39 @@ describe("listMyDocuments", () => {
       "5",
       "8",
       "4",
+    ]);
+  });
+
+  it("puts the newer of two documents sent at once first, also above 2^53", async () => {
+    const sentAt = "2026-09-03T08:00:00Z";
+    const doc = (id: string) => ({
+      id,
+      organization_id: "3",
+      traeger_name: "Ganztag Nord",
+      kind: "invoice",
+      number: "",
+      period_name: "",
+      service_from: "",
+      service_until: "",
+      issued_on: "",
+      total_cents: 0,
+      child_names: ["Lina"],
+      sent_at: sentAt,
+    });
+    mockFetch(async (input) =>
+      jsonResponse({
+        data: String(input).endsWith("/documents")
+          ? [doc("9007199254740992"), doc("99"), doc("9007199254740993")]
+          : [],
+      }),
+    );
+
+    const out = await listMyDocuments();
+
+    expect(out.documents.map((document) => document.id)).toEqual([
+      "9007199254740993",
+      "9007199254740992",
+      "99",
     ]);
   });
 });

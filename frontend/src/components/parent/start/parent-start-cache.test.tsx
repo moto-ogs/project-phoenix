@@ -78,11 +78,13 @@ beforeEach(() => {
   });
   vi.mocked(listMessageThreads).mockResolvedValue([]);
   vi.mocked(fetchParentProfile).mockResolvedValue({
+    last_name: "",
     first_name: "Eltern",
     portal_locale: null,
   });
   vi.mocked(listMyChildren).mockImplementation(async () => [
     {
+      care_ended: false,
       student_id: "42",
       tenant_id: "7",
       first_name: `Kind ${state.account}`,
