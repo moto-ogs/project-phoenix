@@ -407,7 +407,7 @@ func (c *familyImportCheck) match(row *parentbilling.FamilyChildrenImportRow, sc
 func (c *familyImportCheck) reachedTargets(row *parentbilling.FamilyChildrenImportRow, found []familyImportContract, from calendar.Date) []familyImportTarget {
 	field := parentbilling.FamilyImportFieldChildLastName
 	running := c.applicableContracts(slices.Clone(found), from)
-	heard := heardContracts(found, running)
+	heard := c.heardContracts(found, running)
 	var targets []familyImportTarget
 	if len(running) == 0 {
 		problemOf(row, field, parentbilling.FamilyImportProblemContractEnded)
@@ -427,13 +427,17 @@ func (c *familyImportCheck) reachedTargets(row *parentbilling.FamilyChildrenImpo
 	return targets
 }
 
-// heardContracts are the contracts applicableContracts left out: their
-// families take over nothing from the row, but its number still speaks
-// against their rows, as it did before point 5 (ADR 0305, #7863).
-func heardContracts(found, running []familyImportContract) []familyImportContract {
-	return slices.DeleteFunc(slices.Clone(found), func(contract familyImportContract) bool {
-		return slices.ContainsFunc(running, func(kept familyImportContract) bool { return kept.id == contract.id })
-	})
+// heardContracts are the contracts of the families applicableContracts
+// left out entirely: they take over nothing from the row, but its number
+// still speaks against their rows, as it did before point 5 (ADR 0305,
+// #7863). A family that keeps a running contract is no witness: the row
+// decides there.
+func (c *familyImportCheck) heardContracts(found, running []familyImportContract) []familyImportContract {
+	reached := map[string]bool{}
+	for _, contract := range running {
+		reached[c.family(contract.id)] = true
+	}
+	return slices.DeleteFunc(slices.Clone(found), func(contract familyImportContract) bool { return reached[c.family(contract.id)] })
 }
 
 // applicableContracts keeps a historical contract for a historical count,
