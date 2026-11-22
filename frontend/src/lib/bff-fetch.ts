@@ -229,12 +229,7 @@ async function call<T>(
   } catch {
     answer = undefined;
   }
-  if (
-    answer === null ||
-    typeof answer !== "object" ||
-    !("data" in answer) ||
-    (answer as { status?: unknown }).status !== "success"
-  ) {
+  if (answer === null || typeof answer !== "object" || !("data" in answer)) {
     // The proxy decodes every answer, so this is a broken BFF route. A
     // write may have happened: the person reloads before trying again.
     throw new ApiError(message(502), 502, {

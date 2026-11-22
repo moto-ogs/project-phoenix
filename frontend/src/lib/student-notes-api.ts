@@ -6,14 +6,11 @@
 // reader's audience never arrive at all. The client renders that answer and
 // never computes its own.
 
-import { legacyBffJson } from "./bff-fetch";
+import { bffJson } from "./bff-fetch";
 import type {
-  noteSubjectsResponse,
   studentNoteRequestBody,
   studentNoteResponse,
-  studentNoteTeamInformedResponse,
   studentNoteTeamNoticeResponse,
-  studentNoteTeamReadRequest,
 } from "./contract/students.generated";
 
 /** Note lifetimes. A permanent note is the durable hint shown with the master data. */
@@ -134,19 +131,14 @@ function toPayload(draft: StudentNoteDraft): studentNoteRequestBody {
   };
 }
 
-function notesPath(studentId: string, noteId?: string): string {
-  const base = `/api/students/${encodeURIComponent(studentId)}/notes`;
-  return noteId ? `${base}/${encodeURIComponent(noteId)}` : base;
-}
-
 class StudentNotesService {
   /** kind narrows the read to one lifetime; omit it for the whole card. */
   async list(studentId: string, kind?: string): Promise<StudentNote[]> {
-    const query = kind ? `?kind=${encodeURIComponent(kind)}` : "";
-    const notes = await legacyBffJson<studentNoteResponse[]>(
-      `${notesPath(studentId)}${query}`,
-    );
-    return (notes ?? []).map(mapNote);
+    const notes = await bffJson("tenant", "GET /api/students/{id}/notes", {
+      params: { id: studentId },
+      query: { kind: kind || undefined },
+    });
+    return notes.map(mapNote);
   }
 
   /**
@@ -154,8 +146,12 @@ class StudentNotesService {
    * against the same read, so the form never offers one it would refuse.
    */
   async listActivities(studentId: string): Promise<StudentNoteActivity[]> {
-    const subjects = await legacyBffJson<noteSubjectsResponse>(
-      `/api/students/${encodeURIComponent(studentId)}/note-subjects`,
+    const subjects = await bffJson(
+      "tenant",
+      "GET /api/students/{id}/note-subjects",
+      {
+        params: { id: studentId },
+      },
     );
     return (subjects.activities ?? []).map((activity) => ({
       id: activity.id,
@@ -168,13 +164,10 @@ class StudentNotesService {
     studentId: string,
     draft: StudentNoteDraft,
   ): Promise<StudentNote> {
-    const note = await legacyBffJson<studentNoteResponse>(
-      notesPath(studentId),
-      {
-        method: "POST",
-        body: toPayload(draft),
-      },
-    );
+    const note = await bffJson("tenant", "POST /api/students/{id}/notes", {
+      params: { id: studentId },
+      body: toPayload(draft),
+    });
     return mapNote(note);
   }
 
@@ -183,9 +176,13 @@ class StudentNotesService {
     noteId: string,
     draft: StudentNoteDraft,
   ): Promise<StudentNote> {
-    const note = await legacyBffJson<studentNoteResponse>(
-      notesPath(studentId, noteId),
-      { method: "PUT", body: toPayload(draft) },
+    const note = await bffJson(
+      "tenant",
+      "PUT /api/students/{id}/notes/{noteId}",
+      {
+        params: { id: studentId, noteId },
+        body: toPayload(draft),
+      },
     );
     return mapNote(note);
   }
@@ -196,19 +193,18 @@ class StudentNotesService {
    * zero means nobody else in the team may read the notes.
    */
   async informTeam(studentId: string, noteId: string): Promise<number> {
-    const result = await legacyBffJson<studentNoteTeamInformedResponse>(
-      `${notesPath(studentId, noteId)}/team-notices`,
-      { method: "POST", body: {} },
+    const result = await bffJson(
+      "tenant",
+      "POST /api/students/{id}/notes/{noteId}/team-notices",
+      { params: { id: studentId, noteId } },
     );
     return result.informed;
   }
 
   /** The reader's notes shared by the team and not yet read, newest first. */
   async listTeamNotices(): Promise<StudentNoteTeamNotice[]> {
-    const notices = await legacyBffJson<studentNoteTeamNoticeResponse[]>(
-      "/api/students/team-notices",
-    );
-    return (notices ?? []).map(mapTeamNotice);
+    const notices = await bffJson("tenant", "GET /api/students/team-notices");
+    return notices.map(mapTeamNotice);
   }
 
   /**
@@ -219,24 +215,25 @@ class StudentNotesService {
     studentId: string,
     observed: readonly StudentNoteTeamNoticeRevision[],
   ): Promise<StudentNoteTeamNotice[]> {
-    const notices = await legacyBffJson<studentNoteTeamNoticeResponse[]>(
-      `/api/students/${encodeURIComponent(studentId)}/team-notices/read`,
+    const notices = await bffJson(
+      "tenant",
+      "POST /api/students/{id}/team-notices/read",
       {
-        method: "POST",
+        params: { id: studentId },
         body: {
           notices: observed.map((notice) => ({
             note_id: notice.noteId,
             informed_at: notice.informedAt,
           })),
-        } satisfies studentNoteTeamReadRequest,
+        },
       },
     );
-    return (notices ?? []).map(mapTeamNotice);
+    return notices.map(mapTeamNotice);
   }
 
   async remove(studentId: string, noteId: string): Promise<void> {
-    await legacyBffJson<unknown>(notesPath(studentId, noteId), {
-      method: "DELETE",
+    await bffJson("tenant", "DELETE /api/students/{id}/notes/{noteId}", {
+      params: { id: studentId, noteId },
     });
   }
 }
