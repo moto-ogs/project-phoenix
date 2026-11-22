@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Dokumentart je Leistung (#4688): Rechnung, Gebührenbescheid oder (nur
  * Ferien) Bestätigungsschreiben als Rechnung. Die Freigabe eines Laufs hält
@@ -7,7 +8,6 @@
 
 import { knownEnum } from "./contract/known-enum";
 import type * as traegerBillingDocumentKindsContract from "./contract/traeger-billing-document-kinds.generated";
-import { traegerRequest } from "./traeger-api";
 
 // Go does not register these sets; the contract types them as string.
 const SERVICE_VALUES = ["holiday", "care"] as const;
@@ -33,8 +33,6 @@ export interface DocumentKindOverview {
   /** Version der Vorlage „Bescheid“; 0 = Standardvorlage. */
   readonly feeNoticeTemplateVersion: number;
 }
-
-const PATH = "/api/traeger/billing-document-kinds";
 
 /** Name einer Dokumentart, wie Schreiben und Übersicht sie nennen. */
 export const DOCUMENT_KIND_LABEL: Readonly<Record<DocumentKind, string>> = {
@@ -77,9 +75,7 @@ function overviewFromBackend(
 
 export async function fetchDocumentKinds(): Promise<DocumentKindOverview> {
   return overviewFromBackend(
-    await traegerRequest<traegerBillingDocumentKindsContract.DocumentKindOverview>(
-      PATH,
-    ),
+    await bffJson("org", "GET /traeger/billing-document-kinds/"),
   );
 }
 
@@ -88,15 +84,12 @@ export async function saveDocumentKind(
   documentKind: DocumentKind,
 ): Promise<DocumentKindOverview> {
   return overviewFromBackend(
-    await traegerRequest<traegerBillingDocumentKindsContract.DocumentKindOverview>(
-      `${PATH}/${encodeURIComponent(service)}`,
-      {
-        method: "PUT",
-        body: {
-          document_kind: documentKind,
-        } satisfies traegerBillingDocumentKindsContract.DocumentKindRequest,
-      },
-    ),
+    await bffJson("org", "PUT /traeger/billing-document-kinds/{service}", {
+      params: { service },
+      body: {
+        document_kind: documentKind,
+      } satisfies traegerBillingDocumentKindsContract.DocumentKindRequest,
+    }),
   );
 }
 

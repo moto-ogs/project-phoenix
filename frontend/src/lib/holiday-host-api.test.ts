@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TEST_CLOCK_TODAY, testClockDay } from "~/test/clock";
 import { ApiError } from "./api-error";
-import type { HostedHolidayWeek as HostedHolidayWeekWire } from "./contract/holiday-weeks.generated";
+import type * as holidayWeeksContract from "./contract/holiday-weeks.generated";
 import {
   assignHolidayGuestGroup,
   downloadHolidayParticipants,
@@ -33,7 +33,7 @@ function jsonResponse(status: number, body: unknown): Response {
   });
 }
 
-const BACKEND_WEEK: HostedHolidayWeekWire = {
+const BACKEND_WEEK: holidayWeeksContract.HostedHolidayWeek = {
   id: "51",
   period_name: "Sommerferien 2026",
   starts_on: "2026-09-14",

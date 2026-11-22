@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the registration form of a holiday period (#5198): the
  * Träger-Büro builds the questions with the form builder of the online
@@ -64,9 +65,9 @@ function formPath(periodId: string): string {
 /** The current version of the form of a holiday period. */
 export async function fetchHolidayForm(periodId: string): Promise<HolidayForm> {
   return formFromBackend(
-    await traegerRequest<traegerHolidayPeriodsContract.HolidayFormEditor>(
-      formPath(periodId),
-    ),
+    await bffJson("org", "GET /traeger/holiday-periods/{id}/form", {
+      params: { id: periodId },
+    }),
   );
 }
 
@@ -79,8 +80,10 @@ export async function saveHolidayForm(
   healthRequirement: HolidayHealthRequirement = "optional",
 ): Promise<HolidayForm> {
   return formFromBackend(
+    // The contract leaves the editor's body undescribed; this call moves to
+    // bffJsonUncontracted once #7850 is merged.
     await traegerRequest<traegerHolidayPeriodsContract.HolidayFormEditor>(
-      formPath(periodId),
+      `/api/traeger/holiday-periods/${encodeURIComponent(periodId)}/form`,
       {
         method: "PUT",
         body: {
