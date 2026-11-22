@@ -22,7 +22,6 @@ import { SectionCard } from "~/components/ui/section-card";
 import { Skeleton } from "~/components/ui/skeleton";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { useExportRun } from "~/hooks/use-export-run";
-import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
 import { formatDate, parseISODate } from "~/lib/date-helpers";
 import {
   downloadBlob,
@@ -31,7 +30,7 @@ import {
 } from "~/lib/file-download";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import {
-  absenceListExportPath,
+  fetchAbsenceListExport,
   fetchAbsenceListSchool,
   fetchClassDayClassesSchool,
   type AbsenceList,
@@ -130,10 +129,7 @@ async function downloadAbsenceList(
   format: AbsenceListExportFormat,
   printTarget?: Window,
 ): Promise<void> {
-  const response = await transportFetch(absenceListExportPath(query, format));
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "absence list export failed");
-  }
+  const response = await fetchAbsenceListExport(query, format);
   const blob = await response.blob();
   if (printTarget) {
     await openBlobForPrint(blob, printTarget);
