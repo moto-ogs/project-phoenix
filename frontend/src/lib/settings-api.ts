@@ -317,7 +317,7 @@ export async function revealSettingValue(key: string): Promise<string | null> {
     );
   }
 
-  // The portal's catalog proxy answers { success, data: { value } } (#2352).
+  // The portal's catalog proxy answers { status, data: { value } } (#2352).
   const json = (await response.json()) as { data?: { value?: unknown } };
   const value = json?.data?.value;
   return typeof value === "string" ? value : null;

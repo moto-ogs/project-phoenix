@@ -12,18 +12,7 @@ import {
 } from "./traeger-billing-api";
 import { familyKeyEmail } from "~/lib/family-key";
 import { knownEnum } from "./contract/known-enum";
-import type {
-  BillingFamily as WireFamily,
-  BillingFamilyDetail as WireFamilyDetail,
-  BillingFamilyDocument as WireFamilyDocument,
-  BillingPayment as WirePayment,
-  ChildDebtorNumberRequest,
-  FamilyChild as WireFamilyChild,
-  FamilyChildNumbers as WireFamilyChildNumbers,
-  FamilyDebtorNumber,
-  FamilyDebtorNumberRequest,
-  debtorNumberSettings as WireDebtorNumberSettings,
-} from "./contract/traeger-billing-families.generated";
+import type * as traegerBillingFamiliesContract from "./contract/traeger-billing-families.generated";
 import {
   type DebtorNumberFormat,
   debtorNumberFormatOf,
@@ -155,7 +144,9 @@ export interface BillingFamilyDetail extends BillingFamily {
   readonly documents: readonly BillingFamilyDocument[];
 }
 
-function paymentFromBackend(payment: WirePayment): BillingPayment {
+function paymentFromBackend(
+  payment: traegerBillingFamiliesContract.BillingPayment,
+): BillingPayment {
   return {
     kind: knownEnum(PAYMENT_KIND_VALUES, payment.kind),
     costBearerName: payment.cost_bearer_name,
@@ -172,7 +163,9 @@ function knownPaymentMethods(
   });
 }
 
-function familyFromBackend(family: WireFamily): BillingFamily {
+function familyFromBackend(
+  family: traegerBillingFamiliesContract.BillingFamily,
+): BillingFamily {
   return {
     id: family.id,
     recipientFirstName: family.recipient_first_name,
@@ -197,7 +190,7 @@ function familyFromBackend(family: WireFamily): BillingFamily {
 }
 
 function documentFromBackend(
-  document: WireFamilyDocument,
+  document: traegerBillingFamiliesContract.BillingFamilyDocument,
 ): BillingFamilyDocument {
   return {
     id: document.id,
@@ -232,7 +225,10 @@ const FAMILIES_PATH = "/api/traeger/billing-families";
  * families of the holiday care before their first invoice (#6692), by name.
  */
 export async function fetchBillingFamilies(): Promise<BillingFamily[]> {
-  const families = await traegerRequest<WireFamily[]>(FAMILIES_PATH);
+  const families =
+    await traegerRequest<traegerBillingFamiliesContract.BillingFamily[]>(
+      FAMILIES_PATH,
+    );
   return families.map(familyFromBackend);
 }
 
@@ -240,9 +236,10 @@ export async function fetchBillingFamilies(): Promise<BillingFamily[]> {
 export async function fetchBillingFamily(
   id: string,
 ): Promise<BillingFamilyDetail> {
-  const family = await traegerRequest<WireFamilyDetail>(
-    `${FAMILIES_PATH}/${encodeURIComponent(id)}`,
-  );
+  const family =
+    await traegerRequest<traegerBillingFamiliesContract.BillingFamilyDetail>(
+      `${FAMILIES_PATH}/${encodeURIComponent(id)}`,
+    );
   return {
     ...familyFromBackend(family),
     documents: (family.documents ?? []).map(documentFromBackend),
@@ -257,16 +254,17 @@ export async function setFamilyDebtorNumber(
   familyEmail: string,
   debtorNumber: string,
 ): Promise<string> {
-  const saved = await traegerRequest<FamilyDebtorNumber>(
-    `${FAMILIES_PATH}/debtor-number`,
-    {
-      method: "PUT",
-      body: {
-        family_email: familyEmail,
-        debtor_number: debtorNumber,
-      } satisfies FamilyDebtorNumberRequest,
-    },
-  );
+  const saved =
+    await traegerRequest<traegerBillingFamiliesContract.FamilyDebtorNumber>(
+      `${FAMILIES_PATH}/debtor-number`,
+      {
+        method: "PUT",
+        body: {
+          family_email: familyEmail,
+          debtor_number: debtorNumber,
+        } satisfies traegerBillingFamiliesContract.FamilyDebtorNumberRequest,
+      },
+    );
   return saved.debtor_number;
 }
 
@@ -275,9 +273,10 @@ export async function setFamilyDebtorNumber(
  * and check it before the backend does, and whom they name (#7007).
  */
 export async function fetchDebtorNumberSettings(): Promise<DebtorNumberSettings> {
-  const raw = await traegerRequest<WireDebtorNumberSettings>(
-    `${FAMILIES_PATH}/debtor-number-format`,
-  );
+  const raw =
+    await traegerRequest<traegerBillingFamiliesContract.debtorNumberSettings>(
+      `${FAMILIES_PATH}/debtor-number-format`,
+    );
   return {
     format: debtorNumberFormatOf(raw),
     // "payer" is the backend's default scope (DebtorNumberScopePayer).
@@ -285,7 +284,9 @@ export async function fetchDebtorNumberSettings(): Promise<DebtorNumberSettings>
   };
 }
 
-function childFromBackend(child: WireFamilyChild): FamilyChild {
+function childFromBackend(
+  child: traegerBillingFamiliesContract.FamilyChild,
+): FamilyChild {
   return {
     firstName: child.first_name,
     lastName: child.last_name,
@@ -299,9 +300,9 @@ function childFromBackend(child: WireFamilyChild): FamilyChild {
  * and their own numbers (#7007).
  */
 export async function fetchFamilyChildren(): Promise<FamilyChildNumbers[]> {
-  const families = await traegerRequest<WireFamilyChildNumbers[]>(
-    `${FAMILIES_PATH}/children`,
-  );
+  const families = await traegerRequest<
+    traegerBillingFamiliesContract.FamilyChildNumbers[]
+  >(`${FAMILIES_PATH}/children`);
   return families.map((family) => ({
     familyEmail: family.family_email,
     recipientFirstName: family.recipient_first_name,
@@ -319,19 +320,20 @@ export async function setChildDebtorNumber(
   child: FamilyChild,
   debtorNumber: string,
 ): Promise<FamilyChild> {
-  const saved = await traegerRequest<WireFamilyChild>(
-    `${FAMILIES_PATH}/child-debtor-number`,
-    {
-      method: "PUT",
-      body: {
-        family_email: familyEmail,
-        child_first_name: child.firstName,
-        child_last_name: child.lastName,
-        child_birth_date: child.birthDate,
-        debtor_number: debtorNumber,
-      } satisfies ChildDebtorNumberRequest,
-    },
-  );
+  const saved =
+    await traegerRequest<traegerBillingFamiliesContract.FamilyChild>(
+      `${FAMILIES_PATH}/child-debtor-number`,
+      {
+        method: "PUT",
+        body: {
+          family_email: familyEmail,
+          child_first_name: child.firstName,
+          child_last_name: child.lastName,
+          child_birth_date: child.birthDate,
+          debtor_number: debtorNumber,
+        } satisfies traegerBillingFamiliesContract.ChildDebtorNumberRequest,
+      },
+    );
   return childFromBackend(saved);
 }
 

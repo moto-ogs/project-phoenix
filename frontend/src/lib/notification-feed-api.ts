@@ -1,6 +1,6 @@
 // Client des Benachrichtigungs-Feeds. Die Routen der Staff-Glocke, von moto
 // schule (#7139) und des Elternportals (#7140) reichen an das Backend weiter;
-// der Wrapper antwortet mit { success, message, data }. `apiBase` wählt die
+// der Katalog-Proxy antwortet mit { status, data, message }. `apiBase` wählt die
 // Staff- oder Schulroute; das Elternportal hält seinen eigenen Client.
 
 import { authFetch } from "./api-helpers";

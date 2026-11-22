@@ -15,20 +15,7 @@ import type {
 } from "./enrollment-phase-api";
 import type { CareSelectionRule, DaysOfWeekMode } from "./care-offering-api";
 import { knownEnum, requiredEnum } from "./contract/known-enum";
-import type {
-  TraegerFieldChange as FieldChangeWire,
-  OfferingRequest,
-  TraegerOfferingDraft as OfferingDraftWire,
-  TraegerOfferingFields as OfferingFieldsWire,
-  TraegerOffering as OfferingWire,
-  PhaseDetail,
-  PhaseRequest,
-  TraegerPhaseFields as PhaseFieldsWire,
-  TraegerPhase as PhaseWire,
-  Preview,
-  Rollout,
-  RolloutRequest,
-} from "./contract/traeger-catalog.generated";
+import type * as traegerCatalogContract from "./contract/traeger-catalog.generated";
 import { CARE_WEEKDAYS, type CareWeekday } from "./traeger-care-billing-api";
 import {
   type ContractTerms,
@@ -283,7 +270,7 @@ function outcomeOf(
  * every one of these fields normalized, never empty.
  */
 function phaseFieldsFromBackend(
-  fields: PhaseFieldsWire,
+  fields: traegerCatalogContract.TraegerPhaseFields,
   at: string,
 ): TraegerPhaseFields {
   return {
@@ -313,7 +300,7 @@ function weekdayOf(value: string, field: string): CareWeekday {
 }
 
 function offeringFieldsFromBackend(
-  fields: OfferingFieldsWire,
+  fields: traegerCatalogContract.TraegerOfferingFields,
   at: string,
 ): TraegerOfferingFields {
   const pickupTimes: Partial<Record<CareWeekday, string>> = {};
@@ -350,7 +337,7 @@ function offeringFieldsFromBackend(
 }
 
 function offeringDraftFromBackend(
-  draft: OfferingDraftWire,
+  draft: traegerCatalogContract.TraegerOfferingDraft,
   at: string,
 ): TraegerOfferingDraft {
   return {
@@ -370,7 +357,9 @@ function offeringDraftFromBackend(
   };
 }
 
-function offeringFromBackend(offering: OfferingWire): TraegerOffering {
+function offeringFromBackend(
+  offering: traegerCatalogContract.TraegerOffering,
+): TraegerOffering {
   return {
     id: offering.id,
     traegerPhaseId: offering.traeger_phase_id,
@@ -389,7 +378,9 @@ function offeringFromBackend(offering: OfferingWire): TraegerOffering {
   };
 }
 
-function phaseFromBackend(phase: PhaseWire): TraegerPhase {
+function phaseFromBackend(
+  phase: traegerCatalogContract.TraegerPhase,
+): TraegerPhase {
   return {
     id: phase.id,
     draft: phaseFieldsFromBackend(phase.draft, "traeger_phase.draft"),
@@ -411,7 +402,9 @@ function phaseFromBackend(phase: PhaseWire): TraegerPhase {
   };
 }
 
-function phaseDetailFromBackend(phase: PhaseDetail): TraegerPhaseDetail {
+function phaseDetailFromBackend(
+  phase: traegerCatalogContract.PhaseDetail,
+): TraegerPhaseDetail {
   return {
     ...phaseFromBackend(phase),
     offerings: (phase.offerings ?? []).map(offeringFromBackend),
@@ -420,7 +413,7 @@ function phaseDetailFromBackend(phase: PhaseDetail): TraegerPhaseDetail {
 
 // The preview only shows: an unknown state is left undefined and hidden.
 function fieldChangesFromBackend(
-  changes: readonly FieldChangeWire[] | null,
+  changes: readonly traegerCatalogContract.TraegerFieldChange[] | null,
 ): TraegerFieldChange[] {
   return (changes ?? []).map((change) => ({
     field: change.field,
@@ -431,7 +424,9 @@ function fieldChangesFromBackend(
 }
 
 /** The body the backend reads; IDs travel as numbers. */
-function phaseInputToBackend(input: TraegerPhaseInput): PhaseRequest {
+function phaseInputToBackend(
+  input: TraegerPhaseInput,
+): traegerCatalogContract.PhaseRequest {
   return {
     // Go reads a missing flag as active: a deactivated draft stays so.
     is_active: input.isActive ?? null,
@@ -446,10 +441,12 @@ function phaseInputToBackend(input: TraegerPhaseInput): PhaseRequest {
     care_offering_selection_mode: input.careOfferingSelectionMode,
     all_schools: input.allSchools,
     school_ids: input.allSchools ? [] : [...input.schoolIds],
-  } satisfies PhaseRequest;
+  } satisfies traegerCatalogContract.PhaseRequest;
 }
 
-function offeringDraftToBackend(draft: TraegerOfferingDraft): OfferingRequest {
+function offeringDraftToBackend(
+  draft: TraegerOfferingDraft,
+): traegerCatalogContract.OfferingRequest {
   const { fields } = draft;
   return {
     fields: {
@@ -484,7 +481,7 @@ function offeringDraftToBackend(draft: TraegerOfferingDraft): OfferingRequest {
     ...(draft.contractTemplate
       ? { contract_template: termsToBackend(draft.contractTemplate) }
       : {}),
-  } satisfies OfferingRequest;
+  } satisfies traegerCatalogContract.OfferingRequest;
 }
 
 // --- Requests ----------------------------------------------------------------
@@ -496,7 +493,9 @@ function phasePath(id: string): string {
 }
 
 export async function fetchTraegerPhases(): Promise<TraegerPhase[]> {
-  const phases = await traegerRequest<PhaseWire[]>(`${BASE}/phases`);
+  const phases = await traegerRequest<traegerCatalogContract.TraegerPhase[]>(
+    `${BASE}/phases`,
+  );
   return phases.map(phaseFromBackend);
 }
 
@@ -504,7 +503,7 @@ export async function fetchTraegerPhase(
   id: string,
 ): Promise<TraegerPhaseDetail> {
   return phaseDetailFromBackend(
-    await traegerRequest<PhaseDetail>(phasePath(id)),
+    await traegerRequest<traegerCatalogContract.PhaseDetail>(phasePath(id)),
   );
 }
 
@@ -512,7 +511,7 @@ export async function createTraegerPhase(
   input: TraegerPhaseInput,
 ): Promise<TraegerPhaseDetail> {
   return phaseDetailFromBackend(
-    await traegerRequest<PhaseDetail>(`${BASE}/phases`, {
+    await traegerRequest<traegerCatalogContract.PhaseDetail>(`${BASE}/phases`, {
       method: "POST",
       body: phaseInputToBackend(input),
     }),
@@ -524,7 +523,7 @@ export async function updateTraegerPhase(
   input: TraegerPhaseInput,
 ): Promise<TraegerPhaseDetail> {
   return phaseDetailFromBackend(
-    await traegerRequest<PhaseDetail>(phasePath(id), {
+    await traegerRequest<traegerCatalogContract.PhaseDetail>(phasePath(id), {
       method: "PUT",
       body: phaseInputToBackend(input),
     }),
@@ -535,9 +534,12 @@ export async function withdrawTraegerPhase(
   id: string,
 ): Promise<TraegerPhaseDetail> {
   return phaseDetailFromBackend(
-    await traegerRequest<PhaseDetail>(`${phasePath(id)}/withdraw`, {
-      method: "POST",
-    }),
+    await traegerRequest<traegerCatalogContract.PhaseDetail>(
+      `${phasePath(id)}/withdraw`,
+      {
+        method: "POST",
+      },
+    ),
   );
 }
 
@@ -546,10 +548,13 @@ export async function createTraegerOffering(
   draft: TraegerOfferingDraft,
 ): Promise<TraegerOffering> {
   return offeringFromBackend(
-    await traegerRequest<OfferingWire>(`${phasePath(phaseId)}/offerings`, {
-      method: "POST",
-      body: offeringDraftToBackend(draft),
-    }),
+    await traegerRequest<traegerCatalogContract.TraegerOffering>(
+      `${phasePath(phaseId)}/offerings`,
+      {
+        method: "POST",
+        body: offeringDraftToBackend(draft),
+      },
+    ),
   );
 }
 
@@ -558,7 +563,7 @@ export async function updateTraegerOffering(
   draft: TraegerOfferingDraft,
 ): Promise<TraegerOffering> {
   return offeringFromBackend(
-    await traegerRequest<OfferingWire>(
+    await traegerRequest<traegerCatalogContract.TraegerOffering>(
       `${BASE}/offerings/${encodeURIComponent(id)}`,
       { method: "PUT", body: offeringDraftToBackend(draft) },
     ),
@@ -569,7 +574,7 @@ export async function withdrawTraegerOffering(
   id: string,
 ): Promise<TraegerOffering> {
   return offeringFromBackend(
-    await traegerRequest<OfferingWire>(
+    await traegerRequest<traegerCatalogContract.TraegerOffering>(
       `${BASE}/offerings/${encodeURIComponent(id)}/withdraw`,
       { method: "POST" },
     ),
@@ -579,9 +584,12 @@ export async function withdrawTraegerOffering(
 export async function previewTraegerPhase(
   id: string,
 ): Promise<TraegerCatalogPreview> {
-  const preview = await traegerRequest<Preview>(`${phasePath(id)}/preview`, {
-    method: "POST",
-  });
+  const preview = await traegerRequest<traegerCatalogContract.Preview>(
+    `${phasePath(id)}/preview`,
+    {
+      method: "POST",
+    },
+  );
   return {
     traegerPhaseId: preview.traeger_phase_id,
     version: preview.version,
@@ -609,10 +617,13 @@ export async function rolloutTraegerPhase(
   id: string,
   fingerprint: string,
 ): Promise<TraegerRollout> {
-  const rollout = await traegerRequest<Rollout>(`${phasePath(id)}/rollout`, {
-    method: "POST",
-    body: { fingerprint } satisfies RolloutRequest,
-  });
+  const rollout = await traegerRequest<traegerCatalogContract.Rollout>(
+    `${phasePath(id)}/rollout`,
+    {
+      method: "POST",
+      body: { fingerprint } satisfies traegerCatalogContract.RolloutRequest,
+    },
+  );
   return {
     traegerPhaseId: rollout.traeger_phase_id,
     version: rollout.version,
