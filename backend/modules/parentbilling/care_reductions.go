@@ -78,7 +78,9 @@ var (
 // either a share (DiscountBasisPoints), an amount (DiscountCents) or, for an
 // income level or a sibling rule, a fixed end price (PriceCents); a sibling
 // rule may instead take the sibling prices of the price list
-// (TariffSiblingPrice, #6196); a cap has CapCents.
+// (TariffSiblingPrice, #6196); a cap has CapCents. A sibling rule reduces
+// the children from the rank SiblingFromChild on or, with
+// SiblingAllChildren, every child of a family of at least that size.
 type CareRuleInput struct {
 	Kind                string         `json:"kind"`
 	Name                string         `json:"name"`
@@ -98,6 +100,10 @@ type CareRuleInput struct {
 	// CountsFamilyChildren lets a sibling rule count the family's number
 	// (#5918); other kinds never do.
 	CountsFamilyChildren bool `json:"counts_family_children"`
+	// SiblingAllChildren reads SiblingFromChild as the size of the family
+	// from which every child gets the reduction (#7765); other kinds never
+	// carry it.
+	SiblingAllChildren bool `json:"sibling_all_children"`
 }
 
 // CareRuleSet is what the rule page shows: the care rules by kind and
@@ -157,7 +163,9 @@ type CareEvidenceSet struct {
 // CareReduction is one reduction of an invoice by a rule of the chain, with
 // a copy of the rule. A sibling reduction names the child's rank among the
 // FamilyChildren its rule counted; the rank follows the base price, the
-// highest first, then the age, the oldest first.
+// highest first, then the age, the oldest first. A reduction for the size
+// of the family (SiblingAllChildren) keeps the rank too, but did not depend
+// on it.
 type CareReduction struct {
 	Kind                string   `json:"kind"`
 	RuleID              ident.ID `json:"rule_id"`
@@ -170,6 +178,9 @@ type CareReduction struct {
 	CapCents            *int64   `json:"cap_cents" contract:"number"`
 	// TariffSiblingPrice copies the price-list mode of a sibling rule.
 	TariffSiblingPrice bool `json:"tariff_sibling_price"`
+	// SiblingAllChildren copies the family-size mode of a sibling rule
+	// (#7765): every child of the family got the reduction.
+	SiblingAllChildren bool `json:"sibling_all_children"`
 	// CareOfferingIDs are the modules the rule reduced, none for all; a
 	// later run of the month places an earlier reduction by them.
 	CareOfferingIDs []ident.ID `json:"care_offering_ids"`

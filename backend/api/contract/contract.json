@@ -10310,6 +10310,12 @@
       "portals": [
         "org"
       ],
+      "query": [
+        {
+          "name": "numbers",
+          "kind": "bool"
+        }
+      ],
       "response": {
         "kind": "array",
         "elem": {
@@ -11411,6 +11417,17 @@
           "kind": "ref",
           "ref": "FamilyBilling"
         }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/family-billing/contracts/{id}",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ContractFamilyBilling"
       }
     },
     {
@@ -30538,6 +30555,18 @@
           }
         },
         {
+          "name": "family_payment_method",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contract_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
           "name": "issued_cents",
           "schema": {
             "kind": "int"
@@ -30663,6 +30692,18 @@
           "name": "holiday_only",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "family_payment_method",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contract_id",
+          "schema": {
+            "kind": "id"
           }
         },
         {
@@ -37270,6 +37311,12 @@
           }
         },
         {
+          "name": "sibling_all_children",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "care_offering_ids",
           "schema": {
             "kind": "array",
@@ -37792,6 +37839,13 @@
         },
         {
           "name": "counts_family_children",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "sibling_all_children",
           "optional": true,
           "schema": {
             "kind": "bool"
@@ -42187,6 +42241,44 @@
       ]
     },
     {
+      "name": "ContractFamilyBilling",
+      "go_type": "parentbilling.ContractFamilyBilling",
+      "fields": [
+        {
+          "name": "contract_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "family_email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "party_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "party_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "family",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "FamilyBilling"
+          }
+        }
+      ]
+    },
+    {
       "name": "ContractFamilyChildren",
       "go_type": "care.ContractFamilyChildren",
       "fields": [
@@ -43591,6 +43683,12 @@
         },
         {
           "name": "counts_family_children",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "sibling_all_children",
           "schema": {
             "kind": "bool"
           }
@@ -50497,6 +50595,12 @@
       "go_type": "parentbilling.FamilyChildNumbers",
       "fields": [
         {
+          "name": "contract_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
           "name": "family_email",
           "schema": {
             "kind": "string"
@@ -50708,6 +50812,12 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "valid_from",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -50768,6 +50878,13 @@
           "name": "school_id",
           "schema": {
             "kind": "id"
+          }
+        },
+        {
+          "name": "valid_from",
+          "schema": {
+            "kind": "date",
+            "nullable": true
           }
         }
       ]
@@ -50850,6 +50967,17 @@
           "schema": {
             "kind": "date",
             "nullable": true
+          }
+        },
+        {
+          "name": "later_valid_from",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "date",
+              "nullable": true
+            }
           }
         },
         {

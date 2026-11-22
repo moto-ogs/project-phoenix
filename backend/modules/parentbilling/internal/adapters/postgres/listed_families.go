@@ -34,7 +34,7 @@ func (s *Store) ReadListedFamilies(ctx context.Context, organizationID, accountI
   shown AS MATERIALIZED (
    SELECT family.* FROM parent_billing.family_billing AS family
    WHERE family.organization_id = ?0 AND (family.care_contract_id IS NULL OR family.debtor_number IS NOT NULL
-    OR family.family_email IN (SELECT family_key FROM documents))),
+    OR family.payment_method IS NOT NULL OR family.family_email IN (SELECT family_key FROM documents))),
   family_reads AS (
    INSERT INTO parent_billing.family_billing_events (organization_id, family_billing_id, care_contract_id, action, actor_account_id, occurred_at)
    SELECT ?0, id, care_contract_id, 'read', ?2, ?3 FROM shown)

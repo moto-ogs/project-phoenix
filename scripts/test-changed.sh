@@ -14,10 +14,12 @@ cd "$repo_root"
 # shellcheck source=scripts/go-test-workspace.sh
 source "$repo_root/scripts/go-test-workspace.sh"
 
-# Keep concurrent package binaries from multiplying runtime workers across
-# overlapping worktrees. This matches scripts/test-backend.sh and the shared
-# local test budget; -parallel remains the deliberate per-binary test budget.
-export GOMAXPROCS=1
+# Bound the runtime workers of each compile, link and test binary, so package
+# binaries of overlapping worktrees do not multiply them. Four is the pinned
+# runner's budget (run-go-toolchain.sh); one core ran api in 60 s instead of
+# 31 s on Linux. macOS keeps one: parallel GC in links is expensive there
+# (test-backend.sh). -parallel remains the deliberate per-binary test budget.
+if [ "$(uname -s)" = Darwin ]; then export GOMAXPROCS=1; else export GOMAXPROCS=4; fi
 
 FAST=false
 if [ "${1:-}" = --fast ]; then

@@ -162,7 +162,7 @@ func (entry *isolatedTestDatabase) open(tb testing.TB, name string) (err error) 
 // scope asked for.
 func (entry *isolatedTestDatabase) createClone(ctx context.Context, name string) (*testdb.CloneHandle, error) {
 	if entry.source == nil {
-		return packageMaintenance.CreateClone(ctx, packageCloneCfg, testdb.RunID()+"-"+name)
+		return packageMaintenance.CreateShortLivedClone(ctx, packageCloneCfg, testdb.RunID()+"-"+name)
 	}
 	source, err := entry.source.built(ctx)
 	if err != nil {

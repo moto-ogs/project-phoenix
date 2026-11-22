@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Länger als gebucht (#4683, ADR 0156): je Schule, wie oft Kinder länger da
 // waren, als ihr Vertrag bucht. moto vergleicht die gebuchten Zeiten mit dem
 // Ein- und Auschecken (Soll und Ist, ADR 0139). Die Zahlen je Schule sieht
@@ -35,7 +37,10 @@ import {
   traegerExportScope,
 } from "~/components/traeger/traeger-list-export-menu";
 import { hasPermission } from "~/lib/auth-utils";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import { calendarConcept } from "~/lib/concepts/calendar";
 import { careTimesConcept } from "~/lib/concepts/careTimes";
 import { childrenConcept } from "~/lib/concepts/children";
@@ -596,9 +601,9 @@ function TraegerZeitvergleichContent() {
             <TraegerListExportMenu
               download={(format) =>
                 downloadTraegerList(
-                  "/api/traeger/care-time-overruns/export",
-                  format,
-                  exportParams,
+                  bffFile("org", "GET /traeger/care-time-overruns/export", {
+                    query: listExportQuery(format, exportParams),
+                  }),
                 )
               }
               scope={exportScope}
@@ -628,9 +633,11 @@ function TraegerZeitvergleichContent() {
               <TraegerListExportMenu
                 download={(format) =>
                   downloadTraegerList(
-                    "/api/traeger/care-time-overruns/children/export",
-                    format,
-                    exportParams,
+                    bffFile(
+                      "org",
+                      "GET /traeger/care-time-overruns/children/export",
+                      { query: listExportQuery(format, exportParams) },
+                    ),
                   )
                 }
                 scope={exportScope}

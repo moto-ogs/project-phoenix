@@ -1,5 +1,4 @@
-import { bffJson } from "~/lib/bff-fetch";
-import { apiErrorFromResponse, transportFetch } from "../api-error";
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
 import { knownEnum } from "~/lib/contract/known-enum";
 import type * as operatorBillingContract from "~/lib/contract/operator-billing.generated";
@@ -192,17 +191,14 @@ export const operatorBillingService = {
 
   /** Downloads the CSV of one month (YYYY-MM), or of every month. */
   async downloadKeyDateCounts(month?: string): Promise<void> {
-    const query = month ? `?month=${encodeURIComponent(month)}` : "";
-    const response = await transportFetch(
-      `/api/operator/billing/key-date-counts/export${query}`,
-      { credentials: "include" },
+    const response = await bffFile(
+      "platform",
+      "GET /operator/billing/key-date-counts/export",
+      {
+        query: { month: month || undefined },
+        errorMessage: "Key date count export failed",
+      },
     );
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `Key date count export failed (${response.status})`,
-      );
-    }
     const blob = await response.blob();
     const fallback = month
       ? `stichtagszahlen-${month}.csv`

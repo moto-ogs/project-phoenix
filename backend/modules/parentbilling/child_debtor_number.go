@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The debtor number of a child (#7007). A Träger says with
@@ -102,6 +103,9 @@ type ChildDebtorNumberInput struct {
 // names them when the Träger keeps a number per child: the recipient of its
 // invoices, empty for a family known only by a number.
 type FamilyChildNumbers struct {
+	// ContractID is a contract of the family, 0 for a family known only by
+	// a number: it opens the family's recipient and payment (#7770).
+	ContractID         ident.ID      `json:"contract_id"`
 	FamilyEmail        string        `json:"family_email"`
 	RecipientFirstName string        `json:"recipient_first_name"`
 	RecipientLastName  string        `json:"recipient_last_name"`

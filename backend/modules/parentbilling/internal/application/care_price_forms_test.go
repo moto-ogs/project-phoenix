@@ -517,6 +517,15 @@ func TestCareRuleTakesTheSiblingPricesOfThePriceList(t *testing.T) {
 	normalized, err := normalizeCareRule(income, schools)
 	require.NoError(t, err)
 	assert.False(t, normalized.TariffSiblingPrice)
+
+	// Only a sibling rule chooses by the size of the family (#7765).
+	input.SiblingAllChildren, income.SiblingAllChildren = true, true
+	normalized, err = normalizeCareRule(input, schools)
+	require.NoError(t, err)
+	assert.True(t, normalized.SiblingAllChildren)
+	normalized, err = normalizeCareRule(income, schools)
+	require.NoError(t, err)
+	assert.False(t, normalized.SiblingAllChildren)
 }
 
 // An income reduction before the sibling stage counts towards the sibling

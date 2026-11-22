@@ -45,6 +45,7 @@ export interface CareRuleRequest {
   cap_cents?: number | null;
   tariff_sibling_price?: boolean;
   counts_family_children?: boolean;
+  sibling_all_children?: boolean;
 }
 
 export const routes = {

@@ -59,6 +59,12 @@ export interface CareRule {
    * Abrechnung confirmed, siblings without a contract included (#5918).
    */
   readonly countsFamilyChildren: boolean;
+  /**
+   * A sibling rule chooses by the size of the family (#7765): from
+   * `siblingFromChild` counted children on, every child gets the reduction,
+   * the first too. Otherwise the children from that rank on.
+   */
+  readonly siblingAllChildren?: boolean;
 }
 
 export type CareRuleInput = Omit<CareRule, "id">;
@@ -131,6 +137,7 @@ function ruleFromBackend(
     capCents: rule.cap_cents,
     tariffSiblingPrice: rule.tariff_sibling_price,
     countsFamilyChildren: rule.counts_family_children,
+    siblingAllChildren: rule.sibling_all_children,
   };
 }
 
@@ -200,6 +207,7 @@ function ruleBody(
     cap_cents: input.capCents,
     tariff_sibling_price: input.tariffSiblingPrice ?? false,
     counts_family_children: input.countsFamilyChildren,
+    sibling_all_children: input.siblingAllChildren ?? false,
   };
 }
 
