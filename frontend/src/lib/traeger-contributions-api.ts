@@ -242,7 +242,7 @@ export async function confirmHolidayRegistration(
     body: {
       benefits_exemption: benefitsExemption,
       debtor_number: debtorNumber,
-      ...(costBearerId ? { cost_bearer_id: Number(costBearerId) } : {}),
+      ...(costBearerId ? { cost_bearer_id: costBearerId } : {}),
       ...(familyDebtorNumber
         ? { family_debtor_number: familyDebtorNumber }
         : {}),

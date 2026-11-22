@@ -187,12 +187,12 @@ export interface ContractImportRequest {
 
 /**
  * The mapping as the multipart field "mapping" carries it. Go reads the
- * school as int64 there; the contract models the multipart parts, not
+ * school as ident.ID there; the contract models the multipart parts, not
  * this JSON inside one.
  */
 interface MappingField {
   columns: Record<ContractImportField, string>;
-  school_id: number;
+  school_id: string;
   module_name: string;
   effective_from: string | null;
 }
@@ -207,7 +207,7 @@ function knownFields(fields: readonly string[] | null): ContractImportField[] {
 function toBackendMapping(mapping: ContractImportMapping): MappingField {
   return {
     columns: { ...mapping.columns },
-    school_id: mapping.schoolId === "" ? 0 : Number(mapping.schoolId),
+    school_id: mapping.schoolId === "" ? "0" : mapping.schoolId,
     module_name: mapping.moduleName,
     effective_from: mapping.effectiveFrom === "" ? null : mapping.effectiveFrom,
   };

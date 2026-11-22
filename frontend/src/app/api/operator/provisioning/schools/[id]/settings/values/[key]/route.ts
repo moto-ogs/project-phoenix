@@ -16,17 +16,13 @@ import {
 import { TENANT_RESOLVE_AFFECTING_KEYS } from "~/lib/settings-keys";
 import { bffError } from "~/lib/api-response-error.server";
 import { unwrapEnvelope } from "~/lib/backend-client.server";
+import type { SchoolSummary } from "~/lib/contract/shared.generated";
 
 const logger = createLogger({
   component: "OperatorSchoolSettingsValuesRoute",
 });
 
 const VALID_KEY_PATTERN = /^[a-z0-9_.]{1,255}$/;
-
-interface SchoolSummary {
-  id: number;
-  slug: string;
-}
 
 interface SchoolSummariesEnvelope {
   data?: SchoolSummary[];
@@ -37,8 +33,6 @@ async function resolveSchoolSlug(
   token: string,
 ): Promise<string | null> {
   try {
-    const numericId = Number(schoolId);
-    if (!Number.isFinite(numericId)) return null;
     // No dedicated single-school endpoint exists; the summaries list is the
     // cheapest server-side path that returns the slug for an operator. List
     // size is bounded (one entry per school in the platform) so a single
@@ -47,7 +41,7 @@ async function resolveSchoolSlug(
       SchoolSummariesEnvelope | SchoolSummary[]
     >("/operator/schools/summaries", token);
     const summaries = Array.isArray(resp) ? resp : (resp.data ?? []);
-    const match = summaries.find((s) => s.id === numericId);
+    const match = summaries.find((s) => s.id === schoolId);
     return match?.slug ?? null;
   } catch (error) {
     logger.warn("school_slug_lookup_failed", {

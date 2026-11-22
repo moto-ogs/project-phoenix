@@ -21,6 +21,7 @@ import {
   fetchTraegerSchools,
   fetchTraegerSchoolsAlerts,
   publishHolidayPeriod,
+  startTraegerSchoolSession,
   traegerLogin,
   updateHolidayPeriod,
 } from "./traeger-api";
@@ -347,6 +348,21 @@ describe("traeger-api", () => {
     expect(error).toBeInstanceOf(ApiError);
     expect((error as ApiError).code).toBe("traeger.no_membership");
     expect((error as ApiError).status).toBe(403);
+  });
+
+  it("preserves a large school ID when starting a school session", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, { data: { handoff_token: "handoff" } }),
+    );
+
+    await expect(startTraegerSchoolSession("9007199254740993")).resolves.toBe(
+      "handoff",
+    );
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe("/api/traeger/school-sessions");
+    expect(JSON.parse(init?.body as string)).toEqual({
+      school_id: "9007199254740993",
+    });
   });
 
   it("maps the schools of the Träger with string IDs", async () => {

@@ -172,9 +172,7 @@ async function postImport(
       "mapping",
       JSON.stringify({
         columns: request.mapping.columns,
-        school_id: request.mapping.schoolId
-          ? Number(request.mapping.schoolId)
-          : 0,
+        school_id: request.mapping.schoolId || "0",
       }),
     );
   }

@@ -300,7 +300,7 @@ export async function startTraegerSchoolSession(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ school_id: Number(schoolId) }),
+    body: JSON.stringify({ school_id: schoolId }),
   });
   const data = await readJson(response);
   if (!response.ok) {
