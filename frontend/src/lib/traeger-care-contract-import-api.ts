@@ -8,11 +8,7 @@
 
 import { apiErrorFromResponse, transportFetch } from "./api-error";
 import { knownEnum } from "./contract/known-enum";
-import type {
-  ContractImport as WireResult,
-  ContractImportEntry as WireLogEntry,
-  ContractImportRow as WireRow,
-} from "./contract/traeger-contract-imports.generated";
+import type * as traegerContractImportsContract from "./contract/traeger-contract-imports.generated";
 import { readJson, traegerRequest } from "./traeger-api";
 
 const IMPORTS_PATH = "/api/traeger/contract-imports";
@@ -185,18 +181,6 @@ export interface ContractImportRequest {
   readonly fingerprint?: string;
 }
 
-/**
- * The mapping as the multipart field "mapping" carries it. Go reads the
- * school as int64 there; the contract models the multipart parts, not
- * this JSON inside one.
- */
-interface MappingField {
-  columns: Record<ContractImportField, string>;
-  school_id: number;
-  module_name: string;
-  effective_from: string | null;
-}
-
 function knownFields(fields: readonly string[] | null): ContractImportField[] {
   return (fields ?? []).flatMap((field) => {
     const known = knownEnum(FIELD_VALUES, field);
@@ -204,16 +188,21 @@ function knownFields(fields: readonly string[] | null): ContractImportField[] {
   });
 }
 
-function toBackendMapping(mapping: ContractImportMapping): MappingField {
+/** The multipart field "mapping"; "0" leaves the school to the file. */
+function toBackendMapping(
+  mapping: ContractImportMapping,
+): traegerContractImportsContract.ContractImportMapping {
   return {
     columns: { ...mapping.columns },
-    school_id: mapping.schoolId === "" ? 0 : Number(mapping.schoolId),
+    school_id: mapping.schoolId || "0",
     module_name: mapping.moduleName,
     effective_from: mapping.effectiveFrom === "" ? null : mapping.effectiveFrom,
   };
 }
 
-function mapRow(row: WireRow): ContractImportRow {
+function mapRow(
+  row: traegerContractImportsContract.ContractImportRow,
+): ContractImportRow {
   return {
     line: row.line,
     status: knownEnum(ROW_STATUS_VALUES, row.status),
@@ -247,7 +236,9 @@ function mapRow(row: WireRow): ContractImportRow {
 /** The school of a mapping as the catalog proxy sends it; "0" names none. */
 const mappedSchoolId = (id: string): string => (id === "0" ? "" : id);
 
-function mapImportResult(result: WireResult): ContractImportResult {
+function mapImportResult(
+  result: traegerContractImportsContract.ContractImport,
+): ContractImportResult {
   return {
     encoding: result.encoding,
     delimiter: result.delimiter,
@@ -314,7 +305,9 @@ async function postImport(
     );
   }
   const data = await readJson(response);
-  return mapImportResult((data as { data: WireResult }).data);
+  return mapImportResult(
+    (data as { data: traegerContractImportsContract.ContractImport }).data,
+  );
 }
 
 /** Reads the file and answers every row; stores nothing. */
@@ -335,7 +328,10 @@ export function applyContractImport(
 export async function fetchContractImportLog(): Promise<
   ContractImportLogEntry[]
 > {
-  const entries = await traegerRequest<WireLogEntry[]>(IMPORTS_PATH);
+  const entries =
+    await traegerRequest<traegerContractImportsContract.ContractImportEntry[]>(
+      IMPORTS_PATH,
+    );
   return entries.map((entry) => ({
     file: entry.file,
     accountId: entry.account_id,

@@ -18,32 +18,9 @@ import {
 import { apiErrorFromBody, transportFetch } from "./api-error";
 import { knownEnum, requiredEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
-import type {
-  HolidayBookingChange as WireBookingChange,
-  HolidayCriterionCheck as WireCheck,
-  HolidayRegistrationBooking as WireBooking,
-  HolidayRegistrationChild as WireChild,
-  HolidayRegistrationDetail as WireDetail,
-  HolidayRegistrationMailProblem as WireMailProblem,
-} from "./contract/shared.generated";
-import type {
-  HolidayBookingChoice,
-  HolidayCapacityRequest,
-  HolidayConfirmationSettings as WireConfirmationSettings,
-  HolidayPlaceChange,
-  HolidayRebookingRequest,
-} from "./contract/traeger-holiday-contributions.generated";
-import type {
-  HolidayCriteriaCheckRequest,
-  HolidayKnownChildrenResponse,
-  HolidayMailProblemsResponse,
-  HolidayRegistrationEditRequest,
-  HolidayRegistrationHealthDetail as WireHealthDetail,
-  HolidayRegistrationList as WireList,
-  HolidayRegistrationSummary as WireSummary,
-  HolidayWeekPlaces as WireWeekPlaces,
-  HolidayWishRequest,
-} from "./contract/traeger-holiday-periods.generated";
+import type * as sharedContract from "./contract/shared.generated";
+import type * as traegerHolidayContributionsContract from "./contract/traeger-holiday-contributions.generated";
+import type * as traegerHolidayPeriodsContract from "./contract/traeger-holiday-periods.generated";
 import { knownMailOutcome, type MailOutcome } from "./email-delivery-status";
 import { filenameFromDisposition } from "./file-download";
 import {
@@ -437,7 +414,9 @@ function presentDays(days: readonly (string | null)[] | null | undefined) {
  * out of the list (#2353): the actions of the office and the bulk
  * confirmation decide on both, and a rebooking sends every booking back.
  */
-function knownRegistration(registration: WireSummary): boolean {
+function knownRegistration(
+  registration: traegerHolidayPeriodsContract.HolidayRegistrationSummary,
+): boolean {
   return (
     knownEnum(STATUSES, registration.status) !== undefined &&
     (registration.children ?? []).every((child) =>
@@ -448,7 +427,9 @@ function knownRegistration(registration: WireSummary): boolean {
   );
 }
 
-function bookingFromBackend(booking: WireBooking): HolidayRegistrationBooking {
+function bookingFromBackend(
+  booking: sharedContract.HolidayRegistrationBooking,
+): HolidayRegistrationBooking {
   const days = presentDays(booking.days);
   return {
     weekId: booking.week_id,
@@ -477,7 +458,9 @@ function bookingFromBackend(booking: WireBooking): HolidayRegistrationBooking {
   };
 }
 
-function childFromBackend(child: WireChild): HolidayRegistrationChild {
+function childFromBackend(
+  child: sharedContract.HolidayRegistrationChild,
+): HolidayRegistrationChild {
   return {
     id: child.id,
     firstName: child.first_name,
@@ -500,7 +483,8 @@ function childFromBackend(child: WireChild): HolidayRegistrationChild {
 
 /** Mail problems of a kind or state this build does not know drop out. */
 function mailProblemsFromBackend(
-  problems: readonly WireMailProblem[] | null | undefined,
+  problems:
+    readonly sharedContract.HolidayRegistrationMailProblem[] | null | undefined,
 ): HolidayRegistrationMailProblem[] {
   return (problems ?? []).flatMap((problem) => {
     const kind = knownEnum(MAIL_KINDS, problem.kind);
@@ -511,7 +495,7 @@ function mailProblemsFromBackend(
 
 /** Only for a registration `knownRegistration` let through. */
 function summaryFromBackend(
-  registration: WireSummary,
+  registration: traegerHolidayPeriodsContract.HolidayRegistrationSummary,
 ): HolidayRegistrationSummary {
   return {
     id: registration.id,
@@ -537,7 +521,7 @@ function summaryFromBackend(
 
 /** A check with a value this build does not know drops out. */
 function checksFromBackend(
-  checks: readonly WireCheck[],
+  checks: readonly sharedContract.HolidayCriterionCheck[],
 ): HolidayCriterionCheck[] {
   return checks.flatMap((check) => {
     const checked =
@@ -550,7 +534,7 @@ function checksFromBackend(
 }
 
 function changesFromBackend(
-  changes: readonly WireBookingChange[] | undefined,
+  changes: readonly sharedContract.HolidayBookingChange[] | undefined,
 ): HolidayBookingChange[] {
   return (changes ?? []).map((change) => {
     const days = presentDays(change.days);
@@ -568,7 +552,7 @@ function changesFromBackend(
  * unknown action, a decision or a wish it would have to guess.
  */
 function historyFromBackend(
-  history: WireDetail["history"],
+  history: sharedContract.HolidayRegistrationDetail["history"],
 ): HolidayRegistrationEvent[] {
   return (history ?? []).flatMap((event) => {
     const action = knownEnum(EVENT_ACTIONS, event.action);
@@ -612,7 +596,7 @@ function historyFromBackend(
 
 /** A criterion with a scope or answer this build does not know drops out. */
 function criteriaFromBackend(
-  criteria: WireDetail["criteria"],
+  criteria: sharedContract.HolidayRegistrationDetail["criteria"],
 ): HolidayRegistrationCriterion[] {
   return (criteria ?? []).flatMap((criterion) => {
     const scope = knownEnum(CRITERION_SCOPES, criterion.scope);
@@ -644,7 +628,7 @@ function criteriaFromBackend(
  * value this build does not know fails the read instead of being guessed.
  */
 function detailFromBackend(
-  registration: WireDetail,
+  registration: sharedContract.HolidayRegistrationDetail,
 ): HolidayRegistrationDetail {
   return {
     ...summaryFromBackend(registration),
@@ -749,7 +733,7 @@ export async function uploadHolidayProof(
     { method: "POST", body, credentials: "include" },
   );
   const payload = (await response.json().catch(() => null)) as {
-    data?: WireDetail;
+    data?: sharedContract.HolidayRegistrationDetail;
   } | null;
   if (!response.ok || !payload?.data) {
     throw apiErrorFromBody(
@@ -782,9 +766,10 @@ export async function fetchHolidayRegistrations(
   periodId: string,
   filter: HolidayRegistrationFilter,
 ): Promise<HolidayRegistrationList> {
-  const list = await traegerRequest<WireList>(
-    `${registrationsPath(periodId)}${holidayRegistrationQuery(filter)}`,
-  );
+  const list =
+    await traegerRequest<traegerHolidayPeriodsContract.HolidayRegistrationList>(
+      `${registrationsPath(periodId)}${holidayRegistrationQuery(filter)}`,
+    );
   return {
     registrations: (list.registrations ?? [])
       .filter(knownRegistration)
@@ -804,7 +789,7 @@ export async function fetchHolidayRegistration(
   registrationId: string,
 ): Promise<HolidayRegistrationDetail> {
   return detailFromBackend(
-    await traegerRequest<WireDetail>(
+    await traegerRequest<sharedContract.HolidayRegistrationDetail>(
       registrationPath(periodId, registrationId),
     ),
   );
@@ -824,9 +809,10 @@ export async function fetchHolidayKnownChildren(
   const query = registrationId
     ? `?registration_id=${encodeURIComponent(registrationId)}`
     : "";
-  const known = await traegerRequest<HolidayKnownChildrenResponse>(
-    `/api/traeger/holiday-periods/${encodeURIComponent(periodId)}/registrations/known-children${query}`,
-  );
+  const known =
+    await traegerRequest<traegerHolidayPeriodsContract.HolidayKnownChildrenResponse>(
+      `/api/traeger/holiday-periods/${encodeURIComponent(periodId)}/registrations/known-children${query}`,
+    );
   return new Map(
     (known.children ?? []).map((child) => [child.child_id, child.school_id]),
   );
@@ -840,9 +826,10 @@ export async function fetchHolidayKnownChildren(
 export async function fetchHolidayRegistrationMailProblems(
   periodId: string,
 ): Promise<ReadonlyMap<string, readonly HolidayRegistrationMailProblem[]>> {
-  const answer = await traegerRequest<HolidayMailProblemsResponse>(
-    `/api/traeger/holiday-periods/${encodeURIComponent(periodId)}/registrations/mail-problems`,
-  );
+  const answer =
+    await traegerRequest<traegerHolidayPeriodsContract.HolidayMailProblemsResponse>(
+      `/api/traeger/holiday-periods/${encodeURIComponent(periodId)}/registrations/mail-problems`,
+    );
   return new Map(
     (answer.registrations ?? []).map((registration) => [
       registration.registration_id,
@@ -859,9 +846,10 @@ export async function fetchHolidayRegistrationHealth(
   periodId: string,
   registrationId: string,
 ): Promise<HolidayRegistrationHealthDetail> {
-  const health = await traegerRequest<WireHealthDetail>(
-    `${registrationPath(periodId, registrationId)}/health`,
-  );
+  const health =
+    await traegerRequest<traegerHolidayPeriodsContract.HolidayRegistrationHealthDetail>(
+      `${registrationPath(periodId, registrationId)}/health`,
+    );
   return {
     answers: health.custom_data ?? {},
     children: (health.children ?? []).map((child) => ({
@@ -907,7 +895,7 @@ export async function changeHolidayRegistration(
   action: HolidayRegistrationAction,
 ): Promise<HolidayRegistrationDetail> {
   return detailFromBackend(
-    await traegerRequest<WireDetail>(
+    await traegerRequest<sharedContract.HolidayRegistrationDetail>(
       `${registrationPath(periodId, registrationId)}/${action}`,
       { method: "POST", body: {} },
     ),
@@ -924,7 +912,7 @@ export async function checkHolidayRegistrationCriteria(
   checks: readonly HolidayCriterionCheck[],
 ): Promise<HolidayRegistrationDetail> {
   return detailFromBackend(
-    await traegerRequest<WireDetail>(
+    await traegerRequest<sharedContract.HolidayRegistrationDetail>(
       `${registrationPath(periodId, registrationId)}/criteria`,
       {
         method: "PUT",
@@ -934,7 +922,7 @@ export async function checkHolidayRegistrationCriteria(
             child_id: check.childId === null ? null : check.childId,
             checked: check.checked,
           })),
-        } satisfies HolidayCriteriaCheckRequest,
+        } satisfies traegerHolidayPeriodsContract.HolidayCriteriaCheckRequest,
       },
     ),
   );
@@ -951,9 +939,14 @@ export async function setHolidayChildWish(
   wish: "yes" | "no",
 ): Promise<HolidayRegistrationDetail> {
   return detailFromBackend(
-    await traegerRequest<WireDetail>(
+    await traegerRequest<sharedContract.HolidayRegistrationDetail>(
       `${registrationPath(periodId, registrationId)}/children/${encodeURIComponent(childId)}/holiday-wish`,
-      { method: "PUT", body: { wish } satisfies HolidayWishRequest },
+      {
+        method: "PUT",
+        body: {
+          wish,
+        } satisfies traegerHolidayPeriodsContract.HolidayWishRequest,
+      },
     ),
   );
 }
@@ -966,20 +959,24 @@ export async function rebookHolidayChild(
   bookings: readonly HolidayBookingChange[],
 ): Promise<HolidayRegistrationDetail> {
   return detailFromBackend(
-    await traegerRequest<WireDetail>(
+    await traegerRequest<sharedContract.HolidayRegistrationDetail>(
       `/api/traeger/holiday-contributions/${encodeURIComponent(periodId)}/registrations/${encodeURIComponent(registrationId)}/children/${encodeURIComponent(childId)}/bookings`,
       {
         method: "PUT",
         body: {
-          bookings: bookings.map((booking): HolidayBookingChoice => ({
-            week_id: booking.weekId,
-            time_model_id: booking.timeModelId,
-            ...(booking.days && booking.days.length > 0
-              ? { days: [...booking.days] }
-              : {}),
-            ...(booking.lunch ? { lunch: true } : {}),
-          })),
-        } satisfies HolidayRebookingRequest,
+          bookings: bookings.map(
+            (
+              booking,
+            ): traegerHolidayContributionsContract.HolidayBookingChoice => ({
+              week_id: booking.weekId,
+              time_model_id: booking.timeModelId,
+              ...(booking.days && booking.days.length > 0
+                ? { days: [...booking.days] }
+                : {}),
+              ...(booking.lunch ? { lunch: true } : {}),
+            }),
+          ),
+        } satisfies traegerHolidayContributionsContract.HolidayRebookingRequest,
       },
     ),
   );
@@ -1059,8 +1056,8 @@ function contactBody(contact: HolidayRegistrationContactEdit) {
 /** The request body; the field names are those of the public form. */
 function holidayRegistrationEditBody(
   edit: HolidayRegistrationEdit,
-): HolidayRegistrationEditRequest {
-  const body: HolidayRegistrationEditRequest = {};
+): traegerHolidayPeriodsContract.HolidayRegistrationEditRequest {
+  const body: traegerHolidayPeriodsContract.HolidayRegistrationEditRequest = {};
   if (edit.guardians) {
     body.guardian = personBody(edit.guardians.guardian);
     const address = edit.guardians.address;
@@ -1082,9 +1079,7 @@ function holidayRegistrationEditBody(
         first_name: edit.child.firstName,
         last_name: edit.child.lastName,
         birth_date: edit.child.birthDate,
-        home_school_id: edit.child.homeSchoolId
-          ? edit.child.homeSchoolId
-          : "0",
+        home_school_id: edit.child.homeSchoolId ? edit.child.homeSchoolId : "0",
         guest_school_name: edit.child.guestSchoolName,
         custom_data: { ...edit.child.answers },
       },
@@ -1105,7 +1100,7 @@ export async function editHolidayRegistration(
   edit: HolidayRegistrationEdit,
 ): Promise<HolidayRegistrationDetail> {
   return detailFromBackend(
-    await traegerRequest<WireDetail>(
+    await traegerRequest<sharedContract.HolidayRegistrationDetail>(
       `${registrationPath(periodId, registrationId)}/details`,
       { method: "PUT", body: holidayRegistrationEditBody(edit) },
     ),
@@ -1205,9 +1200,10 @@ export interface HolidayConfirmationSettings {
 }
 
 export async function fetchHolidayConfirmationSettings(): Promise<HolidayConfirmationSettings> {
-  const settings = await traegerRequest<WireConfirmationSettings>(
-    "/api/traeger/holiday-contributions/confirmation-settings",
-  );
+  const settings =
+    await traegerRequest<traegerHolidayContributionsContract.HolidayConfirmationSettings>(
+      "/api/traeger/holiday-contributions/confirmation-settings",
+    );
   return {
     debtorNumberRequired: settings.debtor_number_required,
     debtorNumberFormat: debtorNumberFormatOf(settings.debtor_number_format),
@@ -1260,9 +1256,9 @@ export interface HolidayWeekPlaces {
 export async function fetchHolidayWeekPlaces(
   periodId: string,
 ): Promise<readonly HolidayWeekPlaces[]> {
-  const weeks = await traegerRequest<WireWeekPlaces[]>(
-    `/api/traeger/holiday-periods/${encodeURIComponent(periodId)}/places`,
-  );
+  const weeks = await traegerRequest<
+    traegerHolidayPeriodsContract.HolidayWeekPlaces[]
+  >(`/api/traeger/holiday-periods/${encodeURIComponent(periodId)}/places`);
   return weeks.map((week) => ({
     weekId: week.week_id,
     startsOn: requiredDay(week.starts_on, "holiday_week_places.starts_on"),
@@ -1306,9 +1302,15 @@ export async function setHolidayWeekCapacity(
   weekId: string,
   capacity: number | null,
 ): Promise<{ readonly movedUp: readonly string[] }> {
-  const change = await traegerRequest<HolidayPlaceChange>(
-    `/api/traeger/holiday-contributions/${encodeURIComponent(periodId)}/weeks/${encodeURIComponent(weekId)}/capacity`,
-    { method: "PUT", body: { capacity } satisfies HolidayCapacityRequest },
-  );
+  const change =
+    await traegerRequest<traegerHolidayContributionsContract.HolidayPlaceChange>(
+      `/api/traeger/holiday-contributions/${encodeURIComponent(periodId)}/weeks/${encodeURIComponent(weekId)}/capacity`,
+      {
+        method: "PUT",
+        body: {
+          capacity,
+        } satisfies traegerHolidayContributionsContract.HolidayCapacityRequest,
+      },
+    );
   return { movedUp: change.moved_up ?? [] };
 }

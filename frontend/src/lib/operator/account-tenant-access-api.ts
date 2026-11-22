@@ -1,11 +1,6 @@
 import { apiErrorFromBody, transportFetch } from "../api-error";
 import { knownEnum } from "../contract/known-enum";
-import type {
-  AccountTenantAccessEntry as WireAccountTenantAccess,
-  RoleOption as WireRoleOption,
-  grantAccountTenantAccessRequest,
-  updateAccountTenantRoleRequest,
-} from "../contract/operator-accounts.generated";
+import type * as operatorAccountsContract from "../contract/operator-accounts.generated";
 
 // Go does not register the set; the contract types it as string.
 const ACCESS_STATUS_VALUES = ["active", "pending", "inactive"] as const;
@@ -45,7 +40,9 @@ interface GrantAccountTenantAccessRequest {
   position?: string;
 }
 
-function mapAccess(entry: WireAccountTenantAccess): AccountTenantAccess {
+function mapAccess(
+  entry: operatorAccountsContract.AccountTenantAccessEntry,
+): AccountTenantAccess {
   return {
     tenantId: entry.tenant_id,
     schoolName: entry.school_name,
@@ -94,7 +91,7 @@ async function request(
   }
 
   const payload = (await response.json()) as {
-    data: WireAccountTenantAccess[];
+    data: operatorAccountsContract.AccountTenantAccessEntry[];
   };
   return payload.data.map(mapAccess);
 }
@@ -111,7 +108,9 @@ async function requestRoles(
   if (!response.ok) {
     await throwApiError(response);
   }
-  const payload = (await response.json()) as { data: WireRoleOption[] };
+  const payload = (await response.json()) as {
+    data: operatorAccountsContract.RoleOption[];
+  };
   return payload.data.map((role) => ({
     id: role.id,
     name: role.name,
@@ -144,7 +143,7 @@ class AccountTenantAccessService {
         first_name: body.firstName,
         last_name: body.lastName,
         position: body.position,
-      } satisfies grantAccountTenantAccessRequest),
+      } satisfies operatorAccountsContract.grantAccountTenantAccessRequest),
     });
   }
 
@@ -153,7 +152,7 @@ class AccountTenantAccessService {
       method: "PUT",
       body: JSON.stringify({
         role_id: roleId,
-      } satisfies updateAccountTenantRoleRequest),
+      } satisfies operatorAccountsContract.updateAccountTenantRoleRequest),
     });
   }
 

@@ -1,8 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type {
-  AnnouncementViewDetailResponse as WireAnnouncementViewDetail,
-  OperatorAnnouncementResponse as WireAnnouncement,
-} from "~/lib/contract/operator-announcements.generated";
+import type * as operatorAnnouncementsContract from "~/lib/contract/operator-announcements.generated";
 import {
   mapAnnouncement,
   mapViewDetail,
@@ -13,7 +10,7 @@ import {
 } from "./announcements-helpers";
 
 describe("mapAnnouncement", () => {
-  const base: WireAnnouncement = {
+  const base: operatorAnnouncementsContract.OperatorAnnouncementResponse = {
     id: "42",
     title: "Release v2.0",
     content: "Neue Features",
@@ -54,7 +51,7 @@ describe("mapAnnouncement", () => {
   });
 
   it("handles null/undefined optional fields", () => {
-    const input: WireAnnouncement = {
+    const input: operatorAnnouncementsContract.OperatorAnnouncementResponse = {
       ...base,
       version: undefined,
       published_at: undefined,
@@ -90,14 +87,15 @@ describe("mapAnnouncement", () => {
 
 describe("mapViewDetail", () => {
   it("maps backend view detail to frontend format", () => {
-    const input: WireAnnouncementViewDetail = {
-      user_id: "123",
-      user_name: "Max Mustermann",
-      seen_at: "2026-03-15T14:30:00Z",
-      shown_at: "2026-03-15T14:30:00Z",
-      dismissed_at: null,
-      dismissed: false,
-    };
+    const input: operatorAnnouncementsContract.AnnouncementViewDetailResponse =
+      {
+        user_id: "123",
+        user_name: "Max Mustermann",
+        seen_at: "2026-03-15T14:30:00Z",
+        shown_at: "2026-03-15T14:30:00Z",
+        dismissed_at: null,
+        dismissed: false,
+      };
 
     const result = mapViewDetail(input);
 
@@ -109,14 +107,15 @@ describe("mapViewDetail", () => {
   });
 
   it("maps dismissed view detail", () => {
-    const input: WireAnnouncementViewDetail = {
-      user_id: "456",
-      user_name: "Erika Muster",
-      seen_at: "2026-03-15T15:00:00Z",
-      shown_at: "2026-03-15T15:00:00Z",
-      dismissed_at: "2026-03-15T15:01:00Z",
-      dismissed: true,
-    };
+    const input: operatorAnnouncementsContract.AnnouncementViewDetailResponse =
+      {
+        user_id: "456",
+        user_name: "Erika Muster",
+        seen_at: "2026-03-15T15:00:00Z",
+        shown_at: "2026-03-15T15:00:00Z",
+        dismissed_at: "2026-03-15T15:01:00Z",
+        dismissed: true,
+      };
 
     const result = mapViewDetail(input);
 
@@ -167,21 +166,22 @@ describe("label constants", () => {
 });
 
 describe("mapAnnouncement with values this build does not know (#2353)", () => {
-  const announcement: WireAnnouncement = {
-    id: "7",
-    title: "Neu",
-    content: "Text",
-    type: "newsletter",
-    severity: "urgent",
-    active: true,
-    target_roles: ["admin", "caterer"],
-    target_org_ids: null,
-    target_tenant_ids: null,
-    created_by: "1",
-    created_at: "2026-09-01T08:00:00Z",
-    updated_at: "2026-09-01T08:00:00Z",
-    status: "scheduled",
-  };
+  const announcement: operatorAnnouncementsContract.OperatorAnnouncementResponse =
+    {
+      id: "7",
+      title: "Neu",
+      content: "Text",
+      type: "newsletter",
+      severity: "urgent",
+      active: true,
+      target_roles: ["admin", "caterer"],
+      target_org_ids: null,
+      target_tenant_ids: null,
+      created_by: "1",
+      created_at: "2026-09-01T08:00:00Z",
+      updated_at: "2026-09-01T08:00:00Z",
+      status: "scheduled",
+    };
 
   it("preserves unknown type and severity values for editing", () => {
     const result = mapAnnouncement(announcement);

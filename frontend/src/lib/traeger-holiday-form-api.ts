@@ -7,7 +7,7 @@
  */
 
 import { apiErrorFromResponse, transportFetch } from "./api-error";
-import type { HolidayFormEditor as WireHolidayFormEditor } from "./contract/traeger-holiday-periods.generated";
+import type * as traegerHolidayPeriodsContract from "./contract/traeger-holiday-periods.generated";
 import type { FormLegalBlock } from "./enrollment-form-schema-api";
 import {
   holidayFormFieldsFromContract,
@@ -44,7 +44,9 @@ export interface HolidayForm {
  * enum of a question or legal block fails the read when this build does
  * not know it; the page shows its load error instead of saving a guess.
  */
-function formFromBackend(form: WireHolidayFormEditor): HolidayForm {
+function formFromBackend(
+  form: traegerHolidayPeriodsContract.HolidayFormEditor,
+): HolidayForm {
   return {
     ...holidayFormVersionFromContract(form, "HolidayFormEditor"),
     createdAt: form.created_at,
@@ -62,7 +64,9 @@ function formPath(periodId: string): string {
 /** The current version of the form of a holiday period. */
 export async function fetchHolidayForm(periodId: string): Promise<HolidayForm> {
   return formFromBackend(
-    await traegerRequest<WireHolidayFormEditor>(formPath(periodId)),
+    await traegerRequest<traegerHolidayPeriodsContract.HolidayFormEditor>(
+      formPath(periodId),
+    ),
   );
 }
 
@@ -75,21 +79,24 @@ export async function saveHolidayForm(
   healthRequirement: HolidayHealthRequirement = "optional",
 ): Promise<HolidayForm> {
   return formFromBackend(
-    await traegerRequest<WireHolidayFormEditor>(formPath(periodId), {
-      method: "PUT",
-      body: {
-        fields,
-        address_requirement: addressRequirement,
-        health_requirement: healthRequirement,
-        legal_blocks: legalBlocks.map((block) => ({
-          ...block,
-          attachments: block.attachments?.map((a) => ({
-            label: a.label,
-            document_id: a.document_url,
+    await traegerRequest<traegerHolidayPeriodsContract.HolidayFormEditor>(
+      formPath(periodId),
+      {
+        method: "PUT",
+        body: {
+          fields,
+          address_requirement: addressRequirement,
+          health_requirement: healthRequirement,
+          legal_blocks: legalBlocks.map((block) => ({
+            ...block,
+            attachments: block.attachments?.map((a) => ({
+              label: a.label,
+              document_id: a.document_url,
+            })),
           })),
-        })),
+        },
       },
-    }),
+    ),
   );
 }
 

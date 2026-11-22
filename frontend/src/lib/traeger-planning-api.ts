@@ -13,13 +13,8 @@ import {
   type TraegerListFile,
   type TraegerListFormat,
 } from "./traeger-list-export";
-import type { TraegerStaffSchool as WireSchool } from "~/lib/contract/shared.generated";
-import type {
-  PlanShiftRequest,
-  TraegerFutureShifts as WireFutureShifts,
-  TraegerPlanningShift as WireShift,
-  TraegerPlanningWeek as WireWeek,
-} from "~/lib/contract/traeger-staff-planning.generated";
+import type * as sharedContract from "~/lib/contract/shared.generated";
+import type * as traegerStaffPlanningContract from "~/lib/contract/traeger-staff-planning.generated";
 import { requiredDay } from "~/lib/contract/required-day";
 import { traegerRequest } from "~/lib/traeger-api";
 import {
@@ -135,12 +130,16 @@ export interface TraegerFutureShifts {
   readonly shifts: number;
 }
 
-const mapSchool = (school: WireSchool): TraegerPlanningSchool => ({
+const mapSchool = (
+  school: sharedContract.TraegerStaffSchool,
+): TraegerPlanningSchool => ({
   id: school.id,
   name: school.name,
 });
 
-function mapPlanningShift(shift: WireShift): TraegerPlanningShift {
+function mapPlanningShift(
+  shift: traegerStaffPlanningContract.TraegerPlanningShift,
+): TraegerPlanningShift {
   return {
     id: shift.id,
     schoolId: shift.school_id,
@@ -159,7 +158,9 @@ function mapPlanningShift(shift: WireShift): TraegerPlanningShift {
   };
 }
 
-function mapPlanningWeek(week: WireWeek): TraegerPlanningWeek {
+function mapPlanningWeek(
+  week: traegerStaffPlanningContract.TraegerPlanningWeek,
+): TraegerPlanningWeek {
   return {
     weekStart: requiredDay(week.week_start, "traeger_planning_week.week_start"),
     rules: {
@@ -196,7 +197,9 @@ function mapPlanningWeek(week: WireWeek): TraegerPlanningWeek {
   };
 }
 
-function shiftBody(input: TraegerPlanShiftInput): PlanShiftRequest {
+function shiftBody(
+  input: TraegerPlanShiftInput,
+): traegerStaffPlanningContract.PlanShiftRequest {
   return {
     school_id: input.schoolId,
     date: input.date,
@@ -215,9 +218,10 @@ const recordPath = (recordId: string) =>
 export async function fetchTraegerPlanningWeek(
   weekStart: string,
 ): Promise<TraegerPlanningWeek> {
-  const week = await traegerRequest<WireWeek>(
-    `${BASE}?week=${encodeURIComponent(weekStart)}`,
-  );
+  const week =
+    await traegerRequest<traegerStaffPlanningContract.TraegerPlanningWeek>(
+      `${BASE}?week=${encodeURIComponent(weekStart)}`,
+    );
   return mapPlanningWeek(week);
 }
 
@@ -236,10 +240,11 @@ export async function planTraegerShift(
   recordId: string,
   input: TraegerPlanShiftInput,
 ): Promise<TraegerPlanningShift> {
-  const shift = await traegerRequest<WireShift>(
-    `${recordPath(recordId)}/shifts`,
-    { method: "POST", body: shiftBody(input) },
-  );
+  const shift =
+    await traegerRequest<traegerStaffPlanningContract.TraegerPlanningShift>(
+      `${recordPath(recordId)}/shifts`,
+      { method: "POST", body: shiftBody(input) },
+    );
   return mapPlanningShift(shift);
 }
 
@@ -248,10 +253,11 @@ export async function changeTraegerShift(
   shiftId: string,
   input: TraegerPlanShiftInput,
 ): Promise<TraegerPlanningShift> {
-  const shift = await traegerRequest<WireShift>(
-    `${recordPath(recordId)}/shifts/${encodeURIComponent(shiftId)}`,
-    { method: "PUT", body: shiftBody(input) },
-  );
+  const shift =
+    await traegerRequest<traegerStaffPlanningContract.TraegerPlanningShift>(
+      `${recordPath(recordId)}/shifts/${encodeURIComponent(shiftId)}`,
+      { method: "PUT", body: shiftBody(input) },
+    );
   return mapPlanningShift(shift);
 }
 
@@ -270,9 +276,9 @@ export async function removeTraegerShift(
 export async function fetchTraegerFutureShifts(): Promise<
   TraegerFutureShifts[]
 > {
-  const schools = await traegerRequest<WireFutureShifts[]>(
-    `${BASE}/future-shifts`,
-  );
+  const schools = await traegerRequest<
+    traegerStaffPlanningContract.TraegerFutureShifts[]
+  >(`${BASE}/future-shifts`);
   return schools.map((school) => ({
     schoolId: school.school_id,
     schoolName: school.school_name,

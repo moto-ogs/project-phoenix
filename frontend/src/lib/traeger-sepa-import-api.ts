@@ -9,12 +9,7 @@
 
 import { apiErrorFromResponse, transportFetch } from "./api-error";
 import { knownEnum } from "./contract/known-enum";
-import type {
-  SEPAMandateImport,
-  SEPAMandateImportEntry,
-  SEPAMandateImportMapping,
-  SEPAMandateImportRow,
-} from "./contract/traeger-sepa-mandates.generated";
+import type * as traegerSepaMandatesContract from "./contract/traeger-sepa-mandates.generated";
 import { type MandateSequence, knownMandateSequence } from "./traeger-sepa-api";
 import { readJson, traegerRequest } from "./traeger-api";
 
@@ -156,7 +151,9 @@ export interface ImportRequest {
 }
 
 // payer_key "" lets the backend refuse a mapping without a key.
-function toBackendMapping(mapping: ImportMapping): SEPAMandateImportMapping {
+function toBackendMapping(
+  mapping: ImportMapping,
+): traegerSepaMandatesContract.SEPAMandateImportMapping {
   return {
     columns: { ...mapping.columns },
     payer_key: mapping.payerKey ?? "",
@@ -172,7 +169,9 @@ function knownFields(fields: readonly string[] | null): ImportField[] {
   });
 }
 
-function mapRow(row: SEPAMandateImportRow): ImportRow {
+function mapRow(
+  row: traegerSepaMandatesContract.SEPAMandateImportRow,
+): ImportRow {
   return {
     line: row.line,
     status: knownEnum(IMPORT_ROW_STATUS_VALUES, row.status),
@@ -199,7 +198,9 @@ function mapRow(row: SEPAMandateImportRow): ImportRow {
   };
 }
 
-function mapImportResult(result: SEPAMandateImport): ImportResult {
+function mapImportResult(
+  result: traegerSepaMandatesContract.SEPAMandateImport,
+): ImportResult {
   const { counts } = result;
   return {
     encoding: result.encoding,
@@ -259,7 +260,9 @@ async function postImport(
     );
   }
   const data = await readJson(response);
-  return mapImportResult((data as { data: SEPAMandateImport }).data);
+  return mapImportResult(
+    (data as { data: traegerSepaMandatesContract.SEPAMandateImport }).data,
+  );
 }
 
 /** Reads the file and answers every row; stores nothing. */
@@ -276,7 +279,10 @@ export function applySepaImport(request: ImportRequest): Promise<ImportResult> {
 
 /** The imports of the Träger, newest first. */
 export async function fetchSepaImportLog(): Promise<ImportLogEntry[]> {
-  const entries = await traegerRequest<SEPAMandateImportEntry[]>(IMPORTS_PATH);
+  const entries =
+    await traegerRequest<traegerSepaMandatesContract.SEPAMandateImportEntry[]>(
+      IMPORTS_PATH,
+    );
   return entries.map((entry) => ({
     file: entry.file,
     accountId: entry.account_id,

@@ -10,10 +10,7 @@
 import { apiErrorFromResponse, transportFetch } from "./api-error";
 import { readJson } from "./traeger-api";
 import { knownEnum } from "./contract/known-enum";
-import type {
-  FamilyChildrenImport as WireResult,
-  FamilyChildrenImportRow as WireRow,
-} from "./contract/traeger-family-children.generated";
+import type * as traegerFamilyChildrenContract from "./contract/traeger-family-children.generated";
 
 const IMPORTS_PATH = "/api/traeger/family-children/imports";
 
@@ -114,7 +111,9 @@ export interface FamilyImportRequest {
   readonly fingerprint?: string;
 }
 
-function mapRow(row: WireRow): FamilyImportRow {
+function mapRow(
+  row: traegerFamilyChildrenContract.FamilyChildrenImportRow,
+): FamilyImportRow {
   return {
     line: row.line,
     status: knownEnum(ROW_STATUS_VALUES, row.status),
@@ -137,7 +136,9 @@ function mapRow(row: WireRow): FamilyImportRow {
 /** The school of a mapping as the catalog proxy sends it; "0" names none. */
 const mappedSchoolId = (id: string): string => (id === "0" ? "" : id);
 
-function mapImportResult(result: WireResult): FamilyImportResult {
+function mapImportResult(
+  result: traegerFamilyChildrenContract.FamilyChildrenImport,
+): FamilyImportResult {
   return {
     encoding: result.encoding,
     delimiter: result.delimiter,
@@ -172,10 +173,9 @@ async function postImport(
       "mapping",
       JSON.stringify({
         columns: request.mapping.columns,
-        school_id: request.mapping.schoolId
-          ? Number(request.mapping.schoolId)
-          : 0,
-      }),
+        // "0" leaves the school to the file.
+        school_id: request.mapping.schoolId || "0",
+      } satisfies traegerFamilyChildrenContract.FamilyChildrenImportMapping),
     );
   }
   if (request.fingerprint) {
@@ -194,7 +194,9 @@ async function postImport(
     );
   }
   const data = await readJson(response);
-  return mapImportResult((data as { data: WireResult }).data);
+  return mapImportResult(
+    (data as { data: traegerFamilyChildrenContract.FamilyChildrenImport }).data,
+  );
 }
 
 /** Reads the file and answers every row; stores nothing. */

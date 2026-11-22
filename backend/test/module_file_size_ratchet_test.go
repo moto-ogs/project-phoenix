@@ -64,7 +64,7 @@ var moduleFileSizeAllowlist = map[string]int{
 	// ADR 0087.
 	"internal/devtools/seedapi/parent_enrollment.go": 1300,
 	// ADR 0087.
-	"internal/devtools/seedapi/stammdaten.go": 1465,
+	"internal/devtools/seedapi/stammdaten.go": 1456,
 	// ADR 0087.
 	"internal/devtools/simulate/demo_day.go": 805,
 	// ADR 0087.

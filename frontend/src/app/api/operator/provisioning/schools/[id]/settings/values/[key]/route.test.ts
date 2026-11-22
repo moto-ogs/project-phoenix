@@ -152,8 +152,8 @@ describe("PUT /api/operator/provisioning/schools/[id]/settings/values/[key]", ()
           json: async () => ({
             status: "success",
             data: [
-              { id: 10, slug: "school-ten" },
-              { id: 11, slug: "school-eleven" },
+              { id: "10", slug: "school-ten" },
+              { id: "11", slug: "school-eleven" },
             ],
           }),
         });
@@ -203,7 +203,7 @@ describe("PUT /api/operator/provisioning/schools/[id]/settings/values/[key]", ()
         status: 200,
         json: async () => ({
           status: "success",
-          data: [{ id: 10, slug: "school-ten" }],
+          data: [{ id: "10", slug: "school-ten" }],
         }),
       });
 
@@ -389,7 +389,7 @@ describe("DELETE /api/operator/provisioning/schools/[id]/settings/values/[key]",
           status: 200,
           json: async () => ({
             status: "success",
-            data: [{ id: 10, slug: "school-ten" }],
+            data: [{ id: "10", slug: "school-ten" }],
           }),
         });
 

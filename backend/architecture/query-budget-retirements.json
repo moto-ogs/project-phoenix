@@ -333,5 +333,20 @@
     "scenario": "api.enrollment.schema.by_id.reads",
     "route": "GET /api/enrollment/schema/{id}",
     "issue": 2353
+  },
+  {
+    "scenario": "api.activities.student_enrollments.complete",
+    "route": "GET /api/activities/students/{studentId}",
+    "issue": 7808
+  },
+  {
+    "scenario": "api.activities.presence20.supervisors.n3",
+    "route": "GET /api/activities/{id}/supervisors",
+    "issue": 7808
+  },
+  {
+    "scenario": "api.activities.presence20.supervisors.n8",
+    "route": "GET /api/activities/{id}/supervisors",
+    "issue": 7808
   }
 ]

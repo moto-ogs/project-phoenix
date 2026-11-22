@@ -2,20 +2,14 @@ import { apiErrorFromResponse, transportFetch } from "../api-error";
 import { operatorFetch } from "./api-helpers";
 import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
 import { knownEnum } from "~/lib/contract/known-enum";
-import type {
-  BillingKeyDayScope as WireBillingKeyDayScope,
-  billingKeyDateCountResponse as WireBillingKeyDateCount,
-  billingKeyDayOverrideResponse as WireBillingKeyDayOverride,
-  billingKeyDayResponse as WireBillingKeyDay,
-  updateBillingKeyDayRequest,
-} from "~/lib/contract/operator-billing.generated";
+import type * as operatorBillingContract from "~/lib/contract/operator-billing.generated";
 
 // The contract decodes a scope it does not know as a string; this build
 // knows these two.
 const BILLING_KEY_DAY_SCOPE_VALUES = [
   "organization",
   "school",
-] as const satisfies readonly WireBillingKeyDayScope[];
+] as const satisfies readonly operatorBillingContract.BillingKeyDayScope[];
 
 /**
  * Operator billing report (#2791): the key day that applies to every school
@@ -70,7 +64,9 @@ export interface BillingKeyDayOverride {
 export const BILLING_KEY_DAY_MIN = 1;
 export const BILLING_KEY_DAY_MAX = 28;
 
-function mapBillingKeyDay(data: WireBillingKeyDay): BillingKeyDay {
+function mapBillingKeyDay(
+  data: operatorBillingContract.billingKeyDayResponse,
+): BillingKeyDay {
   return {
     keyDay: data.key_day,
     nextKeyDate: data.next_key_date,
@@ -82,7 +78,7 @@ function mapBillingKeyDay(data: WireBillingKeyDay): BillingKeyDay {
 }
 
 export function mapBillingKeyDateCount(
-  data: WireBillingKeyDateCount,
+  data: operatorBillingContract.billingKeyDateCountResponse,
 ): BillingKeyDateCount {
   return {
     schoolId: data.school_id,
@@ -97,7 +93,7 @@ export function mapBillingKeyDateCount(
 }
 
 function mapBillingKeyDayOverride(
-  data: WireBillingKeyDayOverride,
+  data: operatorBillingContract.billingKeyDayOverrideResponse,
 ): BillingKeyDayOverride[] {
   const scope = knownEnum(BILLING_KEY_DAY_SCOPE_VALUES, data.scope);
   if (scope === undefined) return [];
@@ -127,20 +123,24 @@ export function billingMonth(period: string): string {
 
 export const operatorBillingService = {
   async getKeyDay(): Promise<BillingKeyDay> {
-    const data = await operatorFetch<WireBillingKeyDay>(
-      "/api/operator/billing/key-day",
-    );
+    const data =
+      await operatorFetch<operatorBillingContract.billingKeyDayResponse>(
+        "/api/operator/billing/key-day",
+      );
     return mapBillingKeyDay(data);
   },
 
   async updateKeyDay(keyDay: number): Promise<BillingKeyDay> {
-    const data = await operatorFetch<WireBillingKeyDay>(
-      "/api/operator/billing/key-day",
-      {
-        method: "PUT",
-        body: { key_day: keyDay } satisfies updateBillingKeyDayRequest,
-      },
-    );
+    const data =
+      await operatorFetch<operatorBillingContract.billingKeyDayResponse>(
+        "/api/operator/billing/key-day",
+        {
+          method: "PUT",
+          body: {
+            key_day: keyDay,
+          } satisfies operatorBillingContract.updateBillingKeyDayRequest,
+        },
+      );
     return mapBillingKeyDay(data);
   },
 
@@ -150,13 +150,16 @@ export const operatorBillingService = {
     id: string,
     keyDay: number,
   ): Promise<BillingKeyDay> {
-    const data = await operatorFetch<WireBillingKeyDay>(
-      overridePath(scope, id),
-      {
-        method: "PUT",
-        body: { key_day: keyDay } satisfies updateBillingKeyDayRequest,
-      },
-    );
+    const data =
+      await operatorFetch<operatorBillingContract.billingKeyDayResponse>(
+        overridePath(scope, id),
+        {
+          method: "PUT",
+          body: {
+            key_day: keyDay,
+          } satisfies operatorBillingContract.updateBillingKeyDayRequest,
+        },
+      );
     return mapBillingKeyDay(data);
   },
 
@@ -165,17 +168,18 @@ export const operatorBillingService = {
     scope: BillingKeyDayScope,
     id: string,
   ): Promise<BillingKeyDay> {
-    const data = await operatorFetch<WireBillingKeyDay>(
-      overridePath(scope, id),
-      { method: "DELETE" },
-    );
+    const data =
+      await operatorFetch<operatorBillingContract.billingKeyDayResponse>(
+        overridePath(scope, id),
+        { method: "DELETE" },
+      );
     return mapBillingKeyDay(data);
   },
 
   async listKeyDateCounts(): Promise<BillingKeyDateCount[]> {
-    const data = await operatorFetch<WireBillingKeyDateCount[]>(
-      "/api/operator/billing/key-date-counts",
-    );
+    const data = await operatorFetch<
+      operatorBillingContract.billingKeyDateCountResponse[]
+    >("/api/operator/billing/key-date-counts");
     return data.map(mapBillingKeyDateCount);
   },
 
