@@ -72,23 +72,16 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 		r.With(withTx).Put("/{id}", rs.updateActivity)
 		r.With(withTx).Delete("/{id}", rs.deleteActivity)
 
-		// Supervisor Assignment
-		r.With(common.RequiresPermission(permissions.ActivitiesRead), withTx).
-			Get("/{id}/supervisors", rs.getActivitySupervisors)
+		// Supervisor Assignment: the activity's own body sets its
+		// supervisors (supervisor_ids); this route only replaces one.
 		r.With(common.RequiresPermission(permissions.ActivitiesAssign), withTx).
 			Get("/supervisors/available", rs.getAvailableSupervisors)
-		r.With(common.RequiresPermission(permissions.ActivitiesAssign), withTx, rs.requireActivityModification).
-			Post("/{id}/supervisors", rs.assignSupervisor)
 		r.With(common.RequiresPermission(permissions.ActivitiesAssign), withTx, rs.requireActivityModification).
 			Delete("/{id}/supervisors/{supervisorId}", rs.removeSupervisor)
 
 		// Student Enrollment
 		r.With(common.RequiresPermission(permissions.ActivitiesRead), withTx).
 			Get("/{id}/students", rs.getActivityStudents)
-		r.With(common.RequiresPermission(permissions.ActivitiesRead), withTx).
-			Get("/students/{studentId}", rs.getStudentEnrollments)
-		r.With(common.RequiresPermission(permissions.ActivitiesEnroll), withTx, rs.requireActivityModification).
-			Post("/{id}/students/{studentId}", rs.enrollStudent)
 		r.With(common.RequiresPermission(permissions.ActivitiesEnroll), withTx, rs.requireActivityModification).
 			Delete("/{id}/students/{studentId}", rs.unenrollStudent)
 		r.With(common.RequiresPermission(permissions.ActivitiesEnroll), withTx, rs.requireActivityModification).

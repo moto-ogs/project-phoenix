@@ -11,7 +11,9 @@ import {
   type CompanionWeekday,
 } from "./student-companion-api";
 
-function parsedBody(body: string): unknown {
+/** The error body: parsed already (ApiError.problem) or its JSON text. */
+function parsedBody(body: unknown): unknown {
+  if (typeof body !== "string") return body;
   try {
     return JSON.parse(body) as unknown;
   } catch {
@@ -58,7 +60,7 @@ export class CompanionPlanConflictError extends ApiError {
    */
   readonly conflicts: CompanionExtensionConfirmation[];
 
-  constructor(body: string) {
+  constructor(body: unknown) {
     const parsed = parsedBody(body);
     super(problemDetail(parsed)?.trim() ?? "companion plan conflict", 409);
     // Keeps code and details, including the half-saved consent marker.
@@ -75,7 +77,7 @@ export class CompanionPlanConflictError extends ApiError {
  * one of those as the question would replace its real contract with an empty
  * confirmation the user cannot answer.
  */
-export function isCompanionPlanConflictResponse(body: string): boolean {
+export function isCompanionPlanConflictResponse(body: unknown): boolean {
   return conflictExtensions(parsedBody(body)).length > 0;
 }
 

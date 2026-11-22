@@ -1,16 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type {
-  SchoolAccount as WireSchoolAccount,
-  operatorInvitationResponse as WireInvitation,
-} from "~/lib/contract/operator-schools.generated";
-import type { scanResponse as WireUnregisteredTagScan } from "~/lib/contract/operator-unregistered-tag-scans.generated";
-import type {
-  OperatorDevice as WireOperatorDevice,
-  OperatorPerson as WireOperatorPerson,
-  Organization as WireOrganization,
-  OrganizationAccount as WireOrgAccount,
-  School as WireSchool,
-} from "~/lib/contract/shared.generated";
+import type * as operatorSchoolsContract from "~/lib/contract/operator-schools.generated";
+import type * as operatorUnregisteredTagScansContract from "~/lib/contract/operator-unregistered-tag-scans.generated";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 
 const { mockOperatorFetch } = vi.hoisted(() => ({
   mockOperatorFetch: vi.fn(),
@@ -24,7 +15,7 @@ import { operatorProvisioningService } from "./provisioning-api";
 
 const NOW = "2026-03-15T10:00:00Z";
 
-const mockBackendOrg: WireOrganization = {
+const mockBackendOrg: sharedContract.Organization = {
   test_system: false,
   id: "5",
   name: "Stadt Köln",
@@ -36,7 +27,7 @@ const mockBackendOrg: WireOrganization = {
   updated_at: NOW,
 };
 
-const mockBackendSchool: WireSchool = {
+const mockBackendSchool: sharedContract.School = {
   child_quota_bundles: null,
   child_quota_bundle_size: 0,
   device_slots: null,
@@ -58,7 +49,7 @@ const mockBackendSchool: WireSchool = {
   updated_at: NOW,
 };
 
-const mockBackendSchoolAccount: WireSchoolAccount = {
+const mockBackendSchoolAccount: operatorSchoolsContract.SchoolAccount = {
   has_admin_role: false,
   has_user_role: false,
   has_caregiver_profile: false,
@@ -73,13 +64,13 @@ const mockBackendSchoolAccount: WireSchoolAccount = {
   status: "active",
 };
 
-const mockBackendOrgAccount: WireOrgAccount = {
+const mockBackendOrgAccount: sharedContract.OrganizationAccount = {
   ...mockBackendSchoolAccount,
   school_id: "10",
   school_name: "GGS Europaschule",
 };
 
-const mockBackendDevice: WireOperatorDevice = {
+const mockBackendDevice: sharedContract.OperatorDevice = {
   id: "1",
   device_id: "dev-001",
   device_type: "terminal",
@@ -97,38 +88,40 @@ const mockBackendDevice: WireOperatorDevice = {
   updated_at: NOW,
 };
 
-const mockBackendInvitation: WireInvitation = {
-  caregiver_enabled: false,
-  id: "1",
-  email: "admin@example.com",
-  role_id: "4",
-  role_name: "admin",
-  expires_at: NOW,
-  first_name: "Ada",
-  last_name: "Lovelace",
-  created_by: "0",
-  delivery_status: "pending",
-  email_retry_count: 0,
-};
+const mockBackendInvitation: operatorSchoolsContract.operatorInvitationResponse =
+  {
+    caregiver_enabled: false,
+    id: "1",
+    email: "admin@example.com",
+    role_id: "4",
+    role_name: "admin",
+    expires_at: NOW,
+    first_name: "Ada",
+    last_name: "Lovelace",
+    created_by: "0",
+    delivery_status: "pending",
+    email_retry_count: 0,
+  };
 
-const mockBackendUnregisteredTagScan: WireUnregisteredTagScan = {
-  id: "300",
-  tenant_id: "10",
-  tag_uid: "04AABBCCDD",
-  device_id: "1",
-  scanned_at: NOW,
-  resolved_at: undefined,
-  resolved_by_operator_id: undefined,
-  resolution_note: undefined,
-  created_at: NOW,
-  updated_at: NOW,
-  school_id: "10",
-  school_name: "GGS Europaschule",
-  organization_id: "5",
-  organization_name: "Stadt Köln",
-  device_identifier: "dev-001",
-  device_name: "Eingang Hauptgebäude",
-};
+const mockBackendUnregisteredTagScan: operatorUnregisteredTagScansContract.scanResponse =
+  {
+    id: "300",
+    tenant_id: "10",
+    tag_uid: "04AABBCCDD",
+    device_id: "1",
+    scanned_at: NOW,
+    resolved_at: undefined,
+    resolved_by_operator_id: undefined,
+    resolution_note: undefined,
+    created_at: NOW,
+    updated_at: NOW,
+    school_id: "10",
+    school_name: "GGS Europaschule",
+    organization_id: "5",
+    organization_name: "Stadt Köln",
+    device_identifier: "dev-001",
+    device_name: "Eingang Hauptgebäude",
+  };
 
 describe("OperatorProvisioningService", () => {
   beforeEach(() => {
@@ -805,7 +798,7 @@ describe("OperatorProvisioningService", () => {
   });
 
   describe("listSchoolPersons", () => {
-    const mockBackendPerson: WireOperatorPerson = {
+    const mockBackendPerson: sharedContract.OperatorPerson = {
       id: "42",
       first_name: "Max",
       last_name: "Mustermann",
@@ -1231,7 +1224,7 @@ describe("OperatorProvisioningService", () => {
     });
 
     it("maps each returned person", async () => {
-      const backendPerson: WireOperatorPerson = {
+      const backendPerson: sharedContract.OperatorPerson = {
         id: "5",
         first_name: "Anna",
         last_name: "Beispiel",

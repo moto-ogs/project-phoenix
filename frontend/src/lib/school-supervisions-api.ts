@@ -1,3 +1,4 @@
+import type { ApiResponse } from "./api-envelope";
 import { apiErrorFromBody, transportFetch } from "./api-error";
 import { requiredDay } from "./contract/required-day";
 // Client-seitige API für die Aufsichten im Schul-Portal ("moto schule", #2527).
@@ -7,16 +8,8 @@ import { requiredDay } from "./contract/required-day";
 // /school/supervisions sprechen. Das Backend beschränkt jede Antwort auf die
 // Blöcke, in die diese Lehrkraft im Betreuungsplan eingeteilt ist.
 
-import type {
-  SchoolSupervisionsResponse,
-  SupervisionContact as WireSupervisionContact,
-  SupervisionStudentSheet as WireSupervisionStudentSheet,
-} from "./contract/school-supervisions.generated";
-import type {
-  CompleteOperationRequest,
-  OperationRoster,
-  startOperationResponse,
-} from "./contract/shared.generated";
+import type * as schoolSupervisionsContract from "./contract/school-supervisions.generated";
+import type * as sharedContract from "./contract/shared.generated";
 import type {
   AttendancePatchBody,
   HomeworkFeedbackBody,
@@ -29,10 +22,6 @@ import {
   mapRoster,
   mapStartOperation,
 } from "./timetable-operations-types";
-
-interface ApiEnvelope<T> {
-  data: T;
-}
 
 /** Eine Kontaktperson auf dem Kind-Infoblatt. */
 export interface SupervisionContact {
@@ -58,7 +47,9 @@ export interface SupervisionStudentSheet {
   emergencyContacts: SupervisionContact[];
 }
 
-function mapContact(raw: WireSupervisionContact): SupervisionContact {
+function mapContact(
+  raw: schoolSupervisionsContract.SupervisionContact,
+): SupervisionContact {
   return { ...raw, phones: raw.phones ?? [] };
 }
 
@@ -70,7 +61,7 @@ async function unwrap<T>(response: Response): Promise<T> {
       await response.json().catch(() => undefined),
     );
   }
-  const envelope = (await response.json()) as ApiEnvelope<T>;
+  const envelope = (await response.json()) as ApiResponse<T>;
   return envelope.data;
 }
 
@@ -86,7 +77,9 @@ function jsonRequest(method: string, body?: unknown): RequestInit {
   };
 }
 
-function mapSheet(raw: WireSupervisionStudentSheet): SupervisionStudentSheet {
+function mapSheet(
+  raw: schoolSupervisionsContract.SupervisionStudentSheet,
+): SupervisionStudentSheet {
   return {
     studentId: raw.student_id,
     firstName: raw.first_name,
@@ -107,17 +100,18 @@ const base = "/api/school/supervisions";
 export const schoolSupervisionsApi = {
   /** Die eigenen Aufsichten von heute, in jedem Zustand. */
   async myDay(): Promise<PlannedTimetableInstance[]> {
-    const raw = await unwrap<SchoolSupervisionsResponse>(
-      await transportFetch(base, {
-        credentials: "include",
-        headers: { Accept: "application/json" },
-      }),
-    );
+    const raw =
+      await unwrap<schoolSupervisionsContract.SchoolSupervisionsResponse>(
+        await transportFetch(base, {
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        }),
+      );
     return (raw.instances ?? []).map(mapPlannedInstance);
   },
 
   async roster(instanceId: string): Promise<TimetableRoster> {
-    const raw = await unwrap<OperationRoster>(
+    const raw = await unwrap<sharedContract.OperationRoster>(
       await transportFetch(`${base}/${instanceId}/roster`, {
         credentials: "include",
         headers: { Accept: "application/json" },
@@ -127,7 +121,7 @@ export const schoolSupervisionsApi = {
   },
 
   async start(instanceId: string): Promise<StartOperationResult> {
-    const raw = await unwrap<startOperationResponse>(
+    const raw = await unwrap<sharedContract.startOperationResponse>(
       await transportFetch(`${base}/${instanceId}/start`, jsonRequest("POST")),
     );
     return mapStartOperation(raw);
@@ -142,7 +136,7 @@ export const schoolSupervisionsApi = {
         `${base}/${instanceId}/complete`,
         jsonRequest("POST", {
           confirmed_present_student_ids: confirmedPresentStudentIds,
-        } satisfies CompleteOperationRequest),
+        } satisfies sharedContract.CompleteOperationRequest),
       ),
     );
   },
@@ -151,7 +145,7 @@ export const schoolSupervisionsApi = {
     instanceId: string,
     studentId: string,
   ): Promise<TimetableRoster> {
-    const raw = await unwrap<OperationRoster>(
+    const raw = await unwrap<sharedContract.OperationRoster>(
       await transportFetch(
         `${base}/${instanceId}/students/${studentId}/check-in`,
         jsonRequest("POST"),
@@ -164,7 +158,7 @@ export const schoolSupervisionsApi = {
     instanceId: string,
     studentId: string,
   ): Promise<TimetableRoster> {
-    const raw = await unwrap<OperationRoster>(
+    const raw = await unwrap<sharedContract.OperationRoster>(
       await transportFetch(
         `${base}/${instanceId}/students/${studentId}/check-out`,
         jsonRequest("POST"),
@@ -205,15 +199,16 @@ export const schoolSupervisionsApi = {
     instanceId: string,
     studentId: string,
   ): Promise<SupervisionStudentSheet> {
-    const raw = await unwrap<WireSupervisionStudentSheet>(
-      await transportFetch(
-        `${base}/${instanceId}/students/${studentId}/sheet`,
-        {
-          credentials: "include",
-          headers: { Accept: "application/json" },
-        },
-      ),
-    );
+    const raw =
+      await unwrap<schoolSupervisionsContract.SupervisionStudentSheet>(
+        await transportFetch(
+          `${base}/${instanceId}/students/${studentId}/sheet`,
+          {
+            credentials: "include",
+            headers: { Accept: "application/json" },
+          },
+        ),
+      );
     return mapSheet(raw);
   },
 };

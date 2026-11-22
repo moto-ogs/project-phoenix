@@ -3,6 +3,7 @@ import type {
   ActivityCategoryResponse,
   ActivityResponse,
 } from "./contract/activities.generated";
+import { bffJson } from "./bff-fetch";
 import { sessionFetch } from "./session-cache";
 import { handleDomainApiError } from "./api-helpers";
 import { ApiError, apiErrorFromResponse } from "./api-error";
@@ -15,15 +16,14 @@ function handleActivityApiError(error: unknown, context: string): never {
   handleDomainApiError(error, context);
 }
 import {
-  mapStudentEnrollmentResponse,
+  mapEnrolledStudentResponse,
   mapActivityCategoryResponse,
   mapActivityResponse,
   type Activity,
   type ActivityCategory,
   type UpdateActivityRequest,
   type ActivityFilter,
-  type ActivityStudent,
-  type StudentEnrollmentBody,
+  type ActivityParticipant,
 } from "./activity-helpers";
 
 // Re-export types for external use
@@ -48,63 +48,6 @@ function parseActivitiesResponse(responseData: {
   return (responseData.data ?? []).map(mapActivityResponse);
 }
 
-// Helper: Parse enrolled students response
-// Backend returns StudentResponse with {id, first_name, last_name}
-// We use mapStudentEnrollmentResponse which handles this structure
-function parseEnrolledStudentsResponse(
-  responseData: unknown,
-): ActivityStudent[] {
-  const isActivityStudent = (value: unknown): value is ActivityStudent => {
-    if (!value || typeof value !== "object") {
-      return false;
-    }
-
-    return "student_id" in value && "name" in value;
-  };
-
-  const normalizeActivityStudent = (
-    student: ActivityStudent,
-  ): ActivityStudent => ({
-    ...student,
-    id: String(student.id),
-    student_id: String(student.student_id),
-    created_at:
-      student.created_at instanceof Date
-        ? student.created_at
-        : new Date(student.created_at),
-    updated_at:
-      student.updated_at instanceof Date
-        ? student.updated_at
-        : new Date(student.updated_at),
-  });
-
-  // Check for wrapped response with data property
-  if (
-    responseData &&
-    typeof responseData === "object" &&
-    "data" in responseData
-  ) {
-    const wrapped = responseData as { data: unknown };
-    if (!Array.isArray(wrapped.data)) {
-      return [];
-    }
-
-    return wrapped.data.map((item) =>
-      isActivityStudent(item)
-        ? normalizeActivityStudent(item)
-        : mapStudentEnrollmentResponse(item as StudentEnrollmentBody),
-    );
-  }
-  // Handle direct array response
-  return Array.isArray(responseData)
-    ? responseData.map((item) =>
-        isActivityStudent(item)
-          ? normalizeActivityStudent(item)
-          : mapStudentEnrollmentResponse(item as StudentEnrollmentBody),
-      )
-    : [];
-}
-
 // Get all activities
 export async function fetchActivities(
   filters?: ActivityFilter,
@@ -126,29 +69,18 @@ export async function fetchActivities(
   );
 }
 
-// Get enrolled students for an activity
+/** The students enrolled in an activity. */
 export async function getEnrolledStudents(
   activityId: string,
-): Promise<ActivityStudent[]> {
-  const url = `/api/activities/${activityId}/students`;
-
-  try {
-    const response = await sessionFetch(url, {
-      method: "GET",
-    });
-
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `API error: ${response.status}`,
-      );
-    }
-
-    const responseData = (await response.json()) as unknown;
-    return parseEnrolledStudentsResponse(responseData);
-  } catch (error) {
-    handleActivityApiError(error, "fetch enrolled students");
-  }
+): Promise<ActivityParticipant[]> {
+  const students = await bffJson(
+    "tenant",
+    "GET /api/activities/{id}/students",
+    {
+      params: { id: activityId },
+    },
+  );
+  return students.map(mapEnrolledStudentResponse);
 }
 
 // Update an activity

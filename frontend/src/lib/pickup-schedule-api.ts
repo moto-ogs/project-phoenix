@@ -23,7 +23,7 @@ import {
   mapPickupExceptionFormToBackend,
   mapPickupNoteFormToBackend,
 } from "./pickup-schedule-helpers";
-import type { ArrivalScheduleInput } from "./student-arrival-api";
+import type { ArrivalScheduleRequestItem } from "./contract/students.generated";
 import type {
   DepartureExceptionRequest,
   DepartureExceptionResponse,
@@ -119,7 +119,7 @@ export interface PickupAdjustmentPayload {
     notes?: string;
   }>;
   care_days: number[];
-  arrival_schedules?: ArrivalScheduleInput[];
+  arrival_schedules?: ArrivalScheduleRequestItem[];
   effective_from: string;
   selections?: PickupAdjustmentSelection[];
   excluded_auto_offering_ids?: string[];

@@ -8,12 +8,7 @@
 
 import { knownEnum, requiredEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
-import type {
-  HolidayAllocationBoard as BoardWire,
-  HolidayAllocationRequest,
-  HolidayCriteriaCatalog,
-  HolidayCriteriaRequest,
-} from "./contract/traeger-holiday-periods.generated";
+import type * as traegerHolidayPeriodsContract from "./contract/traeger-holiday-periods.generated";
 import { traegerRequest } from "./traeger-api";
 
 const SCOPES: readonly HolidayCriterionScope[] = ["family", "child"];
@@ -69,7 +64,9 @@ export const MAX_ALLOCATION_DECISIONS = 500;
  * The editor saves the whole list and archives a criterion left out, so an
  * unknown scope fails the read instead of dropping or guessing it (#2353).
  */
-function criteriaFromBackend(data: HolidayCriteriaCatalog): HolidayCriterion[] {
+function criteriaFromBackend(
+  data: traegerHolidayPeriodsContract.HolidayCriteriaCatalog,
+): HolidayCriterion[] {
   return (data.criteria ?? []).map((criterion) => ({
     id: criterion.id,
     name: criterion.name,
@@ -86,7 +83,9 @@ const criteriaPath = "/api/traeger/holiday-periods/criteria";
 /** The criteria of the Träger, highest priority first. */
 export async function fetchHolidayCriteria(): Promise<HolidayCriterion[]> {
   return criteriaFromBackend(
-    await traegerRequest<HolidayCriteriaCatalog>(criteriaPath),
+    await traegerRequest<traegerHolidayPeriodsContract.HolidayCriteriaCatalog>(
+      criteriaPath,
+    ),
   );
 }
 
@@ -98,18 +97,21 @@ export async function saveHolidayCriteria(
   criteria: readonly HolidayCriterionInput[],
 ): Promise<HolidayCriterion[]> {
   return criteriaFromBackend(
-    await traegerRequest<HolidayCriteriaCatalog>(criteriaPath, {
-      method: "PUT",
-      body: {
-        criteria: criteria.map((criterion) => ({
-          id: criterion.id ? criterion.id : "0",
-          name: criterion.name,
-          question: criterion.question,
-          scope: criterion.scope,
-          active: criterion.active,
-        })),
-      } satisfies HolidayCriteriaRequest,
-    }),
+    await traegerRequest<traegerHolidayPeriodsContract.HolidayCriteriaCatalog>(
+      criteriaPath,
+      {
+        method: "PUT",
+        body: {
+          criteria: criteria.map((criterion) => ({
+            id: criterion.id ? criterion.id : "0",
+            name: criterion.name,
+            question: criterion.question,
+            scope: criterion.scope,
+            active: criterion.active,
+          })),
+        } satisfies traegerHolidayPeriodsContract.HolidayCriteriaRequest,
+      },
+    ),
   );
 }
 
@@ -206,7 +208,9 @@ export interface HolidayAllocationDecisionInput {
  * out (#2353): it is a list, and the proposal goes back as the stale check,
  * so no entry may carry a guessed one.
  */
-function boardFromBackend(board: BoardWire): HolidayAllocationBoard {
+function boardFromBackend(
+  board: traegerHolidayPeriodsContract.HolidayAllocationBoard,
+): HolidayAllocationBoard {
   return {
     criteria: (board.criteria ?? []).flatMap((criterion) => {
       const scope = knownEnum(SCOPES, criterion.scope);
@@ -300,7 +304,9 @@ export async function fetchHolidayAllocation(
   periodId: string,
 ): Promise<HolidayAllocationBoard> {
   return boardFromBackend(
-    await traegerRequest<BoardWire>(allocationPath(periodId)),
+    await traegerRequest<traegerHolidayPeriodsContract.HolidayAllocationBoard>(
+      allocationPath(periodId),
+    ),
   );
 }
 
@@ -313,16 +319,19 @@ export async function decideHolidayAllocation(
   decisions: readonly HolidayAllocationDecisionInput[],
 ): Promise<HolidayAllocationBoard> {
   return boardFromBackend(
-    await traegerRequest<BoardWire>(`${allocationPath(periodId)}/decisions`, {
-      method: "POST",
-      body: {
-        decisions: decisions.map((decision) => ({
-          booking_id: decision.bookingId,
-          placement: decision.placement,
-          proposal: decision.proposal,
-          reason: decision.reason,
-        })),
-      } satisfies HolidayAllocationRequest,
-    }),
+    await traegerRequest<traegerHolidayPeriodsContract.HolidayAllocationBoard>(
+      `${allocationPath(periodId)}/decisions`,
+      {
+        method: "POST",
+        body: {
+          decisions: decisions.map((decision) => ({
+            booking_id: decision.bookingId,
+            placement: decision.placement,
+            proposal: decision.proposal,
+            reason: decision.reason,
+          })),
+        } satisfies traegerHolidayPeriodsContract.HolidayAllocationRequest,
+      },
+    ),
   );
 }

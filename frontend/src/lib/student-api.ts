@@ -3,31 +3,27 @@
 // staff portal's catalog proxy under /api/students; this module maps the
 // contract's shape (student-wire) onto the browser's Student once.
 
-import { ApiError, apiErrorFromResponse, apiErrorFromText } from "./api-error";
+import { ApiError } from "./api-error";
 import {
   mapAttendanceHistoryResponse,
   type AttendanceHistory,
-  type AttendanceHistoryWire,
 } from "./attendance-history-helpers";
 import { bffJson } from "./bff-fetch";
 import type {
-  CareOfferingOptionResponse,
   EnrollmentAnswerFilterResponse,
-  NameStudentResponse,
   PrivacyConsentDefaultsResponse,
   PrivacyConsentResponse,
   RoomHistoryStopResponse,
-  StudentDetailResponse,
-  StudentResponse,
+  StudentEnrollmentExtraFieldGroup,
+  changeHistoryEntry,
   schoolCheckinBatchRequest,
-  schoolCheckinBatchResponse,
   schoolCheckinRequest,
-  schoolCheckinResponse,
+  studentDeleteImpactResponse,
+  studentDeleteRequest,
 } from "./contract/students.generated";
 import { knownEnum } from "./contract/known-enum";
 import { createLogger } from "~/lib/logger";
 import { encodeMultiValueParam } from "./multi-value-param";
-import { sessionFetch } from "./session-cache";
 import type {
   CareOfferingOption,
   EnrollmentAnswerFilter,
@@ -65,7 +61,6 @@ const logger = createLogger({ component: "StudentAPI" });
 /** The filters of `GET /api/students`. */
 export interface StudentFilters {
   search?: string;
-  inHouse?: boolean;
   /**
    * Educational group(s). Several may be selected at once (#2218) and travel
    * comma-separated; the backend reads both that form and a repeated parameter.
@@ -114,7 +109,6 @@ const QUERY_KEYS: Record<
   string
 > = {
   search: "search",
-  inHouse: "in_house",
   roomId: "room_id",
   locationState: "location_state",
   dayStatus: "day_status",
@@ -139,14 +133,14 @@ const MULTI_VALUE_KEYS = {
   gradeLevel: "grade_level",
 } as const;
 
-function studentQuery(filters: StudentFilters = {}): string {
-  const params = new URLSearchParams();
+function studentQuery(filters: StudentFilters = {}): Record<string, string> {
+  const query: Record<string, string> = {};
   for (const [key, param] of Object.entries(QUERY_KEYS)) {
     const value = filters[key as keyof typeof QUERY_KEYS];
-    // false and 0 restrict nothing, except in_house where false is a filter.
-    if (value === undefined || value === "" || value === 0) continue;
-    if (value === false && key !== "inHouse") continue;
-    params.append(param, String(value));
+    // false and 0 restrict nothing.
+    if (value === undefined || value === "" || value === 0 || value === false)
+      continue;
+    query[param] = String(value);
   }
   // A selection of several values travels comma-separated and escaped (see
   // lib/multi-value-param); a single string is taken as already encoded.
@@ -155,10 +149,9 @@ function studentQuery(filters: StudentFilters = {}): string {
     const encoded = Array.isArray(value)
       ? encodeMultiValueParam(value)
       : (value ?? "").trim();
-    if (encoded) params.append(param, encoded);
+    if (encoded) query[param] = encoded;
   }
-  const query = params.toString();
-  return query ? `?${query}` : "";
+  return query;
 }
 
 /**
@@ -168,18 +161,9 @@ function studentQuery(filters: StudentFilters = {}): string {
 export async function fetchStudents(
   filters?: StudentFilters,
 ): Promise<{ students: Student[]; pagination: StudentPage["pagination"] }> {
-  const url = `/api/students${studentQuery(filters)}`;
-  const response = await sessionFetch(url);
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `GET ${url} failed (${response.status})`,
-    );
-  }
-  const page = (await response.json()) as {
-    data: NameStudentResponse[];
-    pagination: StudentPage["pagination"];
-  };
+  const page = await bffJson("tenant", "GET /api/students/", {
+    query: studentQuery(filters),
+  });
   const view: StudentView = filters?.view ?? "full";
   return {
     students: page.data.map((row) => mapStudentListRow(row, view)),
@@ -188,7 +172,7 @@ export async function fetchStudents(
 }
 
 export async function fetchSchoolClasses(): Promise<string[]> {
-  return bffJson<string[]>("/api/students/school-classes");
+  return bffJson("tenant", "GET /api/students/school-classes");
 }
 
 /** Names for a complete local child selector, including subsequent pages. */
@@ -206,9 +190,10 @@ export async function fetchAllStudentNames(): Promise<Student[]> {
 export async function fetchStudent(id: string): Promise<Student> {
   // The detail read carries the consent: one read and no consent waterfall.
   return mapStudentDetailResponse(
-    await bffJson<StudentDetailResponse>(
-      `/api/students/${encodeURIComponent(id)}?include_privacy_consent=true`,
-    ),
+    await bffJson("tenant", "GET /api/students/{id}", {
+      params: { id },
+      query: { include_privacy_consent: true },
+    }),
   );
 }
 
@@ -223,8 +208,7 @@ export async function fetchStudent(id: string): Promise<Student> {
  */
 export async function createStudent(body: StudentCreateBody): Promise<Student> {
   const consent = sentConsentPair(body);
-  const created = await bffJson<StudentResponse>("/api/students", {
-    method: "POST",
+  const created = await bffJson("tenant", "POST /api/students/", {
     body: studentCreateRequest(body),
   });
 
@@ -269,21 +253,20 @@ function markPrivacyConsentSaved(error: unknown): unknown {
 export async function fetchEnrollmentAnswerFilters(): Promise<
   EnrollmentAnswerFilter[]
 > {
-  const filters = await bffJson<EnrollmentAnswerFilterResponse[] | null>(
-    "/api/students/enrollment-answer-filters",
+  const filters = await bffJson(
+    "tenant",
+    "GET /api/students/enrollment-answer-filters",
   );
-  return (filters ?? []).map(mapEnrollmentAnswerFilter);
+  return filters.map(mapEnrollmentAnswerFilter);
 }
 
 /** The school's active care offerings that count as care (#4571). */
 export async function fetchCareOfferingOptions(): Promise<
   CareOfferingOption[]
 > {
-  const offerings = await bffJson<CareOfferingOptionResponse[] | null>(
-    "/api/students/care-offerings",
-  );
-  return (offerings ?? []).map((offering) => ({
-    id: String(offering.id),
+  const offerings = await bffJson("tenant", "GET /api/students/care-offerings");
+  return offerings.map((offering) => ({
+    id: offering.id,
     name: offering.name,
   }));
 }
@@ -303,28 +286,12 @@ function mapEnrollmentAnswerFilter(
   };
 }
 
-interface StudentEnrollmentExtraField {
-  key: string;
-  label: string;
-  type: string;
-  target?: string;
-  options?: { label: string; value: string }[];
-  value: unknown;
-}
-
-export interface StudentEnrollmentExtraFieldGroup {
-  request_id: string;
-  phase_name: string;
-  submitted_at: string;
-  fields: StudentEnrollmentExtraField[];
-}
-
 export async function fetchStudentEnrollmentExtraFields(
   id: string,
 ): Promise<StudentEnrollmentExtraFieldGroup[]> {
-  return bffJson<StudentEnrollmentExtraFieldGroup[]>(
-    `/api/students/${encodeURIComponent(id)}/enrollment-extra-fields`,
-  );
+  return bffJson("tenant", "GET /api/students/{id}/enrollment-extra-fields", {
+    params: { id },
+  });
 }
 
 /**
@@ -363,28 +330,22 @@ export async function updateStudent(
   const consent = sentConsentPair(update);
   if (consent) await writeStudentConsent(id, consent);
 
-  let response: Response;
+  let data;
   try {
-    response = await sessionFetch(`/api/students/${encodeURIComponent(id)}`, {
-      method: "PUT",
-      body: JSON.stringify(prepareStudentForBackend(update)),
+    data = await bffJson("tenant", "PUT /api/students/{id}", {
+      params: { id },
+      body: prepareStudentForBackend(update),
+      errorMessage: "Student update failed",
     });
-  } catch (error) {
-    throw consent ? markPrivacyConsentSaved(error) : error;
-  }
-  if (!response.ok) {
-    const body = await response.text();
+  } catch (failure) {
     const error =
-      response.status === 409 && isCompanionPlanConflictResponse(body)
-        ? new CompanionPlanConflictError(body)
-        : apiErrorFromText(
-            `Student update failed (${response.status})`,
-            response.status,
-            body,
-          );
+      failure instanceof ApiError &&
+      failure.status === 409 &&
+      isCompanionPlanConflictResponse(failure.problem)
+        ? new CompanionPlanConflictError(failure.problem)
+        : failure;
     throw consent ? markPrivacyConsentSaved(error) : error;
   }
-  const { data } = (await response.json()) as { data: StudentResponse };
   if (data.companions_changed ?? writeMayChangeCompanions(update)) {
     notifyStudentCompanionsChanged();
   }
@@ -394,24 +355,13 @@ export async function updateStudent(
   };
 }
 
-/** The latest recorded change of a tracked field (#1455). */
-export interface StudentFieldChange {
-  id: string;
-  field: string;
-  /** Already formatted German values. */
-  old_value: string;
-  new_value: string;
-  edited_by: string;
-  changed_at: string;
-}
-
 /** Recorded field changes, newest first; the backend requires full access. */
 export async function fetchStudentChangeHistory(
   id: string,
-): Promise<StudentFieldChange[]> {
-  return bffJson<StudentFieldChange[]>(
-    `/api/students/${encodeURIComponent(id)}/change-history`,
-  );
+): Promise<changeHistoryEntry[]> {
+  return bffJson("tenant", "GET /api/students/{id}/change-history", {
+    params: { id },
+  });
 }
 
 /** The child's Anwesenheitsprotokoll (#1425); 403 when the school turned it off. */
@@ -419,9 +369,9 @@ export async function fetchStudentAttendanceHistory(
   id: string,
 ): Promise<AttendanceHistory> {
   return mapAttendanceHistoryResponse(
-    await bffJson<AttendanceHistoryWire>(
-      `/api/students/${encodeURIComponent(id)}/attendance-history`,
-    ),
+    await bffJson("tenant", "GET /api/students/{id}/attendance-history", {
+      params: { id },
+    }),
   );
 }
 
@@ -477,9 +427,13 @@ export async function schoolCheckinStudent(
       : note
         ? { action, note }
         : { action };
-    const data = await bffJson<schoolCheckinResponse>(
-      `/api/students/${encodeURIComponent(studentId)}/school-checkin`,
-      { method: "POST", body },
+    const data = await bffJson(
+      "tenant",
+      "POST /api/students/{id}/school-checkin",
+      {
+        params: { id: studentId },
+        body,
+      },
     );
     return {
       studentId: data.student_id,
@@ -561,9 +515,10 @@ export async function schoolCheckinStudentsBatch(
       const body: schoolCheckinBatchRequest = checkoutReason
         ? { action, reason: checkoutReason, student_ids: chunk }
         : { action, student_ids: chunk };
-      const data = await bffJson<schoolCheckinBatchResponse>(
-        "/api/students/school-checkin/batch",
-        { method: "POST", body },
+      const data = await bffJson(
+        "tenant",
+        "POST /api/students/school-checkin/batch",
+        { body },
       );
       outcome.succeeded += data.succeeded;
       outcome.failed += data.failed;
@@ -602,32 +557,6 @@ export async function schoolCheckinStudentsBatch(
 
 // ─── Deletion ───────────────────────────────────────────────────────────────
 
-export interface StudentDeletionCounts {
-  timetable_assignments: number;
-  activity_enrollments: number;
-  attendance_records: number;
-  care_schedules: number;
-  guardian_links: number;
-  companion_links: number;
-  communications: number;
-  consents: number;
-  enrollment_references: number;
-  other_records: number;
-}
-
-export interface StudentDeletionImpact {
-  confirmation_name: string;
-  fingerprint: string;
-  total: number;
-  counts: StudentDeletionCounts;
-  preserved: {
-    guardian_profiles: boolean;
-    parent_accounts: boolean;
-    other_students: boolean;
-    shared_instances: boolean;
-  };
-}
-
 export type StudentDeletionReason =
   | "test_data"
   | "incorrect_entry"
@@ -637,22 +566,23 @@ export type StudentDeletionReason =
   // Austritt liegt lange genug zurück, die Aufbewahrungsfrist ist um.
   | "retention_expired";
 
-interface DeleteStudentWithDataInput {
-  expected_fingerprint: string;
-  confirmation_name: string;
+type DeleteStudentWithDataInput = studentDeleteRequest & {
   reason: StudentDeletionReason;
-  acknowledged: true;
-}
+};
 
 export async function fetchStudentDeletionImpact(
   id: string,
   completionId?: string,
-): Promise<StudentDeletionImpact> {
-  return bffJson<StudentDeletionImpact>(
-    completionId
-      ? `/api/students/care-withdrawals/${encodeURIComponent(completionId)}/deletion-impact`
-      : `/api/students/${encodeURIComponent(id)}/delete-impact`,
-  );
+): Promise<studentDeleteImpactResponse> {
+  return completionId
+    ? bffJson(
+        "tenant",
+        "GET /api/students/care-withdrawals/{completionId}/deletion-impact",
+        { params: { completionId } },
+      )
+    : bffJson("tenant", "GET /api/students/{id}/delete-impact", {
+        params: { id },
+      });
 }
 
 export async function deleteStudentWithData(
@@ -660,12 +590,19 @@ export async function deleteStudentWithData(
   input: DeleteStudentWithDataInput,
   completionId?: string,
 ): Promise<void> {
-  await bffJson<unknown>(
-    completionId
-      ? `/api/students/care-withdrawals/${encodeURIComponent(completionId)}`
-      : `/api/students/${encodeURIComponent(id)}`,
-    { method: "DELETE", body: input },
-  );
+  await (completionId
+    ? bffJson(
+        "tenant",
+        "DELETE /api/students/care-withdrawals/{completionId}",
+        {
+          params: { completionId },
+          body: input,
+        },
+      )
+    : bffJson("tenant", "DELETE /api/students/{id}", {
+        params: { id },
+        body: input,
+      }));
 }
 
 // ─── Student photo (Datenverwaltung) ────────────────────────────────────────
@@ -696,19 +633,18 @@ export async function uploadStudentPhoto(
   if (options.consentAcknowledged) {
     formData.append("consent_acknowledged", "true");
   }
-  const data = await bffJson<{ photo_url: string }>(
-    `/api/students/${encodeURIComponent(studentId)}/photo`,
-    { method: "POST", body: formData },
-  );
+  const data = await bffJson("tenant", "POST /api/students/{id}/photo", {
+    params: { id: studentId },
+    body: formData,
+  });
   return { photoUrl: data.photo_url };
 }
 
 /** Removes a child's photo (idempotent). */
 export async function deleteStudentPhoto(studentId: string): Promise<void> {
-  await bffJson<unknown>(
-    `/api/students/${encodeURIComponent(studentId)}/photo`,
-    { method: "DELETE" },
-  );
+  await bffJson("tenant", "DELETE /api/students/{id}/photo", {
+    params: { id: studentId },
+  });
 }
 
 // ─── Room history stop (#3844) ──────────────────────────────────────────────
@@ -732,16 +668,14 @@ function mapRoomHistoryStop(
   };
 }
 
-function roomHistoryStopPath(studentId: string): string {
-  return `/api/students/${encodeURIComponent(studentId)}/room-history-stop`;
-}
-
 /** Reads the stop of a child's room history and mood. */
 export async function fetchRoomHistoryStop(
   studentId: string,
 ): Promise<RoomHistoryStop> {
   return mapRoomHistoryStop(
-    await bffJson<RoomHistoryStopResponse>(roomHistoryStopPath(studentId)),
+    await bffJson("tenant", "GET /api/students/{id}/room-history-stop", {
+      params: { id: studentId },
+    }),
   );
 }
 
@@ -753,8 +687,8 @@ export async function stopRoomHistory(
   studentId: string,
 ): Promise<RoomHistoryStop> {
   return mapRoomHistoryStop(
-    await bffJson<RoomHistoryStopResponse>(roomHistoryStopPath(studentId), {
-      method: "PUT",
+    await bffJson("tenant", "PUT /api/students/{id}/room-history-stop", {
+      params: { id: studentId },
     }),
   );
 }
@@ -764,8 +698,8 @@ export async function resumeRoomHistory(
   studentId: string,
 ): Promise<RoomHistoryStop> {
   return mapRoomHistoryStop(
-    await bffJson<RoomHistoryStopResponse>(roomHistoryStopPath(studentId), {
-      method: "DELETE",
+    await bffJson("tenant", "DELETE /api/students/{id}/room-history-stop", {
+      params: { id: studentId },
     }),
   );
 }
@@ -790,17 +724,15 @@ export async function fetchStudentPrivacyConsent(
   studentId: string,
 ): Promise<PrivacyConsent> {
   return mapConsentPair(
-    await bffJson<PrivacyConsentResponse>(
-      `/api/students/${encodeURIComponent(studentId)}/privacy-consent`,
-    ),
+    await bffJson("tenant", "GET /api/students/{id}/privacy-consent", {
+      params: { id: studentId },
+    }),
   );
 }
 
 /** The consent a new child starts with: the school's defaults. */
 export async function fetchPrivacyConsentDefaults(): Promise<PrivacyConsent> {
   return mapConsentPair(
-    await bffJson<PrivacyConsentDefaultsResponse>(
-      "/api/students/privacy-consent/defaults",
-    ),
+    await bffJson("tenant", "GET /api/students/privacy-consent/defaults"),
   );
 }

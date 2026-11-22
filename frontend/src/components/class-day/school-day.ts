@@ -145,10 +145,10 @@ export function schoolDayChildrenByClass(
   report: SchoolDayReport,
   list: SchoolDayList,
 ): SchoolDayClassGroup[] {
-  return report.classes
+  return (report.classes ?? [])
     .map((klass) => ({
       schoolClass: klass.school_class,
-      children: klass.children.filter(list.matches),
+      children: (klass.children ?? []).filter(list.matches),
     }))
     .filter((group) => group.children.length > 0);
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import type { PendingOperatorInvitationResponse as WireInvitationResponse } from "~/lib/contract/operator-invitations.generated";
-import type { OperatorListItem as WireOperatorListItem } from "~/lib/contract/shared.generated";
+import type * as operatorInvitationsContract from "~/lib/contract/operator-invitations.generated";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import {
   mapPendingInvitation,
   mapOperatorInfo,
@@ -8,20 +8,21 @@ import {
   type InvitationValidationBody,
 } from "./operator-invitation-helpers";
 
-const sampleInvitation: WireInvitationResponse = {
-  id: "42",
-  email: "new-op@example.com",
-  display_name: "Max Mustermann",
-  created_by: "1",
-  creator_name: "Admin",
-  expires_at: "2026-04-06T12:00:00Z",
-  email_sent_at: "2026-04-04T12:00:00Z",
-  email_error: undefined,
-  email_retry_count: 0,
-  created_at: "2026-04-04T12:00:00Z",
-};
+const sampleInvitation: operatorInvitationsContract.PendingOperatorInvitationResponse =
+  {
+    id: "42",
+    email: "new-op@example.com",
+    display_name: "Max Mustermann",
+    created_by: "1",
+    creator_name: "Admin",
+    expires_at: "2026-04-06T12:00:00Z",
+    email_sent_at: "2026-04-04T12:00:00Z",
+    email_error: undefined,
+    email_retry_count: 0,
+    created_at: "2026-04-04T12:00:00Z",
+  };
 
-const sampleOperator: WireOperatorListItem = {
+const sampleOperator: sharedContract.OperatorListItem = {
   id: "7",
   email: "operator@example.com",
   display_name: "Operator One",

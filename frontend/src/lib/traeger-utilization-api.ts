@@ -11,10 +11,7 @@ import {
   type TraegerListFile,
   type TraegerListFormat,
 } from "./traeger-list-export";
-import type {
-  Utilization as WireUtilization,
-  UtilizationChildren as WireChildren,
-} from "./contract/traeger-schools.generated";
+import type * as traegerSchoolsContract from "./contract/traeger-schools.generated";
 import { requiredDay } from "./contract/required-day";
 import type { TraegerSchool } from "./traeger-api";
 import { traegerRequest } from "./traeger-api";
@@ -104,7 +101,9 @@ function windowQuery(window: UtilizationWindow, schoolId?: string): string {
   return query.toString();
 }
 
-function utilizationFromBackend(body: WireUtilization): TraegerUtilization {
+function utilizationFromBackend(
+  body: traegerSchoolsContract.Utilization,
+): TraegerUtilization {
   return {
     from: requiredDay(body.from, "utilization.from"),
     to: requiredDay(body.to, "utilization.to"),
@@ -145,7 +144,7 @@ export async function fetchTraegerUtilization(
   window: UtilizationWindow,
 ): Promise<TraegerUtilization> {
   return utilizationFromBackend(
-    await traegerRequest<WireUtilization>(
+    await traegerRequest<traegerSchoolsContract.Utilization>(
       `${UTILIZATION_PATH}?${windowQuery(window)}`,
     ),
   );
@@ -156,7 +155,7 @@ export async function fetchUtilizationChildren(
   schoolId: string,
   window: UtilizationWindow,
 ): Promise<UtilizationChildren> {
-  const body = await traegerRequest<WireChildren>(
+  const body = await traegerRequest<traegerSchoolsContract.UtilizationChildren>(
     `/api/traeger/schools/${encodeURIComponent(schoolId)}/utilization/children?${windowQuery(window)}`,
   );
   return {

@@ -81,20 +81,23 @@ Worked example, the same route from Go to the browser:
    (`backend/modules/careplan/http/partial_absence_replace_test.go`). CI's
    `TestEveryRegisteredRouteIsAnsweredInATest` (`backend/api`) fails on a
    registered JSON route no test answers.
-6. **Browser call.** The domain client calls the BFF path with `bffJson`
-   (`frontend/src/lib/bff-fetch.ts`) and types the answer with the generated
-   type (`frontend/src/lib/student-partial-absences-api.ts`):
+6. **Browser call.** The domain client calls `bffJson` (`frontend/src/lib/bff-fetch.ts`)
+   with the portal and the route's catalog key; the generated entry types the
+   path parameters, the query, the body and the answer
+   (`frontend/src/lib/student-partial-absences-api.ts`):
 
    ```ts
-   const rows = await bffJson<PartialAbsenceResponse[]>(
-     `${partialAbsencesPath(studentId)}?from=${from}&to=${to}`,
-   );
+   const rows = await bffJson("tenant", "GET /api/students/{id}/partial-absences", {
+     params: { id: studentId },
+     query: { from, to },
+   });
    return rows.map(mapPartialAbsence);
    ```
 
    `mapPartialAbsence` maps to the view type. A failure throws an `ApiError`
-   for the shared error path. Older clients read `sessionFetch` or `authFetch`
-   and unwrap `data` by hand; their move to `bffJson` is #7806.
+   for the shared error path; `errorMessage` keeps a client's own text.
+   The other portals and the rules for 204, 401 and a missing `data`:
+   [Browser calls](frontend-api.md#browser-calls).
    Components load through `useSWRAuth` and a key factory of `~/lib/swr`.
 7. **No route file.** The staff portal's catch-all `app/api/[...path]/route.ts`
    serves the path. Other portals call `/api/<portal>/…` for the backend's
@@ -160,12 +163,11 @@ Only for what belongs to the browser and cannot live in Go:
   purges the cached tenant lookup, `demo/access/sessions` sets the demo cookie;
 - a hand-off for a registered path that Next would give to a neighbouring
   route file (`catalogProxyUnder`); `app/api/catalog-route-selection.test.ts`
-  fails when one is missing;
-- an aggregation of several backend reads that has no Go view yet
-  (`activities/[id]/students`). A new one is a Go view instead (#5018).
+  fails when one is missing.
 
 A reshaping, an ID or format check or a second backend call for the same
-screen moves into the Go handler. A file whose only code forwards to the
+screen moves into the Go handler; an aggregation of several reads is a Go
+view (#5018). A file whose only code forwards to the
 backend fails `app/api/proxy-routes.test.ts`; a file whose backend paths
 the contract registers, all of them, fails `app/api/route-backend-paths.test.ts`,
 and a file in front of a registered path fails

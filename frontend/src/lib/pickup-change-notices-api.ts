@@ -4,10 +4,7 @@
 // decision sets it unread again as taken back.
 
 import { bffJson } from "./bff-fetch";
-import type {
-  pickupChangeNoticeResponse as WirePickupChangeNotice,
-  pickupChangeNoticesReadRequest as WirePickupChangeNoticesReadRequest,
-} from "./contract/students.generated";
+import type { pickupChangeNoticeResponse } from "./contract/students.generated";
 
 /** A changed pickup time of a child the reader looks after, not yet seen. */
 export interface PickupChangeNotice {
@@ -29,7 +26,7 @@ export type PickupChangeNoticeRevision = Pick<
   "requestId" | "informedAt"
 >;
 
-function mapNotice(data: WirePickupChangeNotice): PickupChangeNotice {
+function mapNotice(data: pickupChangeNoticeResponse): PickupChangeNotice {
   return {
     requestId: data.request_id,
     studentId: data.student_id,
@@ -44,8 +41,9 @@ function mapNotice(data: WirePickupChangeNotice): PickupChangeNotice {
 export const pickupChangeNoticesService = {
   /** The reader's unseen changes on days from today on, newest first. */
   async list(): Promise<PickupChangeNotice[]> {
-    const notices = await bffJson<WirePickupChangeNotice[]>(
-      "/api/students/pickup-change-notices",
+    const notices = await bffJson(
+      "tenant",
+      "GET /api/students/pickup-change-notices",
     );
     return notices.map(mapNotice);
   },
@@ -58,16 +56,17 @@ export const pickupChangeNoticesService = {
     studentId: string,
     observed: readonly PickupChangeNoticeRevision[],
   ): Promise<PickupChangeNotice[]> {
-    const notices = await bffJson<WirePickupChangeNotice[]>(
-      `/api/students/${encodeURIComponent(studentId)}/pickup-change-notices/read`,
+    const notices = await bffJson(
+      "tenant",
+      "POST /api/students/{id}/pickup-change-notices/read",
       {
-        method: "POST",
+        params: { id: studentId },
         body: {
           notices: observed.map((notice) => ({
             request_id: notice.requestId,
             informed_at: notice.informedAt,
           })),
-        } satisfies WirePickupChangeNoticesReadRequest,
+        },
       },
     );
     return notices.map(mapNotice);

@@ -1,3 +1,4 @@
+import type { studentDeleteImpactResponse } from "~/lib/contract/students.generated";
 import {
   act,
   fireEvent,
@@ -12,7 +13,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ModalProvider } from "~/components/ui/modal-context";
 import { ApiError } from "~/lib/api-error";
-import type { StudentDeletionImpact } from "~/lib/student-api";
 import { StudentDeletionModal } from "./student-deletion-modal";
 
 vi.unmock("swr");
@@ -59,7 +59,7 @@ vi.mock("~/lib/student-api", async (importOriginal) => {
   };
 });
 
-const impact: StudentDeletionImpact = {
+const impact: studentDeleteImpactResponse = {
   confirmation_name: "Mia Muster",
   fingerprint: "abc123",
   total: 5,
@@ -160,9 +160,9 @@ describe("StudentDeletionModal", () => {
       total: 8,
       counts: { ...impact.counts, timetable_assignments: 5 },
     };
-    let resolve!: (value: StudentDeletionImpact) => void;
+    let resolve!: (value: studentDeleteImpactResponse) => void;
     mockFetchImpact.mockReturnValueOnce(
-      new Promise<StudentDeletionImpact>((done) => {
+      new Promise<studentDeleteImpactResponse>((done) => {
         resolve = done;
       }),
     );

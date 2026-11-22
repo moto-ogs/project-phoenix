@@ -77,11 +77,20 @@ type ActivityScheduleResponse struct {
 	UpdatedAt       time.Time `json:"updated_at"`
 }
 
-// StudentResponse represents a simplified student in activity response
-type StudentResponse struct {
-	ID        int64  `json:"id"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
+// EnrolledStudentResponse is one student enrolled in an activity.
+type EnrolledStudentResponse struct {
+	ID        ident.ID `json:"id"`
+	FirstName string   `json:"first_name"`
+	LastName  string   `json:"last_name"`
+}
+
+// EnrollmentUpdateResponse answers a replaced enrollment list.
+type EnrollmentUpdateResponse struct {
+	ActivityID       ident.ID   `json:"activity_id"`
+	ActivityName     string     `json:"activity_name"`
+	EnrollmentCount  int        `json:"enrollment_count"`
+	MaxParticipants  *int       `json:"max_participants"`
+	StudentsEnrolled []ident.ID `json:"students_enrolled"`
 }
 
 // ActivityRequest represents an activity creation/update request
@@ -194,20 +203,6 @@ func (req *BatchEnrollmentRequest) studentIDs() []int64 {
 func (req *BatchEnrollmentRequest) Bind(_ *http.Request) error {
 	if req.StudentIDs == nil {
 		return errors.New("student IDs are required")
-	}
-	return nil
-}
-
-// SupervisorRequest represents a supervisor assignment request
-type SupervisorRequest struct {
-	StaffID   int64 `json:"staff_id"`
-	IsPrimary bool  `json:"is_primary"`
-}
-
-// Bind validates the supervisor request
-func (req *SupervisorRequest) Bind(_ *http.Request) error {
-	if req.StaffID <= 0 {
-		return errors.New("staff ID is required and must be greater than 0")
 	}
 	return nil
 }

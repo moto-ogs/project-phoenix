@@ -19,6 +19,8 @@ import { TenantPage } from "~/components/ui/tenant-page";
 import { SectionCard } from "~/components/ui/section-card";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { apiErrorFromResponse } from "~/lib/api-error";
+import type { ApiResponse } from "~/lib/api-envelope";
+import type * as operatorProfileContract from "~/lib/contract/operator-profile.generated";
 import { getSessionPersonName } from "~/lib/auth-utils";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
@@ -32,14 +34,7 @@ import { PasskeySettingsSection } from "~/components/settings/passkey-settings-s
 
 const logger = createLogger({ component: "OperatorSettingsPage" });
 
-interface OperatorProfile {
-  // The catalog proxy delivers the id as a string (#2352).
-  id: number | string;
-  email: string;
-  display_name: string;
-}
-
-async function fetchOperatorProfile(): Promise<OperatorProfile | null> {
+async function fetchOperatorProfile(): Promise<operatorProfileContract.OperatorResponse> {
   const response = await sessionFetch("/api/operator/profile", {
     method: "GET",
   });
@@ -49,8 +44,9 @@ async function fetchOperatorProfile(): Promise<OperatorProfile | null> {
       `Operator profile load failed (${response.status})`,
     );
   }
-  const data = (await response.json()) as { data?: OperatorProfile };
-  return data.data ?? null;
+  const json =
+    (await response.json()) as ApiResponse<operatorProfileContract.OperatorResponse>;
+  return json.data;
 }
 
 function isEmail(value: string | null | undefined): value is string {
@@ -136,18 +132,13 @@ function OperatorSettingsContent() {
         );
       }
 
-      const data = (await response.json()) as { data?: OperatorProfile };
-      const updatedProfile = data.data;
-      const nextDisplayName = updatedProfile?.display_name ?? draftDisplayName;
-      const nextEmail = updatedProfile?.email ?? email;
-
-      if (updatedProfile) {
-        await mutateProfile(updatedProfile, { revalidate: false });
-      } else {
-        void mutateProfile();
-      }
-
-      await updateSession({ name: nextDisplayName, email: nextEmail });
+      const { data: updatedProfile } =
+        (await response.json()) as ApiResponse<operatorProfileContract.OperatorResponse>;
+      await mutateProfile(updatedProfile, { revalidate: false });
+      await updateSession({
+        name: updatedProfile.display_name,
+        email: updatedProfile.email,
+      });
 
       setIsEditing(false);
       toastSuccess("Profil erfolgreich aktualisiert", { duration: 3000 });

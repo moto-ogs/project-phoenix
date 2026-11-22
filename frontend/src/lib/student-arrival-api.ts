@@ -4,10 +4,19 @@ import { DEPARTURE_WEEKDAYS } from "./departure-plan";
 import { knownEnum } from "./contract/known-enum";
 import type {
   ArrivalDataResponse,
+  ArrivalNoteRequest,
   ArrivalNoteResponse,
+  ArrivalScheduleInput,
+  ArrivalScheduleRequestItem,
   ArrivalScheduleResponse,
+  BulkUpsertArrivalScheduleRequest,
+  BulkUpsertResult,
+  ClassArrivalExceptionListResponse,
+  ClassArrivalExceptionRequest,
+  ClassArrivalExceptionResponse,
+  ClassArrivalTimesResponse,
+  StudentArrivalExceptionRequest,
   StudentArrivalExceptionResponse,
-  arrivalSettingsResponse,
 } from "./contract/students.generated";
 
 /**
@@ -147,20 +156,6 @@ export interface CareTimePresets {
   readonly pickup: string;
 }
 
-export interface ArrivalScheduleInput {
-  weekday: number;
-  /** Empty string = care day whose time comes from the class timetable. */
-  expected_arrival: string;
-  notes?: string | null;
-}
-
-interface BulkArrivalRequestBody {
-  school_class?: string;
-  group_id?: number;
-  student_ids?: number[];
-  schedules: ArrivalScheduleInput[];
-}
-
 export type BulkArrivalFilter =
   | { type: "school_class"; schoolClass: string }
   | { type: "group"; groupId: string }
@@ -179,13 +174,10 @@ export async function fetchArrivalData(
   date?: string,
   toDate?: string,
 ): Promise<ArrivalData> {
-  const query = new URLSearchParams();
-  if (date) query.set("date", date);
-  if (toDate) query.set("to", toDate);
-  const suffix = query.size > 0 ? `?${query.toString()}` : "";
-  const data = await bffJson<ArrivalDataResponse>(
-    `/api/students/${encodeURIComponent(studentId)}/arrival-schedules${suffix}`,
-  );
+  const data = await bffJson("tenant", "GET /api/students/{id}/arrival-schedules", {
+    params: { id: studentId },
+    query: { date, to: toDate },
+  });
   return mapArrivalData(data);
 }
 
@@ -200,20 +192,16 @@ function mapArrivalData(data: ArrivalDataResponse): ArrivalData {
 export async function fetchBulkArrivalScheduleStatus(
   studentIds: string[],
 ): Promise<number> {
-  const status = await bffJson<{ student_ids: (number | string)[] }>(
-    "/api/students/arrival-schedules/status",
-    {
-      method: "POST",
-      body: { student_ids: studentIds.map((id) => Number.parseInt(id, 10)) },
-    },
+  const status = await bffJson(
+    "tenant",
+    "POST /api/students/arrival-schedules/status",
+    { body: { student_ids: studentIds } },
   );
-  return status.student_ids.length;
+  return status.student_ids?.length ?? 0;
 }
 
 export async function fetchArrivalSettings(): Promise<ArrivalSettings> {
-  const settings = await bffJson<arrivalSettingsResponse>(
-    "/api/students/arrival-settings",
-  );
+  const settings = await bffJson("tenant", "GET /api/students/arrival-settings");
   return {
     careDaysSource:
       knownEnum(CARE_DAYS_SOURCES, settings.care_days_source) ?? null,
@@ -228,38 +216,37 @@ export async function fetchArrivalSettings(): Promise<ArrivalSettings> {
 
 export async function updateArrivalSchedules(
   studentId: string,
-  schedules: ArrivalScheduleInput[],
+  schedules: ArrivalScheduleRequestItem[],
 ): Promise<ArrivalData> {
-  const data = await bffJson<ArrivalDataResponse>(
-    `/api/students/${encodeURIComponent(studentId)}/arrival-schedules`,
-    { method: "PUT", body: { schedules } },
-  );
+  const data = await bffJson("tenant", "PUT /api/students/{id}/arrival-schedules", {
+    params: { id: studentId },
+    body: { schedules },
+  });
   return mapArrivalData(data);
 }
+
+const POSITIVE_ID = /^[1-9]\d{0,18}$/;
 
 export async function bulkUpsertArrivalSchedules(
   filter: BulkArrivalFilter,
   schedules: ArrivalScheduleInput[],
-): Promise<unknown> {
-  const body: BulkArrivalRequestBody = { schedules };
+): Promise<BulkUpsertResult> {
+  const body: BulkUpsertArrivalScheduleRequest = { schedules };
   if (filter.type === "school_class") {
     body.school_class = filter.schoolClass;
   } else if (filter.type === "group") {
-    const groupId = Number.parseInt(filter.groupId, 10);
-    if (!Number.isSafeInteger(groupId) || groupId <= 0) {
+    if (!POSITIVE_ID.test(filter.groupId)) {
       throw new ApiError("Ungültige Gruppen-ID", 400, {
         code: "general.input",
       });
     }
-    body.group_id = groupId;
+    body.group_id = filter.groupId;
   } else {
-    const studentIds = [...new Set(filter.studentIds)].map((id) =>
-      Number.parseInt(id, 10),
-    );
+    const studentIds = [...new Set(filter.studentIds)];
     if (
       studentIds.length === 0 ||
       studentIds.length > 500 ||
-      studentIds.some((id) => !Number.isSafeInteger(id) || id <= 0)
+      studentIds.some((id) => !POSITIVE_ID.test(id))
     ) {
       throw new ApiError("Ungültige Kinderauswahl", 400, {
         code: "general.input",
@@ -267,38 +254,29 @@ export async function bulkUpsertArrivalSchedules(
     }
     body.student_ids = studentIds;
   }
-  return bffJson<unknown>("/api/students/arrival-schedules/bulk", {
-    method: "POST",
-    body,
-  });
-}
-
-interface ArrivalExceptionInput {
-  exception_date: string;
-  expected_arrival: string | null;
-  clear_expected_arrival?: boolean;
-  reason?: string | null;
+  return bffJson("tenant", "POST /api/students/arrival-schedules/bulk", { body });
 }
 
 export async function createArrivalException(
   studentId: string,
-  input: ArrivalExceptionInput,
+  input: StudentArrivalExceptionRequest,
 ): Promise<ArrivalException> {
-  const data = await bffJson<StudentArrivalExceptionResponse>(
-    `/api/students/${encodeURIComponent(studentId)}/arrival-exceptions`,
-    { method: "POST", body: input },
-  );
+  const data = await bffJson("tenant", "POST /api/students/{id}/arrival-exceptions", {
+    params: { id: studentId },
+    body: input,
+  });
   return mapArrivalException(data);
 }
 
 export async function updateArrivalException(
   studentId: string,
   exceptionId: string,
-  input: ArrivalExceptionInput,
+  input: StudentArrivalExceptionRequest,
 ): Promise<ArrivalException> {
-  const data = await bffJson<StudentArrivalExceptionResponse>(
-    `/api/students/${encodeURIComponent(studentId)}/arrival-exceptions/${encodeURIComponent(exceptionId)}`,
-    { method: "PUT", body: input },
+  const data = await bffJson(
+    "tenant",
+    "PUT /api/students/{id}/arrival-exceptions/{exceptionId}",
+    { params: { id: studentId, exceptionId }, body: input },
   );
   return mapArrivalException(data);
 }
@@ -307,37 +285,31 @@ export async function deleteArrivalException(
   studentId: string,
   exceptionId: string,
 ): Promise<void> {
-  await bffJson<void>(
-    `/api/students/${encodeURIComponent(studentId)}/arrival-exceptions/${encodeURIComponent(exceptionId)}`,
-    { method: "DELETE" },
-  );
-}
-
-interface ArrivalNoteInput {
-  note_date: string;
-  content: string;
+  await bffJson("tenant", "DELETE /api/students/{id}/arrival-exceptions/{exceptionId}", {
+    params: { id: studentId, exceptionId },
+  });
 }
 
 export async function createArrivalNote(
   studentId: string,
-  input: ArrivalNoteInput,
+  input: ArrivalNoteRequest,
 ): Promise<ArrivalNote> {
-  const data = await bffJson<ArrivalNoteResponse>(
-    `/api/students/${encodeURIComponent(studentId)}/arrival-notes`,
-    { method: "POST", body: input },
-  );
+  const data = await bffJson("tenant", "POST /api/students/{id}/arrival-notes", {
+    params: { id: studentId },
+    body: input,
+  });
   return mapArrivalNote(data);
 }
 
 export async function updateArrivalNote(
   studentId: string,
   noteId: string,
-  input: ArrivalNoteInput,
+  input: ArrivalNoteRequest,
 ): Promise<ArrivalNote> {
-  const data = await bffJson<ArrivalNoteResponse>(
-    `/api/students/${encodeURIComponent(studentId)}/arrival-notes/${encodeURIComponent(noteId)}`,
-    { method: "PUT", body: input },
-  );
+  const data = await bffJson("tenant", "PUT /api/students/{id}/arrival-notes/{noteId}", {
+    params: { id: studentId, noteId },
+    body: input,
+  });
   return mapArrivalNote(data);
 }
 
@@ -345,81 +317,42 @@ export async function deleteArrivalNote(
   studentId: string,
   noteId: string,
 ): Promise<void> {
-  await bffJson<void>(
-    `/api/students/${encodeURIComponent(studentId)}/arrival-notes/${encodeURIComponent(noteId)}`,
-    {
-      method: "DELETE",
-    },
-  );
+  await bffJson("tenant", "DELETE /api/students/{id}/arrival-notes/{noteId}", {
+    params: { id: studentId, noteId },
+  });
 }
 
 /** The Unterrichtsschluss a school class carries (#2414). */
-interface ClassArrivalTimes {
-  school_class: string;
-  /** Day code ("mon" … "fri") to HH:MM. Absent days have no time. */
-  times: Record<string, string>;
-  updated_at?: string;
-}
-
 export async function fetchClassArrivalTimes(
   schoolClass: string,
-): Promise<ClassArrivalTimes> {
-  return bffJson<ClassArrivalTimes>(
-    `/api/students/class-arrival-times/${encodeURIComponent(schoolClass)}`,
-  );
+): Promise<ClassArrivalTimesResponse> {
+  return bffJson("tenant", "GET /api/students/class-arrival-times/{schoolClass}", {
+    params: { schoolClass },
+  });
 }
 
 /**
- * One date on which a whole class arrives at a different time than its
+ * Lists the class-wide exceptions from today on (backend default: 60 days):
+ * dates on which a whole class arrives at a different time than its
  * Unterrichtsschluss says (#2962), for example "Unterricht fällt aus".
  */
-export interface ClassArrivalException {
-  school_class: string;
-  /** YYYY-MM-DD */
-  date: string;
-  /** HH:MM */
-  arrival_time: string;
-  reason?: string | null;
-  created_at: string;
-  /** Wer die Ausnahme eingetragen hat: die OGS oder die Schule (#2970). */
-  origin?: "ogs" | "school";
-}
-
-export interface ClassArrivalExceptionList {
-  school_class: string;
-  /** Whether the caller may set or remove exceptions (setting + permission). */
-  can_edit: boolean;
-  exceptions: ClassArrivalException[];
-}
-
-export interface ClassArrivalExceptionInput {
-  /** HH:MM */
-  arrival_time: string;
-  reason?: string | null;
-}
-
-function classArrivalExceptionPath(schoolClass: string, date?: string): string {
-  const base = `/api/students/class-arrival-exceptions/${encodeURIComponent(schoolClass)}`;
-  return date ? `${base}/${encodeURIComponent(date)}` : base;
-}
-
-/** Lists the class-wide exceptions from today on (backend default: 60 days). */
 export async function fetchClassArrivalExceptions(
   schoolClass: string,
-): Promise<ClassArrivalExceptionList> {
-  return bffJson<ClassArrivalExceptionList>(
-    classArrivalExceptionPath(schoolClass),
-  );
+): Promise<ClassArrivalExceptionListResponse> {
+  return bffJson("tenant", "GET /api/students/class-arrival-exceptions/{schoolClass}", {
+    params: { schoolClass },
+  });
 }
 
 export async function upsertClassArrivalException(
   schoolClass: string,
   date: string,
-  input: ClassArrivalExceptionInput,
-): Promise<ClassArrivalException> {
-  return bffJson<ClassArrivalException>(
-    classArrivalExceptionPath(schoolClass, date),
-    { method: "PUT", body: input },
+  input: ClassArrivalExceptionRequest,
+): Promise<ClassArrivalExceptionResponse> {
+  return bffJson(
+    "tenant",
+    "PUT /api/students/class-arrival-exceptions/{schoolClass}/{date}",
+    { params: { schoolClass, date }, body: input },
   );
 }
 
@@ -427,7 +360,9 @@ export async function deleteClassArrivalException(
   schoolClass: string,
   date: string,
 ): Promise<void> {
-  await bffJson<void>(classArrivalExceptionPath(schoolClass, date), {
-    method: "DELETE",
-  });
+  await bffJson(
+    "tenant",
+    "DELETE /api/students/class-arrival-exceptions/{schoolClass}/{date}",
+    { params: { schoolClass, date } },
+  );
 }
