@@ -17,6 +17,7 @@ import {
 } from "./runtime";
 import {
   SettingsSchemaSchema,
+  type setValueRequest,
 } from "./shared.generated";
 
 /** Go: records.DevicePINStatus */
@@ -58,6 +59,17 @@ export const HomeLayoutResponseSchema: z.ZodType<HomeLayoutResponse, unknown> = 
   blocks: nullable(arr(HomeBlockPlacementSchema)),
   policies: nullable(rec(str)),
   can_manage_policies: bool,
+});
+
+/** Go: settingshttp.loginImageResponse */
+export interface loginImageResponse {
+  login_image_url: string | null;
+  can_edit: boolean;
+}
+
+export const loginImageResponseSchema: z.ZodType<loginImageResponse, unknown> = object<loginImageResponse>({
+  login_image_url: nullable(str),
+  can_edit: bool,
 });
 
 /** Go: records.PayrollCategoryStatus */
@@ -148,6 +160,15 @@ export const legalAGBDocumentResponseSchema: z.ZodType<legalAGBDocumentResponse,
   document_url: str,
 });
 
+/** Go: settingshttp.loginImageUploadResponse */
+export interface loginImageUploadResponse {
+  login_image_url: string;
+}
+
+export const loginImageUploadResponseSchema: z.ZodType<loginImageUploadResponse, unknown> = object<loginImageUploadResponse>({
+  login_image_url: str,
+});
+
 /** Go: settingshttp.homeLayoutBlockRequest */
 export interface homeLayoutBlockRequest {
   key?: string;
@@ -180,6 +201,20 @@ export const routes = {
     portals: ["tenant"],
     response: noData,
   },
+  "DELETE /api/settings/login-image": {
+    method: "DELETE",
+    pattern: "/api/settings/login-image",
+    portals: ["tenant"],
+    routeFile: "the route file purges the cached tenant lookup after the write, so the login page shows the change",
+    response: noData,
+  },
+  "DELETE /api/settings/values/{key}": {
+    method: "DELETE",
+    pattern: "/api/settings/values/{key}",
+    portals: ["tenant"],
+    routeFile: "the route file purges the cached tenant lookup after the write, so the login page shows the change",
+    response: noData,
+  },
   "GET /api/settings/device-pin-status": {
     method: "GET",
     pattern: "/api/settings/device-pin-status",
@@ -191,6 +226,13 @@ export const routes = {
     pattern: "/api/settings/home-layout",
     portals: ["tenant"],
     response: success(HomeLayoutResponseSchema),
+  },
+  "GET /api/settings/login-image": {
+    method: "GET",
+    pattern: "/api/settings/login-image",
+    portals: ["tenant"],
+    routeFile: "served by the same route file as its writes",
+    response: success(loginImageResponseSchema),
   },
   "GET /api/settings/payroll-status": {
     method: "GET",
@@ -225,6 +267,16 @@ export const routes = {
     request: multipart,
     response: success(legalAGBDocumentResponseSchema),
   },
+  "POST /api/settings/login-image": {
+    method: "POST",
+    pattern: "/api/settings/login-image",
+    portals: ["tenant"],
+    maxBodyBytes: 2098176,
+    tooLargeCode: "files.file_too_large",
+    routeFile: "the route file purges the cached tenant lookup after the write, so the login page shows the change",
+    request: multipart,
+    response: success(loginImageUploadResponseSchema),
+  },
   "PUT /api/settings/home-layout": {
     method: "PUT",
     pattern: "/api/settings/home-layout",
@@ -237,6 +289,14 @@ export const routes = {
     pattern: "/api/settings/home-layout/policies",
     portals: ["tenant"],
     request: requestBody<homeBlockPoliciesRequest>(),
+    response: noData,
+  },
+  "PUT /api/settings/values/{key}": {
+    method: "PUT",
+    pattern: "/api/settings/values/{key}",
+    portals: ["tenant"],
+    routeFile: "the route file purges the cached tenant lookup after the write, so the login page shows the change",
+    request: requestBody<setValueRequest>(),
     response: noData,
   },
 } as const;

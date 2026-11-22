@@ -33,4 +33,5 @@ type (
 	Route      = contractmodel.Route
 	Document   = contractmodel.Document
 	Answer     = contractmodel.Answer
+	Outside    = contractmodel.OutsideRoute
 )

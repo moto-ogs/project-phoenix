@@ -1,4 +1,5 @@
 {
+  "checkin_staff_profile_required": "Only the school's staff can check children in and out. Your account has no staff profile at this school.",
   "log_disabled": "You cannot access {object}. Please contact the school.",
   "web_disabled": "You cannot access {object}. Please contact the school."
 }

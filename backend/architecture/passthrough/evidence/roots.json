@@ -2,14 +2,14 @@
   "sites": [
     {
       "build": "production",
-      "evidence": "func (p AttendanceRoutePeople) FindByAccountID(ctx context.Context, id int64) (int64, bool, error) {\n\trow, err := p.source.FindByAccountID(ctx, id)\n\tif row == nil {\n\t\treturn 0, false, err\n\t}\n\treturn row.ID.Int64(), true, err\n}",
+      "evidence": "func (p AttendanceRoutePeople) FindByAccountID(ctx context.Context, id int64) (int64, bool, error) {\n\trow, err := p.source.FindByAccountID(ctx, id)\n\tif peoplePorts.IsPersonNotFound(err) {\n\t\treturn 0, false, nil\n\t}\n\tif row == nil {\n\t\treturn 0, false, err\n\t}\n\treturn row.ID.Int64(), true, err\n}",
       "form": "unclassified-evidence",
       "id": "api/AttendanceRoutePeople.FindByAccountID",
       "owner": "roots"
     },
     {
       "build": "production",
-      "evidence": "func (p AttendanceRoutePeople) GetStaffByPersonID(ctx context.Context, id int64) (int64, int64, bool, error) {\n\trow, err := p.source.StaffRows().FindByPersonID(ctx, id)\n\tif row == nil {\n\t\treturn 0, 0, false, err\n\t}\n\treturn row.ID.Int64(), row.TenantID.Int64(), true, err\n}",
+      "evidence": "func (p AttendanceRoutePeople) GetStaffByPersonID(ctx context.Context, id int64) (int64, int64, bool, error) {\n\trow, err := p.source.StaffRows().FindByPersonID(ctx, id)\n\tif isRepositoryNotFound(err) {\n\t\treturn 0, 0, false, nil\n\t}\n\tif row == nil {\n\t\treturn 0, 0, false, err\n\t}\n\treturn row.ID.Int64(), row.TenantID.Int64(), true, err\n}",
       "form": "unclassified-evidence",
       "id": "api/AttendanceRoutePeople.GetStaffByPersonID",
       "owner": "roots"

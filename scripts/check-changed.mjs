@@ -56,7 +56,7 @@ export function stepsFor(root, base, paths) {
     ...(paths.includes(CONTRACT_MODEL_PATH)
       ? [{ name: 'contract', command: ['node', 'scripts/check-contract-compat.mjs', base] }]
       : []),
-    // Numeric identifiers and routes without a contract only shrink (#2353).
+    // Catalog lines outside the contract only shrink (#2353, #7808).
     ...(paths.some(path => path === CONTRACT_MODEL_PATH || path.startsWith(`${CATALOG_DIR}/`))
       ? [{ name: 'contract-registers', command: ['node', 'scripts/check-contract-shrink.mjs', base] }]
       : []),

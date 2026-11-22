@@ -113,7 +113,53 @@ type Route struct {
 	// PrivateCache says the proxy passes a file's private Cache-Control on
 	// instead of private, no-store.
 	PrivateCache bool `json:"private_cache,omitempty"`
+	// RouteFile says why the portal's own route file, not the catalog
+	// proxy, serves the route. No proxy allowlist names it.
+	RouteFile string `json:"route_file,omitempty"`
+	// Plain says the route answers its data as the whole body, without the
+	// envelope. Only a route file reads such an answer.
+	Plain bool `json:"plain,omitempty"`
 }
+
+// OutsideRoute is a catalog line the contract does not type: no portal's
+// JSON, or a caller of its own (#7808).
+type OutsideRoute struct {
+	Method  string `json:"method"`
+	Pattern string `json:"pattern"`
+	// Reason is one of OutsideReasons.
+	Reason string `json:"reason"`
+	// Why says in one sentence why the reason applies.
+	Why string `json:"why"`
+}
+
+// Key is the route's line in the route catalog.
+func (r OutsideRoute) Key() string { return r.Method + " " + r.Pattern }
+
+// The reasons a catalog line stays outside the contract (#7808). The list is
+// closed: a line that fits none is typed, as a proxied route or one a route
+// file serves.
+const (
+	// OutsideDevice: the kiosk (PyrePortal) calls it with its device key and
+	// reads numeric identifiers.
+	OutsideDevice = "device"
+	// OutsideWebDAV: a calendar app speaks WebDAV with XML bodies.
+	OutsideWebDAV = "webdav"
+	// OutsideMetrics: Prometheus scrapes plain text.
+	OutsideMetrics = "metrics"
+	// OutsideProbe: the load balancer and the container runtime probe the
+	// process.
+	OutsideProbe = "probe"
+	// OutsideStream: a server-sent event stream.
+	OutsideStream = "stream"
+	// OutsidePublicAPI: a machine-to-machine API with its own published
+	// description.
+	OutsidePublicAPI = "public-api"
+	// OutsideWebhook: a provider posts its events.
+	OutsideWebhook = "webhook"
+)
+
+// OutsideReasons is the closed set of OutsideRoute reasons.
+var OutsideReasons = []string{OutsideDevice, OutsideWebDAV, OutsideMetrics, OutsideProbe, OutsideStream, OutsidePublicAPI, OutsideWebhook}
 
 // The Cache-Control values a file route may name (#2352, ADR 0270). The
 // list is closed: a value the proxy would hand a browser is reviewed here.
@@ -139,7 +185,9 @@ func (r Route) Key() string { return r.Method + " " + r.Pattern }
 // Document is the whole contract. It is committed as contract.json, and the
 // comparison with the base branch reads it.
 type Document struct {
-	Routes []Route  `json:"routes"`
-	Enums  []Enum   `json:"enums"`
-	Types  []Object `json:"types"`
+	Routes []Route `json:"routes"`
+	// Outside lists the catalog lines without a contract, with their reason.
+	Outside []OutsideRoute `json:"outside"`
+	Enums   []Enum         `json:"enums"`
+	Types   []Object       `json:"types"`
 }

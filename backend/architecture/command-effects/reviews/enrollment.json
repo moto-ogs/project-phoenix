@@ -8719,12 +8719,12 @@
     },
     {
       "adr": "0067",
-      "approval_adr": "0083",
+      "approval_adr": "0308",
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.EnrollmentArrivalSchedules.CreateArrivalSchedule",
       "classification": "E1",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.WeeklyArrivalSchedules.CreateArrivalSchedule",
-      "reason": "E1 existing decision/renewal/approved-child-sync surface: decision_ports.go, approval.go, guardian_profiles.go, guardian_links.go, approved_child_sync.go and change_request_apply.go; caller tenant unit, request/class/recurrence/child ordering and account-before-roster protocol remain as documented in the #4538 inventory. This exact binding is retained coordination, including raw record halves, not newly approved as a guarded leaf. Target: modules/timetable/internal/application.EnrollmentArrivalSchedules.CreateArrivalSchedule.",
+      "reason": "E1 existing decision/renewal/approved-child-sync surface: decision_ports.go, approval.go, guardian_profiles.go, guardian_links.go, approved_child_sync.go and change_request_apply.go; caller tenant unit, request/class/recurrence/child ordering and account-before-roster protocol remain as documented in the #4538 inventory. This exact binding is retained coordination, including raw record halves, not newly approved as a guarded leaf. Since #7818 the binding also carries whether the Träger-Büro entered the weekly time (ADR 0308); effect, owner and transaction are unchanged. Target: modules/timetable/internal/application.EnrollmentArrivalSchedules.CreateArrivalSchedule.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.EnrollmentArrivalSchedules.CreateArrivalSchedule",
       "target_owner": "timetable-activities"
@@ -8755,12 +8755,12 @@
     },
     {
       "adr": "0067",
-      "approval_adr": "0083",
+      "approval_adr": "0308",
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.EnrollmentPickupSchedules.UpsertPickupSchedule",
       "classification": "E1",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.WeeklyPickupSchedules.UpsertPickupSchedule",
-      "reason": "E1 existing decision/renewal/approved-child-sync surface: decision_ports.go, approval.go, guardian_profiles.go, guardian_links.go, approved_child_sync.go and change_request_apply.go; caller tenant unit, request/class/recurrence/child ordering and account-before-roster protocol remain as documented in the #4538 inventory. This exact binding is retained coordination, including raw record halves, not newly approved as a guarded leaf. Target: modules/timetable/internal/application.EnrollmentPickupSchedules.UpsertPickupSchedule.",
+      "reason": "E1 existing decision/renewal/approved-child-sync surface: decision_ports.go, approval.go, guardian_profiles.go, guardian_links.go, approved_child_sync.go and change_request_apply.go; caller tenant unit, request/class/recurrence/child ordering and account-before-roster protocol remain as documented in the #4538 inventory. This exact binding is retained coordination, including raw record halves, not newly approved as a guarded leaf. Since #7818 the binding also carries whether the Träger-Büro entered the weekly time (ADR 0308); effect, owner and transaction are unchanged. Target: modules/timetable/internal/application.EnrollmentPickupSchedules.UpsertPickupSchedule.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.EnrollmentPickupSchedules.UpsertPickupSchedule",
       "target_owner": "timetable-activities"

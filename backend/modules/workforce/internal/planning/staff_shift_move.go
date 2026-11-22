@@ -161,8 +161,15 @@ func movedShift(existing *workforce.ShiftRecord, input MoveShiftInput) workforce
 	moved.BreakMinutes = input.BreakMinutes
 	moved.ShiftTypeID = input.ShiftTypeID
 	moved.WorkingTime = input.WorkingTime
+	// The moved row keeps its author. Only the Träger-Büro moves with an
+	// account and without a staff member (#7818): no staff member is named as
+	// the last editor, and the row is marked as last changed by the
+	// Träger-Büro, as a change in the Träger-Portal marks it.
+	moved.UpdatedBy = nil
 	if input.ActorStaffID > 0 {
 		moved.UpdatedBy = &input.ActorStaffID
+	} else if input.ActorAccountID != nil {
+		moved.PlannedByTraeger = true
 	}
 	return moved
 }
@@ -349,11 +356,18 @@ func (s *staffShiftService) validateMovedOrigin(ctx context.Context, existing, m
 }
 
 func (s *staffShiftService) recordSeriesException(ctx context.Context, shift *workforce.ShiftRecord, date calendar.Date) error {
+	// The exception takes the occurrence's author: its staff member, or the
+	// mark of the Träger-Büro for an occurrence of a series it planned
+	// (#7818).
 	exception := &StaffShiftSeriesException{
-		SeriesID:  *shift.SeriesID,
-		Date:      date,
-		CreatedBy: shift.CreatedBy,
+		SeriesID:         *shift.SeriesID,
+		Date:             date,
+		CreatedBy:        shift.CreatedBy,
+		PlannedByTraeger: shift.CreatedBy <= 0 && shift.PlannedByTraeger,
 	}
 	exception.TenantID = shift.TenantID
-	return shiftWriteError("create staff shift series exception", s.exceptionRepo.RecordSeriesException(ctx, workforce.StaffShiftSeriesException{ID: exception.ID, TenantID: exception.TenantID, SeriesID: exception.SeriesID, Date: exception.Date.String(), CreatedBy: exception.CreatedBy, CreatedAt: exception.CreatedAt}))
+	return shiftWriteError("create staff shift series exception", s.exceptionRepo.RecordSeriesException(ctx, workforce.StaffShiftSeriesException{
+		ID: exception.ID, TenantID: exception.TenantID, SeriesID: exception.SeriesID, Date: exception.Date.String(),
+		CreatedBy: exception.CreatedBy, PlannedByTraeger: exception.PlannedByTraeger, CreatedAt: exception.CreatedAt,
+	}))
 }
