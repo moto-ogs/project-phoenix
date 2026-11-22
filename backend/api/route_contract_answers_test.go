@@ -15,44 +15,11 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/contract"
 )
 
-// routesNoRouterTestAnswers are the registered routes without unambiguous
-// router answers, so the answer check (api/common/answer_contract_test_helpers.go)
-// cannot attribute a real answer to them. Their tests call the handler without
-// a router, use an ambiguous router, or none exists. Their types still render
-// within the contract (TestRegisteredResponseTypesRenderWithinTheContract).
-// Measured with a full suite on 2026-11-20 (#7563).
-//
-// Shrink only: give the route a test through its router and delete the line.
-var routesNoRouterTestAnswers = map[string]string{
-	"DELETE /caterer/auth/passkeys/{passkeyId}":                        "no router test answers it",
-	"DELETE /operator/auth/mfa/trusted-devices/{deviceId}":             "no router test answers it",
-	"DELETE /operator/auth/passkeys/{passkeyId}":                       "no router test answers it",
-	"DELETE /traeger/holiday-periods/{id}/form/documents/{documentId}": "no router test answers it",
-	"GET /auth/invitations/{token}":                                    "no router test answers it",
-	"POST /auth/guardian-invitations/{token}/accept":                   "no router test answers it",
-	"POST /caterer/account/mfa/disable":                                "no router test answers it",
-	"POST /caterer/auth/passkeys/enrollment/challenge":                 "no router test answers it",
-	"POST /caterer/auth/passkeys/register/options":                     "no router test answers it",
-	"POST /caterer/auth/passkeys/register/verify":                      "no router test answers it",
-	"POST /caterer/auth/password-reset":                                "no router test answers it",
-	"POST /caterer/auth/password-reset/confirm":                        "no router test answers it",
-	"POST /operator/auth/email-confirm":                                "no router test answers it",
-	"POST /operator/auth/passkeys/enrollment/challenge":                "no router test answers it",
-	"POST /operator/auth/passkeys/register/options":                    "no router test answers it",
-	"POST /operator/auth/passkeys/register/verify":                     "no router test answers it",
-	"POST /operator/profile/password":                                  "no router test answers it",
-	"POST /parent/auth/password-reset":                                 "no router test answers it",
-	"POST /parent/auth/password-reset/confirm":                         "no router test answers it",
-	"POST /parent/me/mfa/disable":                                      "no router test answers it",
-	"POST /school/auth/password-reset":                                 "no router test answers it",
-	"POST /school/auth/password-reset/confirm":                         "no router test answers it",
-	"POST /traeger/contracts/{id}/paper-signature":                     "its handler answers 204 without common.Respond",
-}
-
 // The answer check writes the key of every registered route a test identified
 // unambiguously and answered to the file CONTRACT_ANSWERS_FILE names. After a
 // run of the whole suite, CONTRACT_ANSWERS_CHECK=1 makes this test hold that
-// file against the register above:
+// file against every registered JSON route; there is no exception list
+// (#7808):
 //
 //	cd backend && rm -f /tmp/answers.txt
 //	CONTRACT_ANSWERS_FILE=/tmp/answers.txt ../scripts/run-go-toolchain.sh ../scripts/test-backend.sh -count=1 ./...
@@ -61,14 +28,13 @@ var routesNoRouterTestAnswers = map[string]string{
 // A selection of packages answers fewer routes. CI's backend job runs the
 // check after every run that tested ./api: the whole suite holds every route,
 // a selection with CONTRACT_ANSWERS_BASE (the base branch's contract.json)
-// only the routes the branch adds. Both find a register line a test answers.
+// only the routes the branch adds.
 //
 // A file route answers bytes, not the envelope: no decoder reads it, so no
 // answer of it can leave the contract, and it needs none here.
 // Collection never reads the file while other packages may still write it.
 // Ambiguous relative patterns validate schemas but do not count as
 // coverage; mount those test routers explicitly to identify their routes.
-// The register itself is checked on every run.
 func TestEveryRegisteredRouteIsAnsweredInATest(t *testing.T) {
 	t.Parallel()
 	doc, err := ContractDocument()
@@ -79,32 +45,23 @@ func TestEveryRegisteredRouteIsAnsweredInATest(t *testing.T) {
 			registered[route.Key()] = true
 		}
 	}
-	for key := range routesNoRouterTestAnswers {
-		assert.Truef(t, registered[key], "%s is not a registered route answering JSON; delete its line", key)
-	}
-
 	answered, err := readRouteAnswers(os.Getenv)
 	require.NoError(t, err)
 	if answered == nil {
-		// Only the register is checked: one package answers few routes.
+		// Without the collected answers there is nothing to hold: one
+		// package answers few routes.
 		return
 	}
 	existing, err := readBaseRoutes(os.Getenv)
 	require.NoError(t, err)
-	var unanswered, stale []string
+	var unanswered []string
 	for key := range registered {
-		_, excused := routesNoRouterTestAnswers[key]
-		switch {
-		case !answered[key] && !excused && !existing[key]:
+		if !answered[key] && !existing[key] {
 			unanswered = append(unanswered, key)
-		case answered[key] && excused:
-			stale = append(stale, key)
 		}
 	}
 	sort.Strings(unanswered)
-	sort.Strings(stale)
-	assert.Emptyf(t, unanswered, "no test unambiguously answers these registered routes through a router. Mount the route's router explicitly in a test:\n%s", strings.Join(unanswered, "\n"))
-	assert.Emptyf(t, stale, "a test answers these routes now; delete their lines from routesNoRouterTestAnswers:\n%s", strings.Join(stale, "\n"))
+	assert.Emptyf(t, unanswered, "no test unambiguously answers these registered routes through a router. Mount the route's router explicitly in a test, under the route's full path:\n%s", strings.Join(unanswered, "\n"))
 }
 
 func readRouteAnswers(getenv func(string) string) (map[string]bool, error) {

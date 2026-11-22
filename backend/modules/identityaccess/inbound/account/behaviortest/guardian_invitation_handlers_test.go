@@ -1,7 +1,16 @@
 package account_test
 
 import (
+	"context"
+	"fmt"
+	"net/http"
+	"time"
+
 	"testing"
+
+	testpkg "github.com/moto-ogs/project-phoenix/test"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	rootAPI "github.com/moto-ogs/project-phoenix/api"
 	transactionFailures "github.com/moto-ogs/project-phoenix/modules/transactionruntime"
@@ -83,4 +92,28 @@ func TestAcceptGuardianInvitation_BadRequest_PasswordMismatch(t *testing.T) {
 	rr := testutil.ExecuteRequest(router, req)
 
 	testutil.AssertBadRequest(t, rr)
+}
+
+// A guardian accepts a valid invitation through the auth router under its
+// /auth mount, so the answer is held to its registered route (#7808).
+func TestAcceptGuardianInvitation_CreatesTheAccount(t *testing.T) {
+	t.Parallel()
+	db, authRoute := setupAuthDependenciesRoute(t)
+	resource := authAPI.NewResource(authRoute.AuthService, authRoute.Invitations, nil, authRoute.Sessions, identityaccessCompose.TenantUnitOfWork{}, transactionFailures.IsConstraintViolation, authRoute.SettingsService)
+	router := testutil.NewTenantRouter(db)
+	router.Mount("/auth", resource.Router(rootAPI.TenantSessionChain))
+
+	inviter := testpkg.CreateTestAccount(t, db, "guardian-accept-route")
+	profile := testpkg.CreateTestGuardianProfile(t, db, "guardian-accept-route")
+	token := fmt.Sprintf("guardian-accept-route-%d", testpkg.UniqueTestTenantID(t))
+	_, err := db.ExecContext(context.Background(), `INSERT INTO auth.guardian_invitations (tenant_id, token, guardian_profile_id, created_by, expires_at, email)
+		VALUES (?, ?, ?, ?, ?, LOWER(BTRIM(?)))`, testpkg.Tenant(t), testpkg.TokenHash(t, db, token), profile.ID, inviter.ID, testpkg.DatabaseNow(t, db).Add(48*time.Hour), *profile.Email)
+	require.NoError(t, err)
+
+	password := testpkg.NewTestPassword()
+	rr := testutil.ExecuteRequest(router, testutil.NewJSONRequest(t, http.MethodPost, "/auth/guardian-invitations/"+token+"/accept", map[string]any{
+		"password": password, "confirm_password": password,
+	}))
+	require.Equal(t, http.StatusCreated, rr.Code, rr.Body.String())
+	assert.Contains(t, rr.Body.String(), *profile.Email)
 }
