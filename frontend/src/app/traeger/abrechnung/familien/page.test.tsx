@@ -590,6 +590,11 @@ describe("TraegerBillingFamiliesPage: payment method of a family (#7770)", () =>
       "href",
       expect.stringMatching(/\/abrechnung\/familien\/zahlung\/77$/),
     );
+    // The number dialog needs a row this family does not have yet: its
+    // number is set on the payment page.
+    expect(
+      screen.queryByRole("menuitem", { name: /Debitorennummer eintragen/ }),
+    ).not.toBeInTheDocument();
   });
 
   it("names the invoices' method when it differs from the one set", async () => {

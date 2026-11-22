@@ -154,7 +154,8 @@ function paymentMenuItems(
   return [
     {
       label: "Empfänger und Zahlung ändern",
-      description: "Öffnet die Seite für Empfänger, Zahlungsweg und Zahltag",
+      description:
+        "Öffnet die Seite für Empfänger, Zahlungsweg, Zahltag und Debitorennummer",
       icon: <CreditCard aria-hidden="true" className="h-4 w-4" />,
       href: familyPaymentPath(family.contractId, { filter }),
       onClick: () => undefined,
@@ -190,6 +191,18 @@ function DebtorCell({
   const others = otherInvoiceNumbers(family);
   const name = familyName(family) || familyKeyLabel(family.familyEmail);
   const number = family.familyDebtorNumber;
+  const numberItem: OverflowMenuItem = {
+    label: number ? "Debitorennummer ändern" : "Debitorennummer eintragen",
+    description: number
+      ? "Öffnet ein Fenster, um die Debitorennummer zu ändern"
+      : "Öffnet ein Fenster, um die Debitorennummer einzutragen",
+    icon: number ? (
+      <Pencil aria-hidden="true" className="h-4 w-4" />
+    ) : (
+      <Plus aria-hidden="true" className="h-4 w-4" />
+    ),
+    onClick: () => onChange(family),
+  };
   return (
     <span className="block min-w-0 sm:w-40">
       <span className="flex min-w-0 items-center justify-between gap-3">
@@ -212,20 +225,10 @@ function DebtorCell({
           <OverflowMenu
             ariaLabel={`Aktionen für ${name}`}
             items={[
-              {
-                label: number
-                  ? "Debitorennummer ändern"
-                  : "Debitorennummer eintragen",
-                description: number
-                  ? "Öffnet ein Fenster, um die Debitorennummer zu ändern"
-                  : "Öffnet ein Fenster, um die Debitorennummer einzutragen",
-                icon: number ? (
-                  <Pencil aria-hidden="true" className="h-4 w-4" />
-                ) : (
-                  <Plus aria-hidden="true" className="h-4 w-4" />
-                ),
-                onClick: () => onChange(family),
-              },
+              // A family known by its contract alone has no row the number
+              // dialog could write to: its number is set on the page for
+              // recipient and payment, which creates the row.
+              ...(family.contractOnly ? [] : [numberItem]),
               ...paymentMenuItems(family, paymentFilter),
             ]}
           />

@@ -89,6 +89,12 @@ export interface BillingFamily extends BillingAmounts {
    */
   readonly contractId?: string;
   /**
+   * The family is known by its contract alone: no document, no number and
+   * no deviation yet. Its number is set with its recipient and payment,
+   * which create its row; the number dialog of the list needs that row.
+   */
+  readonly contractOnly?: boolean;
+  /**
    * The children and their own numbers when the Träger keeps a number per
    * child (#7007); absent when it keeps one per payer.
    */
@@ -398,6 +404,7 @@ export function withFamilyChildren(
       hasDocuments: false,
       familyPaymentMethod: "",
       contractId: family.contractId ?? "",
+      contractOnly: Boolean(family.contractId),
       ...(perChild ? { children: family.children } : {}),
       issuedCents: 0,
       cancelledCents: 0,
