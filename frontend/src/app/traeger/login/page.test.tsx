@@ -160,7 +160,7 @@ describe("TraegerLoginPage", () => {
       challenge_token: "challenge",
       code: "123456",
       remember_device: false,
-      organization_id: 7,
+      organization_id: "7",
     });
     await waitFor(() =>
       expect(navigate).toHaveBeenCalledWith("/traeger/uebersicht"),
@@ -391,7 +391,7 @@ describe("TraegerLoginPage", () => {
       code: "654321",
       remember_device: false,
       challenge_token: "challenge",
-      organization_id: 7,
+      organization_id: "7",
     });
   });
 

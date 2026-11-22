@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -52,13 +53,13 @@ func TestTraegerLoginSetsUpTheSecondFactorBeforeTheSession(t *testing.T) {
 		wrong = "111111"
 	}
 	code, refused := traegerPost(t, portal, "/traeger/auth/mfa/enroll/confirm", login.AccessToken, map[string]any{
-		"challenge_token": start.ChallengeToken, "code": wrong, "organization_id": organization,
+		"challenge_token": start.ChallengeToken, "code": wrong, "organization_id": strconv.FormatInt(organization, 10),
 	})
 	assert.Equal(t, http.StatusUnauthorized, code)
 	assert.Equal(t, "identity.mfa_code_invalid", refused.Code)
 
 	code, session := traegerPost(t, portal, "/traeger/auth/mfa/enroll/confirm", login.AccessToken, map[string]any{
-		"challenge_token": start.ChallengeToken, "code": sent, "organization_id": organization,
+		"challenge_token": start.ChallengeToken, "code": sent, "organization_id": strconv.FormatInt(organization, 10),
 	})
 	require.Equal(t, http.StatusOK, code)
 	require.NotEmpty(t, session.RefreshToken)
@@ -76,7 +77,7 @@ func TestTraegerLoginSetsUpTheSecondFactorBeforeTheSession(t *testing.T) {
 	assert.Empty(t, again.AccessToken, "no session before the code")
 	assert.Equal(t, organization, int64(again.OrganizationID))
 	code, verified := traegerPost(t, portal, "/traeger/auth/mfa/verify", "", map[string]any{
-		"challenge_token": again.ChallengeToken, "code": lastTraegerCode(t, portal, account.Email), "organization_id": organization,
+		"challenge_token": again.ChallengeToken, "code": lastTraegerCode(t, portal, account.Email), "organization_id": strconv.FormatInt(organization, 10),
 	})
 	require.Equal(t, http.StatusOK, code)
 	assert.Equal(t, float64(organization), traegerTokenClaims(t, verified.AccessToken)["org_id"])
@@ -109,7 +110,7 @@ func TestTraegerSecondFactorRefusesForeignChallengesAndCodes(t *testing.T) {
 	require.Equal(t, "mfa_required", login.Status)
 	foreign := traegerOrganization(t, db, "Träger Fremd", true)
 	code, answer = traegerPost(t, portal, "/traeger/auth/mfa/verify", "", map[string]any{
-		"challenge_token": login.ChallengeToken, "code": lastTraegerCode(t, portal, account.Email), "organization_id": foreign,
+		"challenge_token": login.ChallengeToken, "code": lastTraegerCode(t, portal, account.Email), "organization_id": strconv.FormatInt(foreign, 10),
 	})
 	assert.Equal(t, http.StatusForbidden, code, "the code opens only a Träger of the account")
 	assert.Equal(t, "traeger.no_membership", answer.Code)

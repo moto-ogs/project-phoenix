@@ -142,7 +142,7 @@ export async function traegerLogin(input: {
   };
   if (input.ignoreTrustedDevice) body.ignore_trusted_device = true;
   if (input.organizationId !== undefined) {
-    body.organization_id = Number(input.organizationId);
+    body.organization_id = input.organizationId;
   }
   // A sign-in step of the BFF without a session (`public`).
   return signInAnswer(
