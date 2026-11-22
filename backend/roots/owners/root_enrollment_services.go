@@ -111,7 +111,9 @@ func BuildEnrollmentDecisions(
 		Companions:        EnrollmentDecisionCompanions(NewStudentCompanionRepository(carePlan), carePlan.DeleteCompanionEdges),
 		PickupSchedules:   arrivalTimetable.NewEnrollmentPickupSchedules(careRows.PickupSchedules),
 		ArrivalSchedules:  arrivalTimetable.NewEnrollmentArrivalSchedules(careRows.ArrivalSchedules),
-		Bookings:          offerings.Bookings, GuardianAccess: identity, GuardianInvitations: identity, GuardianAuthorizer: people.StudentGuardians,
+		// The enrollment of the children of imported contracts (ADR 0308).
+		ContractRecords: records, CareBookings: enrollment.CareBookings,
+		Bookings: offerings.Bookings, GuardianAccess: identity, GuardianInvitations: identity, GuardianAuthorizer: people.StudentGuardians,
 		GuardianHold:           NewEnrollmentGuardianHold(db, people.StudentGuardians, people.Students, people.GuardianProfiles, nil),
 		StudentAudit:           EnrollmentDecisionStudentAudit(services.StudentAudit),
 		StudentConsents:        EnrollmentDecisionStudentConsents(services.StudentConsents),

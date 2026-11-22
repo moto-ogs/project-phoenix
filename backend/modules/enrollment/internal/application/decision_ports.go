@@ -34,6 +34,10 @@ type (
 	// active request of the phase that created or renews it (#6247).
 	DecisionPhaseHolders interface {
 		PhaseRequestsHoldingStudents(ctx context.Context, phaseID int64, studentIDs, excludedChildIDs []int64) (map[int64]enrollmentNative.CandidatePhaseRequest, error)
+		// ContractEnrollmentHolders lists every request child of the phase
+		// that holds one of the students, with the source of its request
+		// (#7760, ADR 0308).
+		ContractEnrollmentHolders(ctx context.Context, phaseID int64, studentIDs []int64) ([]enrollmentNative.ContractEnrollmentHolder, error)
 	}
 	// DecisionChildren reads the request children with their offering
 	// selections and writes the decision state.
@@ -222,16 +226,23 @@ type DecisionDependencies struct {
 	// The owner's composition binds its own store.
 	PhaseHolders DecisionPhaseHolders
 	// Reads is the per-account read state of the admin queue (#3778).
-	Reads          enrollmentNative.RequestReads
-	Children       DecisionChildren
-	Guardians      DecisionGuardians
-	LateInvites    DecisionLateInvites
-	Phases         DecisionPhases
-	Schemas        DecisionSchemas
-	Offerings      CareOfferingCatalog
-	Notifications  enrollmentNative.Notifications
-	Bookings       DecisionBookings
-	GuardianAccess DecisionGuardianAccess
+	Reads enrollmentNative.RequestReads
+	// ContractRecords, CareBookings and Random serve the enrollment of the
+	// children of imported care contracts (#7760, ADR 0308): the request
+	// and its child, the bookings Care Plan records for it, and the entropy
+	// of its status token. Without the three the capability refuses.
+	ContractRecords ContractEnrollmentRecords
+	CareBookings    enrollmentNative.CareBookingCommands
+	Random          func([]byte) error
+	Children        DecisionChildren
+	Guardians       DecisionGuardians
+	LateInvites     DecisionLateInvites
+	Phases          DecisionPhases
+	Schemas         DecisionSchemas
+	Offerings       CareOfferingCatalog
+	Notifications   enrollmentNative.Notifications
+	Bookings        DecisionBookings
+	GuardianAccess  DecisionGuardianAccess
 	// GuardianInvitations creates the invitation an approval owes. Nil
 	// leaves it uncreated (focused tests).
 	GuardianInvitations DecisionGuardianInvitations

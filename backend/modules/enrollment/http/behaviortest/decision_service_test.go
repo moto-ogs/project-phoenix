@@ -261,16 +261,18 @@ func newDecisionsForTestWithBookings(
 	studentEnrollment := testStudentEnrollment(env.db)
 	decisionRows := repoFactory.EnrollmentOn(decisionTestClock)
 	return newTestDecisions(enrollmentCompose.DecisionDependencies{
-		Now:            decisionTestClock,
-		Requests:       decisionRows,
-		Children:       decisionRows,
-		Guardians:      decisionRows,
-		LateInvites:    decisionRows,
-		Phases:         decisionRows,
-		Schemas:        decisionRows,
-		Offerings:      enrollmentCompose.NewCareOfferingRecords(repoFactoryCare.CarePlan),
-		Bookings:       bookings,
-		GuardianAccess: testGuardianAccess(env.db), GuardianAuthorizer: repoFactory.StudentGuardian, GuardianHold: testGuardianHold(env.db, repoFactory),
+		Now:             decisionTestClock,
+		Requests:        decisionRows,
+		Children:        decisionRows,
+		Guardians:       decisionRows,
+		LateInvites:     decisionRows,
+		Phases:          decisionRows,
+		Schemas:         decisionRows,
+		Offerings:       enrollmentCompose.NewCareOfferingRecords(repoFactoryCare.CarePlan),
+		Bookings:        bookings,
+		ContractRecords: decisionRows,
+		CareBookings:    requestTestBookingCommands(),
+		GuardianAccess:  testGuardianAccess(env.db), GuardianAuthorizer: repoFactory.StudentGuardian, GuardianHold: testGuardianHold(env.db, repoFactory),
 		People: owners.EnrollmentDecisionPeopleDirectory(
 			repoFactory.Person, repoFactory.Staff, repoFactory.Student, repoFactory.StudentGuardian, repoFactory.GuardianProfile, repoFactory.GuardianPhoneNumber, studentEnrollment,
 		),

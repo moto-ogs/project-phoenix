@@ -753,6 +753,30 @@
       "target_owner": ""
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Decisions.EnrollContractChildren",
+      "binding_digest": "a2456802e7d0954e0ef13f229cc09303",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.ContractEnrollments.EnrollContractChildren",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupAutoExcusal.ResyncFutureExceptions",
+      "target_owner": "care-plan"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Decisions.EnrollContractChildren",
+      "binding_digest": "386577e661991d88f181939010c1e6e6",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.ContractEnrollments.EnrollContractChildren",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/securityruntime.FillRandom",
+      "target_owner": "security-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Decisions.EnrollContractChildren",
+      "binding_digest": "2c91fb756d7870aef733ee767297bf78",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.ContractEnrollments.EnrollContractChildren",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/timetable.RecurrenceWriteLock.LockRecurrenceWrites",
+      "target_owner": "timetable-activities"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment.Decisions.DecideAndInvite",
       "binding_digest": "a223b85accb888391a93aece48c63502",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.DecisionCommand.DecideAndInvite",

@@ -1013,6 +1013,40 @@
     },
     {
       "adr": "0083",
+      "approval_adr": "0308",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Decisions.EnrollContractChildren",
+      "classification": "debt",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.ContractEnrollments.EnrollContractChildren",
+      "reason": "Unreviewed cross-owner mutation, explicit coordination finding (not a leaf or E1-E5 grant): enrollment reaches modules/careplan.PickupAutoExcusal.ResyncFutureExceptions (care-plan) through modules/enrollment/internal/application.Decisions.EnrollContractChildren, the same resync of the pickup auto excusals an approval (Decide) makes once the bookings of an approved child exist, here without the announcement to the guardians (#7760). Approved for the silent enrollment of the children of imported contracts by ADR 0308; protocol review stays follow-up work (ADR 0098).",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupAutoExcusal.ResyncFutureExceptions",
+      "target_owner": "care-plan"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Decisions.EnrollContractChildren",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.ContractEnrollments.EnrollContractChildren",
+      "reason": "Read-only target: enrollment reaches modules/securityruntime.FillRandom (security-runtime) through modules/enrollment/internal/application.Decisions.EnrollContractChildren for the entropy of the status token of the request it stores, as the rollover does (#7760). No persistent, lock or scope effect.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/securityruntime.FillRandom",
+      "target_owner": "security-runtime"
+    },
+    {
+      "adr": "0083",
+      "approval_adr": "0308",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Decisions.EnrollContractChildren",
+      "classification": "debt",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.ContractEnrollments.EnrollContractChildren",
+      "reason": "Unreviewed cross-owner lock, explicit coordination finding (not a leaf or E1-E5 grant): enrollment reaches modules/timetable.RecurrenceWriteLock.LockRecurrenceWrites (timetable-activities) through modules/enrollment/internal/application.Decisions.EnrollContractChildren, the approval gates an approval (Decide) takes before its row locks and the gate the phase bounds reader takes again before it reads the phase (#7760). Approved for the silent enrollment of the children of imported contracts by ADR 0308; protocol review stays follow-up work (ADR 0098).",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/timetable.RecurrenceWriteLock.LockRecurrenceWrites",
+      "target_owner": "timetable-activities"
+    },
+    {
+      "adr": "0083",
       "approval_adr": "0174",
       "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment.Decisions.DecideAndInvite",
       "classification": "debt",

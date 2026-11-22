@@ -130,11 +130,13 @@ func validateChildGradeEligibility(phase *enrollmentNative.Phase, children []Sub
 }
 
 // isTrustedEnrollmentSource reports whether a stored request came through a
-// deliberate override path (admin manual enrollment or a late invite); an
-// edit keeps the eligibility override its creation had.
+// deliberate override path (admin manual enrollment, a late invite or the
+// enrollment of a child of an imported care contract, ADR 0308); an edit
+// keeps the eligibility override its creation had.
 func isTrustedEnrollmentSource(source string) bool {
 	switch strings.TrimSpace(source) {
-	case enrollmentNative.RequestSourceLateInvite, enrollmentNative.RequestSourceAdminManual:
+	case enrollmentNative.RequestSourceLateInvite, enrollmentNative.RequestSourceAdminManual,
+		enrollmentNative.RequestSourceContractImport:
 		return true
 	default:
 		return false
@@ -193,7 +195,9 @@ func assertExistingStudentMatchResolved(phase *enrollmentNative.Phase, matchedSt
 // reEnrollmentSubmitter is the identity a pinned re-enrollment is authorized
 // against: the authenticated account, or the email an accountless late
 // invite was issued to — never an edited contact email (#2164). AdminManaged
-// marks the staff-authorized manual enrollmentNative.
+// marks the staff-authorized manual enrollmentNative and the enrollment the
+// school made for a child of an imported care contract (ADR 0308): neither
+// has a parent identity.
 type reEnrollmentSubmitter struct {
 	GuardianAccountID *int64
 	GuardianEmail     string
@@ -204,7 +208,7 @@ func reEnrollmentSubmitterFor(submissionSource string, guardianAccountID *int64,
 	return reEnrollmentSubmitter{
 		GuardianAccountID: guardianAccountID,
 		GuardianEmail:     guardianEmailKey(guardianEmail),
-		AdminManaged:      enrollmentNative.NormalizedSubmissionSource(submissionSource) == enrollmentNative.RequestSourceAdminManual,
+		AdminManaged:      enrollmentNative.StaffEnteredSubmissionSource(submissionSource),
 	}
 }
 
