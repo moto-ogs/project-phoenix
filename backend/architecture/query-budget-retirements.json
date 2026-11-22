@@ -362,6 +362,9 @@
   {
     "scenario": "api.users.list.positive_growth",
     "route": "GET /api/users/",
+    "issue": 7808
+  },
+  {
     "scenario": "api.activities.student_enrollments.complete",
     "route": "GET /api/activities/students/{studentId}",
     "issue": 7808
