@@ -148,6 +148,9 @@ const (
 	// contract to a child record and its removal (#7760).
 	ActionLinkChild   = "link_child"
 	ActionUnlinkChild = "unlink_child"
+	// ActionBindApplication records the binding of an imported contract to
+	// the application child of its child (#7760, ADR 0308).
+	ActionBindApplication = "bind_application"
 )
 
 // VersionsDetail is the detail of a template entry of the trail with the

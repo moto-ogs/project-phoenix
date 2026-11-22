@@ -16,8 +16,9 @@ import (
 // newest version. ImportOrigin is the origin of a contract an import stored,
 // empty for one from an application. StudentID the child record of the
 // school it is linked to, nil without one (#7760). RequestChildID is the
-// application child of a contract from an application, nil for an imported
-// one: with it the read also gives the keys of the contracts.
+// application child of a contract from an application and of an imported
+// contract bound to one (ADR 0308), nil for an imported one that is not
+// bound: with it the read also gives the keys of the contracts.
 type ContractChild struct {
 	ContractID   int64
 	SchoolID     int64
@@ -29,7 +30,7 @@ type ContractChild struct {
 	EndsOn       *calendar.Date
 	ImportOrigin string
 	StudentID    *int64
-	// RequestChildID is the key of a contract from an application.
+	// RequestChildID is the key of a contract with an application child.
 	RequestChildID *int64
 }
 
@@ -38,6 +39,15 @@ type ContractChild struct {
 type ChildLink struct {
 	ContractID int64
 	StudentID  int64
+}
+
+// ApplicationBinding names the application child an imported contract is
+// bound to, with the child record the contract must still have (#7760, ADR
+// 0308).
+type ApplicationBinding struct {
+	ContractID     int64
+	StudentID      int64
+	RequestChildID int64
 }
 
 // The keys of a trail entry that names the file and the line a link came

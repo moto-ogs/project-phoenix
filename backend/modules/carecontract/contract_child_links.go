@@ -87,6 +87,10 @@ var (
 	// ErrChildLinkNotImported reports a contract from an application: it
 	// keeps the child of its application.
 	ErrChildLinkNotImported = errors.New("only a contract from an import is linked to a child record here")
+	// ErrChildLinkBound reports an imported contract bound to the
+	// application of its child (ADR 0308): the enrollment and the bookings it
+	// follows belong to that child record, so the link stays.
+	ErrChildLinkBound = errors.New("the contract is bound to the application of its child")
 )
 
 // ChildLinkColumns names per field the header of the column it comes from.
@@ -218,6 +222,7 @@ type ContractChildLinks interface {
 	// UnlinkChild takes the child record studentID, the one the office saw,
 	// off an imported contract, to correct a wrong link. A contract without
 	// one stays as it is; one linked to another child record is
-	// ErrChildLinkChanged.
+	// ErrChildLinkChanged, one bound to the application of its child
+	// ErrChildLinkBound.
 	UnlinkChild(ctx context.Context, reviewer Reviewer, contractID, studentID int64) error
 }

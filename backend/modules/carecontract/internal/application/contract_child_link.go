@@ -38,8 +38,9 @@ type ChildLinkStore interface {
 	// UnlinkContractChild takes the child record studentID off an imported
 	// contract and answers the school and whether it had one; a contract
 	// without one stays as it is. ErrContractNotFound, ErrChildLinkNotImported
-	// for a contract from an application, or ErrChildLinkChanged for one
-	// linked to another child record.
+	// for a contract from an application, ErrChildLinkBound for an imported
+	// one bound to an application, or ErrChildLinkChanged for one linked to
+	// another child record.
 	UnlinkContractChild(ctx context.Context, organizationID, contractID, studentID int64) (int64, bool, error)
 	InsertEvents(ctx context.Context, organizationID int64, events []Event) error
 }

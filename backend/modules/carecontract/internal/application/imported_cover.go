@@ -127,11 +127,15 @@ func importCoverage(reads []schoolRead, children []ports.ContractChild, today ca
 // all but a withdrawn one, which never held, and an ended one without a last
 // day. A contract that ended before today still counts: a contract from an
 // application may begin in the past, and both would bill the days they
-// share. The time each contract holds decides in importCovers.
+// share. The time each contract holds decides in importCovers. An imported
+// contract bound to an application child (ADR 0308) is none of them: it
+// counts by its key like a contract from an application and covers no other
+// application of the child, so the child gets its contract for the next
+// phase as every other child does.
 func runningImports(children []ports.ContractChild) map[int64][]ports.ContractChild {
 	imported := map[int64][]ports.ContractChild{}
 	for _, child := range children {
-		if child.ImportOrigin != "" && everHeld(child) {
+		if child.ImportOrigin != "" && child.RequestChildID == nil && everHeld(child) {
 			imported[child.SchoolID] = append(imported[child.SchoolID], child)
 		}
 	}

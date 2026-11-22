@@ -31,6 +31,12 @@
       "legacy": "care_contract.change_not_found"
     },
     {
+      "code": "care_contract.child_link_bound",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "care_contract.child_link_bound"
+    },
+    {
       "code": "care_contract.child_link_changed",
       "class": "business_rejection",
       "parameters": [],

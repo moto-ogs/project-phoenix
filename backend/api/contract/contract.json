@@ -44661,6 +44661,12 @@
           }
         },
         {
+          "name": "follows_bookings",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "version",
           "schema": {
             "kind": "ref",
@@ -45921,6 +45927,12 @@
         },
         {
           "name": "imported",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "follows_bookings",
           "schema": {
             "kind": "bool"
           }

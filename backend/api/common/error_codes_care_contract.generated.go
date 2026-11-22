@@ -6,6 +6,7 @@ const CodeCareContractChangeContractNotActive = "care_contract.change_contract_n
 const CodeCareContractChangeEndsCare = "care_contract.change_ends_care"
 const CodeCareContractChangeNotApplicable = "care_contract.change_not_applicable"
 const CodeCareContractChangeNotFound = "care_contract.change_not_found"
+const CodeCareContractChildLinkBound = "care_contract.child_link_bound"
 const CodeCareContractChildLinkChanged = "care_contract.child_link_changed"
 const CodeCareContractChildLinkNotImported = "care_contract.child_link_not_imported"
 const CodeCareContractChildLinkRefused = "care_contract.child_link_refused"
@@ -41,6 +42,7 @@ var errorCodeClassesCareContract = []errorCodeClass{
 	{CodeCareContractChangeEndsCare, "business_rejection"},
 	{CodeCareContractChangeNotApplicable, "business_rejection"},
 	{CodeCareContractChangeNotFound, "business_rejection"},
+	{CodeCareContractChildLinkBound, "business_rejection"},
 	{CodeCareContractChildLinkChanged, "business_rejection"},
 	{CodeCareContractChildLinkNotImported, "business_rejection"},
 	{CodeCareContractChildLinkRefused, "business_rejection"},

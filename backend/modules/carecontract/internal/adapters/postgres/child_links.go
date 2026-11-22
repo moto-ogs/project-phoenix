@@ -79,7 +79,9 @@ func (Store) LinkContractChildren(ctx context.Context, organizationID int64, lin
 // a contract without a child record stays as it is, and one linked to
 // another child record is ErrChildLinkChanged: nothing is written then.
 // ErrContractNotFound for a contract the Träger does not have,
-// ErrChildLinkNotImported for one from an application.
+// ErrChildLinkNotImported for one from an application, ErrChildLinkBound
+// for an imported one bound to the application of its child (ADR 0308): its
+// enrollment and its bookings belong to that child record.
 func (Store) UnlinkContractChild(ctx context.Context, organizationID, contractID, studentID int64) (int64, bool, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
@@ -89,8 +91,9 @@ func (Store) UnlinkContractChild(ctx context.Context, organizationID, contractID
 		SchoolID  int64  `bun:"school_id"`
 		Imported  bool   `bun:"imported"`
 		StudentID *int64 `bun:"student_id"`
+		Bound     bool   `bun:"bound"`
 	}
-	err = db.NewRaw(`SELECT school_id, import_origin IS NOT NULL AS imported, student_id
+	err = db.NewRaw(`SELECT school_id, import_origin IS NOT NULL AS imported, student_id, request_child_id IS NOT NULL AS bound
 		FROM care_contract.contracts WHERE organization_id = ? AND id = ? FOR UPDATE`, organizationID, contractID).Scan(ctx, &row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, false, carecontract.ErrContractNotFound
@@ -101,6 +104,8 @@ func (Store) UnlinkContractChild(ctx context.Context, organizationID, contractID
 	switch {
 	case !row.Imported:
 		return 0, false, carecontract.ErrChildLinkNotImported
+	case row.Bound:
+		return 0, false, carecontract.ErrChildLinkBound
 	case row.StudentID == nil:
 		return row.SchoolID, false, nil
 	case *row.StudentID != studentID:

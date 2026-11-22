@@ -18,6 +18,8 @@ type (
 	CorrectionPorts = application.CorrectionPorts
 	// ChildLinkPorts are the ports of the link of imported contracts to child records (#7760).
 	ChildLinkPorts = application.ChildLinkPorts
+	// EnrollmentPorts are the school reads of the enrollment of the children of imported contracts (#7760, ADR 0308).
+	EnrollmentPorts = application.EnrollmentPorts
 )
 
 // NewContracts builds the contracts of the Träger-Büro; the reads open own units for each school's access log. now is the root's clock (ADR 0239), nil the real one.
@@ -56,6 +58,11 @@ func NewContractCorrections(ports CorrectionPorts, today func() calendar.Date) c
 // NewContractChildLinks builds the link of imported contracts to child records (#7760); it opens its own units. today: see NewIntake.
 func NewContractChildLinks(ports ChildLinkPorts, today func() calendar.Date) carecontract.ContractChildLinks {
 	return application.NewContractChildLinks(postgres.NewStore(today), ports, today)
+}
+
+// NewContractEnrollments builds the plan and the binding of the enrollment of the children of imported contracts (#7760, ADR 0308); it opens no unit, the caller runs each step in its own. today: see NewIntake.
+func NewContractEnrollments(ports EnrollmentPorts, today func() calendar.Date) carecontract.ContractEnrollments {
+	return application.NewContractEnrollments(postgres.NewStore(today), ports, today)
 }
 
 // NewConclusion builds the conclusion at the acceptance (Weg b, #4680); it opens its own units. now: see NewContracts.

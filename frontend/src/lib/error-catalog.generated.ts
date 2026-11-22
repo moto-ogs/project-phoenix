@@ -52,6 +52,8 @@ export const ERROR_CATALOG = {
         "Die Schule lässt diese Änderung gerade nicht zu. Bitte sprich mit der Schule.",
       "care_contract.change_not_found":
         "Diesen Änderungswunsch gibt es nicht mehr. Bitte lade die Seite neu.",
+      "care_contract.child_link_bound":
+        "Der Vertrag ist schon an die Anmeldung des Kindes gebunden. Die Verknüpfung mit der Kinderakte lässt sich nicht mehr lösen.",
       "care_contract.child_link_changed":
         "Die Angaben haben sich seit der Prüfung geändert. Prüfe sie noch einmal.",
       "care_contract.child_link_not_imported":
@@ -2214,6 +2216,8 @@ export const ERROR_CATALOG = {
         "The school does not allow this change right now. Please talk to the school.",
       "care_contract.change_not_found":
         "This change request no longer exists. Please reload the page.",
+      "care_contract.child_link_bound":
+        "The contract is already bound to the child’s enrollment. The link to the child record can no longer be removed.",
       "care_contract.child_link_changed":
         "The details have changed since the check. Please check them again.",
       "care_contract.child_link_not_imported":
