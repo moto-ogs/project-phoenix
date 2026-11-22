@@ -255,7 +255,7 @@ func (c *familyImportCandidate) showDay(stored map[string]calendar.Date) {
 // over nothing, but its number speaks against the rows of its families.
 func familyImportRows(candidates []familyImportCandidate) (rows []importedChildren, owner []int) {
 	for i, candidate := range candidates {
-		witness := candidate.row.RepeatsLine > 0
+		witness := candidate.row.RepeatsLine > 0 || candidate.speaksOnly
 		if (candidate.row.Status != "" && !witness) || candidate.row.Children == nil {
 			continue
 		}

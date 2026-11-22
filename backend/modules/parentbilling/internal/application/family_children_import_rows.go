@@ -42,10 +42,11 @@ var familyImportHeaderNames = map[string][]string{
 		"geborenam", "birthdate", "dateofbirth"},
 	parentbilling.FamilyImportFieldSchool: {"schule", "schulname", "einrichtung", "standort", "betreuungsort", "ogs", "school"},
 	// Only names that speak of the number: a plain „Gültig ab“ can be the
-	// first day of the contract, and moto never backdates a number to it by
-	// itself (#7765). The office maps such a column on purpose.
+	// first day of the contract and a plain „Stichtag“ the day of a report,
+	// and moto never dates a number by such a column by itself (#7765). The
+	// office maps it on purpose.
 	parentbilling.FamilyImportFieldValidFrom: {"kinderzahlgiltab", "kinderzahlgueltigab", "kinderzahlgueltigseit", "kinderzahlab",
-		"kinderzahlstichtag", "stichtagkinderzahl", "stichtag"},
+		"kinderzahlstichtag", "stichtagkinderzahl"},
 }
 
 // familyImportIndex is a mapping resolved against a file: the position of
@@ -188,6 +189,9 @@ type familyImportCandidate struct {
 	targets   []familyImportTarget
 	validFrom calendar.Date
 	decided   []importedChildren
+	// speaksOnly marks a row held back only by its day: it takes over
+	// nothing, but its number still speaks against the rows of its families.
+	speaksOnly bool
 }
 
 // familyImportCheck reads rows against the schools and contracts of the
@@ -221,12 +225,23 @@ func (c *familyImportCheck) candidate(cells []string, line int) familyImportCand
 	row.Children = c.children(row, cells)
 	candidate.validFrom = c.validFrom(row, cells)
 	schoolID, hasSchool := c.school(row, cells)
-	if len(row.Problems) > 0 || !hasSchool {
+	candidate.speaksOnly = hasSchool && onlyDayHoldsBack(row)
+	if (len(row.Problems) > 0 && !candidate.speaksOnly) || !hasSchool {
 		row.Status = parentbilling.FamilyImportInvalid
 		return candidate
 	}
 	candidate.targets = c.match(row, schoolID)
+	if candidate.speaksOnly {
+		row.Status = parentbilling.FamilyImportInvalid
+	}
 	return candidate
+}
+
+// onlyDayHoldsBack tells whether a row's one problem is its day. Its child
+// and number are sound: without the day column the row would count, so its
+// number must still speak against a sibling's row that names another one.
+func onlyDayHoldsBack(row *parentbilling.FamilyChildrenImportRow) bool {
+	return len(row.Problems) == 1 && row.Problems[0].Field == parentbilling.FamilyImportFieldValidFrom
 }
 
 // validFrom reads the day the row's number counts from: its own column,

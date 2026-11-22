@@ -22,8 +22,8 @@ func TestFamilyImportRowsCountFromTheDayTheOfficeNames(t *testing.T) {
 	assert.Equal(t, "Kinderzahl gilt ab",
 		suggestFamilyImportMapping([]string{"Vorname", "Nachname", "Kinderzahl", "Gültig ab", "Kinderzahl gilt ab"}).Columns.ValidFrom,
 		"the column that names the number goes before a plain „Gültig ab“")
-	assert.Empty(t, suggestFamilyImportMapping([]string{"Vorname", "Nachname", "Kinderzahl", "Gültig ab"}).Columns.ValidFrom,
-		"a plain „Gültig ab“ is not mapped by itself")
+	assert.Empty(t, suggestFamilyImportMapping([]string{"Vorname", "Nachname", "Kinderzahl", "Gültig ab", "Stichtag"}).Columns.ValidFrom,
+		"a plain „Gültig ab“ or „Stichtag“ is not mapped by itself")
 	headers := []string{"Vorname", "Nachname", "Kinderzahl", "Kinderzahl gilt ab"}
 	schools := []parentbilling.CareSchool{{ID: ident.ID(school), Name: "Grundschule Nord"}}
 	mapping := suggestFamilyImportMapping(headers)
@@ -100,6 +100,20 @@ func TestFamilyImportRowsCountFromTheDayTheOfficeNames(t *testing.T) {
 	require.Len(t, numbers, 1)
 	assert.Equal(t, calendar.NewDate(2026, 10, 15), numbers[0].ValidFrom)
 	assert.Equal(t, int64(1), numbers[0].ContractID, "Mia's row names the day, her contract carries the number")
+	// A row held back only by its day still speaks: Noah's row names three
+	// with a cell that is no day, Mia's names two. The numbers of the family
+	// disagree, so neither is taken over.
+	check = familyImportCheck{index: index, schools: schools,
+		recipients: map[int64]parentbilling.CareRecipient{1: {Email: family}, 2: {Email: family}},
+		contracts:  familyImportContracts([]parentbilling.CareContractVersion{contract(1, "Mia"), contract(2, "Noah")})}
+	disagreeing := []familyImportCandidate{
+		check.candidate([]string{"Mia", "Beispiel", "2", ""}, 2),
+		check.candidate([]string{"Noah", "Beispiel", "3", "bald"}, 3),
+	}
+	decideFamilyImport(disagreeing, map[string]*familyNumbers{}, calendar.NewDate(2026, 11, 22))
+	assert.Equal(t, parentbilling.FamilyImportConflict, disagreeing[0].row.Status, "a sibling's row with a bad day names another number")
+	assert.Equal(t, parentbilling.FamilyImportInvalid, disagreeing[1].row.Status)
+	assert.Empty(t, newImportedChildren(disagreeing[0].decided), "nothing is stored for the family")
 }
 
 // A file for the time after a confirmation that still holds today (#7765):
