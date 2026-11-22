@@ -8,7 +8,7 @@ const { installSessionTenantMismatchObserver } =
 const { onSessionTenantMismatch } = await import("./api-error");
 const { bindSessionAccount, SESSION_ACCOUNT_HEADER } =
   await import("./session-account");
-const { authFetch, fetchWithRetry } = await import("./api-helpers");
+const { fetchWithRetry } = await import("./api-helpers");
 const { getCachedSession, primeSessionCache } = await import("./session-cache");
 const { listAvailableTenants } = await import("./tenant-api");
 const { timeTrackingService } = await import("./time-tracking-api");
@@ -56,7 +56,6 @@ describe("the session tenant refusal reaches TenantGuard from every client", () 
   it.each([
     ["a plain fetch that reads only ok", () => fetch("/api/students")],
     ["a sessionFetch client", () => listAvailableTenants()],
-    ["authFetch", () => authFetch("/api/students")],
     ["fetchWithRetry", () => fetchWithRetry("/api/students")],
     ["the time tracking client", () => timeTrackingService.checkIn("present")],
   ])("%s", async (_client, send) => {
@@ -144,7 +143,6 @@ describe("the tab's account on every request to its own BFF", () => {
     ],
     ["a Request object", () => fetch(new Request(`${location.origin}/api/x`))],
     ["a sessionFetch client", () => listAvailableTenants()],
-    ["authFetch", () => authFetch("/api/students")],
   ])("names the bound account on %s", async (_client, send) => {
     bindSessionAccount("7");
     fetchMock.mockResolvedValue(Response.json({ data: [] }));

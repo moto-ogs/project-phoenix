@@ -9,10 +9,7 @@
 
 import { bffJson } from "~/lib/bff-fetch";
 import { knownEnum } from "./contract/known-enum";
-import type {
-  ChildLinking as WireLinking,
-  ChildLinkRow as WireRow,
-} from "./contract/traeger-contract-child-links.generated";
+import type * as childLinksContract from "./contract/traeger-contract-child-links.generated";
 
 // Go does not register these sets; the contract types them as string. A value
 // this build does not know stays undefined instead of passing as a known one.
@@ -113,7 +110,7 @@ export interface ChildLinkFileRequest {
   readonly fingerprint?: string;
 }
 
-function mapRow(row: WireRow): ChildLinkRow {
+function mapRow(row: childLinksContract.ChildLinkRow): ChildLinkRow {
   const hasStudent =
     row.student_first_name !== "" ||
     row.student_last_name !== "" ||
@@ -146,7 +143,7 @@ function mapRow(row: WireRow): ChildLinkRow {
   };
 }
 
-function mapLinking(result: WireLinking): ChildLinkResult {
+function mapLinking(result: childLinksContract.ChildLinking): ChildLinkResult {
   return {
     encoding: result.encoding,
     delimiter: result.delimiter,

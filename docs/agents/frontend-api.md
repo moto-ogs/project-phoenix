@@ -301,15 +301,15 @@ its generated entry types `params`, `query`, `body` and the answer. The
 import is type-only, so no decoder reaches the browser bundle: the portal's
 catalog proxy has decoded the answer already.
 
-| Portal | Example |
-|---|---|
-| Staff (`tenant`) | `bffJson("tenant", "GET /api/students/{id}/partial-absences", { params: { id }, query: { from, to } })` |
-| Parents (`parent`) | `bffJson("parent", "GET /parent/me/children")` |
-| moto schule (`school`) | `bffJson("school", "GET /school/calendar/my")` |
-| Träger (`org`) | `bffJson("org", "POST /traeger/absence-types/", { body })` |
-| Caterer (`caterer`) | `bffJson("caterer", "GET /caterer/schools/{schoolId}/orders", { params: { schoolId }, query: { from, to } })` |
-| Operator (`platform`) | `bffJson("platform", "GET /operator/stats")` |
-| Ohne Sitzung (`public`) | `bffJson("public", "GET /traeger/invitations/{token}", { params: { token } })` |
+| Portal | Example | In the code |
+|---|---|---|
+| Staff (`tenant`) | `bffJson("tenant", "GET /api/students/{id}/partial-absences", { params: { id }, query: { from, to } })` | [`guardian-api.ts`](../../frontend/src/lib/guardian-api.ts), [`timetable-api.ts`](../../frontend/src/lib/timetable-api.ts) |
+| Parents (`parent`) | `bffJson("parent", "GET /parent/me/notifications/feed/", { query: { limit, cursor } })` | [`notification-feed-api.ts`](../../frontend/src/lib/notification-feed-api.ts) `parentNotificationFeedApi` |
+| moto schule (`school`) | `bffJson("school", "GET /school/notifications/feed/", { query: { limit, cursor } })` | [`notification-feed-api.ts`](../../frontend/src/lib/notification-feed-api.ts) `schoolNotificationFeedApi` |
+| Träger (`org`) | `bffJson("org", "GET /traeger/notifications/feed/unread-count")` | [`notification-feed-api.ts`](../../frontend/src/lib/notification-feed-api.ts) `traegerNotificationFeedApi` |
+| Caterer (`caterer`) | `bffJson("caterer", "POST /caterer/notifications/feed/{id}/read", { params: { id } })` | [`notification-feed-api.ts`](../../frontend/src/lib/notification-feed-api.ts) `catererNotificationFeedApi` |
+| Operator (`platform`) | `bffJson("platform", "GET /operator/invitations/")` | [`operator-invitation-api.ts`](../../frontend/src/lib/operator/operator-invitation-api.ts) |
+| Ohne Sitzung (`public`) | `bffJson("public", "GET /auth/invitations/{token}", { params: { token } })` | [`invitation-api.ts`](../../frontend/src/lib/invitation-api.ts) `validateInvitation` |
 
 The path is the pattern below the portal's BFF prefix, a route outside the
 portal's mount (`/analytics-policy`) below the prefix as a whole; a trailing
@@ -332,15 +332,32 @@ slash is dropped and each parameter encoded.
   the session gate before the request and one renewal with a retry
   (`sessionFetch`), then sign-out; `authRefusals` names codes that refuse
   only the operation. Operator: to `/operator/login`. Parents: to
-  `/parents/login`. Träger, moto schule and caterer: the error stays on the
-  page. A parent client that reports refusals (`PARENT_ACCESS_REFUSED_EVENT`)
-  catches the `ApiError` itself.
+  `/parents/login`, except for the call's explicit `authRefusals` (e.g. a
+  wrong MFA confirmation code or current password). Träger, moto schule and
+  caterer: the error stays on the page. A parent client that reports refusals
+  (`PARENT_ACCESS_REFUSED_EVENT`) catches the `ApiError` itself.
 - **No contract:** a backend route without a contract gets one first
   (#7808); its client waits until then. A named `route.ts` the contract
   cannot carry (`settings/values/[key]` purges the cached tenant lookup) is
   called with `bffJsonUncontracted<T>(portal, method, path, options)`; each
   caller is listed with its reason in `bff-fetch-uncontracted.test.ts`, and
   the list only shrinks.
+- **Wait:** a refusal with `Retry-After` (429, 503) carries the wait as
+  `retryAfterSeconds` on the `ApiError` (`apiErrorFromResponse`).
+- **Lists Go writes as `null`:** the generated type says so (`T[] | null`).
+  Read it as an empty list where the screen needs one, once, in the client
+  (`slot-lists-api.ts` derives `WithLists<…>` from the generated type); do not
+  copy the answer into a hand-written type.
+- **Guards:** `fetchWithAuth`, `authFetch` and `operatorFetch` are gone.
+  `old-fetch-helpers.test.ts` lists the files that still import
+  `sessionFetch` for JSON or `traegerRequest`, each with its blocker; a new
+  importer fails, and the list only shrinks. `scripts/backend-wire-types.mjs`
+  finds hand-written wire types by their form (two `snake_case` fields of
+  their own, a generated type imported under another name, a type that only
+  renames a generated one); its baseline only shrinks.
+- **Tests:** a client test that stubs `fetch` mocks the session gate with
+  `vi.mock("~/lib/session-cache", () => import("~/test/mocks/plain-session-fetch"))`;
+  answers of a paginated route carry `pagination` (`pagedJson`).
 - **Files:** a route registered with `File: true` is called with
   `bffFile(portal, route, options)` from the same module: the same path,
   portal table and ApiError, resolving to the successful `Response` whose
