@@ -241,11 +241,12 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 				}
 			case "students":
 				var rows []struct {
-					ID        wireID `json:"student_id"`
+					// The route has no contract yet and answers numbers.
+					ID        int64  `json:"student_id"`
 					FirstName string `json:"first_name"`
 					LastName  string `json:"last_name"`
 					Class     string `json:"school_class"`
-					Link      wireID `json:"relationship_id"`
+					Link      int64  `json:"relationship_id"`
 					Role      string `json:"guardian_role"`
 				}
 				require.NoError(t, json.Unmarshal(envelope.Data, &rows))

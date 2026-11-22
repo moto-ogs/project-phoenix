@@ -83,10 +83,10 @@ func TestCrossTenantStudentsPositiveGrowthQueryBudget(t *testing.T) {
 		require.Equal(t, testutil.StatusOK, rr.Code, rr.Body.String())
 		var response struct {
 			Data []struct {
-				ID         testpkg.ID `json:"student_id"`
-				FirstName  string     `json:"first_name"`
-				LastName   string     `json:"last_name"`
-				HomeTenant string     `json:"home_tenant"`
+				ID         int64  `json:"student_id"`
+				FirstName  string `json:"first_name"`
+				LastName   string `json:"last_name"`
+				HomeTenant string `json:"home_tenant"`
 			} `json:"data"`
 		}
 		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &response))

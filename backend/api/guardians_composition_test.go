@@ -682,7 +682,8 @@ func TestGuardianComposition_GuardianStudentsCarryNamesAndLink(t *testing.T) {
 	assert.Equal(t, "Mia", row["first_name"])
 	assert.Equal(t, "Directory", row["last_name"])
 	assert.Equal(t, "2b", row["school_class"])
-	assert.Equal(t, int64(linkID), testpkg.JSONID(t, row["relationship_id"]))
+	// The route has no contract yet and answers numbers.
+	assert.EqualValues(t, linkID, row["relationship_id"])
 	assert.Equal(t, "primary_guardian", row["guardian_role"])
 }
 
