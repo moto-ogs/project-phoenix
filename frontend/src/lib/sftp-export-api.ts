@@ -2,12 +2,8 @@
 // Gleiche Berechtigung wie der Export selbst (time_tracking:manage); die
 // übertragene Datei ist dieselbe, die der Download liefert.
 
-import { apiErrorFromResponse } from "./api-error";
-import type {
-  ExportTransferResponse,
-  ExportTransferStatus,
-} from "./contract/staff.generated";
-import { sessionFetch } from "./session-cache";
+import { bffJson } from "./bff-fetch";
+import type { TransferExportRequest } from "./contract/staff.generated";
 
 type ExportFormat = "csv" | "xlsx" | "datev_lodas" | "datev_lug";
 
@@ -87,22 +83,16 @@ export function transferFailureSettingsHref(
 }
 
 export async function fetchSFTPStatus(): Promise<SFTPStatus> {
-  const response = await sessionFetch(
-    "/api/staff/time-tracking/export/sftp-status",
+  const status = await bffJson(
+    "tenant",
+    "GET /api/staff/time-tracking/export/sftp-status",
   );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Failed to fetch SFTP status: ${response.statusText}`,
-    );
-  }
-  const json = (await response.json()) as { data: ExportTransferStatus };
   return {
-    enabled: json.data.enabled,
-    ready: json.data.ready,
-    host: json.data.host,
-    remoteDirectory: json.data.remote_directory,
-    missingSettings: json.data.missing_settings ?? [],
+    enabled: status.enabled,
+    ready: status.ready,
+    host: status.host,
+    remoteDirectory: status.remote_directory,
+    missingSettings: status.missing_settings ?? [],
   };
 }
 
@@ -121,7 +111,7 @@ export async function transferExportViaSFTP(
 ): Promise<TransferOutcome> {
   // Die Auswahl reist im Body, nicht in der Query: die POST-Proxy-Route
   // reicht den Body weiter, den Query-String aber nicht.
-  const body: Record<string, string | number> = {
+  const body: TransferExportRequest = {
     year: params.year,
     format: params.format,
   };
@@ -135,32 +125,16 @@ export async function transferExportViaSFTP(
     body.time_format = params.timeFormat;
   }
 
-  const response = await sessionFetch("/api/staff/time-tracking/export/sftp", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Transfer request failed: ${response.statusText}`,
-    );
-  }
-  const json = (await response.json()) as {
-    data?: ExportTransferResponse;
-  };
-  // Die Hülle muss ein `data` tragen. Fehlt es, hat die Route-Hülle das
-  // Ergebnis für eine fertige Antwort gehalten — das passiert, sobald das
-  // Payload ein Feld `success` hätte. Lieber laut scheitern als eine
-  // Übertragung als geglückt zu melden, die niemand geprüft hat.
-  if (!json.data) {
-    throw new Error("Transfer response is missing its data envelope");
-  }
+  const result = await bffJson(
+    "tenant",
+    "POST /api/staff/time-tracking/export/sftp",
+    { body },
+  );
   return {
-    transferred: json.data.transferred,
-    filename: json.data.filename,
-    targetHost: json.data.target_host,
-    targetDirectory: json.data.target_directory,
-    reason: json.data.reason,
+    transferred: result.transferred,
+    filename: result.filename,
+    targetHost: result.target_host,
+    targetDirectory: result.target_directory,
+    reason: result.reason,
   };
 }

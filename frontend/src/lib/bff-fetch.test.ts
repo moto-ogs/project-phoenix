@@ -93,6 +93,20 @@ describe("bffFile", () => {
     );
   });
 
+  it("sends the body of a file route that takes one", async () => {
+    mockSessionFetch.mockResolvedValueOnce(new Response("xlsx"));
+
+    await bffFile("tenant", "POST /api/students/export", {
+      body: { format: "xlsx" },
+    });
+
+    expect(mockSessionFetch).toHaveBeenCalledWith("/api/students/export", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: '{"format":"xlsx"}',
+    });
+  });
+
   it("turns a refused file into the ApiError with the caller's text", async () => {
     mockSessionFetch.mockResolvedValueOnce(
       Response.json({ code: "general.permission" }, { status: 403 }),

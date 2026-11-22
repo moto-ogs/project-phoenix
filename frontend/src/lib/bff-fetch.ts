@@ -270,16 +270,14 @@ async function send(
   return response;
 }
 
-async function call<T>(
-  portal: Portal,
+/** The fetch init of a call: JSON serialized, FormData as is. */
+function requestInit(
   method: Method,
-  url: string,
-  options: CallOptions & { body?: unknown },
-): Promise<T> {
-  const { body, signal, headers, errorMessage } = options;
+  { body, signal, headers }: CallOptions & { body?: unknown },
+): RequestInit {
   const isForm = body instanceof FormData;
   const json = body !== undefined && !isForm;
-  const init: RequestInit = {
+  return {
     method,
     ...(signal && { signal }),
     ...((json || headers) && {
@@ -289,6 +287,16 @@ async function call<T>(
     }),
     ...(body !== undefined && { body: isForm ? body : JSON.stringify(body) }),
   };
+}
+
+async function call<T>(
+  portal: Portal,
+  method: Method,
+  url: string,
+  options: CallOptions & { body?: unknown },
+): Promise<T> {
+  const { errorMessage } = options;
+  const init = requestInit(method, options);
   const response = await send(portal, method, url, init, options);
   const message = (status: number) =>
     errorMessage ?? `${method} ${url} failed (${status})`;
@@ -372,17 +380,12 @@ export async function bffFile<P extends Portal, K extends FileRouteKey<P>>(
   const space = route.indexOf(" ");
   const method = route.slice(0, space) as Method;
   const opts = (options ?? {}) as CallOptions & {
+    body?: unknown;
     params?: Record<string, string>;
     query?: Record<string, QueryValue>;
   };
   const url = bffPath(portal, route.slice(space + 1), opts.params, opts.query);
-  return send(
-    portal,
-    method,
-    url,
-    { method, ...(opts.signal && { signal: opts.signal }) },
-    opts,
-  );
+  return send(portal, method, url, requestInit(method, opts), opts);
 }
 
 /**
