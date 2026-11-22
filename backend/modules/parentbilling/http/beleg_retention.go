@@ -127,7 +127,7 @@ func (rs *BelegRetentionResource) RecordSuspension(w http.ResponseWriter, r *htt
 	var suspension capability.RetentionSuspension
 	rs.write(w, r, BelegRetentionSuspension, req.BelegType, func(ctx context.Context, operatorID int64) error {
 		var err error
-		suspension, err = rs.retention.RecordSuspension(ctx, organizationID, operatorID, capability.NewRetentionSuspension{BelegType: req.BelegType, BelegID: req.BelegID.Int64(), Reason: req.Reason, Scope: req.Scope, Responsible: req.Responsible, ReviewOn: req.ReviewOn})
+		suspension, err = rs.retention.RecordSuspension(ctx, organizationID, operatorID, capability.NewRetentionSuspension(req))
 		return err
 	}, func() { common.Respond(w, r, http.StatusCreated, suspension, "Suspension recorded") })
 }

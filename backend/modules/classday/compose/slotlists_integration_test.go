@@ -826,7 +826,7 @@ func TestBuildList_ListKindRestrictsSlots(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Len(t, result.Slots, 1)
-	assert.Equal(t, f.instanceID, result.Slots[0].InstanceID)
+	assert.Equal(t, f.instanceID, result.Slots[0].InstanceID.Int64())
 	require.Len(t, result.Rows, 2)
 	assert.NotNil(t, rowByStudent(result.Rows, f.plannedID))
 	assert.NotNil(t, rowByStudent(result.Rows, f.missingID))
@@ -991,7 +991,7 @@ func TestBuildList_ClassFilterAndOptions(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Len(t, filtered.Rows, 1)
-	assert.Equal(t, f.walkInID, filtered.Rows[0].StudentID)
+	assert.Equal(t, f.walkInID, filtered.Rows[0].StudentID.Int64())
 	assert.ElementsMatch(t, []string{"3a", "3b"}, filtered.Classes)
 }
 

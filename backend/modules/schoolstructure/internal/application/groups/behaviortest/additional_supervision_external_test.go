@@ -93,8 +93,8 @@ func TestAdditionalSupervisionOffersExternalCaregivers(t *testing.T) {
 	}, overview.RunningSupervisions[0].AvailableTargets,
 		"the placeholder is offered, the expired external caregiver record is not")
 	for _, target := range overview.Targets {
-		require.NotEqual(t, invited.ID, target.ID, "a person without an account never takes over a group")
-		require.NotEqual(t, withAccount.StaffID, target.ID, "an external caregiver never takes over a group")
+		require.NotEqual(t, invited.ID, target.ID.Int64(), "a person without an account never takes over a group")
+		require.NotEqual(t, withAccount.StaffID, target.ID.Int64(), "an external caregiver never takes over a group")
 	}
 
 	created, err := testpkg.TenantQuery2(t, ctx, db, module.Assign, caller, additionalSupervisionAssignment(running.ID, invited.ID))

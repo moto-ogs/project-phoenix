@@ -122,8 +122,8 @@ func TestSupervisionHandOverMovesOnlyTheRunningSupervision(t *testing.T) {
 	result, err := f.handOver(t, ctx, substitutionCaller(t, f.ownerAccount, false), f.targetStaff)
 	require.NoError(t, err)
 	require.Equal(t, TargetAdditionalSupervision, result.Type)
-	require.Equal(t, f.running, result.ActiveGroupID)
-	require.Equal(t, f.targetStaff, result.Target.ID)
+	require.Equal(t, f.running, result.ActiveGroupID.Int64())
+	require.Equal(t, f.targetStaff, result.Target.ID.Int64())
 	require.Empty(t, f.broadcaster.Events(), "signals wait for the commit")
 	commit()
 

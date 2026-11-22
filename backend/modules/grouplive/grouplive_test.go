@@ -408,7 +408,7 @@ func TestGetSelectsPersonalGroupFirstInDirectoryOrder(t *testing.T) {
 	got, err := newService(f).LiveGroup(context.Background(), 0)
 	require.NoError(t, err)
 	require.NotNil(t, got.GroupID)
-	assert.Equal(t, zebraGroupID, *got.GroupID, "the default selection prefers a personal group over the first sorted one")
+	assert.Equal(t, zebraGroupID, (*got.GroupID).Int64(), "the default selection prefers a personal group over the first sorted one")
 	assert.Equal(t, []NavigationGroup{
 		{ID: 1, Name: "Äpfel", RoomID: (*ident.ID)(new(ident.ID(31))), RoomName: "Raum A"},
 		{ID: 2, Name: "Zebra", ViaSubstitution: true, IsPersonal: true},
@@ -430,7 +430,7 @@ func TestGetKeepsSupervisedGroupsWithoutGroupsRead(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 0, f.tenantGroupsCalls, "operational overview without groups:read never widens the visible set")
 	require.NotNil(t, got.GroupID)
-	assert.Equal(t, zebraGroupID, *got.GroupID)
+	assert.Equal(t, zebraGroupID, (*got.GroupID).Int64())
 	assert.Equal(t, map[string]RoomStatus{}, got.RoomStatus)
 	assert.Equal(t, emptyTracking(), got.TrackingIndicators)
 	assert.Equal(t, []Transfer{}, got.Transfers)

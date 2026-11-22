@@ -91,8 +91,8 @@ func TestAdditionalSupervisionExternalInterface(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, TargetAdditionalSupervision, created.Type)
-	require.Equal(t, running.ID, created.ActiveGroupID)
-	require.Equal(t, target.StaffID, created.Target.ID)
+	require.Equal(t, running.ID, created.ActiveGroupID.Int64())
+	require.Equal(t, target.StaffID, created.Target.ID.Int64())
 
 	row := testpkg.GroupSupervisorRowByID(t, db, created.ID.Int64())
 	require.Equal(t, "additional_supervisor", row.Role)
@@ -199,7 +199,7 @@ func TestAdditionalSupervisionAuthorizationMatrix(t *testing.T) {
 	require.ElementsMatch(t, []int64{owned.ID, other.ID}, runningSupervisionIDs(overview))
 	created, err := personal.Assign(ctx, adminCaller, additionalSupervisionAssignment(other.ID, target.StaffID))
 	require.NoError(t, err)
-	require.Equal(t, other.ID, created.ActiveGroupID)
+	require.Equal(t, other.ID, created.ActiveGroupID.Int64())
 
 	_, err = personal.Assign(ctx, adminCaller, additionalSupervisionAssignment(owned.ID, unverified.ID))
 	require.ErrorIs(t, err, ErrNotFound)
@@ -531,7 +531,7 @@ func TestGroupHandoverPermissionsAndPeriod(t *testing.T) {
 		{ID: ident.ID(foreign.ID), Name: foreign.Name},
 	}, adminOverview.Groups)
 	for _, handover := range adminOverview.GroupHandovers {
-		require.NotEqual(t, legacy.ID, handover.ID)
+		require.NotEqual(t, legacy.ID, handover.ID.Int64())
 	}
 	require.ErrorIs(t, testpkg.TenantCommand2(t, ctx, db, service.End, adminCaller, EndRequest{Type: TargetGroupHandover, ID: legacy.ID}), ErrNotFound)
 	_, err = testpkg.TenantQuery1(t, ctx, db, repos.GroupSubstitution.FindByID, any(legacy.ID))

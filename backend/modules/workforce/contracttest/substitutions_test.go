@@ -72,7 +72,7 @@ func TestSubstitutionCapabilityPreservesCallerAndOverview(t *testing.T) {
 	require.Equal(t, "2026-09-21", out.ScheduleAppointments[0].Date)
 	require.True(t, out.ScheduleAppointments[0].Staff[0].IsSubstitute)
 	require.True(t, out.RunningSupervisions[0].CanAssign)
-	require.Equal(t, staff.ID, out.RunningSupervisions[0].AvailableTargets[0].ID)
+	require.Equal(t, staff.ID, out.RunningSupervisions[0].AvailableTargets[0].ID.Int64())
 	out, err = capability.Overview(ctx, caller, workforce.SubstitutionOverviewQuery{})
 	require.NoError(t, err)
 	require.Nil(t, out)

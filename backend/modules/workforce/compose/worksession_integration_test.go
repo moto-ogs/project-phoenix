@@ -325,7 +325,7 @@ func TestWorkSessionBreaksFollowTheLegacyRowRules(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.NotZero(t, first.ID)
-	assert.Equal(t, testpkg.Tenant(t), first.TenantID)
+	assert.Equal(t, testpkg.Tenant(t), first.TenantID.Int64())
 	assert.True(t, first.IsActive())
 
 	active := true
