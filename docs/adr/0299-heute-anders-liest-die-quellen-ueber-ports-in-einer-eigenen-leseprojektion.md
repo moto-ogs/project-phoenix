@@ -340,10 +340,14 @@ Projektion nutzt „change“.
   Middleware außerhalb der Anfrage-Transaktion der beiden Schreibrouten, sie
   sendet also nur nach einer bestätigten 2xx-Antwort, und braucht keinen
   neuen After-Commit-Eintrag.
-- Query-Budget: Die Quelle kostet ein Statement. Dafür liest die Quelle
-  Personal das Team der eigenen Gruppen jetzt in einem Statement
-  (`TeacherFilter.GroupIDs` in School Membership) statt in zweien. Die eigenen
-  Gruppen liest sie über `MyTeacherGroupIDs`; die heute vertretenen Gruppen
-  leitet sie aus den Gruppenübergaben des Tages ab, die sie ohnehin liest (wie
-  in #7661 beschrieben). `api.day_changes.today` misst danach 18 von 19,
-  `api.day_changes.today_activities` 20 von 20.
+- Query-Budget: Die Quelle kostet ein Statement. Zwei Einsparungen gleichen
+  es aus. Die Quelle Personal liest die eigenen Lehrkraft-Gruppen und die
+  Lehrkräfte dieser und der heute vertretenen Gruppen in einem Statement von
+  School Membership (`GroupAssignmentFilter.GroupsOfTeacherStaffIDs`) statt in
+  zweien; die Quellen Kinder und Klassen nutzen das Ergebnis im Savepoint
+  weiter. Die beiden Termin-Lesungen von Timetable (`BlockStaffChanges` für
+  Personal, `BlockDayChanges` für Stundenplan) teilen sich im Savepoint die
+  Zuordnungen des Tages (`WithDayStaffShare`): Die erste liest alle Zeilen des
+  Tages mit ihrem Termin in einem Statement, die zweite filtert sie.
+  `api.day_changes.today` bleibt bei 17, `api.day_changes.today.children` bei
+  24 und `api.day_changes.today_activities` bei 20 Anweisungen.

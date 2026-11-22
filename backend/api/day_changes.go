@@ -95,7 +95,6 @@ type dayChangesGroups interface {
 type DayChangesSources struct {
 	Caller    dayChangesCaller
 	Workforce dayChangesWorkforce
-	Teachers  owners.GroupTeacherStaff
 	Names     dayChangesStaffNames
 	Groups    dayChangesGroups
 	CarePlan  dayChangesCarePlan
@@ -123,7 +122,7 @@ type DayChangesSources struct {
 
 // NewDayChanges binds the sources to the projection's ports.
 func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
-	if sources.Caller == nil || sources.Workforce == nil || sources.Teachers == nil || sources.Names == nil || sources.Groups == nil || sources.BlockStaff == nil {
+	if sources.Caller == nil || sources.Workforce == nil || sources.Names == nil || sources.Groups == nil || sources.BlockStaff == nil {
 		return nil, fmt.Errorf("%w: personal sources", daychangesview.ErrDependencies)
 	}
 	if sources.CarePlan == nil || sources.Students == nil {
@@ -172,7 +171,8 @@ type dayChangesSavepoints struct{}
 func (dayChangesSavepoints) Run(ctx context.Context, read func(context.Context) error) error {
 	// The sources of one savepoint read the staff names once (#7675).
 	return tenant.WithSavepoint(ctx, func(ctx context.Context) error {
-		return read(withDayChangesGroupMemo(withDayChangesNameMemo(ctx)))
+		// Timetable's block reads share the day's staff rows (#7666).
+		return read(timetable.WithDayStaffShare(withDayChangesGroupMemo(withDayChangesNameMemo(ctx))))
 	})
 }
 
@@ -297,15 +297,6 @@ func (s dayChangesStaff) viewer(ctx context.Context) (staffViewer, error) {
 		return viewer, nil
 	}
 	viewer.selfID = staffID
-	// The teacher groups come from School Membership in one statement by
-	// staff record (#7681), as the Kinder source reads them.
-	groupIDs, err := s.sources.teacherGroups(ctx, staffID)
-	if err != nil {
-		return staffViewer{}, err
-	}
-	for _, id := range groupIDs {
-		viewer.groups[id] = true
-	}
 	return viewer, nil
 }
 
@@ -330,22 +321,34 @@ func containsRole(roles []string, role string) bool {
 	return false
 }
 
-// addTeam completes the caller's groups with those it covers on the day and
-// names the teachers of all of them. Today's substitutes are added after.
+// addTeam reads the caller's teacher groups, completes them with those it
+// covers on the day and names the teachers of all of them, in one School
+// Membership statement (#7666, the query budget of the route). Today's
+// substitutes are added after.
 func (s dayChangesStaff) addTeam(ctx context.Context, viewer *staffViewer, handovers []workforce.GroupSubstitution) error {
-	for _, cover := range handovers {
-		if viewer.selfID != 0 && cover.SubstituteStaffID == viewer.selfID {
-			viewer.groups[cover.GroupID] = true
-		}
-	}
-	if len(viewer.groups) == 0 {
+	if viewer.selfID == 0 {
 		return nil
 	}
-	teachers, err := s.sources.Teachers.GroupTeacherStaffIDs(ctx, sortedIDs(viewer.groups))
-	if err != nil {
-		return fmt.Errorf("resolve group teachers: %w", err)
+	covered := map[int64]bool{}
+	for _, cover := range handovers {
+		if cover.SubstituteStaffID == viewer.selfID {
+			covered[cover.GroupID] = true
+		}
 	}
-	for _, staffIDs := range teachers {
+	own, teachers, err := s.sources.groupTeam(ctx, viewer.selfID, sortedIDs(covered))
+	if err != nil {
+		return err
+	}
+	for _, id := range own {
+		viewer.groups[id] = true
+	}
+	for id := range covered {
+		viewer.groups[id] = true
+	}
+	for groupID, staffIDs := range teachers {
+		if !viewer.groups[groupID] {
+			continue
+		}
 		for _, id := range staffIDs {
 			viewer.team[id] = true
 		}

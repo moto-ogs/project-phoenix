@@ -59,7 +59,7 @@ func NewDayChangesTestResource(db transactionruntime.Database, unit tenant.UnitO
 	}
 	view, err := NewDayChanges(DayChangesSources{
 		Assignments: membership, ClassArrivals: classArrivals,
-		Caller: caller, Workforce: owners.MustNewWorkforce(db), Teachers: owners.NewGroupTeacherStaff(membership),
+		Caller: caller, Workforce: owners.MustNewWorkforce(db),
 		CarePlan: carePlan, Students: owners.MustNewPeopleDirectory(db), Blocks: blocks, BlockStaff: blockStaff,
 		Names: newDayChangesStaffNames(people), Groups: owners.NewSchoolStructureSuiteRepositories(db).Group,
 		// Without calendar periods every notice applies in every week; the
