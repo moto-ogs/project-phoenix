@@ -100,7 +100,7 @@ func (s dayChangesClasses) ClassChanges(ctx context.Context, day calendar.Date) 
 	entries := make([]daychangesview.SourceEntry, 0, len(rows))
 	for _, row := range rows {
 		// The TIME column holds the wall clock itself; no zone applies.
-		at := row.ArrivalTime.Format("15:04")
+		at := calendar.NormalizeWallClock(row.ArrivalTime).Format("15:04")
 		entries = append(entries, daychangesview.SourceEntry{
 			Kind: daychangesview.KindClassDismissalChanged, Involved: mine[classKey(row.SchoolClass)],
 			Class: &daychangesview.DayClass{Name: strings.TrimSpace(row.SchoolClass), Time: &at},
@@ -133,7 +133,8 @@ func classTripChildren(statusDays []careplan.StudentStatusDay, arrivals []carepl
 			continue
 		}
 		seen[arrival.StudentID] = true
-		trips = append(trips, classTripChild{studentID: arrival.StudentID, returnAt: arrival.ExpectedArrival.Format("15:04")})
+		returnAt := calendar.NormalizeWallClock(*arrival.ExpectedArrival).Format("15:04")
+		trips = append(trips, classTripChild{studentID: arrival.StudentID, returnAt: returnAt})
 	}
 	return trips
 }
