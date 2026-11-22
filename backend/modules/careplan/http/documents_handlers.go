@@ -53,8 +53,8 @@ func studentDocumentActor(r *http.Request) (careplan.StudentDocumentActor, error
 
 // StudentDocumentResponse is one document on the wire.
 type StudentDocumentResponse struct {
-	ID            common.ID `json:"id"`
-	StudentID     common.ID `json:"student_id"`
+	ID            ident.ID  `json:"id"`
+	StudentID     ident.ID  `json:"student_id"`
 	Category      string    `json:"category"`
 	CategoryLabel string    `json:"category_label"`
 	Filename      string    `json:"filename"`
@@ -72,7 +72,7 @@ type StudentDocumentResponse struct {
 // see plus the caller's visible categories (drives the filter and the upload
 // category picker).
 type StudentDocumentListResponse struct {
-	StudentID         common.ID                 `json:"student_id"`
+	StudentID         ident.ID                  `json:"student_id"`
 	Documents         []StudentDocumentResponse `json:"documents"`
 	VisibleCategories []StudentDocumentCategory `json:"visible_categories"`
 }

@@ -69,7 +69,6 @@ var moduleFacadeMethodSetAllowlist = map[string]int{
 	"modules/careplan/schedules.go:StudentSchedulesCommand":                                           28,
 	"modules/careplan/schedules.go:StudentSchedulesQuery":                                             13,
 	"modules/classday/classday.go:ClassDay":                                                           17,
-	"modules/communication/messages.go:ParentMessagingCapability":                                     13,
 	"modules/communication/parent_announcements.go:ParentAnnouncementCapability":                      23,
 	"modules/communication/portal_announcement_access.go:PortalAnnouncementAccess":                    23,
 	"modules/communication/staff_announcement_records.go:StaffAnnouncementRecords":                    37,

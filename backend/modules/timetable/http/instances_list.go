@@ -42,23 +42,23 @@ const maxInstanceListRangeDays = 56
 // instance. Names are intentionally omitted at the list level to keep the
 // payload compact; the slide-over detail view fetches them on demand.
 type instanceStaffSummary struct {
-	StaffID       common.ID `json:"staff_id"`
-	IsPrimary     bool      `json:"is_primary"`
-	IsAbsent      bool      `json:"is_absent"`
-	IsSubstitute  bool      `json:"is_substitute"`
-	IsSickAbsence bool      `json:"is_sick_absence"`
-	AbsenceReason *string   `json:"absence_reason,omitempty"`
+	StaffID       ident.ID `json:"staff_id"`
+	IsPrimary     bool     `json:"is_primary"`
+	IsAbsent      bool     `json:"is_absent"`
+	IsSubstitute  bool     `json:"is_substitute"`
+	IsSickAbsence bool     `json:"is_sick_absence"`
+	AbsenceReason *string  `json:"absence_reason,omitempty"`
 }
 
 // instanceStudentSummary carries the editable attendance state for one child.
 // The legacy student_ids array stays in the payload for older clients, but new
 // planner UI should use Students so it can group expected/present/absent rows.
 type instanceStudentSummary struct {
-	StudentID   common.ID `json:"student_id"`
-	Status      string    `json:"status"`
-	Substatus   *string   `json:"substatus,omitempty"`
-	Note        *string   `json:"note,omitempty"`
-	CheckedInAt *string   `json:"checked_in_at,omitempty"`
+	StudentID   ident.ID `json:"student_id"`
+	Status      string   `json:"status"`
+	Substatus   *string  `json:"substatus,omitempty"`
+	Note        *string  `json:"note,omitempty"`
+	CheckedInAt *string  `json:"checked_in_at,omitempty"`
 	// CareDayStatus is the same per-child care-day verdict the active-
 	// supervision roster carries: "scheduled" | "not_scheduled" | "cancelled"
 	// | "unknown" (#1747). The counts below exclude the non-expected ones, so
@@ -84,33 +84,33 @@ type instanceStudentSummary struct {
 type enrichedInstance struct {
 	// EnrichWarning is set only when a committed create could not be re-read
 	// with its enrichment; the enriched fields are empty then.
-	EnrichWarning          string     `json:"enrich_warning,omitempty"`
-	ID                     common.ID  `json:"id"`
-	Date                   string     `json:"date"`
-	StartTime              string     `json:"start_time"`
-	EndTime                string     `json:"end_time"`
-	Title                  string     `json:"title"`
-	Description            *string    `json:"description,omitempty"`
-	Notes                  *string    `json:"notes,omitempty"`
-	SeriesNotes            *string    `json:"series_notes,omitempty"`
-	Status                 string     `json:"status"`
-	IsSpontaneous          bool       `json:"is_spontaneous"`
-	IsLive                 bool       `json:"is_live"`
-	ActivityGroupID        *common.ID `json:"activity_group_id,omitempty"`
-	CalendarPeriodID       *common.ID `json:"calendar_period_id,omitempty"`
-	ListKind               *string    `json:"list_kind,omitempty"`
-	ActivityType           string     `json:"activity_type"`
-	PlanningTrackID        *common.ID `json:"planning_track_id,omitempty"`
-	PlanningTrackName      string     `json:"planning_track_name,omitempty"`
-	PlanningTrackColor     string     `json:"planning_track_color,omitempty"`
-	PlanningTrackSortOrder *int       `json:"planning_track_sort_order,omitempty"`
-	RoomID                 common.ID  `json:"room_id"`
-	RoomName               string     `json:"room_name"`
+	EnrichWarning          string    `json:"enrich_warning,omitempty"`
+	ID                     ident.ID  `json:"id"`
+	Date                   string    `json:"date"`
+	StartTime              string    `json:"start_time"`
+	EndTime                string    `json:"end_time"`
+	Title                  string    `json:"title"`
+	Description            *string   `json:"description,omitempty"`
+	Notes                  *string   `json:"notes,omitempty"`
+	SeriesNotes            *string   `json:"series_notes,omitempty"`
+	Status                 string    `json:"status"`
+	IsSpontaneous          bool      `json:"is_spontaneous"`
+	IsLive                 bool      `json:"is_live"`
+	ActivityGroupID        *ident.ID `json:"activity_group_id,omitempty"`
+	CalendarPeriodID       *ident.ID `json:"calendar_period_id,omitempty"`
+	ListKind               *string   `json:"list_kind,omitempty"`
+	ActivityType           string    `json:"activity_type"`
+	PlanningTrackID        *ident.ID `json:"planning_track_id,omitempty"`
+	PlanningTrackName      string    `json:"planning_track_name,omitempty"`
+	PlanningTrackColor     string    `json:"planning_track_color,omitempty"`
+	PlanningTrackSortOrder *int      `json:"planning_track_sort_order,omitempty"`
+	RoomID                 ident.ID  `json:"room_id"`
+	RoomName               string    `json:"room_name"`
 	// GroupName is the education group the block's template targets, as the
 	// Tagesplan shows it (#3817); empty without a template group.
 	GroupName             string                   `json:"group_name,omitempty"`
 	Staff                 []instanceStaffSummary   `json:"staff"`
-	StudentIDs            []common.ID              `json:"student_ids"`
+	StudentIDs            []ident.ID               `json:"student_ids"`
 	Students              []instanceStudentSummary `json:"students"`
 	StaffCount            int                      `json:"staff_count"`
 	AbsentStaffCount      int                      `json:"absent_staff_count"`

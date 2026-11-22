@@ -57,7 +57,6 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 		// inbox is the only permission it needs.
 		r.With(read, withTx).Get("/count-scope", rs.getCountScope)
 		r.With(read, withTx).Put("/count-scope", rs.setCountScope)
-		r.With(read, withTx).Post("/threads", rs.startThread)
 		r.With(read, withTx).Post("/threads/open", rs.openThread)
 		r.With(read, withTx).Get("/threads/{threadId}", rs.getThread)
 		r.With(read, withTx).Post("/threads/{threadId}", rs.postMessage)
@@ -479,36 +478,6 @@ func (rs *Resource) postMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	common.Respond(w, r, http.StatusCreated, toMessageResponses(messages, messageViewer(r)), "Message sent")
-}
-
-func (rs *Resource) startThread(w http.ResponseWriter, r *http.Request) {
-	var req StartThreadRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
-		return
-	}
-	studentID, err := strconv.ParseInt(req.StudentID, 10, 64)
-	if err != nil || studentID <= 0 {
-		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid student ID")))
-		return
-	}
-	guardianID, err := strconv.ParseInt(req.GuardianAccountID, 10, 64)
-	if err != nil || guardianID <= 0 {
-		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid guardian ID")))
-		return
-	}
-	attachmentIDs, ok := common.ParseMessageSend(w, r, req.ClientMessageID, req.AttachmentIDs, communication.MaxMessageAttachments)
-	if !ok {
-		return
-	}
-	sendCtx := communication.WithMessageSend(r.Context(), req.ClientMessageID, attachmentIDs)
-
-	detail, err := rs.Service.StartParentMessageThread(sendCtx, studentID, guardianID, req.Body, req.Audience)
-	if err != nil {
-		renderMessagingError(w, r, err)
-		return
-	}
-	common.Respond(w, r, http.StatusCreated, toThreadDetail(detail, messageViewer(r)), "Thread created")
 }
 
 func (rs *Resource) openThread(w http.ResponseWriter, r *http.Request) {

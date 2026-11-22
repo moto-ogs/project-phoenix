@@ -34,9 +34,9 @@ type LoginResponse struct {
 
 // OperatorResponse represents an operator in the response
 type OperatorResponse struct {
-	ID          common.ID `json:"id"`
-	Email       string    `json:"email"`
-	DisplayName string    `json:"display_name"`
+	ID          ident.ID `json:"id"`
+	Email       string   `json:"email"`
+	DisplayName string   `json:"display_name"`
 }
 
 func operatorResponse(operator *identityaccess.Operator) *OperatorResponse {

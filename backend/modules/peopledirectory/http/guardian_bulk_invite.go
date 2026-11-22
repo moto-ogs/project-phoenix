@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
@@ -21,9 +20,9 @@ import (
 const bulkInviteMaxStudents = 2000
 
 type bulkInviteRequest struct {
-	StudentIDs []common.ID `json:"student_ids"`
-	ResendOpen bool        `json:"resend_open"`
-	DryRun     bool        `json:"dry_run"`
+	StudentIDs []ident.ID `json:"student_ids"`
+	ResendOpen bool       `json:"resend_open"`
+	DryRun     bool       `json:"dry_run"`
 }
 
 type bulkInviteProblemResponse struct {

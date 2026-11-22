@@ -5,10 +5,10 @@ import (
 	"net/http"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -80,9 +80,9 @@ func (rs *StaffAdminResource) listTraegerMonthStaff(w http.ResponseWriter, r *ht
 
 // TraegerMonthStaff lists the staff members the Träger closes in a month.
 type TraegerMonthStaff struct {
-	Year     int         `json:"year"`
-	Month    int         `json:"month"`
-	StaffIDs []common.ID `json:"staff_ids"`
+	Year     int        `json:"year"`
+	Month    int        `json:"month"`
+	StaffIDs []ident.ID `json:"staff_ids"`
 }
 
 // closeMonth handles POST /api/staff/time-tracking/month-close — freezes the

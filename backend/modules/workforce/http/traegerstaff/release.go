@@ -98,7 +98,7 @@ func (rs *ReleaseResource) Grant(w http.ResponseWriter, r *http.Request) {
 
 // withdrawnReleaseResponse names the Träger whose release ended.
 type withdrawnReleaseResponse struct {
-	OrganizationID common.ID `json:"organization_id"`
+	OrganizationID ident.ID `json:"organization_id"`
 }
 
 // Withdraw answers DELETE /operator/organizations/{id}/staff-release.

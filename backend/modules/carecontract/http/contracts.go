@@ -204,8 +204,8 @@ func (rs *Resource) create(w http.ResponseWriter, r *http.Request) {
 }
 
 type SendRequest struct {
-	ContractIDs    []common.ID `json:"contract_ids"`
-	RecipientEmail *string     `json:"recipient_email"`
+	ContractIDs    []ident.ID `json:"contract_ids"`
+	RecipientEmail *string    `json:"recipient_email"`
 }
 
 // Bind accepts the body; the owner checks the IDs.

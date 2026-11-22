@@ -342,8 +342,6 @@ type SEPAMandates interface {
 	ListSEPAMandates(ctx context.Context, reviewer HolidayReviewer, contractID int64) ([]SEPAMandate, error)
 	// CreateSEPAMandate stores the mandate of the family of a contract.
 	CreateSEPAMandate(ctx context.Context, reviewer HolidayReviewer, input SEPAMandateInput) (SEPAMandate, error)
-	// ChangeSEPAMandate changes the account of a mandate in force.
-	ChangeSEPAMandate(ctx context.Context, reviewer HolidayReviewer, id int64, change SEPAMandateChange) (SEPAMandate, error)
 	// RevokeSEPAMandate ends a mandate in force on the day the revocation
 	// arrived, at most today.
 	RevokeSEPAMandate(ctx context.Context, reviewer HolidayReviewer, id int64, revokedOn calendar.Date) (SEPAMandate, error)

@@ -22,15 +22,15 @@ import (
 
 // GapInstance is one row in the gaps response.
 type GapInstance struct {
-	InstanceID         common.ID `json:"instance_id"`
-	Date               string    `json:"date"`
-	Title              string    `json:"title"`
-	StartTime          string    `json:"start_time"`
-	EndTime            string    `json:"end_time"`
-	RoomID             common.ID `json:"room_id"`
-	Status             string    `json:"status"`
-	AssignedStaffCount int       `json:"assigned_staff_count"`
-	AbsentStaffCount   int       `json:"absent_staff_count"`
+	InstanceID         ident.ID `json:"instance_id"`
+	Date               string   `json:"date"`
+	Title              string   `json:"title"`
+	StartTime          string   `json:"start_time"`
+	EndTime            string   `json:"end_time"`
+	RoomID             ident.ID `json:"room_id"`
+	Status             string   `json:"status"`
+	AssignedStaffCount int      `json:"assigned_staff_count"`
+	AbsentStaffCount   int      `json:"absent_staff_count"`
 	// PresentStaffCount is the non-absent count (planned people still there plus
 	// any covering substitute); PlannedStaffCount is the base-plan positions
 	// (non-substitute rows). A partial shortfall has 0 < present < planned.

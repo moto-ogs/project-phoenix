@@ -39,19 +39,19 @@ func (req *PartialAbsenceRequest) Bind(_ *http.Request) error {
 }
 
 type PartialAbsenceResponse struct {
-	ID         common.ID `json:"id"`
-	StudentID  common.ID `json:"student_id"`
-	Date       string    `json:"date"`
-	FromTime   string    `json:"from_time"`
-	Reason     *string   `json:"reason,omitempty"`
-	PickupTime *string   `json:"pickup_time,omitempty"`
+	ID         ident.ID `json:"id"`
+	StudentID  ident.ID `json:"student_id"`
+	Date       string   `json:"date"`
+	FromTime   string   `json:"from_time"`
+	Reason     *string  `json:"reason,omitempty"`
+	PickupTime *string  `json:"pickup_time,omitempty"`
 	// Auto marks an excusal derived from a pulled-forward pickup time
 	// (#2360). Auto rows follow the day's pickup time and cannot be deleted
 	// through the manual endpoints — editing converts them to manual.
-	Auto      bool      `json:"auto"`
-	CreatedBy common.ID `json:"created_by"`
-	CreatedAt string    `json:"created_at"`
-	UpdatedAt string    `json:"updated_at"`
+	Auto      bool     `json:"auto"`
+	CreatedBy ident.ID `json:"created_by"`
+	CreatedAt string   `json:"created_at"`
+	UpdatedAt string   `json:"updated_at"`
 }
 
 // partialAbsenceDeletedResponse confirms a removed partial absence.

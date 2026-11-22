@@ -100,10 +100,10 @@ func (req *AcceptInvitationRequest) Bind(r *http.Request) error {
 
 // PendingOperatorInvitationResponse represents a pending invitation in API responses
 type PendingOperatorInvitationResponse struct {
-	ID              common.ID  `json:"id"`
+	ID              ident.ID   `json:"id"`
 	Email           string     `json:"email"`
 	DisplayName     *string    `json:"display_name,omitempty"`
-	CreatedBy       common.ID  `json:"created_by"`
+	CreatedBy       ident.ID   `json:"created_by"`
 	CreatorName     string     `json:"creator_name,omitempty"`
 	ExpiresAt       time.Time  `json:"expires_at"`
 	EmailSentAt     *time.Time `json:"email_sent_at,omitempty"`
@@ -127,7 +127,7 @@ type InvitationsListResponse struct {
 
 // OperatorListItem represents an operator in the list
 type OperatorListItem struct {
-	ID          common.ID  `json:"id"`
+	ID          ident.ID   `json:"id"`
 	Email       string     `json:"email"`
 	DisplayName string     `json:"display_name"`
 	Active      bool       `json:"active"`

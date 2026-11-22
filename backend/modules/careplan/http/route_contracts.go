@@ -3,11 +3,12 @@ package careplanhttp
 import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	careplan "github.com/moto-ogs/project-phoenix/modules/careplan"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // studentDocumentDeletedResponse names the child whose document was removed.
 type studentDocumentDeletedResponse struct {
-	StudentID common.ID `json:"student_id"`
+	StudentID ident.ID `json:"student_id"`
 }
 
 // DecisionResponses are the answer types of the review routes. Request

@@ -52,10 +52,10 @@ func (r *HomeworkFeedbackRequest) Bind(_ *http.Request) error {
 
 // HomeworkFeedbackResponse is the stored feedback on the wire.
 type HomeworkFeedbackResponse struct {
-	StudentID common.ID `json:"student_id"`
-	Date      string    `json:"date"`
-	Status    string    `json:"status"`
-	Note      *string   `json:"note,omitempty"`
+	StudentID ident.ID `json:"student_id"`
+	Date      string   `json:"date"`
+	Status    string   `json:"status"`
+	Note      *string  `json:"note,omitempty"`
 }
 
 var homeworkFeedbackErrorRenderer = common.RulesRenderer([]common.ErrorRule{
