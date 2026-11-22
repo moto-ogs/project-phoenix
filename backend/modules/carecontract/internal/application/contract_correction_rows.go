@@ -363,7 +363,9 @@ func planParties(entry correctionEntry, subject ports.CorrectionSubject, plan *c
 	if !entry.hasParties || joinWords(entry.partyCell) == joinWords(correctionPartyCell(subject.Parties)) {
 		return
 	}
-	renames, adds, complete := matchCorrectionParties(subject.Parties, writtenCorrectionParties(entry, subject.Parties))
+	written, stored, wanted := reserveWrittenParties(entry, subject.Parties)
+	renames, adds, complete := matchCorrectionParties(stored, wanted)
+	renames = append(written, renames...)
 	if !complete {
 		plan.problem(carecontract.ContractCorrectionFieldParties, carecontract.ContractCorrectionProblemPartyRemoved)
 		return
@@ -391,15 +393,16 @@ func planParties(entry correctionEntry, subject ports.CorrectionSubject, plan *c
 	plan.row.Changes = append(plan.row.Changes, carecontract.ContractCorrectionFieldParties)
 }
 
-// writtenCorrectionParties are the parties of the row, each name the list to
-// download wrote for a party of the contract read with that party's own
-// boundary between last and first name: a stored last name may carry a
-// comma, which no other reading would keep. A name written as the list
-// writes it is that party; one that differs only in case keeps its new
-// spelling and the party's boundary, so it pairs with its own party.
-func writtenCorrectionParties(entry correctionEntry, stored []ports.CorrectionParty) []ports.CorrectionParty {
-	wanted, free := slices.Clone(entry.parties), slices.Clone(stored)
-	claimed := make([]bool, len(wanted))
+// reserveWrittenParties pairs each name the list to download wrote for a
+// party of the contract with exactly that party, read with the party's own
+// boundary between last and first name: a stored name may carry a comma,
+// which no other reading would keep. A name written as the list writes it
+// is that party; one that differs only in case is that party written anew.
+// It answers the parties whose spelling changes and what is left of the
+// contract's parties and of the row's names for the pairing by name and
+// place.
+func reserveWrittenParties(entry correctionEntry, stored []ports.CorrectionParty) (renames, leftStored, leftWanted []ports.CorrectionParty) {
+	free, claimed := slices.Clone(stored), make([]bool, len(entry.parties))
 	for _, same := range []func(a, b string) bool{func(a, b string) bool { return a == b }, strings.EqualFold} {
 		for n, name := range entry.partyNames {
 			if claimed[n] {
@@ -411,11 +414,20 @@ func writtenCorrectionParties(entry correctionEntry, stored []ports.CorrectionPa
 			if at < 0 {
 				continue
 			}
-			wanted[n] = withStoredBoundary(name, free[at])
+			written := withStoredBoundary(name, free[at])
+			if written.FirstName != joinWords(free[at].FirstName) || written.LastName != joinWords(free[at].LastName) {
+				written.ID = free[at].ID
+				renames = append(renames, written)
+			}
 			claimed[n], free = true, slices.Delete(free, at, at+1)
 		}
 	}
-	return wanted
+	for n, party := range entry.parties {
+		if !claimed[n] {
+			leftWanted = append(leftWanted, party)
+		}
+	}
+	return renames, free, leftWanted
 }
 
 // withStoredBoundary splits a name written as the list to download writes

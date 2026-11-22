@@ -174,6 +174,15 @@ func TestCorrectionSheetReadsBackAsUnchanged(t *testing.T) {
 	shouted := planCorrection(t, double, "7", "Lia Beispiel", "Neu, Anna | SCHMIDT, Eva, Maria", "", "", "vertrag.pdf")
 	assert.Equal(t, []ports.CorrectionParty{{ID: 95, FirstName: "Eva, Maria", LastName: "SCHMIDT"}}, shouted.correction.Renames)
 
+	// Two parties whose names read alike once their commas are gone stay
+	// apart: each written name belongs to the party the list wrote it for.
+	alike := correctionSubject()
+	alike.Parties = []ports.CorrectionParty{{ID: 96, FirstName: "Anna", LastName: "Schmidt, Eva Maria"},
+		{ID: 97, FirstName: "Eva", LastName: "Maria, Anna Schmidt"}}
+	apart := planCorrection(t, alike, "7", "Lia Beispiel", "SCHMIDT, Eva Maria, Anna | Maria, Anna Schmidt, Eva", "", "", "vertrag.pdf")
+	assert.Equal(t, []ports.CorrectionParty{{ID: 96, FirstName: "Anna", LastName: "SCHMIDT, Eva Maria"}}, apart.correction.Renames)
+	assert.Empty(t, apart.correction.Adds)
+
 	index, missing := resolveCorrectionColumns(sheet.Headers)
 	require.Empty(t, missing)
 	check := newCorrectionCheck([]ports.CorrectionSubject{subject, unknown, comma})
