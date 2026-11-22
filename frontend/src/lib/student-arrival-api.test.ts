@@ -230,19 +230,29 @@ describe("student-arrival-api", () => {
   });
 
   describe("fetchBulkArrivalScheduleStatus", () => {
-    it("uses one request for all selected children", async () => {
-      mockSessionFetch.mockResolvedValueOnce(wrapped({ student_ids: [1, 2] }));
+    it.each([
+      ["1", "2"],
+      ["9007199254740993", "9223372036854775807"],
+    ])(
+      "uses one request preserving the selected IDs %s and %s",
+      async (...studentIds) => {
+        mockSessionFetch.mockResolvedValueOnce(
+          wrapped({ student_ids: studentIds }),
+        );
 
-      await expect(fetchBulkArrivalScheduleStatus(["1", "2"])).resolves.toBe(2);
+        await expect(fetchBulkArrivalScheduleStatus(studentIds)).resolves.toBe(
+          2,
+        );
 
-      expect(mockSessionFetch).toHaveBeenCalledWith(
-        "/api/students/arrival-schedules/status",
-        expect.objectContaining({
-          method: "POST",
-          body: JSON.stringify({ student_ids: [1, 2] }),
-        }),
-      );
-    });
+        expect(mockSessionFetch).toHaveBeenCalledWith(
+          "/api/students/arrival-schedules/status",
+          expect.objectContaining({
+            method: "POST",
+            body: JSON.stringify({ student_ids: studentIds }),
+          }),
+        );
+      },
+    );
   });
 
   describe("fetchArrivalSettings", () => {
@@ -323,53 +333,86 @@ describe("student-arrival-api", () => {
       );
     });
 
-    it("posts group ID and schedules", async () => {
-      mockSessionFetch.mockResolvedValueOnce(wrapped({}));
+    it.each(["17", "9007199254740993", "9223372036854775807"])(
+      "posts group ID %s and schedules",
+      async (groupId) => {
+        mockSessionFetch.mockResolvedValueOnce(wrapped({}));
 
-      await bulkUpsertArrivalSchedules({ type: "group", groupId: "17" }, [
-        { weekday: 1, expected_arrival: "08:00" },
-      ]);
-
-      expect(mockSessionFetch).toHaveBeenCalledWith(
-        "/api/students/arrival-schedules/bulk",
-        expect.objectContaining({
-          method: "POST",
-          body: JSON.stringify({
-            schedules: [{ weekday: 1, expected_arrival: "08:00" }],
-            group_id: 17,
-          }),
-        }),
-      );
-    });
-
-    it("posts selected student IDs and schedules", async () => {
-      mockSessionFetch.mockResolvedValueOnce(wrapped({}));
-
-      await bulkUpsertArrivalSchedules(
-        { type: "students", studentIds: ["9", "4"] },
-        [{ weekday: 2, expected_arrival: "09:15" }],
-      );
-
-      expect(mockSessionFetch).toHaveBeenCalledWith(
-        "/api/students/arrival-schedules/bulk",
-        expect.objectContaining({
-          body: JSON.stringify({
-            schedules: [{ weekday: 2, expected_arrival: "09:15" }],
-            student_ids: [9, 4],
-          }),
-        }),
-      );
-    });
-
-    it("rejects an invalid group ID before sending a request", async () => {
-      await expect(
-        bulkUpsertArrivalSchedules({ type: "group", groupId: "not-an-id" }, [
+        await bulkUpsertArrivalSchedules({ type: "group", groupId }, [
           { weekday: 1, expected_arrival: "08:00" },
-        ]),
-      ).rejects.toThrow("Ungültige Gruppen-ID");
+        ]);
 
-      expect(mockSessionFetch).not.toHaveBeenCalled();
-    });
+        expect(mockSessionFetch).toHaveBeenCalledWith(
+          "/api/students/arrival-schedules/bulk",
+          expect.objectContaining({
+            method: "POST",
+            body: JSON.stringify({
+              schedules: [{ weekday: 1, expected_arrival: "08:00" }],
+              group_id: groupId,
+            }),
+          }),
+        );
+      },
+    );
+
+    it.each([
+      ["9", "4"],
+      ["9007199254740993", "9223372036854775807"],
+    ])(
+      "posts selected IDs %s and %s without duplicates",
+      async (...studentIds) => {
+        mockSessionFetch.mockResolvedValueOnce(wrapped({}));
+
+        await bulkUpsertArrivalSchedules(
+          { type: "students", studentIds: [...studentIds, studentIds[0]!] },
+          [{ weekday: 2, expected_arrival: "09:15" }],
+        );
+
+        expect(mockSessionFetch).toHaveBeenCalledWith(
+          "/api/students/arrival-schedules/bulk",
+          expect.objectContaining({
+            body: JSON.stringify({
+              schedules: [{ weekday: 2, expected_arrival: "09:15" }],
+              student_ids: studentIds,
+            }),
+          }),
+        );
+      },
+    );
+
+    it.each(["not-an-id", "17oops", "0", "-1", "1.5"])(
+      "rejects invalid group ID %s before sending a request",
+      async (groupId) => {
+        await expect(
+          bulkUpsertArrivalSchedules({ type: "group", groupId }, [
+            { weekday: 1, expected_arrival: "08:00" },
+          ]),
+        ).rejects.toThrow("Ungültige Gruppen-ID");
+
+        expect(mockSessionFetch).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each([
+      [],
+      ["not-an-id"],
+      ["9oops"],
+      ["0"],
+      ["-1"],
+      ["1.5"],
+      Array.from({ length: 501 }, (_, index) => String(index + 1)),
+    ])(
+      "rejects invalid student selection %# before sending a request",
+      async (...studentIds) => {
+        await expect(
+          bulkUpsertArrivalSchedules({ type: "students", studentIds }, [
+            { weekday: 1, expected_arrival: "08:00" },
+          ]),
+        ).rejects.toThrow("Ungültige Kinderauswahl");
+
+        expect(mockSessionFetch).not.toHaveBeenCalled();
+      },
+    );
   });
 
   describe("arrival exceptions CRUD", () => {

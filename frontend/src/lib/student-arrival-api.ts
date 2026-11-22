@@ -156,8 +156,8 @@ export interface ArrivalScheduleInput {
 
 interface BulkArrivalRequestBody {
   school_class?: string;
-  group_id?: number;
-  student_ids?: number[];
+  group_id?: string;
+  student_ids?: string[];
   schedules: ArrivalScheduleInput[];
 }
 
@@ -204,7 +204,7 @@ export async function fetchBulkArrivalScheduleStatus(
     "/api/students/arrival-schedules/status",
     {
       method: "POST",
-      body: { student_ids: studentIds.map((id) => Number.parseInt(id, 10)) },
+      body: { student_ids: studentIds },
     },
   );
   return status.student_ids.length;
@@ -245,21 +245,19 @@ export async function bulkUpsertArrivalSchedules(
   if (filter.type === "school_class") {
     body.school_class = filter.schoolClass;
   } else if (filter.type === "group") {
-    const groupId = Number.parseInt(filter.groupId, 10);
-    if (!Number.isSafeInteger(groupId) || groupId <= 0) {
+    const groupId = filter.groupId;
+    if (!/^[1-9]\d*$/.test(groupId)) {
       throw new ApiError("Ungültige Gruppen-ID", 400, {
         code: "general.input",
       });
     }
     body.group_id = groupId;
   } else {
-    const studentIds = [...new Set(filter.studentIds)].map((id) =>
-      Number.parseInt(id, 10),
-    );
+    const studentIds = [...new Set(filter.studentIds)];
     if (
       studentIds.length === 0 ||
       studentIds.length > 500 ||
-      studentIds.some((id) => !Number.isSafeInteger(id) || id <= 0)
+      studentIds.some((id) => !/^[1-9]\d*$/.test(id))
     ) {
       throw new ApiError("Ungültige Kinderauswahl", 400, {
         code: "general.input",
