@@ -32,7 +32,6 @@ import {
   withdrawStatus,
   type EnrollmentChangeRequest,
   type StatusChild,
-  type StatusGuardian,
   type StatusResponse,
 } from "~/lib/enrollment-submission-api";
 import { createLogger } from "~/lib/logger";
@@ -1332,7 +1331,7 @@ function GuardianDetails({ status }: Readonly<{ status: StatusResponse }>) {
       <DataField label={t("phoneLabel")}>
         {status.guardian_phone ?? t("notProvided")}
       </DataField>
-      {status.additional_guardians?.map((guardian: StatusGuardian) => (
+      {status.additional_guardians?.map((guardian) => (
         <DataField
           key={`${guardian.first_name}-${guardian.last_name}-${guardian.email ?? ""}-${guardian.phone ?? ""}`}
           label={t("additionalGuardiansLabel")}

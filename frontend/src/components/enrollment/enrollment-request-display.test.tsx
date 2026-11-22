@@ -1,15 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import type {
-  AdminRequestChild,
-  AdminRequestSchemaField,
-} from "~/lib/enrollment-admin-api";
+import type { AdminRequestChild } from "~/lib/enrollment-admin-api";
 import {
   ChildExtraFields,
   ChildOfferings,
   formatPlainDate,
 } from "./enrollment-request-display";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 
 describe("formatPlainDate", () => {
   it("preserves a date-only birthday east of Berlin", () => {
@@ -36,6 +34,8 @@ describe("ChildOfferings", () => {
             manual_selected_days: ["fri"],
             automatic_selected_days: ["mon", "tue", "wed", "thu"],
             available_days: ["mon", "tue", "wed", "thu", "fri"],
+            includes_lunch: false,
+            includes_holiday_care: false,
           },
         ]}
       />,
@@ -112,6 +112,8 @@ describe("ChildOfferings", () => {
             available_days: ["mon"],
             valid_from: "2026-09-01",
             starts_later: true,
+            includes_lunch: false,
+            includes_holiday_care: false,
           },
         ]}
       />,
@@ -129,6 +131,8 @@ describe("ChildOfferings", () => {
             offering_name: "Ganztagsbetreuung",
             days_of_week_mode: "fixed",
             available_days: ["mon"],
+            includes_lunch: false,
+            includes_holiday_care: false,
           },
         ]}
         phaseName="Schuljahr 2026/2027"
@@ -170,7 +174,7 @@ describe("ChildExtraFields companion note (#1694)", () => {
     };
   }
 
-  const departureField: AdminRequestSchemaField = {
+  const departureField: enrollmentContract.AdminRequestSchemaField = {
     key: "student.allowed_departure_modes",
     label: "Heimweg",
     type: "weekday_multi_mode",
