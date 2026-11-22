@@ -5,7 +5,7 @@ import {
   holidayRegistrationEntriesFromBackend,
 } from "~/lib/parent-holiday-registration-entries";
 import type { CareContractStatus } from "./traeger-care-contracts-api";
-import type { HolidayRegistrationEntriesResponse as WireHolidayRegistrationEntries } from "./contract/parent-me.generated";
+import type * as parentMeContract from "./contract/parent-me.generated";
 import {
   ApiError,
   transportFetch as fetchTransport,
@@ -23,8 +23,7 @@ import {
  */
 
 import type { AppLocale } from "~/i18n/locales";
-import type { Salutation } from "~/lib/salutation";
-import type { ConsentRecord, ConsentState } from "~/lib/consent-types";
+import type { ConsentState } from "~/lib/consent-types";
 import type { SurveyAnswersRequest, SurveyForm } from "~/lib/survey-form";
 import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
 import { createLogger } from "~/lib/logger";
@@ -58,7 +57,6 @@ import {
   isParentAccessRefusal,
   PARENT_ACCESS_REFUSED_EVENT,
 } from "~/lib/parent-access-refusal";
-import type { ContractNoticeOptions as ParentNoticeOptions } from "./contract/parent-me.generated";
 
 // Capture the originating account before awaiting the cookie-bound request.
 const responseOrigins = new WeakMap<
@@ -80,76 +78,22 @@ async function transportFetch(
 
 const logger = createLogger({ component: "ParentAPI" });
 
-type ChildStatus = "pending" | "active" | "inactive" | "alumnus";
-
-export interface Child {
-  readonly student_id: string;
-  readonly tenant_id: string;
-  readonly first_name: string;
-  readonly last_name: string;
-  readonly school_class?: string;
-  readonly status: ChildStatus;
-  readonly enrolled_from?: string; // ISO date
-  readonly enrolled_until?: string; // ISO date
-  readonly school_name: string;
-  readonly school_slug: string;
-  // Das Kind gehört zur Klasse, hat aber keinen OGS-Platz (#4803). Das Portal
-  // zeigt dann keine OGS-Funktionen, nur die der Schule. Fehlt das Feld
-  // (älteres Backend), hat das Kind einen Platz.
-  readonly without_care_place?: boolean;
-}
+export type Child = parentMeContract.ChildResponse;
 
 // The row "room_history" (#3844) shows whether moto records the child's
 // rooms and mood ("recording") or the stop is set ("stopped"). It only comes
 // when the Träger lets parents stop it.
 export type ChildConsentState = ConsentState | "recording" | "stopped";
 
-export interface ChildConsent extends Omit<ConsentRecord, "key" | "state"> {
-  readonly key: ConsentRecord["key"] | "room_history";
-  readonly state: ChildConsentState;
-  readonly can_withdraw: boolean;
-  readonly can_grant: boolean;
-}
+export type ChildConsent = parentMeContract.ChildConsentResponse;
 
 // One enrollment phase the calling parent may apply to, joined to its school.
 // Mirrors api/parent EnrollablePhaseResponse. Rows are pre-filtered server-side
 // (only phases the account may actually apply to) and pre-sorted (already_linked
 // DESC, school name, service start). int64 ids arrive as strings.
-export interface EnrollablePhase {
-  readonly school_id: string;
-  readonly school_name: string;
-  readonly school_slug: string;
-  // The school's tenant routing identifier. Enrollment links MUST be built from
-  // this, not from school_slug: /auth/tenant/resolve and the parent enrollment
-  // endpoints both resolve tenants by subdomain, and slug is only unique per
-  // organization (#1663).
-  readonly school_subdomain: string;
-  readonly phase_id: string;
-  readonly phase_name: string;
-  /** Locale → the school's translation of `phase_name` (#3377). */
-  readonly phase_name_translations?: Readonly<Record<string, string>>;
-  readonly phase_kind: "school_year" | "holiday" | "custom";
-  readonly service_start_date: string; // YYYY-MM-DD
-  readonly service_end_date: string; // YYYY-MM-DD
-  readonly enrollment_open_at?: string; // ISO timestamp
-  readonly enrollment_close_at?: string; // ISO timestamp
-  // True when the parent already has a linked child at this school.
-  readonly already_linked: boolean;
-  // Who the phase is open to: "open" (anyone), "new_students" (children not yet
-  // enrolled), "existing_students" (only children already enrolled — a
-  // re-enrollment / renewal phase), or "linked_parents" (only guardians with an
-  // existing linked child). The backend can return any of these (#1663).
-  readonly audience:
-    "open" | "new_students" | "existing_students" | "linked_parents";
-}
+export type EnrollablePhase = parentMeContract.EnrollablePhaseResponse;
 
-export interface ParentProfile {
-  readonly first_name?: string;
-  readonly last_name?: string;
-  // null = the guardian has never picked a parents-portal language, so the
-  // client keeps the anonymous cookie/Accept-Language locale.
-  readonly portal_locale: AppLocale | null;
-}
+export type ParentProfile = parentMeContract.ParentProfileResponse;
 
 // The two absence kinds a parent can report: "sick" (Krankmeldung, flips the
 // live sick flag) or "excused" (Termin/Abwesenheit, no live flag).
@@ -274,75 +218,7 @@ export interface SickNoteSubmitResult {
 }
 
 // Resolved per-tenant parent-portal feature toggles for a child.
-export interface ChildFeatures {
-  readonly conference_book_allowed?: boolean;
-  // Zustand, keine Fähigkeit: Das Kind ist nicht mehr in Betreuung (#2487).
-  // Ist es true, sind alle Schreib-Flags unten false — das Portal zeigt dann
-  // ein Nur-Lesen-Profil mit einem Satz dazu statt Knöpfe, die alle gleich
-  // scheitern würden.
-  readonly care_ended?: boolean;
-  // Zustand, keine Fähigkeit: Das Kind hat keinen OGS-Platz (#4803). Alle
-  // OGS-Flags sind dann false; Krankmeldung, Elternsprechtag und Stammdaten
-  // bleiben, wie die Beziehung sie erlaubt.
-  readonly without_care_place?: boolean;
-  readonly sick_note_enabled: boolean;
-  readonly excused_note_enabled?: boolean;
-  // Whether a Krankmeldung stays pending until the OGS confirms it.
-  readonly sick_requires_approval?: boolean;
-  readonly notes_enabled: boolean;
-  // Whether an "excused" absence submission must be confirmed by the OGS before
-  // it takes effect (operations.parent_excused_requires_approval). When true the
-  // child stays "expected" until an office/admin approves the request.
-  readonly excused_requires_approval?: boolean;
-  // Whether the guardian may submit structured change-requests (care schedule /
-  // master data). Separate from notes_enabled (chat) so the UI hides the request
-  // actions for a chat-only guardian instead of dead-ending on a backend 403.
-  readonly request_submit_enabled: boolean;
-  readonly pickup_change_enabled: boolean;
-  // Ob die Anfrage für einen Tag auch eine andere Abholart enthalten darf
-  // (#3945): Abholänderung für einen Tag UND Abholart ändern sind an.
-  readonly pickup_change_mode_enabled?: boolean;
-  // Die Schule kann eine Uhrzeit festlegen, bis zu der Eltern die Abholzeit
-  // für heute ändern dürfen (operations.parent_pickup_change_cutoff_time,
-  // #3163). Leer oder fehlend heißt: keine Frist. today_closed sagt, dass die
-  // Frist vorbei ist; der Server entscheidet das, der Client rechnet nicht nach.
-  readonly pickup_change_cutoff_time?: string;
-  readonly pickup_change_today_closed?: boolean;
-  // Die Betreuung ist für heute zu Ende (operations.session_end_time, #5710):
-  // Eltern ändern die heutige Abholzeit nicht mehr, auch wenn das Kind noch
-  // im Unterricht ist. Der Server entscheidet das.
-  readonly pickup_change_care_day_ended?: boolean;
-  readonly pickup_manage_allowed?: boolean;
-  readonly emergency_contact_manage_allowed?: boolean;
-  readonly guardian_contact_manage_allowed: boolean;
-  // Ob die Person ihre eigenen offenen Abwesenheitsanfragen ändern darf
-  // (parent_portal.sick_note.submit, #4603). Fehlt das Feld (älteres
-  // Backend), bleibt der Knopf aus.
-  readonly absence_request_edit_enabled?: boolean;
-  readonly related_accounts_invite_enabled: boolean;
-  readonly related_accounts_remove_enabled: boolean;
-  readonly master_data_edit_enabled: boolean;
-  readonly master_data_contact_edit_enabled: boolean;
-  readonly master_data_request_enabled: boolean;
-  // Whether the school makes a reason mandatory when a guardian sends a
-  // request (operations.parent_request_reason_policy is guardians|both).
-  // Missing = the strictest reading, see lib/parent-request-reason.ts.
-  readonly reason_required?: boolean;
-  readonly meal_plan_enabled: boolean;
-  readonly meal_registration_enabled: boolean;
-  // STATE, not a capability: the child has a pending change request (master data
-  // or care schedule) awaiting an OGS decision. Lets the overview badge the
-  // Stammdaten entry without fetching the full request payloads.
-  readonly has_open_change_request: boolean;
-  // Whether the school broadcasts parent announcements
-  // (operations.parent_news_enabled). When every linked school has it off the
-  // Neuigkeiten feed is empty, so the parents-portal nav/panel entries gate on
-  // this to avoid dead-ending on an empty page.
-  readonly parent_news_enabled: boolean;
-  // The school's term for its care („OGS“, „GTS“; #6082). Every parent text
-  // that names the care of this child uses it.
-  readonly care_facility_term?: string;
-}
+export type ChildFeatures = parentMeContract.ChildFeaturesResponse;
 
 // One dish of the read-only meal plan (Essensplan) for a child's school.
 // Mirrors api/parent.MealPlanEntryResponse. A day can carry several dishes.
@@ -436,99 +312,27 @@ export interface PickupPermissionRequest {
 }
 
 // A guardian linked to the child, with portal-access status.
-export interface RelatedAccount {
-  readonly guardian_profile_id: string;
-  readonly first_name: string;
-  readonly last_name: string;
-  readonly email?: string;
-  readonly relationship_type: string;
-  // Per-child role preset on the link; used to hide the grant-access action
-  // for school-managed social-worker contacts (#2172).
-  readonly guardian_role?: string;
-  readonly is_primary: boolean;
-  readonly status: "active" | "pending" | "no_account" | "active_no_access";
-  // Marks the requesting parent's own row. Self-removal is rejected by the
-  // backend, so the panel hides the remove action for it.
-  readonly is_self: boolean;
-}
+export type RelatedAccount = parentMeContract.relatedAccountResponse;
 
 // One phone number of a guardian. Mirrors api/parent.guardianPhoneResponse.
-interface GuardianPhone {
-  readonly phone_number: string;
-  readonly phone_type: string;
-  readonly label?: string;
-  readonly is_primary: boolean;
-}
-
 // A guardian of the child with contact + pickup detail and the caller's
 // per-guardian edit capabilities. Mirrors api/parent.childGuardianResponse.
-export interface ChildGuardian {
-  readonly guardian_profile_id: string;
-  readonly student_guardian_id: string;
-  readonly first_name: string;
-  readonly last_name: string;
-  // Die selbst gewählte Anrede; nur am eigenen Profil gesetzt (#7362).
-  readonly salutation?: Salutation;
-  readonly email?: string;
-  readonly phones: GuardianPhone[];
-  readonly address_street?: string;
-  readonly address_city?: string;
-  readonly address_postal_code?: string;
-  readonly relationship_type: string;
-  readonly is_primary: boolean;
-  readonly is_emergency_contact: boolean;
-  readonly can_pickup: boolean;
-  /** Wochentage (1 = Montag … 5 = Freitag), fehlt: an allen Tagen (#4780). */
-  readonly pickup_weekdays?: readonly number[];
-  readonly pickup_notes?: string;
-  readonly has_account: boolean;
-  readonly is_self: boolean;
-  readonly can_edit_contact: boolean;
-  readonly can_manage_pickup: boolean;
-  readonly contact_locked_own_account: boolean;
-  readonly contact_locked_shared: boolean;
-  readonly contact_locked_social_worker: boolean;
-  readonly contact_locked_full_guardian: boolean;
-}
+export type ChildGuardian = parentMeContract.childGuardianResponse;
 
 // Payload for a guardian contact edit. Profile fields + phone list are
 // replaced wholesale. Mirrors api/parent.updateGuardianContactRequest.
-export interface GuardianContactPayload {
-  readonly first_name: string;
-  readonly last_name: string;
-  // Nur am eigenen Profil: "" löscht die Anrede, ohne Feld bleibt sie.
-  readonly salutation?: Salutation | "";
-  readonly email?: string | null;
-  readonly address_street?: string | null;
-  readonly address_city?: string | null;
-  readonly address_postal_code?: string | null;
-  readonly phones: {
-    readonly phone_number: string;
-    readonly phone_type: string;
-    readonly label?: string | null;
-    readonly is_primary: boolean;
-  }[];
-}
+export type GuardianContactPayload =
+  parentMeContract.updateGuardianContactRequest;
 
 // Creates a contact without app access. App access is handled independently by
 // the related-account invitation flow.
-export interface CreateGuardianContactPayload extends GuardianContactPayload {
-  readonly relationship_type: "parent" | "guardian" | "relative" | "other";
-  /** Mit Abholerlaubnis: als unterschriebene Anfrage an die OGS (#4780). */
-  readonly can_pickup: boolean;
-  readonly pickup_weekdays?: readonly number[];
-  readonly pickup_signature?: ReturnType<typeof signatureRequestBody>;
-  readonly is_emergency_contact: boolean;
-  readonly pickup_notes?: string | null;
-}
+export type CreateGuardianContactPayload =
+  parentMeContract.createGuardianContactRequest;
 
 // Payload for a per-child pickup/relationship edit. Every field optional; an
 // omitted field is left unchanged. Mirrors api/parent.updateGuardianRelationshipRequest.
-export interface GuardianRelationshipPayload {
-  readonly can_pickup?: boolean;
-  readonly is_emergency_contact?: boolean;
-  readonly pickup_notes?: string | null;
-}
+export type GuardianRelationshipPayload =
+  parentMeContract.updateGuardianRelationshipRequest;
 
 interface ApiEnvelope<T> {
   readonly status?: string;
@@ -694,12 +498,8 @@ export async function grantChildPhotoConsent(
  * child is not stopped; `can_change` needs the Träger's switch and the
  * guardian's consent permission.
  */
-export interface ChildRoomHistoryStop {
-  readonly offered: boolean;
-  readonly stopped: boolean;
-  readonly stopped_at?: string;
-  readonly can_change: boolean;
-}
+export type ChildRoomHistoryStop =
+  parentMeContract.ChildRoomHistoryStopResponse;
 
 const roomHistoryStopUrl = (studentId: string) =>
   `/api/parent/me/children/${encodeURIComponent(studentId)}/room-history-stop`;
@@ -958,28 +758,7 @@ export async function getChildFeatures(
  * Frontend leitet Ebene 1 NIE aus `state` ab; eine Ja/Nein-Aussage ohne Beleg
  * waere schlimmer als zu schweigen.
  */
-type ChildTodayState =
-  | "present"
-  | "left"
-  | "in_class"
-  | "expected"
-  | "not_arrived"
-  | "absent"
-  | "no_care"
-  | "unknown";
-
-export interface ChildToday {
-  readonly at_ogs: boolean | null;
-  readonly state: ChildTodayState;
-  /** "HH:MM", nur bei present. */
-  readonly since?: string;
-  /** "HH:MM", nur bei left und in_class. */
-  readonly until?: string;
-  /** "HH:MM", nur bei expected und not_arrived. */
-  readonly expected_from?: string;
-  /** "HH:MM", nur wenn das Kind gerade in der OGS ist. */
-  readonly pickup_time?: string;
-}
+export type ChildToday = parentMeContract.TodayStatusResponse;
 
 /** Was angezeigt wird, solange oder falls der Endpunkt nichts liefert. */
 export const UNKNOWN_CHILD_TODAY: ChildToday = {
@@ -1441,9 +1220,10 @@ export async function listHolidayOffers(): Promise<HolidayOffer[]> {
 export async function listHolidayRegistrationEntries(): Promise<
   HolidayRegistrationEntry[]
 > {
-  const body = await getJson<WireHolidayRegistrationEntries>(
-    "/api/parent/me/holiday-registration-entries",
-  );
+  const body =
+    await getJson<parentMeContract.HolidayRegistrationEntriesResponse>(
+      "/api/parent/me/holiday-registration-entries",
+    );
   return holidayRegistrationEntriesFromBackend(body);
 }
 
@@ -2065,13 +1845,8 @@ export async function updateGuardianRelationship(
 }
 
 // Outcome echoed by the invite resolve.
-export interface InviteRelatedAccountResult {
-  readonly outcome: string;
-  readonly guardian_profile_id: string;
-  // Current guardian role for the existing_contact_restricted outcome, so the
-  // UI can name it in the upgrade confirmation.
-  readonly existing_role?: string;
-}
+export type InviteRelatedAccountResult =
+  parentMeContract.inviteRelatedAccountResponse;
 
 /** Invites a further guardian to the child by email. */
 export async function inviteRelatedAccount(
@@ -2505,40 +2280,10 @@ export async function withdrawChildCourseRequest(
 // One change-request row in the parent view. Mirrors
 // api/parent.MasterDataChangeResponse. old/new values are JSON (string for the
 // fields shipped today; object for departure modes).
-export interface MasterDataChange {
-  readonly id: string;
-  readonly target: string;
-  readonly field_key: string;
-  readonly old_value?: unknown;
-  readonly new_value: unknown;
-  readonly status: "auto_applied" | "pending" | "approved" | "rejected";
-  readonly created_at: string;
-  readonly is_self?: boolean;
-}
+export type MasterDataChange = parentMeContract.MasterDataChangeResponse;
 
 // The structured Stammdaten view. Mirrors api/parent.MasterDataResponse.
-export interface ChildMasterData {
-  readonly student_id: string;
-  readonly first_name: string;
-  readonly last_name: string;
-  readonly birthday?: string;
-  readonly school_class: string;
-  readonly status: string;
-  readonly enrolled_from?: string;
-  readonly enrolled_until?: string;
-  readonly health_info?: string;
-  readonly guardian_profile_id: string;
-  readonly email?: string;
-  readonly address_street?: string;
-  readonly address_city?: string;
-  readonly address_postal_code?: string;
-  readonly preferred_contact_method: string;
-  readonly language_preference: string;
-  readonly primary_phone?: string;
-  readonly departure_days?: Record<string, string>;
-  readonly allowed_departure_modes?: Record<string, string[]>;
-  readonly pending_changes: MasterDataChange[];
-}
+export type ChildMasterData = parentMeContract.MasterDataResponse;
 
 /** Fetches the child's structured Stammdaten view (guardian's own data included). */
 export async function getChildMasterData(
@@ -2726,7 +2471,9 @@ export async function listMyDocuments(): Promise<ParentDocumentInbox> {
   ].sort(
     (a, b) =>
       Date.parse(b.sent_at) - Date.parse(a.sent_at) ||
-      Number(b.id) - Number(a.id),
+      // Newer ID first; decimal strings compare exactly by length, then text.
+      b.id.length - a.id.length ||
+      (b.id > a.id ? 1 : b.id < a.id ? -1 : 0),
   );
   const failed = [
     ["letters", letters],
@@ -2800,7 +2547,7 @@ export async function fetchMyContractNoticeOptions(
   contractId: string,
 ): Promise<ContractNoticeOptions> {
   return noticeOptionsFromBackend(
-    await getJson<ParentNoticeOptions>(
+    await getJson<parentMeContract.ContractNoticeOptions>(
       contractNoticePath(organizationId, contractId),
     ),
   );
@@ -2813,7 +2560,7 @@ export async function declareMyContractNotice(
   declaration: NoticeDeclaration,
 ): Promise<ContractNoticeOptions> {
   return noticeOptionsFromBackend(
-    await postJson<ParentNoticeOptions>(
+    await postJson<parentMeContract.ContractNoticeOptions>(
       contractNoticePath(organizationId, contractId),
       declarationBody(declaration),
     ),
