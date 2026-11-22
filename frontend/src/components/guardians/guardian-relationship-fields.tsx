@@ -43,7 +43,7 @@ export function RelationshipTypeSelect({
     <div>
       {/* The marker sits beside the label, never inside: the label is this
           select's aria-labelledby target, so its text is the accessible name. */}
-      <div className="mb-2 flex items-center gap-1">
+      <div className="mb-2 flex min-h-6 items-center gap-1">
         <FieldLabel id={`${id}-label`} htmlFor={id} className="mb-0">
           Beziehung zum Kind
         </FieldLabel>
@@ -77,15 +77,24 @@ export function GuardianRoleSelect({
   disabled = false,
 }: GuardianRoleSelectProps) {
   return (
-    <CustomSelect
-      label="Portalrolle"
-      id={id}
-      value={value}
-      options={GUARDIAN_ROLE_OPTIONS}
-      hint={GUARDIAN_ROLE_HINTS[value]}
-      onChange={(next) => onChange(next as GuardianRole)}
-      disabled={disabled}
-    />
+    <div>
+      {/* Same label row as „Beziehung zum Kind“ beside it, whose marker
+          makes the row taller: both selects start on one line. */}
+      <div className="mb-2 flex min-h-6 items-center">
+        <FieldLabel id={`${id}-label`} htmlFor={id} className="mb-0">
+          Portalrolle
+        </FieldLabel>
+      </div>
+      <CustomSelect
+        id={id}
+        ariaLabelledBy={`${id}-label`}
+        value={value}
+        options={GUARDIAN_ROLE_OPTIONS}
+        hint={GUARDIAN_ROLE_HINTS[value]}
+        onChange={(next) => onChange(next as GuardianRole)}
+        disabled={disabled}
+      />
+    </div>
   );
 }
 
