@@ -15,7 +15,7 @@ import (
 // /traeger/billing-runs/{id}/carried-corrections/{positionID}: the new amount
 // of the child in whole cent and the reason (#5663).
 type BillingCarriedCorrectionRequest struct {
-	TotalCents int64  `json:"total_cents"`
+	TotalCents int64  `json:"total_cents" contract:"number"`
 	Reason     string `json:"reason"`
 }
 

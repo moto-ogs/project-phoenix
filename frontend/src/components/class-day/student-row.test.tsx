@@ -8,7 +8,7 @@ const NOW = new Date("2026-08-24T10:00:00Z");
 
 function row(overrides: Partial<ClassDayRow> = {}): ClassDayRow {
   return {
-    student_id: 1,
+    student_id: "1",
     first_name: "Emilia",
     last_name: "Braun",
     registered: true,
@@ -88,7 +88,7 @@ describe("StudentRow", () => {
 
   it("kennzeichnet ein Kind ohne OGS-Datensatz und erfindet keine Abweichung", () => {
     renderRow({
-      student_id: 0,
+      student_id: "0",
       list_entry: true,
       list_entry_id: "42",
       stays_today: false,

@@ -168,7 +168,7 @@ func (c staffClockTimeClock) Workday(ctx context.Context, staffID int64, day str
 	for sessionID, breaks := range workday.Breaks {
 		kioskBreaks := make([]staffclock.Break, 0, len(breaks))
 		for _, workBreak := range breaks {
-			kioskBreaks = append(kioskBreaks, staffclock.Break{ID: workBreak.ID, StartedAt: workBreak.StartedAt, EndedAt: workBreak.EndedAt})
+			kioskBreaks = append(kioskBreaks, staffclock.Break{ID: workBreak.ID.Int64(), StartedAt: workBreak.StartedAt, EndedAt: workBreak.EndedAt})
 		}
 		result.Breaks[sessionID] = kioskBreaks
 	}

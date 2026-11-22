@@ -239,6 +239,7 @@ export const routes = {
     method: "POST",
     pattern: "/traeger/holiday-closures/preview",
     portals: ["org"],
+    noCommit: "the preview counts the bookings a closure would touch and saves nothing",
     request: requestBody<HolidayClosurePreviewRequest>(),
     response: success(HolidayClosureImpactSchema),
   },

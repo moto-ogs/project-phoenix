@@ -206,7 +206,6 @@ func (rs *GuardianResource) Router() chi.Router {
 
 		// Guardian profile reads share the users:read gate; the picker search
 		// (#1513) returns a minimal, enumeration-resistant projection.
-		r.With(usersRead, withTx).Get("/", rs.listGuardians)
 		r.With(usersRead, withTx).Get("/search", rs.searchGuardiansForPicker)
 		r.With(usersRead, withTx).Get("/{id}", rs.getGuardian)
 
@@ -222,7 +221,6 @@ func (rs *GuardianResource) Router() chi.Router {
 		// Student-guardian relationships: anyone with users:read may view them
 		// (emergency cases); writes add the per-student check in the handler.
 		r.With(usersRead, withTx).Get("/students/{studentId}/guardians", rs.getStudentGuardians)
-		r.With(usersRead, withTx).Get("/{id}/students", rs.getGuardianStudents)
 		r.With(usersUpdate, withTx).Post("/students/{studentId}/guardians", rs.linkGuardianToStudent)
 		// Atomic create-or-link of one or more guardians (#819).
 		r.With(usersUpdate, withTx).Post("/students/{studentId}/guardians/batch", rs.createStudentGuardians)

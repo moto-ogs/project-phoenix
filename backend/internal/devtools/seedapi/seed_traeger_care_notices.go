@@ -44,7 +44,7 @@ type seedCareNoticeRun struct {
 	Status       string  `json:"status"`
 	SchoolIDs    []apiID `json:"school_ids"`
 	PreviewCount int     `json:"preview_count"`
-	PreviewCents int64   `json:"preview_cents"`
+	PreviewCents int64   `json:"preview_cents" contract:"number"`
 	Fingerprint  string  `json:"fingerprint"`
 }
 

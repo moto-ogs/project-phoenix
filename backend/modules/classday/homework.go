@@ -3,6 +3,8 @@ package classday
 import (
 	"context"
 	"errors"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Homework through "moto schule" (#4796): the Lehrkraft enters what an
@@ -25,9 +27,9 @@ var (
 type DayHomework struct {
 	// ID is serialized as a JSON string: JavaScript clients round numbers
 	// beyond 2^53.
-	ID          int64  `json:"id,string"`
-	Subject     string `json:"subject,omitempty"`
-	Description string `json:"description"`
+	ID          ident.ID `json:"id"`
+	Subject     string   `json:"subject,omitempty"`
+	Description string   `json:"description"`
 }
 
 // DayHomeworkFeedback is the OGS feedback of one child on the report's date:

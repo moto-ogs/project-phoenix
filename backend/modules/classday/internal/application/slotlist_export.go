@@ -143,7 +143,7 @@ func selectedGroupNames(params listRequest, result *classday.ClassdayResult) []s
 	}
 	byID := make(map[int64]string, len(result.Groups))
 	for _, group := range result.Groups {
-		byID[group.ID] = group.Name
+		byID[group.ID.Int64()] = group.Name
 	}
 	names := make([]string, 0, len(params.GroupIDs))
 	for _, id := range params.GroupIDs {
@@ -186,10 +186,10 @@ func summarySlotCount(params listRequest, result *classday.ClassdayResult) int {
 		if slot.Status == string(ports.InstanceStatusCancelled) {
 			continue
 		}
-		if _, deferred := result.DeferredSlots[slot.InstanceID]; deferred {
+		if _, deferred := result.DeferredSlots[slot.InstanceID.Int64()]; deferred {
 			continue
 		}
-		if all || selected[slot.InstanceID] {
+		if all || selected[slot.InstanceID.Int64()] {
 			count++
 		}
 	}

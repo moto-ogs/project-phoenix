@@ -1,5 +1,6 @@
 // Database Entity Configuration Types
 
+import type { RouteKey } from "~/lib/bff-fetch";
 import type { ReactNode } from "react";
 import type { MotoConcept } from "~/lib/moto-concepts";
 
@@ -137,17 +138,17 @@ interface DetailSection<T = Record<string, unknown>> {
   columns?: 1 | 2;
 }
 
-// API configuration
+// API configuration: the staff portal's registered route of each operation
+// (#7806). An operation without a route is not offered by the entity.
 interface ApiConfig {
-  basePath: string;
-  listParams?: Record<string, string>;
-  endpoints?: {
-    list?: string;
-    get?: string;
-    create?: string;
-    update?: string;
-    delete?: string;
+  routes: {
+    list: RouteKey<"tenant">;
+    get?: RouteKey<"tenant">;
+    create?: RouteKey<"tenant">;
+    update?: RouteKey<"tenant">;
+    delete?: RouteKey<"tenant">;
   };
+  listParams?: Record<string, string>;
 }
 
 // List item configuration

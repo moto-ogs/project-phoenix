@@ -418,8 +418,8 @@ func linkDeveloperAdminIdentity(ctx context.Context, primary, target *Runtime, s
 	var identity struct {
 		Data struct {
 			SchoolIdentity struct {
-				StaffID   int64 `json:"staff_id,string"`
-				TeacherID int64 `json:"teacher_id,string"`
+				StaffID   apiID `json:"staff_id"`
+				TeacherID apiID `json:"teacher_id"`
 			} `json:"school_identity"`
 		} `json:"data"`
 	}
@@ -429,7 +429,7 @@ func linkDeveloperAdminIdentity(ctx context.Context, primary, target *Runtime, s
 	if identity.Data.SchoolIdentity.StaffID == 0 {
 		return fmt.Errorf("developer admin staff identity missing")
 	}
-	state.Accounts.Admin = []AccountCredentials{{Key: "developer-admin", Email: admin.Email, Password: admin.Password, Name: admin.Name, StaffID: identity.Data.SchoolIdentity.StaffID, TeacherID: identity.Data.SchoolIdentity.TeacherID}}
+	state.Accounts.Admin = []AccountCredentials{{Key: "developer-admin", Email: admin.Email, Password: admin.Password, Name: admin.Name, StaffID: int64(identity.Data.SchoolIdentity.StaffID), TeacherID: int64(identity.Data.SchoolIdentity.TeacherID)}}
 	return nil
 }
 

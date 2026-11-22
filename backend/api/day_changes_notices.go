@@ -21,6 +21,7 @@ import (
 	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // dayChangesNoticeReads is Timetable's read of the day's notices.
@@ -70,7 +71,7 @@ func dayChangesNoticeEntry(notice timetable.StaffNoticeView) daychangesview.Sour
 		Involved: notice.RequiresAcknowledgement && !acknowledged,
 		Link:     &daychangesview.Link{Target: daychangesview.LinkStaffNotices},
 		Notice: &daychangesview.DayNotice{
-			ID: notice.ID, Title: notice.Title, Body: notice.Body, Priority: priority,
+			ID: ident.ID(notice.ID), Title: notice.Title, Body: notice.Body, Priority: priority,
 			RequiresAcknowledgement: notice.RequiresAcknowledgement, Acknowledged: acknowledged,
 		},
 	}

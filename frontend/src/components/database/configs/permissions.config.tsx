@@ -60,7 +60,7 @@ export const permissionsConfig = defineEntityConfig<Permission>({
   backUrl: "/database",
 
   api: {
-    basePath: "/api/auth/permissions",
+    routes: { list: "GET /auth/permissions/" },
   },
 
   form: {
@@ -208,18 +208,8 @@ export const permissionsConfig = defineEntityConfig<Permission>({
   },
 
   service: {
-    mapResponse: (data: unknown): Permission => {
-      let actual = data;
-      if (
-        data &&
-        typeof data === "object" &&
-        "status" in data &&
-        "data" in data
-      ) {
-        actual = (data as { status: string; data: unknown }).data;
-      }
-      return mapPermissionResponse(actual as PermissionWire);
-    },
+    mapResponse: (data: unknown): Permission =>
+      mapPermissionResponse(data as PermissionWire),
   },
 
   labels: {

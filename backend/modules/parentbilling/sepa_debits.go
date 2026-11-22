@@ -123,7 +123,7 @@ type SEPADebit struct {
 	RunID            ident.ID      `json:"run_id"`
 	InvoiceNumber    string        `json:"invoice_number"`
 	RecipientName    string        `json:"recipient_name"`
-	AmountCents      int64         `json:"amount_cents"`
+	AmountCents      int64         `json:"amount_cents" contract:"number"`
 	DueOn            calendar.Date `json:"due_on"`
 	CollectOn        calendar.Date `json:"collect_on,omitempty"`
 	SequenceType     string        `json:"sequence_type"`
@@ -146,7 +146,7 @@ type SEPADebitGroup struct {
 	SequenceType string        `json:"sequence_type"`
 	CollectOn    calendar.Date `json:"collect_on"`
 	Count        int           `json:"count"`
-	TotalCents   int64         `json:"total_cents"`
+	TotalCents   int64         `json:"total_cents" contract:"number"`
 }
 
 // SEPADebitRun is the debit file of a run: what goes into it, what stays
@@ -161,7 +161,7 @@ type SEPADebitRun struct {
 	AccountMissing bool             `json:"account_missing"`
 	MessageID      string           `json:"message_id"`
 	Count          int              `json:"count"`
-	TotalCents     int64            `json:"total_cents"`
+	TotalCents     int64            `json:"total_cents" contract:"number"`
 	Groups         []SEPADebitGroup `json:"groups"`
 	PastDue        int              `json:"past_due"`
 	Debits         []SEPADebit      `json:"debits"`

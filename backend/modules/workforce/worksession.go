@@ -134,9 +134,9 @@ type WorkSessionFilter struct {
 
 // WorkSessionBreak is one break period inside a work block.
 type WorkSessionBreak struct {
-	ID              int64      `json:"id,string"`
-	TenantID        int64      `json:"tenant_id,string"`
-	SessionID       int64      `json:"session_id,string"`
+	ID              ident.ID   `json:"id"`
+	TenantID        ident.ID   `json:"tenant_id"`
+	SessionID       ident.ID   `json:"session_id"`
 	StartedAt       time.Time  `json:"started_at"`
 	EndedAt         *time.Time `json:"ended_at,omitempty"`
 	DurationMinutes int        `json:"duration_minutes"`

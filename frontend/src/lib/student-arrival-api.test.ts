@@ -231,7 +231,7 @@ describe("student-arrival-api", () => {
 
   describe("fetchBulkArrivalScheduleStatus", () => {
     it("uses one request for all selected children", async () => {
-      mockSessionFetch.mockResolvedValueOnce(wrapped({ student_ids: [1, 2] }));
+      mockSessionFetch.mockResolvedValueOnce(wrapped({ student_ids: ["1", "2"] }));
 
       await expect(fetchBulkArrivalScheduleStatus(["1", "2"])).resolves.toBe(2);
 
@@ -239,7 +239,7 @@ describe("student-arrival-api", () => {
         "/api/students/arrival-schedules/status",
         expect.objectContaining({
           method: "POST",
-          body: JSON.stringify({ student_ids: [1, 2] }),
+          body: JSON.stringify({ student_ids: ["1", "2"] }),
         }),
       );
     });
@@ -336,7 +336,7 @@ describe("student-arrival-api", () => {
           method: "POST",
           body: JSON.stringify({
             schedules: [{ weekday: 1, expected_arrival: "08:00" }],
-            group_id: 17,
+            group_id: "17",
           }),
         }),
       );
@@ -355,7 +355,7 @@ describe("student-arrival-api", () => {
         expect.objectContaining({
           body: JSON.stringify({
             schedules: [{ weekday: 2, expected_arrival: "09:15" }],
-            student_ids: [9, 4],
+            student_ids: ["9", "4"],
           }),
         }),
       );

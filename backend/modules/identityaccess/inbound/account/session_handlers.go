@@ -270,9 +270,9 @@ func buildSchoolIdentityResponse(identity *identityaccess.SchoolIdentity) *Schoo
 		return nil
 	}
 	return &SchoolIdentityResponse{
-		PersonID:  identity.PersonID,
-		StaffID:   identity.StaffID,
-		TeacherID: identity.TeacherID,
+		PersonID:  ident.ID(identity.PersonID),
+		StaffID:   ident.ID(identity.StaffID),
+		TeacherID: ident.ID(identity.TeacherID),
 	}
 }
 

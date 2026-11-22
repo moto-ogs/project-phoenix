@@ -251,7 +251,7 @@ func TestOperatorRoutesBlockAndUnblockADevice(t *testing.T) {
 	}
 	f.call(t, http.MethodGet, fmt.Sprintf("/operator/schools/%d/devices", schoolID), nil, &fleet)
 	for _, row := range fleet {
-		assert.NotEqual(t, device.ID, int64(row.ID), "the removed device is no longer listed")
+		assert.NotEqual(t, device.ID.Int64(), int64(row.ID), "the removed device is no longer listed")
 	}
 }
 

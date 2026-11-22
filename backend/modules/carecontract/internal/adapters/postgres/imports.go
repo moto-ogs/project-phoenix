@@ -65,7 +65,7 @@ type importedRecord struct {
 	ChildBirthDate         *calendar.Date         `json:"child_birth_date"`
 	SchoolName             string                 `json:"school_name"`
 	PhaseName              string                 `json:"phase_name"`
-	PriceCents             *int64                 `json:"price_cents"`
+	PriceCents             *int64                 `json:"price_cents" contract:"number"`
 	TermKind               string                 `json:"term_kind"`
 	TermMonths             *int                   `json:"term_months"`
 	NoticeMonths           int                    `json:"notice_months"`

@@ -106,8 +106,6 @@ type ActivePeople struct {
 	People interface {
 		GroupStudents(context.Context, int64) ([]peopleValues.StudentRecord, error)
 		CountByGroupIDs(context.Context, []int64) (map[int64]int, error)
-		FindPerson(context.Context, int64) (peopleValues.Person, error)
-		ListPersonsByID(context.Context, []int64) (map[int64]peopleValues.Person, error)
 	}
 }
 

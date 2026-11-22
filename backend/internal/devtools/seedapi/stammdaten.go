@@ -1305,7 +1305,7 @@ func (s *FixedSeeder) fetchRoles(_ context.Context) error {
 	var resp struct {
 		Status string `json:"status"`
 		Data   []struct {
-			ID   int64  `json:"id,string"`
+			ID   apiID  `json:"id"`
 			Name string `json:"name"`
 		} `json:"data"`
 	}
@@ -1314,7 +1314,7 @@ func (s *FixedSeeder) fetchRoles(_ context.Context) error {
 	}
 
 	for _, role := range resp.Data {
-		s.roleIDs[role.Name] = role.ID
+		s.roleIDs[role.Name] = int64(role.ID)
 	}
 
 	if s.verbose {
@@ -1415,7 +1415,7 @@ func (s *FixedSeeder) seedStaffAccounts(ctx context.Context, result *FixedResult
 				ID apiID `json:"id"`
 				// int64 ids travel as JSON strings on this field.
 				SchoolIdentity *struct {
-					PersonID int64 `json:"person_id,string"`
+					PersonID apiID `json:"person_id"`
 				} `json:"school_identity"`
 			} `json:"data"`
 		}
@@ -1428,7 +1428,7 @@ func (s *FixedSeeder) seedStaffAccounts(ctx context.Context, result *FixedResult
 
 		// seedStaff later posts this id to /api/staff, which adopts the staff
 		// record created here instead of adding a second one.
-		s.personIDs[personKey] = account.Data.SchoolIdentity.PersonID
+		s.personIDs[personKey] = int64(account.Data.SchoolIdentity.PersonID)
 		result.PersonCount++
 
 		// Store credentials for summary

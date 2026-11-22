@@ -33,6 +33,82 @@ const base = {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("import uploads through the catalog proxy (#2352)", () => {
+  it.each(["7", "9007199254740993", ""])(
+    "preserves school ID %s in the family children import mapping",
+    async (schoolId) => {
+      const mapping = {
+        columns: {
+          child_first_name: "a",
+          child_last_name: "b",
+          child_birth_date: "",
+          school: "",
+          children: "",
+        },
+        schoolId,
+      };
+      const fetchMock = answer({
+        ...base,
+        mapping: { columns: {}, school_id: schoolId || "0" },
+        schools: [],
+        counts: {},
+        rows: [],
+      });
+      await previewFamilyChildrenImport({ file, mapping });
+      const familyForm = fetchMock.mock.calls[0]![1].body as FormData;
+      expect(JSON.parse(String(familyForm.get("mapping")))).toEqual({
+        columns: mapping.columns,
+        school_id: schoolId || "0",
+      });
+    },
+  );
+
+  it.each(["7", "9007199254740993", ""])(
+    "preserves school ID %s in the contract import mapping",
+    async (schoolId) => {
+      const contractMapping = {
+        columns: {
+          child_first_name: "a",
+          child_last_name: "b",
+          child_birth_date: "",
+          school: "",
+          module: "",
+          weekdays: "",
+          effective_from: "",
+          ends_on: "",
+          concluded_on: "",
+          party_first_name: "",
+          party_last_name: "",
+          party_email: "",
+          debtor_number: "",
+          family_children: "",
+        },
+        schoolId,
+        moduleName: "",
+        effectiveFrom: "",
+      };
+      const contractFetch = answer({
+        ...base,
+        mapping: {
+          columns: {},
+          school_id: schoolId || "0",
+          module_name: "",
+          effective_from: null,
+        },
+        schools: [],
+        counts: {},
+        rows: [],
+      });
+      await previewContractImport({ file, mapping: contractMapping });
+      const contractForm = contractFetch.mock.calls[0]![1].body as FormData;
+      expect(JSON.parse(String(contractForm.get("mapping")))).toEqual({
+        columns: contractMapping.columns,
+        school_id: schoolId || "0",
+        module_name: "",
+        effective_from: null,
+      });
+    },
+  );
+
   it("reads the family children preview, no school chosen", async () => {
     const fetchMock = answer({
       ...base,

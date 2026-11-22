@@ -3,6 +3,8 @@ package supervisiondashboard
 import (
 	"context"
 	"fmt"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The planning times (#2703): the effective pickup and arrival of each child
@@ -11,7 +13,7 @@ import (
 // DashboardPickupTime / ArrivalTime keep the field names of the bulk endpoints they
 // replace so the frontend mapping stays identical.
 type DashboardPickupTime struct {
-	StudentID   int64              `json:"student_id,string"`
+	StudentID   ident.ID           `json:"student_id"`
 	Date        string             `json:"date"`
 	WeekdayName string             `json:"weekday_name"`
 	PickupTime  *string            `json:"pickup_time,omitempty"`
@@ -24,7 +26,7 @@ type DashboardPickupTime struct {
 }
 
 type ArrivalTime struct {
-	StudentID       int64              `json:"student_id,string"`
+	StudentID       ident.ID           `json:"student_id"`
 	Date            string             `json:"date"`
 	WeekdayName     string             `json:"weekday_name"`
 	ExpectedArrival *string            `json:"expected_arrival,omitempty"`
@@ -70,7 +72,7 @@ func planningVisible(caller Caller, studentIDs []int64, fullAccess bool) bool {
 
 func pickupTimeFromEffective(studentID int64, effective Pickup) DashboardPickupTime {
 	return DashboardPickupTime{
-		StudentID: studentID, Date: string(effective.Date), WeekdayName: effective.WeekdayName,
+		StudentID: ident.ID(studentID), Date: string(effective.Date), WeekdayName: effective.WeekdayName,
 		PickupTime: effective.PickupTime, IsException: effective.IsException, Notes: effective.Notes,
 		DayNotes: effective.DayNotes, DayDepartureMode: effective.DayDepartureMode,
 	}
@@ -78,7 +80,7 @@ func pickupTimeFromEffective(studentID int64, effective Pickup) DashboardPickupT
 
 func arrivalTimeFromEffective(studentID int64, effective Arrival) ArrivalTime {
 	return ArrivalTime{
-		StudentID: studentID, Date: string(effective.Date), WeekdayName: effective.WeekdayName,
+		StudentID: ident.ID(studentID), Date: string(effective.Date), WeekdayName: effective.WeekdayName,
 		ExpectedArrival: effective.ArrivalTime, IsException: effective.IsException, Notes: effective.Notes,
 		DayNotes: effective.DayNotes,
 	}

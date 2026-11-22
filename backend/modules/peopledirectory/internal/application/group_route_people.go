@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"fmt"
 
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
@@ -37,33 +36,6 @@ func (p GroupRoutePeople) GroupStudents(ctx context.Context, groupID int64) ([]p
 	for _, student := range students {
 		if student != nil {
 			result = append(result, studentRouteRecord(student))
-		}
-	}
-	return result, nil
-}
-
-// FindPerson returns one person.
-func (p GroupRoutePeople) FindPerson(ctx context.Context, personID int64) (peopleModule.Person, error) {
-	person, err := p.persons.Get(ctx, personID)
-	if err != nil {
-		return peopleModule.Person{}, err
-	}
-	if person == nil {
-		return peopleModule.Person{}, fmt.Errorf("person %d: %w", personID, peopleModule.ErrPersonNotFound)
-	}
-	return studentRoutePerson(person), nil
-}
-
-// ListPersonsByID returns the persons keyed by ID; an unknown ID is absent.
-func (p GroupRoutePeople) ListPersonsByID(ctx context.Context, personIDs []int64) (map[int64]peopleModule.Person, error) {
-	persons, err := p.persons.GetByIDs(ctx, personIDs)
-	if err != nil {
-		return nil, err
-	}
-	result := make(map[int64]peopleModule.Person, len(persons))
-	for id, person := range persons {
-		if person != nil {
-			result[id] = studentRoutePerson(person)
 		}
 	}
 	return result, nil

@@ -174,9 +174,9 @@ type CreatedAccount struct {
 // SystemRole is a platform role an operator can hand out. IDs stay decimal
 // strings in JSON so frontend code never loses int64 precision.
 type SystemRole struct {
-	ID       int64  `json:"id,string"`
-	Name     string `json:"name"`
-	IsSystem bool   `json:"is_system"`
+	ID       ident.ID `json:"id"`
+	Name     string   `json:"name"`
+	IsSystem bool     `json:"is_system"`
 }
 
 // SchoolAccount is one account with access to a school.

@@ -102,7 +102,7 @@ func (req *BillingRunRequest) Bind(*http.Request) error { return nil }
 type BillingCorrectionRequest struct {
 	RegistrationID common.ID `json:"registration_id"`
 	ChildID        common.ID `json:"child_id"`
-	TotalCents     int64     `json:"total_cents"`
+	TotalCents     int64     `json:"total_cents" contract:"number"`
 	Reason         string    `json:"reason"`
 }
 
@@ -114,7 +114,7 @@ func (req *BillingCorrectionRequest) Bind(*http.Request) error { return nil }
 // the fingerprint of the preview the Abrechnung checked (#6506).
 type BillingReleaseRequest struct {
 	DocumentCount int   `json:"document_count"`
-	TotalCents    int64 `json:"total_cents"`
+	TotalCents    int64 `json:"total_cents" contract:"number"`
 	// DocumentKind is the kind of document the Abrechnung saw (#4688);
 	// missing skips the check.
 	DocumentKind string `json:"document_kind"`

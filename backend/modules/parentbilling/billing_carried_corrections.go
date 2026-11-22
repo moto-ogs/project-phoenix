@@ -25,8 +25,8 @@ var ErrCarriedCorrectionNotFound = errors.New("the correction is not proposed in
 type BillingCarriedCorrection struct {
 	PositionID        ident.ID `json:"position_id"`
 	SourceNumber      string   `json:"source_number"`
-	AmountCents       int64    `json:"amount_cents"`
-	SourceAmountCents int64    `json:"source_amount_cents"`
+	AmountCents       int64    `json:"amount_cents" contract:"number"`
+	SourceAmountCents int64    `json:"source_amount_cents" contract:"number"`
 	Reason            string   `json:"reason"`
 	// ChildID and SourceDocumentID place the proposal; TotalBeforeCents is the
 	// child's amount before it, which the history of the release records.

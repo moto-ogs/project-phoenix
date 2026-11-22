@@ -1,12 +1,10 @@
+import type { StudentEnrollmentExtraFieldGroup } from "~/lib/contract/students.generated";
 import { useCallback, useEffect } from "react";
 
 import { useSWRAuth } from "~/lib/swr";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
-import {
-  fetchStudentEnrollmentExtraFields,
-  type StudentEnrollmentExtraFieldGroup,
-} from "~/lib/student-api";
+import { fetchStudentEnrollmentExtraFields } from "~/lib/student-api";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "useStudentEnrollmentExtraFields" });

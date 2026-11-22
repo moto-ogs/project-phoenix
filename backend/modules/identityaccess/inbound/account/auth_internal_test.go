@@ -125,7 +125,7 @@ func TestToRoleResponse(t *testing.T) {
 
 		resp := toRoleResponse(role)
 
-		assert.Equal(t, int64(42), resp.ID)
+		assert.Equal(t, int64(42), resp.ID.Int64())
 		assert.Equal(t, "custom-admin", resp.Name)
 		assert.Equal(t, "A custom admin role", resp.Description)
 		assert.False(t, resp.IsSystem)

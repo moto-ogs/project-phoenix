@@ -139,7 +139,7 @@ func workSessionsToDomain(rows []workSessionRow) []workforce.WorkSession {
 
 func workSessionBreakFromDomain(value workforce.WorkSessionBreak) *workSessionBreakRow {
 	return &workSessionBreakRow{
-		ID: value.ID, TenantID: value.TenantID, SessionID: value.SessionID, StartedAt: value.StartedAt,
+		ID: value.ID.Int64(), TenantID: value.TenantID.Int64(), SessionID: value.SessionID.Int64(), StartedAt: value.StartedAt,
 		EndedAt: value.EndedAt, DurationMinutes: value.DurationMinutes, PlannedEndTime: value.PlannedEndTime,
 		CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
 	}
@@ -147,7 +147,7 @@ func workSessionBreakFromDomain(value workforce.WorkSessionBreak) *workSessionBr
 
 func workSessionBreakToDomain(row workSessionBreakRow) workforce.WorkSessionBreak {
 	return workforce.WorkSessionBreak{
-		ID: row.ID, TenantID: row.TenantID, SessionID: row.SessionID, StartedAt: row.StartedAt,
+		ID: ident.ID(row.ID), TenantID: ident.ID(row.TenantID), SessionID: ident.ID(row.SessionID), StartedAt: row.StartedAt,
 		EndedAt: row.EndedAt, DurationMinutes: row.DurationMinutes, PlannedEndTime: row.PlannedEndTime,
 		CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
 	}

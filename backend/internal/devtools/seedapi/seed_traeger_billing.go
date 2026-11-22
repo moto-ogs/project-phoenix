@@ -25,13 +25,13 @@ const (
 // preview and the first child of the first invoice.
 type seedBillingRunDetail struct {
 	PreviewCount int    `json:"preview_count"`
-	PreviewCents int64  `json:"preview_cents"`
+	PreviewCents int64  `json:"preview_cents" contract:"number"`
 	Fingerprint  string `json:"fingerprint"`
 	Documents    []struct {
 		RegistrationID apiID `json:"registration_id"`
 		Children       []struct {
 			ChildID    apiID `json:"child_id"`
-			TotalCents int64 `json:"total_cents"`
+			TotalCents int64 `json:"total_cents" contract:"number"`
 		} `json:"children"`
 	} `json:"documents"`
 }

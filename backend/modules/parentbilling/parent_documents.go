@@ -81,7 +81,7 @@ type ParentDocument struct {
 	ServiceFrom  calendar.Date `json:"service_from"`
 	ServiceUntil calendar.Date `json:"service_until"`
 	IssuedOn     calendar.Date `json:"issued_on"`
-	TotalCents   int64         `json:"total_cents"`
+	TotalCents   int64         `json:"total_cents" contract:"number"`
 	ChildNames   []string      `json:"child_names"`
 	SentAt       time.Time     `json:"sent_at"`
 }

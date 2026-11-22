@@ -19,14 +19,12 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	DELETE /api/guardians/students/{studentId}/guardians/{guardianId}
 	DELETE /api/guardians/{id}
 	DELETE /api/guardians/{id}/phone-numbers/{phoneId}
-	GET /api/guardians/
 	GET /api/guardians/invitations/pending-approval
 	GET /api/guardians/search
 	GET /api/guardians/students/{studentId}/guardians
 	GET /api/guardians/{id}
 	GET /api/guardians/{id}/delete-preview
 	GET /api/guardians/{id}/phone-numbers/
-	GET /api/guardians/{id}/students
 	POST /api/guardians/
 	POST /api/guardians/bulk-invite
 	POST /api/guardians/invitations/{invitationId}/approve

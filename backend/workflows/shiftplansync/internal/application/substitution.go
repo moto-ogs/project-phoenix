@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/realtime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -167,7 +168,7 @@ func projectSubstitutionAppointments(instances []*timetable.ScheduledInstance, d
 			}
 			staff = append(staff, education.ScheduleAppointmentStaff{
 				AssignmentID: row.ID,
-				Staff:        education.StaffRef{ID: row.StaffID, FullName: name},
+				Staff:        education.StaffRef{ID: ident.ID(row.StaffID), FullName: name},
 				IsAbsent:     row.IsAbsent,
 				IsSubstitute: row.IsSubstitute,
 				CanEnd:       canChange && row.IsSubstitute && !row.IsAbsent,
@@ -196,7 +197,7 @@ func (a *SubstitutionAdapter) loadTargets(ctx context.Context, include bool) ([]
 	// (#4573 D6); the mark lets the pickers leave them out.
 	for _, member := range members {
 		if member != nil {
-			targets = append(targets, education.StaffRef{ID: member.ID, FullName: member.FullName(), IsExternal: member.IsExternalCaregiver})
+			targets = append(targets, education.StaffRef{ID: ident.ID(member.ID), FullName: member.FullName(), IsExternal: member.IsExternalCaregiver})
 		}
 	}
 	return targets, nil

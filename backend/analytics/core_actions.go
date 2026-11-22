@@ -455,7 +455,6 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/api/timetable/templates/{id}/offering-connection"}:                               event("template_offering_connected"),
 	{http.MethodPost, "/api/timetable/templates/{id}/students/{studentId}/remove-days"}:                  notCaptured,
 	{http.MethodPut, "/api/timetable/templates/{id}/students/{studentId}/kept-days"}:                     notCaptured,
-	{http.MethodPost, "/api/users/"}:                                                                     notCaptured,
 	{http.MethodPut, "/api/users/{id}"}:                                                                  notCaptured,
 	{http.MethodPost, "/api/work-time-models/"}:                                                          notCaptured,
 	{http.MethodDelete, "/api/work-time-models/{id}"}:                                                    notCaptured,
