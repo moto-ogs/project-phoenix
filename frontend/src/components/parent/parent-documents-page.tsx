@@ -56,7 +56,16 @@ const DOCUMENT_TITLES = {
   care_fee_notice: "careFeeNotice",
   care_change_notice: "careChangeNotice",
   care_contract: "careContract",
-} as const satisfies Record<ParentDocument["kind"], string>;
+} as const;
+
+function isDocumentKind(kind: string): kind is keyof typeof DOCUMENT_TITLES {
+  return Object.hasOwn(DOCUMENT_TITLES, kind);
+}
+
+/** A kind this build has a title for; a newer kind shows the inbox title. */
+function documentTitleKey(kind: string) {
+  return isDocumentKind(kind) ? DOCUMENT_TITLES[kind] : "title";
+}
 
 /** A row of the inbox: a letter or contract, or a released document. */
 type InboxEntry =
@@ -256,7 +265,7 @@ function ParentDocumentCard({
   return (
     <InboxDocumentCard
       concept={contract ? careContractsConcept : documentsConcept}
-      title={t(DOCUMENT_TITLES[document.kind], {
+      title={t(documentTitleKey(document.kind), {
         period: document.period_name,
       })}
       description={t("sender", { traeger: document.traeger_name })}
@@ -298,7 +307,7 @@ function ParentDocumentCard({
           </DataField>
         ) : null}
         <DataField label={t("children")}>
-          {document.child_names.join(", ")}
+          {(document.child_names ?? []).join(", ")}
         </DataField>
         {contract ? (
           <>

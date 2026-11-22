@@ -110,7 +110,7 @@ function isPollClosed(item: ParentAnnouncement): boolean {
 export function isOpenPoll(item: ParentAnnouncement): boolean {
   if (!isPoll(item) || isPollClosed(item)) return false;
   return (item.children ?? []).some(
-    (child) => child.selected_options.length === 0,
+    (child) => (child.selected_options ?? []).length === 0,
   );
 }
 
@@ -136,7 +136,7 @@ function pollAnswerSummary(
   const optionLabels = new Map(
     (item.options ?? []).map((option) => [option.id, option.label]),
   );
-  const answer = child.selected_options
+  const answer = (child.selected_options ?? [])
     .map((optionId) => optionLabels.get(optionId))
     .filter((label): label is string => label !== undefined)
     .join(", ");
@@ -232,7 +232,7 @@ function NewsCardState({
   if (children.length === 0) return null;
 
   const answered = children.filter(
-    (child) => child.selected_options.length > 0,
+    (child) => (child.selected_options ?? []).length > 0,
   );
   const answerSummaries = answered
     .map((child) =>
@@ -351,7 +351,7 @@ function DeclarationCardState({
   const locale = useLocale();
   const declaration = item.declaration;
   const children = declaration.children;
-  if (children.length === 0) return null;
+  if ((children ?? []).length === 0) return null;
 
   const deadline =
     declaration.deadline && !declaration.closed ? (
@@ -371,14 +371,14 @@ function DeclarationCardState({
     );
   }
 
-  const summary = children
+  const summary = (children ?? [])
     .map((child) =>
-      children.length === 1
+      (children ?? []).length === 1
         ? td(`state.${child.state}`)
         : `${child.first_name}: ${td(`state.${child.state}`)}`,
     )
     .join(" · ");
-  const settled = children.every((child) => child.state === "agreed");
+  const settled = (children ?? []).every((child) => child.state === "agreed");
 
   return (
     <>
@@ -439,13 +439,13 @@ function usePollAnswers(
   ].join("|");
   const [draft, setDraft] = useState<Record<string, string[]>>(() =>
     Object.fromEntries(
-      children.map((c) => [c.student_id, [...c.selected_options]]),
+      children.map((c) => [c.student_id, [...(c.selected_options ?? [])]]),
     ),
   );
   useEffect(() => {
     setDraft(
       Object.fromEntries(
-        children.map((c) => [c.student_id, [...c.selected_options]]),
+        children.map((c) => [c.student_id, [...(c.selected_options ?? [])]]),
       ),
     );
     clearError();
@@ -471,7 +471,7 @@ function usePollAnswers(
   };
 
   const isDirty = (child: ParentAnnouncementPollChild): boolean => {
-    const saved = [...child.selected_options]
+    const saved = [...(child.selected_options ?? [])]
       .sort((a, b) => a.localeCompare(b))
       .join(",");
     const current = [...selectionFor(child)]
@@ -557,7 +557,7 @@ function initiallyOpenPollChild(
   children: readonly ParentAnnouncementPollChild[],
 ): ReadonlySet<string> {
   const first =
-    children.find((child) => child.selected_options.length === 0) ??
+    children.find((child) => (child.selected_options ?? []).length === 0) ??
     children[0];
   return new Set(first ? [first.student_id] : []);
 }
@@ -625,7 +625,7 @@ function usePollChildStatus(
 ) {
   const t = useTranslations("parentDashboard");
   const dirty = poll.isDirty(child);
-  const answered = child.selected_options.length > 0;
+  const answered = (child.selected_options ?? []).length > 0;
   if (dirty) return { label: t("newsPollUnsaved"), tone: "warning" as const };
   if (answered) return { label: t("newsPollAnswered"), tone: "green" as const };
   return { label: t("newsPollOpen"), tone: "gray" as const };

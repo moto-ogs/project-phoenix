@@ -108,6 +108,8 @@ beforeEach(async () => {
     can_request: false,
   });
   vi.spyOn(api, "getChildCourses").mockResolvedValue({
+    can_request: false,
+    reason_required: false,
     enabled: false,
     items: [],
     pending_submitted_by_self: false,

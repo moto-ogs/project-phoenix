@@ -943,8 +943,8 @@ function GuardianRow({
                   compact
                   label={tPermission("pending", {
                     days:
-                      pendingPermission.weekdays.length > 0
-                        ? weekdayList(pendingPermission.weekdays)
+                      (pendingPermission.weekdays ?? []).length > 0
+                        ? weekdayList(pendingPermission.weekdays ?? [])
                         : tPermission("days.all"),
                   })}
                 />
@@ -1812,8 +1812,8 @@ function PickupModal({
                     type="info"
                     message={`${tPermission("pending", {
                       days:
-                        pendingPermission.weekdays.length > 0
-                          ? weekdayList(pendingPermission.weekdays)
+                        (pendingPermission.weekdays ?? []).length > 0
+                          ? weekdayList(pendingPermission.weekdays ?? [])
                           : tPermission("days.all"),
                     })}. ${tPermission("waitsForOgs")}`}
                   />
