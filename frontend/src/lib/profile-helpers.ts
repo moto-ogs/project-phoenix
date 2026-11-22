@@ -1,4 +1,4 @@
-import type { ProfileResponse } from "./contract/me.generated";
+import type * as meContract from "./contract/me.generated";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "ProfileHelpers" });
@@ -46,11 +46,8 @@ export interface ProfileUpdateRequest {
   settings?: ProfileSettings;
 }
 
-// Backend response mapping
-// Wire type: the decoded response of the catalog proxy (#2353).
-export type ProfileWire = ProfileResponse;
-
-export function mapProfileResponse(data: ProfileWire): Profile {
+// The decoded answer of the catalog proxy (#2353), mapped to the view.
+export function mapProfileResponse(data: meContract.ProfileResponse): Profile {
   // Go sends the settings as a JSON string.
   let settings: ProfileSettings | undefined;
   if (data.settings) {

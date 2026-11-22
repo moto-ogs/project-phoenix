@@ -33,7 +33,6 @@ import type {
 } from "~/lib/supervision-derive";
 import type { TenantInfo } from "~/lib/tenant-api";
 import { loadUserContext } from "~/lib/user-context.server";
-import type { NavigationEducationalGroup } from "~/lib/usercontext-helpers";
 
 const logger = createLogger({ component: "ShellBootstrap" });
 
@@ -140,11 +139,9 @@ async function loadSupervision(
 
   const [groups, supervision, openRooms] = await Promise.all([
     optional("groups", async (signal) => {
-      const response = await apiGet<ApiResponse<NavigationEducationalGroup[]>>(
-        "/api/students/ogs-group-navigation",
-        token,
-        { signal },
-      );
+      const response = await apiGet<
+        ApiResponse<studentsContract.NavigationGroup[]>
+      >("/api/students/ogs-group-navigation", token, { signal });
       return response.data;
     }),
     optional("supervised", loadSupervised),

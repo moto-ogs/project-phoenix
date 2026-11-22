@@ -4,16 +4,7 @@ import {
   systemRoleDescription,
   systemRoleLabel,
 } from "~/lib/role-labels";
-import type {
-  PermissionResponse,
-  RoleResponse,
-} from "~/lib/contract/shared.generated";
-
-/** A role as the contract sends it (`GET /auth/roles`, account roles). */
-export type RoleWire = RoleResponse;
-
-/** A permission as the contract sends it. */
-export type PermissionWire = PermissionResponse;
+import type * as sharedContract from "~/lib/contract/shared.generated";
 
 /** German display labels for system base roles used in announcement targeting. */
 export const BASE_ROLE_LABELS: Record<string, string> = {
@@ -52,7 +43,7 @@ export interface Permission {
   updatedAt: string;
 }
 
-export function mapRoleResponse(role: RoleWire): Role {
+export function mapRoleResponse(role: sharedContract.RoleResponse): Role {
   return {
     id: role.id,
     name: role.name,
@@ -67,7 +58,7 @@ export function mapRoleResponse(role: RoleWire): Role {
 }
 
 export function mapPermissionResponse(
-  backendPermission: PermissionWire,
+  backendPermission: sharedContract.PermissionResponse,
 ): Permission {
   return {
     id: backendPermission.id,
