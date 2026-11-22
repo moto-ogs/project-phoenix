@@ -201,7 +201,6 @@ export function offering(overrides: Partial<CareOffering> = {}): CareOffering {
   return {
     id: "offer-1",
     phase_id: "10",
-    activity_group_id: null,
     name: "Regelbetreuung",
     description: "Montag bis Freitag",
     days_of_week_mode: "fixed",
@@ -213,6 +212,8 @@ export function offering(overrides: Partial<CareOffering> = {}): CareOffering {
     is_active: true,
     is_required: false,
     counts_as_care: true,
+    auto_add_grade_levels: [],
+    auto_add_trigger_offering_ids: [],
     pickup_times: {
       mon: "14:30",
       tue: "14:30",

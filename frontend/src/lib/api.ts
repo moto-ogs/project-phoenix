@@ -1,4 +1,3 @@
-import { apiErrorFromText, transportFetch } from "./api-error";
 import { bffJson } from "./bff-fetch";
 import { createLogger } from "~/lib/logger";
 import { mapGroupsResponse } from "./group-helpers";
@@ -8,15 +7,6 @@ import { mapRoomsResponse } from "./room-helpers";
 
 // Logger instance for API client
 const logger = createLogger({ component: "ApiClient" });
-
-/**
- * Headers of the room delete below. The BFF
- * routes authenticate through the session cookie; the browser holds no
- * token (#5005).
- */
-const JSON_HEADERS: Record<string, string> = {
-  "Content-Type": "application/json",
-};
 
 // Re-export types for external usage
 export type { Student } from "./student-helpers";
@@ -95,28 +85,9 @@ export const roomService = {
 
   // Delete a room
   deleteRoom: async (id: string): Promise<void> => {
-    const url = `/api/rooms/${id}`;
-
     try {
-      const response = await transportFetch(url, {
-        method: "DELETE",
-        credentials: "include",
-        headers: JSON_HEADERS,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        logger.error("api error during fetch", {
-          status: response.status,
-          error_text: errorText.substring(0, 200), // Truncate long errors
-        });
-        // Code, Feldfehler und Vorgangskennung bleiben erhalten (#2517).
-        throw apiErrorFromText(
-          `API error: ${response.status}`,
-          response.status,
-          errorText,
-        );
-      }
+      // Code, Feldfehler und Vorgangskennung bleiben erhalten (#2517).
+      await bffJson("tenant", "DELETE /api/rooms/{id}", { params: { id } });
     } catch (error) {
       logger.error("failed to delete room", {
         room_id: id,

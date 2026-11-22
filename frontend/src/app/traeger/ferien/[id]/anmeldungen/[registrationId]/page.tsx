@@ -73,7 +73,7 @@ import {
   DocumentAttachmentList,
   type AttachmentLabels,
 } from "~/components/enrollment/attachment-list";
-import { holidayDocumentPath } from "~/lib/traeger-holiday-form-api";
+import { fetchHolidayDocument } from "~/lib/traeger-holiday-form-api";
 import { LegalMarkdown } from "~/components/enrollment/legal-markdown";
 import { Button } from "~/components/ui/button";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
@@ -712,8 +712,8 @@ function HolidayRegistrationContent() {
                       <DocumentAttachmentList
                         labels={PDF_LABELS}
                         attachments={block.attachments}
-                        documentURL={(documentId) =>
-                          holidayDocumentPath(periodId, documentId)
+                        loadDocument={(documentId) =>
+                          fetchHolidayDocument(periodId, documentId)
                         }
                       />
                     </div>

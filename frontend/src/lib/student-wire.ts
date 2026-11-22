@@ -43,7 +43,7 @@ function allOf<T extends string>() {
   ): readonly T[] => values;
 }
 
-const DAY_PLANNING_STATUS_VALUES = allOf<DayPlanningStatus>()([
+export const DAY_PLANNING_STATUS_VALUES = allOf<DayPlanningStatus>()([
   "comes_today",
   "not_coming_today",
 ]);
@@ -291,9 +291,7 @@ export function prepareStudentForBackend(student: StudentUpdate) {
       student.departure_days === undefined
         ? undefined
         : normalizeDepartureDays(student.departure_days),
-    group_id: student.group_id
-      ? String(student.group_id)
-      : undefined,
+    group_id: student.group_id ? String(student.group_id) : undefined,
     address_street: student.address_street,
     address_city: student.address_city,
     address_postal_code: student.address_postal_code,

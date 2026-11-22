@@ -166,8 +166,10 @@ function mockFetchResponse(status: number, body: unknown): typeof global.fetch {
 }
 
 function mockTenantAuthenticatedResponse(): typeof global.fetch {
+  // The BFF's answer to the password step: `{ status, data }`.
   return mockFetchResponse(200, {
-    status: "authenticated",
+    status: "success",
+    data: { status: "authenticated" },
   });
 }
 

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
+import { bffFile } from "~/lib/bff-fetch";
 import { DocumentAttachmentList } from "./attachment-list";
 
 const mocks = vi.hoisted(() => ({
@@ -8,10 +9,6 @@ const mocks = vi.hoisted(() => ({
   download: vi.fn(),
   show: vi.fn(),
   showMessage: vi.fn(),
-}));
-vi.mock("~/lib/api-error", async (original) => ({
-  ...(await original<object>()),
-  transportFetch: mocks.fetch,
 }));
 vi.mock("~/lib/file-download", () => ({ downloadBlob: mocks.download }));
 vi.mock("~/contexts/ToastContext", () => ({
@@ -34,7 +31,15 @@ const attachments = [
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.stubGlobal("fetch", mocks.fetch);
 });
+
+/** The init every PDF request of the portals without a session carries. */
+const PLAIN_GET = {
+  method: "GET",
+  credentials: "include",
+  cache: "no-store",
+};
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -64,11 +69,8 @@ describe("anonymous enrollment PDF actions", () => {
     );
     await waitFor(() => expect(mocks.download).toHaveBeenCalledTimes(2));
     expect(mocks.fetch.mock.calls).toEqual([
-      [attachments[0]!.document_url, { cache: "no-store" }],
-      [
-        "/api/public/enrollment-form-legal-documents/42_pickup.pdf",
-        { cache: "no-store" },
-      ],
+      [attachments[0]!.document_url, PLAIN_GET],
+      ["/api/public/enrollment-form-legal-documents/42_pickup.pdf", PLAIN_GET],
     ]);
     expect(mocks.download.mock.calls[0]![1]).toBe(
       "Informationen zum Schulstart.pdf",
@@ -188,8 +190,12 @@ describe("anonymous enrollment PDF actions", () => {
     render(
       <DocumentAttachmentList
         attachments={[{ label: "Ferienhinweis", document_url: "81" }]}
-        documentURL={(id) =>
-          `/api/traeger/holiday-periods/5/form/documents/${id}`
+        loadDocument={(id) =>
+          bffFile(
+            "org",
+            "GET /traeger/holiday-periods/{id}/form/documents/{documentId}",
+            { params: { id: "5", documentId: id } },
+          )
         }
         labels={{
           open: "PDF öffnen",
@@ -212,7 +218,7 @@ describe("anonymous enrollment PDF actions", () => {
     await waitFor(() =>
       expect(mocks.fetch).toHaveBeenCalledWith(
         "/api/traeger/holiday-periods/5/form/documents/81",
-        { cache: "no-store" },
+        PLAIN_GET,
       ),
     );
     await waitFor(() => expect(mocks.download).toHaveBeenCalled());

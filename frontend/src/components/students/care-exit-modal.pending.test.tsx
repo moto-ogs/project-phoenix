@@ -2,7 +2,7 @@
 // Antwort schließt keinen neueren Vorgang. Echter SlideOver, vaul-Mock.
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ModalProvider } from "~/components/ui/modal-context";
 import { ApiError } from "~/lib/api-error";
@@ -84,6 +84,11 @@ async function renderAndConfirm() {
 }
 
 describe("CareExitModal pending lock (#6593)", () => {
+  beforeAll(async () => {
+    // Assert error handling independently of the lazy catalog's load time.
+    await import("~/lib/error-presentation");
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockPreview.mockResolvedValue(PREVIEW);

@@ -10,7 +10,6 @@
  */
 import { bffFile, bffJson } from "~/lib/bff-fetch";
 import type * as wire from "~/lib/contract/shared.generated";
-import { traegerRequest } from "~/lib/traeger-api";
 import {
   downloadTraegerList,
   type TraegerListFile,
@@ -151,9 +150,10 @@ export async function liftSchoolBlock(blockId: string): Promise<void> {
 export async function fetchTraegerPoolWeek(
   weekStart: string,
 ): Promise<PoolWeek> {
-  const week = await traegerRequest<wire.PoolWeek>(
-    `/api/traeger/staff-pool?week=${encodeURIComponent(weekStart)}`,
-  );
+  const week = await bffJson("org", "GET /traeger/staff-pool/", {
+    query: { week: weekStart },
+    errorMessage: "staff pool week failed",
+  });
   return mapPoolWeek(week);
 }
 
@@ -172,10 +172,10 @@ export function downloadTraegerPoolWeek(
 }
 
 export async function liftTraegerBlock(blockId: string): Promise<void> {
-  await traegerRequest<unknown>(
-    `/api/traeger/staff-pool/blocks/${encodeURIComponent(blockId)}`,
-    { method: "DELETE" },
-  );
+  await bffJson("org", "DELETE /traeger/staff-pool/blocks/{id}", {
+    params: { id: blockId },
+    errorMessage: "staff pool lift failed",
+  });
 }
 
 /** Der Stand der Nachweise in einem Wort, für das Abzeichen der Zeile. */

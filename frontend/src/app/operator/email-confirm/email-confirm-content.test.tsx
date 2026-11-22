@@ -15,6 +15,11 @@ function render(ui: React.ReactElement) {
 
 const OBJECT = "die Bestätigung der E-Mail-Adresse";
 
+/** The catalog proxy's answer to a confirmation: no data. */
+function confirmed(): Response {
+  return new Response(JSON.stringify({ status: "success", data: null }));
+}
+
 function errorResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status });
 }
@@ -155,11 +160,7 @@ describe("EmailConfirmContent", () => {
   });
 
   it("shows success state after successful confirmation", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ message: "Email changed successfully" }),
-    });
+    mockFetch.mockResolvedValueOnce(confirmed());
 
     setQueryToken("test-token");
     render(<EmailConfirmContent />);
@@ -175,11 +176,7 @@ describe("EmailConfirmContent", () => {
   });
 
   it("shows success link to settings profile tab", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ message: "OK" }),
-    });
+    mockFetch.mockResolvedValueOnce(confirmed());
 
     setQueryToken("test-token");
     render(<EmailConfirmContent />);
@@ -201,11 +198,7 @@ describe("EmailConfirmContent", () => {
       status: "authenticated",
     });
 
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ message: "OK" }),
-    });
+    mockFetch.mockResolvedValueOnce(confirmed());
 
     setQueryToken("test-token");
     render(<EmailConfirmContent />);
@@ -221,11 +214,7 @@ describe("EmailConfirmContent", () => {
   });
 
   it("does not trigger session update when unauthenticated", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ message: "OK" }),
-    });
+    mockFetch.mockResolvedValueOnce(confirmed());
 
     setQueryToken("test-token");
     render(<EmailConfirmContent />);
@@ -249,11 +238,7 @@ describe("EmailConfirmContent", () => {
 
     mockUpdateSession.mockRejectedValueOnce(new Error("session error"));
 
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ message: "OK" }),
-    });
+    mockFetch.mockResolvedValueOnce(confirmed());
 
     setQueryToken("test-token");
     render(<EmailConfirmContent />);
@@ -317,11 +302,7 @@ describe("EmailConfirmContent", () => {
 
   it("handles retry after error", async () => {
     mockFetch.mockResolvedValueOnce(errorResponse(500, {}));
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ message: "OK" }),
-    });
+    mockFetch.mockResolvedValueOnce(confirmed());
 
     setQueryToken("test-token");
     render(<EmailConfirmContent />);
@@ -335,11 +316,7 @@ describe("EmailConfirmContent", () => {
   });
 
   it("sends correct request to API", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ message: "OK" }),
-    });
+    mockFetch.mockResolvedValueOnce(confirmed());
 
     setQueryToken("my-test-token");
     render(<EmailConfirmContent />);
@@ -380,11 +357,7 @@ describe("EmailConfirmContent", () => {
     // While confirming, the idle UI is gone — can't double-click
     expect(screen.queryByText("Jetzt bestätigen")).not.toBeInTheDocument();
 
-    resolveResponse!({
-      ok: true,
-      status: 200,
-      json: async () => ({ message: "OK" }),
-    });
+    resolveResponse!(confirmed());
 
     await waitFor(() => {
       expect(screen.getByText("E-Mail-Adresse geändert")).toBeInTheDocument();
@@ -414,11 +387,7 @@ describe("EmailConfirmContent", () => {
   // so the second must keep the token it already read.
   it("keeps the token when the mount effect runs again", async () => {
     replaceStateSpy.mockRestore();
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ status: "success" }),
-    });
+    mockFetch.mockResolvedValueOnce(confirmed());
     setQueryToken("strict-token");
 
     // StrictMode at the root, as next dev renders the page.
@@ -445,11 +414,7 @@ describe("EmailConfirmContent", () => {
 
   it("shows the result again when the person returns after confirming", async () => {
     replaceStateSpy.mockRestore();
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ status: "success" }),
-    });
+    mockFetch.mockResolvedValueOnce(confirmed());
     setQueryToken("back-token");
 
     const first = render(<EmailConfirmContent />);

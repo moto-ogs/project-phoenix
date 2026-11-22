@@ -1,12 +1,14 @@
 import { ApiError } from "./api-error";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
+  mockHandleAuthFailure,
   mockBrowserSupportsWebAuthn,
   mockGetSession,
   mockStartAuthentication,
   mockStartRegistration,
 } = vi.hoisted(() => ({
+  mockHandleAuthFailure: vi.fn(),
   mockBrowserSupportsWebAuthn: vi.fn(),
   mockGetSession: vi.fn(),
   mockStartAuthentication: vi.fn(),
@@ -23,6 +25,10 @@ vi.mock("next-auth/react", () => ({
   getSession: mockGetSession,
 }));
 
+vi.mock("./auth-failure", () => ({
+  handleAuthFailure: mockHandleAuthFailure,
+}));
+
 import {
   isPasskeySupported,
   isPasskeyCeremonyIncompleteError,
@@ -32,6 +38,7 @@ import {
   revokePasskey,
   startPasskeyEnrollment,
 } from "./passkey-api";
+import { clearSessionCache } from "./session-cache";
 
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -58,8 +65,14 @@ function mockAuthenticatedSession() {
 describe("passkey-api", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    clearSessionCache();
     global.fetch = vi.fn();
     mockBrowserSupportsWebAuthn.mockReturnValue(true);
+    mockHandleAuthFailure.mockResolvedValue(true);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("reports browser WebAuthn support", () => {
@@ -187,12 +200,13 @@ describe("passkey-api", () => {
       )
       .mockResolvedValueOnce(
         jsonResponse(200, {
-          status: "authenticated",
-          access_token: "caterer-access",
-          refresh_token: "caterer-refresh",
+          status: "success",
+          data: { status: "authenticated" },
         }),
       )
-      .mockResolvedValueOnce(jsonResponse(200, []));
+      .mockResolvedValueOnce(
+        jsonResponse(200, { status: "success", data: [] }),
+      );
 
     await loginWithPasskey("caterer");
     await listPasskeys("caterer");
@@ -222,13 +236,94 @@ describe("passkey-api", () => {
     expect(result.masked_email).toBe("a***@example.test");
     expect(global.fetch).toHaveBeenCalledWith(
       "/api/auth/passkeys/enrollment/challenge",
-      expect.objectContaining({
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      }),
+      expect.objectContaining({ method: "POST" }),
     );
   });
+
+  it.each(["tenant", "operator"] as const)(
+    "returns an incorrect enrollment code in %s without renewal, retry, or navigation",
+    async (scope) => {
+      mockAuthenticatedSession();
+      const path = scope === "tenant" ? "/settings" : "/operator/settings";
+      const location = { pathname: path, href: path };
+      vi.stubGlobal("window", { location });
+      vi.mocked(global.fetch).mockImplementation(async () =>
+        jsonResponse(401, { code: "identity.mfa_code_invalid" }),
+      );
+
+      await expect(
+        registerPasskey(scope, { code: "000000", name: "Laptop" }),
+      ).rejects.toMatchObject({
+        status: 401,
+        code: "identity.mfa_code_invalid",
+      });
+
+      expect(global.fetch).toHaveBeenCalledExactlyOnceWith(
+        scope === "tenant"
+          ? "/api/auth/passkeys/register/options"
+          : "/api/operator/auth/passkeys/register/options",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ code: "000000", name: "Laptop" }),
+        }),
+      );
+      expect(location.href).toBe(path);
+      expect(mockHandleAuthFailure).not.toHaveBeenCalled();
+      expect(mockStartRegistration).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["tenant", "operator", "caterer"] as const)(
+    "returns an expired registration ceremony in %s without renewal, retry, or navigation",
+    async (scope) => {
+      mockAuthenticatedSession();
+      mockStartRegistration.mockResolvedValue({ id: "registration-id" });
+      const path = scope === "tenant" ? "/settings" : `/${scope}/settings`;
+      const location = { pathname: path, href: path };
+      vi.stubGlobal("window", { location });
+      vi.mocked(global.fetch)
+        .mockResolvedValueOnce(
+          jsonResponse(200, {
+            status: "success",
+            data: {
+              session_id: "expired-registration-session",
+              options: { challenge: "registration-challenge" },
+            },
+          }),
+        )
+        .mockImplementation(async () =>
+          jsonResponse(401, { code: "identity.passkey_login_failed" }),
+        );
+
+      await expect(
+        registerPasskey(scope, { code: "123456", name: "Laptop" }),
+      ).rejects.toMatchObject({
+        status: 401,
+        code: "identity.passkey_login_failed",
+      });
+
+      expect(mockStartRegistration).toHaveBeenCalledExactlyOnceWith({
+        optionsJSON: { challenge: "registration-challenge" },
+      });
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+      expect(global.fetch).toHaveBeenNthCalledWith(
+        2,
+        scope === "tenant"
+          ? "/api/auth/passkeys/register/verify"
+          : `/api/${scope}/auth/passkeys/register/verify`,
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({
+            session_id: "expired-registration-session",
+            name: "Laptop",
+            response: { id: "registration-id" },
+          }),
+        }),
+      );
+      expect(location.href).toBe(path);
+      expect(mockHandleAuthFailure).not.toHaveBeenCalled();
+    },
+  );
 
   it("runs registration through options, WebAuthn, and verify", async () => {
     mockAuthenticatedSession();
@@ -321,18 +416,12 @@ describe("passkey-api", () => {
     expect(global.fetch).toHaveBeenNthCalledWith(
       1,
       "/api/auth/passkeys",
-      expect.objectContaining({
-        method: "GET",
-        body: undefined,
-      }),
+      expect.objectContaining({ method: "GET" }),
     );
     expect(global.fetch).toHaveBeenNthCalledWith(
       2,
       "/api/auth/passkeys/7",
-      expect.objectContaining({
-        method: "DELETE",
-        body: undefined,
-      }),
+      expect.objectContaining({ method: "DELETE" }),
     );
   });
 
@@ -358,7 +447,7 @@ describe("passkey-api", () => {
 
       await expect(startPasskeyEnrollment("tenant")).rejects.toMatchObject({
         status: 403,
-        message: "Passkey-Anfrage fehlgeschlagen (403).",
+        message: "Passkey-Anfrage fehlgeschlagen.",
         detail,
       });
     },
@@ -389,7 +478,7 @@ describe("passkey-api", () => {
     await expect(promise).rejects.toBeInstanceOf(ApiError);
     await expect(promise).rejects.toMatchObject({
       status: 502,
-      message: "Passkey-Anfrage fehlgeschlagen (502).",
+      message: "Passkey-Anfrage fehlgeschlagen.",
     });
   });
 });

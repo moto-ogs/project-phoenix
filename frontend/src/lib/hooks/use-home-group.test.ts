@@ -1,16 +1,14 @@
+import type * as studentsContract from "~/lib/contract/students.generated";
 import { describe, expect, it } from "vitest";
 
-import type {
-  OgsLiveViewData,
-  OgsLiveWireStudent,
-} from "~/lib/ogs-group-live-api";
+import type { OgsLiveViewData } from "~/lib/ogs-group-live-api";
 
 import { deriveHomeGroup } from "./use-home-group";
 
 function student(
   id: string,
-  overrides: Partial<OgsLiveWireStudent> = {},
-): OgsLiveWireStudent {
+  overrides: Partial<studentsContract.Student> = {},
+): studentsContract.Student {
   return {
     id,
     first_name: `Kind${id}`,

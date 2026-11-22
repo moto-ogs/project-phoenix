@@ -7,18 +7,30 @@ import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const UNCONTRACTED_CALLERS: Readonly<Record<string, string>> = {
+  "components/tenant/tenant-relogin.ts":
+    "POST auth/logout: the BFF revokes the session family before Auth.js drops the cookie",
+  "lib/mfa-api.ts":
+    "POST <portal>/auth/login, mfa/verify, mfa/enroll/confirm: sign-in steps whose route installs the session",
+  "lib/operator/operator-invitation-api.ts":
+    "POST operator/auth/invitations/session, validate, accept: the route keeps the token in the flow's cookie",
+  "lib/passkey-api.ts":
+    "POST <portal>/auth/passkeys/login/verify: a sign-in step whose route installs the session",
+  "lib/portal-password-login.ts":
+    "POST caterer/auth/login, parent/auth/login: sign-in steps whose route installs the session",
+  "lib/shell-auth-context.tsx":
+    "POST <portal>/auth/logout: the BFF revokes the session family before Auth.js drops the cookie",
   "lib/email-code-factor-api.ts":
     "POST caterer/account/mfa/confirm, parent/me/mfa/confirm: the route installs the renewed session",
   "lib/payroll-api.ts":
     "PUT settings/values/[key]: the route purges the cached tenant lookup",
   "lib/staff-preview-api.ts":
-    "POST auth/staff-preview: a session step of the BFF, no backend route of its own",
+    "POST auth/staff-preview, auth/staff-preview/end: session steps of the BFF; the end reads the preview token from the cookie",
   "lib/tenant-api.ts":
     "POST auth/switch-tenant: the session switch of the BFF (ADR 0270, sign-in steps)",
   "lib/settings-api.ts":
     "PUT/DELETE settings/values/[key]: the route purges the cached tenant lookup",
   "lib/traeger-api.ts":
-    "POST traeger/auth/mfa/step-up/verify: a session step of the BFF, no backend route of its own",
+    "POST traeger/auth/login, traeger/auth/mfa/step-up/verify: sign-in and session steps of the BFF, no backend route of their own",
   "lib/traeger-holiday-form-api.ts":
     "PUT traeger/holiday-periods/[id]/form: the contract leaves the editor's own body undescribed",
   "lib/operator/provisioning-api.ts":
