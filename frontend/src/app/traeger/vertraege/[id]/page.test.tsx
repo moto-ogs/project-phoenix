@@ -29,8 +29,15 @@ const { api, mockPush, mockReplace } = vi.hoisted(() => ({
   mockReplace: vi.fn(),
 }));
 
+const links = vi.hoisted(() => ({
+  previewContractChildLink: vi.fn(),
+  linkContractChild: vi.fn(),
+  unlinkContractChild: vi.fn(),
+}));
+
 vi.unmock("swr");
 vi.mock("~/lib/traeger-care-contracts-api", () => api);
+vi.mock("~/lib/traeger-contract-child-links-api", () => links);
 // The SEPA mandate card of the family (#4695) answers 403 without the right
 // „Abrechnung“; these tests cover the contract and keep it empty.
 vi.mock("~/lib/traeger-sepa-api", () => ({
@@ -133,6 +140,8 @@ const DRAFT: CareContractDetail = {
   sentAt: null,
   concluded: null,
   endsOn: null,
+  studentId: null,
+  imported: false,
   version: {
     number: 1,
     effectiveFrom: "2027-08-01",
@@ -194,6 +203,7 @@ const DRAFT: CareContractDetail = {
   signature: null,
   reminders: [],
   versions: [],
+  corrections: [],
 };
 
 function renderPage() {
@@ -392,8 +402,12 @@ describe("TraegerVertragPage", () => {
     expect(
       screen.getByText(/Die Eltern sehen den Vertrag erst/),
     ).toBeInTheDocument();
-    // A discarded draft would take the family's choice with it (#7770).
+    // A discarded draft would take the family's choice with it (#7770),
+    // and its mandate too (#7862).
     expect(screen.queryByText("Empfänger und Zahlung")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("SEPA-Lastschriftmandat"),
+    ).not.toBeInTheDocument();
 
     showTab("Kündigung");
     expect(
@@ -692,9 +706,13 @@ describe("TraegerVertragPage", () => {
     expect(
       screen.getByText(/Die Mail ging an erika@example.org/),
     ).toBeInTheDocument();
-    // A sent contract cannot be discarded: its family sets how it pays.
+    // A sent contract cannot be discarded: its family sets how it pays
+    // and gives its mandate.
     expect(
       await screen.findByText("Empfänger und Zahlung"),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText("SEPA-Lastschriftmandat"),
     ).toBeInTheDocument();
     showTab("Unterschrift und Versand");
     expect(screen.getByText("Gesendet")).toBeInTheDocument();
@@ -790,6 +808,79 @@ describe("TraegerVertragPage", () => {
     });
     expect(within(dialog).getByText(/erika@example\.org/)).toBeInTheDocument();
     expect(api.resendCareContract).not.toHaveBeenCalled();
+  });
+
+  it("shows a completed imported contract without inventing its day", async () => {
+    api.fetchCareContract.mockResolvedValue({
+      ...DRAFT,
+      status: "aktiv",
+      concluded: {
+        method: "papier",
+        // A stand-in instant: the office does not know the day.
+        at: "2026-08-01T00:00:00Z",
+        takenOver: true,
+        dateUnknown: true,
+      },
+      parties: [
+        {
+          firstName: "Erika",
+          lastName: "Muster",
+          email: "erika@example.org",
+          hasAccount: true,
+        },
+        { firstName: "Jan", lastName: "Muster", email: "", hasAccount: false },
+      ],
+      documentFrozen: true,
+      corrections: [
+        {
+          correctedAt: "2026-09-08T10:00:00Z",
+          file: "vertraege-nachgepflegt.csv",
+          evidence: "Vertrag-Muster.pdf",
+          changes: ["parties", "concluded_on"],
+          before: {
+            parties: ["Erika Muster"],
+            method: "papier",
+            concludedOn: "2026-03-12",
+            dateUnknown: false,
+          },
+          after: {
+            parties: ["Erika Muster", "Jan Muster"],
+            method: "papier",
+            concludedOn: null,
+            dateUnknown: true,
+          },
+        },
+      ],
+    });
+    renderPage();
+
+    expect(
+      await screen.findByText("Abschlussdatum unbekannt, auf Papier"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/01\.08\.2026/)).not.toBeInTheDocument();
+    // Every party of the contract, not only the first.
+    const parents = screen
+      .getByRole("heading", { name: "Eltern" })
+      .closest("section");
+    if (!parents) throw new Error("card missing");
+    expect(within(parents).getByText("Erika Muster")).toBeInTheDocument();
+    expect(within(parents).getByText("Jan Muster")).toBeInTheDocument();
+    expect(
+      within(parents).getByText("Keine E-Mail-Adresse"),
+    ).toBeInTheDocument();
+
+    const card = screen
+      .getByRole("heading", { name: "Nachgepflegte Angaben" })
+      .closest("section");
+    if (!card) throw new Error("card missing");
+    const corrections = within(card);
+    expect(
+      corrections.getByText("Nachgepflegt am 08.09.2026"),
+    ).toBeInTheDocument();
+    expect(corrections.getByText("Vertrag-Muster.pdf")).toBeInTheDocument();
+    expect(corrections.getByText("12.03.2026").tagName).toBe("DEL");
+    expect(corrections.getByText("Unbekannt").tagName).toBe("INS");
+    expect(corrections.getByText("Jan Muster").tagName).toBe("INS");
   });
 
   it("follows the address after a tab click and browser navigation", async () => {
@@ -1207,6 +1298,134 @@ describe("TraegerVertragPage", () => {
       expect(screen.queryByText(reloadText)).not.toBeInTheDocument();
       expect(api.fetchCareContract).toHaveBeenCalledTimes(2);
       expect(api.resendCareContract).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("Kinderakte eines importierten Vertrags (#7760)", () => {
+    const IMPORTED: CareContractDetail = {
+      ...DRAFT,
+      status: "aktiv",
+      imported: true,
+      concluded: { method: "papier", at: "2026-09-01T08:00:00Z" },
+    };
+
+    it("names the contract number and what an unlinked import misses", async () => {
+      api.fetchCareContract.mockResolvedValue(IMPORTED);
+      renderPage();
+      expect(await screen.findByText("Nicht verknüpft")).toBeInTheDocument();
+      expect(screen.getByText("Vertrag Nr.")).toBeInTheDocument();
+      expect(
+        screen.getByText(/fehlen der Soll-Ist-Vergleich/),
+      ).toBeInTheDocument();
+      links.previewContractChildLink.mockResolvedValueOnce({
+        line: 1,
+        status: "ready",
+        contractId: "7",
+        studentId: "12",
+        schoolName: "OGS Am Lindenhof",
+        contract: { firstName: "Lina", lastName: "Muster", birthDate: null },
+        student: { firstName: "Lina", lastName: "Muster", birthDate: null },
+        problems: [],
+        repeatsLine: null,
+        otherContractId: null,
+        fingerprint: "fp-12",
+      });
+      links.linkContractChild.mockResolvedValueOnce({});
+      api.fetchCareContract.mockResolvedValue({ ...IMPORTED, studentId: "12" });
+      fireEvent.click(
+        screen.getByRole("button", { name: "Mit Kinderakte verknüpfen" }),
+      );
+      fireEvent.change(await screen.findByLabelText(/Nummer der Kinderakte/), {
+        target: { value: "12" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Prüfen" }));
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Verknüpfen" }),
+      );
+      expect(
+        await screen.findByText(
+          "Der Vertrag ist jetzt mit der Kinderakte verknüpft.",
+        ),
+      ).toBeInTheDocument();
+      expect(await screen.findByText("Nr. 12")).toBeInTheDocument();
+      expect(links.linkContractChild).toHaveBeenCalledWith(
+        "7",
+        "12",
+        false,
+        "fp-12",
+      );
+    });
+
+    it("unlinks after a confirmation that says what stays", async () => {
+      api.fetchCareContract.mockResolvedValue({ ...IMPORTED, studentId: "12" });
+      renderPage();
+      expect(await screen.findByText("Nr. 12")).toBeInTheDocument();
+      const [menu] = screen.getAllByRole("button", {
+        name: "Weitere Aktionen",
+      });
+      fireEvent.click(menu!);
+      fireEvent.click(
+        screen.getByRole("menuitem", { name: /Verknüpfung lösen/ }),
+      );
+      expect(
+        await screen.findByText(/Schon ausgestellte Rechnungen bleiben/),
+      ).toBeInTheDocument();
+      links.unlinkContractChild.mockResolvedValueOnce(undefined);
+      api.fetchCareContract.mockResolvedValue(IMPORTED);
+      fireEvent.click(
+        screen.getByRole("button", { name: "Verknüpfung lösen" }),
+      );
+      expect(
+        await screen.findByText(
+          "Die Verknüpfung mit der Kinderakte ist gelöst.",
+        ),
+      ).toBeInTheDocument();
+      expect(links.unlinkContractChild).toHaveBeenCalledWith("7", "12");
+      expect(await screen.findByText("Nicht verknüpft")).toBeInTheDocument();
+    });
+
+    it("shows the contract again when another child record was linked since", async () => {
+      api.fetchCareContract.mockResolvedValue({ ...IMPORTED, studentId: "12" });
+      renderPage();
+      expect(await screen.findByText("Nr. 12")).toBeInTheDocument();
+      const [menu] = screen.getAllByRole("button", {
+        name: "Weitere Aktionen",
+      });
+      fireEvent.click(menu!);
+      fireEvent.click(
+        screen.getByRole("menuitem", { name: /Verknüpfung lösen/ }),
+      );
+      await screen.findByText(/Schon ausgestellte Rechnungen bleiben/);
+      links.unlinkContractChild.mockRejectedValueOnce(
+        new ApiError("Request failed (409)", 409, {
+          code: "care_contract.child_link_changed",
+        }),
+      );
+      api.fetchCareContract.mockResolvedValue({ ...IMPORTED, studentId: "13" });
+      fireEvent.click(
+        screen.getByRole("button", { name: "Verknüpfung lösen" }),
+      );
+      expect(
+        await screen.findByText(
+          catalogText("care_contract.child_link_changed", "die Verknüpfung"),
+        ),
+      ).toBeInTheDocument();
+      expect(links.unlinkContractChild).toHaveBeenCalledWith("7", "12");
+      expect(await screen.findByText("Nr. 13")).toBeInTheDocument();
+      expect(
+        screen.queryByText(/Schon ausgestellte Rechnungen bleiben/),
+      ).not.toBeInTheDocument();
+    });
+
+    it("offers nothing for a contract from an application", async () => {
+      api.fetchCareContract.mockResolvedValue({ ...DRAFT, studentId: "3" });
+      renderPage();
+      // Anker: the contract data are on screen.
+      expect(await screen.findByText("Vertrag Nr.")).toBeInTheDocument();
+      expect(screen.queryByText("Kinderakte")).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Mit Kinderakte verknüpfen" }),
+      ).not.toBeInTheDocument();
     });
   });
 });

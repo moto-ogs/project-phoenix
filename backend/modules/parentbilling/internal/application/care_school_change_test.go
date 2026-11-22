@@ -364,3 +364,30 @@ func TestCarePreviewsRankByABirthDateFromAnotherSchool(t *testing.T) {
 		assert.Equal(t, map[ident.ID]int64{ident.ID(contractMia): 2000, ident.ID(contractNoah): 4000}, totals, name)
 	}
 }
+
+// A child ranks by the birth date a contract that bills nothing this month
+// knows (#7863): Ben's second contract at Birkenfeld starts on the 15th, so
+// his draft at Ispringen bills January; only the new contract names his
+// birth date. Ben is older, Mia the second child: she pays half.
+func TestCarePreviewsRankByABirthDateOfAnUnbilledContract(t *testing.T) {
+	t.Parallel()
+	mia := sjrVersion(t, contractMia, schoolIspringen, 1, billingMonth, "2027-01-31", mon1400)
+	mia.ChildBirthDate = ptr(day(t, "2019-05-01"))
+	ben := sjrVersion(t, contractNoah, schoolIspringen, 2, billingMonth, "2027-01-31", mon1400)
+	ben.ChildFirstName, ben.ChildBirthDate = "Ben", nil
+	later := sjrVersion(t, contractLea, schoolBirkenfeld, 3, "2027-01-15", "2027-01-31", mon1400)
+	later.ChildFirstName, later.StudentID, later.ChildBirthDate = "Ben", ben.StudentID, ptr(day(t, "2016-03-01"))
+	in := careMonthInput{
+		month: day(t, billingMonth), rule: parentbilling.MonthRuleVersionOnFirst,
+		versions: []parentbilling.CareContractVersion{mia, ben, later}, tariffs: chainTariffs(t), rules: familySiblingRule(false)(t),
+		invoiced:   map[int64]parentbilling.CareInvoice{},
+		recipients: map[int64]parentbilling.CareRecipient{contractMia: {Email: familyEva}, contractNoah: {Email: familyEva}, contractLea: {Email: familyEva}},
+	}
+	month, err := buildCareMonth(in)
+	require.NoError(t, err)
+	totals := map[ident.ID]int64{}
+	for _, invoice := range month.invoices {
+		totals[invoice.ContractID] = invoice.TotalCents
+	}
+	assert.Equal(t, map[ident.ID]int64{ident.ID(contractMia): 2000, ident.ID(contractNoah): 4000}, totals)
+}

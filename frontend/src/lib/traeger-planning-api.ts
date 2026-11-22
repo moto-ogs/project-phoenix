@@ -1,4 +1,4 @@
-import { bffJson } from "~/lib/bff-fetch";
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Einsatzplanung des Trägers über alle Standorte (#4708, ADR 0242).
  *
@@ -13,6 +13,7 @@ import {
   downloadTraegerList,
   type TraegerListFile,
   type TraegerListFormat,
+  listExportQuery,
 } from "./traeger-list-export";
 import type * as sharedContract from "~/lib/contract/shared.generated";
 import type * as traegerStaffPlanningContract from "~/lib/contract/traeger-staff-planning.generated";
@@ -23,8 +24,6 @@ import {
   type WorkingTimeConfirmation,
   type WorkingTimeWarning,
 } from "~/lib/working-time";
-
-const BASE = "/api/traeger/staff-planning";
 
 /** Die Werte, gegen die moto die Woche prüft, alle in Minuten. */
 export interface TraegerPlanningRules {
@@ -229,7 +228,11 @@ export function downloadTraegerPlanningWeek(
   weekStart: string,
   format: TraegerListFormat,
 ): Promise<TraegerListFile> {
-  return downloadTraegerList(`${BASE}/export`, format, { week: weekStart });
+  return downloadTraegerList(
+    bffFile("org", "GET /traeger/staff-planning/export", {
+      query: listExportQuery(format, { week: weekStart }),
+    }),
+  );
 }
 
 export async function planTraegerShift(

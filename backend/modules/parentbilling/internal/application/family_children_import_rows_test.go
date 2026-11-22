@@ -553,6 +553,10 @@ func TestFamilyImportWitnessSpeaksOnlyWhileTheChildBelonged(t *testing.T) {
 			"Mia;Beispiel;3;01.10.2026\nNoah;Beispiel;2;20.11.2026\n", calendar.NewDate(2026, 11, 20)},
 		{"a row for a day before the child joined", "2026-11-01", "2026-11-10",
 			"Mia;Beispiel;3;01.10.2026\nNoah;Beispiel;2;01.10.2026\n", calendar.NewDate(2026, 11, 16)},
+		// Mia's row day lies before she joined, Noah's in her time: a row
+		// that does not reach the family on its own day is no witness.
+		{"a row whose own day lies before the child joined", "2026-11-01", "2026-11-10",
+			"Mia;Beispiel;3;01.10.2026\nNoah;Beispiel;2;05.11.2026\n", calendar.NewDate(2026, 11, 16)},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -574,7 +578,7 @@ func importSiblingRows(t *testing.T, today calendar.Date, versions []parentbilli
 ) []parentbilling.ImportedFamilyChildren {
 	t.Helper()
 	contracts := familySourceContracts{versions: versions, recipients: map[int64]parentbilling.CareRecipient{
-		contractMia: {Email: "family@example.org"}, contractNoah: {Email: "family@example.org"},
+		contractMia: {Email: "family@example.org"}, contractNoah: {Email: "family@example.org"}, contractLea: {Email: "family@example.org"},
 	}}
 	store := &siblingFamilyImportStore{familySourceStore: familySourceStore{counts: counts}}
 	clock := func() calendar.Date { return today }
@@ -588,4 +592,22 @@ func importSiblingRows(t *testing.T, today calendar.Date, versions []parentbilli
 	_, err = imports.ImportFamilyChildren(context.Background(), reviewer, request)
 	require.NoError(t, err)
 	return store.stored
+}
+
+// A witness speaks for all the times its child was in the family (#7863):
+// Mia had a contract in September and another in October, both ended. Her
+// September row and Noah's October row name different numbers; neither is
+// taken over.
+func TestFamilyImportWitnessCoversEveryContractOfTheFamily(t *testing.T) {
+	t.Parallel()
+	today := calendar.NewDate(2026, 11, 22)
+	september := sjrVersion(t, contractMia, schoolIspringen, 1, "2026-09-01", "2026-09-30")
+	october := sjrVersion(t, contractLea, schoolIspringen, 3, "2026-10-01", "2026-10-31")
+	noah := sjrVersion(t, contractNoah, schoolIspringen, 2, "2026-09-01", "2027-06-30")
+	noah.ChildFirstName = "Noah"
+	expired := []parentbilling.FamilyChildCount{{ID: 5, ContractID: ident.ID(contractNoah), FamilyEmail: "family@example.org",
+		ConfirmedChildren: ptr(4), ValidFrom: ptr(calendar.NewDate(2026, 8, 1)), ValidUntil: ptr(calendar.NewDate(2026, 11, 15))}}
+	stored := importSiblingRows(t, today, []parentbilling.CareContractVersion{september, october, noah}, expired,
+		"Mia;Beispiel;3;01.09.2026\nNoah;Beispiel;2;01.10.2026\n")
+	assert.Empty(t, stored, "contradicting sibling rows must not save a family count")
 }

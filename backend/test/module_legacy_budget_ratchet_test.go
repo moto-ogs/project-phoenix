@@ -259,7 +259,9 @@ var moduleComposeBudgets = map[string]int{
 	// termination (+35); ADR 0163: the office's decision of the parents' changes (+5);
 	// ADR 0184: the contract retention of the Belege (+4).
 	// ADR 0232: the import of existing contracts and its ports (+6).
-	"modules/carecontract/compose": 181,
+	// ADR 0307 (#7760): the link of imported contracts
+	// to child records and its ports (+7).
+	"modules/carecontract/compose": 188,
 	// Raised by ADR 0158: the monthly contribution constructor (+5);
 	// ADR 0165: the constructor of the monthly letters (+7);
 	// ADR 0167: the constructor of the payment terms (+5);
@@ -287,7 +289,9 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0234: the note search beside the facade (+2).
 	// ADR 0268: the clock of the rosters, the guardians and the retention (+6).
 	// ADR 0278: the time import of the guardian profile clock (+1).
-	"modules/peopledirectory/compose":    1002,
+	// ADR 0307 (#7760): the read of child records by
+	// identifier the link of imported contracts binds (+13).
+	"modules/peopledirectory/compose":    1015,
 	"modules/presenceprojection/compose": 7,
 	"modules/requestreview/compose":      12,
 	"modules/schedulerruntime/compose":   45,
@@ -327,8 +331,10 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0241: the presence series of the utilization (+7).
 	// #2352: the session row alias the root names in the contract fits in
 	// shortened comments (-1).
-	"modules/studentpresence/compose":                 269,
-	"modules/studentpresence/compose/presenceservice": 110,
+	// Lowered by #7808: the cross-tenant student and school aliases left
+	// with the visitor read (-1, -5).
+	"modules/studentpresence/compose":                 268,
+	"modules/studentpresence/compose/presenceservice": 105,
 	"modules/supervisiondashboard/compose":            11,
 	// Raised by ADR 0128: the student template days constructor (+5), by
 	// ADR 0144: the vacation hint constructor (+6) and by ADR 0224: the cohort

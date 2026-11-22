@@ -43,6 +43,9 @@ type CancelShiftInput struct {
 	ShiftTypeID      *int64
 	Replacements     []ShiftReplacementInput
 	ActorStaffID     int64
+	// TraegerAccountID is the Träger-Büro account behind a cancellation
+	// without a staff member (#7818): the covers it creates carry the mark.
+	TraegerAccountID int64
 	// WorkingTime confirms the working-time warnings of the covers (#4708).
 	WorkingTime workforce.WorkingTimeConfirmation
 }
@@ -338,6 +341,12 @@ func cancellationOriginUpdate(existing *workforce.ShiftRecord, input CancelShift
 	if input.ActorStaffID > 0 {
 		originUpdate.UpdatedBy = &input.ActorStaffID
 	}
+	// The origin keeps its author and is marked as last changed by the
+	// Träger-Büro, as a change in the Träger-Portal marks it (#7818).
+	if account := input.TraegerAccountID; account > 0 {
+		originUpdate.PlannedByTraeger = true
+		originUpdate.TraegerAccountID = &account
+	}
 	return originUpdate, StaffShiftUpdateOptions{
 		PreserveSeriesOverride:    input.PreserveSeriesOverride,
 		PreserveExistingNotes:     true,
@@ -381,6 +390,11 @@ func (s *staffShiftService) rebuildReplacements(
 			ChangeReason:  reason,
 			CreatedBy:     input.ActorStaffID,
 			WorkingTime:   input.WorkingTime,
+		}
+		// A cover the Träger-Büro creates has no staff author (#7818).
+		if account := input.TraegerAccountID; account > 0 {
+			replacement.PlannedByTraeger = true
+			replacement.TraegerAccountID = &account
 		}
 		shift, err := s.createShift(ctx, replacement, grandfatheredTypesByStaff[r.StaffID], stored)
 		if err != nil {

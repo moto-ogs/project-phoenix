@@ -8,11 +8,7 @@ import {
   mapBirthdayOverview,
   updateBirthdayOptOut,
 } from "./birthdays-api";
-import { fetchWithAuth } from "./fetch-with-auth";
-
-vi.mock("./fetch-with-auth", () => ({
-  fetchWithAuth: vi.fn(),
-}));
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
 vi.mock("./analytics", () => ({
   trackEvent: vi.fn(),
@@ -24,6 +20,7 @@ const originalRevokeObjectURL = URL.revokeObjectURL;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  globalThis.fetch = vi.fn();
   URL.createObjectURL = vi.fn(() => "blob:birthday-url");
   URL.revokeObjectURL = vi.fn();
 });
@@ -131,7 +128,7 @@ describe("mapBirthdayOverview", () => {
 
 describe("fetchBirthdayOverviewClient", () => {
   it("calls the BFF route and returns the mapped overview", async () => {
-    vi.mocked(fetchWithAuth).mockResolvedValue({
+    vi.mocked(globalThis.fetch).mockResolvedValue({
       ok: true,
       json: () =>
         Promise.resolve({
@@ -155,7 +152,9 @@ describe("fetchBirthdayOverviewClient", () => {
 
     const overview = await fetchBirthdayOverviewClient();
 
-    expect(fetchWithAuth).toHaveBeenCalledWith("/api/birthdays");
+    expect(globalThis.fetch).toHaveBeenCalledWith("/api/birthdays", {
+      method: "GET",
+    });
     expect(overview.celebrations[0]).toMatchObject({
       id: "3",
       name: "Mika Klein",
@@ -164,51 +163,51 @@ describe("fetchBirthdayOverviewClient", () => {
   });
 
   it("throws with the status so the dashboard can drop the card", async () => {
-    vi.mocked(fetchWithAuth).mockResolvedValue({
+    vi.mocked(globalThis.fetch).mockResolvedValue({
       ok: false,
       status: 500,
     } as Response);
 
-    await expect(fetchBirthdayOverviewClient()).rejects.toThrow(
-      "Birthday fetch failed: 500",
-    );
+    await expect(fetchBirthdayOverviewClient()).rejects.toMatchObject({
+      status: 500,
+    });
   });
 });
 
 describe("fetchBirthdayOptOut", () => {
   it("returns the stored preference", async () => {
-    vi.mocked(fetchWithAuth).mockResolvedValue({
+    vi.mocked(globalThis.fetch).mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ data: { opt_out: true } }),
     } as Response);
 
     await expect(fetchBirthdayOptOut()).resolves.toBe(true);
-    expect(fetchWithAuth).toHaveBeenCalledWith("/api/birthdays/opt-out");
+    expect(globalThis.fetch).toHaveBeenCalledWith("/api/birthdays/opt-out", {
+      method: "GET",
+    });
   });
 
   // An account without a staff record answers 404; the profile card uses the
   // rejection to hide itself rather than showing a setting nobody can apply.
   it("throws when the account has no preference to read", async () => {
-    vi.mocked(fetchWithAuth).mockResolvedValue({
+    vi.mocked(globalThis.fetch).mockResolvedValue({
       ok: false,
       status: 404,
     } as Response);
 
-    await expect(fetchBirthdayOptOut()).rejects.toThrow(
-      "Birthday opt-out fetch failed: 404",
-    );
+    await expect(fetchBirthdayOptOut()).rejects.toMatchObject({ status: 404 });
   });
 });
 
 describe("updateBirthdayOptOut", () => {
   it("sends the preference and returns what the backend stored", async () => {
-    vi.mocked(fetchWithAuth).mockResolvedValue({
+    vi.mocked(globalThis.fetch).mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ data: { opt_out: true } }),
     } as Response);
 
     await expect(updateBirthdayOptOut(true)).resolves.toBe(true);
-    expect(fetchWithAuth).toHaveBeenCalledWith("/api/birthdays/opt-out", {
+    expect(globalThis.fetch).toHaveBeenCalledWith("/api/birthdays/opt-out", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ opt_out: true }),
@@ -216,14 +215,14 @@ describe("updateBirthdayOptOut", () => {
   });
 
   it("throws on a failed write so the switch can roll back", async () => {
-    vi.mocked(fetchWithAuth).mockResolvedValue({
+    vi.mocked(globalThis.fetch).mockResolvedValue({
       ok: false,
       status: 500,
     } as Response);
 
-    await expect(updateBirthdayOptOut(false)).rejects.toThrow(
-      "Birthday opt-out update failed: 500",
-    );
+    await expect(updateBirthdayOptOut(false)).rejects.toMatchObject({
+      status: 500,
+    });
   });
 });
 

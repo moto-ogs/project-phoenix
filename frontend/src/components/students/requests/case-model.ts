@@ -123,7 +123,12 @@ function addEnrollmentCases(
   const childIDs = item.data.child_ids ?? [];
   if (childIDs.length) {
     childIDs.forEach((id, index) =>
-      addOpenCase(cases, item, id, item.data.child_names[index] ?? "Anmeldung"),
+      addOpenCase(
+        cases,
+        item,
+        id,
+        item.data.child_names?.[index] ?? "Anmeldung",
+      ),
     );
     return;
   }

@@ -187,7 +187,7 @@ func TestMFAResend_Success_ReturnsRenewedToken(t *testing.T) {
 
 	r := jsonReq(t, http.MethodPost, "/mfa/resend", MFAResendRequest{ChallengeToken: "tok"})
 	rr := httptest.NewRecorder()
-	rs.mfaResend(rr, r)
+	testutil.ServeAtRoute(rr, r, "/auth/mfa/resend", rs.mfaResend)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 	var resp MFAResendResponse
@@ -203,7 +203,7 @@ func TestMFAResend_BindRejectsEmptyToken(t *testing.T) {
 
 	r := jsonReq(t, http.MethodPost, "/mfa/resend", MFAResendRequest{}) // empty token fails Bind
 	rr := httptest.NewRecorder()
-	rs.mfaResend(rr, r)
+	testutil.ServeAtRoute(rr, r, "/auth/mfa/resend", rs.mfaResend)
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
@@ -220,7 +220,7 @@ func TestMFAResend_ServiceErrorPropagates(t *testing.T) {
 
 	r := jsonReq(t, http.MethodPost, "/mfa/resend", MFAResendRequest{ChallengeToken: "tok"})
 	rr := httptest.NewRecorder()
-	rs.mfaResend(rr, r)
+	testutil.ServeAtRoute(rr, r, "/auth/mfa/resend", rs.mfaResend)
 
 	assert.Equal(t, http.StatusTooManyRequests, rr.Code)
 }
@@ -242,7 +242,7 @@ func TestMFAEnrollStart_ReturnsTheChallengeToken(t *testing.T) {
 
 	r := withEnrollmentClaims(jsonReq(t, http.MethodPost, "/mfa/enroll/start", nil), 42, 70010001)
 	rr := httptest.NewRecorder()
-	rs.mfaEnrollStart(rr, r)
+	testutil.ServeAtRoute(rr, r, "/auth/mfa/enroll/start", rs.mfaEnrollStart)
 
 	require.Equal(t, http.StatusOK, rr.Code)
 	var body portalauth.EnrollStartResponse
@@ -263,7 +263,7 @@ func TestMFAEnrollStart_PassesTheTokensCredentialGeneration(t *testing.T) {
 		CredentialGeneration: 7, MFAEnrollmentPending: true,
 	}))
 	rr := httptest.NewRecorder()
-	rs.mfaEnrollStart(rr, r)
+	testutil.ServeAtRoute(rr, r, "/auth/mfa/enroll/start", rs.mfaEnrollStart)
 
 	require.Equal(t, http.StatusOK, rr.Code)
 	assert.Equal(t, []int64{7}, svc.StartedCredentialGenerations)
@@ -296,14 +296,14 @@ func TestMFAEnrollConfirm_RedeemsThePresentedChallengeOfTheEnrollingAccount(t *t
 	}
 
 	rr := httptest.NewRecorder()
-	rs.mfaEnrollConfirm(rr, withEnrollmentClaims(jsonReq(t, http.MethodPost, "/mfa/enroll/confirm",
-		MFAVerifyRequest{ChallengeToken: "enroll-challenge", Code: "123456"}), 42, 70010001))
+	testutil.ServeAtRoute(rr, withEnrollmentClaims(jsonReq(t, http.MethodPost, "/mfa/enroll/confirm",
+		MFAVerifyRequest{ChallengeToken: "enroll-challenge", Code: "123456"}), 42, 70010001), "/auth/mfa/enroll/confirm", rs.mfaEnrollConfirm)
 	require.Equal(t, http.StatusOK, rr.Code)
 	assert.Equal(t, []string{"enroll-challenge"}, redeemed)
 
 	rr = httptest.NewRecorder()
-	rs.mfaEnrollConfirm(rr, withEnrollmentClaims(jsonReq(t, http.MethodPost, "/mfa/enroll/confirm",
-		map[string]string{"code": "123456"}), 42, 70010001))
+	testutil.ServeAtRoute(rr, withEnrollmentClaims(jsonReq(t, http.MethodPost, "/mfa/enroll/confirm",
+		map[string]string{"code": "123456"}), 42, 70010001), "/auth/mfa/enroll/confirm", rs.mfaEnrollConfirm)
 	assert.Equal(t, http.StatusBadRequest, rr.Code, "a confirm without challenge_token is refused")
 	assert.Equal(t, []string{"enroll-challenge"}, redeemed, "nothing is redeemed without a challenge token")
 }
@@ -323,7 +323,7 @@ func TestMFAEnrollStart_StartChallengeErrorMapped(t *testing.T) {
 
 	r := withEnrollmentClaims(jsonReq(t, http.MethodPost, "/mfa/enroll/start", nil), 42, 70010001)
 	rr := httptest.NewRecorder()
-	rs.mfaEnrollStart(rr, r)
+	testutil.ServeAtRoute(rr, r, "/auth/mfa/enroll/start", rs.mfaEnrollStart)
 
 	assert.Equal(t, http.StatusTooManyRequests, rr.Code)
 }
@@ -353,7 +353,7 @@ func TestMFAEnrollConfirm_AlreadyEnrolledMintsSession(t *testing.T) {
 	r := withEnrollmentClaims(jsonReq(t, http.MethodPost, "/mfa/enroll/confirm",
 		MFAVerifyRequest{ChallengeToken: "enroll-challenge", Code: "123456"}), 42, 70010001)
 	rr := httptest.NewRecorder()
-	rs.mfaEnrollConfirm(rr, r)
+	testutil.ServeAtRoute(rr, r, "/auth/mfa/enroll/confirm", rs.mfaEnrollConfirm)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 	var body portalauth.TokenResponse
@@ -390,7 +390,7 @@ func TestMFAEnrollConfirm_StaleCredentialRecordsAndMintsNothing(t *testing.T) {
 	r := withEnrollmentClaims(jsonReq(t, http.MethodPost, "/mfa/enroll/confirm",
 		MFAVerifyRequest{ChallengeToken: "enroll-challenge", Code: "123456", RememberDevice: true}), 42, 70010001)
 	rr := httptest.NewRecorder()
-	rs.mfaEnrollConfirm(rr, r)
+	testutil.ServeAtRoute(rr, r, "/auth/mfa/enroll/confirm", rs.mfaEnrollConfirm)
 
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 	assert.Equal(t, "identity.invalid_credentials", decodeWireError(t, rr).Code)
@@ -413,7 +413,7 @@ func TestMFAEnrollConfirm_EnrollErrorPropagates(t *testing.T) {
 	r := withEnrollmentClaims(jsonReq(t, http.MethodPost, "/mfa/enroll/confirm",
 		MFAVerifyRequest{ChallengeToken: "enroll-challenge", Code: "123456"}), 42, 70010001)
 	rr := httptest.NewRecorder()
-	rs.mfaEnrollConfirm(rr, r)
+	testutil.ServeAtRoute(rr, r, "/auth/mfa/enroll/confirm", rs.mfaEnrollConfirm)
 
 	assert.Equal(t, http.StatusInternalServerError, rr.Code)
 }
@@ -451,7 +451,7 @@ func TestMFAEnrollConfirm_InjectsTenantFromClaims(t *testing.T) {
 	r := withEnrollmentClaims(jsonReq(t, http.MethodPost, "/mfa/enroll/confirm",
 		MFAVerifyRequest{ChallengeToken: "enroll-challenge", Code: "123456"}), 42, tenantID)
 	rr := httptest.NewRecorder()
-	rs.mfaEnrollConfirm(rr, r)
+	testutil.ServeAtRoute(rr, r, "/auth/mfa/enroll/confirm", rs.mfaEnrollConfirm)
 
 	require.Equal(t, http.StatusOK, rr.Code)
 	assert.Equal(t, tenantID, verifyTenant,
@@ -469,7 +469,7 @@ func TestMFAEnrollConfirm_BindRejectsShortCode(t *testing.T) {
 	r := withEnrollmentClaims(jsonReq(t, http.MethodPost, "/mfa/enroll/confirm",
 		MFAVerifyRequest{ChallengeToken: "enroll-challenge", Code: "12"}), 42, 70010001)
 	rr := httptest.NewRecorder()
-	rs.mfaEnrollConfirm(rr, r)
+	testutil.ServeAtRoute(rr, r, "/auth/mfa/enroll/confirm", rs.mfaEnrollConfirm)
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
@@ -487,7 +487,7 @@ func TestMFAEnrollConfirm_WrongCodeReturns401(t *testing.T) {
 	r := withEnrollmentClaims(jsonReq(t, http.MethodPost, "/mfa/enroll/confirm",
 		MFAVerifyRequest{ChallengeToken: "enroll-challenge", Code: "654321"}), 42, 70010001)
 	rr := httptest.NewRecorder()
-	rs.mfaEnrollConfirm(rr, r)
+	testutil.ServeAtRoute(rr, r, "/auth/mfa/enroll/confirm", rs.mfaEnrollConfirm)
 
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 }
@@ -554,7 +554,7 @@ func TestMFAEnrollStart_RequiresEnrollmentClaim(t *testing.T) {
 
 	r := jsonReq(t, http.MethodPost, "/mfa/enroll/start", nil) // no enrollment claim
 	rr := httptest.NewRecorder()
-	rs.mfaEnrollStart(rr, r)
+	testutil.ServeAtRoute(rr, r, "/auth/mfa/enroll/start", rs.mfaEnrollStart)
 
 	assert.Equal(t, http.StatusUnauthorized, rr.Code,
 		"missing enrollment claim must fail closed — this is the post-#1430 contract; the handler used to read CtxClaims and a regular session token would have worked")
@@ -573,7 +573,7 @@ func TestMFAEnrollConfirm_RequiresEnrollmentClaim(t *testing.T) {
 	r := jsonReq(t, http.MethodPost, "/mfa/enroll/confirm",
 		MFAVerifyRequest{ChallengeToken: "enroll-challenge", Code: "123456"})
 	rr := httptest.NewRecorder()
-	rs.mfaEnrollConfirm(rr, r)
+	testutil.ServeAtRoute(rr, r, "/auth/mfa/enroll/confirm", rs.mfaEnrollConfirm)
 
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 }

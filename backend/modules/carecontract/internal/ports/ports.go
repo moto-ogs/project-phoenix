@@ -142,6 +142,12 @@ const (
 	ActionDiscard  = "discard"
 	ActionTemplate = "template"
 	ActionConclude = "conclude"
+	// ActionCorrect is a correction of a contract from an import (#7767).
+	ActionCorrect = "correct"
+	// ActionLinkChild and ActionUnlinkChild record the link of an imported
+	// contract to a child record and its removal (#7760).
+	ActionLinkChild   = "link_child"
+	ActionUnlinkChild = "unlink_child"
 )
 
 // VersionsDetail is the detail of a template entry of the trail with the
@@ -155,7 +161,15 @@ type Store interface {
 	MarkWithdrawalInformed(ctx context.Context, organizationID, contractID int64, at time.Time) error
 	Templates(ctx context.Context, organizationID int64) ([]TemplateRow, error)
 	UpsertTemplate(ctx context.Context, organizationID, accountID, schoolID, offeringID int64, input carecontract.TemplateInput) (carecontract.ContractTemplate, error)
-	ContractKeys(ctx context.Context, organizationID int64, schoolIDs []int64) (map[ContractKey]bool, error)
+	// ContractChildren reads the child of every contract at the schools as
+	// its newest version names it, with the time the contract holds and the
+	// application child of a contract from an application.
+	ContractChildren(ctx context.Context, organizationID int64, schoolIDs []int64) ([]ContractChild, error)
+	// LockChildLinks makes the caller the only one of the Träger that links
+	// contracts to child records or creates a contract until its transaction
+	// ends (#7760): a creation decides under it whether an imported contract
+	// covers the child.
+	LockChildLinks(ctx context.Context, organizationID int64) error
 	InsertContract(ctx context.Context, organizationID, accountID int64, contract NewContract) (int64, error)
 	ListContracts(ctx context.Context, organizationID int64, filter carecontract.ContractFilter) ([]carecontract.ContractSummary, error)
 	CountContracts(ctx context.Context, organizationID int64) (map[string]int, error)
@@ -173,6 +187,9 @@ type Store interface {
 	// any other state is ErrContractNotConcludable.
 	MarkConcluded(ctx context.Context, organizationID, contractID, versionID int64, conclusion carecontract.Concluded) error
 	InsertEvents(ctx context.Context, organizationID int64, events []Event) error
+	// ContractCorrections reads the corrections of a contract from an import
+	// out of its trail, newest first (#7767).
+	ContractCorrections(ctx context.Context, organizationID, contractID int64) ([]carecontract.ContractCorrection, error)
 	// Versions reads every version of a contract, oldest first, with the
 	// last day each effective version holds.
 	Versions(ctx context.Context, organizationID, contractID int64) ([]carecontract.Version, error)

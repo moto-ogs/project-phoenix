@@ -1,4 +1,3 @@
-import * as apiError from "~/lib/api-error";
 import type { Session } from "next-auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { tenantPrefetchResources } from "./tenant-prefetch-resources";
@@ -24,7 +23,15 @@ function context(permissions: string[], scope = "") {
   };
 }
 
-afterEach(() => vi.restoreAllMocks());
+vi.mock("~/lib/session-cache", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/session-cache")>()),
+  sessionFetch: (await import("~/test/mocks/plain-session-fetch")).sessionFetch,
+}));
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 describe("tenant destination resources", () => {
   it.each(["", "tenant"])(
@@ -170,13 +177,14 @@ describe("tenant destination resources", () => {
 });
 
 it("uses the cold destination's exact entry fetcher for a parameterized supervision link", async () => {
-  const transport = vi.spyOn(apiError, "transportFetch").mockResolvedValueOnce(
+  const transport = vi.fn<typeof fetch>().mockResolvedValueOnce(
     new Response(
       JSON.stringify({
         data: buildSupervisionDashboardWire({ selected_group_id: "first" }),
       }),
     ),
   );
+  vi.stubGlobal("fetch", transport);
   const resources = await tenantPrefetchResources(
     "/active-supervisions?session=9",
     context(["groups:read"]),
@@ -187,8 +195,6 @@ it("uses the cold destination's exact entry fetcher for a parameterized supervis
   });
   expect(transport).toHaveBeenCalledExactlyOnceWith(
     "/api/active/supervision-dashboard",
-    {
-      headers: { "Content-Type": "application/json" },
-    },
+    expect.objectContaining({ method: "GET" }),
   );
 });

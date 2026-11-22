@@ -6,25 +6,32 @@ import { FileTypeIcon } from "~/components/ui/file-type-icon";
 
 import { Button } from "~/components/ui/button";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
-import {
-  ApiError,
-  apiErrorFromResponse,
-  transportFetch,
-} from "~/lib/api-error";
+import { ApiError } from "~/lib/api-error";
+import { bffFile } from "~/lib/bff-fetch";
 import { downloadBlob } from "~/lib/file-download";
 import type { FormAttachment } from "~/lib/enrollment-form-schema-api";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
 
 /** Keep the request on the existing anonymous PDF route, including in saved
  * admin previews whose schema still carries canonical upload URLs. */
-function publicDocumentURL(url: string): string {
+async function loadPublicDocument(url: string): Promise<Response> {
   const match =
-    /^(?:\/uploads\/|\/api\/public\/)(enrollment-form-legal-documents)\/([\w.-]+\.pdf)$/i.exec(
+    /^(?:\/uploads\/|\/api\/public\/)enrollment-form-legal-documents\/([\w.-]+\.pdf)$/i.exec(
       url,
     );
   if (!match) throw new ApiError("Invalid enrollment PDF URL", 400);
-  return `/api/public/${match[1]}/${encodeURIComponent(match[2]!)}`;
+  return bffFile(
+    "public",
+    "GET /public/enrollment-form-legal-documents/{filename}",
+    {
+      params: { filename: match[1]! },
+      errorMessage: "Enrollment PDF could not be loaded",
+    },
+  );
 }
+
+/** Loads the PDF an attachment names; a failure is an ApiError. */
+export type LoadAttachmentDocument = (reference: string) => Promise<Response>;
 
 const NO_ATTACHMENTS: FormAttachment[] = [];
 
@@ -42,28 +49,28 @@ export interface AttachmentLabels {
 }
 interface AttachmentActionsProps {
   attachments: FormAttachment[];
-  documentURL: (reference: string) => string;
+  loadDocument: LoadAttachmentDocument;
 }
 export function DocumentAttachmentList({
   attachments = NO_ATTACHMENTS,
-  documentURL = publicDocumentURL,
+  loadDocument = loadPublicDocument,
   labels,
 }: Readonly<{
   attachments?: FormAttachment[];
-  documentURL?: (reference: string) => string;
+  loadDocument?: LoadAttachmentDocument;
   labels?: AttachmentLabels;
 }>) {
   if (attachments.length === 0) return null;
   return labels ? (
     <AttachmentActions
       attachments={attachments}
-      documentURL={documentURL}
+      loadDocument={loadDocument}
       labels={labels}
     />
   ) : (
     <LocalizedAttachmentActions
       attachments={attachments}
-      documentURL={documentURL}
+      loadDocument={loadDocument}
     />
   );
 }
@@ -89,7 +96,7 @@ function LocalizedAttachmentActions(props: Readonly<AttachmentActionsProps>) {
 
 function AttachmentActions({
   attachments,
-  documentURL,
+  loadDocument,
   labels,
 }: Readonly<AttachmentActionsProps & { labels: AttachmentLabels }>) {
   const { show, showMessage } = useApiErrorDisplay();
@@ -107,15 +114,7 @@ function AttachmentActions({
     }
     setBusyURL(attachment.document_url);
     try {
-      const response = await transportFetch(
-        documentURL(attachment.document_url),
-        { cache: "no-store" },
-      );
-      if (!response.ok)
-        throw await apiErrorFromResponse(
-          response,
-          "Enrollment PDF could not be loaded",
-        );
+      const response = await loadDocument(attachment.document_url);
       if (!response.headers.get("content-type")?.includes("application/pdf"))
         throw new ApiError("Expected enrollment PDF", 500);
       const blob = await response.blob();

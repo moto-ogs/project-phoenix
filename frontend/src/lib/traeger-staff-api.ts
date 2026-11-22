@@ -1,4 +1,4 @@
-import { bffJson } from "~/lib/bff-fetch";
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Personalakte des Trägers über alle Schulen (#4705, ADR 0089, ADR 0233).
  *
@@ -16,10 +16,9 @@ import {
   downloadTraegerList,
   type TraegerListFile,
   type TraegerListFormat,
+  listExportQuery,
 } from "./traeger-list-export";
 import { mapStaffProof, type StaffProof } from "~/lib/traeger-staff-proofs-api";
-
-const BASE = "/api/traeger/staff-records";
 
 // Go does not register these sets; the contract types them as string. A value
 // this build does not know stays undefined and shows as „–“.
@@ -424,7 +423,11 @@ export async function fetchStaffOverview(): Promise<StaffOverview> {
 export function downloadStaffRecordList(
   format: TraegerListFormat,
 ): Promise<TraegerListFile> {
-  return downloadTraegerList(`${BASE}/export`, format);
+  return downloadTraegerList(
+    bffFile("org", "GET /traeger/staff-records/export", {
+      query: listExportQuery(format),
+    }),
+  );
 }
 
 export async function fetchStaffRecord(id: string): Promise<StaffRecordDetail> {
@@ -744,27 +747,19 @@ export type StaffHireMatch =
       readonly staffId: string;
     });
 
-/**
- * One entry of `details.matches` of the hire refusal. It travels in the error
- * envelope, which no contract decoder reads, so its IDs may still be numbers.
- */
-interface HireMatchDetails {
-  kind?: unknown;
-  staff_record_id?: unknown;
-  school_id?: unknown;
-  school_name?: unknown;
-  staff_id?: unknown;
-  first_name?: unknown;
-  last_name?: unknown;
-  reasons?: unknown;
-}
-
 function hireMatchReasons(raw: unknown): StaffHireMatchReason[] {
   if (!Array.isArray(raw)) return [];
   return HIRE_MATCH_REASONS.filter((reason) => raw.includes(reason));
 }
 
-function hireMatch(match: HireMatchDetails): StaffHireMatch | null {
+/**
+ * One entry of `details.matches` of the hire refusal. It travels in the error
+ * envelope, which no contract decoder reads; Go writes its IDs as JSON
+ * numbers (`workforce.HireMatch`, #7808).
+ */
+function hireMatch(
+  match: Readonly<Record<string, unknown>>,
+): StaffHireMatch | null {
   const common = {
     firstName: typeof match.first_name === "string" ? match.first_name : "",
     lastName: typeof match.last_name === "string" ? match.last_name : "",
@@ -806,7 +801,7 @@ export function staffHireMatches(
   const matches: StaffHireMatch[] = [];
   for (const entry of raw as unknown[]) {
     if (typeof entry !== "object" || entry === null) continue;
-    const match = hireMatch(entry as HireMatchDetails);
+    const match = hireMatch(entry as Record<string, unknown>);
     if (match) matches.push(match);
   }
   return matches;

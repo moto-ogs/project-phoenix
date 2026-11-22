@@ -12,20 +12,24 @@ import (
 	peopleCompose "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose"
 	membershipCompose "github.com/moto-ogs/project-phoenix/modules/schoolmembership/compose"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/workflows/staffpersonmerge"
 	mergeCompose "github.com/moto-ogs/project-phoenix/workflows/staffpersonmerge/compose"
 	mergeHTTP "github.com/moto-ogs/project-phoenix/workflows/staffpersonmerge/http"
 )
 
+// staffPersonMergeAudit writes the operator audit details with encoding/json,
+// which writes an ident.ID as a number: the stored JSON keeps its form (ADR
+// 0300, addendum).
 type staffPersonMergeAudit struct {
 	create func(context.Context, *auditRecords.OperatorAuditEntry) error
 }
 
 func (a staffPersonMergeAudit) RecordStaffPersonMergePreview(ctx context.Context, operatorID, schoolID int64, clientIP net.IP) error {
 	changes, err := json.Marshal(struct {
-		SchoolID int64  `json:"school_id"`
-		View     string `json:"view"`
-	}{schoolID, "staff_person_merge_candidates"})
+		SchoolID ident.ID `json:"school_id"`
+		View     string   `json:"view"`
+	}{ident.ID(schoolID), "staff_person_merge_candidates"})
 	if err != nil {
 		return err
 	}
@@ -34,13 +38,13 @@ func (a staffPersonMergeAudit) RecordStaffPersonMergePreview(ctx context.Context
 
 func (a staffPersonMergeAudit) RecordStaffPersonMerge(ctx context.Context, operatorID, schoolID int64, candidate staffpersonmerge.StaffPersonMergeCandidate) error {
 	changes, err := json.Marshal(struct {
-		SchoolID        int64 `json:"school_id"`
-		DonorID         int64 `json:"donor_person_id"`
-		KeeperID        int64 `json:"keeper_person_id"`
-		DonorStaffID    int64 `json:"donor_staff_id"`
-		KeeperStaffID   int64 `json:"keeper_staff_id"`
-		SchoolConfirmed bool  `json:"school_confirmed"`
-	}{schoolID, candidate.Donor.Person.ID.Int64(), candidate.Keeper.Person.ID.Int64(), candidate.Donor.Employment.ID.Int64(), candidate.Keeper.Employment.ID.Int64(), true})
+		SchoolID        ident.ID `json:"school_id"`
+		DonorID         ident.ID `json:"donor_person_id"`
+		KeeperID        ident.ID `json:"keeper_person_id"`
+		DonorStaffID    ident.ID `json:"donor_staff_id"`
+		KeeperStaffID   ident.ID `json:"keeper_staff_id"`
+		SchoolConfirmed bool     `json:"school_confirmed"`
+	}{ident.ID(schoolID), candidate.Donor.Person.ID, candidate.Keeper.Person.ID, candidate.Donor.Employment.ID, candidate.Keeper.Employment.ID, true})
 	if err != nil {
 		return err
 	}

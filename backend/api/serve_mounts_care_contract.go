@@ -47,6 +47,8 @@ func mountCareContractRoutes(root, signingLink chi.Router, organizations Holiday
 	root.Mount("/traeger/contract-templates", resource.TemplateRouter(ProtectedTraegerRoutes))
 	mountCareContractNoticeRoutes(root, organizations, settings, schoolSettings, delivery, outcomes, accessLog, addressees, holidays, parentsURL, now)
 	mountCareContractImportRoutes(root, organizations, settings, accessLog, today, now)
+	mountCareContractCorrectionRoutes(root, accessLog, today)
+	mountCareContractChildLinkRoutes(root, organizations, accessLog, today)
 	// The one-time link of a contract mail (#4679), without an account.
 	signing := careContractCompose.NewSigning(careContractSignaturePorts(organizations, settings, delivery, outcomes, holidays, parentsURL), now)
 	signingLink.Mount(careContractSigningPath, careContractHTTP.NewSigningResource(signing).PublicRouter())
@@ -291,6 +293,10 @@ func (l careContractAccessLog) RecordAccess(ctx context.Context, access carecont
 	case carecontract.SchoolAccessContracts:
 		resource = auditModels.ResourceTypeCareContracts
 		metadata["contract_ids"] = access.ContractIDs
+		if len(access.StudentIDs) > 0 {
+			// The child records a link of imported contracts showed (#7760).
+			metadata["student_ids"] = access.StudentIDs
+		}
 	case carecontract.SchoolAccessChanges:
 		resource = auditModels.ResourceTypeCareContractChanges
 		metadata["contract_ids"] = access.ContractIDs

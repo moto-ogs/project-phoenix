@@ -88,7 +88,9 @@ func (emptySchoolMessagingRouter) SchoolRouter(_ func(chi.Router, func(chi.Route
 // newSchoolRouter builds the school portal router with a stubbed second
 // factor; the composed one stays on the resource.
 func newSchoolRouter(resource *schoolportal.Resource, mfa schoolportal.MFARuntime) http.Handler {
-	return testpkg.SessionVerifier(schoolportal.NewResource(resource.AuthService, mfa, resource.Resets, resource.ClassDay, resource.Timetable, resource.StaffMessaging, resource.StaffNotices, resource.Notifications, resource.TenantContext).Router(SchoolSessionChain, ProtectedSchoolRoutes))
+	// Mounted at /school like in production, so the answer check knows each
+	// route (#7808); the tests call the paths below the mount.
+	return testpkg.SessionVerifier(testpkg.MountedQueryBudgetRouter("/school", schoolportal.NewResource(resource.AuthService, mfa, resource.Resets, resource.ClassDay, resource.Timetable, resource.StaffMessaging, resource.StaffNotices, resource.Notifications, resource.TenantContext).Router(SchoolSessionChain, ProtectedSchoolRoutes)))
 }
 
 // newSchoolChiRouter is newSchoolRouter without the http.Handler erasure, for

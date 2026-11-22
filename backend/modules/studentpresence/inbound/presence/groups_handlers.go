@@ -3,9 +3,11 @@ package presence
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 
+	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
@@ -123,27 +125,63 @@ func (rs *Resource) loadActiveSupervisorsMap(ctx context.Context, groups []stude
 	return supervisorMap
 }
 
-// extractStaffFromRequest resolves staff for the validated account.
+// errNoStaffRecord refuses a valid session whose account has no person or no
+// staff record at the school, a Träger-Büro session through the Absprung
+// included: the action is the school staff's own. It is the caller's gap
+// (403), not a missing session (401) and not a failed lookup (500).
+var errNoStaffRecord = errors.New("user is not a staff member")
+
+// errNoSessionPrincipal is a request without a validated session; the
+// middleware normally rejects it before the handler runs.
+var errNoSessionPrincipal = errors.New("account not found")
+
+// extractStaffFromRequest resolves staff for the validated account and
+// answers a refusal with a plain 403.
 func (rs *Resource) extractStaffFromRequest(w http.ResponseWriter, r *http.Request) (*StaffIdentity, error) {
-	principal, principalErr := common.CurrentPrincipal(r.Context())
-	if principalErr != nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(errors.New("account not found")))
-		return nil, errors.New("account not found")
+	staff, err := rs.resolveRequestStaff(r)
+	if err != nil {
+		renderStaffResolutionError(w, r, err, common.ErrorForbidden(err))
 	}
+	return staff, err
+}
 
+// resolveRequestStaff finds the staff record of the validated account. The
+// People port reports a missing person or staff record as nil without an
+// error; any error is a failed lookup.
+func (rs *Resource) resolveRequestStaff(r *http.Request) (*StaffIdentity, error) {
+	principal, err := common.CurrentPrincipal(r.Context())
+	if err != nil {
+		return nil, errNoSessionPrincipal
+	}
 	person, err := rs.PersonService.FindByAccountID(r.Context(), principal.AccountID())
-	if err != nil || person == nil {
-		common.RenderError(w, r, common.ErrorUnauthorized(errors.New("account not found")))
-		return nil, errors.New("account not found")
+	if err != nil {
+		return nil, fmt.Errorf("find person by account: %w", err)
 	}
-
+	if person == nil {
+		return nil, errNoStaffRecord
+	}
 	staff, err := rs.PersonService.GetStaffByPersonID(r.Context(), person.ID)
-	if err != nil || staff == nil {
-		common.RenderError(w, r, common.ErrorForbidden(errors.New("user is not a staff member")))
-		return nil, errors.New("user is not a staff member")
+	if err != nil {
+		return nil, fmt.Errorf("find staff by person: %w", err)
 	}
-
+	if staff == nil {
+		return nil, errNoStaffRecord
+	}
 	return staff, nil
+}
+
+// renderStaffResolutionError answers a failed resolveRequestStaff: refusal
+// for an account without a staff record, 401 only without a validated
+// session, 500 for a failed lookup.
+func renderStaffResolutionError(w http.ResponseWriter, r *http.Request, err error, refusal render.Renderer) {
+	switch {
+	case errors.Is(err, errNoStaffRecord):
+		common.RenderError(w, r, refusal)
+	case errors.Is(err, errNoSessionPrincipal):
+		common.RenderError(w, r, common.ErrorUnauthorized(err))
+	default:
+		common.RenderError(w, r, common.ErrorInternalServer(err))
+	}
 }
 
 // getActiveGroupSupervisors handles getting supervisors for an active group

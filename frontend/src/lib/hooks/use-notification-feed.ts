@@ -3,10 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
-  fetchNotificationFeed,
-  fetchNotificationFeedUnreadCount,
-  markAllNotificationFeedRead,
-  markNotificationFeedEntryRead,
   NOTIFICATION_FEED_REFRESH_EVENT,
   type NotificationFeedApi,
   parentNotificationFeedApi,
@@ -91,7 +87,7 @@ export function useNotificationFeedUnread(
   source?: NotificationFeedSource,
 ) {
   const portal = useNotificationFeedPortal();
-  const { apiBase } = portal;
+  const api = source ? source.api : portal.api;
   const refreshInterval = useLiveRefreshInterval(FEED_FALLBACK_INTERVAL_MS);
   const key = !enabled
     ? null
@@ -106,10 +102,7 @@ export function useNotificationFeedUnread(
             : notificationFeedKeys.unreadCount();
   const { data, mutate } = useSWRAuth<number>(
     key,
-    () =>
-      source
-        ? source.api.fetchUnreadCount()
-        : fetchNotificationFeedUnreadCount(apiBase),
+    () => api.fetchUnreadCount(),
     {
       refreshInterval,
       // Ein verborgener Tab pollt nicht. Kommt er zurück, stimmt die Zahl
@@ -151,7 +144,7 @@ export function useNotificationFeed(
   source?: NotificationFeedSource,
 ) {
   const portal = useNotificationFeedPortal();
-  const { apiBase } = portal;
+  const api = source ? source.api : portal.api;
   const [extra, setExtra] = useState<readonly NotificationFeedEntry[]>([]);
   // undefined: der nächste Cursor ist der der ersten Seite.
   const [extraCursor, setExtraCursor] = useState<string | null | undefined>(
@@ -200,7 +193,7 @@ export function useNotificationFeed(
           : portal.keyScope === "caterer"
             ? catererKeys.notificationFeedFirstPage()
             : notificationFeedKeys.firstPage(),
-    () => (source ? source.api.fetchPage() : fetchNotificationFeed(apiBase)),
+    () => api.fetchPage(),
     {
       refreshInterval,
       // Auch bei verlorenen Live-Ereignissen stimmen Seiten und Cursor
@@ -234,9 +227,7 @@ export function useNotificationFeed(
     setLoadingMore(true);
     setLoadMoreError(null);
     try {
-      const page = source
-        ? await source.api.fetchPage(nextCursor)
-        : await fetchNotificationFeed(apiBase, nextCursor);
+      const page = await api.fetchPage(nextCursor);
       if (generation.current !== started) return;
       setExtra((current) => [...current, ...page.entries]);
       setExtraCursor(page.nextCursor);
@@ -245,7 +236,7 @@ export function useNotificationFeed(
     } finally {
       if (generation.current === started) setLoadingMore(false);
     }
-  }, [nextCursor, loadingMore, apiBase, source]);
+  }, [nextCursor, loadingMore, api]);
 
   const items = useMemo((): readonly NotificationFeedItem[] => {
     const seen = new Set<string>();
@@ -271,9 +262,7 @@ export function useNotificationFeed(
       const { id, updatedAt } = item.entry;
       setLocallyRead((current) => new Map(current).set(id, updatedAt));
       try {
-        const count = source
-          ? await source.api.markRead(id)
-          : await markNotificationFeedEntryRead(apiBase, id);
+        const count = await api.markRead(id);
         if (sessionGeneration.current === started) onUnreadCount(count);
       } catch {
         if (sessionGeneration.current !== started) return;
@@ -287,20 +276,18 @@ export function useNotificationFeed(
         });
       }
     },
-    [onUnreadCount, apiBase, source],
+    [onUnreadCount, api],
   );
 
   /** Wirft bei einem Fehler; der Aufrufer zeigt ihn als Meldung. */
   const markAllRead = useCallback(async () => {
     const started = sessionGeneration.current;
     const upTo = latestUpdate(items);
-    const count = source
-      ? await source.api.markAllRead()
-      : await markAllNotificationFeedRead(apiBase);
+    const count = await api.markAllRead();
     if (sessionGeneration.current !== started) return;
     setAllReadUpTo(upTo);
     onUnreadCount(count);
-  }, [items, onUnreadCount, apiBase, source]);
+  }, [items, onUnreadCount, api]);
 
   const retry = useCallback(() => {
     if (first.error) {

@@ -2,7 +2,8 @@
 // timetable slots or Ganztag pickup cohorts with three data modes
 // (Plan / Ist / Abgleich) and PDF/XLSX export.
 
-import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
+import { bffFile, bffJson } from "~/lib/bff-fetch";
+import type * as timetableContract from "~/lib/contract/timetable.generated";
 import {
   downloadBlob,
   filenameFromDisposition,
@@ -22,114 +23,25 @@ export type SlotListGroupBy = "" | "slot" | "room" | "class" | "pickup_time";
 
 export type SlotListFormat = "pdf" | "xlsx";
 
-export interface SlotListRequest {
-  date: string; // YYYY-MM-DD
-  target: SlotListTarget;
-  pickup_cohort?: SlotListPickupCohort;
-  list_kind?: SlotListKind;
-  source: SlotListSource;
-  /** Selected timetable slots. Omit = all selectable slots; [] = none selected. */
-  instance_ids?: string[];
-  /** Optional education-group filter. Omit/empty = all groups. */
-  group_ids?: string[];
-  /** Optional school-class filter. Omit/empty = all classes. */
-  classes?: string[];
-  /** Section the preview/export. Omit/"" = one flat list. */
-  group_by?: SlotListGroupBy;
-  /**
-   * Content hash (SlotListResult.signature) of the preview the user reviewed.
-   * Export-only: the backend refuses with 409 when its fresh rebuild no longer
-   * matches, so a downloaded file never differs from the approved preview.
-   */
-  expected_signature?: string;
-}
-
-interface SlotListSlot {
-  instance_id: string;
-  title: string;
-  time_range: string;
-  status: string;
-  /** Timetable list classification; drives which classified list a slot exports to. */
-  list_kind?: string;
-  /** Planned room name; reshapes a room-grouped export when it changes. */
-  room_name?: string;
-}
-
-export interface SlotListRow {
-  student_id: string;
-  name: string;
-  school_class: string;
-  group_name: string;
-  group_id?: string;
-  instance_id?: string;
-  slot: string;
-  room_name?: string;
-  pickup_time?: string;
-  planned: boolean;
-  present: boolean;
-  unplanned: boolean;
-  excused: boolean;
-  status_label: string;
-  /** Section heading when grouped; empty for a flat list. */
-  group_title?: string;
-}
-
-interface SlotListGroupOption {
-  id: string;
-  name: string;
-}
-
-interface SlotListCounters {
-  planned: number;
-  present: number;
-  missing: number;
-  excused: number;
-  unplanned: number;
-}
-
-export interface SlotListResult {
+/**
+ * The request of a preview or export: the contract's `slotListRequest` with
+ * the closed value sets of the screen. `instance_ids` omitted = all
+ * selectable slots, [] = none; `group_ids`/`classes` omitted or empty = all;
+ * `group_by` omitted or "" = one flat list. `expected_signature` (export
+ * only) is the reviewed preview's `signature`: the backend refuses with 409
+ * when its fresh rebuild no longer matches.
+ */
+export type SlotListRequest = Omit<
+  timetableContract.slotListRequest,
+  "target" | "pickup_cohort" | "list_kind" | "source" | "group_by" | "format"
+> & {
   date: string;
   target: SlotListTarget;
   pickup_cohort?: SlotListPickupCohort;
   list_kind?: SlotListKind;
-  list_label: string;
   source: SlotListSource;
   group_by?: SlotListGroupBy;
-  provenance: string;
-  slots: SlotListSlot[];
-  groups: SlotListGroupOption[];
-  classes: string[];
-  counters: SlotListCounters;
-  rows: SlotListRow[];
-  /**
-   * Backend content hash of this rendered list. Echoed back as an export's
-   * expected_signature so the backend can refuse (409) an export whose fresh
-   * rebuild no longer matches the reviewed preview (#1565 review pass 2).
-   */
-  signature: string;
-}
-
-interface SlotListPickupCohortOption {
-  cohort: SlotListPickupCohort;
-  label: string;
-  available: boolean;
-  row_count: number;
-}
-
-interface SlotListKindOption {
-  kind: SlotListKind;
-  label: string;
-  available: boolean;
-  slot_count: number;
-  row_count: number;
-}
-
-export interface SlotListOptionsResult {
-  date: string;
-  slots: SlotListSlot[];
-  pickup_cohorts: SlotListPickupCohortOption[];
-  list_kinds: SlotListKindOption[];
-}
+};
 
 export const SLOT_LIST_KIND_LABELS: Record<SlotListKind, string> = {
   edge_hours: "Randstunden",
@@ -159,35 +71,51 @@ export function groupByOptionsFor(target: SlotListTarget): SlotListGroupBy[] {
     : ["", "slot", "room", "class"];
 }
 
+// Go writes empty lists as null; the screen reads them as empty lists.
+type WithLists<T, K extends keyof T> = Omit<T, K> & {
+  [P in K]: NonNullable<T[P]>;
+};
+
+export type SlotListOptionsResult = WithLists<
+  timetableContract.OptionsResult,
+  "slots" | "pickup_cohorts" | "list_kinds"
+>;
+
+/** `signature` goes back as an export's `expected_signature`. */
+export type SlotListResult = WithLists<
+  timetableContract.ClassdayResult,
+  "slots" | "groups" | "classes" | "rows"
+>;
+
 export async function fetchSlotListOptions(
   date: string,
 ): Promise<SlotListOptionsResult> {
-  const response = await transportFetch("/api/timetable/lists/options", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ date }),
+  const options = await bffJson("tenant", "POST /api/timetable/lists/options", {
+    body: { date },
+    errorMessage: "slot list options failed",
   });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "slot list options failed");
-  }
-  const payload = (await response.json()) as { data: SlotListOptionsResult };
-  return payload.data;
+  return {
+    ...options,
+    slots: options.slots ?? [],
+    pickup_cohorts: options.pickup_cohorts ?? [],
+    list_kinds: options.list_kinds ?? [],
+  };
 }
 
 export async function fetchSlotListPreview(
   request: SlotListRequest,
 ): Promise<SlotListResult> {
-  const response = await transportFetch("/api/timetable/lists/preview", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(request),
+  const result = await bffJson("tenant", "POST /api/timetable/lists/preview", {
+    body: request,
+    errorMessage: "slot list preview failed",
   });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "slot list preview failed");
-  }
-  // route-wrapper envelopes handler results as { data, status }
-  const payload = (await response.json()) as { data: SlotListResult };
-  return payload.data;
+  return {
+    ...result,
+    slots: result.slots ?? [],
+    groups: result.groups ?? [],
+    classes: result.classes ?? [],
+    rows: result.rows ?? [],
+  };
 }
 
 export type SlotListExportMode = "download" | "print";
@@ -233,21 +161,17 @@ export async function exportSlotList(
   }
 
   try {
-    const response = await transportFetch("/api/timetable/lists/export", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...request,
-        format,
-        expected_signature: expectedSignature,
-      }),
-    });
-    if (!response.ok) {
-      // An ApiError with status and code: the caller branches on the 409
-      // drift refusal (the fresh build no longer matches the reviewed
-      // preview) without matching the message (#1565 review pass 2).
-      throw await apiErrorFromResponse(response, "slot list export failed");
-    }
+    // A refusal is an ApiError with status and code: the caller branches on
+    // the 409 drift refusal (the fresh build no longer matches the reviewed
+    // preview) without matching the message (#1565 review pass 2).
+    const response = await bffFile(
+      "tenant",
+      "POST /api/timetable/lists/export",
+      {
+        body: { ...request, format, expected_signature: expectedSignature },
+        errorMessage: "slot list export failed",
+      },
+    );
 
     const blob = await response.blob();
 

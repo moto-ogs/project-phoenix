@@ -117,8 +117,8 @@ func TestDemoCareDaysReadsTheSchoolAndReturnsWallClockMinutes(t *testing.T) {
 	router.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, path+day.String(), nil))
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 	assert.JSONEq(t, `[
-		{"student_id":7,"date":"2026-10-20","expected":true,"no_plan":false,"cancelled":false,"arrival_minute":750,"pickup_minute":900},
-		{"student_id":8,"date":"2026-10-20","expected":false,"no_plan":false,"cancelled":true,"arrival_minute":null,"pickup_minute":null}
+		{"student_id":"7","date":"2026-10-20","expected":true,"no_plan":false,"cancelled":false,"arrival_minute":750,"pickup_minute":900},
+		{"student_id":"8","date":"2026-10-20","expected":false,"no_plan":false,"cancelled":true,"arrival_minute":null,"pickup_minute":null}
 	]`, string(mustData(t, rr)))
 
 	invalid := httptest.NewRecorder()

@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Verlauf des Träger-Büros (#5474): wer wann eine Person eingeladen, eine
 // Einladung zurückgenommen, Rollen oder einen Namen (#4693) geändert oder
 // eine Person entfernt hat.
@@ -23,7 +25,10 @@ import {
   type TraegerAccountHistoryEntry,
   type TraegerAccountHistoryPage,
 } from "~/lib/traeger-api";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import { TRAEGER_ROLE_LABELS, type TraegerRole } from "~/lib/traeger-roles";
 import { labelOf } from "~/lib/label-of";
 
@@ -184,8 +189,9 @@ export function TraegerAccountHistory({
           <TraegerListExportMenu
             download={(format) =>
               downloadTraegerList(
-                "/api/traeger/accounts/history/export",
-                format,
+                bffFile("org", "GET /traeger/accounts/history/export", {
+                  query: listExportQuery(format),
+                }),
               )
             }
             scope="Träger-Büro"

@@ -22,24 +22,12 @@ func (rs *Resource) claimGroup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Read the authenticated account from the validated security principal.
-	principal, principalErr := common.CurrentPrincipal(ctx)
-	if principalErr != nil {
-		common.RespondWithError(w, r, http.StatusUnauthorized, "Invalid token")
-		return
-	}
-
-	// Get person from account ID
-	person, err := rs.PersonService.FindByAccountID(ctx, principal.AccountID())
-	if err != nil || person == nil {
-		common.RespondWithError(w, r, http.StatusUnauthorized, "Account not found")
-		return
-	}
-
-	// Get staff record from person
-	staff, err := rs.PersonService.GetStaffByPersonID(ctx, person.ID)
-	if err != nil || staff == nil {
-		common.RespondWithError(w, r, http.StatusUnauthorized, "Staff authentication required")
+	// Taking over a supervision is the staff member's own: an account
+	// without a staff record is refused with the reason (403), a failed
+	// lookup is a 500.
+	staff, err := rs.resolveRequestStaff(r)
+	if err != nil {
+		renderStaffResolutionError(w, r, err, common.ErrorForbiddenWithCode(err, common.CodeTimetableNoStaffProfile))
 		return
 	}
 

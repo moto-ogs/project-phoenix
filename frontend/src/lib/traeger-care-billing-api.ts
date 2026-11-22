@@ -1,4 +1,4 @@
-import { bffJson } from "~/lib/bff-fetch";
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the monthly contribution of the care contract (#4684): the
  * price list of the Träger (a monthly price per booked weekday, module and
@@ -609,8 +609,6 @@ function amendmentFromBackend(
   };
 }
 
-const RUNS_PATH = "/api/traeger/care-billing-runs";
-
 /** An ID of the contract; "0" is none. */
 function id(value: string): string {
   return value === "0" ? "" : value;
@@ -1132,14 +1130,6 @@ function careLettersFromBackend(
   };
 }
 
-function lettersPath(runId: string): string {
-  return `${RUNS_PATH}/${encodeURIComponent(runId)}/letters`;
-}
-
-function invoicePath(runId: string, invoiceId: string): string {
-  return `${RUNS_PATH}/${encodeURIComponent(runId)}/invoices/${encodeURIComponent(invoiceId)}`;
-}
-
 function careLetterBody(
   input: CareLetterInput,
 ): traegerCareBillingRunsContract.CareLetterRequest {
@@ -1174,12 +1164,10 @@ export async function previewCareLetter(
   input: CareLetterInput,
 ): Promise<BillingFile> {
   return billingFile(
-    `${lettersPath(runId)}/preview`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(careLetterBody(input)),
-    },
+    bffFile("org", "POST /traeger/care-billing-runs/{id}/letters/preview", {
+      params: { id: runId },
+      body: careLetterBody(input),
+    }),
     "vorschau.pdf",
   );
 }
@@ -1193,8 +1181,10 @@ export async function printCareLetters(
   withoutEmailOnly = false,
 ): Promise<BillingFile> {
   return billingFile(
-    `${lettersPath(runId)}/print${withoutEmailOnly ? "?only=without_email" : ""}`,
-    {},
+    bffFile("org", "GET /traeger/care-billing-runs/{id}/letters/print", {
+      params: { id: runId },
+      query: { only: withoutEmailOnly ? "without_email" : undefined },
+    }),
     "monatsrechnungen.pdf",
   );
 }
@@ -1223,8 +1213,14 @@ export async function downloadCareLetter(
   kind: CareLetterKind,
 ): Promise<BillingFile> {
   return billingFile(
-    `${invoicePath(runId, invoiceId)}/letter${kind === "cancellation" ? "?kind=cancellation" : ""}`,
-    {},
+    bffFile(
+      "org",
+      "GET /traeger/care-billing-runs/{id}/invoices/{invoiceID}/letter",
+      {
+        params: { id: runId, invoiceID: invoiceId },
+        query: { kind: kind === "cancellation" ? kind : undefined },
+      },
+    ),
     kind === "cancellation" ? "storno.pdf" : "rechnung.pdf",
   );
 }

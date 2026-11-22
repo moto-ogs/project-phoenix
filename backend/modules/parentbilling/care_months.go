@@ -259,6 +259,9 @@ type CareRecipient struct {
 	Kind       string         `json:"kind"`
 	SecondName string         `json:"second_name"`
 	Address    *PostalAddress `json:"address"`
+	// ContractDraft tells that the contract is still a draft, which can be
+	// discarded with everything that hangs on it (#7862); never on the wire.
+	ContractDraft bool `json:"-"`
 }
 
 // CareInvoice is the invoice of one contract and month: a draft without a

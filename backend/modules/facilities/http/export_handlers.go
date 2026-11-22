@@ -7,14 +7,15 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
 type roomSnapshotExportRequest struct {
-	Format         string   `json:"format"`
-	Title          string   `json:"title"`
-	RoomIDs        *[]int64 `json:"room_ids"`
-	IncludeTransit bool     `json:"include_transit"`
+	Format         string      `json:"format"`
+	Title          string      `json:"title"`
+	RoomIDs        *[]ident.ID `json:"room_ids"`
+	IncludeTransit bool        `json:"include_transit"`
 }
 
 // InvalidExportError marks renderer validation failures that preserve the
@@ -39,7 +40,9 @@ func (rs *Resource) exportSnapshot(w http.ResponseWriter, r *http.Request) {
 		rs.runtime.Failure(w, r, FailureInvalid, fmt.Errorf("unsupported export format %q", request.Format), "invalid_request")
 		return
 	}
-	file, err := rs.runtime.ExportSnapshot(r.Context(), SnapshotRequest(request))
+	file, err := rs.runtime.ExportSnapshot(r.Context(), SnapshotRequest{
+		Format: request.Format, Title: request.Title, RoomIDs: ident.OptionalInt64s(request.RoomIDs), IncludeTransit: request.IncludeTransit,
+	})
 	if err != nil {
 		kind, code := classifyExportFailure(err)
 		rs.runtime.Failure(w, r, kind, err, code)

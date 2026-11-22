@@ -366,9 +366,9 @@ func (req *AcceptInvitationRequest) Bind(_ *http.Request) error {
 }
 
 type AcceptInvitationResponse struct {
-	AccountID       int64  `json:"account_id"`
-	Email           string `json:"email"`
-	TenantSubdomain string `json:"tenant_subdomain,omitempty"`
+	AccountID       ident.ID `json:"account_id"`
+	Email           string   `json:"email"`
+	TenantSubdomain string   `json:"tenant_subdomain,omitempty"`
 }
 
 var acceptInvitationErrorRules = []common.ErrorRule{
@@ -449,7 +449,7 @@ func (rs *Resource) acceptInvitation(w http.ResponseWriter, r *http.Request) {
 		slog.Int64("account_id", account.ID))
 
 	resp := AcceptInvitationResponse{
-		AccountID: account.ID,
+		AccountID: ident.ID(account.ID),
 		Email:     account.Email,
 	}
 	if rs.SchoolService != nil && rs.transactions != nil {

@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Ein Monatslauf (#4684): die Vorschau aller Rechnungen eines Monats nach
 // dem gültigen Vertrag und der Preisliste, und die Freigabe, die jede
 // Rechnung mit ihrer Nummer ausstellt. Danach ändern sich die Rechnungen
@@ -82,7 +84,10 @@ import {
   releaseCareRun,
 } from "~/lib/traeger-care-billing-api";
 import { includeCareInvoice } from "~/lib/traeger-care-review-api";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
@@ -672,8 +677,14 @@ export default function TraegerCareRunPage() {
                 <TraegerListExportMenu
                   download={(format) =>
                     downloadTraegerList(
-                      `/api/traeger/care-billing-runs/${run.id}/invoices/export`,
-                      format,
+                      bffFile(
+                        "org",
+                        "GET /traeger/care-billing-runs/{id}/invoices/export",
+                        {
+                          params: { id: run.id },
+                          query: listExportQuery(format),
+                        },
+                      ),
                     )
                   }
                   scope="Alle Rechnungen des Laufs"

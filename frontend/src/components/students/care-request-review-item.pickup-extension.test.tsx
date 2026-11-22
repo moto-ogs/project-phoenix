@@ -8,6 +8,7 @@ import {
 import { ApiError } from "~/lib/api-error";
 import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type * as studentsContract from "~/lib/contract/students.generated";
 
 import type { PickupExtension } from "~/lib/pickup-extension-api";
 import { releaseFakeTimers } from "~/test/clock";
@@ -109,7 +110,7 @@ describe("CareRequestReviewItem after a later pickup (#3261)", () => {
     // in den nächsten Test übergehen, sonst hängt dessen Ergebnis von der
     // Ausführungsreihenfolge der Suite ab.
     vi.resetAllMocks();
-    mockDecide.mockResolvedValue(laterPickupRow());
+    mockDecide.mockResolvedValue(decided(laterPickupRow()));
   });
 
   it("fragt nach dem Freigeben nach dem Termin", async () => {
@@ -396,3 +397,14 @@ describe("CareRequestReviewItem after a later pickup (#3261)", () => {
     );
   });
 });
+
+/** The decide route's answer: the generated type of the row. */
+function decided(
+  request: StaffCareRequest,
+): studentsContract.CareRequestResponse {
+  return {
+    ...request,
+    diff: [...request.diff],
+    affected_blocks: [...request.affected_blocks],
+  };
+}

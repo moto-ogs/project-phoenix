@@ -144,8 +144,8 @@ interface CallOptions {
    */
   errorMessage?: string;
   /**
-   * Tenant only: a 401 with one of these codes refuses this operation and
-   * leaves the session as it is; it becomes an ApiError without a renewal.
+   * Tenant and parent: a 401 with one of these codes refuses this operation
+   * and leaves the session as it is, without renewal or a login redirect.
    */
   authRefusals?: readonly ErrorCode[];
 }
@@ -182,7 +182,8 @@ function onLoginPage(path: string): boolean {
  * after the BFF renewed the session once:
  * - tenant: the session gate and one renewal with a retry (`sessionFetch`),
  *   then a sign-out;
- * - operator (`platform`) and parents: a switch to the portal's login;
+ * - operator (`platform`) and parents: a switch to the portal's login
+ *   (parents keep operation-specific `authRefusals` on the page);
  * - Träger (`org`), moto schule and caterer: the ApiError, as before.
  */
 const PORTALS: Readonly<Record<Portal, PortalRow>> = {
@@ -197,9 +198,17 @@ const PORTALS: Readonly<Record<Portal, PortalRow>> = {
   parent: {
     mount: "/parent",
     bff: "/api/parent",
-    send: async (url, init) => {
+    send: async (url, init, { authRefusals }) => {
       const response = await sendPlain(url, init);
       if (response.status === 401 && typeof window !== "undefined") {
+        if (authRefusals?.length) {
+          const refusal = await apiErrorFromResponse(
+            response.clone(),
+            "Request refused",
+          );
+          if (refusal.code && authRefusals.includes(refusal.code))
+            return response;
+        }
         window.location.assign("/parents/login");
       }
       return response;

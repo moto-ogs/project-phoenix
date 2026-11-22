@@ -89,15 +89,12 @@ func (s *Store) FindAccountRecord(ctx context.Context, id int64) (domain.Managed
 	return scanAdministeredAccount(ctx, query.Where(`"account".id = ?`, id).Limit(1), "find account record")
 }
 
-func (s *Store) FindManageableAccountRecord(ctx context.Context, id int64, visibility domain.AccountVisibility, forUpdate bool) (domain.ManagedAccountRecord, bool, domain.OperationStats, error) {
+func (s *Store) FindManageableAccountRecord(ctx context.Context, id int64, visibility domain.AccountVisibility) (domain.ManagedAccountRecord, bool, domain.OperationStats, error) {
 	query, err := s.accountSelect(ctx)
 	if err != nil {
 		return domain.ManagedAccountRecord{}, false, domain.OperationStats{}, err
 	}
 	query = scopeAccounts(query.Where(`"account".id = ?`, id), visibility)
-	if forUpdate {
-		query = query.For("UPDATE")
-	}
 	return scanAdministeredAccount(ctx, query.Limit(1), "find manageable account record")
 }
 
@@ -113,55 +110,6 @@ func scanAdministeredAccount(ctx context.Context, query *bun.SelectQuery, operat
 		return domain.ManagedAccountRecord{}, false, stats, nil
 	}
 	return rows[0].toDomain(), true, stats, nil
-}
-
-// ListManageableAccountRecords orders by account id. The retained listing
-// left the order to the planner; the endpoint's page is stable now.
-func (s *Store) ListManageableAccountRecords(ctx context.Context, filter domain.AccountListFilter, visibility domain.AccountVisibility) ([]domain.ManagedAccountRecord, domain.OperationStats, error) {
-	query, err := s.accountSelect(ctx)
-	if err != nil {
-		return nil, domain.OperationStats{}, err
-	}
-	query = scopeAccounts(query, visibility)
-	if filter.Email != "" {
-		query = query.Where(`LOWER("account".email) = LOWER(?)`, filter.Email)
-	}
-	if filter.Active != nil {
-		query = query.Where(`"account".active = ?`, *filter.Active)
-	}
-	return scanAdministeredAccounts(ctx, query.OrderExpr(`"account".id`), "list manageable account records")
-}
-
-func scanAdministeredAccounts(ctx context.Context, query *bun.SelectQuery, operation string) ([]domain.ManagedAccountRecord, domain.OperationStats, error) {
-	var rows []administeredAccountRow
-	started := time.Now()
-	err := query.Scan(ctx, &rows)
-	stats := domain.OperationStats{Queries: 1, StatementDuration: time.Since(started), Rows: int64(len(rows))}
-	if err != nil {
-		return nil, stats, fmt.Errorf("identity access postgres: %s: %w", operation, err)
-	}
-	records := make([]domain.ManagedAccountRecord, 0, len(rows))
-	for _, row := range rows {
-		records = append(records, row.toDomain())
-	}
-	return records, stats, nil
-}
-
-func (s *Store) UpdateManageableAccountIdentity(ctx context.Context, update domain.AccountIdentityUpdate, visibility domain.AccountVisibility) (bool, domain.OperationStats, error) {
-	db, err := s.database(ctx)
-	if err != nil {
-		return false, domain.OperationStats{}, err
-	}
-	query := db.NewUpdate().
-		Model((*administeredAccountRow)(nil)).
-		ModelTableExpr(`auth.accounts AS "account"`).
-		Set(`email = ?`, update.Email).
-		Where(`"account".id = ?`, update.AccountID).
-		Where(liveAccountSQL)
-	if update.Username != nil {
-		query = query.Set(`username = ?`, *update.Username)
-	}
-	return execManageableAccountWrite(ctx, scopeAccounts(query, visibility), "update manageable account identity")
 }
 
 func (s *Store) SetManageableAccountActive(ctx context.Context, id int64, active bool, visibility domain.AccountVisibility) (bool, domain.OperationStats, error) {

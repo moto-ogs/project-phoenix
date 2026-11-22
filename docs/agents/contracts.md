@@ -1009,20 +1009,18 @@ Backend paths in this section are relative to `backend/`:
 
 #### Account-wide changes by a school administrator (#6862)
 
-The login address, the name and the second factor belong to the account, not
-to one school. A school administrator (`users:manage`) changes the address
-(`PUT /auth/accounts/{id}`) and resets the second factor
-(`DELETE /auth/accounts/{id}/mfa`) only while their school alone holds the
-account: it is the account's only active school and the account has neither
-a retained Träger-Büro membership nor parents-portal access at a Träger
-(ADR 0216) (`AccountOwnership` in
+The second factor belongs to the account, not to one school. A school
+administrator (`users:manage`) resets it (`DELETE /auth/accounts/{id}/mfa`)
+only while their school alone holds the account: it is the account's only
+active school and the account has neither a retained Träger-Büro membership
+nor parents-portal access at a Träger (ADR 0216) (`AccountOwnership` in
 `modules/identityaccess/internal/application/account_ownership.go`). Otherwise
-both answer 403 `identity.account_shared_across_schools`; the school-scoped
-override (`PUT …/mfa/override`) stays open, and the operator changes the rest.
-A changed address mails the previous address and a reset mails the holder
-(`account-login-address-changed.html`, `account-mfa-reset.html`), queued in the
-transaction of the change. The school administrator's account-wide MFA writes
-leave the request's school transaction for an administrative one.
+it answers 403 `identity.account_shared_across_schools`; the school-scoped
+override (`PUT …/mfa/override`) stays open, and the operator resets it. A
+reset mails the holder (`account-mfa-reset.html`), queued in the transaction
+of the reset. The school administrator's account-wide MFA writes leave the
+request's school transaction for an administrative one. No school route
+changes an account's login address.
 
 #### Privileged MFA floor (#3841, slice 3841-f)
 

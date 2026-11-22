@@ -473,6 +473,33 @@ func TestTraegerSchoolSessionApprovesParentWeeklyRequest(t *testing.T) {
 	assertTraegerAuthored(t, tc, "student_pickup_schedules", chain.StudentID, onWeekday(3))
 }
 
+// An ordinary admin account without a staff record, outside a session of the
+// Träger-Büro, still may not decide a family's request. The refusal names
+// the missing staff profile, so the screen can say what to fix (#7818).
+func TestSchoolSessionWithoutStaffRecordCannotApproveParentWeeklyRequest(t *testing.T) {
+	t.Parallel()
+
+	tc := setupStudentsRoute(t)
+	chain := testpkg.CreateTestParentGuardianChain(t, tc.db)
+	account := testpkg.CreateTestAccount(t, tc.db, fmt.Sprintf("admin-ohne-personal-%d@example.com", testpkg.UniqueSuffix()))
+	claims := testutil.AdminTestClaims(int(account.ID))
+
+	tenantCtx := tenant.WithTenantID(testpkg.WithPackageTenantRuntime(context.Background()), chain.TenantID)
+	pending, err := testpkg.TenantQuery3(t, tenantCtx, tc.db, tc.careRequests.CreateRequest, chain.StudentID, chain.AccountID,
+		json.RawMessage(`{"weekdays":[{"weekday":3,"pickup":"16:00"}]}`))
+	require.NoError(t, err)
+	token, _ := openWeeklyBaseline(t, tc, claims, chain.StudentID, pending.ID)
+
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("/care-schedule-change-requests/%d/decide", pending.ID),
+		strings.NewReader(fmt.Sprintf(`{"approve":true,"reason":"Passt so","impact_token":%q}`, token)))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	rr := authExec(t, tc, req, claims, []string{"admin:*"})
+	require.Equal(t, http.StatusForbidden, rr.Code, rr.Body.String())
+	assert.Contains(t, rr.Body.String(), `"code":"students.schedule_staff_profile_required"`)
+	assert.Empty(t, careRowAuthors(t, tc, "student_pickup_schedules", chain.StudentID, onWeekday(3)), "the refused approval writes no row")
+}
+
 // A day a parent set from the parents portal is taken over by the next staff
 // write. The Träger-Büro takes it over the same way: the row becomes a staff
 // entry without a staff author and with the mark, on a create over the day

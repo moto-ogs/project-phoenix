@@ -55,6 +55,21 @@ func (rs *Resource) getStaffIDFromJWT(r *http.Request) (int64, error) {
 	return staffID, nil
 }
 
+// exceptionTakeoverStaffID is the resolver a guardian's exception is taken
+// over with, in the contract careplan declares for it: (0, nil) for an
+// account without a staff record, an error only for a failed lookup (#7818).
+// Care Plan then refuses a missing author with its own sentinel, and a failed
+// lookup stays a server error.
+func (rs *Resource) exceptionTakeoverStaffID(r *http.Request) func() (int64, error) {
+	return func() (int64, error) {
+		staffID, err := rs.getStaffIDFromJWT(r)
+		if errors.Is(err, errPersonNotFoundForAccount) || errors.Is(err, errUserNotStaff) {
+			return 0, nil
+		}
+		return staffID, err
+	}
+}
+
 // withoutStaffRecord answers a request whose account has no staff record at
 // the school: the Träger-Büro writes without one, everybody else is refused.
 func withoutStaffRecord(r *http.Request, refusal error) (int64, error) {
@@ -421,7 +436,7 @@ func (rs *Resource) createStudentPickupException(w http.ResponseWriter, r *http.
 	tenantID := tenant.FromContext(r.Context())
 	exception, err := rs.PickupScheduleService.CreateOrReclaimException(
 		r.Context(), student.ID, exceptionDate, pickupTime, req.Reason, staffID,
-		func() (int64, error) { return rs.getStaffIDFromJWT(r) },
+		rs.exceptionTakeoverStaffID(r),
 	)
 	if err != nil {
 		renderExceptionWriteError(w, r, err)
@@ -480,7 +495,7 @@ func (rs *Resource) updateStudentPickupException(w http.ResponseWriter, r *http.
 	tenantID := tenant.FromContext(r.Context())
 	exception, err := rs.PickupScheduleService.UpdateException(
 		r.Context(), exceptionID, student.ID, exceptionDate, req.Reason, pickupTime, req.ClearPickupTime,
-		func() (int64, error) { return rs.getStaffIDFromJWT(r) },
+		rs.exceptionTakeoverStaffID(r),
 	)
 	if err != nil {
 		renderExceptionWriteError(w, r, err)

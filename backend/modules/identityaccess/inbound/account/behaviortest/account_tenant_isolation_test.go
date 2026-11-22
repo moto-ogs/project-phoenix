@@ -74,29 +74,9 @@ func (e *accountIsolationEnv) execute(t *testing.T, claims testutil.Claims, meth
 	return testutil.ExecuteWithAuth(t, e.router, req, claims)
 }
 
-// listAccounts lists the accounts the caller of ctx may administer.
-func (e *accountIsolationEnv) listAccounts(t *testing.T, ctx context.Context) []identityaccess.ManagedAccount {
-	t.Helper()
-	accounts, err := e.tc.resource.Sessions.ListManageableAccounts(ctx, identityaccess.AccountListFilter{})
-	require.NoError(t, err)
-	return accounts
-}
-
 // schoolCtx is the caller context of the school's administrator.
 func (e *accountIsolationEnv) schoolCtx() context.Context {
 	return tenant.WithTenantID(context.Background(), e.tenantID)
-}
-
-func (e *accountIsolationEnv) updateEmail(ctx context.Context, accountID int64, email string) error {
-	return e.tc.resource.Sessions.UpdateManageableAccount(ctx, identityaccess.AccountIdentityUpdate{AccountID: accountID, Email: email})
-}
-
-func accountIDs(accounts []identityaccess.ManagedAccount) []int64 {
-	ids := make([]int64, 0, len(accounts))
-	for _, account := range accounts {
-		ids = append(ids, account.ID)
-	}
-	return ids
 }
 
 func TestAccountManagementOwnTenantAllowed(t *testing.T) {
@@ -108,33 +88,16 @@ func TestAccountManagementOwnTenantAllowed(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, account.ID, got.ID)
 
-	updatedEmail := fmt.Sprintf("account-scope-updated-%d@example.test", account.ID)
-	require.NoError(t, e.updateEmail(e.schoolCtx(), account.ID, updatedEmail))
-
-	var listed []string
-	for _, managed := range e.listAccounts(t, e.schoolCtx()) {
-		if managed.ID == account.ID && managed.Active {
-			listed = append(listed, managed.Email)
-		}
-	}
-	assert.Equal(t, []string{updatedEmail}, listed)
+	require.NoError(t, e.tc.resource.Sessions.DeactivateAccount(e.schoolCtx(), account.ID))
+	assert.False(t, readStoredAccount(t, testpkg.Ctx(t), e.tc.db, account.ID).Active)
+	require.NoError(t, e.tc.resource.Sessions.ActivateAccount(e.schoolCtx(), account.ID))
+	assert.True(t, readStoredAccount(t, testpkg.Ctx(t), e.tc.db, account.ID).Active)
 }
 
 func assertAccountActionStatus(t *testing.T, e *accountIsolationEnv, claims testutil.Claims, method, path string, body any, status int) {
 	t.Helper()
 	rr := e.execute(t, claims, method, path, body)
 	require.Equal(t, status, rr.Code, rr.Body.String())
-}
-
-func TestAccountManagementForeignAccountsAbsentFromList(t *testing.T) {
-	t.Parallel()
-	e := newAccountIsolationEnv(t)
-	foreignID, _ := e.foreignAccount(t, "account-scope-list-foreign")
-	local := testpkg.CreateTestAccount(t, e.tc.db, "account-scope-list-local")
-
-	ids := accountIDs(e.listAccounts(t, e.schoolCtx()))
-	assert.Contains(t, ids, local.ID)
-	assert.NotContains(t, ids, foreignID)
 }
 
 func TestAccountManagementRBACForeignAccountDoesNotLeakExistence(t *testing.T) {
@@ -174,19 +137,16 @@ func TestAccountManagementForeignGetDoesNotLeakExistence(t *testing.T) {
 	assert.Equal(t, missingErr.Error(), foreignErr.Error())
 }
 
-func TestAccountManagementForeignUpdateDoesNotLeakExistence(t *testing.T) {
+func TestAccountManagementForeignDeactivateDoesNotLeakExistence(t *testing.T) {
 	t.Parallel()
 	e := newAccountIsolationEnv(t)
-	foreignID, originalEmail := e.foreignAccount(t, "account-scope-update-foreign")
-	foreignErr := e.updateEmail(e.schoolCtx(), foreignID, fmt.Sprintf("stolen-%d@example.test", foreignID))
-	missingErr := e.updateEmail(e.schoolCtx(), e.missingAccountID(t), "stolen-missing@example.test")
+	foreignID, _ := e.foreignAccount(t, "account-scope-deactivate-foreign")
+	foreignErr := e.tc.resource.Sessions.DeactivateAccount(e.schoolCtx(), foreignID)
+	missingErr := e.tc.resource.Sessions.DeactivateAccount(e.schoolCtx(), e.missingAccountID(t))
 	require.ErrorIs(t, foreignErr, identityaccess.ErrAccountNotFound)
 	require.ErrorIs(t, missingErr, identityaccess.ErrAccountNotFound)
 	assert.Equal(t, missingErr.Error(), foreignErr.Error())
-
-	var email string
-	require.NoError(t, e.tc.db.NewSelect().Column("email").TableExpr("auth.accounts").Where("id = ?", foreignID).Scan(context.Background(), &email))
-	assert.Equal(t, originalEmail, email)
+	assert.True(t, readStoredAccount(t, testpkg.Ctx(t), e.tc.db, foreignID).Active)
 }
 
 func TestAccountManagementInactiveMembershipDenied(t *testing.T) {
@@ -199,8 +159,7 @@ func TestAccountManagementInactiveMembershipDenied(t *testing.T) {
 	ctx := tenant.WithTenantID(context.Background(), e.tenantID)
 	_, err = e.tc.resource.Sessions.FindManageableAccount(ctx, account.ID)
 	require.ErrorIs(t, err, identityaccess.ErrAccountNotFound)
-	assert.NotContains(t, accountIDs(e.listAccounts(t, e.schoolCtx())), account.ID)
-	require.ErrorIs(t, e.updateEmail(e.schoolCtx(), account.ID, account.Email), identityaccess.ErrAccountNotFound)
+	require.ErrorIs(t, e.tc.resource.Sessions.DeactivateAccount(e.schoolCtx(), account.ID), identityaccess.ErrAccountNotFound)
 }
 
 func (e *accountIsolationEnv) createSchoolInOwnOrganization(t *testing.T) (int64, int64) {
@@ -227,8 +186,6 @@ func TestAccountManagementPlatformScopeRemainsGlobal(t *testing.T) {
 	assert.Equal(t, foreignID, got.ID)
 	require.NoError(t, e.tc.resource.Sessions.DeactivateAccount(ctx, foreignID))
 	require.NoError(t, e.tc.resource.Sessions.ActivateAccount(ctx, foreignID))
-
-	assert.Contains(t, accountIDs(e.listAccounts(t, ctx)), foreignID)
 }
 
 // Organization scope must not detach a command from an existing school unit.
@@ -240,11 +197,6 @@ func TestAccountManagementOrganizationWritesRollBackWithCaller(t *testing.T) {
 	ctx := testpkg.WithTestTenantRuntime(t, tenant.WithScope(tenant.WithOrgID(testpkg.Ctx(t), organizationID), tenant.ScopeOrg))
 	rollback := errors.New("later workflow command failed")
 	err := testpkg.WithinCurrentTenant(ctx, func(txCtx context.Context) error {
-		if err := e.tc.resource.Sessions.UpdateManageableAccount(txCtx, identityaccess.AccountIdentityUpdate{
-			AccountID: account.ID, Email: fmt.Sprintf("rollback-%d@example.invalid", account.ID),
-		}); err != nil {
-			return err
-		}
 		if err := e.tc.resource.Sessions.DeactivateAccount(txCtx, account.ID); err != nil {
 			return err
 		}
@@ -252,7 +204,6 @@ func TestAccountManagementOrganizationWritesRollBackWithCaller(t *testing.T) {
 	})
 	require.ErrorIs(t, err, rollback)
 	got := readStoredAccount(t, ctx, e.tc.db, account.ID)
-	assert.Equal(t, account.Email, got.Email)
 	assert.True(t, got.Active)
 }
 
@@ -297,16 +248,14 @@ func TestAccountManagementOrganizationWriteRetainsCallerSchoolBoundary(t *testin
 	t.Parallel()
 	e := newAccountIsolationEnv(t)
 	organizationID, schoolID := e.createSchoolInOwnOrganization(t)
-	accountID, email := e.accountForTenant(t, "org-school-boundary", schoolID)
+	accountID, _ := e.accountForTenant(t, "org-school-boundary", schoolID)
 	ctx := testpkg.WithTestTenantRuntime(t, tenant.WithScope(tenant.WithOrgID(testpkg.Ctx(t), organizationID), tenant.ScopeOrg))
 	err := testpkg.WithinCurrentTenant(ctx, func(txCtx context.Context) error {
-		return e.tc.resource.Sessions.UpdateManageableAccount(txCtx, identityaccess.AccountIdentityUpdate{
-			AccountID: accountID, Email: fmt.Sprintf("denied-%d@example.invalid", accountID),
-		})
+		return e.tc.resource.Sessions.DeactivateAccount(txCtx, accountID)
 	})
 	require.ErrorIs(t, err, identityaccess.ErrAccountNotFound)
 	got := readStoredAccount(t, ctx, e.tc.db, accountID)
-	require.Equal(t, email, got.Email)
+	require.True(t, got.Active)
 }
 
 // TestAccountManagementRejectsTraegerTokens: ADR 0084 removed the former org
