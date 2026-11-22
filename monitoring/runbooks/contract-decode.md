@@ -19,7 +19,7 @@ antwortet er 502 und schreibt `contract_decode_failed` mit:
 ## Schritte
 
 1. In Loki die Zeilen lesen:
-   `{env="prod",service="frontend"} |= "contract_decode_failed" | json`.
+   `{env="prod",service="frontend"} |= "contract_decode_failed" | json | context="server"`.
    `route` und `issues` nennen Feld und Art der Abweichung.
 2. Prüfen, ob Backend und Frontend aus demselben Stand stammen. Nach einem
    Deploy erst das Backend, dann das Frontend; ein Fenster zwischen beiden

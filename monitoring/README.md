@@ -122,7 +122,9 @@ the same correction. Runbook: [`runbooks/server-errors.md`](runbooks/server-erro
 ## Contract decode failures
 
 `grafana/provisioning/alerting/contract-decode.yml` alerts once per route on
-every `contract_decode_failed` line of the frontend in 5 minutes (#7809). The
+every `contract_decode_failed` line of the frontend's server logger
+(`context="server"`) in 5 minutes (#7809). Browser log lines on the same
+stream carry `context="client"` and never count. The
 catalog proxy writes that line and answers 502 when a backend answer does not
 match the generated decoder. It is prepared, not deployed; deploy it alone with
 `scripts/deploy-grafana-provisioning.sh <ssh-host> alerting/contract-decode.yml`.

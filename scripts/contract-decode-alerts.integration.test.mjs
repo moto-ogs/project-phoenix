@@ -64,6 +64,8 @@ test('contract decode LogQL alerts per route on the first rejected answer', { ti
   push(now - minute, { level: 'error', msg: 'error_displayed', error_code: 'general.write_answer_unreadable' });
   push(now - minute, rejected('GET /api/students/'), 'staging');
   push(now - minute, rejected('GET /api/visits/'), 'prod', 'server');
+  // The browser log endpoint writes to the same stream; a client cannot forge the alert.
+  push(now - minute, { ...rejected('GET /api/forged/'), context: 'client', provenance: 'client_log' });
   assert.deepEqual(firing(), ['GET /api/groups/{id}', 'POST /api/rooms/'],
-    'other frontend lines, staging and server lines do not alert');
+    'other frontend lines, staging, server and client log lines do not alert');
 });
