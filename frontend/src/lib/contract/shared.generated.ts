@@ -26,6 +26,9 @@ export type GuardianPhoneType = (typeof GUARDIAN_PHONE_TYPE_VALUES)[number];
 export const GUARDIAN_RELATIONSHIP_TYPE_VALUES = ["guardian", "other", "parent", "relative"] as const;
 export type GuardianRelationshipType = (typeof GUARDIAN_RELATIONSHIP_TYPE_VALUES)[number];
 
+export const LIST_FORMAT_VALUES = ["csv", "docx", "pdf", "xlsx"] as const;
+export type ListFormat = (typeof LIST_FORMAT_VALUES)[number];
+
 /** Go: absencetypes.AllowanceCarryResponse */
 export interface AllowanceCarryResponse {
   year: number;

@@ -23,6 +23,7 @@ import {
   type OpenEnum,
 } from "./runtime";
 import {
+  type ListFormat,
   type NewStudentGuardian,
 } from "./shared.generated";
 
@@ -2600,7 +2601,7 @@ export interface studentExportFilters {
 
 /** Go: presenceprojectionhttp.studentExportRequest */
 export interface studentExportRequest {
-  format?: string;
+  format?: OpenEnum<ListFormat>;
   preset?: string;
   title?: string;
   filters?: studentExportFilters;

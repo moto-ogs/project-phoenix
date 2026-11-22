@@ -8,6 +8,7 @@ import {
   nullable,
   object,
   optional,
+  requestBody,
   safeInt,
   str,
   success,
@@ -192,6 +193,15 @@ export const SeriesDetailResponseSchema: z.ZodType<SeriesDetailResponse, unknown
   include_school_breaks: bool,
 });
 
+/** Go: staffshifts.PlanExportRequest */
+export interface PlanExportRequest {
+  from?: string;
+  to?: string;
+  template?: string;
+  variant?: string;
+  format?: string;
+}
+
 /** Go: staffshifts.CancellationResponse */
 export interface CancellationResponse {
   shift: ShiftResponse;
@@ -265,6 +275,7 @@ export const routes = {
     method: "POST",
     pattern: "/api/staff-shifts/export",
     portals: ["tenant"],
+    request: requestBody<PlanExportRequest>(),
     response: fileAnswer,
   },
   "POST /api/staff-shifts/series": {

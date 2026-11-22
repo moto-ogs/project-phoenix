@@ -13484,6 +13484,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "staffExportRequest"
+      },
       "file": true
     },
     {
@@ -14045,6 +14049,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "PaymentExportRequest"
+      },
       "file": true
     },
     {
@@ -14825,6 +14833,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "PlanExportRequest"
+      },
       "file": true
     },
     {
@@ -16038,6 +16050,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "betreuungsplanExportRequest"
+      },
       "file": true
     },
     {
@@ -23030,6 +23046,15 @@
       ]
     },
     {
+      "name": "ListFormat",
+      "values": [
+        "csv",
+        "docx",
+        "pdf",
+        "xlsx"
+      ]
+    },
+    {
       "name": "MatchField",
       "values": [
         "class",
@@ -23048,6 +23073,14 @@
       "values": [
         "important",
         "info"
+      ]
+    },
+    {
+      "name": "PaymentExportFormat",
+      "values": [
+        "docx",
+        "pdf",
+        "xlsx"
       ]
     },
     {
@@ -71374,6 +71407,21 @@
       ]
     },
     {
+      "name": "PaymentExportRequest",
+      "go_type": "users.PaymentExportRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "format",
+          "optional": true,
+          "schema": {
+            "kind": "enum",
+            "ref": "PaymentExportFormat"
+          }
+        }
+      ]
+    },
+    {
       "name": "PaymentOverviewRow",
       "go_type": "users.PaymentOverviewRow",
       "fields": [
@@ -74199,6 +74247,48 @@
           "name": "table",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PlanExportRequest",
+      "go_type": "staffshifts.PlanExportRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "from",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "to",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "template",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "variant",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "format",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -104162,6 +104252,72 @@
       ]
     },
     {
+      "name": "betreuungsplanExportRequest",
+      "go_type": "timetablehttp.betreuungsplanExportRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "from",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "to",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "template",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "variant",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "format",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "room_id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "billingKeyDateCountResponse",
       "go_type": "operator.billingKeyDateCountResponse",
       "fields": [
@@ -117591,6 +117747,39 @@
       ]
     },
     {
+      "name": "staffExportRequest",
+      "go_type": "birthdays.staffExportRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "format",
+          "optional": true,
+          "schema": {
+            "kind": "enum",
+            "ref": "ListFormat"
+          }
+        },
+        {
+          "name": "title",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "months",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "stampRequest",
       "go_type": "parent.stampRequest",
       "request": true,
@@ -118218,7 +118407,8 @@
           "name": "format",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "enum",
+            "ref": "ListFormat"
           }
         },
         {

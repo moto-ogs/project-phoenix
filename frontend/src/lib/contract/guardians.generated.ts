@@ -16,10 +16,14 @@ import {
   safeInt,
   str,
   success,
+  type OpenEnum,
 } from "./runtime";
 import {
   type NewStudentGuardian,
 } from "./shared.generated";
+
+export const PAYMENT_EXPORT_FORMAT_VALUES = ["docx", "pdf", "xlsx"] as const;
+export type PaymentExportFormat = (typeof PAYMENT_EXPORT_FORMAT_VALUES)[number];
 
 /** Go: users.pendingApprovalResponse */
 export interface pendingApprovalResponse {
@@ -279,6 +283,11 @@ export const bulkInviteResponseSchema: z.ZodType<bulkInviteResponse, unknown> = 
   skipped_restricted: safeInt,
   problems: nullable(arr(bulkInviteProblemResponseSchema)),
 });
+
+/** Go: users.PaymentExportRequest */
+export interface PaymentExportRequest {
+  format?: OpenEnum<PaymentExportFormat>;
+}
 
 /** Go: users.StudentGuardianLinkRequest */
 export interface StudentGuardianLinkRequest {
@@ -569,6 +578,7 @@ export const routes = {
     method: "POST",
     pattern: "/api/guardians/payment-overview/export",
     portals: ["tenant"],
+    request: requestBody<PaymentExportRequest>(),
     response: fileAnswer,
   },
   "POST /api/guardians/students/{studentId}/guardians": {

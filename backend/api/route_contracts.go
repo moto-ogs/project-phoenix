@@ -518,7 +518,10 @@ func guardianRouteContracts() []common.RouteContract {
 		{Method: "DELETE", Pattern: "/{id}", Portals: portals, Query: deleteQuery, NoData: true},
 		{Method: "GET", Pattern: "/{id}/delete-preview", Portals: portals, Response: types.DeletePreview},
 		{Method: "POST", Pattern: "/{id}/email-stop", Portals: portals, NoData: true},
-		{Method: "POST", Pattern: "/payment-overview/export", Portals: portals, File: true},
+		{
+			Method: "POST", Pattern: "/payment-overview/export", Portals: portals, Request: types.PaymentExport, File: true,
+			Enums: []common.EnumContract{{Name: "PaymentExportFormat", Fields: []string{"PaymentExportRequest.format"}, Values: types.PaymentExportFormats}},
+		},
 		{Method: "DELETE", Pattern: "/{id}/email-stop", Portals: portals, NoData: true},
 		{Method: "DELETE", Pattern: "/{id}/email-block", Portals: portals, NoData: true},
 		{Method: "POST", Pattern: "/{id}/invite", Portals: portals, Response: types.Invitation},
