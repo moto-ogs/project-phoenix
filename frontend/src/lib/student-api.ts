@@ -9,7 +9,7 @@ import {
   type AttendanceHistory,
   type AttendanceHistoryWire,
 } from "./attendance-history-helpers";
-import { bffJson } from "./bff-fetch";
+import { legacyBffJson } from "./bff-fetch";
 import type {
   CareOfferingOptionResponse,
   EnrollmentAnswerFilterResponse,
@@ -188,7 +188,7 @@ export async function fetchStudents(
 }
 
 export async function fetchSchoolClasses(): Promise<string[]> {
-  return bffJson<string[]>("/api/students/school-classes");
+  return legacyBffJson<string[]>("/api/students/school-classes");
 }
 
 /** Names for a complete local child selector, including subsequent pages. */
@@ -206,7 +206,7 @@ export async function fetchAllStudentNames(): Promise<Student[]> {
 export async function fetchStudent(id: string): Promise<Student> {
   // The detail read carries the consent: one read and no consent waterfall.
   return mapStudentDetailResponse(
-    await bffJson<StudentDetailResponse>(
+    await legacyBffJson<StudentDetailResponse>(
       `/api/students/${encodeURIComponent(id)}?include_privacy_consent=true`,
     ),
   );
@@ -223,7 +223,7 @@ export async function fetchStudent(id: string): Promise<Student> {
  */
 export async function createStudent(body: StudentCreateBody): Promise<Student> {
   const consent = sentConsentPair(body);
-  const created = await bffJson<StudentResponse>("/api/students", {
+  const created = await legacyBffJson<StudentResponse>("/api/students", {
     method: "POST",
     body: studentCreateRequest(body),
   });
@@ -269,7 +269,7 @@ function markPrivacyConsentSaved(error: unknown): unknown {
 export async function fetchEnrollmentAnswerFilters(): Promise<
   EnrollmentAnswerFilter[]
 > {
-  const filters = await bffJson<EnrollmentAnswerFilterResponse[] | null>(
+  const filters = await legacyBffJson<EnrollmentAnswerFilterResponse[] | null>(
     "/api/students/enrollment-answer-filters",
   );
   return (filters ?? []).map(mapEnrollmentAnswerFilter);
@@ -279,7 +279,7 @@ export async function fetchEnrollmentAnswerFilters(): Promise<
 export async function fetchCareOfferingOptions(): Promise<
   CareOfferingOption[]
 > {
-  const offerings = await bffJson<CareOfferingOptionResponse[] | null>(
+  const offerings = await legacyBffJson<CareOfferingOptionResponse[] | null>(
     "/api/students/care-offerings",
   );
   return (offerings ?? []).map((offering) => ({
@@ -322,7 +322,7 @@ export interface StudentEnrollmentExtraFieldGroup {
 export async function fetchStudentEnrollmentExtraFields(
   id: string,
 ): Promise<StudentEnrollmentExtraFieldGroup[]> {
-  return bffJson<StudentEnrollmentExtraFieldGroup[]>(
+  return legacyBffJson<StudentEnrollmentExtraFieldGroup[]>(
     `/api/students/${encodeURIComponent(id)}/enrollment-extra-fields`,
   );
 }
@@ -409,7 +409,7 @@ export interface StudentFieldChange {
 export async function fetchStudentChangeHistory(
   id: string,
 ): Promise<StudentFieldChange[]> {
-  return bffJson<StudentFieldChange[]>(
+  return legacyBffJson<StudentFieldChange[]>(
     `/api/students/${encodeURIComponent(id)}/change-history`,
   );
 }
@@ -419,7 +419,7 @@ export async function fetchStudentAttendanceHistory(
   id: string,
 ): Promise<AttendanceHistory> {
   return mapAttendanceHistoryResponse(
-    await bffJson<AttendanceHistoryWire>(
+    await legacyBffJson<AttendanceHistoryWire>(
       `/api/students/${encodeURIComponent(id)}/attendance-history`,
     ),
   );
@@ -477,7 +477,7 @@ export async function schoolCheckinStudent(
       : note
         ? { action, note }
         : { action };
-    const data = await bffJson<schoolCheckinResponse>(
+    const data = await legacyBffJson<schoolCheckinResponse>(
       `/api/students/${encodeURIComponent(studentId)}/school-checkin`,
       { method: "POST", body },
     );
@@ -561,7 +561,7 @@ export async function schoolCheckinStudentsBatch(
       const body: schoolCheckinBatchRequest = checkoutReason
         ? { action, reason: checkoutReason, student_ids: chunk }
         : { action, student_ids: chunk };
-      const data = await bffJson<schoolCheckinBatchResponse>(
+      const data = await legacyBffJson<schoolCheckinBatchResponse>(
         "/api/students/school-checkin/batch",
         { method: "POST", body },
       );
@@ -648,7 +648,7 @@ export async function fetchStudentDeletionImpact(
   id: string,
   completionId?: string,
 ): Promise<StudentDeletionImpact> {
-  return bffJson<StudentDeletionImpact>(
+  return legacyBffJson<StudentDeletionImpact>(
     completionId
       ? `/api/students/care-withdrawals/${encodeURIComponent(completionId)}/deletion-impact`
       : `/api/students/${encodeURIComponent(id)}/delete-impact`,
@@ -660,7 +660,7 @@ export async function deleteStudentWithData(
   input: DeleteStudentWithDataInput,
   completionId?: string,
 ): Promise<void> {
-  await bffJson<unknown>(
+  await legacyBffJson<unknown>(
     completionId
       ? `/api/students/care-withdrawals/${encodeURIComponent(completionId)}`
       : `/api/students/${encodeURIComponent(id)}`,
@@ -696,7 +696,7 @@ export async function uploadStudentPhoto(
   if (options.consentAcknowledged) {
     formData.append("consent_acknowledged", "true");
   }
-  const data = await bffJson<{ photo_url: string }>(
+  const data = await legacyBffJson<{ photo_url: string }>(
     `/api/students/${encodeURIComponent(studentId)}/photo`,
     { method: "POST", body: formData },
   );
@@ -705,7 +705,7 @@ export async function uploadStudentPhoto(
 
 /** Removes a child's photo (idempotent). */
 export async function deleteStudentPhoto(studentId: string): Promise<void> {
-  await bffJson<unknown>(
+  await legacyBffJson<unknown>(
     `/api/students/${encodeURIComponent(studentId)}/photo`,
     { method: "DELETE" },
   );
@@ -741,7 +741,9 @@ export async function fetchRoomHistoryStop(
   studentId: string,
 ): Promise<RoomHistoryStop> {
   return mapRoomHistoryStop(
-    await bffJson<RoomHistoryStopResponse>(roomHistoryStopPath(studentId)),
+    await legacyBffJson<RoomHistoryStopResponse>(
+      roomHistoryStopPath(studentId),
+    ),
   );
 }
 
@@ -753,9 +755,12 @@ export async function stopRoomHistory(
   studentId: string,
 ): Promise<RoomHistoryStop> {
   return mapRoomHistoryStop(
-    await bffJson<RoomHistoryStopResponse>(roomHistoryStopPath(studentId), {
-      method: "PUT",
-    }),
+    await legacyBffJson<RoomHistoryStopResponse>(
+      roomHistoryStopPath(studentId),
+      {
+        method: "PUT",
+      },
+    ),
   );
 }
 
@@ -764,9 +769,12 @@ export async function resumeRoomHistory(
   studentId: string,
 ): Promise<RoomHistoryStop> {
   return mapRoomHistoryStop(
-    await bffJson<RoomHistoryStopResponse>(roomHistoryStopPath(studentId), {
-      method: "DELETE",
-    }),
+    await legacyBffJson<RoomHistoryStopResponse>(
+      roomHistoryStopPath(studentId),
+      {
+        method: "DELETE",
+      },
+    ),
   );
 }
 
@@ -790,7 +798,7 @@ export async function fetchStudentPrivacyConsent(
   studentId: string,
 ): Promise<PrivacyConsent> {
   return mapConsentPair(
-    await bffJson<PrivacyConsentResponse>(
+    await legacyBffJson<PrivacyConsentResponse>(
       `/api/students/${encodeURIComponent(studentId)}/privacy-consent`,
     ),
   );
@@ -799,7 +807,7 @@ export async function fetchStudentPrivacyConsent(
 /** The consent a new child starts with: the school's defaults. */
 export async function fetchPrivacyConsentDefaults(): Promise<PrivacyConsent> {
   return mapConsentPair(
-    await bffJson<PrivacyConsentDefaultsResponse>(
+    await legacyBffJson<PrivacyConsentDefaultsResponse>(
       "/api/students/privacy-consent/defaults",
     ),
   );

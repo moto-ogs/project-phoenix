@@ -33,18 +33,15 @@ function mapPartialAbsence(row: PartialAbsenceResponse): StudentPartialAbsence {
   };
 }
 
-function partialAbsencesPath(studentId: string, id?: string | null): string {
-  const base = `/api/students/${encodeURIComponent(studentId)}/partial-absences`;
-  return id ? `${base}/${encodeURIComponent(id)}` : base;
-}
-
 export async function fetchStudentPartialAbsences(
   studentId: string,
   from: string,
   to: string,
 ): Promise<StudentPartialAbsence[]> {
-  const rows = await bffJson<PartialAbsenceResponse[]>(
-    `${partialAbsencesPath(studentId)}?from=${from}&to=${to}`,
+  const rows = await bffJson(
+    "tenant",
+    "GET /api/students/{id}/partial-absences",
+    { params: { id: studentId }, query: { from, to } },
   );
   return rows.map(mapPartialAbsence);
 }
@@ -59,10 +56,16 @@ export async function saveStudentPartialAbsence(
   const body: PartialAbsenceRequest = reason
     ? { date, from_time: fromTime, reason }
     : { date, from_time: fromTime };
-  const row = await bffJson<PartialAbsenceResponse>(
-    partialAbsencesPath(studentId, partialAbsenceId),
-    { method: partialAbsenceId ? "PUT" : "POST", body },
-  );
+  const row = partialAbsenceId
+    ? await bffJson(
+        "tenant",
+        "PUT /api/students/{id}/partial-absences/{partialAbsenceId}",
+        { params: { id: studentId, partialAbsenceId }, body },
+      )
+    : await bffJson("tenant", "POST /api/students/{id}/partial-absences", {
+        params: { id: studentId },
+        body,
+      });
   return mapPartialAbsence(row);
 }
 
@@ -70,7 +73,9 @@ export async function deleteStudentPartialAbsence(
   studentId: string,
   partialAbsenceId: string,
 ): Promise<void> {
-  await bffJson<unknown>(partialAbsencesPath(studentId, partialAbsenceId), {
-    method: "DELETE",
-  });
+  await bffJson(
+    "tenant",
+    "DELETE /api/students/{id}/partial-absences/{partialAbsenceId}",
+    { params: { id: studentId, partialAbsenceId } },
+  );
 }

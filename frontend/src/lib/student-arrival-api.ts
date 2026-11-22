@@ -1,5 +1,5 @@
 import { ApiError } from "./api-error";
-import { bffJson } from "./bff-fetch";
+import { legacyBffJson } from "./bff-fetch";
 import { DEPARTURE_WEEKDAYS } from "./departure-plan";
 import { knownEnum } from "./contract/known-enum";
 import type {
@@ -183,7 +183,7 @@ export async function fetchArrivalData(
   if (date) query.set("date", date);
   if (toDate) query.set("to", toDate);
   const suffix = query.size > 0 ? `?${query.toString()}` : "";
-  const data = await bffJson<ArrivalDataResponse>(
+  const data = await legacyBffJson<ArrivalDataResponse>(
     `/api/students/${encodeURIComponent(studentId)}/arrival-schedules${suffix}`,
   );
   return mapArrivalData(data);
@@ -200,7 +200,7 @@ function mapArrivalData(data: ArrivalDataResponse): ArrivalData {
 export async function fetchBulkArrivalScheduleStatus(
   studentIds: string[],
 ): Promise<number> {
-  const status = await bffJson<{ student_ids: (number | string)[] }>(
+  const status = await legacyBffJson<{ student_ids: (number | string)[] }>(
     "/api/students/arrival-schedules/status",
     {
       method: "POST",
@@ -211,7 +211,7 @@ export async function fetchBulkArrivalScheduleStatus(
 }
 
 export async function fetchArrivalSettings(): Promise<ArrivalSettings> {
-  const settings = await bffJson<arrivalSettingsResponse>(
+  const settings = await legacyBffJson<arrivalSettingsResponse>(
     "/api/students/arrival-settings",
   );
   return {
@@ -230,7 +230,7 @@ export async function updateArrivalSchedules(
   studentId: string,
   schedules: ArrivalScheduleInput[],
 ): Promise<ArrivalData> {
-  const data = await bffJson<ArrivalDataResponse>(
+  const data = await legacyBffJson<ArrivalDataResponse>(
     `/api/students/${encodeURIComponent(studentId)}/arrival-schedules`,
     { method: "PUT", body: { schedules } },
   );
@@ -267,7 +267,7 @@ export async function bulkUpsertArrivalSchedules(
     }
     body.student_ids = studentIds;
   }
-  return bffJson<unknown>("/api/students/arrival-schedules/bulk", {
+  return legacyBffJson<unknown>("/api/students/arrival-schedules/bulk", {
     method: "POST",
     body,
   });
@@ -284,7 +284,7 @@ export async function createArrivalException(
   studentId: string,
   input: ArrivalExceptionInput,
 ): Promise<ArrivalException> {
-  const data = await bffJson<StudentArrivalExceptionResponse>(
+  const data = await legacyBffJson<StudentArrivalExceptionResponse>(
     `/api/students/${encodeURIComponent(studentId)}/arrival-exceptions`,
     { method: "POST", body: input },
   );
@@ -296,7 +296,7 @@ export async function updateArrivalException(
   exceptionId: string,
   input: ArrivalExceptionInput,
 ): Promise<ArrivalException> {
-  const data = await bffJson<StudentArrivalExceptionResponse>(
+  const data = await legacyBffJson<StudentArrivalExceptionResponse>(
     `/api/students/${encodeURIComponent(studentId)}/arrival-exceptions/${encodeURIComponent(exceptionId)}`,
     { method: "PUT", body: input },
   );
@@ -307,7 +307,7 @@ export async function deleteArrivalException(
   studentId: string,
   exceptionId: string,
 ): Promise<void> {
-  await bffJson<void>(
+  await legacyBffJson<void>(
     `/api/students/${encodeURIComponent(studentId)}/arrival-exceptions/${encodeURIComponent(exceptionId)}`,
     { method: "DELETE" },
   );
@@ -322,7 +322,7 @@ export async function createArrivalNote(
   studentId: string,
   input: ArrivalNoteInput,
 ): Promise<ArrivalNote> {
-  const data = await bffJson<ArrivalNoteResponse>(
+  const data = await legacyBffJson<ArrivalNoteResponse>(
     `/api/students/${encodeURIComponent(studentId)}/arrival-notes`,
     { method: "POST", body: input },
   );
@@ -334,7 +334,7 @@ export async function updateArrivalNote(
   noteId: string,
   input: ArrivalNoteInput,
 ): Promise<ArrivalNote> {
-  const data = await bffJson<ArrivalNoteResponse>(
+  const data = await legacyBffJson<ArrivalNoteResponse>(
     `/api/students/${encodeURIComponent(studentId)}/arrival-notes/${encodeURIComponent(noteId)}`,
     { method: "PUT", body: input },
   );
@@ -345,7 +345,7 @@ export async function deleteArrivalNote(
   studentId: string,
   noteId: string,
 ): Promise<void> {
-  await bffJson<void>(
+  await legacyBffJson<void>(
     `/api/students/${encodeURIComponent(studentId)}/arrival-notes/${encodeURIComponent(noteId)}`,
     {
       method: "DELETE",
@@ -364,7 +364,7 @@ interface ClassArrivalTimes {
 export async function fetchClassArrivalTimes(
   schoolClass: string,
 ): Promise<ClassArrivalTimes> {
-  return bffJson<ClassArrivalTimes>(
+  return legacyBffJson<ClassArrivalTimes>(
     `/api/students/class-arrival-times/${encodeURIComponent(schoolClass)}`,
   );
 }
@@ -407,7 +407,7 @@ function classArrivalExceptionPath(schoolClass: string, date?: string): string {
 export async function fetchClassArrivalExceptions(
   schoolClass: string,
 ): Promise<ClassArrivalExceptionList> {
-  return bffJson<ClassArrivalExceptionList>(
+  return legacyBffJson<ClassArrivalExceptionList>(
     classArrivalExceptionPath(schoolClass),
   );
 }
@@ -417,7 +417,7 @@ export async function upsertClassArrivalException(
   date: string,
   input: ClassArrivalExceptionInput,
 ): Promise<ClassArrivalException> {
-  return bffJson<ClassArrivalException>(
+  return legacyBffJson<ClassArrivalException>(
     classArrivalExceptionPath(schoolClass, date),
     { method: "PUT", body: input },
   );
@@ -427,7 +427,7 @@ export async function deleteClassArrivalException(
   schoolClass: string,
   date: string,
 ): Promise<void> {
-  await bffJson<void>(classArrivalExceptionPath(schoolClass, date), {
+  await legacyBffJson<void>(classArrivalExceptionPath(schoolClass, date), {
     method: "DELETE",
   });
 }

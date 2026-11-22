@@ -2,7 +2,6 @@
 import type {
   ActivityCategoryResponse,
   ActivityResponse,
-  EnrolledStudentResponse,
 } from "./contract/activities.generated";
 import { bffJson } from "./bff-fetch";
 import { sessionFetch } from "./session-cache";
@@ -74,8 +73,12 @@ export async function fetchActivities(
 export async function getEnrolledStudents(
   activityId: string,
 ): Promise<ActivityParticipant[]> {
-  const students = await bffJson<EnrolledStudentResponse[]>(
-    `/api/activities/${encodeURIComponent(activityId)}/students`,
+  const students = await bffJson(
+    "tenant",
+    "GET /api/activities/{id}/students",
+    {
+      params: { id: activityId },
+    },
   );
   return students.map(mapEnrolledStudentResponse);
 }

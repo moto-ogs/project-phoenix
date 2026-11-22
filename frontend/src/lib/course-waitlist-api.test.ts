@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 const { mockBffJson } = vi.hoisted(() => ({ mockBffJson: vi.fn() }));
-vi.mock("~/lib/bff-fetch", () => ({ bffJson: mockBffJson }));
+vi.mock("~/lib/bff-fetch", () => ({ legacyBffJson: mockBffJson }));
 
 import { fetchCourseWaitlists } from "./course-waitlist-api";
 
