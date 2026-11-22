@@ -3627,6 +3627,7 @@ export interface ContributionRule {
   cap_cents: number | null;
   tariff_sibling_price: boolean;
   counts_family_children: boolean;
+  sibling_all_children: boolean;
   updated_at: string;
 }
 
@@ -3648,6 +3649,7 @@ export const ContributionRuleSchema: z.ZodType<ContributionRule, unknown> = obje
   cap_cents: nullable(safeInt),
   tariff_sibling_price: bool,
   counts_family_children: bool,
+  sibling_all_children: bool,
   updated_at: instant,
 });
 
@@ -3672,6 +3674,21 @@ export const CareModuleSchema: z.ZodType<CareModule, unknown> = object<CareModul
   booked_weekdays: nullable(arr(str)),
   booked_days_per_week: nullable(arr(safeInt)),
   contract_count: safeInt,
+});
+
+/** Go: carecontract.ContractCorrectionValues */
+export interface ContractCorrectionValues {
+  parties: string[] | null;
+  method: string;
+  concluded_on: string | null;
+  date_unknown: boolean;
+}
+
+export const ContractCorrectionValuesSchema: z.ZodType<ContractCorrectionValues, unknown> = object<ContractCorrectionValues>({
+  parties: nullable(arr(str)),
+  method: str,
+  concluded_on: nullable(calendarDate),
+  date_unknown: bool,
 });
 
 /** Go: parentbilling.HolidaySiblingChild */

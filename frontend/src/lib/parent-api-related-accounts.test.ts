@@ -151,13 +151,14 @@ describe("parent-api related accounts", () => {
   });
 
   describe("removeRelatedAccount", () => {
-    it("resolves on a 200 DELETE", async () => {
+    it("resolves on a DELETE without content", async () => {
       let method = "";
       let url = "";
       mockFetch(async (input, init) => {
         url = String(input);
         method = String(init?.method);
-        return new Response("", { status: 200 });
+        // The catalog proxy answers a route without data with 204.
+        return new Response(null, { status: 204 });
       });
       await expect(removeRelatedAccount("3", "10")).resolves.toBeUndefined();
       expect(method).toBe("DELETE");

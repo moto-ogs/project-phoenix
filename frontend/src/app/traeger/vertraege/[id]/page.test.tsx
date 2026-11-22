@@ -1,3 +1,4 @@
+import { testClockDay } from "~/test/clock";
 import {
   fireEvent,
   render,
@@ -37,6 +38,19 @@ vi.mock("~/lib/traeger-sepa-api", () => ({
   fetchSepaMandateHistory: vi.fn().mockResolvedValue([]),
   createSepaMandate: vi.fn(),
   revokeSepaMandate: vi.fn(),
+}));
+// The card „Empfänger und Zahlung“ of the family (#7770) has its own tests
+// (family-billing-status-card.test.tsx); here the family has no deviation.
+vi.mock("~/lib/traeger-billing-terms-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/traeger-billing-terms-api")>()),
+  fetchContractFamilyBilling: (contractId: string) =>
+    Promise.resolve({
+      contractId,
+      familyEmail: "",
+      partyName: "",
+      partyLastName: "",
+      family: null,
+    }),
 }));
 // The change requests of the parents (#5979) and the termination (#4682)
 // have their own tests; here no change waits and nobody gave notice.
@@ -180,6 +194,7 @@ const DRAFT: CareContractDetail = {
   signature: null,
   reminders: [],
   versions: [],
+  corrections: [],
 };
 
 function renderPage() {
@@ -378,6 +393,8 @@ describe("TraegerVertragPage", () => {
     expect(
       screen.getByText(/Die Eltern sehen den Vertrag erst/),
     ).toBeInTheDocument();
+    // A discarded draft would take the family's choice with it (#7770).
+    expect(screen.queryByText("Empfänger und Zahlung")).not.toBeInTheDocument();
 
     showTab("Kündigung");
     expect(
@@ -676,6 +693,10 @@ describe("TraegerVertragPage", () => {
     expect(
       screen.getByText(/Die Mail ging an erika@example.org/),
     ).toBeInTheDocument();
+    // A sent contract cannot be discarded: its family sets how it pays.
+    expect(
+      await screen.findByText("Empfänger und Zahlung"),
+    ).toBeInTheDocument();
     showTab("Unterschrift und Versand");
     expect(screen.getByText("Gesendet")).toBeInTheDocument();
     showTab("Versionen");
@@ -683,6 +704,37 @@ describe("TraegerVertragPage", () => {
     expect(
       screen.queryByRole("button", { name: /Vertrag senden/ }),
     ).not.toBeInTheDocument();
+  });
+
+  it("offers no payment card on a contract that is over", async () => {
+    // What is saved goes with the contract it was saved through, and a
+    // contract that is over is deleted first (#7770).
+    api.fetchCareContract.mockResolvedValue({
+      ...DRAFT,
+      status: "beendet",
+      documentFrozen: true,
+    });
+    renderPage();
+
+    expect(
+      await screen.findByText("E-Mail bei Vertragserstellung"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Empfänger und Zahlung")).not.toBeInTheDocument();
+  });
+
+  it("offers no payment card after the last day of a terminated contract", async () => {
+    api.fetchCareContract.mockResolvedValue({
+      ...DRAFT,
+      status: "gekuendigt",
+      endsOn: testClockDay(-1),
+      documentFrozen: true,
+    });
+    renderPage();
+
+    expect(
+      await screen.findByText("E-Mail bei Vertragserstellung"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Empfänger und Zahlung")).not.toBeInTheDocument();
   });
 
   it("keeps a concluded contract unchanged and allows resending", async () => {
@@ -739,6 +791,79 @@ describe("TraegerVertragPage", () => {
     });
     expect(within(dialog).getByText(/erika@example\.org/)).toBeInTheDocument();
     expect(api.resendCareContract).not.toHaveBeenCalled();
+  });
+
+  it("shows a completed imported contract without inventing its day", async () => {
+    api.fetchCareContract.mockResolvedValue({
+      ...DRAFT,
+      status: "aktiv",
+      concluded: {
+        method: "papier",
+        // A stand-in instant: the office does not know the day.
+        at: "2026-08-01T00:00:00Z",
+        takenOver: true,
+        dateUnknown: true,
+      },
+      parties: [
+        {
+          firstName: "Erika",
+          lastName: "Muster",
+          email: "erika@example.org",
+          hasAccount: true,
+        },
+        { firstName: "Jan", lastName: "Muster", email: "", hasAccount: false },
+      ],
+      documentFrozen: true,
+      corrections: [
+        {
+          correctedAt: "2026-09-08T10:00:00Z",
+          file: "vertraege-nachgepflegt.csv",
+          evidence: "Vertrag-Muster.pdf",
+          changes: ["parties", "concluded_on"],
+          before: {
+            parties: ["Erika Muster"],
+            method: "papier",
+            concludedOn: "2026-03-12",
+            dateUnknown: false,
+          },
+          after: {
+            parties: ["Erika Muster", "Jan Muster"],
+            method: "papier",
+            concludedOn: null,
+            dateUnknown: true,
+          },
+        },
+      ],
+    });
+    renderPage();
+
+    expect(
+      await screen.findByText("Abschlussdatum unbekannt, auf Papier"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/01\.08\.2026/)).not.toBeInTheDocument();
+    // Every party of the contract, not only the first.
+    const parents = screen
+      .getByRole("heading", { name: "Eltern" })
+      .closest("section");
+    if (!parents) throw new Error("card missing");
+    expect(within(parents).getByText("Erika Muster")).toBeInTheDocument();
+    expect(within(parents).getByText("Jan Muster")).toBeInTheDocument();
+    expect(
+      within(parents).getByText("Keine E-Mail-Adresse"),
+    ).toBeInTheDocument();
+
+    const card = screen
+      .getByRole("heading", { name: "Nachgepflegte Angaben" })
+      .closest("section");
+    if (!card) throw new Error("card missing");
+    const corrections = within(card);
+    expect(
+      corrections.getByText("Nachgepflegt am 08.09.2026"),
+    ).toBeInTheDocument();
+    expect(corrections.getByText("Vertrag-Muster.pdf")).toBeInTheDocument();
+    expect(corrections.getByText("12.03.2026").tagName).toBe("DEL");
+    expect(corrections.getByText("Unbekannt").tagName).toBe("INS");
+    expect(corrections.getByText("Jan Muster").tagName).toBe("INS");
   });
 
   it("follows the address after a tab click and browser navigation", async () => {

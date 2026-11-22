@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The debtor numbers of the children in the list of families (#7007). When
@@ -38,9 +39,11 @@ type ChildNumberStore interface {
 
 // contractChild is the child of a contract as the list names it.
 type contractChild struct {
-	family    string
-	recipient parentbilling.CareRecipient
-	child     parentbilling.FamilyChild
+	family string
+	// contractID is the contract the child was read from.
+	contractID int64
+	recipient  parentbilling.CareRecipient
+	child      parentbilling.FamilyChild
 	// until is the last day of the contract within the window read.
 	until calendar.Date
 }
@@ -80,12 +83,12 @@ func (f *BillingFamilies) contractChildren(ctx context.Context, organizationID i
 		}
 		if i, seen := at[parentbilling.ChildDebtorNumberKey(family, key)]; seen {
 			if until[id].After(children[i].until) {
-				children[i].until = until[id]
+				children[i].until, children[i].contractID = until[id], id
 			}
 			continue
 		}
 		at[parentbilling.ChildDebtorNumberKey(family, key)] = len(children)
-		children = append(children, contractChild{family: family, recipient: recipient, until: until[id], child: parentbilling.FamilyChild{
+		children = append(children, contractChild{family: family, contractID: id, recipient: recipient, until: until[id], child: parentbilling.FamilyChild{
 			FirstName: version.ChildFirstName, LastName: version.ChildLastName, BirthDate: version.ChildBirthDate}})
 	}
 	return children, nil
@@ -110,6 +113,51 @@ func contractSpans(versions []parentbilling.CareContractVersion) (map[int64]pare
 	return first, until, ids
 }
 
+// familyList collects the families of the list of children by address.
+type familyList struct {
+	families []parentbilling.FamilyChildNumbers
+	at       map[string]int
+	// until is the last day of the contract each family is opened by.
+	until map[string]calendar.Date
+}
+
+// add answers the place of the family and lists a new one.
+// The family is opened by its contract that runs longest: what is saved
+// through it goes with it, so it should be the last one to go (#7770).
+func (l *familyList) add(family string, contractID int64, last calendar.Date, recipient parentbilling.CareRecipient) int {
+	i, ok := l.at[family]
+	if !ok {
+		l.families = append(l.families, parentbilling.FamilyChildNumbers{ContractID: ident.ID(contractID), FamilyEmail: family,
+			RecipientFirstName: recipient.FirstName, RecipientLastName: recipient.LastName, Children: []parentbilling.FamilyChild{}})
+		l.at[family], l.until[family] = len(l.families)-1, last
+		return l.at[family]
+	}
+	if l.families[i].RecipientLastName == "" {
+		l.families[i].RecipientFirstName, l.families[i].RecipientLastName = recipient.FirstName, recipient.LastName
+	}
+	if last.After(l.until[family]) {
+		l.families[i].ContractID, l.until[family] = ident.ID(contractID), last
+	}
+	return i
+}
+
+// openedByRunningContracts leaves a family whose longest contract is over
+// without a contract to open it by: what is saved goes with the contract
+// it was saved through, and a contract that is over is deleted first
+// (#7770). Such a family keeps the contract of its deviation.
+func openedByRunningContracts(families []parentbilling.FamilyChildNumbers, contracts []contractChild, today calendar.Date) []parentbilling.FamilyChildNumbers {
+	until := make(map[int64]calendar.Date, len(contracts))
+	for _, contract := range contracts {
+		until[contract.contractID] = contract.until
+	}
+	for i := range families {
+		if last, known := until[families[i].ContractID.Int64()]; known && last.Before(today) {
+			families[i].ContractID = 0
+		}
+	}
+	return families
+}
+
 // familyChildNumbers lists the families of the contracts and of the
 // numbers with their children, by address, and answers the numbers it
 // shows, for the trail.
@@ -117,18 +165,11 @@ func familyChildNumbers(contracts []contractChild, numbers []parentbilling.Child
 	[]parentbilling.FamilyChildNumbers, []parentbilling.ChildDebtorNumber,
 ) {
 	families := []parentbilling.FamilyChildNumbers{}
-	at := map[string]int{}
-	add := func(family string, recipient parentbilling.CareRecipient) int {
-		if i, ok := at[family]; ok {
-			if families[i].RecipientLastName == "" {
-				families[i].RecipientFirstName, families[i].RecipientLastName = recipient.FirstName, recipient.LastName
-			}
-			return i
-		}
-		families = append(families, parentbilling.FamilyChildNumbers{FamilyEmail: family, RecipientFirstName: recipient.FirstName,
-			RecipientLastName: recipient.LastName, Children: []parentbilling.FamilyChild{}})
-		at[family] = len(families) - 1
-		return at[family]
+	listed := familyList{at: map[string]int{}, until: map[string]calendar.Date{}}
+	add := func(family string, contractID int64, last calendar.Date, recipient parentbilling.CareRecipient) int {
+		i := listed.add(family, contractID, last, recipient)
+		families = listed.families
+		return i
 	}
 	byKey := make(map[string]parentbilling.ChildDebtorNumber, len(numbers))
 	for _, number := range numbers {
@@ -137,7 +178,7 @@ func familyChildNumbers(contracts []contractChild, numbers []parentbilling.Child
 	shown := map[string]bool{}
 	var read []parentbilling.ChildDebtorNumber
 	for _, contract := range contracts {
-		i := add(contract.family, contract.recipient)
+		i := add(contract.family, contract.contractID, contract.until, contract.recipient)
 		child := contract.child
 		key := parentbilling.ChildDebtorNumberKey(contract.family, parentbilling.ChildKey(child.FirstName, child.LastName, child.BirthDate))
 		if number, ok := byKey[key]; ok {
@@ -151,7 +192,7 @@ func familyChildNumbers(contracts []contractChild, numbers []parentbilling.Child
 		if shown[number.Key()] {
 			continue
 		}
-		i := add(number.FamilyEmail, parentbilling.CareRecipient{})
+		i := add(number.FamilyEmail, 0, "", parentbilling.CareRecipient{})
 		families[i].Children = append(families[i].Children, parentbilling.FamilyChild{FirstName: number.ChildFirstName,
 			LastName: number.ChildLastName, BirthDate: number.ChildBirthDate, DebtorNumber: number.DebtorNumber})
 		read = append(read, number)
@@ -168,8 +209,9 @@ func familyChildNumbers(contracts []contractChild, numbers []parentbilling.Child
 // FamilyChildren lists the families with their children and numbers, and
 // records the read of every number it shows. The office can prepare the
 // numbers before the Träger keeps them per child; the list of families asks
-// for them only then.
-func (f *BillingFamilies) FamilyChildren(ctx context.Context, reviewer parentbilling.HolidayReviewer) ([]parentbilling.FamilyChildNumbers, error) {
+// for them only then. Without numbers it answers the families with a
+// contract alone: no child, no number and so no read to record (#7770).
+func (f *BillingFamilies) FamilyChildren(ctx context.Context, reviewer parentbilling.HolidayReviewer, numbers bool) ([]parentbilling.FamilyChildNumbers, error) {
 	if err := validReviewer(reviewer); err != nil {
 		return nil, err
 	}
@@ -177,11 +219,19 @@ func (f *BillingFamilies) FamilyChildren(ctx context.Context, reviewer parentbil
 	if err != nil {
 		return nil, err
 	}
-	numbers, err := f.store.ChildDebtorNumbers(ctx, reviewer.OrganizationID)
+	if !numbers {
+		families, _ := familyChildNumbers(contracts, nil)
+		for i := range families {
+			families[i].Children = []parentbilling.FamilyChild{}
+		}
+		return openedByRunningContracts(families, contracts, f.today()), nil
+	}
+	stored, err := f.store.ChildDebtorNumbers(ctx, reviewer.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
-	families, read := familyChildNumbers(contracts, numbers)
+	families, read := familyChildNumbers(contracts, stored)
+	families = openedByRunningContracts(families, contracts, f.today())
 	if err := f.store.InsertChildDebtorNumberEvents(ctx, reviewer.OrganizationID, reviewer.AccountID, familyBillingRead, read); err != nil {
 		return nil, fmt.Errorf("parent billing: record the read of the children's numbers: %w", err)
 	}

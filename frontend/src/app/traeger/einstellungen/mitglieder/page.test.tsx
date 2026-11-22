@@ -26,6 +26,11 @@ vi.mock("~/lib/traeger-list-export", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/traeger-list-export")>()),
   downloadTraegerList: vi.fn(),
 }));
+// downloadTraegerList is mocked; the file request it would read never runs.
+vi.mock("~/lib/bff-fetch", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/bff-fetch")>()),
+  bffFile: () => new Promise<Response>(() => undefined),
+}));
 
 const api = vi.hoisted(() => ({
   fetchTraegerBuero: vi.fn(),

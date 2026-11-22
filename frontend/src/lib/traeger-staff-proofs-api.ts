@@ -1,4 +1,4 @@
-import { bffJson } from "~/lib/bff-fetch";
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Nachweise am Personalstamm des Trägers (#4707, ADR 0089 Abschnitt 7,
  * ADR 0238).
@@ -15,12 +15,11 @@ import {
   downloadTraegerList,
   type TraegerListFile,
   type TraegerListFormat,
+  listExportQuery,
 } from "./traeger-list-export";
 import type * as traegerStaffProofsContract from "./contract/traeger-staff-proofs.generated";
 import type * as sharedContract from "./contract/shared.generated";
 import { knownEnum } from "./contract/known-enum";
-
-const BASE = "/api/traeger/staff-proofs";
 
 // Go does not register the set; the contract types it as string. A value
 // this build does not know stays undefined and shows as „–“.
@@ -284,7 +283,11 @@ export async function deleteStaffProof(
 export function downloadStaffProofList(
   format: TraegerListFormat,
 ): Promise<TraegerListFile> {
-  return downloadTraegerList(`${BASE}/export`, format);
+  return downloadTraegerList(
+    bffFile("org", "GET /traeger/staff-proofs/export", {
+      query: listExportQuery(format),
+    }),
+  );
 }
 
 /** Name, Farbe und Satz je Stand, wie auf der Liste der Schule. */

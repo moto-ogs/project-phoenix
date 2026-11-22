@@ -94,8 +94,11 @@ export function CareContractNoticeCard({
 }: Readonly<{
   contractId: string;
   status: CareContractStatus | undefined;
-  /** When the contract was concluded: no declaration can be older. */
-  concludedAt: string;
+  /**
+   * When the contract was concluded: no declaration can be older. null: a
+   * taken-over contract whose day nobody knows (#7767), without a bound.
+   */
+  concludedAt: string | null;
   onChanged: () => void;
 }>) {
   const {

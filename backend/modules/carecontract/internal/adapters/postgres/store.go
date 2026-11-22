@@ -248,7 +248,7 @@ const moduleNamesSQL = `ARRAY(SELECT s.module_name FROM care_contract.contract_v
 // summarySQL reads a contract with its current version (currentVersionOrderSQL) and its first
 // party; the filter follows. Bind order: today twice, then organization_id.
 const summarySQL = `SELECT c.id, c.status, c.school_id, c.student_id, c.created_at, c.sent_at, c.concluded_at, c.conclusion_method,
-	c.ends_on, c.early_start_requested,
+	c.conclusion_date_unknown, c.import_origin IS NOT NULL AS taken_over, c.ends_on, c.early_start_requested,
 	v.school_name, v.child_first_name, v.child_last_name, ` + moduleNamesSQL + ` AS module_names, v.effective_from,
 	COALESCE(p.first_name || ' ' || p.last_name, '') AS party_name, COALESCE(p.email, '') AS party_email
 	FROM care_contract.contracts AS c
@@ -278,6 +278,8 @@ type summaryRow struct {
 	SentAt         *time.Time    `bun:"sent_at"`
 	ConcludedAt    *time.Time    `bun:"concluded_at"`
 	Method         *string       `bun:"conclusion_method"`
+	DateUnknown    bool          `bun:"conclusion_date_unknown"`
+	TakenOver      bool          `bun:"taken_over"`
 	SchoolName     string        `bun:"school_name"`
 	ChildFirstName string        `bun:"child_first_name"`
 	ChildLastName  string        `bun:"child_last_name"`
@@ -305,7 +307,7 @@ func (r summaryRow) concluded() *carecontract.Concluded {
 	if r.ConcludedAt == nil || r.Method == nil {
 		return nil
 	}
-	return &carecontract.Concluded{Method: *r.Method, At: *r.ConcludedAt}
+	return &carecontract.Concluded{Method: *r.Method, At: *r.ConcludedAt, DateUnknown: r.DateUnknown, TakenOver: r.TakenOver}
 }
 
 // accountRef is the acting account, or NULL for the automatic conclusion,

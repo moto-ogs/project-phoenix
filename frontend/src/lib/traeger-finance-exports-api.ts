@@ -1,4 +1,4 @@
-import { bffJson } from "~/lib/bff-fetch";
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the finance exports (#4693): the field mapping of the
  * Sollstellung, the file numbers of the Träger, the released runs with
@@ -261,8 +261,6 @@ export interface InvoiceHistory {
   readonly steps: readonly InvoiceStep[];
 }
 
-const BASE = "/api/traeger/finance-exports";
-
 const PATH_KINDS: Record<ExportRunKind, ExportRunPathKind> = {
   care: "care-runs",
   holiday: "holiday-runs",
@@ -498,8 +496,13 @@ export async function downloadSollstellung(
   runId: string,
 ): Promise<BillingFile> {
   return billingFile(
-    `${BASE}/runs/${kind}/${encodeURIComponent(runId)}/sollstellung`,
-    {},
+    bffFile(
+      "org",
+      "GET /traeger/finance-exports/runs/{kind}/{id}/sollstellung",
+      {
+        params: { kind, id: runId },
+      },
+    ),
     "sollstellung.csv",
   );
 }
@@ -526,13 +529,14 @@ export async function downloadDatevBatch(
   runId: string,
   options: DatevDownloadOptions = {},
 ): Promise<BillingFile> {
-  const query = new URLSearchParams();
-  if (options.all) query.set("mode", "all");
-  if (options.fiscalYear) query.set("fiscal_year", options.fiscalYear);
-  const search = query.size > 0 ? `?${query.toString()}` : "";
   return billingFile(
-    `${BASE}/runs/${kind}/${encodeURIComponent(runId)}/datev${search}`,
-    {},
+    bffFile("org", "GET /traeger/finance-exports/runs/{kind}/{id}/datev", {
+      params: { kind, id: runId },
+      query: {
+        mode: options.all ? "all" : undefined,
+        fiscal_year: options.fiscalYear || undefined,
+      },
+    }),
     "EXTF_Buchungsstapel.csv",
   );
 }

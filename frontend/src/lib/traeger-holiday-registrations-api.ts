@@ -1,4 +1,4 @@
-import { bffJson } from "~/lib/bff-fetch";
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the review of the holiday registrations in the Träger portal
  * (#4663): the list of a holiday period with its filters, one registration
@@ -16,7 +16,6 @@ import {
   holidayFormVersionFromContract,
   type HolidayFormVersion,
 } from "~/lib/holiday-form-field";
-import { apiErrorFromBody, transportFetch } from "./api-error";
 import { knownEnum, requiredEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
 import type * as sharedContract from "./contract/shared.generated";
@@ -728,21 +727,13 @@ export async function uploadHolidayProof(
 ): Promise<HolidayRegistrationDetail> {
   const body = new FormData();
   body.append("file", file);
-  const response = await transportFetch(
-    `${registrationPath(periodId, registrationId)}/proofs`,
-    { method: "POST", body, credentials: "include" },
+  return detailFromBackend(
+    await bffJson(
+      "org",
+      "POST /traeger/holiday-periods/{id}/registrations/{registrationId}/proofs",
+      { params: { id: periodId, registrationId }, body },
+    ),
   );
-  const payload = (await response.json().catch(() => null)) as {
-    data?: sharedContract.HolidayRegistrationDetail;
-  } | null;
-  if (!response.ok || !payload?.data) {
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      payload,
-    );
-  }
-  return detailFromBackend(payload.data);
 }
 
 /** The query of a filter, empty values left out. */
@@ -754,20 +745,6 @@ function holidayFilterQuery(filter: HolidayRegistrationFilter) {
     time_model: filter.timeModel || undefined,
     wish: filter.wish || undefined,
   };
-}
-
-/** The query string of a filter, empty values left out. */
-function holidayRegistrationQuery(
-  filter: HolidayRegistrationFilter,
-  extra: Record<string, string> = {},
-): string {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(holidayFilterQuery(filter))) {
-    if (value) params.set(key, value);
-  }
-  for (const [key, value] of Object.entries(extra)) params.set(key, value);
-  const query = params.toString();
-  return query ? `?${query}` : "";
 }
 
 /** The registrations of a period that match the filter. */
@@ -1141,25 +1118,10 @@ interface DownloadedFile {
 }
 
 /** Fetches a file of the Träger portal with the backend's file name. */
-async function downloadTraegerFile(path: string): Promise<DownloadedFile> {
-  const response = await transportFetch(path, {
-    credentials: "include",
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    let body: unknown = null;
-    try {
-      body = text ? (JSON.parse(text) as unknown) : null;
-    } catch {
-      body = null;
-    }
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      body,
-    );
-  }
+async function downloadTraegerFile(
+  file: Promise<Response>,
+): Promise<DownloadedFile> {
+  const response = await file;
   return {
     blob: await response.blob(),
     filename: filenameFromDisposition(response),
@@ -1173,13 +1135,11 @@ export async function downloadHolidayRegistrations(
   format: "pdf" | "xlsx" | "csv",
 ): Promise<DownloadedFile> {
   return downloadTraegerFile(
-    `${registrationsPath(periodId)}/export${holidayRegistrationQuery(filter, { format })}`,
+    bffFile("org", "GET /traeger/holiday-periods/{id}/registrations/export", {
+      params: { id: periodId },
+      query: { ...holidayFilterQuery(filter), format },
+    }),
   );
-}
-
-/** The query that asks for the health information in a file (#6691). */
-function healthQuery(withHealth: boolean): Record<string, string> {
-  return withHealth ? { health: "true" } : {};
 }
 
 /**
@@ -1192,7 +1152,14 @@ export async function downloadHolidayRegistrationPdf(
   withHealth: boolean,
 ): Promise<DownloadedFile> {
   return downloadTraegerFile(
-    `${registrationPath(periodId, registrationId)}/pdf${holidayRegistrationQuery(EMPTY_HOLIDAY_REGISTRATION_FILTER, healthQuery(withHealth))}`,
+    bffFile(
+      "org",
+      "GET /traeger/holiday-periods/{id}/registrations/{registrationId}/pdf",
+      {
+        params: { id: periodId, registrationId },
+        query: { health: withHealth ? "true" : undefined },
+      },
+    ),
   );
 }
 
@@ -1203,7 +1170,13 @@ export async function downloadHolidayRegistrationPdfs(
   withHealth: boolean,
 ): Promise<DownloadedFile> {
   return downloadTraegerFile(
-    `${registrationsPath(periodId)}/pdf${holidayRegistrationQuery(filter, healthQuery(withHealth))}`,
+    bffFile("org", "GET /traeger/holiday-periods/{id}/registrations/pdf", {
+      params: { id: periodId },
+      query: {
+        ...holidayFilterQuery(filter),
+        health: withHealth ? "true" : undefined,
+      },
+    }),
   );
 }
 

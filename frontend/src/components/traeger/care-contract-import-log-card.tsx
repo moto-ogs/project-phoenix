@@ -3,7 +3,7 @@
 // Die bisherigen Vertragsimporte (#4723): welche Datei, wann, von wem und wie
 // viele Verträge. Nur zur Information; die Datei selbst bewahrt moto nicht auf.
 
-import { useMemo } from "react";
+import { type ReactNode, useMemo } from "react";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { SectionCard } from "~/components/ui/section-card";
 import { formatBerlinDate, formatBerlinTime } from "~/lib/date-helpers";
@@ -14,7 +14,12 @@ import { useTraegerResource } from "./use-traeger-resource";
 
 export function CareContractImportLogCard({
   entries,
-}: Readonly<{ entries: readonly ContractImportLogEntry[] }>) {
+  action,
+}: Readonly<{
+  entries: readonly ContractImportLogEntry[];
+  /** The way to complete imported contracts (#7767). */
+  action?: ReactNode;
+}>) {
   // Die Personen des Träger-Büros nennen die Konten; ohne Leserecht
   // bleibt die Kontonummer, ohne Fehlermeldung.
   const { data: buero } = useTraegerResource(
@@ -74,6 +79,7 @@ export function CareContractImportLogCard({
     <SectionCard
       title="Bisherige Importe"
       description="Nur zur Information. Jeder übernommene Vertrag merkt sich die Datei und die Zeile."
+      action={action}
     >
       {entries.length === 0 ? (
         <p className="text-sm text-gray-600">Noch keine Verträge importiert.</p>

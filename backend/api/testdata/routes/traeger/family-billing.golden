@@ -1,2 +1,3 @@
 GET /traeger/family-billing/
+GET /traeger/family-billing/contracts/{id}
 PUT /traeger/family-billing/

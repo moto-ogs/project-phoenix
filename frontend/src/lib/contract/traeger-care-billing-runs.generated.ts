@@ -161,6 +161,7 @@ export interface CareReduction {
   price_cents: number | null;
   cap_cents: number | null;
   tariff_sibling_price: boolean;
+  sibling_all_children: boolean;
   care_offering_ids: string[] | null;
   amount_cents: number;
 }
@@ -176,6 +177,7 @@ export const CareReductionSchema: z.ZodType<CareReduction, unknown> = object<Car
   price_cents: nullable(safeInt),
   cap_cents: nullable(safeInt),
   tariff_sibling_price: bool,
+  sibling_all_children: bool,
   care_offering_ids: nullable(arr(int64String)),
   amount_cents: safeInt,
 });

@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Vorlagen des Trägers (#4677, ADR 0152): für jede Dokumentart Betreff,
 // Anrede, Brieftext und Grußformel mit Platzhaltern. Die Liste zeigt, ob eine
 // Art die Standardvorlage oder eine eigene Version nutzt. Lesen darf, wer
@@ -24,7 +26,10 @@ import {
   type DocumentTemplateSummary,
   fetchDocumentTemplates,
 } from "~/lib/traeger-document-templates";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 
 const COLUMNS: DataTableColumn<DocumentTemplateSummary>[] = [
@@ -95,8 +100,9 @@ export default function TraegerVorlagenPage() {
   const exportItems = useTraegerListExportItems({
     download: (format) =>
       downloadTraegerList(
-        "/api/traeger/master-data/document-templates/export",
-        format,
+        bffFile("org", "GET /traeger/master-data/document-templates/export", {
+          query: listExportQuery(format),
+        }),
       ),
     scope: traegerExportScope(),
     fallbackName: "vorlagen",

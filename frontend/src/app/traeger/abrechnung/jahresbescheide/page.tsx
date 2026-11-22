@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Jahresbescheide des Trägers (#6219): Ein Jahreslauf setzt den Beitrag für
 // die Monate eines Jahres in einem Gebührenbescheid je Vertrag fest, mit
 // Monatsraten zum Monatsersten. Für diese Monate stellt der Monatslauf keine
@@ -42,7 +44,10 @@ import {
   fetchCareNoticeRuns,
   startCareNoticeRun,
 } from "~/lib/traeger-care-notices-api";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 import { labelOf } from "~/lib/label-of";
 
@@ -150,7 +155,11 @@ export default function TraegerJahresbescheidePage() {
 
   const exportItems = useTraegerListExportItems({
     download: (format) =>
-      downloadTraegerList("/api/traeger/care-notice-runs/export", format),
+      downloadTraegerList(
+        bffFile("org", "GET /traeger/care-notice-runs/export", {
+          query: listExportQuery(format),
+        }),
+      ),
     scope: traegerExportScope(),
     fallbackName: "jahresbescheide",
     errorObject: "die Jahresläufe",

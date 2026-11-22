@@ -337,6 +337,10 @@ type Party struct {
 	LastName   string `json:"last_name"`
 	Email      string `json:"email"`
 	HasAccount bool   `json:"has_account"`
+	// ContractDraft says the party's contract is still a draft. Only the
+	// billing reads (ContractBilling) fill it: a draft can be discarded, so
+	// nothing of the billing may hang on it (#7770).
+	ContractDraft bool `json:"-"`
 }
 
 // Mailing is one send of the contract with the state of its mail.
@@ -390,6 +394,9 @@ type ContractDetail struct {
 	TermText   string `json:"term_text"`
 	NoticeText string `json:"notice_text"`
 	FeeText    string `json:"fee_text"`
+	// Corrections are the corrections of a contract from an import, newest
+	// first (#7767, contract_corrections.go); empty for every other.
+	Corrections []ContractCorrection `json:"corrections"`
 }
 
 // File is a rendered PDF.
