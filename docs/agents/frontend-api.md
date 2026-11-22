@@ -80,10 +80,11 @@ or write a `Backend*` interface for a registered route.
   `scripts/check-contract-shrink.mjs <base>` fails on a new one. A route the contract cannot carry
   (a sign-in step, a device or webhook endpoint) needs a new ADR that names
   its catalog line.
-- In a request type an identifier is a `string`; Go still reads a JSON number
-  there. A request type with its own `UnmarshalJSON` needs an entry in
-  `Readers` (`backend/api/route_contracts.go`), or the generator stops;
-  `ReadsLaxIDs` is for a request only.
+- In a request type an identifier is a `string`; for one release Go still
+  reads a JSON number there (`ident.ID`). A request type with its own
+  `UnmarshalJSON` needs an entry in `Readers`
+  (`backend/api/route_contracts.go`), or the generator stops; an own reader
+  does not make an `int64` an identifier.
 - Removing or renaming a registered field or route needs one release as
   deprecated (`DeprecatedFields`, `Deprecated`);
   `scripts/check-contract-compat.mjs <base>` fails otherwise.

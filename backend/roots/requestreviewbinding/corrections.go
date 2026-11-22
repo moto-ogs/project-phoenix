@@ -78,7 +78,7 @@ func (c correctionLog) History(ctx context.Context, filter requestreview.QueueFi
 		name := strings.TrimSpace(person.FirstName + " " + person.LastName)
 		diff := correctionDiff(row)
 		result = append(result, requestreview.Row{Type: requestreview.TypeDirectCorrection, SortTime: row.ChangedAt, ID: row.ID, StudentID: row.StudentID, StudentName: name, DecidedAt: row.ChangedAt,
-			Data: requestreview.DirectCorrectionResponse{ID: strconv.FormatInt(row.ID, 10), StudentID: strconv.FormatInt(row.StudentID, 10), StudentName: name, ChangedAt: row.ChangedAt, ChangedByName: row.ActorName(), Reason: row.Reason, Diff: diff},
+			Payload: requestreview.Payload{DirectCorrection: &requestreview.DirectCorrectionResponse{ID: strconv.FormatInt(row.ID, 10), StudentID: strconv.FormatInt(row.StudentID, 10), StudentName: name, ChangedAt: row.ChangedAt, ChangedByName: row.ActorName(), Reason: row.Reason, Diff: diff}},
 		})
 	}
 	return result, next, nil

@@ -7,11 +7,14 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation"
 )
 
+// The identifiers of the kiosk device API stay JSON numbers and say so with
+// contract:"number": PyrePortal v1.11.5 reads them as numbers (#7808).
+
 // CheckinRequest represents a student check-in request from RFID devices
 type CheckinRequest struct {
 	StudentRFID string `json:"student_rfid"`
 	Action      string `json:"action"` // "checkin" or "checkout"
-	RoomID      *int64 `json:"room_id,omitempty"`
+	RoomID      *int64 `json:"room_id,omitempty" contract:"number"`
 }
 
 // PickupQueryRequest represents a read-only pickup info request from RFID devices.
@@ -21,10 +24,10 @@ type PickupQueryRequest struct {
 
 // CheckinResponse represents the response to a student check-in request
 type CheckinResponse struct {
-	StudentID   int64     `json:"student_id"`
+	StudentID   int64     `json:"student_id" contract:"number"`
 	StudentName string    `json:"student_name"`
 	Action      string    `json:"action"`
-	VisitID     *int64    `json:"visit_id,omitempty"`
+	VisitID     *int64    `json:"visit_id,omitempty" contract:"number"`
 	RoomName    string    `json:"room_name,omitempty"`
 	ProcessedAt time.Time `json:"processed_at"`
 	Message     string    `json:"message"`

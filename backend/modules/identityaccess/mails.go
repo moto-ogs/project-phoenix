@@ -274,22 +274,6 @@ func MFAResetByAdminMailContent(message MFAResetByAdminMail, origin string) Mail
 	}
 }
 
-// LoginAddressChangedMailContent tells the previous address that an
-// administrator moved the login away from it (#6862). It names neither the
-// new address nor a link.
-func LoginAddressChangedMailContent(message LoginAddressChangedMail, origin string) Mail {
-	return Mail{
-		Subject:  "Die E-Mail-Adresse deines moto-Kontos wurde geändert",
-		Template: "account-login-address-changed.html",
-		Content: map[string]any{
-			"LogoURL":    trimmedLogoURL(origin),
-			"ChangedAt":  message.ChangedAt,
-			"Actor":      adminActor(message.ByOperator),
-			"ByOperator": message.ByOperator,
-		},
-	}
-}
-
 // --- the operator links -------------------------------------------------------
 
 // operatorInviterFallback names an inviter the invitation does not know.

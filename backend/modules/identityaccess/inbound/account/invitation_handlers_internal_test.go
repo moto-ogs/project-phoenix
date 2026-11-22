@@ -18,6 +18,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/settings"
 	transactionFailures "github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -253,7 +254,7 @@ func TestInvitationHandlers_ValidateAndAccept(t *testing.T) {
 	var acceptResp AcceptInvitationResponse
 	err := json.Unmarshal([]byte(extractDataJSON(t, acceptRR.Body.Bytes())), &acceptResp)
 	assert.NoError(t, err)
-	assert.Equal(t, int64(77), acceptResp.AccountID)
+	assert.Equal(t, ident.ID(77), acceptResp.AccountID)
 	assert.Equal(t, "invitee@example.com", acceptResp.Email)
 	assert.Empty(t, acceptResp.TenantSubdomain, "tenant_subdomain should be empty when SchoolRepo is nil")
 }

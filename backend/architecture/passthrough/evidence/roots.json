@@ -2,14 +2,14 @@
   "sites": [
     {
       "build": "production",
-      "evidence": "func (p AttendanceRoutePeople) FindByAccountID(ctx context.Context, id int64) (int64, bool, error) {\n\trow, err := p.source.FindByAccountID(ctx, id)\n\tif row == nil {\n\t\treturn 0, false, err\n\t}\n\treturn row.ID.Int64(), true, err\n}",
+      "evidence": "func (p AttendanceRoutePeople) FindByAccountID(ctx context.Context, id int64) (int64, bool, error) {\n\trow, err := p.source.FindByAccountID(ctx, id)\n\tif peoplePorts.IsPersonNotFound(err) {\n\t\treturn 0, false, nil\n\t}\n\tif row == nil {\n\t\treturn 0, false, err\n\t}\n\treturn row.ID.Int64(), true, err\n}",
       "form": "unclassified-evidence",
       "id": "api/AttendanceRoutePeople.FindByAccountID",
       "owner": "roots"
     },
     {
       "build": "production",
-      "evidence": "func (p AttendanceRoutePeople) GetStaffByPersonID(ctx context.Context, id int64) (int64, int64, bool, error) {\n\trow, err := p.source.StaffRows().FindByPersonID(ctx, id)\n\tif row == nil {\n\t\treturn 0, 0, false, err\n\t}\n\treturn row.ID.Int64(), row.TenantID.Int64(), true, err\n}",
+      "evidence": "func (p AttendanceRoutePeople) GetStaffByPersonID(ctx context.Context, id int64) (int64, int64, bool, error) {\n\trow, err := p.source.StaffRows().FindByPersonID(ctx, id)\n\tif isRepositoryNotFound(err) {\n\t\treturn 0, 0, false, nil\n\t}\n\tif row == nil {\n\t\treturn 0, 0, false, err\n\t}\n\treturn row.ID.Int64(), row.TenantID.Int64(), true, err\n}",
       "form": "unclassified-evidence",
       "id": "api/AttendanceRoutePeople.GetStaffByPersonID",
       "owner": "roots"
@@ -4016,13 +4016,6 @@
       "evidence": "func (p accountPersons) FindPersonIDByAccount(ctx context.Context, accountID int64) (int64, bool, error) {\n\tperson, err := p.directory.FindPersonByAccount(ctx, accountID)\n\tif errors.Is(err, peopledirectory.ErrPersonNotFound) {\n\t\treturn 0, false, nil\n\t}\n\tif err != nil {\n\t\treturn 0, false, err\n\t}\n\treturn person.ID, true, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/accountPersons.FindPersonIDByAccount",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (q activeSchoolQuery) ListSchoolsByID(ctx context.Context, ids []int64) ([]presenceservice.School, error) {\n\tschools, err := q.schools.ListSchoolsByID(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]presenceservice.School, 0, len(schools))\n\tfor _, school := range schools {\n\t\tresult = append(result, presenceservice.School{ID: school.ID.Int64(), Slug: school.Slug})\n\t}\n\treturn result, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/activeSchoolQuery.ListSchoolsByID",
       "owner": "roots"
     },
     {

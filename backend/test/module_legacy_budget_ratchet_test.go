@@ -331,8 +331,10 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0241: the presence series of the utilization (+7).
 	// #2352: the session row alias the root names in the contract fits in
 	// shortened comments (-1).
-	"modules/studentpresence/compose":                 269,
-	"modules/studentpresence/compose/presenceservice": 110,
+	// Lowered by #7808: the cross-tenant student and school aliases left
+	// with the visitor read (-1, -5).
+	"modules/studentpresence/compose":                 268,
+	"modules/studentpresence/compose/presenceservice": 105,
 	"modules/supervisiondashboard/compose":            11,
 	// Raised by ADR 0128: the student template days constructor (+5), by
 	// ADR 0144: the vacation hint constructor (+6) and by ADR 0224: the cohort

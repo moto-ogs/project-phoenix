@@ -58,7 +58,14 @@ Worked example, the same route from Go to the browser:
    `int64` says so with `contract:"number"`. The generator refuses a bare
    `int64`, the json option `,string`, a number under an identifier's name
    (`id`, `*_id`, `*_ids`), a numeric identifier in an answer and an answer
-   whose shape depends on a query parameter.
+   whose shape depends on a query parameter. Outside the contract,
+   `TestNoNumericIdentifierRatchet` (`backend/test`) refuses a numeric
+   identifier in any struct of `api/` and of every `http` and `inbound`
+   role; only the kiosk device API (`/api/iot/*`, `/api/students/{id}/rfid`)
+   keeps numbers and tags them `contract:"number"`, because PyrePortal
+   v1.11.5 reads them. `ident.ID` still reads a JSON number in a request:
+   that is the one-release compatibility for browser tabs of the previous
+   frontend and goes after the next release (`backend/sharedkernel/ident/id.go`).
 3. **Mount.** A new contracts function gets one row in the matching
    `*ContractMounts()` list of `backend/api/route_contracts.go`, e.g.
    `{"/api/activities", timetableActivitiesHTTP.RouteContracts()}`. This
@@ -128,6 +135,11 @@ Same steps; the contract names the body type, and the client sends it typed
 
 - Go's `Bind` validates and answers 400 with field errors; the generated
   request type has only optional fields and repeats no rule.
+- Every route whose handler reads a body names its type in `Request`, a
+  file export too. A test that reaches a handler reading a body its contract
+  does not type fails the answer check (`api/common/answer_contract_test_helpers.go`).
+  A Go type that a body and an answer both carry is generated twice: the
+  answer keeps its name, the body is `<Name>Input` with optional fields.
 - A route without an answer body registers `NoData: true`.
 - A route whose body carries a password or a code names why it must not be
   sent twice in `NoRetryAfterRenewal`.

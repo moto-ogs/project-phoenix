@@ -194,18 +194,18 @@ func TestListGuardians_RepoErrorPropagates(t *testing.T) {
 	assert.Contains(t, err.Error(), "list guardians")
 }
 
-func TestStartThread_GuardianLookupErrorPropagates(t *testing.T) {
+func TestOpenThread_GuardianLookupErrorPropagates(t *testing.T) {
 	t.Parallel()
 
 	// authorizeThreadParticipants → ListGuardiansForStudent fails → server error,
 	// not ErrInvalidGuardian (which would wrongly imply the recipient is invalid).
 	svc := errSvc(&fakeThreadRepo{listGuardiansErr: errBoom}, &fakeMessageRepo{}, &fakeReadRepo{})
-	_, err := testpkg.TenantQuery4(t, errCtx(t), testpkg.SetupTestDB(t), svc.StartThread, 7, 2, "Hallo", "")
+	_, err := testpkg.TenantQuery3(t, errCtx(t), testpkg.SetupTestDB(t), svc.OpenThread, 7, 2, "")
 	require.Error(t, err)
 	assert.NotErrorIs(t, err, messaging.ErrInvalidGuardian)
 }
 
-func TestStartThread_GetOrCreateErrorPropagates(t *testing.T) {
+func TestOpenThread_GetOrCreateErrorPropagates(t *testing.T) {
 	t.Parallel()
 
 	tr := &fakeThreadRepo{
@@ -213,7 +213,7 @@ func TestStartThread_GetOrCreateErrorPropagates(t *testing.T) {
 		getOrCreateErr: errBoom,
 	}
 	svc := errSvc(tr, &fakeMessageRepo{}, &fakeReadRepo{})
-	_, err := testpkg.TenantQuery4(t, errCtx(t), testpkg.SetupTestDB(t), svc.StartThread, 7, 2, "Hallo", "")
+	_, err := testpkg.TenantQuery3(t, errCtx(t), testpkg.SetupTestDB(t), svc.OpenThread, 7, 2, "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "get-or-create thread")
 }

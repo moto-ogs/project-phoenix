@@ -268,17 +268,12 @@ func ContractDocument() (contract.Document, error) {
 		// The one route whose answer a query parameter shapes (ADR 0270 point 3).
 		QueryVariants: []string{"GET /api/students/"},
 	}
-	// Both student bodies only refuse retired keys before the plain decode;
-	// CompanionEntry takes its companion id as a number or a decimal string.
+	// Both student bodies only refuse retired keys before the plain decode.
 	options.Readers = map[reflect.Type]string{
 		reflect.TypeFor[careStudentsHTTP.StudentRequest]():       contract.ReadsFields,
 		reflect.TypeFor[careStudentsHTTP.UpdateStudentRequest](): contract.ReadsFields,
-		reflect.TypeFor[careStudentsHTTP.CompanionEntry]():       contract.ReadsLaxIDs,
-		// The absence bodies take absence_type_id as a number or a decimal string.
-		reflect.TypeFor[workforceModule.CreateAbsenceRequest](): contract.ReadsLaxIDs,
-		reflect.TypeFor[workforceModule.UpdateAbsenceRequest](): contract.ReadsLaxIDs,
-		// A corrected break names its id as a number or a decimal string.
-		reflect.TypeFor[workforceModule.BreakDurationUpdate](): contract.ReadsLaxIDs,
+		// An absence edit tells an absent absence_type_id from null.
+		reflect.TypeFor[workforceModule.UpdateAbsenceRequest](): contract.ReadsFields,
 		// A presence is an object or, from older clients, a bare staff id.
 		reflect.TypeFor[timetableHTTP.DeviationPresence](): contract.ReadsFields,
 		// The template writes tell an absent key from null.
@@ -292,6 +287,11 @@ func ContractDocument() (contract.Document, error) {
 		reflect.TypeFor[enrollmentHTTP.EnrollmentPhaseRequest](): contract.ReadsFields,
 		// A school update tells an absent child quota from null (#3567).
 		reflect.TypeFor[provisioningOperatorAPI.ChildQuotaField](): contract.ReadsValue,
+		// The staff-shift writes tell an absent key from null.
+		reflect.TypeFor[staffShiftsHTTP.OptionalID]():     contract.ReadsValue,
+		reflect.TypeFor[staffShiftsHTTP.OptionalBool]():   contract.ReadsValue,
+		reflect.TypeFor[staffShiftsHTTP.OptionalInt]():    contract.ReadsValue,
+		reflect.TypeFor[staffShiftsHTTP.OptionalString](): contract.ReadsValue,
 	}
 	// Appointments and the whole-day substitution keep their own day types.
 	options.Dates = []reflect.Type{reflect.TypeFor[appointments.Date](), reflect.TypeOf(substitutions.Day)}
@@ -518,7 +518,10 @@ func guardianRouteContracts() []common.RouteContract {
 		{Method: "DELETE", Pattern: "/{id}", Portals: portals, Query: deleteQuery, NoData: true},
 		{Method: "GET", Pattern: "/{id}/delete-preview", Portals: portals, Response: types.DeletePreview},
 		{Method: "POST", Pattern: "/{id}/email-stop", Portals: portals, NoData: true},
-		{Method: "POST", Pattern: "/payment-overview/export", Portals: portals, File: true},
+		{
+			Method: "POST", Pattern: "/payment-overview/export", Portals: portals, Request: types.PaymentExport, File: true,
+			Enums: []common.EnumContract{{Name: "PaymentExportFormat", Fields: []string{"PaymentExportRequest.format"}, Values: types.PaymentExportFormats}},
+		},
 		{Method: "DELETE", Pattern: "/{id}/email-stop", Portals: portals, NoData: true},
 		{Method: "DELETE", Pattern: "/{id}/email-block", Portals: portals, NoData: true},
 		{Method: "POST", Pattern: "/{id}/invite", Portals: portals, Response: types.Invitation},

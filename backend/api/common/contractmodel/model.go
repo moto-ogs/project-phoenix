@@ -11,7 +11,6 @@ const (
 	KindInt     = "int"     // JSON number, safe integer
 	KindNumber  = "number"  // JSON number
 	KindID      = "id"      // identifier as a JSON string
-	KindLaxID   = "lax_id"  // identifier a request reads as a number or a decimal string
 	KindDate    = "date"    // YYYY-MM-DD
 	KindInstant = "instant" // RFC 3339
 	KindClock   = "clock"   // wall-clock time as HH:MM

@@ -2,11 +2,8 @@ package timetracking
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
-	"strconv"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
@@ -56,32 +53,6 @@ type CreateAbsenceRequest struct {
 	Note          string `json:"note"`
 }
 
-// UnmarshalJSON accepts decimal strings for int64 identifiers. JavaScript
-// cannot represent every database BIGINT as a number, so browser clients send
-// custom absence IDs as strings.
-func (r *CreateAbsenceRequest) UnmarshalJSON(data []byte) error {
-	var raw struct {
-		AbsenceType   string          `json:"absence_type"`
-		AbsenceTypeID json.RawMessage `json:"absence_type_id"`
-		DateStart     string          `json:"date_start"`
-		DateEnd       string          `json:"date_end"`
-		HalfDay       bool            `json:"half_day"`
-		Note          string          `json:"note"`
-	}
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	r.AbsenceType, r.DateStart, r.DateEnd, r.HalfDay, r.Note = raw.AbsenceType, raw.DateStart, raw.DateEnd, raw.HalfDay, raw.Note
-	if len(raw.AbsenceTypeID) != 0 {
-		id, err := parseAbsenceTypeID(raw.AbsenceTypeID)
-		if err != nil {
-			return err
-		}
-		r.AbsenceTypeID = id
-	}
-	return nil
-}
-
 // UpdateAbsenceRequest defines the request for updating an absence
 type UpdateAbsenceRequest struct {
 	AbsenceType *string `json:"absence_type"`
@@ -95,46 +66,6 @@ type UpdateAbsenceRequest struct {
 	DateEnd          *string `json:"date_end"`
 	HalfDay          *bool   `json:"half_day"`
 	Note             *string `json:"note"`
-}
-
-func (r *UpdateAbsenceRequest) UnmarshalJSON(data []byte) error {
-	var raw struct {
-		AbsenceType   *string         `json:"absence_type"`
-		AbsenceTypeID json.RawMessage `json:"absence_type_id"`
-		DateStart     *string         `json:"date_start"`
-		DateEnd       *string         `json:"date_end"`
-		HalfDay       *bool           `json:"half_day"`
-		Note          *string         `json:"note"`
-	}
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	r.AbsenceType, r.DateStart, r.DateEnd, r.HalfDay, r.Note = raw.AbsenceType, raw.DateStart, raw.DateEnd, raw.HalfDay, raw.Note
-	if len(raw.AbsenceTypeID) == 0 {
-		return nil
-	}
-	r.AbsenceTypeIDSet = true
-	id, err := parseAbsenceTypeID(raw.AbsenceTypeID)
-	if err != nil {
-		return err
-	}
-	r.AbsenceTypeID = id
-	return nil
-}
-
-func parseAbsenceTypeID(raw json.RawMessage) (*int64, error) {
-	if string(raw) == "null" {
-		return nil, nil
-	}
-	var value string
-	if err := json.Unmarshal(raw, &value); err != nil {
-		value = string(raw)
-	}
-	id, err := strconv.ParseInt(value, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("ungültige Abwesenheitsart-ID: %w", err)
-	}
-	return &id, nil
 }
 
 // maxSickAbsenceRangeDays bounds the synchronous plan cascade. Sick reports

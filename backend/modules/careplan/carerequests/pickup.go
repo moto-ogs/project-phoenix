@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -20,6 +21,12 @@ var (
 	ErrPickupChangeImpactChanged    = errors.New("schedule: pickup change affected blocks changed")
 	ErrPickupChangeImpactRequired   = errors.New("schedule: pickup change impact token is required")
 )
+
+// ErrCareRequestStaffProfileRequired refuses a decision by an account without
+// a staff record of the school outside a session of the Träger-Büro (#7818).
+// It is an ErrCareRequestForbidden, so callers matching the general refusal
+// still match it.
+var ErrCareRequestStaffProfileRequired = fmt.Errorf("%w: staff profile required", ErrCareRequestForbidden)
 
 type PickupApproval struct {
 	TenantID            int64

@@ -2515,7 +2515,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s enrollmentArrivalSchedules) CreateArrivalSchedule(ctx context.Context, studentID int64, weekday int, createdBy int64) error {\n\treturn s.repo.Create(ctx, \u0026scheduleModels.StudentArrivalSchedule{StudentID: studentID, Weekday: weekday, CreatedBy: createdBy})\n}",
+      "evidence": "func (s enrollmentArrivalSchedules) CreateArrivalSchedule(ctx context.Context, studentID int64, weekday int, createdBy int64, enteredByTraeger bool) error {\n\treturn s.repo.Create(ctx, \u0026scheduleModels.StudentArrivalSchedule{StudentID: studentID, Weekday: weekday, CreatedBy: createdBy, EnteredByTraeger: enteredByTraeger})\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/internal/application/enrollmentArrivalSchedules.CreateArrivalSchedule",
       "owner": "modules/timetable"
@@ -2536,7 +2536,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s enrollmentPickupSchedules) UpsertPickupSchedule(ctx context.Context, studentID int64, weekday int, pickupTime time.Time, createdBy int64) error {\n\treturn s.repo.UpsertSchedule(ctx, \u0026scheduleModels.StudentPickupSchedule{StudentID: studentID, Weekday: weekday, PickupTime: pickupTime, CreatedBy: createdBy})\n}",
+      "evidence": "func (s enrollmentPickupSchedules) UpsertPickupSchedule(ctx context.Context, studentID int64, weekday int, pickupTime time.Time, createdBy int64, enteredByTraeger bool) error {\n\treturn s.repo.UpsertSchedule(ctx, \u0026scheduleModels.StudentPickupSchedule{StudentID: studentID, Weekday: weekday, PickupTime: pickupTime, CreatedBy: createdBy, EnteredByTraeger: enteredByTraeger})\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/internal/application/enrollmentPickupSchedules.UpsertPickupSchedule",
       "owner": "modules/timetable"
