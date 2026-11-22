@@ -275,6 +275,21 @@ describe("bffJson", () => {
     });
   });
 
+  it("carries the wait of a refused request (Retry-After) on the ApiError", async () => {
+    mockTransportFetch.mockResolvedValueOnce(
+      Response.json(
+        { status: 429, code: "general.rate_limited" },
+        { status: 429, headers: { "Retry-After": "60" } },
+      ),
+    );
+
+    await expect(
+      bffJson("public", "GET /auth/invitations/{token}", {
+        params: { token: "t" },
+      }),
+    ).rejects.toMatchObject({ status: 429, retryAfterSeconds: 60 });
+  });
+
   it("refuses a success without data as an unreadable answer", async () => {
     mockSessionFetch
       .mockResolvedValueOnce(Response.json({ id: "7" }))

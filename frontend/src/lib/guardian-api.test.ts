@@ -1,23 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-// The session gate and its renewal are sessionFetch's own tests. The cases
-// stub fetch with plain answer objects; the mock hands them on as Responses.
-vi.mock("./session-cache", () => ({
-  sessionFetch: async (url: string, init?: RequestInit) => {
-    const { transportFetch } =
-      await vi.importActual<typeof import("./api-error")>("./api-error");
-    const answer = (await transportFetch(url, init)) as
-      Response | { ok: boolean; status?: number; json: () => Promise<unknown> };
-    if (answer instanceof Response) return answer;
-    const status = answer.status ?? (answer.ok ? 200 : 500);
-    if (status === 204) return new Response(null, { status });
-    const body = await answer.json().then(
-      (value) => JSON.stringify(value) ?? "",
-      () => "not JSON",
-    );
-    return new Response(body, { status });
-  },
-}));
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 import {
   fetchStudentGuardians,
   updateGuardian,
