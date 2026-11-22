@@ -69,7 +69,7 @@ Worked example, the same route from Go to the browser:
    ```bash
    ../scripts/run-go-toolchain.sh go test -tags=testhooks ./api/ -run TestFullProductionRouterGolden -update-goldens
    ../scripts/run-go-toolchain.sh go run . gencontract
-   ../scripts/run-go-toolchain.sh go test -tags=testhooks ./api/ -run 'TestFullProductionRouterGolden|TestTheCommittedContractIsCurrent'
+   ../scripts/run-go-toolchain.sh go test -tags=testhooks ./api/ ./cmd/ -run 'TestFullProductionRouterGolden|TestTheCommittedContractIsCurrent'
    ```
 
    This writes the catalog line (`backend/api/testdata/routes/api/students.golden`),
