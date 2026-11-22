@@ -60,8 +60,8 @@ function ListRules() {
         <span className="font-normal">
           Namen als „Nachname, Vorname“, getrennt mit „ | “. Ein weiterer Name
           kommt dazu. Schreibst du einen Namen anders, ändert moto die
-          Schreibweise. Keine Partei fällt weg, Mail-Adresse und Elternkonto
-          bleiben.
+          Schreibweise. Vor- oder Nachname muss dabei gleich bleiben. Keine
+          Partei fällt weg, Mail-Adresse und Elternkonto bleiben.
         </span>
       </DataField>
       <DataField label="Abschlussart">
@@ -213,6 +213,7 @@ export default function TraegerContractCorrectionPage() {
   };
 
   const changing = run?.counts.change ?? 0;
+  const invalid = run?.counts.invalid ?? 0;
 
   return (
     <TenantPage
@@ -238,6 +239,10 @@ export default function TraegerContractCorrectionPage() {
               ? "1 Vertrag wird geändert."
               : `${changing} Verträge werden geändert.`}{" "}
             Es entsteht kein neuer Vertrag und es geht keine Mail raus.
+            {invalid > 0 &&
+              (invalid === 1
+                ? " 1 Zeile mit Fehler bleibt, wie sie ist."
+                : ` ${invalid} Zeilen mit Fehler bleiben, wie sie sind.`)}
           </p>
         </ConfirmationModal>
       }

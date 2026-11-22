@@ -119,12 +119,13 @@ func (c *ContractCorrections) evaluate(ctx context.Context, reviewer carecontrac
 	for n, entry := range entries {
 		plans[n] = check.plan(entry)
 	}
-	run.Fingerprint = c.ports.Fingerprint(correctionState(plans))
+	file := importFileName(request.FileName)
+	run.Fingerprint = c.ports.Fingerprint(append(correctionState(plans), file...))
 	if request.Apply {
 		if request.Fingerprint != run.Fingerprint {
 			return nil, carecontract.ErrContractCorrectionChanged
 		}
-		if err := c.apply(ctx, reviewer, importFileName(request.FileName), plans); err != nil {
+		if err := c.apply(ctx, reviewer, file, plans); err != nil {
 			return nil, err
 		}
 		run.Applied = true
@@ -186,7 +187,7 @@ func countCorrectionRow(counts *carecontract.ContractCorrectionCounts, status st
 
 // correctionState names every row with what the correction does with it and
 // what it stores: a correction stores only the preview it was given, by the
-// fingerprint of this state. A contract that changed since the preview has
+// fingerprint of this state and the name of the file the trail keeps. A contract that changed since the preview has
 // other values before and so another state.
 func correctionState(plans []correctionPlan) []byte {
 	type stateRow struct {

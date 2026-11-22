@@ -152,6 +152,8 @@ func TestCareContractCorrectionCompletesImportedContractsOnce(t *testing.T) {
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "care_contract.import_changed")
 
+	rec = importForm(t, f.traeger, f.office.token, contractCorrectionPath, "andere.csv", file, map[string]string{"fingerprint": preview.Fingerprint})
+	require.Equal(t, http.StatusConflict, rec.Code, "the trail names the file the office saw in the preview")
 	rec = importForm(t, f.traeger, f.office.token, contractCorrectionPath, `C:\Belege\nachpflege.csv`, file, map[string]string{"fingerprint": preview.Fingerprint})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	applied := decodeSchoolPortalData[contractCorrectionBody](t, rec.Body.Bytes())
@@ -251,10 +253,24 @@ func TestCareContractCorrectionRefusesUnprovenAndDestructiveRows(t *testing.T) {
 	assert.Equal(t, "change", renamed.Rows[0].Status)
 	assert.Equal(t, []string{"Eva Beispiel-Roth"}, renamed.Rows[0].After.Parties)
 
+	// A preview the office confirms after the contract changed is refused,
+	// and stores nothing.
+	other := contractCorrectionFile(fmt.Sprintf("%d;;Mia Beispiel;;online;;beleg.pdf", mia))
+	rec := importForm(t, f.traeger, f.office.token, contractCorrectionPath, "nachpflege.csv", other,
+		map[string]string{"fingerprint": previewContractCorrection(t, f, other).Fingerprint})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	rec = importForm(t, f.traeger, f.office.token, contractCorrectionPath, "nachpflege.csv",
+		contractCorrectionFile(fmt.Sprintf("%d;;Mia Beispiel;Beispiel-Roth, Eva;;;beleg.pdf", mia)), map[string]string{"fingerprint": renamed.Fingerprint})
+	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+	var names string
+	require.NoError(t, f.db.NewRaw(`SELECT string_agg(last_name, ',') FROM care_contract.contract_parties WHERE contract_id = ?`, mia).
+		Scan(context.Background(), &names))
+	assert.Equal(t, "Eva Beispiel", names, "the refused correction stored nothing")
+
 	missing := previewContractCorrection(t, f, []byte("Kind;Abschlussart\nMia Beispiel;online\n"))
 	assert.ElementsMatch(t, []string{"contract_id", "evidence"}, missing.Missing)
 	assert.Empty(t, missing.Rows)
-	rec := importForm(t, f.traeger, f.office.token, contractCorrectionPath, "nachpflege.csv", []byte("Kind;Abschlussart\nMia Beispiel;online\n"), nil)
+	rec = importForm(t, f.traeger, f.office.token, contractCorrectionPath, "nachpflege.csv", []byte("Kind;Abschlussart\nMia Beispiel;online\n"), nil)
 	assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 }
 

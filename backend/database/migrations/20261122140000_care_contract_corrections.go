@@ -51,11 +51,19 @@ ALTER TABLE care_contract.contract_events ADD CONSTRAINT chk_contract_events_act
 	CHECK (action IN ('read', 'create', 'send', 'discard', 'template', 'conclude', 'sign', 'remind', 'terminate', 'withdraw', 'set_end', 'reject_reason', 'correct'));
 `
 
-// careContractCorrectionsDownSQL drops the mark and the trail of the
-// corrections. The corrected values stay: the trail that named the values
-// before goes with the action.
+// careContractCorrectionsDownSQL drops the mark and the trail action while
+// nothing carries them. Once a contract is corrected or its day of the
+// conclusion is unknown it refuses: without the trail the corrected values
+// would stand without their proof, and without the mark the instant of the
+// takeover would read as the day of the conclusion.
 const careContractCorrectionsDownSQL = `
-DELETE FROM care_contract.contract_events WHERE action = 'correct';
+DO $$
+BEGIN
+	IF EXISTS (SELECT 1 FROM care_contract.contract_events WHERE action = 'correct')
+		OR EXISTS (SELECT 1 FROM care_contract.contracts WHERE conclusion_date_unknown) THEN
+		RAISE EXCEPTION 'care contract corrections are stored: this migration cannot be rolled back';
+	END IF;
+END $$;
 ALTER TABLE care_contract.contract_events DROP CONSTRAINT chk_contract_events_action;
 ALTER TABLE care_contract.contract_events ADD CONSTRAINT chk_contract_events_action
 	CHECK (action IN ('read', 'create', 'send', 'discard', 'template', 'conclude', 'sign', 'remind', 'terminate', 'withdraw', 'set_end', 'reject_reason'));

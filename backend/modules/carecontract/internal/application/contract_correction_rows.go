@@ -4,6 +4,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
@@ -318,18 +319,19 @@ func (c *correctionCheck) subject(entry *correctionEntry) (ports.CorrectionSubje
 	switch {
 	case !subject.Imported || subject.ConcludedAt == nil:
 		entry.problem(carecontract.ContractCorrectionFieldContract, carecontract.ContractCorrectionProblemNotImported)
-	case entry.child != "" && nameKey(entry.child) != nameKey(subject.ChildFirstName+" "+subject.ChildLastName):
+	case entry.child != "" && !namesChild(entry.child, subject.ChildFirstName, subject.ChildLastName):
 		entry.problem(carecontract.ContractCorrectionFieldChild, carecontract.ContractCorrectionProblemChildDiffers)
 	}
 	return subject, true
 }
 
-// nameKey folds a name for a comparison: its words without case and commas,
-// in any order, so "Beispiel, Lia" names the child "Lia Beispiel".
-func nameKey(name string) string {
-	words := strings.Fields(strings.ToLower(strings.ReplaceAll(name, ",", " ")))
-	slices.Sort(words)
-	return strings.Join(words, " ")
+// namesChild tells whether a row names the child: its first and last name in
+// either order, without case and commas. The words of each keep their order,
+// so "Anna Marie Weber" is not "Marie Anna Weber".
+func namesChild(written, first, last string) bool {
+	fold := func(name string) string { return joinWords(strings.ToLower(strings.ReplaceAll(name, ",", " "))) }
+	written = fold(written)
+	return written == fold(first+" "+last) || written == fold(last+" "+first)
 }
 
 // planConclusion plans the method and the day of the conclusion.
@@ -356,18 +358,18 @@ func planConclusion(entry correctionEntry, subject ports.CorrectionSubject, plan
 }
 
 // planParties plans the parties: a name the contract has stays, a name it
-// lacks corrects the party left over at its place or, with none left, is a
-// further party. A row never removes a party. A cell the list to download
+// lacks corrects the party left over whose name it resembles or, with none
+// left, is a further party. A row never removes a party. A cell the list to download
 // wrote itself changes nothing, however its names read.
 func planParties(entry correctionEntry, subject ports.CorrectionSubject, plan *correctionPlan) {
 	if !entry.hasParties || joinWords(entry.partyCell) == joinWords(correctionPartyCell(subject.Parties)) {
 		return
 	}
-	written, stored, wanted := reserveWrittenParties(entry, subject.Parties)
-	renames, adds, complete := matchCorrectionParties(stored, wanted)
+	written, stored, wanted := pairNamedParties(entry, subject.Parties)
+	renames, adds, problem := matchCorrectionParties(stored, wanted)
 	renames = append(written, renames...)
-	if !complete {
-		plan.problem(carecontract.ContractCorrectionFieldParties, carecontract.ContractCorrectionProblemPartyRemoved)
+	if problem != "" {
+		plan.problem(carecontract.ContractCorrectionFieldParties, problem)
 		return
 	}
 	if len(renames)+len(adds) == 0 {
@@ -393,39 +395,68 @@ func planParties(entry correctionEntry, subject ports.CorrectionSubject, plan *c
 	plan.row.Changes = append(plan.row.Changes, carecontract.ContractCorrectionFieldParties)
 }
 
-// reserveWrittenParties pairs each name the list to download wrote for a
-// party of the contract with exactly that party, read with the party's own
-// boundary between last and first name: a stored name may carry a comma,
-// which no other reading would keep. A name written as the list writes it
-// is that party; one that differs only in case is that party written anew.
-// It answers the parties whose spelling changes and what is left of the
-// contract's parties and of the row's names for the pairing by name and
-// place.
-func reserveWrittenParties(entry correctionEntry, stored []ports.CorrectionParty) (renames, leftStored, leftWanted []ports.CorrectionParty) {
-	free, claimed := slices.Clone(stored), make([]bool, len(entry.parties))
-	for _, same := range []func(a, b string) bool{func(a, b string) bool { return a == b }, strings.EqualFold} {
-		for n, name := range entry.partyNames {
-			at := -1
-			if !claimed[n] {
-				at = slices.IndexFunc(free, func(party ports.CorrectionParty) bool {
-					return same(joinWords(correctionPartyCell([]ports.CorrectionParty{party})), name)
-				})
-			}
-			if at < 0 {
+// partyPairing pairs the names of a row with the parties of a contract:
+// free are the parties no name found yet, claimed the names that found one.
+type partyPairing struct {
+	free    []ports.CorrectionParty
+	claimed []bool
+	renames []ports.CorrectionParty
+}
+
+// pair gives each name without a party the first free party match accepts,
+// and keeps the party as match writes it when its spelling changes.
+func (p *partyPairing) pair(match func(name int, party ports.CorrectionParty) (written ports.CorrectionParty, changed, ok bool)) {
+	for n := range p.claimed {
+		if p.claimed[n] {
+			continue
+		}
+		for at, party := range p.free {
+			written, changed, ok := match(n, party)
+			if !ok {
 				continue
 			}
-			if written, changed := writtenParty(name, free[at]); changed {
-				renames = append(renames, written)
+			if changed {
+				written.ID = party.ID
+				p.renames = append(p.renames, written)
 			}
-			claimed[n], free = true, slices.Delete(free, at, at+1)
+			p.claimed[n], p.free = true, slices.Delete(p.free, at, at+1)
+			break
 		}
 	}
+}
+
+// pairNamedParties pairs each name of the row with the party of the
+// contract that carries it. A name as the list to download writes a party is
+// that party, read with the party's own boundary between last and first
+// name: a stored name may carry a comma, which no other reading would keep.
+// Then a name that reads the same in full is that party. Every name that is
+// the same finds its party before any that differs only in case, which is
+// the party written anew: so a row stored once reads back as unchanged. It
+// answers the parties whose spelling changes and what is left of the
+// contract's parties and of the row's names for the pairing by likeness.
+func pairNamedParties(entry correctionEntry, stored []ports.CorrectionParty) (renames, leftStored, leftWanted []ports.CorrectionParty) {
+	full := func(party ports.CorrectionParty) string {
+		return fullName(joinWords(party.FirstName), joinWords(party.LastName))
+	}
+	pairing := partyPairing{free: slices.Clone(stored), claimed: make([]bool, len(entry.parties))}
+	for step, same := range []func(a, b string) bool{func(a, b string) bool { return a == b }, strings.EqualFold} {
+		pairing.pair(func(n int, party ports.CorrectionParty) (ports.CorrectionParty, bool, bool) {
+			if !same(joinWords(correctionPartyCell([]ports.CorrectionParty{party})), entry.partyNames[n]) {
+				return ports.CorrectionParty{}, false, false
+			}
+			written, changed := writtenParty(entry.partyNames[n], party)
+			return written, changed, true
+		})
+		pairing.pair(func(n int, party ports.CorrectionParty) (ports.CorrectionParty, bool, bool) {
+			return entry.parties[n], step > 0, same(full(entry.parties[n]), full(party))
+		})
+	}
 	for n, party := range entry.parties {
-		if !claimed[n] {
+		if !pairing.claimed[n] {
 			leftWanted = append(leftWanted, party)
 		}
 	}
-	return renames, free, leftWanted
+	return pairing.renames, pairing.free, leftWanted
 }
 
 // writtenParty is party with the name as the row writes it; changed tells
@@ -447,38 +478,71 @@ func withStoredBoundary(name string, party ports.CorrectionParty) ports.Correcti
 	return ports.CorrectionParty{LastName: string(written[:last]), FirstName: joinWords(strings.TrimPrefix(string(written[last:]), ","))}
 }
 
-// matchCorrectionParties pairs the parties of the contract with the names of
-// the row: first every name that is the same, then every name that differs
-// only in case, which is the same person written anew, and last the names
-// left over by their place. It answers the parties whose name changes, the
-// further parties and whether every party of the contract found a name.
-func matchCorrectionParties(stored, wanted []ports.CorrectionParty) (renames, adds []ports.CorrectionParty, complete bool) {
-	name := func(party ports.CorrectionParty) string {
-		return fullName(joinWords(party.FirstName), joinWords(party.LastName))
-	}
+// matchCorrectionParties pairs the parties no name of the row named with the
+// names left over, each with the name most like its own. A party keeps its
+// address and its account, so a name that shares no word with it is never
+// written onto it, and neither is one of two names equally like it: the
+// place in the row says nothing about who a person is. It answers the
+// parties whose name changes, the further parties and, when a party found
+// no name, the problem.
+func matchCorrectionParties(stored, wanted []ports.CorrectionParty) (renames, adds []ports.CorrectionParty, problem string) {
 	stored, wanted = slices.Clone(stored), slices.Clone(wanted)
-	pair := func(same func(a, b string) bool, rename bool) {
-		for n := 0; n < len(stored); n++ {
-			at := slices.IndexFunc(wanted, func(party ports.CorrectionParty) bool { return same(name(party), name(stored[n])) })
-			if at < 0 {
-				continue
+	for len(stored) > 0 {
+		if len(wanted) == 0 {
+			return nil, nil, carecontract.ContractCorrectionProblemPartyRemoved
+		}
+		n, at, clear := closestParties(stored, wanted)
+		if !clear {
+			return nil, nil, carecontract.ContractCorrectionProblemPartyUnclear
+		}
+		renames = append(renames, ports.CorrectionParty{ID: stored[n].ID, FirstName: wanted[at].FirstName, LastName: wanted[at].LastName})
+		stored, wanted = slices.Delete(stored, n, n+1), slices.Delete(wanted, at, at+1)
+	}
+	return renames, wanted, ""
+}
+
+// closestParties finds the party and the name most alike. It is clear when
+// they share a word and neither is as much like another name or party.
+func closestParties(stored, wanted []ports.CorrectionParty) (party, name int, clear bool) {
+	best := 0
+	for n := range stored {
+		for at := range wanted {
+			switch alike := partyLikeness(stored[n], wanted[at]); {
+			case alike > best:
+				party, name, best, clear = n, at, alike, true
+			case alike == best && (n == party || at == name):
+				clear = false
 			}
-			if rename {
-				renames = append(renames, ports.CorrectionParty{ID: stored[n].ID, FirstName: wanted[at].FirstName, LastName: wanted[at].LastName})
-			}
-			stored, wanted = slices.Delete(stored, n, n+1), slices.Delete(wanted, at, at+1)
-			n--
 		}
 	}
-	pair(func(a, b string) bool { return a == b }, false)
-	pair(strings.EqualFold, true)
-	if len(stored) > len(wanted) {
-		return nil, nil, false
+	return party, name, clear && best > 0
+}
+
+// partyLikeness counts the words of the party's name the written name has
+// too. A first name counts double: the parties of one contract mostly share
+// their last name.
+func partyLikeness(party, written ports.CorrectionParty) int {
+	has := nameWords(written.FirstName + " " + written.LastName)
+	alike := 0
+	for _, word := range nameWords(party.FirstName) {
+		if slices.Contains(has, word) {
+			alike += 2
+		}
 	}
-	for n, party := range stored {
-		renames = append(renames, ports.CorrectionParty{ID: party.ID, FirstName: wanted[n].FirstName, LastName: wanted[n].LastName})
+	for _, word := range nameWords(party.LastName) {
+		if slices.Contains(has, word) {
+			alike++
+		}
 	}
-	return renames, wanted[len(stored):], true
+	return alike
+}
+
+var umlauts = strings.NewReplacer("ä", "ae", "ö", "oe", "ü", "ue", "ß", "ss")
+
+// nameWords are the words of a name in lower case, with umlauts written
+// out: "Müller-Roth" and "Mueller Roth" have the same words.
+func nameWords(name string) []string {
+	return strings.FieldsFunc(umlauts.Replace(strings.ToLower(name)), func(r rune) bool { return !unicode.IsLetter(r) })
 }
 
 // correctionPartyCell writes the parties as the list to download does:

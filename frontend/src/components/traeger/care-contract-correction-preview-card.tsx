@@ -139,10 +139,18 @@ const COLUMNS: DataTableColumn<ContractCorrectionRow>[] = [
 function footerText(run: ContractCorrectionRun): string {
   const { counts } = run;
   if (run.applied) {
-    return "Die Verträge zeigen die neuen Angaben. Eine erneut hochgeladene Liste ändert nichts mehr.";
+    return counts.invalid > 0
+      ? "Die Verträge zeigen die neuen Angaben. Zeilen mit Fehler sind unverändert: Korrigiere sie und lade die Liste noch einmal hoch."
+      : "Die Verträge zeigen die neuen Angaben. Eine erneut hochgeladene Liste ändert nichts mehr.";
   }
   if (counts.invalid > 0) {
-    return `${counts.invalid === 1 ? "1 Zeile bleibt" : `${counts.invalid} Zeilen bleiben`} draußen. Korrigiere die Liste und lade sie noch einmal hoch.`;
+    const rows =
+      counts.invalid === 1
+        ? "1 Zeile mit Fehler ändert moto nicht."
+        : `${counts.invalid} Zeilen mit Fehler ändert moto nicht.`;
+    return counts.change > 0
+      ? `${rows} Die anderen kannst du jetzt ändern.`
+      : `${rows} Korrigiere die Liste und lade sie noch einmal hoch.`;
   }
   if (counts.change === 0) {
     return "Alle Verträge der Liste sind schon aktuell.";

@@ -26,8 +26,9 @@ import (
 //     conclusion, nothing else. Versions, booked care, the child, mandates,
 //     debtor numbers, mails, signatures and invoices stay untouched.
 //   - A party is never removed and never loses its e-mail address or its
-//     account: the Elternabrechnung finds the family by them. A further
-//     party is stored by its name only.
+//     account: the Elternabrechnung finds the family by them. Its name
+//     changes only to one that shares a word with it; a further party is
+//     stored by its name only.
 //   - A day no document proves is unknown, never a guess: the contract
 //     carries the mark and nothing counts from the instant it keeps.
 //   - Every correction lands in the trail with the values before and after,
@@ -80,6 +81,10 @@ const (
 	// ContractCorrectionProblemPartyRemoved is a row that leaves out a party
 	// of the contract.
 	ContractCorrectionProblemPartyRemoved = "party_removed"
+	// ContractCorrectionProblemPartyUnclear is a row whose names do not tell
+	// which of them a party of the contract is: the party keeps its address
+	// and its account, so no name is written onto it by its place alone.
+	ContractCorrectionProblemPartyUnclear = "party_unclear"
 	// ContractCorrectionProblemAfterNotice is a day of the conclusion after
 	// the day a termination or withdrawal of the contract was received.
 	ContractCorrectionProblemAfterNotice = "after_notice"

@@ -75,6 +75,8 @@ const PROBLEM_TEXTS: Partial<
     too_long: "Ein Name ist zu lang, oder es sind mehr als 6 Vertragsparteien.",
     party_removed:
       "Eine Vertragspartei fehlt. Vorhandene Parteien bleiben im Vertrag.",
+    party_unclear:
+      "moto erkennt nicht, welcher Name zu einer vorhandenen Vertragspartei gehört. Ändere zuerst nur ihre Schreibweise. Weitere Namen ergänzt du danach mit einer zweiten Liste.",
   },
   method: {
     invalid:
