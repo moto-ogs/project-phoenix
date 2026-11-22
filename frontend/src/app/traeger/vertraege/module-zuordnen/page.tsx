@@ -274,7 +274,7 @@ export default function TraegerOfferingCorrectionPage() {
               )
             }
           >
-            <div className="space-y-5">
+            <div className="flex flex-col gap-6">
               {file ? null : (
                 <Dropzone
                   accept=".csv,.txt,text/csv,text/plain"

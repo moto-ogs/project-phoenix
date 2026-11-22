@@ -91,33 +91,37 @@ function ChangeCell({
     return <span className="text-gray-500">–</span>;
   }
   return (
-    <ul className="space-y-1.5">
+    <ul className="space-y-2">
       {contract.changes.map((change) => (
         <li
           key={`${change.weekdays.join(",")}|${change.from}|${change.to}`}
-          className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm"
+          className="grid grid-cols-[3.75rem_minmax(0,1fr)] gap-x-2 text-sm"
         >
-          <span className="w-14 shrink-0 text-xs font-medium text-gray-500 tabular-nums">
+          <span className="pt-px text-xs leading-5 font-medium text-gray-700 tabular-nums">
             {contractImportWeekdays(change.weekdays)}
           </span>
           {change.from === change.to ? (
             <span className="wrap-anywhere text-gray-900">{change.to}</span>
           ) : (
-            <>
+            // The old module stays quiet, the new one carries the weight;
+            // the arrow never parts from its target when the cell wraps.
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
               <span className="wrap-anywhere text-gray-500">{change.from}</span>
-              <ArrowRight
-                className="h-3.5 w-3.5 shrink-0 text-gray-500"
-                aria-hidden="true"
-              />
-              <span className="sr-only">wird zu</span>
-              {change.to ? (
-                <span className="font-medium wrap-anywhere text-gray-900">
-                  {change.to}
-                </span>
-              ) : (
-                <StatusBadge tone="orange" size="xs" label="noch offen" />
-              )}
-            </>
+              <span className="inline-flex min-w-0 items-center gap-1.5">
+                <ArrowRight
+                  className="h-3.5 w-3.5 shrink-0 text-gray-500"
+                  aria-hidden="true"
+                />
+                <span className="sr-only">wird zu</span>
+                {change.to ? (
+                  <span className="font-medium wrap-anywhere text-gray-900">
+                    {change.to}
+                  </span>
+                ) : (
+                  <StatusBadge tone="orange" size="xs" label="noch offen" />
+                )}
+              </span>
+            </span>
           )}
         </li>
       ))}
@@ -202,6 +206,7 @@ export function CareContractOfferingCorrectionPreviewCard({
       sortValue: (contract) =>
         `${contract.childLastName} ${contract.childFirstName}`,
       stacked: "title",
+      className: "lg:min-w-52",
     },
     {
       key: "status",
@@ -219,6 +224,7 @@ export function CareContractOfferingCorrectionPreviewCard({
     {
       key: "change",
       header: "Änderung",
+      className: "lg:min-w-80",
       render: (contract) => <ChangeCell contract={contract} />,
     },
     {
