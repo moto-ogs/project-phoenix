@@ -172,6 +172,7 @@ function run(change: Partial<CareRunDetail> = {}): CareRunDetail {
     unpriced: [],
     duplicates: [],
     duplicateChildren: 0,
+    joinedChildren: [],
     billed: 0,
     previewCount: 1,
     previewCents: 2450,

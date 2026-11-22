@@ -49,3 +49,23 @@ func TestSeedSchoolChangeContractPicksTheLastFittingChild(t *testing.T) {
 	assert.Equal(t, seedSchoolChangeChild{id: 1, firstName: "Mila", lastName: "Ernst", birthDate: calendar.NewDate(2018, 4, 9),
 		party: seedSchoolChangeParty{FirstName: "Lea", LastName: "Ernst", Email: "ernst@example.test"}}, child)
 }
+
+// A repeated seed finds the phase of the change at the Demo-Schule Manuell
+// and moves no second child (#7874).
+func TestSeedSchoolChangeRunsOnce(t *testing.T) {
+	t.Parallel()
+	for name, body := range map[string]string{
+		"first seed":    `{"data":[{"name":"Schuljahr 2026/27"}]}`,
+		"repeated seed": `{"data":[{"name":"Schuljahr 2026/27"},{"name":"Aufnahme im laufenden Schuljahr"}]}`,
+	} {
+		srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
+			assert.Equal(t, "/api/enrollment/phases", r.URL.Path)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = fmt.Fprint(w, body)
+		})
+		done, err := seedSchoolChangeDone(newTestClient(srv.URL, false), AuthRef{})
+		srv.Close()
+		require.NoError(t, err, name)
+		assert.Equal(t, name == "repeated seed", done, name)
+	}
+}

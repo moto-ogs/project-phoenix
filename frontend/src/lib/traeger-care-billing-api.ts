@@ -498,7 +498,7 @@ export interface CareRunDetail extends CareRun {
   /** The children of `duplicates`; the release bills none of them. */
   readonly duplicateChildren: number;
   /** Children of a calculated run joined by their name across schools. */
-  readonly joinedChildren?: readonly CareJoinedChild[];
+  readonly joinedChildren: readonly CareJoinedChild[];
   /**
    * Families a sibling rule that counts the family ranks without a
    * confirmed number for the month (#5918); it counts their children with a

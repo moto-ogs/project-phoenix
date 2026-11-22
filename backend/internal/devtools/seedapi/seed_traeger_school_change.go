@@ -50,17 +50,22 @@ func (seedTraegerSchoolChangeStep) Run(ctx context.Context, rt *Runtime) error {
 	if err != nil {
 		return err
 	}
+	school := int64(manual.School.ID)
+	adminAuth, err := rt.Adapter.LoginTenant(ctx, manual.Credentials.SchoolAdmin.Email, manual.Credentials.SchoolAdmin.Password, manual.School.TenantSlug)
+	if err != nil {
+		return fmt.Errorf("sign in the admin of the Demo-Schule Manuell: %w", err)
+	}
+	// A repeated seed finds the phase of the change again and moves no
+	// second child.
+	if done, err := seedSchoolChangeDone(rt.Client, adminAuth); err != nil || done {
+		return err
+	}
 	old, ok, err := seedSchoolChangeContract(rt.Client, auth, rt.Bootstrap.SchoolID, month)
 	if err != nil || !ok {
 		if ok = err == nil; ok {
 			fmt.Println("  Schulwechsel: no active contract of the school to change from")
 		}
 		return err
-	}
-	school := int64(manual.School.ID)
-	adminAuth, err := rt.Adapter.LoginTenant(ctx, manual.Credentials.SchoolAdmin.Email, manual.Credentials.SchoolAdmin.Password, manual.School.TenantSlug)
-	if err != nil {
-		return fmt.Errorf("sign in the admin of the Demo-Schule Manuell: %w", err)
 	}
 	offering, requestChild, err := seedSchoolChangeEnrollment(rt, adminAuth, old, change)
 	if err != nil {
@@ -259,6 +264,31 @@ func withSchoolChangeEnrollment(rt *Runtime, auth AuthRef, enroll func() error) 
 	return enroll()
 }
 
+// seedSchoolChangePhase is the phase the Demo-Schule Manuell takes the
+// child in with; a repeated seed finds it by its name.
+const seedSchoolChangePhase = "Aufnahme im laufenden Schuljahr"
+
+// seedNamedPhase is a phase of the list by its name.
+type seedNamedPhase struct {
+	Name string `json:"name"`
+}
+
+// seedSchoolChangeDone tells whether an earlier seed took a child in
+// already: the Demo-Schule Manuell has the phase of the change.
+func seedSchoolChangeDone(client *Client, auth AuthRef) (bool, error) {
+	raw, err := client.GetWithAuth(auth, "/api/enrollment/phases")
+	if err != nil {
+		return false, fmt.Errorf("read the phases of the Demo-Schule Manuell: %w", err)
+	}
+	var phases struct {
+		Data []seedNamedPhase `json:"data"`
+	}
+	if err := parseJSON(raw, &phases); err != nil {
+		return false, err
+	}
+	return slices.ContainsFunc(phases.Data, func(phase seedNamedPhase) bool { return phase.Name == seedSchoolChangePhase }), nil
+}
+
 // seedSchoolChangeOffering creates the form, the phase whose care begins
 // on the day of the change, and its care offering; it answers the phase.
 func seedSchoolChangeOffering(rt *Runtime, auth AuthRef, change calendar.Date) (int64, error) {
@@ -272,7 +302,7 @@ func seedSchoolChangeOffering(rt *Runtime, auth AuthRef, change calendar.Date) (
 	}
 	yearEnd := calendar.NewDate(seedSchoolYearStart(rt.FixedSeeder.seedDay)+1, 7, 31)
 	raw, err = rt.Client.PostWithAuth(auth, "/api/enrollment/phases", map[string]any{
-		"name": "Aufnahme im laufenden Schuljahr", "kind": "school_year",
+		"name": seedSchoolChangePhase, "kind": "school_year",
 		"service_start_date": change.String(), "service_end_date": yearEnd.String(),
 		"show_status_reason_to_parent": true, "care_overflow_mode": "waitlist", "care_offering_selection_mode": "at_least_one",
 		"audience": "open", "is_active": true, "form_schema_id": strconv.FormatInt(schemaID, 10),

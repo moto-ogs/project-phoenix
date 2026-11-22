@@ -173,7 +173,7 @@ func childKeys(byContract map[int64][]parentbilling.CareContractVersion, childre
 		}
 		key, known := byRecord[*child.StudentID]
 		if !known {
-			key = fmt.Sprintf("student:%d", *child.StudentID)
+			key = fmt.Sprintf("student:%019d", *child.StudentID)
 			addRecordKey(byRecord, byPerson, child, key)
 		}
 		keys[contractID] = key

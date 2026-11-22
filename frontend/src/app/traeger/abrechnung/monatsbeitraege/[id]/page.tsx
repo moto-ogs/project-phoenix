@@ -605,7 +605,7 @@ export default function TraegerCareRunPage() {
           {/* A child billed at another school of the run's month (#7874):
               the empty run says why it has no invoice here. */}
           {empty ? (
-            <CareJoinedChildrenCard childrenJoined={run.joinedChildren ?? []} />
+            <CareJoinedChildrenCard childrenJoined={run.joinedChildren} />
           ) : null}
           {/* Mensa months a school has not released yet come with a later
               run; the empty run still names them. */}
@@ -856,7 +856,7 @@ export default function TraegerCareRunPage() {
           ) : null}
           <CareDuplicatesCard duplicates={run.duplicates} released={!preview} />
           {preview ? (
-            <CareJoinedChildrenCard childrenJoined={run.joinedChildren ?? []} />
+            <CareJoinedChildrenCard childrenJoined={run.joinedChildren} />
           ) : null}
           {preview ? <CareUnpricedCard unpriced={run.unpriced} /> : null}
           {preview ? (
