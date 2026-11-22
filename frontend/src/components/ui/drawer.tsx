@@ -10,6 +10,7 @@ import {
   OVERLAY_BACKDROP_BLUR_CLASS,
   OVERLAY_BACKDROP_TINT_CLASS,
   Z_LAYER,
+  type ZLayer,
 } from "./overlay-styles";
 
 type DrawerDirection = "bottom" | "left";
@@ -45,14 +46,23 @@ Drawer.displayName = "Drawer";
 
 const DrawerPortal = DrawerPrimitive.Portal;
 
+/**
+ * Ebene des Blatts in `Z_LAYER`. `popover`: ein Blatt, das am Telefon ein
+ * Popover ersetzt (`ResponsivePanel`) und darum wie dieses auch über einem
+ * offenen Dialog liegen muss.
+ */
+type DrawerLayer = Extract<ZLayer, "sheet" | "popover">;
+
 const DrawerOverlay = React.forwardRef<
   React.ComponentRef<typeof DrawerPrimitive.Overlay>,
-  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Overlay>
->(({ className, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Overlay> & {
+    readonly layer?: DrawerLayer;
+  }
+>(({ className, layer = "sheet", ...props }, ref) => (
   <DrawerPrimitive.Overlay
     ref={ref}
     className={cn(
-      `fixed inset-0 ${Z_LAYER.sheet} ${FIXED_LAYER_SHIFT}`,
+      `fixed inset-0 ${Z_LAYER[layer]} ${FIXED_LAYER_SHIFT}`,
       OVERLAY_BACKDROP_TINT_CLASS,
       OVERLAY_BACKDROP_BLUR_CLASS,
       className,
@@ -86,18 +96,21 @@ type DrawerContentProps = React.ComponentPropsWithoutRef<
 > & {
   /** Nur von unten: das Blatt füllt den ganzen Bildschirm, ohne Rundung. */
   readonly fullScreen?: boolean;
+  /** Ebene von Blatt und Abdunklung; ohne Angabe `sheet`. */
+  readonly layer?: DrawerLayer;
 };
 
 const DrawerContent = React.forwardRef<
   React.ComponentRef<typeof DrawerPrimitive.Content>,
   DrawerContentProps
->(({ className, children, fullScreen = false, ...props }, ref) => {
+>(({ className, children, fullScreen = false, ...rest }, ref) => {
+  const { layer = "sheet", ...props } = rest;
   const direction = React.useContext(DrawerDirectionContext);
   const sheetRef = React.useRef<HTMLDivElement | null>(null);
   useSheetAboveKeyboard(sheetRef, direction === "bottom");
   return (
     <DrawerPortal>
-      <DrawerOverlay />
+      <DrawerOverlay layer={layer} />
       <DrawerPrimitive.Content
         ref={(node: HTMLDivElement | null) => {
           sheetRef.current = node;
@@ -105,7 +118,7 @@ const DrawerContent = React.forwardRef<
           else if (ref) ref.current = node;
         }}
         className={cn(
-          `${Z_LAYER.sheet} ${FIXED_LAYER_SHIFT} border-0 bg-white`,
+          `${Z_LAYER[layer]} ${FIXED_LAYER_SHIFT} border-0 bg-white`,
           fullScreen && direction === "bottom"
             ? FULL_SCREEN_BOTTOM_CLASSES
             : directionContentClasses[direction],
