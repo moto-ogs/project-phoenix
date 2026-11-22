@@ -1,5 +1,4 @@
-import type { ApiResponse } from "./api-envelope";
-import { apiErrorFromBody, transportFetch } from "./api-error";
+import { bffJson } from "./bff-fetch";
 import { requiredDay } from "./contract/required-day";
 // Client-seitige API für die Aufsichten im Schul-Portal ("moto schule", #2527).
 //
@@ -9,7 +8,6 @@ import { requiredDay } from "./contract/required-day";
 // Blöcke, in die diese Lehrkraft im Betreuungsplan eingeteilt ist.
 
 import type * as schoolSupervisionsContract from "./contract/school-supervisions.generated";
-import type * as sharedContract from "./contract/shared.generated";
 import type {
   AttendancePatchBody,
   HomeworkFeedbackBody,
@@ -53,30 +51,6 @@ function mapContact(
   return { ...raw, phones: raw.phones ?? [] };
 }
 
-async function unwrap<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Anfrage fehlgeschlagen (HTTP ${response.status})`,
-      response.status,
-      await response.json().catch(() => undefined),
-    );
-  }
-  const envelope = (await response.json()) as ApiResponse<T>;
-  return envelope.data;
-}
-
-function jsonRequest(method: string, body?: unknown): RequestInit {
-  return {
-    method,
-    credentials: "include",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body ?? {}),
-  };
-}
-
 function mapSheet(
   raw: schoolSupervisionsContract.SupervisionStudentSheet,
 ): SupervisionStudentSheet {
@@ -95,34 +69,31 @@ function mapSheet(
   };
 }
 
-const base = "/api/school/supervisions";
-
 export const schoolSupervisionsApi = {
   /** Die eigenen Aufsichten von heute, in jedem Zustand. */
   async myDay(): Promise<PlannedTimetableInstance[]> {
-    const raw =
-      await unwrap<schoolSupervisionsContract.SchoolSupervisionsResponse>(
-        await transportFetch(base, {
-          credentials: "include",
-          headers: { Accept: "application/json" },
-        }),
-      );
+    const raw = await bffJson("school", "GET /school/supervisions/");
     return (raw.instances ?? []).map(mapPlannedInstance);
   },
 
   async roster(instanceId: string): Promise<TimetableRoster> {
-    const raw = await unwrap<sharedContract.OperationRoster>(
-      await transportFetch(`${base}/${instanceId}/roster`, {
-        credentials: "include",
-        headers: { Accept: "application/json" },
-      }),
+    const raw = await bffJson(
+      "school",
+      "GET /school/supervisions/{id}/roster",
+      {
+        params: { id: instanceId },
+      },
     );
     return mapRoster(raw);
   },
 
   async start(instanceId: string): Promise<StartOperationResult> {
-    const raw = await unwrap<sharedContract.startOperationResponse>(
-      await transportFetch(`${base}/${instanceId}/start`, jsonRequest("POST")),
+    const raw = await bffJson(
+      "school",
+      "POST /school/supervisions/{id}/start",
+      {
+        params: { id: instanceId },
+      },
     );
     return mapStartOperation(raw);
   },
@@ -131,25 +102,20 @@ export const schoolSupervisionsApi = {
     instanceId: string,
     confirmedPresentStudentIds: string[],
   ): Promise<void> {
-    await unwrap<unknown>(
-      await transportFetch(
-        `${base}/${instanceId}/complete`,
-        jsonRequest("POST", {
-          confirmed_present_student_ids: confirmedPresentStudentIds,
-        } satisfies sharedContract.CompleteOperationRequest),
-      ),
-    );
+    await bffJson("school", "POST /school/supervisions/{id}/complete", {
+      params: { id: instanceId },
+      body: { confirmed_present_student_ids: confirmedPresentStudentIds },
+    });
   },
 
   async checkIn(
     instanceId: string,
     studentId: string,
   ): Promise<TimetableRoster> {
-    const raw = await unwrap<sharedContract.OperationRoster>(
-      await transportFetch(
-        `${base}/${instanceId}/students/${studentId}/check-in`,
-        jsonRequest("POST"),
-      ),
+    const raw = await bffJson(
+      "school",
+      "POST /school/supervisions/{id}/students/{student_id}/check-in",
+      { params: { id: instanceId, student_id: studentId } },
     );
     return mapRoster(raw);
   },
@@ -158,11 +124,10 @@ export const schoolSupervisionsApi = {
     instanceId: string,
     studentId: string,
   ): Promise<TimetableRoster> {
-    const raw = await unwrap<sharedContract.OperationRoster>(
-      await transportFetch(
-        `${base}/${instanceId}/students/${studentId}/check-out`,
-        jsonRequest("POST"),
-      ),
+    const raw = await bffJson(
+      "school",
+      "POST /school/supervisions/{id}/students/{student_id}/check-out",
+      { params: { id: instanceId, student_id: studentId } },
     );
     return mapRoster(raw);
   },
@@ -172,11 +137,10 @@ export const schoolSupervisionsApi = {
     studentId: string,
     body: AttendancePatchBody,
   ): Promise<void> {
-    await unwrap<unknown>(
-      await transportFetch(
-        `${base}/${instanceId}/students/${studentId}/attendance`,
-        jsonRequest("PATCH", body),
-      ),
+    await bffJson(
+      "school",
+      "PATCH /school/supervisions/{id}/students/{student_id}/attendance",
+      { params: { id: instanceId, student_id: studentId }, body },
     );
   },
 
@@ -186,11 +150,10 @@ export const schoolSupervisionsApi = {
     studentId: string,
     body: HomeworkFeedbackBody,
   ): Promise<void> {
-    await unwrap<unknown>(
-      await transportFetch(
-        `${base}/${instanceId}/students/${studentId}/homework-feedback`,
-        jsonRequest("PUT", body),
-      ),
+    await bffJson(
+      "school",
+      "PUT /school/supervisions/{id}/students/{student_id}/homework-feedback",
+      { params: { id: instanceId, student_id: studentId }, body },
     );
   },
 
@@ -199,16 +162,11 @@ export const schoolSupervisionsApi = {
     instanceId: string,
     studentId: string,
   ): Promise<SupervisionStudentSheet> {
-    const raw =
-      await unwrap<schoolSupervisionsContract.SupervisionStudentSheet>(
-        await transportFetch(
-          `${base}/${instanceId}/students/${studentId}/sheet`,
-          {
-            credentials: "include",
-            headers: { Accept: "application/json" },
-          },
-        ),
-      );
+    const raw = await bffJson(
+      "school",
+      "GET /school/supervisions/{id}/students/{student_id}/sheet",
+      { params: { id: instanceId, student_id: studentId } },
+    );
     return mapSheet(raw);
   },
 };
