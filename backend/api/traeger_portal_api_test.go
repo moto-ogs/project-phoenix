@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -225,7 +226,7 @@ type traegerLoginAnswer struct {
 
 func traegerLogin(t *testing.T, router http.Handler, email, password string, organizationID int64) (int, traegerLoginAnswer) {
 	t.Helper()
-	body, err := json.Marshal(map[string]any{"email": email, "password": password, "organization_id": organizationID})
+	body, err := json.Marshal(map[string]any{"email": email, "password": password, "organization_id": strconv.FormatInt(organizationID, 10)})
 	require.NoError(t, err)
 	req := httptest.NewRequest(http.MethodPost, "/traeger/auth/login", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -301,11 +302,11 @@ func traegerSignIn(t *testing.T, portal *traegerPortalHandler, email, password s
 		started, start := traegerPost(t, portal, "/traeger/auth/mfa/enroll/start", answer.AccessToken, map[string]any{})
 		require.Equal(t, http.StatusOK, started)
 		return traegerPost(t, portal, "/traeger/auth/mfa/enroll/confirm", answer.AccessToken, map[string]any{
-			"challenge_token": start.ChallengeToken, "code": lastTraegerCode(t, portal, email), "organization_id": answer.OrganizationID,
+			"challenge_token": start.ChallengeToken, "code": lastTraegerCode(t, portal, email), "organization_id": answer.OrganizationID.String(),
 		})
 	case "mfa_required":
 		return traegerPost(t, portal, "/traeger/auth/mfa/verify", "", map[string]any{
-			"challenge_token": answer.ChallengeToken, "code": lastTraegerCode(t, portal, email), "organization_id": answer.OrganizationID,
+			"challenge_token": answer.ChallengeToken, "code": lastTraegerCode(t, portal, email), "organization_id": answer.OrganizationID.String(),
 		})
 	}
 	return code, answer

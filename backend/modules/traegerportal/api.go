@@ -193,7 +193,7 @@ func (req *LoginRequest) Bind(_ *http.Request) error {
 	return validation.ValidateStruct(req,
 		validation.Field(&req.Email, validation.Required, is.Email),
 		validation.Field(&req.Password, validation.Required),
-		validation.Field(&req.OrganizationID, validation.Min(int64(0))),
+		validation.Field(&req.OrganizationID, validation.Min(ident.ID(0))),
 	)
 }
 
@@ -224,7 +224,7 @@ func (rs *Resource) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	client := portalauth.ClientOf(r)
-	result, err := rs.auth.Login(r.Context(), req.Email, req.Password, client.IP, client.UserAgent, int64(req.OrganizationID), common.TrustedDevice(r))
+	result, err := rs.auth.Login(r.Context(), req.Email, req.Password, client.IP, client.UserAgent, req.OrganizationID.Int64(), common.TrustedDevice(r))
 	if err != nil {
 		portalauth.Render(w, r, err, portalauth.LoginRules)
 		return

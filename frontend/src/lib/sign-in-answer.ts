@@ -46,8 +46,8 @@ interface WireSignInAnswer {
   access_token?: string;
   challenge_token?: string;
   masked_email?: string;
-  organization_id?: string | number;
-  organizations?: { id: string | number; name: string }[];
+  organization_id?: string;
+  organizations?: { id: string; name: string }[];
   trusted_device_enabled?: boolean;
   trusted_device_days?: number;
 }
@@ -92,14 +92,14 @@ const SIGN_IN_WIRE: Record<PortalKey, SignInWire> = {
 export function signInAnswer(portal: PortalKey, body: unknown): SignInAnswer {
   const wire = SIGN_IN_WIRE[portal];
   const answer = (body ?? {}) as WireSignInAnswer;
-  const organizationId = String(answer.organization_id ?? "");
+  const organizationId = answer.organization_id ?? "";
   const readable = (field?: string) => !wire.refusesUnreadable || !!field;
 
   if (answer.status === "organization_selection_required") {
     return {
       status: "organization_selection_required",
       organizations: (answer.organizations ?? []).map((organization) => ({
-        id: String(organization.id),
+        id: organization.id,
         name: organization.name,
       })),
     };
