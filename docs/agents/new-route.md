@@ -92,7 +92,7 @@ Worked example, the same route from Go to the browser:
 
    `mapPartialAbsence` maps to the view type. A failure throws an `ApiError`
    for the shared error path. Older clients read `sessionFetch` or `authFetch`
-   and unwrap `data` by hand; a client you touch moves to `bffJson`.
+   and unwrap `data` by hand; their move to `bffJson` is #7806.
    Components load through `useSWRAuth` and a key factory of `~/lib/swr`.
 7. **No route file.** The staff portal's catch-all `app/api/[...path]/route.ts`
    serves the path. Other portals call `/api/<portal>/…` for the backend's
