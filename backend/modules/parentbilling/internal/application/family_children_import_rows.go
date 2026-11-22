@@ -192,9 +192,8 @@ type familyImportTarget struct {
 	// inForce are the times the child's contracts of the family are in
 	// force, one per version of a contract.
 	inForce []familyImportSpan
-	// witness marks a family the child belonged to on the row's day but
-	// that the number no longer reaches: the row speaks against its rows
-	// and takes over nothing there (#7863).
+	// witness marks a family the number no longer reaches: the row speaks
+	// against its rows and takes over nothing there (#7863).
 	witness bool
 }
 
@@ -408,7 +407,7 @@ func (c *familyImportCheck) match(row *parentbilling.FamilyChildrenImportRow, sc
 func (c *familyImportCheck) reachedTargets(row *parentbilling.FamilyChildrenImportRow, found []familyImportContract, from calendar.Date) []familyImportTarget {
 	field := parentbilling.FamilyImportFieldChildLastName
 	running := c.applicableContracts(slices.Clone(found), from)
-	heard := c.heardContracts(found, running, from)
+	heard := heardContracts(found, running)
 	var targets []familyImportTarget
 	if len(running) == 0 {
 		problemOf(row, field, parentbilling.FamilyImportProblemContractEnded)
@@ -428,29 +427,12 @@ func (c *familyImportCheck) reachedTargets(row *parentbilling.FamilyChildrenImpo
 	return targets
 }
 
-// heardContracts are the contracts of the families the child belonged to
-// on the row's day that applicableContracts left out: a renewal there would
-// start only after the child left. Each such family keeps all the child's
-// contracts in it, so the witness speaks for every time the child was there.
-// The row's number still speaks against their rows (ADR 0305, #7863).
-func (c *familyImportCheck) heardContracts(found, running []familyImportContract, from calendar.Date) []familyImportContract {
-	left := slices.DeleteFunc(slices.Clone(found), func(contract familyImportContract) bool {
+// heardContracts are the contracts applicableContracts left out: their
+// families take over nothing from the row, but its number still speaks
+// against their rows, as it did before point 5 (ADR 0305, #7863).
+func heardContracts(found, running []familyImportContract) []familyImportContract {
+	return slices.DeleteFunc(slices.Clone(found), func(contract familyImportContract) bool {
 		return slices.ContainsFunc(running, func(kept familyImportContract) bool { return kept.id == contract.id })
-	})
-	onDay := map[string]bool{}
-	for _, contract := range left {
-		if spansCover(contract.inForce, from) {
-			onDay[c.family(contract.id)] = true
-		}
-	}
-	return slices.DeleteFunc(left, func(contract familyImportContract) bool { return !onDay[c.family(contract.id)] })
-}
-
-// spansCover tells whether one of the spans holds the day; a span without
-// an end runs on.
-func spansCover(spans []familyImportSpan, day calendar.Date) bool {
-	return slices.ContainsFunc(spans, func(span familyImportSpan) bool {
-		return span.from != "" && !day.Before(span.from) && (span.until == "" || !day.After(span.until))
 	})
 }
 

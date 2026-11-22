@@ -273,11 +273,7 @@ func familyImportRows(candidates []familyImportCandidate) (rows []importedChildr
 			if candidate.row.Status != "" && !witness {
 				continue
 			}
-			var belongs []familyImportSpan
-			if target.witness {
-				belongs = target.inForce
-			}
-			rows = append(rows, importedChildren{family: target.family, witness: witness, belongs: belongs, number: parentbilling.ImportedFamilyChildren{
+			rows = append(rows, importedChildren{family: target.family, witness: witness, number: parentbilling.ImportedFamilyChildren{
 				Line: candidate.row.Line, ContractID: target.contractID, Children: *candidate.row.Children, ValidFrom: candidate.validFrom}})
 			owner = append(owner, i)
 		}
