@@ -29,10 +29,11 @@ import {
   SkeletonRegion,
 } from "~/components/ui/page-skeletons";
 import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
-import { ApiError, transportFetch } from "~/lib/api-error";
+import { ApiError } from "~/lib/api-error";
 import {
   fetchSigningView,
   signContract,
+  fetchSigningDocument,
   signingDocumentUrl,
   type SigningService,
   type SigningSource,
@@ -249,14 +250,21 @@ function ContractDocument({
   const [blob, setBlob] = useState<Blob | null>(null);
   const url = useObjectUrl(blob);
   const documentUrl = signingDocumentUrl(source);
+  // The page passes a new source object on every render; the preview loads
+  // again only when the contract changes.
+  const link = source.kind === "link" ? source.link : null;
+  const organizationId = source.kind === "inbox" ? source.organizationId : "";
+  const contractId = source.kind === "inbox" ? source.contractId : "";
 
   // oxlint-disable-next-line swr/no-effect-load -- loads the PDF as a blob for an object URL preview, also for the sessionless mail link
   useEffect(() => {
     let cancelled = false;
-    transportFetch(documentUrl, { method: "GET", cache: "no-store" })
-      .then(async (response) => {
-        if (!response.ok) throw new Error(`document ${response.status}`);
-        const loaded = await response.blob();
+    fetchSigningDocument(
+      link === null
+        ? { kind: "inbox", organizationId, contractId }
+        : { kind: "link", link },
+    )
+      .then((loaded) => {
         if (!cancelled) setBlob(loaded);
       })
       .catch((err: unknown) => {
@@ -268,7 +276,7 @@ function ContractDocument({
     return () => {
       cancelled = true;
     };
-  }, [documentUrl]);
+  }, [link, organizationId, contractId]);
 
   return (
     <SectionCard

@@ -88,6 +88,19 @@ vi.mock("~/lib/logger", () => ({
 
 global.fetch = mockFetch as unknown as typeof fetch;
 
+vi.mock("~/lib/session-cache", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/session-cache")>()),
+  sessionFetch: (await import("~/test/mocks/plain-session-fetch")).sessionFetch,
+}));
+
+/** A successful write without data, as the catalog proxy hands it on. */
+function noData() {
+  return {
+    ok: true,
+    json: () => Promise.resolve({ status: "success", data: null }),
+  };
+}
+
 function createState(overrides: Record<string, unknown> = {}) {
   return {
     accountId: "42",
@@ -169,7 +182,7 @@ describe("CaregiverBlockerResolutionPanel", () => {
   });
 
   it("confirms ending an active supervision before calling the API", async () => {
-    mockFetch.mockResolvedValue({ ok: true });
+    mockFetch.mockResolvedValue(noData());
 
     render(
       <CaregiverBlockerResolutionPanel
@@ -195,7 +208,7 @@ describe("CaregiverBlockerResolutionPanel", () => {
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
         "/api/active/supervisors/7/end",
-        expect.objectContaining({ method: "POST", credentials: "include" }),
+        expect.objectContaining({ method: "POST" }),
       );
     });
     await waitFor(() => {
@@ -207,7 +220,7 @@ describe("CaregiverBlockerResolutionPanel", () => {
   });
 
   it("ends group handovers and reports success", async () => {
-    mockFetch.mockResolvedValue({ ok: true });
+    mockFetch.mockResolvedValue(noData());
 
     render(
       <CaregiverBlockerResolutionPanel
@@ -235,8 +248,7 @@ describe("CaregiverBlockerResolutionPanel", () => {
         "/api/substitutions/end",
         expect.objectContaining({
           method: "POST",
-          credentials: "include",
-          body: JSON.stringify({ type: "group_handover", id: 9 }),
+          body: JSON.stringify({ type: "group_handover", id: "9" }),
         }),
       );
     });
@@ -246,7 +258,7 @@ describe("CaregiverBlockerResolutionPanel", () => {
   });
 
   it("transfers activity supervision to a replacement caregiver", async () => {
-    mockFetch.mockResolvedValue({ ok: true });
+    mockFetch.mockResolvedValue(noData());
 
     render(
       <CaregiverBlockerResolutionPanel
@@ -375,7 +387,7 @@ describe("CaregiverBlockerResolutionPanel", () => {
   });
 
   it("preserves other group leaders when removing a Stammgruppe assignment", async () => {
-    mockFetch.mockResolvedValue({ ok: true });
+    mockFetch.mockResolvedValue(noData());
 
     render(
       <CaregiverBlockerResolutionPanel
@@ -407,7 +419,7 @@ describe("CaregiverBlockerResolutionPanel", () => {
         "/api/groups/14",
         expect.objectContaining({
           method: "PUT",
-          body: JSON.stringify({ name: "Gruppe Gelb", teacher_ids: [31] }),
+          body: JSON.stringify({ name: "Gruppe Gelb", teacher_ids: ["31"] }),
         }),
       );
     });
@@ -417,7 +429,7 @@ describe("CaregiverBlockerResolutionPanel", () => {
   });
 
   it("preserves other group leaders when reassigning a Stammgruppe", async () => {
-    mockFetch.mockResolvedValue({ ok: true });
+    mockFetch.mockResolvedValue(noData());
 
     render(
       <CaregiverBlockerResolutionPanel
@@ -450,7 +462,10 @@ describe("CaregiverBlockerResolutionPanel", () => {
         "/api/groups/14",
         expect.objectContaining({
           method: "PUT",
-          body: JSON.stringify({ name: "Gruppe Gelb", teacher_ids: [31, 32] }),
+          body: JSON.stringify({
+            name: "Gruppe Gelb",
+            teacher_ids: ["31", "32"],
+          }),
         }),
       );
     });

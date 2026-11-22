@@ -35,6 +35,11 @@ function RoomDetailHarness({ roomId }: { readonly roomId: string }) {
 // loader states) rather than session/SSE plumbing.
 // ----------------------------------------------------------------------------
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
     data: { user: { token: "test-token" } },

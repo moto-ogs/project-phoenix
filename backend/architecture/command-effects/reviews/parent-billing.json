@@ -328,7 +328,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.Recipients",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.BillingRecipients: the party each monthly invoice of the given contracts of the session's Träger goes to, read in its Träger transaction; the monthly run copies it and records the read in its own trail (#4684).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.BillingRecipients: the party each monthly invoice of the given contracts of the session's Träger goes to, read in its Träger transaction; the monthly run copies it and records the read in its own trail (#4684). It also marks a draft contract, so the Elternabrechnung refuses a SEPA mandate on a draft, which its discard would take along (#7862).",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",
       "target_owner": "care-contract"
@@ -501,7 +501,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.ContractParties.Recipients",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.BillingRecipients: the name of the billing party of the one contract the parents portal checked, read in its Träger transaction to propose the account holder of a new online SEPA mandate (#4696).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.BillingRecipients: the name of the billing party of the one contract the parents portal checked, read in its Träger transaction to propose the account holder of a new online SEPA mandate (#4696). It also marks a draft contract, so the Elternabrechnung refuses a SEPA mandate on a draft, which its discard would take along (#7862).",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",
       "target_owner": "care-contract"
@@ -956,6 +956,16 @@
       "target_owner": "care-contract"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.retainedContracts.DeletableContracts",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.RetainedContracts.DeletableContracts",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractRetention.DeletableContracts: which of the due contracts DeleteEndedContracts would delete, by the same condition, read in the administrative transaction of the hourly Beleg retention after due_retained_contracts locked them, so the Elternabrechnung moves a family's deviation only off contracts that go (#7862, ADR 0184 Nachtrag 2026-11-22); IDs only.",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractRetention.DeletableContracts",
+      "target_owner": "care-contract"
+    },
+    {
       "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.retainedContracts.DeleteEndedContracts",
       "classification": "leaf",
@@ -964,6 +974,16 @@
       "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target modules/carecontract.ContractRetention.DeleteEndedContracts: joins the administrative transaction of the hourly Beleg retention and deletes only the given contracts of the Träger that ended by the evaluation day and whose event (end or conclusion), read as it stands at the delete, lies on or before the last day the current Weisung allows, with their trail; Care Contract keeps the guard against drafts and contracts in force. Before the call the Elternabrechnung holds the retention lock of the Träger and has locked the due contract rows (parent_billing.due_retained_contracts), so no mandate or debit can be added to them, and lists only contracts without mandate, debit or suspension (#4720, ADR 0184). The target takes no further lock, no re-read under foreign locks, no after-commit step.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractRetention.DeleteEndedContracts",
+      "target_owner": "care-contract"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.retainedContracts.RecipientEmails",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.RetainedContracts.RecipientEmails",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractRetention.RecipientEmails: the address of the invoice recipient of each given contract past its draft, read in the administrative transaction of the hourly Beleg retention so the Elternabrechnung moves a family's deviation to another contract of the family before the deletion (#7862, ADR 0184 Nachtrag 2026-11-22); no other party, child or bank data.",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractRetention.RecipientEmails",
       "target_owner": "care-contract"
     },
     {
@@ -1046,7 +1066,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling/internal/application.CareLetterRecipients.Recipients",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.BillingRecipients: the party each monthly invoice of the given contracts of the session's Träger goes to now, read in its Träger transaction before a letter is sent, so a letter only goes to the address that is still the contract's billing party (#4684, ADR 0165). Reviewed again for #7770: the party the target answers also says whether its contract is still a draft; this binding does not read it, and no read or write changes.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.BillingRecipients: the party each monthly invoice of the given contracts of the session's Träger goes to now, read in its Träger transaction before a letter is sent, so a letter only goes to the address that is still the contract's billing party (#4684, ADR 0165). Reviewed again for #7770: the party the target answers also says whether its contract is still a draft; this binding does not read it, and no read or write changes. It also marks a draft contract, so the Elternabrechnung refuses a SEPA mandate on a draft, which its discard would take along (#7862).",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",
       "target_owner": "care-contract"

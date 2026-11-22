@@ -89,6 +89,9 @@ function catalogOffering(overrides: Partial<CareOffering> = {}): CareOffering {
     includes_lunch: false,
     is_active: true,
     is_required: false,
+    counts_as_care: true,
+    auto_add_grade_levels: [],
+    auto_add_trigger_offering_ids: [],
     sort_order: 1,
     created_at: "2026-06-18T11:15:00Z",
     updated_at: "2026-06-18T11:15:00Z",
@@ -987,7 +990,7 @@ describe("ChildOfferingAdjustment", () => {
     const checkbox = await screen.findByRole("checkbox", {
       name: /Verpflichtender Ganztag/,
     });
-    expect(checkbox).toBeChecked();
+    await waitFor(() => expect(checkbox).toBeChecked());
     fireEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
     fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
 

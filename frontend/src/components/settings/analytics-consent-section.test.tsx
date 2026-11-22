@@ -16,6 +16,11 @@ const mocks = vi.hoisted(() => ({
   useTenant: vi.fn(),
 }));
 
+// The staff portal sends through sessionFetch; the stub passes the answer on.
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 vi.mock("~/env.client", () => ({ clientEnv: mocks.env }));
 vi.mock("~/lib/demo-access", () => ({ isDemoBuild: () => false }));
 vi.mock("~/lib/posthog-client", () => ({

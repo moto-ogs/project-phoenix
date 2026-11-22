@@ -5,8 +5,8 @@
  * hat, ist `booked` null.
  */
 
-import { apiErrorFromResponse, transportFetch } from "./api-error";
-import type { DeviceSlotsResponse } from "./contract/iot.generated";
+import { bffJson } from "./bff-fetch";
+import type * as iotContract from "./contract/iot.generated";
 
 export interface DeviceSlots {
   /** Gekaufte Geräteplätze; null ohne Grenze. */
@@ -17,7 +17,9 @@ export interface DeviceSlots {
   readonly free: number | null;
 }
 
-export function mapDeviceSlots(data: DeviceSlotsResponse): DeviceSlots {
+export function mapDeviceSlots(
+  data: iotContract.DeviceSlotsResponse,
+): DeviceSlots {
   return {
     booked: data.device_slots ?? null,
     occupied: data.occupied,
@@ -42,18 +44,9 @@ export function freeDeviceSlots(
 }
 
 export async function fetchDeviceSlots(): Promise<DeviceSlots> {
-  const response = await transportFetch("/api/iot/device-slots", {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `device slots failed (${response.status})`,
-    );
-  }
-  // The catalog proxy hands on the contract's `DeviceSlotsResponse`.
-  const json = (await response.json()) as { data: DeviceSlotsResponse };
-  return mapDeviceSlots(json.data);
+  return mapDeviceSlots(
+    await bffJson("tenant", "GET /api/iot/device-slots", {
+      errorMessage: "device slots failed",
+    }),
+  );
 }

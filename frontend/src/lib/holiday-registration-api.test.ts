@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { PublicHolidayRegistrationOfferResponse as WireHolidayRegistrationOffer } from "./contract/traeger-holiday-registrations.generated";
+import type * as traegerHolidayRegistrationsContract from "./contract/traeger-holiday-registrations.generated";
 import {
   fetchHolidayRegistrationFamily,
   fetchHolidayRegistrationOffer,
@@ -71,7 +71,7 @@ describe("fetchHolidayRegistrationFamily (#4662)", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/parent/holiday-registrations/a%2Fb/family",
-      expect.objectContaining({ cache: "no-store" }),
+      expect.objectContaining({ method: "GET", cache: "no-store" }),
     );
     expect(family).toEqual({
       guardian: {
@@ -212,8 +212,10 @@ describe("fetchHolidayRegistrationOffer form (#2353)", () => {
   });
 
   function offer(
-    form: Partial<WireHolidayRegistrationOffer["form"]>,
-  ): WireHolidayRegistrationOffer {
+    form: Partial<
+      traegerHolidayRegistrationsContract.PublicHolidayRegistrationOfferResponse["form"]
+    >,
+  ): traegerHolidayRegistrationsContract.PublicHolidayRegistrationOfferResponse {
     return {
       traeger_name: "Träger",
       name: "Herbstferien",
@@ -259,7 +261,9 @@ describe("fetchHolidayRegistrationOffer form (#2353)", () => {
     };
   }
 
-  function answerWith(data: WireHolidayRegistrationOffer): void {
+  function answerWith(
+    data: traegerHolidayRegistrationsContract.PublicHolidayRegistrationOfferResponse,
+  ): void {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(answer(200, { status: "success", data })),
@@ -314,14 +318,16 @@ describe("fetchHolidayRegistrationOffer form (#2353)", () => {
       },
     ],
     ["a health requirement", { health_requirement: "strict" }],
-  ] satisfies [string, Partial<WireHolidayRegistrationOffer["form"]>][])(
-    "fails the read on %s this build does not know",
-    async (_name, form) => {
-      answerWith(offer(form));
+  ] satisfies [
+    string,
+    Partial<
+      traegerHolidayRegistrationsContract.PublicHolidayRegistrationOfferResponse["form"]
+    >,
+  ][])("fails the read on %s this build does not know", async (_name, form) => {
+    answerWith(offer(form));
 
-      await expect(fetchHolidayRegistrationOffer("tok")).rejects.toThrow(
-        /^contract: HolidayRegistrationForm\..+ has an unknown value$/,
-      );
-    },
-  );
+    await expect(fetchHolidayRegistrationOffer("tok")).rejects.toThrow(
+      /^contract: HolidayRegistrationForm\..+ has an unknown value$/,
+    );
+  });
 });

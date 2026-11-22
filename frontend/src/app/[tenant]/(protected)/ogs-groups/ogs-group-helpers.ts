@@ -14,11 +14,11 @@ import { foldForSearch } from "~/lib/search-fold";
 export interface OGSGroup {
   id: string;
   name: string;
-  room_name?: string;
-  room_id?: string;
-  student_count?: number;
-  present_count?: number;
-  supervisor_name?: string;
+  roomName?: string;
+  roomId?: string;
+  studentCount?: number;
+  presentCount?: number;
+  supervisorName?: string;
   students?: Student[];
   viaSubstitution?: boolean;
   isPersonal?: boolean;
@@ -39,8 +39,8 @@ export function countCheckedInStudents(
 }
 
 function formatGroupAttendanceCount(group?: OGSGroup | null): string {
-  if (!group || group.student_count === undefined) return "";
-  return `${group.present_count ?? 0}/${group.student_count}`;
+  if (!group || group.studentCount === undefined) return "";
+  return `${group.presentCount ?? 0}/${group.studentCount}`;
 }
 
 export function formatGroupLabelWithAttendance(group: OGSGroup): string {
@@ -52,22 +52,22 @@ export function isStudentInGroupRoom(
   student: Student,
   currentGroup?: OGSGroup | null,
 ): boolean {
-  if (!student?.current_location || !currentGroup?.room_name) {
+  if (!student?.current_location || !currentGroup?.roomName) {
     return false;
   }
 
   const parsed = parseLocation(student.current_location);
   if (parsed.room) {
     const normalizedStudentRoom = parsed.room.trim().toLowerCase();
-    const normalizedGroupRoom = currentGroup.room_name.trim().toLowerCase();
+    const normalizedGroupRoom = currentGroup.roomName.trim().toLowerCase();
     if (normalizedStudentRoom === normalizedGroupRoom) {
       return true;
     }
   }
 
-  if (currentGroup.room_id) {
+  if (currentGroup.roomId) {
     const normalizedLocation = student.current_location.toLowerCase();
-    return normalizedLocation.includes(currentGroup.room_id.toString());
+    return normalizedLocation.includes(currentGroup.roomId.toString());
   }
 
   return false;
