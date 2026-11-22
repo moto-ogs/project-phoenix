@@ -78,7 +78,7 @@ describe("FamilyChildrenImportValidFromCard", () => {
     });
     expect(
       screen.getByText(
-        /Zeilen mit einem Tag in der Spalte „Stichtag“ nehmen ihren Tag\. Dieser Tag gilt für alle anderen Zeilen\. Nennen Geschwister verschiedene Tage, gilt für die Familie der früheste\. Übernimmt moto nur eine dieser Zeilen, gilt ihr Tag\./,
+        /Zeilen mit einem Tag in der Spalte „Stichtag“ nehmen ihren Tag\. Dieser Tag gilt für alle anderen Zeilen\. Nennen Geschwister verschiedene Tage, gilt für die Familie der früheste Tag der Zeilen, die moto übernimmt\./,
       ),
     ).toBeInTheDocument();
   });

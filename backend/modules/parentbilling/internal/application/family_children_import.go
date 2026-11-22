@@ -46,8 +46,9 @@ func (c *CareReductions) ImportFamilyChildren(ctx context.Context, reviewer pare
 	if request.Mapping != nil {
 		result.Mapping = *request.Mapping
 	}
-	result.Mapping = settleFamilyImportMapping(result.Mapping, schools, c.today())
-	index, err := resolveFamilyImportMapping(table.headers, result.Mapping, schools, c.today())
+	today := c.today()
+	result.Mapping = settleFamilyImportMapping(result.Mapping, schools, today)
+	index, err := resolveFamilyImportMapping(table.headers, result.Mapping, schools, today)
 	if err != nil {
 		return parentbilling.FamilyChildrenImport{}, err
 	}
@@ -104,7 +105,7 @@ func (c *CareReductions) decideFamilyImportFile(ctx context.Context, reviewer pa
 func (c *CareReductions) familyImportCandidates(ctx context.Context, reviewer parentbilling.HolidayReviewer, table importTable,
 	index familyImportIndex, schools []parentbilling.CareSchool,
 ) ([]familyImportCandidate, error) {
-	organizationID, today := reviewer.OrganizationID, c.today()
+	organizationID, today := reviewer.OrganizationID, index.today
 	// The contracts of the page of the numbers: in force from three months
 	// back to nine ahead. A contract that began before counts from the
 	// first day of that window.
@@ -125,12 +126,12 @@ func (c *CareReductions) familyImportCandidates(ctx context.Context, reviewer pa
 	if err != nil {
 		return nil, fmt.Errorf("parent billing: read the contract parties: %w", err)
 	}
-	check := familyImportCheck{index: index, schools: schools, contracts: contracts, recipients: recipients}
+	numbers, _ := numbersByFamily(counts, recipients)
+	check := familyImportCheck{index: index, schools: schools, contracts: contracts, recipients: recipients, numbers: numbers}
 	candidates := make([]familyImportCandidate, len(table.rows))
 	for i, cells := range table.rows {
 		candidates[i] = check.candidate(cells, table.lines[i])
 	}
-	numbers, _ := numbersByFamily(counts, recipients)
 	shown := decideFamilyImport(candidates, numbers, today)
 	event := parentbilling.FamilyChildEvent{Action: parentbilling.FamilyChildEventRead, Actor: parentbilling.FamilyChildActorOffice,
 		AccountID: reviewer.AccountID}
@@ -144,22 +145,17 @@ func (c *CareReductions) familyImportCandidates(ctx context.Context, reviewer pa
 // numbers of its families and answers the numbers the answer tells.
 func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*familyNumbers, today calendar.Date) []parentbilling.FamilyChildTarget {
 	rows, owner := familyImportRows(candidates)
-	current := func(family string) *parentbilling.FamilyChildCount {
-		if found, ok := numbers[family]; ok {
-			return found.confirmed()
-		}
-		return nil
-	}
-	// Conflicting carried confirmations still protect their earlier months.
-	// Only an explicit office confirmation may settle them for the family.
+	decisionDay := familyImportDecisionDay(today, familyImportTargets(candidates))
 	for i := range rows {
-		if found := numbers[rows[i].family]; found != nil {
-			if _, differing := found.count(); differing {
-				rows[i].status = parentbilling.ImportedChildrenConfirmationsDiffer
-			}
+		if _, differing := numbers[rows[i].family].confirmedForImport(decisionDay(rows[i])); differing {
+			rows[i].status = parentbilling.ImportedChildrenConfirmationsDiffer
 		}
 	}
-	decideImportedChildren(rows, familyImportCurrent(numbers), familyImportDecisionDay(today, familyImportTargets(candidates)))
+	current := func(family string, day calendar.Date) *parentbilling.FamilyChildCount {
+		count, _ := numbers[family].confirmedForImport(day)
+		return count
+	}
+	decideImportedChildren(rows, current, decisionDay)
 	var shown []parentbilling.FamilyChildTarget
 	seen := map[int64]bool{}
 	for i, row := range rows {
@@ -167,7 +163,10 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 			continue
 		}
 		candidates[owner[i]].decided = append(candidates[owner[i]].decided, row)
-		if count := current(row.family); count != nil && row.confirmed != nil && !seen[count.ID.Int64()] {
+		if row.confirmed == nil {
+			continue
+		}
+		if count := current(row.family, decisionDay(row)); count != nil && !seen[count.ID.Int64()] {
 			seen[count.ID.Int64()] = true
 			shown = append(shown, parentbilling.FamilyChildTarget{ContractID: count.ContractID.Int64(), CountID: (*int64)(&count.ID)})
 		}
@@ -179,31 +178,9 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 	return shown
 }
 
-// familyImportCurrent answers the confirmation a row of a family compares
-// with on its day (familyNumbers.confirmedForImport), nil without one.
-func familyImportCurrent(numbers map[string]*familyNumbers) func(string, calendar.Date) *parentbilling.FamilyChildCount {
-	return func(family string, day calendar.Date) *parentbilling.FamilyChildCount {
-		if found, ok := numbers[family]; ok {
-			return found.confirmedForImport(day)
-		}
-		return nil
-	}
-}
-
-// familyImportDecisionDay is the day a row's number has to hold on: the
-// later of today and the day the row names. A confirmation that ends before
-// the row's day is renewed from that day, and the months it covers keep it
-// (FamilyChildCount.InForceOn). Only a family in which a contract of the
-// row's own child is in force on the row's day is decided ahead: for a
-// family the child has left or not yet joined, today decides, so the file
-// does not renew its number for a time the child is no part of it.
 func familyImportDecisionDay(today calendar.Date, targets map[familyImportRowFamily]familyImportTarget) func(importedChildren) calendar.Date {
 	return func(row importedChildren) calendar.Date {
-		day := row.number.ValidFrom
-		if day.After(today) && targets[familyImportRowFamily{row.number.Line, row.family}].covers(day) {
-			return day
-		}
-		return today
+		return targets[familyImportRowFamily{row.number.Line, row.family}].decisionDay(today, row.number.ValidFrom)
 	}
 }
 

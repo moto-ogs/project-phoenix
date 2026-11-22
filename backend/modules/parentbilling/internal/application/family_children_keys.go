@@ -91,15 +91,6 @@ func (n *familyNumbers) contractID() int64 {
 	return n.brought[0].ContractID.Int64()
 }
 
-// confirmed is the number the Abrechnung confirmed for the family, nil
-// without one or while its contracts brought different numbers.
-func (n *familyNumbers) confirmed() *parentbilling.FamilyChildCount {
-	if count, differing := n.count(); !differing && count != nil && count.ConfirmedChildren != nil {
-		return count
-	}
-	return nil
-}
-
 // all are the stored numbers of the family: its own and those its
 // contracts brought along.
 func (n *familyNumbers) all() []*parentbilling.FamilyChildCount {
@@ -135,22 +126,42 @@ func (n *familyNumbers) count() (count *parentbilling.FamilyChildCount, differin
 	return first, false
 }
 
-// confirmedForImport is the confirmation a row of the Kinderzahl-Datei
-// compares with on day (#7863): the newest one, but while it only starts
-// after day, the number that holds on day. Without a number that holds on
-// day the newest one stays, so the file never takes over a number in front
-// of a confirmation planned for later.
-func (n *familyNumbers) confirmedForImport(day calendar.Date) *parentbilling.FamilyChildCount {
-	count := n.confirmed()
-	if count == nil || count.ValidFrom == nil || !count.ValidFrom.After(day) {
-		return count
+// confirmedForImport resolves the confirmation and any conflict on day.
+// If nothing holds on that day, keep the stored confirmations as fallback
+// so the file cannot overwrite a planned count, and renewals follow expiry.
+func (n *familyNumbers) confirmedForImport(day calendar.Date) (*parentbilling.FamilyChildCount, bool) {
+	if n == nil {
+		return nil, false
 	}
-	number, holds := n.confirmedOn(day)
-	if !holds {
+	if n.decided() {
+		if _, started := n.own.InForceOn(day); started {
+			// An own confirmation supersedes the carried ones even after expiry.
+			return confirmationOnDay(n.own, day), false
+		}
+	}
+	if n.broughtDifferOn(day) {
+		return nil, true
+	}
+	if held := n.broughtOn(day); held != nil && !confirmationExpired(held, day) {
+		return held, false
+	}
+	return n.count()
+}
+
+// confirmationOnDay is the count with the confirmation valid on day as its
+// current one, so an import compares with the number that holds then and not
+// with one planned for later (#7863). Without one, the count stays as stored:
+// a planned confirmation is never overwritten and an expired one renews.
+func confirmationOnDay(count *parentbilling.FamilyChildCount, day calendar.Date) *parentbilling.FamilyChildCount {
+	if count == nil {
+		return nil
+	}
+	confirmation, started := count.InForceOn(day)
+	if _, valid := validFamilyConfirmation(confirmation, day); !started || !valid {
 		return count
 	}
 	held := *count
-	held.ConfirmedChildren, held.ValidUntil = &number, nil
+	held.ConfirmedChildren, held.ValidFrom, held.ValidUntil = confirmation.Children, confirmation.ValidFrom, confirmation.ValidUntil
 	return &held
 }
 

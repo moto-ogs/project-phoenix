@@ -55,7 +55,7 @@ export function FamilyChildrenImportValidFromCard({
       </div>
       <p className="mt-3 text-sm text-gray-600">
         {ownDays
-          ? `Zeilen mit einem Tag in der Spalte „${mapping.columns.valid_from}“ nehmen ihren Tag. Dieser Tag gilt für alle anderen Zeilen. Nennen Geschwister verschiedene Tage, gilt für die Familie der früheste. Übernimmt moto nur eine dieser Zeilen, gilt ihr Tag. Die Vorschau zeigt dir den Tag je Zeile.`
+          ? `Zeilen mit einem Tag in der Spalte „${mapping.columns.valid_from}“ nehmen ihren Tag. Dieser Tag gilt für alle anderen Zeilen. Nennen Geschwister verschiedene Tage, gilt für die Familie der früheste Tag der Zeilen, die moto übernimmt. Die Vorschau zeigt dir den Tag je Zeile.`
           : "Der Tag gilt für alle Zeilen. Nennt deine Datei den Tag je Kind, ordne oben die Spalte „Gültig ab“ zu."}
       </p>
     </SectionCard>

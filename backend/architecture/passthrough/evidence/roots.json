@@ -1185,6 +1185,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (c parentBillingCareContracts) ChildrenOf(ctx context.Context, organizationID int64, contractIDs []int64) (map[int64]parentbilling.CareContractChild, error) {\n\tchildren, err := c.contracts.BillingChildren(ctx, organizationID, contractIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64]parentbilling.CareContractChild, len(children))\n\tfor contractID, child := range children {\n\t\tresult[contractID] = parentbilling.CareContractChild(child)\n\t}\n\treturn result, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "api/parentBillingCareContracts.ChildrenOf",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (c parentBillingCareContracts) Recipients(ctx context.Context, organizationID int64, contractIDs []int64) (map[int64]parentbilling.CareRecipient, error) {\n\tparties, err := c.contracts.BillingRecipients(ctx, organizationID, contractIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\trecipients := make(map[int64]parentbilling.CareRecipient, len(parties))\n\tfor contractID, party := range parties {\n\t\trecipients[contractID] = parentbilling.CareRecipient{FirstName: party.FirstName, LastName: party.LastName, Email: party.Email}\n\t}\n\treturn recipients, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/parentBillingCareContracts.Recipients",

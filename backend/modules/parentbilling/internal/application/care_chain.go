@@ -468,15 +468,13 @@ func otherContractChildren(entries []*careChainEntry, unbilled []careContractPla
 	return others
 }
 
-// noteUncounted records the schools of the family's invoices the rule
-// reduces: only there the missing number changes an amount.
+// noteUncounted records schools with drafts that could use a confirmed
+// number. A previously issued invoice still ranks, but cannot change.
 func noteUncounted(uncounted map[string][]int64, family string, children []*rankedCareChild, rule *parentbilling.ContributionRule) {
-	if _, ok := uncounted[family]; !ok {
-		uncounted[family] = []int64{}
-	}
+	schools := ident.Int64s(rule.SchoolIDs)
 	for _, child := range children {
 		for _, entry := range child.entries {
-			if appliesAt(ident.Int64s(rule.SchoolIDs), entry) && !slices.Contains(uncounted[family], entry.invoice.SchoolID.Int64()) {
+			if !entry.issued && appliesAt(schools, entry) && !slices.Contains(uncounted[family], entry.invoice.SchoolID.Int64()) {
 				uncounted[family] = append(uncounted[family], entry.invoice.SchoolID.Int64())
 			}
 		}

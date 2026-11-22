@@ -214,7 +214,7 @@ func (s parentBillingCareSchools) TraegerSchools(ctx context.Context, organizati
 }
 
 // parentBillingCareContracts translates the Betreuungsvertrag's versions in
-// force and invoice recipients into the Elternabrechnung's port.
+// force, invoice recipients and contract children into the Elternabrechnung's port.
 type parentBillingCareContracts struct {
 	contracts carecontract.ContractBilling
 }
@@ -252,6 +252,18 @@ func (c parentBillingCareContracts) Recipients(ctx context.Context, organization
 		recipients[contractID] = parentbilling.CareRecipient{FirstName: party.FirstName, LastName: party.LastName, Email: party.Email}
 	}
 	return recipients, nil
+}
+
+func (c parentBillingCareContracts) ChildrenOf(ctx context.Context, organizationID int64, contractIDs []int64) (map[int64]parentbilling.CareContractChild, error) {
+	children, err := c.contracts.BillingChildren(ctx, organizationID, contractIDs)
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[int64]parentbilling.CareContractChild, len(children))
+	for contractID, child := range children {
+		result[contractID] = parentbilling.CareContractChild(child)
+	}
+	return result, nil
 }
 
 // parentBillingTermContracts are the contracts the deviation of a family may

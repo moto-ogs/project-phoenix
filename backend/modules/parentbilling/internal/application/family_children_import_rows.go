@@ -206,6 +206,15 @@ func (t familyImportTarget) covers(day calendar.Date) bool {
 	})
 }
 
+// decisionDay looks ahead only when the child's own contract covers the
+// row's day. For past dates or a gap in the contracts, compare with today.
+func (t familyImportTarget) decisionDay(today, from calendar.Date) calendar.Date {
+	if from.After(today) && t.covers(from) {
+		return from
+	}
+	return today
+}
+
 // familyImportCandidate is a row with the families its number goes to, the
 // day it counts from and, once decided, what happens per family.
 type familyImportCandidate struct {
@@ -225,6 +234,7 @@ type familyImportCheck struct {
 	schools    []parentbilling.CareSchool
 	contracts  []familyImportContract
 	recipients map[int64]parentbilling.CareRecipient
+	numbers    map[string]*familyNumbers
 	named      map[int64]int
 	// unnamed is set while a row is read that names its child for no later
 	// row.
@@ -260,7 +270,11 @@ func (c *familyImportCheck) candidate(cells []string, line int) familyImportCand
 	// A row held back by its day names its child for no later row: a
 	// second row of the child with a sound day still counts.
 	c.unnamed = candidate.speaksOnly
-	candidate.targets = c.match(row, schoolID)
+	matchFrom := candidate.validFrom
+	if candidate.speaksOnly {
+		matchFrom = c.index.today
+	}
+	candidate.targets = c.match(row, schoolID, matchFrom)
 	c.unnamed = false
 	if candidate.speaksOnly {
 		row.Status = parentbilling.FamilyImportInvalid
@@ -362,7 +376,7 @@ func (c *familyImportCheck) school(row *parentbilling.FamilyChildrenImportRow, c
 // cannot tell two children apart, so contracts with different dates of
 // birth that all fit the row name no single child. A child an earlier row
 // named is a conflict.
-func (c *familyImportCheck) match(row *parentbilling.FamilyChildrenImportRow, schoolID int64) []familyImportTarget {
+func (c *familyImportCheck) match(row *parentbilling.FamilyChildrenImportRow, schoolID int64, from calendar.Date) []familyImportTarget {
 	name := foldFamilyImportName(row.ChildFirstName) + "\x1f" + foldFamilyImportName(row.ChildLastName)
 	var found []familyImportContract
 	births := map[calendar.Date]bool{}
@@ -387,16 +401,37 @@ func (c *familyImportCheck) match(row *parentbilling.FamilyChildrenImportRow, sc
 		row.Status = parentbilling.FamilyImportInvalid
 		return nil
 	}
-	// A contract that ended before today names a family the child has
-	// left (#7863): the row tells how many children a family has now, so
-	// it renews no number there and takes over none.
-	running := slices.DeleteFunc(found, func(contract familyImportContract) bool { return contract.endedBefore(c.index.today) })
+	running := c.applicableContracts(found, from)
 	if len(running) == 0 {
 		problemOf(row, field, parentbilling.FamilyImportProblemContractEnded)
 		row.Status = parentbilling.FamilyImportInvalid
 		return nil
 	}
 	return c.targets(row, running)
+}
+
+// applicableContracts keeps a historical contract for a historical count,
+// but not when a renewal would start only after the child left the family.
+func (c *familyImportCheck) applicableContracts(contracts []familyImportContract, from calendar.Date) []familyImportContract {
+	spans := map[string][]familyImportSpan{}
+	for _, contract := range contracts {
+		family := c.family(contract.id)
+		spans[family] = append(spans[family], contract.inForce...)
+	}
+	start := make(map[string]calendar.Date, len(spans))
+	for family, inForce := range spans {
+		target := familyImportTarget{inForce: inForce}
+		day := target.decisionDay(c.index.today, from)
+		count, _ := c.numbers[family].confirmedForImport(day)
+		start[family] = importedChildrenStart(from, day, count)
+	}
+	return slices.DeleteFunc(contracts, func(contract familyImportContract) bool {
+		return contract.endedBefore(start[c.family(contract.id)])
+	})
+}
+
+func (c *familyImportCheck) family(contractID int64) string {
+	return parentbilling.ContractFamilyKey(c.recipients[contractID].Email, contractID)
 }
 
 // endedBefore tells whether every version of the contract ended before the
@@ -424,7 +459,7 @@ func (c *familyImportCheck) targets(row *parentbilling.FamilyChildrenImportRow, 
 		if !repeated && !c.unnamed {
 			c.named[contract.id] = row.Line
 		}
-		family := parentbilling.ContractFamilyKey(c.recipients[contract.id].Email, contract.id)
+		family := c.family(contract.id)
 		position := slices.IndexFunc(targets, func(target familyImportTarget) bool { return target.family == family })
 		switch {
 		case position < 0:

@@ -209,3 +209,57 @@ func TestCareRuleCountChoiceKeepsOnlyOtherSchools(t *testing.T) {
 	assert.Empty(t, normalized.CountSchoolIDs, "a choice of the rule's own schools alone is no choice")
 	assert.NotNil(t, normalized.CountSchoolIDs)
 }
+
+func TestCarePreviewsCountAnIssuedChildWithAnotherContractOnce(t *testing.T) {
+	t.Parallel()
+	mia := sjrVersion(t, contractMia, schoolIspringen, 1, billingMonth, "2027-01-31", mon1400, tue1400)
+	noahEarly := sjrVersion(t, contractNoah, schoolBirkenfeld, 1, billingMonth, "2027-01-14", mon1400)
+	noahLate := sjrVersion(t, contractLea, schoolIspringen, 2, "2027-01-15", "2027-01-31", mon1630)
+	noahLate.StudentID = noahEarly.StudentID
+	const assessedContract = contractLea + 1
+	in := careMonthInput{
+		month: day(t, billingMonth), rule: parentbilling.MonthRuleVersionOnFirst,
+		versions: []parentbilling.CareContractVersion{mia, noahEarly, noahLate},
+		tariffs:  chainTariffs(t), rules: familySizeRule(false, 3)(t),
+		recipients: map[int64]parentbilling.CareRecipient{
+			contractMia: {Email: familyEva}, contractNoah: {Email: familyEva}, contractLea: {Email: familyEva},
+		},
+		issuedChildren: map[int64]parentbilling.CareContractChild{assessedContract: {StudentID: noahEarly.StudentID}},
+		invoiced: map[int64]parentbilling.CareInvoice{assessedContract: {
+			ContractID: ident.ID(assessedContract), SchoolID: ident.ID(schoolIspringen),
+			FamilyEmail: familyEva, DocumentKind: parentbilling.DocumentKindFeeNotice,
+			Positions: []parentbilling.CarePosition{{CareOfferingID: ident.ID(moduleUntil1630), AmountCents: 6000, PayableCents: 6000}},
+		}},
+	}
+	schools := []int64{schoolIspringen}
+	monthly, err := buildCareMonth(in)
+	require.NoError(t, err)
+	_, notice, err := computeNoticeMonth(in, in.invoiced, nil, schools)
+	require.NoError(t, err)
+	for name, preview := range map[string]careMonth{"monthly run": narrowMonth(monthly, schools, nil).careMonth, "fee notice": notice} {
+		require.Len(t, preview.invoices, 1, name)
+		assert.Equal(t, ident.ID(contractMia), preview.invoices[0].ContractID, name)
+		assert.Equal(t, int64(8000), preview.invoices[0].TotalCents, name+": two children do not qualify at the three-child threshold")
+	}
+}
+
+func TestCareReviewDoesNotWarnAboutAnIssuedOnlyFamily(t *testing.T) {
+	t.Parallel()
+	noah := sjrVersion(t, contractNoah, schoolIspringen, 1, billingMonth, "2027-01-31", mon1400)
+	rules := familySiblingRule(true)(t)
+	rules[0].CountSchoolIDs = ident.IDs([]int64{schoolBirkenfeld})
+	in := careMonthInput{
+		month: day(t, billingMonth), rule: parentbilling.MonthRuleVersionOnFirst,
+		versions: []parentbilling.CareContractVersion{noah}, rules: rules,
+		invoiced: map[int64]parentbilling.CareInvoice{contractNoah: {
+			ContractID: ident.ID(contractNoah), SchoolID: ident.ID(schoolIspringen), FamilyEmail: familyEva,
+			Positions: []parentbilling.CarePosition{{CareOfferingID: ident.ID(moduleUntil1400), AmountCents: 4000, PayableCents: 4000}},
+		}},
+	}
+	computed, err := buildCareMonth(in)
+	require.NoError(t, err)
+	review := narrowMonth(computed, []int64{schoolIspringen}, nil)
+	assert.Equal(t, 1, review.billed)
+	assert.Empty(t, review.uncountedContracts)
+	assert.Zero(t, review.uncounted, "no draft in the run needs a confirmation")
+}

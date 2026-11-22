@@ -540,7 +540,7 @@ export function CareRuleModal({
         {kind === "sibling" ? (
           <SwitchRow
             label="Geschwister ohne Vertrag mitzählen"
-            description="moto zählt die Kinderzahl, die du unter „Kinderzahl“ bestätigt hast. Es zählen immer mindestens die Kinder mit Vertrag. Kinder mit Vertrag an einer anderen Schule zählen nur, wenn die Regel dort Geschwister zählt."
+            description="moto zählt die Kinderzahl, die du unter „Kinderzahl“ bestätigt hast. Es zählen immer mindestens die Kinder mit Vertrag. Kinder mit Vertrag an einer anderen Schule zählen nur, wenn du die Schule bei „Geschwister zählen auch an“ wählst."
             checked={draft.countsFamilyChildren}
             onCheckedChange={(countsFamilyChildren) =>
               set({ countsFamilyChildren })

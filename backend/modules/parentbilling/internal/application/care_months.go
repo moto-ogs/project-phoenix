@@ -576,6 +576,10 @@ func (c *CareBilling) careMonthInput(ctx context.Context, organizationID int64, 
 	if in.invoiced, err = c.store.InvoicedContracts(ctx, organizationID, run.BillingMonth); err != nil {
 		return in, err
 	}
+	in.issuedChildren, err = c.issuedCareChildren(ctx, organizationID, missingCareChildren(in.versions, in.invoiced))
+	if err != nil {
+		return in, err
+	}
 	if in.familyCounts, err = c.store.FamilyChildCounts(ctx, organizationID); err != nil {
 		return in, err
 	}
@@ -592,6 +596,36 @@ func (c *CareBilling) careMonthInput(ctx context.Context, organizationID int64, 
 		return in, err
 	}
 	return in, nil
+}
+
+// missingCareChildren names the issued contracts whose identities are not
+// in the versions of the month.
+func missingCareChildren(versions []parentbilling.CareContractVersion, issued map[int64]parentbilling.CareInvoice) []int64 {
+	if len(issued) == 0 {
+		return nil
+	}
+	current := make(map[int64]bool, len(versions))
+	for _, version := range versions {
+		current[version.ContractID] = true
+	}
+	var missing []int64
+	for id := range issued {
+		if !current[id] {
+			missing = append(missing, id)
+		}
+	}
+	return missing
+}
+
+func (c *CareBilling) issuedCareChildren(ctx context.Context, organizationID int64, ids []int64) (map[int64]parentbilling.CareContractChild, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	children, err := c.contracts.ChildrenOf(ctx, organizationID, ids)
+	if err != nil {
+		return nil, fmt.Errorf("parent billing: read children of issued contracts: %w", err)
+	}
+	return children, nil
 }
 
 // detail is the run with its preview or its issued invoices and the number

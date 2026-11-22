@@ -2,6 +2,7 @@ package application
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"strconv"
 	"strings"
@@ -91,17 +92,32 @@ func holdView(holds []parentbilling.CareRunHold) []parentbilling.CareDuplicate {
 // date of birth. A contract without a record joins the child whose record's
 // contracts carry the same name and date of birth when exactly one does.
 func childrenOf(byContract map[int64][]parentbilling.CareContractVersion, order []int64) [][]int64 {
+	return groupCareChildren(contractChildrenOf(byContract), order)
+}
+
+func contractChildrenOf(byContract map[int64][]parentbilling.CareContractVersion) map[int64]parentbilling.CareContractChild {
+	children := make(map[int64]parentbilling.CareContractChild, len(byContract))
+	for contractID, versions := range byContract {
+		version := versions[0]
+		children[contractID] = parentbilling.CareContractChild{StudentID: version.StudentID, FirstName: version.ChildFirstName,
+			LastName: version.ChildLastName, BirthDate: version.ChildBirthDate}
+	}
+	return children
+}
+
+func groupCareChildren(identities map[int64]parentbilling.CareContractChild, order []int64) [][]int64 {
 	recordsOf := map[string][]int64{}
 	for _, contractID := range order {
-		version := byContract[contractID][0]
-		if version.StudentID != nil && !slices.Contains(recordsOf[personOf(version)], *version.StudentID) {
-			recordsOf[personOf(version)] = append(recordsOf[personOf(version)], *version.StudentID)
+		child := identities[contractID]
+		person := personOf(child)
+		if child.StudentID != nil && !slices.Contains(recordsOf[person], *child.StudentID) {
+			recordsOf[person] = append(recordsOf[person], *child.StudentID)
 		}
 	}
 	groups := map[string][]int64{}
 	var keys []string
 	for _, contractID := range order {
-		key := childKeyOf(byContract[contractID][0], recordsOf)
+		key := childKeyOf(identities[contractID], recordsOf)
 		if _, seen := groups[key]; !seen {
 			keys = append(keys, key)
 		}
@@ -114,13 +130,26 @@ func childrenOf(byContract map[int64][]parentbilling.CareContractVersion, order 
 	return children
 }
 
-// childKeys names per contract the child it bills, as childrenOf groups
-// them (ADR 0158 E1).
-func childKeys(byContract map[int64][]parentbilling.CareContractVersion, order []int64) map[int64]string {
+// childKeys groups the contracts in force and any issued contracts with
+// retained identities together (ADR 0158 E1). Issued contracts outside the
+// month only take part in the sibling chain, not the billed days (E2).
+func childKeys(byContract map[int64][]parentbilling.CareContractVersion, order []int64, issued map[int64]parentbilling.CareContractChild) map[int64]string {
+	identities := contractChildrenOf(byContract)
+	order = slices.Clone(order)
+	for _, id := range slices.Sorted(maps.Keys(issued)) {
+		if _, inForce := identities[id]; !inForce {
+			identities[id] = issued[id]
+			order = append(order, id)
+		}
+	}
 	keys := map[int64]string{}
-	for i, child := range childrenOf(byContract, order) {
+	for i, child := range groupCareChildren(identities, order) {
+		key := "child:" + strconv.Itoa(i)
+		if _, inForce := byContract[child[0]]; !inForce {
+			key = "contract:" + strconv.FormatInt(child[0], 10)
+		}
 		for _, contractID := range child {
-			keys[contractID] = "child:" + strconv.Itoa(i)
+			keys[contractID] = key
 		}
 	}
 	return keys
@@ -128,24 +157,25 @@ func childKeys(byContract map[int64][]parentbilling.CareContractVersion, order [
 
 // childKeyOf is the child a contract bills: its record, the one record
 // with its name and date of birth, else that name and date of birth.
-func childKeyOf(version parentbilling.CareContractVersion, recordsOf map[string][]int64) string {
-	if version.StudentID != nil {
-		return fmt.Sprintf("student:%d", *version.StudentID)
+func childKeyOf(child parentbilling.CareContractChild, recordsOf map[string][]int64) string {
+	if child.StudentID != nil {
+		return fmt.Sprintf("student:%d", *child.StudentID)
 	}
-	if records := recordsOf[personOf(version)]; len(records) == 1 {
+	person := personOf(child)
+	if records := recordsOf[person]; len(records) == 1 {
 		return fmt.Sprintf("student:%d", records[0])
 	}
-	return "person:" + personOf(version)
+	return "person:" + person
 }
 
 // personOf is the normalized name and date of birth of the child of a
 // contract.
-func personOf(version parentbilling.CareContractVersion) string {
+func personOf(child parentbilling.CareContractChild) string {
 	birth := ""
-	if version.ChildBirthDate != nil {
-		birth = version.ChildBirthDate.String()
+	if child.BirthDate != nil {
+		birth = child.BirthDate.String()
 	}
-	return normalizedName(version.ChildFirstName) + "|" + normalizedName(version.ChildLastName) + "|" + birth
+	return normalizedName(child.FirstName) + "|" + normalizedName(child.LastName) + "|" + birth
 }
 
 func normalizedName(name string) string {

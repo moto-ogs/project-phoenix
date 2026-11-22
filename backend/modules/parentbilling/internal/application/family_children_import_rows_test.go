@@ -224,7 +224,7 @@ func TestFamilyImportTargetCoversOnlyTheVersionsOfTheContract(t *testing.T) {
 		version(calendar.NewDate(2027, 1, 1), calendar.NewDate(2027, 8, 22)),
 	})}
 	row := parentbilling.FamilyChildrenImportRow{Line: 2, ChildFirstName: "Mia", ChildLastName: "Beispiel"}
-	targets := check.match(&row, schoolIspringen)
+	targets := check.match(&row, schoolIspringen, calendar.NewDate(2026, 11, 22))
 	require.Len(t, targets, 1)
 	assert.True(t, targets[0].covers(calendar.NewDate(2026, 11, 30)), "the last day of the first version")
 	assert.False(t, targets[0].covers(calendar.NewDate(2026, 12, 1)), "the time between the versions")
@@ -349,16 +349,14 @@ func TestFamilyImportLeavesOutAFamilyTheChildHasLeft(t *testing.T) {
 	const leftID, runsID int64 = 1, 2
 	left := version(leftID, calendar.NewDate(2025, 8, 1), calendar.NewDate(2026, 10, 31))
 	runs := version(runsID, calendar.NewDate(2026, 11, 1), today.AddDays(evidenceLookAhead))
-	numbers := func() map[string]*familyNumbers {
-		return map[string]*familyNumbers{former: {own: &parentbilling.FamilyChildCount{ID: 5, ContractID: 1, FamilyEmail: former,
-			ConfirmedChildren: ptr(3), ValidFrom: ptr(calendar.NewDate(2025, 8, 1)), ValidUntil: ptr(calendar.NewDate(2026, 11, 15))}}}
-	}
+	numbers := map[string]*familyNumbers{former: {own: &parentbilling.FamilyChildCount{ID: 5, ContractID: 1, FamilyEmail: former,
+		ConfirmedChildren: ptr(3), ValidFrom: ptr(calendar.NewDate(2025, 8, 1)), ValidUntil: ptr(calendar.NewDate(2026, 11, 15))}}}
 	recipients := map[int64]parentbilling.CareRecipient{1: {Email: former}, 2: {Email: current}}
 
-	check := familyImportCheck{index: index, schools: schools, recipients: recipients,
+	check := familyImportCheck{index: index, schools: schools, recipients: recipients, numbers: numbers,
 		contracts: familyImportContracts([]parentbilling.CareContractVersion{left, runs})}
 	candidates := []familyImportCandidate{check.candidate([]string{"Mia", "Beispiel", "2"}, 2)}
-	decideFamilyImport(candidates, numbers(), today)
+	decideFamilyImport(candidates, numbers, today)
 	require.Equal(t, parentbilling.FamilyImportReady, candidates[0].row.Status)
 	assert.Equal(t, today, *candidates[0].row.ValidFrom)
 	assert.Empty(t, candidates[0].row.LaterValidFrom, "no renewal day of the former family")
@@ -367,12 +365,68 @@ func TestFamilyImportLeavesOutAFamilyTheChildHasLeft(t *testing.T) {
 	assert.Equal(t, current, stored[0].FamilyEmail)
 	assert.Equal(t, runsID, stored[0].ContractID)
 
-	check = familyImportCheck{index: index, schools: schools, recipients: recipients,
+	// The old contract covers this row's day, but not the first day of a renewal.
+	index.validFrom = calendar.NewDate(2026, 10, 1)
+	check = familyImportCheck{index: index, schools: schools, recipients: recipients, numbers: numbers,
 		contracts: familyImportContracts([]parentbilling.CareContractVersion{left})}
 	candidates = []familyImportCandidate{check.candidate([]string{"Mia", "Beispiel", "2"}, 2)}
-	decideFamilyImport(candidates, numbers(), today)
+	decideFamilyImport(candidates, numbers, today)
 	assert.Equal(t, parentbilling.FamilyImportInvalid, candidates[0].row.Status, "the child's only contract has ended")
 	assert.Equal(t, []parentbilling.FamilyChildrenImportProblem{{Field: parentbilling.FamilyImportFieldChildLastName,
 		Code: parentbilling.FamilyImportProblemContractEnded}}, candidates[0].row.Problems)
 	assert.Empty(t, newImportedChildren(candidates[0].decided))
+}
+
+func TestFamilyImportComparesCarriedConfirmationsOnTheDecisionDay(t *testing.T) {
+	t.Parallel()
+	const family = "familie@example.org"
+	today, planned := calendar.NewDate(2026, 11, 22), calendar.NewDate(2027, 1, 1)
+	source := func(id ident.ID, past *int, future int) *parentbilling.FamilyChildCount {
+		count := &parentbilling.FamilyChildCount{
+			ID: id, ContractID: id, ConfirmedChildren: ptr(future), ValidFrom: &planned,
+		}
+		if past != nil {
+			count.Confirmations = []parentbilling.FamilyChildConfirmation{{Children: past, ValidFrom: ptr(calendar.NewDate(2026, 9, 1))}}
+		}
+		return count
+	}
+	decide := func(from calendar.Date, a, b *parentbilling.FamilyChildCount) parentbilling.FamilyChildrenImportRow {
+		candidates := []familyImportCandidate{{
+			row: parentbilling.FamilyChildrenImportRow{Line: 2, Children: ptr(2)}, validFrom: from,
+			targets: []familyImportTarget{{family: family, contractID: int64(a.ContractID),
+				inForce: []familyImportSpan{{today, planned}}}},
+		}}
+		decideFamilyImport(candidates, map[string]*familyNumbers{family: {brought: []*parentbilling.FamilyChildCount{a, b}}}, today)
+		return candidates[0].row
+	}
+	a, b := source(1, ptr(2), 3), source(2, ptr(2), 4)
+	row := decide(today, a, b)
+	assert.Equal(t, parentbilling.FamilyImportSame, row.Status, "different planned counts do not conflict today")
+	assert.Equal(t, ptr(2), row.ConfirmedChildren)
+	assert.Equal(t, parentbilling.FamilyImportConflict, decide(planned, a, b).Status, "the planned counts conflict once they start")
+	assert.Equal(t, parentbilling.FamilyImportConflict, decide(today, a, source(2, ptr(4), 3)).Status,
+		"equal planned counts do not hide a current conflict")
+	assert.Equal(t, parentbilling.FamilyImportConflict, decide(today, source(1, nil, 3), source(2, nil, 4)).Status,
+		"without a current count, the file must not overwrite conflicting plans")
+}
+
+func TestFamilyImportAcceptsAFirstConfirmationForAHistoricalContract(t *testing.T) {
+	t.Parallel()
+	today, from := calendar.NewDate(2026, 11, 22), calendar.NewDate(2026, 10, 1)
+	headers := []string{"Vorname", "Nachname", "Kinderzahl"}
+	schools := []parentbilling.CareSchool{{ID: ident.ID(schoolIspringen), Name: "Grundschule Nord"}}
+	mapping := suggestFamilyImportMapping(headers)
+	mapping.SchoolID, mapping.ValidFrom = schools[0].ID, &from
+	index, err := resolveFamilyImportMapping(headers, mapping, schools, today)
+	require.NoError(t, err)
+	contract := sjrVersion(t, contractMia, schoolIspringen, 1, "2026-09-01", "2026-10-31")
+	check := familyImportCheck{index: index, schools: schools, contracts: familyImportContracts([]parentbilling.CareContractVersion{contract})}
+	candidates := []familyImportCandidate{check.candidate([]string{"Mia", "Beispiel", "2"}, 2)}
+	decideFamilyImport(candidates, nil, today)
+	require.Equal(t, parentbilling.FamilyImportReady, candidates[0].row.Status)
+	assert.Equal(t, &from, candidates[0].row.ValidFrom)
+	stored := newImportedChildren(candidates[0].decided)
+	require.Len(t, stored, 1)
+	assert.Equal(t, contract.ContractID, stored[0].ContractID)
+	assert.Equal(t, from, stored[0].ValidFrom)
 }

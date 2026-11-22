@@ -60,23 +60,34 @@ func decideImportedChildren(rows []importedChildren, current func(family string,
 		if row.status != "" || row.witness {
 			continue
 		}
-		count := current(row.family, day(*row))
+		decisionDay := day(*row)
+		count := current(row.family, decisionDay)
 		switch {
 		case len(distinct[row.family]) > 1:
 			row.status = parentbilling.ImportedChildrenRowsDiffer
 		case count == nil || count.ConfirmedChildren == nil:
 			row.status = parentbilling.ImportedChildrenNew
-		case count.ValidUntil != nil && count.ValidUntil.Before(day(*row)):
+		case confirmationExpired(count, decisionDay):
 			row.status = parentbilling.ImportedChildrenNew
-			if next := count.ValidUntil.AddDays(1); next.After(row.number.ValidFrom) {
-				row.number.ValidFrom = next
-			}
+			row.number.ValidFrom = importedChildrenStart(row.number.ValidFrom, decisionDay, count)
 		case *count.ConfirmedChildren == row.number.Children:
 			row.status, row.confirmed = parentbilling.ImportedChildrenSame, count.ConfirmedChildren
 		default:
 			row.status, row.confirmed = parentbilling.ImportedChildrenDiffers, count.ConfirmedChildren
 		}
 	}
+}
+
+func confirmationExpired(count *parentbilling.FamilyChildCount, day calendar.Date) bool {
+	return count != nil && count.ConfirmedChildren != nil && count.ValidUntil != nil && count.ValidUntil.Before(day)
+}
+
+// importedChildrenStart keeps the dates covered by an expired confirmation.
+func importedChildrenStart(from, decisionDay calendar.Date, count *parentbilling.FamilyChildCount) calendar.Date {
+	if confirmationExpired(count, decisionDay) {
+		return max(from, count.ValidUntil.AddDays(1))
+	}
+	return from
 }
 
 // distinctImportedChildren collects per family the numbers its rows name,
@@ -199,8 +210,11 @@ func (f *FamilyNumbers) DecideImportedFamilyChildren(ctx context.Context, review
 		return nil, fmt.Errorf("parent billing: record family child count read: %w", err)
 	}
 	// An import of contracts has no clock of its own: a confirmation that
-	// ended before the first day of the row's contract has run out.
-	decideImportedChildren(rows, func(family string, _ calendar.Date) *parentbilling.FamilyChildCount { return confirmed[family] },
+	// ended before the first day of the row's contract has run out, and the
+	// row compares with the one in force on that day.
+	decideImportedChildren(rows, func(family string, day calendar.Date) *parentbilling.FamilyChildCount {
+		return confirmationOnDay(confirmed[family], day)
+	},
 		func(row importedChildren) calendar.Date { return row.number.ValidFrom })
 	if save {
 		if err := f.saveImportedChildren(ctx, reviewer, rows); err != nil {

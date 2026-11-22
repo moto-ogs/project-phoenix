@@ -465,6 +465,15 @@ type CareContractVersion struct {
 	Services       []CareContractService
 }
 
+// CareContractChild is the identity of a child on a contract, even if the
+// contract is no longer in force for the billing month.
+type CareContractChild struct {
+	StudentID *int64
+	FirstName string
+	LastName  string
+	BirthDate *calendar.Date
+}
+
 // CareContracts is the Betreuungsvertrag as the monthly run reads it. The
 // root binds it. Both run in the caller's Träger transaction.
 type CareContracts interface {
@@ -474,6 +483,8 @@ type CareContracts interface {
 	// Recipients names per contract the party its invoice goes to: the
 	// first party with an e-mail address, else the first party.
 	Recipients(ctx context.Context, organizationID int64, contractIDs []int64) (map[int64]CareRecipient, error)
+	// ChildrenOf reads the identities of the supplied contracts of the Träger.
+	ChildrenOf(ctx context.Context, organizationID int64, contractIDs []int64) (map[int64]CareContractChild, error)
 }
 
 // CareSchools lists the schools of the Träger that are not deleted, by

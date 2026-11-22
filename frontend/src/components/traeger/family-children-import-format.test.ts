@@ -43,7 +43,7 @@ describe("familyImportProblemText", () => {
         row,
       ),
     ).toBe(
-      "Der Tag liegt mehr als neun Monate voraus. So weit voraus übernimmt moto keine Zahl.",
+      "Der Tag liegt mehr als neun Monate voraus. Trage die Zahl später nach.",
     );
     expect(
       familyImportProblemText(
@@ -51,7 +51,7 @@ describe("familyImportProblemText", () => {
         row,
       ),
     ).toBe(
-      "Der Vertrag des Kindes ist schon beendet. moto übernimmt die Zahl nicht.",
+      "Der Vertrag des Kindes endet vor dem Tag der Zeile. moto übernimmt die Zahl nicht.",
     );
   });
 });

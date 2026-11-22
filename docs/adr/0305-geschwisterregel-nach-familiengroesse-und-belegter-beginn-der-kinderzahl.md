@@ -120,17 +120,18 @@ Punkt 5 den Satz zum Beginn der Zahl.
   (`too_far_ahead` an „Gültig ab“). Sie zeigt damit nie „Schon bestätigt“
   für eine Zeit, für die moto die Familie nicht kennt. Ihre Zahl spricht wie
   bei einem ungültigen Tag weiter gegen die Zeilen der Geschwister.
-- **Vergleich mit der Bestätigung des Tages.** Beginnt die neueste
-  Bestätigung erst nach dem Tag, an dem die Zeile entscheidet, vergleicht
-  die Zeile mit der Zahl, die an diesem Tag gilt. Gilt an dem Tag keine,
-  vergleicht sie weiter mit der geplanten Bestätigung: Die Datei übernimmt
-  nie eine Zahl vor einer geplanten (Punkt 6, ADR 0288). Die Liste der
-  Familien bleibt bei `countOn`.
-- **Beendete Verträge.** Ein Vertrag, dessen Versionen alle vor heute
-  enden, nennt eine Familie, die das Kind verlassen hat. Die Zeile spricht
-  nicht für sie: keine erneuerte und keine neue Zahl, auch kein Widerspruch
-  gegen ihre Zeilen. Hat das Kind an der Schule keinen laufenden oder
-  späteren Vertrag, hält moto die Zeile zurück (`contract_ended`).
+- **Vergleich mit der Bestätigung des Tages.** Die Zeile vergleicht die
+  Bestätigungen, die an ihrem Entscheidungstag gelten. Verschiedene Zahlen
+  für einen späteren Tag sind heute kein Widerspruch. Gilt am
+  Entscheidungstag keine Zahl, schützt moto weiterhin geplante Bestätigungen:
+  Die Datei übernimmt nie eine Zahl vor einer geplanten (Punkt 6, ADR 0288).
+  Die Liste der Familien bleibt bei `countOn`.
+- **Beendete Verträge.** Eine Familie zählt für die Zeile nur, wenn das Kind
+  in ihr am oder nach dem Beginn der Kinderzahl einen Vertrag hat. Maßgeblich
+  ist der Tag der Zeile. Bei einer Erneuerung gilt frühestens der Tag nach
+  Ablauf der alten Bestätigung. Ein inzwischen beendeter Vertrag zählt also
+  für einen früheren Beginn, aber nicht für eine Erneuerung nach Vertragsende.
+  Bleibt keine Familie übrig, hält moto die Zeile zurück (`contract_ended`).
 
 ## Nachtrag 22.11.2026: Jeder Vertrag im Monat zählt, die Schulen der Regel zählen immer (#7863 Punkte 1 und 2)
 
@@ -160,4 +161,8 @@ Entscheidung von Yannick am 22.11.2026.
   Regeln bleiben ohne Migration gültig, weil die Kette die Schulen der Regel
   selbst dazunimmt.
 - **Ausgestellte Rechnungen bleiben.** Beides wirkt auf Entwürfe. Eine
-  ausgestellte Rechnung behält ihre gespeicherten Ermäßigungen.
+  ausgestellte Rechnung behält ihre gespeicherten Ermäßigungen. Ein
+  Änderungsbescheid rechnet dagegen alle Monate des Bescheids neu, auch
+  frühere (ADR 0182). Dort gilt die neue Zählung also auch rückwirkend. Weil
+  beide Punkte nur Kinder zur Zählung hinzunehmen, können Rang und
+  Familiengröße nur steigen: Ein Betrag wird dadurch nie höher.

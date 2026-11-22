@@ -23,6 +23,9 @@ type careMonthInput struct {
 	tariffs    []parentbilling.CareTariff
 	invoiced   map[int64]parentbilling.CareInvoice
 	recipients map[int64]parentbilling.CareRecipient
+	// issuedChildren identifies issued contracts outside the versions in
+	// force; a notice preview may compute a month with only some of them.
+	issuedChildren map[int64]parentbilling.CareContractChild
 	// rules and evidences feed the rule chain (#4685); without them every
 	// invoice is its base price.
 	rules     []parentbilling.ContributionRule
@@ -136,7 +139,7 @@ func buildCareMonth(in careMonthInput) (careMonth, error) {
 		freeBySchool: map[int64]int{}}
 	var chained []*careChainEntry
 	var unbilled []careContractPlace
-	childOf := childKeys(byContract, order)
+	childOf := childKeys(byContract, order, in.issuedChildIdentities())
 	for _, contractID := range order {
 		if _, issued := in.invoiced[contractID]; issued {
 			continue
@@ -170,6 +173,17 @@ func buildCareMonth(in careMonthInput) (careMonth, error) {
 	}
 	chainCareMonth(&result, in, chained, unbilled, childOf, byContract)
 	return result, nil
+}
+
+// issuedChildIdentities excludes notices that this preview recomputes.
+func (in careMonthInput) issuedChildIdentities() map[int64]parentbilling.CareContractChild {
+	children := make(map[int64]parentbilling.CareContractChild, len(in.issuedChildren))
+	for id, child := range in.issuedChildren {
+		if _, issued := in.invoiced[id]; issued {
+			children[id] = child
+		}
+	}
+	return children
 }
 
 // chainCareMonth runs the rule chain over the drafts and the issued
