@@ -23,7 +23,6 @@ import {
  */
 
 import type { AppLocale } from "~/i18n/locales";
-import type { ConsentState } from "~/lib/consent-types";
 import type { SurveyAnswersRequest, SurveyForm } from "~/lib/survey-form";
 import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
 import { createLogger } from "~/lib/logger";
@@ -79,12 +78,6 @@ async function transportFetch(
 const logger = createLogger({ component: "ParentAPI" });
 
 export type Child = parentMeContract.ChildResponse;
-
-// The row "room_history" (#3844) shows whether moto records the child's
-// rooms and mood ("recording") or the stop is set ("stopped"). It only comes
-// when the Träger lets parents stop it.
-export type ChildConsentState = ConsentState | "recording" | "stopped";
-
 export type ChildConsent = parentMeContract.ChildConsentResponse;
 
 // One enrollment phase the calling parent may apply to, joined to its school.
