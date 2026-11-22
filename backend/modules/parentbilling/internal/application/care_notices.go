@@ -225,7 +225,7 @@ func (n *CareFeeNotices) CareNoticeRun(ctx context.Context, reviewer parentbilli
 		return parentbilling.CareNoticeRunDetail{}, err
 	}
 	if err := n.store.InsertCareNoticeRunEvent(ctx, reviewer.OrganizationID, run.ID.Int64(), reviewer.AccountID, runEventRead,
-		map[string]any{"contract_ids": noticeContracts(detail.Notices)}); err != nil {
+		map[string]any{"contract_ids": shownNoticeContracts(detail)}); err != nil {
 		return parentbilling.CareNoticeRunDetail{}, fmt.Errorf("parent billing: record notice run read: %w", err)
 	}
 	return detail, nil
@@ -452,6 +452,16 @@ func noticeContracts(notices []parentbilling.CareNotice) []int64 {
 	ids := make([]int64, len(notices))
 	for i, notice := range notices {
 		ids[i] = notice.ContractID.Int64()
+	}
+	return ids
+}
+
+// shownNoticeContracts names the contracts whose child a notice run shows:
+// on a notice or joined across schools (#7874).
+func shownNoticeContracts(detail parentbilling.CareNoticeRunDetail) []int64 {
+	ids := noticeContracts(detail.Notices)
+	for _, child := range detail.JoinedChildren {
+		ids = appendContracts(ids, child.Contracts)
 	}
 	return ids
 }

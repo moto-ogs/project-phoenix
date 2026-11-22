@@ -253,18 +253,27 @@ Kind zusammen, wenn alle Bedingungen gelten:
 4. Die Verträge laufen nacheinander: An keinem Tag laufen Verträge zweier
    dieser Kinder zugleich. Zwillinge gleichen Namens an zwei Schulen haben
    gleichzeitig laufende Verträge und bleiben zwei Kinder.
-5. Alles oder nichts: Erfüllen nicht alle Kinder mit derselben Familie, demselben
-   Namen und demselben Geburtsdatum die Punkte 3 und 4 untereinander, legt moto keines davon
-   zusammen. Das Ergebnis hängt nicht von der Reihenfolge ab, und eine
-   unklare Lage rechnet wie vor diesem Nachtrag.
+5. Alles oder nichts: Alle Kinder mit diesem Namen und Geburtsdatum, gleich
+   aus welcher Familie, erfüllen die Punkte 1 bis 4 untereinander, sonst legt
+   moto keines davon zusammen. Ein Kind gleichen Namens ohne Geburtsdatum
+   verhindert das Zusammenlegen ebenfalls, ebenso ein Kind, dessen Verträge
+   verschiedene Namen, Geburtsdaten oder Familien tragen. Das Ergebnis hängt
+   nicht von der Reihenfolge ab, und eine unklare Lage rechnet wie vor
+   diesem Nachtrag.
 
 Das zusammengelegte Kind ist für E2 bis E4 und die Geschwisterregel ein
 Kind: Bei „voller Monat“ rechnet der Vertrag, der am 1. gilt, den Monat ab,
 der Vertrag an der neuen Schule nichts; er zählt das Kind an seiner Schule
 (ADR 0305, Nachtrag #7863). Unter „anteilig“ rechnet jeder Vertrag seine
 Tage ab. Verträge, die nur eine ausgestellte Rechnung des Monats in die Kette
-bringen (#7863), legen nichts zusammen und verhindern nichts; sie bleiben beim
-Kind ihres Datensatzes. Dieselbe Gruppierung zählt die Kinder einer Familie
+bringen (#7863), legen nichts zusammen und verhindern nichts: Sie kommen erst
+nach der Gruppierung der laufenden Verträge dazu, zum Kind ihres Datensatzes
+oder ohne Datensatz zum einen Kind, dessen Datensätze ihren Namen und ihr
+Geburtsdatum tragen. So gruppieren E2 bis E4 und die Geschwisterregel die
+laufenden Verträge gleich. Der Schlüssel eines Kindes in der Kette hängt nur
+an seinen eigenen Verträgen (kleinste Vertragsnummer); ein Zusammenlegen in
+einer Familie ändert die Reihenfolge gleichrangiger Kinder einer anderen
+nicht. Dieselbe Gruppierung zählt die Kinder einer Familie
 in der Kinderzahl-Übersicht.
 
 **Sichtbar.** Hier entscheidet der Name, nicht eine Kinderakte. Die Prüfung

@@ -157,6 +157,32 @@ func TestCareMonthCountsAChildWithARecordAtEachSchoolOnce(t *testing.T) {
 			children: 2,
 		},
 		{
+			// A child of that name and date of birth in another family
+			// could be the one that moved: nobody joins.
+			name: "a namesake of another family stops the join", contracts: []identityContract{mia, leaves, enters,
+				with(leaves, func(c *identityContract) {
+					c.contract, c.student, c.email = contractLea+2, noahBirkenfeldRecord+20, familyOther
+				})},
+			totals:   map[int64]int64{contractMia: 4000, contractNoah: 4500, contractLea: 3000, contractLea + 2: 4500},
+			children: 2,
+		},
+		{
+			name: "a namesake without a date of birth stops the join", contracts: []identityContract{mia, leaves, enters,
+				with(leaves, func(c *identityContract) {
+					c.contract, c.student, c.email, c.birth = contractLea+2, noahBirkenfeldRecord+20, familyOther, ""
+				})},
+			totals:   map[int64]int64{contractMia: 4000, contractNoah: 4500, contractLea: 3000, contractLea + 2: 4500},
+			children: 2,
+		},
+		{
+			// The parts of a name stay apart: „Lia|Marie Müller“ is not
+			// „Lia Marie|Müller“.
+			name: "a name split differently is another name", contracts: []identityContract{mia,
+				with(leaves, func(c *identityContract) { c.first, c.last = "Lia|Marie", "Müller" }),
+				with(enters, func(c *identityContract) { c.first, c.last = "Lia", "Marie|Müller" })},
+			totals: map[int64]int64{contractMia: 4000, contractNoah: 4500, contractLea: 3000}, children: 2,
+		},
+		{
 			// Within one school the record decides: a second record there
 			// is a second child, as before.
 			name: "two records at one school stay two children", contracts: []identityContract{mia,
@@ -252,4 +278,69 @@ func assertJoined(t *testing.T, month careMonth, joined bool) {
 	// A run of one of the two schools names him; a run of neither does not.
 	assert.Len(t, narrowMonth(month, []int64{schoolBirkenfeld}, nil).joined, 1)
 	assert.Empty(t, narrowMonth(month, []int64{schoolBirkenfeld + 100}, nil).joined)
+}
+
+// The sibling chain counts a child under a key of its own contracts: a
+// school change of another family does not renumber it, so a tie between
+// twins keeps its order (#7874).
+func TestCareChildKeysDoNotDependOnOtherFamilies(t *testing.T) {
+	t.Parallel()
+	twin := func(contract, student int64, first string) parentbilling.CareContractVersion {
+		version := sjrVersion(t, contract, schoolIspringen, 1, billingMonth, "2027-01-31", mon1400)
+		version.StudentID, version.ChildFirstName, version.ChildBirthDate = ptr(student), first, ptr(day(t, "2017-02-03"))
+		return version
+	}
+	twins := []parentbilling.CareContractVersion{twin(910, 9910, "Ida"), twin(911, 9911, "Ole")}
+	byContract, order := versionsByContract(twins)
+	before := childKeys(byContract, order, nil, contractFamilies(byContract, nil))
+
+	moved := []parentbilling.CareContractVersion{
+		sjrVersion(t, 101, schoolBirkenfeld, 1, billingMonth, "2027-01-14", mon1400),
+		sjrVersion(t, 102, schoolIspringen, 1, "2027-01-15", "2027-01-31", mon1400),
+	}
+	recipients := map[int64]parentbilling.CareRecipient{101: {Email: familyEva}, 102: {Email: familyEva}}
+	for i := range moved {
+		moved[i].ChildFirstName, moved[i].ChildBirthDate = "Noah", ptr(day(t, noahBirth))
+	}
+	byContract, order = versionsByContract(append(moved, twins...))
+	after := childKeys(byContract, order, nil, contractFamilies(byContract, recipients))
+	require.Equal(t, after[101], after[102], "the school change is one child")
+	assert.Equal(t, before[910], after[910])
+	assert.Equal(t, before[911], after[911])
+}
+
+// A contract an issued invoice bills outside the versions in force joins a
+// child; it never regroups the contracts in force. Here it carries a second
+// record of the same name in another family: the contract without a record
+// still belongs to the one record in force, as E2 groups it (#7874).
+func TestCareIssuedIdentityDoesNotRegroupContractsInForce(t *testing.T) {
+	t.Parallel()
+	recorded := sjrVersion(t, 201, schoolIspringen, 1, billingMonth, "2027-01-31", mon1400)
+	unrecorded := sjrVersion(t, 202, schoolIspringen, 1, billingMonth, "2027-01-31", tue1400)
+	unrecorded.StudentID = nil
+	for _, version := range []*parentbilling.CareContractVersion{&recorded, &unrecorded} {
+		version.ChildFirstName, version.ChildBirthDate = "Noah", ptr(day(t, noahBirth))
+	}
+	byContract, order := versionsByContract([]parentbilling.CareContractVersion{recorded, unrecorded})
+	families := contractFamilies(byContract, nil)
+	issued := map[int64]parentbilling.CareContractChild{203: {StudentID: ptr(int64(9999)), FirstName: "Noah", LastName: "Beispiel",
+		BirthDate: ptr(day(t, noahBirth))}}
+	keys := childKeys(byContract, order, issued, families)
+	children := childrenOf(byContract, order, families)
+	require.Len(t, children, 1, "E2 groups both contracts in force as one child")
+	assert.Equal(t, keys[201], keys[202], "the chain groups them the same way")
+	assert.NotEqual(t, keys[201], keys[203], "the issued contract of another record stays apart")
+}
+
+// The read of a run records every contract its review shows, including
+// those of a child joined across schools (#7874).
+func TestRunReadsRecordTheContractsOfAJoinedChild(t *testing.T) {
+	t.Parallel()
+	joined := []parentbilling.CareJoinedChild{{Contracts: []parentbilling.CareDuplicateContract{
+		{ContractID: ident.ID(contractNoah)}, {ContractID: ident.ID(contractLea)},
+	}}}
+	monthly := parentbilling.CareRunDetail{Invoices: []parentbilling.CareInvoice{{ContractID: ident.ID(contractNoah)}}, JoinedChildren: joined}
+	assert.Equal(t, []int64{contractNoah, contractLea}, shownContracts(monthly))
+	notice := parentbilling.CareNoticeRunDetail{Notices: []parentbilling.CareNotice{{ContractID: ident.ID(contractMia)}}, JoinedChildren: joined}
+	assert.Equal(t, []int64{contractMia, contractNoah, contractLea}, shownNoticeContracts(notice))
 }

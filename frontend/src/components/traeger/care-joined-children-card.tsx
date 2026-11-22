@@ -24,7 +24,7 @@ import { traegerPath } from "~/lib/traeger-url";
 const INITIAL_ROWS = 5;
 
 const DESCRIPTION =
-  "Diese Kinder haben die Schule gewechselt und an jeder Schule eine eigene Kinderakte. Name, Geburtstag und Familie sind gleich. moto rechnet jedes Kind darum nur einmal ab. Sind es doch zwei Kinder, gib den Lauf nicht frei und schreib dem moto-Support.";
+  "Diese Kinder haben die Schule gewechselt und an jeder Schule eine eigene Kinderakte. Name, Geburtstag und Familie sind gleich. moto rechnet ihre Verträge darum ab wie die eines Kindes. Sind es doch zwei Kinder, gib den Lauf nicht frei und schreib dem moto-Support.";
 
 export function CareJoinedChildrenCard({
   childrenJoined,

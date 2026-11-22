@@ -24,18 +24,22 @@ import (
 //   - their contracts run one after the other: no day of the read span on
 //     which contracts of two of them both run. Twins of one name at two
 //     schools have contracts at the same time and stay two children;
-//   - all children of one family, name and date of birth join or none: one
-//     at the same school as another, or at the same time, leaves all of
-//     them apart, whatever their order.
+//   - every child of that name and date of birth, of any family, joins or
+//     none does, and a child of that name without a date of birth stops
+//     the join: one at the same school as another, at the same time, of
+//     another family or with another spelling on one of its contracts leaves
+//     all of them apart, whatever their order.
 //
 // Contracts outside the versions in force (issued invoices of the month,
-// #7863) neither join nor stop a join; they stay with the child of their
-// record (E1).
+// #7863) neither join nor stop a join; childKeys adds them afterwards.
 
-// schoolChangeKey is the family, the spelled name and the date of birth of
-// a child that may have changed its school.
-type schoolChangeKey struct {
-	family, person string
+// schoolChangePart is what a child of E1 brings to a school change: the
+// spelled names with dates of birth of its contracts in force and their
+// families. complete is false when one of them has no date of birth.
+type schoolChangePart struct {
+	persons  []string
+	families []string
+	complete bool
 }
 
 // contractFamilies is the family of every contract in force: the mail
@@ -53,13 +57,17 @@ func contractFamilies(byContract map[int64][]parentbilling.CareContractVersion, 
 // first part stood. joined names the joined children by their index in
 // the result.
 func joinSchoolChanges(children [][]int64, byContract map[int64][]parentbilling.CareContractVersion, families map[int64]string) (result [][]int64, joined []int) {
+	parts := make([]schoolChangePart, len(children))
+	for i, child := range children {
+		parts[i] = schoolChangePartOf(child, byContract, families)
+	}
 	into := map[int]int{}
-	for _, parts := range schoolChangeBuckets(children, byContract, families) {
-		if len(parts) < 2 || !oneAfterAnother(parts, children, byContract) {
+	for _, bucket := range schoolChangeBuckets(parts) {
+		if !bucketJoins(bucket, parts, children, byContract) {
 			continue
 		}
-		for _, part := range parts[1:] {
-			into[part] = parts[0]
+		for _, part := range bucket[1:] {
+			into[part] = bucket[0]
 		}
 	}
 	if len(into) == 0 {
@@ -83,51 +91,84 @@ func joinSchoolChanges(children [][]int64, byContract map[int64][]parentbilling.
 	return result, joined
 }
 
-// schoolChangeBuckets groups the children that may join by their key, in
-// the order of the children; a child that may join none is left out.
-func schoolChangeBuckets(children [][]int64, byContract map[int64][]parentbilling.CareContractVersion, families map[int64]string) [][]int {
-	index := map[schoolChangeKey]int{}
-	var buckets [][]int
-	for i, child := range children {
-		key, ok := schoolChangeKeyOf(child, byContract, families)
-		if !ok {
-			continue
-		}
-		at, seen := index[key]
-		if !seen {
-			at = len(buckets)
-			index[key] = at
-			buckets = append(buckets, nil)
-		}
-		buckets[at] = append(buckets[at], i)
-	}
-	return buckets
-}
-
-// schoolChangeKeyOf is the key a child may join others under; ok is false
-// for a child without a contract in force, with two families, two names or
-// no date of birth.
-func schoolChangeKeyOf(child []int64, byContract map[int64][]parentbilling.CareContractVersion, families map[int64]string) (schoolChangeKey, bool) {
-	var key schoolChangeKey
+// schoolChangePartOf reads the names, dates of birth and families of the
+// contracts in force of a child.
+func schoolChangePartOf(child []int64, byContract map[int64][]parentbilling.CareContractVersion, families map[int64]string) schoolChangePart {
+	part := schoolChangePart{complete: true}
 	for _, contractID := range child {
 		versions, inForce := byContract[contractID]
 		if !inForce {
 			continue
 		}
 		head := versions[0]
-		// A family moto knows only by its contract is keyed by that
-		// contract (ContractFamilyKey), so it never meets another one.
-		if head.ChildBirthDate == nil {
-			return schoolChangeKey{}, false
+		birth := ""
+		if head.ChildBirthDate != nil {
+			birth = head.ChildBirthDate.String()
+		} else {
+			part.complete = false
 		}
-		own := schoolChangeKey{family: families[contractID],
-			person: schoolChangeName(head.ChildFirstName) + "|" + schoolChangeName(head.ChildLastName) + "|" + head.ChildBirthDate.String()}
-		if key != (schoolChangeKey{}) && key != own {
-			return schoolChangeKey{}, false
+		person := schoolChangeName(head.ChildFirstName) + "\x1f" + schoolChangeName(head.ChildLastName) + "\x1f" + birth
+		if !slices.Contains(part.persons, person) {
+			part.persons = append(part.persons, person)
 		}
-		key = own
+		if !slices.Contains(part.families, families[contractID]) {
+			part.families = append(part.families, families[contractID])
+		}
 	}
-	return key, key != (schoolChangeKey{}) && key.family != ""
+	return part
+}
+
+// schoolChangeBuckets groups the children by name and date of birth, in
+// the order of the children; a child with several goes into each. A child
+// of a name without a date of birth goes into every bucket of that name,
+// where it stops the join.
+func schoolChangeBuckets(parts []schoolChangePart) [][]int {
+	index := map[string]int{}
+	var buckets [][]int
+	for i, part := range parts {
+		for _, person := range part.persons {
+			if strings.HasSuffix(person, "\x1f") {
+				continue
+			}
+			at, seen := index[person]
+			if !seen {
+				at = len(buckets)
+				index[person] = at
+				buckets = append(buckets, nil)
+			}
+			buckets[at] = append(buckets[at], i)
+		}
+	}
+	for i, part := range parts {
+		for _, person := range part.persons {
+			if !strings.HasSuffix(person, "\x1f") {
+				continue
+			}
+			for key, at := range index {
+				if strings.HasPrefix(key, person) && !slices.Contains(buckets[at], i) {
+					buckets[at] = append(buckets[at], i)
+				}
+			}
+		}
+	}
+	return buckets
+}
+
+// bucketJoins tells whether the children of a bucket are one child: each
+// with one name, one date of birth and one family, all the same family, at
+// different schools and one after the other.
+func bucketJoins(bucket []int, parts []schoolChangePart, children [][]int64, byContract map[int64][]parentbilling.CareContractVersion) bool {
+	if len(bucket) < 2 {
+		return false
+	}
+	family := parts[bucket[0]].families
+	for _, i := range bucket {
+		part := parts[i]
+		if !part.complete || len(part.persons) != 1 || len(part.families) != 1 || part.families[0] != family[0] {
+			return false
+		}
+	}
+	return oneAfterAnother(bucket, children, byContract)
 }
 
 // schoolChangeName spells a name so that two schools that wrote it
