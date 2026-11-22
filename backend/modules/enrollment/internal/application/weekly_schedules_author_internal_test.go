@@ -125,7 +125,8 @@ func TestPlanWeeklyPlanStoresAnAuthorOrFails(t *testing.T) {
 	request := &enrollmentNative.Request{SchemaID: new(int64)}
 	*request.SchemaID = schemaID
 	withPickup := &enrollmentNative.RequestChild{ID: childID, CustomData: formValues(map[string]any{"pickup_times": map[string]any{"mon": "15:10"}})}
-	withoutPickup := &enrollmentNative.RequestChild{ID: childID, CustomData: formValues(map[string]any{"pickup_times": map[string]any{}})}
+	emptyPickup := &enrollmentNative.RequestChild{ID: childID, CustomData: formValues(map[string]any{"pickup_times": map[string]any{}})}
+	withoutPickup := &enrollmentNative.RequestChild{ID: childID, CustomData: formValues(map[string]any{})}
 
 	run := func(ctx context.Context, child *enrollmentNative.RequestChild, persons reviewerPersonsFake, staff reviewerStaffFake) ([]*enrollmentNative.WeeklyPlan, error) {
 		var stored []*enrollmentNative.WeeklyPlan
@@ -162,8 +163,18 @@ func TestPlanWeeklyPlanStoresAnAuthorOrFails(t *testing.T) {
 	require.Len(t, stored, 1)
 	assert.Equal(t, enrollmentNative.WeeklyPlan{RequestChildID: childID, On: on, AuthorStaffID: reviewerStaffID}, *stored[0])
 
+	// The start names an author for an answer without a time as well, so
+	// the plan is stored with one or not at all.
+	stored, err = run(context.Background(), emptyPickup, person, reviewerStaffFake{err: errReviewerNotFound})
+	require.ErrorIs(t, err, enrollmentNative.ErrDecisionReviewerStaffRequired)
+	assert.Empty(t, stored)
+	stored, err = run(enrollmentNative.WithTraegerBueroReviewer(context.Background()), emptyPickup, person, reviewerStaffFake{err: errReviewerNotFound})
+	require.NoError(t, err)
+	require.Len(t, stored, 1)
+	assert.True(t, stored[0].ByTraeger)
+
 	stored, err = run(context.Background(), withoutPickup, reviewerPersonsFake{err: lookupFailed}, reviewerStaffFake{})
-	require.NoError(t, err, "a plan without weekly rows needs no author")
+	require.NoError(t, err, "a plan without a weekly answer needs no author")
 	require.Len(t, stored, 1)
 	assert.Equal(t, enrollmentNative.WeeklyPlan{RequestChildID: childID, On: on}, *stored[0])
 }
@@ -178,24 +189,26 @@ func (f pickupWritesFake) UpsertPickupSchedule(_ context.Context, _ int64, weekd
 	return nil
 }
 
-// Only a row names an author (#7818). A weekly answer without a time writes
-// nothing and needs none, at once and at the start of a deferred plan, where
-// no session is left to name one; an answer with a time still needs it.
-func TestWeekdayScheduleNeedsAnAuthorOnlyForARow(t *testing.T) {
+// A weekly answer names its author also when it has no time: under a
+// replacing dispatch it has already cleared the running rows, so nobody
+// without an author gets that far (#7818). The stored mark of the
+// Träger-Büro is such an author and needs no session.
+func TestWeekdayScheduleAnswerNeedsItsAuthor(t *testing.T) {
 	t.Parallel()
 
 	const studentID int64 = 61
 	var days []int
 	d := &Decisions{deps: DecisionDependencies{PickupSchedules: pickupWritesFake{days: &days}}}
-	nobody := scheduleAuthor{}
+	traegerBuero := scheduleAuthor{byTraeger: true}
 
-	for _, empty := range []any{nil, map[string]any{}, map[string]any{"mon": "", "tue": "  "}} {
-		require.NoError(t, d.dispatchWeekdaySchedule(context.Background(), empty, studentID, nobody, true))
+	for _, answer := range []any{map[string]any{}, map[string]any{"mon": "", "tue": "  "}, map[string]any{"mon": "15:00"}} {
+		require.Error(t, d.dispatchWeekdaySchedule(context.Background(), answer, studentID, scheduleAuthor{}, true))
 	}
 	assert.Empty(t, days)
 
-	require.Error(t, d.dispatchWeekdaySchedule(context.Background(), map[string]any{"mon": "15:00"}, studentID, nobody, true))
-	require.NoError(t, d.dispatchWeekdaySchedule(context.Background(), map[string]any{"mon": "15:00", "tue": ""}, studentID, scheduleAuthor{byTraeger: true}, true))
+	require.NoError(t, d.dispatchWeekdaySchedule(context.Background(), map[string]any{}, studentID, traegerBuero, true))
+	assert.Empty(t, days)
+	require.NoError(t, d.dispatchWeekdaySchedule(context.Background(), map[string]any{"mon": "15:00", "tue": ""}, studentID, traegerBuero, true))
 	assert.Len(t, days, 1)
 }
 
@@ -222,4 +235,11 @@ func TestWeeklyRowsChangedComparesRowsNotAnswers(t *testing.T) {
 	assert.True(t, weeklyRowsChanged(run(map[string]any{"mon": "15:30"}), fields))
 	assert.True(t, weeklyRowsChanged(run(map[string]any{"mon": "15:00", "tue": "14:00"}), fields))
 	assert.True(t, weeklyRowsChanged(run(map[string]any{}), fields))
+
+	// An arrival row holds its weekday only: a new time changes nothing.
+	arrival := []enrollmentNative.FormField{{
+		Key: "pickup_times", Type: enrollmentNative.FormFieldWeekdaySchedule, AppliesToCh: true, Target: enrollmentNative.TargetScheduleArrival,
+	}}
+	assert.False(t, weeklyRowsChanged(run(map[string]any{"mon": "08:30"}), arrival))
+	assert.True(t, weeklyRowsChanged(run(map[string]any{"tue": "15:00"}), arrival))
 }

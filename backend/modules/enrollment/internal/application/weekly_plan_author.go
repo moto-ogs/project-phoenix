@@ -10,7 +10,7 @@ import (
 )
 
 // The author of a planned weekly plan (#7818). Only the weekly pickup and
-// arrival rows name an author, so only a plan that writes them needs one.
+// arrival answers name an author, so only a plan that carries one needs it.
 // Such a plan is stored with the staff member who approved or changed it, or
 // with the mark of the Träger-Büro; a reviewer with neither is refused as at
 // an approval that writes the rows at once, and a failed lookup is a failure.
@@ -32,17 +32,12 @@ func (d *Decisions) weeklyPlanSchemaFields(ctx context.Context, request *enrollm
 	return schema.Fields, nil
 }
 
-// weeklyPlanWritesRows reports whether the plan writes weekly pickup or
-// arrival rows, the only part of it that names an author.
-func weeklyPlanWritesRows(request *enrollmentNative.Request, child *enrollmentNative.RequestChild, fields []enrollmentNative.FormField) bool {
+// weeklyPlanNeedsAuthor reports whether the plan carries a weekly pickup or
+// arrival answer. The dispatch names an author for every such answer, also
+// for one without a time, so storing the plan and applying it agree.
+func weeklyPlanNeedsAuthor(request *enrollmentNative.Request, child *enrollmentNative.RequestChild, fields []enrollmentNative.FormField) bool {
 	for i := range fields {
-		field := &fields[i]
-		if !isWeeklyScheduleTarget(field.Target) {
-			continue
-		}
-		// An answer the dispatch will refuse counts as writing: the refusal
-		// belongs to the dispatch, not to a plan stored without an author.
-		if rows, err := weekdayScheduleRows(readFieldValue(request, child, field)); err != nil || len(rows) > 0 {
+		if isWeeklyScheduleTarget(fields[i].Target) && readFieldValue(request, child, &fields[i]) != nil {
 			return true
 		}
 	}
@@ -55,11 +50,11 @@ func isWeeklyScheduleTarget(target string) bool {
 }
 
 // plannedWeeklyPlanAuthor is the author an approval stores with the plan it
-// defers: none for a plan without weekly rows, else the reviewer's staff
+// defers: none for a plan without a weekly answer, else the reviewer's staff
 // membership or the Träger-Büro. Anything else fails the approval.
 func (d *Decisions) plannedWeeklyPlanAuthor(ctx context.Context, request *enrollmentNative.Request, child *enrollmentNative.RequestChild, reviewedBy int64) (resolvedScheduleAuthor, error) {
 	fields, err := d.weeklyPlanSchemaFields(ctx, request)
-	if err != nil || !weeklyPlanWritesRows(request, child, fields) {
+	if err != nil || !weeklyPlanNeedsAuthor(request, child, fields) {
 		return resolvedScheduleAuthor{}, err
 	}
 	return d.resolveScheduleAuthor(ctx, scheduleAuthor{reviewerAccountID: reviewedBy})
@@ -75,7 +70,7 @@ func (d *Decisions) editedWeeklyPlanAuthor(ctx context.Context, run *approvedChi
 	if err != nil {
 		return plan, err
 	}
-	if !weeklyPlanWritesRows(run.request, run.child, fields) {
+	if !weeklyPlanNeedsAuthor(run.request, run.child, fields) {
 		return plan, nil
 	}
 	author, err := d.resolveScheduleAuthor(ctx, scheduleAuthor{reviewerAccountID: run.input.ActorAccountID})
@@ -115,9 +110,18 @@ func weeklyRowsChanged(run *approvedChildSync, fields []enrollmentNative.FormFie
 		}
 		before, beforeErr := weekdayScheduleRows(previous)
 		after, afterErr := weekdayScheduleRows(readFieldValue(run.request, run.child, field))
-		if beforeErr != nil || afterErr != nil || !maps.Equal(before, after) {
+		if beforeErr != nil || afterErr != nil || !sameWeeklyRows(field.Target, before, after) {
 			return true
 		}
 	}
 	return false
+}
+
+// sameWeeklyRows compares what two answers write. An arrival row holds its
+// weekday only, so its time changes nothing.
+func sameWeeklyRows(target string, before, after map[string]string) bool {
+	if target == enrollmentNative.TargetSchedulePickup {
+		return maps.Equal(before, after)
+	}
+	return maps.EqualFunc(before, after, func(string, string) bool { return true })
 }

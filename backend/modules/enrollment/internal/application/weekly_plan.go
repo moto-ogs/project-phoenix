@@ -197,12 +197,19 @@ func (d *Decisions) applyWeeklyPlan(ctx context.Context, plan enrollmentNative.W
 	// the Träger-Büro authors weekly rows. A plan stored without an author
 	// (the reviewer had no staff membership then) falls back to the reviewer
 	// as it is now.
+	// Only a plan with a weekly answer names an author at all.
 	if plan.AuthorStaffID == 0 && !plan.ByTraeger && child.ReviewedBy != nil {
-		author, err := d.resolveScheduleAuthor(ctx, scheduleAuthor{reviewerAccountID: *child.ReviewedBy})
-		if err != nil && !errors.Is(err, enrollmentNative.ErrDecisionReviewerStaffRequired) {
-			return false, fmt.Errorf("weekly plan: resolve the reviewer as author: %w", err)
+		fields, err := d.weeklyPlanSchemaFields(ctx, request)
+		if err != nil {
+			return false, err
 		}
-		plan.AuthorStaffID = author.staffID
+		if weeklyPlanNeedsAuthor(request, child, fields) {
+			author, err := d.resolveScheduleAuthor(ctx, scheduleAuthor{reviewerAccountID: *child.ReviewedBy})
+			if err != nil && !errors.Is(err, enrollmentNative.ErrDecisionReviewerStaffRequired) {
+				return false, fmt.Errorf("weekly plan: resolve the reviewer as author: %w", err)
+			}
+			plan.AuthorStaffID = author.staffID
+		}
 	}
 	if err := d.applyPlannedWeeklyFields(ctx, request, child, student, 0, plan); err != nil {
 		return false, err

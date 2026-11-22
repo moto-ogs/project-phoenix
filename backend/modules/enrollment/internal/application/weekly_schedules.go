@@ -57,10 +57,11 @@ func (d *Decisions) dispatchWeekdaySchedule(ctx context.Context, raw any, studen
 		return nil
 	}
 	rows, err := weekdayScheduleRows(raw)
-	if err != nil || len(rows) == 0 {
+	if err != nil {
 		return err
 	}
-	// Only a row names an author: an answer without a time needs none.
+	// An answer needs its author even when it names no time: under a
+	// replacing dispatch it has already cleared the running rows.
 	rowAuthor, err := d.resolveScheduleAuthor(ctx, author)
 	if err != nil {
 		return err
