@@ -28,7 +28,7 @@ import {
   UNKNOWN_ANALYTICS_PATH,
   type AnalyticsRouteSurface,
 } from "~/lib/analytics-routes";
-import type { Kind as DayChangeKind } from "~/lib/contract/day-changes.generated";
+import type * as dayChangesContract from "~/lib/contract/day-changes.generated";
 import { NOTIFICATION_FEED_ANALYTICS_TYPES } from "~/lib/notification-feed-helpers";
 
 /** Reiterarten auf „Alle Kinder“ (#5046); ein Aufsichtsreiter nennt keinen Raum. */
@@ -59,7 +59,7 @@ const DAY_CHANGE_KINDS = [
   "staff_absent",
   "staff_absent_count",
   "staff_notice",
-] as const satisfies readonly DayChangeKind[];
+] as const satisfies readonly dayChangesContract.Kind[];
 
 /**
  * Selbstöffnende Flächen des Einstiegs (#7541). Ein Wert je Fläche; eine

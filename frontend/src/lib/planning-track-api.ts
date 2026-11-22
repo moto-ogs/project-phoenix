@@ -1,8 +1,6 @@
 import { bffJson } from "./bff-fetch";
-import type {
-  PlanningTrack as PlanningTrackResponse,
-  planningTrackRequest,
-} from "./contract/timetable.generated";
+import type { planningTrackRequest } from "./contract/timetable.generated";
+import type * as timetableContract from "./contract/timetable.generated";
 
 export interface PlanningTrack {
   id: string;
@@ -12,7 +10,7 @@ export interface PlanningTrack {
   archivedAt?: string;
 }
 
-function mapTrack(track: PlanningTrackResponse): PlanningTrack {
+function mapTrack(track: timetableContract.PlanningTrack): PlanningTrack {
   return {
     id: track.id,
     name: track.name,

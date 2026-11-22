@@ -1,10 +1,7 @@
 // Eine Frage des Anmeldeformulars eines Ferienzeitraums (#5198). Das
 // Träger-Portal baut sie, die öffentliche Ferienanmeldung zeigt sie.
 
-import type {
-  FormLegalBlock as WireFormLegalBlock,
-  HolidayFormField as WireHolidayFormField,
-} from "./contract/shared.generated";
+import type * as sharedContract from "./contract/shared.generated";
 import { requiredEnum } from "./contract/known-enum";
 import {
   LEGAL_BLOCK_DISPLAY_MODES,
@@ -109,7 +106,7 @@ export interface HolidayFormVersion {
  * could skip a required question the backend then refuses.
  */
 export function holidayFormFieldsFromContract(
-  fields: readonly WireHolidayFormField[] | null,
+  fields: readonly sharedContract.HolidayFormField[] | null,
   at: string,
 ): HolidayFormField[] {
   return (fields ?? []).map((field, index) => ({
@@ -126,7 +123,7 @@ export function holidayFormFieldsFromContract(
  * for the same reasons as an unknown field type.
  */
 function holidayLegalBlocksFromContract(
-  blocks: readonly WireFormLegalBlock[] | null,
+  blocks: readonly sharedContract.FormLegalBlock[] | null,
   at: string,
 ): FormLegalBlock[] {
   return (blocks ?? []).map((block, index) => {
@@ -173,9 +170,9 @@ function holidayLegalBlocksFromContract(
 
 /** The parts of a version every holiday form answer carries. */
 interface WireHolidayFormVersion {
-  readonly legal_blocks: readonly WireFormLegalBlock[] | null;
+  readonly legal_blocks: readonly sharedContract.FormLegalBlock[] | null;
   readonly version: number;
-  readonly fields: readonly WireHolidayFormField[] | null;
+  readonly fields: readonly sharedContract.HolidayFormField[] | null;
   readonly address_requirement: string;
   readonly health_requirement: string;
 }

@@ -4,12 +4,9 @@ import { knownEnum } from "~/lib/contract/known-enum";
 import type {
   GuardianPickerResponse,
   GuardianResponse,
-  GuardianWithRelationship as GuardianWithRelationshipWire,
-  PhoneNumberCreateRequest as PhoneNumberCreateWire,
   PhoneNumberResponse,
-  PhoneNumberUpdateRequest as PhoneNumberUpdateWire,
-  StudentGuardianLinkRequest as StudentGuardianLinkWire,
 } from "~/lib/contract/guardians.generated";
+import type * as guardiansContract from "~/lib/contract/guardians.generated";
 
 // Phone Number Types
 export type PhoneType = "mobile" | "home" | "work" | "other";
@@ -254,7 +251,7 @@ const ACCOUNT_STATUSES: readonly GuardianAccountStatus[] = [
  * lists leave such a link out.
  */
 export function mapGuardianWithRelationshipResponse(
-  data: GuardianWithRelationshipWire,
+  data: guardiansContract.GuardianWithRelationship,
 ): GuardianWithRelationship | null {
   const guardian = data.guardian;
   if (!guardian) return null;
@@ -282,7 +279,7 @@ export function mapGuardianWithRelationshipResponse(
 
 export function mapStudentGuardianLinkToBackend(
   data: StudentGuardianLinkRequest,
-): StudentGuardianLinkWire {
+): guardiansContract.StudentGuardianLinkRequest {
   return {
     guardian_profile_id: data.guardianProfileId,
     relationship_type: data.relationshipType,
@@ -358,7 +355,7 @@ export interface PhoneNumberUpdateRequest {
 // Map phone number create request to backend format
 export function mapPhoneNumberCreateToBackend(
   data: PhoneNumberCreateRequest,
-): PhoneNumberCreateWire {
+): guardiansContract.PhoneNumberCreateRequest {
   return {
     phone_number: data.phoneNumber,
     phone_type: data.phoneType,
@@ -370,8 +367,8 @@ export function mapPhoneNumberCreateToBackend(
 // Map phone number update request to backend format
 export function mapPhoneNumberUpdateToBackend(
   data: PhoneNumberUpdateRequest,
-): PhoneNumberUpdateWire {
-  const result: PhoneNumberUpdateWire = {};
+): guardiansContract.PhoneNumberUpdateRequest {
+  const result: guardiansContract.PhoneNumberUpdateRequest = {};
   if (data.phoneNumber !== undefined) result.phone_number = data.phoneNumber;
   if (data.phoneType !== undefined) result.phone_type = data.phoneType;
   if (data.label !== undefined) result.label = data.label;

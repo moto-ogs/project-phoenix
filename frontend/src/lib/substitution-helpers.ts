@@ -7,10 +7,10 @@ import { knownEnum } from "~/lib/contract/known-enum";
 import type {
   SubstitutionAssignmentResponse,
   GroupHandover,
-  RunningSupervision as RunningSupervisionWire,
   StaffRef,
   SubstitutionOverviewResult,
 } from "~/lib/contract/substitutions.generated";
+import type * as substitutionsContract from "~/lib/contract/substitutions.generated";
 import type { ExternalAccountStatus } from "~/lib/staff-api";
 import { EXTERNAL_ACCOUNT_STATUS_VALUES } from "~/lib/staff-wire-enums";
 
@@ -157,7 +157,7 @@ function mapSupervisionStaffRef(staff: StaffRef): SupervisionStaffRef {
 }
 
 export function mapRunningSupervision(
-  backend: RunningSupervisionWire,
+  backend: substitutionsContract.RunningSupervision,
 ): RunningSupervision {
   return {
     id: backend.id,

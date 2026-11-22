@@ -20,9 +20,9 @@ import {
 } from "./guardian-helpers";
 import type {
   GuardianResponse,
-  GuardianWithRelationship as GuardianWithRelationshipWire,
   PhoneNumberResponse,
 } from "./contract/guardians.generated";
+import type * as guardiansContract from "./contract/guardians.generated";
 
 describe("guardian-helpers", () => {
   describe("mapGuardianResponse", () => {
@@ -188,7 +188,7 @@ describe("guardian-helpers", () => {
 
   describe("mapGuardianWithRelationshipResponse", () => {
     it("maps guardian with relationship data", () => {
-      const backendData: GuardianWithRelationshipWire = {
+      const backendData: guardiansContract.GuardianWithRelationship = {
         guardian: {
           id: "100",
           first_name: "Parent",
@@ -243,7 +243,7 @@ describe("guardian-helpers", () => {
     });
 
     it("carries the payment mark through", () => {
-      const backendData: GuardianWithRelationshipWire = {
+      const backendData: guardiansContract.GuardianWithRelationship = {
         guardian: {
           id: "101",
           first_name: "Payer",
@@ -269,7 +269,7 @@ describe("guardian-helpers", () => {
     });
 
     it("handles non-primary, non-emergency guardian", () => {
-      const backendData: GuardianWithRelationshipWire = {
+      const backendData: guardiansContract.GuardianWithRelationship = {
         guardian: {
           id: "1",
           first_name: "Relative",

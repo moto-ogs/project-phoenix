@@ -11,7 +11,7 @@ import { apiErrorFromBody, transportFetch } from "~/lib/api-error";
 import { knownEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
 import type { NoticeResponse } from "./contract/holiday-closure-notices.generated";
-import type { Range as WireRange } from "./contract/shared.generated";
+import type * as sharedContract from "./contract/shared.generated";
 
 // Go meldet die Menge nicht an; der Vertrag führt sie als string.
 const NOTICE_STATUS_VALUES = [
@@ -67,7 +67,9 @@ export interface HolidayClosureNotice {
  */
 export type HolidayClosureNoticeWire = NoticeResponse;
 
-function mapRange(range: WireRange | null): HolidayClosureRange | null {
+function mapRange(
+  range: sharedContract.Range | null,
+): HolidayClosureRange | null {
   return range
     ? {
         startDate: requiredDay(range.start_date, "closure_range.start_date"),

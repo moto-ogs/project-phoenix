@@ -21,9 +21,9 @@ import type {
 } from "~/lib/contract/staff.generated";
 import type {
   StaffAbsenceResponse,
-  StaffVacationOpening as StaffVacationOpeningWire,
   VacationQuotaSummary,
 } from "~/lib/contract/shared.generated";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import type { ModelResponse } from "~/lib/contract/work-time-models.generated";
 import {
   EXTERNAL_ACCOUNT_STATUS_VALUES,
@@ -1002,7 +1002,7 @@ export interface StaffVacationOpening {
 }
 
 function mapStaffVacationOpening(
-  data: StaffVacationOpeningWire,
+  data: sharedContract.StaffVacationOpening,
 ): StaffVacationOpening {
   return {
     id: data.id,
