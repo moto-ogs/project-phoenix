@@ -256,7 +256,7 @@ function ChildMasterDataContent({
   const visibilityT = useCareTermTranslations("parentVisibility");
   const pendingByField = useMemo(() => {
     const map = new Map<string, MasterDataChange>();
-    for (const c of data.pending_changes) {
+    for (const c of data.pending_changes ?? []) {
       if (c.status === "pending") map.set(`${c.target}/${c.field_key}`, c);
     }
     return map;
@@ -481,7 +481,10 @@ function IdentitySection({
     );
     onApplied({
       ...data,
-      pending_changes: mergePendingChanges(data.pending_changes, submitted),
+      pending_changes: mergePendingChanges(
+        data.pending_changes ?? [],
+        submitted,
+      ),
     });
     try {
       onApplied(await getChildMasterData(studentId));
@@ -802,7 +805,10 @@ function DepartureSection({
       );
       onApplied({
         ...data,
-        pending_changes: mergePendingChanges(data.pending_changes, submitted),
+        pending_changes: mergePendingChanges(
+          data.pending_changes ?? [],
+          submitted,
+        ),
       });
       setModes(current);
       setRecipientIds([]);
@@ -971,7 +977,7 @@ function DepartureDays({
   tourTarget = false,
   nested = false,
 }: Readonly<{
-  modes?: Record<string, readonly string[]>;
+  modes?: Record<string, readonly string[] | null>;
   tourTarget?: boolean;
   /** Auf grauem Grund (offene Anfrage) heben sich die Tage weiß ab. */
   nested?: boolean;
@@ -1374,7 +1380,7 @@ function mergePendingChanges(
 }
 
 function normalizeDepartureModes(
-  modes?: Record<string, readonly string[]>,
+  modes?: Record<string, readonly string[] | null>,
 ): Record<string, string[]> {
   const out: Record<string, string[]> = {};
   for (const day of DEPARTURE_DAYS) {
@@ -1403,7 +1409,9 @@ function departureModesFromValue(
   return out;
 }
 
-function hasDepartureAccompanied(modes?: Record<string, readonly string[]>) {
+function hasDepartureAccompanied(
+  modes?: Record<string, readonly string[] | null>,
+) {
   return DEPARTURE_DAYS.some((day) =>
     (modes?.[day] ?? []).includes("accompanied"),
   );

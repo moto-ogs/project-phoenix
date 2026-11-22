@@ -184,6 +184,17 @@ const DEFAULT_FEATURES: ChildFeatures = {
   // panel rather than showing an empty one for a school that has news off; the
   // backend feed enforces the gate regardless.
   parent_news_enabled: false,
+  conference_book_allowed: false,
+  care_ended: false,
+  sick_requires_approval: false,
+  excused_requires_approval: false,
+  pickup_change_mode_enabled: false,
+  pickup_change_cutoff_time: "",
+  pickup_change_today_closed: false,
+  pickup_change_care_day_ended: false,
+  emergency_contact_manage_allowed: false,
+  reason_required: false,
+  care_facility_term: "",
 };
 
 // The child's effective pickup situation for TODAY, resolved from the weekly

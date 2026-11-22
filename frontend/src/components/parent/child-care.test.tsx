@@ -2458,6 +2458,18 @@ describe("Fehlerweg der Dialoge (#2518)", () => {
       new ApiError("diag", 503, { code: "general.unavailable" }),
     );
     vi.spyOn(parentApi, "getChildFeatures").mockResolvedValue({
+      conference_book_allowed: false,
+      care_ended: false,
+      sick_requires_approval: false,
+      excused_requires_approval: false,
+      pickup_change_mode_enabled: false,
+      pickup_change_cutoff_time: "",
+      pickup_change_today_closed: false,
+      pickup_change_care_day_ended: false,
+      emergency_contact_manage_allowed: false,
+      absence_request_edit_enabled: false,
+      reason_required: false,
+      care_facility_term: "",
       sick_note_enabled: false,
       excused_note_enabled: false,
 
