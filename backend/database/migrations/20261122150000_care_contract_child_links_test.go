@@ -13,7 +13,7 @@ import (
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
-// TestCareContractChildLinksKeepTheirShape pins 20261122130000 (#7760) under
+// TestCareContractChildLinksKeepTheirShape pins 20261122150000 (#7760) under
 // the request role: it links an imported contract to a child record and
 // unlinks it, the trail records both, and the trail still refuses an action
 // it does not know.
@@ -51,5 +51,6 @@ func TestCareContractChildLinksKeepTheirShape(t *testing.T) {
 	require.NoError(t, as(fmt.Sprintf(`UPDATE care_contract.contracts SET student_id = NULL WHERE id = %d`, contract)),
 		"the request role unlinks the contract")
 	require.NoError(t, as(event("unlink_child")), "the trail records the removal")
+	require.NoError(t, as(event("correct")), "the corrections of imported contracts (#7767) stay recordable")
 	assert.ErrorContains(t, as(event("relink_child")), "chk_contract_events_action", "an unknown action stays refused")
 }
