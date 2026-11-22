@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 
 	enrollmentNative "github.com/moto-ogs/project-phoenix/modules/enrollment"
 )
@@ -36,14 +37,21 @@ func (d *Decisions) weeklyPlanSchemaFields(ctx context.Context, request *enrollm
 func weeklyPlanWritesRows(request *enrollmentNative.Request, child *enrollmentNative.RequestChild, fields []enrollmentNative.FormField) bool {
 	for i := range fields {
 		field := &fields[i]
-		if field.Target != enrollmentNative.TargetSchedulePickup && field.Target != enrollmentNative.TargetScheduleArrival {
+		if !isWeeklyScheduleTarget(field.Target) {
 			continue
 		}
-		if targetedFieldHasMeaningfulValue(field.Target, readFieldValue(request, child, field)) {
+		// An answer the dispatch will refuse counts as writing: the refusal
+		// belongs to the dispatch, not to a plan stored without an author.
+		if rows, err := weekdayScheduleRows(readFieldValue(request, child, field)); err != nil || len(rows) > 0 {
 			return true
 		}
 	}
 	return false
+}
+
+// isWeeklyScheduleTarget reports the two targets whose rows name an author.
+func isWeeklyScheduleTarget(target string) bool {
+	return target == enrollmentNative.TargetSchedulePickup || target == enrollmentNative.TargetScheduleArrival
 }
 
 // plannedWeeklyPlanAuthor is the author an approval stores with the plan it
@@ -59,9 +67,9 @@ func (d *Decisions) plannedWeeklyPlanAuthor(ctx context.Context, request *enroll
 
 // editedWeeklyPlanAuthor names the author of a planned weekly plan after a
 // confirmed edit. An actor with an author of their own becomes the author.
-// An actor without one keeps the stored author only while the weekly answers
+// An actor without one keeps the stored author only while the weekly rows
 // stay as approved; changing them is refused, so that the start never writes
-// new answers in the name of an earlier reviewer.
+// new rows in the name of an earlier reviewer.
 func (d *Decisions) editedWeeklyPlanAuthor(ctx context.Context, run *approvedChildSync, plan enrollmentNative.WeeklyPlan) (enrollmentNative.WeeklyPlan, error) {
 	fields, err := d.weeklyPlanSchemaFields(ctx, run.request)
 	if err != nil {
@@ -71,7 +79,7 @@ func (d *Decisions) editedWeeklyPlanAuthor(ctx context.Context, run *approvedChi
 		return plan, nil
 	}
 	author, err := d.resolveScheduleAuthor(ctx, scheduleAuthor{reviewerAccountID: run.input.ActorAccountID})
-	if errors.Is(err, enrollmentNative.ErrDecisionReviewerStaffRequired) && !weeklyAnswersChanged(run, fields) {
+	if errors.Is(err, enrollmentNative.ErrDecisionReviewerStaffRequired) && !weeklyRowsChanged(run, fields) {
 		return plan, nil
 	}
 	if err != nil {
@@ -81,11 +89,12 @@ func (d *Decisions) editedWeeklyPlanAuthor(ctx context.Context, run *approvedChi
 	return plan, nil
 }
 
-// weeklyAnswersChanged reports whether the edit changes an answer of the
-// weekly plan against the snapshot it was made on. An edit without a
-// snapshot (a direct correction of master data) changes no form answer
-// unless it says so.
-func weeklyAnswersChanged(run *approvedChildSync, fields []enrollmentNative.FormField) bool {
+// weeklyRowsChanged reports whether the edit changes a weekly pickup or
+// arrival row against the snapshot it was made on: the rows, not the raw
+// answers, so a weekday added without a time changes nothing. An edit
+// without a snapshot (a direct correction of master data) changes no form
+// answer unless it says so.
+func weeklyRowsChanged(run *approvedChildSync, fields []enrollmentNative.FormField) bool {
 	if run.snapshot == nil {
 		return run.input.ChildDataChanged
 	}
@@ -97,14 +106,16 @@ func weeklyAnswersChanged(run *approvedChildSync, fields []enrollmentNative.Form
 	previousChildData := mapFromAny(previousChild["custom_data"])
 	for i := range fields {
 		field := &fields[i]
-		if !isWeeklyPlanTarget(field.Target) {
+		if !isWeeklyScheduleTarget(field.Target) {
 			continue
 		}
 		previous := previousRequestData[field.Key]
 		if field.AppliesToCh {
 			previous = previousChildData[field.Key]
 		}
-		if !jsonEqual(previous, readFieldValue(run.request, run.child, field)) {
+		before, beforeErr := weekdayScheduleRows(previous)
+		after, afterErr := weekdayScheduleRows(readFieldValue(run.request, run.child, field))
+		if beforeErr != nil || afterErr != nil || !maps.Equal(before, after) {
 			return true
 		}
 	}

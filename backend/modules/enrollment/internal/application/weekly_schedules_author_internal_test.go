@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -165,4 +166,60 @@ func TestPlanWeeklyPlanStoresAnAuthorOrFails(t *testing.T) {
 	require.NoError(t, err, "a plan without weekly rows needs no author")
 	require.Len(t, stored, 1)
 	assert.Equal(t, enrollmentNative.WeeklyPlan{RequestChildID: childID, On: on}, *stored[0])
+}
+
+type pickupWritesFake struct {
+	WeeklyPickupSchedules
+	days *[]int
+}
+
+func (f pickupWritesFake) UpsertPickupSchedule(_ context.Context, _ int64, weekday int, _ time.Time, _ int64, _ bool) error {
+	*f.days = append(*f.days, weekday)
+	return nil
+}
+
+// Only a row names an author (#7818). A weekly answer without a time writes
+// nothing and needs none, at once and at the start of a deferred plan, where
+// no session is left to name one; an answer with a time still needs it.
+func TestWeekdayScheduleNeedsAnAuthorOnlyForARow(t *testing.T) {
+	t.Parallel()
+
+	const studentID int64 = 61
+	var days []int
+	d := &Decisions{deps: DecisionDependencies{PickupSchedules: pickupWritesFake{days: &days}}}
+	nobody := scheduleAuthor{}
+
+	for _, empty := range []any{nil, map[string]any{}, map[string]any{"mon": "", "tue": "  "}} {
+		require.NoError(t, d.dispatchWeekdaySchedule(context.Background(), empty, studentID, nobody, true))
+	}
+	assert.Empty(t, days)
+
+	require.Error(t, d.dispatchWeekdaySchedule(context.Background(), map[string]any{"mon": "15:00"}, studentID, nobody, true))
+	require.NoError(t, d.dispatchWeekdaySchedule(context.Background(), map[string]any{"mon": "15:00", "tue": ""}, studentID, scheduleAuthor{byTraeger: true}, true))
+	assert.Len(t, days, 1)
+}
+
+// A stored author stands for the rows it approved, not for the raw answers:
+// a weekday added without a time changes nothing, a new time does (#7818).
+func TestWeeklyRowsChangedComparesRowsNotAnswers(t *testing.T) {
+	t.Parallel()
+
+	const childID int64 = 71
+	fields := []enrollmentNative.FormField{{
+		Key: "pickup_times", Type: enrollmentNative.FormFieldWeekdaySchedule, AppliesToCh: true, Target: enrollmentNative.TargetSchedulePickup,
+	}}
+	run := func(answer map[string]any) *approvedChildSync {
+		return &approvedChildSync{
+			request: &enrollmentNative.Request{},
+			child:   &enrollmentNative.RequestChild{ID: childID, CustomData: formValues(map[string]any{"pickup_times": answer})},
+			snapshot: map[string]any{"children": []any{map[string]any{
+				"id": childID, "custom_data": map[string]any{"pickup_times": map[string]any{"mon": "15:00"}},
+			}}},
+		}
+	}
+
+	assert.False(t, weeklyRowsChanged(run(map[string]any{"mon": "15:00", "tue": ""}), fields))
+	assert.True(t, weeklyRowsChanged(run(map[string]any{"mon": "15:30"}), fields))
+	assert.True(t, weeklyRowsChanged(run(map[string]any{"mon": "15:00", "tue": "14:00"}), fields))
+	assert.True(t, weeklyRowsChanged(run(map[string]any{}), fields))
 }

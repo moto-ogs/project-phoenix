@@ -56,27 +56,40 @@ func (d *Decisions) dispatchWeekdaySchedule(ctx context.Context, raw any, studen
 	if (isPickup && d.deps.PickupSchedules == nil) || (!isPickup && d.deps.ArrivalSchedules == nil) {
 		return nil
 	}
-	var sched enrollment.WeekdaySchedule
-	if err := decodeStructured(raw, &sched); err != nil {
-		return fmt.Errorf("decode weekday_schedule: %w", err)
+	rows, err := weekdayScheduleRows(raw)
+	if err != nil || len(rows) == 0 {
+		return err
 	}
-	if err := sched.Validate(); err != nil {
-		return fmt.Errorf("%w: %w", enrollment.ErrDecisionInvalidData, err)
-	}
+	// Only a row names an author: an answer without a time needs none.
 	rowAuthor, err := d.resolveScheduleAuthor(ctx, author)
 	if err != nil {
 		return err
 	}
-	for day, hhmm := range sched {
-		hhmm = strings.TrimSpace(hhmm)
-		if hhmm == "" {
-			continue
-		}
+	for day, hhmm := range rows {
 		if err := d.writeWeekdaySchedule(ctx, studentID, day, hhmm, rowAuthor, isPickup); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// weekdayScheduleRows is the rows a weekly pickup or arrival answer writes:
+// its weekdays with a time. A weekday left empty writes nothing.
+func weekdayScheduleRows(raw any) (map[string]string, error) {
+	var sched enrollment.WeekdaySchedule
+	if err := decodeStructured(raw, &sched); err != nil {
+		return nil, fmt.Errorf("decode weekday_schedule: %w", err)
+	}
+	if err := sched.Validate(); err != nil {
+		return nil, fmt.Errorf("%w: %w", enrollment.ErrDecisionInvalidData, err)
+	}
+	rows := make(map[string]string, len(sched))
+	for day, hhmm := range sched {
+		if hhmm = strings.TrimSpace(hhmm); hhmm != "" {
+			rows[day] = hhmm
+		}
+	}
+	return rows, nil
 }
 
 func (d *Decisions) writeWeekdaySchedule(ctx context.Context, studentID int64, day, hhmm string, author resolvedScheduleAuthor, isPickup bool) error {
