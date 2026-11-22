@@ -29,9 +29,6 @@ type importedChildren struct {
 	// child a second time, but whose number still speaks against the other
 	// rows of its family.
 	witness bool
-	// belongs limits a witness to the rows of the days its child was in the
-	// family; empty, it speaks against every row (#7863).
-	belongs []familyImportSpan
 }
 
 // previewChildrenFamily keys a row of a preview without a mail address and
@@ -102,12 +99,10 @@ func importedChildrenStart(from, decisionDay calendar.Date, count *parentbilling
 // importedRowsDiffer tells whether another row of the row's family names
 // a different number. A conflict with stored confirmations on one day does
 // not disqualify a row's number as evidence against sibling rows elsewhere
-// in the file. A witness of a child that left speaks only against rows of
-// days it belonged to the family.
+// in the file.
 func importedRowsDiffer(family []importedChildren, row importedChildren) bool {
 	for _, other := range family {
-		if other.number.Children != row.number.Children &&
-			(len(other.belongs) == 0 || spansCover(other.belongs, row.number.ValidFrom)) {
+		if other.number.Children != row.number.Children {
 			return true
 		}
 	}

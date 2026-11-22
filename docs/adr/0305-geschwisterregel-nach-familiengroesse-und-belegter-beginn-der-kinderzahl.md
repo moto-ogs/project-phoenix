@@ -132,10 +132,10 @@ Punkt 5 den Satz zum Beginn der Zahl.
   Ablauf der alten Bestätigung. Ein inzwischen beendeter Vertrag zählt also
   für einen früheren Beginn, aber nicht für eine Erneuerung nach Vertragsende.
   Bleibt keine Familie übrig, hält moto die Zeile zurück (`contract_ended`).
-  Eine Familie, zu der das Kind am Tag der Zeile gehörte, die die Zahl aber
-  nicht mehr erreicht, hört die Zeile weiter als Zeugin: Ihre Zahl
-  widerspricht den Zeilen der Geschwister, deren Tag in die Vertragszeit des
-  Kindes in dieser Familie fällt. Gespeichert wird dort nichts.
+  Eine Familie, die die Zahl so nicht mehr erreicht, hört die Zeile weiter
+  als Zeugin: Ihre Zahl widerspricht den Zeilen der Geschwister wie vor
+  #7863, für jeden Tag. Gespeichert wird dort nichts. Punkt 5 verhindert also
+  nur das Speichern; die Konfliktprüfung bleibt so vorsichtig wie bisher.
 
 ## Nachtrag 22.11.2026: Jeder Vertrag im Monat zählt, die Schulen der Regel zählen immer (#7863 Punkte 1 und 2)
 
