@@ -580,9 +580,9 @@ func otherContract(contracts []ports.ContractChild, contract ports.ContractChild
 			continue
 		}
 		// Linked to no child record, the other contract is the child's only
-		// by its names; two contracts born on different days are two
-		// children, namesakes whose records carry no date of birth.
-		if !childDiffers(other, student) && !bornApart(contract, other) {
+		// by its names. Where the child record carries no date of birth, two
+		// contracts born on different days are two children: namesakes.
+		if !childDiffers(other, student) && (student.BirthDate != nil || !bornApart(contract, other)) {
 			return other.ContractID
 		}
 	}

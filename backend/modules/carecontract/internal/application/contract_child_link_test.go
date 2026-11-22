@@ -212,6 +212,13 @@ func TestDecideChildLinksTellsNamesakesApartByTheContracts(t *testing.T) {
 	}
 	row := decideOne(t, contracts, linkPair{line: 2, contractID: 51, studentID: linkBen})[0]
 	assert.Equal(t, carecontract.ChildLinkReady, row.Status)
+	// A child record with a date of birth is told apart by that date: the
+	// other contract that names exactly this child stays a conflict.
+	students := linkStudentsFixture()
+	students[linkSchoolNorth][linkBen] = carecontract.SchoolChild{StudentID: linkBen, FirstName: "Ben", LastName: "Muster", BirthDate: importDay(2019, 3, 4)}
+	rows, _ := decideChildLinks([]linkPair{{line: 2, contractID: 51, studentID: linkBen}},
+		[]carecontract.School{{ID: linkSchoolNorth, Name: "OGS Nord"}}, contracts, students, linkToday)
+	assert.Equal(t, ident.ID(52), rows[0].OtherContractID, "contract 52 names exactly this child")
 }
 
 // A row that links nothing contests no child record: the export of all
@@ -294,9 +301,14 @@ func TestCoveredByImportCoversTheChildOfARunningImportedContract(t *testing.T) {
 	t.Parallel()
 	full := 15000
 	start := calendar.NewDate(2026, 8, 1)
+	yearEnd := calendar.NewDate(2027, 7, 31)
 	read := func(applications ...carecontract.Application) []schoolRead {
 		return []schoolRead{{school: carecontract.School{ID: linkSchoolNorth}, applications: applications,
-			offerings: map[int64]carecontract.Offering{1: {ID: 1, Name: "Ganztag", PriceCents: &full, EndTimes: map[string]string{"mon": "16:00"}}}}}
+			offerings: map[int64]carecontract.Offering{
+				1: {ID: 1, Name: "Ganztag", PriceCents: &full, EndTimes: map[string]string{"mon": "16:00"}},
+				// 2 is a module of the school year 2026/27.
+				2: {ID: 2, Name: "Ganztag 2026/27", PriceCents: &full, EndTimes: map[string]string{"mon": "16:00"}, ServiceEnd: &yearEnd},
+			}}}
 	}
 	application := func(requestChildID int64, studentID *int64, first string, birth *calendar.Date, from calendar.Date) carecontract.Application {
 		return carecontract.Application{RequestChildID: requestChildID, StudentID: studentID, ChildFirstName: first, ChildLastName: "Beispiel",
@@ -312,6 +324,10 @@ func TestCoveredByImportCoversTheChildOfARunningImportedContract(t *testing.T) {
 		january, february := calendar.NewDate(2027, 2, 1), calendar.NewDate(2027, 2, 1)
 		a.Bookings[0].ValidUntil = &january
 		a.Bookings = append(a.Bookings, carecontract.Booking{CareOfferingID: 1, Days: []string{"mon"}, ValidFrom: &february})
+		return a
+	}
+	ofModule := func(a carecontract.Application, offering int64) carecontract.Application {
+		a.Bookings[0].CareOfferingID = offering
 		return a
 	}
 	importedFrom := func(c ports.ContractChild, from calendar.Date) ports.ContractChild {
@@ -344,6 +360,8 @@ func TestCoveredByImportCoversTheChildOfARunningImportedContract(t *testing.T) {
 			imported(linkPtr(linkMia), "Mia", nil, importDay(2026, 10, 31), carecontract.StatusEnded), true},
 		{"an approved booking to come reaches the import's start", withLaterBooking(application(81, linkPtr(linkMia), "Mia", nil, calendar.NewDate(2026, 6, 1))),
 			importedFrom(imported(linkPtr(linkMia), "Mia", nil, nil, carecontract.StatusActive), calendar.NewDate(2027, 2, 1)), true},
+		{"a booking without a stored end stops with the school year of its module", ofModule(application(81, linkPtr(linkMia), "Mia", nil, calendar.NewDate(2026, 8, 3)), 2),
+			importedFrom(imported(linkPtr(linkMia), "Mia", nil, nil, carecontract.StatusActive), calendar.NewDate(2027, 8, 1)), false},
 		{"withdrawn", application(81, linkPtr(linkMia), "Mia", nil, booked),
 			imported(linkPtr(linkMia), "Mia", nil, nil, carecontract.StatusWithdrawn), false},
 		{"ended", application(81, linkPtr(linkMia), "Mia", nil, booked),
