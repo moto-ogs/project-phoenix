@@ -1005,6 +1005,66 @@ export interface SubmitSignatureRequest {
   typed_name?: string;
 }
 
+/** Go: enrollment.FormAttachment */
+export interface FormAttachmentInput {
+  document_id?: string;
+  label?: string;
+  document_url?: string;
+}
+
+/** Go: enrollment.TranslatedText */
+export interface TranslatedTextInput {
+  text?: string;
+  source?: string;
+}
+
+/** Go: enrollment.FormFieldOption */
+export interface FormFieldOptionInput {
+  label?: string;
+  value?: string;
+  translations?: Record<string, Record<string, TranslatedTextInput> | null> | null;
+}
+
+/** Go: enrollment.FormFieldValidation */
+export interface FormFieldValidationInput {
+  min?: number | null;
+  max?: number | null;
+  pattern?: string | null;
+}
+
+/** Go: enrollment.FormFileOptions */
+export interface FormFileOptionsInput {
+  allowed_types?: string[] | null;
+  max_size_mb?: number;
+  multiple?: boolean;
+}
+
+/** Go: enrollment.VisibilityCondition */
+export interface VisibilityConditionInput {
+  source?: string;
+  field?: string;
+  operator?: string;
+  value?: unknown | null;
+}
+
+/** Go: enrollment.FormLegalBlock */
+export interface FormLegalBlockInput {
+  attachments?: FormAttachmentInput[] | null;
+  key?: string;
+  kind?: string;
+  title?: string;
+  label?: string;
+  text?: string;
+  required?: boolean;
+  enabled?: boolean;
+  sort_order?: number;
+  source?: string;
+  display_mode?: string;
+  document_url?: string;
+  translations?: Record<string, Record<string, TranslatedTextInput> | null> | null;
+  guardian_agreement?: boolean;
+}
+
 /** Go: enrollmenthttp.SubmitEnrollmentRequest */
 export interface SubmitEnrollmentRequest {
   phase_id?: string;

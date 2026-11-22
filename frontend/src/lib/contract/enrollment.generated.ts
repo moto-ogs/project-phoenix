@@ -18,6 +18,7 @@ import {
   safeInt,
   str,
   success,
+  type OpenEnum,
 } from "./runtime";
 import {
   CareOfferingResponseSchema,
@@ -36,9 +37,15 @@ import {
   UploadReceiptSchema,
   type CareOfferingResponse,
   type FormAttachment,
+  type FormAttachmentInput,
   type FormField,
+  type FormFieldOptionInput,
+  type FormFieldValidationInput,
+  type FormFileOptionsInput,
   type FormLegalBlock,
+  type FormLegalBlockInput,
   type LegalBlock,
+  type ListFormat,
   type PublicFormSchemaResponse,
   type PublicLegalTextsResponse,
   type PublicPhase,
@@ -48,6 +55,8 @@ import {
   type SubmitGuardianRequest,
   type SubmitSignatureRequest,
   type TranslatedText,
+  type TranslatedTextInput,
+  type VisibilityConditionInput,
 } from "./shared.generated";
 
 /** Go: enrollmenthttp.AdminEnrollmentDeleteRequest */
@@ -1532,6 +1541,39 @@ export interface ChangeRequestMessageRequest {
   body?: string;
 }
 
+/** Go: enrollmenthttp.careUsageExportFiltersRequest */
+export interface careUsageExportFiltersRequest {
+  phase_id?: string;
+  status?: string;
+  care_offering_id?: string;
+  care_offering_ids?: string[] | null;
+  day_count?: number | null;
+  grade_level?: number | null;
+  weekday?: string;
+  pickup_time?: string;
+  search?: string;
+}
+
+/** Go: enrollmenthttp.careUsageExportRequest */
+export interface careUsageExportRequest {
+  format?: OpenEnum<ListFormat>;
+  layout?: string;
+  filters?: careUsageExportFiltersRequest;
+}
+
+/** Go: enrollmenthttp.classRosterExportFiltersRequest */
+export interface classRosterExportFiltersRequest {
+  phase_id?: string;
+  school_class?: string;
+  all_classes?: boolean;
+}
+
+/** Go: enrollmenthttp.classRosterExportRequest */
+export interface classRosterExportRequest {
+  format?: OpenEnum<ListFormat>;
+  filters?: classRosterExportFiltersRequest;
+}
+
 /** Go: enrollmenthttp.RolloverReviewDecisionRequest */
 export interface RolloverReviewDecisionRequest {
   decision?: string;
@@ -1567,6 +1609,12 @@ export const AdminRestoreResponseSchema: z.ZodType<AdminRestoreResponse, unknown
   restored_children: safeInt,
   waitlisted_children: safeInt,
 });
+
+/** Go: enrollmenthttp.phaseExportRequest */
+export interface phaseExportRequest {
+  format?: OpenEnum<ListFormat>;
+  child_status?: string;
+}
 
 /** Go: enrollmenthttp.CareOfferingAvailabilityConditionRequest */
 export interface CareOfferingAvailabilityConditionRequest {
@@ -1808,6 +1856,35 @@ export interface WithdrawRequest {
   child_id?: string | null;
 }
 
+/** Go: enrollment.FormField */
+export interface FormFieldInput {
+  attachments?: FormAttachmentInput[] | null;
+  key?: string;
+  label?: string;
+  type?: string;
+  required?: boolean;
+  help_text?: string;
+  content?: string;
+  options?: FormFieldOptionInput[] | null;
+  allowed_times?: string[] | null;
+  single_mode_grades?: number[] | null;
+  validation?: FormFieldValidationInput | null;
+  file_options?: FormFileOptionsInput | null;
+  sort_order?: number;
+  applies_to_child?: boolean;
+  target?: string;
+  visible_when?: VisibilityConditionInput | null;
+  translations?: Record<string, Record<string, TranslatedTextInput> | null> | null;
+}
+
+/** Go: enrollmenthttp.PublishSchemaRequest */
+export interface PublishSchemaRequest {
+  name?: string;
+  fields?: FormFieldInput[] | null;
+  core_requirements?: Record<string, boolean> | null;
+  legal_blocks?: FormLegalBlockInput[] | null;
+}
+
 /** Go: enrollmenthttp.AdminChildDataCorrectionRequest */
 export interface AdminChildDataCorrectionRequest {
   first_name?: string;
@@ -1970,6 +2047,14 @@ export const PhaseUpdateResponseSchema: z.ZodType<PhaseUpdateResponse, unknown> 
 /** Go: enrollmenthttp.StatusFamilyChildrenRequest */
 export interface StatusFamilyChildrenRequest {
   children?: number;
+}
+
+/** Go: enrollmenthttp.UpdateSchemaRequest */
+export interface UpdateSchemaRequest {
+  name?: string | null;
+  fields?: FormFieldInput[] | null;
+  core_requirements?: Record<string, boolean> | null;
+  legal_blocks?: FormLegalBlockInput[] | null;
 }
 
 /** Query of GET /api/enrollment/admin/change-requests/ */
@@ -2376,12 +2461,14 @@ export const routes = {
     method: "POST",
     pattern: "/api/enrollment/admin/reports/care-usage/export",
     portals: ["tenant"],
+    request: requestBody<careUsageExportRequest>(),
     response: fileAnswer,
   },
   "POST /api/enrollment/admin/reports/class-roster/export": {
     method: "POST",
     pattern: "/api/enrollment/admin/reports/class-roster/export",
     portals: ["tenant"],
+    request: requestBody<classRosterExportRequest>(),
     response: fileAnswer,
   },
   "POST /api/enrollment/admin/request-children/{id}/rollover-review": {
@@ -2414,6 +2501,7 @@ export const routes = {
     method: "POST",
     pattern: "/api/enrollment/admin/students/{studentId}/requests/export",
     portals: ["tenant"],
+    request: requestBody<phaseExportRequest>(),
     response: fileAnswer,
   },
   "POST /api/enrollment/care-offerings/": {
@@ -2450,6 +2538,7 @@ export const routes = {
     method: "POST",
     pattern: "/api/enrollment/phases/{id}/export",
     portals: ["tenant"],
+    request: requestBody<phaseExportRequest>(),
     response: fileAnswer,
   },
   "POST /api/enrollment/phases/{id}/late-invites": {
@@ -2509,6 +2598,7 @@ export const routes = {
     method: "POST",
     pattern: "/api/enrollment/schema/",
     portals: ["tenant"],
+    request: requestBody<PublishSchemaRequest>(),
     response: success(FormSchemaResponseSchema),
   },
   "POST /api/enrollment/{tenantSlug}/submit": {
@@ -2584,6 +2674,7 @@ export const routes = {
     method: "PUT",
     pattern: "/api/enrollment/schema/{id}",
     portals: ["tenant"],
+    request: requestBody<UpdateSchemaRequest>(),
     response: success(FormSchemaResponseSchema),
   },
 } as const;

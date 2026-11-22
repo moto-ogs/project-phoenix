@@ -13665,6 +13665,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "careUsageExportRequest"
+      },
       "file": true
     },
     {
@@ -13673,6 +13677,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "classRosterExportRequest"
+      },
       "file": true
     },
     {
@@ -13730,6 +13738,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "phaseExportRequest"
+      },
       "file": true
     },
     {
@@ -13797,6 +13809,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "phaseExportRequest"
+      },
       "file": true
     },
     {
@@ -13911,6 +13927,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "PublishSchemaRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "FormSchemaResponse"
@@ -14624,6 +14644,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "roomSnapshotExportRequest"
+      },
       "file": true
     },
     {
@@ -20164,6 +20188,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "UpdateSchemaRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "FormSchemaResponse"
@@ -22557,6 +22585,10 @@
       "portals": [
         "org"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "HolidayPeriodFormRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "HolidayFormEditor"
@@ -52441,6 +52473,34 @@
       ]
     },
     {
+      "name": "FormAttachmentInput",
+      "go_type": "enrollment.FormAttachment",
+      "request": true,
+      "fields": [
+        {
+          "name": "document_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "document_url",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "FormField",
       "go_type": "enrollment.FormField",
       "fields": [
@@ -52587,6 +52647,165 @@
       ]
     },
     {
+      "name": "FormFieldInput",
+      "go_type": "enrollment.FormField",
+      "request": true,
+      "fields": [
+        {
+          "name": "attachments",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FormAttachmentInput"
+            }
+          }
+        },
+        {
+          "name": "key",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "required",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "help_text",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "content",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "options",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FormFieldOptionInput"
+            }
+          }
+        },
+        {
+          "name": "allowed_times",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "single_mode_grades",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "validation",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "FormFieldValidationInput"
+          }
+        },
+        {
+          "name": "file_options",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "FormFileOptionsInput"
+          }
+        },
+        {
+          "name": "sort_order",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "applies_to_child",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "target",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "visible_when",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "VisibilityConditionInput"
+          }
+        },
+        {
+          "name": "translations",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "map",
+              "nullable": true,
+              "elem": {
+                "kind": "ref",
+                "ref": "TranslatedTextInput"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "FormFieldOption",
       "go_type": "enrollment.FormFieldOption",
       "fields": [
@@ -52613,6 +52832,43 @@
               "elem": {
                 "kind": "ref",
                 "ref": "TranslatedText"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "FormFieldOptionInput",
+      "go_type": "enrollment.FormFieldOption",
+      "request": true,
+      "fields": [
+        {
+          "name": "label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "value",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "translations",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "map",
+              "nullable": true,
+              "elem": {
+                "kind": "ref",
+                "ref": "TranslatedTextInput"
               }
             }
           }
@@ -52647,6 +52903,37 @@
       ]
     },
     {
+      "name": "FormFieldValidationInput",
+      "go_type": "enrollment.FormFieldValidation",
+      "request": true,
+      "fields": [
+        {
+          "name": "min",
+          "optional": true,
+          "schema": {
+            "kind": "number",
+            "nullable": true
+          }
+        },
+        {
+          "name": "max",
+          "optional": true,
+          "schema": {
+            "kind": "number",
+            "nullable": true
+          }
+        },
+        {
+          "name": "pattern",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "FormFileOptions",
       "go_type": "enrollment.FormFileOptions",
       "fields": [
@@ -52662,6 +52949,38 @@
         },
         {
           "name": "max_size_mb",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "multiple",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "FormFileOptionsInput",
+      "go_type": "enrollment.FormFileOptions",
+      "request": true,
+      "fields": [
+        {
+          "name": "allowed_types",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "max_size_mb",
+          "optional": true,
           "schema": {
             "kind": "int"
           }
@@ -52915,6 +53234,125 @@
               "elem": {
                 "kind": "ref",
                 "ref": "TranslatedText"
+              }
+            }
+          }
+        },
+        {
+          "name": "guardian_agreement",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "FormLegalBlockInput",
+      "go_type": "enrollment.FormLegalBlock",
+      "request": true,
+      "fields": [
+        {
+          "name": "attachments",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FormAttachmentInput"
+            }
+          }
+        },
+        {
+          "name": "key",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "kind",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "text",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "required",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "enabled",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "sort_order",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "source",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "display_mode",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "document_url",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "translations",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "map",
+              "nullable": true,
+              "elem": {
+                "kind": "ref",
+                "ref": "TranslatedTextInput"
               }
             }
           }
@@ -57597,6 +58035,179 @@
       ]
     },
     {
+      "name": "HolidayFormFieldInput",
+      "go_type": "enrollment.HolidayFormField",
+      "request": true,
+      "fields": [
+        {
+          "name": "attachments",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FormAttachmentInput"
+            }
+          }
+        },
+        {
+          "name": "key",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "required",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "help_text",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "content",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "options",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FormFieldOptionInput"
+            }
+          }
+        },
+        {
+          "name": "allowed_times",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "single_mode_grades",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "validation",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "FormFieldValidationInput"
+          }
+        },
+        {
+          "name": "file_options",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "FormFileOptionsInput"
+          }
+        },
+        {
+          "name": "sort_order",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "applies_to_child",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "target",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "visible_when",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "VisibilityConditionInput"
+          }
+        },
+        {
+          "name": "translations",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "map",
+              "nullable": true,
+              "elem": {
+                "kind": "ref",
+                "ref": "TranslatedTextInput"
+              }
+            }
+          }
+        },
+        {
+          "name": "health",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "share_with_host",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "HolidayGuardianInput",
       "go_type": "enrollment.HolidayGuardianInput",
       "fields": [
@@ -58451,6 +59062,51 @@
           "name": "created_at",
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayPeriodFormRequest",
+      "go_type": "enrollmenthttp.HolidayPeriodFormRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "fields",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayFormFieldInput"
+            }
+          }
+        },
+        {
+          "name": "legal_blocks",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FormLegalBlockInput"
+            }
+          }
+        },
+        {
+          "name": "address_requirement",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "health_requirement",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -76560,6 +77216,55 @@
           "name": "organization_name",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PublishSchemaRequest",
+      "go_type": "enrollmenthttp.PublishSchemaRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "fields",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FormFieldInput"
+            }
+          }
+        },
+        {
+          "name": "core_requirements",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "bool"
+            }
+          }
+        },
+        {
+          "name": "legal_blocks",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FormLegalBlockInput"
+            }
           }
         }
       ]
@@ -101330,6 +102035,27 @@
       ]
     },
     {
+      "name": "TranslatedTextInput",
+      "go_type": "enrollment.TranslatedText",
+      "request": true,
+      "fields": [
+        {
+          "name": "text",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "source",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "TrustedDeviceDTO",
       "go_type": "common.TrustedDeviceDTO",
       "fields": [
@@ -101712,6 +102438,56 @@
           "schema": {
             "kind": "string",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "UpdateSchemaRequest",
+      "go_type": "enrollmenthttp.UpdateSchemaRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "fields",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FormFieldInput"
+            }
+          }
+        },
+        {
+          "name": "core_requirements",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "bool"
+            }
+          }
+        },
+        {
+          "name": "legal_blocks",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FormLegalBlockInput"
+            }
           }
         }
       ]
@@ -102551,6 +103327,42 @@
         },
         {
           "name": "operator",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "value",
+          "optional": true,
+          "schema": {
+            "kind": "json",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "VisibilityConditionInput",
+      "go_type": "enrollment.VisibilityCondition",
+      "request": true,
+      "fields": [
+        {
+          "name": "source",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "field",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "operator",
+          "optional": true,
           "schema": {
             "kind": "string"
           }
@@ -105919,6 +106731,112 @@
       ]
     },
     {
+      "name": "careUsageExportFiltersRequest",
+      "go_type": "enrollmenthttp.careUsageExportFiltersRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "phase_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "care_offering_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "care_offering_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "day_count",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "grade_level",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "weekday",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "search",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "careUsageExportRequest",
+      "go_type": "enrollmenthttp.careUsageExportRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "format",
+          "optional": true,
+          "schema": {
+            "kind": "enum",
+            "ref": "ListFormat"
+          }
+        },
+        {
+          "name": "layout",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "filters",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "careUsageExportFiltersRequest"
+          }
+        }
+      ]
+    },
+    {
       "name": "careUsageFilterOptionsResponse",
       "go_type": "enrollmenthttp.careUsageFilterOptionsResponse",
       "fields": [
@@ -106881,6 +107799,57 @@
           "schema": {
             "kind": "date",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "classRosterExportFiltersRequest",
+      "go_type": "enrollmenthttp.classRosterExportFiltersRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "phase_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "all_classes",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "classRosterExportRequest",
+      "go_type": "enrollmenthttp.classRosterExportRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "format",
+          "optional": true,
+          "schema": {
+            "kind": "enum",
+            "ref": "ListFormat"
+          }
+        },
+        {
+          "name": "filters",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "classRosterExportFiltersRequest"
           }
         }
       ]
@@ -114420,6 +115389,28 @@
       ]
     },
     {
+      "name": "phaseExportRequest",
+      "go_type": "enrollmenthttp.phaseExportRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "format",
+          "optional": true,
+          "schema": {
+            "kind": "enum",
+            "ref": "ListFormat"
+          }
+        },
+        {
+          "name": "child_status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "pickupAdjustmentCatalogItemResponse",
       "go_type": "careplanhttp.pickupAdjustmentCatalogItemResponse",
       "fields": [
@@ -116774,6 +117765,45 @@
           "schema": {
             "kind": "number",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "roomSnapshotExportRequest",
+      "go_type": "httpadapter.roomSnapshotExportRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "format",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "id"
+            }
+          }
+        },
+        {
+          "name": "include_transit",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
           }
         }
       ]

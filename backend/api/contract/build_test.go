@@ -326,6 +326,25 @@ func TestARequestBodyHasOnlyOptionalFields(t *testing.T) {
 	}
 }
 
+// A type that a body and an answer both carry keeps its name in the answer;
+// its request role, with only optional fields, is named apart, whichever
+// route comes first.
+func TestATypeOfABodyAndAnAnswerIsTwoTypes(t *testing.T) {
+	t.Parallel()
+	write := Registration{Method: "PUT", Pattern: "/api/rows/{id}", Portals: []string{"tenant"}, Request: inner{}, Response: inner{}}
+	read := Registration{Method: "GET", Pattern: "/api/rows/{id}", Portals: []string{"tenant"}, Response: inner{}}
+	doc, err := Build([]Registration{write, read}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	require.Equal(t, "innerInput", doc.Routes[1].Request.Ref)
+	assert.Equal(t, "inner", doc.Routes[1].Response.Ref)
+	for name, field := range fieldsOf(t, doc, "innerInput") {
+		assert.Truef(t, field.Optional, "%s", name)
+	}
+	for name, field := range fieldsOf(t, doc, "inner") {
+		assert.Falsef(t, field.Optional, "%s", name)
+	}
+}
+
 // A request field of the strict identifier type is a string in the client
 // and has no decoder: Go reads it (ident.ID reads a string or a number), so
 // a legacy request field moves to ident.ID without a generator change.

@@ -2,7 +2,6 @@ package enrollmenthttp
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -15,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type careUsageExportRequest struct {
@@ -52,9 +52,9 @@ type classRosterExportRequest struct {
 }
 
 type classRosterExportFiltersRequest struct {
-	PhaseID     json.RawMessage `json:"phase_id"`
-	SchoolClass string          `json:"school_class"`
-	AllClasses  bool            `json:"all_classes"`
+	PhaseID     ident.ID `json:"phase_id"`
+	SchoolClass string   `json:"school_class"`
+	AllClasses  bool     `json:"all_classes"`
 }
 
 type careUsageExportFiltersRequest struct {
@@ -412,12 +412,11 @@ func parseClassRosterExportRequest(r *http.Request) (lists.Format, capability.Cl
 	default:
 		return "", capability.ClassRosterFilters{}, fmt.Errorf("unsupported export format %q (use pdf, docx or xlsx)", format)
 	}
-	phaseID, err := parseClassRosterPhaseID(body.Filters.PhaseID)
-	if err != nil {
-		return "", capability.ClassRosterFilters{}, err
+	if body.Filters.PhaseID <= 0 {
+		return "", capability.ClassRosterFilters{}, errors.New("phase_id must be positive")
 	}
 	filters := capability.ClassRosterFilters{
-		PhaseID:     phaseID,
+		PhaseID:     body.Filters.PhaseID.Int64(),
 		SchoolClass: strings.TrimSpace(body.Filters.SchoolClass),
 		AllClasses:  body.Filters.AllClasses,
 	}
@@ -428,25 +427,6 @@ func parseClassRosterExportRequest(r *http.Request) (lists.Format, capability.Cl
 		return "", capability.ClassRosterFilters{}, errors.New("school_class is required")
 	}
 	return format, filters, nil
-}
-
-func parseClassRosterPhaseID(raw json.RawMessage) (int64, error) {
-	if len(raw) == 0 || string(raw) == "null" {
-		return 0, errors.New("phase_id is required")
-	}
-	var asString string
-	if err := json.Unmarshal(raw, &asString); err == nil {
-		phaseID, parseErr := strconv.ParseInt(strings.TrimSpace(asString), 10, 64)
-		if parseErr != nil || phaseID <= 0 {
-			return 0, errors.New("phase_id must be positive")
-		}
-		return phaseID, nil
-	}
-	var asNumber int64
-	if err := json.Unmarshal(raw, &asNumber); err == nil && asNumber > 0 {
-		return asNumber, nil
-	}
-	return 0, errors.New("phase_id must be positive")
 }
 
 func (req careUsageExportFiltersRequest) toServiceFilters() (capability.CareUsageFilters, error) {
