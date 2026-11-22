@@ -1,10 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-// The session gate and its renewal are sessionFetch's own tests.
-vi.mock("./session-cache", () => ({
-  sessionFetch: (url: string, init?: RequestInit) =>
-    globalThis.fetch(url, init),
-}));
+// The session gate and its renewal are tested in session-cache and bff-fetch.
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 import {
   describeAdjustment,
   formatRemovalSpan,

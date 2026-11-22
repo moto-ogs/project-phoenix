@@ -1,20 +1,23 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-// The route answers through sessionFetch; `mockRoute` stands for the BFF
+// The route answers through the stubbed fetch; `mockRoute` stands for the BFF
 // route: it receives the request as sent and returns the route's JSON
 // answer, which the real bffJson then reads.
 
 const { mockRoute } = vi.hoisted(() => ({ mockRoute: vi.fn() }));
 
-vi.mock("./session-cache", () => ({
-  sessionFetch: async (url: string, init: RequestInit) => {
-    const answer: unknown = await mockRoute(url, {
-      method: init.method,
-      body: JSON.parse(String(init.body)),
-    });
-    return new Response(JSON.stringify(answer), { status: 200 });
-  },
-}));
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
+
+const fetchMock = vi.fn(async (url: string, init: RequestInit) => {
+  const answer: unknown = await mockRoute(url, {
+    method: init.method,
+    body: JSON.parse(String(init.body)),
+  });
+  return new Response(JSON.stringify(answer), { status: 200 });
+});
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
 
 import {
   schoolCheckinStudent,

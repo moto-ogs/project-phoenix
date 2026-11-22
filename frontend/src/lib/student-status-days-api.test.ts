@@ -1,13 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "./api-error";
 
-// The session gate is sessionFetch's own concern; here it hands straight to
+// The session gate is session-cache's own concern; here it hands straight to
 // fetch so the tests can stand in for the BFF route.
-vi.mock("./session-cache", async () => {
-  const { transportFetch } =
-    await vi.importActual<typeof import("./api-error")>("./api-error");
-  return { sessionFetch: transportFetch };
-});
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 import {
   bulkCreateStudentStatusDays,
   createStudentStatusDays,

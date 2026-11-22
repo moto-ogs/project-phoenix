@@ -5,10 +5,12 @@ import {
   transferFailureMessage,
 } from "./sftp-export-api";
 
-vi.mock("./session-cache", () => ({ sessionFetch: vi.fn() }));
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
-const { sessionFetch } = await import("./session-cache");
-const fetchMock = vi.mocked(sessionFetch);
+const fetchMock = vi.fn();
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
 
 function jsonResponse(data: unknown) {
   return {

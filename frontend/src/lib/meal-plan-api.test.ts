@@ -7,13 +7,12 @@ import {
   mondayOf,
   workWeekDates,
 } from "./meal-plan-api";
-import { sessionFetch } from "./session-cache";
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
-vi.mock("./session-cache", () => ({
-  sessionFetch: vi.fn(),
-}));
-
-const mockedFetch = sessionFetch as unknown as Mock;
+const fetchMock: Mock = vi.fn();
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -24,13 +23,13 @@ function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
 }
 
 beforeEach(() => {
-  mockedFetch.mockReset();
+  fetchMock.mockReset();
 });
 
 describe("getWeeklyMealParticipants", () => {
   it("requests the week and maps each day's children", async () => {
     let seenURL = "";
-    mockedFetch.mockImplementation(async (url: string) => {
+    fetchMock.mockImplementation(async (url: string) => {
       seenURL = url;
       return jsonResponse({
         data: {
@@ -84,7 +83,7 @@ describe("getWeeklyMealParticipants", () => {
 describe("getMealPlanWeek", () => {
   it("requests the week and maps backend entries, trimming empty notes to null", async () => {
     let seenURL = "";
-    mockedFetch.mockImplementation(async (url: string) => {
+    fetchMock.mockImplementation(async (url: string) => {
       seenURL = url;
       return jsonResponse({
         data: [
@@ -112,7 +111,7 @@ describe("getMealPlanWeek", () => {
   });
 
   it("throws an ApiError with the status class on a non-OK response", async () => {
-    mockedFetch.mockResolvedValue(
+    fetchMock.mockResolvedValue(
       new Response("boom", { status: 500, statusText: "Server Error" }),
     );
     await expect(getMealPlanWeek("2026-07-06")).rejects.toMatchObject({
@@ -124,7 +123,7 @@ describe("getMealPlanWeek", () => {
 
   it("URL-encodes the week start", async () => {
     let seenURL = "";
-    mockedFetch.mockImplementation(async (url: string) => {
+    fetchMock.mockImplementation(async (url: string) => {
       seenURL = url;
       return jsonResponse({ data: [] });
     });
@@ -137,7 +136,7 @@ describe("setDay", () => {
   it("PUTs the day with the dishes payload", async () => {
     let seenURL = "";
     let seenInit: RequestInit | undefined;
-    mockedFetch.mockImplementation(async (url: string, init?: RequestInit) => {
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
       seenURL = url;
       seenInit = init;
       return jsonResponse({ status: "success", data: null });
@@ -152,7 +151,7 @@ describe("setDay", () => {
   });
 
   it("keeps code, field errors and request id of a refused save", async () => {
-    mockedFetch.mockResolvedValue(
+    fetchMock.mockResolvedValue(
       new Response(
         JSON.stringify({
           code: "meals.invalid_dishes",

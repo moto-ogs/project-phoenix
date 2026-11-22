@@ -3,8 +3,8 @@ import type { Session } from "next-auth";
 import { SessionProvider, useSession } from "next-auth/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { apiErrorFromResponse } from "~/lib/api-error";
-import { getCachedSession, sessionFetch } from "~/lib/session-cache";
+import { bffJson } from "~/lib/bff-fetch";
+import { getCachedSession } from "~/lib/session-cache";
 import { setTestClock, TEST_CLOCK_INSTANT } from "~/test/clock";
 import { mockSessionData } from "~/test/mocks/next-auth";
 import { SessionCachePrimer } from "./providers";
@@ -26,8 +26,12 @@ function sessionRequests(): number {
   ).length;
 }
 
+/** A staff request through the session gate of bffJson. */
+const STAFF_PATH = "/api/activities/categories";
+const staffRequest = () => bffJson("tenant", "GET /api/activities/categories");
+
 function apiRequests(): number {
-  return fetchMock.mock.calls.filter(([url]) => String(url) === "/api/test")
+  return fetchMock.mock.calls.filter(([url]) => String(url) === STAFF_PATH)
     .length;
 }
 
@@ -111,7 +115,7 @@ describe("SessionCachePrimer with the real SessionProvider", () => {
     await waitFor(() => expect(sessionRequests()).toBe(1));
 
     await waitFor(async () => expect(await getCachedSession()).toBeNull());
-    await expect(sessionFetch("/api/test")).rejects.toMatchObject({
+    await expect(staffRequest()).rejects.toMatchObject({
       status: 401,
       code: "general.permission",
     });
@@ -149,9 +153,10 @@ describe("SessionCachePrimer with the real SessionProvider", () => {
         { status: 409, code: "identity.session_tenant_mismatch" },
         { status: 409 },
       );
-    const response = await sessionFetch("/api/test");
-    const error = await apiErrorFromResponse(response, "Request refused");
-    expect(error.code).toBe("identity.session_tenant_mismatch");
+    await expect(staffRequest()).rejects.toMatchObject({
+      code: "identity.session_tenant_mismatch",
+    });
+    expect(apiRequests()).toBe(1);
 
     expect((await getCachedSession())?.user?.tenantId).toBe(2);
     await waitFor(() =>

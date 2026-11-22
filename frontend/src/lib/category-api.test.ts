@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mockSessionFetch = vi.hoisted(() => vi.fn());
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
-vi.mock("./session-cache", () => ({
-  sessionFetch: mockSessionFetch,
-}));
+const fetchMock = vi.fn();
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
 
 import { mapActivityCategoryResponse } from "./activity-helpers";
 import { ApiError } from "./api-error";
@@ -36,7 +37,7 @@ describe("categoryService requests", () => {
   });
 
   it("always asks for archived and system rows with usage counts", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ data: [category] }, { status: 200 }),
     );
 
@@ -47,21 +48,21 @@ describe("categoryService requests", () => {
     // read-only; the usage counts drive the "wird verwendet" hint. The
     // pickers use the plain list instead, which skips the extra aggregate
     // server-side.
-    expect(mockSessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/activities/categories?include_archived=true&include_system=true&with_usage=true",
       { method: "GET" },
     );
   });
 
   it("creates a category", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ data: category }, { status: 200 }),
     );
 
     await expect(categoryService.createCategory(payload)).resolves.toEqual(
       mapped,
     );
-    expect(mockSessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/activities/categories",
       expect.objectContaining({
         method: "POST",
@@ -71,14 +72,14 @@ describe("categoryService requests", () => {
   });
 
   it("updates a category", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ data: category }, { status: 200 }),
     );
 
     await expect(categoryService.updateCategory("7", payload)).resolves.toEqual(
       mapped,
     );
-    expect(mockSessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/activities/categories/7",
       expect.objectContaining({
         method: "PUT",
@@ -88,22 +89,21 @@ describe("categoryService requests", () => {
   });
 
   it("archives via DELETE and resolves without a payload", async () => {
-    mockSessionFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
 
     await expect(categoryService.archiveCategory("7")).resolves.toBeUndefined();
-    expect(mockSessionFetch).toHaveBeenCalledWith(
-      "/api/activities/categories/7",
-      { method: "DELETE" },
-    );
+    expect(fetchMock).toHaveBeenCalledWith("/api/activities/categories/7", {
+      method: "DELETE",
+    });
   });
 
   it("restores a category", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ data: category }, { status: 200 }),
     );
 
     await expect(categoryService.restoreCategory("7")).resolves.toEqual(mapped);
-    expect(mockSessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/activities/categories/7/restore",
       { method: "POST" },
     );
@@ -116,7 +116,7 @@ describe("categoryService error handling", () => {
   });
 
   it("keeps a backend diagnostic separate from the operation message", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json(
         { detail: "Eine Kategorie mit diesem Namen existiert bereits" },
         { status: 409 },
@@ -133,7 +133,7 @@ describe("categoryService error handling", () => {
   });
 
   it("classifies a plain text error body by its status", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       new Response("upstream exploded", { status: 500 }),
     );
 
@@ -146,7 +146,7 @@ describe("categoryService error handling", () => {
   it("falls back to the operation message when the body is unusable", async () => {
     // Content-Type claims JSON but the body is not parseable — the fallback
     // message is what the user would otherwise never get.
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       new Response("<html>", {
         status: 502,
         headers: { "Content-Type": "application/json" },
@@ -162,7 +162,7 @@ describe("categoryService error handling", () => {
   });
 
   it("reports a failed archive", async () => {
-    mockSessionFetch.mockResolvedValueOnce(Response.json({}, { status: 403 }));
+    fetchMock.mockResolvedValueOnce(Response.json({}, { status: 403 }));
 
     await expect(categoryService.archiveCategory("7")).rejects.toMatchObject({
       status: 403,
@@ -171,7 +171,7 @@ describe("categoryService error handling", () => {
   });
 
   it("reports a failed restore", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ detail: "" }, { status: 409 }),
     );
 
@@ -182,7 +182,7 @@ describe("categoryService error handling", () => {
   });
 
   it("throws an ApiError so callers can narrow", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ detail: "nope" }, { status: 400 }),
     );
 

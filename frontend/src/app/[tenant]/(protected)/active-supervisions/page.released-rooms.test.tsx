@@ -54,7 +54,7 @@ vi.mock("next-auth/react", () => ({
     data: { user: { token: "test-token", id: "7", tenantId: 1 } },
     status: "authenticated",
   })),
-  // The session gate of sessionFetch reads the same session.
+  // The staff session gate of bffJson reads the same session.
   getSession: vi.fn(() =>
     Promise.resolve({
       user: { token: "test-token", id: "7", tenantId: 1 },
