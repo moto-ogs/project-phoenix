@@ -10,7 +10,7 @@ import { mapRoomsResponse } from "./room-helpers";
 const logger = createLogger({ component: "ApiClient" });
 
 /**
- * Headers for the raw fetch() call sites in the services below. The BFF
+ * Headers of the room delete below. The BFF
  * routes authenticate through the session cookie; the browser holds no
  * token (#5005).
  */
