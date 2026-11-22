@@ -58,15 +58,15 @@ type classRosterExportFiltersRequest struct {
 }
 
 type careUsageExportFiltersRequest struct {
-	PhaseID         string   `json:"phase_id"`
-	Status          string   `json:"status,omitempty"`
-	CareOfferingID  string   `json:"care_offering_id,omitempty"`
-	CareOfferingIDs []string `json:"care_offering_ids,omitempty"`
-	DayCount        *int     `json:"day_count,omitempty"`
-	GradeLevel      *int16   `json:"grade_level,omitempty"`
-	Weekday         string   `json:"weekday,omitempty"`
-	PickupTime      string   `json:"pickup_time,omitempty"`
-	Search          string   `json:"search,omitempty"`
+	PhaseID         ident.ID   `json:"phase_id"`
+	Status          string     `json:"status,omitempty"`
+	CareOfferingID  ident.ID   `json:"care_offering_id,omitempty"`
+	CareOfferingIDs []ident.ID `json:"care_offering_ids,omitempty"`
+	DayCount        *int       `json:"day_count,omitempty"`
+	GradeLevel      *int16     `json:"grade_level,omitempty"`
+	Weekday         string     `json:"weekday,omitempty"`
+	PickupTime      string     `json:"pickup_time,omitempty"`
+	Search          string     `json:"search,omitempty"`
 }
 
 type CareUsageReportResponse struct {
@@ -430,7 +430,7 @@ func parseClassRosterExportRequest(r *http.Request) (lists.Format, capability.Cl
 }
 
 func (req careUsageExportFiltersRequest) toServiceFilters() (capability.CareUsageFilters, error) {
-	phaseID, err := parseRequiredPositiveInt64(req.PhaseID, "filters.phase_id")
+	phaseID, err := requiredPositiveID(req.PhaseID, "filters.phase_id")
 	if err != nil {
 		return capability.CareUsageFilters{}, err
 	}
@@ -443,8 +443,8 @@ func (req careUsageExportFiltersRequest) toServiceFilters() (capability.CareUsag
 		PickupTime: req.PickupTime,
 		Search:     req.Search,
 	}
-	if strings.TrimSpace(req.CareOfferingID) != "" {
-		careOfferingID, err := parseRequiredPositiveInt64(req.CareOfferingID, "filters.care_offering_id")
+	if req.CareOfferingID != 0 {
+		careOfferingID, err := requiredPositiveID(req.CareOfferingID, "filters.care_offering_id")
 		if err != nil {
 			return capability.CareUsageFilters{}, err
 		}
@@ -454,8 +454,8 @@ func (req careUsageExportFiltersRequest) toServiceFilters() (capability.CareUsag
 	if req.CareOfferingIDs != nil {
 		filters.CareOfferingIDsSet = true
 	}
-	for _, raw := range req.CareOfferingIDs {
-		careOfferingID, err := parseRequiredPositiveInt64(raw, "filters.care_offering_ids")
+	for _, id := range req.CareOfferingIDs {
+		careOfferingID, err := requiredPositiveID(id, "filters.care_offering_ids")
 		if err != nil {
 			return capability.CareUsageFilters{}, err
 		}
@@ -464,16 +464,14 @@ func (req careUsageExportFiltersRequest) toServiceFilters() (capability.CareUsag
 	return filters, nil
 }
 
-func parseRequiredPositiveInt64(raw, field string) (int64, error) {
-	value := strings.TrimSpace(raw)
-	if value == "" {
+func requiredPositiveID(id ident.ID, field string) (int64, error) {
+	switch {
+	case id == 0:
 		return 0, fmt.Errorf("%s is required", field)
-	}
-	id, err := strconv.ParseInt(value, 10, 64)
-	if err != nil || id <= 0 {
+	case id < 0:
 		return 0, fmt.Errorf("%s must be positive", field)
 	}
-	return id, nil
+	return id.Int64(), nil
 }
 
 func toCareUsageReportResponse(report *capability.CareUsageReport) *CareUsageReportResponse {

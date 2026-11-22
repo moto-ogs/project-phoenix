@@ -32553,7 +32553,7 @@
           "name": "id",
           "optional": true,
           "schema": {
-            "kind": "lax_id"
+            "kind": "id"
           }
         },
         {
@@ -42394,7 +42394,7 @@
           "name": "companion_student_id",
           "optional": true,
           "schema": {
-            "kind": "lax_id"
+            "kind": "id"
           }
         },
         {
@@ -45559,7 +45559,7 @@
           "name": "absence_type_id",
           "optional": true,
           "schema": {
-            "kind": "lax_id",
+            "kind": "id",
             "nullable": true
           }
         },
@@ -103088,7 +103088,7 @@
           "name": "absence_type_id",
           "optional": true,
           "schema": {
-            "kind": "lax_id",
+            "kind": "id",
             "nullable": true
           }
         },
@@ -107679,7 +107679,7 @@
           "name": "phase_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -107693,7 +107693,7 @@
           "name": "care_offering_id",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "id"
           }
         },
         {
@@ -107703,7 +107703,7 @@
             "kind": "array",
             "nullable": true,
             "elem": {
-              "kind": "string"
+              "kind": "id"
             }
           }
         },

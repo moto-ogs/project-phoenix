@@ -15,17 +15,13 @@ import (
 
 type mode string
 
-// wireID and laxID stand for wireID and laxID, which the root
-// names; this package must not import them.
+// wireID stands for ident.ID, which the root names; this package must not
+// import it.
 type wireID int64
 
 func (wireID) MarshalJSON() ([]byte, error) { return []byte(`"0"`), nil }
 
-type laxID int64
-
-func (laxID) MarshalJSON() ([]byte, error) { return []byte(`0`), nil }
-
-var identifiers = map[reflect.Type]string{reflect.TypeFor[wireID](): KindID, reflect.TypeFor[laxID](): KindLaxID}
+var identifiers = map[reflect.Type]string{reflect.TypeFor[wireID](): KindID}
 
 type inner struct {
 	ID        wireID    `json:"id"`
@@ -65,7 +61,7 @@ type body struct {
 
 // ownReader decodes itself; reflection alone cannot say what it takes.
 type ownReader struct {
-	Friend int64 `json:"friend_id"`
+	Friend wireID `json:"friend_id"`
 }
 
 func (*ownReader) UnmarshalJSON([]byte) error { return nil }
@@ -411,11 +407,11 @@ func TestARequestTypeNamesWhatGoReads(t *testing.T) {
 	t.Parallel()
 	options := Options{
 		Identifiers: identifiers,
-		Readers:     map[reflect.Type]string{reflect.TypeFor[ownReader](): ReadsLaxIDs},
+		Readers:     map[reflect.Type]string{reflect.TypeFor[ownReader](): ReadsFields},
 	}
 	doc, err := Build([]Registration{post(ownReader{})}, options)
 	require.NoError(t, err)
-	assert.Equal(t, KindLaxID, fieldsOf(t, doc, "ownReader")["friend_id"].Schema.Kind, "its reader takes a number or a string")
+	assert.Equal(t, KindID, fieldsOf(t, doc, "ownReader")["friend_id"].Schema.Kind, "its reader takes the fields as encoding/json would")
 
 	files, err := TypeScript(doc)
 	require.NoError(t, err)

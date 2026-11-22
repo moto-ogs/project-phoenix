@@ -268,17 +268,12 @@ func ContractDocument() (contract.Document, error) {
 		// The one route whose answer a query parameter shapes (ADR 0270 point 3).
 		QueryVariants: []string{"GET /api/students/"},
 	}
-	// Both student bodies only refuse retired keys before the plain decode;
-	// CompanionEntry takes its companion id as a number or a decimal string.
+	// Both student bodies only refuse retired keys before the plain decode.
 	options.Readers = map[reflect.Type]string{
 		reflect.TypeFor[careStudentsHTTP.StudentRequest]():       contract.ReadsFields,
 		reflect.TypeFor[careStudentsHTTP.UpdateStudentRequest](): contract.ReadsFields,
-		reflect.TypeFor[careStudentsHTTP.CompanionEntry]():       contract.ReadsLaxIDs,
-		// The absence bodies take absence_type_id as a number or a decimal string.
-		reflect.TypeFor[workforceModule.CreateAbsenceRequest](): contract.ReadsLaxIDs,
-		reflect.TypeFor[workforceModule.UpdateAbsenceRequest](): contract.ReadsLaxIDs,
-		// A corrected break names its id as a number or a decimal string.
-		reflect.TypeFor[workforceModule.BreakDurationUpdate](): contract.ReadsLaxIDs,
+		// An absence edit tells an absent absence_type_id from null.
+		reflect.TypeFor[workforceModule.UpdateAbsenceRequest](): contract.ReadsFields,
 		// A presence is an object or, from older clients, a bare staff id.
 		reflect.TypeFor[timetableHTTP.DeviationPresence](): contract.ReadsFields,
 		// The template writes tell an absent key from null.

@@ -342,7 +342,7 @@ func (b *builder) schema(t reflect.Type, where string, request bool) (Schema, er
 	case reflect.Bool:
 		return Schema{Kind: KindBool}, nil
 	case reflect.Int64, reflect.Uint64:
-		// The field decides: see numericID.
+		// The field decides: see bareInt64.
 		return Schema{Kind: KindInt}, errBareInt64
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32:
 		return Schema{Kind: KindInt}, nil
@@ -447,7 +447,7 @@ func (b *builder) wrapped(t reflect.Type, where string) (Schema, error) {
 	at := where + "." + t.Name() + ".Value"
 	s, err := b.schema(sf.Type, at, true)
 	if errors.Is(err, errBareInt64) {
-		err = b.numericID(&s, t, at)
+		err = bareInt64(at)
 	}
 	return s, err
 }
