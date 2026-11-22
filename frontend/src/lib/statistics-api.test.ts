@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "./api-error";
 import { fetchStatisticsReport } from "./statistics-api";
 
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
+
 describe("fetchStatisticsReport errors", () => {
   afterEach(() => vi.unstubAllGlobals());
 

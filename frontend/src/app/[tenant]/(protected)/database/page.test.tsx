@@ -28,6 +28,11 @@ const mockSession = {
   },
 };
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => ({
     data: mockSession,

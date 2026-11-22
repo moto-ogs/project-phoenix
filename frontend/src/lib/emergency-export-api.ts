@@ -1,4 +1,4 @@
-import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
+import { bffFile } from "~/lib/bff-fetch";
 import {
   downloadBlob,
   filenameFromDisposition,
@@ -19,16 +19,11 @@ export async function exportEmergencySnapshot(
   if (printTarget) printTarget.opener = null;
 
   try {
-    const response = await transportFetch("/api/emergency/snapshot/export", {
-      method: "POST",
-    });
-
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        "Emergency snapshot export failed",
-      );
-    }
+    const response = await bffFile(
+      "tenant",
+      "POST /api/emergency/snapshot/export",
+      { errorMessage: "Emergency snapshot export failed" },
+    );
 
     const blob = await response.blob();
     if (printTarget) {

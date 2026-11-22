@@ -15,13 +15,12 @@ import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import type { OverflowMenuEntry } from "~/components/ui/page-header/types";
 import { SectionCard } from "~/components/ui/section-card";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
-import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
 import {
-  careTimeOverrunsExportUrl,
   fetchCareTimeOverruns,
+  fetchCareTimeOverrunsExport,
   type CareTimeExportFormat,
-  type CareTimeOverrunRow,
 } from "~/lib/care-times";
+import type * as statisticsContract from "~/lib/contract/statistics.generated";
 import { formatDate } from "~/lib/date-helpers";
 import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
@@ -82,15 +81,10 @@ export function CareTimeOverrunsSection({
     async (format: CareTimeExportFormat) => {
       setExporting(format);
       try {
-        const res = await transportFetch(
-          careTimeOverrunsExportUrl(fromISO, toISO, format, {
-            groupIds,
-            schoolClasses,
-          }),
-        );
-        if (!res.ok) {
-          throw await apiErrorFromResponse(res, "care time export failed");
-        }
+        const res = await fetchCareTimeOverrunsExport(fromISO, toISO, format, {
+          groupIds,
+          schoolClasses,
+        });
         downloadBlob(
           await res.blob(),
           filenameFromDisposition(res) ??
@@ -124,61 +118,64 @@ export function CareTimeOverrunsSection({
     })),
   ];
 
-  const columns: DataTableColumn<CareTimeOverrunRow>[] = [
-    {
-      key: "name",
-      header: "Kind",
-      render: (row) => (
-        <Link
-          href={tenantPath(`/students/${row.student_id}?tab=betreuungszeiten`)}
-          className="font-medium text-gray-900 hover:underline"
-        >
-          {row.last_name}, {row.first_name}
-        </Link>
-      ),
-      sortValue: (row) => `${row.last_name} ${row.first_name}`,
-      stacked: "title",
-    },
-    {
-      key: "class",
-      header: "Klasse",
-      render: (row) => row.school_class || "–",
-      sortValue: (row) => row.school_class,
-    },
-    {
-      key: "group",
-      header: "Gruppe",
-      render: (row) => row.group_name || "–",
-      sortValue: (row) => row.group_name,
-    },
-    {
-      key: "overruns",
-      header: "Überschreitungen",
-      align: "right",
-      render: (row) => (
-        <span className="tabular-nums">{row.summary.overrun_count}</span>
-      ),
-      sortValue: (row) => row.summary.overrun_count,
-    },
-    {
-      key: "unbooked",
-      header: "Davon ohne Buchung",
-      align: "right",
-      render: (row) => (
-        <span className="tabular-nums">{row.summary.unbooked_days}</span>
-      ),
-      sortValue: (row) => row.summary.unbooked_days,
-    },
-    {
-      key: "extra",
-      header: "Minuten über Buchung",
-      align: "right",
-      render: (row) => (
-        <span className="tabular-nums">{row.summary.extra_minutes}</span>
-      ),
-      sortValue: (row) => row.summary.extra_minutes,
-    },
-  ];
+  const columns: DataTableColumn<statisticsContract.careTimeOverrunRowResponse>[] =
+    [
+      {
+        key: "name",
+        header: "Kind",
+        render: (row) => (
+          <Link
+            href={tenantPath(
+              `/students/${row.student_id}?tab=betreuungszeiten`,
+            )}
+            className="font-medium text-gray-900 hover:underline"
+          >
+            {row.last_name}, {row.first_name}
+          </Link>
+        ),
+        sortValue: (row) => `${row.last_name} ${row.first_name}`,
+        stacked: "title",
+      },
+      {
+        key: "class",
+        header: "Klasse",
+        render: (row) => row.school_class || "–",
+        sortValue: (row) => row.school_class,
+      },
+      {
+        key: "group",
+        header: "Gruppe",
+        render: (row) => row.group_name || "–",
+        sortValue: (row) => row.group_name,
+      },
+      {
+        key: "overruns",
+        header: "Überschreitungen",
+        align: "right",
+        render: (row) => (
+          <span className="tabular-nums">{row.summary.overrun_count}</span>
+        ),
+        sortValue: (row) => row.summary.overrun_count,
+      },
+      {
+        key: "unbooked",
+        header: "Davon ohne Buchung",
+        align: "right",
+        render: (row) => (
+          <span className="tabular-nums">{row.summary.unbooked_days}</span>
+        ),
+        sortValue: (row) => row.summary.unbooked_days,
+      },
+      {
+        key: "extra",
+        header: "Minuten über Buchung",
+        align: "right",
+        render: (row) => (
+          <span className="tabular-nums">{row.summary.extra_minutes}</span>
+        ),
+        sortValue: (row) => row.summary.extra_minutes,
+      },
+    ];
 
   const tolerance = data?.tolerance_minutes ?? 15;
 
