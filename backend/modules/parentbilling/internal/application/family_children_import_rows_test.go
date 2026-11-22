@@ -638,3 +638,24 @@ func TestFamilyImportEndedContractOfTheSameFamilyKeepsTheRenewal(t *testing.T) {
 	assert.Equal(t, 3, stored[0].Children)
 	assert.Equal(t, calendar.NewDate(2027, 1, 1), stored[0].ValidFrom)
 }
+
+// A witness checks its family's rows also when that family's stored
+// numbers disagree (#7863): Mia left family A, whose carried counts say 4
+// and 5; her row says 3, Noah's in A says 2. Neither row is taken over.
+func TestFamilyImportWitnessOfAFamilyWithDifferingNumbersStillContradicts(t *testing.T) {
+	t.Parallel()
+	today := calendar.NewDate(2026, 11, 22)
+	left := sjrVersion(t, contractMia, schoolIspringen, 1, "2026-09-01", "2026-10-31")
+	joined := sjrVersion(t, contractLea, schoolIspringen, 3, "2026-11-01", "2027-06-30")
+	noah := sjrVersion(t, contractNoah, schoolIspringen, 2, "2026-09-01", "2027-06-30")
+	noah.ChildFirstName = "Noah"
+	from := ptr(calendar.NewDate(2026, 8, 1))
+	carried := []parentbilling.FamilyChildCount{
+		{ID: 5, ContractID: ident.ID(contractNoah), FamilyEmail: "contract:502", ConfirmedChildren: ptr(4), ValidFrom: from},
+		{ID: 6, ContractID: ident.ID(contractMia), FamilyEmail: "contract:501", ConfirmedChildren: ptr(5), ValidFrom: from},
+	}
+	stored := importFamilyRows(t, today, []parentbilling.CareContractVersion{left, joined, noah}, map[int64]parentbilling.CareRecipient{
+		contractMia: {Email: "family@example.org"}, contractNoah: {Email: "family@example.org"}, contractLea: {Email: "other@example.org"},
+	}, carried, "Mia;Beispiel;3;01.11.2026\nNoah;Beispiel;2;01.11.2026\n")
+	assert.Empty(t, stored, "contradicting sibling rows must not save a family count")
+}

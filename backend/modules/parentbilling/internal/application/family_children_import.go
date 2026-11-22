@@ -147,7 +147,9 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 	rows, owner := familyImportRows(candidates)
 	decisionDay := familyImportDecisionDay(today, familyImportTargets(candidates))
 	for i := range rows {
-		if _, differing := numbers[rows[i].family].confirmedForImport(decisionDay(rows[i])); differing {
+		// A witness takes over nothing: its family's stored numbers do not
+		// matter for it, only whether it contradicts the family's rows.
+		if _, differing := numbers[rows[i].family].confirmedForImport(decisionDay(rows[i])); differing && !rows[i].witness {
 			rows[i].status = parentbilling.ImportedChildrenConfirmationsDiffer
 		}
 	}
