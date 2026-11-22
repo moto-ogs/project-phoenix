@@ -27,7 +27,7 @@ func (req *BillingCancellationRequest) Bind(*http.Request) error { return nil }
 // amount in whole cent and the reason of the Gutschrift (#4690).
 type BillingCreditRequest struct {
 	ChildID     common.ID `json:"child_id"`
-	AmountCents int64     `json:"amount_cents"`
+	AmountCents int64     `json:"amount_cents" contract:"number"`
 	Reason      string    `json:"reason"`
 }
 

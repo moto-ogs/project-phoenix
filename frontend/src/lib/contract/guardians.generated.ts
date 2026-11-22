@@ -222,6 +222,19 @@ export const GuardianPaymentMaskedResponseSchema: z.ZodType<GuardianPaymentMaske
   account_holder: nullable(str),
 });
 
+/** Go: users.GuardianCreateRequest */
+export interface GuardianCreateRequest {
+  first_name?: string;
+  last_name?: string;
+  email?: string | null;
+  address_street?: string | null;
+  address_city?: string | null;
+  address_postal_code?: string | null;
+  preferred_contact_method?: string;
+  language_preference?: string;
+  notes?: string | null;
+}
+
 /** Go: users.bulkInviteRequest */
 export interface bulkInviteRequest {
   student_ids?: string[] | null;
@@ -341,6 +354,23 @@ export const inviteToStudentResponseSchema: z.ZodType<inviteToStudentResponse, u
   invitation_id: optional(str),
   existing_role: optional(str),
   mail_held: optional(bool),
+});
+
+/** Go: users.GuardianInvitationResponse */
+export interface GuardianInvitationResponse {
+  id: string;
+  guardian_profile_id: string;
+  expires_at: string;
+  email_sent: boolean;
+  token?: string;
+}
+
+export const GuardianInvitationResponseSchema: z.ZodType<GuardianInvitationResponse, unknown> = object<GuardianInvitationResponse>({
+  id: int64String,
+  guardian_profile_id: int64String,
+  expires_at: instant,
+  email_sent: bool,
+  token: optional(str),
 });
 
 /** Go: users.GuardianPaymentRevealResponse */
@@ -509,6 +539,13 @@ export const routes = {
     portals: ["tenant"],
     response: success(z.array(PhoneNumberResponseSchema)),
   },
+  "POST /api/guardians/": {
+    method: "POST",
+    pattern: "/api/guardians/",
+    portals: ["tenant"],
+    request: requestBody<GuardianCreateRequest>(),
+    response: success(GuardianResponseSchema),
+  },
   "POST /api/guardians/bulk-invite": {
     method: "POST",
     pattern: "/api/guardians/bulk-invite",
@@ -560,6 +597,12 @@ export const routes = {
     pattern: "/api/guardians/{id}/email-stop",
     portals: ["tenant"],
     response: noData,
+  },
+  "POST /api/guardians/{id}/invite": {
+    method: "POST",
+    pattern: "/api/guardians/{id}/invite",
+    portals: ["tenant"],
+    response: success(GuardianInvitationResponseSchema),
   },
   "POST /api/guardians/{id}/payment/reveal": {
     method: "POST",

@@ -243,7 +243,7 @@ func FamilyChildrenRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: capability.FamilyChildrenSet{}},
 		{Method: "POST", Pattern: "/imports/preview", Portals: traegerPortal, Multipart: true, MaxBodyBytes: importUploadBytes,
-			TooLargeCode: common.CodeParentBillingFamilyChildrenImportFileTooLarge, Response: capability.FamilyChildrenImport{}},
+			TooLargeCode: common.CodeParentBillingFamilyChildrenImportFileTooLarge, NoCommit: "an import preview checks the file and saves no row of it", Response: capability.FamilyChildrenImport{}},
 		{Method: "POST", Pattern: "/imports", Portals: traegerPortal, Multipart: true, MaxBodyBytes: importUploadBytes,
 			TooLargeCode: common.CodeParentBillingFamilyChildrenImportFileTooLarge, Response: capability.FamilyChildrenImport{}},
 		{Method: "GET", Pattern: "/export", Portals: traegerPortal, Query: listExport, File: true},
@@ -299,7 +299,7 @@ func SEPAMandateRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/export", Portals: traegerPortal, Query: listExport, File: true},
 		{Method: "GET", Pattern: "/imports", Portals: traegerPortal, Response: []capability.SEPAMandateImportEntry{}},
 		{Method: "POST", Pattern: "/imports/preview", Portals: traegerPortal, Multipart: true, MaxBodyBytes: importUploadBytes,
-			TooLargeCode: common.CodeParentBillingSepaImportFileTooLarge, Response: capability.SEPAMandateImport{}},
+			TooLargeCode: common.CodeParentBillingSepaImportFileTooLarge, NoCommit: "an import preview checks the file and saves no row of it", Response: capability.SEPAMandateImport{}},
 		{Method: "POST", Pattern: "/imports", Portals: traegerPortal, Multipart: true, MaxBodyBytes: importUploadBytes,
 			TooLargeCode: common.CodeParentBillingSepaImportFileTooLarge, Response: capability.SEPAMandateImport{}},
 		{Method: "POST", Pattern: "/{id}/revoke", Portals: traegerPortal, Request: SEPAMandateRevokeRequest{}, Response: capability.SEPAMandate{}},

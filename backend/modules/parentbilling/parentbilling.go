@@ -66,7 +66,7 @@ type ContributionRule struct {
 	ValidUntil          *calendar.Date `json:"valid_until"`
 	SiblingFromChild    *int           `json:"sibling_from_child"`
 	DiscountBasisPoints *int           `json:"discount_basis_points"`
-	DiscountCents       *int64         `json:"discount_cents"`
+	DiscountCents       *int64         `json:"discount_cents" contract:"number"`
 	Note                string         `json:"note"`
 	// A care rule (#4685) has a name, the schools and modules it applies
 	// to, the schools whose children a sibling rule counts, a fixed end
@@ -75,8 +75,8 @@ type ContributionRule struct {
 	SchoolIDs       []ident.ID `json:"school_ids"`
 	CareOfferingIDs []ident.ID `json:"care_offering_ids"`
 	CountSchoolIDs  []ident.ID `json:"count_school_ids"`
-	PriceCents      *int64     `json:"price_cents"`
-	CapCents        *int64     `json:"cap_cents"`
+	PriceCents      *int64     `json:"price_cents" contract:"number"`
+	CapCents        *int64     `json:"cap_cents" contract:"number"`
 	// TariffSiblingPrice makes a care sibling rule charge every counted
 	// child from its rank on the sibling price of the price list, per
 	// module and weekday or scale step (#6196).

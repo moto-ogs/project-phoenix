@@ -51,12 +51,6 @@ type StaffRoleRow struct {
 	UpdatedAt         time.Time
 }
 
-// StaffGroup is one group a Betreuungskraft is assigned to.
-type StaffGroup struct {
-	ID   int64
-	Name string
-}
-
 type StaffCreateInput struct {
 	PersonID         int64
 	StaffNotes       string
@@ -142,7 +136,6 @@ type StaffMembershipRuntime struct {
 	AccountHasRole      func(context.Context, int64, string) bool
 	AccountsHoldingRole func(context.Context, []int64, string) (map[int64]bool, error)
 
-	TeacherGroups    func(context.Context, int64) ([]StaffGroup, error)
 	SchoolClasses    func(context.Context, int64) ([]string, error)
 	SetSchoolClasses func(context.Context, int64, []string, int64) error
 	ActiveCaregivers func(context.Context) ([]StaffRoleRow, error)
@@ -197,7 +190,6 @@ func bindStaffMembershipRuntime(users peoplePorts.PersonDirectory, education sch
 			return matches, nil
 		},
 
-		TeacherGroups:    membershipTeacherGroups(education),
 		SchoolClasses:    education.GetStaffSchoolClasses,
 		SetSchoolClasses: education.SetStaffSchoolClasses,
 		ActiveCaregivers: activeCaregivers,
@@ -276,21 +268,6 @@ func staffDirectoryPersons(users peoplePorts.PersonDirectory) (func(context.Cont
 		return result, nil
 	}
 	return person, persons
-}
-
-// membershipTeacherGroups lists the groups a Betreuungskraft is assigned to.
-func membershipTeacherGroups(education schoolstructure.GroupManagement) func(context.Context, int64) ([]StaffGroup, error) {
-	return func(ctx context.Context, teacherID int64) ([]StaffGroup, error) {
-		groups, err := education.GetTeacherGroups(ctx, teacherID)
-		if err != nil {
-			return nil, err
-		}
-		result := make([]StaffGroup, 0, len(groups))
-		for _, group := range groups {
-			result = append(result, StaffGroup{ID: group.ID, Name: group.Name})
-		}
-		return result, nil
-	}
 }
 
 // membershipRoleRows lists the active caregivers and the staff selected by role.

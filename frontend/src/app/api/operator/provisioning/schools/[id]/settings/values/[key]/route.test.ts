@@ -134,9 +134,13 @@ describe("PUT /api/operator/provisioning/schools/[id]/settings/values/[key]", ()
     expect(response.status).toBe(400);
   });
 
-  it.each(["operations.student_photos_enabled", "analytics.enabled"])(
-    "revalidates tenant cache after writing %s",
-    async (key) => {
+  it.each([
+    { key: "operations.student_photos_enabled", schoolId: "10" },
+    { key: "analytics.enabled", schoolId: "10" },
+    { key: "analytics.enabled", schoolId: "9007199254740993" },
+  ])(
+    "revalidates tenant cache after writing $key for school $schoolId",
+    async ({ key, schoolId }) => {
       mockAuth.mockResolvedValue({ user: { token: "valid-token" } });
       // First fetch: the backend PUT. Second fetch: the slug lookup via
       // /operator/schools/summaries that revalidateTenantIfNeeded issues.
@@ -152,14 +156,14 @@ describe("PUT /api/operator/provisioning/schools/[id]/settings/values/[key]", ()
           json: async () => ({
             status: "success",
             data: [
-              { id: "10", slug: "school-ten" },
+              { id: schoolId, slug: "school-ten" },
               { id: "11", slug: "school-eleven" },
             ],
           }),
         });
 
       const request = new NextRequest(
-        `http://localhost:3000/api/operator/provisioning/schools/10/settings/values/${key}`,
+        `http://localhost:3000/api/operator/provisioning/schools/${schoolId}/settings/values/${key}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -168,7 +172,7 @@ describe("PUT /api/operator/provisioning/schools/[id]/settings/values/[key]", ()
       );
       const context: RouteContext = {
         params: Promise.resolve({
-          id: "10",
+          id: schoolId,
           key,
         }),
       };
@@ -176,7 +180,7 @@ describe("PUT /api/operator/provisioning/schools/[id]/settings/values/[key]", ()
 
       expect(response.status).toBe(200);
       expect(mockFetch).toHaveBeenCalledWith(
-        `http://localhost:8080/operator/schools/10/settings/values/${key}`,
+        `http://localhost:8080/operator/schools/${schoolId}/settings/values/${key}`,
         expect.objectContaining({ method: "PUT" }),
       );
       expect(mockFetch).toHaveBeenCalledWith(
@@ -376,9 +380,13 @@ describe("DELETE /api/operator/provisioning/schools/[id]/settings/values/[key]",
     expect(response.status).toBe(400);
   });
 
-  it.each(["operations.student_photos_enabled", "analytics.enabled"])(
-    "revalidates tenant cache after writing %s",
-    async (key) => {
+  it.each([
+    { key: "operations.student_photos_enabled", schoolId: "10" },
+    { key: "analytics.enabled", schoolId: "10" },
+    { key: "analytics.enabled", schoolId: "9007199254740993" },
+  ])(
+    "revalidates tenant cache after writing $key for school $schoolId",
+    async ({ key, schoolId }) => {
       mockAuth.mockResolvedValue({ user: { token: "valid-token" } });
       mockFetch
         // Backend DELETE — 204 No Content, parseResponse short-circuits.
@@ -389,17 +397,17 @@ describe("DELETE /api/operator/provisioning/schools/[id]/settings/values/[key]",
           status: 200,
           json: async () => ({
             status: "success",
-            data: [{ id: "10", slug: "school-ten" }],
+            data: [{ id: schoolId, slug: "school-ten" }],
           }),
         });
 
       const request = new NextRequest(
-        `http://localhost:3000/api/operator/provisioning/schools/10/settings/values/${key}`,
+        `http://localhost:3000/api/operator/provisioning/schools/${schoolId}/settings/values/${key}`,
         { method: "DELETE" },
       );
       const context: RouteContext = {
         params: Promise.resolve({
-          id: "10",
+          id: schoolId,
           key,
         }),
       };

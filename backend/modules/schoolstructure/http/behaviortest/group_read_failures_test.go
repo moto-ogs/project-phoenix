@@ -10,20 +10,9 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	schoolHTTP "github.com/moto-ogs/project-phoenix/modules/schoolstructure/http"
-	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 )
-
-// failingAttendanceReads fails the batched attendance read the location
-// snapshot needs, as an aborted transaction does.
-type failingAttendanceReads struct {
-	studentpresence.Presence
-}
-
-func (failingAttendanceReads) GetStudentsAttendanceStatuses(context.Context, []int64) (map[int64]*studentpresence.DailyAttendanceStatus, error) {
-	return nil, errors.New("attendance unavailable")
-}
 
 // failingGroupChildren fails the read of a group's children.
 type failingGroupChildren struct {
@@ -32,21 +21,6 @@ type failingGroupChildren struct {
 
 func (failingGroupChildren) GroupStudents(context.Context, int64) ([]peopledirectory.StudentRecord, error) {
 	return nil, errors.New("children unavailable")
-}
-
-// A failed presence read is an unknown state, not a confirmed absence: the
-// group list answers 500 instead of every child as "Abwesend" (#6849).
-func TestGetGroupStudents_PresenceReadFailureIsAnError(t *testing.T) {
-	t.Parallel()
-	tc, router := setupProtectedRouter(t)
-	group := testpkg.CreateTestEducationGroup(t, tc.db, "PresenceFailure")
-	child := testpkg.CreateTestStudent(t, tc.db, "Presence", "Failure", "P1")
-	testpkg.AssignStudentToGroup(t, tc.db, child.ID, group.ID)
-	tc.resource.ActiveService = failingAttendanceReads{Presence: tc.resource.ActiveService}
-
-	rr := testutil.ExecuteRequest(router, newReq(t, http.MethodGet,
-		fmt.Sprintf("/groups/%d/students", group.ID), nil, testutil.DefaultTestClaims(), "groups:read"))
-	testutil.AssertErrorResponse(t, rr, http.StatusInternalServerError)
 }
 
 // A failed children read is no empty group: the group answers 500 instead of

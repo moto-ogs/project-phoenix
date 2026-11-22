@@ -22,7 +22,7 @@ func RouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/phases/{id}/offerings", Portals: portals, Request: OfferingRequest{}, Response: careplan.TraegerOffering{}},
 		{Method: "PUT", Pattern: "/offerings/{id}", Portals: portals, Request: OfferingRequest{}, Response: careplan.TraegerOffering{}},
 		{Method: "POST", Pattern: "/offerings/{id}/withdraw", Portals: portals, Response: careplan.TraegerOffering{}},
-		{Method: "POST", Pattern: "/phases/{id}/preview", Portals: portals, Response: traegercatalog.Preview{}},
+		{Method: "POST", Pattern: "/phases/{id}/preview", Portals: portals, NoCommit: "the preview shows what publishing the phase would change and saves nothing", Response: traegercatalog.Preview{}},
 		{Method: "POST", Pattern: "/phases/{id}/rollout", Portals: portals, Request: RolloutRequest{}, Response: traegercatalog.Rollout{}},
 	}
 }

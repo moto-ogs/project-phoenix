@@ -39,10 +39,12 @@ import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import { createLogger } from "~/lib/logger";
+import type {
+  ClassArrivalExceptionListResponse,
+  ClassArrivalExceptionRequest,
+  ClassArrivalExceptionResponse,
+} from "~/lib/contract/students.generated";
 import {
-  type ClassArrivalException,
-  type ClassArrivalExceptionInput,
-  type ClassArrivalExceptionList,
   deleteClassArrivalException,
   fetchClassArrivalExceptions,
   upsertClassArrivalException,
@@ -56,19 +58,19 @@ const logger = createLogger({ component: "ClassArrivalExceptionPanel" });
 /** The preset reason the "Unterricht fällt aus" button writes. */
 const CLASS_ARRIVAL_CANCELLED_REASON = "Unterricht fällt aus";
 
-const NO_EXCEPTIONS: readonly ClassArrivalException[] = [];
+const NO_EXCEPTIONS: readonly ClassArrivalExceptionResponse[] = [];
 
 /** Wie weit die Liste vorausschaut (Backend-Standard: 60 Tage). */
 const LIST_HORIZON_DAYS = 60;
 
 /** Die Datenquelle des Bausteins; jedes Portal bringt seine eigene mit. */
 export interface ClassArrivalExceptionApi {
-  readonly list: (schoolClass: string) => Promise<ClassArrivalExceptionList>;
+  readonly list: (schoolClass: string) => Promise<ClassArrivalExceptionListResponse>;
   readonly upsert: (
     schoolClass: string,
     date: string,
-    input: ClassArrivalExceptionInput,
-  ) => Promise<ClassArrivalException>;
+    input: ClassArrivalExceptionRequest,
+  ) => Promise<ClassArrivalExceptionResponse>;
   readonly remove: (schoolClass: string, date: string) => Promise<void>;
   /**
    * Beginn des ersten geplanten Betreuungsblocks der Klasse an dem Tag
@@ -174,7 +176,7 @@ interface ClassArrivalExceptionPanelProps {
    * Zusatzzeile unter einem Eintrag, zum Beispiel wer ihn gemacht hat. Ohne
    * Angabe nennt die OGS Einträge der Schule.
    */
-  readonly originLabel?: (exception: ClassArrivalException) => string | null;
+  readonly originLabel?: (exception: ClassArrivalExceptionResponse) => string | null;
   /**
    * Die Schule betreut Sa/So nach dem Freitagsplan (#3921): dann sind auch
    * Wochenendtage wählbar.
@@ -233,7 +235,7 @@ type ClassArrivalExceptionPanelBodyProps = ClassArrivalExceptionPanelProps & {
 /** Der OGS-Satz für alle, die nur lesen dürfen. */
 const OGS_READ_ONLY_HINT = "Ändern kann das die Koordination.";
 
-function ogsOriginLabel(exception: ClassArrivalException): string | null {
+function ogsOriginLabel(exception: ClassArrivalExceptionResponse): string | null {
   return exception.origin === "school" ? "Eingetragen von der Schule" : null;
 }
 
@@ -310,7 +312,7 @@ function ClassArrivalExceptionPanelBody({
   // Entfernen läuft erst nach der Rückfrage (Bauart 2 Regel 6, #3109); ein
   // Fehler bleibt im Dialog stehen statt als Toast zu verschwinden.
   const [removeTarget, setRemoveTarget] =
-    useState<ClassArrivalException | null>(null);
+    useState<ClassArrivalExceptionResponse | null>(null);
   const removeErrors = useApiFormError();
   const formRef = useRef<HTMLDivElement>(null);
   const formErrors = useApiFormError(formRef);
@@ -324,7 +326,7 @@ function ClassArrivalExceptionPanelBody({
   const loadError = load.failure !== undefined;
   const loading = !list.data && !loadError;
 
-  const openRemoveConfirmation = (exception: ClassArrivalException) => {
+  const openRemoveConfirmation = (exception: ClassArrivalExceptionResponse) => {
     onConfirmationVisibilityChange?.(true);
     removeErrors.clear();
     setRemoveTarget(exception);
@@ -426,7 +428,7 @@ function ClassArrivalExceptionPanelBody({
     latestSaveRef.current = handleSave;
   });
 
-  const handleRemove = async (exception: ClassArrivalException) => {
+  const handleRemove = async (exception: ClassArrivalExceptionResponse) => {
     setRemoving(exception.date);
     removeErrors.clear();
     try {

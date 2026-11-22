@@ -299,7 +299,7 @@ type ExportProtocolEntry struct {
 	FileName     string   `json:"file_name"`
 	Fingerprint  string   `json:"fingerprint"`
 	InvoiceCount int      `json:"invoice_count"`
-	TotalCents   int64    `json:"total_cents"`
+	TotalCents   int64    `json:"total_cents" contract:"number"`
 	// Reference is the message ID of a PAIN.008 file.
 	Reference string `json:"reference,omitempty"`
 	// RepeatOf is the number of the earliest file of the run with the same
@@ -341,7 +341,7 @@ type ExportRun struct {
 	Label        string        `json:"label"`
 	IssuedOn     calendar.Date `json:"issued_on"`
 	InvoiceCount int           `json:"invoice_count"`
-	TotalCents   int64         `json:"total_cents"`
+	TotalCents   int64         `json:"total_cents" contract:"number"`
 	// LastSollstellung and LastDatev are the newest Sollstellung and DATEV
 	// batch of the run, nil before the first; Exports counts every file of
 	// the run.

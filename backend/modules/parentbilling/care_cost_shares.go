@@ -102,7 +102,7 @@ type CareCostShare struct {
 	CostBearerID     ident.ID      `json:"cost_bearer_id"`
 	CostBearerName   string        `json:"cost_bearer_name"`
 	ShareBasisPoints *int          `json:"share_basis_points"`
-	ShareCents       *int64        `json:"share_cents"`
+	ShareCents       *int64        `json:"share_cents" contract:"number"`
 	Scope            string        `json:"scope"`
 	ValidFrom        calendar.Date `json:"valid_from"`
 	ValidUntil       calendar.Date `json:"valid_until"`
@@ -118,7 +118,7 @@ type CareCostShareInput struct {
 	Kind             string        `json:"kind"`
 	CostBearerID     ident.ID      `json:"cost_bearer_id"`
 	ShareBasisPoints *int          `json:"share_basis_points"`
-	ShareCents       *int64        `json:"share_cents"`
+	ShareCents       *int64        `json:"share_cents" contract:"number"`
 	Scope            string        `json:"scope"`
 	ValidFrom        calendar.Date `json:"valid_from"`
 	ValidUntil       calendar.Date `json:"valid_until"`
@@ -155,9 +155,9 @@ type CareInvoiceCostShare struct {
 	CostBearerID     ident.ID `json:"cost_bearer_id"`
 	CostBearerName   string   `json:"cost_bearer_name"`
 	ShareBasisPoints *int     `json:"share_basis_points"`
-	ShareCents       *int64   `json:"share_cents"`
+	ShareCents       *int64   `json:"share_cents" contract:"number"`
 	Scope            string   `json:"scope"`
-	AmountCents      int64    `json:"amount_cents"`
+	AmountCents      int64    `json:"amount_cents" contract:"number"`
 }
 
 // ContributionCents is the contribution of the invoice before the cost
@@ -192,7 +192,7 @@ type CareCostBearerTotal struct {
 	CostBearerID   ident.ID `json:"cost_bearer_id"`
 	CostBearerName string   `json:"cost_bearer_name"`
 	InvoiceCount   int      `json:"invoice_count"`
-	AmountCents    int64    `json:"amount_cents"`
+	AmountCents    int64    `json:"amount_cents" contract:"number"`
 }
 
 // CareCostShares lets the Abrechnung of a Träger keep the cost bearer

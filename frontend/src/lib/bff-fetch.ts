@@ -14,11 +14,12 @@ export type Portal = Exclude<keyof typeof portalRoutes, "public">;
 
 type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
-// A JSON route: its answer is one decoder. File answers and the response
-// variants of GET /api/students/ are not JSON routes of this helper.
+// A JSON route: its answer is one decoder, or one per variant that a query
+// parameter picks (GET /api/students/ and its `view`). File answers are not
+// JSON routes of this helper.
 type JsonRoute<P extends Portal> = Extract<
   (typeof portalRoutes)[P][number],
-  { response: z.ZodType }
+  { response: z.ZodType } | { variantParam: string }
 >;
 
 type KeyOf<R> = R extends {
@@ -46,16 +47,41 @@ type ParamNames<S extends string> =
 type QueryValue =
   string | number | boolean | null | undefined | readonly (string | number)[];
 
-type Answer<R> = R extends { response: z.ZodType<infer O> } ? O : never;
+/** The variant names of a route with response variants. */
+type VariantOf<R> = R extends {
+  variantParam: string;
+  response: infer M;
+}
+  ? keyof M & string
+  : never;
+
+type DefaultVariant<R> = R extends { defaultVariant: infer D extends string }
+  ? D
+  : never;
+
+type Answer<R, V> = R extends { variantParam: string; response: infer M }
+  ? V extends keyof M
+    ? M[V] extends z.ZodType<infer O>
+      ? O
+      : never
+    : never
+  : R extends { response: z.ZodType<infer O> }
+    ? O
+    : never;
 
 /**
  * What the call resolves to: the `data` of the answer, a paginated list
  * also its `pagination`; `null` for a route without data and for a 204.
  */
-export type BffResult<R> =
-  Answer<R> extends { data: infer D; pagination: infer G }
+export type BffResult<R, V = never> =
+  Answer<R, [V] extends [never] ? DefaultVariant<R> : V> extends {
+    data: infer D;
+    pagination: infer G;
+  }
     ? { data: D; pagination: G }
-    : Answer<R> extends { data: infer D }
+    : Answer<R, [V] extends [never] ? DefaultVariant<R> : V> extends {
+          data: infer D;
+        }
       ? D
       : never;
 
@@ -71,8 +97,20 @@ type ParamsOf<R> = R extends { pattern: infer T extends string }
     : { params: Record<ParamNames<T>, string> }
   : never;
 
-type QueryOf<R> = R extends { query: readonly (infer Q extends string)[] }
-  ? { query?: Partial<Record<Q, QueryValue>> }
+type VariantQuery<R, V> = R extends { variantParam: infer N extends string }
+  ? { [key in N]?: V }
+  : unknown;
+
+type QueryOf<R, V> = R extends { query: readonly (infer Q extends string)[] }
+  ? {
+      query?: Partial<
+        Record<
+          Exclude<Q, R extends { variantParam: infer N } ? N : never>,
+          QueryValue
+        >
+      > &
+        VariantQuery<R, V>;
+    }
   : { query?: never };
 
 interface CallOptions {
@@ -91,12 +129,12 @@ interface CallOptions {
   authRefusals?: readonly ErrorCode[];
 }
 
-type BffOptions<R> = CallOptions & BodyOf<R> & ParamsOf<R> & QueryOf<R>;
+type BffOptions<R, V> = CallOptions & BodyOf<R> & ParamsOf<R> & QueryOf<R, V>;
 
-type OptionalArg<R> =
-  object extends BffOptions<R>
-    ? [options?: BffOptions<R>]
-    : [options: BffOptions<R>];
+type OptionalArg<R, V> =
+  object extends BffOptions<R, V>
+    ? [options?: BffOptions<R, V>]
+    : [options: BffOptions<R, V>];
 
 interface PortalRow {
   /** Where the backend mounts the portal's routes. */
@@ -131,7 +169,9 @@ const PORTALS: Readonly<Record<Portal, PortalRow>> = {
     mount: "/api",
     bff: "/api",
     send: (url, init, { authRefusals }) =>
-      sessionFetch(url, init, authRefusals ? { authRefusals } : {}),
+      authRefusals
+        ? sessionFetch(url, init, { authRefusals })
+        : sessionFetch(url, init),
   },
   parent: {
     mount: "/parent",
@@ -203,13 +243,15 @@ async function call<T>(
 ): Promise<T> {
   const { body, signal, headers, errorMessage } = options;
   const isForm = body instanceof FormData;
+  const json = body !== undefined && !isForm;
   const init: RequestInit = {
     method,
     ...(signal && { signal }),
-    headers:
-      body === undefined || isForm
-        ? { ...headers }
-        : { "Content-Type": "application/json", ...headers },
+    ...((json || headers) && {
+      headers: json
+        ? { "Content-Type": "application/json", ...headers }
+        : { ...headers },
+    }),
     ...(body !== undefined && { body: isForm ? body : JSON.stringify(body) }),
   };
   const response = await PORTALS[portal].send(url, init, options);
@@ -233,12 +275,7 @@ async function call<T>(
     }
     answer = undefined;
   }
-  if (
-    answer === null ||
-    typeof answer !== "object" ||
-    !("data" in answer) ||
-    (answer as { status?: unknown }).status !== "success"
-  ) {
+  if (answer === null || typeof answer !== "object" || !("data" in answer)) {
     // The proxy decodes every answer, so this is a broken BFF route. A
     // write may have happened: the person reloads before trying again.
     throw new ApiError(message(502), 502, {
@@ -270,11 +307,15 @@ async function call<T>(
  * });
  * ```
  */
-export function bffJson<P extends Portal, K extends RouteKey<P>>(
+export function bffJson<
+  P extends Portal,
+  K extends RouteKey<P>,
+  V extends VariantOf<RouteOf<P, K>> = never,
+>(
   portal: P,
   route: K,
-  ...[options]: OptionalArg<RouteOf<P, K>>
-): Promise<BffResult<RouteOf<P, K>>> {
+  ...[options]: OptionalArg<RouteOf<P, K>, V>
+): Promise<BffResult<RouteOf<P, K>, V>> {
   const space = route.indexOf(" ");
   const method = route.slice(0, space) as Method;
   const opts = (options ?? {}) as CallOptions & {
@@ -284,41 +325,4 @@ export function bffJson<P extends Portal, K extends RouteKey<P>>(
   };
   const url = bffPath(portal, route.slice(space + 1), opts.params, opts.query);
   return call(portal, method, url, opts);
-}
-
-/**
- * @deprecated The URL form of the first bffJson, kept only until its callers
- * move to `bffJson(portal, route, …)` in the next PR of #7806. Do not add a
- * caller.
- */
-export async function legacyBffJson<T>(
-  url: string,
-  {
-    method = "GET",
-    body,
-    signal,
-    headers,
-  }: {
-    method?: Method;
-    body?: unknown;
-    signal?: AbortSignal;
-    headers?: Readonly<Record<string, string>>;
-  } = {},
-): Promise<T> {
-  const response = await sessionFetch(url, {
-    method,
-    signal,
-    ...(headers && { headers }),
-    ...(body !== undefined && {
-      body: body instanceof FormData ? body : JSON.stringify(body),
-    }),
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `${method} ${url} failed (${response.status})`,
-    );
-  }
-  if (response.status === 204) return undefined as T;
-  return ((await response.json()) as { data: T }).data;
 }

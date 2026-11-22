@@ -57,7 +57,7 @@ func checkGuestRoutePermissions(t *testing.T, api *goldenRuntime) {
 	t.Run("refused", func(t *testing.T) {
 		for _, route := range []struct{ method, path string }{
 			{http.MethodGet, "/api/students/status-days"},
-			{http.MethodGet, "/api/guardians/"},
+			{http.MethodGet, "/api/guardians/search?q=Muster"},
 			{http.MethodGet, "/api/messages/"},
 			{http.MethodGet, fmt.Sprintf("/api/messages/students/%d/guardians", child.ID)},
 			{http.MethodGet, fmt.Sprintf("/api/students/%d/notes", child.ID)},
