@@ -548,6 +548,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (c careContractSchoolChildren) SchoolChildren(ctx context.Context, ids []int64) ([]carecontract.SchoolChild, error) {\n\tfound, err := c.records.StudentRecordIdentities(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tchildren := make([]carecontract.SchoolChild, len(found))\n\tfor i, record := range found {\n\t\tchildren[i] = carecontract.SchoolChild{StudentID: record.StudentID, FirstName: record.FirstName, LastName: record.LastName, BirthDate: record.Birthday}\n\t}\n\treturn children, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "api/careContractSchoolChildren.SchoolChildren",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (f catererNotificationFeed) Page(ctx context.Context, accountID int64, cursor string, limit int) (notificationsHTTP.SchoolFeedPage, error) {\n\tpage, err := f.CatererNotificationFeed.Page(ctx, accountID, cursor, limit)\n\treturn schoolFeedPage(page), err\n}",
       "form": "unclassified-evidence",
       "id": "api/catererNotificationFeed.Page",

@@ -273,6 +273,10 @@ export interface CareContractSummary {
   readonly concluded: ContractConclusion | null;
   /** Last day of a terminated contract (#4682); null otherwise. */
   readonly endsOn: string | null;
+  /** The child record the contract is linked to; null without one (#7760). */
+  readonly studentId: string | null;
+  /** Taken over from a file, not made from an application (ADR 0232). */
+  readonly imported: boolean;
 }
 
 export interface CareContractList {
@@ -557,6 +561,8 @@ function summaryFromBackend(
         }
       : null,
     endsOn: row.ends_on,
+    studentId: row.student_id,
+    imported: row.imported,
   };
 }
 

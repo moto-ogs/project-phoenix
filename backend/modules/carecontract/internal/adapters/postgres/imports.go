@@ -19,7 +19,8 @@ import (
 // filter; none depends on the number of rows of the file.
 
 // ContractChildren reads the child of every contract at the schools, as its
-// newest version names it, with the origin of a contract an import stored.
+// newest version names it, with the origin of a contract an import stored
+// and the application child of a contract from an application.
 func (Store) ContractChildren(ctx context.Context, organizationID int64, schoolIDs []int64) ([]ports.ContractChild, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
@@ -32,12 +33,17 @@ func (Store) ContractChildren(ctx context.Context, organizationID int64, schoolI
 		FirstName  string         `bun:"child_first_name"`
 		LastName   string         `bun:"child_last_name"`
 		BirthDate  *calendar.Date `bun:"child_birth_date,type:date"`
+		StartsOn   calendar.Date  `bun:"starts_on,type:date"`
 		EndsOn     *calendar.Date `bun:"ends_on,type:date"`
 		Origin     string         `bun:"import_origin"`
+		StudentID  *int64         `bun:"student_id"`
+		RequestID  *int64         `bun:"request_child_id"`
 	}
 	if err := db.NewRaw(`SELECT DISTINCT ON (c.id) c.id AS contract_id, c.school_id, c.status,
-			v.child_first_name, v.child_last_name, v.child_birth_date, COALESCE(c.ends_on, v.ends_on) AS ends_on,
-			COALESCE(c.import_origin, '') AS import_origin
+			v.child_first_name, v.child_last_name, v.child_birth_date, LEAST(c.ends_on, v.ends_on) AS ends_on,
+			COALESCE(c.import_origin, '') AS import_origin, c.student_id, c.request_child_id,
+			(SELECT MIN(f.effective_from) FROM care_contract.contract_versions AS f
+				WHERE f.organization_id = c.organization_id AND f.contract_id = c.id) AS starts_on
 		FROM care_contract.contracts AS c
 		JOIN care_contract.contract_versions AS v ON v.organization_id = c.organization_id AND v.contract_id = c.id
 		WHERE c.organization_id = ? AND c.school_id = ANY(?)
@@ -47,7 +53,8 @@ func (Store) ContractChildren(ctx context.Context, organizationID int64, schoolI
 	children := make([]ports.ContractChild, len(rows))
 	for i, row := range rows {
 		children[i] = ports.ContractChild{ContractID: row.ContractID, SchoolID: row.SchoolID, Status: row.Status,
-			FirstName: row.FirstName, LastName: row.LastName, BirthDate: row.BirthDate, EndsOn: row.EndsOn, ImportOrigin: row.Origin}
+			FirstName: row.FirstName, LastName: row.LastName, BirthDate: row.BirthDate, StartsOn: row.StartsOn,
+			EndsOn: row.EndsOn, ImportOrigin: row.Origin, StudentID: row.StudentID, RequestChildID: row.RequestID}
 	}
 	return children, nil
 }

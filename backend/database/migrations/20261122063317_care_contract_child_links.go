@@ -1,0 +1,57 @@
+package migrations
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/uptrace/bun"
+)
+
+const careContractChildLinksVersion = "20261122063317"
+
+func init() {
+	MigrationRegistry.Register(&Migration{
+		Version:     careContractChildLinksVersion,
+		Description: "Betreuungsvertrag: importierte Verträge mit der Kinderakte verknüpfen (#7760)",
+		DependsOn: []string{
+			roomHistoryStopsVersion,              // the newest migration on development
+			careContractImportsVersion,           // the imported contracts this one links
+			careContractNoticeEndDecisionVersion, // the newest list of trail actions
+		},
+	})
+	Migrations.MustRegister(careContractChildLinksUp, careContractChildLinksDown)
+}
+
+// careContractChildLinksUpSQL lets the trail of a contract record the link
+// of an imported contract to a child record and its removal (#7760, ADR 0232
+// addendum of 22.11.2026). The link itself is student_id, which the request
+// role may update since 1.15.770. Running it again changes nothing.
+const careContractChildLinksUpSQL = `
+ALTER TABLE care_contract.contract_events DROP CONSTRAINT IF EXISTS chk_contract_events_action;
+ALTER TABLE care_contract.contract_events ADD CONSTRAINT chk_contract_events_action
+	CHECK (action IN ('read', 'create', 'send', 'discard', 'template', 'conclude', 'sign', 'remind', 'terminate', 'withdraw', 'set_end',
+		'reject_reason', 'link_child', 'unlink_child'));
+`
+
+// careContractChildLinksDownSQL drops the entries of links and restores the
+// list of 1.15.800. The links themselves stay: student_id is older.
+const careContractChildLinksDownSQL = `
+DELETE FROM care_contract.contract_events WHERE action IN ('link_child', 'unlink_child');
+ALTER TABLE care_contract.contract_events DROP CONSTRAINT chk_contract_events_action;
+ALTER TABLE care_contract.contract_events ADD CONSTRAINT chk_contract_events_action
+	CHECK (action IN ('read', 'create', 'send', 'discard', 'template', 'conclude', 'sign', 'remind', 'terminate', 'withdraw', 'set_end', 'reject_reason'));
+`
+
+func careContractChildLinksUp(ctx context.Context, db *bun.DB) error {
+	if _, err := db.ExecContext(ctx, careContractChildLinksUpSQL); err != nil {
+		return fmt.Errorf("add care contract child link actions: %w", err)
+	}
+	return nil
+}
+
+func careContractChildLinksDown(ctx context.Context, db *bun.DB) error {
+	if _, err := db.ExecContext(ctx, careContractChildLinksDownSQL); err != nil {
+		return fmt.Errorf("drop care contract child link actions: %w", err)
+	}
+	return nil
+}

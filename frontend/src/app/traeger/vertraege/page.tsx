@@ -9,7 +9,14 @@ import { bffFile } from "~/lib/bff-fetch";
 // nicht: ihr Vertrag entsteht von selbst und ist sofort aktiv. Nur die Rolle
 // mit dem Recht „Verträge verwalten“ sieht die Seite.
 
-import { FilePenLine, Plus, Repeat, Send, Upload } from "lucide-react";
+import {
+  FilePenLine,
+  Link2,
+  Plus,
+  Repeat,
+  Send,
+  Upload,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type MouseEvent, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
@@ -169,6 +176,16 @@ const COLUMNS: DataTableColumn<CareContractSummary>[] = [
         >
           {childName(contract)}
         </NavigationLink>
+        {contract.imported && !contract.studentId ? (
+          // An imported contract knows its child only by name until the
+          // office links it to the child record (#7760).
+          <StatusBadge
+            tone="gray"
+            size="xs"
+            label="Ohne Kinderakte"
+            className="ml-1.5 align-middle"
+          />
+        ) : null}
         <span className="block text-sm text-gray-500">
           {contract.modulesText || "–"}
           <span className="sm:hidden">
@@ -622,6 +639,13 @@ export default function TraegerVertraegePage() {
             "Öffnet die neue Zuordnung der Module importierter Verträge aus einer CSV-Datei.",
           icon: <Repeat className="h-4 w-4" aria-hidden />,
           href: traegerPath("/traeger/vertraege/module-zuordnen"),
+        },
+        {
+          label: "Mit Kinderakten verknüpfen",
+          description:
+            "Öffnet das Verknüpfen importierter Verträge mit der Kinderakte, per CSV-Datei.",
+          icon: <Link2 className="h-4 w-4" aria-hidden />,
+          href: traegerPath("/traeger/vertraege/verknuepfen"),
           onClick: () => undefined,
         },
         {

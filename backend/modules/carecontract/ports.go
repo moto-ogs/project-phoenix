@@ -86,7 +86,8 @@ type SchoolAccess struct {
 	// ContractIDs are the contracts at this school a contract read showed.
 	ContractIDs []int64
 	// StudentIDs are the children an overrun read showed by name (#4683),
-	// over the window from RangeStart to RangeEnd.
+	// over the window from RangeStart to RangeEnd, and the child records a
+	// link of imported contracts showed (#7760).
 	StudentIDs []int64
 	RangeStart calendar.Date
 	RangeEnd   calendar.Date

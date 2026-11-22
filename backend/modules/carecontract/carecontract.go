@@ -291,6 +291,10 @@ type ContractSummary struct {
 	// EndsOn is the last day of a terminated contract (#4682); nil
 	// otherwise.
 	EndsOn *calendar.Date `json:"ends_on"`
+	// Imported tells a contract taken over from a file (ADR 0232) from one
+	// of an application: only an imported contract is linked to a child
+	// record by hand (ADR 0307).
+	Imported bool `json:"imported"`
 }
 
 // ContractList is the filtered list with the count of every status over all

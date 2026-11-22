@@ -8,7 +8,7 @@
 
 import { FamilyBillingStatusCard } from "~/components/traeger/family-billing-status-card";
 import { SepaMandateStatusCard } from "~/components/traeger/sepa-mandate-status-card";
-import { Download, RotateCw, Send, Trash2 } from "lucide-react";
+import { Download, Link2, RotateCw, Send, Trash2, Unlink } from "lucide-react";
 import {
   useParams,
   usePathname,
@@ -30,6 +30,7 @@ import {
 } from "~/components/traeger/care-contract-format";
 import { CareContractChangeCard } from "~/components/traeger/care-contract-change-card";
 import { CareContractCorrectionsCard } from "~/components/traeger/care-contract-corrections-card";
+import { CareContractChildLinkModal } from "~/components/traeger/care-contract-child-link-modal";
 import {
   CONTRACT_DELIVERY_SECTION_ID,
   CONTRACT_DETAIL_TABS,
@@ -90,6 +91,7 @@ import {
   formatDate,
 } from "~/lib/date-helpers";
 import { mailStatusCopy } from "~/lib/email-delivery-status";
+import { ApiError, wireErrorCode } from "~/lib/api-error";
 import { downloadBlob } from "~/lib/file-download";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
@@ -104,6 +106,7 @@ import {
   sendCareContracts,
   resendCareContract,
 } from "~/lib/traeger-care-contracts-api";
+import { unlinkContractChild } from "~/lib/traeger-contract-child-links-api";
 import { traegerPath } from "~/lib/traeger-url";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { labelOf } from "~/lib/label-of";
@@ -190,6 +193,9 @@ function TraegerVertragView() {
   const [discarding, setDiscarding] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [confirmingSend, setConfirmingSend] = useState(false);
+  const [linkingChild, setLinkingChild] = useState(false);
+  const [confirmUnlink, setConfirmUnlink] = useState(false);
+  const [unlinking, setUnlinking] = useState(false);
   const actionError = useApiErrorDisplay();
   const discardErrors = useApiFormError();
   const recipientForm = useRef<HTMLFormElement>(null);
@@ -205,6 +211,8 @@ function TraegerVertragView() {
     if (refused) {
       setRecipientEmail("");
       setConfirmDiscard(false);
+      setLinkingChild(false);
+      setConfirmUnlink(false);
     }
   }
 
@@ -326,6 +334,36 @@ function TraegerVertragView() {
     setSending(false);
   };
 
+  const unlinkChild = async () => {
+    // The child record the office saw; the dialog names it.
+    const studentId = contract?.studentId;
+    if (!studentId) return;
+    setUnlinking(true);
+    try {
+      await unlinkContractChild(id, studentId);
+    } catch (err) {
+      logger.error("traeger_care_contract_unlink_child_failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      void actionError.show(err, { object: "die Verknüpfung" });
+      setUnlinking(false);
+      if (
+        err instanceof ApiError &&
+        err.code === wireErrorCode("care_contract.child_link_changed")
+      ) {
+        // Another child record is linked by now: show the contract as it
+        // is, so the office decides again.
+        setConfirmUnlink(false);
+        await afterCardWrite();
+      }
+      return;
+    }
+    setConfirmUnlink(false);
+    setUnlinking(false);
+    success("Die Verknüpfung mit der Kinderakte ist gelöst.");
+    await afterCardWrite();
+  };
+
   const download = async () => {
     try {
       const file = await downloadCareContract(id);
@@ -435,6 +473,26 @@ function TraegerVertragView() {
       description: "Speichert den Vertrag als PDF auf deinem Gerät.",
       icon: <Download className="h-4 w-4" aria-hidden="true" />,
       onClick: () => void download(),
+    });
+  }
+  // Only an imported contract is linked by hand (ADR 0307); one from an
+  // application has the child of its application.
+  if (contract?.imported && !contract.studentId) {
+    headMenu.push({
+      label: "Mit Kinderakte verknüpfen",
+      description:
+        "Zeigt Vertrag und Kinderakte zum Vergleich, dann verknüpfst du.",
+      icon: <Link2 className="h-4 w-4" aria-hidden="true" />,
+      onClick: () => setLinkingChild(true),
+    });
+  }
+  if (contract?.imported && contract.studentId) {
+    headMenu.push({
+      label: "Verknüpfung lösen",
+      description:
+        "moto fragt vorher nach, dann gehört der Vertrag zu keiner Kinderakte.",
+      icon: <Unlink className="h-4 w-4" aria-hidden="true" />,
+      onClick: () => setConfirmUnlink(true),
     });
   }
   if (isDraft) {
@@ -572,6 +630,38 @@ function TraegerVertragView() {
               Eine gesendete Mail lässt sich nicht zurückholen.
             </p>
           </ConfirmationModal>
+          {contract?.imported ? (
+            <CareContractChildLinkModal
+              contractId={contract.id}
+              isOpen={linkingChild}
+              onClose={() => setLinkingChild(false)}
+              onLinked={() => {
+                setLinkingChild(false);
+                success("Der Vertrag ist jetzt mit der Kinderakte verknüpft.");
+                void afterCardWrite();
+              }}
+            />
+          ) : null}
+          <ConfirmationModal
+            isOpen={confirmUnlink}
+            title="Verknüpfung lösen?"
+            confirmText="Verknüpfung lösen"
+            confirmVariant="danger"
+            confirmTooltip="Löst die Verknüpfung sofort, sonst ändert sich nichts."
+            isConfirmLoading={unlinking}
+            loadingText="Wird gelöst …"
+            onClose={() => setConfirmUnlink(false)}
+            onConfirm={() => void unlinkChild()}
+          >
+            <p className="text-sm text-gray-700">
+              {contract?.studentId
+                ? `Der Vertrag ist dann nicht mehr mit der Kinderakte Nr. ${contract.studentId} verknüpft.`
+                : "Der Vertrag ist dann mit keiner Kinderakte mehr verknüpft."}{" "}
+              Sonst ändert sich nichts: Vertrag, Eltern und Beitrag bleiben.
+              Schon ausgestellte Rechnungen bleiben, wie sie sind. Eltern
+              bekommen keine Nachricht.
+            </p>
+          </ConfirmationModal>
           <ConfirmDeleteModal
             isOpen={confirmDiscard}
             title="Entwurf verwerfen?"
@@ -648,6 +738,14 @@ function TraegerVertragView() {
                   <DataField label="Beitrag im Monat">
                     {contract.feeText}
                   </DataField>
+                  {contract.imported ? (
+                    <DataField label="Kinderakte">
+                      <ChildRecordValue
+                        studentId={contract.studentId}
+                        onLink={() => setLinkingChild(true)}
+                      />
+                    </DataField>
+                  ) : null}
                 </DataGrid>
               </SectionCard>
               <SectionCard
@@ -1172,6 +1270,44 @@ function ContractPartyList({
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * Ob ein importierter Vertrag mit der Kinderakte verknüpft ist (#7760), und
+ * was ohne Verknüpfung fehlt.
+ */
+function ChildRecordValue({
+  studentId,
+  onLink,
+}: Readonly<{ studentId: string | null; onLink: () => void }>) {
+  if (studentId) {
+    return (
+      <span className="flex flex-wrap items-center gap-2">
+        <StatusBadge tone="green" label="Verknüpft" />
+        <span className="tabular-nums">Nr. {studentId}</span>
+      </span>
+    );
+  }
+  return (
+    <span className="flex flex-col items-start gap-1.5">
+      <StatusBadge tone="warning" label="Nicht verknüpft" />
+      <span className="text-sm font-normal text-gray-600">
+        Ohne Kinderakte fehlen der Soll-Ist-Vergleich, die genaue Zuordnung des
+        Essens und Rechnungen im Elternpostfach.
+      </span>
+      <Button
+        type="button"
+        variant="outline"
+        size="compact"
+        className="mt-1"
+        onClick={onLink}
+        tooltip="Zeigt Vertrag und Kinderakte zum Vergleich, dann verknüpfst du."
+      >
+        <Link2 className="mr-1.5 h-4 w-4" aria-hidden="true" />
+        Mit Kinderakte verknüpfen
+      </Button>
+    </span>
   );
 }
 

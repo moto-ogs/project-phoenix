@@ -56,6 +56,7 @@ export interface ContractSummary {
   sent_at: string | null;
   concluded: Concluded | null;
   ends_on: string | null;
+  imported: boolean;
 }
 
 export const ContractSummarySchema: z.ZodType<ContractSummary, unknown> = object<ContractSummary>({
@@ -75,6 +76,7 @@ export const ContractSummarySchema: z.ZodType<ContractSummary, unknown> = object
   sent_at: nullable(instant),
   concluded: nullable(ConcludedSchema),
   ends_on: nullable(calendarDate),
+  imported: bool,
 });
 
 /** Go: carecontract.ContractList */
@@ -340,6 +342,7 @@ export interface ContractDetail {
   sent_at: string | null;
   concluded: Concluded | null;
   ends_on: string | null;
+  imported: boolean;
   version: Version;
   parties: Party[] | null;
   mailings: Mailing[] | null;
@@ -370,6 +373,7 @@ export const ContractDetailSchema: z.ZodType<ContractDetail, unknown> = object<C
   sent_at: nullable(instant),
   concluded: nullable(ConcludedSchema),
   ends_on: nullable(calendarDate),
+  imported: bool,
   version: VersionSchema,
   parties: nullable(arr(PartySchema)),
   mailings: nullable(arr(MailingSchema)),

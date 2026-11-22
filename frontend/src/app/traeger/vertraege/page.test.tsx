@@ -80,6 +80,8 @@ const DRAFT: CareContractSummary = {
   sentAt: null,
   concluded: null,
   endsOn: null,
+  studentId: null,
+  imported: false,
 };
 
 const SENT: CareContractSummary = {
@@ -240,6 +242,28 @@ describe("TraegerVertraegePage", () => {
     );
   });
 
+  it("marks only imported contracts without a child record", async () => {
+    api.fetchCareContracts.mockResolvedValue({
+      contracts: [
+        { ...SENT, id: "8", childFirstName: "Ohne", imported: true },
+        {
+          ...SENT,
+          id: "9",
+          childFirstName: "Verknüpft",
+          imported: true,
+          studentId: "12",
+        },
+        DRAFT,
+      ],
+      counts: { versendet: 2, entwurf: 1 },
+      hasMore: false,
+    });
+    renderPage();
+    await screen.findAllByText("Verknüpft Muster");
+    // One marker: the linked import and the application's draft have none.
+    expect(screen.getAllByText("Ohne Kinderakte")).toHaveLength(1);
+  });
+
   it("keeps one visible head action; import and download sit in the page menu", async () => {
     renderPage();
     await screen.findAllByText("Lina Muster");
@@ -260,6 +284,9 @@ describe("TraegerVertraegePage", () => {
     expect(
       screen.getByRole("menuitem", { name: /Module neu zuordnen/ }),
     ).toHaveAttribute("href", "/vertraege/module-zuordnen");
+    expect(
+      screen.getByRole("menuitem", { name: /Mit Kinderakten verknüpfen/ }),
+    ).toHaveAttribute("href", "/vertraege/verknuepfen");
     expect(screen.getByRole("menuitem", { name: /CSV/ })).toBeInTheDocument();
   });
 
