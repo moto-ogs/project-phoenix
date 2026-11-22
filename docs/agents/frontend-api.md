@@ -202,7 +202,8 @@ session read outside it. Success answers the backend's envelope
 `{ status: "success", data }` (`successResponse` in
 `lib/route-wrapper-utils.server.ts`, type `ApiResponse` in `lib/api-envelope.ts`), a DELETE without a result answers 204, and a handler
 may return a Response as it is. No BFF route invents another success
-envelope (#2353). Public JSON routes use `createPublicJsonProxy`
+envelope (#2353); a sign-in step the BFF answers itself (password, code,
+enrollment confirmation, second factor) answers `successResponse` too (#7806). Public JSON routes use `createPublicJsonProxy`
 (`lib/backend-proxy-route.server.ts`), login steps before a session
 `authStepProxy` (`lib/auth-proxy.server.ts`). Do not move a route across
 portal auth boundaries to share code. Streaming SSE uses its documented

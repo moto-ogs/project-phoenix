@@ -4,7 +4,10 @@ import { sessionMutationOriginError } from "~/server/auth/same-origin";
 import { problemResponse } from "~/lib/api-response-error.server";
 import { forwardJsonRequest } from "~/lib/json-proxy.server";
 import { tenant } from "~/lib/route-wrapper.server";
-import type { RouteContext } from "~/lib/route-wrapper-utils.server";
+import {
+  type RouteContext,
+  successResponse,
+} from "~/lib/route-wrapper-utils.server";
 import { installMintedSession } from "~/lib/session-transition.server";
 
 export const POST = tenantPortal.withAuth(
@@ -44,11 +47,13 @@ export const POST = tenantPortal.withAuth(
           );
           if (failure) return failure;
           // Explicit allowlist: no backend token or newly added backend field.
-          return Response.json({
-            expires_in: preview.expires_in,
-            target_account_id: preview.target_account_id,
-            target_name: preview.target_name,
-          });
+          return Response.json(
+            successResponse({
+              expires_in: preview.expires_in,
+              target_account_id: preview.target_account_id,
+              target_name: preview.target_name,
+            }),
+          );
         },
       },
       (path, call) =>

@@ -17,7 +17,13 @@ export const studentsConfig = defineEntityConfig<Student>({
   backUrl: "/database",
 
   api: {
-    basePath: "/api/students",
+    routes: {
+      list: "GET /api/students/",
+      get: "GET /api/students/{id}",
+      create: "POST /api/students/",
+      update: "PUT /api/students/{id}",
+      delete: "DELETE /api/students/{id}",
+    },
   },
 
   form: { sections: [] },

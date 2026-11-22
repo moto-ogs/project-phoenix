@@ -3,13 +3,14 @@ package traegerstaff
 import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 var traegerPortal = []common.PortalScope{common.PortalTraeger}
 
 // IDResponse names the record or type a write touched.
 type IDResponse struct {
-	ID common.ID `json:"id"`
+	ID ident.ID `json:"id"`
 }
 
 // PersonnelNumberRequest is the body PUT /{id}/personnel-number reads: the
@@ -28,7 +29,7 @@ func RecordRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: workforce.TraegerStaffOverview{}},
 		{Method: "GET", Pattern: "/export", Portals: traegerPortal, Query: []common.QueryParam{common.ListFormatQuery}, File: true},
 		{Method: "POST", Pattern: "/", Portals: traegerPortal, Request: StaffLinkRequest{}, Response: workforce.TraegerStaffRecordDetail{}},
-		{Method: "POST", Pattern: "/link-preview", Portals: traegerPortal, Request: StaffLinkRequest{}, Response: workforce.TraegerStaffLinkPreview{}},
+		{Method: "POST", Pattern: "/link-preview", Portals: traegerPortal, NoCommit: "the preview shows which records a link would join and links nothing", Request: StaffLinkRequest{}, Response: workforce.TraegerStaffLinkPreview{}},
 		{Method: "POST", Pattern: "/hire", Portals: traegerPortal, Request: HireRequest{}, Response: workforce.TraegerStaffRecordDetail{}},
 		{Method: "GET", Pattern: "/{id}", Portals: traegerPortal, Response: workforce.TraegerStaffRecordDetail{}},
 		{Method: "DELETE", Pattern: "/{id}", Portals: traegerPortal, Response: IDResponse{}},
@@ -134,10 +135,12 @@ func ImportRouteContracts() []common.RouteContract {
 			MaxBodyBytes: workforce.MaxStaffImportFileBytes + importFormOverhead,
 			TooLargeCode: common.CodeWorkforceTraegerStaffImportFileTooLarge, Response: workforce.StaffImport{}}
 	}
+	preview := upload("/preview")
+	preview.NoCommit = "an import preview checks the file and saves no row of it"
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: []workforce.StaffImportEntry{}},
 		upload("/"),
-		upload("/preview"),
+		preview,
 	}
 }
 

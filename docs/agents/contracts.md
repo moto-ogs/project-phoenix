@@ -940,7 +940,7 @@ Backend paths in this section are relative to `backend/`:
   the session's account (pinned before the code is compared) and mints a new
   Träger family with `mfa_by_device` false through the session mint, which
   retires the presented family with the recovery grace and keeps its switch
-  lineage. The BFF installs the pair and answers `{session_renewed}`; when it
+  lineage. The BFF installs the pair and answers `{ status, data: { session_renewed } }`; when it
   cannot install it, the portal runs its logout and signs in once without
   the device cookie (the BFF drops it for `ignore_trusted_device`); the
   school app links to the Träger login with

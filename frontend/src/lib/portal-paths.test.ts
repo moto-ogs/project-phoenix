@@ -1,10 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { stubPortalHostEnv } from "~/test/route-test-helpers";
-import {
-  configuredPortalOfHost,
-  portalAuthAnswer,
-  portalAuthEnvelope,
-} from "./portal-paths";
+import { configuredPortalOfHost, portalAuthAnswer } from "./portal-paths";
 
 describe("configuredPortalOfHost", () => {
   beforeEach(() => stubPortalHostEnv());
@@ -27,18 +23,17 @@ describe("configuredPortalOfHost", () => {
 });
 
 describe("auth step envelope", () => {
-  it("unwraps and wraps the steps the portal envelopes", () => {
+  it("unwraps the backend answer of the steps the portal envelopes", () => {
     const body = { status: "mfa_required" };
-    const answer = portalAuthEnvelope("operator", "login", body);
 
-    expect(answer).toEqual({ status: "success", data: body });
-    expect(portalAuthAnswer("operator", "login", answer)).toBe(body);
+    expect(
+      portalAuthAnswer("operator", "login", { status: "success", data: body }),
+    ).toBe(body);
   });
 
-  it("passes other portals' answers as they are", () => {
+  it("passes other portals' backend answers as they are", () => {
     const body = { status: "mfa_required" };
 
-    expect(portalAuthEnvelope("school", "login", body)).toBe(body);
     expect(portalAuthAnswer("school", "login", body)).toBe(body);
   });
 });

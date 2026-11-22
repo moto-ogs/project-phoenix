@@ -40,21 +40,21 @@ import (
 //
 // MaxParticipants is optional. Omitted or null means no participant limit.
 type createTemplateRequest struct {
-	Name            string     `json:"name"`
-	Type            string     `json:"type"` // care | activity | external | duty
-	Weekdays        []int      `json:"weekdays"`
-	StartTime       string     `json:"start_time"` // HH:MM
-	EndTime         string     `json:"end_time"`   // HH:MM
-	RoomID          common.ID  `json:"room_id"`
-	CategoryID      common.ID  `json:"category_id"`
-	PlanningTrackID *common.ID `json:"planning_track_id,omitempty"`
-	MaxParticipants *int       `json:"max_participants,omitempty"`
+	Name            string    `json:"name"`
+	Type            string    `json:"type"` // care | activity | external | duty
+	Weekdays        []int     `json:"weekdays"`
+	StartTime       string    `json:"start_time"` // HH:MM
+	EndTime         string    `json:"end_time"`   // HH:MM
+	RoomID          ident.ID  `json:"room_id"`
+	CategoryID      ident.ID  `json:"category_id"`
+	PlanningTrackID *ident.ID `json:"planning_track_id,omitempty"`
+	MaxParticipants *int      `json:"max_participants,omitempty"`
 	// RequiredStaff is the optional manual Personalbedarf override (#1839);
 	// omitted/null = derive from the Betreuungsschlüssel.
-	RequiredStaff    *int       `json:"required_staff,omitempty"`
-	WeekPattern      *int       `json:"week_pattern,omitempty"`
-	CalendarPeriodID *common.ID `json:"calendar_period_id,omitempty"`
-	EducationGroupID *common.ID `json:"education_group_id,omitempty"`
+	RequiredStaff    *int      `json:"required_staff,omitempty"`
+	WeekPattern      *int      `json:"week_pattern,omitempty"`
+	CalendarPeriodID *ident.ID `json:"calendar_period_id,omitempty"`
+	EducationGroupID *ident.ID `json:"education_group_id,omitempty"`
 	// Zielgruppe (target-group) fields. TargetGroupType is one of
 	// timetableModule.TargetGroupType* ("jahrgang" | "klasse" | "gruppe" |
 	// "angebot" | "none"/omitted). "gruppe" reuses EducationGroupID above
@@ -70,8 +70,8 @@ type createTemplateRequest struct {
 	// Jahrgänge (empty = all). student_ids must be empty when set, and the
 	// rule is mutually exclusive with the multi-target list above (targets
 	// never carry the type "angebot").
-	SourceCareOfferingIDs []common.ID `json:"source_care_offering_ids,omitempty"`
-	SourceGradeLevels     []int       `json:"source_grade_levels,omitempty"`
+	SourceCareOfferingIDs []ident.ID `json:"source_care_offering_ids,omitempty"`
+	SourceGradeLevels     []int      `json:"source_grade_levels,omitempty"`
 	// SourceSchoolClasses narrows the same rule to concrete Schulklassen
 	// (#2482, empty = all). Mutually exclusive with source_grade_levels — a
 	// payload carrying both is rejected with 400.
@@ -94,12 +94,12 @@ type createTemplateRequest struct {
 	// EndDate is the optional last day of the series (YYYY-MM-DD, inclusive,
 	// #3594): no occurrences after it. Must not lie before the start nor after
 	// the planning period. Omitted = the series runs until the period ends.
-	EndDate         *string     `json:"end_date,omitempty"`
-	MaterializeFrom *string     `json:"materialize_from,omitempty"` // YYYY-MM-DD
-	MaterializeTo   *string     `json:"materialize_to,omitempty"`   // YYYY-MM-DD
-	StudentIDs      []common.ID `json:"student_ids,omitempty"`
-	StaffIDs        []common.ID `json:"staff_ids,omitempty"`
-	PrimaryStaffID  *common.ID  `json:"primary_staff_id,omitempty"`
+	EndDate         *string    `json:"end_date,omitempty"`
+	MaterializeFrom *string    `json:"materialize_from,omitempty"` // YYYY-MM-DD
+	MaterializeTo   *string    `json:"materialize_to,omitempty"`   // YYYY-MM-DD
+	StudentIDs      []ident.ID `json:"student_ids,omitempty"`
+	StaffIDs        []ident.ID `json:"staff_ids,omitempty"`
+	PrimaryStaffID  *ident.ID  `json:"primary_staff_id,omitempty"`
 	// WeekdayAssignments overrides the shared roster above for individual
 	// weekdays (#2129). Omitted/empty = the same staff and children on every
 	// weekday of the series.
@@ -107,10 +107,10 @@ type createTemplateRequest struct {
 }
 
 type templateTargetRequest struct {
-	Type             string     `json:"type"`
-	GradeLevel       *int16     `json:"grade_level,omitempty"`
-	SchoolClass      *string    `json:"school_class,omitempty"`
-	EducationGroupID *common.ID `json:"education_group_id,omitempty"`
+	Type             string    `json:"type"`
+	GradeLevel       *int16    `json:"grade_level,omitempty"`
+	SchoolClass      *string   `json:"school_class,omitempty"`
+	EducationGroupID *ident.ID `json:"education_group_id,omitempty"`
 }
 
 func (target templateTargetRequest) model() *timetableModule.GroupTargetInput {
@@ -316,12 +316,12 @@ func normalizeTemplateListKind(raw *string) (*string, error) {
 // planner UI: the new template id, the schedule ids, and (if materialize
 // was requested) the count of fresh instances on the grid.
 type createTemplateResponse struct {
-	TemplateID       common.ID   `json:"template_id"`
-	TimeframeID      common.ID   `json:"timeframe_id"`
-	ScheduleIDs      []common.ID `json:"schedule_ids"`
-	InstancesCreated int         `json:"instances_created,omitempty"`
-	MaterializedFrom string      `json:"materialized_from,omitempty"`
-	MaterializedTo   string      `json:"materialized_to,omitempty"`
+	TemplateID       ident.ID   `json:"template_id"`
+	TimeframeID      ident.ID   `json:"timeframe_id"`
+	ScheduleIDs      []ident.ID `json:"schedule_ids"`
+	InstancesCreated int        `json:"instances_created,omitempty"`
+	MaterializedFrom string     `json:"materialized_from,omitempty"`
+	MaterializedTo   string     `json:"materialized_to,omitempty"`
 }
 
 // parsedCreateTemplate holds the request plus the values derived from cheap

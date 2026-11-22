@@ -47,7 +47,8 @@ func RouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{
 			Method: "POST", Pattern: "/", Portals: []common.PortalScope{common.PortalTenant},
-			Request: SchoolSearchRequest{}, Response: schoolsearchview.SearchResult{},
+			NoCommit: "a search reads; the query travels in the body",
+			Request:  SchoolSearchRequest{}, Response: schoolsearchview.SearchResult{},
 			Enums: []common.EnumContract{{
 				Type: schoolsearchview.MatchField(""),
 				Values: []string{

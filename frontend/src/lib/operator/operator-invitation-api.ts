@@ -103,17 +103,8 @@ export async function establishOperatorInvitationSession(
       `Invitation session failed (${response.status})`,
     );
   }
-  const body: unknown = await response.json();
-  if (
-    typeof body !== "object" ||
-    body === null ||
-    !("flow_id" in body) ||
-    typeof body.flow_id !== "string" ||
-    body.flow_id === ""
-  ) {
-    throw new Error("Einladungssitzung ist ungültig");
-  }
-  return body.flow_id;
+  const { data } = (await response.json()) as ApiResponse<{ flow_id: string }>;
+  return data.flow_id;
 }
 
 export async function validateOperatorInvitation(

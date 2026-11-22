@@ -277,29 +277,13 @@ export function isActivityCreator(
 export function mapSupervisorOption(
   supervisor: ActivitySupervisorResponse,
 ): SupervisorOption {
-  const id = String(supervisor.id);
+  const id = supervisor.id;
   const name =
     `${supervisor.first_name ?? ""} ${supervisor.last_name ?? ""}`.trim();
   return { id, name: name || `Supervisor ${id}` };
 }
 
-// Request/Response types
-export interface UpdateActivityRequest {
-  name: string;
-  max_participants: number | null;
-  is_open: boolean;
-  category_id: number;
-  planned_room_id?: number;
-  supervisor_ids?: number[];
-  schedules?: {
-    weekday: number;
-    timeframe_id?: number;
-  }[];
-}
-
 // Added: Activity filter type
 export interface ActivityFilter {
-  search?: string;
   category_id?: string;
-  is_open_ags?: boolean;
 }

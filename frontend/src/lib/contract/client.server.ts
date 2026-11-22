@@ -15,35 +15,6 @@ import type { RequestBody } from "./runtime";
 
 const logger = createLogger({ component: "Contract" });
 
-// These queries do not commit the requested domain change. Import previews
-// may write audit rows, so this is not the read-only-session permission list.
-// Match explicit catalog keys, not a path suffix; unknown POSTs remain writes.
-const READ_ONLY_POST_ROUTES = new Set([
-  "POST /api/import/class-list-entries/preview",
-  "POST /api/import/opening-balances/preview",
-  "POST /api/import/students/preview",
-  "POST /api/import/teachers/preview",
-  "POST /api/parent-announcements/letter-preview",
-  "POST /api/search/",
-  "POST /api/students/arrival-schedules/status",
-  "POST /api/students/care-end/preview",
-  "POST /api/students/care-withdrawals/{completionId}/care-end/preview",
-  "POST /api/students/offering-change-requests/{requestId}/preview",
-  "POST /api/students/{id}/pickup-schedules/preview",
-  "POST /api/timetable/lists/options",
-  "POST /api/timetable/lists/preview",
-  "POST /parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate/preview",
-  "POST /school/parent-letters/letter-preview",
-  "POST /traeger/catalog/phases/{id}/preview",
-  "POST /traeger/contract-imports/preview",
-  "POST /traeger/family-children/imports/preview",
-  "POST /traeger/holiday-closures/preview",
-  "POST /traeger/master-data/document-templates/{kind}/preview",
-  "POST /traeger/sepa-mandates/imports/preview",
-  "POST /traeger/staff-record-imports/preview",
-  "POST /traeger/staff-records/link-preview",
-]);
-
 interface ContractFailure {
   status: number;
   /** The registry code of the RFC 9457 body, when the backend sent one. */
@@ -72,17 +43,31 @@ function failure(cause: ApiResponseError): ContractResult<never> {
   };
 }
 
-/** Checks a payload against a contract decoder. */
+/**
+ * Whether a request may have committed a change its caller asked for: every
+ * method but GET, unless the contract names why a POST commits nothing
+ * (`noCommit`, a preview or a search). An unreadable answer of such a request
+ * asks to reload instead of offering a resend (#7563).
+ */
+export function commits(route: {
+  readonly method: string;
+  readonly noCommit?: string;
+}): boolean {
+  return route.method !== "GET" && route.noCommit === undefined;
+}
+
+/**
+ * Checks a payload against a contract decoder. `route` is the catalog line
+ * for the log, `write` what {@link commits} says of it.
+ */
 export function decodeContract<T>(
   route: string,
   schema: z.ZodType<T>,
   payload: unknown,
+  write: boolean,
 ): ContractResult<T> {
   const parsed = schema.safeParse(payload);
   if (parsed.success) return { ok: true, value: parsed.data };
-  // A backend success may already have committed a change. Only known
-  // queries can safely offer a retry; writes ask to reload first (#7563).
-  const write = !route.startsWith("GET ") && !READ_ONLY_POST_ROUTES.has(route);
   // Paths and issue codes only: the values are personal data.
   logger.error("contract_decode_failed", {
     route,
@@ -117,13 +102,14 @@ export async function contractGet<T>(
     if (isApiResponseError(error)) return failure(error);
     throw error;
   }
-  return decodeContract(route, schema, payload);
+  return decodeContract(route, schema, payload, false);
 }
 
 /** A generated route entry with a body: `routes["POST /api/students/"]`. */
 interface WriteRoute<B, T> {
   method: "POST" | "PUT";
   pattern: string;
+  noCommit?: string;
   request: RequestBody<B>;
   response: z.ZodType<T>;
 }
@@ -152,5 +138,6 @@ export async function contractWrite<B, T>(
     `${route.method} ${route.pattern}`,
     route.response,
     payload,
+    commits(route),
   );
 }

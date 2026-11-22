@@ -89,9 +89,9 @@ type CareRuleInput struct {
 	CountSchoolIDs      []ident.ID     `json:"count_school_ids"`
 	SiblingFromChild    *int           `json:"sibling_from_child"`
 	DiscountBasisPoints *int           `json:"discount_basis_points"`
-	DiscountCents       *int64         `json:"discount_cents"`
-	PriceCents          *int64         `json:"price_cents"`
-	CapCents            *int64         `json:"cap_cents"`
+	DiscountCents       *int64         `json:"discount_cents" contract:"number"`
+	PriceCents          *int64         `json:"price_cents" contract:"number"`
+	CapCents            *int64         `json:"cap_cents" contract:"number"`
 	// TariffSiblingPrice is the price-list mode of a sibling rule (#6196):
 	// each further child pays the sibling price of the price list.
 	TariffSiblingPrice bool `json:"tariff_sibling_price"`
@@ -165,15 +165,15 @@ type CareReduction struct {
 	ChildRank           *int     `json:"child_rank"`
 	FamilyChildren      *int     `json:"family_children"`
 	DiscountBasisPoints *int     `json:"discount_basis_points"`
-	DiscountCents       *int64   `json:"discount_cents"`
-	PriceCents          *int64   `json:"price_cents"`
-	CapCents            *int64   `json:"cap_cents"`
+	DiscountCents       *int64   `json:"discount_cents" contract:"number"`
+	PriceCents          *int64   `json:"price_cents" contract:"number"`
+	CapCents            *int64   `json:"cap_cents" contract:"number"`
 	// TariffSiblingPrice copies the price-list mode of a sibling rule.
 	TariffSiblingPrice bool `json:"tariff_sibling_price"`
 	// CareOfferingIDs are the modules the rule reduced, none for all; a
 	// later run of the month places an earlier reduction by them.
 	CareOfferingIDs []ident.ID `json:"care_offering_ids"`
-	AmountCents     int64      `json:"amount_cents"`
+	AmountCents     int64      `json:"amount_cents" contract:"number"`
 }
 
 // CareReductions lets the Abrechnung of a Träger keep the rules of the

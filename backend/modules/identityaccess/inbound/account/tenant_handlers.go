@@ -98,11 +98,11 @@ func newTenantResolveResponse(school *TenantSchool, resolved tenantShellSettings
 	}
 
 	return &TenantResolveResponse{
-		TenantID:                      common.ID(school.ID),
+		TenantID:                      ident.ID(school.ID),
 		Slug:                          school.Slug,
 		Name:                          school.Name,
 		Subdomain:                     school.Subdomain,
-		OrganizationID:                common.ID(school.OrganizationID),
+		OrganizationID:                ident.ID(school.OrganizationID),
 		OrganizationName:              school.OrganizationName,
 		TraegerName:                   school.TraegerName,
 		Hidden:                        school.Hidden,

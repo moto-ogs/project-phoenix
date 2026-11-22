@@ -1,8 +1,8 @@
 package timetracking
 
 import (
-	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ScheduleEntryRequest represents a single day in the schedule
@@ -23,10 +23,10 @@ type ScheduleEntryResponse struct {
 
 // ScheduleModelInfo describes the assigned work-time template, when there is one.
 type ScheduleModelInfo struct {
-	ID                 common.ID `json:"id"`
-	Name               string    `json:"name"`
-	RotationLength     int       `json:"rotation_length"`
-	RotationAnchorDate string    `json:"rotation_anchor_date"`
+	ID                 ident.ID `json:"id"`
+	Name               string   `json:"name"`
+	RotationLength     int      `json:"rotation_length"`
+	RotationAnchorDate string   `json:"rotation_anchor_date"`
 }
 
 // ScheduleResponse wraps the resolved schedule with rotation metadata.
@@ -54,7 +54,7 @@ type ScheduleResponse struct {
 //	create a tenant template from the same payload and bind it.
 type ScheduleUpdateRequest struct {
 	Mode               string                 `json:"mode"`
-	ModelID            *common.ID             `json:"model_id,omitempty"`
+	ModelID            *ident.ID              `json:"model_id,omitempty"`
 	RotationLength     int                    `json:"rotation_length,omitempty"`
 	RotationAnchorDate string                 `json:"rotation_anchor_date,omitempty"`
 	Entries            []ScheduleEntryRequest `json:"entries"`

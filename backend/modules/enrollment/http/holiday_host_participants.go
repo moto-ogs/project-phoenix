@@ -103,9 +103,9 @@ func (rs *HolidayHostResource) listWeeks(w http.ResponseWriter, r *http.Request)
 // holidayHomeSchoolResponse is a home school count with the school's name; a
 // nil SchoolID counts the holiday guests.
 type holidayHomeSchoolResponse struct {
-	SchoolID *common.ID `json:"school_id"`
-	Name     string     `json:"name"`
-	Count    int        `json:"count"`
+	SchoolID *ident.ID `json:"school_id"`
+	Name     string    `json:"name"`
+	Count    int       `json:"count"`
 }
 
 // holidayParticipantResponse is a participant with the name of its home

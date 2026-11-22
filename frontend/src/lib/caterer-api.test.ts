@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { SchoolOrdersResponse } from "./contract/caterer-schools.generated";
+import type * as catererSchoolsContract from "./contract/caterer-schools.generated";
 
 const { mockAuthFetch } = vi.hoisted(() => ({ mockAuthFetch: vi.fn() }));
 vi.mock("./api-helpers", () => ({ authFetch: mockAuthFetch }));
@@ -7,8 +7,8 @@ vi.mock("./api-helpers", () => ({ authFetch: mockAuthFetch }));
 import { fetchCatererOrders } from "./caterer-api";
 
 function orders(
-  overrides: Partial<SchoolOrdersResponse> = {},
-): SchoolOrdersResponse {
+  overrides: Partial<catererSchoolsContract.SchoolOrdersResponse> = {},
+): catererSchoolsContract.SchoolOrdersResponse {
   return {
     school: { id: "4", name: "Schule am Berg" },
     delivery_address: "Bergstraße 1",

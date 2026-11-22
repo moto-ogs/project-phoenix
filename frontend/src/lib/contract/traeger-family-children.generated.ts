@@ -259,6 +259,7 @@ export const routes = {
     method: "POST",
     pattern: "/traeger/family-children/imports/preview",
     portals: ["org"],
+    noCommit: "an import preview checks the file and saves no row of it",
     maxBodyBytes: 2359296,
     tooLargeCode: "parent_billing.family_children_import_file_too_large",
     request: multipart,

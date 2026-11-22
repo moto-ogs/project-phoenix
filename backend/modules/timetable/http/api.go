@@ -237,10 +237,10 @@ func (req *CalendarPeriodRequest) Bind(_ *http.Request) error {
 // period response (WP-B2, QA #1577 H3). One entry is emitted per overlapping
 // active period.
 type PeriodWarning struct {
-	Code                   string      `json:"code"`
-	Message                string      `json:"message"`
-	OverlappingPeriodIDs   []common.ID `json:"overlapping_period_ids"`
-	OverlappingPeriodNames []string    `json:"overlapping_period_names"`
+	Code                   string     `json:"code"`
+	Message                string     `json:"message"`
+	OverlappingPeriodIDs   []ident.ID `json:"overlapping_period_ids"`
+	OverlappingPeriodNames []string   `json:"overlapping_period_names"`
 }
 
 // warningCodeOverlappingActivePeriods is the machine-readable code the
@@ -252,7 +252,7 @@ const germanDateLayout = "02.01.2006"
 
 // CalendarPeriodResponse represents a calendar period in API responses
 type CalendarPeriodResponse struct {
-	ID              common.ID       `json:"id"`
+	ID              ident.ID        `json:"id"`
 	Name            string          `json:"name"`
 	PeriodType      string          `json:"period_type"`
 	StartDate       string          `json:"start_date"`
@@ -378,7 +378,7 @@ func (rs *Resource) attachOverlapWarnings(ctx context.Context, period schoolcale
 				germanCalendarDate(o.StartDate),
 				germanCalendarDate(o.EndDate),
 			),
-			OverlappingPeriodIDs:   []common.ID{common.ID(o.ID)},
+			OverlappingPeriodIDs:   []ident.ID{ident.ID(o.ID)},
 			OverlappingPeriodNames: []string{o.Name},
 		})
 	}

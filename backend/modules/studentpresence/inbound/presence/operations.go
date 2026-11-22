@@ -30,7 +30,6 @@ type PresenceOperations interface {
 	// Reads
 	SessionRooms(context.Context, []int64) ([]studentpresence.SessionRoomSummary, error)
 	DashboardAnalytics(context.Context) (studentpresence.DashboardAnalytics, error)
-	CrossTenantStudents(context.Context, int64) ([]studentpresence.CrossTenantStudent, error)
 	GetTrackingIndicators(context.Context, []int64, []string) (map[int64][]bool, error)
 }
 
