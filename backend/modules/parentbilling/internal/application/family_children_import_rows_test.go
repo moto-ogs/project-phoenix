@@ -509,3 +509,27 @@ func (s *siblingFamilyImportStore) ConfirmImportedFamilyChildren(_ context.Conte
 	s.stored = append(s.stored, numbers...)
 	return nil
 }
+
+// A row whose renewal would start only after the child left still speaks
+// against its siblings' rows for the family it belonged to on its day
+// (#7863): both children were in the family on 01.10., the confirmation ran
+// until 15.11., Mia's contract ended on 31.10. Neither row stores a number.
+func TestFamilyImportRejectedRenewalStillContradictsSibling(t *testing.T) {
+	t.Parallel()
+	today := calendar.NewDate(2026, 11, 22)
+	left := sjrVersion(t, contractMia, schoolIspringen, 1, "2026-09-01", "2026-10-31")
+	stayed := sjrVersion(t, contractNoah, schoolIspringen, 2, "2026-09-01", "2027-06-30")
+	stayed.ChildFirstName = "Noah"
+	counts := []parentbilling.FamilyChildCount{{ID: 5, ContractID: ident.ID(contractNoah), FamilyEmail: "family@example.org",
+		ConfirmedChildren: ptr(4), ValidFrom: ptr(calendar.NewDate(2026, 8, 1)), ValidUntil: ptr(calendar.NewDate(2026, 11, 15))}}
+
+	result := applySiblingFamilyImport(t, today, []parentbilling.CareContractVersion{left, stayed}, counts,
+		"Mia;Beispiel;3;01.10.2026\nNoah;Beispiel;2;01.10.2026\n")
+	require.Len(t, result.Rows, 2)
+	assert.Equal(t, parentbilling.FamilyImportInvalid, result.Rows[0].Status)
+	assert.Equal(t, []parentbilling.FamilyChildrenImportProblem{{Field: parentbilling.FamilyImportFieldChildLastName,
+		Code: parentbilling.FamilyImportProblemContractEnded}}, result.Rows[0].Problems)
+	assert.Equal(t, parentbilling.FamilyImportConflict, result.Rows[1].Status)
+	assert.Equal(t, []parentbilling.FamilyChildrenImportProblem{{Field: parentbilling.FamilyImportFieldChildren,
+		Code: parentbilling.FamilyImportProblemRowsDiffer}}, result.Rows[1].Problems)
+}

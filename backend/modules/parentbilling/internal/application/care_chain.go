@@ -286,6 +286,11 @@ func rankFamilies(entries []*careChainEntry, rule *parentbilling.ContributionRul
 			child = &rankedCareChild{key: entry.child, birthDate: entry.birthDate}
 			families[family][entry.child] = child
 		}
+		if child.birthDate == nil {
+			// Any entry may know the birth date, e.g. an issued contract
+			// outside the month when the draft names none (#7863).
+			child.birthDate = entry.birthDate
+		}
 		child.base += entry.base(rule)
 		child.entries = append(child.entries, entry)
 	}

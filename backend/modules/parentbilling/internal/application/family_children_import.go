@@ -264,11 +264,15 @@ func (c *familyImportCandidate) showDay(stored map[string]calendar.Date) {
 // over nothing, but its number speaks against the rows of its families.
 func familyImportRows(candidates []familyImportCandidate) (rows []importedChildren, owner []int) {
 	for i, candidate := range candidates {
-		witness := candidate.row.RepeatsLine > 0 || candidate.speaksOnly
-		if (candidate.row.Status != "" && !witness) || candidate.row.Children == nil {
+		speaks := candidate.row.RepeatsLine > 0 || candidate.speaksOnly
+		if candidate.row.Children == nil {
 			continue
 		}
 		for _, target := range candidate.targets {
+			witness := speaks || target.witness
+			if candidate.row.Status != "" && !witness {
+				continue
+			}
 			rows = append(rows, importedChildren{family: target.family, witness: witness, number: parentbilling.ImportedFamilyChildren{
 				Line: candidate.row.Line, ContractID: target.contractID, Children: *candidate.row.Children, ValidFrom: candidate.validFrom}})
 			owner = append(owner, i)

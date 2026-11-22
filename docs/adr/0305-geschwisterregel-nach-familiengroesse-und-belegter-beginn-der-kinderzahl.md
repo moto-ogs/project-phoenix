@@ -147,10 +147,15 @@ Entscheidung von Yannick am 22.11.2026.
   Schule geht einem Vertrag an einer anderen Schule vor. Folgen: Im
   Größenmodus zählt das Kind zur Familiengröße. Im Rangmodus mit Kinderzahl
   geht es nicht mehr als Kind „an anderer Schule“ von der Zahl ab; es steht
-  ohne Beitrag hinter den gereihten Kindern (ADR 0115 Punkt 3), deshalb
-  ändert sich dort kein Rang und kein Betrag, nur die Kinderzahl auf der
-  Ermäßigung („2. Kind von 3“ statt „von 2“). Die taggenaue Abrechnung
-  rechnet wie bisher.
+  ohne Beitrag hinter den gereihten Kindern (ADR 0115 Punkt 3). Kam es von
+  einer anderen Schule, ändert sich deshalb kein Rang und kein Betrag, nur
+  die Kinderzahl auf der Ermäßigung („2. Kind von 3“ statt „von 2“). Buchte
+  sein Vertrag am 1. dagegen keine Betreuung (etwa nur Mittagessen), stand es
+  bisher als Geschwister ohne Vertrag vorn; jetzt steht es als Kind mit
+  Vertrag ohne Beitrag hinten, und ein Geschwisterkind kann im Wechselmonat
+  einen Rang verlieren und mehr zahlen. Das folgt aus der Reihenfolge nach
+  ADR 0088 (Kind mit Vertrag zu 0 €). Die taggenaue Abrechnung rechnet wie
+  bisher.
 - **Die Schulen der Regel zählen immer (Punkt 2).** Das ersetzt in
   Entscheidung 2 den Satz „Der Rangmodus zählt wie bisher nur die gewählten
   Schulen.“ In beiden Modi zählen die Schulen der Regel und dazu die unter
@@ -165,8 +170,9 @@ Entscheidung von Yannick am 22.11.2026.
   Änderungsbescheid rechnet dagegen alle Monate des Bescheids neu, auch
   frühere (ADR 0182). Dort gilt die neue Zählung also auch rückwirkend. Weil
   beide Punkte nur Kinder zur Zählung hinzunehmen, können Rang und
-  Familiengröße nur steigen; was die Familie zusammen zahlt, sinkt oder
-  bleibt. Ein einzelner Vertrag kann trotzdem mehr zahlen, wenn ein
+  Familiengröße meist nur steigen; was die Familie zusammen zahlt, sinkt
+  dann oder bleibt. Ausnahme ist der Rangfall oben (Kind ohne Betreuung am
+  1.). Ein einzelner Vertrag kann außerdem mehr zahlen, wenn ein
   Höchstbetrag der Familie greift: Er verteilt den Überschuss neu auf die
   Kinder (Beispiel: 100 € und 80 € bei 120 € Höchstbetrag waren 100 € und
   20 €; mit 50 % für beide sind es 50 € und 40 €).

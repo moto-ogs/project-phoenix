@@ -192,6 +192,10 @@ type familyImportTarget struct {
 	// inForce are the times the child's contracts of the family are in
 	// force, one per version of a contract.
 	inForce []familyImportSpan
+	// witness marks a family the child belonged to on the row's day but
+	// that the number no longer reaches: the row speaks against its rows
+	// and takes over nothing there (#7863).
+	witness bool
 }
 
 // familyImportSpan is the time one version of a contract is in force, both
@@ -394,13 +398,36 @@ func (c *familyImportCheck) match(row *parentbilling.FamilyChildrenImportRow, sc
 	if speaksOnly {
 		return c.targets(row, found, speaksOnly)
 	}
-	running := c.applicableContracts(found, from)
+	running := c.applicableContracts(slices.Clone(found), from)
+	heard := heardContracts(found, running, from)
+	var targets []familyImportTarget
 	if len(running) == 0 {
 		problemOf(row, field, parentbilling.FamilyImportProblemContractEnded)
 		row.Status = parentbilling.FamilyImportInvalid
-		return nil
+	} else {
+		targets = c.targets(row, running, speaksOnly)
 	}
-	return c.targets(row, running, speaksOnly)
+	if len(heard) > 0 {
+		contractID := row.ContractID
+		for _, target := range c.targets(row, heard, true) {
+			target.witness = true
+			targets = append(targets, target)
+		}
+		if len(running) > 0 {
+			row.ContractID = contractID
+		}
+	}
+	return targets
+}
+
+// heardContracts are the contracts of families the child belonged to on the
+// row's day that applicableContracts left out: a renewal there would start
+// only after the child left. The row's number still speaks against their
+// rows (ADR 0305, #7863).
+func heardContracts(found, running []familyImportContract, from calendar.Date) []familyImportContract {
+	return slices.DeleteFunc(slices.Clone(found), func(contract familyImportContract) bool {
+		return contract.endedBefore(from) || slices.ContainsFunc(running, func(kept familyImportContract) bool { return kept.id == contract.id })
+	})
 }
 
 // applicableContracts keeps a historical contract for a historical count,
