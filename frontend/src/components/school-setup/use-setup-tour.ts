@@ -9,6 +9,7 @@ import {
   type SetupTourBranch,
   type SetupTourStop,
 } from "./setup-tours";
+import { useResponsivePanelSheet } from "../ui/responsive-panel";
 
 /** Die Touren einer Checkliste, je Schritt höchstens eine. */
 export type SetupTourSet<K extends string> = Readonly<
@@ -79,6 +80,10 @@ export function findVisibleTarget(selector: string): Element | null {
   return null;
 }
 
+function targetFor(stop: SetupTourStop, asSheet: boolean): string {
+  return asSheet ? (stop.mobileTarget ?? stop.target) : stop.target;
+}
+
 /**
  * Die Adresse, mit der die Tour ihre Seite öffnet: die beim Start genannte,
  * sonst die der Tour.
@@ -100,10 +105,10 @@ function firstPageStop(stops: readonly SetupTourStop[]): number {
  */
 function closeOverlayLeftBehind(
   shown: Element | null,
-  previous: SetupTourStop,
+  previousTarget: string,
 ): void {
   const overlay = shown?.closest('[role="dialog"]');
-  if (!overlay || overlay.querySelector(previous.target)) return;
+  if (!overlay || overlay.querySelector(previousTarget)) return;
   const close = overlay.querySelector<HTMLElement>("[data-overlay-close]");
   close?.click();
 }
@@ -136,6 +141,8 @@ export interface ActiveTourStop {
   missing: boolean;
   /** Gibt es eine Station, zu der „Zurück“ führt? */
   canGoBack: boolean;
+  /** Die Station zeigt am Telefon auf einen Auslöser statt auf ein Blatt. */
+  usesMobileTarget: boolean;
   /** Was die Sprechblase sagt: der Text der Station oder seine Variante. */
   text: string;
 }
@@ -167,6 +174,9 @@ export function useSetupTour<K extends string>(
   // Über eine Ref, damit ein neues Router-Objekt die laufende Suche nicht
   // neu startet und das gefundene Ziel verwirft.
   const router = useTenantRouter();
+  // Dieselbe Breitenentscheidung wie das Menü: Unter `sm` zeigt ein
+  // `mobileTarget` auf dessen Auslöser statt auf den Inhalt des Blatts.
+  const asSheet = useResponsivePanelSheet();
   const routerRef = useRef(router);
   useEffect(() => {
     routerRef.current = router;
@@ -274,7 +284,7 @@ export function useSetupTour<K extends string>(
 
   const back = useCallback(() => {
     if (!tour || !canGoBack || !previousStop || !definition) return;
-    closeOverlayLeftBehind(target, previousStop);
+    closeOverlayLeftBehind(target, targetFor(previousStop, asSheet));
     if (previousNeedsPage) routerRef.current.push(pageHref(definition, tour));
     setTour({ ...tour, index: previousIndex, reviewing: true });
   }, [
@@ -285,6 +295,7 @@ export function useSetupTour<K extends string>(
     previousNeedsPage,
     definition,
     target,
+    asSheet,
   ]);
 
   const start = useCallback(
@@ -343,6 +354,7 @@ export function useSetupTour<K extends string>(
   // Seitenwechsel oder wenn ein Fenster aufgeht.
   useEffect(() => {
     if (!stop || !tour || !definition) return undefined;
+    const targetSelector = targetFor(stop, asSheet);
     // Stationen der Seitenleiste gelten überall. Alle anderen erst, wenn ihre
     // Seite geladen ist: Nach dem Klick in der Seitenleiste steht kurz noch
     // die alte Seite da, und deren gleichnamiger Knopf wäre das falsche Ziel.
@@ -394,7 +406,7 @@ export function useSetupTour<K extends string>(
         jump(tour, tour.index + (stop.skipCount ?? 1), definition.stops.length);
         return true;
       }
-      const found = findVisibleTarget(stop.target);
+      const found = findVisibleTarget(targetSelector);
       if (found) {
         shown = found;
         setSearch({
@@ -437,7 +449,7 @@ export function useSetupTour<K extends string>(
       }, POLL_MS);
     }
     return () => window.clearInterval(timer);
-  }, [stop, tour, definition, pathname, onStopPage, jump]);
+  }, [stop, tour, definition, pathname, onStopPage, jump, asSheet]);
 
   // Die Person hat die Seite der Station verlassen, etwa über einen Link in
   // der Seitenleiste. Die Tour sucht dort nichts mehr und
@@ -503,6 +515,7 @@ export function useSetupTour<K extends string>(
             target,
             missing,
             canGoBack,
+            usesMobileTarget: asSheet && stop.mobileTarget !== undefined,
             text:
               current?.variant && stop.textWhenVisible
                 ? stop.textWhenVisible.text
