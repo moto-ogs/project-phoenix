@@ -25,6 +25,7 @@ OPTIONAL_VALUES = {
 # requires the whole group once EMAIL_PROVIDER names a provider. #5935 moves these
 # keys to the fail-fast forms. The upload group is required only in S3 mode.
 PENDING_SOPS_VALUES = {
+    "HUBSPOT_DEMO_TOKEN",
     "EMAIL_PROVIDER", "EMAIL_FROM_SECURITY_ADDRESS", "EMAIL_FROM_NOTICES_ADDRESS",
     "EMAIL_WEBHOOK_SECRETS", "LETTERMINT_TEAM_API_TOKEN", "LETTERMINT_WEBHOOK_ID",
     "EMAIL_FALLBACK_SMTP_HOST", "EMAIL_FALLBACK_SMTP_PORT", "EMAIL_FALLBACK_SMTP_USER",
@@ -188,7 +189,10 @@ def main():
                 # Revisions before #7226 run the embedded Worker everywhere.
                 worker = target != "demo" and (not args.revision or "  worker:" in path.read_text())
                 omitted = ({"demo-runtime"} if not sidecar else set()) | ({"worker"} if not worker else set())
-                check(path, target, {name: keys for name, keys in expected.items() if name not in omitted})
+                service_keys = {name: list(keys) for name, keys in expected.items() if name not in omitted and name != "server-demo-only"}
+                if target == "demo" and (not args.revision or "HUBSPOT_DEMO_TOKEN:" in path.read_text()):
+                    service_keys["server"] += expected["server-demo-only"]
+                check(path, target, service_keys)
                 check_missing_config(path, directory)
                 if sidecar:
                     check_demo_runtime(path, bool(args.revision))

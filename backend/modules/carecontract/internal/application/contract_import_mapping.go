@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -155,12 +156,12 @@ func settleContractImportMapping(mapping carecontract.ContractImportMapping, sch
 	if mapping.Columns.School != "" {
 		mapping.SchoolID = 0
 	} else if mapping.SchoolID == 0 && len(schools) == 1 {
-		mapping.SchoolID = schools[0].school.ID
+		mapping.SchoolID = ident.ID(schools[0].school.ID)
 	}
 	if mapping.Columns.Module != "" {
 		mapping.ModuleName = ""
 	} else if mapping.ModuleName == "" {
-		if names := importModuleNames(schools, mapping.SchoolID); len(names) == 1 {
+		if names := importModuleNames(schools, mapping.SchoolID.Int64()); len(names) == 1 {
 			mapping.ModuleName = names[0]
 		}
 	}
@@ -192,7 +193,7 @@ func importModuleNames(schools []importSchool, schoolID int64) []string {
 // choice.
 func resolveContractImportMapping(headers []string, mapping carecontract.ContractImportMapping, schools []importSchool) (contractImportIndex, []string, error) {
 	refused := map[string]string{}
-	index := contractImportIndex{fields: map[string]int{}, schoolID: mapping.SchoolID, moduleName: mapping.ModuleName,
+	index := contractImportIndex{fields: map[string]int{}, schoolID: mapping.SchoolID.Int64(), moduleName: mapping.ModuleName,
 		effectiveFrom: mapping.EffectiveFrom}
 	used := map[string]string{}
 	for _, field := range contractImportFields {
@@ -210,7 +211,7 @@ func resolveContractImportMapping(headers []string, mapping carecontract.Contrac
 			index.fields[field], used[header] = position, field
 		}
 	}
-	if mapping.SchoolID != 0 && !slices.ContainsFunc(schools, func(s importSchool) bool { return s.school.ID == mapping.SchoolID }) {
+	if mapping.SchoolID != 0 && !slices.ContainsFunc(schools, func(s importSchool) bool { return ident.ID(s.school.ID) == mapping.SchoolID }) {
 		refused["school_id"] = "unknown"
 	}
 	if mapping.EffectiveFrom != nil && mapping.EffectiveFrom.Before(earliestImportDay) {

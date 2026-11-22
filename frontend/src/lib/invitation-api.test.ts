@@ -3,8 +3,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type {
   InvitationAcceptRequest,
   CreateInvitationRequest,
-  BackendInvitationValidation,
 } from "./invitation-helpers";
+import type { InvitationValidationResponse } from "./contract/auth-invitations.generated";
 import {
   validateInvitation,
   acceptInvitation,
@@ -23,7 +23,7 @@ vi.mock("./invitation-helpers", async () => {
   return {
     ...actual,
     mapInvitationValidationResponse: vi.fn(
-      (data: BackendInvitationValidation) => ({
+      (data: InvitationValidationResponse) => ({
         email: data.email,
         roleName: data.role_name,
         firstName: data.first_name,
@@ -49,13 +49,16 @@ vi.mock("./invitation-helpers", async () => {
 });
 
 // Sample test data
-const sampleBackendValidation: BackendInvitationValidation = {
+const sampleBackendValidation: InvitationValidationResponse = {
   email: "teacher@example.com",
   role_name: "Teacher",
   first_name: "John",
   last_name: "Doe",
   position: "Math Teacher",
   expires_at: "2025-12-31T23:59:59Z",
+  target_portal: "",
+  requires_account_login: false,
+  caregiver_enabled: false,
 };
 
 const sampleBackendInvitation: SchoolInvitationResponse = {

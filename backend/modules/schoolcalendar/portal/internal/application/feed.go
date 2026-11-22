@@ -360,7 +360,7 @@ func (s *service) staffFeedAppointments(ctx context.Context, staffID int64, from
 	}
 	ids := make([]int64, 0, len(appointments))
 	for _, appointment := range appointments {
-		ids = append(ids, appointment.ID)
+		ids = append(ids, appointment.ID.Int64())
 	}
 	recurrences, err := s.cfg.Appointments.FindRecurrenceRules(ctx, ids)
 	if err != nil {
@@ -368,7 +368,7 @@ func (s *service) staffFeedAppointments(ctx context.Context, staffID int64, from
 	}
 	recurrenceByID := make(map[int64]*appointmentcap.RecurrenceRule, len(recurrences))
 	for _, recurrence := range recurrences {
-		recurrenceByID[recurrence.AppointmentID] = recurrence
+		recurrenceByID[recurrence.AppointmentID.Int64()] = recurrence
 	}
 	cancelledOverrides, err := s.cfg.Appointments.FindCancelledOccurrenceOverrides(ctx, ids)
 	if err != nil {
@@ -381,14 +381,14 @@ func (s *service) staffFeedAppointments(ctx context.Context, staffID int64, from
 	var events []CalendarEvent
 	emittedIDs := make(map[int64]struct{}, len(appointments))
 	for _, appointment := range appointments {
-		recurrence := recurrenceByID[appointment.ID]
+		recurrence := recurrenceByID[appointment.ID.Int64()]
 		if recurrence != nil && !hasOccurrenceInWindow(appointment, recurrence, from, to) {
 			continue
 		}
-		event := appointmentICSEvent(appointment, recurrence, overridesByID[appointment.ID])
+		event := appointmentICSEvent(appointment, recurrence, overridesByID[appointment.ID.Int64()])
 		event.Description = ""
 		events = append(events, event)
-		emittedIDs[appointment.ID] = struct{}{}
+		emittedIDs[appointment.ID.Int64()] = struct{}{}
 	}
 	return events, emittedIDs, nil
 }
@@ -400,8 +400,8 @@ func (s *service) staffFeedAppointmentTombstones(ctx context.Context, staffID in
 	}
 	tombstoneIDs := make([]int64, 0, len(tombstones))
 	for _, appointment := range tombstones {
-		if _, emitted := emittedIDs[appointment.ID]; !emitted {
-			tombstoneIDs = append(tombstoneIDs, appointment.ID)
+		if _, emitted := emittedIDs[appointment.ID.Int64()]; !emitted {
+			tombstoneIDs = append(tombstoneIDs, appointment.ID.Int64())
 		}
 	}
 	recurrences, err := s.cfg.Appointments.FindRecurrenceRules(ctx, tombstoneIDs)
@@ -410,14 +410,14 @@ func (s *service) staffFeedAppointmentTombstones(ctx context.Context, staffID in
 	}
 	recurrenceByID := make(map[int64]*appointmentcap.RecurrenceRule, len(recurrences))
 	for _, recurrence := range recurrences {
-		recurrenceByID[recurrence.AppointmentID] = recurrence
+		recurrenceByID[recurrence.AppointmentID.Int64()] = recurrence
 	}
 	var events []CalendarEvent
 	for _, appointment := range tombstones {
-		if _, emitted := emittedIDs[appointment.ID]; emitted {
+		if _, emitted := emittedIDs[appointment.ID.Int64()]; emitted {
 			continue
 		}
-		event := appointmentICSEvent(appointment, recurrenceByID[appointment.ID], nil)
+		event := appointmentICSEvent(appointment, recurrenceByID[appointment.ID.Int64()], nil)
 		event.Description = ""
 		events = append(events, event)
 	}
@@ -656,7 +656,7 @@ func (s *service) parentFeedAppointments(ctx context.Context, appointments []*ap
 	var events []CalendarEvent
 	emittedIDs := make(map[int64]struct{}, len(appointments))
 	for _, appointment := range appointments {
-		recurrence := recurrenceByID[appointment.ID]
+		recurrence := recurrenceByID[appointment.ID.Int64()]
 		// A count-bounded recurring series (ends_on IS NULL, occurrence_count
 		// set) can slip through applyAppointmentWindow, which treats a NULL
 		// ends_on as open-ended, even when all its occurrences are already
@@ -667,8 +667,8 @@ func (s *service) parentFeedAppointments(ctx context.Context, appointments []*ap
 		if recurrence != nil && !hasOccurrenceInWindow(appointment, recurrence, from, to) {
 			continue
 		}
-		events = append(events, appointmentICSEvent(appointment, recurrence, overridesByID[appointment.ID]))
-		emittedIDs[appointment.ID] = struct{}{}
+		events = append(events, appointmentICSEvent(appointment, recurrence, overridesByID[appointment.ID.Int64()]))
+		emittedIDs[appointment.ID.Int64()] = struct{}{}
 	}
 	return events, emittedIDs, nil
 }
@@ -678,10 +678,10 @@ func (s *service) parentFeedAppointments(ctx context.Context, appointments []*ap
 func (s *service) parentFeedTombstones(ctx context.Context, tombstones []*appointmentcap.Appointment, emittedIDs map[int64]struct{}) ([]CalendarEvent, error) {
 	tombstoneIDs := make([]int64, 0, len(tombstones))
 	for _, appointment := range tombstones {
-		if _, done := emittedIDs[appointment.ID]; done {
+		if _, done := emittedIDs[appointment.ID.Int64()]; done {
 			continue
 		}
-		tombstoneIDs = append(tombstoneIDs, appointment.ID)
+		tombstoneIDs = append(tombstoneIDs, appointment.ID.Int64())
 	}
 	recurrenceByID, err := s.recurrenceRulesByAppointment(ctx, tombstoneIDs)
 	if err != nil {
@@ -689,10 +689,10 @@ func (s *service) parentFeedTombstones(ctx context.Context, tombstones []*appoin
 	}
 	var events []CalendarEvent
 	for _, appointment := range tombstones {
-		if _, done := emittedIDs[appointment.ID]; done {
+		if _, done := emittedIDs[appointment.ID.Int64()]; done {
 			continue
 		}
-		events = append(events, appointmentICSEvent(appointment, recurrenceByID[appointment.ID], nil))
+		events = append(events, appointmentICSEvent(appointment, recurrenceByID[appointment.ID.Int64()], nil))
 	}
 	return events, nil
 }

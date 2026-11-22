@@ -7,6 +7,7 @@ import (
 	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
 	email "github.com/moto-ogs/project-phoenix/modules/delivery/mail"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Payload keys used by the guardian-invitation outbox row. The service
@@ -122,6 +123,9 @@ func payloadInt64Field(payload map[string]any, key string) (int64, bool) {
 	if !ok {
 		return 0, false
 	}
+	if typed, ok := v.(ident.ID); ok {
+		v = typed.Int64()
+	}
 	switch x := v.(type) {
 	case int:
 		return int64(x), true
@@ -141,6 +145,9 @@ func payloadIntField(payload map[string]any, key string) (int, bool) {
 	v, ok := payload[key]
 	if !ok {
 		return 0, false
+	}
+	if typed, ok := v.(ident.ID); ok {
+		v = typed.Int64()
 	}
 	switch x := v.(type) {
 	case int:

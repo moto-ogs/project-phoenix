@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/moto-ogs/project-phoenix/workflows/traegercatalog"
 )
@@ -69,18 +70,18 @@ type PhaseDetail struct {
 
 // PhaseRequest is the office's draft of a Träger phase.
 type PhaseRequest struct {
-	IsActive                  *bool      `json:"is_active"`
-	Name                      string     `json:"name"`
-	Kind                      string     `json:"kind"`
-	ServiceStartDate          string     `json:"service_start_date"`
-	ServiceEndDate            string     `json:"service_end_date"`
-	EnrollmentOpenAt          *time.Time `json:"enrollment_open_at"`
-	EnrollmentCloseAt         *time.Time `json:"enrollment_close_at"`
-	Audience                  string     `json:"audience"`
-	CareOverflowMode          string     `json:"care_overflow_mode"`
-	CareOfferingSelectionMode string     `json:"care_offering_selection_mode"`
-	AllSchools                bool       `json:"all_schools"`
-	SchoolIDs                 []int64    `json:"school_ids"`
+	IsActive                  *bool       `json:"is_active"`
+	Name                      string      `json:"name"`
+	Kind                      string      `json:"kind"`
+	ServiceStartDate          string      `json:"service_start_date"`
+	ServiceEndDate            string      `json:"service_end_date"`
+	EnrollmentOpenAt          *time.Time  `json:"enrollment_open_at"`
+	EnrollmentCloseAt         *time.Time  `json:"enrollment_close_at"`
+	Audience                  string      `json:"audience"`
+	CareOverflowMode          string      `json:"care_overflow_mode"`
+	CareOfferingSelectionMode string      `json:"care_offering_selection_mode"`
+	AllSchools                bool        `json:"all_schools"`
+	SchoolIDs                 []common.ID `json:"school_ids"`
 }
 
 // Bind accepts the request; the owner validates it.
@@ -94,7 +95,7 @@ func (req *PhaseRequest) input() enrollment.TraegerPhaseInput {
 			EnrollmentCloseAt: req.EnrollmentCloseAt, Audience: req.Audience, CareOverflowMode: req.CareOverflowMode,
 			CareOfferingSelectionMode: req.CareOfferingSelectionMode,
 		},
-		AllSchools: req.AllSchools, SchoolIDs: req.SchoolIDs,
+		AllSchools: req.AllSchools, SchoolIDs: ident.Int64s(req.SchoolIDs),
 	}
 }
 
@@ -171,7 +172,7 @@ func (rs *Resource) createPhase(w http.ResponseWriter, r *http.Request) {
 		renderCatalogError(w, r, err)
 		return
 	}
-	rs.respondPhase(w, r, actor, phase.ID, http.StatusCreated)
+	rs.respondPhase(w, r, actor, phase.ID.Int64(), http.StatusCreated)
 }
 
 func (rs *Resource) updatePhase(w http.ResponseWriter, r *http.Request) {

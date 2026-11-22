@@ -286,13 +286,13 @@ func (a planExportInstances) InstancesInRange(ctx context.Context, from, to plan
 			continue
 		}
 		out = append(out, &planexport.Instance{
-			ID:               instance.ID,
+			ID:               instance.ID.Int64(),
 			Date:             planexport.Date(instance.Date),
 			StartTime:        instance.StartTime,
 			EndTime:          instance.EndTime,
 			Title:            instance.Title,
-			ActivityGroupID:  instance.ActivityGroupID,
-			RoomID:           instance.RoomID,
+			ActivityGroupID:  (*int64)(instance.ActivityGroupID),
+			RoomID:           instance.RoomID.Int64(),
 			Cancelled:        instance.IsCancelled(),
 			IsDuty:           instance.IsDuty,
 			CancelReason:     instance.CancelReason,
@@ -374,7 +374,7 @@ func (a planExportPlanningTracks) ListPlanningTracks(ctx context.Context) ([]*pl
 	}
 	out := make([]*planexport.PlanningTrack, 0, len(tracks))
 	for _, track := range tracks {
-		out = append(out, &planexport.PlanningTrack{ID: track.ID, Color: track.Color})
+		out = append(out, &planexport.PlanningTrack{ID: track.ID.Int64(), Color: track.Color})
 	}
 	return out, nil
 }

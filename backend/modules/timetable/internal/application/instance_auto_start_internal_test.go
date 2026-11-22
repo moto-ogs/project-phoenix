@@ -12,6 +12,7 @@ import (
 	scheduleModel "github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain/schedulerecords"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -47,7 +48,7 @@ func TestAutoStart_RunForTenant_StartsOnlyDueStaffedConflictFreeInstances(t *tes
 		Rooms:             &autoStartRoomRepo{},
 		Conflicts: startConflictsFunc(func(_ context.Context, subject timetable.StartConflictSubject) ([]timetable.InstanceConflictWarning, error) {
 			if subject.InstanceID == 104 {
-				return []timetable.InstanceConflictWarning{{Kind: timetable.ConflictKindStaff, ResourceID: subject.RoomID, CanOverride: true}}, nil
+				return []timetable.InstanceConflictWarning{{Kind: timetable.ConflictKindStaff, ResourceID: ident.ID(subject.RoomID), CanOverride: true}}, nil
 			}
 			return nil, nil
 		}),

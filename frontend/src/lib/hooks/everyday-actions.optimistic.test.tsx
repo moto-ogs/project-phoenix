@@ -120,7 +120,7 @@ function Wrapper({ children }: { children: ReactNode }) {
         shouldRetryOnError: false,
       }}
     >
-      <SWRScopeBoundary expectedTenantId={1} />
+      <SWRScopeBoundary expectedTenantId="1" />
       {children}
     </SWRConfig>
   );

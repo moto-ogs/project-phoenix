@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/collation"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // listStaffFilters holds the parsed query parameters of the directory read.
@@ -109,10 +110,10 @@ func (rs *Resource) listStaff(w http.ResponseWriter, r *http.Request) {
 
 // DocumentDirectoryEntry is one staff identity of the document directory.
 type DocumentDirectoryEntry struct {
-	ID        int64  `json:"id"`
-	Name      string `json:"name"`
-	FirstName string `json:"firstName"`
-	LastName  string `json:"lastName"`
+	ID        ident.ID `json:"id"`
+	Name      string   `json:"name"`
+	FirstName string   `json:"firstName"`
+	LastName  string   `json:"lastName"`
 }
 
 // listDocumentDirectory exposes only staff identities to document-capable
@@ -137,7 +138,7 @@ func (rs *Resource) listDocumentDirectory(w http.ResponseWriter, r *http.Request
 			continue
 		}
 		entries = append(entries, DocumentDirectoryEntry{
-			ID:        staff.ID,
+			ID:        ident.ID(staff.ID),
 			Name:      person.FirstName + " " + person.LastName,
 			FirstName: person.FirstName,
 			LastName:  person.LastName,
@@ -218,7 +219,7 @@ func (rs *Resource) getMinimalStaffProfile(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	profile := MinimalStaffProfileResponse{
-		ID: staff.ID, Name: person.FirstName + " " + person.LastName,
+		ID: ident.ID(staff.ID), Name: person.FirstName + " " + person.LastName,
 		FirstName: person.FirstName, LastName: person.LastName,
 	}
 	if staff.IsDeleted() {
@@ -233,7 +234,7 @@ func (rs *Resource) getMinimalStaffProfile(w http.ResponseWriter, r *http.Reques
 // Stammdaten section and the documents tab, nothing more. A former staff
 // member also carries the employment period.
 type MinimalStaffProfileResponse struct {
-	ID        int64          `json:"id"`
+	ID        ident.ID       `json:"id"`
 	Name      string         `json:"name"`
 	FirstName string         `json:"firstName"`
 	LastName  string         `json:"lastName"`

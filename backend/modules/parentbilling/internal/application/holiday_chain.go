@@ -5,6 +5,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The rule chain of the holiday contribution (ADR 0088 section 4, ADR 0115):
@@ -227,7 +228,7 @@ func holidayBaseLines(child parentbilling.HolidayChild) parentbilling.HolidayChi
 	bookings := slices.Clone(child.Bookings)
 	slices.SortStableFunc(bookings, func(a, b parentbilling.HolidayBooking) int { return a.WeekStartsOn.Compare(b.WeekStartsOn) })
 	contribution := parentbilling.HolidayChildContribution{
-		ChildID: child.ID, Position: child.Position, Lines: make([]parentbilling.HolidayContributionLine, 0, len(bookings)+2),
+		ChildID: ident.ID(child.ID), Position: child.Position, Lines: make([]parentbilling.HolidayContributionLine, 0, len(bookings)+2),
 	}
 	for _, booking := range bookings {
 		startsOn, endsOn := booking.WeekStartsOn, booking.WeekEndsOn

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 
@@ -118,11 +119,11 @@ func TestMoveStudentsToActiveGroup(t *testing.T) {
 					capturedStudentIDs = studentIDs
 					capturedActiveGroupID = activeGroupID
 					return studentpresence.StudentMoveResult{
-						Moved:         []int64{42, 84},
-						Unchanged:     []int64{},
+						Moved:         []ident.ID{42, 84},
+						Unchanged:     []ident.ID{},
 						Skipped:       []studentpresence.StudentMoveSkipped{},
-						ActiveGroupID: &targetGroupID,
-						RoomID:        &targetRoomID,
+						ActiveGroupID: (*ident.ID)(&targetGroupID),
+						RoomID:        (*ident.ID)(&targetRoomID),
 					}, nil
 				},
 			},
@@ -249,11 +250,11 @@ func TestMoveStudentsToActiveGroup(t *testing.T) {
 				moveStudentsToSession: func(_ context.Context, studentIDs []int64, activeGroupID int64, _ studentpresence.StudentMoveAuthorization) (studentpresence.StudentMoveResult, error) {
 					calledMove = true
 					return studentpresence.StudentMoveResult{
-						Moved:         studentIDs,
-						Unchanged:     []int64{},
+						Moved:         ident.IDs(studentIDs),
+						Unchanged:     []ident.ID{},
 						Skipped:       []studentpresence.StudentMoveSkipped{},
-						ActiveGroupID: &activeGroupID,
-						RoomID:        &targetRoomID,
+						ActiveGroupID: (*ident.ID)(&activeGroupID),
+						RoomID:        (*ident.ID)(&targetRoomID),
 					}, nil
 				},
 			},

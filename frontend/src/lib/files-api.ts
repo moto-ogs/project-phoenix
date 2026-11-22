@@ -7,6 +7,15 @@ import { ApiError, apiErrorFromResponse, transportFetch } from "./api-error";
 
 import { hasSessionAccess } from "./session-access";
 import { getCachedSession, sessionFetch } from "./session-cache";
+import { knownEnum } from "./contract/known-enum";
+import type {
+  AudienceResponse,
+  FileListResponse,
+  FileResponse,
+  FolderListResponse,
+  FolderRequest,
+  FolderResponse,
+} from "./contract/files.generated";
 
 export type FolderVisibility = "all_staff" | "admins" | "selected";
 
@@ -47,7 +56,8 @@ export interface StoredFile {
 }
 
 export interface FolderFiles {
-  folder: FileFolder;
+  /** null: a visibility this build does not know. */
+  folder: FileFolder | null;
   files: StoredFile[];
 }
 
@@ -74,54 +84,24 @@ interface FolderInput {
   accountIds: string[];
 }
 
-// Ids arrive as decimal strings: they are PostgreSQL bigints, and JSON.parse
-// rounds anything past Number.MAX_SAFE_INTEGER silently — a rounded id
-// addresses a different folder or file.
-interface BackendFolder {
-  id: string;
-  name: string;
-  visibility: FolderVisibility;
-  file_count: number;
-  role_ids: string[];
-  account_ids: string[];
-  created_at: string;
-}
+const FOLDER_VISIBILITIES: readonly FolderVisibility[] = [
+  "all_staff",
+  "admins",
+  "selected",
+];
 
-interface BackendFolderList {
-  folders: BackendFolder[];
-  can_manage: boolean;
-  can_upload: boolean;
-  staff_upload_enabled: boolean;
-  used_bytes: number;
-  max_bytes: number;
-}
-
-interface BackendFile {
-  id: string;
-  folder_id: string;
-  filename: string;
-  size_bytes: number;
-  content_type: string;
-  uploaded_at: string;
-  uploaded_by: string;
-  can_delete: boolean;
-}
-
-interface BackendFolderFiles {
-  folder: BackendFolder;
-  files: BackendFile[];
-}
-
-interface BackendAudience {
-  roles: { id: string; name: string }[];
-  accounts: { account_id: string; first_name: string; last_name: string }[];
-}
-
-function mapFolder(data: BackendFolder): FileFolder {
+/**
+ * null: a visibility this build does not know (#2353). The list leaves such
+ * a folder out: the edit form would otherwise save a default visibility and
+ * open the folder to more people.
+ */
+function mapFolder(data: FolderResponse): FileFolder | null {
+  const visibility = knownEnum(FOLDER_VISIBILITIES, data.visibility);
+  if (!visibility) return null;
   return {
     id: data.id,
     name: data.name,
-    visibility: data.visibility,
+    visibility,
     fileCount: data.file_count,
     roleIds: data.role_ids ?? [],
     accountIds: data.account_ids ?? [],
@@ -129,7 +109,7 @@ function mapFolder(data: BackendFolder): FileFolder {
   };
 }
 
-function mapFile(data: BackendFile): StoredFile {
+function mapFile(data: FileResponse): StoredFile {
   return {
     id: data.id,
     folderId: data.folder_id,
@@ -154,7 +134,7 @@ async function throwFilesError(
   throw await apiErrorFromResponse(response, fallback);
 }
 
-function toBackendFolderInput(input: FolderInput) {
+function toBackendFolderInput(input: FolderInput): FolderRequest {
   return {
     name: input.name,
     visibility: input.visibility,
@@ -169,9 +149,12 @@ class FilesService {
     if (!response.ok) {
       await throwFilesError(response, "Ordner konnten nicht geladen werden.");
     }
-    const json = (await response.json()) as { data: BackendFolderList };
+    const json = (await response.json()) as { data: FolderListResponse };
     return {
-      folders: json.data.folders.map(mapFolder),
+      folders: (json.data.folders ?? []).flatMap((folder) => {
+        const mapped = mapFolder(folder);
+        return mapped ? [mapped] : [];
+      }),
       canManage: json.data.can_manage,
       canUpload: json.data.can_upload,
       staffUploadEnabled: json.data.staff_upload_enabled,
@@ -180,7 +163,7 @@ class FilesService {
     };
   }
 
-  async createFolder(input: FolderInput): Promise<FileFolder> {
+  async createFolder(input: FolderInput): Promise<FileFolder | null> {
     const response = await sessionFetch("/api/files/folders", {
       method: "POST",
       body: JSON.stringify(toBackendFolderInput(input)),
@@ -188,14 +171,14 @@ class FilesService {
     if (!response.ok) {
       await throwFilesError(response, "Ordner konnte nicht angelegt werden.");
     }
-    const json = (await response.json()) as { data: BackendFolder };
+    const json = (await response.json()) as { data: FolderResponse };
     return mapFolder(json.data);
   }
 
   async updateFolder(
     folderId: string,
     input: FolderInput,
-  ): Promise<FileFolder> {
+  ): Promise<FileFolder | null> {
     const response = await sessionFetch(`/api/files/folders/${folderId}`, {
       method: "PUT",
       body: JSON.stringify(toBackendFolderInput(input)),
@@ -206,7 +189,7 @@ class FilesService {
         "Ordner konnte nicht gespeichert werden.",
       );
     }
-    const json = (await response.json()) as { data: BackendFolder };
+    const json = (await response.json()) as { data: FolderResponse };
     return mapFolder(json.data);
   }
 
@@ -227,13 +210,13 @@ class FilesService {
         "Rollen und Personen konnten nicht geladen werden.",
       );
     }
-    const json = (await response.json()) as { data: BackendAudience };
+    const json = (await response.json()) as { data: AudienceResponse };
     return {
-      roles: json.data.roles.map((role) => ({
+      roles: (json.data.roles ?? []).map((role) => ({
         id: role.id,
         name: role.name,
       })),
-      accounts: json.data.accounts.map((account) => ({
+      accounts: (json.data.accounts ?? []).map((account) => ({
         accountId: account.account_id,
         firstName: account.first_name,
         lastName: account.last_name,
@@ -246,10 +229,10 @@ class FilesService {
     if (!response.ok) {
       await throwFilesError(response, "Dateien konnten nicht geladen werden.");
     }
-    const json = (await response.json()) as { data: BackendFolderFiles };
+    const json = (await response.json()) as { data: FileListResponse };
     return {
       folder: mapFolder(json.data.folder),
-      files: json.data.files.map(mapFile),
+      files: (json.data.files ?? []).map(mapFile),
     };
   }
 

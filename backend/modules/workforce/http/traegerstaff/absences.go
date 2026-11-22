@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // AbsenceTypesResource serves the Abwesenheitsarten of the session's Träger
@@ -167,7 +168,7 @@ func (rs *RecordsResource) setAbsenceAllowance(w http.ResponseWriter, r *http.Re
 		renderAbsenceError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, IDResponse{ID: typeID}, "Absence allowance saved successfully")
+	common.Respond(w, r, http.StatusOK, IDResponse{ID: ident.ID(typeID)}, "Absence allowance saved successfully")
 }
 
 func renderAbsenceError(w http.ResponseWriter, r *http.Request, err error) {

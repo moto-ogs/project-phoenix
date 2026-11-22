@@ -13,6 +13,7 @@ import (
 	facilitiesCompose "github.com/moto-ogs/project-phoenix/modules/facilities/compose"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
+	schoolMembershipModule "github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	settingsCompose "github.com/moto-ogs/project-phoenix/modules/settings/compose"
 	presenceCompose "github.com/moto-ogs/project-phoenix/modules/studentpresence/compose"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
@@ -40,7 +41,7 @@ func BuildActivities(owner TimetableOwner, timetableOwner timetable.Capability, 
 // Änderungsprotokoll entry (#1884) and the SSE invalidation are bound here.
 func BuildShiftPlanning(
 	db transactionruntime.Database, env RootEnvironment, hub *realtime.Hub, workTime workforceCompose.WorkTime,
-	people PeopleRows, calendar schoolcalendar.Days, audit AuditOwner, owner TimetableOwner, rooms facilitiesModule.Catalog,
+	membership schoolMembershipModule.StaffAssignmentLockQuery, people PeopleRows, calendar schoolcalendar.Days, audit AuditOwner, owner TimetableOwner, rooms facilitiesModule.Catalog,
 	activities activityContract.ActivityService, settings settingsCompose.BatchSettingsService,
 ) (*workforceCompose.ShiftPlanning, error) {
 	repos := owner.Repositories
@@ -54,7 +55,7 @@ func BuildShiftPlanning(
 		WorkModels:     workTime,
 		Holidays:       schoolCalendarCompose.NewNonWorkingDays(calendar), NonWorkingDays: calendar,
 		CategoryLinker: activities.SetCategoryShiftTypeLinks,
-		DB:             db.Pool(), Broadcaster: hub, Logger: env.Logger.With("service", "shift_planning"),
+		DB:             db.Pool(), LockStaffAssignments: ShiftPlanningStaffRowLock(membership), Broadcaster: hub, Logger: env.Logger.With("service", "shift_planning"),
 		Today: env.Today, PlanRules: settingsCompose.PresenceSettings(settings),
 		WorkingTimeAudit: NewWorkingTimeOverrideAudit(audit.Persistence.DeviationEvent),
 	})

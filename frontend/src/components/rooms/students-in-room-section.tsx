@@ -64,7 +64,10 @@ import { createLogger } from "~/lib/logger";
 import { useAttendanceWebEnabled, usePresenceMode } from "~/lib/tenant-context";
 import { canCheckInToRooms } from "~/lib/student-access";
 import { RoomCheckinDialog } from "~/components/rooms/room-checkin-dialog";
-import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  useSwrLoadError,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
 import { Checkbox } from "~/components/ui/checkbox";
 import { SectionCard } from "~/components/ui/section-card";
 import {
@@ -76,6 +79,9 @@ import {
 
 const logger = createLogger({ component: "StudentsInRoomSection" });
 const EMPTY_STUDENTS: Student[] = [];
+const NO_ACTIVE_GROUPS: ActiveGroup[] = [];
+const NO_SUPERVISIONS: Supervisor[] = [];
+const NO_ROOMS: Room[] = [];
 
 interface StudentsInRoomSectionProps {
   readonly roomId: string;
@@ -157,24 +163,53 @@ export function StudentsInRoomSection({
       pageSize: 200,
     }),
   );
-  const { data: activeGroups = [] } = useSWRAuth<ActiveGroup[]>(
-    checkinTargetKeys.activeGroups(),
-    () => activeService.getActiveGroups({ active: true }),
+  const {
+    data: loadedActiveGroups,
+    error: activeGroupsError,
+    mutate: reloadActiveGroups,
+  } = useSWRAuth<ActiveGroup[]>(checkinTargetKeys.activeGroups(), () =>
+    activeService.getActiveGroups({ active: true }),
   );
+  const activeGroups = loadedActiveGroups ?? NO_ACTIVE_GROUPS;
   const { data: currentStaff } = useSWRAuth<Staff>(
     showAllTargets ? null : meKeys.key(),
     meKeys.fetcher,
   );
-  const { data: activeSupervisions = [] } = useSWRAuth<Supervisor[]>(
+  const {
+    data: loadedSupervisions,
+    error: supervisionsError,
+    mutate: reloadSupervisions,
+  } = useSWRAuth<Supervisor[]>(
     showAllTargets || !currentStaff?.id
       ? null
       : checkinTargetKeys.supervisions(currentStaff.id),
     () => activeService.getStaffActiveSupervisions(currentStaff?.id ?? ""),
   );
-  const { data: rooms = [], mutate: refreshMoveRooms } = useSWRAuth<Room[]>(
-    roomsKeys.key(),
-    roomsKeys.fetcher,
+  const activeSupervisions = loadedSupervisions ?? NO_SUPERVISIONS;
+  const {
+    data: loadedRooms,
+    error: roomsError,
+    mutate: refreshMoveRooms,
+  } = useSWRAuth<Room[]>(roomsKeys.key(), roomsKeys.fetcher);
+  const rooms = loadedRooms ?? NO_ROOMS;
+  // Ohne laufende Angebote, Aufsichten und Räume gäbe es scheinbar kein Ziel
+  // (#2353): der Fehler steht über der Liste, Verschieben und Anmelden
+  // warten, bis die Ziele da sind.
+  const targetsLoad = useSwrResourceLoadError(
+    [
+      { data: loadedActiveGroups, error: activeGroupsError },
+      { data: loadedSupervisions, error: supervisionsError },
+      { data: loadedRooms, error: roomsError },
+    ],
+    "die Liste der Zielräume",
+    () =>
+      Promise.all([
+        reloadActiveGroups(),
+        reloadSupervisions(),
+        refreshMoveRooms(),
+      ]),
   );
+  const targetsMissing = targetsLoad.failure !== undefined;
 
   // Ladefehler mit Katalogtext, Wiederholen und Vorgangskennung (#2517).
   const loadError = useSwrLoadError(error, "die Liste der Kinder im Raum", () =>
@@ -237,6 +272,7 @@ export function StudentsInRoomSection({
   // session with supervision; the rules are those of every other target.
   const presenceMode = usePresenceMode();
   const showRoomCheckin =
+    !targetsMissing &&
     attendanceWebEnabled &&
     presenceMode === "detailed" &&
     canCheckInToRooms(session);
@@ -286,6 +322,7 @@ export function StudentsInRoomSection({
   // to pull out of (children sit in sessions, so a list without one is
   // stale); everyone else sees a plain list.
   const canBulkMove =
+    !targetsMissing &&
     attendanceWebEnabled &&
     (targetScope !== "own" ||
       (sourceGroups.length > 0 && targetOptions.length > 0));
@@ -581,6 +618,7 @@ export function StudentsInRoomSection({
           flush with the first card border. Review feedback (#1323). */}
         <div className="mt-4">
           <LoadErrorAlert error={moveAfterWrite.error} className="mb-4" />
+          <LoadErrorAlert error={targetsLoad.error} className="mb-4" />
           {canBulkMove && students.length > 0 ? (
             <BulkMoveToolbar
               selectedCount={selectedVisibleCount}

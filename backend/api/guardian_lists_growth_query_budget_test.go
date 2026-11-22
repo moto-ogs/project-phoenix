@@ -48,19 +48,19 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 			require.Equal(t, http.StatusCreated, rr.Code, rr.Body.String())
 			var phone struct {
 				Data struct {
-					ID int64 `json:"id"`
+					ID wireID `json:"id"`
 				}
 			}
 			require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &phone))
 			require.Positive(t, phone.Data.ID)
-			phoneIDs = append(phoneIDs, phone.Data.ID)
+			phoneIDs = append(phoneIDs, int64(phone.Data.ID))
 			numbers = append(numbers, number)
 			rr = c.do(t, withPerms(testutil.DefaultTestClaims(), "admin:*", "guardians:financial"), http.MethodPut, fmt.Sprintf("/%d/payment", gid), map[string]any{"iban": testIBAN, "account_holder": fmt.Sprintf("Holder%02d", i)})
 			require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 			c.requirePayerSet(t, sid, &gid)
 		}
-		for _, name := range []string{"search", "detail", "delete-preview", "phones", "students", "payment_overview", "payment_export", "bulk_invite"} {
-			path := map[string]string{"search": "/search?q=BudgetGuardian", "detail": fmt.Sprintf("/%d", guardianIDs[0]), "delete-preview": fmt.Sprintf("/%d/delete-preview", guardianIDs[0]), "phones": fmt.Sprintf("/%d/phone-numbers/", guardianIDs[0]), "students": fmt.Sprintf("/%d/students", guardianIDs[0])}[name]
+		for _, name := range []string{"search", "detail", "delete-preview", "phones", "payment_overview", "payment_export", "bulk_invite"} {
+			path := map[string]string{"search": "/search?q=BudgetGuardian", "detail": fmt.Sprintf("/%d", guardianIDs[0]), "delete-preview": fmt.Sprintf("/%d/delete-preview", guardianIDs[0]), "phones": fmt.Sprintf("/%d/phone-numbers/", guardianIDs[0])}[name]
 			method := http.MethodGet
 			var body any
 			switch name {
@@ -163,7 +163,7 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 				require.Empty(t, row.Problems)
 			case "search":
 				var rows []struct {
-					ID                  int64
+					ID                  wireID
 					FirstName           string `json:"first_name"`
 					LastName            string `json:"last_name"`
 					Email               string
@@ -173,11 +173,11 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 				require.Len(t, rows, n)
 				seen := map[int64]bool{}
 				for _, row := range rows {
-					require.False(t, seen[row.ID])
-					seen[row.ID] = true
+					require.False(t, seen[int64(row.ID)])
+					seen[int64(row.ID)] = true
 					idx := -1
 					for i, id := range guardianIDs {
-						if id == row.ID {
+						if id == int64(row.ID) {
 							idx = i
 						}
 					}
@@ -195,19 +195,19 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 				}
 			case "detail", "phones":
 				type phone struct {
-					ID     int64
+					ID     wireID
 					Number string `json:"phone_number"`
 					Type   string `json:"phone_type"`
 				}
 				var rows []phone
 				if name == "detail" {
 					var row struct {
-						ID           int64
+						ID           wireID
 						FirstName    string  `json:"first_name"`
 						PhoneNumbers []phone `json:"phone_numbers"`
 					}
 					require.NoError(t, json.Unmarshal(envelope.Data, &row))
-					require.Equal(t, guardianIDs[0], row.ID)
+					require.Equal(t, guardianIDs[0], int64(row.ID))
 					require.Equal(t, "BudgetGuardian", row.FirstName)
 					rows = row.PhoneNumbers
 				} else {
@@ -217,7 +217,7 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 				got := map[int64]string{}
 				for _, row := range rows {
 					require.Equal(t, "mobile", row.Type)
-					got[row.ID] = row.Number
+					got[int64(row.ID)] = row.Number
 				}
 				require.Len(t, got, n)
 				for i, id := range phoneIDs {
@@ -239,34 +239,6 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 					require.Contains(t, row.Links, fmt.Sprint(id))
 					require.Contains(t, row.Names, fmt.Sprintf("Child%02d BudgetFamily", i))
 				}
-			case "students":
-				var rows []struct {
-					ID        int64  `json:"student_id"`
-					FirstName string `json:"first_name"`
-					LastName  string `json:"last_name"`
-					Class     string `json:"school_class"`
-					Link      int64  `json:"relationship_id"`
-					Role      string `json:"guardian_role"`
-				}
-				require.NoError(t, json.Unmarshal(envelope.Data, &rows))
-				require.Len(t, rows, n)
-				seen := map[int64]bool{}
-				for _, row := range rows {
-					require.False(t, seen[row.ID])
-					seen[row.ID] = true
-					idx := -1
-					for i, id := range studentIDs {
-						if row.ID == id {
-							idx = i
-						}
-					}
-					require.GreaterOrEqual(t, idx, 0)
-					require.Equal(t, fmt.Sprintf("Child%02d", idx), row.FirstName)
-					require.Equal(t, "BudgetFamily", row.LastName)
-					require.Equal(t, "2b", row.Class)
-					require.Equal(t, linkIDs[idx], row.Link)
-					require.Equal(t, "primary_guardian", row.Role)
-				}
 			}
 			t.Logf("MEASURE guardian.%s N%d=%d", name, n, counter.Total())
 			switch name {
@@ -278,8 +250,6 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 				querybudgets.AssertQueryBudget(t, "api.guardians.delete_preview.http_positive_growth", counter.Measurement(counter.Queries()))
 			case "phones":
 				querybudgets.AssertQueryBudget(t, "api.guardians.phones.http_positive_growth", counter.Measurement(counter.Queries()))
-			case "students":
-				querybudgets.AssertQueryBudget(t, "api.guardians.students.http_positive_growth", counter.Measurement(counter.Queries()))
 			case "payment_overview":
 				querybudgets.AssertQueryBudget(t, "api.guardians.payment_overview.http_positive_growth", counter.Measurement(counter.Queries()))
 			case "payment_export":

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -79,21 +80,21 @@ func TestBuildTemplateWeekdayAssignments_PreservesEmptyDays(t *testing.T) {
 	assert.Equal(t, []templateWeekdayAssignmentResponse{
 		{
 			Weekday:        timetable.WeekdayMonday,
-			StaffIDs:       []int64{11},
-			StudentIDs:     []int64{21},
-			PrimaryStaffID: ptrInt64(11),
+			StaffIDs:       []ident.ID{11},
+			StudentIDs:     []ident.ID{21},
+			PrimaryStaffID: (*ident.ID)(ptrInt64(11)),
 		},
 		{
 			Weekday:    timetable.WeekdayTuesday,
-			StaffIDs:   []int64{},
-			StudentIDs: []int64{},
+			StaffIDs:   ident.IDs([]int64{}),
+			StudentIDs: ident.IDs([]int64{}),
 		},
 	}, byTemplate[templateID])
 
 	protectedByTemplate := buildTemplateProtectedStudentAssignments(rows)
 	assert.Equal(t, []templateProtectedStudentAssignmentResponse{{
 		Weekday:    timetable.WeekdayMonday,
-		StudentIDs: []int64{22},
+		StudentIDs: []ident.ID{22},
 	}}, protectedByTemplate[templateID])
 }
 

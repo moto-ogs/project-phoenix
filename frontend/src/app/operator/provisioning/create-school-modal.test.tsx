@@ -74,7 +74,7 @@ describe("CreateSchoolModal", () => {
     );
     expect(mockCreateSchool).toHaveBeenCalledWith(
       expect.objectContaining({
-        organization_id: 7,
+        organization_id: "7",
         name: "OGS Ispringen",
         email: "ogs@ispringen.example",
         federal_state: "DE-BW",

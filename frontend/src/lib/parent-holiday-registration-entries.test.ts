@@ -35,13 +35,15 @@ describe("holidayRegistrationEntriesFromBackend (#6673)", () => {
     ]);
   });
 
-  it("reads unknown states as the quiet default and tolerates missing lists", () => {
+  it("reads an unknown state as received, an unknown placement as none, and tolerates missing lists", () => {
     const [entry] = holidayRegistrationEntriesFromBackend({
       registrations: [
         {
-          id: 1,
+          id: "1",
           traeger_name: "T",
           period_name: "P",
+          first_day: null,
+          last_day: null,
           submitted_at: "2026-09-01T08:00:00Z",
           status: "something_new",
           children: [
@@ -53,6 +55,7 @@ describe("holidayRegistrationEntriesFromBackend (#6673)", () => {
                   last_day: "2027-01-08",
                   time_model_name: "",
                   placement: "unknown",
+                  lunch: false,
                 },
               ],
             },
@@ -62,8 +65,8 @@ describe("holidayRegistrationEntriesFromBackend (#6673)", () => {
     });
     expect(entry?.status).toBe("received");
     expect(entry?.firstDay).toBe("");
-    expect(entry?.children[0]?.weeks[0]?.placement).toBe("placed");
-    expect(holidayRegistrationEntriesFromBackend(null)).toEqual([]);
+    // An unknown placement promises no place (ADR 0270 point 6, #2353).
+    expect(entry?.children[0]?.weeks[0]?.placement).toBeUndefined();
     expect(
       holidayRegistrationEntriesFromBackend({ registrations: null }),
     ).toEqual([]);

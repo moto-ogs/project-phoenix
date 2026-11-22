@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Stundenkonto of a Personalakte over all schools with the Monatsabschluss
@@ -96,8 +98,8 @@ type TraegerTimeAccountMinutes struct {
 
 // TraegerTimeAccountSchool is one school of the record in the month.
 type TraegerTimeAccountSchool struct {
-	SchoolID   int64  `json:"school_id"`
-	SchoolName string `json:"school_name"`
+	SchoolID   ident.ID `json:"school_id"`
+	SchoolName string   `json:"school_name"`
 	TraegerTimeAccountMinutes
 	// HasTarget is false when the school keeps no Soll for the month.
 	HasTarget bool `json:"has_target"`

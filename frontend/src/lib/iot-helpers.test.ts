@@ -164,7 +164,7 @@ describe("iot-helpers", () => {
         device_id: "RFID-001",
         device_type: "terminal",
         name: "Main Reader",
-        registered_by_id: 456,
+        registered_by_id: "456",
       });
     });
 

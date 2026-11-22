@@ -8,6 +8,7 @@ import (
 
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
 	fixtures "github.com/moto-ogs/project-phoenix/modules/timetable/fixturetest"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
@@ -53,7 +54,7 @@ func TestTimetableOperationsCheckInCreatesVisitAndMarksPlannedPresent(t *testing
 	assert.Equal(t, fixtures.AttendanceStatusPresent(), *deps.studentRepo.updates[0].patch.Status)
 	assert.True(t, deps.studentRepo.updates[0].patch.SubstatusClear)
 	assert.True(t, deps.activeGroups.lastActivity[activeGroupID].After(time.Time{}))
-	assert.Equal(t, studentID, roster.Rows[0].StudentID)
+	assert.Equal(t, ident.ID(studentID), roster.Rows[0].StudentID)
 }
 
 func TestTimetableOperationsCheckInStopsWhenPresenceReadFails(t *testing.T) {
@@ -133,9 +134,9 @@ func TestTimetableOperationsCheckInMovesStudentActiveElsewhere(t *testing.T) {
 		deps.instanceRepo.byID[instanceID] = activeInstance(instanceID, activeGroupID)
 		deps.visitRepo.currentByStudent[studentID] = &studentpresence.Visit{StudentID: studentID, ActiveGroupID: originActiveGroupID, EntryTime: opsNow}
 		deps.activeService.moveResult = &studentpresence.StudentMoveResult{
-			Moved:                  []int64{studentID},
+			Moved:                  []ident.ID{ident.ID(studentID)},
 			PreviousActiveGroupIDs: map[int64]int64{studentID: originActiveGroupID},
-			ActiveGroupID:          &activeGroupID,
+			ActiveGroupID:          (*ident.ID)(&activeGroupID),
 		}
 		return deps
 	}
@@ -225,7 +226,7 @@ func TestTimetableOperationsCheckInMovesStudentActiveElsewhere(t *testing.T) {
 	t.Run("maps a skipped move to a conflict", func(t *testing.T) {
 		deps := newDeps()
 		deps.activeService.moveResult = &studentpresence.StudentMoveResult{
-			Skipped: []studentpresence.StudentMoveSkipped{{StudentID: studentID, Reason: studentpresence.StudentMoveSkipConflict}},
+			Skipped: []studentpresence.StudentMoveSkipped{{StudentID: ident.ID(studentID), Reason: studentpresence.StudentMoveSkipConflict}},
 		}
 		ctx := tenant.WithRollbackMarker(context.Background())
 
@@ -238,7 +239,7 @@ func TestTimetableOperationsCheckInMovesStudentActiveElsewhere(t *testing.T) {
 
 	t.Run("treats an unchanged result as same-group success without move notice", func(t *testing.T) {
 		deps := newDeps()
-		deps.activeService.moveResult = &studentpresence.StudentMoveResult{Unchanged: []int64{studentID}}
+		deps.activeService.moveResult = &studentpresence.StudentMoveResult{Unchanged: []ident.ID{ident.ID(studentID)}}
 
 		roster, err := deps.service.CheckInStudent(context.Background(), 670, false, instanceID, studentID)
 
@@ -286,7 +287,7 @@ func TestTimetableOperationsCheckOutAlreadyEndedReturnsRoster(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, roster)
-	assert.Equal(t, int64(413), roster.Instance.ID)
+	assert.Equal(t, ident.ID(int64(413)), roster.Instance.ID)
 }
 
 func TestTimetableOperationsPatchAttendanceUpdatesRowAndBroadcasts(t *testing.T) {
@@ -321,7 +322,7 @@ func TestTimetableOperationsPatchAttendanceUpdatesRowAndBroadcasts(t *testing.T)
 
 	require.NoError(t, err)
 	require.NotNil(t, row)
-	assert.Equal(t, studentID, row.StudentID)
+	assert.Equal(t, ident.ID(studentID), row.StudentID)
 	require.Len(t, deps.studentRepo.updates, 1)
 	assert.Equal(t, rowID, deps.studentRepo.updates[0].rowID)
 	assert.Equal(t, &note, deps.studentRepo.updates[0].patch.Note)

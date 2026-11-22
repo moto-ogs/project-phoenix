@@ -7,7 +7,6 @@ import { PeriodSwitcherDropdown } from "./period-switcher-dropdown";
 function makePeriod(overrides: Partial<CalendarPeriod>): CalendarPeriod {
   return {
     id: "1",
-    tenantId: "1",
     name: "Schuljahr 2025/2026",
     periodType: "school_year",
     startDate: "2025-08-01",

@@ -1,7 +1,7 @@
 import { operatorFetch } from "./api-helpers";
+import type * as operatorInvitationsContract from "~/lib/contract/operator-invitations.generated";
 import type {
-  BackendInvitationsListResponse,
-  BackendInvitationValidation,
+  InvitationValidationBody,
   CreateOperatorInvitationRequest,
   AcceptOperatorInvitationRequest,
   PendingOperatorInvitation,
@@ -14,6 +14,7 @@ import {
   mapInvitationValidation,
 } from "./operator-invitation-helpers";
 import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
+import type { ApiResponse } from "~/lib/api-envelope";
 import { createLogger } from "~/lib/logger";
 import { OPERATOR_INVITATION_FLOW_HEADER } from "./operator-invitation-flow";
 
@@ -35,17 +36,23 @@ export async function createOperatorInvitation(
     body: {
       email: data.email,
       display_name: data.displayName,
-    },
+    } satisfies operatorInvitationsContract.CreateInvitationRequest,
   });
 }
 
 export async function listOperatorInvitations(): Promise<OperatorInvitationsData> {
-  const raw = await operatorFetch<BackendInvitationsListResponse>(
-    "/api/operator/invitations",
-  );
+  const raw =
+    await operatorFetch<operatorInvitationsContract.InvitationsListResponse>(
+      "/api/operator/invitations",
+    );
+  // Go lists pointers; the contract types an entry nullable.
   return {
-    invitations: (raw.invitations ?? []).map(mapPendingInvitation),
-    operators: (raw.operators ?? []).map(mapOperatorInfo),
+    invitations: (raw.invitations ?? [])
+      .filter((entry) => entry !== null)
+      .map(mapPendingInvitation),
+    operators: (raw.operators ?? [])
+      .filter((entry) => entry !== null)
+      .map(mapOperatorInfo),
   };
 }
 
@@ -132,9 +139,8 @@ export async function validateOperatorInvitation(
     );
   }
 
-  const json: unknown = await response.json();
-  const data = unwrapResponse<BackendInvitationValidation>(json);
-  return mapInvitationValidation(data);
+  const json = (await response.json()) as ApiResponse<InvitationValidationBody>;
+  return mapInvitationValidation(json.data);
 }
 
 export async function acceptOperatorInvitation(
@@ -169,16 +175,4 @@ export async function acceptOperatorInvitation(
     });
     throw error;
   }
-}
-
-function unwrapResponse<T>(json: unknown): T {
-  if (
-    typeof json === "object" &&
-    json !== null &&
-    "data" in json &&
-    "status" in json
-  ) {
-    return (json as { data: T }).data;
-  }
-  return json as T;
 }

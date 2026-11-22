@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -283,7 +284,7 @@ func TestPopulatePhotoFields_FeatureEnabled_NoFullAccess(t *testing.T) {
 	require.NotNil(t, resp.PhotoConsentGivenAt)
 	assert.True(t, resp.PhotoConsentGivenAt.Equal(now))
 	require.NotNil(t, resp.PhotoConsentGivenBy)
-	assert.Equal(t, int64(42), *resp.PhotoConsentGivenBy)
+	assert.Equal(t, ident.ID(int64(42)), *resp.PhotoConsentGivenBy)
 }
 
 // TestPopulatePhotoFields_FullAccess_PhotoAndConsent — the canonical
@@ -310,7 +311,7 @@ func TestPopulatePhotoFields_FullAccess_PhotoAndConsent(t *testing.T) {
 	require.NotNil(t, resp.PhotoConsentGivenAt)
 	assert.True(t, resp.PhotoConsentGivenAt.Equal(now))
 	require.NotNil(t, resp.PhotoConsentGivenBy)
-	assert.Equal(t, by, *resp.PhotoConsentGivenBy)
+	assert.Equal(t, ident.ID(by), *resp.PhotoConsentGivenBy)
 }
 
 // TestPopulatePhotoFields_FullAccess_ConsentNoPhoto — staff member

@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The payload of an offering change request is the complete desired
@@ -140,6 +141,9 @@ func selectionFromPayloadEntry(entry any) (careplan.OfferingChangeSelection, err
 // payloadOfferingID accepts the shapes jsonb round-trips through Go: float64
 // from encoding/json, plus int64 and string for hand-written payloads.
 func payloadOfferingID(value any) (int64, error) {
+	if typed, ok := value.(ident.ID); ok {
+		value = typed.Int64()
+	}
 	switch typed := value.(type) {
 	case float64:
 		return int64(typed), nil

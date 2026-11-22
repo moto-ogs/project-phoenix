@@ -78,6 +78,7 @@ import type { TraegerSchool } from "~/lib/traeger-api";
 import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { useDebounce } from "~/lib/use-debounce";
 import { traegerPath } from "~/lib/traeger-url";
+import { labelOf } from "~/lib/label-of";
 
 const logger = createLogger({ component: "TraegerVertraegePage" });
 
@@ -216,7 +217,7 @@ const COLUMNS: DataTableColumn<CareContractSummary>[] = [
     render: (contract) => (
       <span className="inline-flex flex-col items-start gap-1">
         <StatusBadge
-          label={CONTRACT_STATUS_LABELS[contract.status]}
+          label={labelOf(CONTRACT_STATUS_LABELS, contract.status, "–")}
           tone={contractStatusTone(contract)}
         />
         {contract.status === "gekuendigt" && contract.endsOn ? (
@@ -240,12 +241,13 @@ const COLUMNS: DataTableColumn<CareContractSummary>[] = [
         ) : null}
       </span>
     ),
-    sortValue: (contract) => CONTRACT_STATUS_ORDER.indexOf(contract.status),
+    sortValue: (contract) =>
+      contract.status ? CONTRACT_STATUS_ORDER.indexOf(contract.status) : -1,
     stacked: "meta",
     // On a phone the status alone, without the date under it.
     stackedRender: (contract) => (
       <StatusBadge
-        label={CONTRACT_STATUS_LABELS[contract.status]}
+        label={labelOf(CONTRACT_STATUS_LABELS, contract.status, "–")}
         tone={contractStatusTone(contract)}
       />
     ),
@@ -701,8 +703,8 @@ export default function TraegerVertraegePage() {
                       />
                     ) : null}
                     <StatusBadge
-                      label={CONCLUSION_MODE_LABELS[school.mode]}
-                      tone={CONCLUSION_MODE_TONES[school.mode]}
+                      label={labelOf(CONCLUSION_MODE_LABELS, school.mode, "–")}
+                      tone={labelOf(CONCLUSION_MODE_TONES, school.mode, "gray")}
                     />
                   </span>
                 </li>

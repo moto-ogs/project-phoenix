@@ -112,14 +112,14 @@ func TestAdminCreateStaffAbsence_SickCascades(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, absences, 1)
 	assert.Equal(t, absenceTypeSick, absences[0].AbsenceType)
-	assert.NotEqual(t, subjectID, absences[0].CreatedBy, "creator must be the editor, not the subject")
+	assert.NotEqual(t, subjectID, absences[0].CreatedBy.Int64(), "creator must be the editor, not the subject")
 
 	// The cascade cancelled + stamped the shift inside the request tx.
 	shift, err := repos.FindShift(ctx, shiftID)
 	require.NoError(t, err)
 	assert.True(t, shift.Cancelled)
 	require.NotNil(t, shift.SickAbsenceID)
-	assert.Equal(t, absences[0].ID, *shift.SickAbsenceID)
+	assert.Equal(t, absences[0].ID.Int64(), *shift.SickAbsenceID)
 
 	// DELETE undoes it: absence gone, shift reactivated.
 	req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/staff/%d/absences/%d", subjectID, absences[0].ID), nil)

@@ -44,7 +44,7 @@ func TestCalendarLifecyclePushJoinsTriggeringTransaction(t *testing.T) {
 			if kind != portal.EmailKindAppointmentPublished {
 				created, err := calendar.CreateStaffAppointment(ctx, request)
 				require.NoError(t, err)
-				appointmentID = created.Appointment.ID
+				appointmentID = created.Appointment.ID.Int64()
 			}
 			count := func(source bun.IDB, queryCtx context.Context, expected int) {
 				t.Helper()

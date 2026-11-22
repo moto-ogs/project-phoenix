@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ErrAuditLogInvalid marks a caller mistake in an audit log request — HTTP 400.
@@ -23,18 +24,18 @@ const (
 
 // AuditLogPerson names a staff member in the feed.
 type AuditLogPerson struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 // AuditLogActor is the acting person of an event. StaffID is nil for system
 // actions (auto checkout) and for absence-trail actors whose account no
 // longer maps to a staff row.
 type AuditLogActor struct {
-	StaffID  *int64 `json:"staff_id,omitempty"`
-	Name     string `json:"name"`
-	IsSystem bool   `json:"is_system"`
-	IsSelf   bool   `json:"is_self"`
+	StaffID  *ident.ID `json:"staff_id,omitempty"`
+	Name     string    `json:"name"`
+	IsSystem bool      `json:"is_system"`
+	IsSelf   bool      `json:"is_self"`
 }
 
 // AuditLogEvent is one feed entry: common envelope plus source-typed detail.
@@ -191,13 +192,13 @@ func (s *timeTrackingAuditLogService) decorate(ctx context.Context, entries []*T
 			Detail:     e.Detail,
 		}
 		if e.StaffID != nil {
-			event.Staff = &AuditLogPerson{ID: *e.StaffID, Name: staffNames[*e.StaffID]}
+			event.Staff = &AuditLogPerson{ID: ident.ID(*e.StaffID), Name: staffNames[*e.StaffID]}
 		}
 		actor := AuditLogActor{IsSystem: e.ActorIsSystem}
 		if e.ActorIsSystem {
 			actor.Name = "System"
 		} else if e.ActorStaffID != nil {
-			actor.StaffID = e.ActorStaffID
+			actor.StaffID = (*ident.ID)(e.ActorStaffID)
 			actor.Name = staffNames[*e.ActorStaffID]
 			actor.IsSelf = e.StaffID != nil && *e.StaffID == *e.ActorStaffID
 		}

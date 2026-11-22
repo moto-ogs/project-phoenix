@@ -943,7 +943,7 @@ function setupSWR({
       }
       return { data: phases, isLoading: false };
     }
-    if (key === 'staff-directory-list-{"strict":false}') {
+    if (key === "staff-directory-list-{}") {
       return {
         data: [
           {

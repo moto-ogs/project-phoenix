@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // DirectoryRoom is the Facilities projection this package reads.
@@ -56,7 +57,7 @@ func attachRooms(ctx context.Context, directory RoomDirectory, groups []*domain.
 		if group == nil || group.RoomID == nil {
 			continue
 		}
-		if room, ok := byID[*group.RoomID]; ok {
+		if room, ok := byID[(*group.RoomID).Int64()]; ok {
 			group.Room = room.groupRoom()
 		}
 	}
@@ -65,7 +66,7 @@ func attachRooms(ctx context.Context, directory RoomDirectory, groups []*domain.
 
 func (r DirectoryRoom) groupRoom() *domain.GroupRoom {
 	return &domain.GroupRoom{
-		ID:        r.ID,
+		ID:        ident.ID(r.ID),
 		CreatedAt: r.CreatedAt,
 		UpdatedAt: r.UpdatedAt,
 		Name:      r.Name,
@@ -84,11 +85,11 @@ func groupRoomIDs(groups []*domain.Group) []int64 {
 		if group == nil || group.RoomID == nil || *group.RoomID <= 0 {
 			continue
 		}
-		if _, found := seen[*group.RoomID]; found {
+		if _, found := seen[(*group.RoomID).Int64()]; found {
 			continue
 		}
-		seen[*group.RoomID] = struct{}{}
-		ids = append(ids, *group.RoomID)
+		seen[(*group.RoomID).Int64()] = struct{}{}
+		ids = append(ids, (*group.RoomID).Int64())
 	}
 	return ids
 }

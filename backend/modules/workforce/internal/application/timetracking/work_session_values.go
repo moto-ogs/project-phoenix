@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The clock uses calendar-date records for its calculations. These functions
@@ -74,11 +75,11 @@ func workSessionBreakToRecord(value workforce.WorkSessionBreak) *WorkSessionBrea
 }
 
 func applyWorkSessionBreakToRecord(entity *WorkSessionBreak, value workforce.WorkSessionBreak) {
-	entity.ID = value.ID
+	entity.ID = value.ID.Int64()
 	entity.CreatedAt = value.CreatedAt
 	entity.UpdatedAt = value.UpdatedAt
-	entity.TenantID = value.TenantID
-	entity.SessionID = value.SessionID
+	entity.TenantID = value.TenantID.Int64()
+	entity.SessionID = value.SessionID.Int64()
 	entity.StartedAt = value.StartedAt
 	entity.EndedAt = value.EndedAt
 	entity.DurationMinutes = value.DurationMinutes
@@ -115,7 +116,7 @@ func WorkSessionBreakToCapability(workBreak *WorkSessionBreak) workforce.WorkSes
 		return workforce.WorkSessionBreak{}
 	}
 	return workforce.WorkSessionBreak{
-		ID: workBreak.ID, TenantID: workBreak.TenantID, SessionID: workBreak.SessionID, StartedAt: workBreak.StartedAt,
+		ID: ident.ID(workBreak.ID), TenantID: ident.ID(workBreak.TenantID), SessionID: ident.ID(workBreak.SessionID), StartedAt: workBreak.StartedAt,
 		EndedAt: workBreak.EndedAt, DurationMinutes: workBreak.DurationMinutes, PlannedEndTime: workBreak.PlannedEndTime,
 		CreatedAt: workBreak.CreatedAt, UpdatedAt: workBreak.UpdatedAt,
 	}
@@ -134,7 +135,7 @@ func workSessionsByStaff(values []workforce.WorkSession) map[int64][]*WorkSessio
 func workBreaksBySession(values []workforce.WorkSessionBreak) map[int64][]*WorkSessionBreak {
 	result := make(map[int64][]*WorkSessionBreak)
 	for _, value := range values {
-		result[value.SessionID] = append(result[value.SessionID], workSessionBreakToRecord(value))
+		result[value.SessionID.Int64()] = append(result[value.SessionID.Int64()], workSessionBreakToRecord(value))
 	}
 	return result
 }

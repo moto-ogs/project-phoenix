@@ -11,6 +11,7 @@ import (
 	"github.com/uptrace/bun/driver/pgdriver"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -173,7 +174,7 @@ func (s *TraegerOfferingStore) withSchools(ctx context.Context, db bun.IDB, orga
 }
 
 func (row traegerOfferingSchoolRow) value() careplan.TraegerOfferingSchool {
-	school := careplan.TraegerOfferingSchool{SchoolID: row.SchoolID, AppliedVersion: row.AppliedVersion, AppliedCopyID: row.AppliedCopyID, RecordedAt: row.RecordedAt}
+	school := careplan.TraegerOfferingSchool{SchoolID: ident.ID(row.SchoolID), AppliedVersion: row.AppliedVersion, AppliedCopyID: row.AppliedCopyID, RecordedAt: row.RecordedAt}
 	if row.Outcome != nil {
 		school.Outcome = *row.Outcome
 	}
@@ -185,7 +186,7 @@ func (row traegerOfferingSchoolRow) value() careplan.TraegerOfferingSchool {
 
 func (row traegerOfferingRow) value() (careplan.TraegerOffering, error) {
 	offering := careplan.TraegerOffering{
-		ID: row.ID, OrganizationID: row.OrganizationID, TraegerPhaseID: row.TraegerPhaseID,
+		ID: ident.ID(row.ID), OrganizationID: ident.ID(row.OrganizationID), TraegerPhaseID: ident.ID(row.TraegerPhaseID),
 		ReleasedVersion: row.ReleasedVersion, WithdrawnAt: row.WithdrawnAt, UpdatedAt: row.UpdatedAt,
 	}
 	if err := json.Unmarshal(row.Draft, &offering.Draft); err != nil {

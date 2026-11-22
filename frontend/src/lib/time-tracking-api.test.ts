@@ -28,8 +28,8 @@ function mockFetchResponse(data: unknown, ok = true, status = 200) {
 
 // Sample backend responses (snake_case, numeric IDs)
 const backendSession = {
-  id: 1,
-  staff_id: 10,
+  id: "1",
+  staff_id: "10",
   date: "2025-06-15T00:00:00Z",
   status: "present",
   check_in_time: "2025-06-15T08:00:00Z",
@@ -37,7 +37,7 @@ const backendSession = {
   break_minutes: 0,
   notes: "",
   auto_checked_out: false,
-  created_by: 10,
+  created_by: "10",
   updated_by: null,
   created_at: "2025-06-15T08:00:00Z",
   updated_at: "2025-06-15T08:00:00Z",
@@ -50,8 +50,8 @@ const backendSessionWithCheckout = {
 };
 
 const backendBreak = {
-  id: 5,
-  session_id: 1,
+  id: "5",
+  session_id: "1",
   started_at: "2025-06-15T12:00:00Z",
   ended_at: "2025-06-15T12:30:00Z",
   duration_minutes: 30,
@@ -71,10 +71,10 @@ const backendHistory = {
 };
 
 const backendEdit = {
-  id: 3,
-  session_id: 1,
-  staff_id: 10,
-  edited_by: 99,
+  id: "3",
+  session_id: "1",
+  staff_id: "10",
+  edited_by: "99",
   field_name: "notes",
   old_value: null,
   new_value: "Updated",
@@ -83,17 +83,17 @@ const backendEdit = {
 };
 
 const backendAbsence = {
-  id: 7,
-  staff_id: 10,
+  id: "7",
+  staff_id: "10",
   absence_type: "sick",
   date_start: "2025-06-20T00:00:00Z",
   date_end: "2025-06-21T00:00:00Z",
   half_day: false,
   note: "Flu",
   status: "approved",
-  approved_by: 99,
+  approved_by: "99",
   approved_at: "2025-06-20T08:00:00Z",
-  created_by: 10,
+  created_by: "10",
   created_at: "2025-06-20T07:00:00Z",
   updated_at: "2025-06-20T08:00:00Z",
   duration_days: 2,
@@ -123,7 +123,7 @@ describe("TimeTrackingService", () => {
   describe("checkIn", () => {
     it("sends POST with status and returns mapped session", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
+        status: "success",
         message: "Checked in",
         data: backendSession,
       });
@@ -144,7 +144,7 @@ describe("TimeTrackingService", () => {
 
     it("sends home_office status", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
+        status: "success",
         message: "Checked in",
         data: backendSession,
       });
@@ -243,7 +243,7 @@ describe("TimeTrackingService", () => {
   describe("checkOut", () => {
     it("sends POST and returns mapped session", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
+        status: "success",
         message: "Checked out",
         data: backendSessionWithCheckout,
       });
@@ -274,8 +274,7 @@ describe("TimeTrackingService", () => {
   describe("getCurrentSession", () => {
     it("returns mapped session when active", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
-        message: "",
+        status: "success",
         data: backendSession,
       });
 
@@ -291,8 +290,7 @@ describe("TimeTrackingService", () => {
 
     it("returns null when no active session", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
-        message: "",
+        status: "success",
         data: null,
       });
 
@@ -304,8 +302,7 @@ describe("TimeTrackingService", () => {
   describe("getConfig", () => {
     it("returns the configured account start date", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
-        message: "",
+        status: "success",
         data: {
           account_start_date: "2026-06-01",
         },
@@ -322,8 +319,7 @@ describe("TimeTrackingService", () => {
 
     it("returns an empty account start date when backend config is unset", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
-        message: "",
+        status: "success",
         data: {},
       });
 
@@ -336,8 +332,7 @@ describe("TimeTrackingService", () => {
   describe("getHistory", () => {
     it("sends date range and returns mapped history", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
-        message: "",
+        status: "success",
         data: {
           sessions: [backendHistory],
           weekly_summaries: [],
@@ -365,8 +360,7 @@ describe("TimeTrackingService", () => {
   describe("getHolidays", () => {
     it("sends the date range and maps holidays by calendar date", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
-        message: "",
+        status: "success",
         data: [
           {
             date: "2026-12-25T00:00:00Z",
@@ -391,8 +385,7 @@ describe("TimeTrackingService", () => {
 
     it("returns an empty map when the backend returns null", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
-        message: "",
+        status: "success",
         data: null,
       });
 
@@ -405,8 +398,7 @@ describe("TimeTrackingService", () => {
   describe("getClosingDays", () => {
     it("sends the date range and expands ranges day-wise", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
-        message: "",
+        status: "success",
         data: [
           {
             start_date: "2026-12-24",
@@ -436,8 +428,7 @@ describe("TimeTrackingService", () => {
 
     it("returns an empty map when the backend returns null", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
-        message: "",
+        status: "success",
         data: null,
       });
 
@@ -448,8 +439,7 @@ describe("TimeTrackingService", () => {
 
     it("maps the visible part of a stored range that starts over 400 days earlier", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
-        message: "",
+        status: "success",
         data: [
           {
             start_date: "2020-01-01",
@@ -473,7 +463,7 @@ describe("TimeTrackingService", () => {
   describe("updateSession", () => {
     it("sends PUT with updates and returns mapped session", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
+        status: "success",
         message: "Updated",
         data: { ...backendSession, notes: "Updated notes" },
       });
@@ -495,7 +485,7 @@ describe("TimeTrackingService", () => {
   describe("startBreak", () => {
     it("sends POST and returns mapped break", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
+        status: "success",
         message: "Break started",
         data: { ...backendBreak, ended_at: null, duration_minutes: 0 },
       });
@@ -513,7 +503,7 @@ describe("TimeTrackingService", () => {
 
     it("sends planned duration for timed breaks", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
+        status: "success",
         message: "Break started",
         data: { ...backendBreak, ended_at: null, duration_minutes: 0 },
       });
@@ -533,7 +523,7 @@ describe("TimeTrackingService", () => {
   describe("endBreak", () => {
     it("sends POST and returns mapped session", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
+        status: "success",
         message: "Break ended",
         data: { ...backendSession, break_minutes: 30 },
       });
@@ -551,8 +541,7 @@ describe("TimeTrackingService", () => {
   describe("getSessionBreaks", () => {
     it("returns mapped breaks for a session", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
-        message: "",
+        status: "success",
         data: [backendBreak],
       });
 
@@ -571,8 +560,7 @@ describe("TimeTrackingService", () => {
   describe("getSessionEdits", () => {
     it("returns mapped edits for a session", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
-        message: "",
+        status: "success",
         data: [backendEdit],
       });
 
@@ -589,8 +577,7 @@ describe("TimeTrackingService", () => {
 
     it("handles null data gracefully", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
-        message: "",
+        status: "success",
         data: null,
       });
 
@@ -602,8 +589,7 @@ describe("TimeTrackingService", () => {
   describe("getAbsences", () => {
     it("sends date range and returns mapped absences", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
-        message: "",
+        status: "success",
         data: [backendAbsence],
       });
 
@@ -624,8 +610,7 @@ describe("TimeTrackingService", () => {
 
     it("handles null data gracefully", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
-        message: "",
+        status: "success",
         data: null,
       });
 
@@ -638,8 +623,7 @@ describe("TimeTrackingService", () => {
 
     it("fetches questioned absences without a date range", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
-        message: "",
+        status: "success",
         data: [{ ...backendAbsence, status: "question" }],
       });
 
@@ -658,7 +642,7 @@ describe("TimeTrackingService", () => {
   describe("createAbsence", () => {
     it("sends POST with absence data and returns mapped absence", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
+        status: "success",
         message: "Created",
         data: backendAbsence,
       });
@@ -686,7 +670,7 @@ describe("TimeTrackingService", () => {
   describe("updateAbsence", () => {
     it("sends PUT with updates and returns mapped absence", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
+        status: "success",
         message: "Updated",
         data: { ...backendAbsence, note: "Severe flu" },
       });
@@ -729,7 +713,7 @@ describe("TimeTrackingService", () => {
   describe("requestVacation", () => {
     it("sends vacation request data and returns the mapped absence", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
+        status: "success",
         message: "Created",
         data: { ...backendAbsence, absence_type: "vacation" },
       });
@@ -777,7 +761,7 @@ describe("TimeTrackingService", () => {
   describe("resubmitAbsence", () => {
     it("sends the amended note for another decision round", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
+        status: "success",
         message: "Resubmitted",
         data: null,
       });
@@ -822,8 +806,7 @@ describe("TimeTrackingService", () => {
 
     it("loads vacation quota for a specific year", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
-        message: "",
+        status: "success",
         data: quota,
       });
 
@@ -838,8 +821,7 @@ describe("TimeTrackingService", () => {
 
     it("loads vacation quota without year parameter", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
-        message: "",
+        status: "success",
         data: quota,
       });
 
@@ -855,8 +837,7 @@ describe("TimeTrackingService", () => {
   describe("getOwnAbsenceAllowances", () => {
     it("maps each own Kontingent with its name and string IDs", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
-        message: "",
+        status: "success",
         data: [
           {
             name: "Regenerationstag",
@@ -870,6 +851,7 @@ describe("TimeTrackingService", () => {
             expires_on: "2027-03-31",
             expired_days: 0,
             booking_days: 0,
+            kept_by_traeger: false,
             carried_in: {
               year: 2025,
               remaining_days: 1,
@@ -914,8 +896,7 @@ describe("TimeTrackingService", () => {
 
     it("reads a missing list as no Kontingente", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
-        message: "",
+        status: "success",
         data: null,
       });
 
@@ -929,8 +910,7 @@ describe("TimeTrackingService", () => {
     it("sends request without auth header when no session", async () => {
       mockGetSession.mockResolvedValue(null);
       global.fetch = mockFetchResponse({
-        success: true,
-        message: "",
+        status: "success",
         data: backendSession,
       });
 
@@ -948,8 +928,7 @@ describe("TimeTrackingService", () => {
         expires: "2025-12-31",
       } as never);
       global.fetch = mockFetchResponse({
-        success: true,
-        message: "",
+        status: "success",
         data: backendSession,
       });
 
@@ -965,8 +944,7 @@ describe("TimeTrackingService", () => {
   describe("request headers", () => {
     it("includes Content-Type for requests with body", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
-        message: "",
+        status: "success",
         data: backendSession,
       });
 
@@ -980,8 +958,7 @@ describe("TimeTrackingService", () => {
 
     it("omits Content-Type for GET requests", async () => {
       global.fetch = mockFetchResponse({
-        success: true,
-        message: "",
+        status: "success",
         data: backendSession,
       });
 

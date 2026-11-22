@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Master data of a Träger (#4653, spec #4611 user story 9, ADR 0112): its
@@ -76,7 +78,7 @@ type TraegerDocumentContact struct {
 // TraegerBankAccount is a bank account of the Träger. At most one is the
 // default; the first one is.
 type TraegerBankAccount struct {
-	ID            int64     `json:"id"`
+	ID            ident.ID  `json:"id"`
 	Label         string    `json:"label"`
 	AccountHolder string    `json:"account_holder"`
 	IBAN          string    `json:"iban"`

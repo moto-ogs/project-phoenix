@@ -4,27 +4,16 @@ import {
   systemRoleDescription,
   systemRoleLabel,
 } from "~/lib/role-labels";
+import type {
+  PermissionResponse,
+  RoleResponse,
+} from "~/lib/contract/shared.generated";
 
-export interface BackendRole {
-  ID: string | number;
-  Name: string;
-  Description: string;
-  IsSystem: boolean;
-  BaseRole?: string;
-  CreatedAt: string;
-  UpdatedAt: string;
-  Permissions?: BackendPermission[];
-}
+/** A role as the contract sends it (`GET /auth/roles`, account roles). */
+export type RoleWire = RoleResponse;
 
-export interface BackendPermission {
-  id: string | number;
-  name: string;
-  description: string;
-  resource: string;
-  action: string;
-  created_at: string;
-  updated_at: string;
-}
+/** A permission as the contract sends it. */
+export type PermissionWire = PermissionResponse;
 
 /** German display labels for system base roles used in announcement targeting. */
 export const BASE_ROLE_LABELS: Record<string, string> = {
@@ -49,7 +38,8 @@ export interface Role {
   schoolPortal?: boolean;
   createdAt: string;
   updatedAt: string;
-  permissions?: Permission[];
+  /** The names of the role's permissions; the role list sends names only. */
+  permissionNames?: readonly string[];
 }
 
 export interface Permission {
@@ -62,53 +52,25 @@ export interface Permission {
   updatedAt: string;
 }
 
-// Flexible role interface for handling mixed case API responses
-interface FlexibleRoleData {
-  ID?: string | number;
-  id?: string | number;
-  Name?: string;
-  name?: string;
-  Description?: string;
-  description?: string;
-  IsSystem?: boolean;
-  is_system?: boolean;
-  BaseRole?: string;
-  base_role?: string;
-  school_portal?: boolean;
-  CreatedAt?: string;
-  created_at?: string;
-  UpdatedAt?: string;
-  updated_at?: string;
-  Permissions?: BackendPermission[];
-  permissions?: BackendPermission[];
-}
-
-export function mapRoleResponse(
-  backendRole: BackendRole | FlexibleRoleData,
-): Role {
-  // Handle both uppercase (BackendRole) and lowercase (from API) field names
-  const roleData = backendRole as BackendRole & FlexibleRoleData;
+export function mapRoleResponse(role: RoleWire): Role {
   return {
-    id: String(roleData.ID ?? roleData.id ?? 0),
-    name: roleData.Name ?? roleData.name ?? "",
-    description: roleData.Description ?? roleData.description ?? "",
-    isSystem: roleData.IsSystem ?? roleData.is_system ?? false,
-    baseRole: roleData.BaseRole ?? roleData.base_role,
-    schoolPortal: roleData.school_portal ?? false,
-    createdAt: roleData.CreatedAt ?? roleData.created_at ?? "",
-    updatedAt: roleData.UpdatedAt ?? roleData.updated_at ?? "",
-    permissions:
-      (roleData.Permissions ?? roleData.permissions)?.map(
-        mapPermissionResponse,
-      ) ?? undefined,
+    id: role.id,
+    name: role.name,
+    description: role.description,
+    isSystem: role.is_system,
+    baseRole: role.base_role,
+    schoolPortal: role.school_portal,
+    createdAt: role.created_at,
+    updatedAt: role.updated_at,
+    permissionNames: role.permissions ?? [],
   };
 }
 
 export function mapPermissionResponse(
-  backendPermission: BackendPermission,
+  backendPermission: PermissionWire,
 ): Permission {
   return {
-    id: String(backendPermission.id),
+    id: backendPermission.id,
     name: backendPermission.name,
     description: backendPermission.description,
     resource: backendPermission.resource,

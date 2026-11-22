@@ -45,10 +45,10 @@ func (rs *CareMealTariffResource) Router(protectedTraegerRoutes func(chi.Router,
 
 // CareMealPriceRequest is the body of PUT /traeger/care-meal-tariffs.
 type CareMealPriceRequest struct {
-	SchoolID    int64         `json:"school_id"`
+	SchoolID    common.ID     `json:"school_id"`
 	ValidFrom   calendar.Date `json:"valid_from"`
 	Mode        string        `json:"mode"`
-	AmountCents int64         `json:"amount_cents"`
+	AmountCents int64         `json:"amount_cents" contract:"number"`
 }
 
 // Bind accepts the body; the Owner validates the price.

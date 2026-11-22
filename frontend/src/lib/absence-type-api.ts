@@ -12,19 +12,10 @@ import { apiErrorFromResponse, type ApiError } from "./api-error";
 // stays readable on the absences already filed under it.
 
 import { sessionFetch } from "./session-cache";
-
-interface BackendAbsenceType {
-  id: string;
-  name: string;
-  base_type: string;
-  is_active: boolean;
-  allowance_enabled: boolean;
-  carryover_until?: string | null;
-  requestable?: boolean;
-  kept_by_traeger?: boolean;
-  offered?: boolean;
-  school_limit_days?: number | null;
-}
+import type {
+  AbsenceTypeResponse,
+  AllowanceSummaryResponse,
+} from "./contract/absence-types.generated";
 
 export interface AbsenceType {
   /** Backend int64 as a string, matching the repo-wide ID convention. */
@@ -56,18 +47,18 @@ export interface AbsenceType {
   readonly schoolLimitDays: number | null;
 }
 
-function mapAbsenceType(data: BackendAbsenceType): AbsenceType {
+function mapAbsenceType(data: AbsenceTypeResponse): AbsenceType {
   return {
     id: data.id,
     name: data.name,
     baseType: data.base_type,
     isActive: data.is_active,
     allowanceEnabled: data.allowance_enabled,
-    carryoverUntil: data.carryover_until ?? null,
-    requestable: data.requestable ?? false,
-    keptByTraeger: data.kept_by_traeger ?? false,
+    carryoverUntil: data.carryover_until,
+    requestable: data.requestable,
+    keptByTraeger: data.kept_by_traeger,
     offered: data.offered ?? true,
-    schoolLimitDays: data.school_limit_days ?? null,
+    schoolLimitDays: data.school_limit_days,
   };
 }
 
@@ -83,7 +74,7 @@ async function readList(response: Response): Promise<AbsenceType[]> {
     );
   }
   const json = (await response.json()) as {
-    data: BackendAbsenceType[] | null;
+    data: AbsenceTypeResponse[] | null;
   };
   return (json.data ?? []).map(mapAbsenceType);
 }
@@ -95,7 +86,7 @@ async function readOne(response: Response): Promise<AbsenceType> {
       "Abwesenheitsart konnte nicht gespeichert werden",
     );
   }
-  const json = (await response.json()) as { data: BackendAbsenceType };
+  const json = (await response.json()) as { data: AbsenceTypeResponse };
   return mapAbsenceType(json.data);
 }
 
@@ -207,7 +198,7 @@ class AbsenceTypeService {
     }
     const json = (await response.json()) as {
       data: {
-        years: BackendAbsenceTypeAllowanceSummary[] | null;
+        years: AllowanceSummaryResponse[] | null;
         blocked: boolean;
         blocked_by?: "allowance" | "school_limit";
       };
@@ -240,26 +231,6 @@ class AbsenceTypeService {
     );
     return readAllowance(response);
   }
-}
-
-export interface BackendAbsenceTypeAllowanceSummary {
-  staff_id: string;
-  absence_type_id: string;
-  year: number;
-  entitled_days: number;
-  taken_days: number;
-  reserved_days: number;
-  remaining_days: number;
-  expires_on?: string;
-  expired_days?: number;
-  booking_days?: number;
-  carried_in?: {
-    year: number;
-    remaining_days: number;
-    expired_days: number;
-    expires_on: string;
-  } | null;
-  kept_by_traeger?: boolean;
 }
 
 /** The previous year's rest as seen from the year it is carried into. */
@@ -303,7 +274,7 @@ export interface AbsenceTypeAllowanceSummary {
 }
 
 export function mapAllowance(
-  data: BackendAbsenceTypeAllowanceSummary,
+  data: AllowanceSummaryResponse,
 ): AbsenceTypeAllowanceSummary {
   return {
     staffId: data.staff_id,
@@ -314,8 +285,8 @@ export function mapAllowance(
     reservedDays: data.reserved_days,
     remainingDays: data.remaining_days,
     expiresOn: data.expires_on ?? `${data.year}-12-31`,
-    expiredDays: data.expired_days ?? 0,
-    bookingDays: data.booking_days ?? 0,
+    expiredDays: data.expired_days,
+    bookingDays: data.booking_days,
     carriedIn: data.carried_in
       ? {
           year: data.carried_in.year,
@@ -324,7 +295,7 @@ export function mapAllowance(
           expiresOn: data.carried_in.expires_on,
         }
       : null,
-    keptByTraeger: data.kept_by_traeger ?? false,
+    keptByTraeger: data.kept_by_traeger,
   };
 }
 
@@ -338,7 +309,7 @@ async function readAllowance(
     );
   }
   const json = (await response.json()) as {
-    data: BackendAbsenceTypeAllowanceSummary;
+    data: AllowanceSummaryResponse;
   };
   return mapAllowance(json.data);
 }

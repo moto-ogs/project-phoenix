@@ -5,7 +5,7 @@ import {
   bool,
   calendarDate,
   instant,
-  int64StringOrNumber,
+  int64String,
   noData,
   nullable,
   object,
@@ -35,7 +35,7 @@ export interface withdrawnReleaseResponse {
 }
 
 export const withdrawnReleaseResponseSchema: z.ZodType<withdrawnReleaseResponse, unknown> = object<withdrawnReleaseResponse>({
-  organization_id: int64StringOrNumber,
+  organization_id: int64String,
 });
 
 /** Go: operator.resetTraegerMemberMFARequest */
@@ -61,7 +61,7 @@ export interface OrganizationSummary {
 }
 
 export const OrganizationSummarySchema: z.ZodType<OrganizationSummary, unknown> = object<OrganizationSummary>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   slug: str,
   active: bool,
@@ -95,8 +95,8 @@ export interface RetentionInstruction {
 }
 
 export const RetentionInstructionSchema: z.ZodType<RetentionInstruction, unknown> = object<RetentionInstruction>({
-  id: int64StringOrNumber,
-  organization_id: int64StringOrNumber,
+  id: int64String,
+  organization_id: int64String,
   beleg_type: str,
   trigger_event: str,
   period: safeInt,
@@ -125,10 +125,10 @@ export interface RetentionSuspension {
 }
 
 export const RetentionSuspensionSchema: z.ZodType<RetentionSuspension, unknown> = object<RetentionSuspension>({
-  id: int64StringOrNumber,
-  organization_id: int64StringOrNumber,
+  id: int64String,
+  organization_id: int64String,
   beleg_type: str,
-  beleg_id: optional(int64StringOrNumber),
+  beleg_id: optional(int64String),
   reason: str,
   scope: str,
   responsible: str,
@@ -169,7 +169,7 @@ export interface BelegClarificationReview {
 }
 
 export const BelegClarificationReviewSchema: z.ZodType<BelegClarificationReview, unknown> = object<BelegClarificationReview>({
-  id: int64StringOrNumber,
+  id: int64String,
   beleg_type: str,
   reason: str,
   note: str,
@@ -252,12 +252,12 @@ export interface TraegerErasureOrder {
 }
 
 export const TraegerErasureOrderSchema: z.ZodType<TraegerErasureOrder, unknown> = object<TraegerErasureOrder>({
-  id: int64StringOrNumber,
-  organization_id: int64StringOrNumber,
+  id: int64String,
+  organization_id: int64String,
   order_reference: str,
   confirmed_on: nullable(calendarDate),
   erase_not_before: nullable(calendarDate),
-  recorded_by: int64StringOrNumber,
+  recorded_by: int64String,
   recorded_at: instant,
   started_at: optional(instant),
   records_notice_shown_at: optional(instant),
@@ -287,7 +287,7 @@ export interface TraegerMember {
 }
 
 export const TraegerMemberSchema: z.ZodType<TraegerMember, unknown> = object<TraegerMember>({
-  account_id: int64StringOrNumber,
+  account_id: int64String,
   email: str,
   status: str,
   roles: nullable(arr(str)),
@@ -304,7 +304,7 @@ export interface TraegerInvitation {
 }
 
 export const TraegerInvitationSchema: z.ZodType<TraegerInvitation, unknown> = object<TraegerInvitation>({
-  id: int64StringOrNumber,
+  id: int64String,
   email: str,
   roles: nullable(arr(str)),
   expires_at: instant,
@@ -391,7 +391,7 @@ export interface SampleSchoolResult {
 }
 
 export const SampleSchoolResultSchema: z.ZodType<SampleSchoolResult, unknown> = object<SampleSchoolResult>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   created_count: safeInt,
   skipped_count: safeInt,
   failed_count: safeInt,

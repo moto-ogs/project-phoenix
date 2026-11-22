@@ -1,30 +1,10 @@
 // Types and mapping helpers for planned staff shifts (Dienstplan, #1376).
-// Backend wire format: snake_case, bigint shift/series IDs as strings, dates as
-// "YYYY-MM-DD", times as "HH:MM".
+// Wire shapes: lib/contract/{shared,staff-shifts,time-tracking}.generated.ts.
 
-export interface BackendStaffShift {
-  id: string;
-  staff_id: number | string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  break_minutes: number;
-  shift_type_id?: number | string | null;
-  /** Resolved Schichtart, embedded so staff (who cannot read /shift-types) still
-   *  see the label and color (#1844). Present only when the shift has a type. */
-  shift_type_name?: string | null;
-  shift_type_color?: string | null;
-  notes?: string;
-  series_id?: string | null;
-  /** Immutable source slot for a moved series occurrence. */
-  series_occurrence_date?: string | null;
-  detached?: boolean;
-  cancelled?: boolean;
-  change_reason?: string | null;
-  /** The Personalverwaltung of the Träger planned the shift (#4708). */
-  planned_by_traeger?: boolean;
-  origin_shift_id?: string | null;
-}
+import { knownEnum } from "./contract/known-enum";
+import type { ShiftResponse } from "./contract/shared.generated";
+import type { OverviewResponse } from "./contract/staff-shifts.generated";
+import type { assignmentResponse } from "./contract/time-tracking.generated";
 
 export interface StaffShift {
   id: string;
@@ -69,11 +49,6 @@ type CoverageStatus = "covered" | "uncovered" | "not_applicable";
 
 type CoverageReason = "absent" | "dienstplan_not_used" | null;
 
-interface BackendUncoveredInterval {
-  start_time: string;
-  end_time: string;
-}
-
 interface UncoveredInterval {
   /** Wall-clock "HH:MM" */
   startTime: string;
@@ -81,34 +56,10 @@ interface UncoveredInterval {
   endTime: string;
 }
 
-interface BackendStaffScheduleStaff {
-  id: number | string;
-  first_name: string;
-  last_name: string;
-}
-
 export interface StaffScheduleStaff {
   id: string;
   firstName: string;
   lastName: string;
-}
-
-interface BackendStaffScheduleAssignment {
-  instance_id: number | string;
-  staff_id: number | string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  activity_title: string;
-  room_id: number | string;
-  room_name: string;
-  status: string;
-  is_absent: boolean;
-  is_substitute: boolean;
-  absence_reason: string | null;
-  coverage_status: CoverageStatus;
-  coverage_reason: CoverageReason;
-  uncovered_intervals: BackendUncoveredInterval[];
 }
 
 export interface StaffScheduleAssignment {
@@ -134,21 +85,6 @@ export interface StaffScheduleAssignment {
   uncoveredIntervals: UncoveredInterval[];
 }
 
-interface BackendShiftTypeMinutes {
-  shift_type_id: string | null;
-  planned_minutes: number;
-}
-
-interface BackendStaffWeeklySummary {
-  staff_id: number | string;
-  week_start: string;
-  planned_minutes: number;
-  target_minutes: number | null;
-  delta_minutes: number | null;
-  planned_by_shift_type?: BackendShiftTypeMinutes[];
-}
-
-/** Planned net minutes of one Schichtart in a week (#3819). */
 interface ShiftTypeMinutes {
   /** Schichtart id, or null for shifts without a Schichtart. */
   shiftTypeId: string | null;
@@ -169,17 +105,6 @@ export interface StaffWeeklySummary {
   plannedByShiftType: ShiftTypeMinutes[];
 }
 
-export interface BackendStaffScheduleOverview {
-  from: string;
-  to: string;
-  dienstplan_in_use: boolean;
-  dienstplan_used_weeks?: string[];
-  staff: BackendStaffScheduleStaff[];
-  shifts: BackendStaffShift[];
-  assignments: BackendStaffScheduleAssignment[];
-  weekly_summaries?: BackendStaffWeeklySummary[];
-}
-
 export interface StaffScheduleOverview {
   /** Inclusive calendar-day range start as "YYYY-MM-DD". */
   from: string;
@@ -193,34 +118,42 @@ export interface StaffScheduleOverview {
   weeklySummaries: StaffWeeklySummary[];
 }
 
-export function mapStaffShift(data: BackendStaffShift): StaffShift {
+const COVERAGE_STATUSES: readonly CoverageStatus[] = [
+  "covered",
+  "uncovered",
+  "not_applicable",
+];
+const COVERAGE_REASONS: readonly NonNullable<CoverageReason>[] = [
+  "absent",
+  "dienstplan_not_used",
+];
+
+export function mapStaffShift(data: ShiftResponse): StaffShift {
   return {
-    id: data.id.toString(),
-    staffId: data.staff_id.toString(),
+    id: data.id,
+    staffId: data.staff_id,
     date: data.date.slice(0, 10),
     startTime: data.start_time.slice(0, 5),
     endTime: data.end_time.slice(0, 5),
     breakMinutes: data.break_minutes,
-    shiftTypeId:
-      data.shift_type_id != null ? data.shift_type_id.toString() : null,
+    shiftTypeId: data.shift_type_id ?? null,
     shiftTypeName: data.shift_type_name ?? null,
     shiftTypeColor: data.shift_type_color ?? null,
     notes: data.notes ?? "",
-    seriesId: data.series_id != null ? data.series_id.toString() : null,
+    seriesId: data.series_id ?? null,
     ...(data.series_occurrence_date != null
       ? { seriesOccurrenceDate: data.series_occurrence_date.slice(0, 10) }
       : {}),
-    detached: data.detached ?? false,
-    cancelled: data.cancelled ?? false,
+    detached: data.detached,
+    cancelled: data.cancelled,
     changeReason: data.change_reason ?? null,
-    originShiftId:
-      data.origin_shift_id != null ? data.origin_shift_id.toString() : null,
+    originShiftId: data.origin_shift_id ?? null,
     ...(data.planned_by_traeger ? { plannedByTraeger: true } : {}),
   };
 }
 
 export function mapStaffScheduleOverview(
-  data: BackendStaffScheduleOverview,
+  data: OverviewResponse,
 ): StaffScheduleOverview {
   return {
     from: data.from.slice(0, 10),
@@ -229,34 +162,40 @@ export function mapStaffScheduleOverview(
     dienstplanUsedWeeks: (data.dienstplan_used_weeks ?? []).map((week) =>
       week.slice(0, 10),
     ),
-    staff: data.staff.map((member) => ({
-      id: member.id.toString(),
+    staff: (data.staff ?? []).map((member) => ({
+      id: member.id,
       firstName: member.first_name,
       lastName: member.last_name,
     })),
-    shifts: data.shifts.map(mapStaffShift),
-    assignments: data.assignments.map((assignment) => ({
-      instanceId: assignment.instance_id.toString(),
-      staffId: assignment.staff_id.toString(),
+    shifts: (data.shifts ?? []).map(mapStaffShift),
+    assignments: (data.assignments ?? []).map((assignment) => ({
+      instanceId: assignment.instance_id,
+      staffId: assignment.staff_id,
       date: assignment.date.slice(0, 10),
       startTime: assignment.start_time.slice(0, 5),
       endTime: assignment.end_time.slice(0, 5),
       activityTitle: assignment.activity_title,
-      roomId: assignment.room_id.toString(),
+      roomId: assignment.room_id,
       roomName: assignment.room_name,
       status: assignment.status,
       isAbsent: assignment.is_absent,
       isSubstitute: assignment.is_substitute,
       absenceReason: assignment.absence_reason,
-      coverageStatus: assignment.coverage_status,
-      coverageReason: assignment.coverage_reason,
-      uncoveredIntervals: assignment.uncovered_intervals.map((interval) => ({
-        startTime: interval.start_time.slice(0, 5),
-        endTime: interval.end_time.slice(0, 5),
-      })),
+      coverageStatus:
+        knownEnum(COVERAGE_STATUSES, assignment.coverage_status) ??
+        "not_applicable",
+      coverageReason:
+        knownEnum(COVERAGE_REASONS, assignment.coverage_reason ?? undefined) ??
+        null,
+      uncoveredIntervals: (assignment.uncovered_intervals ?? []).map(
+        (interval) => ({
+          startTime: interval.start_time.slice(0, 5),
+          endTime: interval.end_time.slice(0, 5),
+        }),
+      ),
     })),
     weeklySummaries: (data.weekly_summaries ?? []).map((summary) => ({
-      staffId: summary.staff_id.toString(),
+      staffId: summary.staff_id,
       weekStart: summary.week_start.slice(0, 10),
       plannedMinutes: summary.planned_minutes,
       targetMinutes: summary.target_minutes,
@@ -276,26 +215,6 @@ export function mapStaffScheduleOverview(
 // admin StaffScheduleAssignment above (that one carries coverage math against
 // the Dienstplan; this one carries the block-level Vertretungsplan state a
 // staff member sees for their own day).
-
-export interface BackendOwnAssignment {
-  instance_id: number;
-  title: string;
-  group_name?: string | null;
-  room_name?: string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  status: string;
-  /** Older backends omit this field. */
-  is_spontaneous?: boolean;
-  cancelled: boolean;
-  is_primary: boolean;
-  is_substitute: boolean;
-  is_absent: boolean;
-  absence_reason?: string | null;
-  cancel_reason?: string | null;
-  understaffed_ack: boolean;
-}
 
 export interface OwnAssignment {
   instanceId: string;
@@ -327,9 +246,9 @@ export interface OwnAssignment {
   understaffedAck: boolean;
 }
 
-export function mapOwnAssignment(data: BackendOwnAssignment): OwnAssignment {
+export function mapOwnAssignment(data: assignmentResponse): OwnAssignment {
   return {
-    instanceId: data.instance_id.toString(),
+    instanceId: data.instance_id,
     title: data.title,
     groupName: data.group_name ?? null,
     roomName: data.room_name ?? "",

@@ -13,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Actions of the trail of a family deviation.
@@ -214,7 +215,7 @@ func (t *BillingTerms) SaveFamilyBilling(ctx context.Context, reviewer parentbil
 	if err != nil {
 		return nil, err
 	}
-	family.FamilyEmail, family.ContractID = key, input.ContractID
+	family.FamilyEmail, family.ContractID = key, ident.ID(input.ContractID)
 	if !deviates(family) && (stored == nil || stored.LastUsedOn == nil) {
 		return nil, t.removeFamilyBilling(ctx, reviewer, key)
 	}
@@ -340,7 +341,7 @@ func (t *BillingTerms) SetCareRunDueDates(ctx context.Context, reviewer parentbi
 	if run.Status != parentbilling.RunCalculated {
 		return nil, closedRunError(run.Status)
 	}
-	if err := t.store.ReplaceRunDueDates(ctx, reviewer.OrganizationID, reviewer.AccountID, run.ID, 0, dates); err != nil {
+	if err := t.store.ReplaceRunDueDates(ctx, reviewer.OrganizationID, reviewer.AccountID, run.ID.Int64(), 0, dates); err != nil {
 		return nil, err
 	}
 	return dates, nil
@@ -364,7 +365,7 @@ func (t *BillingTerms) SetHolidayRunDueDates(ctx context.Context, reviewer paren
 	if run.Status != parentbilling.RunCalculated {
 		return nil, closedRunError(run.Status)
 	}
-	if err := t.store.ReplaceRunDueDates(ctx, reviewer.OrganizationID, reviewer.AccountID, 0, run.ID, dates); err != nil {
+	if err := t.store.ReplaceRunDueDates(ctx, reviewer.OrganizationID, reviewer.AccountID, 0, run.ID.Int64(), dates); err != nil {
 		return nil, err
 	}
 	return dates, nil
@@ -482,7 +483,7 @@ func (p invoicePayments) debit(payment parentbilling.InvoicePayment, terms paren
 	}
 	mandate := p.mandates[familyEmail]
 	if mandate != nil {
-		p.usedMandates[mandate.ID] = *mandate
+		p.usedMandates[mandate.ID.Int64()] = *mandate
 	}
 	return parentbilling.ResolveDebit(payment, terms, p.run, family, issuedOn, p.creditor, mandate)
 }
@@ -517,7 +518,7 @@ func (p invoicePayments) deviationsRead() []parentbilling.FamilyBilling {
 func (p invoicePayments) family(key string) *parentbilling.FamilyBilling {
 	family := p.families[key]
 	if family != nil {
-		p.used[family.ID] = *family
+		p.used[family.ID.Int64()] = *family
 	}
 	return family
 }
@@ -596,7 +597,7 @@ func (p invoicePayments) careInvoice(invoice *parentbilling.CareInvoice, issuedO
 		Email: recipient.Email, Kind: recipient.Kind, SecondName: recipient.SecondName, Address: recipient.Address}
 	switch {
 	case p.perChild():
-		invoice.DebtorNumber = p.childNumber(invoice.FamilyEmail, p.contractChildren[invoice.ContractID])
+		invoice.DebtorNumber = p.childNumber(invoice.FamilyEmail, p.contractChildren[invoice.ContractID.Int64()])
 	case family != nil:
 		invoice.DebtorNumber = family.DebtorNumber
 	}

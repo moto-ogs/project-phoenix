@@ -23,13 +23,15 @@ import (
 // the lifecycle, the logger and the clock; the retained rows, the presence
 // writes, the operational settings, Care Plan's care days and effective
 // arrival and pickup times and the broadcaster are bound here. broadcaster
-// is optional.
+// is optional. The Änderungsprotokoll lets "Heute anders" (#7662) see a
+// reinstated block.
 func NewTimetableOperations(
 	deps timetablePorts.OperationDependencies, rows timetableCompose.OwnerRows, presence TimetableOperationPresence,
 	settings TimetableSettings, careDays careplan.CareDayQuery, arrivals EffectiveArrivalTimes, pickups EffectivePickupTimes,
 	broadcaster realtime.Broadcaster, withStaff func(context.Context, int64, int64) context.Context,
 ) (timetable.OperationCapability, error) {
 	deps.Instances, deps.InstanceStaff, deps.Participants, deps.Templates = rows.Instances.Reads, rows.InstanceStaff, rows.Participants, rows.Templates
+	deps.DeviationEvents = rows.DeviationEvents
 	deps.Attendance = timetableOperationAttendance{presence: presence, withStaff: withStaff}
 	deps.Students = rows.Students
 	deps.EducationGroups, deps.Rooms = rows.EducationGroups, rows.Rooms

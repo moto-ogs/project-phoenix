@@ -44,12 +44,12 @@ const seedCodeHolidayWeekSchoolOverride = "workforce.traeger_holiday_week_school
 
 type seedTraegerStaffRecord struct {
 	Employments []struct {
-		SchoolID int64 `json:"school_id"`
-		StaffID  int64 `json:"staff_id"`
+		SchoolID apiID `json:"school_id"`
+		StaffID  apiID `json:"staff_id"`
 		Active   bool  `json:"active"`
 	} `json:"employments"`
 	Contracts []struct {
-		ID int64 `json:"id"`
+		ID apiID `json:"id"`
 	} `json:"contracts"`
 }
 

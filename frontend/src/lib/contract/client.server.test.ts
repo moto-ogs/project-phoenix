@@ -183,51 +183,53 @@ describe("contractWrite", () => {
   });
 
   it.each([
-    "/api/students/care-end/preview",
-    "/api/import/students/preview",
-    "/api/search/",
-    "/api/students/arrival-schedules/status",
-    "/api/students/{id}/pickup-schedules/preview",
-    "/api/timetable/lists/options",
-    "/traeger/contract-imports/preview",
-    "/traeger/staff-records/link-preview",
-    "/parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate/preview",
-    "/school/parent-letters/letter-preview",
-  ])("keeps an unreadable POST query retryable: %s", async (pattern) => {
-    mockApiPost.mockResolvedValueOnce({ status: "success", data: {} });
-    const result = await contractWrite(
-      entry("POST", pattern),
-      pattern,
-      "token",
-      {},
-    );
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.error).toMatchObject({
-      status: 502,
-      code: "general.unavailable",
-    });
-    expect(
-      presentError(
-        new ApiError("Bad Gateway", result.error.status, {
-          code: result.error.code,
-        }),
-        "Vorschau",
-      ),
-    ).toMatchObject({ retryable: true, errorClass: "unavailable" });
-    expect(consoleSpies.error).toHaveBeenCalledWith("contract_decode_failed", {
-      route: `POST ${pattern}`,
-      write: false,
-      issues: ["data.name: invalid_type"],
-    });
-  });
+    ["a preview", "/api/rows/preview", "a preview saves nothing"],
+    [
+      "a search",
+      "/api/search/",
+      "a search reads; the query travels in the body",
+    ],
+  ])(
+    "keeps an unreadable POST the contract marks noCommit retryable: %s",
+    async (_name, pattern, noCommit) => {
+      mockApiPost.mockResolvedValueOnce({ status: "success", data: {} });
+      const result = await contractWrite(
+        { ...entry("POST", pattern), noCommit },
+        pattern,
+        "token",
+        {},
+      );
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.error).toMatchObject({
+        status: 502,
+        code: "general.unavailable",
+      });
+      expect(
+        presentError(
+          new ApiError("Bad Gateway", result.error.status, {
+            code: result.error.code,
+          }),
+          "Vorschau",
+        ),
+      ).toMatchObject({ retryable: true, errorClass: "unavailable" });
+      expect(consoleSpies.error).toHaveBeenCalledWith(
+        "contract_decode_failed",
+        {
+          route: `POST ${pattern}`,
+          write: false,
+          issues: ["data.name: invalid_type"],
+        },
+      );
+    },
+  );
 
   it.each([
     "/api/import/students/import",
     "/auth/staff-preview",
     "/api/rows/preview",
   ])(
-    "does not enable retry for a write or an unknown POST: %s",
+    "does not enable retry for a POST without noCommit: %s",
     async (pattern) => {
       mockApiPost.mockResolvedValueOnce({ status: "success", data: {} });
       const result = await contractWrite(

@@ -5,8 +5,10 @@ import {
   fireEvent,
   cleanup,
   within,
+  waitFor,
 } from "@testing-library/react";
 import { SessionProvider } from "next-auth/react";
+import { ToastProvider } from "~/contexts/ToastContext";
 import type { ReactNode as TenantSWRNode } from "react";
 import { SWRConfig as TenantSWRConfig } from "~/lib/swr/testing";
 
@@ -14,24 +16,38 @@ const { mockUseSWR } = vi.hoisted(() => ({
   mockUseSWR: vi.fn(),
 }));
 
-// The Laufgemeinschaft reads through the real hook (its fetch is mocked
-// below); every other read gets the per-test fake.
+// Companion and attendance history reads use the real cache; other reads
+// get the per-test fake.
 vi.mock("~/lib/swr", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/lib/swr")>();
   return {
+    useInvalidateMatching: actual.useInvalidateMatching,
     useSWRAuth: (key: string | null, ...rest: unknown[]) => {
-      const companions = key?.startsWith("student-companions-") ?? false;
+      const useRealCache =
+        (key?.startsWith("student-companions-") ?? false) ||
+        key === "student-attendance-history-123";
       const real = actual.useSWRAuth(
-        companions ? key : null,
+        useRealCache ? key : null,
         ...(rest as [() => Promise<unknown>]),
       );
-      return companions ? real : mockUseSWR(key, ...rest);
+      return useRealCache ? real : mockUseSWR(key, ...rest);
     },
   };
 });
 
 vi.mock("~/lib/tenant-router", () => ({
   useTenantRouter: () => ({ push: vi.fn() }),
+}));
+
+const { mockStopRoomHistory, mockResumeRoomHistory } = vi.hoisted(() => ({
+  mockStopRoomHistory: vi.fn(),
+  mockResumeRoomHistory: vi.fn(),
+}));
+
+vi.mock("~/lib/student-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/student-api")>()),
+  stopRoomHistory: mockStopRoomHistory,
+  resumeRoomHistory: mockResumeRoomHistory,
 }));
 
 vi.mock("~/lib/student-companion-api", async (importOriginal) => ({
@@ -51,6 +67,7 @@ import {
   PersonalInfoReadOnly,
   StudentHistorySection,
 } from "./student-detail-components";
+import { useSWRAuth } from "~/lib/swr";
 import { SectionCard } from "~/components/ui/section-card";
 import { ApiError } from "~/lib/api-error";
 import { fetchStudentCompanions } from "~/lib/student-companion-api";
@@ -80,6 +97,10 @@ function TenantSWRWrapper({ children }: Readonly<{ children: TenantSWRNode }>) {
 }
 
 function render(...[ui, options]: Parameters<typeof rtlRender>) {
+  return renderWithTenant(ui, options);
+}
+
+function renderWithTenant(...[ui, options]: Parameters<typeof rtlRender>) {
   const Outer = options?.wrapper;
   return rtlRender(ui, {
     ...options,
@@ -1335,6 +1356,9 @@ describe("PersonalInfoReadOnly with showEditButton", () => {
 // =============================================================================
 
 describe("StudentHistorySection", () => {
+  // Der Stopp-Bereich (#3844) meldet Ergebnisse als Toast.
+  const render = (ui: Parameters<typeof rtlRender>[0]) =>
+    renderWithTenant(ui, { wrapper: ToastProvider });
   const defaultProps = {
     studentId: "123",
     attendanceLogEnabled: true,
@@ -1455,6 +1479,143 @@ describe("StudentHistorySection", () => {
       .closest("button");
     fireEvent.click(feedbackButton!);
     expect(onNavigate).toHaveBeenCalledWith("/students/456/feedback-history");
+  });
+
+  // #3844: der Stopp von Raumverlauf und Stimmung je Kind.
+  describe("room history stop", () => {
+    const stopRead = (stopped: boolean) => {
+      const mutate = vi.fn();
+      mockUseSWR.mockImplementation((key: string | null) =>
+        key === "student-room-history-stop-123"
+          ? {
+              data: {
+                stopped,
+                stoppedAt: stopped ? "2026-11-21T09:00:00Z" : null,
+                deletedVisits: 0,
+              },
+              error: undefined,
+              isLoading: false,
+              isValidating: false,
+              mutate,
+            }
+          : {
+              data: undefined,
+              error: undefined,
+              isLoading: true,
+              isValidating: false,
+              mutate: vi.fn(),
+            },
+      );
+      return mutate;
+    };
+
+    it("shows a stopped child to every reader with full access, without the controls", () => {
+      stopRead(true);
+      render(<StudentHistorySection {...defaultProps} />);
+      expect(
+        screen.getByText(
+          /Raumverlauf und Stimmung sind für dieses Kind gestoppt/,
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("Anwesenheit je Betreuungsangebot, ohne Räume"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("Neue Stimmung wird nicht gespeichert"),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Historien")).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Stopp aufheben" }),
+      ).toBeNull();
+    });
+
+    it("lets the OGS administration stop only after typing LÖSCHEN", async () => {
+      const mutate = stopRead(false);
+      mockStopRoomHistory.mockResolvedValue({
+        stopped: true,
+        stoppedAt: "2026-11-21T09:00:00Z",
+        deletedVisits: 3,
+      });
+      function CachedHistory() {
+        const { data } = useSWRAuth(
+          "student-attendance-history-123",
+          async () => ["Previously loaded visit"],
+        );
+        return <div>{data?.join(", ") ?? "No cached visits"}</div>;
+      }
+      render(
+        <>
+          <CachedHistory />
+          <StudentHistorySection {...defaultProps} canManageRoomHistoryStop />
+        </>,
+      );
+      expect(
+        await screen.findByText("Previously loaded visit"),
+      ).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Stopp setzen" }));
+      const confirm = screen.getByRole("button", {
+        name: "Stoppen und löschen",
+      });
+      expect(confirm).toBeDisabled();
+      fireEvent.change(
+        screen.getByLabelText("Zur Bestätigung LÖSCHEN eingeben:"),
+        {
+          target: { value: "LÖSCHEN" },
+        },
+      );
+      fireEvent.click(
+        screen.getByRole("button", { name: "Stoppen und löschen" }),
+      );
+      await waitFor(() =>
+        expect(mockStopRoomHistory).toHaveBeenCalledWith("123"),
+      );
+      await waitFor(() =>
+        expect(mutate).toHaveBeenCalledWith(
+          expect.objectContaining({ stopped: true }),
+          { revalidate: false },
+        ),
+      );
+      expect(await screen.findByText("No cached visits")).toBeInTheDocument();
+      expect(screen.queryByText("Previously loaded visit")).toBeNull();
+      expect(
+        await screen.findByText("Gestoppt. 3 Raumbesuche sind gelöscht."),
+      ).toBeInTheDocument();
+    });
+
+    it("lifts the stop without a question", async () => {
+      const mutate = stopRead(true);
+      mockResumeRoomHistory.mockResolvedValue({
+        stopped: false,
+        stoppedAt: null,
+        deletedVisits: 0,
+      });
+      render(
+        <StudentHistorySection {...defaultProps} canManageRoomHistoryStop />,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Stopp aufheben" }));
+      await waitFor(() =>
+        expect(mockResumeRoomHistory).toHaveBeenCalledWith("123"),
+      );
+      await waitFor(() =>
+        expect(mutate).toHaveBeenCalledWith(
+          expect.objectContaining({ stopped: false }),
+          { revalidate: false },
+        ),
+      );
+    });
+
+    it("reads no stop for a reader without full access", () => {
+      stopRead(true);
+      render(<StudentHistorySection {...defaultProps} readOnly />);
+      expect(
+        screen.queryByText(
+          /Raumverlauf und Stimmung sind für dieses Kind gestoppt/,
+        ),
+      ).toBeNull();
+      expect(
+        screen.getAllByText("Nur für Gruppenbetreuer").length,
+      ).toBeGreaterThan(0);
+    });
   });
 });
 

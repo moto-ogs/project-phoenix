@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 )
@@ -93,7 +94,7 @@ func TestWorkforceRecordWritesRollbackAndRetry(t *testing.T) {
 			return err
 		}},
 		{"balance-create", func(ctx context.Context) error {
-			adjustment, err = capability.CreateStaffBalanceAdjustment(ctx, workforce.StaffBalanceAdjustment{StaffID: staff.ID, Type: workforce.BalanceAdjustmentTypeOpening, EffectiveDate: "2026-05-04", DecidedBy: staff.ID})
+			adjustment, err = capability.CreateStaffBalanceAdjustment(ctx, workforce.StaffBalanceAdjustment{StaffID: ident.ID(staff.ID), Type: workforce.BalanceAdjustmentTypeOpening, EffectiveDate: "2026-05-04", DecidedBy: ident.ID(staff.ID)})
 			return err
 		}},
 		{"balance-update", func(ctx context.Context) error {
@@ -102,7 +103,7 @@ func TestWorkforceRecordWritesRollbackAndRetry(t *testing.T) {
 			return err
 		}},
 		{"opening-create", func(ctx context.Context) error {
-			_, err := capability.CreateStaffVacationOpening(ctx, workforce.StaffVacationOpening{StaffID: staff.ID, Year: 2026, EffectiveDate: "2026-05-04", EnteredRemainingDays: 30, DecidedBy: staff.ID})
+			_, err := capability.CreateStaffVacationOpening(ctx, workforce.StaffVacationOpening{StaffID: ident.ID(staff.ID), Year: 2026, EffectiveDate: "2026-05-04", EnteredRemainingDays: 30, DecidedBy: ident.ID(staff.ID)})
 			return err
 		}},
 		{"quota-insert", func(ctx context.Context) error {

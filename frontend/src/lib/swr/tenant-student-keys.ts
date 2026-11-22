@@ -55,6 +55,9 @@ export const tenantStudentKeys = {
   /** One child's stored privacy consent and retention (`fetchStudentPrivacyConsent`). */
   privacyConsent: (studentId: string) =>
     `student-privacy-consent-${encodeURIComponent(studentId)}`,
+  /** Whether one child's room history and mood are stopped (`fetchRoomHistoryStop`). */
+  roomHistoryStop: (studentId: string) =>
+    `student-room-history-stop-${encodeURIComponent(studentId)}`,
   /** Whether one child's family protection is on (`getFamilyProtection`). */
   familyProtection: (studentId: string) =>
     `student-family-protection-${encodeURIComponent(studentId)}`,

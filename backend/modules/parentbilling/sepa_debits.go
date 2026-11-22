@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The SEPA direct debit file of an issued run (#4697, ADR 0181). moto
@@ -115,14 +116,14 @@ func MandateUsedOn(sequence string, lastCollectedOn *calendar.Date, takenOverOn 
 // family, the amount, the due date, the sequence type and the mandate with
 // the masked IBAN. Left names why a pending debit stays out of the file.
 type SEPADebit struct {
-	ID               int64         `json:"id"`
-	MandateID        int64         `json:"mandate_id"`
-	ContractID       int64         `json:"contract_id"`
+	ID               ident.ID      `json:"id"`
+	MandateID        ident.ID      `json:"mandate_id"`
+	ContractID       ident.ID      `json:"contract_id"`
 	RunKind          string        `json:"run_kind"`
-	RunID            int64         `json:"run_id"`
+	RunID            ident.ID      `json:"run_id"`
 	InvoiceNumber    string        `json:"invoice_number"`
 	RecipientName    string        `json:"recipient_name"`
-	AmountCents      int64         `json:"amount_cents"`
+	AmountCents      int64         `json:"amount_cents" contract:"number"`
 	DueOn            calendar.Date `json:"due_on"`
 	CollectOn        calendar.Date `json:"collect_on,omitempty"`
 	SequenceType     string        `json:"sequence_type"`
@@ -134,7 +135,7 @@ type SEPADebit struct {
 	// NoticeID and NoticeMonth name the installment of a Jahresbescheid the
 	// debit collects instead of an invoice (ADR 0182); InvoiceNumber is
 	// then the number of the notice.
-	NoticeID    int64         `json:"notice_id,omitempty"`
+	NoticeID    ident.ID      `json:"notice_id,omitempty"`
 	NoticeMonth calendar.Date `json:"notice_month,omitempty"`
 	MessageID   string        `json:"message_id,omitempty"`
 }
@@ -145,7 +146,7 @@ type SEPADebitGroup struct {
 	SequenceType string        `json:"sequence_type"`
 	CollectOn    calendar.Date `json:"collect_on"`
 	Count        int           `json:"count"`
-	TotalCents   int64         `json:"total_cents"`
+	TotalCents   int64         `json:"total_cents" contract:"number"`
 }
 
 // SEPADebitRun is the debit file of a run: what goes into it, what stays
@@ -153,14 +154,14 @@ type SEPADebitGroup struct {
 // file as it is now; a confirmation carries it.
 type SEPADebitRun struct {
 	RunKind        string           `json:"run_kind"`
-	RunID          int64            `json:"run_id"`
+	RunID          ident.ID         `json:"run_id"`
 	CreditorID     string           `json:"creditor_id"`
 	CreditorName   string           `json:"creditor_name"`
 	CreditorIBAN   string           `json:"creditor_iban_masked"`
 	AccountMissing bool             `json:"account_missing"`
 	MessageID      string           `json:"message_id"`
 	Count          int              `json:"count"`
-	TotalCents     int64            `json:"total_cents"`
+	TotalCents     int64            `json:"total_cents" contract:"number"`
 	Groups         []SEPADebitGroup `json:"groups"`
 	PastDue        int              `json:"past_due"`
 	Debits         []SEPADebit      `json:"debits"`

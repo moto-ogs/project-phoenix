@@ -33,7 +33,7 @@ func (rs *CareBillingResource) mountReview(billing chi.Router) {
 // the count, the sum and the fingerprint of the preview.
 type CareReleaseRequest struct {
 	DocumentCount int    `json:"document_count"`
-	TotalCents    int64  `json:"total_cents"`
+	TotalCents    int64  `json:"total_cents" contract:"number"`
 	Fingerprint   string `json:"fingerprint"`
 }
 
@@ -52,9 +52,9 @@ func (req *CareInvoiceDateRequest) Bind(*http.Request) error { return nil }
 // CareExclusionRequest is the body of POST …/exclusions: the invoice by its
 // contract and service ("care" or "meal", #6346) and the reason.
 type CareExclusionRequest struct {
-	ContractID int64  `json:"contract_id"`
-	Service    string `json:"service"`
-	Reason     string `json:"reason"`
+	ContractID common.ID `json:"contract_id"`
+	Service    string    `json:"service"`
+	Reason     string    `json:"reason"`
 }
 
 // Bind accepts the body; the Owner checks the service, the reason and the
@@ -64,8 +64,8 @@ func (req *CareExclusionRequest) Bind(*http.Request) error { return nil }
 // CareInclusionRequest is the body of POST …/inclusions: the excluded
 // invoice by its contract and service (#6346).
 type CareInclusionRequest struct {
-	ContractID int64  `json:"contract_id"`
-	Service    string `json:"service"`
+	ContractID common.ID `json:"contract_id"`
+	Service    string    `json:"service"`
 }
 
 // Bind accepts the body; the Owner checks the service and the invoice.
@@ -116,7 +116,7 @@ func (rs *CareBillingResource) exclude(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	detail, err := rs.billing.ExcludeCareInvoice(r.Context(), reviewer, runID,
-		capability.CareInvoiceKey{ContractID: req.ContractID, Service: req.Service}, req.Reason)
+		capability.CareInvoiceKey{ContractID: req.ContractID.Int64(), Service: req.Service}, req.Reason)
 	rs.respondReview(w, r, detail, err, "Invoice excluded successfully")
 }
 
@@ -131,7 +131,7 @@ func (rs *CareBillingResource) include(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	detail, err := rs.billing.IncludeCareInvoice(r.Context(), reviewer, runID,
-		capability.CareInvoiceKey{ContractID: req.ContractID, Service: req.Service})
+		capability.CareInvoiceKey{ContractID: req.ContractID.Int64(), Service: req.Service})
 	rs.respondReview(w, r, detail, err, "Invoice included successfully")
 }
 

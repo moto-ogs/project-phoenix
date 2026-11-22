@@ -7,31 +7,43 @@
  * calendar dates stay "YYYY-MM-DD".
  */
 
+import { knownEnum } from "./contract/known-enum";
+import { requiredDay } from "./contract/required-day";
+import type * as traegerCareCostSharesContract from "./contract/traeger-care-cost-shares.generated";
 import { traegerRequest } from "./traeger-api";
 import { type BillingFile, billingFile } from "./traeger-billing-api";
-import type {
-  CareCostShareKind,
-  CareCostShareScope,
+import {
+  type CareCostShareKind,
+  type CareCostShareScope,
+  knownCostShareKind,
+  knownCostShareScope,
 } from "./traeger-care-billing-api";
 
-/** Where a share stands today; `expiring` ends within `warningDays`. */
-type CareCostShareStatus = "upcoming" | "active" | "expiring" | "expired";
+// Go does not register the set; the contract types it as string.
+const STATUS_VALUES = ["upcoming", "active", "expiring", "expired"] as const;
 
+/** Where a share stands today; `expiring` ends within `warningDays`. */
+type CareCostShareStatus = (typeof STATUS_VALUES)[number];
+
+/**
+ * undefined kind or scope: one this build does not know; saving it again
+ * lets the backend refuse it at its field.
+ */
 export interface CareCostShare {
   readonly id: string;
   readonly contractId: string;
-  readonly kind: CareCostShareKind;
+  readonly kind: CareCostShareKind | undefined;
   readonly costBearerId: string;
   readonly costBearerName: string;
   readonly shareBasisPoints: number | null;
   readonly shareCents: number | null;
   /** What the share covers (#4686): the modules, the Mensa or both. */
-  readonly scope: CareCostShareScope;
+  readonly scope: CareCostShareScope | undefined;
   readonly validFrom: string;
   readonly validUntil: string;
   readonly reference: string;
   readonly checkedOn: string;
-  readonly status: CareCostShareStatus;
+  readonly status: CareCostShareStatus | undefined;
 }
 
 export type CareCostShareInput = Omit<
@@ -64,70 +76,42 @@ export interface CareCostShareSet {
 
 export type CareCostShareExportFormat = "pdf" | "xlsx" | "csv";
 
-interface BackendShare {
-  id: number | string;
-  contract_id: number | string;
-  kind: CareCostShareKind;
-  cost_bearer_id: number | string;
-  cost_bearer_name: string;
-  share_basis_points: number | null;
-  share_cents: number | null;
-  scope?: CareCostShareScope;
-  valid_from: string;
-  valid_until: string;
-  reference: string;
-  checked_on: string;
-  status: CareCostShareStatus;
-}
-
-interface BackendSet {
-  contracts:
-    | {
-        contract_id: number | string;
-        school_id: number | string;
-        school_name: string;
-        child_first_name: string;
-        child_last_name: string;
-        shares: BackendShare[] | null;
-      }[]
-    | null;
-  cost_bearers: { id: number | string; name: string; active: boolean }[] | null;
-  expiring: number;
-  warning_days: number;
-}
-
 const SHARES_PATH = "/api/traeger/care-cost-shares";
 
-function shareFromBackend(share: BackendShare): CareCostShare {
+function shareFromBackend(
+  share: traegerCareCostSharesContract.CareCostShare,
+): CareCostShare {
   return {
-    id: String(share.id),
-    contractId: String(share.contract_id),
-    kind: share.kind,
-    costBearerId: String(share.cost_bearer_id),
+    id: share.id,
+    contractId: share.contract_id,
+    kind: knownCostShareKind(share.kind),
+    costBearerId: share.cost_bearer_id,
     costBearerName: share.cost_bearer_name,
     shareBasisPoints: share.share_basis_points,
     shareCents: share.share_cents,
-    scope: share.scope ?? "care",
-    validFrom: share.valid_from,
-    validUntil: share.valid_until,
+    scope: knownCostShareScope(share.scope),
+    validFrom: requiredDay(share.valid_from, "care_cost_share.valid_from"),
+    validUntil: requiredDay(share.valid_until, "care_cost_share.valid_until"),
     reference: share.reference,
-    checkedOn: share.checked_on,
-    status: share.status,
+    checkedOn: requiredDay(share.checked_on, "care_cost_share.checked_on"),
+    status: knownEnum(STATUS_VALUES, share.status),
   };
 }
 
-function costShareSetFromBackend(body: BackendSet): CareCostShareSet {
+function costShareSetFromBackend(
+  body: traegerCareCostSharesContract.CareCostShareSet,
+): CareCostShareSet {
   return {
     contracts: (body.contracts ?? []).map((contract) => ({
-      contractId: String(contract.contract_id),
-      schoolId: String(contract.school_id),
+      contractId: contract.contract_id,
+      schoolId: contract.school_id,
       schoolName: contract.school_name,
       childFirstName: contract.child_first_name,
       childLastName: contract.child_last_name,
       shares: (contract.shares ?? []).map(shareFromBackend),
     })),
     costBearers: (body.cost_bearers ?? []).map((bearer) => ({
-      id: String(bearer.id),
+      id: bearer.id,
       name: bearer.name,
       active: bearer.active,
     })),
@@ -136,11 +120,13 @@ function costShareSetFromBackend(body: BackendSet): CareCostShareSet {
   };
 }
 
-function shareBody(input: CareCostShareInput) {
+function shareBody(
+  input: CareCostShareInput,
+): traegerCareCostSharesContract.CareCostShareRequest {
   return {
-    contract_id: Number(input.contractId),
+    contract_id: input.contractId,
     kind: input.kind,
-    cost_bearer_id: Number(input.costBearerId),
+    cost_bearer_id: input.costBearerId,
     share_basis_points: input.shareBasisPoints,
     share_cents: input.shareCents,
     scope: input.scope,
@@ -153,7 +139,11 @@ function shareBody(input: CareCostShareInput) {
 
 /** Reads the shares; the backend records the read per contract. */
 export async function fetchCareCostShares(): Promise<CareCostShareSet> {
-  return costShareSetFromBackend(await traegerRequest<BackendSet>(SHARES_PATH));
+  return costShareSetFromBackend(
+    await traegerRequest<traegerCareCostSharesContract.CareCostShareSet>(
+      SHARES_PATH,
+    ),
+  );
 }
 
 /** Creates a share without `shareId`, changes that one otherwise. */
@@ -162,7 +152,7 @@ export async function saveCareCostShare(
   input: CareCostShareInput,
 ): Promise<CareCostShareSet> {
   return costShareSetFromBackend(
-    await traegerRequest<BackendSet>(
+    await traegerRequest<traegerCareCostSharesContract.CareCostShareSet>(
       shareId ? `${SHARES_PATH}/${encodeURIComponent(shareId)}` : SHARES_PATH,
       { method: shareId ? "PUT" : "POST", body: shareBody(input) },
     ),
@@ -173,7 +163,7 @@ export async function deleteCareCostShare(
   shareId: string,
 ): Promise<CareCostShareSet> {
   return costShareSetFromBackend(
-    await traegerRequest<BackendSet>(
+    await traegerRequest<traegerCareCostSharesContract.CareCostShareSet>(
       `${SHARES_PATH}/${encodeURIComponent(shareId)}`,
       { method: "DELETE" },
     ),

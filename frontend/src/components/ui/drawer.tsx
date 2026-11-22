@@ -10,6 +10,7 @@ import {
   OVERLAY_BACKDROP_BLUR_CLASS,
   OVERLAY_BACKDROP_TINT_CLASS,
   Z_LAYER,
+  type ZLayer,
 } from "./overlay-styles";
 
 type DrawerDirection = "bottom" | "left";
@@ -45,21 +46,40 @@ Drawer.displayName = "Drawer";
 
 const DrawerPortal = DrawerPrimitive.Portal;
 
+/**
+ * Ebene des Blatts in `Z_LAYER`. `popover`: ein Blatt, das am Telefon ein
+ * Popover ersetzt (`ResponsivePanel`) und darum wie dieses auch über einem
+ * offenen Dialog liegen muss.
+ */
+type DrawerLayer = Extract<ZLayer, "sheet" | "popover">;
+
+type DrawerOverlayProps = OmitEach<
+  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Overlay>,
+  "layer"
+> & {
+  readonly layer?: DrawerLayer;
+};
+
 const DrawerOverlay = React.forwardRef<
   React.ComponentRef<typeof DrawerPrimitive.Overlay>,
-  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Overlay>
->(({ className, ...props }, ref) => (
-  <DrawerPrimitive.Overlay
-    ref={ref}
-    className={cn(
-      `fixed inset-0 ${Z_LAYER.sheet} ${FIXED_LAYER_SHIFT}`,
-      OVERLAY_BACKDROP_TINT_CLASS,
-      OVERLAY_BACKDROP_BLUR_CLASS,
-      className,
-    )}
-    {...props}
-  />
-));
+  DrawerOverlayProps
+>(({ className, layer: layerProp, ...props }: DrawerOverlayProps, ref) => {
+  // Vaul distributes its props through a union and leaks `layer` as `any`.
+  // Narrow at the kit boundary before using it as a Z_LAYER key.
+  const layer: DrawerLayer = layerProp ?? "sheet";
+  return (
+    <DrawerPrimitive.Overlay
+      ref={ref}
+      className={cn(
+        `fixed inset-0 ${Z_LAYER[layer]} ${FIXED_LAYER_SHIFT}`,
+        OVERLAY_BACKDROP_TINT_CLASS,
+        OVERLAY_BACKDROP_BLUR_CLASS,
+        className,
+      )}
+      {...props}
+    />
+  );
+});
 DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName;
 
 // Position + shape per direction. Vaul handles the slide animation; we
@@ -81,53 +101,70 @@ const directionContentClasses: Record<DrawerDirection, string> = {
 const FULL_SCREEN_BOTTOM_CLASSES =
   "fixed inset-0 flex h-dvh max-h-dvh flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]";
 
-type DrawerContentProps = React.ComponentPropsWithoutRef<
-  typeof DrawerPrimitive.Content
+type DrawerContentProps = OmitEach<
+  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>,
+  "layer"
 > & {
   /** Nur von unten: das Blatt füllt den ganzen Bildschirm, ohne Rundung. */
   readonly fullScreen?: boolean;
+  /** Ebene von Blatt und Abdunklung; ohne Angabe `sheet`. */
+  readonly layer?: DrawerLayer;
 };
 
 const DrawerContent = React.forwardRef<
   React.ComponentRef<typeof DrawerPrimitive.Content>,
   DrawerContentProps
->(({ className, children, fullScreen = false, ...props }, ref) => {
-  const direction = React.useContext(DrawerDirectionContext);
-  const sheetRef = React.useRef<HTMLDivElement | null>(null);
-  useSheetAboveKeyboard(sheetRef, direction === "bottom");
-  return (
-    <DrawerPortal>
-      <DrawerOverlay />
-      <DrawerPrimitive.Content
-        ref={(node: HTMLDivElement | null) => {
-          sheetRef.current = node;
-          if (typeof ref === "function") ref(node);
-          else if (ref) ref.current = node;
-        }}
-        className={cn(
-          `${Z_LAYER.sheet} ${FIXED_LAYER_SHIFT} border-0 bg-white`,
-          fullScreen && direction === "bottom"
-            ? FULL_SCREEN_BOTTOM_CLASSES
-            : directionContentClasses[direction],
-          className,
-        )}
-        {...props}
-      >
-        {direction === "bottom" && (
-          // iOS-style drag handle, only on bottom sheet (matches the
-          // original Vaul UX). Side panels are dismissed via close button
-          // / overlay click.
-          <div
-            data-drawer-handle="true"
-            aria-hidden="true"
-            className="mx-auto mt-4 h-1 w-12 rounded-full bg-gray-300"
-          />
-        )}
-        {children}
-      </DrawerPrimitive.Content>
-    </DrawerPortal>
-  );
-});
+>(
+  (
+    {
+      className,
+      children,
+      fullScreen = false,
+      layer: layerProp,
+      ...props
+    }: DrawerContentProps,
+    ref,
+  ) => {
+    // Vaul distributes its props through a union and leaks `layer` as `any`.
+    // Narrow at the kit boundary before using it as a Z_LAYER key.
+    const layer: DrawerLayer = layerProp ?? "sheet";
+    const direction = React.useContext(DrawerDirectionContext);
+    const sheetRef = React.useRef<HTMLDivElement | null>(null);
+    useSheetAboveKeyboard(sheetRef, direction === "bottom");
+    return (
+      <DrawerPortal>
+        <DrawerOverlay layer={layer} />
+        <DrawerPrimitive.Content
+          ref={(node: HTMLDivElement | null) => {
+            sheetRef.current = node;
+            if (typeof ref === "function") ref(node);
+            else if (ref) ref.current = node;
+          }}
+          className={cn(
+            `${Z_LAYER[layer]} ${FIXED_LAYER_SHIFT} border-0 bg-white`,
+            fullScreen && direction === "bottom"
+              ? FULL_SCREEN_BOTTOM_CLASSES
+              : directionContentClasses[direction],
+            className,
+          )}
+          {...props}
+        >
+          {direction === "bottom" && (
+            // iOS-style drag handle, only on bottom sheet (matches the
+            // original Vaul UX). Side panels are dismissed via close button
+            // / overlay click.
+            <div
+              data-drawer-handle="true"
+              aria-hidden="true"
+              className="mx-auto mt-4 h-1 w-12 rounded-full bg-gray-300"
+            />
+          )}
+          {children}
+        </DrawerPrimitive.Content>
+      </DrawerPortal>
+    );
+  },
+);
 DrawerContent.displayName = "DrawerContent";
 
 const DrawerHeader = ({

@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type endTemplateRequest struct {
@@ -27,9 +28,9 @@ func (req *endTemplateRequest) Bind(_ *http.Request) error {
 }
 
 type endTemplateResponse struct {
-	TemplateID       int64  `json:"template_id"`
-	EffectiveDate    string `json:"effective_date"`
-	DeletedInstances int    `json:"deleted_instances"`
+	TemplateID       common.ID `json:"template_id"`
+	EffectiveDate    string    `json:"effective_date"`
+	DeletedInstances int       `json:"deleted_instances"`
 }
 
 func (rs *Resource) endTemplate(w http.ResponseWriter, r *http.Request) {
@@ -62,7 +63,7 @@ func (rs *Resource) endTemplate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	common.Respond(w, r, http.StatusOK, endTemplateResponse{
-		TemplateID:       result.TemplateID,
+		TemplateID:       ident.ID(result.TemplateID),
 		EffectiveDate:    result.EffectiveDate.String(),
 		DeletedInstances: result.DeletedInstances,
 	}, "Template ended")

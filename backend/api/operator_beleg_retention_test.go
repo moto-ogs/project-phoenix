@@ -151,7 +151,7 @@ func assertConfirmationGatesTheShortPeriod(t *testing.T, db *bun.DB, call func(s
 	assert.NotEmpty(t, recorded["confirmed_at"])
 	var confirmedBy int64
 	require.NoError(t, db.NewRaw(`SELECT confirmed_by_operator_id FROM parent_billing.beleg_retention_instructions WHERE id = ?`,
-		int64(recorded["id"].(float64))).Scan(ctx, &confirmedBy))
+		testpkg.JSONID(t, recorded["id"])).Scan(ctx, &confirmedBy))
 	assert.Equal(t, operatorID, confirmedBy, "the confirmation names the operator who recorded it")
 	assert.Equal(t, before+1, audits("create"), "the confirmed instruction is audited")
 

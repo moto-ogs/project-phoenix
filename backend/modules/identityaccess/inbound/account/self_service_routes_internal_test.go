@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/portalauth"
 	transactionFailures "github.com/moto-ogs/project-phoenix/modules/transactionruntime"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // The staff portal's catalog proxy reaches these routes below /auth
@@ -111,8 +112,8 @@ func TestCaregiverCapabilityRoutesAnswerTheState(t *testing.T) {
 	t.Parallel()
 
 	state := func(active bool) json.RawMessage {
-		return json.RawMessage(`{"account_id":7,"email":"betreuer@example.test","first_name":"Bea","last_name":"Treuer",` +
-			`"person_id":8,"staff_id":9,"has_admin_role":false,"has_user_role":true,"has_person":true,"has_staff":true,` +
+		return json.RawMessage(`{"account_id":"7","email":"betreuer@example.test","first_name":"Bea","last_name":"Treuer",` +
+			`"person_id":"8","staff_id":"9","has_admin_role":false,"has_user_role":true,"has_person":true,"has_staff":true,` +
 			`"has_teacher":false,"has_caregiver_profile":` + map[bool]string{true: "true", false: "false"}[active] +
 			`,"is_active_caregiver":` + map[bool]string{true: "true", false: "false"}[active] + `,"disable_blocked":false}`)
 	}
@@ -141,8 +142,8 @@ func TestCaregiverCapabilityRoutesAnswerTheState(t *testing.T) {
 		require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 		var envelope struct {
 			Data struct {
-				AccountID         int64 `json:"account_id"`
-				IsActiveCaregiver bool  `json:"is_active_caregiver"`
+				AccountID         testpkg.ID `json:"account_id"`
+				IsActiveCaregiver bool       `json:"is_active_caregiver"`
 			} `json:"data"`
 		}
 		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &envelope))

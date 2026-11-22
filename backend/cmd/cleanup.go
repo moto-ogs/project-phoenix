@@ -1018,7 +1018,7 @@ func listActiveTenantIDsForCLI(ctx context.Context, db transactionruntime.Databa
 	}
 	ids := make([]int64, 0, len(active))
 	for _, school := range active {
-		ids = append(ids, school.ID)
+		ids = append(ids, school.ID.Int64())
 	}
 	return ids, nil
 }

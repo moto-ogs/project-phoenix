@@ -39,12 +39,12 @@ const (
 )
 
 type seedCareNoticeRun struct {
-	ID           int64   `json:"id"`
+	ID           apiID   `json:"id"`
 	Year         int     `json:"year"`
 	Status       string  `json:"status"`
-	SchoolIDs    []int64 `json:"school_ids"`
+	SchoolIDs    []apiID `json:"school_ids"`
 	PreviewCount int     `json:"preview_count"`
-	PreviewCents int64   `json:"preview_cents"`
+	PreviewCents int64   `json:"preview_cents" contract:"number"`
 	Fingerprint  string  `json:"fingerprint"`
 }
 
@@ -201,8 +201,8 @@ func seedOpenNoticeRun(client *Client, auth AuthRef, school int64, year int) (in
 		if run.Year != year || run.Status != "calculated" {
 			continue
 		}
-		if slices.Contains(run.SchoolIDs, school) {
-			return run.ID, nil
+		if slices.Contains(run.SchoolIDs, apiID(school)) {
+			return int64(run.ID), nil
 		}
 		fmt.Printf("  Träger fee notices: the open notice run %d of %d assesses other schools; skipped\n", run.ID, year)
 		return 0, nil

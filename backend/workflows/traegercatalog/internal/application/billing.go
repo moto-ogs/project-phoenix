@@ -6,6 +6,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // billing is what a rollout writes beside a school's offering copy.
@@ -54,7 +55,7 @@ func billingFor(offering careplan.TraegerOffering, next offeringRelease, schoolI
 
 func recordedVersion(offering careplan.TraegerOffering, schoolID int64) *int {
 	for _, school := range offering.Schools {
-		if school.SchoolID == schoolID && school.Outcome != enrollment.TraegerOutcomeWithdrawn {
+		if school.SchoolID == ident.ID(schoolID) && school.Outcome != enrollment.TraegerOutcomeWithdrawn {
 			return school.AppliedVersion
 		}
 	}
@@ -83,7 +84,7 @@ func nextMonthStart(day calendar.Date) calendar.Date {
 
 func appliedDraft(offering careplan.TraegerOffering, schoolID int64) *careplan.TraegerOfferingDraft {
 	for _, school := range offering.Schools {
-		if school.SchoolID == schoolID && school.Outcome != enrollment.TraegerOutcomeWithdrawn {
+		if school.SchoolID == ident.ID(schoolID) && school.Outcome != enrollment.TraegerOutcomeWithdrawn {
 			return school.Applied
 		}
 	}
@@ -97,7 +98,7 @@ func needsFinancialInitialization(offering careplan.TraegerOffering, schoolID in
 
 func recordedCopyID(offering careplan.TraegerOffering, schoolID int64) *int64 {
 	for _, school := range offering.Schools {
-		if school.SchoolID == schoolID && school.Outcome != enrollment.TraegerOutcomeWithdrawn {
+		if school.SchoolID == ident.ID(schoolID) && school.Outcome != enrollment.TraegerOutcomeWithdrawn {
 			return school.AppliedCopyID
 		}
 	}

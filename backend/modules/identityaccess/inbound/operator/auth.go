@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/portalauth"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // LoginRequest represents the login request body
@@ -33,16 +34,16 @@ type LoginResponse struct {
 
 // OperatorResponse represents an operator in the response
 type OperatorResponse struct {
-	ID          int64  `json:"id"`
-	Email       string `json:"email"`
-	DisplayName string `json:"display_name"`
+	ID          common.ID `json:"id"`
+	Email       string    `json:"email"`
+	DisplayName string    `json:"display_name"`
 }
 
 func operatorResponse(operator *identityaccess.Operator) *OperatorResponse {
 	if operator == nil {
 		return nil
 	}
-	return &OperatorResponse{ID: operator.ID, Email: operator.Email, DisplayName: operator.DisplayName}
+	return &OperatorResponse{ID: ident.ID(operator.ID), Email: operator.Email, DisplayName: operator.DisplayName}
 }
 
 // Login signs an operator in behind the mandatory MFA gate. The

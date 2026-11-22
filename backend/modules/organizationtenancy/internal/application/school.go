@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func (s *Service) CreateSchool(ctx context.Context, input organizationtenancy.CreateSchool) (result organizationtenancy.School, err error) {
@@ -45,7 +46,7 @@ func (s *Service) UpdateSchool(ctx context.Context, input organizationtenancy.Up
 		if existing.IsDeleted() {
 			return organizationtenancy.ErrSchoolAlreadyDeleted
 		}
-		if input.OrganizationID != existing.OrganizationID {
+		if ident.ID(input.OrganizationID) != existing.OrganizationID {
 			if err := s.requireSchoolOrganization(txCtx, input.OrganizationID, stats); err != nil {
 				return err
 			}
@@ -262,7 +263,7 @@ func (s *Service) requireSchoolDeletionChange(ctx context.Context, existing orga
 		return organizationtenancy.ErrSchoolNotDeleted
 	}
 	if !deleted {
-		if err := s.requireSchoolOrganization(ctx, existing.OrganizationID, stats); err != nil {
+		if err := s.requireSchoolOrganization(ctx, existing.OrganizationID.Int64(), stats); err != nil {
 			return err
 		}
 	}

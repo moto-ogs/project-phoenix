@@ -15,8 +15,4 @@ var (
 	NewSupervisorResponseForTest     = newSupervisorResponse
 	SystemActivityForbiddenForTest   = systemActivityForbidden
 	TimetableTemplateConflictForTest = timetableTemplateConflict
-	TimeframeToSlotForTest           = timeframeToSlot
 )
-
-// RouteScheduleByIDForTest is the read-only schedule route of an activity.
-const RouteScheduleByIDForTest = routeScheduleByID

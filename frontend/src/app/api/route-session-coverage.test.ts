@@ -65,7 +65,7 @@ vi.mock("@sentry/nextjs", async (original) => ({
 
 vi.mock("~/lib/tenant-resolve.server", async (original) => ({
   ...(await original<typeof import("~/lib/tenant-resolve.server")>()),
-  resolveTenantCached: async () => ({ tenant_id: 7 }),
+  resolveTenantCached: async () => ({ tenant_id: "7" }),
 }));
 
 function noteGuard(error: unknown) {

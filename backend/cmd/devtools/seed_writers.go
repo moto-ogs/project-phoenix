@@ -69,7 +69,7 @@ func ownerFeedback(entries []seedapi.PastFeedback) []feedbackCompose.PastFeedbac
 	for i, entry := range entries {
 		owned[i] = feedbackCompose.PastFeedback{
 			Value: entry.Value, Day: feedbackCompose.Date(entry.Day), Time: entry.Time,
-			StudentID: entry.StudentID, IsMensaFeedback: entry.IsMensaFeedback,
+			StudentID: int64(entry.StudentID), IsMensaFeedback: entry.IsMensaFeedback,
 		}
 	}
 	return owned

@@ -9,29 +9,33 @@
 import { apiErrorFromBody, transportFetch } from "~/lib/api-error";
 import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
 
-/** Wire-Form wie im Backend (`roster_impact`). Wochentage nach ISO, 1 = Montag. */
+/**
+ * Wire-Form wie im Backend (`roster_impact`), so wie sie der Vertrag der
+ * jeweiligen Route dekodiert: Go schreibt leere Listen und Tage als `null`.
+ * Wochentage nach ISO, 1 = Montag.
+ */
 export interface RosterImpactWire {
-  readonly effective_from: string;
+  readonly effective_from: string | null;
   readonly adjusted?: ReadonlyArray<{
     readonly template_id: string;
     readonly name: string;
-    readonly removed_weekdays?: readonly number[];
-    readonly added_weekdays?: readonly number[];
-  }>;
+    readonly removed_weekdays?: readonly number[] | null;
+    readonly added_weekdays?: readonly number[] | null;
+  }> | null;
   readonly not_adjusted?: ReadonlyArray<{
     readonly template_id: string;
     readonly name: string;
-    readonly weekdays?: readonly number[];
+    readonly weekdays?: readonly number[] | null;
     readonly via_target?: boolean;
     readonly until?: string | null;
-  }>;
+  }> | null;
   readonly pickup_overrides?: ReadonlyArray<{
     readonly weekday: number;
-    readonly date: string;
+    readonly date: string | null;
     readonly stored_time: string;
     readonly booked_time: string;
     readonly reset_now?: boolean;
-  }>;
+  }> | null;
 }
 
 export interface AdjustedRosterTemplate {
@@ -103,13 +107,20 @@ export function mapRosterImpact(
       viaTarget: template.via_target === true,
       until: template.until ?? null,
     })),
-    pickupOverrides: (wire.pickup_overrides ?? []).map((override) => ({
-      weekday: override.weekday,
-      date: override.date,
-      storedTime: override.stored_time,
-      bookedTime: override.booked_time,
-      resetNow: override.reset_now === true,
-    })),
+    // An override without its first day names no day to show.
+    pickupOverrides: (wire.pickup_overrides ?? []).flatMap((override) =>
+      override.date
+        ? [
+            {
+              weekday: override.weekday,
+              date: override.date,
+              storedTime: override.stored_time,
+              bookedTime: override.booked_time,
+              resetNow: override.reset_now === true,
+            },
+          ]
+        : [],
+    ),
   };
 }
 

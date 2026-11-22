@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Changes of one invoice in the review of a monthly run (#6197, ADR 0119
@@ -132,9 +134,9 @@ type CareRecipientName struct {
 // CareAmendmentValue is one side of a change: the total of an amount
 // change, the label and amount of a position, a recipient or an address.
 type CareAmendmentValue struct {
-	TotalCents  *int64             `json:"total_cents,omitempty"`
+	TotalCents  *int64             `json:"total_cents,omitempty" contract:"number"`
 	Label       string             `json:"label,omitempty"`
-	AmountCents *int64             `json:"amount_cents,omitempty"`
+	AmountCents *int64             `json:"amount_cents,omitempty" contract:"number"`
 	Recipient   *CareRecipientName `json:"recipient,omitempty"`
 	Address     *PostalAddress     `json:"address,omitempty"`
 }
@@ -142,7 +144,7 @@ type CareAmendmentValue struct {
 // CareRevocation is the entry that took a change back.
 type CareRevocation struct {
 	Reason    string    `json:"reason"`
-	AccountID *int64    `json:"account_id"`
+	AccountID *ident.ID `json:"account_id"`
 	RevokedAt time.Time `json:"revoked_at"`
 }
 
@@ -153,15 +155,15 @@ type CareRevocation struct {
 // recipient or address change. A revoked change or one in conflict adds
 // nothing.
 type CareAmendment struct {
-	ID          int64              `json:"id"`
+	ID          ident.ID           `json:"id"`
 	Kind        string             `json:"kind"`
 	Label       string             `json:"label"`
-	AmountCents int64              `json:"amount_cents"`
+	AmountCents int64              `json:"amount_cents" contract:"number"`
 	PositionKey string             `json:"position_key,omitempty"`
 	Before      CareAmendmentValue `json:"before"`
 	After       CareAmendmentValue `json:"after"`
 	Reason      string             `json:"reason"`
-	AccountID   *int64             `json:"account_id"`
+	AccountID   *ident.ID          `json:"account_id"`
 	AmendedAt   time.Time          `json:"amended_at"`
 	// Carried names the cancelled invoice the change came over from.
 	Carried           bool   `json:"carried"`

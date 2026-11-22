@@ -110,7 +110,7 @@ func TestWorkforce20OwnGrowth(t *testing.T) {
 					require.Len(t, rows, n)
 					for i, row := range rows {
 						data := row.(map[string]any)
-						require.Equal(t, float64(edits[n-1-i]), data["id"])
+						require.Equal(t, int64(edits[n-1-i]), testpkg.JSONID(t, data["id"]))
 						require.Equal(t, fmt.Sprintf("Edit %02d", n-1-i), data["new_value"])
 						require.Equal(t, "Own Reader", data["editor_name"])
 					}
@@ -124,7 +124,7 @@ func TestWorkforce20OwnGrowth(t *testing.T) {
 					rows := body.Data.([]any)
 					require.Len(t, rows, n)
 					for i, row := range rows {
-						require.Equal(t, float64(absences[i]), row.(map[string]any)["id"])
+						require.Equal(t, int64(absences[i]), testpkg.JSONID(t, row.(map[string]any)["id"]))
 					}
 				}
 				switch route {

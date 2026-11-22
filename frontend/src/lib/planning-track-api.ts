@@ -1,13 +1,6 @@
 import { apiErrorFromBody } from "./api-error";
+import type { PlanningTrack as PlanningTrackWire } from "./contract/timetable.generated";
 import { sessionFetch } from "./session-cache";
-
-interface BackendPlanningTrack {
-  id: number | string;
-  name: string;
-  color: string;
-  sort_order: number;
-  archived_at?: string | null;
-}
 
 export interface PlanningTrack {
   id: string;
@@ -23,13 +16,13 @@ interface PlanningTrackPayload {
   sort_order: number;
 }
 
-function mapTrack(track: BackendPlanningTrack): PlanningTrack {
+function mapTrack(track: PlanningTrackWire): PlanningTrack {
   return {
-    id: String(track.id),
+    id: track.id,
     name: track.name,
     color: track.color,
     sortOrder: track.sort_order,
-    archivedAt: track.archived_at ?? undefined,
+    archivedAt: track.archived_at,
   };
 }
 
@@ -43,7 +36,7 @@ async function readError(response: Response, fallback: string): Promise<Error> {
 
 async function readOne(response: Response, fallback: string) {
   if (!response.ok) throw await readError(response, fallback);
-  const body = (await response.json()) as { data: BackendPlanningTrack };
+  const body = (await response.json()) as { data: PlanningTrackWire };
   return mapTrack(body.data);
 }
 
@@ -56,10 +49,8 @@ class PlanningTrackService {
         "Planungsspuren konnten nicht geladen werden",
       );
     }
-    const body = (await response.json()) as {
-      data: BackendPlanningTrack[] | null;
-    };
-    return (body.data ?? []).map(mapTrack);
+    const body = (await response.json()) as { data: PlanningTrackWire[] };
+    return body.data.map(mapTrack);
   }
 
   async create(payload: PlanningTrackPayload): Promise<PlanningTrack> {
@@ -101,10 +92,8 @@ class PlanningTrackService {
         "Reihenfolge konnte nicht gespeichert werden",
       );
     }
-    const body = (await response.json()) as {
-      data: BackendPlanningTrack[] | null;
-    };
-    return (body.data ?? []).map(mapTrack);
+    const body = (await response.json()) as { data: PlanningTrackWire[] };
+    return body.data.map(mapTrack);
   }
 
   async archive(id: string): Promise<void> {

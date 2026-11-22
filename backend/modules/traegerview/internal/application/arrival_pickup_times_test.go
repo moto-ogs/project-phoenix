@@ -39,17 +39,17 @@ func TestBuildArrivalPickupTimesAveragesPerSchoolDayAndAddsTheSchools(t *testing
 	empty := traegerview.TraegerSchool{ID: 3, Name: "OGS Neu"}
 	from, to := calendar.NewDate(2026, 10, 1), calendar.NewDate(2026, 10, 31)
 	counts := []traegerview.ArrivalPickupCount{
-		{SchoolID: park.ID, Weekday: 1, StartMinute: 7*60 + 30, Arrivals: 10},
-		{SchoolID: park.ID, Weekday: 1, StartMinute: 15 * 60, Pickups: 7},
-		{SchoolID: wald.ID, Weekday: 1, StartMinute: 7*60 + 30, Arrivals: 3},
-		{SchoolID: wald.ID, Weekday: 6, StartMinute: 9 * 60, Arrivals: 1},
-		{SchoolID: wald.ID, Weekday: 2, StartMinute: 18 * 60, Pickups: 2},
+		{SchoolID: park.ID.Int64(), Weekday: 1, StartMinute: 7*60 + 30, Arrivals: 10},
+		{SchoolID: park.ID.Int64(), Weekday: 1, StartMinute: 15 * 60, Pickups: 7},
+		{SchoolID: wald.ID.Int64(), Weekday: 1, StartMinute: 7*60 + 30, Arrivals: 3},
+		{SchoolID: wald.ID.Int64(), Weekday: 6, StartMinute: 9 * 60, Arrivals: 1},
+		{SchoolID: wald.ID.Int64(), Weekday: 2, StartMinute: 18 * 60, Pickups: 2},
 	}
 	days := []traegerview.AttendanceDays{
-		{SchoolID: park.ID, Weekday: 1, Days: 4, FirstDay: calendar.NewDate(2026, 10, 5)},
-		{SchoolID: wald.ID, Weekday: 1, Days: 3, FirstDay: calendar.NewDate(2026, 10, 12)},
-		{SchoolID: wald.ID, Weekday: 2, Days: 2, FirstDay: calendar.NewDate(2026, 10, 6)},
-		{SchoolID: wald.ID, Weekday: 6, Days: 1, FirstDay: calendar.NewDate(2026, 10, 17)},
+		{SchoolID: park.ID.Int64(), Weekday: 1, Days: 4, FirstDay: calendar.NewDate(2026, 10, 5)},
+		{SchoolID: wald.ID.Int64(), Weekday: 1, Days: 3, FirstDay: calendar.NewDate(2026, 10, 12)},
+		{SchoolID: wald.ID.Int64(), Weekday: 2, Days: 2, FirstDay: calendar.NewDate(2026, 10, 6)},
+		{SchoolID: wald.ID.Int64(), Weekday: 6, Days: 1, FirstDay: calendar.NewDate(2026, 10, 17)},
 	}
 
 	result := buildArrivalPickupTimes([]traegerview.TraegerSchool{park, wald, empty}, counts, days, from, to)

@@ -48,11 +48,13 @@ describe("mapSchoolSetupState", () => {
 
   it("falls back to the registry defaults and drops unknown steps", () => {
     const state = mapSchoolSetupState({
-      basics: {},
+      completed: false,
+      dismissed: false,
+      basics: { presence_mode: "", group_mode: "" },
       // „basics“ war der gestrichene erste Schritt; ein alter Stand zeigt ihn nicht.
       steps: [
-        { key: "someday", applies: true },
-        { key: "basics", applies: true },
+        { key: "someday", applies: true, done: false, skipped: false },
+        { key: "basics", applies: true, done: false, skipped: false },
       ],
     });
     expect(state.basics).toEqual({

@@ -14,7 +14,7 @@ type PastFeedback struct {
 	Value           string `json:"value"`
 	Day             string `json:"day"`
 	Time            string `json:"time"`
-	StudentID       int64  `json:"student_id"`
+	StudentID       apiID  `json:"student_id"`
 	IsMensaFeedback bool   `json:"is_mensa_feedback"`
 }
 
@@ -58,7 +58,7 @@ func (s seedFeedbackHistoryStep) Run(ctx context.Context, rt *Runtime) error {
 	if len(entries) == 0 {
 		return nil
 	}
-	existing, err := pastFeedbackOf(rt, entries[0].StudentID, from, until)
+	existing, err := pastFeedbackOf(rt, int64(entries[0].StudentID), from, until)
 	if err != nil {
 		return err
 	}
@@ -188,7 +188,7 @@ func PastFeedbackAt(day PastPresenceDay, at time.Time, valueRoll uint32, mensa b
 		Value:           feedbackHistoryValue(valueRoll % 100),
 		Day:             day.Date.String(),
 		Time:            at.In(seedBerlinLocation()).Format("15:04:05"),
-		StudentID:       day.StudentID,
+		StudentID:       apiID(day.StudentID),
 		IsMensaFeedback: mensa,
 	}
 }

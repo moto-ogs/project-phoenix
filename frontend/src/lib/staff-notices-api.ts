@@ -11,6 +11,7 @@
 
 import { ApiError, apiErrorFromText, transportFetch } from "./api-error";
 import { staffNoticeKeys } from "~/lib/swr/staff-keys";
+import type { ApiResponse } from "./api-envelope";
 
 export type StaffNoticePriority = "info" | "important";
 
@@ -90,11 +91,6 @@ export interface StaffNoticeAcknowledger {
   name: string;
   /** RFC 3339 */
   acknowledged_at: string;
-}
-
-interface ApiResponse<T> {
-  status?: string;
-  data?: T;
 }
 
 /**

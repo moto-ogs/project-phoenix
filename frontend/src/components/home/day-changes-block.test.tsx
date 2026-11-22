@@ -56,6 +56,9 @@ function change(overrides: Partial<DayChange>): DayChange {
     groupName: null,
     link: null,
     count: null,
+    activity: null,
+    roomName: null,
+    previousRoomName: null,
     ...overrides,
   };
 }
@@ -182,6 +185,76 @@ describe("DayChangesBlock", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("zeigt geänderte, abgesagte und vertretene Dienste mit Uhrzeit und ohne Grund", () => {
+    // Vor Beginn aller Dienste: keiner steht schon unter „erledigt“ (#7660).
+    setTestClock("2026-09-09T09:00:00+02:00");
+    serve({
+      entries: [
+        change({
+          kind: "shift_changed",
+          section: "you",
+          startsAt: "2026-09-09T08:00:00Z",
+          endsAt: "2026-09-09T12:00:00Z",
+          people: [
+            { staffId: "1", name: "Anna", role: "on_duty", isSelf: true },
+          ],
+          link: { target: "own_shift_plan", staffId: null },
+        }),
+        change({
+          kind: "shift_cancelled",
+          startsAt: "2026-09-09T10:00:00Z",
+          endsAt: "2026-09-09T14:00:00Z",
+          people: [
+            {
+              staffId: "2",
+              name: "Ben Kollege",
+              role: "on_duty",
+              isSelf: false,
+            },
+          ],
+          link: { target: "shift_plan", staffId: "2" },
+        }),
+        change({
+          kind: "shift_replacement",
+          startsAt: "2026-09-09T10:00:00Z",
+          endsAt: "2026-09-09T13:00:00Z",
+          people: [
+            {
+              staffId: "3",
+              name: "Tom Hilfe",
+              role: "substitute",
+              isSelf: false,
+            },
+            {
+              staffId: "2",
+              name: "Ben Kollege",
+              role: "replaced",
+              isSelf: false,
+            },
+          ],
+        }),
+      ],
+    });
+    render(<DayChangesBlock />);
+
+    const mine = within(screen.getByRole("region", { name: "Betrifft dich" }));
+    expect(
+      mine.getByRole("link", {
+        name: "Dein Dienst ist heute anders. 10:00 bis 14:00 Uhr",
+      }),
+    ).toHaveAttribute("href", "/schule/mein-dienstplan");
+    const school = within(screen.getByRole("region", { name: "Schule" }));
+    expect(
+      school.getByRole("link", {
+        name: "Der Dienst von Ben Kollege fällt heute aus. 12:00 bis 16:00 Uhr",
+      }),
+    ).toHaveAttribute("href", "/schule/dienstplan?view=person&staff=2");
+    expect(
+      school.getByText("Tom Hilfe vertritt heute Ben Kollege."),
+    ).toBeInTheDocument();
+    expect(school.getByText("12:00 bis 15:00 Uhr")).toBeInTheDocument();
+  });
+
   it("sagt ohne Einträge, dass alles wie geplant läuft", () => {
     serve({});
     render(<DayChangesBlock />);
@@ -195,7 +268,7 @@ describe("DayChangesBlock", () => {
     render(<DayChangesBlock />);
     expect(
       screen.getByText(
-        "Ausfälle und Vertretungen konnten gerade nicht geladen werden.",
+        "Ausfälle, Vertretungen und Dienste konnten gerade nicht geladen werden.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -282,6 +355,88 @@ describe("DayChangesBlock", () => {
     expect(
       screen.getByText(
         "Hinweise der Leitung konnten gerade nicht geladen werden.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("nennt eine ausgefallene Quelle der Schließtage", () => {
+    serve({ failedSources: ["closing_days"] });
+    render(<DayChangesBlock />);
+    expect(
+      screen.getByText("Schließtage konnten gerade nicht geladen werden."),
+    ).toBeInTheDocument();
+  });
+
+  it("zeigt Schul- und Träger-Schließtage mit Link zum Kalender", () => {
+    serve({
+      entries: [
+        change({
+          kind: "closing_day",
+          link: { target: "calendar_periods", staffId: null },
+          closing: { name: "Pädagogischer Tag", traeger: false },
+        }),
+        change({
+          kind: "closing_day",
+          link: { target: "calendar_periods", staffId: null },
+          closing: { name: "Brückentag", traeger: true },
+        }),
+      ],
+    });
+    render(<DayChangesBlock />);
+
+    const school = within(screen.getByRole("region", { name: "Schule" }));
+    expect(
+      school.getByRole("link", {
+        name: "Die OGS ist heute geschlossen: Pädagogischer Tag.",
+      }),
+    ).toHaveAttribute("href", "/schule/calendar-periods");
+    expect(
+      school.getByRole("link", {
+        name: "Der Träger hat die OGS heute geschlossen: Brückentag.",
+      }),
+    ).toHaveAttribute("href", "/schule/calendar-periods");
+  });
+
+  it("zeigt Ausflüge und Unterrichtsschluss der Klassen ohne Namen (#7681)", () => {
+    serve({
+      entries: [
+        change({
+          kind: "class_trip",
+          section: "you",
+          schoolClass: { name: "3a", time: null, children: 12 },
+        }),
+        change({
+          kind: "class_trip",
+          section: "school",
+          schoolClass: { name: "4b", time: "13:00", children: 1 },
+        }),
+        change({
+          kind: "class_dismissal_changed",
+          section: "school",
+          schoolClass: { name: "Klasse 2c", time: "11:30", children: 0 },
+        }),
+      ],
+    });
+    render(<DayChangesBlock />);
+
+    const mine = within(screen.getByRole("region", { name: "Betrifft dich" }));
+    expect(rowTexts(mine.getByRole("list"))).toEqual([
+      "12 Kinder aus Klasse 3a sind heute den ganzen Tag unterwegs.",
+    ]);
+    const school = within(screen.getByRole("region", { name: "Schule" }));
+    expect(rowTexts(school.getByRole("list"))).toEqual([
+      "1 Kind aus Klasse 4b ist heute auf Ausflug und kommt um 13:00 Uhr zurück.",
+      "Bei Klasse 2c endet der Unterricht heute um 11:30 Uhr.",
+    ]);
+    expect(school.queryByRole("link")).toBeNull();
+  });
+
+  it("nennt eine ausgefallene Quelle der Klassen", () => {
+    serve({ failedSources: ["classes"] });
+    render(<DayChangesBlock />);
+    expect(
+      screen.getByText(
+        "Änderungen am Unterrichtsschluss der Klassen konnten gerade nicht geladen werden.",
       ),
     ).toBeInTheDocument();
   });
@@ -491,6 +646,53 @@ describe("DayChangesBlock über den Tag (#7660)", () => {
 
     expect(live).toHaveTextContent("„Heute anders“ hat sich geändert.");
   });
+
+  it("sagt eine geänderte Zahl eines Klassenausflugs an", () => {
+    const trip = (children: number) =>
+      change({
+        kind: "class_trip",
+        schoolClass: { name: "3a", time: "13:00", children },
+      });
+    serve({ entries: [trip(2)] });
+    const { rerender } = render(<DayChangesBlock />);
+    const live = document.querySelector('[aria-live="polite"]');
+    expect(live).toHaveTextContent("");
+
+    serve({ entries: [trip(3)] });
+    rerender(<DayChangesBlock />);
+
+    expect(live).toHaveTextContent("„Heute anders“ hat sich geändert.");
+  });
+
+  it("sagt geänderte Titel und Räume einer bestehenden Terminänderung an", () => {
+    const activity = (
+      title: string,
+      roomName: string,
+      previousRoomName: string,
+    ) =>
+      change({
+        kind: "activity_room_changed",
+        activity: { id: "17", title },
+        roomName,
+        previousRoomName,
+      });
+    serve({ entries: [activity("Chor", "Aula", "Werkraum")] });
+    const { rerender } = render(<DayChangesBlock />);
+    const live = document.querySelector('[aria-live="polite"]');
+    expect(live).toHaveTextContent("");
+
+    serve({ entries: [activity("Konzert", "Aula", "Werkraum")] });
+    rerender(<DayChangesBlock />);
+    expect(live).toHaveTextContent("„Heute anders“ hat sich geändert.");
+
+    serve({ entries: [activity("Konzert", "Turnhalle", "Werkraum")] });
+    rerender(<DayChangesBlock />);
+    expect(live).toHaveTextContent("„Heute anders“ hat sich geändert.");
+
+    serve({ entries: [activity("Konzert", "Turnhalle", "Aula")] });
+    rerender(<DayChangesBlock />);
+    expect(live).toHaveTextContent("„Heute anders“ hat sich geändert.");
+  });
 });
 
 describe("Texte der Gruppen-Vertretung", () => {
@@ -519,5 +721,363 @@ describe("Texte der Gruppen-Vertretung", () => {
         { staffId: "2", name: "Anna", role: "replaced", isSelf: true },
       ]),
     ).toBe("Daria Nowak vertritt dich heute in der Gruppe Igel.");
+  });
+});
+
+describe("DayChangesBlock — Kinder (#7665)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    phone.value = false;
+  });
+
+  const child = (studentId: string, name: string) => ({
+    studentId,
+    name,
+    status: null,
+    pickupTime: null,
+    note: null,
+  });
+
+  it("zeigt Kinder der eigenen Gruppe einzeln und klappt die Zusammenfassung auf", () => {
+    serve({
+      entries: [
+        change({
+          kind: "child_absent",
+          section: "you",
+          groupName: "Igel",
+          child: { ...child("11", "Mia Kind"), status: "sick" },
+          link: { target: "student", staffId: null, studentId: "11" },
+        }),
+        change({
+          kind: "child_pickup_changed",
+          section: "you",
+          groupName: "Igel",
+          child: { ...child("12", "Leo Kind"), pickupTime: "14:30" },
+          link: { target: "student", staffId: null, studentId: "12" },
+        }),
+        change({
+          kind: "child_summary",
+          groupName: "Fuchs",
+          childSummary: {
+            schoolClass: "",
+            counts: {
+              sick: 4,
+              excused: 0,
+              pickupChanged: 0,
+              goesAlone: 1,
+              pickupNote: 0,
+            },
+            items: [
+              {
+                kind: "child_goes_alone",
+                child: child("21", "Lou Kind"),
+                link: { target: "student", staffId: null, studentId: "21" },
+              },
+              {
+                kind: "child_absent",
+                child: { ...child("22", "Pia Kind"), status: "sick" },
+                link: { target: "student", staffId: null, studentId: "22" },
+              },
+            ],
+          },
+        }),
+        change({
+          kind: "child_summary",
+          childSummary: {
+            schoolClass: "4c",
+            counts: {
+              sick: 0,
+              excused: 1,
+              pickupChanged: 0,
+              goesAlone: 0,
+              pickupNote: 0,
+            },
+            items: [],
+          },
+        }),
+      ],
+    });
+    render(<DayChangesBlock />);
+
+    const mine = within(screen.getByRole("region", { name: "Betrifft dich" }));
+    expect(
+      mine.getByRole("link", { name: "Mia Kind ist heute krank gemeldet." }),
+    ).toHaveAttribute("href", "/schule/students/11");
+    expect(
+      mine.getByRole("link", { name: "Leo Kind geht heute um 14:30 Uhr." }),
+    ).toHaveAttribute("href", "/schule/students/12");
+
+    const school = within(screen.getByRole("region", { name: "Schule" }));
+    expect(school.getByText("4 krank, 1 geht allein")).toBeInTheDocument();
+    expect(school.getByText("1 entschuldigt")).toBeInTheDocument();
+    expect(school.getByRole("button", { name: /Klasse 4c/ })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    const toggle = school.getByRole("button", { name: /Gruppe Fuchs/ });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(school.queryByText(/Lou Kind/)).not.toBeInTheDocument();
+
+    fireEvent.click(toggle);
+
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(
+      school.getByRole("link", {
+        name: "Lou Kind geht heute allein nach Hause.",
+      }),
+    ).toHaveAttribute("href", "/schule/students/21");
+    const sick = school.getByRole("link", {
+      name: "Pia Kind ist heute krank gemeldet.",
+    });
+    fireEvent.click(sick);
+    expect(trackEvent).toHaveBeenCalledWith("day_changes_entry_clicked", {
+      day_change_kind: "child_absent",
+    });
+  });
+
+  it("nennt den Ausfall der Kinder-Quelle und gibt keine Entwarnung", () => {
+    serve({ failedSources: ["children"] });
+    render(<DayChangesBlock />);
+    expect(
+      screen.getByText(
+        "Krankmeldungen, Abholzeiten und Ausflüge der Kinder konnten gerade nicht geladen werden.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Heute läuft alles wie geplant."),
+    ).not.toBeInTheDocument();
+  });
+});
+
+describe("Termine aus dem Stundenplan (#7662)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    phone.value = false;
+    // Mittags: die Termine von 13 bis 14 Uhr sind noch nicht vorbei.
+    setTestClock("2026-09-09T12:00:00+02:00");
+  });
+
+  const block = (
+    kind: string,
+    title: string,
+    extra: Partial<DayChange> = {},
+  ): DayChange =>
+    change({
+      kind,
+      activity: { id: title, title },
+      startsAt: "2026-09-09T13:00:00+02:00",
+      endsAt: "2026-09-09T14:00:00+02:00",
+      roomName: "Aula",
+      link: { target: "day_plan", staffId: null },
+      ...extra,
+    });
+
+  it("zeigt Absage, Rücknahme, Raum und Leitung mit Uhrzeit, Raum und Link zum Tagesplan", () => {
+    serve({
+      entries: [
+        block("activity_lead_changed", "Chor", {
+          section: "you",
+          people: [
+            { staffId: "1", name: "Anna", role: "substitute", isSelf: true },
+            { staffId: "2", name: "Ben Krank", role: "absent", isSelf: false },
+          ],
+        }),
+        block("activity_room_changed", "Fußball", {
+          section: "you",
+          roomName: "Turnhalle",
+          previousRoomName: "Werkraum",
+        }),
+        block("activity_cancelled", "Basteln"),
+        block("activity_reinstated", "Theater"),
+      ],
+    });
+    render(<DayChangesBlock />);
+
+    const mine = within(screen.getByRole("region", { name: "Betrifft dich" }));
+    expect(
+      mine.getByRole("link", {
+        name: /Du übernimmst heute „Chor“ für Ben Krank\.\s*13:00 bis 14:00 Uhr · Aula/,
+      }),
+    ).toHaveAttribute("href", "/schule/tagesplan");
+    expect(
+      mine.getByText("„Fußball“ ist heute in einem anderen Raum."),
+    ).toBeInTheDocument();
+    expect(
+      mine.getByText("13:00 bis 14:00 Uhr · Turnhalle statt Werkraum"),
+    ).toBeInTheDocument();
+    const school = within(screen.getByRole("region", { name: "Schule" }));
+    expect(school.getByText("„Basteln“ fällt heute aus.")).toBeInTheDocument();
+    expect(
+      school.getByText("„Theater“ findet doch statt."),
+    ).toBeInTheDocument();
+  });
+
+  it("nennt Vertretung und Ausfall aus Sicht der Person", async () => {
+    const { dayChangeText } = await import("./day-changes-text");
+    const lead = (people: DayChange["people"], title = "Chor") =>
+      dayChangeText(block("activity_lead_changed", title, { people }));
+    const sub = {
+      staffId: "1",
+      name: "Sara",
+      role: "substitute",
+      isSelf: false,
+    };
+    const gone = { staffId: "2", name: "Ben", role: "absent", isSelf: false };
+    expect(lead([sub, { ...gone, isSelf: true }])).toBe(
+      "Sara übernimmt heute „Chor“ für dich.",
+    );
+    expect(lead([sub, gone])).toBe("Sara übernimmt heute „Chor“ für Ben.");
+    expect(lead([gone])).toBe("Bei „Chor“ ist Ben heute nicht da.");
+    expect(lead([{ ...gone, isSelf: true }])).toBe(
+      "Bei „Chor“ bist du heute nicht da.",
+    );
+    expect(lead([sub], " ")).toBe("Sara übernimmt heute einem Termin.");
+    expect(
+      lead([
+        sub,
+        { staffId: "3", name: "Toni", role: "substitute", isSelf: false },
+        gone,
+      ]),
+    ).toBe("Sara und Toni übernehmen heute „Chor“ für Ben.");
+    expect(lead([])).toBe("Bei „Chor“ ändert sich heute, wer betreut.");
+  });
+
+  it("zeigt bei einem Ausfall des Stundenplans einen Hinweis und nie die Entwarnung", () => {
+    serve({ failedSources: ["activities"] });
+    render(<DayChangesBlock />);
+    expect(
+      screen.getByText(
+        "Änderungen an Angeboten und AGs konnten gerade nicht geladen werden.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Heute läuft alles wie geplant."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("erfasst beim Klick auf einen Termin nur seine Art", () => {
+    serve({ entries: [block("activity_cancelled", "Basteln")] });
+    render(<DayChangesBlock />);
+
+    fireEvent.click(screen.getByRole("link", { name: /Basteln/ }));
+
+    expect(trackEvent).toHaveBeenCalledWith("day_changes_entry_clicked", {
+      day_change_kind: "activity_cancelled",
+    });
+  });
+});
+
+describe("Abwesenheit und Vertretung bei Terminen (#7675)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    phone.value = false;
+    // Mittags: der Termin von 10 bis 11 Uhr ist vorbei, der um 13 Uhr nicht.
+    setTestClock("2026-09-09T12:00:00+02:00");
+  });
+
+  const termin = (
+    kind: string,
+    title: string,
+    start: string,
+    end: string,
+    extra: Partial<DayChange> = {},
+  ): DayChange =>
+    change({
+      kind,
+      section: "you",
+      activity: { id: title, title },
+      startsAt: `2026-09-09T${start}:00+02:00`,
+      endsAt: `2026-09-09T${end}:00+02:00`,
+      link: {
+        target: "substitution_plan",
+        staffId: null,
+        instanceId: "41",
+        day: "2026-09-09",
+      },
+      ...extra,
+    });
+
+  it("zeigt Vertretung und Ausfall mit Uhrzeit, Link zum Vertretungsplan und Vergangenes unter „erledigt“", () => {
+    serve({
+      entries: [
+        termin("block_substitution", "Chor", "13:00", "14:00", {
+          roomName: "Aula",
+          people: [
+            { staffId: "1", name: "Sara", role: "substitute", isSelf: false },
+            { staffId: "2", name: "Ben", role: "replaced", isSelf: false },
+          ],
+        }),
+        termin("block_staff_absent", "Lernzeit", "10:00", "11:00", {
+          people: [
+            { staffId: "3", name: "Anna", role: "absent", isSelf: true },
+          ],
+        }),
+      ],
+    });
+    render(<DayChangesBlock />);
+
+    const mine = screen.getByRole("region", { name: "Betrifft dich" });
+    const cover = within(mine).getByRole("link", {
+      name: /Sara übernimmt heute „Chor“ für Ben\.\s*13:00 bis 14:00 Uhr · Aula/,
+    });
+    expect(cover).toHaveAttribute(
+      "href",
+      "/schule/vertretung?d=2026-09-09&block=41",
+    );
+    expect(
+      screen.queryByText("Bei „Lernzeit“ bist du heute nicht da."),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(within(mine).getByRole("button", { name: "1 erledigt" }));
+    expect(rowTexts(mine).at(-1)).toBe(
+      "Bei „Lernzeit“ bist du heute nicht da.10:00 bis 11:00 Uhr",
+    );
+    expect(trackEvent).toHaveBeenCalledWith("day_changes_done_expanded");
+
+    fireEvent.click(cover);
+    expect(trackEvent).toHaveBeenCalledWith("day_changes_entry_clicked", {
+      day_change_kind: "block_substitution",
+    });
+  });
+
+  it("nennt die Vertretung eines Termins aus Sicht der Person", async () => {
+    const { dayChangeText } = await import("./day-changes-text");
+    const sub = {
+      staffId: "1",
+      name: "Sara",
+      role: "substitute",
+      isSelf: false,
+    };
+    const replaced = {
+      staffId: "2",
+      name: "Ben",
+      role: "replaced",
+      isSelf: false,
+    };
+    const text = (people: DayChange["people"]) =>
+      dayChangeText(
+        termin("block_substitution", "Chor", "13:00", "14:00", { people }),
+      );
+    expect(text([{ ...sub, isSelf: true }, replaced])).toBe(
+      "Du übernimmst heute „Chor“ für Ben.",
+    );
+    expect(text([sub, { ...replaced, isSelf: true }])).toBe(
+      "Sara übernimmt heute „Chor“ für dich.",
+    );
+    expect(
+      dayChangeText(
+        termin("block_staff_absent", "Chor", "13:00", "14:00", {
+          people: [{ ...replaced, role: "absent" }],
+        }),
+      ),
+    ).toBe("Bei „Chor“ ist Ben heute nicht da.");
+    const count = (n: number) =>
+      dayChangeText(change({ kind: "block_change_count", count: n }));
+    expect(count(1)).toBe(
+      "Bei 1 weiteren Termin ändert sich heute, wer betreut.",
+    );
+    expect(count(3)).toBe(
+      "Bei 3 weiteren Terminen ändert sich heute, wer betreut.",
+    );
   });
 });

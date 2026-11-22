@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/daychangesview"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
@@ -21,13 +22,14 @@ func (invisibleDayChangesCaller) CurrentStaffID(context.Context) (int64, bool, e
 	return 0, false, nil
 }
 
-func (invisibleDayChangesCaller) MyGroupIDs(context.Context) ([]int64, error) {
-	return nil, errors.New("must not resolve groups for a non-staff account")
+func (invisibleDayChangesCaller) MySchoolClasses(context.Context) ([]string, error) {
+	return nil, errors.New("must not resolve classes for an account without users:read")
 }
 
 type unavailableDayChangesWorkforce struct {
 	handoversRead bool
 	absencesRead  bool
+	shiftsRead    bool
 }
 
 func (w *unavailableDayChangesWorkforce) ListStaffAbsences(context.Context, workforce.StaffAbsenceFilter) ([]workforce.StaffAbsence, error) {
@@ -38,6 +40,11 @@ func (w *unavailableDayChangesWorkforce) ListStaffAbsences(context.Context, work
 func (w *unavailableDayChangesWorkforce) ListGroupSubstitutions(context.Context, workforce.GroupSubstitutionFilter) ([]workforce.GroupSubstitution, error) {
 	w.handoversRead = true
 	return nil, errors.New("group substitutions unavailable")
+}
+
+func (w *unavailableDayChangesWorkforce) ListStaffShifts(context.Context, workforce.StaffShiftFilter) ([]workforce.StaffShift, error) {
+	w.shiftsRead = true
+	return nil, errors.New("staff shifts unavailable")
 }
 
 type directDayChangesIsolation struct{}
@@ -58,8 +65,14 @@ func TestDayChangesInvisibleAccountSkipsUnavailableWorkforce(t *testing.T) {
 			Caller:    invisibleDayChangesCaller{},
 			Workforce: workforceSource,
 		}},
+		Children: dayChangesChildren{},
 		// Without users:read the notice source answers before reading.
 		Notices: dayChangesNotices{},
+		Closing: dayChangesClosingDays{},
+		// Without schedules:read the Stundenplan source reads nothing.
+		Activities: dayChangesActivities{},
+		// Without users:read the class source reads nothing (#7681).
+		Classes: dayChangesClasses{},
 	})
 	require.NoError(t, err)
 
@@ -67,11 +80,16 @@ func TestDayChangesInvisibleAccountSkipsUnavailableWorkforce(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []daychangesview.SourceStatus{
 		{Source: daychangesview.SourceStaff, Status: daychangesview.SourceLoaded},
+		{Source: daychangesview.SourceChildren, Status: daychangesview.SourceLoaded},
 		{Source: daychangesview.SourceNotices, Status: daychangesview.SourceLoaded},
+		{Source: daychangesview.SourceClosingDays, Status: daychangesview.SourceLoaded},
+		{Source: daychangesview.SourceActivities, Status: daychangesview.SourceLoaded},
+		{Source: daychangesview.SourceClasses, Status: daychangesview.SourceLoaded},
 	}, overview.Sources)
 	assert.Empty(t, overview.Entries)
 	assert.False(t, workforceSource.handoversRead)
 	assert.False(t, workforceSource.absencesRead)
+	assert.False(t, workforceSource.shiftsRead)
 }
 
 func TestDayChangesLinksRequireDestinationAccess(t *testing.T) {
@@ -108,6 +126,22 @@ func TestDayChangesLinksRequireDestinationAccess(t *testing.T) {
 	assert.Equal(t, daychangesview.LinkGroupHandovers, allowed.entries[1].Link.Target)
 	assert.Equal(t, daychangesview.LinkStaffList, allowed.entries[2].Link.Target)
 	assert.Equal(t, daychangesview.LinkGroupHandovers, allowed.entries[3].Link.Target)
+}
+
+func TestSortBlockStaffTreatsAbsentSubstituteAsAbsent(t *testing.T) {
+	t.Parallel()
+	staff := sortBlockStaff(timetable.BlockStaffChange{Staff: []timetable.BlockStaffRow{
+		{StaffID: 2, Absent: true},
+		{StaffID: 3, Absent: true, Substitute: true},
+	}}, 0, nil)
+
+	kind, people, ok := staff.entry(0)
+	require.True(t, ok)
+	assert.Equal(t, daychangesview.KindBlockStaffAbsent, kind)
+	assert.Equal(t, []daychangesview.Person{
+		{StaffID: 2, Role: daychangesview.RoleAbsent},
+		{StaffID: 3, Role: daychangesview.RoleAbsent},
+	}, people)
 }
 
 func TestDayChangesViewerMatchesDestinationAccess(t *testing.T) {

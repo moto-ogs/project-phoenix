@@ -12,6 +12,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -80,18 +81,18 @@ func TestCareReductionFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		rules, err := store.ListContributionRules(ctx, own.organization, parentbilling.ServiceCare)
 		require.NoError(t, err)
 		require.Len(t, rules, 1, "ListContributionRules of the Träger and the service")
-		assert.Equal(t, own.care, rules[0].ID)
-		assert.Equal(t, []int64{own.school}, rules[0].SchoolIDs)
+		assert.Equal(t, ident.ID(own.care), rules[0].ID)
+		assert.Equal(t, []ident.ID{ident.ID(own.school)}, rules[0].SchoolIDs)
 
 		all, err := store.CareEvidences(ctx, own.organization, nil)
 		require.NoError(t, err)
 		require.Len(t, all, 1, "CareEvidences of the Träger")
-		assert.Equal(t, own.evidence, all[0].ID)
+		assert.Equal(t, ident.ID(own.evidence), all[0].ID)
 		named, err := store.CareEvidences(ctx, own.organization, []int64{own.contract, other.contract})
 		require.NoError(t, err)
 		assert.Len(t, named, 1, "CareEvidences never answers another Träger's contract")
 
-		input := parentbilling.CareEvidenceInput{ContractID: other.contract, Kind: parentbilling.EvidenceSingleParent,
+		input := parentbilling.CareEvidenceInput{ContractID: ident.ID(other.contract), Kind: parentbilling.EvidenceSingleParent,
 			ValidFrom: september, Evidence: "Erklärung", CheckedOn: september}
 		_, err = store.UpdateCareEvidence(ctx, own.organization, 1, other.evidence, input)
 		assert.ErrorIs(t, err, parentbilling.ErrCareEvidenceNotFound, "UpdateCareEvidence of another Träger")
@@ -99,7 +100,7 @@ func TestCareReductionFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		assert.ErrorIs(t, err, parentbilling.ErrCareEvidenceNotFound, "DeleteCareEvidence of another Träger")
 
 		care := parentbilling.CareRuleInput{Kind: parentbilling.RuleCap, Name: "Deckel", ValidFrom: september,
-			SchoolIDs: []int64{own.school}, CapCents: new(int64)}
+			SchoolIDs: []ident.ID{ident.ID(own.school)}, CapCents: new(int64)}
 		assert.ErrorIs(t, store.UpdateCareRule(ctx, own.organization, other.care, care), parentbilling.ErrContributionRuleNotFound,
 			"UpdateCareRule of another Träger")
 		assert.ErrorIs(t, store.DeleteCareRule(ctx, own.organization, other.care), parentbilling.ErrContributionRuleNotFound,

@@ -1,5 +1,9 @@
 "use client";
 
+import type {
+  Counts,
+  studentDeleteImpactResponse,
+} from "~/lib/contract/students.generated";
 import { Database } from "lucide-react";
 import { ApiError } from "~/lib/api-error";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
@@ -18,8 +22,6 @@ import { InfoText } from "~/components/ui/detail-modal-components";
 import {
   deleteStudentWithData,
   fetchStudentDeletionImpact,
-  type StudentDeletionCounts,
-  type StudentDeletionImpact,
   type StudentDeletionReason,
 } from "~/lib/student-api";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
@@ -31,7 +33,7 @@ import { permissionsConcept } from "~/lib/concepts/permissions";
 
 const logger = createLogger({ component: "StudentDeletionModal" });
 
-const COUNT_LABELS: Record<keyof StudentDeletionCounts, string> = {
+const COUNT_LABELS: Record<keyof Counts, string> = {
   timetable_assignments: "Stundenplan-Zuordnungen",
   activity_enrollments: "Angebotsanmeldungen",
   attendance_records: "Anwesenheits- und Statusdaten",
@@ -93,7 +95,9 @@ export function StudentDeletionModal({
   onClose,
   onDeleted,
 }: StudentDeletionModalProps) {
-  const [impact, setImpact] = useState<StudentDeletionImpact | null>(null);
+  const [impact, setImpact] = useState<studentDeleteImpactResponse | null>(
+    null,
+  );
   const [reason, setReason] = useState<StudentDeletionReason | "">("");
   const [acknowledged, setAcknowledged] = useState(false);
   const [refreshingPreview, setRefreshingPreview] = useState(false);
@@ -146,7 +150,7 @@ export function StudentDeletionModal({
 
   const countRows = useMemo(() => {
     if (!impact) return [];
-    return (Object.keys(COUNT_LABELS) as Array<keyof StudentDeletionCounts>)
+    return (Object.keys(COUNT_LABELS) as Array<keyof Counts>)
       .map((key) => ({
         key,
         label: COUNT_LABELS[key],

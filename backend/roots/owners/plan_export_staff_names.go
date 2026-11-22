@@ -34,7 +34,7 @@ func (n planExportStaffNames) StaffByIDs(ctx context.Context, ids []int64) (map[
 			out[id] = nil
 			continue
 		}
-		record := &planexport.StaffMember{ID: member.ID}
+		record := &planexport.StaffMember{ID: member.ID.Int64()}
 		if member.Person != nil {
 			record.FirstName, record.LastName = member.Person.FirstName, member.Person.LastName
 		}

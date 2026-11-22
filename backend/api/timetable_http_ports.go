@@ -58,7 +58,7 @@ func (p TimetablePeople) AccountPersonID(ctx context.Context, accountID int64) (
 	if person == nil {
 		return 0, fmt.Errorf("account %d: %w", accountID, errAccountWithoutPerson)
 	}
-	return person.ID, nil
+	return person.ID.Int64(), nil
 }
 
 // AccountPersonName returns the display name of the account's person.
@@ -82,7 +82,7 @@ func (p TimetablePeople) StaffPersonID(ctx context.Context, staffID int64) (int6
 	if staff == nil || staff.ID == 0 {
 		return 0, nil
 	}
-	return staff.PersonID, nil
+	return staff.PersonID.Int64(), nil
 }
 
 // PersonStaffID returns the staff id of a person, 0 when the person is no
@@ -95,7 +95,7 @@ func (p TimetablePeople) PersonStaffID(ctx context.Context, personID int64) (int
 	if staff == nil {
 		return 0, nil
 	}
-	return staff.ID, nil
+	return staff.ID.Int64(), nil
 }
 
 // StaffNames maps staff ids to their person's display name in one read.

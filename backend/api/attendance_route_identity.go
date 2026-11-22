@@ -26,7 +26,7 @@ func (p AttendanceRoutePeople) FindByAccountID(ctx context.Context, id int64) (i
 	if row == nil {
 		return 0, false, err
 	}
-	return row.ID, true, err
+	return row.ID.Int64(), true, err
 }
 
 func (p AttendanceRoutePeople) GetStaffByPersonID(ctx context.Context, id int64) (int64, int64, bool, error) {
@@ -34,5 +34,5 @@ func (p AttendanceRoutePeople) GetStaffByPersonID(ctx context.Context, id int64)
 	if row == nil {
 		return 0, 0, false, err
 	}
-	return row.ID, row.TenantID, true, err
+	return row.ID.Int64(), row.TenantID.Int64(), true, err
 }

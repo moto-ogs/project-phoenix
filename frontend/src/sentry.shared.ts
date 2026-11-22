@@ -131,11 +131,10 @@ function scrubDeep(value: unknown, seen: WeakSet<object>): unknown {
 export function scrubClientEvent(event: ErrorEvent): ErrorEvent | null {
   const isNetworkFailure = event.exception?.values?.some(
     (exception) =>
-      (exception.type === "TypeError" &&
-        /^(?:Failed to fetch|Load failed|NetworkError when attempting to fetch resource\.?)$/.test(
-          exception.value ?? "",
-        )) ||
-      (exception.type === "AxiosError" && exception.value === "Network Error"),
+      exception.type === "TypeError" &&
+      /^(?:Failed to fetch|Load failed|NetworkError when attempting to fetch resource\.?)$/.test(
+        exception.value ?? "",
+      ),
   );
   if (isNetworkFailure) return null;
   // Every build names its chunks anew, so Sentry would open a new issue (and

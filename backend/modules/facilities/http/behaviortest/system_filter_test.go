@@ -74,9 +74,7 @@ func roomResponseIDs(t *testing.T, body []byte) map[int64]bool {
 	for _, entry := range data {
 		item, ok := entry.(map[string]interface{})
 		require.True(t, ok, "Expected list entry to be an object")
-		id, ok := item["id"].(float64)
-		require.True(t, ok, "Expected entry id to be a number")
-		ids[int64(id)] = true
+		ids[testpkg.JSONID(t, item["id"])] = true
 	}
 	return ids
 }

@@ -67,7 +67,7 @@ func (s *service) parentVisibleAppointment(ctx context.Context, appointmentID in
 	if appointment == nil || appointment.DeletedAt != nil {
 		return nil, nil, nil
 	}
-	recipients, err := s.cfg.Appointments.FindAppointmentRecipients(ctx, appointment.ID)
+	recipients, err := s.cfg.Appointments.FindAppointmentRecipients(ctx, appointment.ID.Int64())
 	if err != nil {
 		return nil, nil, err
 	}

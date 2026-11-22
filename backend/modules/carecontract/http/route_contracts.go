@@ -90,10 +90,12 @@ func ImportRouteContracts() []common.RouteContract {
 			MaxBodyBytes: carecontract.MaxContractImportFileBytes + importFormOverhead,
 			TooLargeCode: common.CodeCareContractImportFileTooLarge, Response: carecontract.ContractImport{}}
 	}
+	preview := upload("/preview")
+	preview.NoCommit = "an import preview checks the file and saves no row of it"
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: []carecontract.ContractImportEntry{}},
 		upload("/"),
-		upload("/preview"),
+		preview,
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/appointments"
 	"github.com/moto-ogs/project-phoenix/modules/appointments/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/uptrace/bun"
 )
 
@@ -122,8 +123,8 @@ func applyAppointmentFields(row *appointmentRow, fields appointments.Appointment
 }
 
 func appointmentToPublic(row appointmentRow) *appointments.Appointment {
-	return &appointments.Appointment{ID: row.ID, TenantID: row.TenantID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
-		OrganizerStaffID: row.OrganizerStaffID, Title: row.Title, Description: row.Description, Location: row.Location,
+	return &appointments.Appointment{ID: ident.ID(row.ID), TenantID: ident.ID(row.TenantID), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
+		OrganizerStaffID: ident.ID(row.OrganizerStaffID), Title: row.Title, Description: row.Description, Location: row.Location,
 		StartDate: appointments.Date(row.StartDate), EndDate: appointments.Date(row.EndDate), StartTime: row.StartTime, EndTime: row.EndTime,
 		AllDay: row.AllDay, DeliveryMode: row.DeliveryMode, OverviewVisibility: row.OverviewVisibility,
 		CancelledAt: row.CancelledAt, DeletedAt: row.DeletedAt, NotifyGuardians: row.NotifyGuardians,
@@ -141,16 +142,16 @@ func appointmentsToPublic(rows []appointmentRow) []*appointments.Appointment {
 func targetsToPublic(rows []targetRow) []*appointments.AppointmentTarget {
 	result := make([]*appointments.AppointmentTarget, 0, len(rows))
 	for _, row := range rows {
-		result = append(result, &appointments.AppointmentTarget{ID: row.ID, TenantID: row.TenantID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
-			AppointmentID: row.AppointmentID, TargetType: row.TargetType, TargetID: row.TargetID, TargetValue: row.TargetValue})
+		result = append(result, &appointments.AppointmentTarget{ID: ident.ID(row.ID), TenantID: ident.ID(row.TenantID), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
+			AppointmentID: ident.ID(row.AppointmentID), TargetType: row.TargetType, TargetID: (*ident.ID)(row.TargetID), TargetValue: row.TargetValue})
 	}
 	return result
 }
 
 func recurrenceRuleFromPublic(value appointments.RecurrenceRule) recurrenceRuleRow {
 	return recurrenceRuleRow{
-		ID: value.ID, TenantID: value.TenantID, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
-		AppointmentID: value.AppointmentID, Frequency: value.Frequency, IntervalCount: value.IntervalCount,
+		ID: value.ID.Int64(), TenantID: value.TenantID.Int64(), CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
+		AppointmentID: value.AppointmentID.Int64(), Frequency: value.Frequency, IntervalCount: value.IntervalCount,
 		Weekdays: value.Weekdays, MonthDays: value.MonthDays, EndsOn: storageDate(value.EndsOn),
 		OccurrenceCount: value.OccurrenceCount,
 	}
@@ -158,8 +159,8 @@ func recurrenceRuleFromPublic(value appointments.RecurrenceRule) recurrenceRuleR
 
 func recurrenceRuleToPublic(row recurrenceRuleRow) *appointments.RecurrenceRule {
 	return &appointments.RecurrenceRule{
-		ID: row.ID, TenantID: row.TenantID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
-		AppointmentID: row.AppointmentID, Frequency: row.Frequency, IntervalCount: row.IntervalCount,
+		ID: ident.ID(row.ID), TenantID: ident.ID(row.TenantID), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
+		AppointmentID: ident.ID(row.AppointmentID), Frequency: row.Frequency, IntervalCount: row.IntervalCount,
 		Weekdays: row.Weekdays, MonthDays: row.MonthDays, EndsOn: publicDate(row.EndsOn),
 		OccurrenceCount: row.OccurrenceCount,
 	}
@@ -203,9 +204,9 @@ func occurrenceOverridesToPublic(rows []occurrenceOverrideRow) []*appointments.A
 
 func appointmentRecipientToPublic(row appointmentRecipientRow) *appointments.AppointmentRecipient {
 	return &appointments.AppointmentRecipient{
-		ID: row.ID, TenantID: row.TenantID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
-		AppointmentID: row.AppointmentID, RecipientType: row.RecipientType,
-		StaffID: row.StaffID, GuardianProfileID: row.GuardianProfileID,
+		ID: ident.ID(row.ID), TenantID: ident.ID(row.TenantID), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
+		AppointmentID: ident.ID(row.AppointmentID), RecipientType: row.RecipientType,
+		StaffID: (*ident.ID)(row.StaffID), GuardianProfileID: (*ident.ID)(row.GuardianProfileID),
 		Status: row.Status, RespondedAt: row.RespondedAt,
 		OccurrenceResponses: occurrenceResponsesToPublic(row.OccurrenceResponses),
 	}

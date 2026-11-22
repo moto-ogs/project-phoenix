@@ -48,6 +48,7 @@ import { MealPositionLine } from "./care-run-meals";
 import { InvoiceLine } from "./invoice-line";
 import { InvoicePaymentLine } from "./invoice-payment-line";
 import { recipientKindLabel, recipientLine } from "./billing-payment-format";
+import { labelOf } from "~/lib/label-of";
 
 interface SchoolGroup {
   readonly schoolId: string;
@@ -178,7 +179,8 @@ function CostShareLines({ invoice }: Readonly<{ invoice: CareInvoice }>) {
               {share.costBearerName}
             </p>
             <p className="mt-0.5 text-sm text-gray-600">
-              übernimmt · {COST_SHARE_KIND_LABELS[share.kind]} ·{" "}
+              übernimmt ·{" "}
+              {labelOf(COST_SHARE_KIND_LABELS, share.kind, "Kostenträger")} ·{" "}
               {costShareAmountText(share)}
             </p>
           </div>
@@ -550,7 +552,7 @@ export function CareUnpricedCard({
                     .map((entry) =>
                       entry.weekday === ""
                         ? `${entry.moduleName} mit ${daysLabel(entry.daysPerWeek ?? 0)} je Woche`
-                        : `${entry.moduleName} am ${WEEKDAY_LONG[entry.weekday]}`,
+                        : `${entry.moduleName} am ${labelOf(WEEKDAY_LONG, entry.weekday, "–")}`,
                     )
                     .join(", ")}
                 </p>
@@ -581,7 +583,7 @@ function bookedTwice(entries: readonly CareDuplicate[]): string {
   const days = new Map<string, string[]>();
   for (const entry of entries) {
     if (!entry.moduleName) continue;
-    const weekday = WEEKDAY_LONG[entry.weekday];
+    const weekday = labelOf(WEEKDAY_LONG, entry.weekday, "–");
     const known = days.get(entry.moduleName) ?? [];
     if (!known.includes(weekday)) {
       days.set(entry.moduleName, [...known, weekday]);

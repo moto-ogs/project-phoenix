@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/api"
@@ -52,7 +53,7 @@ func TestWorkTimeModelsListQueryBudgetIsFlat(t *testing.T) {
 				totals = []int{480, 90}
 			}
 			row := map[string]any{
-				"id": created.ID, "name": name, "rotation_length": 2,
+				"id": strconv.FormatInt(int64(created.ID), 10), "name": name, "rotation_length": 2,
 				"rotation_anchor_date": "2026-10-26", "entries": entries, "weekly_totals": totals,
 			}
 			expected = append([]map[string]any{row}, expected...)

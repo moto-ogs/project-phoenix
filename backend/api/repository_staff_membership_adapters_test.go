@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -114,7 +115,7 @@ func TestStaffMembershipAdapter_ListsAreTenantScoped(t *testing.T) {
 	require.NoError(t, err)
 	ids := make(map[int64]bool, len(members))
 	for _, member := range members {
-		ids[member.ID] = true
+		ids[member.ID.Int64()] = true
 	}
 	assert.True(t, ids[own.ID], "the tenant's own staff must be listed")
 	assert.False(t, ids[foreign.ID], "another school's staff must stay invisible")
@@ -446,7 +447,7 @@ func TestStaffMembershipAdapter_ListRejectsUnknownFilters(t *testing.T) {
 	byPerson, err := factory.Staff.List(ctx, map[string]any{"person_id": staff.PersonID})
 	require.NoError(t, err)
 	require.Len(t, byPerson, 1)
-	assert.Equal(t, staff.ID, byPerson[0].ID)
+	assert.Equal(t, ident.ID(staff.ID), byPerson[0].ID)
 
 	_, err = factory.Staff.List(ctx, map[string]any{"staff_notes": "anything"})
 	require.Error(t, err, "an unsupported filter must fail loudly instead of listing everything")

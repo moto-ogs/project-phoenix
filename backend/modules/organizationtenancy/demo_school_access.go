@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // StandingDemoSchoolSlug is the shared demo school `go run ./cmd/devtools
@@ -122,12 +124,12 @@ func (d DemoSchoolAccess) DemoSchoolEntry(ctx context.Context, slug string) (Dem
 	if !school.Operational() {
 		return preparing, nil
 	}
-	entry := DemoSchoolEntry{Exists: true, Status: DemoSchoolReady, SchoolID: school.ID}
+	entry := DemoSchoolEntry{Exists: true, Status: DemoSchoolReady, SchoolID: school.ID.Int64()}
 	if progress != nil {
 		entry.AccountID, entry.ParentAccountID = progress.VisitorAccountID, progress.VisitorParentAccountID
 		// Only a Träger of the order's own, never the shared one: its school
 		// must still belong to it.
-		if progress.TraegerID != 0 && progress.TraegerID == school.OrganizationID {
+		if progress.TraegerID != 0 && ident.ID(progress.TraegerID) == school.OrganizationID {
 			entry.TraegerID = progress.TraegerID
 		}
 	}

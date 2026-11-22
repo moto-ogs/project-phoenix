@@ -22,7 +22,6 @@ import (
 	groupLiveHTTP "github.com/moto-ogs/project-phoenix/modules/grouplive/http"
 	mealplanHTTP "github.com/moto-ogs/project-phoenix/modules/mealplan/http"
 	guardiansHTTP "github.com/moto-ogs/project-phoenix/modules/peopledirectory/http"
-	staffHTTP "github.com/moto-ogs/project-phoenix/modules/schoolmembership/http"
 	classListHTTP "github.com/moto-ogs/project-phoenix/modules/schoolmembership/http/classlistentries"
 	schoolSearchHTTP "github.com/moto-ogs/project-phoenix/modules/schoolsearchview/http"
 	"github.com/moto-ogs/project-phoenix/modules/schoolsetup"
@@ -254,19 +253,18 @@ func ContractDocument() (contract.Document, error) {
 		return contract.Document{}, err
 	}
 	substitutions := substitutionsHTTP.RouteContractTypes()
-	options := contract.Legacy(map[reflect.Type]string{
-		reflect.TypeFor[common.ID]():     contract.KindID,
-		reflect.TypeFor[common.JSONID](): contract.KindLaxID,
-		// The device management renders its instants in whole seconds.
-		reflect.TypeFor[devicesAPI.WireTime](): contract.KindInstant,
-		// The answers of an enrollment form: an object of the form's own
-		// fields, whatever the school's schema asks for.
-		reflect.TypeFor[enrollmentOwner.FormValues](): contract.KindJSON,
-		// The substitution bodies take an id as a number or a decimal string.
-		reflect.TypeOf(substitutions.LaxID): contract.KindLaxID,
-		// A staff body names its person as a number or a decimal string.
-		reflect.TypeFor[staffHTTP.JSONID](): contract.KindLaxID,
-	})
+	options := contract.Options{
+		Identifiers: map[reflect.Type]string{
+			reflect.TypeFor[common.ID](): contract.KindID,
+			// The device management renders its instants in whole seconds.
+			reflect.TypeFor[devicesAPI.WireTime](): contract.KindInstant,
+			// The answers of an enrollment form: an object of the form's own
+			// fields, whatever the school's schema asks for.
+			reflect.TypeFor[enrollmentOwner.FormValues](): contract.KindJSON,
+		},
+		// The one route whose answer a query parameter shapes (ADR 0270 point 3).
+		QueryVariants: []string{"GET /api/students/"},
+	}
 	// Both student bodies only refuse retired keys before the plain decode;
 	// CompanionEntry takes its companion id as a number or a decimal string.
 	options.Readers = map[reflect.Type]string{
@@ -294,8 +292,6 @@ func ContractDocument() (contract.Document, error) {
 	}
 	// Appointments and the whole-day substitution keep their own day types.
 	options.Dates = []reflect.Type{reflect.TypeFor[appointments.Date](), reflect.TypeOf(substitutions.Day)}
-	// The timeframe list writes its instants through common.Time (RFC 3339).
-	options.Instants = []reflect.Type{reflect.TypeFor[common.Time]()}
 	return contract.Build(registrations, options)
 }
 
@@ -370,7 +366,7 @@ func contractRegistration(prefix string, route common.RouteContract) contract.Re
 		Method: route.Method, Pattern: prefix + route.Pattern,
 		Request: route.Request, Response: route.Response, Paginated: route.Paginated, NoData: route.NoData,
 		Deprecated: route.Deprecated, DeprecatedFields: route.DeprecatedFields,
-		NoRetryAfterRenewal: route.NoRetryAfterRenewal, MaxBodyBytes: route.MaxBodyBytes,
+		NoRetryAfterRenewal: route.NoRetryAfterRenewal, MaxBodyBytes: route.MaxBodyBytes, NoCommit: route.NoCommit,
 		File: route.File, Multipart: route.Multipart, TooLargeCode: route.TooLargeCode, PublicFile: route.PublicFile, PublicUpload: route.PublicUpload,
 		FileCache: route.FileCache, ConditionalGet: route.ConditionalGet,
 		PrivateCache: route.PrivateCache,
@@ -457,7 +453,6 @@ func staffPortalContractMounts() []contractMount {
 		{"/api/holiday-closure-notices", holidayClosureHTTP.SchoolRouteContracts()},
 		{"/api/rooms", roomsHTTP.RouteContracts()},
 		{"/api/activities", timetableActivitiesHTTP.RouteContracts()},
-		{"/api/schedules", timetableActivitiesHTTP.ScheduleRouteContracts()},
 		{"/api/traeger-documents", organizationTenancyTraeger.SchoolDocumentRouteContracts()},
 		{"/api/meal-caterer", catererPortalHTTP.SchoolRouteContracts()},
 		{"/api/class-list-entries", classListEntryRouteContracts()},
@@ -513,6 +508,7 @@ func guardianRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/search", Portals: portals, Query: search, Paginated: true, Response: types.Pickers},
 		{Method: "GET", Pattern: "/{id}", Portals: portals, Response: types.Guardian},
+		{Method: "POST", Pattern: "/", Portals: portals, Request: types.GuardianCreate, Response: types.Guardian},
 		{Method: "PUT", Pattern: "/{id}", Portals: portals, Request: types.GuardianUpdate, Response: types.Guardian},
 		// Without force a guardian still linked to children is refused; the
 		// expected links pin the confirmed state of the full delete.
@@ -522,6 +518,7 @@ func guardianRouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/payment-overview/export", Portals: portals, File: true},
 		{Method: "DELETE", Pattern: "/{id}/email-stop", Portals: portals, NoData: true},
 		{Method: "DELETE", Pattern: "/{id}/email-block", Portals: portals, NoData: true},
+		{Method: "POST", Pattern: "/{id}/invite", Portals: portals, Response: types.Invitation},
 		{Method: "GET", Pattern: "/{id}/payment", Portals: portals, Response: types.PaymentMasked},
 		{Method: "PUT", Pattern: "/{id}/payment", Portals: portals, Request: types.PaymentRequest, NoData: true},
 		{Method: "POST", Pattern: "/{id}/payment/reveal", Portals: portals, Response: types.PaymentReveal},
@@ -633,14 +630,19 @@ func importRouteContracts() []common.RouteContract {
 			MaxBodyBytes: importAPI.MaxUploadBytes, TooLargeCode: importAPI.CodeImportFileTooLarge,
 		}
 	}
+	preview := func(pattern string, response any) common.RouteContract {
+		route := upload(pattern, response)
+		route.NoCommit = "an import preview checks the file and saves no row of it; only its audit entry is written"
+		return route
+	}
 	return []common.RouteContract{
-		upload("/students/preview", importAPI.StudentPreviewResponse{}),
+		preview("/students/preview", importAPI.StudentPreviewResponse{}),
 		upload("/students/import", importModels.StudentImportResult{}),
-		upload("/teachers/preview", importModels.StaffImportResult{}),
+		preview("/teachers/preview", importModels.StaffImportResult{}),
 		upload("/teachers/import", importModels.StaffImportResult{}),
-		upload("/class-list-entries/preview", importModels.ClassListImportResult{}),
+		preview("/class-list-entries/preview", importModels.ClassListImportResult{}),
 		upload("/class-list-entries/import", importModels.ClassListImportResult{}),
-		upload("/opening-balances/preview", importModels.OpeningBalanceImportResult{}),
+		preview("/opening-balances/preview", importModels.OpeningBalanceImportResult{}),
 		upload("/opening-balances/import", importModels.OpeningBalanceImportResult{}),
 	}
 }

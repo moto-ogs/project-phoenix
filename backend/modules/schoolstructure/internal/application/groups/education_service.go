@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // service implements the Education Service interface
@@ -99,7 +100,7 @@ func (s *service) CreateGroup(ctx context.Context, group *domain.Group) error {
 
 	// If room ID is specified, verify the room exists
 	if group.RoomID != nil && *group.RoomID > 0 {
-		room, err := s.rooms.FindRoom(ctx, *group.RoomID)
+		room, err := s.rooms.FindRoom(ctx, (*group.RoomID).Int64())
 		if err != nil {
 			return &EducationError{Op: "CreateGroup", Err: ErrRoomNotFound}
 		}
@@ -107,7 +108,7 @@ func (s *service) CreateGroup(ctx context.Context, group *domain.Group) error {
 	}
 
 	// Create the group
-	group.TenantID = s.runtime.TenantID(ctx)
+	group.TenantID = ident.ID(s.runtime.TenantID(ctx))
 	if err := s.groupRepo.Create(ctx, group); err != nil {
 		return &EducationError{Op: "CreateGroup", Err: err}
 	}
@@ -157,12 +158,12 @@ func (s *service) checkGroupNameUnique(ctx context.Context, existing, updated *d
 
 // validateAndSetRoom validates room change and sets room reference
 func (s *service) validateAndSetRoom(ctx context.Context, existing, updated *domain.Group) error {
-	if !roomIDHasChanged(existing.RoomID, updated.RoomID) {
+	if !roomIDHasChanged((*int64)(existing.RoomID), (*int64)(updated.RoomID)) {
 		return nil
 	}
 
 	if updated.RoomID != nil && *updated.RoomID > 0 {
-		room, err := s.rooms.FindRoom(ctx, *updated.RoomID)
+		room, err := s.rooms.FindRoom(ctx, (*updated.RoomID).Int64())
 		if err != nil {
 			return &EducationError{Op: "UpdateGroup", Err: ErrRoomNotFound}
 		}

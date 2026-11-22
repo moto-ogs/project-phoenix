@@ -59,11 +59,7 @@ export function WorkTimeModelPeopleTab({ model }: WorkTimeModelPeopleTabProps) {
     data: staff,
     error: staffError,
     mutate: reloadStaff,
-  } = useSWRAuth<Staff[]>(
-    staffKeys.key({}, { strict: true }),
-    // strict: eine fehlgeschlagene Liste ist ein Fehler, keine leere Schule.
-    () => staffKeys.fetcher({}, { strict: true }),
-  );
+  } = useSWRAuth<Staff[]>(staffKeys.key(), () => staffKeys.fetcher());
   const {
     data: facts,
     error: factsError,

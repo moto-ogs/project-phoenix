@@ -1,22 +1,22 @@
 import { describe, it, expect } from "vitest";
-import type { BackendGroup } from "./group-helpers";
+import type { GroupWire } from "./group-helpers";
 import { mapGroupResponse, mapGroupsResponse } from "./group-helpers";
 import { suppressConsole } from "~/test/helpers/console";
 import { buildBackendGroup } from "~/test/fixtures/groups";
 
 // Sample backend group for testing
 const sampleBackendGroup = buildBackendGroup({
-  id: 1,
+  id: "1",
   name: "Klasse 3a",
-  room_id: 10,
+  room_id: "10",
   room: {
-    id: 10,
+    id: "10",
     name: "Raum 101",
   },
-  representative_id: 5,
+  representative_id: "5",
   representative: {
-    id: 5,
-    staff_id: 50,
+    id: "5",
+    staff_id: "50",
     first_name: "Maria",
     last_name: "Schmidt",
     full_name: "Maria Schmidt",
@@ -25,8 +25,8 @@ const sampleBackendGroup = buildBackendGroup({
   },
   teachers: [
     {
-      id: 5,
-      staff_id: 50,
+      id: "5",
+      staff_id: "50",
       first_name: "Maria",
       last_name: "Schmidt",
       full_name: "Maria Schmidt",
@@ -34,8 +34,8 @@ const sampleBackendGroup = buildBackendGroup({
       role: "teacher",
     },
     {
-      id: 6,
-      staff_id: 51,
+      id: "6",
+      staff_id: "51",
       first_name: "Peter",
       last_name: "Mueller",
       full_name: "Peter Mueller",
@@ -44,30 +44,19 @@ const sampleBackendGroup = buildBackendGroup({
     },
   ],
   student_count: 25,
-  supervisor_count: 2,
-  students: [
-    {
-      id: 1,
-      name: "Max Mustermann",
-      school_class: "3a",
-      current_location: "Anwesend",
-    },
-    { id: 2, name: "Anna Schmidt", school_class: "3a", current_location: null },
-  ],
 });
 
 describe("mapGroupResponse", () => {
   it("maps backend group to frontend structure", () => {
     const result = mapGroupResponse(sampleBackendGroup);
 
-    expect(result.id).toBe("1"); // int64 → string
+    expect(result.id).toBe("1");
     expect(result.name).toBe("Klasse 3a");
-    expect(result.room_id).toBe("10"); // int64 → string
+    expect(result.room_id).toBe("10");
     expect(result.room_name).toBe("Raum 101");
     expect(result.representative_id).toBe("5");
     expect(result.representative_name).toBe("Maria Schmidt");
     expect(result.student_count).toBe(25);
-    expect(result.supervisor_count).toBe(2);
     expect(result.created_at).toBe("2024-01-01T00:00:00Z");
     expect(result.updated_at).toBe("2024-01-15T12:00:00Z");
   });
@@ -83,17 +72,6 @@ describe("mapGroupResponse", () => {
     expect(result.representative?.fullName).toBe("Maria Schmidt");
   });
 
-  it("maps students array with location normalization", () => {
-    const result = mapGroupResponse(sampleBackendGroup);
-
-    expect(result.students).toHaveLength(2);
-    expect(result.students?.[0]?.id).toBe("1");
-    expect(result.students?.[0]?.name).toBe("Max Mustermann");
-    expect(result.students?.[0]?.current_location).toBe("Anwesend");
-    // null location should be normalized to "Unbekannt"
-    expect(result.students?.[1]?.current_location).toBe("Unbekannt");
-  });
-
   it("maps teachers to supervisors and extracts teacher_ids", () => {
     const result = mapGroupResponse(sampleBackendGroup);
 
@@ -107,7 +85,7 @@ describe("mapGroupResponse", () => {
   });
 
   it("handles group without room", () => {
-    const groupWithoutRoom: BackendGroup = {
+    const groupWithoutRoom: GroupWire = {
       ...sampleBackendGroup,
       room_id: undefined,
       room: undefined,
@@ -120,7 +98,7 @@ describe("mapGroupResponse", () => {
   });
 
   it("handles group without representative", () => {
-    const groupWithoutRep: BackendGroup = {
+    const groupWithoutRep: GroupWire = {
       ...sampleBackendGroup,
       representative_id: undefined,
       representative: undefined,
@@ -133,19 +111,8 @@ describe("mapGroupResponse", () => {
     expect(result.representative).toBeUndefined();
   });
 
-  it("handles group without students array", () => {
-    const groupWithoutStudents: BackendGroup = {
-      ...sampleBackendGroup,
-      students: undefined,
-    };
-
-    const result = mapGroupResponse(groupWithoutStudents);
-
-    expect(result.students).toBeUndefined();
-  });
-
   it("handles group without teachers array", () => {
-    const groupWithoutTeachers: BackendGroup = {
+    const groupWithoutTeachers: GroupWire = {
       ...sampleBackendGroup,
       teachers: undefined,
     };
@@ -155,24 +122,13 @@ describe("mapGroupResponse", () => {
     expect(result.supervisors).toBeUndefined();
     expect(result.teacher_ids).toBeUndefined();
   });
-
-  it("handles student with missing name", () => {
-    const groupWithUnnamedStudent: BackendGroup = {
-      ...sampleBackendGroup,
-      students: [{ id: 1, school_class: "3a" }],
-    };
-
-    const result = mapGroupResponse(groupWithUnnamedStudent);
-
-    expect(result.students?.[0]?.name).toBe("Unnamed Student");
-  });
 });
 
 describe("mapGroupsResponse", () => {
   const consoleSpies = suppressConsole("error");
 
   it("maps array of backend groups", () => {
-    const groups = [sampleBackendGroup, { ...sampleBackendGroup, id: 2 }];
+    const groups = [sampleBackendGroup, { ...sampleBackendGroup, id: "2" }];
 
     const result = mapGroupsResponse(groups);
 
@@ -188,7 +144,7 @@ describe("mapGroupsResponse", () => {
   });
 
   it("returns empty array for non-array input", () => {
-    const result = mapGroupsResponse("invalid" as unknown as BackendGroup[]);
+    const result = mapGroupsResponse("invalid" as unknown as GroupWire[]);
 
     expect(result).toEqual([]);
     expect(consoleSpies.error).toHaveBeenCalledWith(

@@ -11,7 +11,7 @@ import (
 func holidayBookingReplacements(period enrollment.HolidayPeriod, detail *enrollment.HolidayRegistrationDetail) {
 	weeks := make(map[int64]enrollment.HolidayWeek, len(period.Weeks))
 	for _, week := range period.Weeks {
-		weeks[week.ID] = week
+		weeks[week.ID.Int64()] = week
 	}
 	lineage := map[int64]map[int64][]int64{}
 	for _, event := range detail.History {
@@ -19,16 +19,16 @@ func holidayBookingReplacements(period enrollment.HolidayPeriod, detail *enrollm
 			continue
 		}
 		child := event.Details.ChildID
-		if lineage[child] == nil {
-			lineage[child] = map[int64][]int64{}
+		if lineage[child.Int64()] == nil {
+			lineage[child.Int64()] = map[int64][]int64{}
 		}
-		advanceHolidayReplacements(lineage[child], event.Details, weeks)
+		advanceHolidayReplacements(lineage[child.Int64()], event.Details, weeks)
 	}
 	for i := range detail.Children {
 		child := &detail.Children[i]
 		for j := range child.Bookings {
 			booking := &child.Bookings[j]
-			booking.ReplacedWeeks = holidayReplacementRanges(lineage[child.ID][booking.WeekID], weeks)
+			booking.ReplacedWeeks = holidayReplacementRanges(lineage[child.ID.Int64()][booking.WeekID.Int64()], weeks)
 		}
 	}
 }
@@ -57,12 +57,12 @@ func advanceHolidayReplacements(lineage map[int64][]int64, change enrollment.Hol
 func changedHolidayWeeks(from, other []enrollment.HolidayBookingChange, weeks map[int64]enrollment.HolidayWeek) []int64 {
 	kept := make(map[int64]bool, len(other))
 	for _, booking := range other {
-		kept[booking.WeekID] = true
+		kept[booking.WeekID.Int64()] = true
 	}
 	var changed []int64
 	for _, booking := range from {
-		if !kept[booking.WeekID] {
-			changed = append(changed, booking.WeekID)
+		if !kept[booking.WeekID.Int64()] {
+			changed = append(changed, booking.WeekID.Int64())
 		}
 	}
 	slices.SortFunc(changed, func(a, b int64) int {

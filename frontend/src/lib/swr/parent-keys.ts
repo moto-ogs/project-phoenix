@@ -120,6 +120,9 @@ export const parentKeys = {
     `parent-child-${encodeURIComponent(studentId)}-pickup-signature-statement-${encodeURIComponent(input)}`,
   consents: (studentId: string) =>
     `parent-child-${encodeURIComponent(studentId)}-consents`,
+  /** The stop of the child's room history and mood (#3844). */
+  roomHistoryStop: (studentId: string) =>
+    `parent-child-${encodeURIComponent(studentId)}-room-history-stop`,
   courses: (studentId: string) =>
     `parent-child-${encodeURIComponent(studentId)}-courses`,
   conferences: (studentId: string) =>

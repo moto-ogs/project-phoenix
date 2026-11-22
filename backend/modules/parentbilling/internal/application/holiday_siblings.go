@@ -7,6 +7,7 @@ import (
 	"slices"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Siblings from separate holiday registrations (#5628, ADR 0115 addendum).
@@ -71,10 +72,10 @@ func (m siblingMember) chainMember() holidayMember {
 	children := make([]parentbilling.HolidayChild, len(m.frozen.Children))
 	lunchChildren := make([]parentbilling.HolidayChild, len(m.frozen.Children))
 	for i, child := range m.frozen.Children {
-		children[i] = parentbilling.HolidayChild{ID: child.ChildID, Position: child.Position, BirthDate: registered[child.ChildID].BirthDate,
-			Bookings: frozenHolidayBookings(child.Lines, registered[child.ChildID].Bookings)}
-		lunchChildren[i] = parentbilling.HolidayChild{ID: child.ChildID, Position: child.Position,
-			Bookings: frozenHolidayLunchBookings(child.Lines, registered[child.ChildID].Bookings)}
+		children[i] = parentbilling.HolidayChild{ID: child.ChildID.Int64(), Position: child.Position, BirthDate: registered[child.ChildID.Int64()].BirthDate,
+			Bookings: frozenHolidayBookings(child.Lines, registered[child.ChildID.Int64()].Bookings)}
+		lunchChildren[i] = parentbilling.HolidayChild{ID: child.ChildID.Int64(), Position: child.Position,
+			Bookings: frozenHolidayLunchBookings(child.Lines, registered[child.ChildID.Int64()].Bookings)}
 	}
 	if m.movedUp {
 		children = withMovedUpBookings(children, m.registration.Children)
@@ -199,11 +200,11 @@ func (h *HolidayContributions) siblingGroups(ctx context.Context, organizationID
 	}
 	groups := []parentbilling.HolidaySiblingGroup{}
 	for _, member := range members {
-		if len(groups) == 0 || groups[len(groups)-1].ID != member.GroupID {
-			groups = append(groups, parentbilling.HolidaySiblingGroup{ID: member.GroupID, RegistrationIDs: []int64{}})
+		if len(groups) == 0 || groups[len(groups)-1].ID.Int64() != member.GroupID {
+			groups = append(groups, parentbilling.HolidaySiblingGroup{ID: ident.ID(member.GroupID), RegistrationIDs: []ident.ID{}})
 		}
 		last := &groups[len(groups)-1]
-		last.RegistrationIDs = append(last.RegistrationIDs, member.RegistrationID)
+		last.RegistrationIDs = append(last.RegistrationIDs, ident.ID(member.RegistrationID))
 	}
 	return groups, nil
 }
@@ -256,7 +257,7 @@ func (h *HolidayContributions) MergeHolidaySiblings(ctx context.Context, reviewe
 	if err := h.recordSiblings(ctx, reviewer, periodID, members, parentbilling.HolidaySiblingsMerged); err != nil {
 		return parentbilling.HolidaySiblingGroup{}, err
 	}
-	return parentbilling.HolidaySiblingGroup{ID: groupID, RegistrationIDs: merged}, nil
+	return parentbilling.HolidaySiblingGroup{ID: ident.ID(groupID), RegistrationIDs: ident.IDs(merged)}, nil
 }
 
 // SplitHolidaySibling takes the registration out of its group under the
@@ -274,10 +275,10 @@ func (h *HolidayContributions) SplitHolidaySibling(ctx context.Context, reviewer
 	if !found {
 		return parentbilling.ErrHolidaySiblingGroupNotFound
 	}
-	if err := refuseInvoiced(group.RegistrationIDs, issued); err != nil {
+	if err := refuseInvoiced(ident.Int64s(group.RegistrationIDs), issued); err != nil {
 		return err
 	}
-	members, err := h.readSiblings(ctx, reviewer, periodID, group.RegistrationIDs, nil)
+	members, err := h.readSiblings(ctx, reviewer, periodID, ident.Int64s(group.RegistrationIDs), nil)
 	if err != nil {
 		return err
 	}
@@ -332,7 +333,7 @@ func (h *HolidayContributions) siblingsOf(ctx context.Context, reviewer parentbi
 	ids := []int64{registration.ID}
 	group, grouped := groupOf(groups, registration.ID)
 	if grouped {
-		ids = group.RegistrationIDs
+		ids = ident.Int64s(group.RegistrationIDs)
 	}
 	members, err := h.readSiblings(ctx, reviewer, periodID, ids, &registration)
 	return members, grouped, err
@@ -585,11 +586,11 @@ func siblingView(members []siblingMember, registrationID int64) []parentbilling.
 			continue
 		}
 		sibling := parentbilling.HolidaySibling{
-			RegistrationID: member.id(), Status: member.registration.Status,
+			RegistrationID: ident.ID(member.id()), Status: member.registration.Status,
 			Children: make([]parentbilling.HolidaySiblingChild, len(member.registration.Children)),
 		}
 		for i, child := range member.registration.Children {
-			sibling.Children[i] = parentbilling.HolidaySiblingChild{ID: child.ID, FirstName: child.FirstName, LastName: child.LastName}
+			sibling.Children[i] = parentbilling.HolidaySiblingChild{ID: ident.ID(child.ID), FirstName: child.FirstName, LastName: child.LastName}
 		}
 		siblings = append(siblings, sibling)
 	}
@@ -615,18 +616,18 @@ func mergedGroup(groups []parentbilling.HolidaySiblingGroup, selected []int64) (
 	merged := slices.Clone(selected)
 	var replaced []int64
 	for _, group := range groups {
-		if !slices.ContainsFunc(group.RegistrationIDs, func(id int64) bool { return slices.Contains(selected, id) }) {
+		if !slices.ContainsFunc(group.RegistrationIDs, func(id ident.ID) bool { return slices.Contains(selected, id.Int64()) }) {
 			continue
 		}
-		replaced = append(replaced, group.ID)
-		merged = append(merged, group.RegistrationIDs...)
+		replaced = append(replaced, group.ID.Int64())
+		merged = append(merged, ident.Int64s(group.RegistrationIDs)...)
 	}
 	return distinctIDs(merged), replaced
 }
 
 func groupOf(groups []parentbilling.HolidaySiblingGroup, registrationID int64) (parentbilling.HolidaySiblingGroup, bool) {
 	for _, group := range groups {
-		if slices.Contains(group.RegistrationIDs, registrationID) {
+		if slices.Contains(group.RegistrationIDs, ident.ID(registrationID)) {
 			return group, true
 		}
 	}

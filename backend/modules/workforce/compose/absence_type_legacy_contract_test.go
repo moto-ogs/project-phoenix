@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 )
@@ -148,7 +149,7 @@ func TestUpdateAbsenceTypeRejectsRenamingUsedType(t *testing.T) {
 	created, err := svc.CreateAbsenceType(ctx, workforce.CreateAbsenceType{Name: "Regenerationstag"})
 	require.NoError(t, err)
 	staff := testpkg.CreateTestStaff(t, db, "Used", "Type")
-	_, err = svc.CreateStaffAbsence(ctx, &workforce.StaffAbsence{StaffID: staff.ID, CreatedBy: staff.ID, AbsenceType: workforce.AbsenceTypeOther, AbsenceTypeID: &created.ID, Status: workforce.AbsenceStatusReported, DateStart: "2026-09-07", DateEnd: "2026-09-07"})
+	_, err = svc.CreateStaffAbsence(ctx, &workforce.StaffAbsence{StaffID: ident.ID(staff.ID), CreatedBy: ident.ID(staff.ID), AbsenceType: workforce.AbsenceTypeOther, AbsenceTypeID: (*ident.ID)(&created.ID), Status: workforce.AbsenceStatusReported, DateStart: "2026-09-07", DateEnd: "2026-09-07"})
 	require.NoError(t, err)
 
 	renamed := "Gesundheitstag"

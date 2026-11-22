@@ -5,21 +5,22 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func openingToDomain(value workforce.StaffVacationOpening) domain.StaffVacationOpening {
 	return domain.StaffVacationOpening{
-		ID: value.ID, TenantID: value.TenantID, StaffID: value.StaffID, Year: value.Year, EffectiveDate: value.EffectiveDate,
+		ID: value.ID.Int64(), TenantID: value.TenantID.Int64(), StaffID: value.StaffID.Int64(), Year: value.Year, EffectiveDate: value.EffectiveDate,
 		TakenBeforeDays: value.TakenBeforeDays, EnteredRemainingDays: value.EnteredRemainingDays, Note: value.Note,
-		DecidedBy: value.DecidedBy, DecidedAt: value.DecidedAt, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
+		DecidedBy: value.DecidedBy.Int64(), DecidedAt: value.DecidedAt, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
 	}
 }
 
 func openingToPublic(value domain.StaffVacationOpening) workforce.StaffVacationOpening {
 	return workforce.StaffVacationOpening{
-		ID: value.ID, TenantID: value.TenantID, StaffID: value.StaffID, Year: value.Year, EffectiveDate: value.EffectiveDate,
+		ID: ident.ID(value.ID), TenantID: ident.ID(value.TenantID), StaffID: ident.ID(value.StaffID), Year: value.Year, EffectiveDate: value.EffectiveDate,
 		TakenBeforeDays: value.TakenBeforeDays, EnteredRemainingDays: value.EnteredRemainingDays, Note: value.Note,
-		DecidedBy: value.DecidedBy, DecidedAt: value.DecidedAt, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
+		DecidedBy: ident.ID(value.DecidedBy), DecidedAt: value.DecidedAt, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
 	}
 }
 

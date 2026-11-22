@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/modules/dataimport/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -36,8 +37,8 @@ func TestDataImportCutover_OpeningBalanceOwnerContract(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, opening)
 		assert.Equal(t, date, opening.EffectiveDate)
-		assert.Equal(t, staff.ID, opening.StaffID)
-		assert.Equal(t, actor.staffID, opening.DecidedBy)
+		assert.Equal(t, ident.ID(staff.ID), opening.StaffID)
+		assert.Equal(t, ident.ID(actor.staffID), opening.DecidedBy)
 		assert.Equal(t, "opening", opening.Type)
 		assert.ErrorIs(t, hours.ValidateOpeningBalance(ctx, staff.ID, actor.staffID, date, -195, "Migration"), ports.ErrOpeningAlreadyExists)
 

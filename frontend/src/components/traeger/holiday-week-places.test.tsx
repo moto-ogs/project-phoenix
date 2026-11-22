@@ -114,6 +114,28 @@ describe("HolidayWeekPlacesCard", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Ohne Grenze")).toBeInTheDocument();
   });
+
+  it("shows „–“ for a waiting child whose registration status it does not know (#2353)", () => {
+    const [entry] = FULL_WEEK.waitlist;
+    render(
+      <HolidayWeekPlacesCard
+        periodId="7"
+        week={{
+          ...FULL_WEEK,
+          waitlist: [{ ...entry!, registrationStatus: undefined }],
+        }}
+        hostSchoolName="OGS am Berg"
+        editing={false}
+        onEdit={vi.fn()}
+        onCancel={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+    const row = screen.getByRole("link", {
+      name: /Platz 1 der Warteliste: Tom Platz/,
+    });
+    expect(row).toHaveTextContent("–");
+  });
 });
 
 describe("HolidayWeekPlacesCard editing its places", () => {

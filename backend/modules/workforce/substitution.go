@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Group substitution target types. A group handover hands a whole education
@@ -165,13 +166,13 @@ type SubstitutionCaller struct {
 }
 
 type GroupRef struct {
-	ID   int64  `json:"id,string"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 type StaffRef struct {
-	ID       int64  `json:"id,string"`
-	FullName string `json:"full_name"`
+	ID       ident.ID `json:"id"`
+	FullName string   `json:"full_name"`
 	// IsExternal marks an external caregiver, with or without a moto account
 	// (#3823, #4573), and ExternalAccountStatus is then "account" |
 	// "invitation_pending" | "none", ExternalOrganization the organization
@@ -189,7 +190,7 @@ type Period struct {
 }
 
 type GroupHandover struct {
-	ID     int64                  `json:"id,string"`
+	ID     ident.ID               `json:"id"`
 	Type   SubstitutionTargetType `json:"type"`
 	Group  GroupRef               `json:"group"`
 	Target StaffRef               `json:"target"`
@@ -198,7 +199,7 @@ type GroupHandover struct {
 }
 
 type RunningSupervision struct {
-	ID                       int64                  `json:"id,string"`
+	ID                       ident.ID               `json:"id"`
 	Type                     SubstitutionTargetType `json:"type"`
 	Name                     string                 `json:"name"`
 	RoomName                 string                 `json:"room_name,omitempty"`
@@ -209,7 +210,7 @@ type RunningSupervision struct {
 }
 
 type ScheduleAppointmentStaff struct {
-	AssignmentID int64    `json:"assignment_id"`
+	AssignmentID ident.ID `json:"assignment_id"`
 	Staff        StaffRef `json:"staff"`
 	IsAbsent     bool     `json:"is_absent"`
 	IsSubstitute bool     `json:"is_substitute"`
@@ -219,7 +220,7 @@ type ScheduleAppointmentStaff struct {
 // ScheduleAppointmentOverview is one timetable appointment with the staff
 // planned for it. Date is a calendar day in DateLayout.
 type ScheduleAppointmentOverview struct {
-	ID        int64                      `json:"id"`
+	ID        ident.ID                   `json:"id"`
 	Type      SubstitutionTargetType     `json:"type"`
 	Date      string                     `json:"date"`
 	StartTime string                     `json:"start_time"`
@@ -265,26 +266,26 @@ type AdditionalSupervisionAssignment struct {
 }
 
 type ScheduleAbsenceChange struct {
-	StaffID     int64    `json:"staff_id"`
-	Reason      *string  `json:"reason,omitempty"`
-	InstanceIDs *[]int64 `json:"instance_ids,omitempty"`
+	StaffID     ident.ID    `json:"staff_id"`
+	Reason      *string     `json:"reason,omitempty"`
+	InstanceIDs *[]ident.ID `json:"instance_ids,omitempty"`
 }
 
 type ScheduleSubstitutionChange struct {
-	AbsentStaffID     int64    `json:"absent_staff_id"`
-	SubstituteStaffID int64    `json:"substitute_staff_id"`
-	Reason            *string  `json:"reason,omitempty"`
-	InstanceIDs       *[]int64 `json:"instance_ids,omitempty"`
+	AbsentStaffID     ident.ID    `json:"absent_staff_id"`
+	SubstituteStaffID ident.ID    `json:"substitute_staff_id"`
+	Reason            *string     `json:"reason,omitempty"`
+	InstanceIDs       *[]ident.ID `json:"instance_ids,omitempty"`
 }
 
 type SchedulePresenceChange struct {
-	StaffID     int64    `json:"staff_id"`
-	InstanceIDs *[]int64 `json:"instance_ids,omitempty"`
+	StaffID     ident.ID    `json:"staff_id"`
+	InstanceIDs *[]ident.ID `json:"instance_ids,omitempty"`
 }
 
 type ScheduleSubstitutionRemoval struct {
-	StaffID     int64    `json:"staff_id"`
-	InstanceIDs *[]int64 `json:"instance_ids,omitempty"`
+	StaffID     ident.ID    `json:"staff_id"`
+	InstanceIDs *[]ident.ID `json:"instance_ids,omitempty"`
 }
 
 // ScheduleWholeDayAssignment marks a staff member absent for whole days and
@@ -326,17 +327,17 @@ type ScheduleSubstitutionAssignment struct {
 }
 
 type ScheduleAffectedAppointment struct {
-	InstanceID int64  `json:"instance_id"`
-	Title      string `json:"title"`
-	StartTime  string `json:"start_time"`
-	Action     string `json:"action"`
+	InstanceID ident.ID `json:"instance_id"`
+	Title      string   `json:"title"`
+	StartTime  string   `json:"start_time"`
+	Action     string   `json:"action"`
 }
 
 type ScheduleTimeConflict struct {
-	Kind       string `json:"kind"`
-	InstanceID int64  `json:"instance_id"`
-	OtherID    int64  `json:"other_instance_id"`
-	Message    string `json:"message"`
+	Kind       string   `json:"kind"`
+	InstanceID ident.ID `json:"instance_id"`
+	OtherID    ident.ID `json:"other_instance_id"`
+	Message    string   `json:"message"`
 }
 
 type ScheduleSubstitutionDayResult struct {
@@ -346,7 +347,7 @@ type ScheduleSubstitutionDayResult struct {
 }
 
 type ScheduleSubstitutionResult struct {
-	InstanceID           int64                           `json:"instance_id"`
+	InstanceID           ident.ID                        `json:"instance_id"`
 	Cancelled            bool                            `json:"cancelled"`
 	UnderstaffedAck      bool                            `json:"understaffed_ack"`
 	AffectedAppointments []ScheduleAffectedAppointment   `json:"affected_instances"`
@@ -363,10 +364,10 @@ type SubstitutionAssignment struct {
 }
 
 type SubstitutionAssignmentResult struct {
-	ID                   int64                       `json:"id,string"`
+	ID                   ident.ID                    `json:"id"`
 	Type                 SubstitutionTargetType      `json:"type"`
 	Group                *GroupRef                   `json:"group,omitempty"`
-	ActiveGroupID        int64                       `json:"active_group_id,string,omitempty"`
+	ActiveGroupID        ident.ID                    `json:"active_group_id,omitempty"`
 	Target               StaffRef                    `json:"target"`
 	Period               *Period                     `json:"period,omitempty"`
 	CanEnd               bool                        `json:"can_end,omitempty"`

@@ -10,6 +10,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const dateLayout = "2006-01-02"
@@ -172,11 +174,11 @@ func mustBerlinLocation() *time.Location {
 }
 
 type Appointment struct {
-	ID                 int64      `json:"id"`
-	TenantID           int64      `json:"tenant_id"`
+	ID                 ident.ID   `json:"id"`
+	TenantID           ident.ID   `json:"tenant_id"`
 	CreatedAt          time.Time  `json:"created_at"`
 	UpdatedAt          time.Time  `json:"updated_at"`
-	OrganizerStaffID   int64      `json:"organizer_staff_id"`
+	OrganizerStaffID   ident.ID   `json:"organizer_staff_id"`
 	Title              string     `json:"title"`
 	Description        *string    `json:"description,omitempty"`
 	Location           *string    `json:"location,omitempty"`
@@ -223,13 +225,13 @@ func (a *Appointment) Validate() error {
 }
 
 type AppointmentTarget struct {
-	ID            int64     `json:"id"`
-	TenantID      int64     `json:"tenant_id"`
+	ID            ident.ID  `json:"id"`
+	TenantID      ident.ID  `json:"tenant_id"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
-	AppointmentID int64     `json:"appointment_id"`
+	AppointmentID ident.ID  `json:"appointment_id"`
 	TargetType    string    `json:"target_type"`
-	TargetID      *int64    `json:"target_id,omitempty"`
+	TargetID      *ident.ID `json:"target_id,omitempty"`
 	TargetValue   *string   `json:"target_value,omitempty"`
 }
 
@@ -240,11 +242,11 @@ type AppointmentTargetFields struct {
 }
 
 type RecurrenceRule struct {
-	ID              int64     `json:"id"`
-	TenantID        int64     `json:"tenant_id"`
+	ID              ident.ID  `json:"id"`
+	TenantID        ident.ID  `json:"tenant_id"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
-	AppointmentID   int64     `json:"appointment_id"`
+	AppointmentID   ident.ID  `json:"appointment_id"`
 	Frequency       string    `json:"frequency"`
 	IntervalCount   int       `json:"interval_count"`
 	Weekdays        []string  `json:"weekdays,omitempty"`
@@ -309,14 +311,14 @@ type AppointmentOccurrenceOverride struct {
 }
 
 type AppointmentRecipient struct {
-	ID                int64      `json:"id"`
-	TenantID          int64      `json:"tenant_id"`
+	ID                ident.ID   `json:"id"`
+	TenantID          ident.ID   `json:"tenant_id"`
 	CreatedAt         time.Time  `json:"created_at"`
 	UpdatedAt         time.Time  `json:"updated_at"`
-	AppointmentID     int64      `json:"appointment_id"`
+	AppointmentID     ident.ID   `json:"appointment_id"`
 	RecipientType     string     `json:"recipient_type"`
-	StaffID           *int64     `json:"staff_id,omitempty"`
-	GuardianProfileID *int64     `json:"guardian_profile_id,omitempty"`
+	StaffID           *ident.ID  `json:"staff_id,omitempty"`
+	GuardianProfileID *ident.ID  `json:"guardian_profile_id,omitempty"`
 	Status            string     `json:"status"`
 	RespondedAt       *time.Time `json:"responded_at,omitempty"`
 	// OccurrenceResponses holds the answers for single dates of a series that
@@ -335,8 +337,8 @@ func (r *AppointmentRecipient) Validate() error {
 		return invalid("appointment_id is required")
 	}
 	return ValidateRecipientFields(AppointmentRecipientFields{
-		RecipientType: r.RecipientType, StaffID: r.StaffID,
-		GuardianProfileID: r.GuardianProfileID, Status: r.Status,
+		RecipientType: r.RecipientType, StaffID: (*int64)(r.StaffID),
+		GuardianProfileID: (*int64)(r.GuardianProfileID), Status: r.Status,
 	})
 }
 

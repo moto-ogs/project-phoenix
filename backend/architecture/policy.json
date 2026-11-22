@@ -473,6 +473,14 @@
       "class": "standard"
     },
     {
+      "path": "encoding/json/jsontext",
+      "class": "standard"
+    },
+    {
+      "path": "encoding/json/v2",
+      "class": "standard"
+    },
+    {
       "path": "encoding/xml",
       "class": "standard"
     },

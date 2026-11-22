@@ -4,7 +4,10 @@ import { PORTALS } from "~/server/auth/portals";
 import { sessionMutationOriginError } from "~/server/auth/same-origin";
 import { forwardJsonRequest } from "~/lib/json-proxy.server";
 import { tenant } from "~/lib/route-wrapper.server";
-import type { RouteContext } from "~/lib/route-wrapper-utils.server";
+import {
+  successResponse,
+  type RouteContext,
+} from "~/lib/route-wrapper-utils.server";
 import {
   installMintedSession,
   logoutRollback,
@@ -33,7 +36,7 @@ export const POST = tenantPortal.withAuth(
               () =>
                 tenantPortal.setSession(pair.access_token, pair.refresh_token),
               logoutRollback(PORTALS.tenant.backend.logout, pair),
-            )) ?? Response.json({ success: true })
+            )) ?? Response.json(successResponse(null))
           );
         },
       },

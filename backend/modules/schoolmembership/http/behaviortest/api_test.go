@@ -17,6 +17,8 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	staffHTTP "github.com/moto-ogs/project-phoenix/modules/schoolmembership/http"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -167,7 +169,6 @@ type harness struct {
 	absenceLbl     map[int64]string
 	genders        map[int64]string // staffID -> stated gender
 
-	groups        []staffHTTP.Group
 	classes       []string
 	setClasses    []string
 	setClassActor int64
@@ -223,7 +224,7 @@ func newHarness(t *testing.T, membership *fakeMembership) *harness {
 			}
 		},
 		Success: func(w http.ResponseWriter, r *http.Request, status int, data any, message string) {
-			payload, _ := json.Marshal(data)
+			payload, _ := wire.Marshal(data)
 			render.Status(r, status)
 			_ = render.Render(w, r, response{Status: "success", Data: payload, Message: message})
 		},
@@ -314,7 +315,6 @@ func newHarness(t *testing.T, membership *fakeMembership) *harness {
 		RetryQueuedDocumentCleanups: func(_ context.Context, source string) {
 			h.retryCalls = append(h.retryCalls, source)
 		},
-		TeacherGroups: func(context.Context, int64) ([]staffHTTP.Group, error) { return h.groups, nil },
 		SchoolClasses: func(context.Context, int64) ([]string, error) {
 			if h.classErr != nil {
 				return nil, h.classErr
@@ -465,7 +465,7 @@ func TestListStaffAppliesFiltersAndTiers(t *testing.T) {
 	assert.Contains(t, payload, `"tag_id":"TAG-11"`)
 	assert.Contains(t, payload, `"absence_type_label":"Krank gemeldet"`)
 	assert.Contains(t, payload, `"was_present_today":true`)
-	assert.Contains(t, payload, `"teacher_id":22`)
+	assert.Contains(t, payload, `"teacher_id":"22"`)
 	assert.Contains(t, payload, `"specialization":"Musik"`, "specialization is trimmed")
 	assert.Contains(t, payload, `"qualifications":"Erzieherin"`)
 	assert.Contains(t, payload, `"email":"ada@example.com"`)
@@ -596,7 +596,7 @@ func TestGetStaffSplitsTeacherAndStaffBranch(t *testing.T) {
 	teacher := h.do(t, http.MethodGet, "/staff/2", nil)
 	require.Equal(t, http.StatusOK, teacher.Code)
 	assert.Equal(t, "Teacher retrieved successfully", decode(t, teacher).Message)
-	assert.Contains(t, string(decode(t, teacher).Data), `"teacher_id":22`)
+	assert.Contains(t, string(decode(t, teacher).Data), `"teacher_id":"22"`)
 
 	missing := h.do(t, http.MethodGet, "/staff/99", nil)
 	assert.Equal(t, http.StatusNotFound, missing.Code)
@@ -645,7 +645,7 @@ func TestMinimalProfilesReturnIdentityOnly(t *testing.T) {
 	require.Equal(t, http.StatusOK, recorder.Code)
 	body := decode(t, recorder)
 	assert.Equal(t, "Financial staff profile retrieved successfully", body.Message)
-	assert.JSONEq(t, `{"id":1,"name":"Ada Lovelace","firstName":"Ada","lastName":"Lovelace"}`, string(body.Data))
+	assert.JSONEq(t, `{"id":"1","name":"Ada Lovelace","firstName":"Ada","lastName":"Lovelace"}`, string(body.Data))
 
 	documents := h.do(t, http.MethodGet, "/staff/documents-profile/1", nil)
 	require.Equal(t, http.StatusOK, documents.Code)
@@ -661,7 +661,7 @@ func TestDocumentDirectorySortsAndDrainsTheCleanupQueue(t *testing.T) {
 	require.Equal(t, http.StatusOK, recorder.Code)
 	body := decode(t, recorder)
 	assert.Equal(t, "Document staff directory retrieved successfully", body.Message)
-	assert.Equal(t, `[{"id":1,"name":"Ada Lovelace","firstName":"Ada","lastName":"Lovelace"},{"id":2,"name":"Grace Hopper","firstName":"Grace","lastName":"Hopper"}]`, string(body.Data))
+	assert.Equal(t, `[{"id":"1","name":"Ada Lovelace","firstName":"Ada","lastName":"Lovelace"},{"id":"2","name":"Grace Hopper","firstName":"Grace","lastName":"Hopper"}]`, string(body.Data))
 	assert.Equal(t, []string{"directory"}, h.retryCalls)
 }
 
@@ -683,26 +683,6 @@ func TestServeAvatarFallsBackToNotFound(t *testing.T) {
 
 	invalid := h.do(t, http.MethodGet, "/staff/abc/avatar", nil)
 	assert.Equal(t, http.StatusBadRequest, invalid.Code)
-}
-
-func TestGetStaffGroupsAnswersEmptyForNonTeachers(t *testing.T) {
-	t.Parallel()
-	h := withPersons(newHarness(t, directoryFixture()))
-	h.allow("users:read")
-	h.groups = []staffHTTP.Group{{ID: 5, Name: "Gruppe A"}}
-
-	nonTeacher := h.do(t, http.MethodGet, "/staff/1/groups", nil)
-	require.Equal(t, http.StatusOK, nonTeacher.Code)
-	body := decode(t, nonTeacher)
-	assert.Equal(t, "Staff member is not a teacher and has no assigned groups", body.Message)
-	assert.Equal(t, "[]", string(body.Data))
-
-	teacher := h.do(t, http.MethodGet, "/staff/2/groups", nil)
-	require.Equal(t, http.StatusOK, teacher.Code)
-	assert.Equal(t, `[{"id":5,"name":"Gruppe A"}]`, string(decode(t, teacher).Data))
-
-	missing := h.do(t, http.MethodGet, "/staff/99/groups", nil)
-	assert.Equal(t, http.StatusNotFound, missing.Code)
 }
 
 func TestSchoolClassesRoundTripAndValidation(t *testing.T) {
@@ -780,7 +760,7 @@ func TestCreateStaffValidatesBodyAndGrantsPermissions(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, missingPerson.Code)
 	assert.Equal(t, "person ID is required", decodeError(t, missingPerson).Detail)
 
-	unknownPerson := h.do(t, http.MethodPost, "/staff", map[string]any{"person_id": 999})
+	unknownPerson := h.do(t, http.MethodPost, "/staff", map[string]any{"person_id": ident.ID(999)})
 	assert.Equal(t, http.StatusNotFound, unknownPerson.Code)
 	assert.Equal(t, "person not found", decodeError(t, unknownPerson).Detail)
 
@@ -802,17 +782,17 @@ func TestCreateStaffMapsTheTeacherOutcomes(t *testing.T) {
 		Teacher: &schoolmembership.Teacher{ID: 33, StaffID: 3},
 	}
 
-	teacher := h.do(t, http.MethodPost, "/staff", map[string]any{"person_id": 11, "is_teacher": true})
+	teacher := h.do(t, http.MethodPost, "/staff", map[string]any{"person_id": ident.ID(11), "is_teacher": true})
 	require.Equal(t, http.StatusCreated, teacher.Code)
 	assert.Equal(t, "Teacher created successfully", decode(t, teacher).Message)
 
 	h.createResult = staffHTTP.CreateStaffResult{Staff: schoolmembership.Staff{ID: 3, PersonID: 11}, TeacherCreationFailed: true}
-	failed := h.do(t, http.MethodPost, "/staff", map[string]any{"person_id": 11, "is_teacher": true})
+	failed := h.do(t, http.MethodPost, "/staff", map[string]any{"person_id": ident.ID(11), "is_teacher": true})
 	require.Equal(t, http.StatusCreated, failed.Code)
 	assert.Equal(t, "Staff member created successfully, but failed to create teacher record", decode(t, failed).Message)
 
 	h.createErr = errors.New("staff record already in use")
-	conflict := h.do(t, http.MethodPost, "/staff", map[string]any{"person_id": 11})
+	conflict := h.do(t, http.MethodPost, "/staff", map[string]any{"person_id": ident.ID(11)})
 	assert.Equal(t, http.StatusConflict, conflict.Code, "the root's write renderer decides the status")
 	assert.Equal(t, "staff record already in use", decodeError(t, conflict).Detail)
 }

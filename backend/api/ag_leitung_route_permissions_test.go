@@ -94,7 +94,7 @@ func checkAGLeitungRoutePermissions(t *testing.T, api *goldenRuntime) {
 			{http.MethodGet, "/auth/roles/"},
 			{http.MethodPost, "/auth/roles/"},
 			{http.MethodGet, "/api/messages/"},
-			{http.MethodGet, "/api/guardians/"},
+			{http.MethodGet, "/api/guardians/search?q=Muster"},
 			{http.MethodGet, "/api/students/"},
 			{http.MethodGet, fmt.Sprintf("/api/students/%d/documents", child.ID)},
 		} {

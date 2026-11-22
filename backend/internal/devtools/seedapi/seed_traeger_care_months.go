@@ -23,25 +23,25 @@ func (seedTraegerCareMonthsStep) Name() string { return "Seeding the Träger mon
 const seedCareNumberPattern = "MB-{JJJJ}-{NNNN}"
 
 type seedCareModule struct {
-	SchoolID       int64  `json:"school_id"`
-	CareOfferingID int64  `json:"care_offering_id"`
+	SchoolID       apiID  `json:"school_id"`
+	CareOfferingID apiID  `json:"care_offering_id"`
 	ModuleName     string `json:"module_name"`
 }
 
 type seedCareRunDetail struct {
-	ID           int64  `json:"id"`
+	ID           apiID  `json:"id"`
 	Status       string `json:"status"`
 	PreviewCount int    `json:"preview_count"`
-	PreviewCents int64  `json:"preview_cents"`
+	PreviewCents int64  `json:"preview_cents" contract:"number"`
 	Fingerprint  string `json:"fingerprint"`
 	// ExcludedCount and Invoices show the review of the open run (#5916).
 	ExcludedCount int `json:"excluded_count"`
 	Invoices      []struct {
-		ContractID int64  `json:"contract_id"`
+		ContractID apiID  `json:"contract_id"`
 		Service    string `json:"service"`
 		// Amendments are the changes of the review (#6197).
 		Amendments []struct {
-			ID int64 `json:"id"`
+			ID apiID `json:"id"`
 		} `json:"amendments"`
 	} `json:"invoices"`
 }
@@ -231,7 +231,7 @@ func seedCarePriceLists(client *Client, auth AuthRef, month calendar.Date, freeM
 	var envelope struct {
 		Data struct {
 			Tariffs []struct {
-				SchoolID  int64         `json:"school_id"`
+				SchoolID  apiID         `json:"school_id"`
 				ValidFrom calendar.Date `json:"valid_from"`
 			} `json:"tariffs"`
 		} `json:"data"`
@@ -242,7 +242,7 @@ func seedCarePriceLists(client *Client, auth AuthRef, month calendar.Date, freeM
 	priced := map[int64]bool{}
 	for _, tariff := range envelope.Data.Tariffs {
 		if !tariff.ValidFrom.After(month) {
-			priced[tariff.SchoolID] = true
+			priced[int64(tariff.SchoolID)] = true
 		}
 	}
 	schools, bySchool := seedCarePrices(modules, priced)
@@ -270,19 +270,19 @@ func seedCarePriceLists(client *Client, auth AuthRef, month calendar.Date, freeM
 func seedCarePrices(modules []seedCareModule, priced map[int64]bool) ([]int64, map[int64][]map[string]any) {
 	order := []int64{}
 	for _, module := range modules {
-		if !priced[module.SchoolID] && !slices.Contains(order, module.SchoolID) {
-			order = append(order, module.SchoolID)
+		if !priced[int64(module.SchoolID)] && !slices.Contains(order, int64(module.SchoolID)) {
+			order = append(order, int64(module.SchoolID))
 		}
 	}
 	slices.Sort(order)
 	bySchool := map[int64][]map[string]any{}
 	for _, module := range modules {
-		switch index := slices.Index(order, module.SchoolID); {
+		switch index := slices.Index(order, int64(module.SchoolID)); {
 		case index < 0:
 		case index%2 == 1:
-			bySchool[module.SchoolID] = append(bySchool[module.SchoolID], seedCareScale(module)...)
+			bySchool[int64(module.SchoolID)] = append(bySchool[int64(module.SchoolID)], seedCareScale(module)...)
 		default:
-			bySchool[module.SchoolID] = append(bySchool[module.SchoolID], seedCareWeekdays(module)...)
+			bySchool[int64(module.SchoolID)] = append(bySchool[int64(module.SchoolID)], seedCareWeekdays(module)...)
 		}
 	}
 	return order, bySchool
@@ -310,8 +310,8 @@ func seedCareOfferings(client *Client, auth AuthRef) ([]seedCareModule, error) {
 	}
 	var envelope struct {
 		Data []struct {
-			SchoolID     int64  `json:"school_id"`
-			OfferingID   int64  `json:"offering_id"`
+			SchoolID     apiID  `json:"school_id"`
+			OfferingID   apiID  `json:"offering_id"`
 			OfferingName string `json:"offering_name"`
 		} `json:"data"`
 	}
@@ -444,7 +444,7 @@ func seedCareReview(client *Client, auth AuthRef, month calendar.Date, run seedC
 			return fmt.Errorf("exclude an invoice of the monthly run: %w", err)
 		}
 	}
-	return seedCareAmendment(client, auth, run.ID)
+	return seedCareAmendment(client, auth, int64(run.ID))
 }
 
 // seedCareAmendment changes the first invoice of the open run before its
@@ -478,10 +478,10 @@ func seedCareAmendment(client *Client, auth AuthRef, runID int64) error {
 
 // seedCareRunRef is a monthly run as the run list shows it.
 type seedCareRunRef struct {
-	ID           int64         `json:"id"`
+	ID           apiID         `json:"id"`
 	BillingMonth calendar.Date `json:"billing_month"`
 	Status       string        `json:"status"`
-	SchoolIDs    []int64       `json:"school_ids"`
+	SchoolIDs    []apiID       `json:"school_ids"`
 }
 
 // seedCareRunOf is the first run of the list in the given status that
@@ -500,8 +500,8 @@ func seedCareRunOf(client *Client, auth AuthRef, school int64, month calendar.Da
 		return 0, fmt.Errorf("read the monthly runs: %w", err)
 	}
 	for _, run := range envelope.Data.Runs {
-		if run.BillingMonth == month && run.Status == status && slices.Contains(run.SchoolIDs, school) {
-			return run.ID, nil
+		if run.BillingMonth == month && run.Status == status && slices.Contains(run.SchoolIDs, apiID(school)) {
+			return int64(run.ID), nil
 		}
 	}
 	return 0, nil

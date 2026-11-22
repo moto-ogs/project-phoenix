@@ -31,12 +31,12 @@ var seedPlanningSkips = map[string]bool{
 }
 
 type seedPlanningPerson struct {
-	RecordID int64 `json:"staff_record_id"`
+	RecordID apiID `json:"staff_record_id"`
 	Sites    []struct {
-		SchoolID int64 `json:"school_id"`
+		SchoolID apiID `json:"school_id"`
 	} `json:"sites"`
 	Shifts []struct {
-		SchoolID         int64 `json:"school_id"`
+		SchoolID         apiID `json:"school_id"`
 		PlannedByTraeger bool  `json:"planned_by_traeger"`
 	} `json:"shifts"`
 }
@@ -60,7 +60,7 @@ func seedTraegerPlanning(client *Client, auth AuthRef) (int, error) {
 			continue
 		}
 		for _, shift := range seedPlanningShifts(seedQuietSite(person), evening) {
-			made, err := seedPlanShift(client, auth, person.RecordID, monday, shift)
+			made, err := seedPlanShift(client, auth, int64(person.RecordID), monday, shift)
 			if err != nil {
 				return 0, err
 			}
@@ -78,15 +78,15 @@ func seedTraegerPlanning(client *Client, auth AuthRef) (int, error) {
 func seedQuietSite(person seedPlanningPerson) int64 {
 	counts := map[int64]int{}
 	for _, shift := range person.Shifts {
-		counts[shift.SchoolID]++
+		counts[int64(shift.SchoolID)]++
 	}
 	quiet := person.Sites[0].SchoolID
 	for _, site := range person.Sites[1:] {
-		if counts[site.SchoolID] < counts[quiet] {
+		if counts[int64(site.SchoolID)] < counts[int64(quiet)] {
 			quiet = site.SchoolID
 		}
 	}
-	return quiet
+	return int64(quiet)
 }
 
 func seedPlannedByTraeger(person seedPlanningPerson) bool {

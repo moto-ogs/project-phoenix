@@ -12,6 +12,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 )
@@ -94,11 +95,11 @@ func TestWorkforceOwnerRuntime(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				pause, err := capability.CreateWorkSessionBreak(txCtx, workforce.WorkSessionBreak{SessionID: session.ID, StartedAt: start.Add(4 * time.Hour)})
+				pause, err := capability.CreateWorkSessionBreak(txCtx, workforce.WorkSessionBreak{SessionID: ident.ID(session.ID), StartedAt: start.Add(4 * time.Hour)})
 				if err != nil {
 					return err
 				}
-				_, err = capability.EndWorkSessionBreak(txCtx, pause.ID, start.Add(4*time.Hour+30*time.Minute), 30)
+				_, err = capability.EndWorkSessionBreak(txCtx, pause.ID.Int64(), start.Add(4*time.Hour+30*time.Minute), 30)
 				if err != nil {
 					return err
 				}
@@ -144,10 +145,10 @@ func TestWorkforceOwnerRuntime(t *testing.T) {
 				if _, err := capability.ReplaceStaffQualifications(txCtx, staff.ID, []workforce.StaffQualification{{Name: "Runtime qualification"}}); err != nil {
 					return err
 				}
-				if _, err := capability.CreateStaffBalanceAdjustment(txCtx, workforce.StaffBalanceAdjustment{StaffID: staff.ID, Type: workforce.BalanceAdjustmentTypeOpening, EffectiveDate: day.String(), DecidedBy: staff.ID}); err != nil {
+				if _, err := capability.CreateStaffBalanceAdjustment(txCtx, workforce.StaffBalanceAdjustment{StaffID: ident.ID(staff.ID), Type: workforce.BalanceAdjustmentTypeOpening, EffectiveDate: day.String(), DecidedBy: ident.ID(staff.ID)}); err != nil {
 					return err
 				}
-				if _, err := capability.CreateStaffVacationOpening(txCtx, workforce.StaffVacationOpening{StaffID: staff.ID, Year: 2026, EffectiveDate: day.String(), EnteredRemainingDays: 30, DecidedBy: staff.ID}); err != nil {
+				if _, err := capability.CreateStaffVacationOpening(txCtx, workforce.StaffVacationOpening{StaffID: ident.ID(staff.ID), Year: 2026, EffectiveDate: day.String(), EnteredRemainingDays: 30, DecidedBy: ident.ID(staff.ID)}); err != nil {
 					return err
 				}
 				if err := capability.UpsertStaffVacationQuota(txCtx, workforce.StaffVacationQuota{StaffID: staff.ID, Year: 2026, EntitledDays: 30}); err != nil {

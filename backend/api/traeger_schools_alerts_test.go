@@ -17,6 +17,7 @@ import (
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
@@ -110,7 +111,7 @@ func TestOpenEnrollmentsCountTheWaitingChildrenOfEachSchool(t *testing.T) {
 func traegerAlertsOf(t *testing.T, got traegerview.SchoolsAlerts, school int64) traegerview.SchoolAlerts {
 	t.Helper()
 	for _, row := range got.Schools {
-		if row.ID == school {
+		if row.ID == ident.ID(school) {
 			return row
 		}
 	}

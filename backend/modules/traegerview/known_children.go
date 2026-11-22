@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The hint on a known child in the review of the holiday registrations
@@ -60,7 +61,7 @@ type KnownChildrenPorts struct {
 
 // KnownChild is a registered child with the one school that knows it.
 type KnownChild struct {
-	RegistrationID int64
-	ChildID        int64
-	SchoolID       int64
+	RegistrationID ident.ID
+	ChildID        ident.ID
+	SchoolID       ident.ID
 }

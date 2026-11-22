@@ -7,19 +7,6 @@ const INT64 = /^(0|-?[1-9]\d{0,18})$/;
 /** An int64 identifier sent as a JSON string. Kept verbatim, never a number. */
 export const int64String = z.string().regex(INT64);
 
-/**
- * An identifier that a route sends as a JSON number today and as a string
- * one release later. JSON.parse has already rounded a number beyond 2^53, so
- * an unsafe integer fails here instead of naming a different row.
- */
-export const int64StringOrNumber = z.union([
-  int64String,
-  z
-    .number()
-    .refine(Number.isSafeInteger, "identifier beyond 2^53 lost precision")
-    .transform(String),
-]);
-
 export const safeInt = z.number().refine(Number.isSafeInteger);
 
 /** calendar.Date: a real day as YYYY-MM-DD. */
@@ -103,7 +90,8 @@ export function success<T>(
 
 /**
  * A route that answers no data: a 204, which the backend client reads as
- * undefined, or the envelope without a data member.
+ * undefined, or the envelope without a data member. The catalog proxy
+ * answers it as `{ status: "success", data: null }`, a DELETE as 204.
  */
 export const noData = z
   .union([

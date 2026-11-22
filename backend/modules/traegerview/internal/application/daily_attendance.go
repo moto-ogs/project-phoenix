@@ -326,7 +326,7 @@ func schoolDailyAttendance(school traegerview.TraegerSchool, from, to calendar.D
 	entry := traegerview.SchoolDailyAttendance{TraegerSchool: school, Days: []traegerview.DailyAttendanceDay{}}
 	var total dayTally
 	for date := from; !to.Before(date); date = date.AddDays(1) {
-		day, recorded := tallies[schoolDay{school.ID, date}]
+		day, recorded := tallies[schoolDay{school.ID.Int64(), date}]
 		if !recorded {
 			if weekday := date.Weekday(); weekday == time.Saturday || weekday == time.Sunday {
 				continue
@@ -371,7 +371,7 @@ var statusOrder = map[string]int{
 func buildDailyAttendanceExport(data dailyAttendanceData) traegerview.DailyAttendanceExport {
 	position := make(map[int64]int, len(data.schools))
 	for i, school := range data.schools {
-		position[school.ID] = i
+		position[school.ID.Int64()] = i
 	}
 	records := make([]traegerview.DailyAttendanceRecord, 0, len(data.days)+len(data.absences))
 	for _, day := range data.days {

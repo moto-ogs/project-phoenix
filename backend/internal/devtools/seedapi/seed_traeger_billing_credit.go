@@ -68,7 +68,7 @@ func seedReadBillingFamilies(rt *Runtime, auth AuthRef) error {
 	}
 	var envelope struct {
 		Data []struct {
-			ID int64 `json:"id"`
+			ID apiID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
@@ -93,12 +93,12 @@ func seedCreditTarget(raw []byte) (int64, int64, error) {
 	var envelope struct {
 		Data struct {
 			Documents []struct {
-				ID       int64                   `json:"id"`
+				ID       apiID                   `json:"id"`
 				Kind     string                  `json:"kind"`
 				History  []seedCreditHistoryLink `json:"history"`
 				Children []struct {
-					ChildID    int64 `json:"child_id"`
-					TotalCents int64 `json:"total_cents"`
+					ChildID    apiID `json:"child_id"`
+					TotalCents int64 `json:"total_cents" contract:"number"`
 				} `json:"children"`
 			} `json:"documents"`
 		} `json:"data"`
@@ -112,7 +112,7 @@ func seedCreditTarget(raw []byte) (int64, int64, error) {
 		}
 		for _, child := range document.Children {
 			if document.Kind == "invoice" && child.TotalCents >= seedCreditCents {
-				return document.ID, child.ChildID, nil
+				return int64(document.ID), int64(child.ChildID), nil
 			}
 		}
 	}

@@ -6,33 +6,8 @@ import (
 	"strings"
 
 	"github.com/go-chi/render"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
-
-// getStaffGroups lists the groups a Betreuungskraft is assigned to. A staff
-// member without a teacher profile has none, which is a 200 with an empty
-// list — the group screens rely on that.
-func (rs *Resource) getStaffGroups(w http.ResponseWriter, r *http.Request) {
-	staff, ok := rs.parseAndFindStaff(w, r)
-	if !ok {
-		return
-	}
-	ctx := r.Context()
-	teacher := rs.teacherByStaff(ctx, staff.ID)
-	if teacher == nil {
-		rs.respond(w, r, http.StatusOK, []GroupResponse{}, "Staff member is not a teacher and has no assigned groups")
-		return
-	}
-	groups, err := rs.runtime.TeacherGroups(ctx, teacher.ID)
-	if err != nil {
-		rs.internal(w, r, err)
-		return
-	}
-	responses := make([]GroupResponse, 0, len(groups))
-	for _, group := range groups {
-		responses = append(responses, GroupResponse(group))
-	}
-	rs.respond(w, r, http.StatusOK, responses, "Teacher groups retrieved successfully")
-}
 
 // getStaffSchoolClasses returns the school classes assigned to a staff member
 // (#1772).
@@ -46,7 +21,7 @@ func (rs *Resource) getStaffSchoolClasses(w http.ResponseWriter, r *http.Request
 		rs.runtime.SchoolClassFailure(w, r, err)
 		return
 	}
-	rs.respond(w, r, http.StatusOK, SchoolClassesResponse{StaffID: id, SchoolClasses: classes}, "School classes retrieved successfully")
+	rs.respond(w, r, http.StatusOK, SchoolClassesResponse{StaffID: ident.ID(id), SchoolClasses: classes}, "School classes retrieved successfully")
 }
 
 // updateStaffSchoolClasses replaces the school class assignments with the
@@ -79,7 +54,7 @@ func (rs *Resource) updateStaffSchoolClasses(w http.ResponseWriter, r *http.Requ
 		rs.runtime.SchoolClassFailure(w, r, err)
 		return
 	}
-	rs.respond(w, r, http.StatusOK, SchoolClassesResponse{StaffID: id, SchoolClasses: classes}, "School classes updated successfully")
+	rs.respond(w, r, http.StatusOK, SchoolClassesResponse{StaffID: ident.ID(id), SchoolClasses: classes}, "School classes updated successfully")
 }
 
 // getStaffByRole answers GET /by-role?role=user or ?roles=teacher,staff,user.
@@ -153,10 +128,10 @@ func dedupeByStaffID(rows []StaffWithRoleResponse) []StaffWithRoleResponse {
 	seen := make(map[int64]bool, len(rows))
 	var results []StaffWithRoleResponse
 	for _, row := range rows {
-		if seen[row.ID] {
+		if seen[row.ID.Int64()] {
 			continue
 		}
-		seen[row.ID] = true
+		seen[row.ID.Int64()] = true
 		results = append(results, row)
 	}
 	return results

@@ -9,7 +9,7 @@ import {
 
 /** Go: traegerportal.SchoolSessionRequest */
 export interface SchoolSessionRequest {
-  school_id?: number;
+  school_id?: string;
 }
 
 /** Go: traegerportal.SchoolSessionResponse */

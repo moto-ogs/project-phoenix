@@ -758,23 +758,9 @@
     },
     {
       "build": "production",
-      "evidence": "func (p GroupRoutePeople) FindPerson(ctx context.Context, personID int64) (peopleModule.Person, error) {\n\tperson, err := p.persons.Get(ctx, personID)\n\tif err != nil {\n\t\treturn peopleModule.Person{}, err\n\t}\n\tif person == nil {\n\t\treturn peopleModule.Person{}, fmt.Errorf(\"person %d: %w\", personID, peopleModule.ErrPersonNotFound)\n\t}\n\treturn studentRoutePerson(person), nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/GroupRoutePeople.FindPerson",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
       "evidence": "func (p GroupRoutePeople) GroupStudents(ctx context.Context, groupID int64) ([]peopleModule.StudentRecord, error) {\n\tstudents, err := p.persons.StudentRows().FindByGroupID(ctx, groupID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]peopleModule.StudentRecord, 0, len(students))\n\tfor _, student := range students {\n\t\tif student != nil {\n\t\t\tresult = append(result, studentRouteRecord(student))\n\t\t}\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/GroupRoutePeople.GroupStudents",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
-      "evidence": "func (p GroupRoutePeople) ListPersonsByID(ctx context.Context, personIDs []int64) (map[int64]peopleModule.Person, error) {\n\tpersons, err := p.persons.GetByIDs(ctx, personIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64]peopleModule.Person, len(persons))\n\tfor id, person := range persons {\n\t\tif person != nil {\n\t\t\tresult[id] = studentRoutePerson(person)\n\t\t}\n\t}\n\treturn result, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/GroupRoutePeople.ListPersonsByID",
       "owner": "modules/peopledirectory"
     },
     {
@@ -1087,7 +1073,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p RoomSnapshotPeople) PersonsByIDs(ctx context.Context, ids []int64) (map[int64]peopledirectory.Person, error) {\n\tpersons, err := p.source.GetByIDs(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64]peopledirectory.Person, len(persons))\n\tfor id, person := range persons {\n\t\tif person != nil {\n\t\t\tresult[id] = peopledirectory.Person{ID: person.ID, FirstName: person.FirstName, LastName: person.LastName}\n\t\t}\n\t}\n\treturn result, nil\n}",
+      "evidence": "func (p RoomSnapshotPeople) PersonsByIDs(ctx context.Context, ids []int64) (map[int64]peopledirectory.Person, error) {\n\tpersons, err := p.source.GetByIDs(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64]peopledirectory.Person, len(persons))\n\tfor id, person := range persons {\n\t\tif person != nil {\n\t\t\tresult[id] = peopledirectory.Person{ID: person.ID.Int64(), FirstName: person.FirstName, LastName: person.LastName}\n\t\t}\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/RoomSnapshotPeople.PersonsByIDs",
       "owner": "modules/peopledirectory"
@@ -1822,7 +1808,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p StudentRoutePersons) CreatePerson(ctx context.Context, input peopleModule.CreatePerson) (peopleModule.Person, error) {\n\tperson := \u0026peopleModule.DirectoryPersonSnapshot{FirstName: input.FirstName, LastName: input.LastName, Birthday: peopleModule.OptionalCalendarDate(input.Birthday), TagID: input.TagID, AccountID: input.AccountID}\n\tif err := p.persons.Create(ctx, person); err != nil {\n\t\treturn peopleModule.Person{}, err\n\t}\n\treturn studentRoutePerson(person), nil\n}",
+      "evidence": "func (p StudentRoutePersons) CreatePerson(ctx context.Context, input peopleModule.CreatePerson) (peopleModule.Person, error) {\n\tperson := \u0026peopleModule.DirectoryPersonSnapshot{FirstName: input.FirstName, LastName: input.LastName, Birthday: peopleModule.OptionalCalendarDate(input.Birthday), TagID: input.TagID, AccountID: (*ident.ID)(input.AccountID)}\n\tif err := p.persons.Create(ctx, person); err != nil {\n\t\treturn peopleModule.Person{}, err\n\t}\n\treturn studentRoutePerson(person), nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/StudentRoutePersons.CreatePerson",
       "owner": "modules/peopledirectory"
@@ -1836,14 +1822,14 @@
     },
     {
       "build": "production",
-      "evidence": "func (p StudentRoutePersons) StaffIDForPerson(ctx context.Context, personID int64) (int64, bool, error) {\n\tstaff, err := p.persons.StaffRows().FindByPersonID(ctx, personID)\n\tif err != nil {\n\t\tvar notFound interface{ RepositoryNotFound() }\n\t\tif errors.As(err, \u0026notFound) {\n\t\t\treturn 0, false, nil\n\t\t}\n\t\treturn 0, false, err\n\t}\n\tif staff == nil {\n\t\treturn 0, false, nil\n\t}\n\treturn staff.ID, true, nil\n}",
+      "evidence": "func (p StudentRoutePersons) StaffIDForPerson(ctx context.Context, personID int64) (int64, bool, error) {\n\tstaff, err := p.persons.StaffRows().FindByPersonID(ctx, personID)\n\tif err != nil {\n\t\tvar notFound interface{ RepositoryNotFound() }\n\t\tif errors.As(err, \u0026notFound) {\n\t\t\treturn 0, false, nil\n\t\t}\n\t\treturn 0, false, err\n\t}\n\tif staff == nil {\n\t\treturn 0, false, nil\n\t}\n\treturn staff.ID.Int64(), true, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/StudentRoutePersons.StaffIDForPerson",
       "owner": "modules/peopledirectory"
     },
     {
       "build": "production",
-      "evidence": "func (p StudentRoutePersons) UpdatePerson(ctx context.Context, input peopleModule.UpdatePerson) (peopleModule.Person, error) {\n\tperson := \u0026peopleModule.DirectoryPersonSnapshot{FirstName: input.FirstName, LastName: input.LastName, Birthday: peopleModule.OptionalCalendarDate(input.Birthday), TagID: input.TagID, AccountID: input.AccountID}\n\tperson.ID = input.ID\n\tif err := p.persons.Update(ctx, person); err != nil {\n\t\treturn peopleModule.Person{}, err\n\t}\n\treturn studentRoutePerson(person), nil\n}",
+      "evidence": "func (p StudentRoutePersons) UpdatePerson(ctx context.Context, input peopleModule.UpdatePerson) (peopleModule.Person, error) {\n\tperson := \u0026peopleModule.DirectoryPersonSnapshot{FirstName: input.FirstName, LastName: input.LastName, Birthday: peopleModule.OptionalCalendarDate(input.Birthday), TagID: input.TagID, AccountID: (*ident.ID)(input.AccountID)}\n\tperson.ID = ident.ID(input.ID)\n\tif err := p.persons.Update(ctx, person); err != nil {\n\t\treturn peopleModule.Person{}, err\n\t}\n\treturn studentRoutePerson(person), nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/StudentRoutePersons.UpdatePerson",
       "owner": "modules/peopledirectory"

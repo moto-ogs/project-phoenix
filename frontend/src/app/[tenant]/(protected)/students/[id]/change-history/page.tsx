@@ -1,5 +1,6 @@
 "use client";
 
+import type { changeHistoryEntry } from "~/lib/contract/students.generated";
 import React, { Suspense } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
@@ -11,10 +12,7 @@ import {
   studentHistoryBack,
 } from "../student-referrer";
 import { ApiError } from "~/lib/api-error";
-import {
-  fetchStudentChangeHistory,
-  type StudentFieldChange,
-} from "~/lib/student-api";
+import { fetchStudentChangeHistory } from "~/lib/student-api";
 import { useConfirmedSWR } from "~/lib/hooks/use-confirmed-resource";
 import { studentKeys } from "~/lib/swr/portal-keys";
 import { useStudentData } from "~/lib/hooks/use-student-data";
@@ -44,6 +42,8 @@ const FIELD_LABELS: Record<string, string> = {
   // Krank oder entschuldigt, von der Schulverwaltung in moto schule
   // nachgetragen (#4791).
   school_absence_report: "Meldung der Schulverwaltung",
+  // Stopp von Raumverlauf und Stimmung für das Kind (#3844).
+  room_history_stop: "Raumverlauf und Stimmung",
   document: "Dokument",
 };
 
@@ -69,7 +69,7 @@ function ValueText({ value }: { readonly value: string }) {
 
 // ─── Table ───────────────────────────────────────────────────────────────────
 
-const CHANGE_COLUMNS: DataTableColumn<StudentFieldChange>[] = [
+const CHANGE_COLUMNS: DataTableColumn<changeHistoryEntry>[] = [
   {
     key: "changedAt",
     header: "Zeitpunkt",

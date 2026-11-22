@@ -50,6 +50,7 @@ import {
 } from "~/lib/traeger-care-billing-api";
 import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
+import { labelOf } from "~/lib/label-of";
 
 // The start dialog loads when it opens (#5916).
 const CareRunStartModal = dynamic(
@@ -79,8 +80,8 @@ function runColumns(
       header: "Status",
       render: (run) => (
         <StatusBadge
-          label={CARE_RUN_STATUS_LABELS[run.status]}
-          tone={CARE_RUN_STATUS_TONES[run.status]}
+          label={labelOf(CARE_RUN_STATUS_LABELS, run.status, "–")}
+          tone={labelOf(CARE_RUN_STATUS_TONES, run.status, "gray")}
         />
       ),
       stacked: "meta",

@@ -54,6 +54,7 @@ export function SchoolCheckinMissingHint({
       className="mb-3"
       title={`Noch nicht angemeldet: ${students.length} ${students.length === 1 ? "Kind" : "Kinder"}`}
       message={namesLine(students)}
+      onDismiss={onDismiss}
       actionLayout="stacked"
       action={
         <div className="flex flex-wrap gap-2">
@@ -69,15 +70,6 @@ export function SchoolCheckinMissingHint({
               Nur „{STATUS_FILTER_LABELS[status]}“ zeigen
             </Button>
           ))}
-          <Button
-            type="button"
-            variant="ghost"
-            size="compact"
-            tooltip="Blendet diesen Hinweis aus, die Kinder bleiben unverändert."
-            onClick={onDismiss}
-          >
-            Ausblenden
-          </Button>
         </div>
       }
     />

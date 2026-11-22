@@ -5,7 +5,7 @@ import {
   bool,
   calendarDate,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   optional,
@@ -25,7 +25,7 @@ export interface ChangeLine {
 }
 
 export const ChangeLineSchema: z.ZodType<ChangeLine, unknown> = object<ChangeLine>({
-  care_offering_id: int64StringOrNumber,
+  care_offering_id: int64String,
   module_name: str,
   state: str,
   before_days: nullable(arr(str)),
@@ -44,7 +44,7 @@ export interface ChangeRequest {
 }
 
 export const ChangeRequestSchema: z.ZodType<ChangeRequest, unknown> = object<ChangeRequest>({
-  id: int64StringOrNumber,
+  id: int64String,
   version: str,
   submitted_at: instant,
   effective_from: nullable(calendarDate),

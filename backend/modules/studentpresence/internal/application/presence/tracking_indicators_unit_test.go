@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -36,7 +37,7 @@ type trackingRooms struct {
 func (r trackingRooms) FindByIDs(context.Context, []int64) ([]*SessionRoom, error) {
 	rows := make([]*SessionRoom, 0, len(r.source.rows))
 	for index, row := range r.source.rows {
-		rows = append(rows, &SessionRoom{ID: int64(index + 1), Name: row.RoomName})
+		rows = append(rows, &SessionRoom{ID: ident.ID(int64(index + 1)), Name: row.RoomName})
 	}
 	return rows, nil
 }
@@ -49,7 +50,7 @@ type trackingGroups struct {
 func (r trackingGroups) FindByIDs(context.Context, []int64) ([]*ports.SessionActivity, error) {
 	rows := make([]*ports.SessionActivity, 0, len(r.source.rows))
 	for index, row := range r.source.rows {
-		rows = append(rows, &ports.SessionActivity{ID: int64(index + 1), Name: row.ActivityGroupName})
+		rows = append(rows, &ports.SessionActivity{ID: ident.ID(int64(index + 1)), Name: row.ActivityGroupName})
 	}
 	return rows, nil
 }

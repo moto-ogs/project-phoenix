@@ -33,7 +33,6 @@ export const clientEnvSchema = {
     "production",
     "demo",
   ]),
-  NEXT_PUBLIC_API_URL: z.url(),
   NEXT_PUBLIC_LOG_LEVEL: z
     .enum(["debug", "info", "warn", "error"])
     .default("info"),
@@ -52,7 +51,6 @@ const buildEnvSchema = z.object({
   NEXT_PUBLIC_APP_ENV: clientEnvSchema.NEXT_PUBLIC_APP_ENV,
   API_URL: serverEnvSchema.API_URL,
   TENANT_DOMAIN: serverEnvSchema.TENANT_DOMAIN,
-  NEXT_PUBLIC_API_URL: clientEnvSchema.NEXT_PUBLIC_API_URL,
   NEXT_PUBLIC_TENANT_DOMAIN: clientEnvSchema.NEXT_PUBLIC_TENANT_DOMAIN,
   NEXT_PUBLIC_POSTHOG_KEY: clientEnvSchema.NEXT_PUBLIC_POSTHOG_KEY,
   NEXT_PUBLIC_OPERATOR_HOSTNAME: clientEnvSchema.NEXT_PUBLIC_OPERATOR_HOSTNAME,

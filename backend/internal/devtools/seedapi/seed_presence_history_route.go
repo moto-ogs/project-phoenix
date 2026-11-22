@@ -14,17 +14,17 @@ import (
 const presenceHistoryRouteChunk = 500
 
 type presenceHistoryRouteDay struct {
-	StudentID int64                      `json:"student_id"`
+	StudentID apiID                      `json:"student_id"`
 	Date      calendar.Date              `json:"date"`
-	DeviceID  int64                      `json:"device_id"`
+	DeviceID  apiID                      `json:"device_id"`
 	CheckIn   time.Time                  `json:"check_in"`
 	CheckOut  time.Time                  `json:"check_out"`
 	Visit     *presenceHistoryRouteVisit `json:"visit,omitempty"`
 }
 
 type presenceHistoryRouteVisit struct {
-	ActivityGroupID int64     `json:"activity_group_id"`
-	RoomID          int64     `json:"room_id"`
+	ActivityGroupID apiID     `json:"activity_group_id"`
+	RoomID          apiID     `json:"room_id"`
 	SessionStart    time.Time `json:"session_start"`
 	SessionEnd      time.Time `json:"session_end"`
 	Entry           time.Time `json:"entry"`
@@ -74,12 +74,12 @@ func presenceHistoryRouteDays(days []PastPresenceDay) []presenceHistoryRouteDay 
 	result := make([]presenceHistoryRouteDay, 0, len(days))
 	for _, day := range days {
 		wire := presenceHistoryRouteDay{
-			StudentID: day.StudentID, Date: day.Date, DeviceID: day.DeviceID,
+			StudentID: apiID(day.StudentID), Date: day.Date, DeviceID: apiID(day.DeviceID),
 			CheckIn: day.CheckIn, CheckOut: day.CheckOut,
 		}
 		if visit := day.Visit; visit != nil {
 			wire.Visit = &presenceHistoryRouteVisit{
-				ActivityGroupID: visit.ActivityGroupID, RoomID: visit.RoomID,
+				ActivityGroupID: apiID(visit.ActivityGroupID), RoomID: apiID(visit.RoomID),
 				SessionStart: visit.SessionStart, SessionEnd: visit.SessionEnd,
 				Entry: visit.Entry, Exit: visit.Exit,
 			}

@@ -9,6 +9,7 @@ import (
 	scheduleModels "github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain/schedulerecords"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // WorkforceShiftTypeRows serves the tenant-defined Schichtarten.
@@ -156,6 +157,9 @@ func shiftWallClockTime(value string) time.Time {
 
 // shiftRowID narrows the untyped ID of the generic repository contract.
 func shiftRowID(id any) (int64, error) {
+	if typed, ok := id.(ident.ID); ok {
+		id = typed.Int64()
+	}
 	switch value := id.(type) {
 	case int64:
 		return value, nil

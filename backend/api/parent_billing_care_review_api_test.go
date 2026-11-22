@@ -24,18 +24,18 @@ import (
 )
 
 type careRunSchoolBody struct {
-	ID        int64  `json:"id"`
-	Name      string `json:"name"`
-	OpenRunID *int64 `json:"open_run_id"`
+	ID        wireID  `json:"id"`
+	Name      string  `json:"name"`
+	OpenRunID *wireID `json:"open_run_id"`
 }
 
 type careReviewInvoiceBody struct {
-	ContractID int64 `json:"contract_id"`
-	SchoolID   int64 `json:"school_id"`
-	TotalCents int64 `json:"total_cents"`
+	ContractID wireID `json:"contract_id"`
+	SchoolID   wireID `json:"school_id"`
+	TotalCents int64  `json:"total_cents"`
 	Exclusion  *struct {
-		Reason    string `json:"reason"`
-		AccountID *int64 `json:"account_id"`
+		Reason    string  `json:"reason"`
+		AccountID *wireID `json:"account_id"`
 	} `json:"exclusion"`
 }
 
@@ -43,7 +43,7 @@ type careReviewBody struct {
 	careRunBody
 	Invoices []careReviewInvoiceBody `json:"invoices"`
 	Schools  []struct {
-		ID int64 `json:"id"`
+		ID wireID `json:"id"`
 	} `json:"schools"`
 }
 
@@ -85,18 +85,18 @@ func TestCareReviewRunBillsItsSchoolsAndKeepsASchoolInOneOpenRun(t *testing.T) {
 
 	code, runA := f.startRunWith(t, map[string]any{"billing_month": careMonth, "school_ids": []int64{a}})
 	require.Equal(t, http.StatusCreated, code)
-	assert.Equal(t, []int64{a}, runA.SchoolIDs)
-	review := f.review(t, runA.ID)
+	assert.Equal(t, []int64{a}, testpkg.IDs(runA.SchoolIDs))
+	review := f.review(t, int64(runA.ID))
 	require.Len(t, review.Invoices, 1, "the run of school A bills school A only")
-	assert.Equal(t, mia, review.Invoices[0].ContractID)
+	assert.Equal(t, mia, int64(review.Invoices[0].ContractID))
 	require.Len(t, review.Schools, 1)
 
 	code, _ = f.startRunWith(t, map[string]any{"billing_month": careMonth, "school_ids": []int64{a, b}})
 	assert.Equal(t, http.StatusConflict, code, "school A is in an open run of the month")
 	code, runB := f.startRunWith(t, map[string]any{"billing_month": careMonth})
 	require.Equal(t, http.StatusCreated, code, "without schools the run takes every school no open run bills")
-	assert.Equal(t, []int64{b}, runB.SchoolIDs)
-	assert.Equal(t, noah, f.review(t, runB.ID).Invoices[0].ContractID)
+	assert.Equal(t, []int64{b}, testpkg.IDs(runB.SchoolIDs))
+	assert.Equal(t, noah, int64(f.review(t, int64(runB.ID)).Invoices[0].ContractID))
 	code, _ = f.startRunWith(t, map[string]any{"billing_month": careMonth})
 	assert.Equal(t, http.StatusConflict, code, "every school is in an open run of the month")
 
@@ -106,23 +106,23 @@ func TestCareReviewRunBillsItsSchoolsAndKeepsASchoolInOneOpenRun(t *testing.T) {
 	open := map[int64]int64{}
 	for _, school := range schools {
 		if school.OpenRunID != nil {
-			open[school.ID] = *school.OpenRunID
+			open[int64(school.ID)] = int64(*school.OpenRunID)
 		}
 	}
-	assert.Equal(t, map[int64]int64{a: runA.ID, b: runB.ID}, open, "the dialog names the open run of each school")
+	assert.Equal(t, map[int64]int64{a: int64(runA.ID), b: int64(runB.ID)}, open, "the dialog names the open run of each school")
 
 	foreign := newTraegerOffice(t, f.db, f.traeger, "Träger Prüfphase Schulen Fremd", identityaccess.TraegerRoleBilling)
 	code, _ = f.startRunWith(t, map[string]any{"billing_month": "2030-02-01", "school_ids": []int64{foreign.schools[0]}})
 	assert.Equal(t, http.StatusBadRequest, code, "a school of another Träger is refused")
 
-	review = f.review(t, runA.ID)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(runA.ID, "/release"), careRelease(review.careRunBody))
+	review = f.review(t, int64(runA.ID))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(runA.ID), "/release"), careRelease(review.careRunBody))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	code, next := f.startRunWith(t, map[string]any{"billing_month": careMonth, "school_ids": []int64{a}})
 	require.Equal(t, http.StatusCreated, code, "after the release a later run of the month may bill school A")
-	assert.Empty(t, f.review(t, next.ID).Invoices, "Mia is billed once")
-	assert.Equal(t, 1, f.review(t, next.ID).Billed, "school A counts its own issued invoice")
-	assert.Zero(t, f.review(t, runB.ID).Billed, "school B does not count school A's issued invoice")
+	assert.Empty(t, f.review(t, int64(next.ID)).Invoices, "Mia is billed once")
+	assert.Equal(t, 1, f.review(t, int64(next.ID)).Billed, "school A counts its own issued invoice")
+	assert.Zero(t, f.review(t, int64(runB.ID)).Billed, "school B does not count school A's issued invoice")
 }
 
 // Two runs that start at once with overlapping schools: one starts, the
@@ -183,7 +183,7 @@ func TestCareReviewInvoiceDateGoesOnEveryInvoice(t *testing.T) {
 	require.NotNil(t, run.InvoiceDate)
 	assert.Equal(t, "2030-01-15", *run.InvoiceDate)
 
-	path := careRunPath(run.ID, "/invoice-date")
+	path := careRunPath(int64(run.ID), "/invoice-date")
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, path, map[string]any{"invoice_date": "2029-11-30"})
 	assert.Equal(t, http.StatusBadRequest, rec.Code, "before the month before: %s", rec.Body.String())
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, path, map[string]any{"invoice_date": "2030-01-30"})
@@ -191,7 +191,7 @@ func TestCareReviewInvoiceDateGoesOnEveryInvoice(t *testing.T) {
 	review := decodeSchoolPortalData[careReviewBody](t, rec.Body.Bytes())
 	assert.Equal(t, "2030-01-30", *review.InvoiceDate)
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(review.careRunBody))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(review.careRunBody))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	released := decodeSchoolPortalData[careRunBody](t, rec.Body.Bytes())
 	assert.Equal(t, "2030-01-30", *released.IssuedOn)
@@ -213,7 +213,7 @@ func TestCareReviewExcludedInvoiceComesBackInTheNextRun(t *testing.T) {
 	lea := careContract(t, f.db, f.office.organization, school, "Lea", careMonth, sjrServices()...)
 	pricedSchools(t, f)
 	run := f.startRun(t, careMonth)
-	exclusions := careRunPath(run.ID, "/exclusions")
+	exclusions := careRunPath(int64(run.ID), "/exclusions")
 
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, exclusions, map[string]any{"contract_id": mia, "service": "care", "reason": " "})
 	assert.Equal(t, http.StatusBadRequest, rec.Code, "an exclusion needs a reason: %s", rec.Body.String())
@@ -231,17 +231,17 @@ func TestCareReviewExcludedInvoiceComesBackInTheNextRun(t *testing.T) {
 	require.Len(t, review.Invoices, 2, "the excluded invoice stays in sight")
 	excluded := review.Invoices[1]
 	require.NotNil(t, excluded.Exclusion)
-	assert.Equal(t, mia, excluded.ContractID)
+	assert.Equal(t, mia, int64(excluded.ContractID))
 	assert.Equal(t, "Kündigung wird geprüft", excluded.Exclusion.Reason)
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, exclusions, map[string]any{"contract_id": mia, "service": "care", "reason": "noch mal"})
 	assert.Equal(t, http.StatusConflict, rec.Code, "an excluded invoice is excluded once: %s", rec.Body.String())
 
 	// The return appends to the trail; the second exclusion is in force.
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/inclusions"),
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/inclusions"),
 		map[string]any{"contract_id": mia, "service": "care"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Zero(t, decodeSchoolPortalData[careReviewBody](t, rec.Body.Bytes()).ExcludedCount)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/inclusions"),
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/inclusions"),
 		map[string]any{"contract_id": mia, "service": "care"})
 	assert.Equal(t, http.StatusConflict, rec.Code, "only an excluded invoice returns: %s", rec.Body.String())
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, exclusions,
@@ -258,18 +258,18 @@ func TestCareReviewExcludedInvoiceComesBackInTheNextRun(t *testing.T) {
 	assert.Equal(t, []string{"exclude", "include", "exclude"}, []string{trail[0].Action, trail[1].Action, trail[2].Action})
 	assert.Equal(t, "Vertrag endet", trail[2].Details["reason"])
 	require.NotNil(t, trail[2].Actor)
-	review = f.review(t, run.ID)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(review.careRunBody))
+	review = f.review(t, int64(run.ID))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(review.careRunBody))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	released := decodeSchoolPortalData[careRunBody](t, rec.Body.Bytes())
 	require.Len(t, released.Invoices, 1)
-	assert.Equal(t, lea, released.Invoices[0].ContractID, "the excluded invoice is not issued")
+	assert.Equal(t, lea, int64(released.Invoices[0].ContractID), "the excluded invoice is not issued")
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, exclusions, map[string]any{"contract_id": lea, "service": "care", "reason": "zu spät"})
 	assert.Equal(t, http.StatusConflict, rec.Code, "a released run takes no exclusion: %s", rec.Body.String())
 
-	next := f.review(t, f.startRun(t, careMonth).ID)
+	next := f.review(t, int64(f.startRun(t, careMonth).ID))
 	require.Len(t, next.Invoices, 1, "the next run of the month bills the excluded child")
-	assert.Equal(t, mia, next.Invoices[0].ContractID)
+	assert.Equal(t, mia, int64(next.Invoices[0].ContractID))
 	assert.Nil(t, next.Invoices[0].Exclusion, "the exclusion belongs to its run")
 }
 
@@ -284,24 +284,24 @@ func TestCareReviewReleaseRefusesAPreviewChangedSinceTheReview(t *testing.T) {
 	careContract(t, f.db, f.office.organization, school, "Lea", careMonth, sjrServices()...)
 	pricedSchools(t, f)
 	run := f.startRun(t, careMonth)
-	reviewed := f.review(t, run.ID)
+	reviewed := f.review(t, int64(run.ID))
 	require.NotEmpty(t, reviewed.Fingerprint)
 
 	_, err := f.db.ExecContext(context.Background(), `UPDATE care_contract.contract_parties SET email = 'neu@example.org' WHERE contract_id = ?`, mia)
 	require.NoError(t, err)
-	assert.Equal(t, reviewed.PreviewCents, f.review(t, run.ID).PreviewCents, "count and sum stay the same")
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(reviewed.careRunBody))
+	assert.Equal(t, reviewed.PreviewCents, f.review(t, int64(run.ID)).PreviewCents, "count and sum stay the same")
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(reviewed.careRunBody))
 	assert.Equal(t, http.StatusConflict, rec.Code, "a new recipient since the review: %s", rec.Body.String())
 	body := careRelease(reviewed.careRunBody)
 	body["fingerprint"] = ""
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), body)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), body)
 	assert.Equal(t, http.StatusConflict, rec.Code, "a release without the reviewed state: %s", rec.Body.String())
 
-	reviewed = f.review(t, run.ID)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/exclusions"),
+	reviewed = f.review(t, int64(run.ID))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/exclusions"),
 		map[string]any{"contract_id": mia, "service": "care", "reason": "Rückfrage"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(reviewed.careRunBody))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(reviewed.careRunBody))
 	assert.Equal(t, http.StatusConflict, rec.Code, "an exclusion since the review: %s", rec.Body.String())
 	var invoices int
 	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.care_invoices WHERE run_id = ?`, run.ID).
@@ -320,11 +320,11 @@ func TestCareReviewListExportsThePreviewWithoutNumbers(t *testing.T) {
 	careContract(t, f.db, f.office.organization, school, "Lea", careMonth, sjrServices()...)
 	pricedSchools(t, f)
 	_, run := f.startRunWith(t, map[string]any{"billing_month": careMonth, "invoice_date": "2030-01-30"})
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/exclusions"),
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/exclusions"),
 		map[string]any{"contract_id": mia, "service": "care", "reason": "Kündigung wird geprüft"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(run.ID, "/review-export?format=csv"), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(int64(run.ID), "/review-export?format=csv"), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Header().Get("Content-Disposition"), "pruefliste-monatsbeitrag-2030-01")
 	csv := rec.Body.String()
@@ -339,13 +339,13 @@ func TestCareReviewListExportsThePreviewWithoutNumbers(t *testing.T) {
 		Scan(context.Background(), &numbers))
 	assert.Zero(t, numbers)
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(run.ID, "/review-export?format=xlsx"), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(int64(run.ID), "/review-export?format=xlsx"), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Header().Get("Content-Type"), "spreadsheetml")
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(run.ID, "/review-export?format=pdf"), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(int64(run.ID), "/review-export?format=pdf"), nil)
 	require.Equal(t, http.StatusOK, rec.Code, "the review list as PDF too (#4718): %s", rec.Body.String())
 	assert.Equal(t, "application/pdf", rec.Header().Get("Content-Type"))
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(run.ID, "/review-export?format=docx"), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(int64(run.ID), "/review-export?format=docx"), nil)
 	assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 
 	var details []json.RawMessage
@@ -374,10 +374,10 @@ func TestCareReviewNeedsTheRightAndStaysWithItsTraeger(t *testing.T) {
 		body         any
 	}{
 		{http.MethodGet, careRunsPath + "/schools?month=" + careMonth, nil},
-		{http.MethodPut, careRunPath(run.ID, "/invoice-date"), map[string]any{"invoice_date": "2030-01-30"}},
-		{http.MethodPost, careRunPath(run.ID, "/exclusions"), map[string]any{"contract_id": mia, "service": "care", "reason": "x"}},
-		{http.MethodPost, careRunPath(run.ID, "/inclusions"), map[string]any{"contract_id": mia, "service": "care"}},
-		{http.MethodGet, careRunPath(run.ID, "/review-export?format=csv"), nil},
+		{http.MethodPut, careRunPath(int64(run.ID), "/invoice-date"), map[string]any{"invoice_date": "2030-01-30"}},
+		{http.MethodPost, careRunPath(int64(run.ID), "/exclusions"), map[string]any{"contract_id": mia, "service": "care", "reason": "x"}},
+		{http.MethodPost, careRunPath(int64(run.ID), "/inclusions"), map[string]any{"contract_id": mia, "service": "care"}},
+		{http.MethodGet, careRunPath(int64(run.ID), "/review-export?format=csv"), nil},
 	}
 	for _, request := range requests {
 		rec := traegerJSON(t, f.traeger, answer.AccessToken, request.method, request.path, request.body)
@@ -391,7 +391,7 @@ func TestCareReviewNeedsTheRightAndStaysWithItsTraeger(t *testing.T) {
 	rec := traegerJSON(t, f.traeger, foreign.token, http.MethodGet, careRunsPath+"/schools?month="+careMonth, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	for _, school := range decodeSchoolPortalData[[]careRunSchoolBody](t, rec.Body.Bytes()) {
-		assert.NotEqual(t, f.office.schools[0], school.ID, "no school of another Träger")
+		assert.NotEqual(t, f.office.schools[0], int64(school.ID), "no school of another Träger")
 		assert.Nil(t, school.OpenRunID, "no open run of another Träger")
 	}
 }
@@ -406,7 +406,7 @@ func TestCareReviewAllExcludedRunClosesWithoutIssuing(t *testing.T) {
 	pricedSchools(t, f)
 	code, run := f.startRunWith(t, map[string]any{"billing_month": careMonth, "school_ids": []int64{school}})
 	require.Equal(t, http.StatusCreated, code)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/exclusions"),
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/exclusions"),
 		map[string]any{"contract_id": contract, "service": "care", "reason": "Vertrag wird geprüft"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	review := decodeSchoolPortalData[careReviewBody](t, rec.Body.Bytes())
@@ -414,9 +414,9 @@ func TestCareReviewAllExcludedRunClosesWithoutIssuing(t *testing.T) {
 	require.Equal(t, 1, review.ExcludedCount)
 	stale := careRelease(review.careRunBody)
 	stale["fingerprint"] = ""
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), stale)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), stale)
 	assert.Equal(t, http.StatusConflict, rec.Code, "even an empty release must match the reviewed state")
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(review.careRunBody))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(review.careRunBody))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	released := decodeSchoolPortalData[careRunBody](t, rec.Body.Bytes())
 	assert.Equal(t, "released", released.Status)
@@ -428,11 +428,11 @@ func TestCareReviewAllExcludedRunClosesWithoutIssuing(t *testing.T) {
 	assert.Equal(t, 1, exclusions, "the reason stays in the trail")
 	code, next := f.startRunWith(t, map[string]any{"billing_month": careMonth, "school_ids": []int64{school}})
 	require.Equal(t, http.StatusCreated, code, "closing the run releases the school")
-	nextReview := f.review(t, next.ID)
+	nextReview := f.review(t, int64(next.ID))
 	require.Len(t, nextReview.Invoices, 1)
-	assert.Equal(t, contract, nextReview.Invoices[0].ContractID)
+	assert.Equal(t, contract, int64(nextReview.Invoices[0].ContractID))
 	assert.Nil(t, nextReview.Invoices[0].Exclusion)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(next.ID, "/release"), careRelease(nextReview.careRunBody))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(next.ID), "/release"), careRelease(nextReview.careRunBody))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	issued := decodeSchoolPortalData[careRunBody](t, rec.Body.Bytes())
 	require.Len(t, issued.Invoices, 1)
@@ -452,17 +452,17 @@ func changedSinceReview(t *testing.T, name string, change func(f careBillingFixt
 	pricedSchools(t, f)
 	f.saveRule(t, careRule("income_level", "Stufe 2", []int64{school}, map[string]any{"discount_basis_points": 2000}))
 	run := f.startRun(t, careMonth)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/exclusions"),
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/exclusions"),
 		map[string]any{"contract_id": mia, "service": "care", "reason": "Rückfrage"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	reviewed := f.review(t, run.ID)
+	reviewed := f.review(t, int64(run.ID))
 	require.Equal(t, 1, reviewed.PreviewCount)
 
 	change(f, school, mia)
-	after := f.review(t, run.ID)
+	after := f.review(t, int64(run.ID))
 	assert.Equal(t, reviewed.PreviewCount, after.PreviewCount, "the invoices to issue stay the same")
 	assert.Equal(t, reviewed.PreviewCents, after.PreviewCents, "their sum too")
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(reviewed.careRunBody))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(reviewed.careRunBody))
 	assert.Equal(t, http.StatusConflict, rec.Code, "the release refuses a review that changed: %s", rec.Body.String())
 }
 

@@ -160,6 +160,10 @@
       "write_owner": "student-presence"
     },
     {
+      "name": "active.room_history_stops",
+      "write_owner": "student-presence"
+    },
+    {
       "name": "active.scheduled_checkouts",
       "write_owner": "student-presence"
     },

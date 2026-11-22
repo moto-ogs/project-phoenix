@@ -1,14 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import type {
-  BackendCalendarPeriod,
-  CalendarPeriod,
-} from "./calendar-period-helpers";
+import type { CalendarPeriod } from "./calendar-period-helpers";
 import {
   findPeriodForDate,
   weekCycleLabel,
   weekCycleSlotLetter,
   formatPeriodUsage,
+  mapPeriod,
   mapPeriodsForDates,
   mapPeriodWarnings,
   mapPeriodWithWarnings,
@@ -17,6 +15,10 @@ import {
   weekCycleSlotForDate,
   weekPatternForDate,
 } from "./calendar-period-helpers";
+import {
+  type CalendarPeriodResponse,
+  routes,
+} from "./contract/timetable.generated";
 
 function period(
   id: string,
@@ -27,7 +29,6 @@ function period(
 ): CalendarPeriod {
   return {
     id,
-    tenantId: "1",
     name,
     periodType: "school_year",
     startDate,
@@ -298,19 +299,74 @@ describe("calendar-period-helpers", () => {
     });
   });
 
+  describe("mapPeriod on the decoded proxy answer", () => {
+    it("maps only fields the contract carries, with string IDs", () => {
+      // Go answer as the catalog proxy decodes it: IDs travel as strings,
+      // fields outside the Go type (tenant_id) are dropped.
+      const decoded = routes["GET /api/timetable/periods/{id}"].response.parse({
+        status: "success",
+        data: {
+          id: "5",
+          tenant_id: "1",
+          name: "Schuljahr 2026/2027",
+          period_type: "school_year",
+          start_date: "2026-08-01",
+          end_date: "2027-07-31",
+          week_cycle_length: 2,
+          week_cycle_anchor: "2026-08-03",
+          is_active: true,
+          created_at: "2026-05-01T00:00:00+02:00",
+          updated_at: "2026-05-01T00:00:00+02:00",
+          enrollment_phase_count: 1,
+          activity_group_count: 2,
+          schedule_count: 3,
+          student_enrollment_count: 4,
+          supervisor_count: 5,
+          activity_instance_count: 6,
+          staff_shift_series_count: 7,
+        },
+      });
+
+      expect(mapPeriod(decoded.data)).toStrictEqual({
+        id: "5",
+        name: "Schuljahr 2026/2027",
+        periodType: "school_year",
+        startDate: "2026-08-01",
+        endDate: "2027-07-31",
+        weekCycleLength: 2,
+        weekCycleAnchor: "2026-08-03",
+        isActive: true,
+        createdAt: "2026-05-01T00:00:00+02:00",
+        updatedAt: "2026-05-01T00:00:00+02:00",
+        enrollmentPhaseCount: 1,
+        activityGroupCount: 2,
+        scheduleCount: 3,
+        studentEnrollmentCount: 4,
+        supervisorCount: 5,
+        activityInstanceCount: 6,
+        staffShiftSeriesCount: 7,
+      });
+    });
+  });
+
   describe("mapPeriodWarnings / mapPeriodWithWarnings", () => {
-    const backendPeriod: BackendCalendarPeriod = {
-      id: 5,
-      tenant_id: 1,
+    const backendPeriod: CalendarPeriodResponse = {
+      id: "5",
       name: "Schuljahr 2026/2027",
       period_type: "school_year",
       start_date: "2026-08-01",
       end_date: "2027-07-31",
       week_cycle_length: 1,
-      week_cycle_anchor: null,
       is_active: true,
       created_at: "2026-05-01T00:00:00Z",
       updated_at: "2026-05-01T00:00:00Z",
+      enrollment_phase_count: 0,
+      activity_group_count: 0,
+      schedule_count: 0,
+      student_enrollment_count: 0,
+      supervisor_count: 0,
+      activity_instance_count: 0,
+      staff_shift_series_count: 0,
     };
 
     it("maps backend warnings to camelCase with string IDs", () => {
@@ -319,7 +375,7 @@ describe("calendar-period-helpers", () => {
           {
             code: "overlapping_active_periods",
             message: "Zeitraum überschneidet sich mit aktiven Zeiträumen",
-            overlapping_period_ids: [3, 4],
+            overlapping_period_ids: ["3", "4"],
             overlapping_period_names: ["Halbjahr 1", "Ferien"],
           },
         ]),
@@ -338,7 +394,12 @@ describe("calendar-period-helpers", () => {
       expect(mapPeriodWarnings(null)).toEqual([]);
       expect(
         mapPeriodWarnings([
-          { code: "overlapping_active_periods", message: "Überschneidung" },
+          {
+            code: "overlapping_active_periods",
+            message: "Überschneidung",
+            overlapping_period_ids: null,
+            overlapping_period_names: null,
+          },
         ]),
       ).toEqual([
         {
@@ -357,7 +418,7 @@ describe("calendar-period-helpers", () => {
           {
             code: "overlapping_active_periods",
             message: "Überschneidung",
-            overlapping_period_ids: [3],
+            overlapping_period_ids: ["3"],
             overlapping_period_names: ["Halbjahr 1"],
           },
         ],

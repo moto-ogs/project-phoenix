@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
@@ -18,13 +19,13 @@ import (
 // buildBaseActivityResponse creates the base activity response structure.
 func buildBaseActivityResponse(group *activityContract.Group, enrollmentCount int) ActivityResponse {
 	response := ActivityResponse{
-		ID:              group.ID,
+		ID:              ident.ID(group.ID),
 		Name:            group.Name,
 		MaxParticipants: group.ParticipantLimit(),
 		IsOpen:          group.IsOpen,
-		CategoryID:      group.CategoryID,
-		PlannedRoomID:   group.PlannedRoomID,
-		CreatedBy:       group.CreatedBy,
+		CategoryID:      ident.ID(group.CategoryID),
+		PlannedRoomID:   (*ident.ID)(group.PlannedRoomID),
+		CreatedBy:       (*ident.ID)(group.CreatedBy),
 		EnrollmentCount: enrollmentCount,
 		CreatedAt:       group.CreatedAt,
 		UpdatedAt:       group.UpdatedAt,
@@ -55,14 +56,14 @@ func addSupervisorsToResponse(response *ActivityResponse, supervisors []*activit
 		if supervisor != nil {
 			supervisorIDs = append(supervisorIDs, supervisor.StaffID)
 			if supervisor.IsPrimary {
-				response.SupervisorID = &supervisor.StaffID
+				response.SupervisorID = (*ident.ID)(&supervisor.StaffID)
 			}
 			supervisorDetails = append(supervisorDetails, newSupervisorResponse(supervisor))
 		}
 	}
 
 	if len(supervisorIDs) > 0 {
-		response.SupervisorIDs = supervisorIDs
+		response.SupervisorIDs = ident.IDs(supervisorIDs)
 		response.Supervisors = supervisorDetails
 	}
 }
@@ -90,8 +91,8 @@ func updateGroupFields(group *activityContract.Group, req *ActivityRequest) {
 	group.Name = req.Name
 	group.MaxParticipants = participantLimit(req.MaxParticipants)
 	group.IsOpen = req.IsOpen
-	group.CategoryID = req.CategoryID
-	group.PlannedRoomID = req.PlannedRoomID
+	group.CategoryID = req.CategoryID.Int64()
+	group.PlannedRoomID = (*int64)(req.PlannedRoomID)
 }
 
 // fetchUpdatedGroupData retrieves the updated group with response details.
@@ -264,8 +265,8 @@ func (rs *Resource) createActivity(w http.ResponseWriter, r *http.Request) {
 		Name:            req.Name,
 		MaxParticipants: participantLimit(req.MaxParticipants),
 		IsOpen:          req.IsOpen,
-		CategoryID:      req.CategoryID,
-		PlannedRoomID:   req.PlannedRoomID,
+		CategoryID:      req.CategoryID.Int64(),
+		PlannedRoomID:   (*int64)(req.PlannedRoomID),
 		CreatedBy:       &staffID,
 	}
 
@@ -276,7 +277,7 @@ func (rs *Resource) createActivity(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenant.FromContext(r.Context())
 	if err := rs.transactions.WithinTenant(r.Context(), tenantID, func(ctx context.Context) error {
 		var txErr error
-		createdGroup, txErr = rs.ActivityService.CreateGroup(ctx, group, req.SupervisorIDs, schedules)
+		createdGroup, txErr = rs.ActivityService.CreateGroup(ctx, group, ident.Int64s(req.SupervisorIDs), schedules)
 		return txErr
 	}); err != nil {
 		common.RenderError(w, r, ErrorRenderer(err))
@@ -316,8 +317,8 @@ func (rs *Resource) quickCreateActivity(w http.ResponseWriter, r *http.Request) 
 		Name:            req.Name,
 		MaxParticipants: participantLimit(req.MaxParticipants),
 		IsOpen:          true, // Default to true for quick-create
-		CategoryID:      req.CategoryID,
-		PlannedRoomID:   req.RoomID,
+		CategoryID:      req.CategoryID.Int64(),
+		PlannedRoomID:   (*int64)(req.RoomID),
 		CreatedBy:       &staffID,
 	}
 
@@ -386,12 +387,12 @@ func (rs *Resource) updateActivity(w http.ResponseWriter, r *http.Request) {
 	for _, scheduleReq := range req.Schedules {
 		newSchedules = append(newSchedules, &activityContract.Schedule{
 			Weekday:     scheduleReq.Weekday,
-			TimeframeID: scheduleReq.TimeframeID,
+			TimeframeID: (*int64)(scheduleReq.TimeframeID),
 		})
 	}
 
 	response, err := rs.updateActivityInTx(
-		r.Context(), existingGroup, staffID, hasManagePermission, req.SupervisorIDs, newSchedules,
+		r.Context(), existingGroup, staffID, hasManagePermission, ident.Int64s(req.SupervisorIDs), newSchedules,
 	)
 	if err != nil {
 		// Check for ownership error
@@ -445,7 +446,7 @@ func activityRequestSchedules(req *ActivityRequest) []*activityContract.Schedule
 	for _, s := range req.Schedules {
 		schedules = append(schedules, &activityContract.Schedule{
 			Weekday:     s.Weekday,
-			TimeframeID: s.TimeframeID,
+			TimeframeID: (*int64)(s.TimeframeID),
 		})
 	}
 
@@ -477,7 +478,7 @@ func activityListResponses(groups []*activityContract.Group, enrollmentCounts ma
 func quickActivityResponse(createdGroup *activityContract.Group, req *QuickActivityRequest) QuickActivityResponse {
 	// Build enhanced response with additional context
 	response := QuickActivityResponse{
-		ActivityID: createdGroup.ID,
+		ActivityID: ident.ID(createdGroup.ID),
 		Name:       createdGroup.Name,
 		Status:     "created",
 		Message:    "Activity created successfully and ready for RFID device selection",
@@ -501,13 +502,13 @@ func quickActivityResponse(createdGroup *activityContract.Group, req *QuickActiv
 func createdActivityResponse(createdGroup *activityContract.Group) ActivityResponse {
 	// Create a direct response with minimal fields
 	response := ActivityResponse{
-		ID:              createdGroup.ID,
+		ID:              ident.ID(createdGroup.ID),
 		Name:            createdGroup.Name,
 		MaxParticipants: createdGroup.ParticipantLimit(),
 		IsOpen:          createdGroup.IsOpen,
-		CategoryID:      createdGroup.CategoryID,
-		PlannedRoomID:   createdGroup.PlannedRoomID,
-		CreatedBy:       createdGroup.CreatedBy,
+		CategoryID:      ident.ID(createdGroup.CategoryID),
+		PlannedRoomID:   (*ident.ID)(createdGroup.PlannedRoomID),
+		CreatedBy:       (*ident.ID)(createdGroup.CreatedBy),
 		CreatedAt:       createdGroup.CreatedAt,
 		UpdatedAt:       createdGroup.UpdatedAt,
 		EnrollmentCount: 0,

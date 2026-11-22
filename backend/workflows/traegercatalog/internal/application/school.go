@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/workflows/traegercatalog"
 )
 
@@ -17,13 +18,13 @@ import (
 // offering copies of the Träger phase. lock takes their row locks first,
 // phase copy before offering copies in ID order (ADR 0195 section 5).
 func (c *Catalog) schoolState(ctx context.Context, snap snapshot, lock bool) (string, error) {
-	phase, err := c.deps.SchoolPhases.TraegerPhaseCopyState(ctx, snap.phase.ID, lock)
+	phase, err := c.deps.SchoolPhases.TraegerPhaseCopyState(ctx, snap.phase.ID.Int64(), lock)
 	if err != nil {
 		return "", err
 	}
 	ids := make([]int64, 0, len(snap.offerings))
 	for _, offering := range snap.offerings {
-		ids = append(ids, offering.ID)
+		ids = append(ids, offering.ID.Int64())
 	}
 	offerings, err := c.deps.SchoolOfferings.TraegerOfferingCopyStates(ctx, ids, lock)
 	if err != nil {
@@ -46,7 +47,7 @@ func (c *Catalog) applySchool(ctx context.Context, snap snapshot, next release, 
 		return plan, nil, c.withdrawSchool(ctx, snap, &plan)
 	}
 	applied, err := c.deps.SchoolPhases.ApplyTraegerPhase(ctx, enrollment.TraegerPhaseCopy{
-		SourceID: snap.phase.ID, Version: next.phaseVersion, Fields: next.phase,
+		SourceID: snap.phase.ID.Int64(), Version: next.phaseVersion, Fields: next.phase,
 	})
 	if err != nil {
 		return plan, nil, err
@@ -60,11 +61,11 @@ func (c *Catalog) applySchool(ctx context.Context, snap snapshot, next release, 
 	withdrawn := []int64{}
 	for _, offering := range snap.offerings {
 		if offering.WithdrawnAt != nil {
-			withdrawn = append(withdrawn, offering.ID)
+			withdrawn = append(withdrawn, offering.ID.Int64())
 			continue
 		}
-		released := next.offerings[offering.ID]
-		copies = append(copies, careplan.TraegerOfferingCopy{SourceID: offering.ID, Version: released.version, Fields: released.draft.Fields, PhaseID: applied.CopyID})
+		released := next.offerings[offering.ID.Int64()]
+		copies = append(copies, careplan.TraegerOfferingCopy{SourceID: offering.ID.Int64(), Version: released.version, Fields: released.draft.Fields, PhaseID: applied.CopyID})
 	}
 	batch, err := c.deps.SchoolOfferings.ApplyTraegerOfferings(ctx, copies, withdrawn)
 	if err != nil {
@@ -75,7 +76,7 @@ func (c *Catalog) applySchool(ctx context.Context, snap snapshot, next release, 
 		bySource[row.SourceID] = row
 	}
 	for _, offering := range snap.offerings {
-		row := bySource[offering.ID]
+		row := bySource[offering.ID.Int64()]
 		offeringPlan := traegercatalog.OfferingPlan{TraegerOfferingID: offering.ID, Name: offering.Draft.Fields.Name, Fields: row.Fields, Action: traegercatalog.ActionUpdate}
 		if offering.WithdrawnAt != nil {
 			offeringPlan.Action = traegercatalog.ActionWithdraw
@@ -92,7 +93,7 @@ func (c *Catalog) applySchool(ctx context.Context, snap snapshot, next release, 
 func (c *Catalog) withdrawSchool(ctx context.Context, snap snapshot, plan *traegercatalog.SchoolPlan) error {
 	sources := make([]int64, 0, len(snap.offerings))
 	for _, offering := range snap.offerings {
-		sources = append(sources, offering.ID)
+		sources = append(sources, offering.ID.Int64())
 	}
 	if _, err := c.deps.SchoolOfferings.ApplyTraegerOfferings(ctx, nil, sources); err != nil {
 		return err
@@ -103,7 +104,7 @@ func (c *Catalog) withdrawSchool(ctx context.Context, snap snapshot, plan *traeg
 			Fields: []careplan.TraegerOfferingFieldChange{},
 		})
 	}
-	_, err := c.deps.SchoolPhases.WithdrawTraegerPhase(ctx, snap.phase.ID)
+	_, err := c.deps.SchoolPhases.WithdrawTraegerPhase(ctx, snap.phase.ID.Int64())
 	return err
 }
 
@@ -129,7 +130,7 @@ func (c *Catalog) lockSchool(ctx context.Context, organizationID, schoolID int64
 	if err != nil {
 		return err
 	}
-	if school.OrganizationID != organizationID || school.IsDeleted() {
+	if school.OrganizationID != ident.ID(organizationID) || school.IsDeleted() {
 		return errStale
 	}
 	return nil

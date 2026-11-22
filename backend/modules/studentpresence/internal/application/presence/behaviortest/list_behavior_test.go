@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -23,17 +24,17 @@ func TestPresenceSupervisionQueryUsesCalendarDateAtBoundary(t *testing.T) {
 	data := createSupervisorTestData(t, db)
 	today := calendar.NewDate(2026, 8, 30)
 	tomorrow := calendar.NewDate(2026, 8, 31)
-	endedToday := &ports.GroupSupervisor{GroupID: data.ActiveGroup.ID, StaffID: data.Staff1ID, StartDate: today, EndDate: &today, Role: "today"}
-	endsTomorrow := &ports.GroupSupervisor{GroupID: data.ActiveGroup.ID, StaffID: data.Staff2ID, StartDate: today, EndDate: &tomorrow, Role: "tomorrow"}
+	endedToday := &ports.GroupSupervisor{GroupID: data.ActiveGroup.ID, StaffID: ident.ID(data.Staff1ID), StartDate: today, EndDate: &today, Role: "today"}
+	endsTomorrow := &ports.GroupSupervisor{GroupID: data.ActiveGroup.ID, StaffID: ident.ID(data.Staff2ID), StartDate: today, EndDate: &tomorrow, Role: "tomorrow"}
 	require.NoError(t, repo.Create(ctx, endedToday))
 	require.NoError(t, repo.Create(ctx, endsTomorrow))
 
 	day := today.String()
-	options := studentpresence.GroupSupervisionFilter{ActiveOn: &day, IDs: []int64{endedToday.ID, endsTomorrow.ID}}
+	options := studentpresence.GroupSupervisionFilter{ActiveOn: &day, IDs: []int64{endedToday.ID.Int64(), endsTomorrow.ID.Int64()}}
 	rows, err := newPresence(t, db).QueryGroupSupervisions(ctx, options)
 	require.NoError(t, err)
 	require.Len(t, rows, 1)
-	assert.Equal(t, endsTomorrow.ID, rows[0].ID)
+	assert.Equal(t, endsTomorrow.ID.Int64(), rows[0].ID)
 }
 
 func TestPresenceSupervisionQueryComposesDateAndStaffFilters(t *testing.T) {
@@ -45,8 +46,8 @@ func TestPresenceSupervisionQueryComposesDateAndStaffFilters(t *testing.T) {
 	data := createSupervisorTestData(t, db)
 	start := calendar.NewDate(2020, 1, 1)
 	endedOn := calendar.NewDate(2020, 1, 2)
-	open := &ports.GroupSupervisor{GroupID: data.ActiveGroup.ID, StaffID: data.Staff1ID, StartDate: start, Role: "open"}
-	ended := &ports.GroupSupervisor{GroupID: data.ActiveGroup.ID, StaffID: data.Staff2ID, StartDate: start, EndDate: &endedOn, Role: "ended"}
+	open := &ports.GroupSupervisor{GroupID: data.ActiveGroup.ID, StaffID: ident.ID(data.Staff1ID), StartDate: start, Role: "open"}
+	ended := &ports.GroupSupervisor{GroupID: data.ActiveGroup.ID, StaffID: ident.ID(data.Staff2ID), StartDate: start, EndDate: &endedOn, Role: "ended"}
 	require.NoError(t, repo.Create(ctx, open))
 	require.NoError(t, repo.Create(ctx, ended))
 
@@ -55,13 +56,13 @@ func TestPresenceSupervisionQueryComposesDateAndStaffFilters(t *testing.T) {
 	rows, err := newPresence(t, db).QueryGroupSupervisions(ctx, activeOptions)
 	require.NoError(t, err)
 	require.Len(t, rows, 1)
-	assert.Equal(t, open.ID, rows[0].ID)
+	assert.Equal(t, open.ID.Int64(), rows[0].ID)
 
 	inactiveOptions := studentpresence.GroupSupervisionFilter{EndedBy: &day, StaffIDs: []int64{data.Staff2ID}}
 	rows, err = newPresence(t, db).QueryGroupSupervisions(ctx, inactiveOptions)
 	require.NoError(t, err)
 	require.Len(t, rows, 1)
-	assert.Equal(t, ended.ID, rows[0].ID)
+	assert.Equal(t, ended.ID.Int64(), rows[0].ID)
 
 	emptyOptions := studentpresence.GroupSupervisionFilter{EndedBy: &day, StaffIDs: []int64{data.Staff1ID}}
 	empty, err := newPresence(t, db).QueryGroupSupervisions(ctx, emptyOptions)

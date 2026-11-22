@@ -3,23 +3,26 @@ package users
 import (
 	"errors"
 	"net/http"
+	"time"
 
+	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // PhoneNumberResponse is one guardian phone number on the wire.
 type PhoneNumberResponse struct {
-	ID          int64   `json:"id"`
-	PhoneNumber string  `json:"phone_number"`
-	PhoneType   string  `json:"phone_type"`
-	Label       *string `json:"label,omitempty"`
-	IsPrimary   bool    `json:"is_primary"`
-	Priority    int     `json:"priority"`
+	ID          common.ID `json:"id"`
+	PhoneNumber string    `json:"phone_number"`
+	PhoneType   string    `json:"phone_type"`
+	Label       *string   `json:"label,omitempty"`
+	IsPrimary   bool      `json:"is_primary"`
+	Priority    int       `json:"priority"`
 }
 
 // GuardianResponse is the full guardian profile.
 type GuardianResponse struct {
-	ID                     int64                  `json:"id"`
+	ID                     common.ID              `json:"id"`
 	FirstName              string                 `json:"first_name"`
 	LastName               string                 `json:"last_name"`
 	Email                  *string                `json:"email,omitempty"`
@@ -31,18 +34,18 @@ type GuardianResponse struct {
 	LanguagePreference     string                 `json:"language_preference"`
 	Notes                  *string                `json:"notes,omitempty"`
 	HasAccount             bool                   `json:"has_account"`
-	AccountID              *int64                 `json:"account_id,omitempty"`
+	AccountID              *common.ID             `json:"account_id,omitempty"`
 }
 
 // GuardianPickerResponse is the minimal, GDPR-safe projection of the picker
 // search (#1513): only a COUNT of linked children, never their names, and
 // none of the address, notes or preference fields.
 type GuardianPickerResponse struct {
-	ID                  int64   `json:"id"`
-	FirstName           string  `json:"first_name"`
-	LastName            string  `json:"last_name"`
-	Email               *string `json:"email,omitempty"`
-	LinkedChildrenCount int     `json:"linked_children_count"`
+	ID                  common.ID `json:"id"`
+	FirstName           string    `json:"first_name"`
+	LastName            string    `json:"last_name"`
+	Email               *string   `json:"email,omitempty"`
+	LinkedChildrenCount int       `json:"linked_children_count"`
 }
 
 // GuardianCreateRequest creates a profile; phone numbers are added through
@@ -79,14 +82,14 @@ func (req *GuardianUpdateRequest) Bind(_ *http.Request) error { return nil }
 
 // StudentGuardianLinkRequest links an existing guardian to a child.
 type StudentGuardianLinkRequest struct {
-	GuardianProfileID  int64   `json:"guardian_profile_id"`
-	RelationshipType   string  `json:"relationship_type"`
-	GuardianRole       string  `json:"guardian_role,omitempty"`
-	IsPrimary          bool    `json:"is_primary"`
-	IsEmergencyContact bool    `json:"is_emergency_contact"`
-	CanPickup          bool    `json:"can_pickup"`
-	PickupNotes        *string `json:"pickup_notes,omitempty"`
-	EmergencyPriority  int     `json:"emergency_priority"`
+	GuardianProfileID  common.ID `json:"guardian_profile_id"`
+	RelationshipType   string    `json:"relationship_type"`
+	GuardianRole       string    `json:"guardian_role,omitempty"`
+	IsPrimary          bool      `json:"is_primary"`
+	IsEmergencyContact bool      `json:"is_emergency_contact"`
+	CanPickup          bool      `json:"can_pickup"`
+	PickupNotes        *string   `json:"pickup_notes,omitempty"`
+	EmergencyPriority  int       `json:"emergency_priority"`
 }
 
 func (req *StudentGuardianLinkRequest) Bind(_ *http.Request) error {
@@ -119,10 +122,10 @@ func (req *StudentGuardianUpdateRequest) Bind(_ *http.Request) error { return ni
 // GuardianLinkResponse is one student-guardian relationship on the wire. It keeps
 // the field names of the persisted row the link endpoint used to echo.
 type GuardianLinkResponse struct {
-	ID                 int64           `json:"id"`
-	TenantID           int64           `json:"tenant_id"`
-	StudentID          int64           `json:"student_id"`
-	GuardianProfileID  int64           `json:"guardian_profile_id"`
+	ID                 common.ID       `json:"id"`
+	TenantID           common.ID       `json:"tenant_id"`
+	StudentID          common.ID       `json:"student_id"`
+	GuardianProfileID  common.ID       `json:"guardian_profile_id"`
 	RelationshipType   string          `json:"relationship_type"`
 	GuardianRole       string          `json:"guardian_role"`
 	IsPrimary          bool            `json:"is_primary"`
@@ -196,7 +199,7 @@ type StudentWithRelationship struct {
 // or none.
 type GuardianWithRelationship struct {
 	Guardian           *GuardianResponse `json:"guardian"`
-	RelationshipID     int64             `json:"relationship_id"`
+	RelationshipID     common.ID         `json:"relationship_id"`
 	RelationshipType   string            `json:"relationship_type"`
 	GuardianRole       string            `json:"guardian_role"`
 	IsPrimary          bool              `json:"is_primary"`
@@ -243,6 +246,17 @@ func (req *CreateStudentGuardiansRequest) Bind(_ *http.Request) error {
 	return nil
 }
 
+// GuardianInvitationResponse answers POST /guardians/{id}/invite. The raw
+// token is present only for the dev seeder, which asks for it with its seed
+// header; every other caller gets the invitation without it.
+type GuardianInvitationResponse struct {
+	ID                ident.ID  `json:"id"`
+	GuardianProfileID ident.ID  `json:"guardian_profile_id"`
+	ExpiresAt         time.Time `json:"expires_at"`
+	EmailSent         bool      `json:"email_sent"`
+	Token             string    `json:"token,omitempty"`
+}
+
 // GuardianDeletePreview backs GET /guardians/{id}/delete-preview. Link IDs
 // travel as strings so JavaScript never rounds them.
 type GuardianDeletePreview struct {
@@ -254,10 +268,10 @@ type GuardianDeletePreview struct {
 
 func newGuardianResponse(guardian peopledirectory.Guardian) *GuardianResponse {
 	response := &GuardianResponse{
-		ID: guardian.ID, FirstName: guardian.FirstName, LastName: guardian.LastName, Email: guardian.Email,
+		ID: ident.ID(guardian.ID), FirstName: guardian.FirstName, LastName: guardian.LastName, Email: guardian.Email,
 		AddressStreet: guardian.AddressStreet, AddressCity: guardian.AddressCity, AddressPostalCode: guardian.AddressPostalCode,
 		PreferredContactMethod: guardian.PreferredContactMethod, LanguagePreference: guardian.LanguagePreference,
-		Notes: guardian.Notes, HasAccount: guardian.HasAccount, AccountID: guardian.AccountID,
+		Notes: guardian.Notes, HasAccount: guardian.HasAccount, AccountID: (*ident.ID)(guardian.AccountID),
 	}
 	if len(guardian.PhoneNumbers) > 0 {
 		response.PhoneNumbers = make([]*PhoneNumberResponse, 0, len(guardian.PhoneNumbers))
@@ -268,24 +282,16 @@ func newGuardianResponse(guardian peopledirectory.Guardian) *GuardianResponse {
 	return response
 }
 
-func newGuardianResponses(guardians []peopledirectory.Guardian) []*GuardianResponse {
-	responses := make([]*GuardianResponse, 0, len(guardians))
-	for _, guardian := range guardians {
-		responses = append(responses, newGuardianResponse(guardian))
-	}
-	return responses
-}
-
 func newPhoneNumberResponse(phone peopledirectory.GuardianPhone) *PhoneNumberResponse {
 	return &PhoneNumberResponse{
-		ID: phone.ID, PhoneNumber: phone.PhoneNumber, PhoneType: phone.PhoneType,
+		ID: ident.ID(phone.ID), PhoneNumber: phone.PhoneNumber, PhoneType: phone.PhoneType,
 		Label: phone.Label, IsPrimary: phone.IsPrimary, Priority: phone.Priority,
 	}
 }
 
 func newGuardianLinkResponse(link peopledirectory.GuardianLink) *GuardianLinkResponse {
 	response := &GuardianLinkResponse{
-		ID: link.ID, TenantID: link.TenantID, StudentID: link.StudentID, GuardianProfileID: link.GuardianProfileID,
+		ID: ident.ID(link.ID), TenantID: ident.ID(link.TenantID), StudentID: ident.ID(link.StudentID), GuardianProfileID: ident.ID(link.GuardianProfileID),
 		RelationshipType: link.RelationshipType, GuardianRole: link.GuardianRole,
 		IsPrimary: link.IsPrimary, IsEmergencyContact: link.IsEmergencyContact, CanPickup: link.CanPickup,
 		PickupNotes: link.PickupNotes, EmergencyPriority: link.EmergencyPriority, IsPayer: link.IsPayer,

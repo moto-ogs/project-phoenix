@@ -78,6 +78,7 @@ type legacyInstanceRow struct {
 	CreatedBy              *int64        `bun:"created_by"`
 	TemplateType           *string       `bun:"template_type"`
 	TemplateRequiredStaff  *int          `bun:"template_required_staff"`
+	TemplatePlannedRoomID  *int64        `bun:"template_planned_room_id"`
 	SessionStatus          *string       `bun:"session_status"`
 	ActiveGroupID          *int64        `bun:"session_active_group_id"`
 	StartedBy              *int64        `bun:"session_started_by"`
@@ -96,6 +97,7 @@ const legacyInstanceColumns = `"activity_instance".id, "activity_instance".tenan
 	"activity_instance".cancel_reason, "activity_instance".notes, "activity_instance".idempotency_key,
 	"activity_instance".idempotency_fingerprint, "activity_instance".created_by,
 	"template".type AS template_type, "template".required_staff AS template_required_staff,
+	"template".planned_room_id AS template_planned_room_id,
 	"session".status AS session_status, "session".active_group_id AS session_active_group_id,
 	"session".started_by AS session_started_by, "session".started_at AS session_started_at,
 	"session".completed_at AS session_completed_at, "session".completed_by AS session_completed_by,
@@ -103,6 +105,7 @@ const legacyInstanceColumns = `"activity_instance".id, "activity_instance".tenan
 
 // instanceTemplateJoin reads the block type and Personalbedarf of the
 // template along (#3822): a duty is never started and has its own gap rule.
+// Its planned room tells "Heute anders" a moved block (#7662, #7675).
 const instanceTemplateJoin = `LEFT JOIN activities.groups AS "template"
 	ON "template".id = "activity_instance".activity_group_id AND "template".tenant_id = "activity_instance".tenant_id`
 
@@ -210,6 +213,7 @@ func legacyInstance(row legacyInstanceRow) presenceContract.Instance {
 		instance.TemplateType = *row.TemplateType
 	}
 	instance.TemplateRequiredStaff = row.TemplateRequiredStaff
+	instance.TemplatePlannedRoomID = row.TemplatePlannedRoomID
 	return instance
 }
 

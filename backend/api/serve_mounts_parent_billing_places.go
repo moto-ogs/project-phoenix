@@ -10,6 +10,7 @@ import (
 
 	enrollmentOwner "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/workflows/holidayallocation"
 	holidayAllocationCompose "github.com/moto-ogs/project-phoenix/workflows/holidayallocation/compose"
 )
@@ -48,7 +49,7 @@ func (c parentBillingPlaceChanges) RebookHolidayChild(ctx context.Context, revie
 	if err != nil {
 		return parentbilling.HolidayPlaceChange{}, parentBillingPlacesError(err)
 	}
-	return parentbilling.HolidayPlaceChange{Registration: detail, RegistrationID: detail.ID, MovedUp: sortedMovedUp(detail.Promotions)}, nil
+	return parentbilling.HolidayPlaceChange{Registration: detail, RegistrationID: detail.ID, MovedUp: ident.IDs(sortedMovedUp(detail.Promotions))}, nil
 }
 
 // SetHolidayWeekCapacity sets the places of a week, nil for unlimited
@@ -58,7 +59,7 @@ func (c parentBillingPlaceChanges) SetHolidayWeekCapacity(ctx context.Context, r
 	if err != nil {
 		return parentbilling.HolidayPlaceChange{}, parentBillingPlacesError(err)
 	}
-	return parentbilling.HolidayPlaceChange{WeekID: weekID, Capacity: capacity, MovedUp: sortedMovedUp(change.Promotions)}, nil
+	return parentbilling.HolidayPlaceChange{WeekID: ident.ID(weekID), Capacity: capacity, MovedUp: ident.IDs(sortedMovedUp(change.Promotions))}, nil
 }
 
 // sortedMovedUp names each registration that moved up once, in ascending
@@ -94,8 +95,8 @@ func parentBillingPlacesError(err error) error {
 func promotedRegistrations(promotions []enrollmentOwner.HolidayPromotion) []int64 {
 	ids := []int64{}
 	for _, promotion := range promotions {
-		if !slices.Contains(ids, promotion.RegistrationID) {
-			ids = append(ids, promotion.RegistrationID)
+		if !slices.Contains(ids, promotion.RegistrationID.Int64()) {
+			ids = append(ids, promotion.RegistrationID.Int64())
 		}
 	}
 	return ids

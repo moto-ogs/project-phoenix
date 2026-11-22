@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type PlanningTrack struct {
-	ID         int64      `json:"id"`
-	TenantID   int64      `json:"tenant_id"`
+	ID         ident.ID   `json:"id"`
+	TenantID   ident.ID   `json:"tenant_id"`
 	CreatedAt  time.Time  `json:"created_at"`
 	UpdatedAt  time.Time  `json:"updated_at"`
 	Name       string     `json:"name"`

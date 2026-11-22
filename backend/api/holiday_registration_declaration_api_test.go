@@ -130,7 +130,7 @@ func TestHolidayReceiptAndDetailRepeatTheDeclaration(t *testing.T) {
 	office := newTraegerOffice(t, f.db, f.traeger, "Träger Erklärung Kopie", identityaccess.TraegerRoleAdministration)
 	foreign := newTraegerOffice(t, f.db, f.traeger, "Träger Erklärung Fremd", identityaccess.TraegerRoleAdministration)
 	period := openHolidays(t, f, office)
-	rec := saveHolidayLegalBlocks(t, f, office, period.ID, holidayLegalBlocks())
+	rec := saveHolidayLegalBlocks(t, f, office, int64(period.ID), holidayLegalBlocks())
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	form := decodeSchoolPortalData[enrollment.HolidayPeriodForm](t, rec.Body.Bytes())
 	offer := holidayOffer(t, f, period.PublicToken)
@@ -141,7 +141,7 @@ func TestHolidayReceiptAndDetailRepeatTheDeclaration(t *testing.T) {
 	rec = publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken), body)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	registration := decodeSchoolPortalData[struct {
-		ID int64 `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
 
 	var payload string
@@ -163,7 +163,7 @@ func TestHolidayReceiptAndDetailRepeatTheDeclaration(t *testing.T) {
 	assert.NotContains(t, payload, "Erdnüsse", "the receipt carries no health information")
 	assert.NotContains(t, payload, "2018-03-01", "the receipt carries no date of birth")
 
-	path := fmt.Sprintf("%s/registrations/%d", holidayPeriodPath(period.ID), registration)
+	path := fmt.Sprintf("%s/registrations/%d", holidayPeriodPath(int64(period.ID)), registration)
 	rec = traegerJSON(t, f.traeger, office.token, http.MethodGet, path, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	detail := decodeSchoolPortalData[enrollment.HolidayRegistrationDetail](t, rec.Body.Bytes())

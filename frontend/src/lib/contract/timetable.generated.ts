@@ -6,7 +6,6 @@ import {
   fileAnswer,
   instant,
   int64String,
-  int64StringOrNumber,
   json,
   noData,
   nullable,
@@ -57,8 +56,8 @@ export interface PlanningTrack {
 }
 
 export const PlanningTrackSchema: z.ZodType<PlanningTrack, unknown> = object<PlanningTrack>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
   created_at: instant,
   updated_at: instant,
   name: str,
@@ -73,7 +72,7 @@ export interface TemplateArchivedResponse {
 }
 
 export const TemplateArchivedResponseSchema: z.ZodType<TemplateArchivedResponse, unknown> = object<TemplateArchivedResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
 });
 
 /** Go: timetablehttp.ClosingDayResponse */
@@ -88,7 +87,7 @@ export interface ClosingDayResponse {
 }
 
 export const ClosingDayResponseSchema: z.ZodType<ClosingDayResponse, unknown> = object<ClosingDayResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   start_date: str,
   end_date: str,
   reason: str,
@@ -117,9 +116,9 @@ export interface PlannedConflictWarning {
 
 export const PlannedConflictWarningSchema: z.ZodType<PlannedConflictWarning, unknown> = object<PlannedConflictWarning>({
   kind: str,
-  resource_id: int64StringOrNumber,
+  resource_id: int64String,
   message: str,
-  conflicting_instance_id: int64StringOrNumber,
+  conflicting_instance_id: int64String,
   conflicting_title: str,
 });
 
@@ -159,17 +158,17 @@ export interface DeviationHistoryEvent {
 }
 
 export const DeviationHistoryEventSchema: z.ZodType<DeviationHistoryEvent, unknown> = object<DeviationHistoryEvent>({
-  id: int64StringOrNumber,
-  activity_group_id: optional(int64StringOrNumber),
+  id: int64String,
+  activity_group_id: optional(int64String),
   occurrence_date: str,
   start_time: str,
-  instance_id: optional(int64StringOrNumber),
+  instance_id: optional(int64String),
   event_type: str,
-  subject_staff_id: optional(int64StringOrNumber),
+  subject_staff_id: optional(int64String),
   subject_staff_name: optional(str),
-  related_staff_id: optional(int64StringOrNumber),
+  related_staff_id: optional(int64String),
   related_staff_name: optional(str),
-  actor_account_id: optional(int64StringOrNumber),
+  actor_account_id: optional(int64String),
   actor_name: optional(str),
   old_value: optional(nullable(json)),
   new_value: optional(nullable(json)),
@@ -203,12 +202,12 @@ export interface GapInstance {
 }
 
 export const GapInstanceSchema: z.ZodType<GapInstance, unknown> = object<GapInstance>({
-  instance_id: int64StringOrNumber,
+  instance_id: int64String,
   date: str,
   title: str,
   start_time: str,
   end_time: str,
-  room_id: int64StringOrNumber,
+  room_id: int64String,
   status: str,
   assigned_staff_count: safeInt,
   absent_staff_count: safeInt,
@@ -256,7 +255,7 @@ export interface instanceStaffSummary {
 }
 
 export const instanceStaffSummarySchema: z.ZodType<instanceStaffSummary, unknown> = object<instanceStaffSummary>({
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   is_primary: bool,
   is_absent: bool,
   is_substitute: bool,
@@ -276,7 +275,7 @@ export interface instanceStudentSummary {
 }
 
 export const instanceStudentSummarySchema: z.ZodType<instanceStudentSummary, unknown> = object<instanceStudentSummary>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   status: str,
   substatus: optional(str),
   note: optional(str),
@@ -359,7 +358,7 @@ export interface enrichedInstance {
 
 export const enrichedInstanceSchema: z.ZodType<enrichedInstance, unknown> = object<enrichedInstance>({
   enrich_warning: optional(str),
-  id: int64StringOrNumber,
+  id: int64String,
   date: str,
   start_time: str,
   end_time: str,
@@ -370,19 +369,19 @@ export const enrichedInstanceSchema: z.ZodType<enrichedInstance, unknown> = obje
   status: str,
   is_spontaneous: bool,
   is_live: bool,
-  activity_group_id: optional(int64StringOrNumber),
-  calendar_period_id: optional(int64StringOrNumber),
+  activity_group_id: optional(int64String),
+  calendar_period_id: optional(int64String),
   list_kind: optional(str),
   activity_type: str,
-  planning_track_id: optional(int64StringOrNumber),
+  planning_track_id: optional(int64String),
   planning_track_name: optional(str),
   planning_track_color: optional(str),
   planning_track_sort_order: optional(safeInt),
-  room_id: int64StringOrNumber,
+  room_id: int64String,
   room_name: str,
   group_name: optional(str),
   staff: nullable(arr(instanceStaffSummarySchema)),
-  student_ids: nullable(arr(int64StringOrNumber)),
+  student_ids: nullable(arr(int64String)),
   students: nullable(arr(instanceStudentSummarySchema)),
   staff_count: safeInt,
   absent_staff_count: safeInt,
@@ -427,7 +426,7 @@ export interface editedOccurrenceItem {
 }
 
 export const editedOccurrenceItemSchema: z.ZodType<editedOccurrenceItem, unknown> = object<editedOccurrenceItem>({
-  instance_id: int64StringOrNumber,
+  instance_id: int64String,
   date: str,
   start_time: str,
   title: str,
@@ -463,7 +462,7 @@ export interface InstanceParticipantResponse {
 }
 
 export const InstanceParticipantResponseSchema: z.ZodType<InstanceParticipantResponse, unknown> = object<InstanceParticipantResponse>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   display_name: str,
 });
 
@@ -474,7 +473,7 @@ export interface InstanceStaffNameResponse {
 }
 
 export const InstanceStaffNameResponseSchema: z.ZodType<InstanceStaffNameResponse, unknown> = object<InstanceStaffNameResponse>({
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   display_name: str,
 });
 
@@ -486,7 +485,7 @@ export interface InstanceParticipantsResponse {
 }
 
 export const InstanceParticipantsResponseSchema: z.ZodType<InstanceParticipantsResponse, unknown> = object<InstanceParticipantsResponse>({
-  instance_id: int64StringOrNumber,
+  instance_id: int64String,
   participants: nullable(arr(InstanceParticipantResponseSchema)),
   staff: nullable(arr(InstanceStaffNameResponseSchema)),
 });
@@ -501,7 +500,7 @@ export interface StaffPoolAssignmentResponse {
 }
 
 export const StaffPoolAssignmentResponseSchema: z.ZodType<StaffPoolAssignmentResponse, unknown> = object<StaffPoolAssignmentResponse>({
-  instance_id: int64StringOrNumber,
+  instance_id: int64String,
   title: str,
   start_time: str,
   end_time: str,
@@ -521,7 +520,7 @@ export interface StaffPoolEntryResponse {
 }
 
 export const StaffPoolEntryResponseSchema: z.ZodType<StaffPoolEntryResponse, unknown> = object<StaffPoolEntryResponse>({
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   display_name: str,
   category: str,
   on_shift: bool,
@@ -543,7 +542,7 @@ export interface StaffPoolResponse {
 }
 
 export const StaffPoolResponseSchema: z.ZodType<StaffPoolResponse, unknown> = object<StaffPoolResponse>({
-  instance_id: int64StringOrNumber,
+  instance_id: int64String,
   title: str,
   date: str,
   start_time: str,
@@ -587,7 +586,7 @@ export interface templateRosterMaintenanceOfferingResponse {
 }
 
 export const templateRosterMaintenanceOfferingResponseSchema: z.ZodType<templateRosterMaintenanceOfferingResponse, unknown> = object<templateRosterMaintenanceOfferingResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
 });
 
@@ -632,7 +631,7 @@ export interface offeringSourcedTemplateResponse {
 }
 
 export const offeringSourcedTemplateResponseSchema: z.ZodType<offeringSourcedTemplateResponse, unknown> = object<offeringSourcedTemplateResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   grade_levels: optional(arr(safeInt)),
   school_classes: optional(arr(str)),
@@ -652,15 +651,15 @@ export interface offeringSourceOptionResponse {
 }
 
 export const offeringSourceOptionResponseSchema: z.ZodType<offeringSourceOptionResponse, unknown> = object<offeringSourceOptionResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
-  phase_id: int64StringOrNumber,
+  phase_id: int64String,
   phase_name: str,
   phase_service_start: optional(str),
   total_count: safeInt,
   grade_counts: nullable(rec(safeInt)),
   sourced_templates: nullable(arr(offeringSourcedTemplateResponseSchema)),
-  legacy_linked_template_id: optional(int64StringOrNumber),
+  legacy_linked_template_id: optional(int64String),
 });
 
 /** Go: timetablehttp.offeringSourcesResponse */
@@ -679,7 +678,7 @@ export interface combinedOfferingStudentResponse {
 }
 
 export const combinedOfferingStudentResponseSchema: z.ZodType<combinedOfferingStudentResponse, unknown> = object<combinedOfferingStudentResponse>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   school_class: optional(str),
 });
 
@@ -703,7 +702,7 @@ export interface offeringPreviewStudentResponse {
 }
 
 export const offeringPreviewStudentResponseSchema: z.ZodType<offeringPreviewStudentResponse, unknown> = object<offeringPreviewStudentResponse>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   name: str,
 });
 
@@ -716,7 +715,7 @@ export interface offeringPreviewDroppedResponse {
 }
 
 export const offeringPreviewDroppedResponseSchema: z.ZodType<offeringPreviewDroppedResponse, unknown> = object<offeringPreviewDroppedResponse>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   name: str,
   booked_weekdays: nullable(arr(safeInt)),
   excluded_by: optional(str),
@@ -745,7 +744,7 @@ export interface offeringPreviewSegmentResponse {
 }
 
 export const offeringPreviewSegmentResponseSchema: z.ZodType<offeringPreviewSegmentResponse, unknown> = object<offeringPreviewSegmentResponse>({
-  template_id: int64StringOrNumber,
+  template_id: int64String,
   valid_from: nullable(str),
   valid_until: nullable(str),
 });
@@ -758,7 +757,7 @@ export interface offeringPreviewAlternativeResponse {
 }
 
 export const offeringPreviewAlternativeResponseSchema: z.ZodType<offeringPreviewAlternativeResponse, unknown> = object<offeringPreviewAlternativeResponse>({
-  offering_id: int64StringOrNumber,
+  offering_id: int64String,
   name: str,
   child_count: safeInt,
 });
@@ -830,7 +829,7 @@ export interface PeriodWarning {
 export const PeriodWarningSchema: z.ZodType<PeriodWarning, unknown> = object<PeriodWarning>({
   code: str,
   message: str,
-  overlapping_period_ids: nullable(arr(int64StringOrNumber)),
+  overlapping_period_ids: nullable(arr(int64String)),
   overlapping_period_names: nullable(arr(str)),
 });
 
@@ -857,7 +856,7 @@ export interface CalendarPeriodResponse {
 }
 
 export const CalendarPeriodResponseSchema: z.ZodType<CalendarPeriodResponse, unknown> = object<CalendarPeriodResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   period_type: str,
   start_date: str,
@@ -886,7 +885,7 @@ export interface pickupExtensionBlockResponse {
 }
 
 export const pickupExtensionBlockResponseSchema: z.ZodType<pickupExtensionBlockResponse, unknown> = object<pickupExtensionBlockResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   title: str,
   start_time: str,
   end_time: str,
@@ -907,8 +906,8 @@ export interface pickupExtensionResponse {
 }
 
 export const pickupExtensionResponseSchema: z.ZodType<pickupExtensionResponse, unknown> = object<pickupExtensionResponse>({
-  id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
+  id: int64String,
+  student_id: int64String,
   student_name: str,
   kind: str,
   date: optional(str),
@@ -1029,13 +1028,13 @@ export interface InstanceDayResponse {
 }
 
 export const InstanceDayResponseSchema: z.ZodType<InstanceDayResponse, unknown> = object<InstanceDayResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   title: str,
   start_time: str,
   end_time: str,
-  room_id: int64StringOrNumber,
+  room_id: int64String,
   status: str,
-  active_group_id: nullable(int64StringOrNumber),
+  active_group_id: nullable(int64String),
   attendance: AttendanceDayResponseSchema,
 });
 
@@ -1050,7 +1049,7 @@ export interface StudentDayResponse {
 }
 
 export const StudentDayResponseSchema: z.ZodType<StudentDayResponse, unknown> = object<StudentDayResponse>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   date: str,
   weekday: safeInt,
   arrival: SlotResponseSchema,
@@ -1067,7 +1066,7 @@ export interface StudentWeekResponse {
 }
 
 export const StudentWeekResponseSchema: z.ZodType<StudentWeekResponse, unknown> = object<StudentWeekResponse>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   from: str,
   to: str,
   days: nullable(arr(StudentDayResponseSchema)),
@@ -1086,7 +1085,7 @@ export const templateTargetResponseSchema: z.ZodType<templateTargetResponse, unk
   type: str,
   grade_level: optional(safeInt),
   school_class: optional(str),
-  education_group_id: optional(int64StringOrNumber),
+  education_group_id: optional(int64String),
   education_group_name: optional(str),
 });
 
@@ -1103,12 +1102,12 @@ export interface templateScheduleResponse {
 }
 
 export const templateScheduleResponseSchema: z.ZodType<templateScheduleResponse, unknown> = object<templateScheduleResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   weekday: safeInt,
   start_time: str,
   end_time: str,
   week_pattern: safeInt,
-  calendar_period_id: optional(int64StringOrNumber),
+  calendar_period_id: optional(int64String),
   valid_from: optional(str),
   valid_until: optional(str),
 });
@@ -1123,9 +1122,9 @@ export interface templateWeekdayAssignmentResponse {
 
 export const templateWeekdayAssignmentResponseSchema: z.ZodType<templateWeekdayAssignmentResponse, unknown> = object<templateWeekdayAssignmentResponse>({
   weekday: safeInt,
-  staff_ids: nullable(arr(int64StringOrNumber)),
-  student_ids: nullable(arr(int64StringOrNumber)),
-  primary_staff_id: optional(int64StringOrNumber),
+  staff_ids: nullable(arr(int64String)),
+  student_ids: nullable(arr(int64String)),
+  primary_staff_id: optional(int64String),
 });
 
 /** Go: timetablehttp.templateProtectedStudentAssignmentResponse */
@@ -1136,7 +1135,7 @@ export interface templateProtectedStudentAssignmentResponse {
 
 export const templateProtectedStudentAssignmentResponseSchema: z.ZodType<templateProtectedStudentAssignmentResponse, unknown> = object<templateProtectedStudentAssignmentResponse>({
   weekday: safeInt,
-  student_ids: nullable(arr(int64StringOrNumber)),
+  student_ids: nullable(arr(int64String)),
 });
 
 /** Go: timetablehttp.templateRosterMaintenanceResponse */
@@ -1210,28 +1209,28 @@ export interface templateResponse {
 }
 
 export const templateResponseSchema: z.ZodType<templateResponse, unknown> = object<templateResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
-  resolved_from_template_id: optional(int64StringOrNumber),
+  resolved_from_template_id: optional(int64String),
   type: str,
-  category_id: int64StringOrNumber,
+  category_id: int64String,
   category_name: str,
-  planning_track_id: optional(int64StringOrNumber),
+  planning_track_id: optional(int64String),
   planning_track_name: optional(str),
   planning_track_color: optional(str),
   planning_track_sort_order: optional(safeInt),
-  room_id: optional(int64StringOrNumber),
+  room_id: optional(int64String),
   room_name: optional(str),
-  education_group_id: optional(int64StringOrNumber),
+  education_group_id: optional(int64String),
   education_group_name: optional(str),
   is_open: bool,
   max_participants: nullable(safeInt),
-  calendar_period_id: optional(int64StringOrNumber),
+  calendar_period_id: optional(int64String),
   target_group_type: str,
   target_grade_level: optional(safeInt),
   target_school_class: optional(str),
   targets: nullable(arr(templateTargetResponseSchema)),
-  source_care_offering_ids: optional(arr(int64StringOrNumber)),
+  source_care_offering_ids: optional(arr(int64String)),
   source_grade_levels: optional(arr(safeInt)),
   source_school_classes: optional(arr(str)),
   list_kind: optional(str),
@@ -1245,9 +1244,9 @@ export const templateResponseSchema: z.ZodType<templateResponse, unknown> = obje
   required_staff_count: safeInt,
   assigned_staff_count: safeInt,
   required_staff_override: optional(safeInt),
-  student_ids: nullable(arr(int64StringOrNumber)),
-  staff_ids: nullable(arr(int64StringOrNumber)),
-  primary_staff_id: optional(int64StringOrNumber),
+  student_ids: nullable(arr(int64String)),
+  staff_ids: nullable(arr(int64String)),
+  primary_staff_id: optional(int64String),
   schedules: nullable(arr(templateScheduleResponseSchema)),
   weekday_assignments: nullable(arr(templateWeekdayAssignmentResponseSchema)),
   protected_student_assignments: nullable(arr(templateProtectedStudentAssignmentResponseSchema)),
@@ -1278,9 +1277,9 @@ export interface bookingLeftoverResponse {
 }
 
 export const bookingLeftoverResponseSchema: z.ZodType<bookingLeftoverResponse, unknown> = object<bookingLeftoverResponse>({
-  template_id: int64StringOrNumber,
+  template_id: int64String,
   template_name: str,
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   student_name: str,
   weekdays: nullable(arr(safeInt)),
   booking_ended_on: str,
@@ -1306,7 +1305,7 @@ export interface rosterDeviationChildResponse {
 }
 
 export const rosterDeviationChildResponseSchema: z.ZodType<rosterDeviationChildResponse, unknown> = object<rosterDeviationChildResponse>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   name: str,
   weekdays: nullable(arr(safeInt)),
 });
@@ -1327,7 +1326,7 @@ export interface rosterDeviationResponse {
 }
 
 export const rosterDeviationResponseSchema: z.ZodType<rosterDeviationResponse, unknown> = object<rosterDeviationResponse>({
-  template_id: int64StringOrNumber,
+  template_id: int64String,
   offerings: nullable(arr(templateRosterMaintenanceOfferingResponseSchema)),
   grade_levels: nullable(arr(safeInt)),
   school_classes: nullable(arr(str)),
@@ -1361,9 +1360,9 @@ export interface AttendanceResponse {
 }
 
 export const AttendanceResponseSchema: z.ZodType<AttendanceResponse, unknown> = object<AttendanceResponse>({
-  id: int64StringOrNumber,
-  instance_id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
+  id: int64String,
+  instance_id: int64String,
+  student_id: int64String,
   status: str,
   substatus: nullable(str),
   note: nullable(str),
@@ -1385,11 +1384,11 @@ export interface createInstanceRequest {
   title?: string;
   description?: string | null;
   notes?: string | null;
-  room_id?: number;
-  activity_group_id?: number | null;
+  room_id?: string;
+  activity_group_id?: string | null;
   list_kind?: string | null;
-  staff_ids?: number[] | null;
-  student_ids?: number[] | null;
+  staff_ids?: string[] | null;
+  student_ids?: string[] | null;
   required_staff?: number | null;
 }
 
@@ -1448,7 +1447,7 @@ export const BulkCancelResultSchema: z.ZodType<BulkCancelResult, unknown> = obje
 export interface replanWeekRequest {
   from_date?: string | null;
   to_date?: string | null;
-  activity_group_id?: number | null;
+  activity_group_id?: string | null;
 }
 
 /** Go: timetablehttp.replanWeekResponse */
@@ -1494,7 +1493,7 @@ export interface GuardianNoticeResponse {
 }
 
 export const GuardianNoticeResponseSchema: z.ZodType<GuardianNoticeResponse, unknown> = object<GuardianNoticeResponse>({
-  announcement_id: int64StringOrNumber,
+  announcement_id: int64String,
   child_count: safeInt,
   family_count: safeInt,
 });
@@ -1509,7 +1508,7 @@ export interface InstanceStatusResponse {
 }
 
 export const InstanceStatusResponseSchema: z.ZodType<InstanceStatusResponse, unknown> = object<InstanceStatusResponse>({
-  instance_id: int64StringOrNumber,
+  instance_id: int64String,
   status: str,
   completed_at: optional(str),
   reopen_until: optional(str),
@@ -1521,15 +1520,15 @@ export interface templateTargetRequest {
   type?: string;
   grade_level?: number | null;
   school_class?: string | null;
-  education_group_id?: number | null;
+  education_group_id?: string | null;
 }
 
 /** Go: timetablehttp.weekdayAssignmentRequest */
 export interface weekdayAssignmentRequest {
   weekday?: number;
-  staff_ids?: number[] | null;
-  student_ids?: number[] | null;
-  primary_staff_id?: number | null;
+  staff_ids?: string[] | null;
+  student_ids?: string[] | null;
+  primary_staff_id?: string | null;
 }
 
 /** Go: timetablehttp.convertInstanceToSeriesRequest */
@@ -1539,19 +1538,19 @@ export interface convertInstanceToSeriesRequest {
   weekdays?: number[] | null;
   start_time?: string;
   end_time?: string;
-  room_id?: number;
-  category_id?: number;
-  planning_track_id?: number | null;
+  room_id?: string;
+  category_id?: string;
+  planning_track_id?: string | null;
   max_participants?: number | null;
   required_staff?: number | null;
   week_pattern?: number | null;
-  calendar_period_id?: number | null;
-  education_group_id?: number | null;
+  calendar_period_id?: string | null;
+  education_group_id?: string | null;
   target_group_type?: string;
   target_grade_level?: number | null;
   target_school_class?: string | null;
   targets?: templateTargetRequest[] | null;
-  source_care_offering_ids?: number[] | null;
+  source_care_offering_ids?: string[] | null;
   source_grade_levels?: number[] | null;
   source_school_classes?: string[] | null;
   list_kind?: string | null;
@@ -1561,9 +1560,9 @@ export interface convertInstanceToSeriesRequest {
   end_date?: string | null;
   materialize_from?: string | null;
   materialize_to?: string | null;
-  student_ids?: number[] | null;
-  staff_ids?: number[] | null;
-  primary_staff_id?: number | null;
+  student_ids?: string[] | null;
+  staff_ids?: string[] | null;
+  primary_staff_id?: string | null;
   weekday_assignments?: weekdayAssignmentRequest[] | null;
   instance_notes?: string | null;
 }
@@ -1577,37 +1576,37 @@ export interface convertInstanceToSeriesResponse {
 }
 
 export const convertInstanceToSeriesResponseSchema: z.ZodType<convertInstanceToSeriesResponse, unknown> = object<convertInstanceToSeriesResponse>({
-  template_id: int64StringOrNumber,
-  timeframe_id: int64StringOrNumber,
-  schedule_ids: nullable(arr(int64StringOrNumber)),
-  linked_instance_id: int64StringOrNumber,
+  template_id: int64String,
+  timeframe_id: int64String,
+  schedule_ids: nullable(arr(int64String)),
+  linked_instance_id: int64String,
 });
 
 /** Go: timetablehttp.deviationAbsence */
 export interface deviationAbsence {
-  staff_id?: number;
+  staff_id?: string;
   reason?: string | null;
-  instance_ids?: number[] | null;
+  instance_ids?: string[] | null;
 }
 
 /** Go: timetablehttp.deviationSubstitution */
 export interface deviationSubstitution {
-  absent_staff_id?: number;
-  substitute_staff_id?: number;
+  absent_staff_id?: string;
+  substitute_staff_id?: string;
   reason?: string | null;
-  instance_ids?: number[] | null;
+  instance_ids?: string[] | null;
 }
 
 /** Go: timetablehttp.deviationSubstitutionRemoval */
 export interface deviationSubstitutionRemoval {
-  staff_id?: number;
-  instance_ids?: number[] | null;
+  staff_id?: string;
+  instance_ids?: string[] | null;
 }
 
 /** Go: timetablehttp.DeviationPresence */
 export interface DeviationPresence {
-  staff_id?: number;
-  instance_ids?: number[] | null;
+  staff_id?: string;
+  instance_ids?: string[] | null;
 }
 
 /** Go: timetablehttp.applyDeviationsRequest */
@@ -1632,7 +1631,7 @@ export interface AffectedInstance {
 }
 
 export const AffectedInstanceSchema: z.ZodType<AffectedInstance, unknown> = object<AffectedInstance>({
-  instance_id: int64StringOrNumber,
+  instance_id: int64String,
   title: str,
   start_time: str,
   action: str,
@@ -1648,8 +1647,8 @@ export interface SubstituteTimeConflict {
 
 export const SubstituteTimeConflictSchema: z.ZodType<SubstituteTimeConflict, unknown> = object<SubstituteTimeConflict>({
   kind: str,
-  instance_id: int64StringOrNumber,
-  other_instance_id: int64StringOrNumber,
+  instance_id: int64String,
+  other_instance_id: int64String,
   message: str,
 });
 
@@ -1664,7 +1663,7 @@ export interface ApplyDeviationsResponse {
 }
 
 export const ApplyDeviationsResponseSchema: z.ZodType<ApplyDeviationsResponse, unknown> = object<ApplyDeviationsResponse>({
-  instance_id: int64StringOrNumber,
+  instance_id: int64String,
   cancelled: bool,
   understaffed_ack: bool,
   affected_instances: nullable(arr(AffectedInstanceSchema)),
@@ -1674,8 +1673,8 @@ export const ApplyDeviationsResponseSchema: z.ZodType<ApplyDeviationsResponse, u
 
 /** Go: timetablehttp.moveStaffRequest */
 export interface moveStaffRequest {
-  staff_id?: number;
-  source_instance_id?: number | null;
+  staff_id?: string;
+  source_instance_id?: string | null;
 }
 
 /** Go: timetable.ShiftCoverageWarning */
@@ -1691,7 +1690,7 @@ export interface ShiftCoverageWarning {
 }
 
 export const ShiftCoverageWarningSchema: z.ZodType<ShiftCoverageWarning, unknown> = object<ShiftCoverageWarning>({
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   staff_name: str,
   date: str,
   start_time: str,
@@ -1711,8 +1710,8 @@ export interface MoveStaffResponse {
 }
 
 export const MoveStaffResponseSchema: z.ZodType<MoveStaffResponse, unknown> = object<MoveStaffResponse>({
-  target_instance_id: int64StringOrNumber,
-  source_instance_id: optional(int64StringOrNumber),
+  target_instance_id: int64String,
+  source_instance_id: optional(int64String),
   action: str,
   time_conflicts: nullable(arr(SubstituteTimeConflictSchema)),
   coverage_warnings: nullable(arr(ShiftCoverageWarningSchema)),
@@ -1728,9 +1727,9 @@ export interface StartInstanceResponse {
 }
 
 export const StartInstanceResponseSchema: z.ZodType<StartInstanceResponse, unknown> = object<StartInstanceResponse>({
-  instance_id: int64StringOrNumber,
+  instance_id: int64String,
   status: str,
-  active_group_id: int64StringOrNumber,
+  active_group_id: int64String,
   started_at: str,
   warnings: nullable(arr(InstanceConflictWarningSchema)),
 });
@@ -1997,10 +1996,10 @@ export interface spontaneousStartRequest {
   title?: string;
   description?: string | null;
   notes?: string | null;
-  room_id?: number;
-  activity_group_id?: number | null;
+  room_id?: string;
+  activity_group_id?: string | null;
   staff_ids?: string[] | null;
-  student_ids?: number[] | null;
+  student_ids?: string[] | null;
 }
 
 /** Go: timetablehttp.CalendarPeriodRequest */
@@ -2027,7 +2026,7 @@ export const bootstrapPeriodsResponseSchema: z.ZodType<bootstrapPeriodsResponse,
 
 /** Go: timetablehttp.resolvePickupExtensionRequest */
 export interface resolvePickupExtensionRequest {
-  block_ids?: number[] | null;
+  block_ids?: string[] | null;
 }
 
 /** Go: timetablehttp.resolvePickupExtensionResponse */
@@ -2039,7 +2038,7 @@ export interface resolvePickupExtensionResponse {
 }
 
 export const resolvePickupExtensionResponseSchema: z.ZodType<resolvePickupExtensionResponse, unknown> = object<resolvePickupExtensionResponse>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   kind: str,
   assigned_blocks: nullable(arr(pickupExtensionBlockResponseSchema)),
   instance_count: safeInt,
@@ -2072,11 +2071,11 @@ export interface ShiftCoverageRequest {
   dates?: string[] | null;
   start_time?: string;
   end_time?: string;
-  staff_ids?: number[] | null;
-  exclude_instance_id?: number | null;
+  staff_ids?: string[] | null;
+  exclude_instance_id?: string | null;
   concrete_instance_date?: string | null;
-  replan_activity_group_id?: number | null;
-  calendar_period_id?: number | null;
+  replan_activity_group_id?: string | null;
+  calendar_period_id?: string | null;
   week_pattern?: number | null;
 }
 
@@ -2093,8 +2092,8 @@ export const ShiftCoverageResponseSchema: z.ZodType<ShiftCoverageResponse, unkno
 
 /** Go: timetablehttp.bulkSubstitutionRequest */
 export interface bulkSubstitutionRequest {
-  absent_staff_id?: number;
-  substitute_staff_id?: number | null;
+  absent_staff_id?: string;
+  substitute_staff_id?: string | null;
   dates?: string[] | null;
   reason?: string | null;
 }
@@ -2130,19 +2129,19 @@ export interface createTemplateRequest {
   weekdays?: number[] | null;
   start_time?: string;
   end_time?: string;
-  room_id?: number;
-  category_id?: number;
-  planning_track_id?: number | null;
+  room_id?: string;
+  category_id?: string;
+  planning_track_id?: string | null;
   max_participants?: number | null;
   required_staff?: number | null;
   week_pattern?: number | null;
-  calendar_period_id?: number | null;
-  education_group_id?: number | null;
+  calendar_period_id?: string | null;
+  education_group_id?: string | null;
   target_group_type?: string;
   target_grade_level?: number | null;
   target_school_class?: string | null;
   targets?: templateTargetRequest[] | null;
-  source_care_offering_ids?: number[] | null;
+  source_care_offering_ids?: string[] | null;
   source_grade_levels?: number[] | null;
   source_school_classes?: string[] | null;
   list_kind?: string | null;
@@ -2152,9 +2151,9 @@ export interface createTemplateRequest {
   end_date?: string | null;
   materialize_from?: string | null;
   materialize_to?: string | null;
-  student_ids?: number[] | null;
-  staff_ids?: number[] | null;
-  primary_staff_id?: number | null;
+  student_ids?: string[] | null;
+  staff_ids?: string[] | null;
+  primary_staff_id?: string | null;
   weekday_assignments?: weekdayAssignmentRequest[] | null;
 }
 
@@ -2169,9 +2168,9 @@ export interface createTemplateResponse {
 }
 
 export const createTemplateResponseSchema: z.ZodType<createTemplateResponse, unknown> = object<createTemplateResponse>({
-  template_id: int64StringOrNumber,
-  timeframe_id: int64StringOrNumber,
-  schedule_ids: nullable(arr(int64StringOrNumber)),
+  template_id: int64String,
+  timeframe_id: int64String,
+  schedule_ids: nullable(arr(int64String)),
   instances_created: optional(safeInt),
   materialized_from: optional(str),
   materialized_to: optional(str),
@@ -2190,14 +2189,14 @@ export interface endTemplateResponse {
 }
 
 export const endTemplateResponseSchema: z.ZodType<endTemplateResponse, unknown> = object<endTemplateResponse>({
-  template_id: int64StringOrNumber,
+  template_id: int64String,
   effective_date: str,
   deleted_instances: safeInt,
 });
 
 /** Go: timetablehttp.offeringConnectionRequest */
 export interface offeringConnectionRequest {
-  offering_ids?: number[] | null;
+  offering_ids?: string[] | null;
   grade_levels?: number[] | null;
   school_classes?: string[] | null;
   effective_date?: string;
@@ -2210,7 +2209,7 @@ export interface offeringConnectionResponse {
 }
 
 export const offeringConnectionResponseSchema: z.ZodType<offeringConnectionResponse, unknown> = object<offeringConnectionResponse>({
-  template_ids: nullable(arr(int64StringOrNumber)),
+  template_ids: nullable(arr(int64String)),
   effective_date: str,
 });
 
@@ -2221,28 +2220,28 @@ export interface splitTemplateRequest {
   weekdays?: number[] | null;
   start_time?: string;
   end_time?: string;
-  room_id?: number;
-  category_id?: number;
-  planning_track_id?: number | null;
+  room_id?: string;
+  category_id?: string;
+  planning_track_id?: string | null;
   max_participants?: number | null;
   week_pattern?: number | null;
-  calendar_period_id?: number | null;
-  education_group_id?: number | null;
+  calendar_period_id?: string | null;
+  education_group_id?: string | null;
   target_group_type?: string;
   target_grade_level?: number | null;
   target_school_class?: string | null;
   targets?: templateTargetRequest[] | null;
-  source_care_offering_ids?: number[] | null;
+  source_care_offering_ids?: string[] | null;
   source_grade_levels?: number[] | null;
   source_school_classes?: string[] | null;
   include_closing_days?: boolean | null;
-  student_ids?: number[] | null;
-  staff_ids?: number[] | null;
-  primary_staff_id?: number | null;
+  student_ids?: string[] | null;
+  staff_ids?: string[] | null;
+  primary_staff_id?: string | null;
   weekday_assignments?: weekdayAssignmentRequest[] | null;
   series_roster_from?: string | null;
-  series_roster_scope_student_ids?: number[] | null;
-  series_roster_scope_staff_ids?: number[] | null;
+  series_roster_scope_student_ids?: string[] | null;
+  series_roster_scope_staff_ids?: string[] | null;
   series_roster_scope_weekdays?: number[] | null;
   series_roster_primary_changed?: boolean;
   propagate_notes_to_predecessors?: boolean;
@@ -2267,9 +2266,9 @@ export interface splitTemplateResponse {
 }
 
 export const splitTemplateResponseSchema: z.ZodType<splitTemplateResponse, unknown> = object<splitTemplateResponse>({
-  old_template_id: int64StringOrNumber,
-  new_template_id: int64StringOrNumber,
-  schedule_ids: nullable(arr(int64StringOrNumber)),
+  old_template_id: int64String,
+  new_template_id: int64String,
+  schedule_ids: nullable(arr(int64String)),
   deleted_instances: safeInt,
   instances_created: safeInt,
 });
@@ -2300,17 +2299,17 @@ export interface updateInstanceRequest {
   title?: string;
   description?: string | null;
   notes?: string | null;
-  room_id?: number;
-  activity_group_id?: number | null;
+  room_id?: string;
+  activity_group_id?: string | null;
   list_kind?: string | null;
-  staff_ids?: number[] | null;
-  student_ids?: number[] | null;
+  staff_ids?: string[] | null;
+  student_ids?: string[] | null;
   required_staff?: number | null;
 }
 
 /** Go: timetablehttp.offeringGapAckRequest */
 export interface offeringGapAckRequest {
-  period_id?: number;
+  period_id?: string;
   acknowledged?: boolean | null;
 }
 
@@ -2327,7 +2326,7 @@ export const offeringGapAckResponseSchema: z.ZodType<offeringGapAckResponse, unk
 
 /** Go: timetablehttp.planningTrackOrderRequest */
 export interface planningTrackOrderRequest {
-  ids?: number[] | null;
+  ids?: string[] | null;
 }
 
 /** Go: timetablehttp.updateTemplateRequest */
@@ -2337,31 +2336,31 @@ export interface updateTemplateRequest {
   weekdays?: number[] | null;
   start_time?: string;
   end_time?: string;
-  room_id?: number;
-  category_id?: number;
-  planning_track_id?: number | null;
+  room_id?: string;
+  category_id?: string;
+  planning_track_id?: string | null;
   max_participants?: number | null;
   required_staff?: number | null;
   week_pattern?: number | null;
-  calendar_period_id?: number | null;
-  education_group_id?: number | null;
+  calendar_period_id?: string | null;
+  education_group_id?: string | null;
   target_group_type?: string;
   target_grade_level?: number | null;
   target_school_class?: string | null;
   targets?: templateTargetRequest[] | null;
-  source_care_offering_ids?: number[] | null;
+  source_care_offering_ids?: string[] | null;
   source_grade_levels?: number[] | null;
   source_school_classes?: string[] | null;
   list_kind?: string | null;
   notes?: string | null;
   include_closing_days?: boolean | null;
-  student_ids?: number[] | null;
-  staff_ids?: number[] | null;
-  primary_staff_id?: number | null;
+  student_ids?: string[] | null;
+  staff_ids?: string[] | null;
+  primary_staff_id?: string | null;
   weekday_assignments?: weekdayAssignmentRequest[] | null;
   series_roster_from?: string | null;
-  series_roster_scope_student_ids?: number[] | null;
-  series_roster_scope_staff_ids?: number[] | null;
+  series_roster_scope_student_ids?: string[] | null;
+  series_roster_scope_staff_ids?: string[] | null;
   series_roster_scope_weekdays?: number[] | null;
   series_roster_primary_changed?: boolean;
   propagate_notes_to_predecessors?: boolean;
@@ -2925,6 +2924,7 @@ export const routes = {
     method: "POST",
     pattern: "/api/timetable/lists/options",
     portals: ["tenant"],
+    noCommit: "reads the choices for a list the body describes",
     request: requestBody<slotListOptionsRequest>(),
     response: success(OptionsResultSchema),
   },
@@ -2932,6 +2932,7 @@ export const routes = {
     method: "POST",
     pattern: "/api/timetable/lists/preview",
     portals: ["tenant"],
+    noCommit: "builds the list the body describes and saves nothing",
     request: requestBody<slotListRequest>(),
     response: success(ClassdayResultSchema),
   },

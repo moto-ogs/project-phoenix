@@ -46,7 +46,7 @@ import { traegerPath } from "~/lib/traeger-url";
 import { SepaMandateModal } from "./sepa-mandate-modal";
 import {
   mandateExpired,
-  MANDATE_KIND_LABELS,
+  mandateKindLabel,
   mandateEventActor,
   mandateEventLabel,
   mandateFamily,
@@ -140,7 +140,7 @@ function RevokeModal({
           label="Widerruf erhalten am"
           required
           value={revokedOn}
-          min={mandate?.signedOn}
+          min={mandate?.signedOn ?? undefined}
           max={today}
           onChange={setRevokedOn}
         />
@@ -285,7 +285,7 @@ function FamilyMandates({
                 <span className="font-mono break-all">{inForce.reference}</span>
                 <span className="text-gray-500">
                   {" "}
-                  · {MANDATE_KIND_LABELS[inForce.kind]}
+                  · {mandateKindLabel(inForce.kind)}
                 </span>
               </DataField>
               <DataField label="Konto">
@@ -301,7 +301,7 @@ function FamilyMandates({
               </DataField>
               <DataField label="Unterschrieben am">
                 <span className="tabular-nums">
-                  {formatDate(inForce.signedOn)}
+                  {inForce.signedOn ? formatDate(inForce.signedOn) : "–"}
                 </span>
               </DataField>
               <DataField label="Art der nächsten Abbuchung">
@@ -449,7 +449,7 @@ export function SepaMandatesCard({
             {mandate.reference}
           </span>
           <span className="block text-sm text-gray-500">
-            {MANDATE_KIND_LABELS[mandate.kind]}
+            {mandateKindLabel(mandate.kind)}
           </span>
           {/* On a tablet the next debit stands under the kind, named: the
               table has no room for its own column there. Its value stays
@@ -495,10 +495,10 @@ export function SepaMandatesCard({
       key: "signed",
       header: "Unterschrieben",
       stacked: "field",
-      sortValue: (mandate) => mandate.signedOn,
+      sortValue: (mandate) => mandate.signedOn ?? "",
       render: (mandate) => (
         <span className="whitespace-nowrap tabular-nums">
-          {formatDate(mandate.signedOn)}
+          {mandate.signedOn ? formatDate(mandate.signedOn) : "–"}
         </span>
       ),
     },

@@ -46,7 +46,7 @@ func (f *seedCareTraeger) serve(t *testing.T) func(w seedHTTPResponseWriter, r *
 		case "POST /traeger/care-rules/":
 			var rule seedCareRule
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&rule))
-			rule.ID = int64(len(f.rules) + 1)
+			rule.ID = apiID(len(f.rules) + 1)
 			f.rules = append(f.rules, rule)
 			f.posted = append(f.posted, rule)
 			write(http.StatusCreated, map[string]any{"data": map[string]any{}})
@@ -68,7 +68,7 @@ func (f *seedCareTraeger) serve(t *testing.T) func(w seedHTTPResponseWriter, r *
 			contract := int64(body["contract_id"].(float64))
 			if ruleID, ok := body["rule_id"].(float64); ok {
 				for _, rule := range f.rules {
-					if rule.ID == int64(ruleID) && !slices.Contains(rule.SchoolIDs, f.contracts[contract]) {
+					if int64(rule.ID) == int64(ruleID) && !slices.Contains(rule.SchoolIDs, apiID(f.contracts[contract])) {
 						write(http.StatusBadRequest, map[string]any{"status": 400, "code": "parent_billing.care_evidence_invalid",
 							"detail": "rule_id: does not apply at the school of the contract."})
 						return
@@ -98,7 +98,7 @@ func TestSeedCareReductionsCoverALaterDemoSchoolOfTheTraeger(t *testing.T) {
 	const earlier, seeded = int64(10), int64(20)
 	var rules []seedCareRule
 	for _, kind := range []string{"income_level", "income_level", "sibling", "single_parent", "cap"} {
-		rules = append(rules, seedCareRule{ID: int64(len(rules) + 1), Kind: kind, SchoolIDs: []int64{earlier}})
+		rules = append(rules, seedCareRule{ID: apiID(len(rules) + 1), Kind: kind, SchoolIDs: []apiID{apiID(earlier)}})
 	}
 	traeger := &seedCareTraeger{
 		schools:   []int64{earlier, seeded},
@@ -117,7 +117,7 @@ func TestSeedCareReductionsCoverALaterDemoSchoolOfTheTraeger(t *testing.T) {
 	assert.Equal(t, 2, evidences)
 	require.Len(t, traeger.posted, len(seedCareRules))
 	for _, rule := range traeger.posted {
-		assert.Equal(t, []int64{seeded}, rule.SchoolIDs, "rule %s", rule.Kind)
+		assert.Equal(t, []apiID{apiID(seeded)}, rule.SchoolIDs, "rule %s", rule.Kind)
 	}
 	assert.Equal(t, "income_level", traeger.evidences[101][0]["kind"])
 	assert.Equal(t, "single_parent", traeger.evidences[102][0]["kind"])
@@ -143,7 +143,7 @@ func TestSeedCareReductionsKeepTheRulesForEverySchoolOfANewTraeger(t *testing.T)
 	assert.Equal(t, 1, evidences)
 	require.Len(t, traeger.posted, len(seedCareRules))
 	for _, rule := range traeger.posted {
-		assert.Equal(t, []int64{10, 20}, rule.SchoolIDs, "rule %s", rule.Kind)
+		assert.Equal(t, []apiID{10, 20}, rule.SchoolIDs, "rule %s", rule.Kind)
 	}
 	assert.Equal(t, "income_level", traeger.evidences[101][0]["kind"])
 }

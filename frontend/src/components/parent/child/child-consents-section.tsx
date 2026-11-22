@@ -23,14 +23,92 @@ import { parentKeys } from "~/lib/swr/parent-keys";
 import { formatBerlinDate } from "~/lib/date-helpers";
 import {
   getChildConsents,
+  getChildRoomHistoryStop,
   grantChildPhotoConsent,
+  resumeChildRoomHistory,
+  stopChildRoomHistory,
   withdrawChildPhotoConsent,
+  type ChildConsent,
   type ChildConsentState,
+  type ChildRoomHistoryStop,
 } from "~/lib/parent-api";
 import { confirmationsConcept } from "~/lib/concepts/confirmations";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
 
-type PhotoConsentAction = "withdraw" | "grant";
+// Foto-Einwilligung widerrufen/erneut geben, Raumverlauf und Stimmung
+// stoppen/wieder speichern (#3844).
+type ConsentAction = "withdraw" | "grant" | "stop" | "resume";
+
+const photoConsentCalls = {
+  withdraw: withdrawChildPhotoConsent,
+  grant: grantChildPhotoConsent,
+};
+const roomHistoryStopCalls = {
+  stop: stopChildRoomHistory,
+  resume: resumeChildRoomHistory,
+};
+
+// Die Zeile „Raumverlauf und Stimmung“ (#3844) kommt aus einer eigenen
+// Leseroute: wenn der Träger den Stopp für Eltern freigegeben hat oder das
+// Kind gestoppt ist.
+function roomHistoryRow(
+  stop: ChildRoomHistoryStop | undefined,
+): ChildConsent | null {
+  if (!stop?.offered) return null;
+  return {
+    key: "room_history",
+    state: stop.stopped ? "stopped" : "recording",
+    changed_at: stop.stopped_at,
+    can_withdraw: stop.can_change && !stop.stopped,
+    can_grant: stop.can_change && stop.stopped,
+  };
+}
+
+// Texte je Aktion: Dialog, Erfolg und Fehlerobjekt.
+const consentActionTexts: Record<
+  ConsentAction,
+  {
+    title: string;
+    body: string;
+    confirm: string;
+    loading: string;
+    success: string;
+    errorObject: string;
+  }
+> = {
+  withdraw: {
+    title: "confirmTitle",
+    body: "confirmBody",
+    confirm: "confirmButton",
+    loading: "withdrawing",
+    success: "success",
+    errorObject: "errorObjectPhoto",
+  },
+  grant: {
+    title: "grantConfirmTitle",
+    body: "grantConfirmBody",
+    confirm: "grantConfirmButton",
+    loading: "granting",
+    success: "grantSuccess",
+    errorObject: "errorObjectPhoto",
+  },
+  stop: {
+    title: "roomHistoryStopTitle",
+    body: "roomHistoryStopBody",
+    confirm: "roomHistoryStopButton",
+    loading: "roomHistoryStopping",
+    success: "roomHistoryStopSuccess",
+    errorObject: "errorObjectRoomHistory",
+  },
+  resume: {
+    title: "roomHistoryResumeTitle",
+    body: "roomHistoryResumeBody",
+    confirm: "roomHistoryResumeButton",
+    loading: "roomHistoryResuming",
+    success: "roomHistoryResumeSuccess",
+    errorObject: "errorObjectRoomHistory",
+  },
+};
 
 export function ChildConsentsSection({
   studentId,
@@ -42,22 +120,30 @@ export function ChildConsentsSection({
     () => getChildConsents(studentId),
     PARENT_RESOURCE_OPTIONS,
   );
+  const stopResource = useSWRAuth(
+    parentKeys.roomHistoryStop(studentId),
+    () => getChildRoomHistoryStop(studentId),
+    PARENT_RESOURCE_OPTIONS,
+  );
   const consents = resource.data ?? null;
-  const [pendingAction, setPendingAction] = useState<PhotoConsentAction | null>(
+  const [pendingAction, setPendingAction] = useState<ConsentAction | null>(
     null,
   );
   const [submittingAction, setSubmittingAction] = useState(false);
   const [successfulAction, setSuccessfulAction] =
-    useState<PhotoConsentAction | null>(null);
+    useState<ConsentAction | null>(null);
   // Der Fehler einer Änderung steht im offenen Dialog: ein Toast läge
   // unsichtbar unter ihm.
   const actionErrors = useApiFormError();
   const latestConfirmRef = useRef<() => void>(() => undefined);
 
+  // Nur die Einwilligungen tragen die Ladefehler-Anzeige. Scheitert das Lesen
+  // des Stopps, fehlt bloß dessen Zeile: Die Foto-Einwilligung bleibt
+  // sichtbar und änderbar, der nächste Abruf versucht es erneut.
   const { error: loadError, failure: loadFailed } = useSwrResourceLoadError(
     [resource],
     t("errorObjectList"),
-    () => resource.mutate(),
+    () => void resource.mutate(),
   );
 
   async function confirmAction() {
@@ -67,16 +153,18 @@ export function ChildConsentsSection({
     setSubmittingAction(true);
     actionErrors.clear();
     try {
-      const updatedConsents =
-        action === "grant"
-          ? await grantChildPhotoConsent(studentId)
-          : await withdrawChildPhotoConsent(studentId);
-      await resource.mutate(updatedConsents, { revalidate: false });
+      if (action === "stop" || action === "resume") {
+        const updatedStop = await roomHistoryStopCalls[action](studentId);
+        await stopResource.mutate(updatedStop, { revalidate: false });
+      } else {
+        const updatedConsents = await photoConsentCalls[action](studentId);
+        await resource.mutate(updatedConsents, { revalidate: false });
+      }
       setPendingAction(null);
       setSuccessfulAction(action);
     } catch (err) {
       void actionErrors.show(err, {
-        object: t("errorObjectPhoto"),
+        object: t(consentActionTexts[action].errorObject),
         retry: () => latestConfirmRef.current(),
       });
     } finally {
@@ -93,8 +181,11 @@ export function ChildConsentsSection({
   }
   if (loadFailed) return <LoadErrorAlert error={loadError} />;
 
-  const visibleConsents =
-    consents?.filter((consent) => consent.state !== "not_recorded") ?? [];
+  const roomHistory = roomHistoryRow(stopResource.data);
+  const visibleConsents = [
+    ...(consents?.filter((consent) => consent.state !== "not_recorded") ?? []),
+    ...(roomHistory ? [roomHistory] : []),
+  ];
   if (visibleConsents.length === 0) return null;
 
   const canChangePhotoConsent = visibleConsents.some(
@@ -115,6 +206,21 @@ export function ChildConsentsSection({
   } else if (photoGrantedElsewhere) {
     description = `${description} ${t("photoViaCareDescription")}`;
   }
+  // Raumverlauf und Stimmung (#3844): Der Hinweis zum Stoppen steht nur,
+  // solange Eltern hier stoppen können. Ein Stopp, den sie nicht aufheben
+  // können (fehlendes Recht oder vom Träger abgeschaltet), nennt, wer ihn
+  // aufhebt.
+  if (roomHistory?.can_withdraw) {
+    description = `${description} ${t("roomHistoryDescription")}`;
+  } else if (roomHistory?.state === "stopped" && !roomHistory.can_grant) {
+    description = `${description} ${t("roomHistoryViaCareDescription")}`;
+  }
+  const startAction = (action: ConsentAction) => {
+    actionErrors.clear();
+    setSuccessfulAction(null);
+    setPendingAction(action);
+  };
+  const pendingTexts = consentActionTexts[pendingAction ?? "withdraw"];
 
   return (
     <>
@@ -123,11 +229,11 @@ export function ChildConsentsSection({
         description={description}
         concept={confirmationsConcept}
       >
-        {successfulAction === "withdraw" ? (
-          <Alert type="success" message={t("success")} />
-        ) : null}
-        {successfulAction === "grant" ? (
-          <Alert type="success" message={t("grantSuccess")} />
+        {successfulAction ? (
+          <Alert
+            type="success"
+            message={t(consentActionTexts[successfulAction].success)}
+          />
         ) : null}
         <ul className="divide-y divide-gray-100">
           {visibleConsents.map((consent) => (
@@ -157,11 +263,7 @@ export function ChildConsentsSection({
                       className="mt-1"
                       aria-label={t("withdrawButton")}
                       tooltip={t("withdrawTooltip")}
-                      onClick={() => {
-                        actionErrors.clear();
-                        setSuccessfulAction(null);
-                        setPendingAction("withdraw");
-                      }}
+                      onClick={() => startAction("withdraw")}
                     >
                       {t("withdrawButtonShort")}
                     </Button>
@@ -178,13 +280,43 @@ export function ChildConsentsSection({
                       className="mt-1"
                       aria-label={t("grantButton")}
                       tooltip={t("grantTooltip")}
-                      onClick={() => {
-                        actionErrors.clear();
-                        setSuccessfulAction(null);
-                        setPendingAction("grant");
-                      }}
+                      onClick={() => startAction("grant")}
                     >
                       {t("grantButtonShort")}
+                    </Button>
+                  </div>
+                ) : null}
+                {consent.key === "room_history" &&
+                consent.state === "recording" &&
+                consent.can_withdraw ? (
+                  <div>
+                    <Button
+                      type="button"
+                      variant="ghost_danger"
+                      size="compact"
+                      className="mt-1"
+                      aria-label={t("roomHistoryStopAria")}
+                      tooltip={t("roomHistoryStopTooltip")}
+                      onClick={() => startAction("stop")}
+                    >
+                      {t("roomHistoryStopShort")}
+                    </Button>
+                  </div>
+                ) : null}
+                {consent.key === "room_history" &&
+                consent.state === "stopped" &&
+                consent.can_grant ? (
+                  <div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="compact"
+                      className="mt-1"
+                      aria-label={t("roomHistoryResumeAria")}
+                      tooltip={t("roomHistoryResumeTooltip")}
+                      onClick={() => startAction("resume")}
+                    >
+                      {t("roomHistoryResumeShort")}
                     </Button>
                   </div>
                 ) : null}
@@ -206,36 +338,30 @@ export function ChildConsentsSection({
           setPendingAction(null);
         }}
         onConfirm={() => void confirmAction()}
-        title={
-          pendingAction === "grant" ? t("grantConfirmTitle") : t("confirmTitle")
-        }
-        confirmText={
-          pendingAction === "grant"
-            ? t("grantConfirmButton")
-            : t("confirmButton")
-        }
+        title={t(pendingTexts.title)}
+        confirmText={t(pendingTexts.confirm)}
         cancelText={t("cancel")}
-        loadingText={
-          pendingAction === "grant" ? t("granting") : t("withdrawing")
-        }
+        loadingText={t(pendingTexts.loading)}
         isConfirmLoading={submittingAction}
         isDismissDisabled={submittingAction}
-        confirmVariant={pendingAction === "withdraw" ? "danger" : "primary"}
+        confirmVariant={
+          pendingAction === "withdraw" || pendingAction === "stop"
+            ? "danger"
+            : "primary"
+        }
         closeLabel={t("close")}
         backdropLabel={t("close")}
         mobileSheet
       >
         <FormErrorAlert message={actionErrors.error} className="mb-3" />
-        <p>
-          {pendingAction === "grant" ? t("grantConfirmBody") : t("confirmBody")}
-        </p>
+        <p>{t(pendingTexts.body)}</p>
       </ConfirmationModal>
     </>
   );
 }
 
 function stateTone(state: ChildConsentState): StatusBadgeTone {
-  if (state === "granted") return "green";
-  if (state === "withdrawn") return "orange";
+  if (state === "granted" || state === "recording") return "green";
+  if (state === "withdrawn" || state === "stopped") return "orange";
   return "gray";
 }

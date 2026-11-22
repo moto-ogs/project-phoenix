@@ -9,6 +9,8 @@ import {
 import { studentKeys } from "~/lib/swr/portal-keys";
 import { rooms as roomKeys } from "~/lib/swr/rooms";
 import { groups as groupKeys } from "~/lib/swr/groups";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import {
   HANDOVER_ABSENT_WORDING,
   handoverDetail,
@@ -215,6 +217,8 @@ import { childrenConcept } from "~/lib/concepts/children";
 
 const EMPTY_STRING_ARRAY: string[] = [];
 const EMPTY_STUDENT_ARRAY: Student[] = [];
+const NO_GROUPS: Group[] = [];
+const NO_ROOMS: Room[] = [];
 
 type StatusFilter =
   | "all"
@@ -390,8 +394,8 @@ function readFilterParam(
 const STUDENT_SEARCH_FILTER_STORAGE_PREFIX = "student-search:last-filters";
 // This view shows every match at once — it has no pagination control, and the
 // grouping modes, the counts and the export selection all read the rendered
-// list. The proxy route caps a response at 1000 rows
-// (app/api/students/route.ts), so a selection larger than one page has to be
+// list. The backend caps a page of the child list at 1000 rows
+// (studentListMaxPageSize), so a selection larger than one page has to be
 // walked here; otherwise every child past the first page is unreachable
 // (#2218 review). The bound stops a bad total from looping forever: 20 pages
 // are 20.000 Kinder, far beyond any OGS, and hitting it is logged rather than
@@ -1553,19 +1557,38 @@ function SearchPageContent() {
   } = useStudentPhotosEnabled();
 
   // Fetch groups with SWR (immutable - only fetched once)
-  const { data: groups = [] } = useImmutableSWR<Group[]>(
-    groupKeys.key(),
-    groupKeys.fetcher,
+  const {
+    data: loadedGroups,
+    error: groupsError,
+    mutate: reloadGroups,
+  } = useImmutableSWR<Group[]>(groupKeys.key(), groupKeys.fetcher);
+  const groups = loadedGroups ?? NO_GROUPS;
+  const {
+    data: loadedRooms,
+    error: roomsError,
+    mutate: reloadRooms,
+  } = useSWRAuth<Room[]>(roomKeys.key({ page: 1, pageSize: 1000 }), () =>
+    roomKeys.fetcher({ page: 1, pageSize: 1000 }),
   );
-  const { data: rooms = [] } = useSWRAuth<Room[]>(
-    roomKeys.key({ page: 1, pageSize: 1000 }),
-    () => roomKeys.fetcher({ page: 1, pageSize: 1000 }),
-  );
+  const rooms = loadedRooms ?? NO_ROOMS;
 
-  const { data: schoolClassOptionsData } = useSWRAuth<unknown>(
-    studentKeys.schoolClasses(),
-    fetchSchoolClasses,
-    { revalidateOnFocus: false },
+  const {
+    data: schoolClassOptionsData,
+    error: schoolClassesError,
+    mutate: reloadSchoolClasses,
+  } = useSWRAuth<unknown>(studentKeys.schoolClasses(), fetchSchoolClasses, {
+    revalidateOnFocus: false,
+  });
+  // Ohne Gruppen, Räume oder Klassen fehlten Filter und Raumnamen, als gäbe
+  // es sie nicht (#2353): ein Fehler steht über der Liste.
+  const filterOptionsLoad = useSwrResourceLoadError(
+    [
+      { data: loadedGroups, error: groupsError },
+      { data: loadedRooms, error: roomsError },
+      { data: schoolClassOptionsData, error: schoolClassesError },
+    ],
+    "die Filterauswahl",
+    () => Promise.all([reloadGroups(), reloadRooms(), reloadSchoolClasses()]),
   );
   const schoolClassOptions = useMemo(
     () =>
@@ -3603,6 +3626,7 @@ function SearchPageContent() {
           <ForbiddenPage embedded message={load.error.message} />
         ) : null}
         <div hidden={isPermissionError}>
+          <LoadErrorAlert error={filterOptionsLoad.error} className="mb-3" />
           {/* Planning-date context banner (#1939). The day chooser itself lives in
           the filter panel, in the "Anwesenheit" section right above the
           Kommt/Kommt-nicht filter it scopes. This banner only appears for a

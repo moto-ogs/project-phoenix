@@ -77,9 +77,15 @@ func newPlanSyncEnv(t *testing.T, cascadeBroadcaster realtime.Broadcaster, now f
 		Rooms:           owners.NewTimetableRoomNames(rooms.Facilities),
 		ActivityGroups:  repos.GroupReads(),
 		DB:              db,
-		Broadcaster:     realtimeHub,
-		Logger:          logger,
-		Today:           today,
+		// The Workforce capability runs on the real clock, so its shift writes
+		// lock no staff row on the fixtures' days, which lie before today; the
+		// suites drive the cascade without LockSickReportWrite, which takes those
+		// rows in production. A batch lock on the pinned planning day would take
+		// rows the writes never take, so this composition binds none.
+		LockStaffAssignments: func(context.Context, []int64) error { return nil },
+		Broadcaster:          realtimeHub,
+		Logger:               logger,
+		Today:                today,
 	})
 	require.NoError(t, err)
 	// planExport is nil: no suite here renders the printable plan.

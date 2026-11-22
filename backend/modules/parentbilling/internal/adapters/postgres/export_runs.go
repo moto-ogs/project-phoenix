@@ -12,6 +12,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The released runs of a Träger as the finance exports read them (#4693):
@@ -54,8 +55,8 @@ func lastFile(run parentbilling.ExportRun, format string, id, number *int64, nam
 	if id == nil || number == nil || at == nil {
 		return nil
 	}
-	entry := &parentbilling.ExportProtocolEntry{ID: *id, FileNumber: *number, Format: format, RunKind: run.RunKind, RunID: run.RunID,
-		RunLabel: run.Label, FileName: textOf(name), Fingerprint: textOf(sha), ExportedBy: account, ExportedAt: *at}
+	entry := &parentbilling.ExportProtocolEntry{ID: ident.ID(*id), FileNumber: *number, Format: format, RunKind: run.RunKind, RunID: run.RunID,
+		RunLabel: run.Label, FileName: textOf(name), Fingerprint: textOf(sha), ExportedBy: (*ident.ID)(account), ExportedAt: *at}
 	if count != nil {
 		entry.InvoiceCount = *count
 	}
@@ -66,7 +67,7 @@ func lastFile(run parentbilling.ExportRun, format string, id, number *int64, nam
 }
 
 func (r exportRunRow) run() parentbilling.ExportRun {
-	run := parentbilling.ExportRun{RunKind: r.RunKind, RunID: r.RunID, IssuedOn: r.IssuedOn, InvoiceCount: r.InvoiceCount,
+	run := parentbilling.ExportRun{RunKind: r.RunKind, RunID: ident.ID(r.RunID), IssuedOn: r.IssuedOn, InvoiceCount: r.InvoiceCount,
 		TotalCents: r.TotalCents, Exports: r.Exports,
 		Label: parentbilling.ExportRunLabel(r.RunKind, r.CareMonth, nil, textOf(r.PeriodName))}
 	run.LastSollstellung = lastFile(run, parentbilling.ExportFormatSollstellung, r.LastID, r.LastNumber, r.LastName, r.LastSHA,

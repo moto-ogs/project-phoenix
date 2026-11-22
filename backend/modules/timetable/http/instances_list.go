@@ -30,6 +30,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // maxInstanceListRangeDays caps the /instances list window. 56 days = 8 weeks
@@ -41,23 +42,23 @@ const maxInstanceListRangeDays = 56
 // instance. Names are intentionally omitted at the list level to keep the
 // payload compact; the slide-over detail view fetches them on demand.
 type instanceStaffSummary struct {
-	StaffID       int64   `json:"staff_id"`
-	IsPrimary     bool    `json:"is_primary"`
-	IsAbsent      bool    `json:"is_absent"`
-	IsSubstitute  bool    `json:"is_substitute"`
-	IsSickAbsence bool    `json:"is_sick_absence"`
-	AbsenceReason *string `json:"absence_reason,omitempty"`
+	StaffID       common.ID `json:"staff_id"`
+	IsPrimary     bool      `json:"is_primary"`
+	IsAbsent      bool      `json:"is_absent"`
+	IsSubstitute  bool      `json:"is_substitute"`
+	IsSickAbsence bool      `json:"is_sick_absence"`
+	AbsenceReason *string   `json:"absence_reason,omitempty"`
 }
 
 // instanceStudentSummary carries the editable attendance state for one child.
 // The legacy student_ids array stays in the payload for older clients, but new
 // planner UI should use Students so it can group expected/present/absent rows.
 type instanceStudentSummary struct {
-	StudentID   int64   `json:"student_id"`
-	Status      string  `json:"status"`
-	Substatus   *string `json:"substatus,omitempty"`
-	Note        *string `json:"note,omitempty"`
-	CheckedInAt *string `json:"checked_in_at,omitempty"`
+	StudentID   common.ID `json:"student_id"`
+	Status      string    `json:"status"`
+	Substatus   *string   `json:"substatus,omitempty"`
+	Note        *string   `json:"note,omitempty"`
+	CheckedInAt *string   `json:"checked_in_at,omitempty"`
 	// CareDayStatus is the same per-child care-day verdict the active-
 	// supervision roster carries: "scheduled" | "not_scheduled" | "cancelled"
 	// | "unknown" (#1747). The counts below exclude the non-expected ones, so
@@ -83,33 +84,33 @@ type instanceStudentSummary struct {
 type enrichedInstance struct {
 	// EnrichWarning is set only when a committed create could not be re-read
 	// with its enrichment; the enriched fields are empty then.
-	EnrichWarning          string  `json:"enrich_warning,omitempty"`
-	ID                     int64   `json:"id"`
-	Date                   string  `json:"date"`
-	StartTime              string  `json:"start_time"`
-	EndTime                string  `json:"end_time"`
-	Title                  string  `json:"title"`
-	Description            *string `json:"description,omitempty"`
-	Notes                  *string `json:"notes,omitempty"`
-	SeriesNotes            *string `json:"series_notes,omitempty"`
-	Status                 string  `json:"status"`
-	IsSpontaneous          bool    `json:"is_spontaneous"`
-	IsLive                 bool    `json:"is_live"`
-	ActivityGroupID        *int64  `json:"activity_group_id,omitempty"`
-	CalendarPeriodID       *int64  `json:"calendar_period_id,omitempty"`
-	ListKind               *string `json:"list_kind,omitempty"`
-	ActivityType           string  `json:"activity_type"`
-	PlanningTrackID        *int64  `json:"planning_track_id,omitempty"`
-	PlanningTrackName      string  `json:"planning_track_name,omitempty"`
-	PlanningTrackColor     string  `json:"planning_track_color,omitempty"`
-	PlanningTrackSortOrder *int    `json:"planning_track_sort_order,omitempty"`
-	RoomID                 int64   `json:"room_id"`
-	RoomName               string  `json:"room_name"`
+	EnrichWarning          string     `json:"enrich_warning,omitempty"`
+	ID                     common.ID  `json:"id"`
+	Date                   string     `json:"date"`
+	StartTime              string     `json:"start_time"`
+	EndTime                string     `json:"end_time"`
+	Title                  string     `json:"title"`
+	Description            *string    `json:"description,omitempty"`
+	Notes                  *string    `json:"notes,omitempty"`
+	SeriesNotes            *string    `json:"series_notes,omitempty"`
+	Status                 string     `json:"status"`
+	IsSpontaneous          bool       `json:"is_spontaneous"`
+	IsLive                 bool       `json:"is_live"`
+	ActivityGroupID        *common.ID `json:"activity_group_id,omitempty"`
+	CalendarPeriodID       *common.ID `json:"calendar_period_id,omitempty"`
+	ListKind               *string    `json:"list_kind,omitempty"`
+	ActivityType           string     `json:"activity_type"`
+	PlanningTrackID        *common.ID `json:"planning_track_id,omitempty"`
+	PlanningTrackName      string     `json:"planning_track_name,omitempty"`
+	PlanningTrackColor     string     `json:"planning_track_color,omitempty"`
+	PlanningTrackSortOrder *int       `json:"planning_track_sort_order,omitempty"`
+	RoomID                 common.ID  `json:"room_id"`
+	RoomName               string     `json:"room_name"`
 	// GroupName is the education group the block's template targets, as the
 	// Tagesplan shows it (#3817); empty without a template group.
 	GroupName             string                   `json:"group_name,omitempty"`
 	Staff                 []instanceStaffSummary   `json:"staff"`
-	StudentIDs            []int64                  `json:"student_ids"`
+	StudentIDs            []common.ID              `json:"student_ids"`
 	Students              []instanceStudentSummary `json:"students"`
 	StaffCount            int                      `json:"staff_count"`
 	AbsentStaffCount      int                      `json:"absent_staff_count"`
@@ -342,7 +343,7 @@ func (rs *Resource) blockSelection(ctx context.Context, filter timetable.BlockFi
 	}
 	ids := make([]int64, 0, len(instances))
 	for _, inst := range instances {
-		ids = append(ids, inst.ID)
+		ids = append(ids, inst.ID.Int64())
 	}
 	groups, err := rs.BlockGroups.BlockEducationGroups(ctx, ids)
 	if err != nil {
@@ -370,7 +371,7 @@ func keepMatchingInstances(enriched []enrichedInstance, matches []bool) []enrich
 // applyWindowConflicts attaches each instance's window conflicts.
 func applyWindowConflicts(enriched []enrichedInstance, conflictsByInstance map[int64][]timetable.InstanceConflictWarning) {
 	for i := range enriched {
-		if warnings, ok := conflictsByInstance[enriched[i].ID]; ok {
+		if warnings, ok := conflictsByInstance[enriched[i].ID.Int64()]; ok {
 			enriched[i].ConflictWarnings = warnings
 		}
 	}
@@ -402,11 +403,11 @@ func (rs *Resource) enrichWrittenInstance(ctx context.Context, instanceID int64)
 	if err != nil {
 		return enrichedInstance{}, fmt.Errorf("load instance rows: %w", err)
 	}
-	metadata, err := rs.TimetableData.BlockDisplayMetadata(ctx, []int64{inst.ID})
+	metadata, err := rs.TimetableData.BlockDisplayMetadata(ctx, []int64{inst.ID.Int64()})
 	if err != nil {
 		return enrichedInstance{}, fmt.Errorf("load block display metadata: %w", err)
 	}
-	enriched, _, _, err := rs.enrichInstance(ctx, inst, rows, metadata[inst.ID], make(map[int64]timetable.EmptyOfferingRosterExplainer), rs.childrenPerStaffRatio(ctx), careDays)
+	enriched, _, _, err := rs.enrichInstance(ctx, inst, rows, metadata[inst.ID.Int64()], make(map[int64]timetable.EmptyOfferingRosterExplainer), rs.childrenPerStaffRatio(ctx), careDays)
 	if err != nil {
 		return enrichedInstance{}, err
 	}
@@ -431,7 +432,7 @@ func (rs *Resource) enrichInstances(
 	}
 	instanceIDs := make([]int64, 0, len(instances))
 	for _, inst := range instances {
-		instanceIDs = append(instanceIDs, inst.ID)
+		instanceIDs = append(instanceIDs, inst.ID.Int64())
 	}
 	metadata, err := rs.TimetableData.BlockDisplayMetadata(ctx, instanceIDs)
 	if err != nil {
@@ -445,14 +446,14 @@ func (rs *Resource) enrichInstances(
 		matches = make([]bool, 0, len(instances))
 	}
 	for _, inst := range instances {
-		item, staffRows, studentRows, err := rs.enrichInstance(ctx, inst, rows, metadata[inst.ID], offeringSourceCache, childrenPerStaffRatio, careDays)
+		item, staffRows, studentRows, err := rs.enrichInstance(ctx, inst, rows, metadata[inst.ID.Int64()], offeringSourceCache, childrenPerStaffRatio, careDays)
 		if err != nil {
 			return nil, nil, nil, err
 		}
 		enriched = append(enriched, item)
 		conflictInputs = append(conflictInputs, windowConflictBlock(inst, staffRows, studentRows))
 		if matches != nil {
-			matches = append(matches, selection.filter.Matches(inst.RoomID, staffRows, selection.groups[inst.ID]))
+			matches = append(matches, selection.filter.Matches(inst.RoomID.Int64(), staffRows, selection.groups[inst.ID.Int64()]))
 		}
 	}
 	return enriched, conflictInputs, matches, nil
@@ -462,12 +463,12 @@ func (rs *Resource) enrichInstances(
 // the Timetable owner's window conflict detection (#2139).
 func windowConflictBlock(inst timetable.ScheduledInstance, staffRows []timetable.InstanceStaff, studentRows []timetable.ScheduledParticipant) timetable.WindowConflictBlock {
 	block := timetable.WindowConflictBlock{
-		InstanceID: inst.ID,
+		InstanceID: inst.ID.Int64(),
 		Date:       inst.Date,
 		Title:      inst.Title,
 		StartTime:  inst.StartTime,
 		EndTime:    inst.EndTime,
-		RoomID:     inst.RoomID,
+		RoomID:     inst.RoomID.Int64(),
 		Status:     inst.Status,
 		Staff:      make([]timetable.WindowConflictStaff, 0, len(staffRows)),
 		Students:   make([]timetable.WindowConflictStudent, 0, len(studentRows)),
@@ -504,10 +505,10 @@ func (rs *Resource) enrichInstance(
 	childrenPerStaffRatio int,
 	careDays map[int64]map[calendar.Date]careplan.CareDayStatus,
 ) (enrichedInstance, []timetable.InstanceStaff, []timetable.ScheduledParticipant, error) {
-	staffRows := rows.Staff[inst.ID]
+	staffRows := rows.Staff[inst.ID.Int64()]
 	staff, absentCount := summarizeInstanceStaff(staffRows)
 
-	studentRows := rows.Participants[inst.ID]
+	studentRows := rows.Participants[inst.ID.Int64()]
 	attendance := summarizeInstanceStudents(inst, studentRows, careDays, rows.Cutoffs[inst.Date])
 
 	availability, err := rs.completionAvailability(ctx, inst)
@@ -516,7 +517,7 @@ func (rs *Resource) enrichInstance(
 	}
 
 	item := enrichedInstance{
-		ID:                     inst.ID,
+		ID:                     ident.ID(inst.ID),
 		Date:                   inst.Date.Format(dateLayout),
 		StartTime:              inst.StartTime.Format("15:04"),
 		EndTime:                inst.EndTime.Format("15:04"),
@@ -527,19 +528,19 @@ func (rs *Resource) enrichInstance(
 		Status:                 inst.Status,
 		IsSpontaneous:          inst.IsSpontaneous,
 		IsLive:                 inst.Status == timetable.InstanceStatusActive && inst.ActiveGroupID != nil,
-		ActivityGroupID:        inst.ActivityGroupID,
-		CalendarPeriodID:       inst.CalendarPeriodID,
+		ActivityGroupID:        (*ident.ID)(inst.ActivityGroupID),
+		CalendarPeriodID:       (*ident.ID)(inst.CalendarPeriodID),
 		ListKind:               inst.ListKind,
 		ActivityType:           metadata.ActivityType,
-		PlanningTrackID:        metadata.PlanningTrackID,
+		PlanningTrackID:        (*ident.ID)(metadata.PlanningTrackID),
 		PlanningTrackName:      metadata.PlanningTrackName,
 		PlanningTrackColor:     metadata.PlanningTrackColor,
 		PlanningTrackSortOrder: metadata.PlanningTrackSortOrder,
-		RoomID:                 inst.RoomID,
+		RoomID:                 ident.ID(inst.RoomID),
 		RoomName:               metadata.RoomName,
 		GroupName:              metadata.GroupName,
 		Staff:                  staff,
-		StudentIDs:             attendance.studentIDs,
+		StudentIDs:             ident.IDs(attendance.studentIDs),
 		Students:               attendance.students,
 		StaffCount:             len(staffRows),
 		AbsentStaffCount:       absentCount,
@@ -601,7 +602,7 @@ func (rs *Resource) dayConflictWarningsFor(
 	dayInstances, err := rs.TimetableData.ListScheduledInstances(ctx, inst.Date, inst.Date)
 	if err != nil {
 		rs.getLogger().Warn("day conflict detection: load day instances failed",
-			slog.Int64("instance_id", inst.ID),
+			slog.Int64("instance_id", inst.ID.Int64()),
 			slog.String("date", inst.Date.String()),
 			slog.String("error", err.Error()),
 		)
@@ -610,16 +611,16 @@ func (rs *Resource) dayConflictWarningsFor(
 	rows, err := rs.TimetableData.ListScheduledInstanceRows(ctx, dayInstances)
 	if err != nil {
 		rs.getLogger().Warn("day conflict detection: load instance rows failed",
-			slog.Int64("instance_id", inst.ID),
+			slog.Int64("instance_id", inst.ID.Int64()),
 			slog.String("error", err.Error()),
 		)
 		return empty
 	}
 	inputs := make([]timetable.WindowConflictBlock, 0, len(dayInstances))
 	for _, dayInst := range dayInstances {
-		inputs = append(inputs, windowConflictBlock(dayInst, rows.Staff[dayInst.ID], rows.Participants[dayInst.ID]))
+		inputs = append(inputs, windowConflictBlock(dayInst, rows.Staff[dayInst.ID.Int64()], rows.Participants[dayInst.ID.Int64()]))
 	}
-	if warnings, ok := rs.ConflictDetection.DetectWindowConflicts(inputs)[inst.ID]; ok {
+	if warnings, ok := rs.ConflictDetection.DetectWindowConflicts(inputs)[inst.ID.Int64()]; ok {
 		return warnings
 	}
 	return empty
@@ -637,15 +638,15 @@ func (rs *Resource) resolveEmptyRosterReason(
 	}
 	periodKey := int64(0)
 	if inst.CalendarPeriodID != nil {
-		periodKey = *inst.CalendarPeriodID
+		periodKey = (*inst.CalendarPeriodID).Int64()
 	}
 	explain, cached := cache[periodKey]
 	if !cached {
 		var err error
-		explain, err = rs.OfferingSourceOptions.EmptyRosterExplainer(ctx, inst.CalendarPeriodID)
+		explain, err = rs.OfferingSourceOptions.EmptyRosterExplainer(ctx, (*int64)(inst.CalendarPeriodID))
 		if err != nil {
 			rs.getLogger().Warn("instance list: offering-source explanation failed",
-				slog.Int64("instance_id", inst.ID),
+				slog.Int64("instance_id", inst.ID.Int64()),
 				slog.String("error", err.Error()),
 			)
 			return nil

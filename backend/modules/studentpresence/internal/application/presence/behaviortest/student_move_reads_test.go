@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	activeService "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence"
 	presenceevents "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence/behaviortest"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -76,12 +77,12 @@ func TestBulkMoveReadsGuardsOnce(t *testing.T) {
 					result, err := svc.MoveStudentsToActiveGroupAuthorized(ctx, cohort.request, target.ID, activeSvcBypassAuth)
 					counter.Stop()
 					require.NoError(t, err)
-					assert.Equal(t, interleave(cohort.moving, cohort.transit), result.Moved)
-					assert.Equal(t, cohort.unchanged, result.Unchanged)
+					assert.Equal(t, ident.IDs(interleave(cohort.moving, cohort.transit)), result.Moved)
+					assert.Equal(t, ident.IDs(cohort.unchanged), result.Unchanged)
 					skipped := make([]int64, 0, len(result.Skipped))
 					for _, s := range result.Skipped {
 						assert.Equal(t, activeService.StudentMoveSkipNotPresent, s.Reason)
-						skipped = append(skipped, s.StudentID)
+						skipped = append(skipped, s.StudentID.Int64())
 					}
 					assert.Equal(t, cohort.absent, skipped)
 					for _, id := range cohort.moving {
@@ -91,7 +92,7 @@ func TestBulkMoveReadsGuardsOnce(t *testing.T) {
 					result, err := svc.AssignTransitStudentsToActiveGroup(ctx, cohort.request, target.ID)
 					counter.Stop()
 					require.NoError(t, err)
-					assert.Equal(t, cohort.transit, result.Assigned)
+					assert.Equal(t, ident.IDs(cohort.transit), result.Assigned)
 					assert.Len(t, result.Skipped, 3*size)
 				}
 				t.Logf("%s N%d: %d statements", operation, size, counter.Total())

@@ -3,11 +3,13 @@ package identityaccess
 import (
 	"context"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // AccountMetadata is display information, without credentials or ORM behavior.
 type AccountMetadata struct {
-	ID            int64
+	ID            ident.ID
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 	Email         string

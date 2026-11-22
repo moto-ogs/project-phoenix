@@ -478,12 +478,11 @@ export default function TraegerDailyAttendancePage() {
         title="Das Land legt das Format noch fest"
         message="Bis dahin enthält die Datei je Kind und Tag: Einrichtung, Ort, Datum, laufende Nummer, Status, Ankunft, Abholung und Minuten. Sie enthält keine Namen."
       />
+      {/* A state, no X (#7704): it ends with the next valid range. */}
       {clamped ? (
         <Alert
           type="warning"
           message={`Ein Zeitraum hat höchstens ${DAILY_ATTENDANCE_MAX_DAYS} Tage. moto zeigt die ${DAILY_ATTENDANCE_MAX_DAYS} Tage bis zum gewählten Ende.`}
-          onDismiss={() => setClamped(false)}
-          dismissLabel="Hinweis schließen"
         />
       ) : null}
       <Figures summary={summary} loading={loading} />

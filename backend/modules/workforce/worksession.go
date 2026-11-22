@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Work session statuses and channels.
@@ -132,9 +134,9 @@ type WorkSessionFilter struct {
 
 // WorkSessionBreak is one break period inside a work block.
 type WorkSessionBreak struct {
-	ID              int64      `json:"id,string"`
-	TenantID        int64      `json:"tenant_id,string"`
-	SessionID       int64      `json:"session_id,string"`
+	ID              ident.ID   `json:"id"`
+	TenantID        ident.ID   `json:"tenant_id"`
+	SessionID       ident.ID   `json:"session_id"`
 	StartedAt       time.Time  `json:"started_at"`
 	EndedAt         *time.Time `json:"ended_at,omitempty"`
 	DurationMinutes int        `json:"duration_minutes"`
@@ -159,14 +161,14 @@ type WorkSessionBreakFilter struct {
 // StaffBalanceAdjustment is one Stundenkonto correction transaction (#1420).
 // EffectiveDate is a calendar day in DateLayout; MinutesDelta is signed.
 type StaffBalanceAdjustment struct {
-	ID            int64     `json:"id"`
-	TenantID      int64     `json:"tenant_id"`
-	StaffID       int64     `json:"staff_id"`
+	ID            ident.ID  `json:"id"`
+	TenantID      ident.ID  `json:"tenant_id"`
+	StaffID       ident.ID  `json:"staff_id"`
 	Type          string    `json:"type"`
 	MinutesDelta  int       `json:"minutes_delta"`
 	EffectiveDate string    `json:"effective_date"`
 	Note          string    `json:"note"`
-	DecidedBy     int64     `json:"decided_by"`
+	DecidedBy     ident.ID  `json:"decided_by"`
 	DecidedAt     time.Time `json:"decided_at"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
@@ -187,15 +189,15 @@ type StaffBalanceAdjustmentFilter struct {
 // StaffVacationOpening records the vacation days a staff member had already
 // taken before the moto introduction (#2132), per calendar year.
 type StaffVacationOpening struct {
-	ID                   int64     `json:"id"`
-	TenantID             int64     `json:"tenant_id"`
-	StaffID              int64     `json:"staff_id"`
+	ID                   ident.ID  `json:"id"`
+	TenantID             ident.ID  `json:"tenant_id"`
+	StaffID              ident.ID  `json:"staff_id"`
 	Year                 int       `json:"year"`
 	EffectiveDate        string    `json:"effective_date"`
 	TakenBeforeDays      float64   `json:"taken_before_days"`
 	EnteredRemainingDays float64   `json:"entered_remaining_days"`
 	Note                 string    `json:"note"`
-	DecidedBy            int64     `json:"decided_by"`
+	DecidedBy            ident.ID  `json:"decided_by"`
 	DecidedAt            time.Time `json:"decided_at"`
 	CreatedAt            time.Time `json:"created_at"`
 	UpdatedAt            time.Time `json:"updated_at"`

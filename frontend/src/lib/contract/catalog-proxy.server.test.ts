@@ -24,17 +24,18 @@ let sessionReads = 0;
 type Handler = (...args: unknown[]) => Promise<unknown>;
 
 // Stands for the portal's handlers: each reads the session, then runs the
-// handler with the session's token. makePortalHandlers has its own tests;
-// here each request records the options its handler was built with.
+// handler with the session's token and hands a Response on as it is.
+// makePortalHandlers has its own tests; here each request records the
+// options its handler was built with.
 let usedOptions: unknown;
+const answered = (result: unknown) =>
+  result instanceof Response ? result : Response.json({ data: result });
 const noBody =
   (handler: Handler, options?: unknown) =>
   async (request: NextRequest, context: { params: Promise<unknown> }) => {
     sessionReads++;
     usedOptions = options;
-    return Response.json({
-      data: await handler(request, "token", await context.params),
-    });
+    return answered(await handler(request, "token", await context.params));
   };
 const withBody =
   (handler: Handler, options?: unknown) =>
@@ -44,9 +45,9 @@ const withBody =
     // Like parseRequestBody: an empty body reads as {}.
     const text = await request.text();
     const body: unknown = text ? JSON.parse(text) : {};
-    return Response.json({
-      data: await handler(request, body, "token", await context.params),
-    });
+    return answered(
+      await handler(request, body, "token", await context.params),
+    );
   };
 const portal = {
   get: noBody,
@@ -169,9 +170,15 @@ describe("makeCatalogProxy", () => {
     api.mockResolvedValueOnce({
       status: "success",
       data: { name: "Ada", more: 1 },
+      message: "found",
     });
     const response = await call("GET", ["rows", "a/b"], "?day=2026-09-09");
-    expect(await data(response)).toEqual({ name: "Ada" });
+    // The backend's envelope with the decoded data and its message (#2353).
+    expect(await response.json()).toEqual({
+      status: "success",
+      data: { name: "Ada" },
+      message: "found",
+    });
     // The segment is encoded again, and this route registers no query.
     expect(api).toHaveBeenCalledExactlyOnceWith(
       "GET",
@@ -197,11 +204,10 @@ describe("makeCatalogProxy", () => {
         pagination,
       });
       const response = await call("GET", ["pages"], "?view=names&page=2");
-      // The names variant drops what it does not declare; the portal's
-      // handler passes this envelope through as it is.
-      expect(await data(response)).toEqual({
-        success: true,
-        message: "Success",
+      // The names variant drops what it does not declare; the backend's
+      // envelope passes on with its page.
+      expect(await response.json()).toEqual({
+        status: "success",
         data: [{ name: "Ada" }],
         pagination,
       });
@@ -226,8 +232,9 @@ describe("makeCatalogProxy", () => {
         pagination,
       });
       const response = await call("GET", ["pages"], "?view=other");
-      expect(await data(response)).toMatchObject({
+      expect(await response.json()).toMatchObject({
         data: [{ name: "Ada", age: 7 }],
+        pagination,
       });
     });
   });

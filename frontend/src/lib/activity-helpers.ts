@@ -1,36 +1,13 @@
 // lib/activity-helpers.ts
 // Type definitions and helper functions for activities
 
-import { normalizeLocation } from "./location-helper";
-
 import type {
   ActivityCategoryResponse,
   ActivityResponse,
   ActivityScheduleResponse,
   ActivitySupervisorResponse,
+  EnrolledStudentResponse,
 } from "./contract/activities.generated";
-
-// Actual backend structure for enrolled students from /api/activities/{id}/students
-// Backend returns a simplified StudentResponse with id, first_name, last_name
-export interface BackendStudentEnrollment {
-  id: number; // This is the student ID
-  student_id?: number; // Backend doesn't actually return this field
-  activity_group_id?: number;
-  enrollment_date?: string;
-  attendance_status?: string;
-  created_at?: string;
-  updated_at?: string;
-  // Direct person fields (backend processed)
-  first_name?: string;
-  last_name?: string;
-  school_class?: string;
-  current_location?: string | null;
-  // Fallback: Flattened fields in case backend changes
-  student__school_class?: string;
-  student__current_location?: string | null;
-  person__first_name?: string;
-  person__last_name?: string;
-}
 
 // Frontend supervisor type
 export interface ActivitySupervisor {
@@ -58,7 +35,6 @@ export interface Activity {
   updated_at: Date;
   participant_count?: number;
   times?: ActivitySchedule[];
-  students?: ActivityStudent[];
 }
 
 export interface ActivityCategory {
@@ -97,15 +73,10 @@ interface ActivitySchedule {
   updated_at: Date;
 }
 
-export interface ActivityStudent {
+/** A student enrolled in an activity, as the activity's roster lists them. */
+export interface ActivityParticipant {
   id: string;
-  activity_id: string;
-  student_id: string;
-  name?: string;
-  school_class?: string;
-  current_location: string;
-  created_at: Date;
-  updated_at: Date;
+  name: string;
 }
 
 /** A staff member offered as an activity supervisor. */
@@ -243,7 +214,6 @@ export function mapActivityResponse(
     updated_at: new Date(backendActivity.updated_at),
     participant_count: backendActivity.enrollment_count ?? 0,
     times: backendActivity.schedules?.map(mapScheduleToTime) ?? [],
-    students: [],
     planned_room_id: backendActivity.planned_room_id
       ? String(backendActivity.planned_room_id)
       : undefined,
@@ -272,44 +242,14 @@ export function mapActivityCategoryResponse(
   };
 }
 
-// Map enrolled students from backend enrollment structure
-export function mapStudentEnrollmentResponse(
-  enrollment: BackendStudentEnrollment,
-): ActivityStudent {
-  // Handle both direct and flattened person fields
-  const firstName =
-    enrollment.first_name ?? enrollment.person__first_name ?? "";
-  const lastName = enrollment.last_name ?? enrollment.person__last_name ?? "";
-  const fullName = `${firstName} ${lastName}`.trim() || "Unnamed Student";
-  const current_location = normalizeLocation(
-    enrollment.current_location ?? enrollment.student__current_location,
-  );
-
+/** The view of one enrolled student of GET /api/activities/{id}/students. */
+export function mapEnrolledStudentResponse(
+  student: EnrolledStudentResponse,
+): ActivityParticipant {
   return {
-    id: String(enrollment.id),
-    activity_id: enrollment.activity_group_id
-      ? String(enrollment.activity_group_id)
-      : "",
-    // Backend returns 'id' as the student ID, not 'student_id'
-    student_id: String(enrollment.id),
-    name: fullName,
-    school_class:
-      enrollment.school_class ?? enrollment.student__school_class ?? "",
-    current_location,
-    created_at: enrollment.created_at
-      ? new Date(enrollment.created_at)
-      : new Date(),
-    updated_at: enrollment.updated_at
-      ? new Date(enrollment.updated_at)
-      : new Date(),
+    id: student.id,
+    name: `${student.first_name} ${student.last_name}`.trim(),
   };
-}
-
-// Map an array of enrolled students
-export function mapStudentEnrollmentsResponse(
-  enrollments: BackendStudentEnrollment[],
-): ActivityStudent[] {
-  return enrollments.map(mapStudentEnrollmentResponse);
 }
 
 // Check if a user (staff member) is the creator of an activity

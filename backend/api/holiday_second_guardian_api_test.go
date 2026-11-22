@@ -63,9 +63,9 @@ func TestHolidayRegistrationSecondGuardianStaysOptional(t *testing.T) {
 		rec := publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken), body)
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		id := decodeSchoolPortalData[struct {
-			ID int64 `json:"id"`
+			ID wireID `json:"id"`
 		}](t, rec.Body.Bytes()).ID
-		rec = traegerJSON(t, f.traeger, office.token, http.MethodGet, fmt.Sprintf("%s/registrations/%d", holidayPeriodPath(period.ID), id), nil)
+		rec = traegerJSON(t, f.traeger, office.token, http.MethodGet, fmt.Sprintf("%s/registrations/%d", holidayPeriodPath(int64(period.ID)), id), nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		detail := decodeSchoolPortalData[enrollment.HolidayRegistrationDetail](t, rec.Body.Bytes())
 		if i < 2 {
@@ -85,10 +85,10 @@ func TestHolidayRegistrationSecondGuardianIsAuditedAndOnlyInDetailAndExport(t *t
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(f.period.PublicToken), body)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	id := decodeSchoolPortalData[struct {
-		ID int64 `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
 	assert.NotContains(t, rec.Body.String(), "Anders")
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(id, ""), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(int64(id), ""), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	detail := decodeSchoolPortalData[enrollment.HolidayRegistrationDetail](t, rec.Body.Bytes())
 	require.NotNil(t, detail.SecondGuardian)
@@ -108,7 +108,7 @@ func TestHolidayRegistrationSecondGuardianIsAuditedAndOnlyInDetailAndExport(t *t
 	assert.Contains(t, f.auditActions(t), "export")
 	for _, role := range []string{identityaccess.TraegerRoleReadOnly, identityaccess.TraegerRoleAdministration} {
 		other := newTraegerOffice(t, f.db, f.traeger, "Zweite Person Fremdzugriff "+role, role)
-		rec = traegerJSON(t, f.traeger, other.token, http.MethodGet, f.registrationPath(id, ""), nil)
+		rec = traegerJSON(t, f.traeger, other.token, http.MethodGet, f.registrationPath(int64(id), ""), nil)
 		if role == identityaccess.TraegerRoleReadOnly {
 			assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
 		} else {
@@ -167,7 +167,7 @@ func TestHolidaySecondGuardianReachesTheHostingSchoolWithoutItsEMail(t *testing.
 	assert.Contains(t, rec.Body.String(), "Ben")
 	assert.Contains(t, rec.Body.String(), `"second_guardian":{"name":"Tom Anders","phone":"0151 9999999"}`)
 	assert.NotContains(t, rec.Body.String(), "tom@example.org")
-	rec = f.assign(t, lead, f.offer.Weeks[0].ID, f.group)
+	rec = f.assign(t, lead, int64(f.offer.Weeks[0].ID), f.group)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	f.today.Store(calendar.NewDate(2099, 7, 6))
 	f.reconcile(t)

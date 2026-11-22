@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The review of a monthly run before its release (#5916, ADR 0119
@@ -63,11 +64,11 @@ func (c *CareBilling) reviewed(ctx context.Context, organizationID int64, run pa
 	if err != nil {
 		return "", reviewedMonth{}, err
 	}
-	exclusions, err := c.store.CareRunExclusions(ctx, organizationID, run.ID)
+	exclusions, err := c.store.CareRunExclusions(ctx, organizationID, run.ID.Int64())
 	if err != nil {
 		return "", reviewedMonth{}, err
 	}
-	review := narrowMonth(month, run.SchoolIDs, exclusions)
+	review := narrowMonth(month, ident.Int64s(run.SchoolIDs), exclusions)
 	if err := c.amendReviewed(ctx, organizationID, run, &review); err != nil {
 		return "", reviewedMonth{}, err
 	}
@@ -98,12 +99,12 @@ func narrowMonth(month careMonth, schoolIDs []int64, exclusions map[parentbillin
 	review.free = countInRun(month.freeBySchool, inRun)
 	narrowFeeNotices(&review, month, inRun)
 	for _, invoice := range month.invoices {
-		if !inRun(invoice.SchoolID) {
+		if !inRun(invoice.SchoolID.Int64()) {
 			continue
 		}
 		// An excluded invoice still belongs to a family the run counts as
 		// uncounted, so the list names it too.
-		if slices.Contains(month.uncountedSchools[invoice.FamilyEmail], invoice.SchoolID) && !namesContract(review.uncountedContracts, invoice.ContractID) {
+		if slices.Contains(month.uncountedSchools[invoice.FamilyEmail], invoice.SchoolID.Int64()) && !namesContract(review.uncountedContracts, invoice.ContractID.Int64()) {
 			review.uncountedContracts = append(review.uncountedContracts, parentbilling.CareUncountedContract{
 				ContractID: invoice.ContractID, SchoolName: invoice.SchoolName, ChildFirstName: invoice.ChildFirstName,
 				ChildLastName: invoice.ChildLastName, Status: month.uncountedStates[invoice.FamilyEmail]})
@@ -116,14 +117,14 @@ func narrowMonth(month careMonth, schoolIDs []int64, exclusions map[parentbillin
 		review.invoices = append(review.invoices, invoice)
 	}
 	for _, unpriced := range month.unpriced {
-		if inRun(unpriced.SchoolID) {
+		if inRun(unpriced.SchoolID.Int64()) {
 			review.unpriced = append(review.unpriced, unpriced)
 		}
 	}
 	narrowMeals(&review, month, inRun)
 	for _, duplicate := range month.duplicates {
 		if slices.ContainsFunc(duplicate.Contracts, func(contract parentbilling.CareDuplicateContract) bool {
-			return inRun(contract.SchoolID)
+			return inRun(contract.SchoolID.Int64())
 		}) {
 			review.duplicates = append(review.duplicates, duplicate)
 		}
@@ -134,7 +135,9 @@ func narrowMonth(month careMonth, schoolIDs []int64, exclusions map[parentbillin
 // namesContract tells whether the list names a contract already: a Mensa
 // invoice of its own repeats the contract of its care invoice.
 func namesContract(contracts []parentbilling.CareUncountedContract, contractID int64) bool {
-	return slices.ContainsFunc(contracts, func(contract parentbilling.CareUncountedContract) bool { return contract.ContractID == contractID })
+	return slices.ContainsFunc(contracts, func(contract parentbilling.CareUncountedContract) bool {
+		return contract.ContractID == ident.ID(contractID)
+	})
 }
 
 // narrowFeeNotices keeps the Jahresbescheide of the run's schools that
@@ -149,7 +152,7 @@ func narrowFeeNotices(review *reviewedMonth, month careMonth, inRun func(int64) 
 	slices.Sort(review.feeNotices)
 	review.feeNoticeHeld = []parentbilling.CareFeeNoticeHold{}
 	for _, hold := range month.feeNoticeHeld {
-		if inRun(hold.SchoolID) {
+		if inRun(hold.SchoolID.Int64()) {
 			review.feeNoticeHeld = append(review.feeNoticeHeld, hold)
 		}
 	}
@@ -171,17 +174,17 @@ func countInRun(bySchool map[int64]int, inRun func(int64) bool) int {
 // run does not bill. The Mensa positions travel on their invoices.
 func narrowMeals(review *reviewedMonth, month careMonth, inRun func(int64) bool) {
 	for _, gap := range month.mealGaps {
-		if inRun(gap.SchoolID) {
+		if inRun(gap.SchoolID.Int64()) {
 			review.mealGaps = append(review.mealGaps, gap)
 		}
 	}
 	for _, unbilled := range month.mealUnbilled {
-		if inRun(unbilled.SchoolID) {
+		if inRun(unbilled.SchoolID.Int64()) {
 			review.mealUnbilled = append(review.mealUnbilled, unbilled)
 		}
 	}
 	for _, changed := range month.mealChanged {
-		if inRun(changed.SchoolID) {
+		if inRun(changed.SchoolID.Int64()) {
 			review.mealChanged = append(review.mealChanged, changed)
 		}
 	}
@@ -252,7 +255,7 @@ func previewFingerprint(run parentbilling.CareRun, rule string, review reviewedM
 		MealChanged []parentbilling.CareMealChanged  `json:"meal_changed"`
 		LegalRemedy string                           `json:"legal_remedy"`
 		FeeNotices  []string                         `json:"fee_notices"`
-	}{run.ID, run.SchoolIDs, run.InvoiceDate, rule, fingerprintInvoices(review.invoices),
+	}{run.ID.Int64(), ident.Int64s(run.SchoolIDs), run.InvoiceDate, rule, fingerprintInvoices(review.invoices),
 		fingerprintInvoices(review.excluded), review.unpriced, review.duplicates, review.billed, review.free,
 		review.dueDates.InPaymentOrder(), review.uncounted, review.mealGaps, review.mealUnbilled, review.mealChanged,
 		review.legalRemedy, review.feeNotices})
@@ -268,7 +271,7 @@ func (c *CareBilling) runSchools(ctx context.Context, organizationID int64, mont
 	}
 	own := make([]int64, len(schools))
 	for i, school := range schools {
-		own[i] = school.ID
+		own[i] = school.ID.Int64()
 	}
 	if len(requested) == 0 {
 		open, err := c.store.OpenCareRunSchools(ctx, organizationID, month)
@@ -317,8 +320,8 @@ func (c *CareBilling) CareRunSchools(ctx context.Context, organizationID int64, 
 	result := make([]parentbilling.CareRunSchool, len(schools))
 	for i, school := range schools {
 		result[i] = parentbilling.CareRunSchool{ID: school.ID, Name: school.Name}
-		if runID, taken := open[school.ID]; taken {
-			result[i].OpenRunID = &runID
+		if runID, taken := open[school.ID.Int64()]; taken {
+			result[i].OpenRunID = (*ident.ID)(&runID)
 		}
 	}
 	return result, nil
@@ -368,18 +371,18 @@ func (c *CareBilling) SetCareRunInvoiceDate(ctx context.Context, reviewer parent
 	if err := checkInvoiceDate(run.BillingMonth, invoiceDate); err != nil {
 		return parentbilling.CareRunDetail{}, err
 	}
-	if err := c.store.SetCareRunInvoiceDate(ctx, reviewer.OrganizationID, run.ID, invoiceDate); err != nil {
+	if err := c.store.SetCareRunInvoiceDate(ctx, reviewer.OrganizationID, run.ID.Int64(), invoiceDate); err != nil {
 		return parentbilling.CareRunDetail{}, err
 	}
 	var value any
 	if invoiceDate != nil {
 		value = invoiceDate.String()
 	}
-	if err := c.store.InsertCareRunEvent(ctx, reviewer.OrganizationID, run.ID, reviewer.AccountID, runEventInvoiceDate,
+	if err := c.store.InsertCareRunEvent(ctx, reviewer.OrganizationID, run.ID.Int64(), reviewer.AccountID, runEventInvoiceDate,
 		map[string]any{"invoice_date": value}); err != nil {
 		return parentbilling.CareRunDetail{}, fmt.Errorf("parent billing: record the invoice date: %w", err)
 	}
-	return c.CareRun(ctx, reviewer, run.ID)
+	return c.CareRun(ctx, reviewer, run.ID.Int64())
 }
 
 // checkExclusionService accepts the service of an invoice of a run; an
@@ -426,10 +429,10 @@ func (c *CareBilling) ExcludeCareInvoice(ctx context.Context, reviewer parentbil
 	}
 	details := exclusionEvent(key)
 	details["school_id"], details["reason"] = review.invoices[index].SchoolID, reason
-	if err := c.store.InsertCareRunEvent(ctx, reviewer.OrganizationID, run.ID, reviewer.AccountID, runEventExclude, details); err != nil {
+	if err := c.store.InsertCareRunEvent(ctx, reviewer.OrganizationID, run.ID.Int64(), reviewer.AccountID, runEventExclude, details); err != nil {
 		return parentbilling.CareRunDetail{}, fmt.Errorf("parent billing: record the exclusion: %w", err)
 	}
-	return c.CareRun(ctx, reviewer, run.ID)
+	return c.CareRun(ctx, reviewer, run.ID.Int64())
 }
 
 // IncludeCareInvoice takes the one excluded invoice the key names back into
@@ -442,18 +445,18 @@ func (c *CareBilling) IncludeCareInvoice(ctx context.Context, reviewer parentbil
 	if err != nil {
 		return parentbilling.CareRunDetail{}, err
 	}
-	exclusions, err := c.store.CareRunExclusions(ctx, reviewer.OrganizationID, run.ID)
+	exclusions, err := c.store.CareRunExclusions(ctx, reviewer.OrganizationID, run.ID.Int64())
 	if err != nil {
 		return parentbilling.CareRunDetail{}, err
 	}
 	if _, excluded := exclusions[key]; !excluded {
 		return parentbilling.CareRunDetail{}, parentbilling.ErrCareExclusionConflict
 	}
-	if err := c.store.InsertCareRunEvent(ctx, reviewer.OrganizationID, run.ID, reviewer.AccountID, runEventInclude,
+	if err := c.store.InsertCareRunEvent(ctx, reviewer.OrganizationID, run.ID.Int64(), reviewer.AccountID, runEventInclude,
 		exclusionEvent(key)); err != nil {
 		return parentbilling.CareRunDetail{}, fmt.Errorf("parent billing: record the return: %w", err)
 	}
-	return c.CareRun(ctx, reviewer, run.ID)
+	return c.CareRun(ctx, reviewer, run.ID.Int64())
 }
 
 // reviewDetail fills the review of a calculated run into its detail: the
@@ -496,7 +499,7 @@ func (c *CareBilling) reviewDetail(ctx context.Context, reviewer parentbilling.H
 		detail.ExcludedCount++
 		detail.ExcludedCents += invoice.TotalCents
 	}
-	detail.Schools, err = c.runSchoolNames(ctx, organizationID, detail.SchoolIDs)
+	detail.Schools, err = c.runSchoolNames(ctx, organizationID, ident.Int64s(detail.SchoolIDs))
 	return err
 }
 
@@ -508,7 +511,7 @@ func (c *CareBilling) runSchoolNames(ctx context.Context, organizationID int64, 
 	}
 	named := []parentbilling.CareSchool{}
 	for _, school := range schools {
-		if slices.Contains(schoolIDs, school.ID) {
+		if slices.Contains(schoolIDs, school.ID.Int64()) {
 			named = append(named, school)
 		}
 	}
@@ -519,8 +522,8 @@ func (c *CareBilling) runSchoolNames(ctx context.Context, organizationID int64, 
 func excludedContracts(invoices []parentbilling.CareInvoice) []int64 {
 	ids := []int64{}
 	for _, invoice := range invoices {
-		if !slices.Contains(ids, invoice.ContractID) {
-			ids = append(ids, invoice.ContractID)
+		if !slices.Contains(ids, invoice.ContractID.Int64()) {
+			ids = append(ids, invoice.ContractID.Int64())
 		}
 	}
 	return ids

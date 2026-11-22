@@ -25,7 +25,6 @@ global.fetch = mockFetch;
 vi.mock("~/env", () => ({
   env: {
     API_URL: "http://server:8080",
-    NEXT_PUBLIC_API_URL: "http://localhost:8080",
   },
 }));
 
@@ -91,9 +90,11 @@ describe("GET /api/sse/events", () => {
     expect(mockFetch).toHaveBeenCalledWith(
       "http://server:8080/api/sse/events",
       expect.objectContaining({
+        // The one identity set of every BFF call (sendBackend).
         headers: {
           Authorization: "Bearer test-token",
           Accept: "text/event-stream",
+          "X-Moto-Frontend-Origin": "http://localhost:3000",
         },
         cache: "no-store",
         signal: expect.any(AbortSignal),

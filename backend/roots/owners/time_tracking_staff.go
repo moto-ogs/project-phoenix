@@ -34,7 +34,7 @@ func (q monthCloseStaffQuery) ListMonthCloseStaff(ctx context.Context) ([]workfo
 	}
 	staff := make([]workforceModule.MonthCloseStaff, 0, len(rows))
 	for _, row := range rows {
-		staff = append(staff, workforceModule.MonthCloseStaff{ID: row.ID, ExternalCaregiver: row.IsExternalCaregiver})
+		staff = append(staff, workforceModule.MonthCloseStaff{ID: row.ID.Int64(), ExternalCaregiver: row.IsExternalCaregiver})
 	}
 	return staff, nil
 }
@@ -65,8 +65,8 @@ func (q overviewStaffQuery) FindOverviewStaff(ctx context.Context, ids []int64) 
 			continue
 		}
 		member := workforceCompose.OverviewStaff{
-			ID: row.ID, EmploymentType: row.EmploymentType, PersonnelNumber: row.PersonnelNumber,
-			WorkTimeModelID: row.WorkTimeModelID, RotationAnchorDate: row.RotationAnchorDate, ExternalCaregiver: row.IsExternalCaregiver,
+			ID: row.ID.Int64(), EmploymentType: row.EmploymentType, PersonnelNumber: row.PersonnelNumber,
+			WorkTimeModelID: (*int64)(row.WorkTimeModelID), RotationAnchorDate: row.RotationAnchorDate, ExternalCaregiver: row.IsExternalCaregiver,
 		}
 		if row.Person != nil {
 			member.FirstName = row.Person.FirstName
@@ -85,8 +85,8 @@ func (q overviewStaffQuery) ListOverviewStaff(ctx context.Context) ([]workforceC
 	staff := make([]workforceCompose.OverviewStaff, 0, len(rows))
 	for _, row := range rows {
 		member := workforceCompose.OverviewStaff{
-			ID: row.ID, EmploymentType: row.EmploymentType, PersonnelNumber: row.PersonnelNumber,
-			WorkTimeModelID: row.WorkTimeModelID, RotationAnchorDate: row.RotationAnchorDate, ExternalCaregiver: row.IsExternalCaregiver,
+			ID: row.ID.Int64(), EmploymentType: row.EmploymentType, PersonnelNumber: row.PersonnelNumber,
+			WorkTimeModelID: (*int64)(row.WorkTimeModelID), RotationAnchorDate: row.RotationAnchorDate, ExternalCaregiver: row.IsExternalCaregiver,
 		}
 		if row.Person != nil {
 			member.FirstName = row.Person.FirstName
@@ -111,7 +111,7 @@ func (q timeExportStaffQuery) ListExportStaff(ctx context.Context) ([]workforceC
 	}
 	staff := make([]workforceCompose.TimeExportStaff, 0, len(rows))
 	for _, row := range rows {
-		member := workforceCompose.TimeExportStaff{ID: row.ID, ExternalCaregiver: row.IsExternalCaregiver}
+		member := workforceCompose.TimeExportStaff{ID: row.ID.Int64(), ExternalCaregiver: row.IsExternalCaregiver}
 		if row.Person != nil {
 			member.FirstName = row.Person.FirstName
 			member.LastName = row.Person.LastName

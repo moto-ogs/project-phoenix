@@ -16,7 +16,7 @@ func seedHolidayGuestGroupHint(rt *Runtime, groupID int64) error {
 	}
 	var envelope struct {
 		Data []struct {
-			GroupID int64 `json:"group_id"`
+			GroupID apiID `json:"group_id"`
 			Guests  int   `json:"guests"`
 		} `json:"data"`
 	}
@@ -24,7 +24,7 @@ func seedHolidayGuestGroupHint(rt *Runtime, groupID int64) error {
 		return fmt.Errorf("decode the holiday guest groups: %w", err)
 	}
 	for _, group := range envelope.Data {
-		if group.GroupID == groupID && group.Guests > 0 {
+		if int64(group.GroupID) == groupID && group.Guests > 0 {
 			return nil
 		}
 	}

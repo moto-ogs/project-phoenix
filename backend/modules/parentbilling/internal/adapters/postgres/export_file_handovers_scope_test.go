@@ -13,6 +13,7 @@ import (
 	"github.com/uptrace/bun/dialect/pgdialect"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -104,7 +105,7 @@ func TestExportHandoversKeepTheTraegerBelowRLS(t *testing.T) {
 		require.NoError(t, err)
 		var settled *parentbilling.ExportFileHandover
 		for _, entry := range files.Files {
-			if entry.ID == ownFirst {
+			if entry.ID == ident.ID(ownFirst) {
 				settled = entry.Handover
 			}
 		}

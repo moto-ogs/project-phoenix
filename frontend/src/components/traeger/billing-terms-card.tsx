@@ -35,6 +35,7 @@ import {
   bundleLabel,
   dueDaysLabel,
 } from "./billing-payment-format";
+import { labelOf } from "~/lib/label-of";
 
 const logger = createLogger({ component: "BillingTermsCard" });
 
@@ -74,7 +75,8 @@ function ServiceTermsModal({
   onClose: () => void;
   onSaved: (data: BillingTerms) => void;
 }>) {
-  const [method, setMethod] = useState<PaymentMethod>("transfer");
+  // null: the stored method is one this build does not know.
+  const [method, setMethod] = useState<PaymentMethod | null>("transfer");
   const [days, setDays] = useState("14");
   const [bundleWith, setBundleWith] = useState("");
   const save = useFormModalPending(row !== null);
@@ -86,7 +88,7 @@ function ServiceTermsModal({
 
   useEffect(() => {
     if (!row) return;
-    setMethod(row.terms.paymentMethod);
+    setMethod(row.terms.paymentMethod ?? null);
     setDays(String(row.terms.dueDays));
     setBundleWith(row.terms.bundleWith);
     clearErrors();
@@ -103,6 +105,10 @@ function ServiceTermsModal({
       formErrors.invalid("Bitte prüfe deine Angaben.", {
         due_days: `Bitte eine ganze Zahl von 0 bis ${MAX_DUE_DAYS} eingeben.`,
       });
+      return;
+    }
+    if (method === null) {
+      formErrors.invalid("Bitte wähle aus, wie die Familien zahlen.", {});
       return;
     }
     await save.run(async (op) => {
@@ -248,7 +254,8 @@ export function BillingTermsCard({
       key: "method",
       header: "Zahlungsweg",
       stacked: "field",
-      render: ({ terms }) => PAYMENT_METHOD_LABELS[terms.paymentMethod],
+      render: ({ terms }) =>
+        labelOf(PAYMENT_METHOD_LABELS, terms.paymentMethod, "–"),
     },
     {
       key: "days",

@@ -11,7 +11,7 @@ const model = (fields, route = {}) => ({
   enums: [],
   types: [{ name: "Row", go_type: "rows.Row", fields }],
 });
-const base = model([field("id", "legacy_id"), field("name", "string"), field("nick", "string", { optional: true }), field("old", "string", { deprecated: true })]);
+const base = model([field("id", "lax_id"), field("name", "string"), field("nick", "string", { optional: true }), field("old", "string", { deprecated: true })]);
 const withFields = (change) => model(change(structuredClone(base.types[0].fields)));
 
 test("additions, a dropped deprecated field and string identifiers are compatible", () => {
@@ -40,11 +40,12 @@ test("every change that breaks a reader of the base is named", () => {
   for (const [name, head, message] of cases) {
     assert.ok(breakingChanges(base, head).includes(message), `${name}: ${JSON.stringify(breakingChanges(base, head))}`);
   }
-  const named = model([field("id", "legacy_id"), field("name", "enum"), field("nick", "clock", { optional: true }), field("old", "string", { deprecated: true })]);
+  const named = model([field("id", "lax_id"), field("name", "enum"), field("nick", "clock", { optional: true }), field("old", "string", { deprecated: true })]);
   assert.deepEqual(breakingChanges(base, named), [], "naming the form of a string keeps the wire");
   assert.ok(breakingChanges(named, base).includes("GET /api/rows/[].name: enum became string"));
   const stringBase = model([field("id", "id")]);
-  assert.deepEqual(breakingChanges(stringBase, model([field("id", "legacy_id")])), ["GET /api/rows/[].id: id became legacy_id"]);
+  assert.deepEqual(breakingChanges(model([field("id", "lax_id")]), stringBase), [], "a lax reader may become a strict identifier");
+  assert.deepEqual(breakingChanges(stringBase, model([field("id", "lax_id")])), ["GET /api/rows/[].id: id became lax_id"]);
 });
 
 test("a deprecated route may leave and a variant may not", () => {

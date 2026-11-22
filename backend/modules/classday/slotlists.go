@@ -22,6 +22,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Date is a calendar day in "YYYY-MM-DD" form. The projection resolves it in
@@ -340,10 +342,10 @@ type Params struct {
 // Slot is one activity instance on the selected date, returned so the UI can
 // offer concrete single- or multi-slot selection and explain empty results.
 type Slot struct {
-	InstanceID int64  `json:"instance_id,string"`
-	Title      string `json:"title"`
-	TimeRange  string `json:"time_range"`
-	Status     string `json:"status"`
+	InstanceID ident.ID `json:"instance_id"`
+	Title      string   `json:"title"`
+	TimeRange  string   `json:"time_range"`
+	Status     string   `json:"status"`
 	// ListKind and RoomName are echoed so the frontend's pre-export options
 	// guard can detect document-affecting drift that leaves the active
 	// instance-ID set unchanged (#1565 review pass 4): a list_kind reassignment
@@ -357,24 +359,24 @@ type Slot struct {
 
 // ClassdayGroupOption is one selectable education group in the group filter.
 type ClassdayGroupOption struct {
-	ID   int64  `json:"id,string"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 // SlotListRow is one child on the list.
 type SlotListRow struct {
-	StudentID   int64  `json:"student_id,string"`
-	Name        string `json:"name"`
-	SchoolClass string `json:"school_class"`
-	GroupName   string `json:"group_name"`
-	GroupID     *int64 `json:"group_id,string,omitempty"`
-	InstanceID  int64  `json:"instance_id,string,omitempty"`
-	Slot        string `json:"slot"`
-	RoomName    string `json:"room_name,omitempty"`
-	PickupTime  string `json:"pickup_time,omitempty"`
-	Planned     bool   `json:"planned"`
-	Present     bool   `json:"present"`
-	Unplanned   bool   `json:"unplanned"`
+	StudentID   ident.ID  `json:"student_id"`
+	Name        string    `json:"name"`
+	SchoolClass string    `json:"school_class"`
+	GroupName   string    `json:"group_name"`
+	GroupID     *ident.ID `json:"group_id,omitempty"`
+	InstanceID  ident.ID  `json:"instance_id,omitempty"`
+	Slot        string    `json:"slot"`
+	RoomName    string    `json:"room_name,omitempty"`
+	PickupTime  string    `json:"pickup_time,omitempty"`
+	Planned     bool      `json:"planned"`
+	Present     bool      `json:"present"`
+	Unplanned   bool      `json:"unplanned"`
 	// Excused is a planned-but-absent child whose absence carries an explicit
 	// instance_students.substatus. Lifecycle no-shows flip to status=absent
 	// without substatus and still count as unexplained "Fehlt".

@@ -47,19 +47,18 @@ describe("student-companion-api", () => {
   });
 
   describe("fetchStudentCompanions", () => {
-    it("fetches the companion list and maps ids to strings", async () => {
+    it("fetches the companion list of the contract", async () => {
       mockSessionFetch.mockResolvedValueOnce(
         Response.json({
-          success: true,
+          status: "success",
           data: [
             {
-              // The backend serializes the int64 id as a JSON number …
-              companion_student_id: 7,
+              companion_student_id: "7",
               first_name: "Lina",
               last_name: "Klein",
               weekdays: ["mon", "tue"],
             },
-            { companion_student_id: 8 },
+            { companion_student_id: "8", weekdays: null },
           ],
         }),
       );
@@ -70,7 +69,6 @@ describe("student-companion-api", () => {
         "/api/students/42/companions",
         expect.objectContaining({ method: "GET" }),
       );
-      // … and the client maps it to a string like every other backend id.
       expect(result).toEqual([
         {
           companion_student_id: "7",
@@ -80,20 +78,22 @@ describe("student-companion-api", () => {
         },
         {
           companion_student_id: "8",
-          first_name: undefined,
-          last_name: undefined,
           weekdays: [],
         },
       ]);
     });
 
-    it("returns an empty array for a null list or a 204", async () => {
-      mockSessionFetch
-        .mockResolvedValueOnce(Response.json({ success: true, data: null }))
-        .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    it("drops a weekday this build does not know", async () => {
+      mockSessionFetch.mockResolvedValueOnce(
+        Response.json({
+          status: "success",
+          data: [{ companion_student_id: "7", weekdays: ["mon", "sat"] }],
+        }),
+      );
 
-      await expect(fetchStudentCompanions("42")).resolves.toEqual([]);
-      await expect(fetchStudentCompanions("42")).resolves.toEqual([]);
+      await expect(fetchStudentCompanions("42")).resolves.toEqual([
+        { companion_student_id: "7", weekdays: ["mon"] },
+      ]);
     });
   });
 

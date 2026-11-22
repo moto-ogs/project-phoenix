@@ -8,18 +8,21 @@
  * Jedes Laden steht im Zugriffsprotokoll jeder Schule; nichts wird
  * zwischengespeichert.
  */
+import type * as traegerStaffRecordsContract from "~/lib/contract/traeger-staff-records.generated";
+import { knownEnum } from "~/lib/contract/known-enum";
 import { traegerRequest } from "~/lib/traeger-api";
 
 const RECORDS = "/api/traeger/staff-records";
 
-/** Wie der Monat beim Träger steht. */
-type TraegerMonthState =
-  /** Ein Vertrag deckt den Monat ab, eine Schule ist noch offen. */
-  | "open"
-  /** Jede Schule, die der Träger abschließt, ist abgeschlossen. */
-  | "closed"
-  /** Kein Vertrag deckt den Monat ab: die Schulen schließen selbst ab. */
-  | "school";
+/**
+ * Wie der Monat beim Träger steht. `open`: ein Vertrag deckt den Monat ab,
+ * eine Schule ist noch offen. `closed`: jede Schule, die der Träger
+ * abschließt, ist abgeschlossen. `school`: kein Vertrag deckt den Monat ab,
+ * die Schulen schließen selbst ab. Go meldet die Menge nicht an; der Vertrag
+ * führt `string`.
+ */
+const MONTH_STATE_VALUES = ["open", "closed", "school"] as const;
+type TraegerMonthState = (typeof MONTH_STATE_VALUES)[number];
 
 interface TraegerTimeAccountMinutes {
   readonly targetMinutes: number;
@@ -50,44 +53,18 @@ export interface TraegerTimeAccountSchool extends TraegerTimeAccountMinutes {
 export interface TraegerTimeAccount extends TraegerTimeAccountMinutes {
   readonly year: number;
   readonly month: number;
-  readonly state: TraegerMonthState;
+  /** undefined: ein Stand, den dieser Build nicht kennt; nichts lässt sich abschließen. */
+  readonly state: TraegerMonthState | undefined;
   /** Der Monat ist vorbei; erst dann lässt er sich abschließen. */
   readonly ended: boolean;
   readonly schools: readonly TraegerTimeAccountSchool[];
 }
 
-interface BackendMinutes {
-  target_minutes: number;
-  actual_minutes: number;
-  credited_minutes: number;
-  adjustment_minutes: number;
-  balance_minutes: number;
-  carry_in_minutes: number;
-  closing_balance_minutes: number;
-}
-
-interface BackendSchool extends BackendMinutes {
-  school_id: number;
-  school_name: string;
-  has_target: boolean;
-  by_traeger: boolean;
-  closed: boolean;
-  closed_by_traeger: boolean;
-  closed_at?: string | null;
-  close_reason?: string | null;
-  drift_minutes: number;
-  later_closed?: string | null;
-}
-
-interface BackendAccount extends BackendMinutes {
-  year: number;
-  month: number;
-  state: TraegerMonthState;
-  ended: boolean;
-  schools: BackendSchool[] | null;
-}
-
-function mapMinutes(data: BackendMinutes): TraegerTimeAccountMinutes {
+function mapMinutes(
+  data:
+    | traegerStaffRecordsContract.TraegerTimeAccount
+    | traegerStaffRecordsContract.TraegerTimeAccountSchool,
+): TraegerTimeAccountMinutes {
   return {
     targetMinutes: data.target_minutes,
     actualMinutes: data.actual_minutes,
@@ -99,16 +76,18 @@ function mapMinutes(data: BackendMinutes): TraegerTimeAccountMinutes {
   };
 }
 
-function mapTraegerTimeAccount(data: BackendAccount): TraegerTimeAccount {
+function mapTraegerTimeAccount(
+  data: traegerStaffRecordsContract.TraegerTimeAccount,
+): TraegerTimeAccount {
   return {
     ...mapMinutes(data),
     year: data.year,
     month: data.month,
-    state: data.state,
+    state: knownEnum(MONTH_STATE_VALUES, data.state),
     ended: data.ended,
     schools: (data.schools ?? []).map((school) => ({
       ...mapMinutes(school),
-      schoolId: String(school.school_id),
+      schoolId: school.school_id,
       schoolName: school.school_name,
       hasTarget: school.has_target,
       byTraeger: school.by_traeger,
@@ -131,7 +110,7 @@ export async function fetchTraegerTimeAccount(
   month: number,
 ): Promise<TraegerTimeAccount> {
   return mapTraegerTimeAccount(
-    await traegerRequest<BackendAccount>(
+    await traegerRequest<traegerStaffRecordsContract.TraegerTimeAccount>(
       `${accountPath(recordId)}?year=${year}&month=${month}`,
     ),
   );
@@ -143,14 +122,17 @@ async function changeMonth(
   input: { year: number; month: number; reason: string },
 ): Promise<TraegerTimeAccount> {
   return mapTraegerTimeAccount(
-    await traegerRequest<BackendAccount>(`${accountPath(recordId)}/${action}`, {
-      method: "POST",
-      body: {
-        year: input.year,
-        month: input.month,
-        reason: input.reason.trim(),
+    await traegerRequest<traegerStaffRecordsContract.TraegerTimeAccount>(
+      `${accountPath(recordId)}/${action}`,
+      {
+        method: "POST",
+        body: {
+          year: input.year,
+          month: input.month,
+          reason: input.reason.trim(),
+        } satisfies traegerStaffRecordsContract.TimeAccountMonthRequest,
       },
-    }),
+    ),
   );
 }
 

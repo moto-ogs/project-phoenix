@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/domain/userscontract"
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
@@ -47,7 +48,7 @@ func (s *caregiverCapabilityService) loadCapabilityStateWithRoleFlags(
 	}
 
 	state := &peopleValues.CaregiverCapabilityState{
-		AccountID: account.ID,
+		AccountID: ident.ID(account.ID),
 		Email:     account.Email,
 	}
 
@@ -97,19 +98,19 @@ func (s *caregiverCapabilityService) loadCaregiverProfile(
 	state.FirstName = person.FirstName
 	state.LastName = person.LastName
 
-	staff, err := s.findStaffByPersonID(ctx, person.ID)
+	staff, err := s.findStaffByPersonID(ctx, person.ID.Int64())
 	if err != nil || staff == nil {
 		return err
 	}
 	state.HasStaff = true
 	state.StaffID = &staff.ID
 
-	teacher, err := s.TeacherRepo.FindByStaffID(ctx, staff.ID)
+	teacher, err := s.TeacherRepo.FindByStaffID(ctx, staff.ID.Int64())
 	if err != nil || teacher == nil {
 		return err
 	}
 	state.HasTeacher = true
-	state.TeacherID = &teacher.ID
+	state.TeacherID = (*ident.ID)(&teacher.ID)
 	return nil
 }
 
@@ -161,7 +162,7 @@ func (s *caregiverCapabilityService) listDisableBlockers(
 	}
 
 	if state.StaffID != nil {
-		staffBlockers, err := s.listStaffBlockers(ctx, *state.StaffID, tenantID, state)
+		staffBlockers, err := s.listStaffBlockers(ctx, (*state.StaffID).Int64(), tenantID, state)
 		if err != nil {
 			return nil, err
 		}
@@ -169,7 +170,7 @@ func (s *caregiverCapabilityService) listDisableBlockers(
 	}
 
 	if state.TeacherID != nil {
-		groups, err := s.GroupTeacherRepo.ListGroupTeacherBlockers(ctx, *state.TeacherID, tenantID)
+		groups, err := s.GroupTeacherRepo.ListGroupTeacherBlockers(ctx, (*state.TeacherID).Int64(), tenantID)
 		if err != nil {
 			return nil, err
 		}

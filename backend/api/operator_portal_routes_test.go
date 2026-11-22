@@ -107,7 +107,7 @@ func TestOperatorRoutesSwitchTheCaregiverCapabilityOfASchoolAccount(t *testing.T
 	_, schoolID := provisionTestSchool(t, f.db, f.service, f.operatorID, "route-caregiver")
 	password := testpkg.NewTestPassword()
 	var account struct {
-		ID int64 `json:"id"`
+		ID wireID `json:"id"`
 	}
 	f.call(t, http.MethodPost, fmt.Sprintf("/operator/schools/%d/create-account", schoolID), map[string]any{
 		"email": fmt.Sprintf("route-caregiver-%d@example.test", schoolID), "first_name": "Clara", "last_name": "Care",
@@ -115,9 +115,9 @@ func TestOperatorRoutesSwitchTheCaregiverCapabilityOfASchoolAccount(t *testing.T
 	}, &account)
 	path := fmt.Sprintf("/operator/schools/%d/accounts/%d/caregiver-capability", schoolID, account.ID)
 	type state struct {
-		AccountID int64  `json:"account_id"`
-		FirstName string `json:"first_name"`
-		StaffID   *int64 `json:"staff_id"`
+		AccountID wireID  `json:"account_id"`
+		FirstName string  `json:"first_name"`
+		StaffID   *wireID `json:"staff_id"`
 	}
 
 	var read state
@@ -163,7 +163,7 @@ func TestOperatorRoutesManageTheSchoolsAndSecondFactorsOfAccounts(t *testing.T) 
 	roles = others
 	require.GreaterOrEqual(t, len(roles), 2, "a school offers several roles")
 	type access struct {
-		TenantID int64  `json:"tenant_id"`
+		TenantID wireID `json:"tenant_id"`
 		Status   string `json:"status"`
 		Roles    []struct {
 			ID string `json:"id"`
@@ -171,7 +171,7 @@ func TestOperatorRoutesManageTheSchoolsAndSecondFactorsOfAccounts(t *testing.T) 
 	}
 	find := func(entries []access) access {
 		for _, entry := range entries {
-			if entry.TenantID == schoolID {
+			if int64(entry.TenantID) == schoolID {
 				return entry
 			}
 		}
@@ -228,12 +228,12 @@ func TestOperatorRoutesManageTheOperatorTeam(t *testing.T) {
 	f.call(t, http.MethodPost, "/operator/invitations/", map[string]string{"email": email}, nil)
 	type team struct {
 		Invitations []struct {
-			ID    int64  `json:"id"`
+			ID    wireID `json:"id"`
 			Email string `json:"email"`
 		} `json:"invitations"`
 		Operators []struct {
-			ID     int64 `json:"id"`
-			IsSelf bool  `json:"is_self"`
+			ID     wireID `json:"id"`
+			IsSelf bool   `json:"is_self"`
 		} `json:"operators"`
 	}
 	var listed team
@@ -241,7 +241,7 @@ func TestOperatorRoutesManageTheOperatorTeam(t *testing.T) {
 	var invitationID int64
 	for _, invitation := range listed.Invitations {
 		if invitation.Email == email {
-			invitationID = invitation.ID
+			invitationID = int64(invitation.ID)
 		}
 	}
 	require.NotZero(t, invitationID, "the open invitation is listed")
@@ -253,11 +253,11 @@ func TestOperatorRoutesManageTheOperatorTeam(t *testing.T) {
 
 	member := testpkg.CreateTestOperator(t, f.db)
 	var deactivated struct {
-		ID     int64 `json:"id"`
-		Active bool  `json:"active"`
+		ID     wireID `json:"id"`
+		Active bool   `json:"active"`
 	}
 	f.call(t, http.MethodPost, fmt.Sprintf("/operator/operators/%d/deactivate", member.ID), nil, &deactivated)
-	assert.Equal(t, member.ID, deactivated.ID)
+	assert.Equal(t, member.ID, int64(deactivated.ID))
 	assert.False(t, deactivated.Active)
 	var reactivated struct {
 		Active bool `json:"active"`
@@ -279,9 +279,9 @@ func TestOperatorRoutesWriteChangeAndDeleteAnAnnouncement(t *testing.T) {
 	router.Mount("/operator", inner)
 	f := operatorProvisioningRoutes{db: db, router: router, ctx: provisioningContext(t, db), operatorID: operatorID}
 	type announcement struct {
-		ID              int64   `json:"id"`
-		Title           string  `json:"title"`
-		TargetTenantIDs []int64 `json:"target_tenant_ids"`
+		ID              wireID   `json:"id"`
+		Title           string   `json:"title"`
+		TargetTenantIDs []wireID `json:"target_tenant_ids"`
 	}
 
 	var created announcement
@@ -289,7 +289,7 @@ func TestOperatorRoutesWriteChangeAndDeleteAnAnnouncement(t *testing.T) {
 		"title": "Route Wartung", "content": "Heute Abend", "type": "announcement", "severity": "info",
 		"target_tenant_ids": []int64{testpkg.Tenant(t)},
 	}, &created))
-	assert.Equal(t, []int64{testpkg.Tenant(t)}, created.TargetTenantIDs)
+	assert.Equal(t, []int64{testpkg.Tenant(t)}, testpkg.IDs(created.TargetTenantIDs))
 	var changed announcement
 	f.call(t, http.MethodPut, fmt.Sprintf("/operator/announcements/%d", created.ID), map[string]any{
 		"title": "Route Wartung verschoben", "content": "Morgen Abend", "type": "announcement", "severity": "info",

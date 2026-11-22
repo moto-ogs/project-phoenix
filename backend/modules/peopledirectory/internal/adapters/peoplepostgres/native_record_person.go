@@ -10,15 +10,15 @@ func DirectoryPersonRow(value *directory.DirectoryPersonSnapshot) *models.Person
 		return nil
 	}
 	result := &models.Person{}
-	result.ID = value.ID
+	result.ID = value.ID.Int64()
 	result.CreatedAt = value.CreatedAt
 	result.UpdatedAt = value.UpdatedAt
-	result.TenantID = value.TenantID
+	result.TenantID = value.TenantID.Int64()
 	result.FirstName = value.FirstName
 	result.LastName = value.LastName
 	result.Birthday = value.Birthday
 	result.TagID = value.TagID
-	result.AccountID = value.AccountID
+	result.AccountID = (*int64)(value.AccountID)
 	result.DeletedAt = value.DeletedAt
 	if value.Account != nil {
 		x := models.PersonAccount(*value.Account)

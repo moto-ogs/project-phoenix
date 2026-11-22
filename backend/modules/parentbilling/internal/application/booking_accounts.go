@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The revenue accounts and cost centers of a Träger (#4821) and how a
@@ -73,10 +74,10 @@ type bookingScope struct {
 func newBookingResolver(assignments parentbilling.BookingAssignments, standard string) bookingResolver {
 	r := bookingResolver{standard: standard, revenue: map[bookingScope]string{}, centers: map[bookingScope][]parentbilling.CostCenter{}}
 	for _, account := range assignments.RevenueAccounts {
-		r.revenue[bookingScope{account.Scope, account.ScopeID}] = account.Account
+		r.revenue[bookingScope{account.Scope, account.ScopeID.Int64()}] = account.Account
 	}
 	for _, center := range assignments.CostCenters {
-		key := bookingScope{center.Scope, center.ScopeID}
+		key := bookingScope{center.Scope, center.ScopeID.Int64()}
 		r.centers[key] = append(r.centers[key], center)
 	}
 	for key := range r.centers {
@@ -188,11 +189,11 @@ func freezeCareAccounts(resolver bookingResolver, invoices []parentbilling.CareI
 		invoice := &invoices[i]
 		for j := range invoice.Positions {
 			position := &invoice.Positions[j]
-			position.Accounts = resolver.care(invoice.SchoolID, position.CareOfferingID, position.ServiceFrom)
+			position.Accounts = resolver.care(invoice.SchoolID.Int64(), position.CareOfferingID.Int64(), position.ServiceFrom)
 		}
 		for j := range invoice.MealPositions {
 			meal := &invoice.MealPositions[j]
-			meal.Accounts = resolver.meal(meal.SchoolID, meal.MealMonth)
+			meal.Accounts = resolver.meal(meal.SchoolID.Int64(), meal.MealMonth)
 		}
 	}
 }
@@ -322,11 +323,11 @@ func (b *BookingAccounts) BookingAccounts(ctx context.Context, reviewer parentbi
 	}
 	own := make(map[int64]bool, len(schools))
 	for _, school := range schools {
-		own[school.ID] = true
+		own[school.ID.Int64()] = true
 	}
 	ownOfferings := []parentbilling.BookingOffering{}
 	for _, offering := range offerings {
-		if own[offering.SchoolID] {
+		if own[offering.SchoolID.Int64()] {
 			ownOfferings = append(ownOfferings, offering)
 		}
 	}
@@ -373,7 +374,7 @@ func (b *BookingAccounts) ownSchoolIDs(ctx context.Context, organizationID int64
 	}
 	own := make(map[int64]bool, len(schools))
 	for _, school := range schools {
-		own[school.ID] = true
+		own[school.ID.Int64()] = true
 	}
 	return own, nil
 }
@@ -400,7 +401,7 @@ func (b *BookingAccounts) ownOffering(ctx context.Context, organizationID, offer
 		return err
 	}
 	if !slices.ContainsFunc(offerings, func(offering parentbilling.BookingOffering) bool {
-		return offering.CareOfferingID == offeringID && own[offering.SchoolID]
+		return offering.CareOfferingID == ident.ID(offeringID) && own[offering.SchoolID.Int64()]
 	}) {
 		return parentbilling.ErrBookingScopeNotFound
 	}
@@ -451,7 +452,7 @@ func (b *BookingAccounts) AddCostCenter(ctx context.Context, reviewer parentbill
 	if len(errs) > 0 {
 		return parentbilling.BookingAccounts{}, errs
 	}
-	if err := b.ownScope(ctx, reviewer.OrganizationID, center.Scope, center.ScopeID, true); err != nil {
+	if err := b.ownScope(ctx, reviewer.OrganizationID, center.Scope, center.ScopeID.Int64(), true); err != nil {
 		return parentbilling.BookingAccounts{}, err
 	}
 	if err := b.store.InsertCostCenter(ctx, reviewer.OrganizationID, reviewer.AccountID, center); err != nil {
@@ -472,7 +473,7 @@ func (b *BookingAccounts) DeleteCostCenter(ctx context.Context, reviewer parentb
 	if err != nil {
 		return parentbilling.BookingAccounts{}, err
 	}
-	if id <= 0 || !slices.ContainsFunc(assignments.CostCenters, func(c parentbilling.CostCenter) bool { return c.ID == id }) {
+	if id <= 0 || !slices.ContainsFunc(assignments.CostCenters, func(c parentbilling.CostCenter) bool { return c.ID == ident.ID(id) }) {
 		return parentbilling.BookingAccounts{}, parentbilling.ErrCostCenterNotFound
 	}
 	if err := b.store.DeleteCostCenter(ctx, reviewer.OrganizationID, id); err != nil {

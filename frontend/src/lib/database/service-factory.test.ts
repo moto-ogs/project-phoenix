@@ -96,18 +96,18 @@ describe("createCrudService", () => {
       expect(result.pagination.total_records).toBe(2);
     });
 
-    it("handles wrapped API response", async () => {
+    it("keeps the backend's page of a paginated answer", async () => {
+      // The BFF passes the backend's envelope on (#2353).
+      const pagination = {
+        current_page: 2,
+        page_size: 10,
+        total_pages: 3,
+        total_records: 21,
+      };
       const mockResponse = {
-        success: true,
-        data: {
-          data: [{ id: "1", name: "Test 1" }],
-          pagination: {
-            current_page: 1,
-            page_size: 10,
-            total_pages: 1,
-            total_records: 1,
-          },
-        },
+        status: "success",
+        data: [{ id: "1", name: "Test 1" }],
+        pagination,
       };
 
       (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -121,7 +121,10 @@ describe("createCrudService", () => {
       const service = createCrudService(mockConfig);
       const result = await service.getList();
 
-      expect(result.data).toHaveLength(1);
+      expect(result).toEqual({
+        data: [{ id: "1", name: "Test 1" }],
+        pagination,
+      });
     });
 
     it("handles direct array response", async () => {

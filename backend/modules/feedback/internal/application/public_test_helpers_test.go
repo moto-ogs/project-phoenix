@@ -40,8 +40,20 @@ type seamSettings struct{}
 
 func (seamSettings) FeedbackEnabled(context.Context) (bool, error)      { return true, nil }
 func (seamSettings) FeedbackRetentionDays(context.Context) (int, error) { return 90, nil }
+
+// seamStops reports the listed children as stopped (#3844).
+type seamStops map[int64]bool
+
+func (s seamStops) MoodCaptureStopped(_ context.Context, studentID int64) (bool, error) {
+	return s[studentID], nil
+}
+
 func newTestModule(e *recordingEngine) *Service {
-	return New(seamStore{e: e}, seamSettings{}, seamTransaction{}, func(o ports.Observation) {
+	return newTestModuleWithStops(e, seamStops{})
+}
+
+func newTestModuleWithStops(e *recordingEngine, stops seamStops) *Service {
+	return New(seamStore{e: e}, seamSettings{}, stops, seamTransaction{}, func(o ports.Observation) {
 		if o.Err != nil {
 			e.ObserveRejection(o.Operation, o.Duration, o.Err)
 		}

@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -161,7 +162,7 @@ func TestMonthClose_FreezesBalanceAgainstRetroactiveSessionEdit(t *testing.T) {
 
 	var frozen *timetracking.MonthSnapshot
 	for _, snapshot := range result.Snapshots {
-		if snapshot.StaffID == f.staff {
+		if snapshot.StaffID == ident.ID(f.staff) {
 			frozen = snapshot
 		}
 	}
@@ -414,7 +415,7 @@ func TestSessionCorrections_PersistConsistentState(t *testing.T) {
 			f := newSnapshotFixture(t)
 			svc := f.newAdminSessionService()
 			end := f.session.CheckInTime.Add(4*time.Hour + 30*time.Minute)
-			brk, err := f.workforce.CreateWorkSessionBreak(f.ctx, workforce.WorkSessionBreak{TenantID: f.tenantID, SessionID: f.session.ID, StartedAt: f.session.CheckInTime.Add(4 * time.Hour), EndedAt: &end, DurationMinutes: 30})
+			brk, err := f.workforce.CreateWorkSessionBreak(f.ctx, workforce.WorkSessionBreak{TenantID: ident.ID(f.tenantID), SessionID: ident.ID(f.session.ID), StartedAt: f.session.CheckInTime.Add(4 * time.Hour), EndedAt: &end, DurationMinutes: 30})
 			require.NoError(t, err)
 			_, err = f.workforce.SetWorkSessionBreakMinutes(f.ctx, f.session.ID, 99)
 			require.NoError(t, err)
@@ -442,7 +443,7 @@ func TestSessionCorrections_PersistConsistentState(t *testing.T) {
 			assert.Equal(t, before, after, "rejected scalar correction leaves audit unchanged")
 			minutes := 45
 			require.NoError(t, testpkg.RunInTenantTransaction(f.ctx, func(ctx context.Context) error {
-				return correct(ctx, timetracking.SessionUpdateRequest{Notes: &notes, BreakMinutes: &minutes, Breaks: []timetracking.BreakDurationUpdate{{ID: brk.ID, DurationMinutes: minutes}}})
+				return correct(ctx, timetracking.SessionUpdateRequest{Notes: &notes, BreakMinutes: &minutes, Breaks: []timetracking.BreakDurationUpdate{{ID: brk.ID.Int64(), DurationMinutes: minutes}}})
 			}))
 			stored, err = f.workforce.FindWorkSession(f.ctx, f.session.ID)
 			require.NoError(t, err)

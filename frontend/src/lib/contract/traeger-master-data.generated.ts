@@ -5,7 +5,7 @@ import {
   bool,
   fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   multipart,
   noData,
   nullable,
@@ -71,7 +71,7 @@ export interface TraegerBankAccount {
 }
 
 export const TraegerBankAccountSchema: z.ZodType<TraegerBankAccount, unknown> = object<TraegerBankAccount>({
-  id: int64StringOrNumber,
+  id: int64String,
   label: str,
   account_holder: str,
   iban: str,
@@ -351,6 +351,7 @@ export const routes = {
     method: "POST",
     pattern: "/traeger/master-data/document-templates/{kind}/preview",
     portals: ["org"],
+    noCommit: "renders a sample letter and saves no template",
     request: requestBody<TemplateRequest>(),
     response: success(SampleLetterSchema),
   },

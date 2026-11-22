@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -33,9 +34,9 @@ func TestProvisioningCreateSchool(t *testing.T) {
 		assert.Equal(t, "burbach", created.Slug)
 		assert.Equal(t, "burbach-gs", created.Subdomain)
 		assert.Equal(t, "Burbach", created.City)
-		require.Contains(t, h.engine.schools, created.ID)
+		require.Contains(t, h.engine.schools, created.ID.Int64())
 
-		categories := h.categories.seeded[created.ID]
+		categories := h.categories.seeded[created.ID.Int64()]
 		require.Len(t, categories, 10)
 		assert.Contains(t, categories, domain.ActivityCategory{
 			Name: "Mensa", Description: "Aktivitäten rund um das Mittagessen", Color: "#FF9500",
@@ -44,7 +45,7 @@ func TestProvisioningCreateSchool(t *testing.T) {
 
 		require.Len(t, h.devices.created, 1)
 		device := h.devices.created[0]
-		assert.Equal(t, created.ID, device.TenantID)
+		assert.Equal(t, created.ID.Int64(), device.TenantID)
 		assert.Equal(t, domain.WebManualDeviceID, device.DeviceID)
 		assert.Equal(t, domain.DeviceTypeVirtual, device.DeviceType)
 		assert.Equal(t, domain.DeviceStatusActive, device.Status)
@@ -52,12 +53,12 @@ func TestProvisioningCreateSchool(t *testing.T) {
 		assert.Equal(t, "Web-Portal (Manuell)", *device.Name)
 		assert.Nil(t, device.APIKey, "the virtual device authenticates no kiosk")
 
-		entry := h.onlyAudit(t, domain.AuditActionCreate, domain.AuditResourceSchool, created.ID)
+		entry := h.onlyAudit(t, domain.AuditActionCreate, domain.AuditResourceSchool, created.ID.Int64())
 		assert.Equal(t, map[string]any{
 			"name": "Grundschule Burbach", "slug": "burbach", "subdomain": "burbach-gs", "organizationID": float64(1),
 			"federalState": "DE-NW",
 		}, auditChanges(t, entry))
-		assert.Equal(t, map[int64]string{created.ID: "DE-NW"}, h.settings.federalStates, "the federal state becomes the school's setting (#7174)")
+		assert.Equal(t, map[int64]string{created.ID.Int64(): "DE-NW"}, h.settings.federalStates, "the federal state becomes the school's setting (#7174)")
 	})
 
 	t.Run("rejects a school without a federal state before writing", func(t *testing.T) {
@@ -119,7 +120,7 @@ func TestProvisioningCreateSchool(t *testing.T) {
 		created, err := h.svc.CreateSchool(context.Background(), validCreateSchool(2), testOperatorID, operatorIP)
 
 		require.NoError(t, err)
-		assert.Equal(t, int64(2), created.OrganizationID)
+		assert.Equal(t, ident.ID(int64(2)), created.OrganizationID)
 		assert.Equal(t, "burbach", created.Slug)
 	})
 
@@ -486,7 +487,7 @@ func TestProvisioningUpdateSchool(t *testing.T) {
 		updated, err := h.svc.UpdateSchool(context.Background(), 10, schoolChanges(2), testOperatorID, operatorIP)
 
 		require.NoError(t, err)
-		assert.Equal(t, int64(2), updated.OrganizationID)
+		assert.Equal(t, ident.ID(int64(2)), updated.OrganizationID)
 		entry := h.onlyAudit(t, domain.AuditActionUpdate, domain.AuditResourceSchool, 10)
 		assert.Equal(t, map[string]any{
 			"organization_id": map[string]any{"old": float64(1), "new": float64(2)},

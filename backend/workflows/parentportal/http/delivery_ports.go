@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // PushSubscriptions manages only the authenticated parent's devices.
@@ -70,7 +72,7 @@ type FeedPage struct {
 
 // FeedEntry is one entry of the feed: finished text and an app-relative link.
 type FeedEntry struct {
-	ID        int64
+	ID        ident.ID
 	Type      string
 	Title     string
 	Body      string

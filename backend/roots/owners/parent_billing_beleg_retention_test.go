@@ -12,6 +12,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -221,7 +222,7 @@ func TestBelegRetentionSuspensionHoldsTheDeletion(t *testing.T) {
 	assert.Equal(t, 1, invoices, "and keeps the invoice it would take along")
 
 	admin(func(adminCtx context.Context) error {
-		return retention.LiftSuspension(adminCtx, f.organization, hold.ID, 0)
+		return retention.LiftSuspension(adminCtx, f.organization, hold.ID.Int64(), 0)
 	})
 	today = calendar.NewDate(2035, time.January, 3)
 	admin(func(adminCtx context.Context) error { _, err := retention.ApplyBelegRetention(adminCtx); return err })
@@ -292,7 +293,7 @@ func TestPendingDebitGoesWithItsInvoice(t *testing.T) {
 	admin(func(adminCtx context.Context) error {
 		instruct(t, retention, adminCtx, f.organization)
 		_, err := retention.RecordSuspension(adminCtx, f.organization, 0, parentbilling.NewRetentionSuspension{
-			BelegType: parentbilling.BelegSEPADebit, BelegID: f.debit, Reason: "Rückfrage der Bank", Scope: "Lastschrift MB-1",
+			BelegType: parentbilling.BelegSEPADebit, BelegID: ident.ID(f.debit), Reason: "Rückfrage der Bank", Scope: "Lastschrift MB-1",
 			Responsible: "Kämmerei", ReviewOn: calendar.NewDate(2036, time.March, 1),
 		})
 		return err

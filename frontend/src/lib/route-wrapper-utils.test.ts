@@ -4,7 +4,7 @@ import {
   buildQueryString,
   extractParams,
   parseRequestBody,
-  wrapInApiResponse,
+  successResponse,
   createUnauthorizedResponse,
   isStringParam,
   requirePathSegmentParam,
@@ -209,37 +209,21 @@ describe("parseRequestBody with maxBodyBytes", () => {
   });
 });
 
-describe("wrapInApiResponse", () => {
-  it("wraps plain data in ApiResponse", () => {
-    const data = { id: "1", name: "Test" };
-    const response = wrapInApiResponse(data);
-    expect(response).toEqual({ success: true, message: "Success", data });
+describe("successResponse", () => {
+  it("answers data in the backend's envelope", () => {
+    expect(successResponse({ id: "1" })).toEqual({
+      status: "success",
+      data: { id: "1" },
+    });
+    expect(successResponse(null)).toEqual({ status: "success", data: null });
   });
 
-  it("returns already wrapped data unchanged", () => {
-    // wrapInApiResponse checks if data itself has "success" in it
-    const alreadyWrapped = { success: true, data: { id: "1" } };
-    const response = wrapInApiResponse(alreadyWrapped);
-    expect(response).toBe(alreadyWrapped);
-  });
-
-  it("wraps null data", () => {
-    const response = wrapInApiResponse(null);
-    expect(response).toEqual({ success: true, message: "Success", data: null });
-  });
-
-  it("wraps array data", () => {
-    const data = [1, 2, 3];
-    const response = wrapInApiResponse(data);
-    expect(response).toEqual({ success: true, message: "Success", data });
-  });
-
-  it("wraps primitive data", () => {
-    const response = wrapInApiResponse("test string");
-    expect(response).toEqual({
-      success: true,
-      message: "Success",
-      data: "test string",
+  it("wraps a payload that names a status or success of its own", () => {
+    // The removed wrapper passed such a payload on unwrapped (#2353).
+    const payload = { success: false, status: "ok" };
+    expect(successResponse(payload)).toEqual({
+      status: "success",
+      data: payload,
     });
   });
 });

@@ -94,13 +94,13 @@ func traegerCall(t *testing.T, router http.Handler, method, path, token string, 
 
 type traegerBueroAnswer struct {
 	Members []struct {
-		AccountID int64    `json:"account_id"`
+		AccountID wireID   `json:"account_id"`
 		Email     string   `json:"email"`
 		Name      string   `json:"name"`
 		Roles     []string `json:"roles"`
 	} `json:"members"`
 	Invitations []struct {
-		ID    int64    `json:"id"`
+		ID    wireID   `json:"id"`
 		Email string   `json:"email"`
 		Roles []string `json:"roles"`
 	} `json:"invitations"`
@@ -121,7 +121,7 @@ func traegerInvite(t *testing.T, db *bun.DB, router http.Handler, token, address
 	rec := traegerCall(t, router, http.MethodPost, "/traeger/accounts/invitations", token, map[string]any{"email": address, "roles": roles})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	invitation := decodeSchoolPortalData[struct {
-		ID int64 `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes())
 	ctx := context.Background()
 	const queued = `FROM platform.email_outbox WHERE tenant_id IS NULL AND kind = ? AND payload->>'Type' = 'traeger_invitation' AND (payload->>'ReferenceID')::bigint = ?`
@@ -263,7 +263,7 @@ func TestTraegerAccountsStayInsideTheTraegerOfTheSession(t *testing.T) {
 
 	buero := traegerBueroList(t, router, admin.AccessToken)
 	require.Len(t, buero.Members, 1)
-	assert.NotEqual(t, foreignMember.ID, buero.Members[0].AccountID, "no Träger sees the people of another Träger")
+	assert.NotEqual(t, foreignMember.ID, int64(buero.Members[0].AccountID), "no Träger sees the people of another Träger")
 	assert.Empty(t, buero.Invitations)
 
 	rec := traegerCall(t, router, http.MethodPut, fmt.Sprintf("/traeger/accounts/%d/roles", foreignMember.ID), admin.AccessToken, map[string]any{"roles": []string{identityaccess.TraegerRoleReadOnly}})

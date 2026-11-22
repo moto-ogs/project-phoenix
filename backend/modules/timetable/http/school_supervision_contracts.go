@@ -13,7 +13,7 @@ type SchoolSupervisionsResponse struct {
 // CompleteOperationRequest names the children the supervisor confirmed as
 // present when she ends a block.
 type CompleteOperationRequest struct {
-	ConfirmedPresentStudentIDs []int64 `json:"confirmed_present_student_ids"`
+	ConfirmedPresentStudentIDs []common.ID `json:"confirmed_present_student_ids"`
 }
 
 // SchoolSupervisionRouteContracts registers the typed contract of the

@@ -493,7 +493,7 @@ describe("OperatorSchoolDetailPage", () => {
       expect(mockUpdateSchool).toHaveBeenCalledWith(
         "10",
         expect.objectContaining({
-          organization_id: 1,
+          organization_id: "1",
           name: "Test School",
           slug: "test-school",
           subdomain: "test-school",

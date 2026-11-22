@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   arr,
   instant,
-  int64StringOrNumber,
+  int64String,
   noData,
   nullable,
   object,
@@ -33,10 +33,10 @@ export interface PendingOperatorInvitationResponse {
 }
 
 export const PendingOperatorInvitationResponseSchema: z.ZodType<PendingOperatorInvitationResponse, unknown> = object<PendingOperatorInvitationResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   email: str,
   display_name: optional(str),
-  created_by: int64StringOrNumber,
+  created_by: int64String,
   creator_name: optional(str),
   expires_at: instant,
   email_sent_at: optional(instant),

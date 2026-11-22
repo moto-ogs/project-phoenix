@@ -15,6 +15,7 @@ import (
 	securityruntime "github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	realtime "github.com/moto-ogs/project-phoenix/realtime"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	tenant "github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -455,8 +456,8 @@ func (rs *Resource) bulkUpsertArrivalSchedules(w http.ResponseWriter, r *http.Re
 		r.Context(),
 		careplan.ArrivalScheduleBulkFilter{
 			SchoolClass: req.SchoolClass,
-			GroupID:     req.GroupID,
-			StudentIDs:  req.StudentIDs,
+			GroupID:     req.GroupID.Int64(),
+			StudentIDs:  ident.Int64s(req.StudentIDs),
 			Authorize: func(ctx context.Context, student careplan.ScheduleStudent) (bool, error) {
 				return securityruntime.CanUpdateStudent(ctx, sessiontoken.PermissionsFromCtx(r.Context()), student, rs.UserContextService)
 			},
@@ -495,7 +496,7 @@ func (rs *Resource) bulkUpsertArrivalSchedules(w http.ResponseWriter, r *http.Re
 }
 
 type ArrivalScheduleStatusResponse struct {
-	StudentIDs []int64 `json:"student_ids"`
+	StudentIDs []common.ID `json:"student_ids"`
 }
 
 // getBulkArrivalScheduleStatus returns the selected children that have their
@@ -508,13 +509,13 @@ func (rs *Resource) getBulkArrivalScheduleStatus(w http.ResponseWriter, r *http.
 		return
 	}
 
-	authorizedIDs, err := rs.filterAuthorizedStudentIDs(r, req.StudentIDs)
+	authorizedIDs, err := rs.filterAuthorizedStudentIDs(r, ident.Int64s(req.StudentIDs))
 	if err != nil {
 		renderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
 	if len(authorizedIDs) == 0 {
-		common.Respond(w, r, http.StatusOK, ArrivalScheduleStatusResponse{StudentIDs: []int64{}}, "Bulk arrival schedule status retrieved successfully")
+		common.Respond(w, r, http.StatusOK, ArrivalScheduleStatusResponse{StudentIDs: []ident.ID{}}, "Bulk arrival schedule status retrieved successfully")
 		return
 	}
 
@@ -529,7 +530,7 @@ func (rs *Resource) getBulkArrivalScheduleStatus(w http.ResponseWriter, r *http.
 			studentIDs = append(studentIDs, studentID)
 		}
 	}
-	common.Respond(w, r, http.StatusOK, ArrivalScheduleStatusResponse{StudentIDs: studentIDs}, "Bulk arrival schedule status retrieved successfully")
+	common.Respond(w, r, http.StatusOK, ArrivalScheduleStatusResponse{StudentIDs: ident.IDs(studentIDs)}, "Bulk arrival schedule status retrieved successfully")
 }
 
 // ClassArrivalTimesResponse is the current Unterrichtsschluss of one class.

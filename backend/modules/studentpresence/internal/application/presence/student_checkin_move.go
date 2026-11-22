@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const opCheckInStudentsToSession = "CheckInStudentsToSession"
@@ -65,7 +66,7 @@ func (s *service) checkInStudentsToSessionLocked(ctx context.Context, studentIDs
 	opts.arrivals = make(map[int64]struct{}, len(batch.Results))
 	for _, item := range batch.Results {
 		if !item.OK {
-			rejected = append(rejected, StudentMoveSkipped{StudentID: item.StudentID, Reason: studentpresence.StudentMoveSkipNotFound})
+			rejected = append(rejected, StudentMoveSkipped{StudentID: ident.ID(item.StudentID), Reason: studentpresence.StudentMoveSkipNotFound})
 			continue
 		}
 		if item.Changed {
@@ -79,7 +80,7 @@ func (s *service) checkInStudentsToSessionLocked(ctx context.Context, studentIDs
 	}
 	if len(placeable) == 0 {
 		result := newStudentMoveResult(&activeGroupID, nil)
-		result.Unchanged = append(result.Unchanged, kept...)
+		result.Unchanged = append(result.Unchanged, ident.IDs(kept)...)
 		result.Skipped = rejected
 		return result, nil
 	}
@@ -88,8 +89,8 @@ func (s *service) checkInStudentsToSessionLocked(ctx context.Context, studentIDs
 	if err != nil {
 		return nil, err
 	}
-	result.CheckedIn = checkedIn
-	result.Unchanged = append(result.Unchanged, kept...)
+	result.CheckedIn = ident.IDs(checkedIn)
+	result.Unchanged = append(result.Unchanged, ident.IDs(kept)...)
 	result.Skipped = append(rejected, result.Skipped...)
 	return result, nil
 }

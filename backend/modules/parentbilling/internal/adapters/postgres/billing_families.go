@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The documents of the families of a Träger (#4691). A family is the mail
@@ -123,8 +124,8 @@ func (s *Store) FamilyDocuments(ctx context.Context, organizationID, familyID in
 
 func (row familyDocumentRow) document() parentbilling.BillingFamilyDocument {
 	document := parentbilling.BillingFamilyDocument{
-		ID: row.ID, RunID: row.RunID, Kind: row.Kind, Number: row.Number, IssuedOn: row.IssuedOn, PeriodName: row.PeriodName,
-		ServiceFrom: row.ServiceFrom, ServiceUntil: row.ServiceUntil, ReferenceDocumentID: row.ReferenceDocumentID,
+		ID: ident.ID(row.ID), RunID: ident.ID(row.RunID), Kind: row.Kind, Number: row.Number, IssuedOn: row.IssuedOn, PeriodName: row.PeriodName,
+		ServiceFrom: row.ServiceFrom, ServiceUntil: row.ServiceUntil, ReferenceDocumentID: (*ident.ID)(row.ReferenceDocumentID),
 		Reason: row.Reason, TotalCents: row.TotalCents, ChildNames: nonNil(row.ChildNames),
 		RecipientFirstName: row.RecipientFirstName, RecipientLastName: row.RecipientLastName, RecipientEmail: row.RecipientEmail,
 		FamilyKey: row.FamilyKey, CostBearerNames: nonNil(row.CostBearerNames), Exempt: row.Exempt,

@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -315,7 +316,7 @@ func TestBuildAttendanceHistoryDays_MultipleRowsSameDay_Consolidated(t *testing.
 	assert.Equal(t, morningIn, day.Attendance.CheckInTime, "earliest check-in wins")
 	require.NotNil(t, day.Attendance.CheckOutTime)
 	assert.Equal(t, afternoonOut, *day.Attendance.CheckOutTime, "latest check-out wins")
-	assert.Equal(t, int64(42), day.Attendance.CheckedInBy, "checked_in_by from earliest row")
+	assert.Equal(t, ident.ID(int64(42)), day.Attendance.CheckedInBy, "checked_in_by from earliest row")
 	require.NotNil(t, day.Attendance.DurationMinutes)
 	assert.Equal(t, 420, *day.Attendance.DurationMinutes, "duration sums sessions without counting the school-time gap")
 	require.Len(t, day.Attendance.Sessions, 2)

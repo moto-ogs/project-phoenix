@@ -105,6 +105,12 @@ func groupAssignmentListQuery(query *bun.SelectQuery, filter schoolmembership.Gr
 			Join(`INNER JOIN users.teachers AS "teacher" ON "teacher".id = "group_assignment".teacher_id`).
 			Where(`"teacher".staff_id IN (?)`, bun.List(filter.TeacherStaffIDs))
 	}
+	if filter.WithTeacherStaff {
+		query = query.ColumnExpr(`"group_assignment".*`).
+			ColumnExpr(`"assigned_teacher".staff_id AS teacher_staff_id`).
+			Join(`LEFT JOIN users.teachers AS "assigned_teacher" ON "assigned_teacher".id = "group_assignment".teacher_id
+				AND "assigned_teacher".tenant_id = "group_assignment".tenant_id AND "assigned_teacher".deleted_at IS NULL`)
+	}
 	query = query.OrderExpr(`"group_assignment".id ASC`)
 	if forUpdate {
 		query = query.For("UPDATE OF group_assignment")

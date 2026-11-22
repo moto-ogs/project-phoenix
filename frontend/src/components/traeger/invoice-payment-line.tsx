@@ -7,6 +7,7 @@ import {
   dueOnText,
   dueSourceHint,
 } from "./billing-payment-format";
+import { labelOf } from "~/lib/label-of";
 
 export function InvoicePaymentLine({
   payment,
@@ -14,7 +15,7 @@ export function InvoicePaymentLine({
   const hint = dueSourceHint(payment);
   return (
     <p className="mt-0.5 text-sm text-gray-600">
-      {PAYMENT_METHOD_LABELS[payment.method]} ·{" "}
+      {labelOf(PAYMENT_METHOD_LABELS, payment.method, "Zahlung")} ·{" "}
       <span className="whitespace-nowrap">{dueOnText(payment)}</span>
       {hint ? <span className="text-gray-500"> ({hint})</span> : null}
     </p>

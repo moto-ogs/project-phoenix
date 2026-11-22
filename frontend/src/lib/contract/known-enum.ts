@@ -8,3 +8,20 @@ export function knownEnum<T extends string>(
 ): T | undefined {
   return values.find((known) => known === value);
 }
+
+/**
+ * An open enum the page cannot work without: a value this build does not
+ * know fails the read like a broken required field (ADR 0270 point 6), so
+ * nothing saves a guessed value back.
+ */
+export function requiredEnum<T extends string>(
+  values: readonly T[],
+  value: string,
+  field: string,
+): T {
+  const known = knownEnum(values, value);
+  if (known === undefined) {
+    throw new Error(`contract: ${field} has an unknown value`);
+  }
+  return known;
+}

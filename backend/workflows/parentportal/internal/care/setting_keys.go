@@ -25,15 +25,18 @@ const (
 	KeyParentPickupChangeCutoffTime     = "operations.parent_pickup_change_cutoff_time"
 	KeyParentPickupChangeEnabled        = "operations.parent_pickup_change_enabled"
 	KeyParentRequestReasonPolicy        = "operations.parent_request_reason_policy"
-	KeyParentSickNoteEnabled            = "operations.parent_sick_note_enabled"
-	KeyParentSickReportsEnabled         = "operations.parent_sick_reports_enabled"
-	KeyParentSickRequiresApproval       = "operations.parent_sick_requires_approval"
-	KeySessionEndTime                   = "operations.session_end_time"
-	ParentInviteModeDirect              = "direct"
-	ParentInviteModeDisabled            = "disabled"
-	ParentInviteModeStaffApproval       = "staff_approval"
-	ReasonPolicyBoth                    = parentrequests.ReasonPolicyBoth
-	ReasonPolicyGuardians               = parentrequests.ReasonPolicyGuardians
-	ReasonPolicyNobody                  = parentrequests.ReasonPolicyNobody
-	ReasonPolicyStaff                   = parentrequests.ReasonPolicyStaff
+	// KeyParentRoomHistoryStopEnabled is the Träger's switch letting parents
+	// stop the room history and the mood of their child (#3844).
+	KeyParentRoomHistoryStopEnabled = "gdpr.parent_room_history_stop_enabled"
+	KeyParentSickNoteEnabled        = "operations.parent_sick_note_enabled"
+	KeyParentSickReportsEnabled     = "operations.parent_sick_reports_enabled"
+	KeyParentSickRequiresApproval   = "operations.parent_sick_requires_approval"
+	KeySessionEndTime               = "operations.session_end_time"
+	ParentInviteModeDirect          = "direct"
+	ParentInviteModeDisabled        = "disabled"
+	ParentInviteModeStaffApproval   = "staff_approval"
+	ReasonPolicyBoth                = parentrequests.ReasonPolicyBoth
+	ReasonPolicyGuardians           = parentrequests.ReasonPolicyGuardians
+	ReasonPolicyNobody              = parentrequests.ReasonPolicyNobody
+	ReasonPolicyStaff               = parentrequests.ReasonPolicyStaff
 )

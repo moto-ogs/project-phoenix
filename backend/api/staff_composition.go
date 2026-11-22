@@ -7,6 +7,7 @@ import (
 	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	nativeUploads "github.com/moto-ogs/project-phoenix/modules/delivery/objects"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
@@ -106,9 +107,9 @@ func toStaffHTTPRoleRows(rows []StaffRoleRow) []staffHTTP.StaffWithRoleResponse 
 	result := make([]staffHTTP.StaffWithRoleResponse, 0, len(rows))
 	for _, row := range rows {
 		result = append(result, staffHTTP.StaffWithRoleResponse{
-			ID: row.StaffID, PersonID: row.PersonID, TeacherID: row.TeacherID,
+			ID: ident.ID(row.StaffID), PersonID: ident.ID(row.PersonID), TeacherID: ident.ID(row.TeacherID),
 			FirstName: row.FirstName, LastName: row.LastName, FullName: row.FirstName + " " + row.LastName,
-			AccountID: row.AccountID, Email: row.Email, IsActiveCaregiver: row.IsActiveCaregiver,
+			AccountID: ident.ID(row.AccountID), Email: row.Email, IsActiveCaregiver: row.IsActiveCaregiver,
 			CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
 		})
 	}
@@ -196,7 +197,6 @@ func newStaffResource(
 
 		RetryQueuedDocumentCleanups: staffAdmin.RetryQueuedStaffDocumentCleanups,
 
-		TeacherGroups:    staffTeacherGroups(runtime),
 		SchoolClasses:    runtime.SchoolClasses,
 		SetSchoolClasses: runtime.SetSchoolClasses,
 		ActiveCaregivers: staffRoleRows(runtime.ActiveCaregivers),
@@ -293,20 +293,6 @@ func staffPersonsLookup(runtime StaffMembershipRuntime) func(context.Context, []
 		result := make([]staffHTTP.Person, 0, len(persons))
 		for _, person := range persons {
 			result = append(result, toStaffHTTPPerson(person))
-		}
-		return result, nil
-	}
-}
-
-func staffTeacherGroups(runtime StaffMembershipRuntime) func(context.Context, int64) ([]staffHTTP.Group, error) {
-	return func(ctx context.Context, teacherID int64) ([]staffHTTP.Group, error) {
-		groups, err := runtime.TeacherGroups(ctx, teacherID)
-		if err != nil {
-			return nil, err
-		}
-		result := make([]staffHTTP.Group, 0, len(groups))
-		for _, group := range groups {
-			result = append(result, staffHTTP.Group{ID: group.ID, Name: group.Name})
 		}
 		return result, nil
 	}

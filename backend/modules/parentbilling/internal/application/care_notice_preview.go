@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // noticePreview is the preview of a calculated notice run: the drafts, the
@@ -98,13 +99,13 @@ func (n *CareFeeNotices) noticeDrafts(ctx context.Context, organizationID int64,
 		if err != nil {
 			return nil, err
 		}
-		review, final, err := computeNoticeMonth(monthIn, invoiced, in.noticed[month], run.SchoolIDs)
+		review, final, err := computeNoticeMonth(monthIn, invoiced, in.noticed[month], ident.Int64s(run.SchoolIDs))
 		if err != nil {
 			return nil, err
 		}
 		drafts[month] = retainFailedAssessments(final, review.careMonth, in.previous, in.month.recipients, month)
 		if !month.Before(run.PeriodFrom) {
-			addBilledByInvoice(billed, invoiced, run.SchoolIDs)
+			addBilledByInvoice(billed, invoiced, ident.Int64s(run.SchoolIDs))
 		}
 		preview.unpriced = appendNew(preview.unpriced, review.unpriced)
 		preview.duplicates = appendNew(preview.duplicates, review.duplicates)
@@ -179,7 +180,7 @@ func retainFailedAssessments(final, review careMonth, previous map[int64]parentb
 // bills; a month of a notice carries the notice number.
 func addBilledByInvoice(billed map[int64]bool, invoiced map[int64]parentbilling.CareInvoice, schoolIDs []int64) {
 	for contractID, invoice := range invoiced {
-		if invoice.Number == "" && slices.Contains(schoolIDs, invoice.SchoolID) {
+		if invoice.Number == "" && slices.Contains(schoolIDs, invoice.SchoolID.Int64()) {
 			billed[contractID] = true
 		}
 	}
@@ -219,12 +220,12 @@ func (in *noticeInput) collectPrevious(effective []parentbilling.CareNotice, run
 		if !slices.Contains(run.SchoolIDs, notice.SchoolID) {
 			continue
 		}
-		in.previous[notice.ContractID] = notice
+		in.previous[notice.ContractID.Int64()] = notice
 		for _, installment := range notice.Installments {
 			if in.noticed[installment.Month] == nil {
 				in.noticed[installment.Month] = map[int64]bool{}
 			}
-			in.noticed[installment.Month][notice.ContractID] = true
+			in.noticed[installment.Month][notice.ContractID.Int64()] = true
 			if installment.Month.Before(start) {
 				start = installment.Month
 			}
@@ -308,7 +309,7 @@ func (n *CareFeeNotices) withPayments(ctx context.Context, organizationID int64,
 	for i := range notices {
 		family := notices[i].FamilyEmail
 		if family == "" {
-			family = parentbilling.ContractFamilyKey(notices[i].Recipient.Email, notices[i].ContractID)
+			family = parentbilling.ContractFamilyKey(notices[i].Recipient.Email, notices[i].ContractID.Int64())
 		}
 		invoice := parentbilling.CareInvoice{Recipient: notices[i].Recipient, Service: parentbilling.ServiceCare,
 			FamilyEmail: family}
@@ -349,7 +350,7 @@ func noticeFingerprint(run parentbilling.CareNoticeRun, rule string, preview not
 		Unpriced    []parentbilling.CareUnpriced  `json:"unpriced"`
 		Duplicates  []parentbilling.CareDuplicate `json:"duplicates"`
 		LegalRemedy string                        `json:"legal_remedy"`
-	}{run.ID, run.SchoolIDs, run.PeriodFrom, preview.issuedOn, rule, notices, preview.unchanged, preview.billed,
+	}{run.ID.Int64(), ident.Int64s(run.SchoolIDs), run.PeriodFrom, preview.issuedOn, rule, notices, preview.unchanged, preview.billed,
 		preview.unpriced, preview.duplicates, legalRemedy})
 	if err != nil {
 		return ""

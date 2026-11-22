@@ -121,7 +121,7 @@ func (rs *WeekProtocolResource) seed(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInternalServerWrap("seed week protocols", err))
 		return
 	}
-	render.JSON(w, r, map[string]any{"data": map[string]bool{"seeded": true}})
+	common.RenderJSON(w, r, map[string]any{"data": map[string]bool{"seeded": true}})
 }
 
 var weekProtocolErrorRules = []common.ErrorRule{

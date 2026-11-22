@@ -12,6 +12,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -84,7 +85,7 @@ func TestCareNoticeFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, runs, 2, "ListCareNoticeRuns")
 		for _, run := range runs {
-			assert.Contains(t, []int64{own.noticeRun, own.openRun}, run.ID)
+			assert.Contains(t, []int64{own.noticeRun, own.openRun}, run.ID.Int64())
 		}
 
 		_, err = store.CareNoticeRun(ctx, own.organization, other.noticeRun, false)
@@ -95,7 +96,7 @@ func TestCareNoticeFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		effective, err := store.EffectiveCareNotices(ctx, own.organization, 2029)
 		require.NoError(t, err)
 		require.Len(t, effective, 1, "EffectiveCareNotices")
-		assert.Equal(t, own.notice, effective[0].ID)
+		assert.Equal(t, ident.ID(own.notice), effective[0].ID)
 		require.Len(t, effective[0].Installments, 1, "withNoticeMonths")
 		assert.Equal(t, int64(3200), effective[0].Installments[0].AmountCents)
 

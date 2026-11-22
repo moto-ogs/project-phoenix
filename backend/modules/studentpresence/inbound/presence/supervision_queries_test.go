@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -72,8 +73,8 @@ func TestSessionSupervisorsPreserveExistenceGate(t *testing.T) {
 			}
 			require.NoError(t, err)
 			require.Len(t, rows, 1)
-			assert.Equal(t, supervision.ID, rows[0].ID)
-			assert.Equal(t, supervision.StaffID, rows[0].StaffID)
+			assert.Equal(t, ident.ID(supervision.ID), rows[0].ID)
+			assert.Equal(t, ident.ID(supervision.StaffID), rows[0].StaffID)
 		})
 	}
 }
@@ -107,9 +108,9 @@ func TestPresenceSupervisionResponseDateContract(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tc.active, row.IsActive)
 			assert.Equal(t, tc.start+"T00:00:00Z", row.StartTime.Format(time.RFC3339))
-			assert.Equal(t, input.ID, row.ID)
-			assert.Equal(t, input.StaffID, row.StaffID)
-			assert.Equal(t, input.GroupID, row.ActiveGroupID)
+			assert.Equal(t, ident.ID(input.ID), row.ID)
+			assert.Equal(t, ident.ID(input.StaffID), row.StaffID)
+			assert.Equal(t, ident.ID(input.GroupID), row.ActiveGroupID)
 			assert.Equal(t, now, row.CreatedAt)
 			assert.Equal(t, now, row.UpdatedAt)
 			if tc.end == nil {

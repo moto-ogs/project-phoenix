@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -85,7 +86,7 @@ func TestProvisioningListOrganizationSummaries(t *testing.T) {
 		}, summaries[0])
 		assert.Equal(t, 1, summaries[1].GeraeteCount)
 		assert.Equal(t, 7, summaries[1].PersonenCount)
-		assert.Equal(t, int64(3), summaries[2].ID)
+		assert.Equal(t, ident.ID(int64(3)), summaries[2].ID)
 		require.NotNil(t, summaries[2].DeletedAt, "deleted organisations stay listed")
 		assert.Zero(t, summaries[2].SchulenCount)
 		assert.Zero(t, summaries[2].GeraeteCount)
@@ -149,7 +150,7 @@ func TestProvisioningListSchoolSummaries(t *testing.T) {
 			Address: "Hauptstr. 1", City: "Burbach", Zip: "57299", Phone: "0271", Email: "gs@burbach.test",
 			Settings: `{"a":1}`, KontenCount: 4, GeraeteCount: 2, PersonenCount: 5,
 		}, summaries[0])
-		assert.Equal(t, int64(50), summaries[3].ID)
+		assert.Equal(t, ident.ID(int64(50)), summaries[3].ID)
 		require.NotNil(t, summaries[3].DeletedAt, "deleted schools stay listed")
 		assert.Equal(t, 1, summaries[3].GeraeteCount)
 		assert.Equal(t, 11, summaries[3].PersonenCount)
@@ -171,11 +172,11 @@ func TestProvisioningListSchoolSummaries(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, summaries, 4)
 		limited, unlimited, empty := summaries[0], summaries[1], summaries[2]
-		require.Equal(t, int64(10), limited.ID)
+		require.Equal(t, ident.ID(int64(10)), limited.ID)
 		assert.Equal(t, &bundles, limited.ChildQuotaBundles)
 		assert.Equal(t, 50, limited.ChildQuotaBundleSize)
 		assert.Equal(t, 120, limited.ChildQuotaCount, "a count above the Kinderkontingent is shown as it is")
-		require.Equal(t, int64(20), unlimited.ID)
+		require.Equal(t, ident.ID(int64(20)), unlimited.ID)
 		assert.Nil(t, unlimited.ChildQuotaBundles, "a school without Kinderkontingent has no bundles")
 		assert.Equal(t, 8, unlimited.ChildQuotaCount, "the Kontingentzahl is counted without a Kinderkontingent too")
 		assert.Zero(t, empty.ChildQuotaCount, "a school without a counted child counts zero")
@@ -232,7 +233,7 @@ func TestProvisioningListOrganizationSchoolSummaries(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Len(t, summaries, 3)
-		assert.Equal(t, []int64{10, 20, 50}, []int64{summaries[0].ID, summaries[1].ID, summaries[2].ID})
+		assert.Equal(t, []int64{10, 20, 50}, []int64{summaries[0].ID.Int64(), summaries[1].ID.Int64(), summaries[2].ID.Int64()})
 		require.Len(t, h.dashboard.schoolFilter, 1)
 		require.NotNil(t, h.dashboard.schoolFilter[0])
 		assert.Equal(t, int64(1), *h.dashboard.schoolFilter[0])

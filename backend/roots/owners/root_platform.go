@@ -176,7 +176,7 @@ func schoolTraeger(organizations organizationtenancy.SchoolListQuery) func(conte
 		}
 		result := make(map[int64]int64, len(schools))
 		for _, school := range schools {
-			result[school.ID] = school.OrganizationID
+			result[school.ID.Int64()] = school.OrganizationID.Int64()
 		}
 		return result, nil
 	}

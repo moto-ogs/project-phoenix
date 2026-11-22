@@ -16,7 +16,7 @@ func TestPublicFeedbackContractPreservesNormalizedEntry(t *testing.T) {
 	student := testpkg.CreateTestStudent(t, db, "Feedback", "Contract", "1a")
 	settings, err := compose.NewBoundSettings(func(context.Context) (bool, error) { return true, nil }, func(context.Context) (int, error) { return 90, nil })
 	require.NoError(t, err)
-	module, err := compose.New(compose.Dependencies{DB: db, Settings: settings, Today: func() feedback.Date { return "2026-08-31" }, Observe: func(compose.Observation) {}})
+	module, err := compose.New(compose.Dependencies{DB: db, Settings: settings, Stops: noStops{}, Today: func() feedback.Date { return "2026-08-31" }, Observe: func(compose.Observation) {}})
 	require.NoError(t, err)
 	entry, err := module.Submit(testpkg.Ctx(t), feedback.CreateEntry{Value: " positive ", Day: "2026-08-31", Time: "12:34:56", StudentID: student.ID})
 	require.NoError(t, err)
@@ -29,3 +29,8 @@ func TestPublicFeedbackContractPreservesNormalizedEntry(t *testing.T) {
 	require.Equal(t, feedback.Date("2026-08-31"), found.Day)
 	require.Equal(t, "12:34:56", found.Time)
 }
+
+// noStops stops no child's mood capture.
+type noStops struct{}
+
+func (noStops) MoodCaptureStopped(context.Context, int64) (bool, error) { return false, nil }

@@ -8,6 +8,7 @@ import (
 	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The trail of imported SEPA mandates (#6198): the creation of each with
@@ -46,8 +47,8 @@ func (s *Store) InsertSEPAMandateImportEvents(ctx context.Context, organizationI
 	}
 	rows := make([]sepaMandateImportEventRow, len(imported))
 	for i, entry := range imported {
-		rows[i] = sepaMandateImportEventRow{OrganizationID: organizationID, MandateID: entry.Mandate.ID,
-			CareContractID: entry.Mandate.ContractID, Action: "create", Source: parentbilling.MandateFromImport,
+		rows[i] = sepaMandateImportEventRow{OrganizationID: organizationID, MandateID: entry.Mandate.ID.Int64(),
+			CareContractID: entry.Mandate.ContractID.Int64(), Action: "create", Source: parentbilling.MandateFromImport,
 			Fields: []string{}, ActorAccountID: accountRef(accountID), ImportFile: file, ImportLine: entry.Line}
 	}
 	if _, err := db.NewInsert().Model(&rows).Exec(ctx); err != nil {
@@ -71,7 +72,7 @@ func (s *Store) SEPAMandateImportEvents(ctx context.Context, organizationID int6
 	}
 	entries := make([]parentbilling.SEPAMandateImportEntry, len(rows))
 	for i, row := range rows {
-		entries[i] = parentbilling.SEPAMandateImportEntry{File: row.ImportFile, AccountID: row.ActorAccountID,
+		entries[i] = parentbilling.SEPAMandateImportEntry{File: row.ImportFile, AccountID: (*ident.ID)(row.ActorAccountID),
 			ImportedAt: row.OccurredAt, Mandates: 1}
 	}
 	return entries, nil

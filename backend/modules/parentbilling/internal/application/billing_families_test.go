@@ -8,15 +8,16 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func familyDocument(id int64, key, kind string, total int64, reference int64) parentbilling.BillingFamilyDocument {
 	document := parentbilling.BillingFamilyDocument{
-		ID: id, RunID: 1, Kind: kind, FamilyKey: key, TotalCents: total, RecipientEmail: key,
+		ID: ident.ID(id), RunID: 1, Kind: kind, FamilyKey: key, TotalCents: total, RecipientEmail: key,
 		IssuedOn: calendar.NewDate(2027, 1, int(id)),
 	}
 	if reference > 0 {
-		document.ReferenceDocumentID = &reference
+		document.ReferenceDocumentID = (*ident.ID)(&reference)
 	}
 	return document
 }
@@ -62,7 +63,7 @@ func TestFamiliesOfSumEveryStateOfAnInvoice(t *testing.T) {
 	states := map[int64]string{}
 	open := map[int64]int64{}
 	for _, document := range append(a.Documents, b.Documents...) {
-		states[document.ID], open[document.ID] = document.Status, document.OpenCents
+		states[document.ID.Int64()], open[document.ID.Int64()] = document.Status, document.OpenCents
 		if document.Kind != parentbilling.DocumentInvoice {
 			assert.Nil(t, document.Payment, "only an invoice has a payer")
 		}

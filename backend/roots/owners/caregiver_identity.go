@@ -14,5 +14,5 @@ func (c caregiverIdentity) FindCaregiverAccount(ctx context.Context, accountID i
 	if err != nil {
 		return nil, err
 	}
-	return &peoplePorts.CaregiverAccount{ID: account.ID, Email: account.Email}, nil
+	return &peoplePorts.CaregiverAccount{ID: account.ID.Int64(), Email: account.Email}, nil
 }

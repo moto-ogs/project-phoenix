@@ -13,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Jahresbescheide of the monthly care (#6219, ADR 0182). Every query
@@ -48,8 +49,8 @@ type careNoticeRunRow struct {
 }
 
 func (r careNoticeRunRow) run() parentbilling.CareNoticeRun {
-	return parentbilling.CareNoticeRun{ID: r.ID, Year: r.Year, PeriodFrom: r.PeriodFrom, PeriodUntil: r.PeriodUntil, Status: r.Status,
-		SchoolIDs: r.SchoolIDs, NoticeDate: r.NoticeDate, CreatedAt: r.CreatedAt, ReleasedAt: r.ReleasedAt, IssuedOn: r.IssuedOn,
+	return parentbilling.CareNoticeRun{ID: ident.ID(r.ID), Year: r.Year, PeriodFrom: r.PeriodFrom, PeriodUntil: r.PeriodUntil, Status: r.Status,
+		SchoolIDs: ident.IDs(r.SchoolIDs), NoticeDate: r.NoticeDate, CreatedAt: r.CreatedAt, ReleasedAt: r.ReleasedAt, IssuedOn: r.IssuedOn,
 		NoticeCount: r.NoticeCount, TotalCents: r.TotalCents, DiscardedAt: r.DiscardedAt}
 }
 
@@ -132,7 +133,7 @@ func (s *Store) InsertCareNoticeRun(ctx context.Context, organizationID, account
 		return parentbilling.CareNoticeRun{}, err
 	}
 	row := &careNoticeRunRow{OrganizationID: organizationID, Year: run.Year, PeriodFrom: run.PeriodFrom, PeriodUntil: run.PeriodUntil,
-		Status: parentbilling.RunCalculated, SchoolIDs: run.SchoolIDs, NoticeDate: run.NoticeDate, CreatedByAccountID: &accountID}
+		Status: parentbilling.RunCalculated, SchoolIDs: ident.Int64s(run.SchoolIDs), NoticeDate: run.NoticeDate, CreatedByAccountID: &accountID}
 	if _, err := db.NewInsert().Model(row).ExcludeColumn("released_at", "issued_on", "notice_count", "total_cents").
 		Returning("id, created_at").Exec(ctx); err != nil {
 		if constraintOf(err) == openCareNoticeRunYearIndex {
@@ -261,8 +262,8 @@ func (s *Store) withNoticeMonths(ctx context.Context, db bun.IDB, organizationID
 
 func (r careNoticeRow) notice() parentbilling.CareNotice {
 	issuedOn := r.IssuedOn
-	notice := parentbilling.CareNotice{ID: r.ID, Number: r.Number, IssuedOn: &issuedOn, Kind: r.Kind, ContractID: r.CareContractID,
-		SchoolID: r.SchoolID, SchoolName: r.SchoolName, ChildFirstName: r.ChildFirstName, ChildLastName: r.ChildLastName,
+	notice := parentbilling.CareNotice{ID: ident.ID(r.ID), Number: r.Number, IssuedOn: &issuedOn, Kind: r.Kind, ContractID: ident.ID(r.CareContractID),
+		SchoolID: ident.ID(r.SchoolID), SchoolName: r.SchoolName, ChildFirstName: r.ChildFirstName, ChildLastName: r.ChildLastName,
 		StudentID: r.StudentID, Recipient: r.Recipient, FamilyEmail: r.FamilyEmail, PaymentMethod: r.PaymentMethod, Year: r.Year, PeriodFrom: r.PeriodFrom,
 		PeriodUntil: r.PeriodUntil, Lines: r.Lines, PreviousCents: r.PreviousCents, TotalCents: r.TotalCents,
 		DeltaCents: r.DeltaCents, LegalRemedy: r.LegalRemedy, Installments: []parentbilling.CareNoticeInstallment{},
@@ -271,7 +272,7 @@ func (r careNoticeRow) notice() parentbilling.CareNotice {
 		notice.Lines = []parentbilling.CareNoticeLine{}
 	}
 	if r.AmendsNoticeID != nil {
-		notice.Amends = &parentbilling.CareNoticeReference{ID: *r.AmendsNoticeID}
+		notice.Amends = &parentbilling.CareNoticeReference{ID: ident.ID(*r.AmendsNoticeID)}
 	}
 	return notice
 }
@@ -284,9 +285,9 @@ func noticeReferences(ctx context.Context, db bun.IDB, organizationID int64, not
 	}
 	ids := make([]int64, 0, len(notices)*2)
 	for _, notice := range notices {
-		ids = append(ids, notice.ID)
+		ids = append(ids, notice.ID.Int64())
 		if notice.Amends != nil {
-			ids = append(ids, notice.Amends.ID)
+			ids = append(ids, notice.Amends.ID.Int64())
 		}
 	}
 	var rows []struct {
@@ -311,11 +312,11 @@ func noticeReferences(ctx context.Context, db bun.IDB, organizationID int64, not
 // applyNoticeReference fills the notice a notice amends and names the one
 // that amends it, from one row of the references.
 func applyNoticeReference(notice *parentbilling.CareNotice, id int64, number string, issuedOn calendar.Date, amends *int64) {
-	reference := &parentbilling.CareNoticeReference{ID: id, Number: number, IssuedOn: &issuedOn}
-	if notice.Amends != nil && id == notice.Amends.ID {
+	reference := &parentbilling.CareNoticeReference{ID: ident.ID(id), Number: number, IssuedOn: &issuedOn}
+	if notice.Amends != nil && ident.ID(id) == notice.Amends.ID {
 		notice.Amends = reference
 	}
-	if amends != nil && *amends == notice.ID {
+	if amends != nil && ident.ID(*amends) == notice.ID {
 		notice.AmendedBy = reference
 	}
 }
@@ -342,7 +343,7 @@ func (s *Store) IssueCareNotices(ctx context.Context, organizationID int64, run 
 		}
 	}
 	for i, notice := range notices {
-		row := noticeRow(organizationID, run.ID, numberYear, first+int64(i), notice)
+		row := noticeRow(organizationID, run.ID.Int64(), numberYear, first+int64(i), notice)
 		if err := insertNotice(ctx, db, row); err != nil {
 			return err
 		}
@@ -387,7 +388,7 @@ func noticeMonthRows(organizationID, noticeID int64, notice parentbilling.CareNo
 			}
 		}
 		snapshot.Invoice.Number, snapshot.Invoice.DocumentKind = notice.Number, parentbilling.DocumentKindFeeNotice
-		months[j] = careNoticeMonthRow{OrganizationID: organizationID, NoticeID: noticeID, CareContractID: notice.ContractID,
+		months[j] = careNoticeMonthRow{OrganizationID: organizationID, NoticeID: noticeID, CareContractID: notice.ContractID.Int64(),
 			BillingMonth: installment.Month, DueOn: installment.DueOn, ImmediatelyDue: installment.ImmediatelyDue,
 			PreviousCents: installment.PreviousCents, AmountCents: installment.AmountCents, Snapshot: snapshot}
 	}
@@ -400,19 +401,19 @@ func noticeFamily(notice parentbilling.CareNotice) string {
 	if notice.FamilyEmail != "" {
 		return notice.FamilyEmail
 	}
-	return parentbilling.ContractFamilyKey(notice.Recipient.Email, notice.ContractID)
+	return parentbilling.ContractFamilyKey(notice.Recipient.Email, notice.ContractID.Int64())
 }
 
 func noticeRow(organizationID, runID int64, numberYear int, sequence int64, notice parentbilling.CareNotice) *careNoticeRow {
 	row := &careNoticeRow{OrganizationID: organizationID, RunID: runID, Number: notice.Number, NumberYear: numberYear,
-		NumberSequence: sequence, IssuedOn: *notice.IssuedOn, Year: notice.Year, Kind: notice.Kind, CareContractID: notice.ContractID,
-		SchoolID: notice.SchoolID, SchoolName: notice.SchoolName, ChildFirstName: notice.ChildFirstName,
+		NumberSequence: sequence, IssuedOn: *notice.IssuedOn, Year: notice.Year, Kind: notice.Kind, CareContractID: notice.ContractID.Int64(),
+		SchoolID: notice.SchoolID.Int64(), SchoolName: notice.SchoolName, ChildFirstName: notice.ChildFirstName,
 		ChildLastName: notice.ChildLastName, StudentID: notice.StudentID, RecipientEmail: notice.Recipient.Email,
 		FamilyEmail: noticeFamily(notice), Recipient: notice.Recipient,
 		PaymentMethod: notice.PaymentMethod, PeriodFrom: notice.PeriodFrom, PeriodUntil: notice.PeriodUntil, Lines: notice.Lines,
 		PreviousCents: notice.PreviousCents, TotalCents: notice.TotalCents, DeltaCents: notice.DeltaCents, LegalRemedy: notice.LegalRemedy}
 	if notice.Amends != nil {
-		row.AmendsNoticeID = &notice.Amends.ID
+		row.AmendsNoticeID = (*int64)(&notice.Amends.ID)
 	}
 	if row.PaymentMethod == "" {
 		row.PaymentMethod = parentbilling.PaymentTransfer

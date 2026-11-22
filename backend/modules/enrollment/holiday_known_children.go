@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The hint on a known child in the review of the holiday registrations
@@ -40,9 +41,9 @@ type HolidayRegisteredChildren interface {
 // HolidayKnownChild is a registered child with the one school of the Träger
 // that knows it.
 type HolidayKnownChild struct {
-	RegistrationID int64 `json:"registration_id"`
-	ChildID        int64 `json:"child_id"`
-	SchoolID       int64 `json:"school_id"`
+	RegistrationID ident.ID `json:"registration_id"`
+	ChildID        ident.ID `json:"child_id"`
+	SchoolID       ident.ID `json:"school_id"`
 }
 
 // HolidayKnownChildren finds the known children of a period of the Träger,

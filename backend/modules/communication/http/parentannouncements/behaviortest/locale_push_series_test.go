@@ -186,8 +186,8 @@ func (f *localePushFixture) stored(t *testing.T) stored {
 	var out stored
 	for _, row := range rows {
 		var recipient struct {
-			SubscriptionID int64 `json:"subscription_id"`
-			AccountID      int64 `json:"account_id"`
+			SubscriptionID testpkg.ID `json:"subscription_id"`
+			AccountID      testpkg.ID `json:"account_id"`
 		}
 		var payload struct {
 			Title    string `json:"title"`
@@ -200,7 +200,7 @@ func (f *localePushFixture) stored(t *testing.T) stored {
 		require.NotNil(t, row.Key)
 		require.NotNil(t, row.Type)
 		require.NotNil(t, row.ID)
-		out.push = append(out.push, pushRow{Key: *row.Key, Kind: row.Kind, Related: fmt.Sprintf("%s:%d", *row.Type, *row.ID), Account: recipient.AccountID, Sub: recipient.SubscriptionID,
+		out.push = append(out.push, pushRow{Key: *row.Key, Kind: row.Kind, Related: fmt.Sprintf("%s:%d", *row.Type, *row.ID), Account: int64(recipient.AccountID), Sub: int64(recipient.SubscriptionID),
 			Title: payload.Title, Body: payload.Body, Status: row.Status, Attempts: row.Attempts, DeepLink: payload.DeepLink, Priority: payload.Priority, HasLeases: row.Lease != nil})
 	}
 	sort.Slice(out.push, func(i, j int) bool { return out.push[i].Key < out.push[j].Key })

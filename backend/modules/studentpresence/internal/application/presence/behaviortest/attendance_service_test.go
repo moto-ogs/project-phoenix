@@ -27,6 +27,7 @@ import (
 	activeService "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -503,8 +504,8 @@ func TestClaimActiveGroup(t *testing.T) {
 		// ASSERT
 		require.NoError(t, err)
 		require.NotNil(t, supervisor)
-		assert.Equal(t, staff.ID, supervisor.StaffID)
-		assert.Equal(t, activeGroup.ID, supervisor.GroupID)
+		assert.Equal(t, ident.ID(staff.ID), supervisor.StaffID)
+		assert.Equal(t, ident.ID(activeGroup.ID), supervisor.GroupID)
 		assert.Equal(t, "supervisor", supervisor.Role)
 	})
 

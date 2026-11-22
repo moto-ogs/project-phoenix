@@ -6,7 +6,7 @@ import {
   calendarDate,
   fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   lazy,
   multipart,
   nullable,
@@ -39,7 +39,7 @@ export const ProfileResponseSchema: z.ZodType<ProfileResponse, unknown> = object
   username: nullable(str),
   last_login: nullable(instant),
   avatar: optional(str),
-  id: int64StringOrNumber,
+  id: int64String,
   first_name: str,
   last_name: str,
   created_at: instant,
@@ -63,7 +63,7 @@ export interface GroupRoom {
 }
 
 export const GroupRoomSchema: z.ZodType<GroupRoom, unknown> = object<GroupRoom>({
-  id: int64StringOrNumber,
+  id: int64String,
   created_at: instant,
   updated_at: instant,
   name: str,
@@ -87,12 +87,12 @@ export interface CallerGroupRow {
 }
 
 export const CallerGroupRowSchema: z.ZodType<CallerGroupRow, unknown> = object<CallerGroupRow>({
-  id: int64StringOrNumber,
+  id: int64String,
   created_at: instant,
   updated_at: instant,
-  tenant_id: int64StringOrNumber,
+  tenant_id: int64String,
   name: str,
-  room_id: optional(int64StringOrNumber),
+  room_id: optional(int64String),
   room: optional(GroupRoomSchema),
   via_substitution: bool,
 });
@@ -112,15 +112,15 @@ export interface SessionActivityCategory {
 }
 
 export const SessionActivityCategorySchema: z.ZodType<SessionActivityCategory, unknown> = object<SessionActivityCategory>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
   created_at: instant,
   updated_at: instant,
   name: str,
   description: optional(str),
   color: optional(str),
   is_system: bool,
-  shift_type_id: optional(int64StringOrNumber),
+  shift_type_id: optional(int64String),
   archived_at: optional(instant),
 });
 
@@ -156,29 +156,29 @@ export interface SessionActivity {
 }
 
 export const SessionActivitySchema: z.ZodType<SessionActivity, unknown> = object<SessionActivity>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
   created_at: instant,
   updated_at: instant,
   name: str,
   max_participants: safeInt,
   required_staff: optional(safeInt),
   is_open: bool,
-  category_id: int64StringOrNumber,
-  planning_track_id: optional(int64StringOrNumber),
-  planned_room_id: optional(int64StringOrNumber),
-  created_by: nullable(int64StringOrNumber),
+  category_id: int64String,
+  planning_track_id: optional(int64String),
+  planned_room_id: optional(int64String),
+  created_by: nullable(int64String),
   type: str,
-  education_group_id: optional(int64StringOrNumber),
+  education_group_id: optional(int64String),
   list_kind: optional(str),
   is_template: bool,
   is_system: bool,
   archived_at: optional(instant),
-  calendar_period_id: optional(int64StringOrNumber),
+  calendar_period_id: optional(int64String),
   target_group_type: str,
   target_grade_level: optional(safeInt),
   target_school_class: optional(str),
-  source_care_offering_ids: optional(arr(int64StringOrNumber)),
+  source_care_offering_ids: optional(arr(int64String)),
   source_grade_levels: optional(arr(safeInt)),
   source_school_classes: optional(arr(str)),
   notes: optional(str),
@@ -199,8 +199,8 @@ export interface SessionDevice {
 }
 
 export const SessionDeviceSchema: z.ZodType<SessionDevice, unknown> = object<SessionDevice>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
   created_at: instant,
   updated_at: instant,
   device_id: str,
@@ -227,8 +227,8 @@ export interface SessionRoom {
 }
 
 export const SessionRoomSchema: z.ZodType<SessionRoom, unknown> = object<SessionRoom>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
   created_at: instant,
   updated_at: instant,
   name: str,
@@ -255,15 +255,15 @@ export interface SessionStaffPerson {
 }
 
 export const SessionStaffPersonSchema: z.ZodType<SessionStaffPerson, unknown> = object<SessionStaffPerson>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
   created_at: instant,
   updated_at: instant,
   first_name: str,
   last_name: str,
   birthday: optional(calendarDate),
   tag_id: optional(str),
-  account_id: optional(int64StringOrNumber),
+  account_id: optional(int64String),
 });
 
 /** Go: ports.SessionStaff */
@@ -282,14 +282,14 @@ export interface SessionStaff {
 }
 
 export const SessionStaffSchema: z.ZodType<SessionStaff, unknown> = object<SessionStaff>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
   created_at: instant,
   updated_at: instant,
-  person_id: int64StringOrNumber,
+  person_id: int64String,
   staff_notes: optional(str),
   employment_type: optional(str),
-  work_time_model_id: optional(int64StringOrNumber),
+  work_time_model_id: optional(int64String),
   rotation_anchor_date: optional(calendarDate),
   birthday_display_opt_out: bool,
   person: optional(SessionStaffPersonSchema),
@@ -311,12 +311,12 @@ export interface GroupSupervisor {
 }
 
 export const GroupSupervisorSchema: z.ZodType<GroupSupervisor, unknown> = object<GroupSupervisor>({
-  id: int64StringOrNumber,
+  id: int64String,
   created_at: instant,
   updated_at: instant,
-  tenant_id: int64StringOrNumber,
-  staff_id: int64StringOrNumber,
-  group_id: int64StringOrNumber,
+  tenant_id: int64String,
+  staff_id: int64String,
+  group_id: int64String,
   role: str,
   start_date: nullable(calendarDate),
   end_date: optional(calendarDate),
@@ -344,17 +344,17 @@ export interface ActiveGroup {
 }
 
 export const ActiveGroupSchema: z.ZodType<ActiveGroup, unknown> = object<ActiveGroup>({
-  id: int64StringOrNumber,
+  id: int64String,
   created_at: instant,
   updated_at: instant,
-  tenant_id: int64StringOrNumber,
+  tenant_id: int64String,
   start_time: instant,
   end_time: optional(instant),
   last_activity: instant,
   timeout_minutes: safeInt,
-  group_id: nullable(int64StringOrNumber),
-  device_id: optional(int64StringOrNumber),
-  room_id: int64StringOrNumber,
+  group_id: nullable(int64String),
+  device_id: optional(int64String),
+  room_id: int64String,
   actual_group: optional(SessionActivitySchema),
   device: optional(SessionDeviceSchema),
   room: optional(SessionRoomSchema),
@@ -375,7 +375,7 @@ export interface PersonAccountSnapshot {
 }
 
 export const PersonAccountSnapshotSchema: z.ZodType<PersonAccountSnapshot, unknown> = object<PersonAccountSnapshot>({
-  id: int64StringOrNumber,
+  id: int64String,
   created_at: instant,
   updated_at: instant,
   email: str,
@@ -399,7 +399,7 @@ export const PersonRFIDSnapshotSchema: z.ZodType<PersonRFIDSnapshot, unknown> = 
   id: str,
   created_at: instant,
   updated_at: instant,
-  tenant_id: int64StringOrNumber,
+  tenant_id: int64String,
   active: bool,
 });
 
@@ -419,15 +419,15 @@ export interface DirectoryPersonSnapshot {
 }
 
 export const DirectoryPersonSnapshotSchema: z.ZodType<DirectoryPersonSnapshot, unknown> = object<DirectoryPersonSnapshot>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
   created_at: instant,
   updated_at: instant,
   first_name: str,
   last_name: str,
   birthday: optional(calendarDate),
   tag_id: optional(str),
-  account_id: optional(int64StringOrNumber),
+  account_id: optional(int64String),
   account: optional(PersonAccountSnapshotSchema),
   rfid_card: optional(PersonRFIDSnapshotSchema),
 });
@@ -448,14 +448,14 @@ export interface Staff {
 }
 
 export const StaffSchema: z.ZodType<Staff, unknown> = object<Staff>({
-  id: int64StringOrNumber,
+  id: int64String,
   created_at: instant,
   updated_at: instant,
-  tenant_id: int64StringOrNumber,
-  person_id: int64StringOrNumber,
+  tenant_id: int64String,
+  person_id: int64String,
   staff_notes: optional(str),
   employment_type: optional(str),
-  work_time_model_id: optional(int64StringOrNumber),
+  work_time_model_id: optional(int64String),
   rotation_anchor_date: optional(calendarDate),
   birthday_display_opt_out: bool,
   person: optional(DirectoryPersonSnapshotSchema),

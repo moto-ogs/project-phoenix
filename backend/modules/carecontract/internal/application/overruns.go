@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Overruns serves carecontract.OverrunEvaluations (#4683, ADR 0156). It
@@ -70,7 +71,7 @@ func (o *Overruns) evaluate(ctx context.Context, reviewer carecontract.Reviewer,
 		result.ToleranceMinutes = max(result.ToleranceMinutes, list.ToleranceMinutes)
 		figures := schoolFigures(list.Rows)
 		result.Schools = append(result.Schools, carecontract.SchoolOverruns{
-			SchoolID: school.ID, SchoolName: school.Name, DataFrom: list.DataFrom, ComparedDays: list.ComparedDays, UncomparedDays: list.UncomparedDays, Figures: figures,
+			SchoolID: ident.ID(school.ID), SchoolName: school.Name, DataFrom: list.DataFrom, ComparedDays: list.ComparedDays, UncomparedDays: list.UncomparedDays, Figures: figures,
 		})
 		result.Total = addFigures(result.Total, figures)
 		if named {
@@ -95,7 +96,7 @@ func (o *Overruns) readSchool(ctx context.Context, reviewer carecontract.Reviewe
 		}
 		ids := make([]int64, 0, len(list.Rows))
 		for _, row := range namedChildren(school, list.Rows) {
-			ids = append(ids, row.StudentID)
+			ids = append(ids, row.StudentID.Int64())
 		}
 		if len(ids) == 0 {
 			return nil
@@ -163,7 +164,7 @@ func namedChildren(school carecontract.School, rows []carecontract.SchoolOverrun
 			continue
 		}
 		children = append(children, carecontract.OverrunChild{
-			SchoolID: school.ID, SchoolName: school.Name, StudentID: row.StudentID, FirstName: row.FirstName,
+			SchoolID: ident.ID(school.ID), SchoolName: school.Name, StudentID: ident.ID(row.StudentID), FirstName: row.FirstName,
 			LastName: row.LastName, SchoolClass: row.SchoolClass, OverrunDays: row.OverrunDays,
 			UnbookedDays: row.UnbookedDays, ExtraMinutes: row.ExtraMinutes,
 		})

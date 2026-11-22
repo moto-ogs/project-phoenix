@@ -85,11 +85,11 @@ vi.mock("~/components/enrollment/enrollment-form", () => ({
 }));
 
 const tenant: TenantInfo = {
-  tenantId: 42,
+  tenantId: "42",
   slug: "school-a",
   subdomain: "school-a",
   name: "School A",
-  organizationId: 10,
+  organizationId: "10",
   organizationName: "Test organization",
   settings: {},
   presenceMode: "detailed",
@@ -115,7 +115,7 @@ describe("embedded enrollment analytics policy", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: string) => {
-        if (input.startsWith("/api/tenant/resolve")) {
+        if (input.startsWith("/api/auth/tenant/resolve")) {
           return Response.json({
             data: {
               tenant_id: 42,
@@ -502,7 +502,10 @@ describe("embedded enrollment analytics policy", () => {
       await act(async () => {
         window.dispatchEvent(new Event("phoenix:tenant-settings-stale"));
       });
-      expect(fetch).toHaveBeenCalledWith("/api/tenant/resolve?slug=school-a");
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/auth/tenant/resolve?slug=school-a",
+        undefined,
+      );
       await initializePostHog();
       capturePostHog("login_failed");
       expect(mocks.init).not.toHaveBeenCalled();
@@ -654,8 +657,14 @@ describe("embedded enrollment analytics policy", () => {
           }),
       );
       act(() => document.dispatchEvent(new Event("visibilitychange")));
-      expect(fetch).toHaveBeenCalledWith("/api/tenant/resolve?slug=school-a");
-      expect(fetch).toHaveBeenCalledWith("/api/tenant/resolve?slug=school-b");
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/auth/tenant/resolve?slug=school-a",
+        undefined,
+      );
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/auth/tenant/resolve?slug=school-b",
+        undefined,
+      );
       await act(async () =>
         resolveHost(
           Response.json({
@@ -711,7 +720,7 @@ describe("embedded enrollment analytics policy", () => {
           : "school-a";
         return Response.json({
           data: {
-            tenant_id: slug === "school-a" ? 42 : 43,
+            tenant_id: slug === "school-a" ? "42" : "43",
             slug,
             subdomain: slug,
             analytics_enabled: slug === "school-a" || enabled,
@@ -759,7 +768,10 @@ describe("embedded enrollment analytics policy", () => {
       // Anker: the token edit loaded its actual foreign-school form.
       expect(screen.getByText("Loaded enrollment form")).toBeInTheDocument();
       // Initial resolution must not depend on a settings or visibility event.
-      expect(fetch).toHaveBeenCalledWith("/api/tenant/resolve?slug=school-b");
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/auth/tenant/resolve?slug=school-b",
+        undefined,
+      );
       capturePostHog("login_failed");
       expect(mocks.capture).toHaveBeenCalledTimes(enabled ? 1 : 0);
     },
@@ -781,7 +793,7 @@ describe("embedded enrollment analytics policy", () => {
       mocks.fetchBootstrap.mockResolvedValue({ phase: {} });
       let resolveTarget!: (response: Response) => void;
       vi.mocked(fetch).mockImplementation(async (input) => {
-        if (String(input).startsWith("/api/tenant/resolve")) {
+        if (String(input).startsWith("/api/auth/tenant/resolve")) {
           return new Promise<Response>((resolve) => {
             resolveTarget = resolve;
           });
@@ -828,7 +840,10 @@ describe("embedded enrollment analytics policy", () => {
           </>,
         ),
       );
-      expect(fetch).toHaveBeenCalledWith("/api/tenant/resolve?slug=school-c");
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/auth/tenant/resolve?slug=school-c",
+        undefined,
+      );
       capturePostHog("login_failed");
       expect(mocks.capture).not.toHaveBeenCalled();
       expect(beforeSend(event)).toBeNull();
@@ -1020,7 +1035,7 @@ describe("embedded enrollment analytics policy", () => {
         data: { user: { id: "7", scope: "parent" } },
       });
       vi.mocked(fetch).mockImplementation(async (input) => {
-        if (String(input).startsWith("/api/tenant/resolve")) {
+        if (String(input).startsWith("/api/auth/tenant/resolve")) {
           return Response.json({
             data: {
               tenant_id: 42,

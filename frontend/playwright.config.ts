@@ -50,7 +50,6 @@ function requiredEnv(name: string): string {
 
 const webServerEnv = {
   API_URL: requiredEnv("API_URL"),
-  NEXT_PUBLIC_API_URL: requiredEnv("NEXT_PUBLIC_API_URL"),
   NEXT_PUBLIC_OPERATOR_HOSTNAME: requiredEnv("NEXT_PUBLIC_OPERATOR_HOSTNAME"),
   NEXT_PUBLIC_PARENTS_HOSTNAME: requiredEnv("NEXT_PUBLIC_PARENTS_HOSTNAME"),
   NEXT_PUBLIC_APP_ENV: requiredEnv("NEXT_PUBLIC_APP_ENV"),

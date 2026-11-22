@@ -40,14 +40,14 @@ func TestAbsenceWriter_GrouplessStudent(t *testing.T) {
 
 		var env struct {
 			Data []struct {
-				ID     int64  `json:"id"`
-				Status string `json:"status"`
+				ID     testpkg.ID `json:"id"`
+				Status string     `json:"status"`
 			} `json:"data"`
 		}
 		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &env))
 		require.NotEmpty(t, env.Data)
 		assert.Equal(t, "sick", env.Data[0].Status)
-		createdStatusDayID = env.Data[0].ID
+		createdStatusDayID = int64(env.Data[0].ID)
 	})
 
 	t.Run("can_read_the_planned_status_days", func(t *testing.T) {
@@ -116,7 +116,7 @@ func TestAbsenceWriter_GrouplessStudent(t *testing.T) {
 
 		var env struct {
 			Data []struct {
-				ID int64 `json:"id"`
+				ID testpkg.ID `json:"id"`
 			} `json:"data"`
 		}
 		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &env))

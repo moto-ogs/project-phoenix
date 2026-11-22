@@ -4,6 +4,7 @@
 // fetch plumbing: request shape (method, URL, body), the { data } unwrapping,
 // and the error paths that must preserve the backend's stable error code.
 
+import type * as wire from "~/lib/contract/admin.generated";
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { ApiError } from "./api-error";
 import {
@@ -22,11 +23,6 @@ import {
   NOT_LATEST_TRANSITION_CODE,
   PREVIEW_STALE_CODE,
   NOT_DRAFT_CODE,
-  type BackendGradeTransition,
-  type BackendTransitionPreview,
-  type BackendTransitionResult,
-  type BackendSuggestedMapping,
-  type BackendTransitionHistoryEntry,
 } from "./grade-transition-api";
 
 const BASE = "/api/admin/grade-transitions";
@@ -80,7 +76,7 @@ const failUnparseable = (status: number) => ({
 const parseBody = (init?: RequestInit) =>
   JSON.parse(String(init?.body ?? "null")) as Record<string, unknown>;
 
-const transitionRow: BackendGradeTransition = {
+const transitionRow: wire.TransitionResponse = {
   id: "7",
   academic_year: "2026-2027",
   status: "draft",
@@ -91,7 +87,8 @@ const transitionRow: BackendGradeTransition = {
   can_revert: false,
 };
 
-const resultRow: BackendTransitionResult = {
+const resultRow: wire.TransitionResultResponse = {
+  warnings: null,
   transition_id: "7",
   status: "applied",
   students_promoted: 40,
@@ -254,7 +251,7 @@ describe("deleteGradeTransition", () => {
 });
 
 describe("previewGradeTransition", () => {
-  const preview: BackendTransitionPreview = {
+  const preview: wire.TransitionPreviewResponse = {
     transition_id: "7",
     academic_year: "2026-2027",
     total_students: 50,
@@ -449,7 +446,7 @@ describe("fetchTransitionClasses", () => {
 
 describe("fetchSuggestedMappings", () => {
   it("maps every suggestion", async () => {
-    const suggestions: BackendSuggestedMapping[] = [
+    const suggestions: wire.SuggestedMappingResponse[] = [
       {
         from_class: "1a",
         to_class: "2a",
@@ -483,14 +480,14 @@ describe("fetchSuggestedMappings", () => {
 
 describe("fetchTransitionHistory", () => {
   it("maps every ledger row for the escaped id", async () => {
-    const rows: BackendTransitionHistoryEntry[] = [
+    const rows: wire.TransitionHistoryResponse[] = [
       {
         id: "3",
         transition_id: "7",
         student_id: "99",
         person_name: "Mika Muster",
         from_class: "4a",
-        to_class: null,
+        to_class: undefined,
         action: "graduated",
         created_at: "2026-08-01T06:00:00Z",
         student_state: "purged",

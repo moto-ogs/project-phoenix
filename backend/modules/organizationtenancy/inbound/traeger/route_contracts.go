@@ -35,7 +35,7 @@ func MasterDataRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/document-templates/export", Portals: traegerPortal, Query: []common.QueryParam{common.ListFormatQuery}, File: true},
 		{Method: "GET", Pattern: "/document-templates/{kind}", Portals: traegerPortal, Response: organizationtenancy.TraegerDocumentTemplateDetail{}},
 		{Method: "POST", Pattern: "/document-templates/{kind}/versions", Portals: traegerPortal, Request: TemplateRequest{}, Response: organizationtenancy.TraegerDocumentTemplate{}},
-		{Method: "POST", Pattern: "/document-templates/{kind}/preview", Portals: traegerPortal, Request: TemplateRequest{}, Response: templates.SampleLetter{}},
+		{Method: "POST", Pattern: "/document-templates/{kind}/preview", Portals: traegerPortal, NoCommit: "renders a sample letter and saves no template", Request: TemplateRequest{}, Response: templates.SampleLetter{}},
 	}
 }
 

@@ -12,6 +12,8 @@ import (
 
 	schoolStructureCompose "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -26,17 +28,17 @@ func TestSubstitutionResponseIDsSerializeAsStrings(t *testing.T) {
 
 	for name, response := range map[string]any{
 		"group handover": GroupHandover{
-			ID: id, Group: GroupRef{ID: id}, Target: StaffRef{ID: id},
+			ID: ident.ID(id), Group: GroupRef{ID: ident.ID(id)}, Target: StaffRef{ID: ident.ID(id)},
 		},
 		"running supervision": RunningSupervision{
-			ID: id, Supervisors: []StaffRef{{ID: id}}, AvailableTargets: []StaffRef{{ID: id}},
+			ID: ident.ID(id), Supervisors: []StaffRef{{ID: ident.ID(id)}}, AvailableTargets: []StaffRef{{ID: ident.ID(id)}},
 		},
 		"additional supervision": AssignmentResult{
-			ID: id, Group: &GroupRef{ID: id}, ActiveGroupID: id, Target: StaffRef{ID: id},
+			ID: ident.ID(id), Group: &GroupRef{ID: ident.ID(id)}, ActiveGroupID: ident.ID(id), Target: StaffRef{ID: ident.ID(id)},
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			payload, err := json.Marshal(response)
+			payload, err := wire.Marshal(response)
 			require.NoError(t, err)
 			require.NotContains(t, string(payload), `:9007199254740993`)
 			require.Contains(t, string(payload), `:"9007199254740993"`)
@@ -75,10 +77,10 @@ func TestAdditionalSupervisionExternalInterface(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, []RunningSupervision{{
-		ID: running.ID, Type: TargetAdditionalSupervision,
+		ID: ident.ID(running.ID), Type: TargetAdditionalSupervision,
 		Name: "Lesen", RoomName: room.Name,
-		Supervisors:              []StaffRef{{ID: owner.StaffID, FullName: "Robin Owner"}},
-		AvailableTargets:         []StaffRef{{ID: target.StaffID, FullName: "Toni Target"}},
+		Supervisors:              []StaffRef{{ID: ident.ID(owner.StaffID), FullName: "Robin Owner"}},
+		AvailableTargets:         []StaffRef{{ID: ident.ID(target.StaffID), FullName: "Toni Target"}},
 		IsCurrentUserSupervising: true, CanAssign: true,
 	}}, overview.RunningSupervisions)
 
@@ -90,10 +92,10 @@ func TestAdditionalSupervisionExternalInterface(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, TargetAdditionalSupervision, created.Type)
-	require.Equal(t, running.ID, created.ActiveGroupID)
-	require.Equal(t, target.StaffID, created.Target.ID)
+	require.Equal(t, running.ID, created.ActiveGroupID.Int64())
+	require.Equal(t, target.StaffID, created.Target.ID.Int64())
 
-	row := testpkg.GroupSupervisorRowByID(t, db, created.ID)
+	row := testpkg.GroupSupervisorRowByID(t, db, created.ID.Int64())
 	require.Equal(t, "additional_supervisor", row.Role)
 	require.Equal(t, calendar.DateFromTime(now), row.StartDate)
 	require.Nil(t, row.EndDate)
@@ -104,8 +106,8 @@ func TestAdditionalSupervisionExternalInterface(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, overview.RunningSupervisions, 1)
 	require.ElementsMatch(t, []StaffRef{
-		{ID: owner.StaffID, FullName: "Robin Owner"},
-		{ID: target.StaffID, FullName: "Toni Target"},
+		{ID: ident.ID(owner.StaffID), FullName: "Robin Owner"},
+		{ID: ident.ID(target.StaffID), FullName: "Toni Target"},
 	}, overview.RunningSupervisions[0].Supervisors)
 	require.Empty(t, overview.RunningSupervisions[0].AvailableTargets)
 
@@ -198,7 +200,7 @@ func TestAdditionalSupervisionAuthorizationMatrix(t *testing.T) {
 	require.ElementsMatch(t, []int64{owned.ID, other.ID}, runningSupervisionIDs(overview))
 	created, err := personal.Assign(ctx, adminCaller, additionalSupervisionAssignment(other.ID, target.StaffID))
 	require.NoError(t, err)
-	require.Equal(t, other.ID, created.ActiveGroupID)
+	require.Equal(t, other.ID, created.ActiveGroupID.Int64())
 
 	_, err = personal.Assign(ctx, adminCaller, additionalSupervisionAssignment(owned.ID, unverified.ID))
 	require.ErrorIs(t, err, ErrNotFound)
@@ -392,10 +394,10 @@ func TestGroupHandoverExternalInterface(t *testing.T) {
 
 	overview, err := testpkg.TenantQuery2(t, ctx, db, service.Overview, caller, OverviewQuery{GroupID: group.ID, IncludeTargets: true})
 	require.NoError(t, err)
-	require.Equal(t, []GroupRef{{ID: group.ID, Name: group.Name}}, overview.Groups)
+	require.Equal(t, []GroupRef{{ID: ident.ID(group.ID), Name: group.Name}}, overview.Groups)
 	require.Len(t, overview.GroupHandovers, 1)
 	require.True(t, overview.GroupHandovers[0].CanEnd)
-	require.Contains(t, overview.Targets, StaffRef{ID: target.StaffID, FullName: "Toni Target"})
+	require.Contains(t, overview.Targets, StaffRef{ID: ident.ID(target.StaffID), FullName: "Toni Target"})
 	payload, err := json.Marshal(overview)
 	require.NoError(t, err)
 	require.NotContains(t, string(payload), "account_id")
@@ -416,7 +418,7 @@ func TestGroupHandoverExternalInterface(t *testing.T) {
 		GroupHandover: &GroupHandoverAssignment{GroupID: group.ID, TargetStaffID: target.StaffID},
 	})
 	require.ErrorIs(t, err, ErrAlreadyAssigned)
-	require.NoError(t, testpkg.TenantCommand2(t, ctx, db, service.End, caller, EndRequest{Type: TargetGroupHandover, ID: created.ID}))
+	require.NoError(t, testpkg.TenantCommand2(t, ctx, db, service.End, caller, EndRequest{Type: TargetGroupHandover, ID: created.ID.Int64()}))
 	require.NoError(t, db.NewSelect().TableExpr(`audit.substitution_changes AS "change"`).
 		ColumnExpr("COUNT(*)").
 		Where(`"change".tenant_id = ?`, testpkg.Tenant(t)).
@@ -477,9 +479,9 @@ func TestGroupHandoverPermissionsAndPeriod(t *testing.T) {
 	require.Len(t, receivedOverview.GroupHandovers, 1)
 	require.False(t, receivedOverview.GroupHandovers[0].CanEnd)
 	require.ErrorIs(t, testpkg.TenantCommand2(t, ctx, db, service.End, substitutionCaller(t, targetAccountID, false), EndRequest{
-		Type: TargetGroupHandover, ID: received.ID,
+		Type: TargetGroupHandover, ID: received.ID.Int64(),
 	}), ErrNotFound)
-	require.NoError(t, testpkg.TenantCommand2(t, ctx, db, service.End, caller, EndRequest{Type: TargetGroupHandover, ID: received.ID}))
+	require.NoError(t, testpkg.TenantCommand2(t, ctx, db, service.End, caller, EndRequest{Type: TargetGroupHandover, ID: received.ID.Int64()}))
 	dualRoleCaller := caller
 	dualRoleCaller.Admin = true
 	todayHandover, err := testpkg.TenantQuery2(t, ctx, db, service.Assign, dualRoleCaller, Assignment{
@@ -492,7 +494,7 @@ func TestGroupHandoverPermissionsAndPeriod(t *testing.T) {
 	require.Equal(t, calendar.DateFromTime(fixedNow).String(), todayHandover.Period.StartDate)
 	require.Equal(t, todayHandover.Period.StartDate, todayHandover.Period.EndDate)
 	require.NoError(t, testpkg.TenantCommand2(t, ctx, db, service.End, dualRoleCaller, EndRequest{
-		Type: TargetGroupHandover, ID: todayHandover.ID,
+		Type: TargetGroupHandover, ID: todayHandover.ID.Int64(),
 	}))
 
 	admin := testpkg.CreateTestAccount(t, db, "substitution-admin")
@@ -513,7 +515,7 @@ func TestGroupHandoverPermissionsAndPeriod(t *testing.T) {
 	ownerOverview, err := testpkg.TenantQuery2(t, ctx, db, service.Overview, caller, OverviewQuery{})
 	require.NoError(t, err)
 	require.Empty(t, ownerOverview.GroupHandovers)
-	require.ErrorIs(t, testpkg.TenantCommand2(t, ctx, db, service.End, caller, EndRequest{Type: TargetGroupHandover, ID: futureOwn.ID}), ErrNotRunning)
+	require.ErrorIs(t, testpkg.TenantCommand2(t, ctx, db, service.End, caller, EndRequest{Type: TargetGroupHandover, ID: futureOwn.ID.Int64()}), ErrNotRunning)
 
 	otherTenant, _ := testpkg.CreateTestTenant(t, db)
 	otherGroup := testpkg.CreateTestEducationGroupForTenant(t, db, otherTenant, "Other tenant")
@@ -526,11 +528,11 @@ func TestGroupHandoverPermissionsAndPeriod(t *testing.T) {
 	adminOverview, err := testpkg.TenantQuery2(t, ctx, db, service.Overview, adminCaller, OverviewQuery{On: &tomorrow, IncludeTargets: true})
 	require.NoError(t, err)
 	require.ElementsMatch(t, []GroupRef{
-		{ID: owned.ID, Name: owned.Name},
-		{ID: foreign.ID, Name: foreign.Name},
+		{ID: ident.ID(owned.ID), Name: owned.Name},
+		{ID: ident.ID(foreign.ID), Name: foreign.Name},
 	}, adminOverview.Groups)
 	for _, handover := range adminOverview.GroupHandovers {
-		require.NotEqual(t, legacy.ID, handover.ID)
+		require.NotEqual(t, legacy.ID, handover.ID.Int64())
 	}
 	require.ErrorIs(t, testpkg.TenantCommand2(t, ctx, db, service.End, adminCaller, EndRequest{Type: TargetGroupHandover, ID: legacy.ID}), ErrNotFound)
 	_, err = testpkg.TenantQuery1(t, ctx, db, repos.GroupSubstitution.FindByID, any(legacy.ID))
@@ -576,7 +578,7 @@ func TestGroupHandoverAllStaffVisibilityDoesNotGrantActions(t *testing.T) {
 	})
 	require.ErrorIs(t, err, ErrNotFound)
 	require.ErrorIs(t, testpkg.TenantCommand2(t, ctx, db, service.End, observerCaller, EndRequest{
-		Type: TargetGroupHandover, ID: created.ID,
+		Type: TargetGroupHandover, ID: created.ID.Int64(),
 	}), ErrNotFound)
 
 	schoolCaller := observerCaller
@@ -615,7 +617,7 @@ func TestGroupHandoverAuditFailureRollsBack(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Error(t, testpkg.TenantCommand2(t, testpkg.Ctx(t), db, service.End, substitutionCaller(t, admin.ID, true), EndRequest{
-		Type: TargetGroupHandover, ID: created.ID,
+		Type: TargetGroupHandover, ID: created.ID.Int64(),
 	}))
 	_, err = testpkg.TenantQuery1(t, testpkg.Ctx(t), db, repos.GroupSubstitution.FindByID, any(created.ID))
 	require.NoError(t, err)
@@ -652,7 +654,7 @@ func TestGroupHandoverSignalsOnlyAfterCommit(t *testing.T) {
 
 	endCtx, commitEnd := testpkg.WithAfterCommitHooks(testpkg.Ctx(t))
 	require.NoError(t, testpkg.TenantCommand2(t, endCtx, db, service.End, caller, EndRequest{
-		Type: TargetGroupHandover, ID: created.ID,
+		Type: TargetGroupHandover, ID: created.ID.Int64(),
 	}))
 	require.Len(t, broadcaster.Events(), 1)
 	commitEnd()
@@ -710,7 +712,7 @@ func (g *ownershipRevokingGroups) FindByIDForUpdate(ctx context.Context, id any)
 	if err != nil {
 		return nil, err
 	}
-	relations, err := g.links.FindByGroup(ctx, group.ID)
+	relations, err := g.links.FindByGroup(ctx, group.ID.Int64())
 	if err != nil {
 		return nil, err
 	}
@@ -761,7 +763,7 @@ func additionalSupervisionAssignment(activeGroupID, targetStaffID int64) Assignm
 func runningSupervisionIDs(overview *OverviewResult) []int64 {
 	ids := make([]int64, 0, len(overview.RunningSupervisions))
 	for _, supervision := range overview.RunningSupervisions {
-		ids = append(ids, supervision.ID)
+		ids = append(ids, supervision.ID.Int64())
 	}
 	return ids
 }
@@ -769,7 +771,7 @@ func runningSupervisionIDs(overview *OverviewResult) []int64 {
 func findRunningSupervision(t *testing.T, overview *OverviewResult, activeGroupID int64) RunningSupervision {
 	t.Helper()
 	for _, supervision := range overview.RunningSupervisions {
-		if supervision.ID == activeGroupID {
+		if supervision.ID.Int64() == activeGroupID {
 			return supervision
 		}
 	}

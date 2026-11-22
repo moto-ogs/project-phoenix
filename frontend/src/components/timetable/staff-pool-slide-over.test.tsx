@@ -259,18 +259,16 @@ describe("StaffPoolSlideOver", () => {
       action: "moved",
       timeConflicts: [
         {
-          instanceId: "44",
-          title: "AG",
-          date: FUTURE_DATE,
-          startTime: "13:00",
-          endTime: "14:00",
+          instanceId: "42",
+          kind: "substitute_time_conflict",
+          otherInstanceId: "44",
+          message: "Vertretung ist auf Instanz 44 um 13:00 eingetragen",
         },
         {
-          instanceId: "45",
-          title: "Hausaufgaben",
-          date: FUTURE_DATE,
-          startTime: "12:45",
-          endTime: "13:15",
+          instanceId: "42",
+          kind: "substitute_time_conflict",
+          otherInstanceId: "45",
+          message: "Vertretung ist auf Instanz 45 um 12:45 eingetragen",
         },
       ],
       coverageWarnings: [
@@ -300,11 +298,10 @@ describe("StaffPoolSlideOver", () => {
     );
     // Zeitkonflikte werden zu EINEM Toast zusammengefasst — zwei Konflikte
     // ergeben also genau zwei Warn-Toasts (Abdeckung + Konflikte).
+    // Go names only the other block (substitute_conflicts.go:20), so the
+    // toast counts the overlaps instead of showing an empty title and times.
     expect(mockToastWarning).toHaveBeenCalledWith(
-      expect.stringContaining("zeitgleich auf „AG“ (13:00 – 14:00)"),
-    );
-    expect(mockToastWarning).toHaveBeenCalledWith(
-      expect.stringContaining("„Hausaufgaben“ (12:45 – 13:15)"),
+      expect.stringContaining("zeitgleich auf 2 anderen Blöcken eingeplant."),
     );
     expect(mockToastWarning).toHaveBeenCalledTimes(2);
   });

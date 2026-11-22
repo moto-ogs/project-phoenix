@@ -1,12 +1,16 @@
 package users
 
-import "time"
+import (
+	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+)
 
 // PersonAccount is the account metadata attached to a person by the directory
 // lookup. Credentials and account persistence operations stay with Identity &
 // Access. The JSON fields preserve the existing person response.
 type PersonAccount struct {
-	ID            int64      `json:"id"`
+	ID            ident.ID   `json:"id"`
 	CreatedAt     time.Time  `json:"created_at"`
 	UpdatedAt     time.Time  `json:"updated_at"`
 	Email         string     `json:"email"`

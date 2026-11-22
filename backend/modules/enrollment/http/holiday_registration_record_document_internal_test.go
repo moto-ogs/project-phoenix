@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // recordText is every title, label and value of the file, one per line.
@@ -60,7 +61,7 @@ func holidayTestRecord(t *testing.T) (capability.HolidayPeriod, capability.Holid
 			GuardianFirstName: "Eva", GuardianLastName: "Muster", GuardianEmail: "eva@example.org", GuardianPhone: "0151 2345678",
 			BenefitsDeclared: true, DebtorNumber: "D-4711", RetentionDays: 365, DeletesOn: &deletesOn,
 			Children: []capability.HolidayRegistrationChild{{
-				ID: 5, FirstName: "Lia", LastName: "Muster", BirthDate: calendar.NewDate(2018, 3, 1), HomeSchoolID: &school,
+				ID: 5, FirstName: "Lia", LastName: "Muster", BirthDate: calendar.NewDate(2018, 3, 1), HomeSchoolID: (*ident.ID)(&school),
 				Bookings: []capability.HolidayRegistrationBooking{{
 					WeekStartsOn: calendar.NewDate(2027, 1, 4), WeekEndsOn: calendar.NewDate(2027, 1, 8), HostSchoolID: 7,
 					TimeModelName: "bis 16 Uhr", Placement: capability.HolidayPlacementWaitlisted,

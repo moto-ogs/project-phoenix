@@ -73,15 +73,15 @@ func TestDeletingATraegerDocumentEndsEveryReleaseAndKeepsTheAudit(t *testing.T) 
 	sonnen := f.group(t, nord, "Sonnenblumen")
 	document := f.uploaded(t, f.office.token, "Hausordnung")
 	kept := f.uploaded(t, f.office.token, "Elternbrief")
-	f.released(t, f.office.token, document.ID, map[string]any{"audience": "schools", "school_id": nord})
-	f.released(t, f.office.token, document.ID, map[string]any{"audience": "schools"})
-	f.released(t, f.office.token, document.ID, map[string]any{"audience": "parents", "school_id": nord, "group_id": sonnen})
-	f.released(t, f.office.token, kept.ID, map[string]any{"audience": "schools"})
+	f.released(t, f.office.token, int64(document.ID), map[string]any{"audience": "schools", "school_id": nord})
+	f.released(t, f.office.token, int64(document.ID), map[string]any{"audience": "schools"})
+	f.released(t, f.office.token, int64(document.ID), map[string]any{"audience": "parents", "school_id": nord, "group_id": sonnen})
+	f.released(t, f.office.token, int64(kept.ID), map[string]any{"audience": "schools"})
 
 	nordLead, suedLead := f.staff(t, nord, permissions.FilesManage), f.staff(t, sued, permissions.FilesManage)
 	link := fmt.Sprintf("/%d/file", document.ID)
 	require.Equal(t, http.StatusOK, f.schoolGet(t, nordLead, link).Code)
-	f.download(t, f.office.token, document.ID)
+	f.download(t, f.office.token, int64(document.ID))
 	shared := organizationtenancyCompose.NewSharedTraegerDocuments()
 	unit := tenant.WithUnitOfWork(context.Background(), testpkg.TenantRuntime(t, f.db))
 	parentAccount := testpkg.CreateTestAccount(t, f.db, fmt.Sprintf("eltern-loeschen-%d@example.org", testpkg.UniqueTestTenantID(t)))
@@ -94,7 +94,7 @@ func TestDeletingATraegerDocumentEndsEveryReleaseAndKeepsTheAudit(t *testing.T) 
 			if listed, err = shared.ParentDocuments(ctx, f.office.organization, parent); err != nil {
 				return err
 			}
-			_, openErr = shared.OpenParentDocument(ctx, f.office.organization, document.ID, parent)
+			_, openErr = shared.OpenParentDocument(ctx, f.office.organization, int64(document.ID), parent)
 			return nil
 		}))
 		return listed, openErr
@@ -102,16 +102,16 @@ func TestDeletingATraegerDocumentEndsEveryReleaseAndKeepsTheAudit(t *testing.T) 
 	listed, err := parentOpens()
 	require.NoError(t, err, "the parent opens the document before the deletion")
 	require.Len(t, listed, 1)
-	_, accessLogBefore := f.downloadEntries(t, f.office.organization, document.ID)
-	before := f.trail(t, document.ID)
+	_, accessLogBefore := f.downloadEntries(t, f.office.organization, int64(document.ID))
+	before := f.trail(t, int64(document.ID))
 	require.Equal(t, 3, before.ActiveReleases)
 	require.Equal(t, 2, before.Reads, "the school and the parent opened it")
 	require.Equal(t, 1, before.Downloads)
 
-	rec := f.deleteDocument(t, f.office.token, document.ID)
+	rec := f.deleteDocument(t, f.office.token, int64(document.ID))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
-	after := f.trail(t, document.ID)
+	after := f.trail(t, int64(document.ID))
 	assert.False(t, after.HasFile, "the file is removed from the database")
 	assert.NotNil(t, after.DeletedAt, "the deletion is recorded with its time")
 	assert.True(t, after.DeletedByActor, "the deletion is recorded with the acting account")
@@ -120,12 +120,12 @@ func TestDeletingATraegerDocumentEndsEveryReleaseAndKeepsTheAudit(t *testing.T) 
 	assert.Equal(t, before.Releases, after.Releases, "the releases stay as the record of the sharing")
 	assert.Equal(t, before.Reads, after.Reads, "the reads stay")
 	assert.Equal(t, before.Downloads, after.Downloads, "the download ledger stays")
-	_, accessLogAfter := f.downloadEntries(t, f.office.organization, document.ID)
+	_, accessLogAfter := f.downloadEntries(t, f.office.organization, int64(document.ID))
 	assert.Equal(t, accessLogBefore, accessLogAfter, "the schools' access log stays")
 
-	assert.Equal(t, []int64{kept.ID}, documentIDs(f.documents(t, f.office.token)), "the Träger lists only the other document")
-	assert.Equal(t, []int64{kept.ID}, documentIDs(f.schoolDocuments(t, nordLead)))
-	assert.Equal(t, []int64{kept.ID}, documentIDs(f.schoolDocuments(t, suedLead)))
+	assert.Equal(t, []int64{int64(kept.ID)}, documentIDs(f.documents(t, f.office.token)), "the Träger lists only the other document")
+	assert.Equal(t, []int64{int64(kept.ID)}, documentIDs(f.schoolDocuments(t, nordLead)))
+	assert.Equal(t, []int64{int64(kept.ID)}, documentIDs(f.schoolDocuments(t, suedLead)))
 	rec = f.schoolGet(t, nordLead, link)
 	assert.Equal(t, http.StatusNotFound, rec.Code, "an existing link of the school opens nothing")
 	assert.Equal(t, "traeger.shared_document_not_found", refusalOf(t, rec).Code)
@@ -136,13 +136,13 @@ func TestDeletingATraegerDocumentEndsEveryReleaseAndKeepsTheAudit(t *testing.T) 
 	assert.Empty(t, listed, "the parent lists nothing")
 	assert.ErrorIs(t, err, organizationtenancy.ErrTraegerDocumentNotFound, "an existing link of the parent opens nothing")
 
-	rec = f.deleteDocument(t, f.office.token, document.ID)
+	rec = f.deleteDocument(t, f.office.token, int64(document.ID))
 	assert.Equal(t, http.StatusNotFound, rec.Code, "a document is deleted once")
 	assert.Equal(t, "traeger.document_not_found", refusalOf(t, rec).Code)
-	rec = f.release(t, f.office.token, document.ID, map[string]any{"audience": "parents"})
+	rec = f.release(t, f.office.token, int64(document.ID), map[string]any{"audience": "parents"})
 	assert.Equal(t, http.StatusNotFound, rec.Code, "a deleted document takes no new release")
-	assert.Zero(t, f.trail(t, document.ID).ActiveReleases)
-	assert.Equal(t, 1, f.trail(t, kept.ID).ActiveReleases, "the other document keeps its release")
+	assert.Zero(t, f.trail(t, int64(document.ID)).ActiveReleases)
+	assert.Equal(t, 1, f.trail(t, int64(kept.ID)).ActiveReleases, "the other document keeps its release")
 }
 
 // TestDeletingATraegerDocumentNeedsTheRightAndStaysWithinTheTraeger pins the
@@ -152,16 +152,16 @@ func TestDeletingATraegerDocumentNeedsTheRightAndStaysWithinTheTraeger(t *testin
 	t.Parallel()
 	f := newTraegerDocumentsFixture(t)
 	document := f.uploaded(t, f.office.token, "Elternbrief")
-	f.released(t, f.office.token, document.ID, map[string]any{"audience": "schools"})
+	f.released(t, f.office.token, int64(document.ID), map[string]any{"audience": "schools"})
 
 	readOnly := f.member(t, f.office, identityaccess.TraegerRoleReadOnly)
-	assert.Equal(t, http.StatusForbidden, f.deleteDocument(t, readOnly, document.ID).Code)
+	assert.Equal(t, http.StatusForbidden, f.deleteDocument(t, readOnly, int64(document.ID)).Code)
 	other := f.newOffice(t, "Träger Fremd Löschen", identityaccess.TraegerRoleDocuments)
-	rec := f.deleteDocument(t, other.token, document.ID)
+	rec := f.deleteDocument(t, other.token, int64(document.ID))
 	assert.Equal(t, http.StatusNotFound, rec.Code, "another Träger reaches no document of this one")
 	assert.Equal(t, "traeger.document_not_found", refusalOf(t, rec).Code)
 
-	trail := f.trail(t, document.ID)
+	trail := f.trail(t, int64(document.ID))
 	assert.True(t, trail.HasFile)
 	assert.Nil(t, trail.DeletedAt)
 	assert.Equal(t, 1, trail.ActiveReleases, "the refused deletions changed nothing")
@@ -190,8 +190,8 @@ func TestAFailedTraegerDocumentDeletionChangesNothing(t *testing.T) {
 	t.Parallel()
 	f := newTraegerDocumentsFixture(t)
 	document := f.uploaded(t, f.office.token, "Hausordnung")
-	f.released(t, f.office.token, document.ID, map[string]any{"audience": "schools"})
-	f.released(t, f.office.token, document.ID, map[string]any{"audience": "parents"})
+	f.released(t, f.office.token, int64(document.ID), map[string]any{"audience": "schools"})
+	f.released(t, f.office.token, int64(document.ID), map[string]any{"audience": "parents"})
 
 	organizations, err := owners.NewOrganizationTenancy(testpkg.NewDatabase(t, f.db))
 	require.NoError(t, err)
@@ -201,14 +201,14 @@ func TestAFailedTraegerDocumentDeletionChangesNothing(t *testing.T) {
 		Notices: owners.TraegerDocumentReleaseNotices{},
 	})
 	unit := tenant.WithUnitOfWork(context.Background(), testpkg.TenantRuntime(t, f.db))
-	err = documents.DeleteDocument(unit, f.office.organization, 0, document.ID)
+	err = documents.DeleteDocument(unit, f.office.organization, 0, int64(document.ID))
 	require.ErrorIs(t, err, errTraegerCommitLost)
 
-	trail := f.trail(t, document.ID)
+	trail := f.trail(t, int64(document.ID))
 	assert.True(t, trail.HasFile, "the file stays")
 	assert.Nil(t, trail.DeletedAt)
 	assert.Equal(t, 2, trail.ActiveReleases, "every release stays")
-	assert.Equal(t, []int64{document.ID}, documentIDs(f.documents(t, f.office.token)))
+	assert.Equal(t, []int64{int64(document.ID)}, documentIDs(f.documents(t, f.office.token)))
 }
 
 // TestADeletedTraegerDocumentKeepsItsReadsForTheirRetention pins the
@@ -227,15 +227,15 @@ func TestADeletedTraegerDocumentKeepsItsReadsForTheirRetention(t *testing.T) {
 		VALUES (?0, ?1, 'school', NOW() - INTERVAL '3 years 1 day'), (?0, ?1, 'parent', NOW() - INTERVAL '2 years 11 months')`,
 		f.office.organization, document.ID)
 	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, f.deleteDocument(t, f.office.token, document.ID).Code)
-	require.Equal(t, 2, f.trail(t, document.ID).Reads, "the deletion keeps the reads")
+	require.Equal(t, http.StatusOK, f.deleteDocument(t, f.office.token, int64(document.ID)).Code)
+	require.Equal(t, 2, f.trail(t, int64(document.ID)).Reads, "the deletion keeps the reads")
 
 	unit := tenant.WithUnitOfWork(ctx, testpkg.TenantRuntime(t, f.db))
 	require.NoError(t, tenant.WithinAdmin(unit, func(adminCtx context.Context) error {
 		_, err := organizationtenancyCompose.NewSharedTraegerDocuments().DeleteExpiredTraegerDocumentReads(adminCtx)
 		return err
 	}))
-	trail := f.trail(t, document.ID)
+	trail := f.trail(t, int64(document.ID))
 	assert.Equal(t, 1, trail.Reads, "the expired read goes, the younger one stays")
 	assert.NotNil(t, trail.DeletedAt, "the deleted document's row stays as their referent")
 }
@@ -323,16 +323,16 @@ func TestATraegerDocumentReleaseNeverSurvivesAConcurrentDeletion(t *testing.T) {
 		t.Parallel()
 		f := newTraegerDocumentsFixture(t)
 		document := f.uploaded(t, f.office.token, "Hausordnung")
-		err := race(t, f, document.ID, "platform.traeger_document", deleteDocument, release)
+		err := race(t, f, int64(document.ID), "platform.traeger_document", deleteDocument, release)
 		assert.ErrorIs(t, err, organizationtenancy.ErrTraegerDocumentNotFound, "the release finds the document deleted")
-		assert.Zero(t, f.trail(t, document.ID).ActiveReleases, "no active release of a deleted document")
+		assert.Zero(t, f.trail(t, int64(document.ID)).ActiveReleases, "no active release of a deleted document")
 	})
 	t.Run("an opening by a school during a deletion finds nothing", func(t *testing.T) {
 		t.Parallel()
 		f := newTraegerDocumentsFixture(t)
 		school := f.office.schools[0]
 		document := f.uploaded(t, f.office.token, "Hausordnung")
-		f.released(t, f.office.token, document.ID, map[string]any{"audience": "schools", "school_id": school})
+		f.released(t, f.office.token, int64(document.ID), map[string]any{"audience": "schools", "school_id": school})
 		account := testpkg.CreateTestAccount(t, f.db, fmt.Sprintf("ogs-oeffnen-%d@example.org", testpkg.UniqueTestTenantID(t)))
 		schoolID, err := tenant.NewTenantID(school)
 		require.NoError(t, err)
@@ -340,7 +340,7 @@ func TestATraegerDocumentReleaseNeverSurvivesAConcurrentDeletion(t *testing.T) {
 		held, commit, deleted := make(chan struct{}), make(chan struct{}), make(chan error, 1)
 		go func() {
 			deleted <- tenant.WithinTraeger(unit, f.office.organization, func(ctx context.Context) error {
-				err := deleteDocument(ctx, f.office.organization, document.ID)
+				err := deleteDocument(ctx, f.office.organization, int64(document.ID))
 				close(held)
 				if err != nil {
 					return err
@@ -359,7 +359,7 @@ func TestATraegerDocumentReleaseNeverSurvivesAConcurrentDeletion(t *testing.T) {
 			var result opening
 			result.err = tenant.WithinTenant(unit, schoolID, func(ctx context.Context) error {
 				var openErr error
-				result.file, openErr = store.OpenSchoolDocument(ctx, school, account.ID, document.ID)
+				result.file, openErr = store.OpenSchoolDocument(ctx, school, account.ID, int64(document.ID))
 				return openErr
 			})
 			opened <- result
@@ -379,9 +379,9 @@ func TestATraegerDocumentReleaseNeverSurvivesAConcurrentDeletion(t *testing.T) {
 		t.Parallel()
 		f := newTraegerDocumentsFixture(t)
 		document := f.uploaded(t, f.office.token, "Hausordnung")
-		err := race(t, f, document.ID, "platform.traeger_document", release, deleteDocument)
+		err := race(t, f, int64(document.ID), "platform.traeger_document", release, deleteDocument)
 		require.NoError(t, err)
-		trail := f.trail(t, document.ID)
+		trail := f.trail(t, int64(document.ID))
 		assert.NotNil(t, trail.DeletedAt)
 		assert.Equal(t, 1, trail.Releases)
 		assert.Zero(t, trail.ActiveReleases, "the deletion revokes the release committed meanwhile")
@@ -396,10 +396,10 @@ func TestADeletedTraegerDocumentReachesNoParentThroughAStaleRelease(t *testing.T
 	f := newTraegerDocumentsFixture(t)
 	school := f.office.schools[0]
 	document := f.uploaded(t, f.office.token, "Elternbrief")
-	f.released(t, f.office.token, document.ID, map[string]any{"audience": "parents"})
+	f.released(t, f.office.token, int64(document.ID), map[string]any{"audience": "parents"})
 	_, err := f.db.ExecContext(t.Context(), `UPDATE platform.traeger_documents SET content = NULL, deleted_at = NOW() WHERE id = ?`, document.ID)
 	require.NoError(t, err, "a deletion whose revocation is missing")
-	require.Equal(t, 1, f.trail(t, document.ID).ActiveReleases)
+	require.Equal(t, 1, f.trail(t, int64(document.ID)).ActiveReleases)
 
 	shared := organizationtenancyCompose.NewSharedTraegerDocuments()
 	unit := tenant.WithUnitOfWork(context.Background(), testpkg.TenantRuntime(t, f.db))
@@ -409,7 +409,7 @@ func TestADeletedTraegerDocumentReachesNoParentThroughAStaleRelease(t *testing.T
 		listed, err := shared.ParentDocuments(ctx, f.office.organization, parent)
 		require.NoError(t, err)
 		assert.Empty(t, listed, "the parent lists no deleted document")
-		_, err = shared.OpenParentDocument(ctx, f.office.organization, document.ID, parent)
+		_, err = shared.OpenParentDocument(ctx, f.office.organization, int64(document.ID), parent)
 		assert.ErrorIs(t, err, organizationtenancy.ErrTraegerDocumentNotFound, "the parent's link opens nothing")
 		return nil
 	}))
@@ -426,7 +426,7 @@ func TestDeletingAnotherTraegersDocumentFindsNothingBeneathRLS(t *testing.T) {
 	t.Parallel()
 	f := newTraegerDocumentsFixture(t)
 	document := f.uploaded(t, f.office.token, "Elternbrief")
-	f.released(t, f.office.token, document.ID, map[string]any{"audience": "schools"})
+	f.released(t, f.office.token, int64(document.ID), map[string]any{"audience": "schools"})
 	other := f.newOffice(t, "Träger Fremd unter RLS", identityaccess.TraegerRoleDocuments)
 
 	store := organizationtenancyCompose.NewSharedTraegerDocuments()
@@ -437,12 +437,12 @@ func TestDeletingAnotherTraegersDocumentFindsNothingBeneathRLS(t *testing.T) {
 		// Träger filter keeps A's document out.
 		require.NoError(t, testpkg.WithoutRequestRole(txCtx))
 		var err error
-		deleted, err = store.DeleteDocument(txCtx, other.organization, 0, document.ID)
+		deleted, err = store.DeleteDocument(txCtx, other.organization, 0, int64(document.ID))
 		return err
 	}))
 	assert.False(t, deleted, "another Träger's document is not found")
 
-	trail := f.trail(t, document.ID)
+	trail := f.trail(t, int64(document.ID))
 	assert.True(t, trail.HasFile, "A's file stays")
 	assert.Nil(t, trail.DeletedAt, "A's document carries no deletion mark")
 	assert.Equal(t, 1, trail.ActiveReleases, "A's release stays active")

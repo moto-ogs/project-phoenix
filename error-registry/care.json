@@ -373,6 +373,12 @@
       "legacy": "notes_disabled"
     },
     {
+      "code": "care.room_history_stop_disabled",
+      "class": "permission",
+      "parameters": [],
+      "legacy": "care.room_history_stop_disabled"
+    },
+    {
       "code": "care.offering_change_already_pending",
       "class": "business_rejection",
       "parameters": [],

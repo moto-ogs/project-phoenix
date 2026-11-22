@@ -7,10 +7,6 @@
  */
 
 import {
-  type BackendMealChanged,
-  type BackendMealGap,
-  type BackendMealPosition,
-  type BackendMealUnbilled,
   type CareMealChanged,
   type CareMealGap,
   type CareMealPosition,
@@ -20,32 +16,37 @@ import {
   mealPositionsFromBackend,
   mealUnbilledFromBackend,
 } from "./traeger-care-meal-api";
-import type {
-  MailOutcome,
-  MailProviderBlock,
+import {
+  type MailOutcome,
+  type MailProviderBlock,
+  knownMailOutcome,
+  knownMailProviderBlock,
 } from "~/lib/email-delivery-status";
 import { traegerRequest } from "./traeger-api";
+import { knownEnum } from "./contract/known-enum";
+import { requiredDay } from "./contract/required-day";
+import type * as sharedContract from "./contract/shared.generated";
+import type * as traegerCareBillingRunsContract from "./contract/traeger-care-billing-runs.generated";
+import type * as traegerCareTariffsContract from "./contract/traeger-care-tariffs.generated";
 import {
-  type BackendInvoicePayment,
-  type BackendRunDueDate,
   type InvoicePayment,
   type PostalAddress,
   type RecipientKind,
   type RunDueDate,
   invoicePaymentFromBackend,
+  knownRecipientKind,
   runDueDatesFromBackend,
 } from "./traeger-billing-terms-api";
 import {
   type BillingFile,
   type LetterMailStatus,
   billingFile,
+  knownLetterMailStatus,
 } from "./traeger-billing-api";
 
-export type CareWeekday = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
-export type CareRunStatus = "calculated" | "released" | "discarded";
-export type CareMonthRule = "version_on_first" | "pro_rata";
-
-export const CARE_WEEKDAYS: readonly CareWeekday[] = [
+// Go does not register these sets; the contract types them as string. A value
+// this build does not know stays undefined instead of passing as a known one.
+const WEEKDAY_VALUES = [
   "mon",
   "tue",
   "wed",
@@ -53,7 +54,66 @@ export const CARE_WEEKDAYS: readonly CareWeekday[] = [
   "fri",
   "sat",
   "sun",
-];
+] as const;
+const RUN_STATUS_VALUES = ["calculated", "released", "discarded"] as const;
+const MONTH_RULE_VALUES = ["version_on_first", "pro_rata"] as const;
+const AMENDMENT_KIND_VALUES = [
+  "amount",
+  "add_position",
+  "remove_position",
+  "recipient",
+  "address",
+] as const;
+const AMENDMENT_CONFLICT_VALUES = [
+  "basis_changed",
+  "position_missing",
+  "negative_total",
+] as const;
+const REDUCTION_KIND_VALUES = [
+  "income_level",
+  "sibling",
+  "single_parent",
+  "cap",
+] as const;
+const COST_SHARE_KIND_VALUES = [
+  "education_participation",
+  "youth_office",
+  "other_subsidy",
+] as const;
+const COST_SHARE_SCOPE_VALUES = ["care", "meal", "both"] as const;
+
+/** The cost share kind a value names, undefined when unknown. */
+export function knownCostShareKind(
+  value: string,
+): CareCostShareKind | undefined {
+  return knownEnum(COST_SHARE_KIND_VALUES, value);
+}
+
+/** The cost share scope a value names, undefined when unknown. */
+export function knownCostShareScope(
+  value: string,
+): CareCostShareScope | undefined {
+  return knownEnum(COST_SHARE_SCOPE_VALUES, value);
+}
+const UNCOUNTED_STATUS_VALUES = ["missing", "expired"] as const;
+
+export type CareWeekday = (typeof WEEKDAY_VALUES)[number];
+export type CareRunStatus = (typeof RUN_STATUS_VALUES)[number];
+export type CareMonthRule = (typeof MONTH_RULE_VALUES)[number];
+
+export const CARE_WEEKDAYS: readonly CareWeekday[] = WEEKDAY_VALUES;
+
+function knownWeekday(value: string): CareWeekday | undefined {
+  return knownEnum(WEEKDAY_VALUES, value);
+}
+
+/** The weekdays of a list this build knows; an unknown one is left out. */
+function knownWeekdays(values: readonly string[] | null): CareWeekday[] {
+  return (values ?? []).flatMap((value) => {
+    const weekday = knownWeekday(value);
+    return weekday ? [weekday] : [];
+  });
+}
 
 /** A module the contracts of the Träger book at one school. */
 export interface CareModule {
@@ -84,7 +144,8 @@ interface CareTariff {
   readonly schoolId: string;
   readonly careOfferingId: string;
   readonly moduleName: string;
-  readonly weekday: CareWeekday | "";
+  /** "" for a scale step; undefined: a weekday this build does not know. */
+  readonly weekday: CareWeekday | "" | undefined;
   readonly daysPerWeek?: number | null;
   readonly validFrom: string;
   readonly validUntil: string | null;
@@ -129,14 +190,15 @@ export interface CarePriceInput {
 export interface CareRun {
   readonly id: string;
   readonly billingMonth: string;
-  readonly status: CareRunStatus;
+  /** undefined: a status this build does not know. */
+  readonly status: CareRunStatus | undefined;
   readonly createdAt: string;
   readonly releasedAt: string | null;
   readonly issuedOn: string | null;
   readonly documentCount: number | null;
   readonly totalCents: number | null;
-  /** Empty until a released run records the rule it billed by. */
-  readonly monthRule: CareMonthRule | "";
+  /** Empty until a released run records the rule it billed by; undefined: unknown. */
+  readonly monthRule: CareMonthRule | "" | undefined;
   /** The schools the run bills (#5916). */
   readonly schoolIds: readonly string[];
   /** The invoice date of the run; null takes the day of the release. */
@@ -176,12 +238,14 @@ export interface CarePosition {
   readonly key: string;
 }
 
-export type CareAmendmentKind =
-  "amount" | "add_position" | "remove_position" | "recipient" | "address";
+export type CareAmendmentKind = (typeof AMENDMENT_KIND_VALUES)[number];
 
-/** Why a change of the review is not applied (#6197). */
+/**
+ * Why a change of the review is not applied (#6197). "other": a reason this
+ * build does not know; the change is still not applied.
+ */
 type CareAmendmentConflict =
-  "basis_changed" | "position_missing" | "negative_total";
+  (typeof AMENDMENT_CONFLICT_VALUES)[number] | "other";
 
 /** One side of a change: a total, a position, a recipient or an address. */
 interface CareAmendmentValue {
@@ -204,7 +268,8 @@ interface CareAmendmentValue {
  */
 export interface CareAmendment {
   readonly id: string;
-  readonly kind: CareAmendmentKind;
+  /** undefined: a kind this build does not know; its amount still counts. */
+  readonly kind: CareAmendmentKind | undefined;
   readonly label: string;
   readonly amountCents: number;
   readonly positionKey: string;
@@ -301,7 +366,7 @@ interface CareExclusion {
  * reduction names the child's rank among the children its rule counted.
  */
 export interface CareReduction {
-  readonly kind: "income_level" | "sibling" | "single_parent" | "cap";
+  readonly kind: (typeof REDUCTION_KIND_VALUES)[number] | undefined;
   readonly name: string;
   readonly childRank: number | null;
   readonly familyChildren: number | null;
@@ -314,20 +379,19 @@ export interface CareReduction {
   readonly amountCents: number;
 }
 
-export type CareCostShareKind =
-  "education_participation" | "youth_office" | "other_subsidy";
+export type CareCostShareKind = (typeof COST_SHARE_KIND_VALUES)[number];
 
 /** What a share covers (#4686): the modules, the Mensa or both. */
-export type CareCostShareScope = "care" | "meal" | "both";
+export type CareCostShareScope = (typeof COST_SHARE_SCOPE_VALUES)[number];
 
 /** The part one cost bearer pays of an invoice, a positive amount (#4687). */
 interface CareInvoiceCostShare {
-  readonly kind: CareCostShareKind;
+  readonly kind: CareCostShareKind | undefined;
   readonly costBearerId: string;
   readonly costBearerName: string;
   readonly shareBasisPoints: number | null;
   readonly shareCents: number | null;
-  readonly scope: CareCostShareScope;
+  readonly scope: CareCostShareScope | undefined;
   readonly amountCents: number;
 }
 
@@ -360,8 +424,8 @@ export interface CareUnpriced {
   readonly childLastName: string;
   readonly careOfferingId: string;
   readonly moduleName: string;
-  /** Empty for a missing scale step. */
-  readonly weekday: CareWeekday | "";
+  /** Empty for a missing scale step; undefined: a weekday this build does not know. */
+  readonly weekday: CareWeekday | "" | undefined;
   /** The missing scale step of a module priced by days per week. */
   readonly daysPerWeek?: number | null;
 }
@@ -376,7 +440,7 @@ export interface CareDuplicate {
   readonly childFirstName: string;
   readonly childLastName: string;
   readonly moduleName: string;
-  readonly weekday: CareWeekday;
+  readonly weekday: CareWeekday | undefined;
   readonly contracts: readonly {
     readonly contractId: string;
     readonly schoolId: string;
@@ -394,8 +458,8 @@ export interface CareUncountedContract {
   readonly schoolName: string;
   readonly childFirstName: string;
   readonly childLastName: string;
-  /** No number at all, or one that ended before the month. */
-  readonly status: "missing" | "expired";
+  /** No number at all, or one that ended before the month; undefined: unknown. */
+  readonly status: (typeof UNCOUNTED_STATUS_VALUES)[number] | undefined;
 }
 
 export interface CareRunDetail extends CareRun {
@@ -457,170 +521,24 @@ export interface CareFeeNoticeHold {
   readonly noticeNumber: string;
 }
 
-interface BackendModule {
-  school_id: number | string;
-  school_name: string;
-  care_offering_id: number | string;
-  module_name: string;
-  ends_at: string;
-  booked_weekdays: CareWeekday[] | null;
-  booked_days_per_week?: number[] | null;
-  contract_count: number;
-}
-
-interface BackendTariff {
-  id: number | string;
-  school_id: number | string;
-  care_offering_id: number | string;
-  module_name: string;
-  weekday: CareWeekday | "";
-  days_per_week?: number | null;
-  valid_from: string;
-  valid_until: string | null;
-  monthly_cents: number;
-  sibling_cents?: number | null;
-  meal_extra?: boolean;
-}
-
-interface BackendTariffs {
-  schools: { id: number | string; name: string }[] | null;
-  modules: BackendModule[] | null;
-  tariffs: BackendTariff[] | null;
-  lists?:
-    | {
-        school_id: number | string;
-        valid_from: string;
-        free_months: number[] | null;
-      }[]
-    | null;
-  billed_until: Record<string, string> | null;
-}
-
-interface BackendRun {
-  id: number | string;
-  billing_month: string;
-  status: CareRunStatus;
-  created_at: string;
-  released_at: string | null;
-  issued_on: string | null;
-  document_count: number | null;
-  total_cents: number | null;
-  month_rule: CareMonthRule | "";
-  school_ids?: (number | string)[] | null;
-  invoice_date?: string | null;
-  discarded_at?: string | null;
-}
-
-interface BackendInvoice {
-  id: number | string;
-  number: string;
-  issued_on: string | null;
-  contract_id: number | string;
-  service?: string;
-  family_email?: string;
-  school_id: number | string;
-  school_name: string;
-  child_first_name: string;
-  child_last_name: string;
-  recipient: {
-    first_name: string;
-    last_name: string;
-    email: string;
-    kind?: RecipientKind | "";
-    second_name?: string;
-    address?: { street: string; postal_code: string; city: string } | null;
+function addressFromBackend(
+  address: sharedContract.PostalAddress,
+): PostalAddress {
+  return {
+    street: address.street,
+    postalCode: address.postal_code,
+    city: address.city,
   };
-  payment?: BackendInvoicePayment | null;
-  positions:
-    | {
-        care_offering_id: number | string;
-        module_name: string;
-        version_number: number;
-        service_from: string;
-        service_until: string;
-        weekdays:
-          | {
-              weekday: CareWeekday;
-              monthly_cents: number;
-              amount_cents: number;
-            }[]
-          | null;
-        days_per_week?: number | null;
-        tier_monthly_cents?: number | null;
-        meal_extra?: boolean;
-        amount_cents: number;
-        payable_cents?: number;
-        key?: string;
-      }[]
-    | null;
-  reductions:
-    | {
-        kind: CareReduction["kind"];
-        name: string;
-        child_rank: number | null;
-        family_children: number | null;
-        discount_basis_points: number | null;
-        discount_cents: number | null;
-        price_cents: number | null;
-        cap_cents: number | null;
-        tariff_sibling_price?: boolean;
-        amount_cents: number;
-      }[]
-    | null;
-  meal_positions?: BackendMealPosition[] | null;
-  cost_shares?:
-    | {
-        kind: CareCostShareKind;
-        cost_bearer_id: number | string;
-        cost_bearer_name: string;
-        share_basis_points: number | null;
-        share_cents: number | null;
-        scope?: CareCostShareScope;
-        amount_cents: number;
-      }[]
-    | null;
-  amendments?: BackendAmendment[] | null;
-  total_cents: number;
-  exclusion?: { reason: string; excluded_at: string } | null;
-}
-
-interface BackendAmendmentValue {
-  total_cents?: number;
-  label?: string;
-  amount_cents?: number;
-  recipient?: {
-    first_name: string;
-    last_name: string;
-    second_name: string;
-    email: string;
-  };
-  address?: { street: string; postal_code: string; city: string };
-}
-
-interface BackendAmendment {
-  id: number | string;
-  kind: CareAmendmentKind;
-  label: string;
-  amount_cents: number;
-  position_key?: string;
-  before?: BackendAmendmentValue;
-  after?: BackendAmendmentValue;
-  reason: string;
-  amended_at: string;
-  carried?: boolean;
-  carried_from_number?: string;
-  revocation?: { reason: string; revoked_at: string } | null;
-  conflict?: CareAmendmentConflict | "";
 }
 
 function amendmentValue(
-  value: BackendAmendmentValue | undefined,
+  value: traegerCareBillingRunsContract.CareAmendmentValue,
 ): CareAmendmentValue {
   return {
-    totalCents: value?.total_cents ?? null,
-    label: value?.label ?? "",
-    amountCents: value?.amount_cents ?? null,
-    recipient: value?.recipient
+    totalCents: value.total_cents ?? null,
+    label: value.label ?? "",
+    amountCents: value.amount_cents ?? null,
+    recipient: value.recipient
       ? {
           firstName: value.recipient.first_name,
           lastName: value.recipient.last_name,
@@ -628,20 +546,16 @@ function amendmentValue(
           email: value.recipient.email,
         }
       : null,
-    address: value?.address
-      ? {
-          street: value.address.street,
-          postalCode: value.address.postal_code,
-          city: value.address.city,
-        }
-      : null,
+    address: value.address ? addressFromBackend(value.address) : null,
   };
 }
 
-function amendmentFromBackend(amendment: BackendAmendment): CareAmendment {
+function amendmentFromBackend(
+  amendment: traegerCareBillingRunsContract.CareAmendment,
+): CareAmendment {
   return {
-    id: String(amendment.id),
-    kind: amendment.kind,
+    id: amendment.id,
+    kind: knownEnum(AMENDMENT_KIND_VALUES, amendment.kind),
     label: amendment.label,
     amountCents: amendment.amount_cents,
     positionKey: amendment.position_key ?? "",
@@ -658,164 +572,108 @@ function amendmentFromBackend(amendment: BackendAmendment): CareAmendment {
           revokedAt: amendment.revocation.revoked_at,
         }
       : null,
-    conflict: amendment.conflict ? amendment.conflict : null,
+    conflict: amendment.conflict
+      ? (knownEnum(AMENDMENT_CONFLICT_VALUES, amendment.conflict) ?? "other")
+      : null,
   };
-}
-
-export interface BackendRunDetail extends BackendRun {
-  invoices: BackendInvoice[] | null;
-  unpriced:
-    | {
-        contract_id: number | string;
-        school_id: number | string;
-        school_name: string;
-        child_first_name: string;
-        child_last_name: string;
-        care_offering_id: number | string;
-        module_name: string;
-        weekday: CareWeekday | "";
-        days_per_week?: number | null;
-      }[]
-    | null;
-  duplicates:
-    | {
-        child_first_name: string;
-        child_last_name: string;
-        module_name: string;
-        weekday: CareWeekday;
-        contracts:
-          | {
-              contract_id: number | string;
-              school_id: number | string;
-              school_name: string;
-            }[]
-          | null;
-      }[]
-    | null;
-  duplicate_children: number;
-  uncounted_families?: number;
-  uncounted_contracts?:
-    | {
-        contract_id: number | string;
-        school_name: string;
-        child_first_name: string;
-        child_last_name: string;
-        status: "missing" | "expired";
-      }[]
-    | null;
-  billed: number;
-  free_of_charge?: number;
-  preview_count: number;
-  preview_cents: number;
-  number_pattern: string;
-  number_range_set: boolean;
-  meal_gaps?: BackendMealGap[] | null;
-  meal_unbilled?: BackendMealUnbilled[] | null;
-  meal_changed?: BackendMealChanged[] | null;
-  due_dates?: BackendRunDueDate[] | null;
-  schools?: { id: number | string; name: string }[] | null;
-  excluded_count?: number;
-  excluded_cents?: number;
-  fingerprint?: string;
-  amendable?: {
-    amount: boolean;
-    recipient: boolean;
-    address: boolean;
-    positions: boolean;
-  };
-  amendment_conflicts?: number;
-  document_kind?: string;
-  legal_remedy_missing?: boolean;
-  cost_bearers?:
-    | {
-        cost_bearer_id: number | string;
-        cost_bearer_name: string;
-        invoice_count: number;
-        amount_cents: number;
-      }[]
-    | null;
-  fee_notice_held?:
-    | {
-        contract_id: number | string;
-        child_first_name: string;
-        child_last_name: string;
-        notice_number: string;
-      }[]
-    | null;
 }
 
 const TARIFFS_PATH = "/api/traeger/care-tariffs";
 const RUNS_PATH = "/api/traeger/care-billing-runs";
 
-/** An ID of the backend, number or string; 0 is none. */
-function id(value: number | string): string {
-  const text = String(value);
-  return text === "0" ? "" : text;
+/** An ID of the contract; "0" is none. */
+function id(value: string): string {
+  return value === "0" ? "" : value;
 }
 
-function tariffsFromBackend(body: BackendTariffs): CareTariffs {
+export function schoolFromBackend(
+  school: sharedContract.CareSchool,
+): CareSchool {
+  return { id: id(school.id), name: school.name };
+}
+
+/** Per school the last billed month; a school without one is left out. */
+function billedUntilFromBackend(
+  billed: Readonly<Record<string, string | null>> | null,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [school, month] of Object.entries(billed ?? {})) {
+    if (month) out[school] = month;
+  }
+  return out;
+}
+
+export function moduleFromBackend(
+  module: sharedContract.CareModule,
+): CareModule {
   return {
-    schools: (body.schools ?? []).map((school) => ({
-      id: id(school.id),
-      name: school.name,
-    })),
-    modules: (body.modules ?? []).map((module) => ({
-      schoolId: id(module.school_id),
-      schoolName: module.school_name,
-      careOfferingId: id(module.care_offering_id),
-      moduleName: module.module_name,
-      endsAt: module.ends_at,
-      bookedWeekdays: module.booked_weekdays ?? [],
-      bookedDaysPerWeek: module.booked_days_per_week ?? [],
-      contractCount: module.contract_count,
-    })),
+    schoolId: id(module.school_id),
+    schoolName: module.school_name,
+    careOfferingId: id(module.care_offering_id),
+    moduleName: module.module_name,
+    endsAt: module.ends_at,
+    bookedWeekdays: knownWeekdays(module.booked_weekdays),
+    bookedDaysPerWeek: module.booked_days_per_week ?? [],
+    contractCount: module.contract_count,
+  };
+}
+
+function tariffsFromBackend(
+  body: traegerCareTariffsContract.CareTariffs,
+): CareTariffs {
+  return {
+    schools: (body.schools ?? []).map(schoolFromBackend),
+    modules: (body.modules ?? []).map(moduleFromBackend),
     tariffs: (body.tariffs ?? []).map((tariff) => ({
       id: id(tariff.id),
       schoolId: id(tariff.school_id),
       careOfferingId: id(tariff.care_offering_id),
       moduleName: tariff.module_name,
-      weekday: tariff.weekday,
-      daysPerWeek: tariff.days_per_week ?? null,
-      validFrom: tariff.valid_from,
+      weekday: tariff.weekday === "" ? "" : knownWeekday(tariff.weekday),
+      daysPerWeek: tariff.days_per_week,
+      validFrom: requiredDay(tariff.valid_from, "care_tariff.valid_from"),
       validUntil: tariff.valid_until,
       monthlyCents: tariff.monthly_cents,
-      siblingCents: tariff.sibling_cents ?? null,
-      mealExtra: tariff.meal_extra ?? false,
+      siblingCents: tariff.sibling_cents,
+      mealExtra: tariff.meal_extra,
     })),
     lists: (body.lists ?? []).map((list) => ({
       schoolId: id(list.school_id),
-      validFrom: list.valid_from,
+      validFrom: requiredDay(list.valid_from, "care_price_list.valid_from"),
       freeMonths: list.free_months ?? [],
     })),
-    billedUntil: { ...body.billed_until },
+    billedUntil: billedUntilFromBackend(body.billed_until),
   };
 }
 
-function runFromBackend(run: BackendRun): CareRun {
+function runFromBackend(run: traegerCareBillingRunsContract.CareRun): CareRun {
   return {
     id: id(run.id),
-    billingMonth: run.billing_month,
-    status: run.status,
+    billingMonth: requiredDay(run.billing_month, "care_run.billing_month"),
+    status: knownEnum(RUN_STATUS_VALUES, run.status),
     createdAt: run.created_at,
     releasedAt: run.released_at,
     issuedOn: run.issued_on,
     documentCount: run.document_count,
     totalCents: run.total_cents,
-    monthRule: run.month_rule,
+    monthRule:
+      run.month_rule === "" ? "" : knownEnum(MONTH_RULE_VALUES, run.month_rule),
     schoolIds: (run.school_ids ?? []).map(id),
-    invoiceDate: run.invoice_date ?? null,
-    discardedAt: run.discarded_at ?? null,
+    invoiceDate: run.invoice_date,
+    discardedAt: run.discarded_at,
   };
 }
 
-function invoiceFromBackend(invoice: BackendInvoice): CareInvoice {
+function invoiceFromBackend(
+  invoice: traegerCareBillingRunsContract.CareInvoice,
+): CareInvoice {
   return {
     id: id(invoice.id),
     number: invoice.number,
     issuedOn: invoice.issued_on,
     contractId: id(invoice.contract_id),
     service: invoice.service === "meal" ? "meal" : "care",
-    familyEmail: invoice.family_email ?? "",
+    familyEmail: invoice.family_email,
     schoolId: id(invoice.school_id),
     schoolName: invoice.school_name,
     childFirstName: invoice.child_first_name,
@@ -824,14 +682,13 @@ function invoiceFromBackend(invoice: BackendInvoice): CareInvoice {
       firstName: invoice.recipient.first_name,
       lastName: invoice.recipient.last_name,
       email: invoice.recipient.email,
-      kind: invoice.recipient.kind ?? "",
-      secondName: invoice.recipient.second_name ?? "",
+      kind:
+        invoice.recipient.kind === ""
+          ? ""
+          : knownRecipientKind(invoice.recipient.kind),
+      secondName: invoice.recipient.second_name,
       address: invoice.recipient.address
-        ? {
-            street: invoice.recipient.address.street,
-            postalCode: invoice.recipient.address.postal_code,
-            city: invoice.recipient.address.city,
-          }
+        ? addressFromBackend(invoice.recipient.address)
         : null,
     },
     payment: invoicePaymentFromBackend(invoice.payment),
@@ -839,13 +696,26 @@ function invoiceFromBackend(invoice: BackendInvoice): CareInvoice {
       careOfferingId: id(position.care_offering_id),
       moduleName: position.module_name,
       versionNumber: position.version_number,
-      serviceFrom: position.service_from,
-      serviceUntil: position.service_until,
-      weekdays: (position.weekdays ?? []).map((weekday) => ({
-        weekday: weekday.weekday,
-        monthlyCents: weekday.monthly_cents,
-        amountCents: weekday.amount_cents,
-      })),
+      serviceFrom: requiredDay(
+        position.service_from,
+        "care_position.service_from",
+      ),
+      serviceUntil: requiredDay(
+        position.service_until,
+        "care_position.service_until",
+      ),
+      weekdays: (position.weekdays ?? []).flatMap((price) => {
+        const weekday = knownWeekday(price.weekday);
+        return weekday
+          ? [
+              {
+                weekday,
+                monthlyCents: price.monthly_cents,
+                amountCents: price.amount_cents,
+              },
+            ]
+          : [];
+      }),
       daysPerWeek: position.days_per_week ?? null,
       tierMonthlyCents: position.tier_monthly_cents ?? null,
       mealExtra: position.meal_extra ?? false,
@@ -854,7 +724,7 @@ function invoiceFromBackend(invoice: BackendInvoice): CareInvoice {
       key: position.key ?? "",
     })),
     reductions: (invoice.reductions ?? []).map((reduction) => ({
-      kind: reduction.kind,
+      kind: knownEnum(REDUCTION_KIND_VALUES, reduction.kind),
       name: reduction.name,
       childRank: reduction.child_rank,
       familyChildren: reduction.family_children,
@@ -862,17 +732,17 @@ function invoiceFromBackend(invoice: BackendInvoice): CareInvoice {
       discountCents: reduction.discount_cents,
       priceCents: reduction.price_cents,
       capCents: reduction.cap_cents,
-      tariffSiblingPrice: reduction.tariff_sibling_price ?? false,
+      tariffSiblingPrice: reduction.tariff_sibling_price,
       amountCents: reduction.amount_cents,
     })),
     mealPositions: mealPositionsFromBackend(invoice.meal_positions),
     costShares: (invoice.cost_shares ?? []).map((share) => ({
-      kind: share.kind,
+      kind: knownCostShareKind(share.kind),
       costBearerId: id(share.cost_bearer_id),
       costBearerName: share.cost_bearer_name,
       shareBasisPoints: share.share_basis_points,
       shareCents: share.share_cents,
-      scope: share.scope ?? "care",
+      scope: knownCostShareScope(share.scope),
       amountCents: share.amount_cents,
     })),
     amendments: (invoice.amendments ?? []).map(amendmentFromBackend),
@@ -886,7 +756,9 @@ function invoiceFromBackend(invoice: BackendInvoice): CareInvoice {
   };
 }
 
-export function detailFromBackend(detail: BackendRunDetail): CareRunDetail {
+export function detailFromBackend(
+  detail: traegerCareBillingRunsContract.CareRunDetail,
+): CareRunDetail {
   return {
     ...runFromBackend(detail),
     invoices: (detail.invoices ?? []).map(invoiceFromBackend),
@@ -898,31 +770,31 @@ export function detailFromBackend(detail: BackendRunDetail): CareRunDetail {
       childLastName: entry.child_last_name,
       careOfferingId: id(entry.care_offering_id),
       moduleName: entry.module_name,
-      weekday: entry.weekday,
+      weekday: entry.weekday === "" ? "" : knownWeekday(entry.weekday),
       daysPerWeek: entry.days_per_week ?? null,
     })),
     duplicates: (detail.duplicates ?? []).map((entry) => ({
       childFirstName: entry.child_first_name,
       childLastName: entry.child_last_name,
       moduleName: entry.module_name,
-      weekday: entry.weekday,
+      weekday: knownWeekday(entry.weekday),
       contracts: (entry.contracts ?? []).map((contract) => ({
         contractId: id(contract.contract_id),
         schoolId: id(contract.school_id),
         schoolName: contract.school_name,
       })),
     })),
-    duplicateChildren: detail.duplicate_children ?? 0,
-    uncountedFamilies: detail.uncounted_families ?? 0,
+    duplicateChildren: detail.duplicate_children,
+    uncountedFamilies: detail.uncounted_families,
     uncountedContracts: (detail.uncounted_contracts ?? []).map((contract) => ({
-      contractId: String(contract.contract_id),
+      contractId: id(contract.contract_id),
       schoolName: contract.school_name,
       childFirstName: contract.child_first_name,
       childLastName: contract.child_last_name,
-      status: contract.status,
+      status: knownEnum(UNCOUNTED_STATUS_VALUES, contract.status),
     })),
     billed: detail.billed,
-    freeOfCharge: detail.free_of_charge ?? 0,
+    freeOfCharge: detail.free_of_charge,
     previewCount: detail.preview_count,
     previewCents: detail.preview_cents,
     numberPattern: detail.number_pattern,
@@ -931,22 +803,14 @@ export function detailFromBackend(detail: BackendRunDetail): CareRunDetail {
     mealUnbilled: mealUnbilledFromBackend(detail.meal_unbilled),
     mealChanged: mealChangedFromBackend(detail.meal_changed),
     dueDates: runDueDatesFromBackend(detail.due_dates),
-    schools: (detail.schools ?? []).map((school) => ({
-      id: id(school.id),
-      name: school.name,
-    })),
-    excludedCount: detail.excluded_count ?? 0,
-    excludedCents: detail.excluded_cents ?? 0,
-    fingerprint: detail.fingerprint ?? "",
-    amendable: {
-      amount: detail.amendable?.amount ?? false,
-      recipient: detail.amendable?.recipient ?? false,
-      address: detail.amendable?.address ?? false,
-      positions: detail.amendable?.positions ?? false,
-    },
-    amendmentConflicts: detail.amendment_conflicts ?? 0,
+    schools: (detail.schools ?? []).map(schoolFromBackend),
+    excludedCount: detail.excluded_count,
+    excludedCents: detail.excluded_cents,
+    fingerprint: detail.fingerprint,
+    amendable: { ...detail.amendable },
+    amendmentConflicts: detail.amendment_conflicts,
     documentKind: detail.document_kind,
-    legalRemedyMissing: detail.legal_remedy_missing ?? false,
+    legalRemedyMissing: detail.legal_remedy_missing,
     costBearers: (detail.cost_bearers ?? []).map((total) => ({
       costBearerId: id(total.cost_bearer_id),
       costBearerName: total.cost_bearer_name,
@@ -963,7 +827,9 @@ export function detailFromBackend(detail: BackendRunDetail): CareRunDetail {
 }
 
 export async function fetchCareTariffs(): Promise<CareTariffs> {
-  return tariffsFromBackend(await traegerRequest<BackendTariffs>(TARIFFS_PATH));
+  return tariffsFromBackend(
+    await traegerRequest<traegerCareTariffsContract.CareTariffs>(TARIFFS_PATH),
+  );
 }
 
 /** Sets the prices of a school from `validFrom` (the 1st of a month) on. */
@@ -974,14 +840,14 @@ export async function saveCarePriceList(
   freeMonths: readonly number[] = [],
 ): Promise<CareTariffs> {
   return tariffsFromBackend(
-    await traegerRequest<BackendTariffs>(TARIFFS_PATH, {
+    await traegerRequest<traegerCareTariffsContract.CareTariffs>(TARIFFS_PATH, {
       method: "PUT",
       body: {
-        school_id: Number(schoolId),
+        school_id: schoolId,
         valid_from: validFrom,
-        free_months: freeMonths,
+        free_months: [...freeMonths],
         prices: prices.map((price) => ({
-          care_offering_id: Number(price.careOfferingId),
+          care_offering_id: price.careOfferingId,
           module_name: price.moduleName,
           weekday: price.weekday ?? "",
           days_per_week: price.daysPerWeek ?? null,
@@ -989,7 +855,7 @@ export async function saveCarePriceList(
           sibling_cents: price.siblingCents,
           meal_extra: price.mealExtra,
         })),
-      },
+      } satisfies traegerCareTariffsContract.CarePriceListRequest,
     }),
   );
 }
@@ -1000,7 +866,7 @@ export async function deleteCarePriceList(
   validFrom: string,
 ): Promise<CareTariffs> {
   return tariffsFromBackend(
-    await traegerRequest<BackendTariffs>(
+    await traegerRequest<traegerCareTariffsContract.CareTariffs>(
       `${TARIFFS_PATH}/${encodeURIComponent(schoolId)}/${encodeURIComponent(validFrom)}`,
       { method: "DELETE" },
     ),
@@ -1008,13 +874,14 @@ export async function deleteCarePriceList(
 }
 
 export async function fetchCareRuns(): Promise<CareRunList> {
-  const body = await traegerRequest<{
-    runs: BackendRun[] | null;
-    suggested_month: string;
-  }>(RUNS_PATH);
+  const body =
+    await traegerRequest<traegerCareBillingRunsContract.CareRunList>(RUNS_PATH);
   return {
     runs: (body.runs ?? []).map(runFromBackend),
-    suggestedMonth: body.suggested_month,
+    suggestedMonth: requiredDay(
+      body.suggested_month,
+      "care_runs.suggested_month",
+    ),
   };
 }
 
@@ -1029,20 +896,20 @@ export interface CareRunStartInput {
 
 export async function startCareRun(input: CareRunStartInput): Promise<CareRun> {
   return runFromBackend(
-    await traegerRequest<BackendRun>(RUNS_PATH, {
+    await traegerRequest<traegerCareBillingRunsContract.CareRun>(RUNS_PATH, {
       method: "POST",
       body: {
         billing_month: input.billingMonth,
-        school_ids: input.schoolIds.map(Number),
+        school_ids: [...input.schoolIds],
         invoice_date: input.invoiceDate,
-      },
+      } satisfies traegerCareBillingRunsContract.CareRunRequest,
     }),
   );
 }
 
 export async function fetchCareRun(runId: string): Promise<CareRunDetail> {
   return detailFromBackend(
-    await traegerRequest<BackendRunDetail>(
+    await traegerRequest<traegerCareBillingRunsContract.CareRunDetail>(
       `${RUNS_PATH}/${encodeURIComponent(runId)}`,
     ),
   );
@@ -1059,7 +926,7 @@ export async function releaseCareRun(
   >,
 ): Promise<CareRunDetail> {
   return detailFromBackend(
-    await traegerRequest<BackendRunDetail>(
+    await traegerRequest<traegerCareBillingRunsContract.CareRunDetail>(
       `${RUNS_PATH}/${encodeURIComponent(run.id)}/release`,
       {
         method: "POST",
@@ -1080,7 +947,7 @@ export async function releaseCareRun(
  */
 export async function discardCareRun(runId: string): Promise<CareRunDetail> {
   return detailFromBackend(
-    await traegerRequest<BackendRunDetail>(
+    await traegerRequest<traegerCareBillingRunsContract.CareRunDetail>(
       `${RUNS_PATH}/${encodeURIComponent(runId)}/discard`,
       { method: "POST" },
     ),
@@ -1117,7 +984,7 @@ export interface CareLetterMailing {
   /** The number of this document: the invoice or the Storno. */
   readonly number: string;
   readonly invoiceNumber: string;
-  readonly issuedOn: string;
+  readonly issuedOn: string | null;
   readonly childFirstName: string;
   readonly childLastName: string;
   readonly schoolName: string;
@@ -1140,6 +1007,7 @@ export interface CareLetterMailing {
   readonly printed?: boolean;
   /** A later released invoice replaces this cancelled invoice. */
   readonly replaced?: boolean;
+  /** "unknown" also stands for a state this build does not know. */
   readonly status: LetterMailStatus;
   readonly sends: number;
   readonly attempts: number;
@@ -1179,55 +1047,8 @@ export interface CareLetterSeries {
   readonly recipientChanged: number;
 }
 
-interface BackendCareLetterMailing {
-  invoice_id: number | string;
-  kind: CareLetterKind;
-  number: string;
-  invoice_number: string;
-  issued_on: string;
-  child_first_name: string;
-  child_last_name: string;
-  school_name: string;
-  recipient_first_name: string;
-  recipient_last_name: string;
-  recipient_email: string;
-  total_cents: number;
-  reason?: string;
-  cancelled: boolean;
-  cancellation_number?: string;
-  has_letter: boolean;
-  in_inbox?: boolean;
-  printed?: boolean;
-  replaced?: boolean;
-  status: LetterMailStatus;
-  sends: number;
-  attempts: number;
-  requested_at: string | null;
-  sent_at: string | null;
-  mail_outcome?: MailOutcome;
-  provider_block?: MailProviderBlock;
-}
-
-interface BackendCareLetters {
-  letters: {
-    payment_due_on: string;
-    notes: string;
-    created_at: string;
-  } | null;
-  documents: BackendCareLetterMailing[] | null;
-  summary: {
-    letters: number;
-    sent: number;
-    queued: number;
-    failed: number;
-    not_sent: number;
-    without_email: number;
-    without_inbox?: number;
-  } | null;
-}
-
 function careMailingFromBackend(
-  mailing: BackendCareLetterMailing,
+  mailing: traegerCareBillingRunsContract.CareLetterMailing,
 ): CareLetterMailing {
   return {
     invoiceId: id(mailing.invoice_id),
@@ -1246,38 +1067,43 @@ function careMailingFromBackend(
     cancelled: mailing.cancelled,
     cancellationNumber: mailing.cancellation_number ?? "",
     hasLetter: mailing.has_letter,
-    inInbox: mailing.in_inbox ?? false,
-    printed: mailing.printed ?? false,
-    replaced: mailing.replaced ?? false,
-    status: mailing.status,
+    inInbox: mailing.in_inbox,
+    printed: mailing.printed,
+    replaced: mailing.replaced,
+    status: knownLetterMailStatus(mailing.status),
     sends: mailing.sends,
     attempts: mailing.attempts,
     requestedAt: mailing.requested_at,
     sentAt: mailing.sent_at,
-    mailOutcome: mailing.mail_outcome || undefined,
-    providerBlock: mailing.provider_block || undefined,
+    mailOutcome: knownMailOutcome(mailing.mail_outcome),
+    providerBlock: knownMailProviderBlock(mailing.provider_block),
   };
 }
 
-function careLettersFromBackend(body: BackendCareLetters): CareLetters {
+function careLettersFromBackend(
+  body: traegerCareBillingRunsContract.CareLetters,
+): CareLetters {
   const summary = body.summary;
   return {
     letters: body.letters
       ? {
-          paymentDueOn: body.letters.payment_due_on,
+          paymentDueOn: requiredDay(
+            body.letters.payment_due_on,
+            "care_letters.payment_due_on",
+          ),
           notes: body.letters.notes,
           createdAt: body.letters.created_at,
         }
       : null,
     documents: (body.documents ?? []).map(careMailingFromBackend),
     summary: {
-      letters: summary?.letters ?? 0,
-      sent: summary?.sent ?? 0,
-      queued: summary?.queued ?? 0,
-      failed: summary?.failed ?? 0,
-      notSent: summary?.not_sent ?? 0,
-      withoutEmail: summary?.without_email ?? 0,
-      withoutInbox: summary?.without_inbox ?? 0,
+      letters: summary.letters,
+      sent: summary.sent,
+      queued: summary.queued,
+      failed: summary.failed,
+      notSent: summary.not_sent,
+      withoutEmail: summary.without_email,
+      withoutInbox: summary.without_inbox,
     },
   };
 }
@@ -1290,14 +1116,18 @@ function invoicePath(runId: string, invoiceId: string): string {
   return `${RUNS_PATH}/${encodeURIComponent(runId)}/invoices/${encodeURIComponent(invoiceId)}`;
 }
 
-function careLetterBody(input: CareLetterInput) {
+function careLetterBody(
+  input: CareLetterInput,
+): traegerCareBillingRunsContract.CareLetterRequest {
   return { payment_due_on: input.paymentDueOn, notes: input.notes };
 }
 
 /** The letters of a released run with the state of every invoice. */
 export async function fetchCareLetters(runId: string): Promise<CareLetters> {
   return careLettersFromBackend(
-    await traegerRequest<BackendCareLetters>(lettersPath(runId)),
+    await traegerRequest<traegerCareBillingRunsContract.CareLetters>(
+      lettersPath(runId),
+    ),
   );
 }
 
@@ -1307,10 +1137,13 @@ export async function createCareLetters(
   input: CareLetterInput,
 ): Promise<CareLetters> {
   return careLettersFromBackend(
-    await traegerRequest<BackendCareLetters>(lettersPath(runId), {
-      method: "POST",
-      body: careLetterBody(input),
-    }),
+    await traegerRequest<traegerCareBillingRunsContract.CareLetters>(
+      lettersPath(runId),
+      {
+        method: "POST",
+        body: careLetterBody(input),
+      },
+    ),
   );
 }
 
@@ -1349,12 +1182,10 @@ export async function printCareLetters(
 export async function mailCareLetters(
   runId: string,
 ): Promise<CareLetterSeries> {
-  const series = await traegerRequest<{
-    queued: number;
-    already: number;
-    without_email: number;
-    recipient_changed?: number;
-  }>(`${lettersPath(runId)}/mail`, { method: "POST" });
+  const series = await traegerRequest<sharedContract.BillingLetterSeries>(
+    `${lettersPath(runId)}/mail`,
+    { method: "POST" },
+  );
   return {
     queued: series.queued,
     already: series.already,
@@ -1383,7 +1214,7 @@ export async function mailCareLetter(
   kind: CareLetterKind,
 ): Promise<CareLetterMailing> {
   return careMailingFromBackend(
-    await traegerRequest<BackendCareLetterMailing>(
+    await traegerRequest<traegerCareBillingRunsContract.CareLetterMailing>(
       `${invoicePath(runId, invoiceId)}/mail${kind === "cancellation" ? "?kind=cancellation" : ""}`,
       { method: "POST" },
     ),
@@ -1397,9 +1228,14 @@ export async function cancelCareInvoice(
   reason: string,
 ): Promise<CareLetters> {
   return careLettersFromBackend(
-    await traegerRequest<BackendCareLetters>(
+    await traegerRequest<traegerCareBillingRunsContract.CareLetters>(
       `${invoicePath(runId, invoiceId)}/cancellation`,
-      { method: "POST", body: { reason } },
+      {
+        method: "POST",
+        body: {
+          reason,
+        } satisfies traegerCareBillingRunsContract.CareCancellationRequest,
+      },
     ),
   );
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // maxBillingSpan bounds VersionsInForce: a billing run asks for a month, a
@@ -51,7 +52,7 @@ func (c *Contracts) versionDocument(ctx context.Context, reviewer carecontract.R
 	if version == nil {
 		return carecontract.File{}, 0, carecontract.ErrVersionNotFound
 	}
-	file, stored, err := c.store.VersionDocument(ctx, reviewer.OrganizationID, version.ID)
+	file, stored, err := c.store.VersionDocument(ctx, reviewer.OrganizationID, version.ID.Int64())
 	if err != nil {
 		return carecontract.File{}, 0, err
 	}
@@ -68,7 +69,7 @@ func (c *Contracts) versionDocument(ctx context.Context, reviewer carecontract.R
 	if err := trailContract(ctx, c.store, reviewer.OrganizationID, reviewer.AccountID, record, ActionRead, map[string]any{"view": view, "version_number": number}); err != nil {
 		return carecontract.File{}, 0, err
 	}
-	return file, record.Summary.SchoolID, nil
+	return file, record.Summary.SchoolID.Int64(), nil
 }
 
 // sentVersionRecord points a send again at the PDF the parents have (#4681):
@@ -80,7 +81,7 @@ func (c *Contracts) sentVersionRecord(ctx context.Context, organizationID int64,
 	if record.DocumentID != nil || record.SentDocument == nil {
 		return record, nil
 	}
-	versions, err := c.store.Versions(ctx, organizationID, record.Summary.ID)
+	versions, err := c.store.Versions(ctx, organizationID, record.Summary.ID.Int64())
 	if err != nil {
 		return ContractRecord{}, err
 	}
@@ -91,7 +92,7 @@ func (c *Contracts) sentVersionRecord(ctx context.Context, organizationID int64,
 // PDF shows.
 func withSentVersion(record ContractRecord, versions []carecontract.Version) ContractRecord {
 	for _, version := range versions {
-		if version.ID == record.SentDocument.VersionID {
+		if version.ID == ident.ID(record.SentDocument.VersionID) {
 			documentID := record.SentDocument.ID
 			record.Version, record.DocumentID = version, &documentID
 		}

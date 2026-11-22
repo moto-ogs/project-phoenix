@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Holiday positions book on the KOST1 of the school that hosts their week
@@ -34,8 +35,8 @@ func holidayBase(weekID int64, day calendar.Date, cents int64) parentbilling.Bil
 // from 19 October, the holiday care FER all year.
 func hostAssignments() parentbilling.BookingAssignments {
 	return parentbilling.BookingAssignments{CostCenters: []parentbilling.CostCenter{
-		{Scope: parentbilling.BookingScopeSchool, ScopeID: ispringen, ValidFrom: onDay(2026, time.October, 1), Code: "ISP"},
-		{Scope: parentbilling.BookingScopeSchool, ScopeID: birkenfeld, ValidFrom: onDay(2026, time.October, 19), Code: "BIR"},
+		{Scope: parentbilling.BookingScopeSchool, ScopeID: ident.ID(ispringen), ValidFrom: onDay(2026, time.October, 1), Code: "ISP"},
+		{Scope: parentbilling.BookingScopeSchool, ScopeID: ident.ID(birkenfeld), ValidFrom: onDay(2026, time.October, 19), Code: "BIR"},
 		{Scope: parentbilling.BookingScopeHoliday, ValidFrom: onDay(2026, time.January, 1), Code: "FER"},
 	}}
 }
@@ -120,16 +121,16 @@ func TestHolidayPositionsBookOnTheHolidayKost1OfTheirHostSchool(t *testing.T) {
 	const birkenfeld2, birkenfeld3, withoutAny int64 = 13, 14, 15
 	school, schoolHoliday := parentbilling.BookingScopeSchool, parentbilling.BookingScopeSchoolHoliday
 	assignments := parentbilling.BookingAssignments{CostCenters: []parentbilling.CostCenter{
-		{Scope: school, ScopeID: ispringen, ValidFrom: onDay(2026, time.January, 1), Code: "5467"},
-		{Scope: schoolHoliday, ScopeID: ispringen, ValidFrom: onDay(2026, time.January, 1), Code: "5469"},
+		{Scope: school, ScopeID: ident.ID(ispringen), ValidFrom: onDay(2026, time.January, 1), Code: "5467"},
+		{Scope: schoolHoliday, ScopeID: ident.ID(ispringen), ValidFrom: onDay(2026, time.January, 1), Code: "5469"},
 		// The holiday KOST1 changes on 19 October and ends on 2 November.
-		{Scope: schoolHoliday, ScopeID: ispringen, ValidFrom: onDay(2026, time.October, 19), Code: "5470"},
-		{Scope: schoolHoliday, ScopeID: ispringen, ValidFrom: onDay(2026, time.November, 2), Code: ""},
+		{Scope: schoolHoliday, ScopeID: ident.ID(ispringen), ValidFrom: onDay(2026, time.October, 19), Code: "5470"},
+		{Scope: schoolHoliday, ScopeID: ident.ID(ispringen), ValidFrom: onDay(2026, time.November, 2), Code: ""},
 		// Three schools share one value; only the second has none of its own.
-		{Scope: school, ScopeID: birkenfeld, ValidFrom: onDay(2026, time.January, 1), Code: "5567"},
-		{Scope: schoolHoliday, ScopeID: birkenfeld, ValidFrom: onDay(2026, time.January, 1), Code: "5569"},
-		{Scope: school, ScopeID: birkenfeld2, ValidFrom: onDay(2026, time.January, 1), Code: "5567"},
-		{Scope: schoolHoliday, ScopeID: birkenfeld3, ValidFrom: onDay(2026, time.January, 1), Code: "5569"},
+		{Scope: school, ScopeID: ident.ID(birkenfeld), ValidFrom: onDay(2026, time.January, 1), Code: "5567"},
+		{Scope: schoolHoliday, ScopeID: ident.ID(birkenfeld), ValidFrom: onDay(2026, time.January, 1), Code: "5569"},
+		{Scope: school, ScopeID: ident.ID(birkenfeld2), ValidFrom: onDay(2026, time.January, 1), Code: "5567"},
+		{Scope: schoolHoliday, ScopeID: ident.ID(birkenfeld3), ValidFrom: onDay(2026, time.January, 1), Code: "5569"},
 		{Scope: parentbilling.BookingScopeHoliday, ValidFrom: onDay(2026, time.January, 1), Code: "FER"},
 	}}
 	resolver := newBookingResolver(assignments, "4400")
@@ -184,10 +185,10 @@ func TestExportFilesBookTheHolidayKost1OfTheHostSchool(t *testing.T) {
 	school, schoolHoliday := parentbilling.BookingScopeSchool, parentbilling.BookingScopeSchoolHoliday
 	january := onDay(2026, time.January, 1)
 	resolver := newBookingResolver(parentbilling.BookingAssignments{CostCenters: []parentbilling.CostCenter{
-		{Scope: school, ScopeID: ispringen, ValidFrom: january, Code: "5467"},
-		{Scope: schoolHoliday, ScopeID: ispringen, ValidFrom: january, Code: "5469"},
-		{Scope: school, ScopeID: birkenfeld, ValidFrom: january, Code: "5567"},
-		{Scope: schoolHoliday, ScopeID: birkenfeld, ValidFrom: january, Code: "5569"},
+		{Scope: school, ScopeID: ident.ID(ispringen), ValidFrom: january, Code: "5467"},
+		{Scope: schoolHoliday, ScopeID: ident.ID(ispringen), ValidFrom: january, Code: "5469"},
+		{Scope: school, ScopeID: ident.ID(birkenfeld), ValidFrom: january, Code: "5567"},
+		{Scope: schoolHoliday, ScopeID: ident.ID(birkenfeld), ValidFrom: january, Code: "5569"},
 	}}, "4400")
 	part := func(host int64, day calendar.Date, cents int64) parentbilling.ExportBookingPart {
 		accounts, fallback := resolver.holidayWeek(host, day)

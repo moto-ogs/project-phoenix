@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // SchoolRows reads the rows of a school set; the Postgres adapter serves it.
@@ -249,7 +250,7 @@ func (o *Overview) Traeger(ctx context.Context, organizationID, accountID int64)
 		return traegerview.Traeger{}, err
 	}
 	index := slices.IndexFunc(memberships, func(traeger traegerview.Traeger) bool {
-		return traeger.ID == organizationID
+		return traeger.ID == ident.ID(organizationID)
 	})
 	if index < 0 {
 		return traegerview.Traeger{}, traegerview.ErrTraegerUnavailable

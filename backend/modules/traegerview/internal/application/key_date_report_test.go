@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func TestAbsenceWindowStartsWithTheSchoolYearAndEndsYesterday(t *testing.T) {
@@ -86,7 +87,7 @@ func TestAggregateKeyDateSchoolsSumsSozialraeumeAndTheTotal(t *testing.T) {
 	nord := "Nord"
 	school := func(id int64, district *string, children, staff int, forms ...traegerview.KeyDateCareForm) traegerview.KeyDateSchool {
 		figures := completeFigures(traegerview.KeyDateFigures{Children: children, Staff: staff, PresentDays: 8, SickDays: 2}, forms)
-		return traegerview.KeyDateSchool{ID: id, District: district, Figures: figures, CareForms: forms}
+		return traegerview.KeyDateSchool{ID: ident.ID(id), District: district, Figures: figures, CareForms: forms}
 	}
 	schools := []traegerview.KeyDateSchool{
 		school(1, &nord, 10, 2, traegerview.KeyDateCareForm{Name: "OGS", Children: 10, Capacity: intPtr(12), Active: true}),

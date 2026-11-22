@@ -27,7 +27,7 @@ var seedPoolSlots = [][2]string{{"08:00", "13:00"}, {"17:00", "19:00"}, {"06:30"
 type seedPoolWeek struct {
 	Available bool `json:"available"`
 	Springers []struct {
-		RecordID int64 `json:"staff_record_id"`
+		RecordID apiID `json:"staff_record_id"`
 		Blocks   []struct {
 			Own bool `json:"own"`
 		} `json:"blocks"`
@@ -60,7 +60,7 @@ func seedTraegerPoolBlock(client *Client, school AuthRef) (bool, error) {
 	}
 	for day := range 5 {
 		for _, slot := range seedPoolSlots {
-			blocked, err := seedPoolBlockSlot(client, school, springer.RecordID, monday.AddDate(0, 0, day), slot)
+			blocked, err := seedPoolBlockSlot(client, school, int64(springer.RecordID), monday.AddDate(0, 0, day), slot)
 			if err != nil || blocked {
 				return blocked, err
 			}

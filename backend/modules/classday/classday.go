@@ -3,9 +3,11 @@ package classday
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ErrClassNotAssigned is returned when the requested class is not among the
@@ -40,6 +42,17 @@ var (
 	// ErrArrivalExceptionNotFound means there is nothing to delete.
 	ErrArrivalExceptionNotFound = errors.New("class arrival exception not found")
 )
+
+// ClassTripArrivalReason is the reason of each child's arrival exception a
+// day outing with a return time writes (#4799): "Ausflug", or "Ausflug: "
+// and the Lehrkraft's own reason.
+const ClassTripArrivalReason = "Ausflug"
+
+// IsClassTripArrival reports whether an arrival exception's reason marks a
+// day outing of the class ("Heute anders", #7681).
+func IsClassTripArrival(reason string) bool {
+	return reason == ClassTripArrivalReason || strings.HasPrefix(reason, ClassTripArrivalReason+": ")
+}
 
 // ErrClassTripsNotConfigured is returned by the class-trip capability when
 // the projection was composed without its write seams. The HTTP adapter
@@ -235,15 +248,15 @@ type Actor struct {
 // contact details: the Lehrkraft view is a privacy-reduced projection of the
 // class roster — who stays, who goes home, and how.
 type DayRow struct {
-	StudentID int64  `json:"student_id"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
+	StudentID ident.ID `json:"student_id"`
+	FirstName string   `json:"first_name"`
+	LastName  string   `json:"last_name"`
 	// ListEntry marks a class-list-only entry (#2382): a child of the class
 	// cohort with NO OGS record ("Keine Betreuung"). StudentID is 0;
 	// ListEntryID carries the users.class_list_entries id, serialized as a
 	// JSON string because JavaScript clients round numbers beyond 2^53.
-	ListEntry   bool  `json:"list_entry,omitempty"`
-	ListEntryID int64 `json:"list_entry_id,string,omitempty"`
+	ListEntry   bool     `json:"list_entry,omitempty"`
+	ListEntryID ident.ID `json:"list_entry_id,omitempty"`
 	// WithoutCarePlace marks a child of the class without an OGS place
 	// (#4803, "Keine Betreuung"): unlike a list entry it has a StudentID,
 	// so its day status and morning mark show, but it never stays in the
@@ -582,7 +595,7 @@ type SupervisionContact struct {
 // be assigned to the block, the child must be on that block's roster, and every
 // single call writes a GDPR access-log row naming the child.
 type SupervisionStudentSheet struct {
-	StudentID   int64         `json:"student_id"`
+	StudentID   ident.ID      `json:"student_id"`
 	FirstName   string        `json:"first_name"`
 	LastName    string        `json:"last_name"`
 	SchoolClass string        `json:"school_class,omitempty"`
@@ -652,11 +665,11 @@ const (
 // what its numbers count: the name, the day status, the morning status and
 // whether the child stays in the OGS. No times, departures or contacts.
 type SchoolDayChild struct {
-	StudentID int64 `json:"student_id,string,omitempty"`
+	StudentID ident.ID `json:"student_id,omitempty"`
 	// ListEntry marks a class-list-only entry (#2382); ListEntryID carries
 	// its id as a JSON string.
-	ListEntry   bool  `json:"list_entry,omitempty"`
-	ListEntryID int64 `json:"list_entry_id,string,omitempty"`
+	ListEntry   bool     `json:"list_entry,omitempty"`
+	ListEntryID ident.ID `json:"list_entry_id,omitempty"`
 	// WithoutCarePlace marks a child without an OGS place (#4803).
 	WithoutCarePlace bool   `json:"without_care_place,omitempty"`
 	FirstName        string `json:"first_name"`
@@ -741,10 +754,10 @@ var ErrSharedNoteStudentNotInClass = errors.New("the child is not in this class"
 // those are the OGS's business, and the Lehrkraft can neither change nor
 // answer the note.
 type SharedNote struct {
-	ID       int64  `json:"id,string"`
-	Kind     string `json:"kind"`
-	Category string `json:"category,omitempty"`
-	Body     string `json:"body"`
+	ID       ident.ID `json:"id"`
+	Kind     string   `json:"kind"`
+	Category string   `json:"category,omitempty"`
+	Body     string   `json:"body"`
 	// SubjectDate is the day a dated entry describes; nil for a durable hint.
 	SubjectDate *calendar.Date `json:"subject_date,omitempty"`
 	// AuthorName is the author's current name, empty when the person is gone.
@@ -757,7 +770,7 @@ type SharedNote struct {
 // StudentSharedNotes is the view of one child in moto schule with the notes
 // the OGS released for the school, newest first.
 type StudentSharedNotes struct {
-	StudentID   int64        `json:"student_id,string"`
+	StudentID   ident.ID     `json:"student_id"`
 	FirstName   string       `json:"first_name"`
 	LastName    string       `json:"last_name"`
 	SchoolClass string       `json:"school_class"`

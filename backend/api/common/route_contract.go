@@ -65,6 +65,13 @@ type RouteContract struct {
 	// MaxBodyBytes is the largest request body the proxy reads; it answers a
 	// larger one 413 without calling the backend. Zero sets no limit.
 	MaxBodyBytes int
+	// NoCommit says why a POST commits none of the changes its caller could
+	// ask for: a preview, a search or a read with a body. When its answer
+	// does not match the contract, the proxy offers a retry instead of asking
+	// to reload a change that may have been saved. Only a POST names it. It
+	// is not the read-only preview session's allowlist (readonly_preview.go):
+	// an import preview commits no import but writes an audit row.
+	NoCommit string
 	// File replaces Response on a route that answers a file: its bytes with
 	// Content-Type and Content-Disposition instead of the envelope. The proxy
 	// streams them through and never caches them; an error keeps the envelope.

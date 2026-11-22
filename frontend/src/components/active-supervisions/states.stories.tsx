@@ -36,13 +36,7 @@ export const NoAccess: Story = {
 };
 
 export const EmptyRooms: Story = {
-  render: () => (
-    <EmptyRoomsView
-      onClaimed={fn()}
-      cachedActiveGroups={[]}
-      currentStaffId={undefined}
-    />
-  ),
+  render: () => <EmptyRoomsView />,
 };
 
 export const ReleaseModal: Story = {

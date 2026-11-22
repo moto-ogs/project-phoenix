@@ -74,6 +74,7 @@ import { formatEuro } from "./contribution-format";
 import { recipientKindLabel } from "./billing-payment-format";
 import { InvoiceExportHistoryCard } from "./invoice-export-history-card";
 import { InvoicePaymentLine } from "./invoice-payment-line";
+import { labelOf } from "~/lib/label-of";
 
 const logger = createLogger({ component: "BillingRunOverviewCard" });
 
@@ -214,8 +215,8 @@ function BillingDocumentExportHistory({
           <SlideOverHeader>
             <SlideOverTitle>Ausstellung, Versand und Exporte</SlideOverTitle>
             <SlideOverDescription className="wrap-anywhere">
-              {BILLING_DOCUMENT_KIND_LABELS[document.kind]} {document.number} an{" "}
-              {recipientName(document)}
+              {labelOf(BILLING_DOCUMENT_KIND_LABELS, document.kind, "Beleg")}{" "}
+              {document.number} an {recipientName(document)}
             </SlideOverDescription>
           </SlideOverHeader>
           <SlideOverBody>
@@ -441,7 +442,11 @@ export function BillingRunOverviewCard({
               )}
               {document.kind !== "invoice" ? (
                 <StatusBadge
-                  label={BILLING_DOCUMENT_KIND_LABELS[document.kind]}
+                  label={labelOf(
+                    BILLING_DOCUMENT_KIND_LABELS,
+                    document.kind,
+                    "Beleg",
+                  )}
                   tone="blue"
                 />
               ) : null}

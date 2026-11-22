@@ -82,6 +82,9 @@ type targetRiskWorkload struct {
 	// bookedActivities every care-end child is enrolled in, so ending care
 	// removes real bookings and the removal sets carry rows.
 	bookedActivities []int64
+	// bookedRosters holds each booked activity's children: the roster
+	// route replaces the whole list.
+	bookedRosters map[int64][]int64
 
 	owned        map[string]bool
 	slotCounters []*testpkg.QueryCounter
@@ -166,8 +169,14 @@ func newTargetRiskWorkload(t *testing.T, production *Runtime) *targetRiskWorkloa
 func (w *targetRiskWorkload) bookedStudent(t *testing.T, name string) int64 {
 	t.Helper()
 	id := testpkg.CreateTestStudent(w.fixtures, w.db, "Checkpoint", name, "2a").ID
+	if w.bookedRosters == nil {
+		w.bookedRosters = map[int64][]int64{}
+	}
 	for _, activityID := range w.bookedActivities {
-		enrolled := checkpointRequest(w.handler, checkpointScenario{Method: http.MethodPost, Path: fmt.Sprintf("/api/activities/%d/students/%d", activityID, id), Authenticated: true}, w.token)
+		w.bookedRosters[activityID] = append(w.bookedRosters[activityID], id)
+		body, err := json.Marshal(map[string][]int64{"student_ids": w.bookedRosters[activityID]})
+		require.NoError(t, err)
+		enrolled := checkpointRequest(w.handler, checkpointScenario{Method: http.MethodPut, Path: fmt.Sprintf("/api/activities/%d/students", activityID), Body: string(body), Authenticated: true}, w.token)
 		require.Equal(t, http.StatusOK, enrolled.Code, "prepare activity booking: %s", enrolled.Body.String())
 	}
 	return id

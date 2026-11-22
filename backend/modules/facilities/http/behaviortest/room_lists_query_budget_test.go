@@ -118,11 +118,11 @@ func TestRoomListsQueryBudget(t *testing.T) {
 			require.Len(t, body.Data, n)
 			seen := make(map[int64]bool, n)
 			for _, room := range body.Data {
-				want, ok := expected[room.ID]
+				want, ok := expected[room.ID.Int64()]
 				require.True(t, ok, "unexpected or foreign room %d", room.ID)
 				require.NotEqual(t, foreignRoom.ID, room.ID)
-				require.False(t, seen[room.ID], "duplicate room")
-				seen[room.ID] = true
+				require.False(t, seen[room.ID.Int64()], "duplicate room")
+				seen[room.ID.Int64()] = true
 				require.Equal(t, want.name, room.Name)
 				require.Equal(t, "Test Building", room.Building)
 				require.NotNil(t, room.Category)

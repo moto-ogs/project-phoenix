@@ -23,6 +23,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	provisioningAPI "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -172,6 +173,8 @@ func TestOperatorRecordsAndWithdrawsTheErasureOrderOfADeactivatedTraeger(t *test
 	}
 
 	assert.Nil(t, f.openOrder(t, path), "no order yet")
+	rec = f.call(t, http.MethodGet, path, nil)
+	assert.Contains(t, rec.Body.String(), `"data":null`, "the contract's nullable answer needs the data member")
 
 	rec = f.call(t, http.MethodPost, path, order)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
@@ -179,7 +182,7 @@ func TestOperatorRecordsAndWithdrawsTheErasureOrderOfADeactivatedTraeger(t *test
 	assert.Equal(t, "LOESCH-4657", recorded.OrderReference)
 	assert.Equal(t, "2026-01-02", recorded.ConfirmedOn.String())
 	assert.Equal(t, "2099-12-31", recorded.EraseNotBefore.String())
-	assert.Equal(t, f.operatorID, recorded.RecordedBy)
+	assert.Equal(t, ident.ID(f.operatorID), recorded.RecordedBy)
 
 	open := f.openOrder(t, path)
 	require.NotNil(t, open)

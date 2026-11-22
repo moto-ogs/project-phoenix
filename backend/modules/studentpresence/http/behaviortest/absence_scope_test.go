@@ -83,12 +83,12 @@ func TestDirectAbsenceScopeRestrictsExistingReportsOnNextRequest(t *testing.T) {
 		require.Equal(t, http.StatusCreated, rr.Code, rr.Body.String())
 		var response struct {
 			Data []struct {
-				ID int64 `json:"id"`
+				ID testpkg.ID `json:"id"`
 			} `json:"data"`
 		}
 		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
 		require.Len(t, response.Data, 1)
-		statusIDs[status] = response.Data[0].ID
+		statusIDs[status] = int64(response.Data[0].ID)
 	}
 	partialPayload := map[string]any{"date": date, "from_time": "13:00", "reason": "Arzttermin"}
 	rr := authExec(t, tc, testutil.NewAuthenticatedRequest(t, "POST", fmt.Sprintf("/%d/partial-absences", student.ID), partialPayload), claims, perms)

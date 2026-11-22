@@ -100,7 +100,7 @@ func TestCareTimeOverrunsReadTheHolidayBooking(t *testing.T) {
 	assert.Equal(t, overrunFiguresBody{Children: 1, OverrunDays: 1, UnbookedDays: 1, ExtraMinutes: 360 + 120}, body.Total,
 		"8 June is within the holiday booking; 9 and 15 June stay")
 	for _, school := range body.Schools {
-		if school.SchoolID == f.school {
+		if int64(school.SchoolID) == f.school {
 			assert.Equal(t, 3, school.ComparedDays, "three child-days, each compared once")
 		}
 	}

@@ -1,10 +1,23 @@
 /**
  * Client of the Träger portal ("moto träger", #4649). Talks to the BFF
  * routes under /api/traeger, which forward to the backend with the Träger
- * session. Backend int64 IDs arrive as numbers and leave here as strings.
+ * session. The catalog proxy decodes every answer with the contract of its
+ * route (lib/contract): IDs arrive as strings.
  */
 
 import { ApiError, apiErrorFromBody, transportFetch } from "./api-error";
+import { knownEnum } from "./contract/known-enum";
+import { requiredDay } from "./contract/required-day";
+import type * as sharedContract from "./contract/shared.generated";
+import type * as traegerAccessLogContract from "./contract/traeger-access-log.generated";
+import type * as traegerAccountsContract from "./contract/traeger-accounts.generated";
+import type * as traegerHolidayPeriodsContract from "./contract/traeger-holiday-periods.generated";
+import type * as traegerInvitationsContract from "./contract/traeger-invitations.generated";
+import type * as traegerMasterDataContract from "./contract/traeger-master-data.generated";
+import type * as traegerOrganizationContract from "./contract/traeger-organization.generated";
+import type * as traegerProfileContract from "./contract/traeger-profile.generated";
+import type * as traegerSchoolSessionsContract from "./contract/traeger-school-sessions.generated";
+import type * as traegerSchoolsContract from "./contract/traeger-schools.generated";
 import type { SettingsSchema } from "./settings-api";
 import { filenameFromDisposition } from "./file-download";
 import { portalAuthPath } from "./portal-paths";
@@ -54,8 +67,28 @@ export interface TraegerSchoolsToday {
 }
 
 /** The kinds of a hint on the dashboard (#4675), in the backend's order. */
-export type TraegerAlertKind =
-  "staff_shortage" | "sick_children" | "open_enrollments";
+export type TraegerAlertKind = (typeof ALERT_KIND_VALUES)[number];
+
+// Go does not register these sets; the contract types them as string. A value
+// this build does not know stays undefined instead of passing as a known one.
+const ALERT_KIND_VALUES = [
+  "staff_shortage",
+  "sick_children",
+  "open_enrollments",
+] as const;
+const NO_CARE_KIND_VALUES = ["holiday", "closing_day"] as const;
+const BOOKING_UNIT_VALUES = ["week", "day"] as const;
+const ALLOCATION_MODE_VALUES = ["arrival", "criteria"] as const;
+const PERIOD_STATUS_VALUES = ["draft", "published"] as const;
+const ACCOUNT_ACTION_VALUES = [
+  "invitation_created",
+  "invitation_revoked",
+  "invitation_accepted",
+  "roles_changed",
+  "member_removed",
+  "name_changed",
+] as const;
+const ACCESS_KIND_VALUES = ["read", "change"] as const;
 
 /** The Träger's thresholds of the dashboard hints; 0 switches one off. */
 export interface TraegerAlertThresholds {
@@ -80,48 +113,6 @@ export interface TraegerSchoolsAlerts {
   readonly thresholds: TraegerAlertThresholds;
   readonly schools: readonly TraegerSchoolAlerts[];
   readonly asOf: string;
-}
-
-interface BackendSchoolFigures {
-  children_total: number;
-  children_present: number;
-  children_sick: number;
-  staff_total: number;
-  staff_present: number;
-  care_ratio: number | null;
-  as_of: string;
-}
-
-interface BackendSchoolView extends BackendSchool {
-  address?: string | null;
-  zip?: string | null;
-  phone?: string | null;
-  email?: string | null;
-  figures: BackendSchoolFigures;
-}
-
-interface BackendSchoolsAlerts {
-  thresholds: {
-    children_per_staff: number;
-    sick_percent: number;
-    open_enrollments: number;
-  };
-  schools:
-    | (BackendSchool & {
-        figures: BackendSchoolFigures;
-        open_enrollments: number;
-        alerts: TraegerAlertKind[] | null;
-      })[]
-    | null;
-  as_of: string;
-}
-
-interface BackendSchool {
-  id: number;
-  name: string;
-  slug: string;
-  subdomain: string;
-  city?: string | null;
 }
 
 /** Reads a JSON body; null for an empty or unreadable one. */
@@ -188,22 +179,26 @@ export async function fetchTraegerSchools(): Promise<TraegerSchool[]> {
       data,
     );
   }
-  const schools = ((data as { data?: BackendSchool[] } | null)?.data ??
-    []) as BackendSchool[];
+  const schools = (data as { data: traegerSchoolsContract.TraegerSchool[] })
+    .data;
   return schools.map(toTraegerSchool);
 }
 
-function toTraegerSchool(school: BackendSchool): TraegerSchool {
+function toTraegerSchool(
+  school: traegerSchoolsContract.TraegerSchool,
+): TraegerSchool {
   return {
-    id: String(school.id),
+    id: school.id,
     name: school.name,
     slug: school.slug,
     subdomain: school.subdomain,
-    city: school.city ?? "",
+    city: school.city,
   };
 }
 
-function toSchoolFigures(figures: BackendSchoolFigures): TraegerSchoolFigures {
+function toSchoolFigures(
+  figures: traegerSchoolsContract.SchoolFigures,
+): TraegerSchoolFigures {
   return {
     childrenTotal: figures.children_total,
     childrenPresent: figures.children_present,
@@ -232,7 +227,7 @@ export async function fetchTraegerSchoolsAlerts(): Promise<TraegerSchoolsAlerts>
       data,
     );
   }
-  const alerts = (data as { data: BackendSchoolsAlerts }).data;
+  const alerts = (data as { data: traegerSchoolsContract.SchoolsAlerts }).data;
   return {
     thresholds: {
       childrenPerStaff: alerts.thresholds.children_per_staff,
@@ -243,7 +238,10 @@ export async function fetchTraegerSchoolsAlerts(): Promise<TraegerSchoolsAlerts>
       ...toTraegerSchool(school),
       figures: toSchoolFigures(school.figures),
       openEnrollments: school.open_enrollments,
-      alerts: school.alerts ?? [],
+      alerts: (school.alerts ?? []).flatMap((alert) => {
+        const kind = knownEnum(ALERT_KIND_VALUES, alert);
+        return kind ? [kind] : [];
+      }),
     })),
     asOf: alerts.as_of,
   };
@@ -265,13 +263,13 @@ export async function fetchTraegerSchool(
       data,
     );
   }
-  const school = (data as { data: BackendSchoolView }).data;
+  const school = (data as { data: traegerSchoolsContract.SchoolView }).data;
   return {
     ...toTraegerSchool(school),
-    address: school.address ?? "",
-    zip: school.zip ?? "",
-    phone: school.phone ?? "",
-    email: school.email ?? "",
+    address: school.address,
+    zip: school.zip,
+    phone: school.phone,
+    email: school.email,
     figures: toSchoolFigures(school.figures),
   };
 }
@@ -287,7 +285,9 @@ export async function startTraegerSchoolSession(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ school_id: Number(schoolId) }),
+    body: JSON.stringify({
+      school_id: schoolId,
+    } satisfies traegerSchoolSessionsContract.SchoolSessionRequest),
   });
   const data = await readJson(response);
   if (!response.ok) {
@@ -372,7 +372,8 @@ export interface HolidayTimeModel {
 export interface HolidayNoCareDay {
   /** Calendar date "YYYY-MM-DD". */
   readonly date: string;
-  readonly kind: "holiday" | "closing_day";
+  /** undefined: a kind this build does not know; the day still has no care. */
+  readonly kind: (typeof NO_CARE_KIND_VALUES)[number] | undefined;
   readonly name: string;
 }
 
@@ -401,7 +402,7 @@ export interface HolidayWeek {
 }
 
 /** How a holiday week is booked (#4701). */
-export type HolidayBookingUnit = "week" | "day";
+export type HolidayBookingUnit = (typeof BOOKING_UNIT_VALUES)[number];
 
 /** What the Träger-Büro writes: the whole period with its weeks. */
 export interface HolidayPeriodInput {
@@ -434,11 +435,12 @@ export interface HolidayPeriodInput {
 }
 
 /** How the places of a holiday period are given out (#4700). */
-export type HolidayAllocationMode = "arrival" | "criteria";
+export type HolidayAllocationMode = (typeof ALLOCATION_MODE_VALUES)[number];
 
 export interface HolidayPeriod extends HolidayPeriodInput {
   readonly id: string;
-  readonly status: "draft" | "published";
+  /** undefined: a status this build does not know. */
+  readonly status: (typeof PERIOD_STATUS_VALUES)[number] | undefined;
   readonly publishedAt: string | null;
   /** Key of the period's one public registration link (#4661). */
   readonly publicToken: string;
@@ -448,92 +450,71 @@ export interface HolidayPeriod extends HolidayPeriodInput {
   readonly allocationModeLocked?: boolean;
 }
 
-interface BackendTimeModel {
-  id: number;
-  name: string;
-  starts_at: string;
-  ends_at: string;
-  price_cents: number;
-  archived?: boolean;
-  protected?: boolean;
+function noCareDaysFromBackend(
+  days: readonly sharedContract.HolidayNoCareDay[] | null,
+): HolidayNoCareDay[] {
+  return (days ?? []).map((day) => ({
+    date: requiredDay(day.date, "holiday_no_care_day.date"),
+    kind: knownEnum(NO_CARE_KIND_VALUES, day.kind),
+    name: day.name,
+  }));
 }
 
-interface BackendWeek {
-  id: number;
-  starts_on: string;
-  ends_on: string;
-  host_school_id: number;
-  time_models?: BackendTimeModel[] | null;
-  booking_unit?: HolidayBookingUnit;
-  no_care_days?: HolidayNoCareDay[] | null;
-  lunch_price_cents?: number | null;
-  lunch_booked?: boolean;
-}
-
-interface BackendHolidayPeriod {
-  id: number;
-  name: string;
-  registration_opens_on: string;
-  registration_closes_on: string;
-  binding: boolean;
-  notes: string;
-  acceptance_mail_text?: string;
-  holiday_wish_rule?: boolean;
-  status: "draft" | "published";
-  published_at: string | null;
-  public_token?: string;
-  registration_count?: number;
-  max_days_per_child?: number | null;
-  allocation_mode?: HolidayAllocationMode;
-  allocation_mode_locked?: boolean;
-  weeks?: BackendWeek[] | null;
-}
-
-function holidayPeriodFromBackend(period: BackendHolidayPeriod): HolidayPeriod {
+function holidayPeriodFromBackend(
+  period: traegerHolidayPeriodsContract.HolidayPeriod,
+): HolidayPeriod {
   return {
-    id: String(period.id),
+    id: period.id,
     name: period.name,
-    registrationOpensOn: period.registration_opens_on,
-    registrationClosesOn: period.registration_closes_on,
+    registrationOpensOn: requiredDay(
+      period.registration_opens_on,
+      "holiday_period.registration_opens_on",
+    ),
+    registrationClosesOn: requiredDay(
+      period.registration_closes_on,
+      "holiday_period.registration_closes_on",
+    ),
     binding: period.binding,
     notes: period.notes,
-    acceptanceMailText: period.acceptance_mail_text ?? "",
-    holidayWishRule: period.holiday_wish_rule ?? false,
-    status: period.status,
+    acceptanceMailText: period.acceptance_mail_text,
+    holidayWishRule: period.holiday_wish_rule,
+    status: knownEnum(PERIOD_STATUS_VALUES, period.status),
     publishedAt: period.published_at,
-    publicToken: period.public_token ?? "",
-    registrationCount: period.registration_count ?? 0,
-    maxDaysPerChild: period.max_days_per_child ?? null,
-    allocationMode: period.allocation_mode ?? "arrival",
-    allocationModeLocked: period.allocation_mode_locked ?? false,
+    publicToken: period.public_token,
+    registrationCount: period.registration_count,
+    maxDaysPerChild: period.max_days_per_child,
+    allocationMode: knownEnum(ALLOCATION_MODE_VALUES, period.allocation_mode),
+    allocationModeLocked: period.allocation_mode_locked,
     weeks: (period.weeks ?? []).map((week) => ({
-      id: String(week.id),
-      startsOn: week.starts_on,
-      endsOn: week.ends_on,
-      hostSchoolId: String(week.host_school_id),
-      bookingUnit: week.booking_unit ?? "week",
-      noCareDays: week.no_care_days ?? [],
+      id: week.id,
+      startsOn: requiredDay(week.starts_on, "holiday_week.starts_on"),
+      endsOn: requiredDay(week.ends_on, "holiday_week.ends_on"),
+      hostSchoolId: week.host_school_id,
+      bookingUnit: knownEnum(BOOKING_UNIT_VALUES, week.booking_unit),
+      noCareDays: noCareDaysFromBackend(week.no_care_days),
       // Only a week with lunch carries the fields (#5631).
       ...(week.lunch_price_cents == null
         ? {}
         : {
             lunchPriceCents: week.lunch_price_cents,
-            lunchBooked: week.lunch_booked ?? false,
+            lunchBooked: week.lunch_booked,
           }),
       timeModels: (week.time_models ?? []).map((model) => ({
-        id: String(model.id),
+        id: model.id,
         name: model.name,
         startsAt: model.starts_at,
         endsAt: model.ends_at,
         priceCents: model.price_cents,
-        archived: model.archived ?? false,
-        protected: model.protected ?? false,
+        archived: model.archived,
+        protected: model.protected,
       })),
     })),
   };
 }
 
-function holidayPeriodToBackend(input: HolidayPeriodInput) {
+function holidayPeriodToBackend(
+  input: HolidayPeriodInput,
+): traegerHolidayPeriodsContract.HolidayPeriodRequest {
   return {
     name: input.name,
     registration_opens_on: input.registrationOpensOn,
@@ -545,17 +526,17 @@ function holidayPeriodToBackend(input: HolidayPeriodInput) {
     max_days_per_child: input.maxDaysPerChild ?? null,
     allocation_mode: input.allocationMode ?? "arrival",
     weeks: input.weeks.map((week) => ({
-      ...(week.id ? { id: Number(week.id) } : {}),
+      ...(week.id ? { id: week.id } : {}),
       starts_on: week.startsOn,
       ends_on: week.endsOn,
-      host_school_id: Number(week.hostSchoolId),
+      host_school_id: week.hostSchoolId,
       booking_unit: week.bookingUnit ?? "week",
       // Left out, the week offers no lunch (#5631).
       ...(week.lunchPriceCents == null
         ? {}
         : { lunch_price_cents: week.lunchPriceCents }),
       time_models: week.timeModels.map((model) => ({
-        ...(model.id ? { id: Number(model.id) } : {}),
+        ...(model.id ? { id: model.id } : {}),
         name: model.name,
         starts_at: model.startsAt,
         ends_at: model.endsAt,
@@ -604,28 +585,6 @@ export interface TraegerInvitationPreview {
   readonly expiresAt: string;
 }
 
-interface BackendMember {
-  account_id: number;
-  email: string;
-  name?: string | null;
-  roles?: string[] | null;
-}
-
-interface BackendInvitation {
-  id: number;
-  email: string;
-  roles?: string[] | null;
-  expires_at: string;
-}
-
-interface BackendPreview {
-  organization_name: string;
-  email: string;
-  roles?: string[] | null;
-  requires_existing_password: boolean;
-  expires_at: string;
-}
-
 /** Sends a request to a Träger BFF route and returns the `data` member. */
 export async function traegerRequest<T>(
   path: string,
@@ -652,44 +611,42 @@ export async function traegerRequest<T>(
   return (data as { data?: T } | null)?.data as T;
 }
 
-function mapInvitation(invitation: BackendInvitation): TraegerInvitation {
+function mapInvitation(
+  invitation: traegerAccountsContract.TraegerInvitationResponse,
+): TraegerInvitation {
   return {
-    id: String(invitation.id),
+    id: invitation.id,
     email: invitation.email,
     roles: traegerRoles(invitation.roles ?? []),
     expiresAt: invitation.expires_at,
   };
 }
 
-function mapMember(member: BackendMember): TraegerMember {
+function mapMember(
+  member: traegerAccountsContract.TraegerMemberResponse,
+): TraegerMember {
   return {
-    accountId: String(member.account_id),
+    accountId: member.account_id,
     email: member.email,
-    name: member.name ?? "",
+    name: member.name,
     roles: traegerRoles(member.roles ?? []),
   };
 }
 
 /** The people and the open invitations of the Träger-Büro. */
 export async function fetchTraegerBuero(): Promise<TraegerBuero> {
-  const data = await traegerRequest<{
-    members?: BackendMember[];
-    invitations?: BackendInvitation[];
-  } | null>("/api/traeger/accounts");
+  const data =
+    await traegerRequest<traegerAccountsContract.TraegerAccountsResponse>(
+      "/api/traeger/accounts",
+    );
   return {
-    members: (data?.members ?? []).map(mapMember),
-    invitations: (data?.invitations ?? []).map(mapInvitation),
+    members: (data.members ?? []).map(mapMember),
+    invitations: (data.invitations ?? []).map(mapInvitation),
   };
 }
 
 /** What a change of the Träger-Büro did (#5474). */
-export type TraegerAccountChangeAction =
-  | "invitation_created"
-  | "invitation_revoked"
-  | "invitation_accepted"
-  | "roles_changed"
-  | "member_removed"
-  | "name_changed";
+export type TraegerAccountChangeAction = (typeof ACCOUNT_ACTION_VALUES)[number];
 
 /** One change of the Träger-Büro: who did what, when, to whom. */
 export interface TraegerAccountHistoryEntry {
@@ -697,7 +654,8 @@ export interface TraegerAccountHistoryEntry {
   readonly id: string;
   /** Instant (RFC 3339). */
   readonly occurredAt: string;
-  readonly action: TraegerAccountChangeAction;
+  /** undefined: an action this build does not know. */
+  readonly action: TraegerAccountChangeAction | undefined;
   /** Empty for an account erased since; the page says „Gelöschtes Konto“. */
   readonly actorEmail: string;
   readonly targetEmail: string;
@@ -712,17 +670,6 @@ export interface TraegerAccountHistoryPage {
   readonly hasMore: boolean;
 }
 
-interface BackendHistoryEntry {
-  id: number;
-  occurred_at: string;
-  action: TraegerAccountChangeAction;
-  actor_email: string;
-  target_email: string;
-  target_name?: string | null;
-  roles_before?: string[] | null;
-  roles_after?: string[] | null;
-}
-
 /**
  * One page of the changes of the Träger-Büro, newest first. A later page
  * passes the ID of the last entry it has as `before`.
@@ -731,22 +678,22 @@ export async function fetchTraegerAccountHistory(
   before?: string,
 ): Promise<TraegerAccountHistoryPage> {
   const query = before ? `?${new URLSearchParams({ before }).toString()}` : "";
-  const data = await traegerRequest<{
-    entries?: BackendHistoryEntry[];
-    has_more?: boolean;
-  } | null>(`/api/traeger/accounts/history${query}`);
+  const data =
+    await traegerRequest<traegerAccountsContract.TraegerHistoryResponse>(
+      `/api/traeger/accounts/history${query}`,
+    );
   return {
-    entries: (data?.entries ?? []).map((entry) => ({
-      id: String(entry.id),
+    entries: (data.entries ?? []).map((entry) => ({
+      id: entry.id,
       occurredAt: entry.occurred_at,
-      action: entry.action,
+      action: knownEnum(ACCOUNT_ACTION_VALUES, entry.action),
       actorEmail: entry.actor_email,
       targetEmail: entry.target_email,
-      targetName: entry.target_name ?? "",
+      targetName: entry.target_name,
       rolesBefore: traegerRoles(entry.roles_before ?? []),
       rolesAfter: traegerRoles(entry.roles_after ?? []),
     })),
-    hasMore: data?.has_more ?? false,
+    hasMore: data.has_more,
   };
 }
 
@@ -787,7 +734,7 @@ export async function changeTraegerMemberName(
   name: string,
 ): Promise<TraegerMember> {
   return mapMember(
-    await traegerRequest<BackendMember>(
+    await traegerRequest<traegerAccountsContract.TraegerMemberResponse>(
       `/api/traeger/accounts/${encodeURIComponent(accountId)}/name`,
       { method: "PUT", body: { name } },
     ),
@@ -807,9 +754,10 @@ export async function removeTraegerMember(accountId: string): Promise<void> {
 export async function fetchTraegerInvitation(
   token: string,
 ): Promise<TraegerInvitationPreview> {
-  const data = await traegerRequest<BackendPreview>(
-    `/api/traeger/invitations/${encodeURIComponent(token)}`,
-  );
+  const data =
+    await traegerRequest<traegerInvitationsContract.InvitationPreviewResponse>(
+      `/api/traeger/invitations/${encodeURIComponent(token)}`,
+    );
   return {
     organizationName: data.organization_name,
     email: data.email,
@@ -851,24 +799,22 @@ export interface TraegerProfile {
   readonly name: string;
 }
 
-interface BackendProfile {
-  account_id: number;
-  email: string;
-  name?: string | null;
-}
-
-function mapProfile(profile: BackendProfile): TraegerProfile {
+function mapProfile(
+  profile: traegerProfileContract.TraegerProfileResponse,
+): TraegerProfile {
   return {
-    accountId: String(profile.account_id),
+    accountId: profile.account_id,
     email: profile.email,
-    name: profile.name ?? "",
+    name: profile.name,
   };
 }
 
 /** The own account of the signed-in person (#4693); needs no extra right. */
 export async function fetchTraegerProfile(): Promise<TraegerProfile> {
   return mapProfile(
-    await traegerRequest<BackendProfile>("/api/traeger/profile"),
+    await traegerRequest<traegerProfileContract.TraegerProfileResponse>(
+      "/api/traeger/profile",
+    ),
   );
 }
 
@@ -877,10 +823,13 @@ export async function changeTraegerProfileName(
   name: string,
 ): Promise<TraegerProfile> {
   return mapProfile(
-    await traegerRequest<BackendProfile>("/api/traeger/profile/name", {
-      method: "PUT",
-      body: { name },
-    }),
+    await traegerRequest<traegerProfileContract.TraegerProfileResponse>(
+      "/api/traeger/profile/name",
+      {
+        method: "PUT",
+        body: { name },
+      },
+    ),
   );
 }
 
@@ -889,15 +838,16 @@ const holidayPeriodsPath = "/api/traeger/holiday-periods";
 /** Every holiday period of the signed-in person's Träger, newest first. */
 export async function fetchHolidayPeriods(): Promise<HolidayPeriod[]> {
   const periods =
-    (await traegerRequest<BackendHolidayPeriod[] | null>(holidayPeriodsPath)) ??
-    [];
+    (await traegerRequest<traegerHolidayPeriodsContract.HolidayPeriod[]>(
+      holidayPeriodsPath,
+    )) ?? [];
   return periods.map(holidayPeriodFromBackend);
 }
 
 /** One holiday period of the Träger. */
 export async function fetchHolidayPeriod(id: string): Promise<HolidayPeriod> {
   return holidayPeriodFromBackend(
-    await traegerRequest<BackendHolidayPeriod>(
+    await traegerRequest<traegerHolidayPeriodsContract.HolidayPeriod>(
       `${holidayPeriodsPath}/${encodeURIComponent(id)}`,
     ),
   );
@@ -908,10 +858,13 @@ export async function createHolidayPeriod(
   input: HolidayPeriodInput,
 ): Promise<HolidayPeriod> {
   return holidayPeriodFromBackend(
-    await traegerRequest<BackendHolidayPeriod>(holidayPeriodsPath, {
-      method: "POST",
-      body: holidayPeriodToBackend(input),
-    }),
+    await traegerRequest<traegerHolidayPeriodsContract.HolidayPeriod>(
+      holidayPeriodsPath,
+      {
+        method: "POST",
+        body: holidayPeriodToBackend(input),
+      },
+    ),
   );
 }
 
@@ -921,7 +874,7 @@ export async function updateHolidayPeriod(
   input: HolidayPeriodInput,
 ): Promise<HolidayPeriod> {
   return holidayPeriodFromBackend(
-    await traegerRequest<BackendHolidayPeriod>(
+    await traegerRequest<traegerHolidayPeriodsContract.HolidayPeriod>(
       `${holidayPeriodsPath}/${encodeURIComponent(id)}`,
       { method: "PUT", body: holidayPeriodToBackend(input) },
     ),
@@ -931,7 +884,7 @@ export async function updateHolidayPeriod(
 /** Publishes a complete period for registration. */
 export async function publishHolidayPeriod(id: string): Promise<HolidayPeriod> {
   return holidayPeriodFromBackend(
-    await traegerRequest<BackendHolidayPeriod>(
+    await traegerRequest<traegerHolidayPeriodsContract.HolidayPeriod>(
       `${holidayPeriodsPath}/${encodeURIComponent(id)}/publish`,
       { method: "POST" },
     ),
@@ -941,7 +894,7 @@ export async function publishHolidayPeriod(id: string): Promise<HolidayPeriod> {
 // --- Zugriffsprotokoll (#4655) ---
 
 /** Whether an access log entry read data or changed it. */
-export type TraegerAccessKind = "read" | "change";
+export type TraegerAccessKind = (typeof ACCESS_KIND_VALUES)[number];
 
 /** The filter of the access log (#4655). Days are `YYYY-MM-DD`, both included. */
 export interface TraegerAccessLogFilter {
@@ -965,7 +918,8 @@ export interface TraegerAccessLogEntry {
   /** Null when no person is recorded, e.g. for an automatic step. */
   readonly accountId: string | null;
   readonly person: string;
-  readonly kind: TraegerAccessKind;
+  /** undefined: a kind this build does not know. */
+  readonly kind: TraegerAccessKind | undefined;
   readonly dataLabel: string;
 }
 
@@ -980,17 +934,6 @@ export interface TraegerAccessLogPage {
 export interface TraegerAccessLogPerson {
   readonly accountId: string;
   readonly name: string;
-}
-
-interface BackendAccessLogEntry {
-  id: string;
-  occurred_at: string;
-  school_id: number;
-  school_name: string;
-  account_id: number | null;
-  person: string;
-  kind: TraegerAccessKind;
-  data_label: string;
 }
 
 /** The query of a filter, as the backend reads it. */
@@ -1018,26 +961,22 @@ export async function fetchTraegerAccessLog(
   page: number,
   asOf?: string,
 ): Promise<TraegerAccessLogPage> {
-  const data = await traegerRequest<{
-    entries?: BackendAccessLogEntry[];
-    has_more?: boolean;
-    as_of?: string;
-  } | null>(
+  const data = await traegerRequest<traegerAccessLogContract.AccessLogPage>(
     `/api/traeger/access-log?${traegerAccessLogQuery(filter, page, asOf)}`,
   );
   return {
-    entries: (data?.entries ?? []).map((entry) => ({
+    entries: (data.entries ?? []).map((entry) => ({
       id: entry.id,
       occurredAt: entry.occurred_at,
-      schoolId: String(entry.school_id),
+      schoolId: entry.school_id,
       schoolName: entry.school_name,
-      accountId: entry.account_id === null ? null : String(entry.account_id),
+      accountId: entry.account_id,
       person: entry.person,
-      kind: entry.kind,
+      kind: knownEnum(ACCESS_KIND_VALUES, entry.kind),
       dataLabel: entry.data_label,
     })),
-    hasMore: data?.has_more ?? false,
-    asOf: data?.as_of ?? "",
+    hasMore: data.has_more,
+    asOf: data.as_of,
   };
 }
 
@@ -1047,11 +986,11 @@ export async function fetchTraegerAccessLogPeople(
   to: string,
 ): Promise<TraegerAccessLogPerson[]> {
   const query = new URLSearchParams({ from, to }).toString();
-  const data = await traegerRequest<
-    { account_id: number; name: string }[] | null
-  >(`/api/traeger/access-log/people?${query}`);
-  return (data ?? []).map((person) => ({
-    accountId: String(person.account_id),
+  const data = await traegerRequest<traegerAccessLogContract.AccessLogPerson[]>(
+    `/api/traeger/access-log/people?${query}`,
+  );
+  return data.map((person) => ({
+    accountId: person.account_id,
     name: person.name,
   }));
 }
@@ -1126,25 +1065,19 @@ export interface TraegerOrganization {
   readonly federalStates: readonly string[];
 }
 
-interface BackendTraegerOrganization {
-  id: number;
-  name: string;
-  test_system?: boolean;
-  federal_states?: string[] | null;
-}
-
 /** The Träger of the signed-in person's session. */
 export async function fetchTraegerOrganization(): Promise<TraegerOrganization> {
-  const organization = await traegerRequest<BackendTraegerOrganization | null>(
-    "/api/traeger/organization",
-  );
+  const organization =
+    await traegerRequest<traegerOrganizationContract.TraegerFrame | null>(
+      "/api/traeger/organization",
+    );
   if (!organization) {
     throw apiErrorFromBody("Träger response without data", 502, organization);
   }
   return {
-    id: String(organization.id),
+    id: organization.id,
     name: organization.name,
-    testSystem: organization.test_system ?? false,
+    testSystem: organization.test_system,
     federalStates: organization.federal_states ?? [],
   };
 }
@@ -1200,25 +1133,9 @@ export interface TraegerMasterData {
   readonly bankAccounts: readonly TraegerBankAccount[];
 }
 
-interface BackendTraegerLogo {
-  content_type: string;
-  width: number;
-  height: number;
-  size_bytes: number;
-  updated_at: string;
-}
-
-interface BackendTraegerBankAccount {
-  id: string | number;
-  label: string;
-  account_holder: string;
-  iban: string;
-  bic: string;
-  bank_name: string;
-  is_default: boolean;
-}
-
-function mapTraegerLogo(logo: BackendTraegerLogo): TraegerLogo {
+function mapTraegerLogo(
+  logo: traegerMasterDataContract.TraegerLogo,
+): TraegerLogo {
   return {
     contentType: logo.content_type,
     width: logo.width,
@@ -1229,10 +1146,10 @@ function mapTraegerLogo(logo: BackendTraegerLogo): TraegerLogo {
 }
 
 function mapTraegerBankAccount(
-  account: BackendTraegerBankAccount,
+  account: traegerMasterDataContract.TraegerBankAccount,
 ): TraegerBankAccount {
   return {
-    id: String(account.id),
+    id: account.id,
     label: account.label,
     accountHolder: account.account_holder,
     iban: account.iban,
@@ -1242,7 +1159,9 @@ function mapTraegerBankAccount(
   };
 }
 
-function backendBankAccount(input: TraegerBankAccountInput) {
+function backendBankAccount(
+  input: TraegerBankAccountInput,
+): traegerMasterDataContract.BankAccountRequest {
   return {
     label: input.label,
     account_holder: input.accountHolder,
@@ -1264,24 +1183,15 @@ export function traegerLogoSrc(logo: TraegerLogo): string {
 
 /** Reads the master data of the Träger. The read is logged. */
 export async function fetchTraegerMasterData(): Promise<TraegerMasterData> {
-  const data = await traegerRequest<{
-    contact?: Partial<TraegerContact> | null;
-    withdrawal?: Partial<TraegerWithdrawalContact> | null;
-    logo?: BackendTraegerLogo | null;
-    bank_accounts?: BackendTraegerBankAccount[] | null;
-  } | null>(masterDataPath);
+  const data =
+    await traegerRequest<traegerMasterDataContract.TraegerProfile>(
+      masterDataPath,
+    );
   return {
-    contact: {
-      name: data?.contact?.name ?? "",
-      phone: data?.contact?.phone ?? "",
-      email: data?.contact?.email ?? "",
-    },
-    withdrawal: {
-      phone: data?.withdrawal?.phone ?? "",
-      email: data?.withdrawal?.email ?? "",
-    },
-    logo: data?.logo ? mapTraegerLogo(data.logo) : null,
-    bankAccounts: (data?.bank_accounts ?? []).map(mapTraegerBankAccount),
+    contact: { ...data.contact },
+    withdrawal: { ...data.withdrawal },
+    logo: data.logo ? mapTraegerLogo(data.logo) : null,
+    bankAccounts: (data.bank_accounts ?? []).map(mapTraegerBankAccount),
   };
 }
 
@@ -1338,7 +1248,8 @@ export async function uploadTraegerLogo(file: File): Promise<TraegerLogo> {
       data,
     );
   }
-  const logo = (data as { data?: BackendTraegerLogo } | null)?.data;
+  const logo = (data as { data?: traegerMasterDataContract.TraegerLogo } | null)
+    ?.data;
   if (!logo) {
     throw apiErrorFromBody("Logo response without data", 502, data);
   }
@@ -1355,9 +1266,12 @@ export async function createTraegerBankAccount(
   input: TraegerBankAccountInput,
 ): Promise<TraegerBankAccount> {
   return mapTraegerBankAccount(
-    await traegerRequest<BackendTraegerBankAccount>(
+    await traegerRequest<traegerMasterDataContract.TraegerBankAccount>(
       `${masterDataPath}/bank-accounts`,
-      { method: "POST", body: backendBankAccount(input) },
+      {
+        method: "POST",
+        body: backendBankAccount(input),
+      },
     ),
   );
 }
@@ -1368,10 +1282,13 @@ export async function updateTraegerBankAccount(
   input: TraegerBankAccountInput,
 ): Promise<TraegerBankAccount> {
   return mapTraegerBankAccount(
-    await traegerRequest<BackendTraegerBankAccount>(bankAccountPath(id), {
-      method: "PUT",
-      body: backendBankAccount(input),
-    }),
+    await traegerRequest<traegerMasterDataContract.TraegerBankAccount>(
+      bankAccountPath(id),
+      {
+        method: "PUT",
+        body: backendBankAccount(input),
+      },
+    ),
   );
 }
 

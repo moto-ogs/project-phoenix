@@ -141,9 +141,8 @@ export interface CheckinTargetState {
   readonly target: TargetRoomOption | null;
   /** "" picks "Anwesend (ohne Raum)", otherwise an option's value. */
   readonly setTargetValue: (value: string) => void;
-  /** The remembered target that is gone, until the person acts on it. */
+  /** The remembered target that is gone, until the person chooses again. */
   readonly lostTargetName: string | null;
-  readonly dismissLost: () => void;
   /** Reloads the targets, e.g. after the backend refused a stale choice. */
   readonly refresh: () => Promise<void>;
 }
@@ -196,8 +195,8 @@ export function useCheckinTarget(enabled: boolean): CheckinTargetState {
     );
     const namedGroups = listOf(groups.data).map((group) => {
       const name = group.groupId ? activityNames.get(group.groupId) : undefined;
-      return name && !group.actualGroup
-        ? { ...group, actualGroup: { id: Number(group.groupId), name } }
+      return name && group.groupId && !group.actualGroup
+        ? { ...group, actualGroup: { id: group.groupId, name } }
         : group;
     });
     const own = new Set(
@@ -296,7 +295,6 @@ export function useCheckinTarget(enabled: boolean): CheckinTargetState {
     target: available ? resolved.target : null,
     setTargetValue,
     lostTargetName: available ? lostTargetName : null,
-    dismissLost: useCallback(() => setLostTargetName(null), []),
     refresh,
   };
 }

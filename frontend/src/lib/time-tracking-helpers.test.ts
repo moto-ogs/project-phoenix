@@ -1,12 +1,7 @@
+import type * as shared from "~/lib/contract/shared.generated";
+import type * as tt from "~/lib/contract/time-tracking.generated";
 import { describe, it, expect } from "vitest";
-import type {
-  BackendWorkSession,
-  BackendWorkSessionBreak,
-  BackendWorkSessionHistory,
-  BackendWorkSessionEdit,
-  BackendStaffAbsence,
-  WorkSessionHistory,
-} from "./time-tracking-helpers";
+import type { WorkSessionHistory } from "./time-tracking-helpers";
 import {
   mapDailyProjectionResponse,
   mapWorkSessionResponse,
@@ -27,19 +22,21 @@ import {
 
 // Helper to create mock backend session
 const createMockBackendSession = (
-  overrides: Partial<BackendWorkSession> = {},
-): BackendWorkSession => ({
-  id: 42,
-  staff_id: 100,
+  overrides: Partial<tt.SessionResponse> = {},
+): tt.SessionResponse => ({
+  id: "42",
+  tenant_id: "1",
+  staff_id: "100",
   date: "2026-01-15T00:00:00Z",
   status: "present",
+  source: "app",
   check_in_time: "2026-01-15T08:00:00Z",
   check_out_time: "2026-01-15T16:00:00Z",
   break_minutes: 30,
   notes: "Test notes",
   auto_checked_out: false,
-  created_by: 100,
-  updated_by: null,
+  created_by: "100",
+  updated_by: undefined,
   created_at: "2026-01-15T08:00:00Z",
   updated_at: "2026-01-15T16:00:00Z",
   ...overrides,
@@ -77,21 +74,21 @@ describe("mapWorkSessionResponse", () => {
   });
 
   it("handles null check_out_time", () => {
-    const backend = createMockBackendSession({ check_out_time: null });
+    const backend = createMockBackendSession({ check_out_time: undefined });
     const result = mapWorkSessionResponse(backend);
 
     expect(result.checkOutTime).toBeNull();
   });
 
   it("handles null updated_by", () => {
-    const backend = createMockBackendSession({ updated_by: null });
+    const backend = createMockBackendSession({ updated_by: undefined });
     const result = mapWorkSessionResponse(backend);
 
     expect(result.updatedBy).toBeNull();
   });
 
   it("converts a set updated_by to a string ID", () => {
-    const backend = createMockBackendSession({ updated_by: 9 });
+    const backend = createMockBackendSession({ updated_by: "9" });
     const result = mapWorkSessionResponse(backend);
 
     expect(result.updatedBy).toBe("9");
@@ -104,11 +101,13 @@ describe("mapWorkSessionResponse", () => {
     expect(result.source).toBe("nfc");
   });
 
-  it("leaves source undefined when the payload predates the column", () => {
-    const backend = createMockBackendSession();
+  // Go always sends source now; a value this build does not know reads as
+  // "unknown" instead of reaching the source badge unchecked.
+  it("reads a source this build does not know as unknown", () => {
+    const backend = createMockBackendSession({ source: "kiosk" });
     const result = mapWorkSessionResponse(backend);
 
-    expect(result.source).toBeUndefined();
+    expect(result.source).toBe("unknown");
   });
 
   it("handles empty notes string", () => {
@@ -128,13 +127,14 @@ describe("mapWorkSessionResponse", () => {
 
 describe("mapWorkSessionBreakResponse", () => {
   it("converts IDs from number to string", () => {
-    const backend: BackendWorkSessionBreak = {
-      id: 5,
-      session_id: 42,
+    const backend: shared.WorkSessionBreak = {
+      tenant_id: "1",
+      id: "5",
+      session_id: "42",
       started_at: "2026-01-15T12:00:00Z",
       ended_at: "2026-01-15T12:30:00Z",
       duration_minutes: 30,
-      planned_end_time: null,
+      planned_end_time: undefined,
       created_at: "2026-01-15T12:00:00Z",
       updated_at: "2026-01-15T12:30:00Z",
     };
@@ -145,13 +145,14 @@ describe("mapWorkSessionBreakResponse", () => {
   });
 
   it("converts snake_case to camelCase", () => {
-    const backend: BackendWorkSessionBreak = {
-      id: 5,
-      session_id: 42,
+    const backend: shared.WorkSessionBreak = {
+      tenant_id: "1",
+      id: "5",
+      session_id: "42",
       started_at: "2026-01-15T12:00:00Z",
       ended_at: "2026-01-15T12:30:00Z",
       duration_minutes: 30,
-      planned_end_time: null,
+      planned_end_time: undefined,
       created_at: "2026-01-15T12:00:00Z",
       updated_at: "2026-01-15T12:30:00Z",
     };
@@ -163,13 +164,14 @@ describe("mapWorkSessionBreakResponse", () => {
   });
 
   it("handles null ended_at", () => {
-    const backend: BackendWorkSessionBreak = {
-      id: 5,
-      session_id: 42,
+    const backend: shared.WorkSessionBreak = {
+      tenant_id: "1",
+      id: "5",
+      session_id: "42",
       started_at: "2026-01-15T12:00:00Z",
-      ended_at: null,
+      ended_at: undefined,
       duration_minutes: 0,
-      planned_end_time: null,
+      planned_end_time: undefined,
       created_at: "2026-01-15T12:00:00Z",
       updated_at: "2026-01-15T12:00:00Z",
     };
@@ -181,12 +183,13 @@ describe("mapWorkSessionBreakResponse", () => {
 
 describe("mapWorkSessionHistoryResponse", () => {
   it("maps base session and adds history fields", () => {
-    const backend: BackendWorkSessionHistory = {
+    const backend: shared.HistorySessionResponse = {
+      pack_up_minutes: 0,
+      rounding_minutes: 0,
       ...createMockBackendSession(),
       net_minutes: 450,
       is_overtime: false,
       is_break_compliant: true,
-      rest_period_warning: null,
       breaks: null,
       edit_count: 0,
       audit_count: 1,
@@ -202,30 +205,33 @@ describe("mapWorkSessionHistoryResponse", () => {
   });
 
   it("maps nested breaks array", () => {
-    const backend: BackendWorkSessionHistory = {
+    const backend: shared.HistorySessionResponse = {
+      pack_up_minutes: 0,
+      rounding_minutes: 0,
       ...createMockBackendSession(),
       net_minutes: 450,
       is_overtime: false,
       is_break_compliant: true,
-      rest_period_warning: null,
       breaks: [
         {
-          id: 1,
-          session_id: 42,
+          tenant_id: "1",
+          id: "1",
+          session_id: "42",
           started_at: "2026-01-15T12:00:00Z",
           ended_at: "2026-01-15T12:15:00Z",
           duration_minutes: 15,
-          planned_end_time: null,
+          planned_end_time: undefined,
           created_at: "2026-01-15T12:00:00Z",
           updated_at: "2026-01-15T12:15:00Z",
         },
         {
-          id: 2,
-          session_id: 42,
+          tenant_id: "1",
+          id: "2",
+          session_id: "42",
           started_at: "2026-01-15T14:00:00Z",
           ended_at: "2026-01-15T14:15:00Z",
           duration_minutes: 15,
-          planned_end_time: null,
+          planned_end_time: undefined,
           created_at: "2026-01-15T14:00:00Z",
           updated_at: "2026-01-15T14:15:00Z",
         },
@@ -242,12 +248,13 @@ describe("mapWorkSessionHistoryResponse", () => {
   });
 
   it("handles null breaks array", () => {
-    const backend: BackendWorkSessionHistory = {
+    const backend: shared.HistorySessionResponse = {
+      pack_up_minutes: 0,
+      rounding_minutes: 0,
       ...createMockBackendSession(),
       net_minutes: 450,
       is_overtime: false,
       is_break_compliant: true,
-      rest_period_warning: null,
       breaks: null,
       edit_count: 0,
       audit_count: 0,
@@ -258,12 +265,13 @@ describe("mapWorkSessionHistoryResponse", () => {
   });
 
   it("defaults edit_count to 0 when undefined", () => {
-    const backend: BackendWorkSessionHistory = {
+    const backend: shared.HistorySessionResponse = {
+      pack_up_minutes: 0,
+      rounding_minutes: 0,
       ...createMockBackendSession(),
       net_minutes: 450,
       is_overtime: false,
       is_break_compliant: true,
-      rest_period_warning: null,
       breaks: null,
       edit_count: undefined as unknown as number,
       audit_count: undefined as unknown as number,
@@ -278,6 +286,7 @@ describe("mapWorkSessionHistoryResponse", () => {
 describe("mapHistoryResponse", () => {
   it("maps weekly summaries", () => {
     const result = mapHistoryResponse({
+      labor_days: null,
       sessions: [],
       weekly_summaries: [
         {
@@ -428,11 +437,14 @@ describe("mapClosingDaysResponse", () => {
 
 describe("mapWorkSessionEditResponse", () => {
   it("converts IDs from number to string", () => {
-    const backend: BackendWorkSessionEdit = {
-      id: 10,
-      session_id: 42,
-      staff_id: 100,
-      edited_by: 200,
+    const backend: shared.WorkSessionEditView = {
+      tenant_id: "1",
+      editor_name: "",
+      is_self_edit: false,
+      id: "10",
+      session_id: "42",
+      staff_id: "100",
+      edited_by: "200",
       field_name: "check_out_time",
       old_value: "2026-01-15T16:00:00Z",
       new_value: "2026-01-15T17:00:00Z",
@@ -448,11 +460,14 @@ describe("mapWorkSessionEditResponse", () => {
   });
 
   it("converts snake_case to camelCase", () => {
-    const backend: BackendWorkSessionEdit = {
-      id: 10,
-      session_id: 42,
-      staff_id: 100,
-      edited_by: 200,
+    const backend: shared.WorkSessionEditView = {
+      tenant_id: "1",
+      editor_name: "",
+      is_self_edit: false,
+      id: "10",
+      session_id: "42",
+      staff_id: "100",
+      edited_by: "200",
       field_name: "check_out_time",
       old_value: "2026-01-15T16:00:00Z",
       new_value: "2026-01-15T17:00:00Z",
@@ -468,11 +483,14 @@ describe("mapWorkSessionEditResponse", () => {
   });
 
   it("handles null old_value and new_value", () => {
-    const backend: BackendWorkSessionEdit = {
-      id: 10,
-      session_id: 42,
-      staff_id: 100,
-      edited_by: 200,
+    const backend: shared.WorkSessionEditView = {
+      tenant_id: "1",
+      editor_name: "",
+      is_self_edit: false,
+      id: "10",
+      session_id: "42",
+      staff_id: "100",
+      edited_by: "200",
       field_name: "notes",
       old_value: null,
       new_value: null,
@@ -489,18 +507,22 @@ describe("mapWorkSessionEditResponse", () => {
 
 describe("mapStaffAbsenceResponse", () => {
   it("converts IDs from number to string", () => {
-    const backend: BackendStaffAbsence = {
-      id: 15,
-      staff_id: 100,
+    const backend: shared.StaffAbsenceResponse = {
+      tenant_id: "1",
+      start_half_day: false,
+      end_half_day: false,
+      requested_at: "2026-01-01T08:00:00+01:00",
+      id: "15",
+      staff_id: "100",
       absence_type: "vacation",
       date_start: "2026-02-01T00:00:00Z",
       date_end: "2026-02-05T00:00:00Z",
       half_day: false,
       note: "Beach vacation",
       status: "approved",
-      approved_by: 200,
+      approved_by: "200",
       approved_at: "2026-01-20T10:00:00Z",
-      created_by: 100,
+      created_by: "100",
       created_at: "2026-01-15T09:00:00Z",
       updated_at: "2026-01-20T10:00:00Z",
       duration_days: 5,
@@ -514,18 +536,22 @@ describe("mapStaffAbsenceResponse", () => {
   });
 
   it("converts snake_case to camelCase", () => {
-    const backend: BackendStaffAbsence = {
-      id: 15,
-      staff_id: 100,
+    const backend: shared.StaffAbsenceResponse = {
+      tenant_id: "1",
+      start_half_day: false,
+      end_half_day: false,
+      requested_at: "",
+      id: "15",
+      staff_id: "100",
       absence_type: "sick",
       date_start: "2026-02-01T00:00:00Z",
       date_end: "2026-02-05T00:00:00Z",
       half_day: true,
       note: "Flu",
       status: "pending",
-      approved_by: null,
-      approved_at: null,
-      created_by: 100,
+      approved_by: undefined,
+      approved_at: undefined,
+      created_by: "100",
       created_at: "2026-01-15T09:00:00Z",
       updated_at: "2026-01-15T09:00:00Z",
       duration_days: 5,
@@ -540,18 +566,22 @@ describe("mapStaffAbsenceResponse", () => {
   });
 
   it("splits date fields on T to get date portion only", () => {
-    const backend: BackendStaffAbsence = {
-      id: 15,
-      staff_id: 100,
+    const backend: shared.StaffAbsenceResponse = {
+      tenant_id: "1",
+      start_half_day: false,
+      end_half_day: false,
+      requested_at: "",
+      id: "15",
+      staff_id: "100",
       absence_type: "training",
       date_start: "2026-02-01T08:00:00Z",
       date_end: "2026-02-05T17:00:00Z",
       half_day: false,
       note: "Conference",
       status: "approved",
-      approved_by: 200,
+      approved_by: "200",
       approved_at: "2026-01-20T10:00:00Z",
-      created_by: 100,
+      created_by: "100",
       created_at: "2026-01-15T09:00:00Z",
       updated_at: "2026-01-20T10:00:00Z",
       duration_days: 5,
@@ -563,18 +593,22 @@ describe("mapStaffAbsenceResponse", () => {
   });
 
   it("handles empty note string as empty string", () => {
-    const backend: BackendStaffAbsence = {
-      id: 15,
-      staff_id: 100,
+    const backend: shared.StaffAbsenceResponse = {
+      tenant_id: "1",
+      start_half_day: false,
+      end_half_day: false,
+      requested_at: "",
+      id: "15",
+      staff_id: "100",
       absence_type: "other",
       date_start: "2026-02-01T00:00:00Z",
       date_end: "2026-02-01T00:00:00Z",
       half_day: false,
       note: "",
       status: "pending",
-      approved_by: null,
-      approved_at: null,
-      created_by: 100,
+      approved_by: undefined,
+      approved_at: undefined,
+      created_by: "100",
       created_at: "2026-01-15T09:00:00Z",
       updated_at: "2026-01-15T09:00:00Z",
       duration_days: 1,
@@ -827,7 +861,6 @@ describe("indexWorkSessionMinutesByBerlinDate", () => {
       netMinutes: 210,
       isOvertime: false,
       isBreakCompliant: true,
-      restPeriodWarning: null,
       breaks: [],
       editCount: 0,
     };
@@ -858,7 +891,6 @@ describe("indexWorkSessionMinutesByBerlinDate", () => {
       netMinutes: 90,
       isOvertime: false,
       isBreakCompliant: true,
-      restPeriodWarning: null,
       breaks: [
         {
           id: "break",
@@ -902,7 +934,6 @@ describe("indexWorkSessionMinutesByBerlinDate", () => {
     netMinutes: 0,
     isOvertime: false,
     isBreakCompliant: true,
-    restPeriodWarning: null,
     breaks: [],
     editCount: 0,
     ...overrides,

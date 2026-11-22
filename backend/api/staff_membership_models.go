@@ -13,9 +13,9 @@ func legacyStaffToMembership(staff *peopleValues.Staff) schoolmembership.Staff {
 		return schoolmembership.Staff{}
 	}
 	result := schoolmembership.Staff{
-		ID: staff.ID, TenantID: staff.TenantID, CreatedAt: staff.CreatedAt, UpdatedAt: staff.UpdatedAt,
-		PersonID: staff.PersonID, StaffNotes: staff.StaffNotes, EmploymentType: staff.EmploymentType,
-		WorkTimeModelID: staff.WorkTimeModelID, PersonnelNumber: staff.PersonnelNumber,
+		ID: staff.ID.Int64(), TenantID: staff.TenantID.Int64(), CreatedAt: staff.CreatedAt, UpdatedAt: staff.UpdatedAt,
+		PersonID: staff.PersonID.Int64(), StaffNotes: staff.StaffNotes, EmploymentType: staff.EmploymentType,
+		WorkTimeModelID: (*int64)(staff.WorkTimeModelID), PersonnelNumber: staff.PersonnelNumber,
 		BirthdayDisplayOptOut: staff.BirthdayDisplayOptOut, DeletedAt: staff.DeletedAt, HasExternalCaregiverRecord: staff.HasExternalCaregiverRecord,
 	}
 	if staff.RotationAnchorDate != nil {

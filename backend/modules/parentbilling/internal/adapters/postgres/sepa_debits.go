@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The debits of the SEPA direct debit file (#4697, ADR 0181). The release
@@ -144,8 +145,8 @@ func (r sepaDebitRow) sealed() parentbilling.SealedSEPADebit {
 		noticeID, noticeMonth = *r.CareNoticeID, *r.NoticeMonth
 	}
 	return parentbilling.SealedSEPADebit{
-		Debit: parentbilling.SEPADebit{NoticeID: noticeID, NoticeMonth: noticeMonth, ID: r.ID, MandateID: r.MandateID, ContractID: r.CareContractID, RunKind: r.RunKind,
-			RunID: r.RunID, InvoiceNumber: r.InvoiceNumber, RecipientName: name, AmountCents: amount, DueOn: r.DueOn, CollectOn: collectOn,
+		Debit: parentbilling.SEPADebit{NoticeID: ident.ID(noticeID), NoticeMonth: noticeMonth, ID: ident.ID(r.ID), MandateID: ident.ID(r.MandateID), ContractID: ident.ID(r.CareContractID), RunKind: r.RunKind,
+			RunID: ident.ID(r.RunID), InvoiceNumber: r.InvoiceNumber, RecipientName: name, AmountCents: amount, DueOn: r.DueOn, CollectOn: collectOn,
 			SequenceType: r.SequenceType, MandateReference: r.MandateReference, IBANMasked: r.IBANMasked, Status: r.Status,
 			SubmittedAt: r.SubmittedAt, MessageID: textOf(r.MessageID)},
 		CreditorID: r.CreditorID, MandateSignedOn: r.MandateSignedOn, BIC: r.BIC, MandateRevoked: r.MandateRevoked,
@@ -363,7 +364,7 @@ const lockRunMandatesSQL = `WITH locked_mandates AS MATERIALIZED (
 func submittedDebitTerms(debits []parentbilling.SEPADebit) ([]int64, []int64, []string) {
 	ids, amounts, dates := make([]int64, len(debits)), make([]int64, len(debits)), make([]string, len(debits))
 	for i, debit := range debits {
-		ids[i], amounts[i], dates[i] = debit.ID, debit.AmountCents, debit.CollectOn.String()
+		ids[i], amounts[i], dates[i] = debit.ID.Int64(), debit.AmountCents, debit.CollectOn.String()
 	}
 	return ids, amounts, dates
 }
@@ -450,7 +451,7 @@ func (s *Store) SEPANoticeRates(ctx context.Context, organizationID int64, notic
 		rate := parentbilling.SEPANoticeRate{RecipientName: strings.TrimSpace(row.RecipientFirstName + " " + row.RecipientLastName),
 			CreditorNow: row.CreditorNow, OneOffClaimed: row.OneOffClaimed, Holder: row.HolderSealed, IBAN: row.IBANSealed}
 		if row.MandateID != nil {
-			rate.Mandate = &parentbilling.SEPAMandate{ID: *row.MandateID, ContractID: derefInt(row.MandateContractID),
+			rate.Mandate = &parentbilling.SEPAMandate{ID: ident.ID(*row.MandateID), ContractID: ident.ID(derefInt(row.MandateContractID)),
 				Reference: textOf(row.Reference), SignedOn: derefDate(row.SignedOn), Kind: textOf(row.Kind),
 				Sequence: textOf(row.Sequence), CreditorID: textOf(row.CreditorID), LastCollectedOn: row.LastCollectedOn,
 				IBANMasked: textOf(row.IBANMasked), BIC: textOf(row.BIC)}
@@ -518,7 +519,7 @@ func (s *Store) InsertSubmittedNoticeRates(ctx context.Context, organizationID, 
 	notices, contracts, amounts, mandates := make([]int64, n), make([]int64, n), make([]int64, n), make([]int64, n)
 	months, dues, collects, numbers, sequences := make([]string, n), make([]string, n), make([]string, n), make([]string, n), make([]string, n)
 	for i, rate := range rates {
-		notices[i], contracts[i], amounts[i], mandates[i] = rate.NoticeID, rate.ContractID, rate.AmountCents, rate.MandateID
+		notices[i], contracts[i], amounts[i], mandates[i] = rate.NoticeID.Int64(), rate.ContractID.Int64(), rate.AmountCents, rate.MandateID.Int64()
 		months[i], dues[i], collects[i] = rate.NoticeMonth.String(), rate.DueOn.String(), rate.CollectOn.String()
 		numbers[i], sequences[i] = rate.InvoiceNumber, rate.SequenceType
 	}

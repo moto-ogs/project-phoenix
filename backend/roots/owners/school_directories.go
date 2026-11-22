@@ -62,7 +62,7 @@ func (d schedulerTenantDirectory) ListCleanupTenantIDs(ctx context.Context) ([]i
 func schoolIDs(schools []organizationModule.School) []int64 {
 	ids := make([]int64, 0, len(schools))
 	for _, school := range schools {
-		ids = append(ids, school.ID)
+		ids = append(ids, school.ID.Int64())
 	}
 	return ids
 }

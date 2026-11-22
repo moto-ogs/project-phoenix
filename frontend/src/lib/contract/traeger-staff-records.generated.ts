@@ -6,7 +6,7 @@ import {
   calendarDate,
   fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   noData,
   nullable,
   num,
@@ -32,7 +32,7 @@ export interface IDResponse {
 }
 
 export const IDResponseSchema: z.ZodType<IDResponse, unknown> = object<IDResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
 });
 
 /** Go: workforce.TraegerStaffEmployment */
@@ -45,9 +45,9 @@ export interface TraegerStaffEmployment {
 }
 
 export const TraegerStaffEmploymentSchema: z.ZodType<TraegerStaffEmployment, unknown> = object<TraegerStaffEmployment>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   active: bool,
   via_pool: bool,
 });
@@ -79,7 +79,7 @@ export const TraegerStaffChangeSchema: z.ZodType<TraegerStaffChange, unknown> = 
   kind: str,
   field: str,
   value: str,
-  school_id: optional(int64StringOrNumber),
+  school_id: optional(int64String),
   school_name: optional(str),
   occurred_at: instant,
 });
@@ -105,8 +105,8 @@ export interface TraegerContractSiteDetail {
 }
 
 export const TraegerContractSiteDetailSchema: z.ZodType<TraegerContractSiteDetail, unknown> = object<TraegerContractSiteDetail>({
-  school_id: int64StringOrNumber,
-  staff_id: int64StringOrNumber,
+  school_id: int64String,
+  staff_id: int64String,
   school_name: str,
   soll: nullable(arr(TraegerContractSollSchema)),
   changeable_from: nullable(calendarDate),
@@ -122,8 +122,8 @@ export interface TraegerContractHolidayWeek {
 }
 
 export const TraegerContractHolidayWeekSchema: z.ZodType<TraegerContractHolidayWeek, unknown> = object<TraegerContractHolidayWeek>({
-  school_id: int64StringOrNumber,
-  staff_id: int64StringOrNumber,
+  school_id: int64String,
+  staff_id: int64String,
   school_name: str,
   week_start: nullable(calendarDate),
   weekday_minutes: nullable(arr(safeInt)),
@@ -141,7 +141,7 @@ export interface TraegerStaffContract {
 }
 
 export const TraegerStaffContractSchema: z.ZodType<TraegerStaffContract, unknown> = object<TraegerStaffContract>({
-  id: int64StringOrNumber,
+  id: int64String,
   kind: str,
   starts_on: nullable(calendarDate),
   ends_on: nullable(calendarDate),
@@ -167,7 +167,7 @@ export interface TraegerStaffRecordDetail {
 }
 
 export const TraegerStaffRecordDetailSchema: z.ZodType<TraegerStaffRecordDetail, unknown> = object<TraegerStaffRecordDetail>({
-  id: int64StringOrNumber,
+  id: int64String,
   first_name: str,
   last_name: str,
   birthday: optional(str),
@@ -193,7 +193,7 @@ export interface TraegerStaffRecordSummary {
 }
 
 export const TraegerStaffRecordSummarySchema: z.ZodType<TraegerStaffRecordSummary, unknown> = object<TraegerStaffRecordSummary>({
-  id: int64StringOrNumber,
+  id: int64String,
   first_name: str,
   last_name: str,
   birthday: optional(str),
@@ -215,9 +215,9 @@ export interface TraegerStaffCandidate {
 }
 
 export const TraegerStaffCandidateSchema: z.ZodType<TraegerStaffCandidate, unknown> = object<TraegerStaffCandidate>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   first_name: str,
   last_name: str,
   birthday: optional(str),
@@ -234,7 +234,7 @@ export interface TraegerStaffSuggestion {
 
 export const TraegerStaffSuggestionSchema: z.ZodType<TraegerStaffSuggestion, unknown> = object<TraegerStaffSuggestion>({
   reason: str,
-  staff_record_id: optional(int64StringOrNumber),
+  staff_record_id: optional(int64String),
   members: nullable(arr(TraegerStaffCandidateSchema)),
 });
 
@@ -279,7 +279,7 @@ export interface TraegerAbsenceSchoolUse {
 }
 
 export const TraegerAbsenceSchoolUseSchema: z.ZodType<TraegerAbsenceSchoolUse, unknown> = object<TraegerAbsenceSchoolUse>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
   taken_days: num,
   reserved_days: num,
@@ -305,7 +305,7 @@ export interface TraegerAbsenceAccount {
 }
 
 export const TraegerAbsenceAccountSchema: z.ZodType<TraegerAbsenceAccount, unknown> = object<TraegerAbsenceAccount>({
-  absence_type_id: int64StringOrNumber,
+  absence_type_id: int64String,
   absence_type_name: str,
   year: safeInt,
   entitled_days: num,
@@ -353,7 +353,7 @@ export interface TraegerTimeAccountSchool {
 }
 
 export const TraegerTimeAccountSchoolSchema: z.ZodType<TraegerTimeAccountSchool, unknown> = object<TraegerTimeAccountSchool>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
   target_minutes: safeInt,
   actual_minutes: safeInt,
@@ -405,13 +405,13 @@ export const TraegerTimeAccountSchema: z.ZodType<TraegerTimeAccount, unknown> = 
 
 /** Go: workforce.TraegerStaffMemberRef */
 export interface TraegerStaffMemberRef {
-  school_id?: number;
-  staff_id?: number;
+  school_id?: string;
+  staff_id?: string;
 }
 
 /** Go: traegerstaff.StaffLinkRequest */
 export interface StaffLinkRequest {
-  staff_record_id?: number | null;
+  staff_record_id?: string | null;
   members?: TraegerStaffMemberRef[] | null;
   choices?: Record<string, string> | null;
 }
@@ -644,6 +644,7 @@ export const routes = {
     method: "POST",
     pattern: "/traeger/staff-records/link-preview",
     portals: ["org"],
+    noCommit: "the preview shows which records a link would join and links nothing",
     request: requestBody<StaffLinkRequest>(),
     response: success(TraegerStaffLinkPreviewSchema),
   },

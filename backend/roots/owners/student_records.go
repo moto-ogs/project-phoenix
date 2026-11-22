@@ -121,7 +121,7 @@ func (p statusDayOverviewPeople) GetByIDs(ctx context.Context, ids []int64) (map
 		if row == nil {
 			continue
 		}
-		names[id] = &studentpresence.PersonName{ID: row.ID, FirstName: row.FirstName, LastName: row.LastName}
+		names[id] = &studentpresence.PersonName{ID: row.ID.Int64(), FirstName: row.FirstName, LastName: row.LastName}
 	}
 	return names, nil
 }

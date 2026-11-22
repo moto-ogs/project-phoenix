@@ -706,7 +706,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.PortalListThreadsForGuardianStudent",
-      "binding_digest": "54ef4d8aa1d80a647c4880423ea61053",
+      "binding_digest": "11b1d7f64e922557e55f97eeaa08aa47",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.PortalMessageInboxReads.PortalListThreadsForGuardianStudent",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
@@ -762,7 +762,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.PortalListThreadsForGuardianTenants",
-      "binding_digest": "54ef4d8aa1d80a647c4880423ea61053",
+      "binding_digest": "11b1d7f64e922557e55f97eeaa08aa47",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.PortalMessageInboxReads.PortalListThreadsForGuardianTenants",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
@@ -1362,7 +1362,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.ParentReadLatestReadCursorByOther",
-      "binding_digest": "54ef4d8aa1d80a647c4880423ea61053",
+      "binding_digest": "11b1d7f64e922557e55f97eeaa08aa47",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.ParentMessageReadRepositorySource.ParentReadLatestReadCursorByOther",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
@@ -2410,7 +2410,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/adapters/parentpostgres.groupParentMessageReadRepository.LatestReadCursorByOther",
-      "binding_digest": "54ef4d8aa1d80a647c4880423ea61053",
+      "binding_digest": "11b1d7f64e922557e55f97eeaa08aa47",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.LatestReadCursorByOther",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
@@ -2442,7 +2442,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/adapters/parentpostgres.parentMessageStaffRepository.LatestReadCursorByOther",
-      "binding_digest": "54ef4d8aa1d80a647c4880423ea61053",
+      "binding_digest": "11b1d7f64e922557e55f97eeaa08aa47",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.LatestReadCursorByOther",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
@@ -2474,7 +2474,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/adapters/parentpostgres.schoolParentMessageReadRepository.LatestReadCursorByOther",
-      "binding_digest": "54ef4d8aa1d80a647c4880423ea61053",
+      "binding_digest": "11b1d7f64e922557e55f97eeaa08aa47",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.LatestReadCursorByOther",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
@@ -2578,7 +2578,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/adapters/parentpostgres.groupParentMessageReadRepository.ListThreadsForGuardianStudent",
-      "binding_digest": "54ef4d8aa1d80a647c4880423ea61053",
+      "binding_digest": "11b1d7f64e922557e55f97eeaa08aa47",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.ListThreadsForGuardianStudent",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
@@ -2634,7 +2634,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/adapters/parentpostgres.parentMessageStaffRepository.ListThreadsForGuardianStudent",
-      "binding_digest": "54ef4d8aa1d80a647c4880423ea61053",
+      "binding_digest": "11b1d7f64e922557e55f97eeaa08aa47",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.ListThreadsForGuardianStudent",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
@@ -2666,7 +2666,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/adapters/parentpostgres.schoolParentMessageReadRepository.ListThreadsForGuardianStudent",
-      "binding_digest": "54ef4d8aa1d80a647c4880423ea61053",
+      "binding_digest": "11b1d7f64e922557e55f97eeaa08aa47",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.ListThreadsForGuardianStudent",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
@@ -2722,7 +2722,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/adapters/parentpostgres.groupParentMessageReadRepository.ListThreadsForGuardianTenants",
-      "binding_digest": "54ef4d8aa1d80a647c4880423ea61053",
+      "binding_digest": "11b1d7f64e922557e55f97eeaa08aa47",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.ListThreadsForGuardianTenants",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
@@ -2778,7 +2778,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/adapters/parentpostgres.parentMessageStaffRepository.ListThreadsForGuardianTenants",
-      "binding_digest": "54ef4d8aa1d80a647c4880423ea61053",
+      "binding_digest": "11b1d7f64e922557e55f97eeaa08aa47",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.ListThreadsForGuardianTenants",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
@@ -2810,7 +2810,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/adapters/parentpostgres.schoolParentMessageReadRepository.ListThreadsForGuardianTenants",
-      "binding_digest": "54ef4d8aa1d80a647c4880423ea61053",
+      "binding_digest": "11b1d7f64e922557e55f97eeaa08aa47",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.ListThreadsForGuardianTenants",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
@@ -2938,7 +2938,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/adapters/parentpostgres.groupParentMessageReadRepository.ParentReadLatestReadCursorByOther",
-      "binding_digest": "54ef4d8aa1d80a647c4880423ea61053",
+      "binding_digest": "11b1d7f64e922557e55f97eeaa08aa47",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.ParentReadLatestReadCursorByOther",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
@@ -2970,7 +2970,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/adapters/parentpostgres.parentMessageStaffRepository.ParentReadLatestReadCursorByOther",
-      "binding_digest": "54ef4d8aa1d80a647c4880423ea61053",
+      "binding_digest": "11b1d7f64e922557e55f97eeaa08aa47",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.ParentReadLatestReadCursorByOther",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
@@ -3002,7 +3002,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/adapters/parentpostgres.schoolParentMessageReadRepository.ParentReadLatestReadCursorByOther",
-      "binding_digest": "54ef4d8aa1d80a647c4880423ea61053",
+      "binding_digest": "11b1d7f64e922557e55f97eeaa08aa47",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.ParentReadLatestReadCursorByOther",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
@@ -3162,7 +3162,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/adapters/parentpostgres.groupParentMessageReadRepository.PortalListThreadsForGuardianStudent",
-      "binding_digest": "54ef4d8aa1d80a647c4880423ea61053",
+      "binding_digest": "11b1d7f64e922557e55f97eeaa08aa47",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.PortalListThreadsForGuardianStudent",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
@@ -3218,7 +3218,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/adapters/parentpostgres.parentMessageStaffRepository.PortalListThreadsForGuardianStudent",
-      "binding_digest": "54ef4d8aa1d80a647c4880423ea61053",
+      "binding_digest": "11b1d7f64e922557e55f97eeaa08aa47",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.PortalListThreadsForGuardianStudent",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
@@ -3250,7 +3250,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/adapters/parentpostgres.schoolParentMessageReadRepository.PortalListThreadsForGuardianStudent",
-      "binding_digest": "54ef4d8aa1d80a647c4880423ea61053",
+      "binding_digest": "11b1d7f64e922557e55f97eeaa08aa47",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.PortalListThreadsForGuardianStudent",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
@@ -3306,7 +3306,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/adapters/parentpostgres.groupParentMessageReadRepository.PortalListThreadsForGuardianTenants",
-      "binding_digest": "54ef4d8aa1d80a647c4880423ea61053",
+      "binding_digest": "11b1d7f64e922557e55f97eeaa08aa47",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.PortalListThreadsForGuardianTenants",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
@@ -3362,7 +3362,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/adapters/parentpostgres.parentMessageStaffRepository.PortalListThreadsForGuardianTenants",
-      "binding_digest": "54ef4d8aa1d80a647c4880423ea61053",
+      "binding_digest": "11b1d7f64e922557e55f97eeaa08aa47",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.PortalListThreadsForGuardianTenants",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
@@ -3394,7 +3394,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/internal/adapters/parentpostgres.schoolParentMessageReadRepository.PortalListThreadsForGuardianTenants",
-      "binding_digest": "54ef4d8aa1d80a647c4880423ea61053",
+      "binding_digest": "11b1d7f64e922557e55f97eeaa08aa47",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageReadRepository.PortalListThreadsForGuardianTenants",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
@@ -3666,7 +3666,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.ParentPortalSchools.SchoolNames",
-      "binding_digest": "edc1c7ccc2927e4dadf7aa16f49d62ad",
+      "binding_digest": "be95969cae89c3035ff4ad4db4794bcb",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.SchoolDirectory.SchoolNames",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListSchoolsByID",
@@ -3674,7 +3674,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.ParentPortalSchools.SchoolNames",
-      "binding_digest": "2000c4eca074441a101fbeaf206b0531",
+      "binding_digest": "dd09f7611ad0402940889ab2508e9597",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.SchoolDirectory.SchoolNames",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListSchoolsByID",

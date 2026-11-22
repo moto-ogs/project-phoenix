@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // planningSite is the school a write of the Einsatzplanung plans for and
@@ -27,7 +28,7 @@ func (t *TraegerStaff) resolvePlanningSite(ctx context.Context, actor workforce.
 	}
 	site := planningSite{}
 	for _, school := range schools {
-		if school.ID == schoolID {
+		if school.ID == ident.ID(schoolID) {
 			site.school = school
 		}
 	}
@@ -58,7 +59,7 @@ func (t *TraegerStaff) resolvePlanningSite(ctx context.Context, actor workforce.
 // withinPlanningSite runs fn in the school's tenant transaction once the
 // employment is live there and the access entry is written.
 func (t *TraegerStaff) withinPlanningSite(ctx context.Context, actor workforce.TraegerStaffActor, recordID int64, site planningSite, fn func(context.Context) error) error {
-	return t.ports.Runtime.WithinSchool(ctx, site.school.ID, func(ctx context.Context) error {
+	return t.ports.Runtime.WithinSchool(ctx, site.school.ID.Int64(), func(ctx context.Context) error {
 		live, err := t.liveStaff(ctx, []planningLink{{recordID: recordID, staffID: site.staffID}})
 		if err != nil {
 			return err
@@ -163,7 +164,7 @@ func (t *TraegerStaff) FutureShifts(ctx context.Context, actor workforce.Traeger
 	result := make([]workforce.TraegerFutureShifts, 0, len(schools))
 	for _, school := range schools {
 		var count int
-		err := t.ports.Runtime.WithinSchool(ctx, school.ID, func(ctx context.Context) error {
+		err := t.ports.Runtime.WithinSchool(ctx, school.ID.Int64(), func(ctx context.Context) error {
 			count, err = t.sites.CountShiftsAfter(ctx, today)
 			return err
 		})

@@ -56,7 +56,7 @@ type presenceHistoryStatusDay struct {
 }
 
 type presenceHistoryStatusDayResponse struct {
-	ID     int64  `json:"id"`
+	ID     apiID  `json:"id"`
 	Date   string `json:"date"`
 	Status string `json:"status"`
 }
@@ -255,7 +255,7 @@ func pendingPresenceHistoryStatusDays(status presenceHistoryStatus, rows []prese
 		if row.Status != status.status {
 			return presenceHistoryStatus{}, nil, fmt.Errorf("seed past %s days: status on %s is already %s", status.status, row.Date, row.Status)
 		}
-		existing = append(existing, presenceHistoryStatusDay{studentID: status.studentID, id: row.ID})
+		existing = append(existing, presenceHistoryStatusDay{studentID: status.studentID, id: int64(row.ID)})
 		delete(wanted, row.Date)
 	}
 	pending := presenceHistoryStatus{studentID: status.studentID, status: status.status}
@@ -313,7 +313,7 @@ func presenceHistoryStatusDaysFromResponse(rows []presenceHistoryStatusDayRespon
 		if row.ID == 0 || row.Status != status.status || !wanted[row.Date] {
 			continue
 		}
-		created = append(created, presenceHistoryStatusDay{studentID: status.studentID, id: row.ID})
+		created = append(created, presenceHistoryStatusDay{studentID: status.studentID, id: int64(row.ID)})
 		delete(wanted, row.Date)
 	}
 	return created, wanted
@@ -500,7 +500,7 @@ func listPresenceHistoryStudents(rt *Runtime) ([]presenceHistoryStudent, error) 
 	for page := 1; ; page++ {
 		var envelope struct {
 			Data []struct {
-				ID         int64  `json:"id"`
+				ID         apiID  `json:"id"`
 				CareEndsOn string `json:"care_ends_on"`
 			} `json:"data"`
 			Pagination struct {
@@ -511,7 +511,7 @@ func listPresenceHistoryStudents(rt *Runtime) ([]presenceHistoryStudent, error) 
 			return nil, fmt.Errorf("read students for the presence history: %w", err)
 		}
 		for _, row := range envelope.Data {
-			student := presenceHistoryStudent{id: row.ID}
+			student := presenceHistoryStudent{id: int64(row.ID)}
 			if lastDay, err := calendar.ParseDate(row.CareEndsOn); err == nil {
 				student.lastDay = &lastDay
 			}

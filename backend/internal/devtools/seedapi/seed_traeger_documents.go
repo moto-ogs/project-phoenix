@@ -126,9 +126,9 @@ func seedTraegerDocumentAudience(client *Client, auth AuthRef) (school, group in
 	}
 	var envelope struct {
 		Data []struct {
-			ID     int64 `json:"id"`
+			ID     apiID `json:"id"`
 			Groups []struct {
-				ID int64 `json:"id"`
+				ID apiID `json:"id"`
 			} `json:"groups"`
 		} `json:"data"`
 	}
@@ -143,9 +143,9 @@ func seedTraegerDocumentAudience(client *Client, auth AuthRef) (school, group in
 		}
 	}
 	if len(first.Groups) > 0 {
-		group = first.Groups[0].ID
+		group = int64(first.Groups[0].ID)
 	}
-	return first.ID, group, nil
+	return int64(first.ID), group, nil
 }
 
 var errNoTraegerSchool = errors.New("the demo Träger has no school")
@@ -159,7 +159,7 @@ func seedTraegerDocumentTitles(client *Client, auth AuthRef) (map[string]int64, 
 	}
 	var envelope struct {
 		Data []struct {
-			ID    int64  `json:"id"`
+			ID    apiID  `json:"id"`
 			Title string `json:"title"`
 		} `json:"data"`
 	}
@@ -168,7 +168,7 @@ func seedTraegerDocumentTitles(client *Client, auth AuthRef) (map[string]int64, 
 	}
 	titles := make(map[string]int64, len(envelope.Data))
 	for _, document := range envelope.Data {
-		titles[document.Title] = document.ID
+		titles[document.Title] = int64(document.ID)
 	}
 	return titles, nil
 }
@@ -181,13 +181,13 @@ func seedTraegerDocumentUpload(client *Client, auth AuthRef, document seedTraege
 	}
 	var envelope struct {
 		Data struct {
-			ID int64 `json:"id"`
+			ID apiID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil || envelope.Data.ID == 0 {
 		return 0, fmt.Errorf("read the uploaded Träger document %q: %w", document.title, errors.Join(err, errors.New("no document id")))
 	}
-	return envelope.Data.ID, nil
+	return int64(envelope.Data.ID), nil
 }
 
 // seedTraegerDocumentReleaseActive is the code of a release that another

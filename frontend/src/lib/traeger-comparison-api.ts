@@ -11,6 +11,8 @@ import {
   type TraegerListFile,
   type TraegerListFormat,
 } from "./traeger-list-export";
+import type * as traegerSchoolsContract from "./contract/traeger-schools.generated";
+import { requiredDay } from "./contract/required-day";
 import type { TraegerSchool } from "./traeger-api";
 import { traegerRequest } from "./traeger-api";
 import type { UtilizationWindow } from "./traeger-utilization-api";
@@ -55,35 +57,13 @@ export interface TraegerComparison {
   readonly together: ComparisonValues;
 }
 
-interface BackendComparison {
-  from: string;
-  to: string;
-  days: number;
-  as_of: string;
-  attendance_from: string | null;
-  schools?:
-    | {
-        id: number;
-        name: string;
-        slug: string;
-        subdomain: string;
-        city?: string;
-        values?: Record<string, number> | null;
-      }[]
-    | null;
-  average?: Record<string, number> | null;
-  together?: Record<string, number> | null;
-}
-
 export interface ComparisonQuery extends UtilizationWindow {
   /** The chosen schools; empty compares every school of the Träger. */
   readonly schoolIds: readonly string[];
 }
 
 /** Keeps only the known keys, so an added backend figure cannot break a page. */
-function knownValues(
-  values: Record<string, number> | null | undefined,
-): ComparisonValues {
+function knownValues(values: Record<string, number> | null): ComparisonValues {
   const result: Partial<Record<ComparisonMetric, number>> = {};
   for (const metric of COMPARISON_METRICS) {
     const value = values?.[metric];
@@ -104,19 +84,21 @@ function comparisonQuery(
   return params.toString();
 }
 
-function comparisonFromBackend(body: BackendComparison): TraegerComparison {
+function comparisonFromBackend(
+  body: traegerSchoolsContract.SchoolComparison,
+): TraegerComparison {
   return {
-    from: body.from,
-    to: body.to,
+    from: requiredDay(body.from, "comparison.from"),
+    to: requiredDay(body.to, "comparison.to"),
     days: body.days,
     asOf: body.as_of,
-    attendanceFrom: body.attendance_from ?? null,
+    attendanceFrom: body.attendance_from,
     schools: (body.schools ?? []).map((school) => ({
-      id: String(school.id),
+      id: school.id,
       name: school.name,
       slug: school.slug,
       subdomain: school.subdomain,
-      city: school.city ?? "",
+      city: school.city,
       values: knownValues(school.values),
     })),
     average: knownValues(body.average),
@@ -129,7 +111,7 @@ export async function fetchTraegerComparison(
   query: ComparisonQuery,
 ): Promise<TraegerComparison> {
   return comparisonFromBackend(
-    await traegerRequest<BackendComparison>(
+    await traegerRequest<traegerSchoolsContract.SchoolComparison>(
       `${COMPARISON_PATH}?${comparisonQuery(query)}`,
     ),
   );

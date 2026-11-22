@@ -271,7 +271,7 @@ var moduleComplexityAllowlist = map[string]int{
 	// ADR 0087.
 	"internal/devtools/seedapi/seeder.go:(*Seeder).printSuccessSummary": 17,
 	// ADR 0087.
-	"internal/devtools/seedapi/stammdaten.go:(*FixedSeeder).Seed": 22,
+	"internal/devtools/seedapi/stammdaten.go:(*FixedSeeder).Seed": 21,
 	// ADR 0087.
 	"internal/devtools/seedapi/stammdaten.go:(*FixedSeeder).seedGuardianPayments": 16,
 	// ADR 0087.

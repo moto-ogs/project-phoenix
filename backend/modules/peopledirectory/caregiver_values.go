@@ -1,6 +1,10 @@
 package peopledirectory
 
-import "time"
+import (
+	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+)
 
 type ActiveCaregiver struct {
 	AccountID int64     `json:"account_id"`
@@ -17,15 +21,15 @@ type ActiveCaregiver struct {
 type CaregiverCapabilityBlockerCode string
 
 type CaregiverCapabilityState struct {
-	AccountID int64  `json:"account_id"`
-	Email     string `json:"email"`
+	AccountID ident.ID `json:"account_id"`
+	Email     string   `json:"email"`
 
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 
-	PersonID  *int64 `json:"person_id,omitempty"`
-	StaffID   *int64 `json:"staff_id,omitempty"`
-	TeacherID *int64 `json:"teacher_id,omitempty"`
+	PersonID  *ident.ID `json:"person_id,omitempty"`
+	StaffID   *ident.ID `json:"staff_id,omitempty"`
+	TeacherID *ident.ID `json:"teacher_id,omitempty"`
 
 	HasAdminRole bool `json:"has_admin_role"`
 	HasUserRole  bool `json:"has_user_role"`
@@ -46,25 +50,25 @@ type CaregiverCapabilityState struct {
 }
 
 type BlockerSupervision struct {
-	ID        int64  `json:"id"`
-	GroupID   int64  `json:"-"`
-	GroupName string `json:"group_name"`
-	StartDate string `json:"start_date"`
+	ID        ident.ID `json:"id"`
+	GroupID   int64    `json:"-"`
+	GroupName string   `json:"group_name"`
+	StartDate string   `json:"start_date"`
 }
 
 type BlockerSubstitution struct {
-	ID        int64  `json:"id"`
-	GroupName string `json:"group_name"`
-	StartDate string `json:"start_date"`
-	EndDate   string `json:"end_date"`
+	ID        ident.ID `json:"id"`
+	GroupName string   `json:"group_name"`
+	StartDate string   `json:"start_date"`
+	EndDate   string   `json:"end_date"`
 }
 
 type BlockerGroup struct {
-	ID         int64   `json:"id"`
-	GroupID    int64   `json:"group_id"`
-	GroupName  string  `json:"group_name"`
-	TeacherID  int64   `json:"teacher_id"`
-	TeacherIDs []int64 `json:"teacher_ids,omitempty"`
+	ID         ident.ID   `json:"id"`
+	GroupID    ident.ID   `json:"group_id"`
+	GroupName  string     `json:"group_name"`
+	TeacherID  ident.ID   `json:"teacher_id"`
+	TeacherIDs []ident.ID `json:"teacher_ids,omitempty"`
 }
 
 type EnableCaregiverCapabilityInput struct {

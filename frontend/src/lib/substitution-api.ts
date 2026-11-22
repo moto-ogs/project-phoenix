@@ -1,10 +1,12 @@
 import { ApiError, apiErrorFromResponse } from "./api-error";
+import type {
+  assignmentRequest,
+  SubstitutionAssignmentResult,
+  SubstitutionOverviewResult,
+} from "./contract/substitutions.generated";
 import { sessionFetch } from "./session-cache";
 import {
-  type BackendGroupHandover,
-  type BackendAdditionalSupervisionResult,
   type RunningSupervision,
-  type BackendSubstitutionOverview,
   type Substitution,
   type TeacherAvailability,
   formatDateForBackend,
@@ -26,11 +28,10 @@ import {
   prepareApplyDeviationsBody,
   prepareBulkSubstitutionBody,
 } from "./timetable-helpers";
+import type { ScheduleSubstitutionResult } from "./contract/substitutions.generated";
 import type {
   ApplyDeviationsInput,
   ApplyDeviationsResponse,
-  BackendApplyDeviationsResponse,
-  BackendBulkSubstitutionResponse,
   BulkSubstitutionInput,
   BulkSubstitutionResponse,
 } from "./timetable-types";
@@ -47,7 +48,7 @@ class SubstitutionService {
       );
     }
     const envelope =
-      (await response.json()) as SubstitutionProxyEnvelope<BackendSubstitutionOverview>;
+      (await response.json()) as SubstitutionProxyEnvelope<SubstitutionOverviewResult>;
     return mapSubstitutionOverview(unwrapSubstitutionProxyEnvelope(envelope));
   }
 
@@ -66,7 +67,7 @@ class SubstitutionService {
       );
     }
     const envelope =
-      (await response.json()) as SubstitutionProxyEnvelope<BackendSubstitutionOverview>;
+      (await response.json()) as SubstitutionProxyEnvelope<SubstitutionOverviewResult>;
     if (envelope.data === undefined) {
       throw invalidResponseError("schedule substitution overview");
     }
@@ -82,22 +83,23 @@ class SubstitutionService {
       // Weg. Der Absturztext des Anzeigewegs ist dafür die richtige Folge.
       throw new Error("cancellations do not go through a substitution");
     }
+    const body = prepareApplyDeviationsBody(input);
     const response = await sessionFetch("/api/substitutions", {
       method: "POST",
       credentials: "include",
       body: JSON.stringify({
         type: "schedule_substitution",
         schedule_substitution: {
-          instance_id: Number(instanceId),
-          ...prepareApplyDeviationsBody(input),
+          ...body,
+          instance_id: instanceId,
         },
-      }),
+      } satisfies assignmentRequest),
     });
     if (!response.ok) throw await substitutionError(response);
     const envelope =
       (await response.json()) as SubstitutionProxyEnvelope<unknown>;
     return mapApplyDeviations(
-      substitutionAssignmentResult<BackendApplyDeviationsResponse>(
+      substitutionAssignmentResult<ScheduleSubstitutionResult>(
         unwrapSubstitutionProxyEnvelope(envelope),
         "schedule_substitution",
       ),
@@ -107,21 +109,22 @@ class SubstitutionService {
   async applyBulkSubstitution(
     input: BulkSubstitutionInput,
   ): Promise<BulkSubstitutionResponse> {
+    const body = prepareBulkSubstitutionBody(input);
     const response = await sessionFetch("/api/substitutions", {
       method: "POST",
       credentials: "include",
       body: JSON.stringify({
         type: "schedule_substitution",
         schedule_substitution: {
-          whole_days: prepareBulkSubstitutionBody(input),
+          whole_days: body,
         },
-      }),
+      } satisfies assignmentRequest),
     });
     if (!response.ok) throw await substitutionError(response);
     const envelope =
       (await response.json()) as SubstitutionProxyEnvelope<unknown>;
     return mapBulkSubstitution(
-      substitutionAssignmentResult<BackendBulkSubstitutionResponse>(
+      substitutionAssignmentResult<ScheduleSubstitutionResult>(
         unwrapSubstitutionProxyEnvelope(envelope),
         "schedule_substitution",
       ),
@@ -139,7 +142,7 @@ class SubstitutionService {
       throw await apiErrorFromResponse(response, "group handovers failed");
     }
     const envelope =
-      (await response.json()) as SubstitutionProxyEnvelope<BackendSubstitutionOverview>;
+      (await response.json()) as SubstitutionProxyEnvelope<SubstitutionOverviewResult>;
     const body = unwrapSubstitutionProxyEnvelope(envelope);
     return mapSubstitutionsResponse(body.group_handovers);
   }
@@ -152,12 +155,12 @@ class SubstitutionService {
       throw await apiErrorFromResponse(response, "available staff failed");
     }
     const envelope =
-      (await response.json()) as SubstitutionProxyEnvelope<BackendSubstitutionOverview>;
+      (await response.json()) as SubstitutionProxyEnvelope<SubstitutionOverviewResult>;
     const body = unwrapSubstitutionProxyEnvelope(envelope);
-    return body.targets.map((staff) => {
+    return (body.targets ?? []).map((staff) => {
       const [firstName = "", ...lastNameParts] = staff.full_name.split(" ");
       return {
-        id: staff.id.toString(),
+        id: staff.id,
         firstName,
         lastName: lastNameParts.join(" "),
         inSubstitution: false,
@@ -177,7 +180,7 @@ class SubstitutionService {
       throw await apiErrorFromResponse(response, "running supervision failed");
     }
     const envelope =
-      (await response.json()) as SubstitutionProxyEnvelope<BackendSubstitutionOverview>;
+      (await response.json()) as SubstitutionProxyEnvelope<SubstitutionOverviewResult>;
     const rows = unwrapSubstitutionProxyEnvelope(envelope).running_supervisions;
     if (!Array.isArray(rows) || rows.length !== 1 || !rows[0]) {
       throw invalidResponseError("running supervision");
@@ -231,12 +234,11 @@ class SubstitutionService {
     }
     const envelope =
       (await response.json()) as SubstitutionProxyEnvelope<unknown>;
-    const body =
-      substitutionAssignmentResult<BackendAdditionalSupervisionResult>(
-        unwrapSubstitutionProxyEnvelope(envelope),
-        "additional_supervision",
-      );
-    return { id: body.id.toString(), targetName: body.target.full_name };
+    const body = substitutionAssignmentResult<SubstitutionAssignmentResult>(
+      unwrapSubstitutionProxyEnvelope(envelope),
+      "additional_supervision",
+    );
+    return { id: body.id, targetName: body.target.full_name };
   }
 
   /**
@@ -281,12 +283,22 @@ class SubstitutionService {
     }
     const envelope =
       (await response.json()) as SubstitutionProxyEnvelope<unknown>;
-    return mapSubstitutionResponse(
-      substitutionAssignmentResult<BackendGroupHandover>(
-        unwrapSubstitutionProxyEnvelope(envelope),
-        "group_handover",
-      ),
+    const result = substitutionAssignmentResult<SubstitutionAssignmentResult>(
+      unwrapSubstitutionProxyEnvelope(envelope),
+      "group_handover",
     );
+    // A group handover always names its group and period; the contract
+    // shares the type with the other kinds, where both are absent.
+    if (!result.group || !result.period) {
+      throw new ApiError("group handover answer without group or period", 502);
+    }
+    return mapSubstitutionResponse({
+      id: result.id,
+      group: result.group,
+      target: result.target,
+      period: result.period,
+      can_end: result.can_end ?? false,
+    });
   }
 
   async deleteSubstitution(id: string): Promise<void> {

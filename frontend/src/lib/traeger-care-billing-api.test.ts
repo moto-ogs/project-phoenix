@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "./api-error";
 import {
+  amendmentApplied,
   cancelCareInvoice,
   downloadCareLetter,
   fetchCareLetters,
@@ -18,7 +19,7 @@ function jsonResponse(status: number, body: unknown): Response {
 }
 
 const INVOICE = {
-  invoice_id: 41,
+  invoice_id: "41",
   kind: "invoice",
   number: "MB-2027-0001",
   invoice_number: "MB-2027-0001",
@@ -71,6 +72,69 @@ describe("traeger-care-billing-api letters (#4684)", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  // ADR 0270 point 6: a value a newer backend adds is not passed on as a
+  // known one. A change in conflict for a new reason stays unapplied.
+  it("keeps unknown values of a monthly run apart from the known ones", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, {
+        data: {
+          id: "7",
+          billing_month: "2027-01-01",
+          status: "archived",
+          month_rule: "",
+          invoices: [
+            {
+              id: "41",
+              contract_id: "42",
+              school_id: "3",
+              recipient: { kind: "guardian" },
+              positions: [],
+              reductions: [
+                { kind: "new_rule", name: "Neu", amount_cents: -100 },
+              ],
+              cost_shares: [{ kind: "fund", scope: "all", amount_cents: 50 }],
+              amendments: [
+                {
+                  id: "5",
+                  kind: "amount",
+                  before: {},
+                  after: {},
+                  conflict: "locked",
+                },
+              ],
+            },
+          ],
+          unpriced: [{ weekday: "hol", module_name: "Früh" }],
+          duplicates: [],
+        },
+      }),
+    );
+    const run = await fetchCareRun("7");
+    expect(run.status).toBeUndefined();
+    expect(run.monthRule).toBe("");
+    const [invoice] = run.invoices;
+    expect(invoice?.recipient.kind).toBeUndefined();
+    expect(invoice?.reductions[0]?.kind).toBeUndefined();
+    expect(invoice?.costShares[0]).toMatchObject({
+      kind: undefined,
+      scope: undefined,
+    });
+    expect(invoice?.amendments?.[0]?.conflict).toBe("other");
+    expect(amendmentApplied(invoice!.amendments![0]!)).toBe(false);
+    expect(run.unpriced[0]?.weekday).toBeUndefined();
+  });
+
+  it("fails on a run whose billing month is null", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, {
+        data: { id: "7", billing_month: null, invoices: [] },
+      }),
+    );
+    await expect(fetchCareRun("7")).rejects.toThrow(
+      "required day care_run.billing_month",
+    );
   });
 
   it("keeps the original family key when a payer receives the invoice", async () => {
@@ -188,7 +252,19 @@ describe("traeger-care-billing-api letters (#4684)", () => {
   it("reads a run without letters yet", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse(200, {
-        data: { letters: null, documents: null, summary: null },
+        data: {
+          letters: null,
+          documents: null,
+          summary: {
+            letters: 0,
+            sent: 0,
+            queued: 0,
+            failed: 0,
+            not_sent: 0,
+            without_email: 0,
+            without_inbox: 0,
+          },
+        },
       }),
     );
 
@@ -243,7 +319,19 @@ describe("traeger-care-billing-api letters (#4684)", () => {
   it("cancels with the reason", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse(201, {
-        data: { letters: null, documents: [], summary: null },
+        data: {
+          letters: null,
+          documents: [],
+          summary: {
+            letters: 0,
+            sent: 0,
+            queued: 0,
+            failed: 0,
+            not_sent: 0,
+            without_email: 0,
+            without_inbox: 0,
+          },
+        },
       }),
     );
 

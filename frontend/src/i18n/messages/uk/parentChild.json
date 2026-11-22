@@ -57,17 +57,22 @@
       "agb": "Загальні умови (AGB)",
       "data_processing": "Інформацію про захист даних надано",
       "email_contact": "Дозволено зв'язок ел. поштою",
-      "photo": "Згода на фото"
+      "photo": "Згода на фото",
+      "room_history": "Історія приміщень і настрій"
     },
     "states": {
       "granted": "Надано",
       "withdrawn": "Відкликано",
-      "not_recorded": "Не надано"
+      "not_recorded": "Не надано",
+      "recording": "Не зупинено",
+      "stopped": "Зупинено"
     },
     "dates": {
       "granted": "Надано {date}",
       "withdrawn": "Відкликано {date}",
-      "not_recorded": "Не надано"
+      "not_recorded": "Не надано",
+      "recording": "Не зупинено",
+      "stopped": "Зупинено {date}"
     },
     "withdrawButton": "Відкликати згоду на фото",
     "withdrawButtonShort": "Відкликати",
@@ -88,7 +93,26 @@
     "errorObjectList": "список згод",
     "errorObjectPhoto": "згода на фото",
     "withdrawTooltip": "Відкликає згоду на фото й видаляє збережене фото. moto спершу перепитає.",
-    "grantTooltip": "Знову дозволяє {careTerm} зберігати фото. moto спершу перепитає."
+    "grantTooltip": "Знову дозволяє {careTerm} зберігати фото. moto спершу перепитає.",
+    "roomHistoryDescription": "Тут можна зупинити історію приміщень і настрій.",
+    "roomHistoryViaCareDescription": "Зупинку історії приміщень і настрою скасовує {careTerm}.",
+    "roomHistoryStopAria": "Зупинити історію приміщень і настрій",
+    "roomHistoryStopShort": "Зупинити",
+    "roomHistoryStopTooltip": "Видаляє попередню історію приміщень і зупиняє запис. moto спершу перепитає.",
+    "roomHistoryStopTitle": "Зупинити історію приміщень і настрій?",
+    "roomHistoryStopBody": "moto одразу видалить, у яких приміщеннях була ваша дитина. Після цього moto більше не зберігає приміщення та настрій дитини. Вихователі й далі бачать, де дитина зараз. Уже збережені настрої moto видалить лише після звичайного строку.",
+    "roomHistoryStopButton": "Зупинити зараз",
+    "roomHistoryStopping": "Зупиняється",
+    "roomHistoryStopSuccess": "Історію приміщень і настрій зупинено. Попередню історію приміщень видалено.",
+    "roomHistoryResumeAria": "Знову зберігати історію приміщень і настрій",
+    "roomHistoryResumeShort": "Знову зберігати",
+    "roomHistoryResumeTooltip": "Скасовує зупинку для вашої дитини. moto спершу перепитає.",
+    "roomHistoryResumeTitle": "Знову зберігати історію приміщень і настрій?",
+    "roomHistoryResumeBody": "Ви скасовуєте зупинку для своєї дитини. Ваша школа вирішує, чи зберігати історію приміщень і настрій. Видалені дані не повернуться.",
+    "roomHistoryResumeButton": "Знову зберігати",
+    "roomHistoryResuming": "Зупинка скасовується",
+    "roomHistoryResumeSuccess": "Зупинку для вашої дитини скасовано.",
+    "errorObjectRoomHistory": "історія приміщень і настрій"
   },
   "errorObject": "список ваших дітей",
   "errorObjectCare": "огляд догляду"

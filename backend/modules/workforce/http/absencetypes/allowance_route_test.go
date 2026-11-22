@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -14,16 +15,20 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // The Leitung sets and reads a staff member's yearly Kontingent through the
 // routes under their production path; the staff portal reaches them through
-// its catalog proxy since #7563. A read without a year is refused.
+// its catalog proxy since #7563. A read without a year is refused. The clock
+// stands in 2026: in a later year the 2026 Kontingent is past and its
+// remaining days count as 0 (Clock early warning, 2027-01-01).
 func TestAbsenceTypeAllowanceIsSetAndReadThroughTheRoutes(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
-	module, caller, err := api.NewAbsenceTypeTestModule(testpkg.NewDatabase(t, db))
+	now := func() time.Time { return time.Date(2026, time.September, 9, 12, 0, 0, 0, calendar.Berlin) }
+	module, caller, err := api.NewAbsenceTypeTestModule(testpkg.NewDatabase(t, db), now)
 	require.NoError(t, err)
 	router := chi.NewRouter()
 	router.Mount("/api/absence-types", api.NewAbsenceTypesRouterForBudgetTest(module.Administration, caller.Caller().StaffID))

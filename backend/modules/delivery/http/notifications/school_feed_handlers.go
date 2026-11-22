@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The bells across schools: the Träger-Portal's (#7146) and the caterer
@@ -75,8 +76,8 @@ func NewCatererFeedResource(feed CatererFeedService, runtime Runtime) *CatererFe
 
 type schoolFeedEntryResponse struct {
 	feedEntryResponse
-	SchoolID   int64  `json:"school_id,string"`
-	SchoolName string `json:"school_name"`
+	SchoolID   ident.ID `json:"school_id"`
+	SchoolName string   `json:"school_name"`
 }
 
 type schoolFeedPageResponse struct {
@@ -150,7 +151,7 @@ func listSchoolFeed(w http.ResponseWriter, r *http.Request, rt Runtime, feed sch
 	}
 	for _, entry := range page.Entries {
 		response.Entries = append(response.Entries, schoolFeedEntryResponse{
-			feedEntryResponse: feedEntryResponse(entry.FeedEntry), SchoolID: entry.SchoolID, SchoolName: entry.SchoolName,
+			feedEntryResponse: feedEntryResponse(entry.FeedEntry), SchoolID: ident.ID(entry.SchoolID), SchoolName: entry.SchoolName,
 		})
 	}
 	rt.Respond(w, r, http.StatusOK, response, "Notification feed retrieved successfully")

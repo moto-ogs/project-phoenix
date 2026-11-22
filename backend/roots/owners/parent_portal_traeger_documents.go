@@ -31,7 +31,7 @@ func (d parentSharedDocuments) ListSharedDocuments(ctx context.Context, organiza
 	documents := make([]parentportal.SharedDocument, len(found))
 	for i, document := range found {
 		documents[i] = parentportal.SharedDocument{
-			ID: document.ID, OrganizationID: organizationID, Title: document.Title, FileName: document.FileName,
+			ID: document.ID.Int64(), OrganizationID: organizationID, Title: document.Title, FileName: document.FileName,
 			ContentType: document.ContentType, SizeBytes: document.SizeBytes, ReleasedAt: document.ReleasedAt,
 		}
 	}

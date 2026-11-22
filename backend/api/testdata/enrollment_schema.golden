@@ -10,6 +10,6 @@
     "name": "Contract Schema",
     "version": 1
   },
-  "message": "Form schema retrieved",
+  "message": "Active form schema retrieved",
   "status": "success"
 }

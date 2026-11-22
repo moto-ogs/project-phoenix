@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func utilizationPortsBound(ports traegerview.UtilizationPorts) bool {
@@ -193,13 +194,13 @@ func unbookedOfferingPhases(to, today calendar.Date, running []int64) []int64 {
 
 // school applies the definitions of traegerview.Utilization to one school.
 func (r utilizationReads) school(school traegerview.TraegerSchool, days []calendar.Date) traegerview.SchoolUtilization {
-	offerings := offeringSeries(r.bookings[school.ID], r.children[school.ID], days)
-	attendance := r.attendance[school.ID]
-	visits := r.visits[school.ID]
+	offerings := offeringSeries(r.bookings[school.ID.Int64()], r.children[school.ID.Int64()], days)
+	attendance := r.attendance[school.ID.Int64()]
+	visits := r.visits[school.ID.Int64()]
 	return traegerview.SchoolUtilization{
 		TraegerSchool: school, Places: offerings.places, Booked: offerings.booked, BookedPlaces: offerings.bookedPlaces,
 		Present: presentSeries(attendance, days), AttendanceFrom: attendance.From, RoomDataFrom: visits.From,
-		Offerings: offerings.offerings, Rooms: roomSeries(r.rooms[school.ID], visits, days),
+		Offerings: offerings.offerings, Rooms: roomSeries(r.rooms[school.ID.Int64()], visits, days),
 	}
 }
 
@@ -234,7 +235,7 @@ func offeringSeries(offerings []traegerview.OfferingBookingIntervals, children m
 			}
 		}
 		totals.offerings = append(totals.offerings, traegerview.UtilizationOffering{
-			ID: offering.ID, Name: offering.Name, Capacity: offering.Capacity, Active: offering.Active, Booked: booked,
+			ID: ident.ID(offering.ID), Name: offering.Name, Capacity: offering.Capacity, Active: offering.Active, Booked: booked,
 		})
 	}
 	for i, students := range schoolDays {
@@ -296,7 +297,7 @@ func roomSeries(names []traegerview.NamedRoom, visits traegerview.SchoolRoomVisi
 	for _, room := range names {
 		if roomDays, used := calendarDays.byRoom[room.ID]; used {
 			children, peak := calendarDays.figures(roomDays)
-			rooms = append(rooms, traegerview.UtilizationRoom{ID: room.ID, Name: room.Name, Capacity: room.Capacity, Children: children, Peak: peak})
+			rooms = append(rooms, traegerview.UtilizationRoom{ID: ident.ID(room.ID), Name: room.Name, Capacity: room.Capacity, Children: children, Peak: peak})
 		}
 	}
 	return rooms

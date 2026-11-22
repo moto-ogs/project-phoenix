@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The assessment of a Jahresbescheid (#6219, ADR 0182). It takes the
@@ -77,11 +78,11 @@ func draftsByContract(in noticeAssessment) (map[int64]map[calendar.Date]parentbi
 	}
 	for _, month := range in.months {
 		for _, draft := range in.drafts[month] {
-			if month.Before(in.from) && !previousCovers(in.previous[draft.ContractID], month) {
+			if month.Before(in.from) && !previousCovers(in.previous[draft.ContractID.Int64()], month) {
 				continue
 			}
-			ensure(draft.ContractID)
-			byContract[draft.ContractID][month] = draft
+			ensure(draft.ContractID.Int64())
+			byContract[draft.ContractID.Int64()][month] = draft
 		}
 	}
 	for contractID := range in.previous {
@@ -163,7 +164,7 @@ func noticeMonth(notice parentbilling.CareNotice, drafts map[calendar.Date]paren
 		return draft
 	}
 	return parentbilling.CareInvoice{ContractID: notice.ContractID, SchoolID: notice.SchoolID, Recipient: notice.Recipient,
-		FamilyEmail: parentbilling.ContractFamilyKey(notice.Recipient.Email, notice.ContractID), Service: parentbilling.ServiceCare,
+		FamilyEmail: parentbilling.ContractFamilyKey(notice.Recipient.Email, notice.ContractID.Int64()), Service: parentbilling.ServiceCare,
 		Positions: []parentbilling.CarePosition{}}
 }
 
@@ -239,14 +240,14 @@ func noticeItems(invoice parentbilling.CareInvoice) []noticeItem {
 	for _, position := range invoice.Positions {
 		offering := position.CareOfferingID
 		items = append(items, noticeItem{key: noticeModuleKey(position), kind: parentbilling.NoticeLineModule,
-			label: position.ModuleName, detail: moduleDetail(position), offering: &offering, cents: position.AmountCents})
+			label: position.ModuleName, detail: moduleDetail(position), offering: (*int64)(&offering), cents: position.AmountCents})
 	}
 	for _, reduction := range invoice.Reductions {
-		items = append(items, noticeItem{key: "r:" + reduction.Kind + ":" + strconv.FormatInt(reduction.RuleID, 10),
+		items = append(items, noticeItem{key: "r:" + reduction.Kind + ":" + strconv.FormatInt(reduction.RuleID.Int64(), 10),
 			kind: parentbilling.NoticeLineReduction, label: reduction.Name, cents: -reduction.AmountCents})
 	}
 	for _, share := range invoice.CostShares {
-		items = append(items, noticeItem{key: "c:" + strconv.FormatInt(share.CostBearerID, 10),
+		items = append(items, noticeItem{key: "c:" + strconv.FormatInt(share.CostBearerID.Int64(), 10),
 			kind: parentbilling.NoticeLineCostShare, label: share.CostBearerName, cents: -share.AmountCents})
 	}
 	return items
@@ -315,7 +316,7 @@ func noticeLines(months []calendar.Date, before, after map[calendar.Date][]notic
 			}
 			closeLine(&lines, open)
 			text := texts[key]
-			open = &parentbilling.CareNoticeLine{Kind: text.kind, Label: text.label, Detail: text.detail, CareOfferingID: text.offering,
+			open = &parentbilling.CareNoticeLine{Kind: text.kind, Label: text.label, Detail: text.detail, CareOfferingID: (*ident.ID)(text.offering),
 				PeriodFrom: month, PeriodUntil: monthEnd(month), Months: 1, Quantity: 1, MonthlyPreviousCents: was, MonthlyCents: now}
 			last = month
 		}

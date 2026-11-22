@@ -10,6 +10,7 @@ import (
 	"github.com/uptrace/bun/dialect/pgdialect"
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -40,7 +41,7 @@ func (r traegerReportTemplateRow) toDomain() (organizationtenancy.TraegerReportT
 		sections = []string{}
 	}
 	return organizationtenancy.TraegerReportTemplate{
-		ID: r.ID, Name: r.Name, Sections: sections, KeyDateMonth: r.KeyDateMonth, KeyDateDay: r.KeyDateDay,
+		ID: ident.ID(r.ID), Name: r.Name, Sections: sections, KeyDateMonth: r.KeyDateMonth, KeyDateDay: r.KeyDateDay,
 		Districts: districts, UpdatedAt: r.UpdatedAt,
 	}, nil
 }

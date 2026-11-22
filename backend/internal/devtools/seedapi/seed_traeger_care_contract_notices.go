@@ -63,7 +63,7 @@ func seedNoticeCasesPresent(client *Client, auth AuthRef) (map[string]bool, erro
 		return nil, err
 	}
 	for _, contract := range terminated {
-		raw, err := client.GetWithAuth(auth, seedNoticePath(contract.ID))
+		raw, err := client.GetWithAuth(auth, seedNoticePath(int64(contract.ID)))
 		if err != nil {
 			return nil, err
 		}
@@ -101,7 +101,7 @@ func nextSeedNoticeCase(present map[string]bool) string {
 type seedNoticeContract struct {
 	NeedsSignature bool   `json:"-"`
 	PartyName      string `json:"party_name"`
-	ID             int64  `json:"id"`
+	ID             apiID  `json:"id"`
 	ChildFirstName string `json:"child_first_name"`
 	ChildLastName  string `json:"child_last_name"`
 }
@@ -135,7 +135,7 @@ func seedNoticeOptions(raw []byte) (seedContractNoticeOptions, error) {
 func seedNoticeCase(client *Client, auth AuthRef, contract seedNoticeContract, decision string) error {
 	id := contract.ID
 	if contract.NeedsSignature {
-		if err := seedPaperContractSignature(client, auth, id, contract.PartyName); err != nil {
+		if err := seedPaperContractSignature(client, auth, int64(id), contract.PartyName); err != nil {
 			return err
 		}
 	}
@@ -144,7 +144,7 @@ func seedNoticeCase(client *Client, auth AuthRef, contract seedNoticeContract, d
 	if decision != "ordentlich" {
 		body["termination_kind"], body["reason"] = "ausserordentlich", "Wir ziehen um."
 	}
-	path := seedNoticePath(id)
+	path := seedNoticePath(int64(id))
 	raw, err := client.PostWithAuth(auth, path, body)
 	if err != nil {
 		return fmt.Errorf("record the %s termination: %w", decision, err)

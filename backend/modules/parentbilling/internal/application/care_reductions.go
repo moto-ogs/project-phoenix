@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Actions of the evidence trail.
@@ -134,7 +135,7 @@ func (c *CareReductions) SaveCareRule(ctx context.Context, reviewer parentbillin
 	if err != nil {
 		return parentbilling.CareRuleSet{}, fmt.Errorf("parent billing: list care rules: %w", err)
 	}
-	if ruleID > 0 && !slices.ContainsFunc(rules, func(rule parentbilling.ContributionRule) bool { return rule.ID == ruleID }) {
+	if ruleID > 0 && !slices.ContainsFunc(rules, func(rule parentbilling.ContributionRule) bool { return rule.ID == ident.ID(ruleID) }) {
 		return parentbilling.CareRuleSet{}, parentbilling.ErrContributionRuleNotFound
 	}
 	if overlapsCareRule(rules, ruleID, input) {
@@ -177,10 +178,10 @@ func overlapsCareRule(rules []parentbilling.ContributionRule, ruleID int64, inpu
 		return false
 	}
 	for _, rule := range rules {
-		if rule.ID == ruleID || rule.Kind != input.Kind || !validityOverlaps(rule.ValidFrom, rule.ValidUntil, input.ValidFrom, input.ValidUntil) {
+		if rule.ID == ident.ID(ruleID) || rule.Kind != input.Kind || !validityOverlaps(rule.ValidFrom, rule.ValidUntil, input.ValidFrom, input.ValidUntil) {
 			continue
 		}
-		if slices.ContainsFunc(rule.SchoolIDs, func(id int64) bool { return slices.Contains(input.SchoolIDs, id) }) {
+		if slices.ContainsFunc(rule.SchoolIDs, func(id ident.ID) bool { return slices.Contains(input.SchoolIDs, ident.ID(id)) }) {
 			return true
 		}
 	}
@@ -230,7 +231,7 @@ func (c *CareReductions) CareEvidences(ctx context.Context, reviewer parentbilli
 	contracts := evidenceContracts(versions)
 	ids := make([]int64, len(contracts))
 	for i, contract := range contracts {
-		ids[i] = contract.ContractID
+		ids[i] = contract.ContractID.Int64()
 	}
 	evidences, err := c.store.CareEvidences(ctx, reviewer.OrganizationID, ids)
 	if err != nil {
@@ -238,10 +239,10 @@ func (c *CareReductions) CareEvidences(ctx context.Context, reviewer parentbilli
 	}
 	byContract := map[int64][]parentbilling.CareEvidence{}
 	for _, evidence := range evidences {
-		byContract[evidence.ContractID] = append(byContract[evidence.ContractID], evidence)
+		byContract[evidence.ContractID.Int64()] = append(byContract[evidence.ContractID.Int64()], evidence)
 	}
 	for i := range contracts {
-		if list, ok := byContract[contracts[i].ContractID]; ok {
+		if list, ok := byContract[contracts[i].ContractID.Int64()]; ok {
 			contracts[i].Evidences = list
 		}
 	}
@@ -275,7 +276,7 @@ func evidenceContracts(versions []parentbilling.CareContractVersion) []parentbil
 	contracts := make([]parentbilling.CareEvidenceContract, 0, len(latest))
 	for _, version := range latest {
 		contracts = append(contracts, parentbilling.CareEvidenceContract{
-			ContractID: version.ContractID, SchoolID: version.SchoolID, SchoolName: version.SchoolName,
+			ContractID: ident.ID(version.ContractID), SchoolID: ident.ID(version.SchoolID), SchoolName: version.SchoolName,
 			ChildFirstName: version.ChildFirstName, ChildLastName: version.ChildLastName, Evidences: []parentbilling.CareEvidence{},
 		})
 	}
@@ -312,7 +313,7 @@ func (c *CareReductions) SaveCareEvidence(ctx context.Context, reviewer parentbi
 	var contractID int64
 	if evidenceID == 0 {
 		evidenceID, err = c.store.InsertCareEvidence(ctx, reviewer.OrganizationID, reviewer.AccountID, input)
-		contractID = input.ContractID
+		contractID = input.ContractID.Int64()
 	} else {
 		action = evidenceEventUpdate
 		contractID, err = c.store.UpdateCareEvidence(ctx, reviewer.OrganizationID, reviewer.AccountID, evidenceID, input)
@@ -344,7 +345,7 @@ func (c *CareReductions) levelFitsSchool(ctx context.Context, organizationID int
 			continue
 		}
 		for _, version := range versions {
-			if version.ContractID == input.ContractID && !slices.Contains(rule.SchoolIDs, version.SchoolID) {
+			if ident.ID(version.ContractID) == input.ContractID && !slices.Contains(rule.SchoolIDs, ident.ID(version.SchoolID)) {
 				return validation.Errors{"rule_id": errors.New("does not apply at the school of the contract")}
 			}
 		}

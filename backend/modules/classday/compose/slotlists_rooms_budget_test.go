@@ -52,7 +52,7 @@ func measureSlotRoomQueries(t *testing.T, options bool) (querybudgets.Measuremen
 		}
 		require.Len(t, slots, wantSlots)
 		for _, slot := range slots {
-			if slot.InstanceID == f.instanceID {
+			if slot.InstanceID.Int64() == f.instanceID {
 				require.NotEmpty(t, slot.RoomName)
 			} else {
 				assert.Equal(t, slot.Title, slot.RoomName, "batch results must map by room ID, not result order")

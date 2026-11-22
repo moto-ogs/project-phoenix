@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -296,8 +297,8 @@ func TestStaffScheduleOverview_BatchesAndProjectsEffectiveDailyAssignments(t *te
 	date := calendar.NewDate(2026, time.July, 6)
 	mainRoomID, overrideRoomID := int64(21), int64(22)
 	instances := &fakeInstanceReader{rows: []*timetable.ScheduledInstance{
-		{Date: calendar.Date(date), Title: "Lernzeit", StartTime: testClock(t, "08:00"), EndTime: testClock(t, "12:00"), RoomID: mainRoomID, Status: timetable.InstanceStatusPlanned},
-		{Date: calendar.Date(date), Title: "Abgesagt", StartTime: testClock(t, "13:00"), EndTime: testClock(t, "14:00"), RoomID: mainRoomID, Status: timetable.InstanceStatusCancelled},
+		{Date: calendar.Date(date), Title: "Lernzeit", StartTime: testClock(t, "08:00"), EndTime: testClock(t, "12:00"), RoomID: ident.ID(mainRoomID), Status: timetable.InstanceStatusPlanned},
+		{Date: calendar.Date(date), Title: "Abgesagt", StartTime: testClock(t, "13:00"), EndTime: testClock(t, "14:00"), RoomID: ident.ID(mainRoomID), Status: timetable.InstanceStatusCancelled},
 	}}
 	instances.rows[0].ID = 31
 	instances.rows[1].ID = 32

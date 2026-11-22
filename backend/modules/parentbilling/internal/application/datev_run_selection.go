@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Which documents of a run a DATEV file books (#6433). One rule serves the
@@ -132,5 +133,5 @@ func datevRunOverview(run parentbilling.ExportRunRef, invoices []parentbilling.E
 	if years == nil {
 		years = []calendar.Date{}
 	}
-	return parentbilling.DatevRunOverview{RunKind: run.RunKind, RunID: run.RunID, NewBookings: len(selection.bookable), FiscalYears: years}
+	return parentbilling.DatevRunOverview{RunKind: run.RunKind, RunID: ident.ID(run.RunID), NewBookings: len(selection.bookable), FiscalYears: years}
 }

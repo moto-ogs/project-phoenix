@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The installments of the Jahresbescheide in the SEPA file (#4697, ADR
@@ -82,7 +83,7 @@ func openNoticeDues(dues []parentbilling.CareNoticeDue, debits []parentbilling.S
 	collected := map[int64]bool{}
 	for _, entry := range debits {
 		if entry.Debit.NoticeID != 0 {
-			collected[entry.Debit.ContractID] = true
+			collected[entry.Debit.ContractID.Int64()] = true
 		}
 	}
 	var open []parentbilling.CareNoticeDue
@@ -103,11 +104,11 @@ func markSharedOneOffs(rates []parentbilling.SealedSEPADebit) {
 	oneOff := map[int64]int{}
 	for _, rate := range rates {
 		if rate.MandateKind == parentbilling.MandateOneOff {
-			oneOff[rate.Debit.MandateID]++
+			oneOff[rate.Debit.MandateID.Int64()]++
 		}
 	}
 	for i := range rates {
-		if rates[i].MandateKind == parentbilling.MandateOneOff && oneOff[rates[i].Debit.MandateID] > 1 {
+		if rates[i].MandateKind == parentbilling.MandateOneOff && oneOff[rates[i].Debit.MandateID.Int64()] > 1 {
 			rates[i].OneOffShared = true
 		}
 	}
@@ -116,9 +117,9 @@ func markSharedOneOffs(rates []parentbilling.SealedSEPADebit) {
 // noticeRate is one installment as a pending debit of the plan.
 func noticeRate(due parentbilling.CareNoticeDue, rate parentbilling.SEPANoticeRate) parentbilling.SealedSEPADebit {
 	entry := parentbilling.SealedSEPADebit{
-		Debit: parentbilling.SEPADebit{ID: -due.NoticeID, ContractID: due.ContractID, RunKind: parentbilling.DebitRunNotice,
+		Debit: parentbilling.SEPADebit{ID: ident.ID(-due.NoticeID), ContractID: ident.ID(due.ContractID), RunKind: parentbilling.DebitRunNotice,
 			InvoiceNumber: due.NoticeNumber, RecipientName: rate.RecipientName, AmountCents: due.AmountCents, DueOn: due.DueOn,
-			Status: parentbilling.DebitPending, NoticeID: due.NoticeID, NoticeMonth: due.Month},
+			Status: parentbilling.DebitPending, NoticeID: ident.ID(due.NoticeID), NoticeMonth: due.Month},
 		CreditorNow: rate.CreditorNow, OneOffShared: rate.OneOffClaimed, Holder: rate.Holder, IBAN: rate.IBAN,
 	}
 	mandate := rate.Mandate
@@ -137,5 +138,5 @@ func noticeRate(due parentbilling.CareNoticeDue, rate parentbilling.SEPANoticeRa
 // noticeEndToEndID is the end-to-end ID of an installment: its notice and
 // month, unique per installment and at most 35 characters.
 func noticeEndToEndID(debit parentbilling.SEPADebit) string {
-	return "MOTO-N" + strconv.FormatInt(debit.NoticeID, 10) + "-" + debit.NoticeMonth.Format("200601")
+	return "MOTO-N" + strconv.FormatInt(debit.NoticeID.Int64(), 10) + "-" + debit.NoticeMonth.Format("200601")
 }

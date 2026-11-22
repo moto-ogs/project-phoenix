@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/exporttransfer"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -78,7 +79,7 @@ func TestTraegerFormatsGoToTheirOwnRecipient(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, all.Handovers, 2)
 	assert.Equal(t, []exporttransfer.TraegerAssignment{
-		{Format: "sollstellung", RecipientID: &kaemmerei}, {Format: "datev", RecipientID: &steuerbuero}, {Format: "pain008", RecipientID: &kaemmerei},
+		{Format: "sollstellung", RecipientID: (*ident.ID)(&kaemmerei)}, {Format: "datev", RecipientID: (*ident.ID)(&steuerbuero)}, {Format: "pain008", RecipientID: (*ident.ID)(&kaemmerei)},
 	}, all.Assignments)
 }
 
@@ -112,7 +113,7 @@ func TestTraegerFailureStaysWithItsRecipient(t *testing.T) {
 	page, err := f.transfers.Recipients(f.ctx, f.org, 10)
 	require.NoError(t, err)
 	for _, recipient := range page.Recipients {
-		if recipient.ID == steuerbuero {
+		if recipient.ID == ident.ID(steuerbuero) {
 			assert.Equal(t, "Steuerkanzlei", recipient.Name)
 			assert.Equal(t, "Steuerbüro", recipient.LastHandover.RecipientName, "the last handover keeps the name it had, as in the journal")
 		}
@@ -120,7 +121,7 @@ func TestTraegerFailureStaysWithItsRecipient(t *testing.T) {
 	states := map[int64]string{}
 	for _, recipient := range page.Recipients {
 		require.NotNil(t, recipient.LastHandover)
-		states[recipient.ID] = recipient.LastHandover.State
+		states[recipient.ID.Int64()] = recipient.LastHandover.State
 	}
 	assert.Equal(t, map[int64]string{kaemmerei: exporttransfer.TraegerTransferred, steuerbuero: exporttransfer.TraegerFailed}, states)
 }
@@ -137,7 +138,7 @@ func TestTraegerRemovingARecipientReturnsItsFormatsToTheDownload(t *testing.T) {
 	page, err := f.transfers.DeleteRecipient(f.ctx, f.org, kaemmerei)
 	require.NoError(t, err)
 	assert.Equal(t, []exporttransfer.TraegerAssignment{
-		{Format: "sollstellung"}, {Format: "datev", RecipientID: &steuerbuero}, {Format: "pain008"},
+		{Format: "sollstellung"}, {Format: "datev", RecipientID: (*ident.ID)(&steuerbuero)}, {Format: "pain008"},
 	}, page.Assignments, "the formats of the removed recipient go back to the download, the others stay")
 	require.Len(t, page.Handovers, 1, "the handovers of a removed recipient stay in the journal")
 	assert.Nil(t, page.Handovers[0].RecipientID)
@@ -185,12 +186,12 @@ func TestTraegerAssignmentRefusesForeignRecipientsAndUnknownFormats(t *testing.T
 	own := f.save(t, f.org)
 	foreign := f.add(t, f.other, f.readyInput())
 	_, err := f.transfers.AssignFormats(f.ctx, f.org, 0, []exporttransfer.TraegerAssignment{
-		{Format: "pain008"}, {Format: "datev", RecipientID: &foreign},
+		{Format: "pain008"}, {Format: "datev", RecipientID: (*ident.ID)(&foreign)},
 	})
 	require.ErrorIs(t, err, exporttransfer.ErrRecipientNotFound)
 	for name, assignments := range map[string][]exporttransfer.TraegerAssignment{
-		"unknown format": {{Format: "cip", RecipientID: &own}},
-		"format twice":   {{Format: "datev", RecipientID: &own}, {Format: "datev"}},
+		"unknown format": {{Format: "cip", RecipientID: (*ident.ID)(&own)}},
+		"format twice":   {{Format: "datev", RecipientID: (*ident.ID)(&own)}, {Format: "datev"}},
 	} {
 		_, err := f.transfers.AssignFormats(f.ctx, f.org, 0, assignments)
 		require.ErrorIs(t, err, exporttransfer.ErrAssignmentInvalid, name)

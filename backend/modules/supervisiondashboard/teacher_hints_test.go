@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -75,7 +76,7 @@ func TestDashboardAttachesTeacherHints(t *testing.T) {
 		fullStudentAccess: func(context.Context) (bool, error) { return true, nil },
 		supervised:        func(context.Context) ([]Session, error) { return []Session{{ID: 10, RoomName: "Adler"}}, nil },
 		yard: func(context.Context, int64) (*SchulhofStatus, error) {
-			return &SchulhofStatus{Exists: true, IsUserSupervising: true, ActiveGroupID: &yardGroupID}, nil
+			return &SchulhofStatus{Exists: true, IsUserSupervising: true, ActiveGroupID: (*ident.ID)(&yardGroupID)}, nil
 		},
 		groupVisits: func(_ context.Context, activeGroupID int64) ([]VisitRecord, error) {
 			return []VisitRecord{{StudentID: 1, ActiveGroupID: activeGroupID, FirstName: "Erika", LastName: "Muster"}}, nil

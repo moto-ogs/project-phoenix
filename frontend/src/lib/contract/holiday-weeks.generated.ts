@@ -5,7 +5,7 @@ import {
   bool,
   calendarDate,
   fileAnswer,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   optional,
@@ -52,7 +52,7 @@ export interface HostedHolidayWeek {
 }
 
 export const HostedHolidayWeekSchema: z.ZodType<HostedHolidayWeek, unknown> = object<HostedHolidayWeek>({
-  id: int64StringOrNumber,
+  id: int64String,
   period_name: str,
   starts_on: nullable(calendarDate),
   ends_on: nullable(calendarDate),
@@ -61,7 +61,7 @@ export const HostedHolidayWeekSchema: z.ZodType<HostedHolidayWeek, unknown> = ob
   care_starts_at: str,
   care_ends_at: str,
   day_participants: nullable(arr(HolidayDayCountSchema)),
-  guest_group_id: nullable(int64StringOrNumber),
+  guest_group_id: nullable(int64String),
   guests: safeInt,
   lunch_offered: bool,
   lunches: nullable(arr(HolidayDayCountSchema)),
@@ -89,15 +89,15 @@ export interface HolidayHomeSchoolBooking {
 }
 
 export const HolidayHomeSchoolBookingSchema: z.ZodType<HolidayHomeSchoolBooking, unknown> = object<HolidayHomeSchoolBooking>({
-  child_id: int64StringOrNumber,
+  child_id: int64String,
   first_name: str,
   last_name: str,
   birth_date: nullable(calendarDate),
-  week_id: int64StringOrNumber,
+  week_id: int64String,
   period_name: str,
   starts_on: nullable(calendarDate),
   ends_on: nullable(calendarDate),
-  host_school_id: int64StringOrNumber,
+  host_school_id: int64String,
   host_school_name: str,
   time_model_name: str,
   time_model_starts_at: str,
@@ -105,7 +105,7 @@ export const HolidayHomeSchoolBookingSchema: z.ZodType<HolidayHomeSchoolBooking,
   days: nullable(arr(nullable(calendarDate))),
   lunch: bool,
   assignment: str,
-  student_id: nullable(int64StringOrNumber),
+  student_id: nullable(int64String),
 });
 
 /** Go: enrollment.HolidayStudentHealth */
@@ -118,7 +118,7 @@ export interface HolidayStudentHealth {
 }
 
 export const HolidayStudentHealthSchema: z.ZodType<HolidayStudentHealth, unknown> = object<HolidayStudentHealth>({
-  week_id: int64StringOrNumber,
+  week_id: int64String,
   period_name: str,
   starts_on: nullable(calendarDate),
   ends_on: nullable(calendarDate),
@@ -141,7 +141,7 @@ export interface HolidayStudentRegistration {
 }
 
 export const HolidayStudentRegistrationSchema: z.ZodType<HolidayStudentRegistration, unknown> = object<HolidayStudentRegistration>({
-  week_id: int64StringOrNumber,
+  week_id: int64String,
   period_name: str,
   starts_on: nullable(calendarDate),
   ends_on: nullable(calendarDate),
@@ -162,9 +162,9 @@ export interface HolidayOwnChildAssignment {
 }
 
 export const HolidayOwnChildAssignmentSchema: z.ZodType<HolidayOwnChildAssignment, unknown> = object<HolidayOwnChildAssignment>({
-  child_id: int64StringOrNumber,
+  child_id: int64String,
   assignment: str,
-  student_id: nullable(int64StringOrNumber),
+  student_id: nullable(int64String),
 });
 
 /** Go: enrollment.HolidayTimeModelCount */
@@ -177,7 +177,7 @@ export interface HolidayTimeModelCount {
 }
 
 export const HolidayTimeModelCountSchema: z.ZodType<HolidayTimeModelCount, unknown> = object<HolidayTimeModelCount>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   starts_at: str,
   ends_at: str,
@@ -192,7 +192,7 @@ export interface holidayHomeSchoolResponse {
 }
 
 export const holidayHomeSchoolResponseSchema: z.ZodType<holidayHomeSchoolResponse, unknown> = object<holidayHomeSchoolResponse>({
-  school_id: nullable(int64StringOrNumber),
+  school_id: nullable(int64String),
   name: str,
   count: safeInt,
 });
@@ -239,13 +239,13 @@ export interface holidayParticipantResponse {
 }
 
 export const holidayParticipantResponseSchema: z.ZodType<holidayParticipantResponse, unknown> = object<holidayParticipantResponse>({
-  child_id: int64StringOrNumber,
+  child_id: int64String,
   first_name: str,
   last_name: str,
   birth_date: nullable(calendarDate),
-  home_school_id: nullable(int64StringOrNumber),
+  home_school_id: nullable(int64String),
   guest_school_name: str,
-  time_model_id: int64StringOrNumber,
+  time_model_id: int64String,
   days: optional(arr(nullable(calendarDate))),
   lunch: bool,
   second_guardian: nullable(HolidayHostGuardianSchema),
@@ -285,8 +285,8 @@ export interface HolidayGuestTransfer {
 }
 
 export const HolidayGuestTransferSchema: z.ZodType<HolidayGuestTransfer, unknown> = object<HolidayGuestTransfer>({
-  week_id: int64StringOrNumber,
-  group_id: int64StringOrNumber,
+  week_id: int64String,
+  group_id: int64String,
   guests: safeInt,
   own_children: safeInt,
 });

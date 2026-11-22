@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/domain/userscontract"
 	ports "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
@@ -60,7 +61,7 @@ func caregiverView(state *peopleValues.CaregiverCapabilityState, err error) (jso
 	if err != nil {
 		return nil, caregiverCapabilityError(err)
 	}
-	view, err := json.Marshal(state)
+	view, err := wire.Marshal(state)
 	if err != nil {
 		return nil, err
 	}

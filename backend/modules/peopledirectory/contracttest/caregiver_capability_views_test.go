@@ -2,12 +2,13 @@ package contracttest_test
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
 
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 
 	peopleCompose "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/domain/userscontract"
@@ -94,7 +95,7 @@ func TestCaregiverCapabilityViewsRenderStateAsJSON(t *testing.T) {
 		Email:       "ada@example.com",
 		FirstName:   "Ada",
 		LastName:    "Lovelace",
-		PersonID:    &personID,
+		PersonID:    (*ident.ID)(&personID),
 		HasUserRole: true,
 	}
 	views := peopleCompose.NewCaregiverCapabilityViews(&stubCaregiverCapabilityService{
@@ -107,11 +108,11 @@ func TestCaregiverCapabilityViewsRenderStateAsJSON(t *testing.T) {
 	view, err := views.GetCaregiverCapability(context.Background(), 34)
 	require.NoError(t, err)
 
-	want, err := json.Marshal(state)
+	want, err := wire.Marshal(state)
 	require.NoError(t, err)
 	assert.JSONEq(t, string(want), string(view))
-	assert.Contains(t, string(view), `"account_id":34`)
-	assert.Contains(t, string(view), `"person_id":56`)
+	assert.Contains(t, string(view), `"account_id":"34"`)
+	assert.Contains(t, string(view), `"person_id":"56"`)
 	assert.Contains(t, string(view), `"has_user_role":true`)
 }
 
@@ -126,7 +127,7 @@ func TestCaregiverCapabilityViewsEnablePassesProfileInput(t *testing.T) {
 				LastName:  "Lovelace",
 				Position:  "Springer",
 			}, input)
-			return &peopleValues.CaregiverCapabilityState{AccountID: accountID, HasUserRole: true}, nil
+			return &peopleValues.CaregiverCapabilityState{AccountID: ident.ID(accountID), HasUserRole: true}, nil
 		},
 	}, nil)
 
@@ -144,13 +145,13 @@ func TestCaregiverCapabilityViewsSchoolAccountRunsInSchoolAdminTx(t *testing.T) 
 			GetFn: func(ctx context.Context, accountID int64) (*peopleValues.CaregiverCapabilityState, error) {
 				assertInSchoolAdminTx(t, ctx, 12)
 				assert.Equal(t, int64(34), accountID)
-				return &peopleValues.CaregiverCapabilityState{AccountID: accountID, HasUserRole: true}, nil
+				return &peopleValues.CaregiverCapabilityState{AccountID: ident.ID(accountID), HasUserRole: true}, nil
 			},
 		}, nil)
 
 		view, err := views.GetSchoolAccountCaregiverCapability(recorder.context(t), 12, 34)
 		require.NoError(t, err)
-		assert.Contains(t, string(view), `"account_id":34`)
+		assert.Contains(t, string(view), `"account_id":"34"`)
 		assert.Equal(t, 1, recorder.calls)
 		assert.NoError(t, recorder.err)
 	})
@@ -166,7 +167,7 @@ func TestCaregiverCapabilityViewsSchoolAccountRunsInSchoolAdminTx(t *testing.T) 
 					LastName:  "Lovelace",
 					Position:  "Springer",
 				}, input)
-				return &peopleValues.CaregiverCapabilityState{AccountID: accountID, HasUserRole: true}, nil
+				return &peopleValues.CaregiverCapabilityState{AccountID: ident.ID(accountID), HasUserRole: true}, nil
 			},
 		}, nil)
 

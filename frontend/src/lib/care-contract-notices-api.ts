@@ -5,12 +5,12 @@
  */
 
 import {
-  type BackendNoticeOptions,
   type ContractNoticeOptions,
   declarationBody,
   type NoticeDeclaration,
   noticeOptionsFromBackend,
 } from "./care-contract-notices";
+import type * as traegerContractNoticesContract from "./contract/traeger-contract-notices.generated";
 import { traegerRequest } from "./traeger-api";
 
 const officePath = (id: string) =>
@@ -21,7 +21,7 @@ export async function fetchContractNoticeOptions(
   receivedOn?: string,
 ): Promise<ContractNoticeOptions> {
   return noticeOptionsFromBackend(
-    await traegerRequest<BackendNoticeOptions>(
+    await traegerRequest<traegerContractNoticesContract.NoticeOptions>(
       receivedOn
         ? `${officePath(id)}?${new URLSearchParams({ received_on: receivedOn })}`
         : officePath(id),
@@ -38,10 +38,13 @@ export async function setContractNoticeEnd(
   endsOn: string,
 ): Promise<ContractNoticeOptions> {
   return noticeOptionsFromBackend(
-    await traegerRequest<BackendNoticeOptions>(`${officePath(id)}/ends-on`, {
-      method: "PUT",
-      body: { ends_on: endsOn },
-    }),
+    await traegerRequest<traegerContractNoticesContract.NoticeOptions>(
+      `${officePath(id)}/ends-on`,
+      {
+        method: "PUT",
+        body: { ends_on: endsOn },
+      },
+    ),
   );
 }
 
@@ -55,7 +58,7 @@ export async function rejectContractNoticeReason(
   expectedEndsOn: string,
 ): Promise<ContractNoticeOptions> {
   return noticeOptionsFromBackend(
-    await traegerRequest<BackendNoticeOptions>(
+    await traegerRequest<traegerContractNoticesContract.NoticeOptions>(
       `${officePath(id)}/reason-rejection`,
       { method: "POST", body: { expected_ends_on: expectedEndsOn } },
     ),
@@ -71,15 +74,18 @@ export async function recordContractNotice(
   },
 ): Promise<ContractNoticeOptions> {
   return noticeOptionsFromBackend(
-    await traegerRequest<BackendNoticeOptions>(officePath(id), {
-      method: "POST",
-      body: {
-        ...declarationBody(declaration),
-        received_on: declaration.receivedOn,
-        ...(declaration.kind === "widerruf"
-          ? { dispatched_on: declaration.dispatchedOn }
-          : {}),
+    await traegerRequest<traegerContractNoticesContract.NoticeOptions>(
+      officePath(id),
+      {
+        method: "POST",
+        body: {
+          ...declarationBody(declaration),
+          received_on: declaration.receivedOn,
+          ...(declaration.kind === "widerruf"
+            ? { dispatched_on: declaration.dispatchedOn }
+            : {}),
+        },
       },
-    }),
+    ),
   );
 }

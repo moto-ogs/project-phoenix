@@ -37,14 +37,14 @@ type overrunEvaluationBody struct {
 	ToleranceMinutes int                `json:"tolerance_minutes"`
 	Total            overrunFiguresBody `json:"total"`
 	Schools          []struct {
-		SchoolID       int64              `json:"school_id"`
+		SchoolID       wireID             `json:"school_id"`
 		ComparedDays   int                `json:"compared_days"`
 		UncomparedDays int                `json:"uncompared_days"`
 		Figures        overrunFiguresBody `json:"figures"`
 	} `json:"schools"`
 	Children []struct {
-		SchoolID     int64  `json:"school_id"`
-		StudentID    int64  `json:"student_id"`
+		SchoolID     wireID `json:"school_id"`
+		StudentID    wireID `json:"student_id"`
 		FirstName    string `json:"first_name"`
 		LastName     string `json:"last_name"`
 		ExtraMinutes int    `json:"extra_minutes"`
@@ -171,9 +171,9 @@ func TestCareTimeOverrunsSummariseEverySchoolFromTheContract(t *testing.T) {
 	attended := map[int64]int{}
 	uncompared := map[int64]int{}
 	for _, school := range body.Schools {
-		figures[school.SchoolID] = school.Figures
-		attended[school.SchoolID] = school.ComparedDays
-		uncompared[school.SchoolID] = school.UncomparedDays
+		figures[int64(school.SchoolID)] = school.Figures
+		attended[int64(school.SchoolID)] = school.ComparedDays
+		uncompared[int64(school.SchoolID)] = school.UncomparedDays
 	}
 	assert.Equal(t, want, figures[f.school])
 	assert.Equal(t, 3, attended[f.school], "the booked child's three check-in days were compared")
@@ -200,7 +200,7 @@ func TestCareTimeOverrunChildrenNeedTheContractRightAndAreLogged(t *testing.T) {
 	code, body, raw := f.get(t, f.admin, "/traeger/care-time-overruns/children?from=2026-06-08&to=2026-06-16")
 	require.Equal(t, http.StatusOK, code, raw)
 	require.Len(t, body.Children, 1)
-	assert.Equal(t, f.child, body.Children[0].StudentID)
+	assert.Equal(t, f.child, int64(body.Children[0].StudentID))
 	assert.Equal(t, "Sina", body.Children[0].FirstName)
 	assert.Equal(t, 540, body.Children[0].ExtraMinutes)
 
@@ -255,7 +255,7 @@ func TestCareTimeOverrunsStayWithTheirTraeger(t *testing.T) {
 	code, body, raw := f.get(t, f.foreignJWT, overrunWindow)
 	require.Equal(t, http.StatusOK, code, raw)
 	for _, school := range body.Schools {
-		assert.NotEqual(t, f.school, school.SchoolID, "another Träger never sees the school")
+		assert.NotEqual(t, f.school, int64(school.SchoolID), "another Träger never sees the school")
 	}
 
 	for _, window := range []string{"from=2026-06-16&to=2026-06-08", "from=2026-01-01&to=2026-06-16", "from=2026-06-08", "from=x&to=y"} {

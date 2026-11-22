@@ -4,18 +4,9 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/render"
 )
-
-// Time is a wrapper for time.Time that properly serializes to JSON in RFC3339 format
-type Time time.Time
-
-// MarshalJSON implements the json.Marshaler interface
-func (t Time) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + time.Time(t).Format(time.RFC3339) + `"`), nil
-}
 
 // Response is the standard API response structure
 type Response struct {
@@ -110,7 +101,7 @@ func RespondNoContent(w http.ResponseWriter, r *http.Request) {
 // RespondWithJSON sends a JSON response with the given status code
 func RespondWithJSON(w http.ResponseWriter, r *http.Request, status int, data interface{}) {
 	render.Status(r, status)
-	render.JSON(w, r, data)
+	RenderJSON(w, r, data)
 }
 
 // Pagination represents pagination metadata for responses

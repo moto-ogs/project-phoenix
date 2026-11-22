@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -63,7 +64,7 @@ func TestUpdateInstance_Success(t *testing.T) {
 	w := doTemplateJSON(t, router, http.MethodPut, fmt.Sprintf("/instances/%d", persisted.ID), body)
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 	got := decodeCreate(t, w)
-	assert.Equal(t, persisted.ID, got.ID)
+	assert.Equal(t, ident.ID(persisted.ID), got.ID)
 	assert.Equal(t, "Updated Basteln", got.Title)
 	assert.Equal(t, "09:00", got.StartTime)
 	assert.Equal(t, timetable.InstanceStatusPlanned, got.Status)

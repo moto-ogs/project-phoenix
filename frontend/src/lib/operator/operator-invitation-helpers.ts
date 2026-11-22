@@ -1,36 +1,11 @@
-// --- Backend response types (snake_case) ---
+import type * as operatorInvitationsContract from "~/lib/contract/operator-invitations.generated";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 
-export interface BackendInvitationResponse {
-  id: number | string;
-  email: string;
-  display_name?: string | null;
-  created_by: number | string;
-  creator_name?: string;
-  expires_at: string;
-  email_sent_at?: string | null;
-  email_error?: string | null;
-  email_retry_count: number;
-  created_at: string;
-}
-
-export interface BackendOperatorListItem {
-  id: number | string;
-  email: string;
-  display_name: string;
-  active: boolean;
-  last_login?: string | null;
-  deactivated_at?: string | null;
-  deletion_due_at?: string | null;
-  created_at: string;
-  is_self: boolean;
-}
-
-export interface BackendInvitationsListResponse {
-  invitations: BackendInvitationResponse[];
-  operators: BackendOperatorListItem[];
-}
-
-export interface BackendInvitationValidation {
+/**
+ * Answer of POST /api/operator/auth/invitations/validate. The route is
+ * public and outside the contract catalog, so its type stays handwritten.
+ */
+export interface InvitationValidationBody {
   email: string;
   display_name?: string | null;
   expires_at: string;
@@ -86,38 +61,40 @@ export interface AcceptOperatorInvitationRequest {
 // --- Mappers ---
 
 export function mapPendingInvitation(
-  data: BackendInvitationResponse,
+  data: operatorInvitationsContract.PendingOperatorInvitationResponse,
 ): PendingOperatorInvitation {
   return {
-    id: data.id.toString(),
+    id: data.id,
     email: data.email,
-    displayName: data.display_name ?? undefined,
-    createdBy: data.created_by.toString(),
+    displayName: data.display_name,
+    createdBy: data.created_by,
     creatorName: data.creator_name,
     expiresAt: data.expires_at,
-    emailSentAt: data.email_sent_at ?? undefined,
-    emailError: data.email_error ?? undefined,
+    emailSentAt: data.email_sent_at,
+    emailError: data.email_error,
     emailRetryCount: data.email_retry_count,
     createdAt: data.created_at,
   };
 }
 
-export function mapOperatorInfo(data: BackendOperatorListItem): OperatorInfo {
+export function mapOperatorInfo(
+  data: sharedContract.OperatorListItem,
+): OperatorInfo {
   return {
-    id: data.id.toString(),
+    id: data.id,
     email: data.email,
     displayName: data.display_name,
     active: data.active,
-    lastLogin: data.last_login ?? undefined,
-    deactivatedAt: data.deactivated_at ?? undefined,
-    deletionDueAt: data.deletion_due_at ?? undefined,
+    lastLogin: data.last_login,
+    deactivatedAt: data.deactivated_at,
+    deletionDueAt: data.deletion_due_at,
     createdAt: data.created_at,
     isSelf: data.is_self,
   };
 }
 
 export function mapInvitationValidation(
-  data: BackendInvitationValidation,
+  data: InvitationValidationBody,
 ): OperatorInvitationValidation {
   return {
     email: data.email,

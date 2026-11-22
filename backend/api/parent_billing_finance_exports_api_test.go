@@ -44,7 +44,7 @@ type exportEntryBody struct {
 
 type exportRunBody struct {
 	RunKind          string           `json:"run_kind"`
-	RunID            int64            `json:"run_id"`
+	RunID            wireID           `json:"run_id"`
 	Label            string           `json:"label"`
 	InvoiceCount     int              `json:"invoice_count"`
 	Exports          int              `json:"exports"`
@@ -135,7 +135,7 @@ func TestFinanceExportsOfAReleasedRun(t *testing.T) {
 
 	runs := exportRuns(t, f)
 	require.Len(t, runs, 1)
-	assert.Equal(t, run, runs[0].RunID)
+	assert.Equal(t, run, int64(runs[0].RunID))
 	assert.Nil(t, runs[0].LastSollstellung, "not yet exported")
 
 	first, content := sollstellung(t, f, run)

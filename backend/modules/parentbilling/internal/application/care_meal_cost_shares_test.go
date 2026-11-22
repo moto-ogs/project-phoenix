@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // mealShareMonth is Mia's April with one module, Monday until 14:00 (32,00 €),
@@ -59,7 +60,7 @@ func splitsOf(month careMonth) []invoiceSplit {
 	for _, invoice := range month.invoices {
 		split := invoiceSplit{service: invoice.Service, shares: []shareOf{}, family: invoice.TotalCents}
 		for _, share := range invoice.CostShares {
-			split.shares = append(split.shares, shareOf{bearer: share.CostBearerID, amount: share.AmountCents})
+			split.shares = append(split.shares, shareOf{bearer: share.CostBearerID.Int64(), amount: share.AmountCents})
 		}
 		splits = append(splits, split)
 	}
@@ -209,12 +210,12 @@ func TestCareCostShareExportNamesTheBaseForCareAndMeals(t *testing.T) {
 	} {
 		t.Run(tc.scope, func(t *testing.T) {
 			t.Parallel()
-			invoice := parentbilling.CareInvoice{ContractID: contractMia, TotalCents: 4160 - tc.cents,
+			invoice := parentbilling.CareInvoice{ContractID: ident.ID(contractMia), TotalCents: 4160 - tc.cents,
 				MealPositions: []parentbilling.CareMealPosition{{AmountCents: 960}},
-				CostShares: []parentbilling.CareInvoiceCostShare{{CostBearerID: bearerJobcenter,
+				CostShares: []parentbilling.CareInvoiceCostShare{{CostBearerID: ident.ID(bearerJobcenter),
 					Kind: parentbilling.CostShareEducationParticipation, Scope: tc.scope, AmountCents: tc.cents, ShareBasisPoints: ptr(5000)}}}
 			table, contracts := careCostShareTable(parentbilling.CareRunDetail{BillingMonth: day(t, mealRunMonth),
-				Invoices: []parentbilling.CareInvoice{invoice}}, parentbilling.CostBearer{ID: bearerJobcenter}, nil)
+				Invoices: []parentbilling.CareInvoice{invoice}}, parentbilling.CostBearer{ID: ident.ID(bearerJobcenter)}, nil)
 			require.Len(t, table.Rows, 2)
 			assert.Equal(t, tc.base, table.Rows[0]["contribution"])
 			assert.Equal(t, tc.amount, table.Rows[0]["amount"])

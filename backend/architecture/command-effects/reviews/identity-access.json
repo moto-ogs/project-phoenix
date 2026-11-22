@@ -3838,6 +3838,17 @@
     },
     {
       "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.DemoCRMWorker.RunOnce",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.DemoCRMJobs.RunOnce",
+      "reason": "Demo CRM delivery (#7677) reuses the existing Identity command admin gateway for atomic claim/consent checks and independent finalization. Ambient transactions are rejected; the provider call runs outside those units. No cross-owner domain writes are coordinated. Tests cover lease fencing, rollback, consent cancellation and ambient-transaction rejection.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FindAccount",
       "classification": "platform",
       "effect": "scope",
@@ -8299,28 +8310,6 @@
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.GetMFAAdminState",
       "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinAdmin (tenant-runtime) through modules/identityaccess/internal/application.engine.GetMFAAdminState. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.GetPermission",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.GetPermission",
-      "reason": "Platform protocol participation (scope): identity-access reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/identityaccess/internal/application.engine.GetPermission. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.GetPermission",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.GetPermission",
-      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinAdmin (tenant-runtime) through modules/identityaccess/internal/application.engine.GetPermission. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
       "target_owner": "tenant-runtime"
@@ -16772,28 +16761,6 @@
     },
     {
       "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.GetPermission",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.GetPermission",
-      "reason": "Platform protocol participation (scope): identity-access reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/identityaccess.Owner.GetPermission. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.GetPermission",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.GetPermission",
-      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinAdmin (tenant-runtime) through modules/identityaccess.Owner.GetPermission. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.GetPermissionByName",
       "classification": "platform",
       "effect": "scope",
@@ -19628,7 +19595,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted; modules/organizationtenancy/school.go:49. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted; modules/organizationtenancy/school.go:49. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
       "target_owner": "organization-tenancy"
@@ -19638,7 +19605,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
-      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Capability.FindSchool (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added.",
+      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Capability.FindSchool (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindSchool",
       "target_owner": "organization-tenancy"
@@ -19648,7 +19615,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
-      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Capability.FindSchoolBySlug (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added.",
+      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Capability.FindSchoolBySlug (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindSchoolBySlug",
       "target_owner": "organization-tenancy"
@@ -19658,7 +19625,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.FindSchoolBySubdomain; modules/organizationtenancy.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.FindSchoolBySubdomain; modules/organizationtenancy.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindSchoolBySubdomain",
       "target_owner": "organization-tenancy"
@@ -19668,7 +19635,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
-      "reason": "Reviewed read: identity-access reaches modules/organizationtenancy.Capability.FindVisibleTraegerName (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain for the tenant shell (#4656). One read transaction counts the organization's operational schools and reads its name; no owned-row mutation, lock or scope effect.",
+      "reason": "Reviewed read: identity-access reaches modules/organizationtenancy.Capability.FindVisibleTraegerName (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain for the tenant shell (#4656). One read transaction counts the organization's operational schools and reads its name; no owned-row mutation, lock or scope effect. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindVisibleTraegerName",
       "target_owner": "organization-tenancy"
@@ -19678,7 +19645,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
-      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Capability.ListOrganizationsByID (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added.",
+      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Capability.ListOrganizationsByID (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListOrganizationsByID",
       "target_owner": "organization-tenancy"
@@ -19688,7 +19655,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
-      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Query.FindSchool (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added.",
+      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Query.FindSchool (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindSchool",
       "target_owner": "organization-tenancy"
@@ -19698,7 +19665,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
-      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Query.FindSchoolBySlug (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added.",
+      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Query.FindSchoolBySlug (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindSchoolBySlug",
       "target_owner": "organization-tenancy"
@@ -19708,7 +19675,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.FindSchoolBySubdomain; modules/organizationtenancy.Query (supplied contract method). May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.FindSchoolBySubdomain; modules/organizationtenancy.Query (supplied contract method). May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindSchoolBySubdomain",
       "target_owner": "organization-tenancy"
@@ -19718,7 +19685,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
-      "reason": "Reviewed read: identity-access reaches modules/organizationtenancy.Query.FindVisibleTraegerName (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain for the tenant shell (#4656). One read transaction counts the organization's operational schools and reads its name; no owned-row mutation, lock or scope effect.",
+      "reason": "Reviewed read: identity-access reaches modules/organizationtenancy.Query.FindVisibleTraegerName (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain for the tenant shell (#4656). One read transaction counts the organization's operational schools and reads its name; no owned-row mutation, lock or scope effect. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindVisibleTraegerName",
       "target_owner": "organization-tenancy"
@@ -19728,7 +19695,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
-      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Query.ListOrganizationsByID (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added.",
+      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Query.ListOrganizationsByID (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListOrganizationsByID",
       "target_owner": "organization-tenancy"
@@ -19738,7 +19705,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
-      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.School.IsDeleted (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added.",
+      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.School.IsDeleted (organization-tenancy) through api.authSchoolDirectory.GetSchoolBySubdomain. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #4656: the binding now also reads the visible Träger name through FindVisibleTraegerName; read only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
       "target_owner": "organization-tenancy"
@@ -19748,7 +19715,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.ListActiveSchoolsByAccountID",
-      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Capability.ListOrganizationsByID (organization-tenancy) through api.authSchoolDirectory.ListActiveSchoolsByAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Capability.ListOrganizationsByID (organization-tenancy) through api.authSchoolDirectory.ListActiveSchoolsByAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListOrganizationsByID",
       "target_owner": "organization-tenancy"
@@ -19768,7 +19735,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.ListActiveSchoolsByAccountID",
-      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Query.ListOrganizationsByID (organization-tenancy) through api.authSchoolDirectory.ListActiveSchoolsByAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Query.ListOrganizationsByID (organization-tenancy) through api.authSchoolDirectory.ListActiveSchoolsByAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListOrganizationsByID",
       "target_owner": "organization-tenancy"
@@ -19788,7 +19755,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.ListActiveSchoolsByAccountID",
-      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.School.IsDeleted (organization-tenancy) through api.authSchoolDirectory.ListActiveSchoolsByAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.School.IsDeleted (organization-tenancy) through api.authSchoolDirectory.ListActiveSchoolsByAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
       "target_owner": "organization-tenancy"
@@ -19819,7 +19786,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.ListPublicSchools",
-      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Capability.ListOrganizationsByID (organization-tenancy) through api.authSchoolDirectory.ListPublicSchools. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Capability.ListOrganizationsByID (organization-tenancy) through api.authSchoolDirectory.ListPublicSchools. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListOrganizationsByID",
       "target_owner": "organization-tenancy"
@@ -19839,7 +19806,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.ListPublicSchools",
-      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Query.ListOrganizationsByID (organization-tenancy) through api.authSchoolDirectory.ListPublicSchools. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.Query.ListOrganizationsByID (organization-tenancy) through api.authSchoolDirectory.ListPublicSchools. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListOrganizationsByID",
       "target_owner": "organization-tenancy"
@@ -19859,7 +19826,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.ListPublicSchools",
-      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.School.IsDeleted (organization-tenancy) through api.authSchoolDirectory.ListPublicSchools. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: identity-access reaches modules/organizationtenancy.School.IsDeleted (organization-tenancy) through api.authSchoolDirectory.ListPublicSchools. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
       "target_owner": "organization-tenancy"
@@ -19902,7 +19869,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.EducationalGroupRows",
-      "reason": "Read-only already reviewed target: identity-access reaches modules/schoolstructure/compose.LegacyGroupRepository.FindByIDs (school-structure) through roots/owners.CallerRows.EducationalGroupRows. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #2352 (ADR 0270): the educational group rows carry the exported CallerGroupRow the route contract names; same reads, no write.",
+      "reason": "Read-only already reviewed target: identity-access reaches modules/schoolstructure/compose.LegacyGroupRepository.FindByIDs (school-structure) through roots/owners.CallerRows.EducationalGroupRows. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #2352 (ADR 0270): the educational group rows carry the exported CallerGroupRow the route contract names; same reads, no write. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose.LegacyGroupRepository.FindByIDs",
       "target_owner": "school-structure"
@@ -19912,7 +19879,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. Re-reviewed for #2352 (ADR 0270): the educational group rows carry the exported CallerGroupRow the route contract names; same reads, no write. Re-reviewed for #7563: the navigation renders the typed identityaccess.NavigationResponse with the school switches the route resolves before the rows, and checks the session rows' type; same reads, no write.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. Re-reviewed for #2352 (ADR 0270): the educational group rows carry the exported CallerGroupRow the route contract names; same reads, no write. Re-reviewed for #7563: the navigation renders the typed identityaccess.NavigationResponse with the school switches the route resolves before the rows, and checks the session rows' type; same reads, no write. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -19952,7 +19919,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
-      "reason": "Read-only already reviewed target: identity-access reaches modules/schoolstructure/compose.LegacyGroupRepository.FindByIDs (school-structure) through roots/owners.CallerRows.NavigationRow. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #2352 (ADR 0270): the educational group rows carry the exported CallerGroupRow the route contract names; same reads, no write. Re-reviewed for #7563: the navigation renders the typed identityaccess.NavigationResponse with the school switches the route resolves before the rows, and checks the session rows' type; same reads, no write.",
+      "reason": "Read-only already reviewed target: identity-access reaches modules/schoolstructure/compose.LegacyGroupRepository.FindByIDs (school-structure) through roots/owners.CallerRows.NavigationRow. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Re-reviewed for #2352 (ADR 0270): the educational group rows carry the exported CallerGroupRow the route contract names; same reads, no write. Re-reviewed for #7563: the navigation renders the typed identityaccess.NavigationResponse with the school switches the route resolves before the rows, and checks the session rows' type; same reads, no write. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose.LegacyGroupRepository.FindByIDs",
       "target_owner": "school-structure"
@@ -20002,7 +19969,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.StaffRow",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -25840,7 +25807,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CallerPeople.FindPersonByAccount",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.PersonRepository.FindByAccountID; modules/peopledirectory/ports/repository_contracts.go:52. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.PersonRepository.FindByAccountID; modules/peopledirectory/ports/repository_contracts.go:52. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByAccountID",
       "target_owner": "people-directory"
@@ -27217,7 +27184,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OrganizationDirectory.ListOrganizationNames",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.ListOrganizationsByID; modules/organizationtenancy.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.ListOrganizationsByID; modules/organizationtenancy.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListOrganizationsByID",
       "target_owner": "organization-tenancy"
@@ -27227,7 +27194,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OrganizationDirectory.ListOrganizationNames",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.ListOrganizationsByID; modules/organizationtenancy.Query (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.ListOrganizationsByID; modules/organizationtenancy.Query (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListOrganizationsByID",
       "target_owner": "organization-tenancy"
@@ -27237,7 +27204,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OrganizationDirectory.ListSchools",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.ListSchoolsByID; modules/organizationtenancy.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.ListSchoolsByID; modules/organizationtenancy.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListSchoolsByID",
       "target_owner": "organization-tenancy"
@@ -27247,7 +27214,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OrganizationDirectory.ListSchools",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.ListSchoolsByID; modules/organizationtenancy.Query (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.ListSchoolsByID; modules/organizationtenancy.Query (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListSchoolsByID",
       "target_owner": "organization-tenancy"
@@ -27257,7 +27224,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OrganizationDirectory.ListSchools",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted; modules/organizationtenancy/school.go:49. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted; modules/organizationtenancy/school.go:49. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
       "target_owner": "organization-tenancy"
@@ -27560,7 +27527,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolDirectory.FindSchool",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted; modules/organizationtenancy/school.go:49. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted; modules/organizationtenancy/school.go:49. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
       "target_owner": "organization-tenancy"
@@ -27570,7 +27537,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolDirectory.FindSchool",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.SchoolLogoURL; modules/organizationtenancy/school.go:64. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.SchoolLogoURL; modules/organizationtenancy/school.go:64. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolLogoURL",
       "target_owner": "organization-tenancy"
@@ -27610,7 +27577,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolDirectory.FindSchoolBySubdomain",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted; modules/organizationtenancy/school.go:49. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted; modules/organizationtenancy/school.go:49. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
       "target_owner": "organization-tenancy"
@@ -27620,7 +27587,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolDirectory.FindSchoolBySubdomain",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.SchoolLogoURL; modules/organizationtenancy/school.go:64. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.SchoolLogoURL; modules/organizationtenancy/school.go:64. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolLogoURL",
       "target_owner": "organization-tenancy"
@@ -27650,7 +27617,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolDirectory.ListActiveSchoolsByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted; modules/organizationtenancy/school.go:49. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted; modules/organizationtenancy/school.go:49. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
       "target_owner": "organization-tenancy"
@@ -27670,7 +27637,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolDirectory.ListActiveSchoolsByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.SchoolLogoURL; modules/organizationtenancy/school.go:64. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.SchoolLogoURL; modules/organizationtenancy/school.go:64. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolLogoURL",
       "target_owner": "organization-tenancy"
@@ -27702,7 +27669,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolDirectory.LockSchoolShared",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted; modules/organizationtenancy/school.go:49. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted; modules/organizationtenancy/school.go:49. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
       "target_owner": "organization-tenancy"
@@ -27712,7 +27679,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolDirectory.LockSchoolShared",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.SchoolLogoURL; modules/organizationtenancy/school.go:64. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.SchoolLogoURL; modules/organizationtenancy/school.go:64. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolLogoURL",
       "target_owner": "organization-tenancy"
@@ -27852,7 +27819,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolIdentityProvisioner.ListAccountPersons",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.PersonIsLive; modules/peopledirectory/peopledirectory.go:61. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.PersonIsLive; modules/peopledirectory/peopledirectory.go:61. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.PersonIsLive",
       "target_owner": "people-directory"
@@ -27862,7 +27829,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolIdentityProvisioner.ListAccountPersons",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.PersonRepository.List; modules/peopledirectory/internal/application/student_notes.go:54. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.PersonRepository.List; modules/peopledirectory/internal/application/student_notes.go:54. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.List",
       "target_owner": "people-directory"
@@ -27872,7 +27839,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolIdentityProvisioner.ListAccountPersons",
-      "reason": "Read-only already reviewed target: identity-access reaches modules/peopledirectory/ports.StudentRepository.FindByPersonID (people-directory) through roots/owners.schoolIdentityProvisioner.ListAccountPersons. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: identity-access reaches modules/peopledirectory/ports.StudentRepository.FindByPersonID (people-directory) through roots/owners.schoolIdentityProvisioner.ListAccountPersons. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindByPersonID",
       "target_owner": "people-directory"
@@ -28288,7 +28255,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.StaffDirectory.FindStaff",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Staff.GetTenantID; modules/peopledirectory/record_metadata.go:13. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Staff.GetTenantID; modules/peopledirectory/record_metadata.go:13. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.GetTenantID",
       "target_owner": "people-directory"
@@ -28298,7 +28265,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.StaffDirectory.FindStaff",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -28601,7 +28568,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.TraegerBueroMemberships.FindLiveTraeger",
-      "reason": "Read on the root-bound Organisation \u0026 Tenancy capability: modules/organizationtenancy.Capability.FindOrganization for the Träger-Büro account management (ADR 0084, #4650). Joins the caller's administrative unit; no mutation or locking read at this terminal.",
+      "reason": "Read on the root-bound Organisation \u0026 Tenancy capability: modules/organizationtenancy.Capability.FindOrganization for the Träger-Büro account management (ADR 0084, #4650). Joins the caller's administrative unit; no mutation or locking read at this terminal. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindOrganization",
       "target_owner": "organization-tenancy"
@@ -28611,7 +28578,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.TraegerBueroMemberships.FindLiveTraeger",
-      "reason": "Read on the root-bound Organisation \u0026 Tenancy capability: modules/organizationtenancy.Organization.IsDeleted for the Träger-Büro account management (ADR 0084, #4650). Joins the caller's administrative unit; no mutation or locking read at this terminal.",
+      "reason": "Read on the root-bound Organisation \u0026 Tenancy capability: modules/organizationtenancy.Organization.IsDeleted for the Träger-Büro account management (ADR 0084, #4650). Joins the caller's administrative unit; no mutation or locking read at this terminal. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Organization.IsDeleted",
       "target_owner": "organization-tenancy"
@@ -28696,7 +28663,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.TraegerMemberships.ListAccountTraegerOrganizations",
-      "reason": "Read on the root-bound Organisation \u0026 Tenancy capability: modules/organizationtenancy Träger membership query (ADR 0084, #4649). Joins the caller's administrative unit through RunRead; no mutation or locking read at this terminal. #4658: the binding maps ID and name explicitly, so the test mark stays out of the sign-in choice.",
+      "reason": "Read on the root-bound Organisation \u0026 Tenancy capability: modules/organizationtenancy Träger membership query (ADR 0084, #4649). Joins the caller's administrative unit through RunRead; no mutation or locking read at this terminal. #4658: the binding maps ID and name explicitly, so the test mark stays out of the sign-in choice. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListAccountTraegerOrganizations",
       "target_owner": "organization-tenancy"
@@ -28706,7 +28673,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.TraegerMemberships.ListAccountTraegerOrganizations",
-      "reason": "Read on the root-bound Organisation \u0026 Tenancy capability: modules/organizationtenancy Träger membership query (ADR 0084, #4649). Joins the caller's administrative unit through RunRead; no mutation or locking read at this terminal. #4658: the binding maps ID and name explicitly, so the test mark stays out of the sign-in choice.",
+      "reason": "Read on the root-bound Organisation \u0026 Tenancy capability: modules/organizationtenancy Träger membership query (ADR 0084, #4649). Joins the caller's administrative unit through RunRead; no mutation or locking read at this terminal. #4658: the binding maps ID and name explicitly, so the test mark stays out of the sign-in choice. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListAccountTraegerOrganizations",
       "target_owner": "organization-tenancy"
@@ -28716,7 +28683,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.TraegerMemberships.ListAccountTraegerOrganizations",
-      "reason": "Read on the root-bound Organisation \u0026 Tenancy capability: modules/organizationtenancy Träger membership query (ADR 0084, #4649). Joins the caller's administrative unit through RunRead; no mutation or locking read at this terminal. #4658: the binding maps ID and name explicitly, so the test mark stays out of the sign-in choice.",
+      "reason": "Read on the root-bound Organisation \u0026 Tenancy capability: modules/organizationtenancy Träger membership query (ADR 0084, #4649). Joins the caller's administrative unit through RunRead; no mutation or locking read at this terminal. #4658: the binding maps ID and name explicitly, so the test mark stays out of the sign-in choice. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerMembershipQuery.ListAccountTraegerOrganizations",
       "target_owner": "organization-tenancy"
@@ -28747,7 +28714,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.TraegerMemberships.LiveTraegers",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Organization.IsDeleted. ADR 0216: a deleted Träger opens no parent session.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Organization.IsDeleted. ADR 0216: a deleted Träger opens no parent session. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Organization.IsDeleted",
       "target_owner": "organization-tenancy"

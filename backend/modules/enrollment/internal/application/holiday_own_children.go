@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Children of the hosting school itself in the weeks it hosts (#6678, ADR
@@ -223,7 +224,7 @@ func (h *HolidayGuests) HolidayStudentRegistrations(ctx context.Context, host en
 
 func ownChildRegistration(match ownChildMatch) enrollment.HolidayStudentRegistration {
 	entry := enrollment.HolidayStudentRegistration{
-		WeekID: match.Week.ID, PeriodName: match.Week.PeriodName, StartsOn: match.Week.StartsOn, EndsOn: match.Week.EndsOn,
+		WeekID: ident.ID(match.Week.ID), PeriodName: match.Week.PeriodName, StartsOn: match.Week.StartsOn, EndsOn: match.Week.EndsOn,
 		Days: match.Days, TimeModelName: match.TimeModelName, TimeModelStarts: match.TimeModelStarts, TimeModelEnds: match.TimeModelEnds,
 		Lunch:     match.Lunch,
 		Emergency: match.Emergency, Pickup: match.Pickup,
@@ -258,10 +259,10 @@ func (h *HolidayGuests) HolidayOwnChildAssignments(ctx context.Context, host enr
 		if match.Week.ID != weekID {
 			continue
 		}
-		assignment := enrollment.HolidayOwnChildAssignment{ChildID: match.ChildID, Assignment: match.assignment}
+		assignment := enrollment.HolidayOwnChildAssignment{ChildID: ident.ID(match.ChildID), Assignment: match.assignment}
 		if match.assignment == enrollment.HolidayOwnChildMatched {
 			studentID := match.studentID
-			assignment.StudentID = &studentID
+			assignment.StudentID = (*ident.ID)(&studentID)
 		}
 		assignments = append(assignments, assignment)
 	}
@@ -297,7 +298,7 @@ func (h *HolidayGuests) HolidayHomeSchoolBookings(ctx context.Context, host enro
 		studentID, assignment, _ := matcher.match(identities[i], bookedDays(booking.Days, booking.StartsOn, booking.EndsOn))
 		booking.Assignment = assignment
 		if assignment == enrollment.HolidayOwnChildMatched {
-			booking.StudentID = &studentID
+			booking.StudentID = (*ident.ID)(&studentID)
 		}
 	}
 	if err := h.log.RecordHolidayGuestAccess(ctx, homeSchoolAccess(host, bookings)); err != nil {
@@ -317,10 +318,10 @@ func homeSchoolAccess(host enrollment.HolidayHost, bookings []enrollment.Holiday
 	}
 	seen, children := map[int64]bool{}, map[int64]bool{}
 	for _, booking := range bookings {
-		children[booking.ChildID] = true
-		if !seen[booking.WeekID] {
-			seen[booking.WeekID] = true
-			access.WeekIDs = append(access.WeekIDs, booking.WeekID)
+		children[booking.ChildID.Int64()] = true
+		if !seen[booking.WeekID.Int64()] {
+			seen[booking.WeekID.Int64()] = true
+			access.WeekIDs = append(access.WeekIDs, booking.WeekID.Int64())
 		}
 		if booking.StartsOn.Before(access.StartsOn) {
 			access.StartsOn = booking.StartsOn

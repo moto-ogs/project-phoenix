@@ -86,16 +86,21 @@ func (c withdrawalContact) details(withPhone bool) string {
 
 // withdrawalNoticeParagraphs is the model notice for a service contract.
 func withdrawalNoticeParagraphs(contact withdrawalContact) []string {
+	// Each paragraph carries its own marker: the check covers one text per marker.
 	return []string{
 		"Widerrufsrecht: Sie haben das Recht, binnen " + withdrawalDays + " Tagen ohne Angabe von Gründen diesen Vertrag zu widerrufen. " +
 			"Die Widerrufsfrist beträgt " + withdrawalDays + " Tage ab dem Tag des Vertragsabschlusses.",
+		// sie-anrede-erlaubt (ADR 0294): gesetzliche Muster-Widerrufsbelehrung (Anlage 1 zu Art. 246a EGBGB), wörtlich.
 		"Um Ihr Widerrufsrecht auszuüben, müssen Sie uns (" + contact.details(true) + ") mittels einer eindeutigen Erklärung " +
 			"(z. B. ein mit der Post versandter Brief oder E-Mail) über Ihren Entschluss, diesen Vertrag zu widerrufen, informieren. " +
 			"Sie können dafür das beigefügte Muster-Widerrufsformular verwenden, das jedoch nicht vorgeschrieben ist.",
+		// sie-anrede-erlaubt (ADR 0294): gesetzliche Muster-Widerrufsbelehrung (Anlage 1 zu Art. 246a EGBGB), wörtlich.
 		"Sie können Ihr Widerrufsrecht auch online in der moto Eltern-App beim Vertrag mit der Schaltfläche „Vertrag widerrufen“ ausüben. " +
 			"Wenn Sie diese Online-Funktion nutzen, übermitteln wir Ihnen auf einem dauerhaften Datenträger (z. B. durch eine E-Mail) " +
 			"unverzüglich eine Eingangsbestätigung mit Informationen zum Inhalt der Widerrufserklärung sowie dem Datum und der Uhrzeit ihres Eingangs.",
+		// sie-anrede-erlaubt (ADR 0294): gesetzliche Muster-Widerrufsbelehrung (Anlage 1 zu Art. 246a EGBGB), wörtlich.
 		"Zur Wahrung der Widerrufsfrist reicht es aus, dass Sie die Mitteilung über die Ausübung des Widerrufsrechts vor Ablauf der Widerrufsfrist absenden.",
+		// sie-anrede-erlaubt (ADR 0294): gesetzliche Muster-Widerrufsbelehrung (Anlage 1 zu Art. 246a EGBGB), wörtlich.
 		"Folgen des Widerrufs: Wenn Sie diesen Vertrag widerrufen, haben wir Ihnen alle Zahlungen, die wir von Ihnen erhalten haben, " +
 			"einschließlich der Lieferkosten (mit Ausnahme der zusätzlichen Kosten, die sich daraus ergeben, dass Sie eine andere Art der " +
 			"Lieferung als die von uns angebotene, günstigste Standardlieferung gewählt haben), " +
@@ -103,6 +108,7 @@ func withdrawalNoticeParagraphs(contact withdrawalContact) []string {
 			"dieses Vertrags bei uns eingegangen ist. Für diese Rückzahlung verwenden wir dasselbe Zahlungsmittel, das Sie bei der ursprünglichen " +
 			"Transaktion eingesetzt haben, es sei denn, mit Ihnen wurde ausdrücklich etwas anderes vereinbart; in keinem Fall werden Ihnen " +
 			"wegen dieser Rückzahlung Entgelte berechnet.",
+		// sie-anrede-erlaubt (ADR 0294): gesetzliche Muster-Widerrufsbelehrung (Anlage 1 zu Art. 246a EGBGB), wörtlich.
 		"Haben Sie verlangt, dass die Dienstleistungen während der Widerrufsfrist beginnen sollen, so haben Sie uns einen angemessenen " +
 			"Betrag zu zahlen, der dem Anteil der bis zu dem Zeitpunkt, zu dem Sie uns von der Ausübung des Widerrufsrechts hinsichtlich " +
 			"dieses Vertrags unterrichten, bereits erbrachten Dienstleistungen im Vergleich zum Gesamtumfang der im Vertrag vorgesehenen " +
@@ -121,7 +127,7 @@ func withdrawalBlocks(record ContractRecord, contact withdrawalContact) []Letter
 	return []LetterBlock{
 		{Heading: "Widerrufsbelehrung", Text: strings.Join(withdrawalNoticeParagraphs(contact), "\n\n")},
 		{Heading: "Beginn vor Ende der Widerrufsfrist", Text: early},
-		{Heading: "Muster-Widerrufsformular", Text: withdrawalForm("Betreuungsvertrag Nr. "+strconv.FormatInt(record.Summary.ID, 10), contact)},
+		{Heading: "Muster-Widerrufsformular", Text: withdrawalForm("Betreuungsvertrag Nr. "+strconv.FormatInt(record.Summary.ID.Int64(), 10), contact)},
 	}
 }
 
@@ -129,6 +135,7 @@ func withdrawalBlocks(record ContractRecord, contact withdrawalContact) []Letter
 // addressee and the service filled in.
 func withdrawalForm(service string, contact withdrawalContact) string {
 	return strings.Join([]string{
+		// sie-anrede-erlaubt (ADR 0294): gesetzliches Muster-Widerrufsformular (Anlage 2 zu Art. 246a EGBGB), wörtlich.
 		"(Wenn Sie den Vertrag widerrufen wollen, dann füllen Sie bitte dieses Formular aus und senden Sie es zurück.)",
 		"– An " + contact.details(false) + ":",
 		"– Hiermit widerrufe(n) ich/wir (*) den von mir/uns (*) abgeschlossenen Vertrag über die Erbringung der folgenden Dienstleistung (*): " + service,

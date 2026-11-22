@@ -221,7 +221,7 @@ func TestLogin_Success(t *testing.T) {
 	assert.Equal(t, "refresh-token", data["refresh_token"])
 
 	operatorData := data["operator"].(map[string]interface{})
-	assert.Equal(t, float64(1), operatorData["id"])
+	assert.Equal(t, "1", operatorData["id"], "the operator id travels as a string")
 	assert.Equal(t, "test@example.com", operatorData["email"])
 	assert.Equal(t, "Test Operator", operatorData["display_name"])
 }

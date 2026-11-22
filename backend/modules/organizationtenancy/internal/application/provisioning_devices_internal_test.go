@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -80,10 +81,10 @@ func TestProvisioningListDevices(t *testing.T) {
 			"sorted by organisation, school and device id; deleted schools and organisations are hidden")
 
 		never, offline, online := devices[1], devices[2], devices[3]
-		assert.Equal(t, int64(3), never.ID)
-		assert.Equal(t, int64(10), never.SchoolID)
+		assert.Equal(t, ident.ID(int64(3)), never.ID)
+		assert.Equal(t, ident.ID(int64(10)), never.SchoolID)
 		assert.Equal(t, "Burbach", never.SchoolName)
-		assert.Equal(t, int64(1), never.OrganizationID)
+		assert.Equal(t, ident.ID(int64(1)), never.OrganizationID)
 		assert.Equal(t, "Talent OGS", never.OrganizationName)
 		assert.Equal(t, "terminal", never.DeviceType)
 		assert.Equal(t, fixedTime, never.CreatedAt)
@@ -118,7 +119,7 @@ func TestProvisioningListDevices(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, devices, 3)
 		for _, device := range devices {
-			assert.Equal(t, int64(1), device.OrganizationID)
+			assert.Equal(t, ident.ID(int64(1)), device.OrganizationID)
 		}
 	})
 
@@ -254,14 +255,14 @@ func TestProvisioningCreateDevice(t *testing.T) {
 		require.Len(t, h.devices.created, 1)
 		assert.Equal(t, int64(10), h.devices.created[0].TenantID)
 
-		entry := h.onlyAudit(t, domain.AuditActionCreate, domain.AuditResourceDevice, device.ID)
+		entry := h.onlyAudit(t, domain.AuditActionCreate, domain.AuditResourceDevice, device.ID.Int64())
 		assert.Equal(t, map[string]any{
 			"device_id": "BURBACH-1", "device_type": "terminal", "school_id": float64(10), "api_key_mode": "auto",
 		}, auditChanges(t, entry))
 		require.Len(t, h.devices.lifecycle, 1)
 		created := h.devices.lifecycle[0]
 		assert.Equal(t, domain.DeviceLifecycleCreated, created.Action)
-		assert.Equal(t, device.ID, created.DeviceRowID)
+		assert.Equal(t, device.ID.Int64(), created.DeviceRowID)
 		assert.Equal(t, testOperatorID, created.OperatorID)
 		assert.Equal(t, "BURBACH-1", *created.Changes["device_id"][1])
 		assert.Equal(t, "Eingang", *created.Changes["name"][1])
@@ -1147,9 +1148,9 @@ func TestProvisioningTransferDevice(t *testing.T) {
 			Name: source.Name, Status: domain.DeviceStatusActive, APIKeyHash: &originalHash, MaskedAPIKey: source.MaskedAPIKey,
 		}, target)
 
-		assert.Equal(t, int64(501), result.ID)
+		assert.Equal(t, ident.ID(int64(501)), result.ID)
 		assert.Equal(t, "BURBACH-2", result.DeviceID)
-		assert.Equal(t, int64(20), result.SchoolID)
+		assert.Equal(t, ident.ID(int64(20)), result.SchoolID)
 		assert.Equal(t, "Walbach", result.SchoolName)
 		assert.Nil(t, result.LastSeen, "the new row starts without the source's presence")
 		assert.Nil(t, result.APIKey)
@@ -1203,7 +1204,7 @@ func TestProvisioningTransferDevice(t *testing.T) {
 		result, err := h.svc.TransferDevice(context.Background(), 200, 20, testOperatorID, operatorIP)
 
 		require.NoError(t, err)
-		assert.Equal(t, int64(20), result.SchoolID)
+		assert.Equal(t, ident.ID(int64(20)), result.SchoolID)
 	})
 
 	for name, tc := range map[string]struct {

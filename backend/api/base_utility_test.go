@@ -789,8 +789,9 @@ func TestRegisterRoutes_UsersRoutesRunThroughProtectedGroup(t *testing.T) {
 	router.Use(testpkg.TenantRuntimeMiddleware(t, db))
 	router.Mount("/api/users", resource.Router())
 	person := testpkg.CreateTestPerson(t, db, "Wired", "Route")
+	personPath := "/api/users/" + strconv.FormatInt(person.ID, 10)
 
-	anonymous := httptest.NewRequest(http.MethodGet, "/api/users", nil)
+	anonymous := httptest.NewRequest(http.MethodGet, personPath, nil)
 	anonymousRecorder := httptest.NewRecorder()
 	router.ServeHTTP(anonymousRecorder, anonymous)
 	assert.Equal(t, http.StatusUnauthorized, anonymousRecorder.Code)
@@ -799,7 +800,7 @@ func TestRegisterRoutes_UsersRoutesRunThroughProtectedGroup(t *testing.T) {
 	forbiddenClaims.Roles = []string{"user"}
 	forbiddenClaims.IsAdmin = false
 	forbiddenClaims.Permissions = nil
-	forbidden := testutil.NewAuthenticatedRequest(t, http.MethodGet, "/api/users", nil,
+	forbidden := testutil.NewAuthenticatedRequest(t, http.MethodGet, personPath, nil,
 		testutil.WithJWTBearer(testutil.MintTestJWT(t, forbiddenClaims)))
 	forbiddenRecorder := httptest.NewRecorder()
 	router.ServeHTTP(forbiddenRecorder, forbidden)
@@ -809,7 +810,7 @@ func TestRegisterRoutes_UsersRoutesRunThroughProtectedGroup(t *testing.T) {
 	allowedClaims.Roles = []string{"user"}
 	allowedClaims.IsAdmin = false
 	allowedClaims.Permissions = []string{"users:read"}
-	allowed := testutil.NewAuthenticatedRequest(t, http.MethodGet, "/api/users/"+strconv.FormatInt(person.ID, 10), nil,
+	allowed := testutil.NewAuthenticatedRequest(t, http.MethodGet, personPath, nil,
 		testutil.WithJWTBearer(testutil.MintTestJWT(t, allowedClaims)))
 	allowedRecorder := httptest.NewRecorder()
 	router.ServeHTTP(allowedRecorder, allowed)

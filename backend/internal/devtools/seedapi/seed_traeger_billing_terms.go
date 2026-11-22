@@ -53,7 +53,7 @@ func seedBillingTerms(client *Client, auth AuthRef, runID int64, month calendar.
 
 // seedRunInvoice is an invoice of the monthly run as the seed reads it.
 type seedRunInvoice = struct {
-	ContractID  int64  `json:"contract_id"`
+	ContractID  apiID  `json:"contract_id"`
 	FamilyEmail string `json:"family_email"`
 	Recipient   struct {
 		LastName string `json:"last_name"`
@@ -123,7 +123,7 @@ func seedSEPAMandates(client *Client, auth AuthRef, invoices []seedRunInvoice) e
 			return fmt.Errorf("keep the SEPA mandate of a family: %w", err)
 		}
 		if i == 1 {
-			if err := seedReplacedMandate(client, auth, raw, mandate, invoice.ContractID); err != nil {
+			if err := seedReplacedMandate(client, auth, raw, mandate, int64(invoice.ContractID)); err != nil {
 				return err
 			}
 		}
@@ -133,7 +133,7 @@ func seedSEPAMandates(client *Client, auth AuthRef, invoices []seedRunInvoice) e
 
 // seedImportedMandates imports the mandate of the first family, if any.
 func seedImportedMandates(client *Client, auth AuthRef, invoices []struct {
-	ContractID  int64  `json:"contract_id"`
+	ContractID  apiID  `json:"contract_id"`
 	FamilyEmail string `json:"family_email"`
 	Recipient   struct {
 		LastName string `json:"last_name"`
@@ -188,7 +188,7 @@ const (
 func seedReplacedMandate(client *Client, auth AuthRef, raw []byte, mandate map[string]any, contractID int64) error {
 	var created struct {
 		Data struct {
-			ID int64 `json:"id"`
+			ID apiID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &created); err != nil {

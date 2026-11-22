@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The role and permission routes call the Identity & Access role
@@ -18,7 +19,7 @@ import (
 // toRoleResponse maps a role to its API response representation.
 func toRoleResponse(role identityaccess.Role) *RoleResponse {
 	return &RoleResponse{
-		ID:           role.ID,
+		ID:           ident.ID(role.ID),
 		Name:         role.Name,
 		Description:  role.Description,
 		IsSystem:     role.IsSystem,
@@ -32,7 +33,7 @@ func toRoleResponse(role identityaccess.Role) *RoleResponse {
 // toPermissionResponse maps a permission to its API response representation.
 func toPermissionResponse(permission identityaccess.Permission) *PermissionResponse {
 	return &PermissionResponse{
-		ID:          permission.ID,
+		ID:          ident.ID(permission.ID),
 		Name:        permission.Name,
 		Description: permission.Description,
 		Resource:    permission.Resource,
@@ -299,22 +300,6 @@ func (rs *Resource) createPermission(w http.ResponseWriter, r *http.Request) {
 	}
 
 	common.Respond(w, r, http.StatusCreated, toPermissionResponse(permission), "Permission created successfully")
-}
-
-// getPermissionByID handles getting a permission by ID
-func (rs *Resource) getPermissionByID(w http.ResponseWriter, r *http.Request) {
-	id, ok := common.ParseIntIDWithError(w, r, "id", common.MsgInvalidPermissionID)
-	if !ok {
-		return
-	}
-
-	permission, err := rs.Sessions.GetPermission(r.Context(), int64(id))
-	if err != nil {
-		common.RenderError(w, r, common.ErrorNotFound(errors.New("permission not found")))
-		return
-	}
-
-	common.Respond(w, r, http.StatusOK, toPermissionResponse(permission), "Permission retrieved successfully")
 }
 
 // listPermissions handles listing permissions

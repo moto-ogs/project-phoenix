@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The stored originals of the Jahresbescheide and their delivery (#6347,
@@ -80,7 +81,7 @@ type noticeLetterRun struct {
 
 func (c noticeLetterRun) byContract(contractID int64) (parentbilling.CareNotice, bool) {
 	for _, notice := range c.notices {
-		if notice.ContractID == contractID {
+		if notice.ContractID == ident.ID(contractID) {
 			return notice, true
 		}
 	}
@@ -106,17 +107,17 @@ func (l *CareNoticeLetters) load(ctx context.Context, reviewer parentbilling.Hol
 	}
 	current := noticeLetterRun{run: run, records: map[int64]parentbilling.CareNoticeLetterRecord{},
 		sends: map[int64][]parentbilling.CareNoticeLetterSend{}}
-	if current.notices, err = l.store.CareNoticeRunNotices(ctx, organizationID, run.ID); err != nil {
+	if current.notices, err = l.store.CareNoticeRunNotices(ctx, organizationID, run.ID.Int64()); err != nil {
 		return noticeLetterRun{}, err
 	}
-	records, err := l.store.CareNoticeLetterRecords(ctx, organizationID, run.ID, withFiles)
+	records, err := l.store.CareNoticeLetterRecords(ctx, organizationID, run.ID.Int64(), withFiles)
 	if err != nil {
 		return noticeLetterRun{}, err
 	}
 	for _, record := range records {
 		current.records[record.NoticeID] = record
 	}
-	sends, err := l.store.CareNoticeLetterMailings(ctx, organizationID, run.ID)
+	sends, err := l.store.CareNoticeLetterMailings(ctx, organizationID, run.ID.Int64())
 	if err != nil {
 		return noticeLetterRun{}, err
 	}
@@ -149,7 +150,7 @@ func (l *CareNoticeLetters) CreateCareNoticeLetters(ctx context.Context, reviewe
 	}
 	var missing []parentbilling.CareNotice
 	for _, notice := range current.notices {
-		if _, ok := current.records[notice.ID]; !ok {
+		if _, ok := current.records[notice.ID.Int64()]; !ok {
 			missing = append(missing, notice)
 		}
 	}
@@ -169,14 +170,14 @@ func (l *CareNoticeLetters) CreateCareNoticeLetters(ctx context.Context, reviewe
 		if err != nil {
 			return parentbilling.CareNoticeLetters{}, fmt.Errorf("parent billing: render notice letter: %w", err)
 		}
-		record, err := l.store.InsertCareNoticeLetter(ctx, reviewer.OrganizationID, current.run.ID, notice.ID, file)
+		record, err := l.store.InsertCareNoticeLetter(ctx, reviewer.OrganizationID, current.run.ID.Int64(), notice.ID.Int64(), file)
 		if err != nil {
 			return parentbilling.CareNoticeLetters{}, err
 		}
-		current.records[notice.ID] = record
-		created = append(created, notice.ID)
+		current.records[notice.ID.Int64()] = record
+		created = append(created, notice.ID.Int64())
 	}
-	if err := l.store.InsertCareNoticeRunEvent(ctx, reviewer.OrganizationID, current.run.ID, reviewer.AccountID, noticeEventLetters,
+	if err := l.store.InsertCareNoticeRunEvent(ctx, reviewer.OrganizationID, current.run.ID.Int64(), reviewer.AccountID, noticeEventLetters,
 		map[string]any{"notice_ids": created, "contract_ids": noticeContracts(missing)}); err != nil {
 		return parentbilling.CareNoticeLetters{}, fmt.Errorf("parent billing: record notice letters: %w", err)
 	}
@@ -207,7 +208,7 @@ func (l *CareNoticeLetters) CareNoticePDF(ctx context.Context, reviewer parentbi
 	if err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
-	notices, err := l.store.CareNoticeRunNotices(ctx, reviewer.OrganizationID, run.ID)
+	notices, err := l.store.CareNoticeRunNotices(ctx, reviewer.OrganizationID, run.ID.Int64())
 	if err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
@@ -216,11 +217,11 @@ func (l *CareNoticeLetters) CareNoticePDF(ctx context.Context, reviewer parentbi
 	if !ok {
 		return parentbilling.BillingLetterFile{}, parentbilling.ErrCareNoticeNotFound
 	}
-	record, err := l.store.CareNoticeLetterRecord(ctx, reviewer.OrganizationID, run.ID, notice.ID)
+	record, err := l.store.CareNoticeLetterRecord(ctx, reviewer.OrganizationID, run.ID.Int64(), notice.ID.Int64())
 	if err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
-	if err := l.recordRead(ctx, reviewer, run.ID, map[string]any{"letter": "download", "letter_id": record.ID,
+	if err := l.recordRead(ctx, reviewer, run.ID.Int64(), map[string]any{"letter": "download", "letter_id": record.ID,
 		"contract_ids": []int64{contractID}}); err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
@@ -243,7 +244,7 @@ func (l *CareNoticeLetters) MailCareNoticeLetters(ctx context.Context, reviewer 
 	var series parentbilling.BillingLetterSeries
 	var queued []int64
 	for _, notice := range current.notices {
-		record, ok := current.records[notice.ID]
+		record, ok := current.records[notice.ID.Int64()]
 		switch {
 		case !ok:
 			continue
@@ -269,7 +270,7 @@ func (l *CareNoticeLetters) MailCareNoticeLetters(ctx context.Context, reviewer 
 		series.Queued++
 		queued = append(queued, record.ID)
 	}
-	if err := l.store.InsertCareNoticeRunEvent(ctx, reviewer.OrganizationID, current.run.ID, reviewer.AccountID, noticeEventMail,
+	if err := l.store.InsertCareNoticeRunEvent(ctx, reviewer.OrganizationID, current.run.ID.Int64(), reviewer.AccountID, noticeEventMail,
 		map[string]any{"queued": series.Queued, "already": series.Already, "without_email": series.WithoutEmail,
 			"recipient_changed": series.RecipientChanged, "letter_ids": queued}); err != nil {
 		return parentbilling.BillingLetterSeries{}, fmt.Errorf("parent billing: record notice mails: %w", err)
@@ -290,14 +291,14 @@ func (l *CareNoticeLetters) MailCareNoticeLetter(ctx context.Context, reviewer p
 	if !ok {
 		return parentbilling.CareNoticeMailing{}, parentbilling.ErrCareNoticeNotFound
 	}
-	record, ok := current.records[notice.ID]
+	record, ok := current.records[notice.ID.Int64()]
 	if !ok {
 		return parentbilling.CareNoticeMailing{}, parentbilling.ErrBillingLettersMissing
 	}
 	if strings.TrimSpace(notice.Recipient.Email) == "" {
 		return parentbilling.CareNoticeMailing{}, parentbilling.ErrRecipientEmailMissing
 	}
-	states, err := l.states(ctx, reviewer.OrganizationID, current.run.ID)
+	states, err := l.states(ctx, reviewer.OrganizationID, current.run.ID.Int64())
 	if err != nil {
 		return parentbilling.CareNoticeMailing{}, err
 	}
@@ -305,7 +306,7 @@ func (l *CareNoticeLetters) MailCareNoticeLetter(ctx context.Context, reviewer p
 	if err := l.refuseWhileWaiting(ctx, last); err != nil {
 		return parentbilling.CareNoticeMailing{}, err
 	}
-	recipients, err := effectiveRecipients(ctx, l.recipients, l.store, reviewer, []int64{notice.ContractID})
+	recipients, err := effectiveRecipients(ctx, l.recipients, l.store, reviewer, []int64{notice.ContractID.Int64()})
 	if err != nil {
 		return parentbilling.CareNoticeMailing{}, err
 	}
@@ -320,7 +321,7 @@ func (l *CareNoticeLetters) MailCareNoticeLetter(ctx context.Context, reviewer p
 		return parentbilling.CareNoticeMailing{}, err
 	}
 	sends := current.sends[record.ID]
-	if err := l.store.InsertCareNoticeRunEvent(ctx, reviewer.OrganizationID, current.run.ID, reviewer.AccountID, noticeEventMail,
+	if err := l.store.InsertCareNoticeRunEvent(ctx, reviewer.OrganizationID, current.run.ID.Int64(), reviewer.AccountID, noticeEventMail,
 		map[string]any{"queued": 1, "letter_ids": []int64{record.ID}}); err != nil {
 		return parentbilling.CareNoticeMailing{}, fmt.Errorf("parent billing: record notice mail: %w", err)
 	}
@@ -363,7 +364,7 @@ func (l *CareNoticeLetters) PrintCareNoticeLetters(ctx context.Context, reviewer
 	var pdfs [][]byte
 	var printed []int64
 	for _, notice := range current.notices {
-		record, ok := current.records[notice.ID]
+		record, ok := current.records[notice.ID.Int64()]
 		if !ok || (only == parentbilling.CareLetterPrintWithoutEmail && strings.TrimSpace(notice.Recipient.Email) != "") {
 			continue
 		}
@@ -377,7 +378,7 @@ func (l *CareNoticeLetters) PrintCareNoticeLetters(ctx context.Context, reviewer
 	if err != nil {
 		return parentbilling.BillingLetterFile{}, fmt.Errorf("parent billing: combine notice letters: %w", err)
 	}
-	if err := l.recordRead(ctx, reviewer, current.run.ID, map[string]any{"letter": "print", "only": only, "letter_ids": printed,
+	if err := l.recordRead(ctx, reviewer, current.run.ID.Int64(), map[string]any{"letter": "print", "only": only, "letter_ids": printed,
 		"contract_ids": noticeContracts(current.notices)}); err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
@@ -401,7 +402,7 @@ func (l *CareNoticeLetters) mailRun(ctx context.Context, reviewer parentbilling.
 func (l *CareNoticeLetters) send(ctx context.Context, reviewer parentbilling.HolidayReviewer, current *noticeLetterRun,
 	notice parentbilling.CareNotice, traeger string,
 ) error {
-	record := current.records[notice.ID]
+	record := current.records[notice.ID.Int64()]
 	recipient := strings.TrimSpace(notice.Recipient.Email)
 	earlier := len(current.sends[record.ID])
 	mailKind := parentbilling.MailDocumentCareFeeNotice
@@ -409,7 +410,7 @@ func (l *CareNoticeLetters) send(ctx context.Context, reviewer parentbilling.Hol
 		mailKind = parentbilling.MailDocumentCareChangeNotice
 	}
 	deliveryID, err := l.noticePost.EnqueueCareNoticeLetterMail(ctx, parentbilling.BillingLetterMail{
-		OrganizationID: reviewer.OrganizationID, RunID: current.run.ID, DocumentID: record.ID, Recipient: recipient,
+		OrganizationID: reviewer.OrganizationID, RunID: current.run.ID.Int64(), DocumentID: record.ID, Recipient: recipient,
 		IdempotencyKey: fmt.Sprintf("parent-billing-care-notice-letter:%d:%d", record.ID, earlier+1),
 		GuardianName:   fullName(notice.Recipient.FirstName, notice.Recipient.LastName),
 		TraegerName:    traeger, PeriodName: noticePeriodName(notice), Number: notice.Number,
@@ -418,7 +419,7 @@ func (l *CareNoticeLetters) send(ctx context.Context, reviewer parentbilling.Hol
 	if err != nil {
 		return fmt.Errorf("parent billing: enqueue notice letter mail: %w", err)
 	}
-	send, err := l.store.InsertCareNoticeLetterMailing(ctx, reviewer.OrganizationID, current.run.ID, reviewer.AccountID,
+	send, err := l.store.InsertCareNoticeLetterMailing(ctx, reviewer.OrganizationID, current.run.ID.Int64(), reviewer.AccountID,
 		parentbilling.CareNoticeLetterSend{LetterID: record.ID, DeliveryID: deliveryID, RecipientEmail: recipient})
 	if err != nil {
 		return err
@@ -445,13 +446,13 @@ func noticePeriodName(notice parentbilling.CareNotice) string {
 // the effective billing address of the contract's family. A notice has no
 // change of its own recipient, so the party of today decides alone.
 func sameNoticeRecipient(notice parentbilling.CareNotice, recipients map[int64]parentbilling.CareRecipient) bool {
-	now, ok := recipients[notice.ContractID]
+	now, ok := recipients[notice.ContractID.Int64()]
 	return ok && strings.EqualFold(strings.TrimSpace(now.Email), strings.TrimSpace(notice.Recipient.Email))
 }
 
 // overview builds the state of every notice and records the read.
 func (l *CareNoticeLetters) overview(ctx context.Context, reviewer parentbilling.HolidayReviewer, current noticeLetterRun) (parentbilling.CareNoticeLetters, error) {
-	states, err := l.states(ctx, reviewer.OrganizationID, current.run.ID)
+	states, err := l.states(ctx, reviewer.OrganizationID, current.run.ID.Int64())
 	if err != nil {
 		return parentbilling.CareNoticeLetters{}, err
 	}
@@ -460,7 +461,7 @@ func (l *CareNoticeLetters) overview(ctx context.Context, reviewer parentbilling
 		mailings = append(mailings, noticeMailing(current, notice, states))
 	}
 	l.readProviderBlocks(ctx, mailings)
-	if err := l.recordRead(ctx, reviewer, current.run.ID, map[string]any{"letters": "status",
+	if err := l.recordRead(ctx, reviewer, current.run.ID.Int64(), map[string]any{"letters": "status",
 		"contract_ids": noticeContracts(current.notices)}); err != nil {
 		return parentbilling.CareNoticeLetters{}, err
 	}
@@ -484,7 +485,7 @@ func noticeMailing(current noticeLetterRun, notice parentbilling.CareNotice, sta
 	if notice.AmendedBy != nil {
 		entry.AmendedBy = notice.AmendedBy.Number
 	}
-	record, ok := current.records[notice.ID]
+	record, ok := current.records[notice.ID.Int64()]
 	if !ok {
 		return entry
 	}

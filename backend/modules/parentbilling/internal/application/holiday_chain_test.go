@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The rounding and the ranking of the chain are not reachable through the
@@ -123,7 +124,7 @@ func TestSiblingRuleRanksAcrossTheRegistrationsOfAGroup(t *testing.T) {
 	require.Len(t, tie[1].Children[0].Lines, 2)
 	assert.Equal(t, parentbilling.LineSibling, tie[1].Children[0].Lines[1].Kind)
 	assert.Equal(t, 2, *tie[1].Children[0].Lines[1].ChildRank)
-	assert.Equal(t, laterChild.ID, tie[1].Children[0].ChildID, "a registration holds only its own child")
+	assert.Equal(t, ident.ID(laterChild.ID), tie[1].Children[0].ChildID, "a registration holds only its own child")
 
 	dearer := computeHolidaySiblings([]holidayMember{
 		{children: []parentbilling.HolidayChild{chainChild(1, 1, 10000)}},

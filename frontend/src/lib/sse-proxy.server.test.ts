@@ -94,9 +94,14 @@ it("does not report an aborted SSE request", async () => {
       new DOMException("aborted", "AbortError"),
     ) as typeof fetch;
   const logger = { error: vi.fn(), debug: vi.fn() } as unknown as Logger;
+  // The browser closed the stream: only then does the upstream fetch abort.
+  const browser = new AbortController();
+  browser.abort();
 
   const response = await proxySSEStream(
-    new NextRequest("http://localhost:3000/api/sse/events"),
+    new NextRequest("http://localhost:3000/api/sse/events", {
+      signal: browser.signal,
+    }),
     { token: "test-token", upstreamPath: "/api/sse/events", logger },
   );
 

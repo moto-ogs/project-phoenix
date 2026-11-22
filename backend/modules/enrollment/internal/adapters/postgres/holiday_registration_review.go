@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Review of the holiday registrations by the Träger-Büro (#4663, ADR 0114).
@@ -178,9 +179,9 @@ func holidayReviewDetails(registrations []holidayReviewRegistrationRow, children
 			duplicates = []int64{}
 		}
 		byRegistration[child.RegistrationID] = append(byRegistration[child.RegistrationID], enrollment.HolidayRegistrationChild{
-			ID: child.ID, FirstName: child.FirstName, LastName: child.LastName, BirthDate: child.BirthDate,
-			HomeSchoolID: child.HomeSchoolID, GuestSchoolName: child.GuestSchoolName,
-			Bookings: childBookings[child.ID], DuplicateRegistrationIDs: duplicates,
+			ID: ident.ID(child.ID), FirstName: child.FirstName, LastName: child.LastName, BirthDate: child.BirthDate,
+			HomeSchoolID: (*ident.ID)(child.HomeSchoolID), GuestSchoolName: child.GuestSchoolName,
+			Bookings: childBookings[child.ID], DuplicateRegistrationIDs: ident.IDs(duplicates),
 			HolidayWish: child.HolidayWish, HolidayWishSource: child.HolidayWishSource,
 		})
 	}
@@ -188,7 +189,7 @@ func holidayReviewDetails(registrations []holidayReviewRegistrationRow, children
 	for i, row := range registrations {
 		details[i] = enrollment.HolidayRegistrationDetail{
 			HolidayRegistrationSummary: enrollment.HolidayRegistrationSummary{
-				ID: row.ID, Status: row.Status, SubmittedAt: row.SubmittedAt,
+				ID: ident.ID(row.ID), Status: row.Status, SubmittedAt: row.SubmittedAt,
 				GuardianFirstName: row.GuardianFirstName, GuardianLastName: row.GuardianLastName,
 				GuardianEmail: row.GuardianEmail, GuardianPhone: row.GuardianPhone, BenefitsDeclared: row.BenefitsDeclared,
 				Children: byRegistration[row.ID], RetentionDays: row.RetentionDays,
@@ -329,7 +330,7 @@ func (s *HolidayRegistrationStore) ReadHolidayHistory(ctx context.Context, organ
 			return nil, fmt.Errorf("enrollment postgres: decode holiday registration history: %w", err)
 		}
 		events[i] = enrollment.HolidayRegistrationEvent{
-			Action: row.Action, OccurredAt: row.OccurredAt, ActorAccountID: row.ActorAccountID, Details: details,
+			Action: row.Action, OccurredAt: row.OccurredAt, ActorAccountID: (*ident.ID)(row.ActorAccountID), Details: details,
 		}
 	}
 	return events, nil
@@ -462,7 +463,7 @@ func (s *HolidayRegistrationStore) ReplaceHolidayChildBookings(ctx context.Conte
 	days := make([]string, len(bookings))
 	lunches := make([]bool, len(bookings))
 	for i, booking := range bookings {
-		weekIDs[i], modelIDs[i], days[i], lunches[i] = booking.WeekID, booking.TimeModelID, holidayDaysLiteral(booking.Days), booking.Lunch
+		weekIDs[i], modelIDs[i], days[i], lunches[i] = booking.WeekID.Int64(), booking.TimeModelID.Int64(), holidayDaysLiteral(booking.Days), booking.Lunch
 	}
 	var left []int64
 	if err := db.NewRaw(deleteHolidayChildBookingsQuery, organizationID, childID, pgdialect.Array(weekIDs)).Scan(ctx, &left); err != nil {
@@ -564,7 +565,7 @@ func (s *HolidayRegistrationStore) ReadHolidayAnswers(ctx context.Context, organ
 			continue
 		}
 		registration.Children = append(registration.Children, enrollment.HolidayChildAnswers{
-			ChildID: child.ID, CustomData: answersOrEmpty(child.CustomData),
+			ChildID: ident.ID(child.ID), CustomData: answersOrEmpty(child.CustomData),
 		})
 		answers[child.RegistrationID] = registration
 	}
@@ -580,7 +581,7 @@ func holidayChildBookings(bookings []holidayReviewBookingRow) (map[int64][]enrol
 			return nil, err
 		}
 		childBookings[booking.ChildID] = append(childBookings[booking.ChildID], enrollment.HolidayRegistrationBooking{
-			WeekID: booking.WeekID, TimeModelID: booking.TimeModelID, Placement: booking.Placement,
+			WeekID: ident.ID(booking.WeekID), TimeModelID: ident.ID(booking.TimeModelID), Placement: booking.Placement,
 			WaitlistPosition: booking.WaitlistPosition, PromotedAt: booking.PromotedAt, Days: days, Lunch: booking.Lunch,
 		})
 	}

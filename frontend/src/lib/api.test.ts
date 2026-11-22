@@ -48,7 +48,7 @@ describe("api.ts helper functions", () => {
   });
 
   describe("groupService.getGroups", () => {
-    it("rejects a refused list in strict mode instead of caching an empty success", async () => {
+    it("rejects a refused list instead of caching an empty success (#2353)", async () => {
       const { fetchWithRetry } = await import("./api-helpers");
       vi.mocked(fetchWithRetry).mockResolvedValue({
         data: null,
@@ -58,9 +58,9 @@ describe("api.ts helper functions", () => {
       const { groupService } = await import("./api");
       const restore = setupBrowserEnv();
       try {
-        await expect(
-          groupService.getGroups({}, { strict: true }),
-        ).rejects.toMatchObject({ status: 403 });
+        await expect(groupService.getGroups()).rejects.toMatchObject({
+          status: 403,
+        });
       } finally {
         restore();
       }
@@ -71,7 +71,7 @@ describe("api.ts helper functions", () => {
       ["rooms", 401],
       ["rooms", 403],
     ] as const)(
-      "keeps code, details and request ID of a strict %s refusal (%s)",
+      "keeps code, details and request ID of a %s refusal (%s)",
       async (resource, status) => {
         const { fetchWithRetry } = await import("./api-helpers");
         vi.mocked(fetchWithRetry).mockResolvedValue({
@@ -91,8 +91,8 @@ describe("api.ts helper functions", () => {
         try {
           const read =
             resource === "groups"
-              ? groupService.getGroups({}, { strict: true })
-              : roomService.getRooms({}, { strict: true });
+              ? groupService.getGroups()
+              : roomService.getRooms();
           await expect(read).rejects.toMatchObject({
             status,
             code: "module.not_booked",
@@ -104,23 +104,30 @@ describe("api.ts helper functions", () => {
         }
       },
     );
-    it("returns empty array when response is null", async () => {
-      const { fetchWithRetry } = await import("./api-helpers");
-      vi.mocked(fetchWithRetry).mockResolvedValue({
-        data: null,
-        response: null,
-      });
+    // #2353: a refusal or an unreadable body is an error, never "no groups".
+    it.each([
+      ["a refusal", { data: null, response: null }],
+      ["a null body", { data: null, response: new Response() }],
+      [
+        "an object without a list",
+        { data: { rows: [] }, response: new Response() },
+      ],
+    ])(
+      "rejects %s instead of resolving to no groups",
+      async (_case, result) => {
+        const { fetchWithRetry } = await import("./api-helpers");
+        vi.mocked(fetchWithRetry).mockResolvedValue(result);
 
-      const { groupService } = await import("./api");
+        const { groupService } = await import("./api");
 
-      const restore = setupBrowserEnv();
-      try {
-        const result = await groupService.getGroups();
-        expect(result).toEqual([]);
-      } finally {
-        restore();
-      }
-    });
+        const restore = setupBrowserEnv();
+        try {
+          await expect(groupService.getGroups()).rejects.toBeInstanceOf(Error);
+        } finally {
+          restore();
+        }
+      },
+    );
 
     it("parses wrapped API response format", async () => {
       const { fetchWithRetry } = await import("./api-helpers");
@@ -197,25 +204,6 @@ describe("api.ts helper functions", () => {
       }
     });
 
-    it("handles non-array response gracefully", async () => {
-      const { fetchWithRetry } = await import("./api-helpers");
-      vi.mocked(fetchWithRetry).mockResolvedValue({
-        data: null,
-        response: new Response(),
-      });
-
-      const { roomService } = await import("./api");
-      const { mapRoomsResponse } = await import("./room-helpers");
-
-      const restore = setupBrowserEnv();
-      try {
-        await roomService.getRooms();
-        expect(mapRoomsResponse).toHaveBeenCalledWith([]);
-      } finally {
-        restore();
-      }
-    });
-
     it("unwraps paginated room responses before mapping", async () => {
       const wrappedRooms = {
         data: [
@@ -247,7 +235,8 @@ describe("api.ts helper functions", () => {
       }
     });
 
-    it("treats wrapped room responses with non-array data as invalid", async () => {
+    // #2353: an invalid answer rejects instead of mapping to no rooms.
+    it("rejects wrapped room responses with non-array data as invalid", async () => {
       const { fetchWithRetry } = await import("./api-helpers");
       vi.mocked(fetchWithRetry).mockResolvedValue({
         data: { data: { id: 101, name: "Not a list" } },
@@ -259,8 +248,10 @@ describe("api.ts helper functions", () => {
 
       const restore = setupBrowserEnv();
       try {
-        await roomService.getRooms();
-        expect(mapRoomsResponse).toHaveBeenCalledWith([]);
+        await expect(roomService.getRooms()).rejects.toMatchObject({
+          status: 500,
+        });
+        expect(mapRoomsResponse).not.toHaveBeenCalled();
       } finally {
         restore();
       }
@@ -331,10 +322,15 @@ describe("api.ts helper functions", () => {
   });
 
   describe("response parsing edge cases", () => {
-    it("parseRoomsResponse returns empty array for null", async () => {
+    // #2353: an unreadable body is a server failure, never "no rooms".
+    it.each([
+      ["a null body", null],
+      ["a string body", "oops"],
+      ["an object without a list", { data: { rooms: [] } }],
+    ])("rejects %s instead of resolving to no rooms", async (_case, data) => {
       const { fetchWithRetry } = await import("./api-helpers");
       vi.mocked(fetchWithRetry).mockResolvedValue({
-        data: null,
+        data,
         response: new Response(),
       });
 
@@ -342,8 +338,10 @@ describe("api.ts helper functions", () => {
 
       const restore = setupBrowserEnv();
       try {
-        const result = await roomService.getRooms();
-        expect(result).toEqual([]);
+        await expect(roomService.getRooms()).rejects.toMatchObject({
+          status: 500,
+          code: "general.server",
+        });
       } finally {
         restore();
       }

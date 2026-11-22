@@ -5,6 +5,7 @@ import (
 
 	directory "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	models "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/rows"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 var _ directory.DirectoryPersonReads = (*personRepository)(nil)
@@ -19,7 +20,7 @@ func NativeDirectoryPerson(row *models.Person) *directory.DirectoryPersonSnapsho
 	if row == nil {
 		return nil
 	}
-	result := &directory.DirectoryPersonSnapshot{ID: row.ID, TenantID: row.TenantID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, FirstName: row.FirstName, LastName: row.LastName, Birthday: row.Birthday, TagID: row.TagID, AccountID: row.AccountID, DeletedAt: row.DeletedAt}
+	result := &directory.DirectoryPersonSnapshot{ID: ident.ID(row.ID), TenantID: ident.ID(row.TenantID), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, FirstName: row.FirstName, LastName: row.LastName, Birthday: row.Birthday, TagID: row.TagID, AccountID: (*ident.ID)(row.AccountID), DeletedAt: row.DeletedAt}
 	if row.Account != nil {
 		value := directory.PersonAccountSnapshot(*row.Account)
 		result.Account = &value

@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/render"
 	careplan "github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -289,7 +290,7 @@ func TestBulkPickupTimeRequest_Bind(t *testing.T) {
 
 	t.Run("valid request", func(t *testing.T) {
 		r := &careplanhttp.BulkEffectiveTimeRequest{
-			StudentIDs: []int64{1, 2, 3},
+			StudentIDs: []ident.ID{1, 2, 3},
 		}
 		err := r.Bind(req)
 		require.NoError(t, err)
@@ -298,7 +299,7 @@ func TestBulkPickupTimeRequest_Bind(t *testing.T) {
 	t.Run("valid request with date", func(t *testing.T) {
 		date := "2026-01-27"
 		r := &careplanhttp.BulkEffectiveTimeRequest{
-			StudentIDs: []int64{1, 2, 3},
+			StudentIDs: []ident.ID{1, 2, 3},
 			Date:       &date,
 		}
 		err := r.Bind(req)
@@ -307,7 +308,7 @@ func TestBulkPickupTimeRequest_Bind(t *testing.T) {
 
 	t.Run("empty student_ids", func(t *testing.T) {
 		r := &careplanhttp.BulkEffectiveTimeRequest{
-			StudentIDs: []int64{},
+			StudentIDs: []ident.ID{},
 		}
 		err := r.Bind(req)
 		require.Error(t, err)
@@ -320,7 +321,7 @@ func TestBulkPickupTimeRequest_Bind(t *testing.T) {
 			ids[i] = int64(i + 1)
 		}
 		r := &careplanhttp.BulkEffectiveTimeRequest{
-			StudentIDs: ids,
+			StudentIDs: ident.IDs(ids),
 		}
 		err := r.Bind(req)
 		require.Error(t, err)
@@ -330,7 +331,7 @@ func TestBulkPickupTimeRequest_Bind(t *testing.T) {
 	t.Run("invalid date format", func(t *testing.T) {
 		invalidDate := "27-01-2026"
 		r := &careplanhttp.BulkEffectiveTimeRequest{
-			StudentIDs: []int64{1, 2, 3},
+			StudentIDs: []ident.ID{1, 2, 3},
 			Date:       &invalidDate,
 		}
 		err := r.Bind(req)
@@ -341,7 +342,7 @@ func TestBulkPickupTimeRequest_Bind(t *testing.T) {
 	t.Run("empty date is valid", func(t *testing.T) {
 		emptyDate := ""
 		r := &careplanhttp.BulkEffectiveTimeRequest{
-			StudentIDs: []int64{1, 2, 3},
+			StudentIDs: []ident.ID{1, 2, 3},
 			Date:       &emptyDate,
 		}
 		err := r.Bind(req)
@@ -388,8 +389,8 @@ func TestMapScheduleToResponse(t *testing.T) {
 		schedule := createTestScheduleModel(1, 1, "15:30", nil)
 		resp := careplanhttp.MapScheduleToResponseForTest(schedule)
 
-		assert.Equal(t, schedule.ID, resp.ID)
-		assert.Equal(t, schedule.StudentID, resp.StudentID)
+		assert.Equal(t, ident.ID(schedule.ID), resp.ID)
+		assert.Equal(t, ident.ID(schedule.StudentID), resp.StudentID)
 		assert.Equal(t, 1, resp.Weekday)
 		assert.Equal(t, "Montag", resp.WeekdayName)
 		assert.Equal(t, "15:30", resp.PickupTime)
@@ -428,8 +429,8 @@ func TestMapExceptionToResponse(t *testing.T) {
 		exception := createTestExceptionModel(1, "2026-02-15", "12:00", "Doctor appointment")
 		resp := careplanhttp.MapExceptionToResponseForTest(exception)
 
-		assert.Equal(t, exception.ID, resp.ID)
-		assert.Equal(t, exception.StudentID, resp.StudentID)
+		assert.Equal(t, ident.ID(exception.ID), resp.ID)
+		assert.Equal(t, ident.ID(exception.StudentID), resp.StudentID)
 		assert.Equal(t, "2026-02-15", resp.ExceptionDate)
 		assert.NotNil(t, resp.PickupTime)
 		assert.Equal(t, "12:00", *resp.PickupTime)
@@ -660,7 +661,7 @@ func TestBulkPickupTimeRequest_Bind_EdgeCases(t *testing.T) {
 			ids[i] = int64(i + 1)
 		}
 		r := &careplanhttp.BulkEffectiveTimeRequest{
-			StudentIDs: ids,
+			StudentIDs: ident.IDs(ids),
 		}
 		err := r.Bind(req)
 		require.NoError(t, err, "exactly 500 student IDs should be allowed")
@@ -668,7 +669,7 @@ func TestBulkPickupTimeRequest_Bind_EdgeCases(t *testing.T) {
 
 	t.Run("single_student_id", func(t *testing.T) {
 		r := &careplanhttp.BulkEffectiveTimeRequest{
-			StudentIDs: []int64{1},
+			StudentIDs: []ident.ID{1},
 		}
 		err := r.Bind(req)
 		require.NoError(t, err, "single student ID should be allowed")
@@ -676,7 +677,7 @@ func TestBulkPickupTimeRequest_Bind_EdgeCases(t *testing.T) {
 
 	t.Run("nil_date_is_valid", func(t *testing.T) {
 		r := &careplanhttp.BulkEffectiveTimeRequest{
-			StudentIDs: []int64{1, 2},
+			StudentIDs: []ident.ID{1, 2},
 			Date:       nil,
 		}
 		err := r.Bind(req)
@@ -704,10 +705,10 @@ func TestMapScheduleToResponse_ResponseFormat(t *testing.T) {
 
 		resp := careplanhttp.MapScheduleToResponseForTest(sched)
 
-		assert.Equal(t, schedID, resp.ID)
-		assert.Equal(t, studentID, resp.StudentID)
+		assert.Equal(t, ident.ID(schedID), resp.ID)
+		assert.Equal(t, ident.ID(studentID), resp.StudentID)
 		assert.Equal(t, "15:30", resp.PickupTime)
-		assert.Equal(t, createdBy, resp.CreatedBy)
+		assert.Equal(t, ident.ID(createdBy), resp.CreatedBy)
 		assert.Equal(t, now.Format(time.RFC3339), resp.CreatedAt)
 		assert.Equal(t, now.Format(time.RFC3339), resp.UpdatedAt)
 	})
@@ -752,10 +753,10 @@ func TestMapExceptionToResponse_ResponseFormat(t *testing.T) {
 
 		resp := careplanhttp.MapExceptionToResponseForTest(exc)
 
-		assert.Equal(t, excID, resp.ID)
-		assert.Equal(t, studentID, resp.StudentID)
+		assert.Equal(t, ident.ID(excID), resp.ID)
+		assert.Equal(t, ident.ID(studentID), resp.StudentID)
 		assert.Equal(t, "2026-02-15", resp.ExceptionDate)
-		assert.Equal(t, createdBy, resp.CreatedBy)
+		assert.Equal(t, ident.ID(createdBy), resp.CreatedBy)
 		assert.Equal(t, now.Format(time.RFC3339), resp.CreatedAt)
 		assert.Equal(t, now.Format(time.RFC3339), resp.UpdatedAt)
 	})

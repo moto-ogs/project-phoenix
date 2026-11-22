@@ -23,7 +23,7 @@ func (s *service) ensureActivityParticipantLimit(ctx context.Context, targetGrou
 	if incoming <= 0 || targetGroup == nil || targetGroup.GroupID == nil {
 		return nil
 	}
-	activity, err := s.limitedActivity(ctx, *targetGroup.GroupID)
+	activity, err := s.limitedActivity(ctx, (*targetGroup.GroupID).Int64())
 	if err != nil || activity == nil {
 		return err
 	}
@@ -31,7 +31,7 @@ func (s *service) ensureActivityParticipantLimit(ctx context.Context, targetGrou
 	if lockedOccupancy != nil {
 		currentOccupancy = *lockedOccupancy
 	} else {
-		currentOccupancy, err = s.SchoolPresence.CountOpenVisitsInGroup(ctx, targetGroup.ID)
+		currentOccupancy, err = s.SchoolPresence.CountOpenVisitsInGroup(ctx, targetGroup.ID.Int64())
 		if err != nil {
 			return &ActiveError{Op: opEnsureActivityParticipantLimit, Err: errors.Join(ErrDatabaseOperation, err)}
 		}
@@ -74,7 +74,7 @@ func participantLimitRefusal(activity *ports.SessionActivity, currentOccupancy, 
 		return nil
 	}
 	return &ActivityParticipantLimitError{
-		ActivityID:       activity.ID,
+		ActivityID:       activity.ID.Int64(),
 		ActivityName:     activity.Name,
 		CurrentOccupancy: currentOccupancy,
 		MaxParticipants:  activity.MaxParticipants,

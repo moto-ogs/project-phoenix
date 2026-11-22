@@ -187,6 +187,19 @@ func CreateTestPickupNote(tb testing.TB, db *bun.DB, studentID int64, date Calen
 	return row
 }
 
+// CreateTestRecurringPickupNote inserts a pickup note that applies on one weekday.
+func CreateTestRecurringPickupNote(tb testing.TB, db *bun.DB, studentID int64, weekday int, staffID int64, content string) *StudentPickupNote {
+	tb.Helper()
+	row := &StudentPickupNote{StudentID: studentID, Weekday: weekday, Content: content, CreatedBy: staffID}
+	row.TenantID = fixtureTenantID(tb)
+
+	ctx, cancel := fixtureCtx()
+	defer cancel()
+	_, err := db.NewInsert().Model(row).ModelTableExpr(`schedule.student_pickup_notes`).Exec(ctx)
+	require.NoError(tb, err, "Failed to create recurring test pickup note")
+	return row
+}
+
 // CreateTestPickupScheduleWithNote inserts one weekday pickup time with a
 // recurring note.
 func CreateTestPickupScheduleWithNote(tb testing.TB, db *bun.DB, studentID int64, weekday int, staffID int64, pickupHHMM, note string) *StudentPickupSchedule {

@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -59,8 +60,8 @@ func TestDeviceHistoryRecordsEveryLifecycleChange(t *testing.T) {
 	created := request(http.MethodPost, "/devices", map[string]any{"device_id": hardwareID, "device_type": "rfid_reader", "name": "Eingang"})
 	require.Equal(t, http.StatusCreated, created.status, string(created.body))
 	var device struct {
-		ID     int64  `json:"id"`
-		APIKey string `json:"api_key"`
+		ID     ident.ID `json:"id"`
+		APIKey string   `json:"api_key"`
 	}
 	created.data(t, &device)
 	require.NotEmpty(t, device.APIKey)

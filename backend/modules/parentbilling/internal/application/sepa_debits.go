@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/sepa"
 )
 
@@ -92,7 +93,7 @@ func validRunKind(kind string) error {
 // those left out, and names the file. A pending debit is collected on its
 // due date, at the earliest tomorrow: a bank refuses a day that passed.
 func (d *SEPADebits) plan(runKind string, runID int64, debits []parentbilling.SealedSEPADebit, day calendar.Date) debitPlan {
-	plan := debitPlan{collectOn: map[int64]calendar.Date{}, run: parentbilling.SEPADebitRun{RunKind: runKind, RunID: runID,
+	plan := debitPlan{collectOn: map[int64]calendar.Date{}, run: parentbilling.SEPADebitRun{RunKind: runKind, RunID: ident.ID(runID),
 		Groups: []parentbilling.SEPADebitGroup{}, Debits: []parentbilling.SEPADebit{}, Submitted: []parentbilling.SEPADebit{},
 		Left: []parentbilling.SEPADebit{}}}
 	earliest := day.AddDays(1)
@@ -119,7 +120,7 @@ func (d *SEPADebits) plan(runKind string, runID int64, debits []parentbilling.Se
 		debit.CollectOn = collectOn
 		entry.Debit = debit
 		plan.included = append(plan.included, entry)
-		plan.collectOn[debit.ID] = collectOn
+		plan.collectOn[debit.ID.Int64()] = collectOn
 		plan.run.Debits = append(plan.run.Debits, debit)
 		plan.run.Count++
 		plan.run.TotalCents += debit.AmountCents
@@ -254,7 +255,7 @@ func (d *SEPADebits) SEPADebitFile(ctx context.Context, reviewer parentbilling.H
 	if err != nil {
 		return parentbilling.SEPADebitFile{}, err
 	}
-	return parentbilling.SEPADebitFile{Filename: entry.FileName, ContentType: "application/xml", Data: data, ExportFileID: entry.ID}, nil
+	return parentbilling.SEPADebitFile{Filename: entry.FileName, ContentType: "application/xml", Data: data, ExportFileID: entry.ID.Int64()}, nil
 }
 
 // storeFile keeps the exact bytes the office downloads, sealed with the
@@ -285,12 +286,12 @@ func fileCreditor(runKind string, runID int64, plan debitPlan) parentbilling.Sto
 	}
 	for _, entry := range plan.included {
 		if debit := entry.Debit; isNoticeRate(debit) {
-			file.NoticeIDs = append(file.NoticeIDs, debit.NoticeID)
+			file.NoticeIDs = append(file.NoticeIDs, debit.NoticeID.Int64())
 		} else {
-			file.DebitIDs = append(file.DebitIDs, debit.ID)
+			file.DebitIDs = append(file.DebitIDs, debit.ID.Int64())
 		}
-		if !slices.Contains(file.MandateIDs, entry.Debit.MandateID) {
-			file.MandateIDs = append(file.MandateIDs, entry.Debit.MandateID)
+		if !slices.Contains(file.MandateIDs, entry.Debit.MandateID.Int64()) {
+			file.MandateIDs = append(file.MandateIDs, entry.Debit.MandateID.Int64())
 		}
 	}
 	return file
@@ -350,7 +351,7 @@ func openDebitBatches(cipher parentbilling.BankDataCipher, organizationID int64,
 		if err != nil {
 			return nil, nil, err
 		}
-		collectOn := collectOns[debit.ID]
+		collectOn := collectOns[debit.ID.Int64()]
 		key := [2]string{debit.SequenceType, collectOn.String()}
 		at, ok := index[key]
 		if !ok {
@@ -400,7 +401,7 @@ func debitEndToEndID(debit parentbilling.SEPADebit) string {
 	if sepaIdentifier(debit.InvoiceNumber) == debit.InvoiceNumber {
 		return debit.InvoiceNumber
 	}
-	return "MOTO-D" + strconv.FormatInt(debit.ID, 10)
+	return "MOTO-D" + strconv.FormatInt(debit.ID.Int64(), 10)
 }
 
 // SubmitSEPADebits confirms that the office submitted the file messageID:
@@ -456,13 +457,13 @@ func submittedDebits(plan debitPlan) ([]parentbilling.SEPADebit, map[int64]calen
 	var mandates []parentbilling.SEPAMandate
 	for i, entry := range plan.included {
 		submitted[i] = entry.Debit
-		submitted[i].CollectOn = plan.collectOn[entry.Debit.ID]
-		on := plan.collectOn[entry.Debit.ID]
-		if last, ok := collected[entry.Debit.MandateID]; !ok || on.After(last) {
+		submitted[i].CollectOn = plan.collectOn[entry.Debit.ID.Int64()]
+		on := plan.collectOn[entry.Debit.ID.Int64()]
+		if last, ok := collected[entry.Debit.MandateID.Int64()]; !ok || on.After(last) {
 			if !ok {
 				mandates = append(mandates, parentbilling.SEPAMandate{ID: entry.Debit.MandateID, ContractID: entry.Debit.ContractID})
 			}
-			collected[entry.Debit.MandateID] = on
+			collected[entry.Debit.MandateID.Int64()] = on
 		}
 	}
 	return submitted, collected, mandates

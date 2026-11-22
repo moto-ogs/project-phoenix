@@ -99,17 +99,6 @@ function hasDataArray(obj: unknown): obj is {
   );
 }
 
-/**
- * Type guard for API wrapper response with success/data structure
- */
-function isApiWrapper(
-  obj: unknown,
-): obj is { success: boolean; data: unknown } {
-  return (
-    obj !== null && typeof obj === "object" && "success" in obj && "data" in obj
-  );
-}
-
 export function createCrudService<T>(config: EntityConfig<T>): CrudService<T> {
   const { api: apiConfig, service } = config;
 
@@ -224,21 +213,24 @@ export function createCrudService<T>(config: EntityConfig<T>): CrudService<T> {
           : endpoints.list;
         const response = await fetchWithAuth(url);
 
-        // Parse response using helper functions to reduce complexity
-        const dataSource = isApiWrapper(response) ? response.data : response;
+        // The backend's envelope arrives whole: a paginated list keeps the
+        // backend's page beside its data (#2353).
 
         // Handle paginated response
-        if (isPaginatedResponse(dataSource)) {
+        if (isPaginatedResponse(response)) {
           const mappedData = mapDataArray<T>(
-            dataSource.data,
+            response.data,
             service?.mapResponse,
           );
-          return { ...dataSource, data: mappedData } as PaginatedResponse<T>;
+          return {
+            data: mappedData,
+            pagination: response.pagination,
+          } as PaginatedResponse<T>;
         }
 
         // Handle direct array response
-        if (Array.isArray(dataSource)) {
-          const mappedData = mapDataArray<T>(dataSource, service?.mapResponse);
+        if (Array.isArray(response)) {
+          const mappedData = mapDataArray<T>(response, service?.mapResponse);
           return {
             data: mappedData,
             pagination: createDefaultPagination(mappedData.length),
@@ -246,20 +238,19 @@ export function createCrudService<T>(config: EntityConfig<T>): CrudService<T> {
         }
 
         // Handle wrapped response with data array
-        if (hasDataArray(dataSource)) {
+        if (hasDataArray(response)) {
           const mappedData = mapDataArray<T>(
-            dataSource.data,
+            response.data,
             service?.mapResponse,
           );
           return {
             data: mappedData,
             pagination:
-              dataSource.pagination ??
-              createDefaultPagination(mappedData.length),
+              response.pagination ?? createDefaultPagination(mappedData.length),
           } as PaginatedResponse<T>;
         }
 
-        const responseShape = describeResponseShape(dataSource);
+        const responseShape = describeResponseShape(response);
         const malformedResponseError = new MalformedCrudListResponseError(
           config.name.plural,
           endpoints.list,

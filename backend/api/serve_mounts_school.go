@@ -283,7 +283,7 @@ func mountSchoolRoutes(
 		Users: peopleCompose.NewRoomSnapshotPeople(users), Education: education,
 		ListExport: renderer, Now: now,
 	}, logger.With("handler", "rooms"), ProtectedTenantRoutes, transactionFailures.IsConstraintViolation).Router())
-	tenant.Mount("/groups", groupsHTTP.NewResource(education, active, peopleCompose.NewGroupRoutePeople(users), caller, newGroupStudentsInClassDay(settings, now), transactionFailures.IsConstraintViolation).Router(ProtectedTenantRoutes))
+	tenant.Mount("/groups", groupsHTTP.NewResource(education, peopleCompose.NewGroupRoutePeople(users), transactionFailures.IsConstraintViolation).Router(ProtectedTenantRoutes))
 	tenant.Mount("/activities", timetableHTTPAdapter.NewResource(activities, timetableOwner, NewTimetableSupervisorDirectory(users), caller, TimetableHTTPTransactions).Router(ProtectedTenantRoutes))
 	// Parent enrollment (PR 5+).
 	tenant.Mount(enrollmentMount, enrollment.Router(TenantSessionChain))
@@ -294,8 +294,6 @@ func mountSchoolRoutes(
 	// point: the root composes it and the IoT service hands it back here
 	// (#2676).
 	tenant.Mount("/display", NewDisplayHTTPRouter(iot.Fleet(), DisplayFeatureEnabled(settings)))
-	// The timeframe list the activity forms offer (Timetable owner).
-	tenant.Mount("/schedules", timetableHTTPAdapter.NewSchedulesResource(timetableOwner).Router(ProtectedTenantRoutes))
 	// The schema-driven settings system.
 	homeLayouts := requireHomeLayoutOperations(settings)
 	tenant.Mount("/settings", newSettingsResource(db, settingsWrites.Tenant, homeLayouts, requireDevicePINOperations(settings), owners.NewEnrollmentBookings(enrollment.Now).SchemaReferencesLegalDocument, enrollment.Now, schools, uploads).SettingsRouter())

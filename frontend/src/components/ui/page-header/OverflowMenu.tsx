@@ -14,7 +14,7 @@ import {
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
 } from "react";
-import { createPortal } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import { ActionHint } from "~/components/ui/action-hint";
 import { useKitDefault } from "~/components/ui/kit-locale";
 import {
@@ -23,6 +23,10 @@ import {
 } from "~/components/ui/button";
 import type { ButtonSize, ButtonVariant } from "~/components/ui/button-styles";
 import Link from "~/components/ui/navigation-link";
+import {
+  ResponsivePanel,
+  useResponsivePanelSheet,
+} from "~/components/ui/responsive-panel";
 import { Check, MoreVertical } from "lucide-react";
 import { SHEET_SCOPE_SELECTOR, useOverlay } from "../overlay-stack";
 import type {
@@ -166,6 +170,9 @@ export function OverflowMenu({
     triggerSize === "sm" ? "text-gray-500" : "text-gray-600";
   const iconSizeClass = triggerSize === "sm" ? "size-4" : "size-5";
   const [isOpen, setIsOpen] = useState(false);
+  // Unter `sm` öffnet das Menü als Blatt von unten (`ResponsivePanel`); die
+  // Verankerung am Auslöser unten gilt dann nicht.
+  const asSheet = useResponsivePanelSheet();
   // The menu renders in a portal on <body> with fixed positioning so it can
   // never be clipped by an ancestor's `overflow-hidden` (e.g. a rounded table
   // or card the kebab lives in). Position is derived from the trigger rect on
@@ -176,10 +183,15 @@ export function OverflowMenu({
   // On the overlay stack, so the panel the menu opened from (an
   // `AnchoredPopover`) counts a press in it as its own. Escape stays with the
   // menu's own handler.
-  useOverlay(isOpen, "popover", { takesEscape: false, elementRef: menuRef });
+  // Das Blatt steht selbst auf dem Stapel.
+  useOverlay(isOpen && !asSheet, "popover", {
+    takesEscape: false,
+    elementRef: menuRef,
+  });
   const focusOnOpenRef = useRef(false);
   const openAnchorRef = useRef<{ top: number; left: number } | null>(null);
   const menuId = useId();
+  const sheetId = useId();
   // Menus stay inside a slide-over's focus scope.
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(
     null,
@@ -189,7 +201,8 @@ export function OverflowMenu({
   // close on scroll/resize so it never lingers detached from its trigger. Only
   // attached while open so we don't pay the listener cost on every page.
   useEffect(() => {
-    if (!isOpen) return;
+    // Das Blatt hängt an keinem Knopf; Schließen regelt `ResponsivePanel`.
+    if (!isOpen || asSheet) return;
 
     const onPointer = (event: MouseEvent) => {
       const target = event.target as Node | null;
@@ -234,7 +247,7 @@ export function OverflowMenu({
       window.removeEventListener("scroll", onReflow, true);
       window.removeEventListener("resize", onReflow);
     };
-  }, [isOpen]);
+  }, [isOpen, asSheet]);
 
   // Decide alignment when opening. The menu is 220px wide when the viewport
   // permits; constrain it on smaller viewports so every action stays reachable.
@@ -251,6 +264,11 @@ export function OverflowMenu({
     const trigger = triggerRef.current;
     if (isOpen) {
       setIsOpen(false);
+      return;
+    }
+    if (asSheet) {
+      onOpen?.();
+      setIsOpen(true);
       return;
     }
     // Enter and Space fire a click without a pointer (detail 0).
@@ -367,18 +385,39 @@ export function OverflowMenu({
     );
 
   useEffect(() => {
-    if (!isOpen || !portalContainer || !focusOnOpenRef.current) return;
+    if (!isOpen || asSheet || !portalContainer || !focusOnOpenRef.current) {
+      return;
+    }
     focusOnOpenRef.current = false;
     const entries = menuEntries();
     (
       entries.find((entry) => entry.getAttribute("aria-checked") === "true") ??
       entries[0]
     )?.focus();
-  }, [isOpen, portalContainer]);
+  }, [isOpen, asSheet, portalContainer]);
 
   useEffect(() => {
     if (disabled) setIsOpen(false);
   }, [disabled]);
+
+  // Schließt vor der Aktion eines Eintrags; der Fokus geht an den Auslöser,
+  // ein Dialog, den die Aktion öffnet, gibt ihn dorthin zurück (#7502). Die
+  // Fokusfalle des Blatts ließe ihn erst nach dem Schließen hinaus.
+  const closeBeforeAction = () => {
+    if (asSheet) flushSync(() => setIsOpen(false));
+    else setIsOpen(false);
+    triggerRef.current?.focus();
+  };
+
+  // Im Blatt beim Öffnen: der gewählte Eintrag, sonst der erste.
+  const initialSheetFocus = () => {
+    const entries = menuEntries();
+    return (
+      entries.find((entry) => entry.getAttribute("aria-checked") === "true") ??
+      entries[0] ??
+      null
+    );
+  };
 
   const onMenuKey = (event: KeyboardEvent<HTMLDivElement>) => {
     const entries = menuEntries();
@@ -417,10 +456,9 @@ export function OverflowMenu({
           item.onClick();
           return;
         }
-        setIsOpen(false);
         // The focused entry unmounts with the menu; the keyboard continues
         // from the trigger. An action that opens a dialog takes it from there.
-        triggerRef.current?.focus();
+        closeBeforeAction();
         item.onClick();
       }
     };
@@ -465,12 +503,13 @@ export function OverflowMenu({
       aria-selected={triggerAriaSelected}
       tabIndex={triggerTabIndex}
       aria-label={triggerAriaLabel}
-      aria-haspopup="menu"
+      // Im Blatt öffnet der Auslöser einen Dialog, darin steht das Menü.
+      aria-haspopup={asSheet ? "dialog" : "menu"}
       aria-expanded={isOpen}
       // Das Menü hängt am `body`; die Karte des Auslösers hebt sich dafür
       // nicht an, sonst deckt sie den Kopf des Menüs zu (globals.css).
       data-portaled-layer=""
-      aria-controls={isOpen ? menuId : undefined}
+      aria-controls={isOpen ? (asSheet ? sheetId : menuId) : undefined}
       className={
         triggerButton
           ? buttonClassName({
@@ -495,16 +534,25 @@ export function OverflowMenu({
       {...iconOnlyMarker(triggerContent == null)}
       data-setup-tour={tourTarget}
     >
-      {triggerHint ? (
-        <ActionHint text={triggerHint} showOnTap={blocked}>
-          {trigger}
-        </ActionHint>
-      ) : (
-        trigger
-      )}
-
-      {isOpen && portalContainer
-        ? createPortal(
+      <ResponsivePanel
+        open={isOpen}
+        onOpenChange={setIsOpen}
+        label={ariaLabel}
+        sheetId={sheetId}
+        returnFocusRef={triggerRef}
+        initialFocus={initialSheetFocus}
+        trigger={
+          triggerHint ? (
+            <ActionHint text={triggerHint} showOnTap={blocked}>
+              {trigger}
+            </ActionHint>
+          ) : (
+            trigger
+          )
+        }
+      >
+        {(inSheet) => {
+          const menu = (
             <div
               ref={menuRef}
               id={menuId}
@@ -512,20 +560,27 @@ export function OverflowMenu({
               aria-label={ariaLabel}
               tabIndex={-1}
               onKeyDown={onMenuKey}
-              style={{
-                ...menuStyle,
-                position:
-                  portalContainer !== document.body ? "absolute" : "fixed",
-              }}
-              // Surface mirrors DesktopFilters dropdown so menu / filter
-              // popovers read as one component family — same border, radius,
-              // and shadow elevation across the page. Fixed + portaled so it
-              // escapes any clipping `overflow-hidden` ancestor. In
-              // container-stretch mode the width comes from `menuStyle`, so the
-              // 220px floor is dropped to let the menu match a narrow column.
-              className={`moto-popover-surface fixed ${Z_LAYER.dropdown} scrollbar-thin overflow-x-hidden overflow-y-auto rounded-xl border py-1 ${
-                matchContainerSelector ? "" : "min-w-[220px]"
-              }`}
+              {...(inSheet
+                ? { className: "outline-none" }
+                : {
+                    style: {
+                      ...menuStyle,
+                      position:
+                        portalContainer !== document.body
+                          ? "absolute"
+                          : "fixed",
+                    },
+                    // Surface mirrors DesktopFilters dropdown so menu / filter
+                    // popovers read as one component family — same border,
+                    // radius, and shadow elevation across the page. Fixed +
+                    // portaled so it escapes any clipping `overflow-hidden`
+                    // ancestor. In container-stretch mode the width comes from
+                    // `menuStyle`, so the 220px floor is dropped to let the
+                    // menu match a narrow column.
+                    className: `moto-popover-surface fixed ${Z_LAYER.dropdown} scrollbar-thin overflow-x-hidden overflow-y-auto rounded-xl border py-1 ${
+                      matchContainerSelector ? "" : "min-w-[220px]"
+                    }`,
+                  })}
             >
               {items.map((entry, index) => {
                 if ("kind" in entry && entry.kind === "header") {
@@ -572,11 +627,10 @@ export function OverflowMenu({
                       onClick={() => {
                         if (entry.disabled) return;
                         if (!(entry.kind === "checkbox" && entry.keepOpen)) {
-                          setIsOpen(false);
                           // As with the keyboard: the clicked entry unmounts
                           // with the menu, a dialog it opens returns the
                           // focus to the trigger (#7502).
-                          triggerRef.current?.focus();
+                          closeBeforeAction();
                         }
                         entry.onClick();
                       }}
@@ -676,7 +730,7 @@ export function OverflowMenu({
 
                 if (item.href != null && !item.disabled) {
                   const onLinkActivate = () => {
-                    setIsOpen(false);
+                    closeBeforeAction();
                     item.onClick();
                   };
                   if (item.external) {
@@ -728,11 +782,10 @@ export function OverflowMenu({
                     disabled={item.disabled}
                     onClick={() => {
                       if (item.disabled) return;
-                      setIsOpen(false);
                       // As with the keyboard: the clicked entry unmounts with
                       // the menu, a dialog it opens returns the focus to the
                       // trigger (#7502).
-                      triggerRef.current?.focus();
+                      closeBeforeAction();
                       item.onClick();
                     }}
                     onKeyDown={onItemKey(item)}
@@ -742,10 +795,12 @@ export function OverflowMenu({
                   </button>
                 );
               })}
-            </div>,
-            portalContainer,
-          )
-        : null}
+            </div>
+          );
+          if (inSheet) return menu;
+          return portalContainer ? createPortal(menu, portalContainer) : null;
+        }}
+      </ResponsivePanel>
     </div>
   );
 }

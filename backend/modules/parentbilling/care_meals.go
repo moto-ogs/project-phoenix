@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Mensa of the monthly run (#4686, ADR 0168). The Träger sets for each
@@ -58,12 +59,12 @@ var (
 // CareMealTariff is how a school's Mensa is billed from ValidFrom (the first
 // day of a month) until ValidUntil, the day before the next price.
 type CareMealTariff struct {
-	ID          int64          `json:"id"`
-	SchoolID    int64          `json:"school_id"`
+	ID          ident.ID       `json:"id"`
+	SchoolID    ident.ID       `json:"school_id"`
 	ValidFrom   calendar.Date  `json:"valid_from"`
 	ValidUntil  *calendar.Date `json:"valid_until"`
 	Mode        string         `json:"mode"`
-	AmountCents int64          `json:"amount_cents"`
+	AmountCents int64          `json:"amount_cents" contract:"number"`
 	CreatedAt   time.Time      `json:"created_at"`
 }
 
@@ -78,7 +79,7 @@ type CareMealTariffs struct {
 
 // CareMealPrice sets the Mensa of a school from ValidFrom on.
 type CareMealPrice struct {
-	SchoolID    int64
+	SchoolID    ident.ID
 	ValidFrom   calendar.Date
 	Mode        string
 	AmountCents int64
@@ -86,13 +87,13 @@ type CareMealPrice struct {
 
 // CareMealPosition is one Mensa month of a child on an invoice.
 type CareMealPosition struct {
-	SchoolID    int64         `json:"school_id"`
-	StudentID   int64         `json:"student_id"`
+	SchoolID    ident.ID      `json:"school_id"`
+	StudentID   ident.ID      `json:"student_id"`
 	MealMonth   calendar.Date `json:"meal_month"`
 	Mode        string        `json:"mode"`
 	Quantity    int           `json:"quantity"`
-	UnitCents   int64         `json:"unit_cents"`
-	AmountCents int64         `json:"amount_cents"`
+	UnitCents   int64         `json:"unit_cents" contract:"number"`
+	AmountCents int64         `json:"amount_cents" contract:"number"`
 	// ReleaseVersion is the version of the school's release the position
 	// bills (#4686); a later version shows the office it changed.
 	ReleaseVersion int `json:"release_version"`
@@ -120,17 +121,17 @@ type CareBilledMealPosition struct {
 // amount a later release of the school no longer gives (#4686): the office
 // cancels the invoice and issues it again; issued invoices never change.
 type CareMealChanged struct {
-	SchoolID       int64         `json:"school_id"`
+	SchoolID       ident.ID      `json:"school_id"`
 	SchoolName     string        `json:"school_name"`
-	StudentID      int64         `json:"student_id"`
+	StudentID      ident.ID      `json:"student_id"`
 	ChildFirstName string        `json:"child_first_name"`
 	ChildLastName  string        `json:"child_last_name"`
 	Month          calendar.Date `json:"month"`
 	InvoiceNumber  string        `json:"invoice_number"`
 	BilledQuantity int           `json:"billed_quantity"`
-	BilledCents    int64         `json:"billed_cents"`
+	BilledCents    int64         `json:"billed_cents" contract:"number"`
 	NewQuantity    int           `json:"new_quantity"`
-	NewCents       int64         `json:"new_cents"`
+	NewCents       int64         `json:"new_cents" contract:"number"`
 }
 
 // CareMealGap is an ended month a school bills its Mensa for that its
@@ -138,7 +139,7 @@ type CareMealChanged struct {
 // starts before the attendance the school still keeps, so nobody can
 // release or bill it any more ("Nicht mehr abrechenbar").
 type CareMealGap struct {
-	SchoolID   int64         `json:"school_id"`
+	SchoolID   ident.ID      `json:"school_id"`
 	SchoolName string        `json:"school_name"`
 	Month      calendar.Date `json:"month"`
 	Expired    bool          `json:"expired"`
@@ -147,9 +148,9 @@ type CareMealGap struct {
 // CareMealUnbilled is a released Mensa month of a child the run does not
 // bill, with the reason.
 type CareMealUnbilled struct {
-	SchoolID       int64         `json:"school_id"`
+	SchoolID       ident.ID      `json:"school_id"`
 	SchoolName     string        `json:"school_name"`
-	StudentID      int64         `json:"student_id"`
+	StudentID      ident.ID      `json:"student_id"`
 	ChildFirstName string        `json:"child_first_name"`
 	ChildLastName  string        `json:"child_last_name"`
 	Month          calendar.Date `json:"month"`

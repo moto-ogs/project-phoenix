@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // NewKioskSessionMirror binds existing Timetable wiring, without a root graph field.
@@ -64,9 +65,9 @@ func (m mirrorTimetable) CreateInstance(ctx context.Context, input devicescanCom
 		return devicescanCompose.MirroredSession{}, err
 	}
 	id, err := m.records.CreateMirroredSessionInstance(ctx, timetable.ScheduledInstance{
-		Date: date, ActivityGroupID: input.ActivityGroupID, Title: input.Title,
-		StartTime: start, EndTime: end, RoomID: input.RoomID, CreatedBy: input.CreatedBy,
-		ActiveGroupID: input.ActiveGroupID, StartedBy: input.StartedBy, StartedAt: input.StartedAt,
+		Date: date, ActivityGroupID: (*ident.ID)(input.ActivityGroupID), Title: input.Title,
+		StartTime: start, EndTime: end, RoomID: ident.ID(input.RoomID), CreatedBy: (*ident.ID)(input.CreatedBy),
+		ActiveGroupID: (*ident.ID)(input.ActiveGroupID), StartedBy: (*ident.ID)(input.StartedBy), StartedAt: input.StartedAt,
 	})
 	if err != nil {
 		return devicescanCompose.MirroredSession{}, err

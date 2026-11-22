@@ -16,18 +16,18 @@ import {
 /** The route wrapper's answer, or a failure without an envelope. */
 function mockResponse(ok: boolean, data?: unknown): Response {
   return ok
-    ? Response.json({ success: true, data })
+    ? Response.json({ status: "success", data })
     : new Response("", { status: 500 });
 }
 
 const backendInstance = {
-  id: 7,
+  id: "7",
   title: "Mittagessen",
   start_time: "12:00",
   end_time: "13:00",
-  room_id: 3,
+  room_id: "3",
   status: "planned",
-  active_group_id: 9,
+  active_group_id: "9",
   attendance: {
     status: "present",
     substatus: "late",
@@ -39,14 +39,14 @@ const backendInstance = {
 };
 
 const backendDay = {
-  student_id: 42,
+  student_id: "42",
   date: "2026-07-21",
   weekday: 2,
   // arrival: schedule with no reason; pickup: exception with reason + null time.
   arrival: { expected_time: "08:00", source: "schedule", reason: null },
   instances: [
     backendInstance,
-    { ...backendInstance, id: 8, active_group_id: null },
+    { ...backendInstance, id: "8", active_group_id: null },
   ],
   pickup: {
     expected_time: null,
@@ -136,7 +136,7 @@ describe("student-care-plan-api", () => {
   describe("fetchStudentCarePlanWeek", () => {
     it("requests the week endpoint and maps each day", async () => {
       const backendWeek = {
-        student_id: 42,
+        student_id: "42",
         from: "2026-07-20",
         to: "2026-07-24",
         days: [backendDay],
@@ -162,7 +162,7 @@ describe("student-care-plan-api", () => {
 
     it("treats null days as an empty list", async () => {
       vi.mocked(fetch).mockResolvedValueOnce(
-        mockResponse(true, { student_id: 1, from: "a", to: "b", days: null }),
+        mockResponse(true, { student_id: "1", from: "a", to: "b", days: null }),
       );
       const week = await fetchStudentCarePlanWeek("1", "a", "b");
       expect(week.days).toEqual([]);

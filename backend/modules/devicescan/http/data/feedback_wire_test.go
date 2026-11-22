@@ -77,6 +77,16 @@ func TestIoTFeedbackWireContractsStayStable(t *testing.T) {
 			body:     `{"status":"success","data":{"reason":"feedback_disabled","status":"skipped"},"message":"Feedback is disabled for this tenant"}` + "\n",
 		},
 		{
+			// A child whose mood capture is stopped (#3844) gets the body of a
+			// school without feedback, so PyrePortal needs no new mapping.
+			name:     "stopped child",
+			feedback: wireFeedback{available: true, err: feedbackModule.ErrMoodCaptureStopped},
+			request:  `{"student_id":42,"value":"positive"}`,
+			status:   200,
+			code:     "feedback_stopped",
+			body:     `{"status":"success","data":{"reason":"feedback_disabled","status":"skipped"},"message":"Feedback is stopped for this student"}` + "\n",
+		},
+		{
 			name:     "mapped validation error",
 			feedback: wireFeedback{available: true, err: &feedbackModule.InvalidEntryDataError{Err: errors.New("rejected")}},
 			request:  `{"student_id":42,"value":"positive"}`,

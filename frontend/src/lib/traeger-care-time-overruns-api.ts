@@ -2,6 +2,8 @@
 // Trägers länger da waren, als ihr Vertrag bucht. Ohne Namen braucht die
 // Auswertung das Recht „Berichte lesen“, mit Namen „Verträge verwalten“.
 
+import { requiredDay } from "./contract/required-day";
+import type * as traegerCareTimeOverrunsContract from "./contract/traeger-care-time-overruns.generated";
 import { traegerRequest } from "./traeger-api";
 
 const OVERRUNS_PATH = "/api/traeger/care-time-overruns";
@@ -19,8 +21,11 @@ interface OverrunFigures {
 export interface SchoolOverruns {
   readonly schoolId: string;
   readonly schoolName: string;
-  /** Erster verglichener Tag; die Löschfrist der Check-ins kann ihn kürzen. */
-  readonly dataFrom: string;
+  /**
+   * Erster verglichener Tag; die Löschfrist der Check-ins kann ihn kürzen.
+   * null: die Schule hat keine Daten.
+   */
+  readonly dataFrom: string | null;
   /** Mit der Buchung verglichene Kind-Tage; 0 heißt: keine Aussage. */
   readonly comparedDays: number;
   /** Kind-Tage mit Check-in, die sich nicht vergleichen ließen (kein Plan, noch nicht ausgecheckt). */
@@ -49,72 +54,37 @@ export interface OverrunEvaluation {
   readonly children: readonly OverrunChild[];
 }
 
-interface BackendFigures {
-  children: number;
-  overrun_days: number;
-  unbooked_days: number;
-  extra_minutes: number;
-}
-
-interface BackendEvaluation {
-  from: string;
-  to: string;
-  tolerance_minutes: number;
-  total: BackendFigures;
-  schools:
-    | {
-        school_id: number | string;
-        school_name: string;
-        data_from: string;
-        compared_days: number;
-        uncompared_days: number;
-        figures: BackendFigures;
-      }[]
-    | null;
-  children:
-    | {
-        school_id: number | string;
-        school_name: string;
-        student_id: number | string;
-        first_name: string;
-        last_name: string;
-        school_class: string;
-        overrun_days: number;
-        unbooked_days: number;
-        extra_minutes: number;
-      }[]
-    | null;
-}
-
 function figuresFromBackend(
-  figures: BackendFigures | undefined,
+  figures: traegerCareTimeOverrunsContract.OverrunFigures,
 ): OverrunFigures {
   return {
-    children: figures?.children ?? 0,
-    overrunDays: figures?.overrun_days ?? 0,
-    unbookedDays: figures?.unbooked_days ?? 0,
-    extraMinutes: figures?.extra_minutes ?? 0,
+    children: figures.children,
+    overrunDays: figures.overrun_days,
+    unbookedDays: figures.unbooked_days,
+    extraMinutes: figures.extra_minutes,
   };
 }
 
-function evaluationFromBackend(body: BackendEvaluation): OverrunEvaluation {
+function evaluationFromBackend(
+  body: traegerCareTimeOverrunsContract.OverrunEvaluation,
+): OverrunEvaluation {
   return {
-    from: body.from,
-    to: body.to,
+    from: requiredDay(body.from, "overrun_evaluation.from"),
+    to: requiredDay(body.to, "overrun_evaluation.to"),
     toleranceMinutes: body.tolerance_minutes,
     total: figuresFromBackend(body.total),
     schools: (body.schools ?? []).map((school) => ({
-      schoolId: String(school.school_id),
+      schoolId: school.school_id,
       schoolName: school.school_name,
       dataFrom: school.data_from,
-      comparedDays: school.compared_days ?? 0,
-      uncomparedDays: school.uncompared_days ?? 0,
+      comparedDays: school.compared_days,
+      uncomparedDays: school.uncompared_days,
       figures: figuresFromBackend(school.figures),
     })),
     children: (body.children ?? []).map((child) => ({
-      schoolId: String(child.school_id),
+      schoolId: child.school_id,
       schoolName: child.school_name,
-      studentId: String(child.student_id),
+      studentId: child.student_id,
       firstName: child.first_name,
       lastName: child.last_name,
       schoolClass: child.school_class,
@@ -142,7 +112,7 @@ export async function fetchOverrunSummary(
   window: OverrunWindow,
 ): Promise<OverrunEvaluation> {
   return evaluationFromBackend(
-    await traegerRequest<BackendEvaluation>(
+    await traegerRequest<traegerCareTimeOverrunsContract.OverrunEvaluation>(
       `${OVERRUNS_PATH}?${overrunQuery(window)}`,
     ),
   );
@@ -153,7 +123,7 @@ export async function fetchOverrunChildren(
   window: OverrunWindow,
 ): Promise<OverrunEvaluation> {
   return evaluationFromBackend(
-    await traegerRequest<BackendEvaluation>(
+    await traegerRequest<traegerCareTimeOverrunsContract.OverrunEvaluation>(
       `${OVERRUNS_PATH}/children?${overrunQuery(window)}`,
     ),
   );
@@ -195,6 +165,7 @@ export type OverrunCoverage = "complete" | "partial" | "none";
  */
 export function schoolHasFigures(school: SchoolOverruns, to: string): boolean {
   return (
+    school.dataFrom !== null &&
     school.dataFrom <= to &&
     (school.comparedDays > 0 || overrunDayCount(school.figures) > 0)
   );
@@ -208,6 +179,7 @@ export function overrunCoverage(
   return schools.some(
     (school) =>
       school.comparedDays === 0 ||
+      school.dataFrom === null ||
       school.dataFrom > from ||
       school.uncomparedDays > 0,
   )

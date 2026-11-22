@@ -23,7 +23,7 @@ type replanWeekRequest struct {
 	ToDate   *string `json:"to_date,omitempty"`
 	// ActivityGroupID optionally narrows the re-plan to one template's
 	// planned instances (WP-B3 template split). Omitted/null = whole grid.
-	ActivityGroupID *int64 `json:"activity_group_id,omitempty"`
+	ActivityGroupID *common.ID `json:"activity_group_id,omitempty"`
 }
 
 // Bind is a no-op. Same rationale as materializeRequest.Bind: date parsing
@@ -72,7 +72,7 @@ func (rs *Resource) replanWeek(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := rs.InstanceService.ReplanWeek(r.Context(), from, to, req.ActivityGroupID, sessiontoken.ActorAccountIDFromCtx(r.Context()))
+	result, err := rs.InstanceService.ReplanWeek(r.Context(), from, to, (*int64)(req.ActivityGroupID), sessiontoken.ActorAccountIDFromCtx(r.Context()))
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInternalServerWrap("replan week failed", err))
 		return

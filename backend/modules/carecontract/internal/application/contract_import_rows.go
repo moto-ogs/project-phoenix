@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -269,7 +270,7 @@ func (r rowReader) school() (importSchool, bool) {
 	if !c.index.has(carecontract.ContractImportFieldSchool) {
 		for _, school := range c.schools {
 			if school.school.ID == c.index.schoolID {
-				r.row.SchoolID, r.row.SchoolName = school.school.ID, school.school.Name
+				r.row.SchoolID, r.row.SchoolName = ident.ID(school.school.ID), school.school.Name
 				return school, true
 			}
 		}
@@ -292,7 +293,7 @@ func (r rowReader) school() (importSchool, bool) {
 		r.problem(carecontract.ContractImportFieldSchool, carecontract.ContractImportProblemUnknown)
 		return importSchool{}, false
 	case 1:
-		r.row.SchoolID, r.row.SchoolName = found[0].school.ID, found[0].school.Name
+		r.row.SchoolID, r.row.SchoolName = ident.ID(found[0].school.ID), found[0].school.Name
 		return found[0], true
 	}
 	r.problem(carecontract.ContractImportFieldSchool, carecontract.ContractImportProblemAmbiguous)
@@ -319,14 +320,14 @@ func (c *contractImportCheck) decide(candidate *importCandidate) {
 	c.seen, c.lines = append(c.seen, candidate.childKey), append(c.lines, row.Line)
 	for i, key := range c.running {
 		if key.same(candidate.childKey) {
-			row.Status, row.ContractID = carecontract.ContractImportDuplicate, c.contracts[i]
+			row.Status, row.ContractID = carecontract.ContractImportDuplicate, ident.ID(c.contracts[i])
 			return
 		}
 	}
 	if id, stored := c.origins[importOrigin{candidate.childKey.schoolID, importOriginOf(*row)}]; stored {
 		// An earlier import stored this contract; it ended or was withdrawn
 		// since. It is not stored a second time.
-		row.Status, row.ContractID = carecontract.ContractImportDuplicate, id
+		row.Status, row.ContractID = carecontract.ContractImportDuplicate, ident.ID(id)
 		row.Hints = append(row.Hints, carecontract.ContractImportHintImportedBefore)
 		return
 	}

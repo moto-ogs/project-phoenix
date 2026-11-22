@@ -524,7 +524,7 @@ func (s *cleanupService) CleanupStaleSupervisors(ctx context.Context) (*Supervis
 		}
 
 		result.RecordsClosed++
-		staffAffected[record.StaffID] = true
+		staffAffected[record.StaffID.Int64()] = true
 
 		// Track oldest record
 		if oldestRecord == nil || record.StartDate.Before(*oldestRecord) {
@@ -560,7 +560,7 @@ func (s *cleanupService) PreviewSupervisorCleanup(ctx context.Context) (*Supervi
 	// Build statistics
 	for _, record := range staleRecords {
 		// Track per-staff counts
-		preview.StaffRecords[record.StaffID]++
+		preview.StaffRecords[record.StaffID.Int64()]++
 
 		// Track per-date counts
 		dateStr := record.StartDate.String()

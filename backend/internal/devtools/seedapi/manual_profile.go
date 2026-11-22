@@ -134,18 +134,18 @@ func manualStaffCredential(rt *Runtime, credential AccountCredentials) (AccountC
 	}
 	var envelope struct {
 		Data []struct {
-			ID        int64 `json:"id"`
-			AccountID int64 `json:"account_id"`
-			TeacherID int64 `json:"teacher_id"`
+			ID        apiID `json:"id"`
+			AccountID apiID `json:"account_id"`
+			TeacherID apiID `json:"teacher_id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
 		return AccountCredentials{}, fmt.Errorf("decode manual shared developer admin identity: %w", err)
 	}
 	for _, staff := range envelope.Data {
-		if staff.AccountID == credential.AccountID && staff.ID > 0 {
-			credential.StaffID = staff.ID
-			credential.TeacherID = staff.TeacherID
+		if int64(staff.AccountID) == credential.AccountID && staff.ID > 0 {
+			credential.StaffID = int64(staff.ID)
+			credential.TeacherID = int64(staff.TeacherID)
 			return credential, nil
 		}
 	}
@@ -370,20 +370,20 @@ func readManualGuardian(rt *Runtime, studentID int64, source DemoGuardian) (Seed
 	var envelope struct {
 		Data []struct {
 			Guardian struct {
-				ID int64 `json:"id"`
+				ID apiID `json:"id"`
 			} `json:"guardian"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil || len(envelope.Data) != 1 || envelope.Data[0].Guardian.ID <= 0 {
 		return SeedEntityRef{}, fmt.Errorf("student %d does not have exactly one persisted contact", studentID)
 	}
-	return SeedEntityRef{ID: envelope.Data[0].Guardian.ID, Name: source.FirstName + " " + source.LastName}, nil
+	return SeedEntityRef{ID: int64(envelope.Data[0].Guardian.ID), Name: source.FirstName + " " + source.LastName}, nil
 }
 
 func decodeSeedEntityID(raw []byte) (int64, error) {
 	var envelope struct {
 		Data struct {
-			ID int64 `json:"id"`
+			ID apiID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
@@ -392,7 +392,7 @@ func decodeSeedEntityID(raw []byte) (int64, error) {
 	if envelope.Data.ID <= 0 {
 		return 0, fmt.Errorf("response contains no entity id")
 	}
-	return envelope.Data.ID, nil
+	return int64(envelope.Data.ID), nil
 }
 
 func seedManualAttendance(rt *Runtime, students map[string]SeedStudent) error {
@@ -495,9 +495,9 @@ func verifyManualStudents(rt *Runtime, expected SeedExpectedState, data manualPr
 	}
 	var envelope struct {
 		Data []struct {
-			ID             int64   `json:"id"`
+			ID             apiID   `json:"id"`
 			SchoolClass    string  `json:"school_class"`
-			GroupID        int64   `json:"group_id"`
+			GroupID        apiID   `json:"group_id"`
 			Location       string  `json:"current_location"`
 			ActualPickupAt *string `json:"actual_pickup_time"`
 		} `json:"data"`
@@ -515,9 +515,9 @@ func verifyManualStudents(rt *Runtime, expected SeedExpectedState, data manualPr
 }
 
 func verifyManualStudentRows(rows []struct {
-	ID             int64   `json:"id"`
+	ID             apiID   `json:"id"`
 	SchoolClass    string  `json:"school_class"`
-	GroupID        int64   `json:"group_id"`
+	GroupID        apiID   `json:"group_id"`
 	Location       string  `json:"current_location"`
 	ActualPickupAt *string `json:"actual_pickup_time"`
 }, expected SeedExpectedState, roomTracking bool) error {
