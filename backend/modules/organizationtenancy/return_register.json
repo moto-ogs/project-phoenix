@@ -17407,6 +17407,12 @@
           "type": "boolean",
           "udt": "bool",
           "nullable": false
+        },
+        {
+          "name": "sibling_all_children",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -22495,6 +22501,12 @@
         },
         {
           "name": "tariff_sibling_price",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
+        },
+        {
+          "name": "sibling_all_children",
           "type": "boolean",
           "udt": "bool",
           "nullable": false
