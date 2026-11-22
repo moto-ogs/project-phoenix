@@ -96,6 +96,32 @@ describe("discarding an empty notice run", () => {
     expect(screen.getByText("Verworfen am 11.11.2026")).toBeInTheDocument();
   });
 
+  it("names a child billed at another school in an empty run (#7874)", async () => {
+    api.fetchCareNoticeRun.mockResolvedValue(
+      run({
+        joinedChildren: [
+          {
+            childFirstName: "Noah",
+            childLastName: "Muster",
+            contracts: [
+              { contractId: "81", schoolId: "3", schoolName: "OGS Nord" },
+              { contractId: "82", schoolId: "5", schoolName: "OGS Süd" },
+            ],
+          },
+        ],
+      }),
+    );
+    renderPage();
+
+    expect(
+      await screen.findByText("Dieser Lauf hat nichts abzurechnen"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Ein Kind an zwei Schulen" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("OGS Nord, dann OGS Süd")).toBeInTheDocument();
+  });
+
   it("closes a run whose contracts keep their notice, as before", async () => {
     api.fetchCareNoticeRun.mockResolvedValue(run({ unchanged: 2 }));
     renderPage();

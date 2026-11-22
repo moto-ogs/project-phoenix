@@ -170,6 +170,32 @@ describe("discarding an empty monthly run", () => {
     expect(screen.queryByText("Dieser Lauf hat nichts abzurechnen")).toBeNull();
   });
 
+  it("names a child billed at another school in an empty run (#7874)", async () => {
+    api.fetchCareRun.mockResolvedValue(
+      run({
+        joinedChildren: [
+          {
+            childFirstName: "Noah",
+            childLastName: "Muster",
+            contracts: [
+              { contractId: "81", schoolId: "3", schoolName: "OGS Nord" },
+              { contractId: "82", schoolId: "5", schoolName: "OGS Süd" },
+            ],
+          },
+        ],
+      }),
+    );
+    renderPage();
+
+    expect(
+      await screen.findByText("Dieser Lauf hat nichts abzurechnen"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Ein Kind an zwei Schulen" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("OGS Nord, dann OGS Süd")).toBeInTheDocument();
+  });
+
   it("keeps the notice hold and recovery link visible for an empty run", async () => {
     api.fetchCareRun.mockResolvedValue(
       run({

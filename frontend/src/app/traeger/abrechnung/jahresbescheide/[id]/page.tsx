@@ -429,26 +429,33 @@ export default function TraegerCareNoticeRunPage() {
       }
     >
       {run && (discarded || empty) ? (
-        <EmptyRunCard
-          title="Jahreslauf"
-          discarded={discarded}
-          description={
-            discarded
-              ? `Er hatte nichts abzurechnen und hat nichts ausgestellt. Für das Jahr ${run.year} kannst du einen neuen Lauf starten.`
-              : `Für das Jahr ${run.year} gibt es keinen Bescheid. Es fehlt auch kein Preis. Du kannst den Lauf verwerfen. Danach ist das Jahr frei für einen neuen Lauf.`
-          }
-          createdAt={run.createdAt}
-          discardedAt={run.discardedAt}
-        >
-          <DataField label="Zeitraum">
-            {noticePeriod(run.periodFrom, run.periodUntil)}
-          </DataField>
-          <DataField label="Schulen">
-            {run.schoolIds.length === 1
-              ? "1 Schule"
-              : `${run.schoolIds.length} Schulen`}
-          </DataField>
-        </EmptyRunCard>
+        <>
+          <EmptyRunCard
+            title="Jahreslauf"
+            discarded={discarded}
+            description={
+              discarded
+                ? `Er hatte nichts abzurechnen und hat nichts ausgestellt. Für das Jahr ${run.year} kannst du einen neuen Lauf starten.`
+                : `Für das Jahr ${run.year} gibt es keinen Bescheid. Es fehlt auch kein Preis. Du kannst den Lauf verwerfen. Danach ist das Jahr frei für einen neuen Lauf.`
+            }
+            createdAt={run.createdAt}
+            discardedAt={run.discardedAt}
+          >
+            <DataField label="Zeitraum">
+              {noticePeriod(run.periodFrom, run.periodUntil)}
+            </DataField>
+            <DataField label="Schulen">
+              {run.schoolIds.length === 1
+                ? "1 Schule"
+                : `${run.schoolIds.length} Schulen`}
+            </DataField>
+          </EmptyRunCard>
+          {/* A child billed at another school (#7874): the empty run says
+            why it has no notice here. */}
+          {empty ? (
+            <CareJoinedChildrenCard childrenJoined={run.joinedChildren} />
+          ) : null}
+        </>
       ) : run ? (
         <>
           {preview && run.previewCount > 0 && run.legalRemedyMissing ? (

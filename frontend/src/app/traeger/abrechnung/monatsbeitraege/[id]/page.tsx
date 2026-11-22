@@ -602,6 +602,11 @@ export default function TraegerCareRunPage() {
               {run.schools.map((school) => school.name).join(", ") || "–"}
             </DataField>
           </EmptyRunCard>
+          {/* A child billed at another school of the run's month (#7874):
+              the empty run says why it has no invoice here. */}
+          {empty ? (
+            <CareJoinedChildrenCard childrenJoined={run.joinedChildren ?? []} />
+          ) : null}
           {/* Mensa months a school has not released yet come with a later
               run; the empty run still names them. */}
           {empty ? (
