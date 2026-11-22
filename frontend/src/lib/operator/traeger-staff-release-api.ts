@@ -5,7 +5,7 @@
  */
 import { knownEnum } from "~/lib/contract/known-enum";
 import type * as operatorOrganizationsContract from "~/lib/contract/operator-organizations.generated";
-import { operatorFetch } from "./api-helpers";
+import { bffJson } from "~/lib/bff-fetch";
 
 // Go does not register the set; the contract types it as string.
 const STAFF_REPRESENTATION_VALUES = ["agreement", "none"] as const;
@@ -22,15 +22,13 @@ export interface TraegerStaffReleaseState {
   readonly records: number;
 }
 
-const base = (orgId: string) =>
-  `/api/operator/organizations/${encodeURIComponent(orgId)}/staff-release`;
-
 export const traegerStaffReleaseService = {
   async getState(orgId: string): Promise<TraegerStaffReleaseState> {
-    const data =
-      await operatorFetch<operatorOrganizationsContract.TraegerStaffReleaseState>(
-        base(orgId),
-      );
+    const data = await bffJson(
+      "platform",
+      "GET /operator/organizations/{id}/staff-release",
+      { params: { id: orgId } },
+    );
     return {
       release: data.release
         ? {
@@ -48,14 +46,22 @@ export const traegerStaffReleaseService = {
     orgId: string,
     representation: StaffRepresentation,
   ): Promise<void> {
-    await operatorFetch<unknown>(base(orgId), {
-      method: "POST",
-      body: {
-        representation,
-      } satisfies operatorOrganizationsContract.grantRequest,
-    });
+    await bffJson(
+      "platform",
+      "POST /operator/organizations/{id}/staff-release",
+      {
+        params: { id: orgId },
+        body: {
+          representation,
+        } satisfies operatorOrganizationsContract.grantRequest,
+      },
+    );
   },
   async withdraw(orgId: string): Promise<void> {
-    await operatorFetch<unknown>(base(orgId), { method: "DELETE" });
+    await bffJson(
+      "platform",
+      "DELETE /operator/organizations/{id}/staff-release",
+      { params: { id: orgId } },
+    );
   },
 };

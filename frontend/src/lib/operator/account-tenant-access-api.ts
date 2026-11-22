@@ -1,4 +1,4 @@
-import { apiErrorFromBody, transportFetch } from "../api-error";
+import { bffJson } from "../bff-fetch";
 import { knownEnum } from "../contract/known-enum";
 import type * as operatorAccountsContract from "../contract/operator-accounts.generated";
 
@@ -65,101 +65,87 @@ function mapAccess(
   };
 }
 
-async function throwApiError(response: Response): Promise<never> {
-  throw apiErrorFromBody(
-    `school access request failed (${response.status})`,
-    response.status,
-    await response.json().catch(() => undefined),
-  );
-}
-
-async function request(
-  endpoint: string,
-  options: RequestInit = {},
-): Promise<AccountTenantAccess[]> {
-  const response = await transportFetch(endpoint, {
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers ?? {}),
-    },
-    ...options,
-  });
-
-  if (!response.ok) {
-    await throwApiError(response);
-  }
-
-  const payload = (await response.json()) as {
-    data: operatorAccountsContract.AccountTenantAccessEntry[];
-  };
-  return payload.data.map(mapAccess);
-}
-
-async function requestRoles(
-  endpoint: string,
-): Promise<
-  { id: string; name: string; isSystem: boolean; schoolPortal: boolean }[]
-> {
-  const response = await transportFetch(endpoint, {
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-  });
-  if (!response.ok) {
-    await throwApiError(response);
-  }
-  const payload = (await response.json()) as {
-    data: operatorAccountsContract.RoleOption[];
-  };
-  return payload.data.map((role) => ({
-    id: role.id,
-    name: role.name,
-    isSystem: role.is_system,
-    schoolPortal: role.school_portal,
-  }));
-}
-
-function basePath(accountId: string): string {
-  return `/api/operator/accounts/${encodeURIComponent(accountId)}/tenants`;
-}
+// The message a client and its tests name; the user reads the code's text.
+const errorMessage = "school access request failed";
 
 class AccountTenantAccessService {
-  list(accountId: string) {
-    return request(basePath(accountId));
-  }
-
-  listAssignableRoles(accountId: string, tenantId: string) {
-    return requestRoles(
-      `${basePath(accountId)}/${encodeURIComponent(tenantId)}/roles`,
+  async list(accountId: string): Promise<AccountTenantAccess[]> {
+    const data = await bffJson(
+      "platform",
+      "GET /operator/accounts/{accountId}/tenants",
+      { params: { accountId }, errorMessage },
     );
+    return data.map(mapAccess);
   }
 
-  grant(accountId: string, body: GrantAccountTenantAccessRequest) {
-    return request(basePath(accountId), {
-      method: "POST",
-      body: JSON.stringify({
-        school_id: body.schoolId,
-        role_id: body.roleId,
-        first_name: body.firstName,
-        last_name: body.lastName,
-        position: body.position,
-      } satisfies operatorAccountsContract.grantAccountTenantAccessRequest),
-    });
+  async listAssignableRoles(
+    accountId: string,
+    tenantId: string,
+  ): Promise<
+    { id: string; name: string; isSystem: boolean; schoolPortal: boolean }[]
+  > {
+    const data = await bffJson(
+      "platform",
+      "GET /operator/accounts/{accountId}/tenants/{tenantId}/roles",
+      { params: { accountId, tenantId }, errorMessage },
+    );
+    return data.map((role) => ({
+      id: role.id,
+      name: role.name,
+      isSystem: role.is_system,
+      schoolPortal: role.school_portal,
+    }));
   }
 
-  updateRole(accountId: string, tenantId: string, roleId: string) {
-    return request(`${basePath(accountId)}/${encodeURIComponent(tenantId)}`, {
-      method: "PUT",
-      body: JSON.stringify({
-        role_id: roleId,
-      } satisfies operatorAccountsContract.updateAccountTenantRoleRequest),
-    });
+  async grant(
+    accountId: string,
+    body: GrantAccountTenantAccessRequest,
+  ): Promise<AccountTenantAccess[]> {
+    const data = await bffJson(
+      "platform",
+      "POST /operator/accounts/{accountId}/tenants",
+      {
+        params: { accountId },
+        body: {
+          school_id: body.schoolId,
+          role_id: body.roleId,
+          first_name: body.firstName,
+          last_name: body.lastName,
+          position: body.position,
+        },
+        errorMessage,
+      },
+    );
+    return data.map(mapAccess);
   }
 
-  revoke(accountId: string, tenantId: string) {
-    return request(`${basePath(accountId)}/${encodeURIComponent(tenantId)}`, {
-      method: "DELETE",
-    });
+  async updateRole(
+    accountId: string,
+    tenantId: string,
+    roleId: string,
+  ): Promise<AccountTenantAccess[]> {
+    const data = await bffJson(
+      "platform",
+      "PUT /operator/accounts/{accountId}/tenants/{tenantId}",
+      {
+        params: { accountId, tenantId },
+        body: { role_id: roleId },
+        errorMessage,
+      },
+    );
+    return data.map(mapAccess);
+  }
+
+  async revoke(
+    accountId: string,
+    tenantId: string,
+  ): Promise<AccountTenantAccess[]> {
+    const data = await bffJson(
+      "platform",
+      "DELETE /operator/accounts/{accountId}/tenants/{tenantId}",
+      { params: { accountId, tenantId }, errorMessage },
+    );
+    return data.map(mapAccess);
   }
 }
 

@@ -18,13 +18,11 @@ import { PasswordChangeModal } from "~/components/auth/password-change-modal";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { SectionCard } from "~/components/ui/section-card";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
-import { apiErrorFromResponse } from "~/lib/api-error";
-import type { ApiResponse } from "~/lib/api-envelope";
 import type * as operatorProfileContract from "~/lib/contract/operator-profile.generated";
 import { getSessionPersonName } from "~/lib/auth-utils";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { sessionFetch } from "~/lib/session-cache";
+import { bffJson } from "~/lib/bff-fetch";
 import { useSWRAuth } from "~/lib/swr";
 import { markPasswordChanged } from "~/lib/login-session-notice";
 import { useShellAuth } from "~/lib/shell-auth-context";
@@ -34,19 +32,10 @@ import { PasskeySettingsSection } from "~/components/settings/passkey-settings-s
 
 const logger = createLogger({ component: "OperatorSettingsPage" });
 
-async function fetchOperatorProfile(): Promise<operatorProfileContract.OperatorResponse> {
-  const response = await sessionFetch("/api/operator/profile", {
-    method: "GET",
+function fetchOperatorProfile(): Promise<operatorProfileContract.OperatorResponse> {
+  return bffJson("platform", "GET /operator/profile/", {
+    errorMessage: "Operator profile load failed",
   });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Operator profile load failed (${response.status})`,
-    );
-  }
-  const json =
-    (await response.json()) as ApiResponse<operatorProfileContract.OperatorResponse>;
-  return json.data;
 }
 
 function isEmail(value: string | null | undefined): value is string {
@@ -119,21 +108,14 @@ function OperatorSettingsContent() {
     setIsSaving(true);
     clearProfileError();
     try {
-      const response = await sessionFetch("/api/operator/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ display_name: draftDisplayName }),
-      });
-
-      if (!response.ok) {
-        throw await apiErrorFromResponse(
-          response,
-          `Operator profile update failed (${response.status})`,
-        );
-      }
-
-      const { data: updatedProfile } =
-        (await response.json()) as ApiResponse<operatorProfileContract.OperatorResponse>;
+      const updatedProfile = await bffJson(
+        "platform",
+        "PUT /operator/profile/",
+        {
+          body: { display_name: draftDisplayName },
+          errorMessage: "Operator profile update failed",
+        },
+      );
       await mutateProfile(updatedProfile, { revalidate: false });
       await updateSession({
         name: updatedProfile.display_name,
@@ -164,24 +146,13 @@ function OperatorSettingsContent() {
     await emailChange.run(async (op) => {
       clearEmailChangeError();
       try {
-        const response = await sessionFetch(
-          "/api/operator/profile/email-change",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              new_email: emailChangeNewEmail,
-              current_password: emailChangePassword,
-            }),
+        await bffJson("platform", "POST /operator/profile/email-change", {
+          body: {
+            new_email: emailChangeNewEmail,
+            current_password: emailChangePassword,
           },
-        );
-
-        if (!response.ok) {
-          throw await apiErrorFromResponse(
-            response,
-            `Operator email change failed (${response.status})`,
-          );
-        }
+          errorMessage: "Operator email change failed",
+        });
 
         const confirmedEmail = emailChangeNewEmail;
         if (op.isCurrent()) handleCloseEmailDialog();
