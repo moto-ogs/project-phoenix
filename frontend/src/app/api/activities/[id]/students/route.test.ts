@@ -210,7 +210,9 @@ describe("GET /api/activities/[id]/students", () => {
 
   it("compares student IDs as strings", async () => {
     mockApiGet
-      .mockResolvedValueOnce({ data: [{ id: "1" }, { id: "9007199254740993" }] })
+      .mockResolvedValueOnce({
+        data: [{ id: "1" }, { id: "9007199254740993" }],
+      })
       .mockResolvedValueOnce(
         studentListResponse([
           { id: "1", first_name: "Kind", last_name: "Eins" },
@@ -249,17 +251,15 @@ describe("GET /api/activities/[id]/students", () => {
       if (repeat !== undefined) {
         rows.push({ id: repeat, first_name: "Kind", last_name: "Zwei" });
       }
-      mockApiGet
-        .mockResolvedValueOnce({ data: [] })
-        .mockResolvedValueOnce({
-          data: rows,
-          pagination: {
-            current_page: 1,
-            page_size: rows.length,
-            total_pages: 1,
-            total_records: rows.length,
-          },
-        });
+      mockApiGet.mockResolvedValueOnce({ data: [] }).mockResolvedValueOnce({
+        data: rows,
+        pagination: {
+          current_page: 1,
+          page_size: rows.length,
+          total_pages: 1,
+          total_records: rows.length,
+        },
+      });
 
       const response = await GET(
         createMockRequest("/api/activities/5/students?available=true"),
@@ -442,7 +442,11 @@ describe("GET /api/activities/[id]/students", () => {
         }
         return {
           data: [
-            { id: isLaterPage ? "2" : "1", first_name: "Kind", last_name: "Eins" },
+            {
+              id: isLaterPage ? "2" : "1",
+              first_name: "Kind",
+              last_name: "Eins",
+            },
           ],
           pagination: {
             current_page: isLaterPage ? 2 : 1,

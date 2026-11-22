@@ -249,7 +249,10 @@ describe("traeger-api", () => {
   it("sends the chosen Träger as a number and returns only session status", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse(200, {
-        status: "authenticated",
+        status: "success",
+        data: {
+          status: "authenticated",
+        },
       }),
     );
 
@@ -270,8 +273,11 @@ describe("traeger-api", () => {
   it("maps the choice of Träger with string IDs", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse(200, {
-        status: "organization_selection_required",
-        organizations: [{ id: 7, name: "Träger Nord" }],
+        status: "success",
+        data: {
+          status: "organization_selection_required",
+          organizations: [{ id: 7, name: "Träger Nord" }],
+        },
       }),
     );
 
@@ -290,12 +296,15 @@ describe("traeger-api", () => {
   it("maps the second factor the login asks for", async () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse(200, {
-        status: "mfa_required",
-        challenge_token: "challenge",
-        masked_email: "a***@b.de",
-        organization_id: 7,
-        trusted_device_enabled: true,
-        trusted_device_days: 90,
+        status: "success",
+        data: {
+          status: "mfa_required",
+          challenge_token: "challenge",
+          masked_email: "a***@b.de",
+          organization_id: 7,
+          trusted_device_enabled: true,
+          trusted_device_days: 90,
+        },
       }),
     );
     await expect(
@@ -312,10 +321,13 @@ describe("traeger-api", () => {
     // An answer without the fields offers nothing to remember (#6955).
     fetchMock.mockResolvedValueOnce(
       jsonResponse(200, {
-        status: "mfa_required",
-        challenge_token: "challenge",
-        masked_email: "a***@b.de",
-        organization_id: 7,
+        status: "success",
+        data: {
+          status: "mfa_required",
+          challenge_token: "challenge",
+          masked_email: "a***@b.de",
+          organization_id: 7,
+        },
       }),
     );
     await expect(
@@ -327,11 +339,14 @@ describe("traeger-api", () => {
 
     fetchMock.mockResolvedValueOnce(
       jsonResponse(200, {
-        status: "mfa_enrollment_required",
-        access_token: "enrollment",
-        masked_email: "a***@b.de",
-        mfa_enrollment_required: true,
-        organization_id: 7,
+        status: "success",
+        data: {
+          status: "mfa_enrollment_required",
+          access_token: "enrollment",
+          masked_email: "a***@b.de",
+          mfa_enrollment_required: true,
+          organization_id: 7,
+        },
       }),
     );
     await expect(

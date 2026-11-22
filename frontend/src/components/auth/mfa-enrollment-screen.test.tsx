@@ -109,7 +109,8 @@ describe("MFAEnrollmentScreen", () => {
   it("auto-submits enroll/confirm when 6 digits are entered and shows the success screen", async () => {
     const startMock = mockResponse(200, START);
     const confirmMock = mockResponse(200, {
-      status: "authenticated",
+      status: "success",
+      data: { status: "authenticated" },
     });
     let callCount = 0;
     global.fetch = vi.fn(
@@ -171,7 +172,10 @@ describe("MFAEnrollmentScreen", () => {
     global.fetch = vi.fn(async (url) =>
       String(url).endsWith("/start")
         ? Response.json(START)
-        : Response.json({ status: "authenticated" }),
+        : Response.json({
+            status: "success",
+            data: { status: "authenticated" },
+          }),
     );
     const onComplete = vi
       .fn()

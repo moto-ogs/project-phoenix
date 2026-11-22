@@ -104,7 +104,7 @@ async function requestJson<T>(
 
 /**
  * The data of a management answer: the catalog proxies answer in the
- * envelope (#2352); the sign-in answers bare and reads `requestJson`.
+ * envelope (#2352), and so does the BFF's answer to the sign-in.
  */
 async function requestData<T>(
   url: string,
@@ -146,7 +146,7 @@ async function finishPasskeyLogin(
   sessionID: string,
   response: AuthenticationResponseJSON,
 ): Promise<PasskeyLoginResponse> {
-  return requestJson<PasskeyLoginResponse>(`${basePath(scope)}/login/verify`, {
+  return requestData<PasskeyLoginResponse>(`${basePath(scope)}/login/verify`, {
     session_id: sessionID,
     response,
   });

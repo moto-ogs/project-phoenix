@@ -5,6 +5,7 @@
  * route (lib/contract): IDs arrive as strings.
  */
 
+import type { ApiResponse } from "~/lib/api-envelope";
 import { ApiError, apiErrorFromBody, transportFetch } from "./api-error";
 import { knownEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
@@ -162,7 +163,7 @@ export async function traegerLogin(input: {
     );
   }
 
-  return signInAnswer("traeger", data);
+  return signInAnswer("traeger", (data as ApiResponse<unknown>).data);
 }
 
 /** The schools of the signed-in person's Träger. */
@@ -338,11 +339,11 @@ export async function verifyTraegerCodeStep(
   challengeToken: string,
   code: string,
 ): Promise<boolean> {
-  const data = await traegerRequest<{ session_renewed?: boolean } | null>(
+  const data = await traegerRequest<{ session_renewed: boolean }>(
     "/api/traeger/auth/mfa/step-up/verify",
     { method: "POST", body: { challenge_token: challengeToken, code } },
   );
-  return data?.session_renewed === true;
+  return data.session_renewed;
 }
 
 // --- Ferienzeiträume (#4659) ---
