@@ -9,11 +9,11 @@ const logger = createLogger({ component: "FeedbackAPI" });
 export interface FeedbackEntry {
   id: string;
   timestamp: string;
-  feedback_type: "positive" | "neutral" | "negative";
-  is_mensa_feedback: boolean;
+  feedbackType: "positive" | "neutral" | "negative";
+  isMensaFeedback: boolean;
 }
 
-const FEEDBACK_VALUES: readonly FeedbackEntry["feedback_type"][] = [
+const FEEDBACK_VALUES: readonly FeedbackEntry["feedbackType"][] = [
   "positive",
   "neutral",
   "negative",
@@ -27,8 +27,8 @@ function mapFeedbackResponse(entry: FeedbackResponse): FeedbackEntry {
   return {
     id: entry.id,
     timestamp,
-    feedback_type: knownEnum(FEEDBACK_VALUES, entry.value) ?? "neutral",
-    is_mensa_feedback: entry.is_mensa_feedback,
+    feedbackType: knownEnum(FEEDBACK_VALUES, entry.value) ?? "neutral",
+    isMensaFeedback: entry.is_mensa_feedback,
   };
 }
 

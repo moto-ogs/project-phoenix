@@ -336,14 +336,12 @@ export const activitiesConfig = defineEntityConfig<Activity>({
           maxParticipants === "" || maxParticipants == null
             ? null
             : maxParticipants,
-        category_id: data.ag_category_id
-          ? Number.parseInt(data.ag_category_id, 10)
-          : undefined,
+        category_id: data.ag_category_id || undefined,
       };
 
       // Backend expects supervisor_ids as an array even for single primary
       if (data.supervisor_id) {
-        request.supervisor_ids = [Number.parseInt(data.supervisor_id, 10)];
+        request.supervisor_ids = [data.supervisor_id];
       }
 
       return request;

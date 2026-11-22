@@ -43,59 +43,50 @@ type SettingLevels = "schule" | "beide" | "traeger";
 /** Where the effective value comes from: registry default, Träger, school. */
 type SettingSource = "default" | "traeger" | "school";
 
-export interface ResolvedSetting {
-  key: string;
-  label: string;
-  description: string;
-  /** Grey example of an empty textarea; never a value (#5693). */
-  placeholder?: string;
-  type:
-    | "boolean"
-    | "number"
-    | "time"
-    | "date"
-    | "text"
-    | "textarea"
-    | "color"
-    | "password"
-    | "select"
-    | "multiselect";
-  default: unknown;
-  value: unknown;
-  /**
-   * School schema: the school has no value of its own, so a reset changes
-   * nothing (booleans: the value equals the inherited one). Träger schema:
-   * the Träger has no value.
-   */
-  is_default: boolean;
-  writable: boolean;
-  visible: boolean;
-  sort_order: number;
-  access_policy: AccessPolicy;
-  levels: SettingLevels;
-  source: SettingSource;
-  /**
-   * Last change of the Träger value (ISO timestamp). Absent without a Träger
-   * value; stays set beneath a school deviation.
-   */
-  traeger_changed_at?: string | null;
-  validation?: {
-    required?: boolean;
-    min?: number;
-    max?: number;
-    pattern?: string;
-    allow_empty?: boolean;
-    max_length?: number;
-  } | null;
-  depends_on?: {
-    key: string;
-    condition: string;
-    value: unknown;
-  } | null;
-  options?: {
-    static?: { label: string; value: unknown }[];
-  } | null;
-}
+type Nullable<T> = { [K in keyof T]: T[K] | null };
+
+/**
+ * One setting of the schema, with its closed value sets known. `is_default`:
+ * school schema: the school has no value of its own, so a reset changes
+ * nothing (booleans: the value equals the inherited one); Träger schema: the
+ * Träger has no value. `placeholder` is the grey example of an empty
+ * textarea, never a value (#5693). `traeger_changed_at` is the last change of
+ * the Träger value; it stays set beneath a school deviation.
+ */
+export type ResolvedSetting = Omit<
+  wire.ResolvedSetting,
+  | "type"
+  | "access_policy"
+  | "levels"
+  | "source"
+  | "traeger_changed_at"
+  | "validation"
+  | "depends_on"
+  | "options"
+> &
+  Partial<
+    Nullable<
+      Pick<
+        wire.ResolvedSetting,
+        "traeger_changed_at" | "validation" | "depends_on" | "options"
+      >
+    >
+  > & {
+    type:
+      | "boolean"
+      | "number"
+      | "time"
+      | "date"
+      | "text"
+      | "textarea"
+      | "color"
+      | "password"
+      | "select"
+      | "multiselect";
+    access_policy: AccessPolicy;
+    levels: SettingLevels;
+    source: SettingSource;
+  };
 
 // --- Optimistic Update Helper ---
 
