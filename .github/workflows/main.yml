@@ -334,6 +334,7 @@ jobs:
               - 'monitoring/grafana/provisioning/alerting/infrastructure.yml'
               - 'monitoring/grafana/provisioning/alerting/holiday-closure-notifications.yml'
               - 'monitoring/grafana/provisioning/alerting/email-delivery.yml'
+              - 'monitoring/grafana/provisioning/alerting/contract-decode.yml'
               - 'monitoring/prometheus-compose.yml'
               - 'scripts/systemd/moto-*backup*'
               - 'scripts/systemd/moto-release-retention*'
