@@ -389,6 +389,33 @@ test('branch deletion needs no code checks', t => {
   assert.equal(result.stdout, '');
 });
 
+test('backend lint expands to all packages for working-tree configuration changes', async t => {
+  for (const state of ['unstaged', 'staged', 'untracked']) {
+    await t.test(state, t => {
+      const f = fixture(t);
+      f.write('scripts/check-backend-quality.sh', readFileSync(join(source, 'check-backend-quality.sh'), 'utf8'));
+      f.write('scripts/backend-affected-packages.sh', '#!/bin/bash\necho example/narrow\n');
+      f.write('.devbox/nix/profile/default/bin/go', '#!/bin/bash\necho example\n');
+      f.write('.devbox/nix/profile/default/bin/golangci-lint', '#!/bin/bash\nprintf "%s\\n" "$@"\n');
+      if (state !== 'untracked') f.write('backend/.golangci.yml', 'version: "2"\n');
+      f.commit('README.md', 'lint fixture\n');
+      f.git('branch', '-f', 'base', 'HEAD');
+      f.commit('backend/narrow/example.go', 'package narrow\n');
+      const lint = expected => {
+        const result = f.run('bash', ['scripts/check-backend-quality.sh', 'lint', 'base'], {
+          env: { ...f.env, PATH: `${join(f.root, '.devbox/nix/profile/default/bin')}:${f.env.PATH}` },
+        });
+        assert.equal(result.status, 0, result.stdout + result.stderr);
+        assert.deepEqual(result.stdout.trim().split('\n'), ['run', '--allow-serial-runners', '--timeout', '20m', expected]);
+      };
+      lint('./narrow');
+      f.write('backend/.golangci.yml', 'version: "2"\n# changed configuration\n');
+      if (state === 'staged') f.git('add', 'backend/.golangci.yml');
+      lint('./...');
+    });
+  }
+});
+
 test('shared backend quality fails when an analyzer executable is missing', t => {
   const f = fixture(t);
   copyFileSync(join(source, 'check-quality.sh'), join(f.root, 'scripts/check-quality.sh'));
