@@ -19,7 +19,7 @@ import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { SectionLabel } from "~/components/ui/section-label";
 import { StatusBadge } from "~/components/ui/status-badge";
-import type { RequestDiffEntry } from "~/lib/messaging-status";
+import type * as studentsContract from "~/lib/contract/students.generated";
 import {
   fetchPickupExtensions,
   type PickupExtension,
@@ -40,7 +40,7 @@ const logger = createLogger({ component: "CareRequestReviewItem" });
  * hat eine Tages-Anfrage für eine dauerhafte Änderung gehalten (#2480).
  */
 export function careSummary(
-  diff: readonly RequestDiffEntry[],
+  diff: readonly studentsContract.CareRequestDiffResponse[],
   requestKind: StaffCareRequest["request_kind"],
 ): string {
   const days = new Set<string>();
@@ -83,7 +83,9 @@ export function careTypeLabel(
  * oder beides. Ohne lesbare Einträge bleibt es bei der Abholzeit, die jede
  * Anfrage vor #3945 trug.
  */
-function pickupChangeLegs(diff: readonly RequestDiffEntry[]): {
+function pickupChangeLegs(
+  diff: readonly studentsContract.CareRequestDiffResponse[],
+): {
   time: boolean;
   mode: boolean;
   person: boolean;
@@ -393,7 +395,7 @@ function RequestDiffRows({
  */
 export function ParentsSawBadge({
   entry,
-}: Readonly<{ entry: RequestDiffEntry }>) {
+}: Readonly<{ entry: studentsContract.CareRequestDiffResponse }>) {
   if (!entry.submitted_old) return null;
   return (
     <StatusBadge

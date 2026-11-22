@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Download } from "lucide-react";
 
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import { cn } from "~/lib/utils";
 import {
   AttachmentViewer,
@@ -17,14 +18,7 @@ import { buttonClassName } from "./button";
 import { FileTypeIcon } from "./file-type-icon";
 
 /** One file of a message, in the shape every chat delivers. */
-interface MessageAttachmentItem {
-  readonly id: string;
-  readonly filename: string;
-  readonly size_bytes: number;
-  readonly content_type: string;
-  readonly width?: number;
-  readonly height?: number;
-}
+type MessageAttachmentItem = Readonly<sharedContract.AttachmentResponse>;
 
 export interface MessageAttachmentLabels {
   /** "Bild öffnen: {name}" */
@@ -77,8 +71,11 @@ export function MessageAttachments({
   downloadUrl: (attachmentId: string) => string;
   /** Which edge the block hugs: the sender's own messages sit at the end. */
   align?: "start" | "end";
-  /** Loads a PDF's bytes for the viewer; see `AttachmentViewer` `loadFile`. */
-  loadFile?: (src: string) => Promise<Blob>;
+  /**
+   * Loads a PDF's bytes for the viewer, by the attachment's id; see
+   * `AttachmentViewer` `loadFile`.
+   */
+  loadFile?: (attachmentId: string) => Promise<Blob>;
   labels?: MessageAttachmentLabels;
 }>) {
   const [viewing, setViewing] = useState<number | null>(null);
@@ -87,7 +84,8 @@ export function MessageAttachments({
   const images = attachments.filter((item) => isViewerImage(item.content_type));
   const files = attachments.filter((item) => !isViewerImage(item.content_type));
   // The viewer pages in the order the message shows them: pictures, files.
-  const viewerItems: ViewerItem[] = [...images, ...files].map((item) => ({
+  const ordered = [...images, ...files];
+  const viewerItems: ViewerItem[] = ordered.map((item) => ({
     src: `${downloadUrl(item.id)}?inline=1`,
     name: item.filename,
     contentType: item.content_type,
@@ -204,7 +202,15 @@ export function MessageAttachments({
         index={viewing}
         onIndexChange={setViewing}
         onClose={() => setViewing(null)}
-        loadFile={loadFile}
+        loadFile={
+          loadFile &&
+          ((src) => {
+            const item = ordered[viewerItems.findIndex((v) => v.src === src)];
+            return item
+              ? loadFile(item.id)
+              : Promise.reject(new Error("unknown attachment"));
+          })
+        }
         labels={labels.lightbox}
       />
     </div>

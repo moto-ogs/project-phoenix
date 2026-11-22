@@ -8,6 +8,24 @@ import {
   fetchNoticeAcknowledgements,
 } from "./staff-notices-api";
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
+const notice = (id: string) => ({
+  id,
+  title: "Elternabend",
+  body: "Heute um 18 Uhr.",
+  priority: "info",
+  audience: "all",
+  valid_from: "2026-09-09",
+  weekdays: [],
+  week_pattern: 0,
+  requires_acknowledgement: false,
+  active: true,
+});
+
 describe("staff-notices-api", () => {
   let fetchMock: ReturnType<typeof vi.fn>;
 
@@ -43,36 +61,24 @@ describe("staff-notices-api", () => {
   it("bindet die Lesefunktionen an den übergebenen Portal-Pfad", async () => {
     fetchMock
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ data: [{ id: "1" }] }), { status: 200 }),
+        new Response(JSON.stringify({ data: [notice("1")] }), { status: 200 }),
       )
       .mockResolvedValueOnce(new Response(null, { status: 204 }));
 
-    const api = createStaffNoticesReadApi("/api/school/staff-notices");
-    await expect(api.fetchTodaysNotices()).resolves.toEqual([{ id: "1" }]);
+    const api = createStaffNoticesReadApi("school");
+    await expect(api.fetchTodaysNotices()).resolves.toEqual([notice("1")]);
     await expect(api.acknowledgeStaffNotice("1")).resolves.toBeUndefined();
 
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "/api/school/staff-notices/today",
-      undefined,
+      expect.objectContaining({ method: "GET" }),
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
       "/api/school/staff-notices/1/acknowledge",
       expect.objectContaining({ method: "POST" }),
     );
-  });
-
-  // Der Schul-Proxy reicht die Backend-Hülle `{ data: [...] }` ungeöffnet in
-  // seiner eigenen Hülle weiter; die Liste muss trotzdem ankommen.
-  it("packt die doppelte Hülle des Schul-Proxys aus", async () => {
-    fetchMock.mockResolvedValueOnce(
-      new Response(JSON.stringify({ data: { data: [{ id: "9" }] } }), {
-        status: 200,
-      }),
-    );
-    const api = createStaffNoticesReadApi("/api/school/staff-notices");
-    await expect(api.fetchTodaysNotices()).resolves.toEqual([{ id: "9" }]);
   });
 
   it("liefert die Bestätigungsliste und meldet Fehler auf Deutsch", async () => {
@@ -95,7 +101,7 @@ describe("staff-notices-api", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "/api/staff-notices/42/acknowledgements",
-      undefined,
+      { method: "GET" },
     );
 
     await expect(fetchNoticeAcknowledgements("42")).rejects.toThrow(

@@ -21,6 +21,8 @@ const UNCONTRACTED_CALLERS: Readonly<Record<string, string>> = {
     "POST traeger/auth/mfa/step-up/verify: a session step of the BFF, no backend route of its own",
   "lib/traeger-holiday-form-api.ts":
     "PUT traeger/holiday-periods/[id]/form: the contract leaves the editor's own body undescribed",
+  "lib/push-api.ts":
+    "DELETE …/push/subscriptions during logout: the family is revoked and the sign-out must stay the last cookie change, so the call bypasses the portal's 401 handling (no gate, renewal or login redirect) until bff-fetch offers that option",
   "lib/operator/operator-settings-api.ts":
     "PUT/DELETE operator/provisioning/schools/[id]/settings/values/[key]: the route purges the cached tenant lookup",
 };

@@ -4,22 +4,11 @@
  * IDs ihrer Uploads. Die Grenzen hier spiegeln das Backend
  * (modules/communication/message_attachments.go), das sie erneut prüft.
  */
-import {
-  ApiError,
-  apiErrorFromResponse,
-  transportFetch,
-} from "~/lib/api-error";
+import { bffFile, bffJson, bffPath } from "~/lib/bff-fetch";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 
-/** Ein Anhang, wie ihn jede Unterhaltung liefert (IDs sind Strings). */
-export interface MessageAttachment {
-  readonly id: string;
-  readonly filename: string;
-  readonly size_bytes: number;
-  readonly content_type: string;
-  /** Pixelgröße eines Bildes, damit sein Platz vor dem Laden feststeht. */
-  readonly width?: number;
-  readonly height?: number;
-}
+/** Ein Anhang, wie ihn der Upload und jede Unterhaltung liefert. */
+export type MessageAttachment = Readonly<sharedContract.UploadResponse>;
 
 export const MAX_MESSAGE_ATTACHMENTS = 5;
 export const MAX_MESSAGE_ATTACHMENT_MB = 10;
@@ -65,81 +54,135 @@ export function checkAttachmentFiles(
 
 /** Wo ein Chat seine Anhänge hochlädt und abruft. */
 export interface MessageAttachmentRoutes {
-  readonly uploadUrl: string;
+  /** Lädt eine Datei hoch und liefert den Anhang für die nächste Nachricht. */
+  readonly upload: (
+    file: File,
+    signal?: AbortSignal,
+  ) => Promise<MessageAttachment>;
+  /** Die Adresse, die einen Anhang speichert (`<a href>`, `<img src>`). */
   readonly downloadUrl: (attachmentId: string) => string;
+  /**
+   * Lädt die Bytes eines Anhangs für die Ansicht in der Seite: ein PDF zeigt
+   * der Betrachter aus einer Object-URL, weil die App sich nicht rahmen lässt.
+   */
+  readonly loadFile: (attachmentId: string) => Promise<Blob>;
 }
 
-/** Routen unter einer Basis mit `/attachments` und `/…/download`. */
-function messageAttachmentRoutes(base: string): MessageAttachmentRoutes {
-  return {
-    uploadUrl: `${base}/attachments`,
-    downloadUrl: (attachmentId) =>
-      `${base}/attachments/${encodeURIComponent(attachmentId)}/download`,
-  };
+const UPLOAD_FAILED = "Die Datei konnte nicht hochgeladen werden";
+const LOAD_FAILED = "Die Datei konnte nicht geladen werden";
+
+function uploadForm(file: File): FormData {
+  const form = new FormData();
+  form.append("file", file, file.name);
+  return form;
 }
 
-export const PARENT_MESSAGE_ATTACHMENTS =
-  messageAttachmentRoutes("/api/messages");
-export const STAFF_MESSAGE_ATTACHMENTS = messageAttachmentRoutes(
-  "/api/staff-messages",
-);
+const blobOf = (response: Response): Promise<Blob> => response.blob();
+
+export const PARENT_MESSAGE_ATTACHMENTS: MessageAttachmentRoutes = {
+  upload: (file, signal) =>
+    bffJson("tenant", "POST /api/messages/attachments", {
+      body: uploadForm(file),
+      signal,
+      errorMessage: UPLOAD_FAILED,
+    }),
+  downloadUrl: (attachmentId) =>
+    bffPath("tenant", "/api/messages/attachments/{attachmentId}/download", {
+      attachmentId,
+    }),
+  loadFile: (attachmentId) =>
+    bffFile("tenant", "GET /api/messages/attachments/{attachmentId}/download", {
+      params: { attachmentId },
+      query: { inline: "1" },
+      errorMessage: LOAD_FAILED,
+    }).then(blobOf),
+};
+
+export const STAFF_MESSAGE_ATTACHMENTS: MessageAttachmentRoutes = {
+  upload: (file, signal) =>
+    bffJson("tenant", "POST /api/staff-messages/attachments", {
+      body: uploadForm(file),
+      signal,
+      errorMessage: UPLOAD_FAILED,
+    }),
+  downloadUrl: (attachmentId) =>
+    bffPath(
+      "tenant",
+      "/api/staff-messages/attachments/{attachmentId}/download",
+      { attachmentId },
+    ),
+  loadFile: (attachmentId) =>
+    bffFile(
+      "tenant",
+      "GET /api/staff-messages/attachments/{attachmentId}/download",
+      {
+        params: { attachmentId },
+        query: { inline: "1" },
+        errorMessage: LOAD_FAILED,
+      },
+    ).then(blobOf),
+};
+
 // The school portal's chat files live beside its mount, at
 // /school-staff-messages (#6685); its proxy reaches them under its prefix.
-export const SCHOOL_STAFF_MESSAGE_ATTACHMENTS = messageAttachmentRoutes(
-  "/api/school/school-staff-messages",
-);
+export const SCHOOL_STAFF_MESSAGE_ATTACHMENTS: MessageAttachmentRoutes = {
+  upload: (file, signal) =>
+    bffJson("school", "POST /school-staff-messages/attachments", {
+      body: uploadForm(file),
+      signal,
+      errorMessage: UPLOAD_FAILED,
+    }),
+  downloadUrl: (attachmentId) =>
+    bffPath(
+      "school",
+      "/school-staff-messages/attachments/{attachmentId}/download",
+      { attachmentId },
+    ),
+  loadFile: (attachmentId) =>
+    bffFile(
+      "school",
+      "GET /school-staff-messages/attachments/{attachmentId}/download",
+      {
+        params: { attachmentId },
+        query: { inline: "1" },
+        errorMessage: LOAD_FAILED,
+      },
+    ).then(blobOf),
+};
 
 /** Die Anhänge der Eltern hängen am Kind, über das sie schreiben. */
 export function guardianMessageAttachments(
   studentId: string,
 ): MessageAttachmentRoutes {
-  return messageAttachmentRoutes(
-    `/api/parent/me/messages/children/${encodeURIComponent(studentId)}`,
-  );
-}
-
-/** Lädt eine Datei hoch und liefert den Anhang für die nächste Nachricht. */
-export async function uploadMessageAttachment(
-  uploadUrl: string,
-  file: File,
-  signal?: AbortSignal,
-): Promise<MessageAttachment> {
-  const form = new FormData();
-  form.append("file", file, file.name);
-  const response = await transportFetch(uploadUrl, {
-    method: "POST",
-    body: form,
-    signal,
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      "Die Datei konnte nicht hochgeladen werden",
-    );
-  }
-  const body = (await response.json()) as { data?: MessageAttachment };
-  if (!body.data?.id) {
-    throw new ApiError("Die Datei konnte nicht hochgeladen werden", 500);
-  }
-  return body.data;
-}
-
-/**
- * Lädt die Bytes eines Anhangs für die Ansicht in der Seite: ein PDF zeigt
- * der Betrachter aus einer Object-URL, weil die App sich nicht rahmen lässt.
- */
-export async function fetchMessageAttachmentFile(url: string): Promise<Blob> {
-  const response = await transportFetch(url, {
-    method: "GET",
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      "Die Datei konnte nicht geladen werden",
-    );
-  }
-  return response.blob();
+  return {
+    upload: (file, signal) =>
+      bffJson(
+        "parent",
+        "POST /parent/me/messages/children/{studentId}/attachments",
+        {
+          params: { studentId },
+          body: uploadForm(file),
+          signal,
+          errorMessage: UPLOAD_FAILED,
+        },
+      ),
+    downloadUrl: (attachmentId) =>
+      bffPath(
+        "parent",
+        "/parent/me/messages/children/{studentId}/attachments/{attachmentId}/download",
+        { studentId, attachmentId },
+      ),
+    loadFile: (attachmentId) =>
+      bffFile(
+        "parent",
+        "GET /parent/me/messages/children/{studentId}/attachments/{attachmentId}/download",
+        {
+          params: { studentId, attachmentId },
+          query: { inline: "1" },
+          errorMessage: LOAD_FAILED,
+        },
+      ).then(blobOf),
+  };
 }
 
 /**

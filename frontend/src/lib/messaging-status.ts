@@ -38,35 +38,6 @@ type WireRequestType =
 type RequestStatus = "offen" | "erledigt" | "abgelehnt" | "zurueckgezogen";
 
 /**
- * One field a still-open request would change, rendered "current → requested".
- * Shared by both portals so their wire types stay aligned.
- */
-export interface RequestDiffEntry {
-  readonly label: string;
-  readonly old: string;
-  readonly new: string;
-  // Structured discriminators the backend sends so the localized parents portal
-  // can render the label in the guardian's language instead of the German
-  // `label` (authoritative only for the German-only staff portal). `weekday`
-  // (1-5) + `care_kind` identify a care-schedule row. Absent on the staff side /
-  // legacy payloads → fall back to `label`.
-  readonly weekday?: number;
-  readonly care_kind?:
-    "arrival" | "pickup" | "departure_mode" | "pickup_person";
-  // Raw departure-mode keys behind `old`/`new` for `departure_mode` rows, so the
-  // localized parents portal renders mode names in the guardian's language
-  // instead of the German `old`/`new` strings. `old_modes` is the day's allowed
-  // set (an "alone" entry stands in for an empty set); `new_mode` is the single
-  // requested mode. Absent for arrival/pickup rows (times are language-neutral)
-  // and for legacy payloads → fall back to `old`/`new`.
-  readonly old_modes?: string[];
-  readonly new_mode?: string;
-  // Staff side only: what the family saw when it filed a weekly request,
-  // present only when the plan changed since (#6990).
-  readonly submitted_old?: string;
-}
-
-/**
  * One message/event/request in a parent-OGS conversation, as it arrives over the
  * wire (int64 ids already stringified by the backend). Shared verbatim by the
  * staff client (parent-messages-api `Message`) and the parent client (parent-api
@@ -366,7 +337,7 @@ export type MessageAudience = "team" | "leadership";
 export const LEADERSHIP_AUDIENCE_LABEL = "Nur Leitung";
 
 /** `?audience=leadership` for the leadership conversation, "" for the team. */
-export function audienceQuery(audience: MessageAudience = "team"): string {
+function audienceQuery(audience: MessageAudience = "team"): string {
   return audience === "leadership" ? "?audience=leadership" : "";
 }
 

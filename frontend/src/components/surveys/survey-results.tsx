@@ -19,8 +19,8 @@ import type {
   SurveyQuestionResult,
   SurveyResults,
   SurveyRespondent,
-  SurveyScaleSummary,
 } from "~/lib/surveys-api";
+import type * as surveysContract from "~/lib/contract/surveys.generated";
 import { sortedSurveyQuestions } from "~/lib/survey-form";
 import { InsetPanel } from "~/components/ui/inset-panel";
 
@@ -195,7 +195,7 @@ function QuestionResultCard({
 
 function ScaleSummaryList({
   items,
-}: Readonly<{ items: SurveyScaleSummary[] }>) {
+}: Readonly<{ items: surveysContract.surveyHighlightResponse[] }>) {
   return (
     <ul className="space-y-1.5">
       {items.map((item) => (

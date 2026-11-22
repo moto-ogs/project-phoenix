@@ -294,10 +294,8 @@ export function ParentGroupThreadView({
               locale={locale}
               tone="parent"
               attachments={message.attachments}
-              attachmentUrl={
-                firstChild
-                  ? guardianMessageAttachments(firstChild).downloadUrl
-                  : undefined
+              attachmentFiles={
+                firstChild ? guardianMessageAttachments(firstChild) : undefined
               }
               attachmentLabels={attachmentLabels.bubble}
             />
@@ -363,7 +361,7 @@ export function ParentGroupThreadView({
               attachments={
                 selected
                   ? {
-                      uploadUrl: guardianMessageAttachments(selected).uploadUrl,
+                      upload: guardianMessageAttachments(selected).upload,
                       labels: attachmentLabels.composer,
                     }
                   : undefined

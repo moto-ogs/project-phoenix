@@ -22,8 +22,8 @@ import { fetchSchoolClasses } from "~/lib/student-api";
 import { fetchActivities } from "~/lib/activity-api";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import type * as messagesContract from "~/lib/contract/messages.generated";
 import {
-  type GroupChild,
   type GroupTargetType,
   type GroupThreadDetail,
   createGroupThread,
@@ -98,7 +98,9 @@ function AudiencePreview({
   type,
   id,
 }: Readonly<{ type: GroupTargetType; id: string }>) {
-  const { data, error, mutate } = useSWRAuth<GroupChild[]>(
+  const { data, error, mutate } = useSWRAuth<
+    messagesContract.GroupChildResponse[]
+  >(
     messageKeys.groupMessageAudience(type, id),
     () => fetchGroupAudience(type, id),
     { keepPreviousData: false, revalidateOnFocus: false },

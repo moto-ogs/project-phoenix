@@ -9,18 +9,21 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { uploadMessageAttachment } from "~/lib/message-attachments";
-import type { MessageAttachment } from "~/lib/message-attachments";
+import {
+  PARENT_MESSAGE_ATTACHMENTS,
+  type MessageAttachment,
+  type MessageAttachmentRoutes,
+} from "~/lib/message-attachments";
 import { AttachmentViewer } from "~/components/ui/attachment-viewer";
 import { ChatBubble } from "./chat-bubble";
 import { MessageComposer } from "./message-composer";
 
-vi.mock("~/lib/message-attachments", async (original) => ({
-  ...(await original<typeof import("~/lib/message-attachments")>()),
-  uploadMessageAttachment: vi.fn(),
-}));
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 
-const upload = vi.mocked(uploadMessageAttachment);
+const upload = vi.fn<MessageAttachmentRoutes["upload"]>();
 
 const PHOTO: MessageAttachment = {
   id: "11",
@@ -47,7 +50,7 @@ function Composer({
       onChange={setValue}
       onSend={onSend}
       sending={false}
-      attachments={{ uploadUrl: "/api/messages/attachments" }}
+      attachments={{ upload }}
     />
   );
 }
@@ -73,7 +76,6 @@ describe("Anhänge im Eingabefeld (#6685)", () => {
     );
 
     expect(upload).toHaveBeenCalledWith(
-      "/api/messages/attachments",
       expect.objectContaining({ name: "ausflug.png" }),
     );
     await waitFor(() => expect(send).toBeEnabled());
@@ -134,7 +136,7 @@ describe("Anhänge im Eingabefeld (#6685)", () => {
         onSend={vi.fn()}
         sending={false}
         attachments={{
-          uploadUrl: "/api/messages/attachments",
+          upload,
           onOpenAttachment,
         }}
       />,
@@ -205,7 +207,10 @@ describe("Anhänge im Eingabefeld (#6685)", () => {
 });
 
 describe("Anhänge in der Sprechblase (#6685)", () => {
-  const url = (id: string) => `/files/${id}`;
+  const files = {
+    downloadUrl: (id: string) => `/files/${id}`,
+    loadFile: vi.fn<MessageAttachmentRoutes["loadFile"]>(),
+  };
 
   it("zeigt Fotos als Bilder und Dateien als Zeile zum Herunterladen", () => {
     render(
@@ -215,7 +220,7 @@ describe("Anhänge in der Sprechblase (#6685)", () => {
         senderName="OGS"
         createdAt="2026-08-16T06:50:00Z"
         attachments={[PHOTO, LIST]}
-        attachmentUrl={url}
+        attachmentFiles={files}
       />,
     );
     expect(screen.getByText("Fotos von heute")).toBeInTheDocument();
@@ -251,7 +256,7 @@ describe("Anhänge in der Sprechblase (#6685)", () => {
         senderName="OGS"
         createdAt="2026-08-16T06:50:00Z"
         attachments={[PHOTO, LIST]}
-        attachmentUrl={url}
+        attachmentFiles={PARENT_MESSAGE_ATTACHMENTS}
       />,
     );
     await user.click(
@@ -265,7 +270,7 @@ describe("Anhänge in der Sprechblase (#6685)", () => {
       "blob:pdf#view=FitH&navpanes=0",
     );
     expect(fetchSpy).toHaveBeenCalledWith(
-      "/files/12?inline=1",
+      "/api/messages/attachments/12/download?inline=1",
       expect.objectContaining({ method: "GET" }),
     );
     expect(
@@ -273,7 +278,7 @@ describe("Anhänge in der Sprechblase (#6685)", () => {
     ).toHaveAttribute("href", "blob:pdf");
     expect(
       within(viewer).getByRole("link", { name: "Herunterladen" }),
-    ).toHaveAttribute("href", "/files/12");
+    ).toHaveAttribute("href", "/api/messages/attachments/12/download");
     expect(
       within(viewer).getByRole("link", {
         name: "Herunterladen: bastelliste.pdf",
@@ -300,7 +305,7 @@ describe("Anhänge in der Sprechblase (#6685)", () => {
               "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
           },
         ]}
-        attachmentUrl={url}
+        attachmentFiles={files}
       />,
     );
     await user.click(
@@ -356,7 +361,7 @@ describe("Anhänge in der Sprechblase (#6685)", () => {
         senderName="Ich"
         createdAt="2026-08-16T06:50:00Z"
         attachments={[PHOTO, { ...PHOTO, id: "13", filename: "drachen.png" }]}
-        attachmentUrl={url}
+        attachmentFiles={files}
       />,
     );
     await user.click(

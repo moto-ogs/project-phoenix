@@ -22,9 +22,9 @@ import {
   MAX_MESSAGE_ATTACHMENT_MB,
   MAX_MESSAGE_ATTACHMENTS,
   MESSAGE_ATTACHMENT_ACCEPT,
-  uploadMessageAttachment,
   type AttachmentRefusal,
   type MessageAttachment,
+  type MessageAttachmentRoutes,
 } from "~/lib/message-attachments";
 
 // Hard client cap mirroring the backend's 2000-rune message/note limit
@@ -156,7 +156,7 @@ export function MessageComposer({
    * der erscheint, sobald etwas angehängt ist (wer die Datei sieht).
    */
   readonly attachments?: {
-    readonly uploadUrl: string;
+    readonly upload: MessageAttachmentRoutes["upload"];
     readonly labels?: ComposerAttachmentLabels;
     readonly notice?: string;
     /** Öffnet eine Vorschau der angetippten Kachel; ohne bleibt sie Anzeige. */
@@ -220,7 +220,8 @@ export function MessageComposer({
       if (added.length === 0) return;
       setPending((current) => [...current, ...added]);
       for (const item of added) {
-        uploadMessageAttachment(attachments.uploadUrl, item.file)
+        attachments
+          .upload(item.file)
           .then((attachment) => {
             setPending((current) =>
               current.map((entry) =>

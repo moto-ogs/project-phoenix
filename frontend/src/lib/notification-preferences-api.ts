@@ -1,100 +1,52 @@
-import { apiErrorFromBody, transportFetch } from "./api-error";
 /**
  * Client for the per-account notification consent API.
  *
  * Mirrors push-api.ts: it throws an ApiError on failure, which the card shows
  * on the shared error path (#2517).
  */
-
-// zod/mini: the full "zod" build adds ~20 kB to every route's client bundle.
-import * as z from "zod/mini";
+import { bffJson } from "./bff-fetch";
+import type * as sharedContract from "./contract/shared.generated";
 
 export type PreferencePortal = "tenant" | "parent" | "school";
 
-export interface NotificationPreferenceType {
-  key: string;
-  label: string;
-  description: string;
-  group: string;
-  enabled: boolean;
-  /** False when the school currently blocks this type for everyone. */
-  available: boolean;
-}
+/**
+ * The catalogue of one account. `tenant_enabled` mirrors the school-wide
+ * switch (false: nothing is delivered at all); `types` is a list also when Go
+ * sends `null`.
+ */
+export type NotificationPreferences = Omit<
+  sharedContract.PreferenceOverview,
+  "types"
+> & {
+  types: sharedContract.PreferenceState[];
+};
 
-export interface NotificationPreferences {
-  /** Mirrors the school-wide switch. False means nothing is delivered at all. */
-  tenant_enabled: boolean;
-  types: NotificationPreferenceType[];
-}
+const FAILED = "Einstellung konnte nicht geladen werden.";
 
-const notificationPreferencesSchema = z.object({
-  tenant_enabled: z.boolean(),
-  types: z.array(
-    z.object({
-      key: z.string(),
-      label: z.string(),
-      description: z.string(),
-      group: z.string(),
-      enabled: z.boolean(),
-      available: z.boolean(),
-    }),
-  ),
-});
-const notificationPreferencesEnvelopeSchema = z.object({
-  data: notificationPreferencesSchema,
-});
-
-function basePath(portal: PreferencePortal): string {
+async function loadOverview(
+  portal: PreferencePortal,
+): Promise<sharedContract.PreferenceOverview> {
   switch (portal) {
     case "parent":
-      return "/api/parent/me/notification-preferences";
+      return bffJson("parent", "GET /parent/me/notification-preferences/", {
+        errorMessage: FAILED,
+      });
     case "school":
-      return "/api/school/notifications/preferences";
+      return bffJson("school", "GET /school/notifications/preferences/", {
+        errorMessage: FAILED,
+      });
     default:
-      return "/api/notifications/preferences";
+      return bffJson("tenant", "GET /api/notifications/preferences/", {
+        errorMessage: FAILED,
+      });
   }
-}
-
-async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-  // A request that never reaches the API is general.unavailable (#2517).
-  const response = await transportFetch(url, {
-    credentials: "include",
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...init?.headers,
-    },
-  });
-  if (response.status === 204) return undefined as T;
-
-  const text = await response.text();
-  let data: unknown = null;
-  try {
-    data = text ? (JSON.parse(text) as unknown) : null;
-  } catch {
-    data = null;
-  }
-
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Einstellung konnte nicht geladen werden (${response.status}).`,
-      response.status,
-      data,
-    );
-  }
-  return data as T;
 }
 
 export async function fetchNotificationPreferences(
   portal: PreferencePortal = "tenant",
 ): Promise<NotificationPreferences> {
-  const response = await requestJson<unknown>(basePath(portal));
-
-  // The tenant proxy unwraps the envelope, the parent proxy may not — accept
-  // either shape rather than depending on which layer stripped it.
-  const direct = notificationPreferencesSchema.safeParse(response);
-  if (direct.success) return direct.data;
-  return notificationPreferencesEnvelopeSchema.parse(response).data;
+  const overview = await loadOverview(portal);
+  return { ...overview, types: overview.types ?? [] };
 }
 
 export async function setNotificationPreference(
@@ -102,46 +54,83 @@ export async function setNotificationPreference(
   enabled: boolean,
   portal: PreferencePortal = "tenant",
 ): Promise<void> {
-  await requestJson<void>(`${basePath(portal)}/${encodeURIComponent(type)}`, {
-    method: "PUT",
-    body: JSON.stringify({ enabled }),
-  });
+  const options = {
+    params: { type },
+    body: { enabled },
+    errorMessage: FAILED,
+  };
+  switch (portal) {
+    case "parent":
+      await bffJson(
+        "parent",
+        "PUT /parent/me/notification-preferences/{type}",
+        options,
+      );
+      return;
+    case "school":
+      await bffJson(
+        "school",
+        "PUT /school/notifications/preferences/{type}",
+        options,
+      );
+      return;
+    default:
+      await bffJson(
+        "tenant",
+        "PUT /api/notifications/preferences/{type}",
+        options,
+      );
+  }
 }
 
 export async function disableAllNotificationPreferences(
   portal: PreferencePortal = "tenant",
 ): Promise<void> {
-  await requestJson<void>(basePath(portal), { method: "DELETE" });
+  const options = { errorMessage: FAILED };
+  switch (portal) {
+    case "parent":
+      await bffJson(
+        "parent",
+        "DELETE /parent/me/notification-preferences/",
+        options,
+      );
+      return;
+    case "school":
+      await bffJson(
+        "school",
+        "DELETE /school/notifications/preferences/",
+        options,
+      );
+      return;
+    default:
+      await bffJson(
+        "tenant",
+        "DELETE /api/notifications/preferences/",
+        options,
+      );
+  }
 }
 
 /**
  * Opt-in e-mails to staff (#3780), decided where their event happens rather
  * than on the profile page. The backend checks the type's permission.
  */
-const emailSubscriptionSchema = z.object({ enabled: z.boolean() });
-const emailSubscriptionEnvelopeSchema = z.object({
-  data: emailSubscriptionSchema,
-});
-
-function emailSubscriptionPath(type: string): string {
-  return `/api/notifications/email-subscriptions/${encodeURIComponent(type)}`;
-}
-
 export async function fetchEmailSubscription(type: string): Promise<boolean> {
-  const response = await requestJson<unknown>(emailSubscriptionPath(type), {
-    cache: "no-store",
-  });
-  const direct = emailSubscriptionSchema.safeParse(response);
-  if (direct.success) return direct.data.enabled;
-  return emailSubscriptionEnvelopeSchema.parse(response).data.enabled;
+  const subscription = await bffJson(
+    "tenant",
+    "GET /api/notifications/email-subscriptions/{type}",
+    { params: { type }, errorMessage: FAILED },
+  );
+  return subscription.enabled;
 }
 
 export async function setEmailSubscription(
   type: string,
   enabled: boolean,
 ): Promise<void> {
-  await requestJson<void>(emailSubscriptionPath(type), {
-    method: "PUT",
-    body: JSON.stringify({ enabled }),
+  await bffJson("tenant", "PUT /api/notifications/email-subscriptions/{type}", {
+    params: { type },
+    body: { enabled },
+    errorMessage: FAILED,
   });
 }

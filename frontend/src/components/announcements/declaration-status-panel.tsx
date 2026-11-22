@@ -33,6 +33,7 @@ import {
   remindUnanswered,
   withApiBase,
 } from "~/lib/parent-announcements-api";
+import type { AnnouncementApiBase } from "~/lib/parent-announcements-api";
 import type {
   DeclarationChild,
   DeclarationChildState,
@@ -114,7 +115,7 @@ export function DeclarationStatusPanel({
 }: {
   readonly announcementId: string;
   /** The routes of the portal that shows the Einverständnis; default the OGS's. */
-  readonly apiBase?: string;
+  readonly apiBase?: AnnouncementApiBase;
   /** Reminders are only offered while the Einverständnis is live. */
   readonly canAct: boolean;
 }) {
