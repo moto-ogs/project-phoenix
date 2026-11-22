@@ -1,3 +1,4 @@
+import { testClockDay } from "~/test/clock";
 import {
   fireEvent,
   render,
@@ -710,6 +711,21 @@ describe("TraegerVertragPage", () => {
     api.fetchCareContract.mockResolvedValue({
       ...DRAFT,
       status: "beendet",
+      documentFrozen: true,
+    });
+    renderPage();
+
+    expect(
+      await screen.findByText("E-Mail bei Vertragserstellung"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Empfänger und Zahlung")).not.toBeInTheDocument();
+  });
+
+  it("offers no payment card after the last day of a terminated contract", async () => {
+    api.fetchCareContract.mockResolvedValue({
+      ...DRAFT,
+      status: "gekuendigt",
+      endsOn: testClockDay(-1),
       documentFrozen: true,
     });
     renderPage();

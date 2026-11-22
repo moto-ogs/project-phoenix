@@ -27,3 +27,18 @@ func TestFamilyIsOpenedByItsLongestRunningContract(t *testing.T) {
 		assert.Empty(t, read)
 	}
 }
+
+// A family whose contracts are all over is opened by none of them.
+func TestFamilyWithoutARunningContractIsOpenedByNone(t *testing.T) {
+	t.Parallel()
+	today := calendar.NewDate(2027, 1, 10)
+	ended := contractChild{family: "ended@example.org", contractID: 1, until: calendar.NewDate(2026, 7, 31),
+		child: parentbilling.FamilyChild{FirstName: "Mia", LastName: "Beispiel"}}
+	lastDay := contractChild{family: "today@example.org", contractID: 2, until: today,
+		child: parentbilling.FamilyChild{FirstName: "Noah", LastName: "Beispiel"}}
+	families, _ := familyChildNumbers([]contractChild{ended, lastDay}, nil)
+	families = openedByRunningContracts(families, []contractChild{ended, lastDay}, today)
+	require.Len(t, families, 2)
+	assert.EqualValues(t, 0, families[0].ContractID, "the contract ended last year")
+	assert.EqualValues(t, 2, families[1].ContractID, "the last day still counts")
+}

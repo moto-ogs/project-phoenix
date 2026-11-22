@@ -708,7 +708,8 @@ function TraegerVertragView() {
                   on a contract that is over, which is deleted first. */}
               {isDraft ||
               contract.status === "beendet" ||
-              contract.status === "widerrufen" ? null : (
+              contract.status === "widerrufen" ||
+              (contract.endsOn && contract.endsOn < today) ? null : (
                 <FamilyBillingStatusCard contractId={contract.id} />
               )}
               {party?.email ? (

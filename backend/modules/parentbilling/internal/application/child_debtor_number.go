@@ -121,7 +121,7 @@ type familyList struct {
 	until map[string]calendar.Date
 }
 
-// add answers the place of the family and lists it at its first contract.
+// add answers the place of the family and lists a new one.
 // The family is opened by its contract that runs longest: what is saved
 // through it goes with it, so it should be the last one to go (#7770).
 func (l *familyList) add(family string, contractID int64, last calendar.Date, recipient parentbilling.CareRecipient) int {
@@ -139,6 +139,23 @@ func (l *familyList) add(family string, contractID int64, last calendar.Date, re
 		l.families[i].ContractID, l.until[family] = ident.ID(contractID), last
 	}
 	return i
+}
+
+// openedByRunningContracts leaves a family whose longest contract is over
+// without a contract to open it by: what is saved goes with the contract
+// it was saved through, and a contract that is over is deleted first
+// (#7770). Such a family keeps the contract of its deviation.
+func openedByRunningContracts(families []parentbilling.FamilyChildNumbers, contracts []contractChild, today calendar.Date) []parentbilling.FamilyChildNumbers {
+	until := make(map[int64]calendar.Date, len(contracts))
+	for _, contract := range contracts {
+		until[contract.contractID] = contract.until
+	}
+	for i := range families {
+		if last, known := until[families[i].ContractID.Int64()]; known && last.Before(today) {
+			families[i].ContractID = 0
+		}
+	}
+	return families
 }
 
 // familyChildNumbers lists the families of the contracts and of the
@@ -207,13 +224,14 @@ func (f *BillingFamilies) FamilyChildren(ctx context.Context, reviewer parentbil
 		for i := range families {
 			families[i].Children = []parentbilling.FamilyChild{}
 		}
-		return families, nil
+		return openedByRunningContracts(families, contracts, f.today()), nil
 	}
 	stored, err := f.store.ChildDebtorNumbers(ctx, reviewer.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
 	families, read := familyChildNumbers(contracts, stored)
+	families = openedByRunningContracts(families, contracts, f.today())
 	if err := f.store.InsertChildDebtorNumberEvents(ctx, reviewer.OrganizationID, reviewer.AccountID, familyBillingRead, read); err != nil {
 		return nil, fmt.Errorf("parent billing: record the read of the children's numbers: %w", err)
 	}
