@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
+	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
 
 // appointmentLines renders the appointment entries as "section kind title
@@ -169,6 +170,8 @@ func TestDayChangesAppointmentSource(t *testing.T) {
 		counter.Reset()
 		_, body := read(t, router, organizerAccount.ID, tenantID, "calendar:own")
 		assert.Len(t, appointmentLines(t, body), len(own)+1)
-		assert.Len(t, counter.Queries(), before)
+		statements := counter.Queries()
+		assert.Len(t, statements, before)
+		querybudgets.AssertQueryBudget(t, "api.day_changes.today_appointments", counter.Measurement(statements))
 	})
 }
