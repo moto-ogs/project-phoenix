@@ -2,7 +2,10 @@
 
 import { useRef } from "react";
 
-import { PasswordChangeModal } from "~/components/auth/password-change-modal";
+import {
+  PasswordChangeModal,
+  type PasswordChangePortal,
+} from "~/components/auth/password-change-modal";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { credentialError } from "./credential-error";
 
@@ -23,13 +26,13 @@ export function TenantPasswordChangeModal({
   isOpen,
   onClose,
   onSuccess,
-  apiEndpoint,
+  portal,
 }: {
   readonly isOpen: boolean;
   readonly onClose: () => void;
   readonly onSuccess?: () => void;
   /** The portal's route; the caterer portal has its own (#4496). */
-  readonly apiEndpoint?: string;
+  readonly portal?: Exclude<PasswordChangePortal, "platform">;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const errorPath = useApiFormError(formRef);
@@ -38,7 +41,7 @@ export function TenantPasswordChangeModal({
       isOpen={isOpen}
       onClose={onClose}
       onSuccess={onSuccess}
-      apiEndpoint={apiEndpoint}
+      portal={portal}
       errorPath={errorPath}
       formRef={formRef}
       mapError={refusedCurrentPassword}

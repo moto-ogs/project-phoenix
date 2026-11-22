@@ -715,7 +715,7 @@ describe("OperatorSettingsPage", () => {
     fireEvent.click(await screen.findByText("Passwort ändern"));
 
     const props = passwordModalProps.current;
-    expect(props?.apiEndpoint).toBe("/api/operator/profile/password");
+    expect(props?.portal).toBe("platform");
     expect(props?.formRef).toBeDefined();
     expect(props?.errorPath).toMatchObject({
       show: expect.any(Function),

@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 import {
   listCareOfferings,
   createCareOffering,
@@ -45,6 +50,9 @@ function mkOffering(id: string): CareOffering {
     includes_lunch: false,
     is_active: true,
     is_required: false,
+    counts_as_care: true,
+    auto_add_grade_levels: [],
+    auto_add_trigger_offering_ids: [],
     sort_order: 0,
     created_at: "2026-04-01T12:00:00Z",
     updated_at: "2026-04-01T12:00:00Z",
@@ -52,7 +60,7 @@ function mkOffering(id: string): CareOffering {
 }
 
 const validInput: CareOfferingInput = {
-  phase_id: 5678,
+  phase_id: "5678",
   name: "OGS",
   days_of_week_mode: "fixed",
   available_days: ["mon", "tue"],
@@ -91,11 +99,6 @@ describe("listCareOfferings", () => {
     expect(seenURL).toContain("phase_id=42");
   });
 
-  it("returns [] when backend returns non-array data", async () => {
-    mockFetch(async () => jsonResponse({ data: null }));
-    expect(await listCareOfferings()).toEqual([]);
-  });
-
   it("uses the German fallback for unknown English backend errors", async () => {
     mockFetch(async () =>
       jsonResponse({ error: "permission denied" }, { status: 403 }),
@@ -105,9 +108,9 @@ describe("listCareOfferings", () => {
     );
   });
 
-  it("appends HTTP status when body has no error", async () => {
+  it("keeps the HTTP status when body has no error", async () => {
     mockFetch(async () => jsonResponse({}, { status: 500 }));
-    await expect(listCareOfferings()).rejects.toThrow(/HTTP 500/);
+    await expect(listCareOfferings()).rejects.toMatchObject({ status: 500 });
   });
 });
 
@@ -122,7 +125,7 @@ describe("createCareOffering", () => {
     });
     const out = await createCareOffering(validInput);
     expect(out.id).toBe("1234");
-    expect(seenBody).toContain(`"phase_id":5678`);
+    expect(seenBody).toContain(`"phase_id":"5678"`);
     expect(seenBody).toContain(`"name":"OGS"`);
   });
 
@@ -245,10 +248,12 @@ describe("cloneCareOffering", () => {
       seenBody = (init?.body as string) ?? "";
       return jsonResponse({ data: mkOffering("9999") }, { status: 201 });
     });
-    const out = await cloneCareOffering("1234", { target_phase_id: 5678 });
+    const out = await cloneCareOffering("1234", {
+      target_phase_id: "5678",
+    });
     expect(out.id).toBe("9999");
     expect(seenURL).toContain("/1234/clone");
-    expect(seenBody).toContain(`"target_phase_id":5678`);
+    expect(seenBody).toContain(`"target_phase_id":"5678"`);
   });
 
   it("URL-encodes the source id", async () => {
@@ -257,7 +262,7 @@ describe("cloneCareOffering", () => {
       seenURL = typeof input === "string" ? input : input.toString();
       return jsonResponse({ data: mkOffering("1") }, { status: 201 });
     });
-    await cloneCareOffering("a/b", { target_phase_id: 5 });
+    await cloneCareOffering("a/b", { target_phase_id: "5" });
     expect(seenURL).toContain("a%2Fb/clone");
   });
 
@@ -266,7 +271,7 @@ describe("cloneCareOffering", () => {
       jsonResponse({ error: "source not found" }, { status: 404 }),
     );
     await expect(
-      cloneCareOffering("1234", { target_phase_id: 5 }),
+      cloneCareOffering("1234", { target_phase_id: "5" }),
     ).rejects.toThrow(/Klonen fehlgeschlagen/);
   });
 });

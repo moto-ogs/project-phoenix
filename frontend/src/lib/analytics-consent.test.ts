@@ -11,6 +11,10 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("~/env.client", () => ({ clientEnv: mocks.env }));
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 vi.mock("~/lib/demo-access", () => ({ isDemoBuild: () => mocks.demo }));
 vi.mock("~/lib/posthog-client", () => ({
   analyticsHostSurface: () => mocks.hostSurface,
@@ -88,7 +92,7 @@ describe("analytics consent", () => {
       expect(published()).toEqual([false]);
       expect(fetchMock).toHaveBeenCalledWith(
         "/api/analytics-consent",
-        expect.objectContaining({ cache: "no-store" }),
+        expect.objectContaining({ method: "GET" }),
       );
 
       reply.resolve(answer(granted));

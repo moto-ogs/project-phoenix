@@ -10,7 +10,7 @@ import { Loading } from "~/components/ui/loading";
 import { SectionCard } from "~/components/ui/section-card";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiFormError } from "~/contexts/ToastContext";
-import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
 import { operatorPath } from "~/lib/operator-url";
 import { createLogger } from "~/lib/logger";
 const logger = createLogger({ component: "OperatorEmailConfirmPage" });
@@ -124,21 +124,11 @@ export function EmailConfirmContent() {
     const entryUrl = window.location.href;
     const entryState: unknown = window.history.state;
     try {
-      const response = await transportFetch(
-        "/api/operator/auth/email-confirm",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token }),
-        },
-      );
-
-      if (!response.ok) {
-        throw await apiErrorFromResponse(
-          response,
-          `Email confirm failed (${response.status})`,
-        );
-      }
+      // Without a session (`public`): the link works signed in or out.
+      await bffJson("public", "POST /operator/auth/email-confirm", {
+        body: { token },
+        errorMessage: "Email confirm failed",
+      });
 
       confirmRef.current = "done";
       markEntryConfirmed(entryUrl, entryState);
