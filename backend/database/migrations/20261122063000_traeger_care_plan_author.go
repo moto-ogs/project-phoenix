@@ -138,6 +138,22 @@ UPDATE users.student_care_exit_source_removals
 		AND NOT snapshot ? 'excused_by_traeger';
 `
 
+// traegerCarePlanAuthorLockSQL closes the tables to writers before the down
+// migration counts: a write still open at the count would commit unseen, and
+// the old shape of the day's way home would take the row without its mark.
+const traegerCarePlanAuthorLockSQL = `
+LOCK TABLE
+	schedule.student_arrival_schedules,
+	schedule.student_arrival_notes,
+	schedule.student_pickup_notes,
+	schedule.student_pickup_schedules,
+	schedule.student_arrival_exceptions,
+	schedule.student_pickup_exceptions,
+	schedule.student_departure_exceptions,
+	users.student_care_exit_source_removals
+IN ACCESS EXCLUSIVE MODE
+`
+
 // traegerCarePlanAuthorEntriesSQL counts what the Träger-Büro entered, live
 // and archived by a care exit.
 const traegerCarePlanAuthorEntriesSQL = `
@@ -226,6 +242,9 @@ func traegerCarePlanAuthorUp(ctx context.Context, db *bun.DB) error {
 
 func traegerCarePlanAuthorDown(ctx context.Context, db *bun.DB) error {
 	return db.RunInTx(ctx, &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
+		if _, err := tx.ExecContext(ctx, traegerCarePlanAuthorLockSQL); err != nil {
+			return fmt.Errorf("lock the Betreuungszeiten for the rollback: %w", err)
+		}
 		var entries int
 		if err := tx.NewRaw(traegerCarePlanAuthorEntriesSQL).Scan(ctx, &entries); err != nil {
 			return fmt.Errorf("count the Betreuungszeiten the Träger-Büro entered: %w", err)

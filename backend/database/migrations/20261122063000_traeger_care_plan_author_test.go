@@ -63,6 +63,14 @@ func TestTraegerCarePlanAuthorConstraints(t *testing.T) {
 	require.ErrorContains(t, excuse(false), "chk_pickup_exception_partial_absence")
 	require.NoError(t, excuse(true))
 	_, err := db.ExecContext(ctx, `
+		UPDATE schedule.student_pickup_exceptions SET excused_created_by = 1
+		WHERE tenant_id = ? AND student_id = ?`, tenantID, student.ID)
+	require.ErrorContains(t, err, "chk_pickup_exception_partial_absence", "a staff member beside the mark of the partial absence")
+	_, err = db.ExecContext(ctx, `
+		INSERT INTO schedule.student_departure_exceptions (tenant_id, student_id, exception_date, departure_mode, created_by, entered_by_traeger)
+		VALUES (?, ?, '2026-09-09', 'pickup', 1, TRUE)`, tenantID, student.ID)
+	require.ErrorContains(t, err, "chk_departure_exception_author")
+	_, err = db.ExecContext(ctx, `
 		UPDATE schedule.student_pickup_exceptions SET excused_from = NULL
 		WHERE tenant_id = ? AND student_id = ?`, tenantID, student.ID)
 	require.ErrorContains(t, err, "chk_pickup_exception_partial_absence")
@@ -126,24 +134,40 @@ func TestTraegerCarePlanAuthorBackfillsCareExitSnapshots(t *testing.T) {
 
 // The shapes before the migration cannot hold what the Träger-Büro entered.
 // Rolling back while such an entry exists would have to delete care data, so
-// the down migration refuses and leaves every row as it is.
+// the down migration refuses and leaves every row as it is: for a live row,
+// for a row only a care exit archived, and not at all once none is left.
 func TestTraegerCarePlanAuthorDownRefusesWhileTraegerEntriesExist(t *testing.T) {
 	t.Parallel()
-	db := testpkg.SetupTestDB(t)
+	db := testpkg.SetupIsolatedTestDB(t)
 	ctx := testpkg.Ctx(t)
 	tenantID := testpkg.Tenant(t)
 	student := testpkg.CreateTestStudent(t, db, "Lena", "Rueckweg", "1c")
+	marked := func() (count int) {
+		require.NoError(t, db.NewRaw(traegerCarePlanAuthorEntriesSQL).Scan(ctx, &count))
+		return count
+	}
+	require.Zero(t, marked(), "the isolated database starts without entries of the Träger-Büro")
 
 	_, err := db.ExecContext(ctx, `
-		INSERT INTO schedule.student_pickup_schedules (tenant_id, student_id, weekday, pickup_time, entered_by_traeger)
-		VALUES (?, ?, 2, '15:00', TRUE)`, tenantID, student.ID)
+		INSERT INTO schedule.student_departure_exceptions (tenant_id, student_id, exception_date, departure_mode, entered_by_traeger)
+		VALUES (?, ?, '2026-09-09', 'pickup', TRUE)`, tenantID, student.ID)
 	require.NoError(t, err)
+	require.ErrorContains(t, traegerCarePlanAuthorDown(ctx, db), "cannot be rolled back")
+	require.Equal(t, 1, marked(), "the refused rollback keeps the row and its mark")
 
+	_, err = db.ExecContext(ctx, `DELETE FROM schedule.student_departure_exceptions WHERE tenant_id = ?`, tenantID)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, `
+		INSERT INTO users.student_care_exit_source_removals (tenant_id, student_id, kind, source_row_id, was_deleted, snapshot)
+		VALUES (?, ?, 'pickup_exception', 1, TRUE, '{"entered_by_traeger": false, "excused_by_traeger": true}'::jsonb)`, tenantID, student.ID)
+	require.NoError(t, err)
 	require.ErrorContains(t, traegerCarePlanAuthorDown(ctx, db), "cannot be rolled back")
 
-	var kept int
-	require.NoError(t, db.NewRaw(`
-		SELECT COUNT(*) FROM schedule.student_pickup_schedules
-		WHERE tenant_id = ? AND student_id = ? AND entered_by_traeger`, tenantID, student.ID).Scan(ctx, &kept))
-	require.Equal(t, 1, kept)
+	_, err = db.ExecContext(ctx, `DELETE FROM users.student_care_exit_source_removals WHERE tenant_id = ?`, tenantID)
+	require.NoError(t, err)
+	require.NoError(t, traegerCarePlanAuthorDown(ctx, db))
+	_, err = db.ExecContext(ctx, `
+		INSERT INTO schedule.student_arrival_schedules (tenant_id, student_id, weekday, expected_arrival)
+		VALUES (?, ?, 1, '11:30')`, tenantID, student.ID)
+	require.ErrorContains(t, err, "created_by", "the old shape requires the staff author again")
 }
