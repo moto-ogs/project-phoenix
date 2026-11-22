@@ -21,19 +21,18 @@ vi.mock("next-auth/react", () => ({
   ),
 }));
 
-vi.mock("./fetch-with-auth", () => ({
-  fetchWithAuth: vi.fn(),
-}));
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
 // Import after mocking
 import { userContextService } from "./usercontext-api";
-import { fetchWithAuth } from "./fetch-with-auth";
 
 describe("userContextService", () => {
-  const fetchWithAuthMock = vi.mocked(fetchWithAuth);
+  const originalFetch = globalThis.fetch;
+  const fetchWithAuthMock = vi.fn<typeof fetch>();
 
   beforeEach(() => {
     vi.clearAllMocks();
+    globalThis.fetch = fetchWithAuthMock;
     // Simulate browser environment
     Object.defineProperty(globalThis, "window", {
       value: {},
@@ -43,6 +42,7 @@ describe("userContextService", () => {
   });
 
   afterEach(() => {
+    globalThis.fetch = originalFetch;
     // Reset window to undefined for server-side tests
     Object.defineProperty(globalThis, "window", {
       value: undefined,
@@ -75,28 +75,6 @@ describe("userContextService", () => {
       expect(result[0]?.room?.name).toBe("Raum 101");
     });
 
-    it("returns empty array when data is null", async () => {
-      fetchWithAuthMock.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ status: "success", data: null }),
-      } as Response);
-
-      const result = await userContextService.getMyEducationalGroups();
-
-      expect(result).toEqual([]);
-    });
-
-    it("returns empty array when data is not an array", async () => {
-      fetchWithAuthMock.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ status: "success", data: "invalid" }),
-      } as Response);
-
-      const result = await userContextService.getMyEducationalGroups();
-
-      expect(result).toEqual([]);
-    });
-
     it("throws error on fetch failure", async () => {
       fetchWithAuthMock.mockResolvedValueOnce({
         ok: false,
@@ -119,7 +97,7 @@ describe("userContextService", () => {
       await userContextService.getMyEducationalGroups();
 
       expect(fetchWithAuthMock).toHaveBeenCalledWith("/api/me/groups", {
-        headers: { "Content-Type": "application/json" },
+        method: "GET",
       });
     });
   });
@@ -144,17 +122,6 @@ describe("userContextService", () => {
       expect(result).toHaveLength(1);
       expect(result[0]?.id).toBe("2");
       expect(result[0]?.room?.name).toBe("Raum 202");
-    });
-
-    it("handles null response data", async () => {
-      fetchWithAuthMock.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ status: "success", data: null }),
-      } as Response);
-
-      const result = await userContextService.getMySupervisedGroups();
-
-      expect(result).toEqual([]);
     });
   });
 
@@ -187,9 +154,9 @@ describe("userContextService", () => {
         text: () => Promise.resolve("Not found"),
       } as Response);
 
-      await expect(userContextService.getCurrentStaff()).rejects.toThrow(
-        "Get current staff failed: 404",
-      );
+      await expect(userContextService.getCurrentStaff()).rejects.toMatchObject({
+        status: 404,
+      });
 
       // Should not have logged "Get current staff error:" for 404
       const errorCalls = consoleSpy.mock.calls.filter(

@@ -10,6 +10,7 @@
 import type { ReactNode } from "react";
 
 import { NotificationFeedPageReload } from "~/components/dashboard/header/notification-feed-page-reload";
+import { traegerNotificationFeedApi } from "~/lib/notification-feed-api";
 import {
   type NotificationFeedPortal,
   NotificationFeedPortalProvider,
@@ -17,7 +18,7 @@ import {
 import { traegerPath } from "~/lib/traeger-url";
 
 const TRAEGER_NOTIFICATION_FEED_PORTAL: NotificationFeedPortal = {
-  apiBase: "/api/traeger/notifications/feed",
+  api: traegerNotificationFeedApi,
   keyScope: "traeger",
   resolveLink: traegerPath,
   analyticsSchoolId: null,

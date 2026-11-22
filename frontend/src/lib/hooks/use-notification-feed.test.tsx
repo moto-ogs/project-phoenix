@@ -27,9 +27,12 @@ vi.mock("~/lib/tenant-context", () => ({
   useTenantSlugSafe: () => "school-a",
 }));
 const api = vi.hoisted(() => ({
-  fetchNotificationFeed: vi.fn(),
-  markNotificationFeedEntryRead: vi.fn(),
-  markAllNotificationFeedRead: vi.fn(),
+  tenantNotificationFeedApi: {
+    fetchPage: vi.fn(),
+    fetchUnreadCount: vi.fn(),
+    markRead: vi.fn(),
+    markAllRead: vi.fn(),
+  },
   parentNotificationFeedApi: {
     fetchPage: vi.fn(),
     fetchUnreadCount: vi.fn(),
@@ -109,12 +112,12 @@ beforeEach(() => {
     user: { id: "account-7", tenantId: 42 },
     expires: "2099-01-01",
   };
-  api.fetchNotificationFeed.mockImplementation(
-    (_base: string, cursor?: string) =>
+  api.tenantNotificationFeedApi.fetchPage.mockImplementation(
+    (cursor?: string) =>
       Promise.resolve(cursor ? page("older") : page("first", "c2")),
   );
-  api.markNotificationFeedEntryRead.mockResolvedValue(0);
-  api.markAllNotificationFeedRead.mockResolvedValue(0);
+  api.tenantNotificationFeedApi.markRead.mockResolvedValue(0);
+  api.tenantNotificationFeedApi.markAllRead.mockResolvedValue(0);
 });
 
 describe("notification feed reconciliation", () => {
@@ -149,7 +152,7 @@ describe("notification feed reconciliation", () => {
       const feed = renderFeed();
       await advance();
       let settle!: () => void;
-      api.fetchNotificationFeed.mockImplementationOnce(
+      api.tenantNotificationFeedApi.fetchPage.mockImplementationOnce(
         () =>
           new Promise<NotificationFeedPage>((resolve, reject) => {
             settle = () =>
@@ -190,7 +193,7 @@ describe("notification feed reconciliation", () => {
         "first",
         "older",
       ]);
-      api.fetchNotificationFeed.mockResolvedValue({
+      api.tenantNotificationFeedApi.fetchPage.mockResolvedValue({
         ...page("new", "new-cursor"),
         unreadCount: 2,
       });
@@ -207,8 +210,7 @@ describe("notification feed reconciliation", () => {
       ]);
       expect(feed.onUnreadCount).toHaveBeenLastCalledWith(2);
       await act(() => feed.result.current.loadMore());
-      expect(api.fetchNotificationFeed).toHaveBeenLastCalledWith(
-        "/api/notifications/feed",
+      expect(api.tenantNotificationFeedApi.fetchPage).toHaveBeenLastCalledWith(
         "new-cursor",
       );
     },
@@ -218,7 +220,7 @@ describe("notification feed reconciliation", () => {
     const feed = renderFeed();
     await advance();
     let resolvePage!: (value: NotificationFeedPage) => void;
-    api.fetchNotificationFeed.mockImplementationOnce(
+    api.tenantNotificationFeedApi.fetchPage.mockImplementationOnce(
       () =>
         new Promise<NotificationFeedPage>((resolve) => {
           resolvePage = resolve;
@@ -228,7 +230,9 @@ describe("notification feed reconciliation", () => {
     act(() => {
       pending = feed.result.current.loadMore();
     });
-    api.fetchNotificationFeed.mockResolvedValue(page("new", "new-cursor"));
+    api.tenantNotificationFeedApi.fetchPage.mockResolvedValue(
+      page("new", "new-cursor"),
+    );
 
     await advance(LIVE_FALLBACK_INTERVAL_MS);
     expect(feed.result.current.items[0]?.entry.id).toBe("new");
@@ -253,8 +257,8 @@ describe("notification feed reconciliation", () => {
       const response = new Promise<number>((resolve) => {
         resolveRead = resolve;
       });
-      api.markNotificationFeedEntryRead.mockReturnValue(response);
-      api.markAllNotificationFeedRead.mockReturnValue(response);
+      api.tenantNotificationFeedApi.markRead.mockReturnValue(response);
+      api.tenantNotificationFeedApi.markAllRead.mockReturnValue(response);
       let pending!: Promise<void>;
       act(() => {
         pending =
@@ -329,8 +333,8 @@ describe("parents portal feed (#7140)", () => {
       feed.result.current.markRead(feed.result.current.items[0]!),
     );
     expect(parentApi.markRead).toHaveBeenCalledWith("parent-first");
-    expect(api.fetchNotificationFeed).not.toHaveBeenCalled();
-    expect(api.markNotificationFeedEntryRead).not.toHaveBeenCalled();
+    expect(api.tenantNotificationFeedApi.fetchPage).not.toHaveBeenCalled();
+    expect(api.tenantNotificationFeedApi.markRead).not.toHaveBeenCalled();
     expect(onUnreadCount).toHaveBeenLastCalledWith(0);
   });
 });
