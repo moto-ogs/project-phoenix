@@ -519,29 +519,6 @@ type RoleResponse struct {
 	Permissions  []string `json:"permissions,omitempty"`
 }
 
-// CreatePermissionRequest represents the create permission request payload
-type CreatePermissionRequest struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Resource    string `json:"resource"`
-	Action      string `json:"action"`
-}
-
-// Bind validates the create permission request
-func (req *CreatePermissionRequest) Bind(_ *http.Request) error {
-	req.Name = strings.TrimSpace(req.Name)
-	req.Description = strings.TrimSpace(req.Description)
-	req.Resource = strings.TrimSpace(strings.ToLower(req.Resource))
-	req.Action = strings.TrimSpace(strings.ToLower(req.Action))
-
-	return validation.ValidateStruct(req,
-		validation.Field(&req.Name, validation.Required, validation.Length(1, 100)),
-		validation.Field(&req.Description, validation.Length(0, 500)),
-		validation.Field(&req.Resource, validation.Required, validation.Length(1, 50)),
-		validation.Field(&req.Action, validation.Required, validation.Length(1, 50)),
-	)
-}
-
 // PermissionResponse represents a permission response
 type PermissionResponse struct {
 	ID          ident.ID `json:"id"`
@@ -553,27 +530,10 @@ type PermissionResponse struct {
 	UpdatedAt   string   `json:"updated_at"`
 }
 
-// UpdateAccountRequest represents the update account request payload
-type UpdateAccountRequest struct {
-	Email    string `json:"email"`
-	Username string `json:"username,omitempty"`
-}
-
 type EnableCaregiverCapabilityRequest struct {
 	FirstName string `json:"first_name,omitempty"`
 	LastName  string `json:"last_name,omitempty"`
 	Position  string `json:"position,omitempty"`
-}
-
-// Bind validates the update account request
-func (req *UpdateAccountRequest) Bind(_ *http.Request) error {
-	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
-	req.Username = strings.TrimSpace(req.Username)
-
-	return validation.ValidateStruct(req,
-		validation.Field(&req.Email, validation.Required, is.Email),
-		validation.Field(&req.Username, validation.Length(3, 30)),
-	)
 }
 
 func (req *EnableCaregiverCapabilityRequest) Bind(_ *http.Request) error {

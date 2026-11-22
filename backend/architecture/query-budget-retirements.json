@@ -388,5 +388,10 @@
     "scenario": "workforce.workforce20.own_export",
     "route": "GET /api/time-tracking/export",
     "issue": 7808
+  },
+  {
+    "scenario": "api.auth.accounts.list.positive_growth",
+    "route": "GET /auth/accounts/",
+    "issue": 7808
   }
 ]
