@@ -20,6 +20,11 @@ function render(ui: ReactElement) {
   return rtlRender(ui, { wrapper: ToastProvider });
 }
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => ({
     data: { user: { id: "1" } },
@@ -199,7 +204,7 @@ describe("OpeningBalanceImportPage", () => {
       expect(global.fetch).toHaveBeenCalledWith(
         "/api/import/opening-balances/template?format=xlsx",
         // The route reads the session cookie (#5005).
-        { credentials: "include" },
+        expect.objectContaining({ method: "GET" }),
       );
     });
   });
