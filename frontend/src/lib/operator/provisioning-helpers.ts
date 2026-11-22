@@ -1,44 +1,12 @@
 import { knownEnum } from "~/lib/contract/known-enum";
 import { requiredDay } from "~/lib/contract/required-day";
-import type {
-  DeviceTransferStatus as WireDeviceTransferStatus,
-  createDeviceRequest,
-} from "~/lib/contract/operator-devices.generated";
-import type {
-  OrganizationSummary as WireOrganizationSummary,
-  SampleChildrenResult as WireSampleChildrenResult,
-  TestTraeger as WireTestTraeger,
-  TraegerErasureOrder as WireTraegerErasureOrder,
-  TraegerInvitation as WireTraegerInvitation,
-  TraegerMember as WireTraegerMember,
-  createOrganizationRequest,
-  createTestTraegerRequest,
-  recordTraegerErasureOrderRecordsRequest,
-  recordTraegerErasureOrderRequest,
-  traegerMemberRequest,
-  updateOrganizationRequest,
-} from "~/lib/contract/operator-organizations.generated";
-import type {
-  SchoolAccount as WireSchoolAccount,
-  SchoolPWAUsage as WireSchoolPWAUsage,
-  SchoolRequiredDetails as WireSchoolRequiredDetails,
-  createSchoolAccountRequest,
-  createSchoolRequest,
-  inviteSchoolAdminRequest,
-  operatorInvitationResponse as WireInvitation,
-  updateSchoolRequest,
-} from "~/lib/contract/operator-schools.generated";
-import type { ProvisioningStats as WireProvisioningStats } from "~/lib/contract/operator-stats.generated";
-import type { scanResponse as WireUnregisteredTagScan } from "~/lib/contract/operator-unregistered-tag-scans.generated";
-import type { CatererSecurityResponse as WireOperatorCaterer } from "~/lib/contract/operator-caterers.generated";
-import type {
-  OperatorDevice as WireOperatorDevice,
-  OperatorPerson as WireOperatorPerson,
-  Organization as WireOrganization,
-  OrganizationAccount as WireOrgAccount,
-  School as WireSchool,
-  SchoolSummary as WireSchoolSummary,
-} from "~/lib/contract/shared.generated";
+import type * as operatorDevicesContract from "~/lib/contract/operator-devices.generated";
+import type * as operatorOrganizationsContract from "~/lib/contract/operator-organizations.generated";
+import type * as operatorSchoolsContract from "~/lib/contract/operator-schools.generated";
+import type * as operatorStatsContract from "~/lib/contract/operator-stats.generated";
+import type * as operatorUnregisteredTagScansContract from "~/lib/contract/operator-unregistered-tag-scans.generated";
+import type * as operatorCaterersContract from "~/lib/contract/operator-caterers.generated";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import { isTraegerRole, type TraegerRole } from "~/lib/traeger-roles";
 
 export interface ProvisioningStats {
@@ -49,7 +17,7 @@ export interface ProvisioningStats {
 }
 
 export function mapProvisioningStats(
-  data: WireProvisioningStats,
+  data: operatorStatsContract.ProvisioningStats,
 ): ProvisioningStats {
   return {
     traegerCount: data.traeger_count,
@@ -74,14 +42,18 @@ export interface SchoolPWAUsage {
   parent: PWAPortalUsage;
 }
 
-function mapPWAPortalUsage(data: WireSchoolPWAUsage["staff"]): PWAPortalUsage {
+function mapPWAPortalUsage(
+  data: operatorSchoolsContract.SchoolPWAUsage["staff"],
+): PWAPortalUsage {
   return {
     standaloneUsers: data.standalone_users,
     eligibleUsers: data.eligible_users,
   };
 }
 
-export function mapSchoolPWAUsage(data: WireSchoolPWAUsage): SchoolPWAUsage {
+export function mapSchoolPWAUsage(
+  data: operatorSchoolsContract.SchoolPWAUsage,
+): SchoolPWAUsage {
   return {
     windowDays: data.window_days,
     staff: mapPWAPortalUsage(data.staff),
@@ -97,7 +69,7 @@ export interface OrganizationSummary extends Organization {
 }
 
 export function mapOrganizationSummary(
-  data: WireOrganizationSummary,
+  data: operatorOrganizationsContract.OrganizationSummary,
 ): OrganizationSummary {
   return {
     ...mapOrganization(data),
@@ -135,7 +107,9 @@ export interface SchoolSummary {
   deviceSlots: number | null;
 }
 
-export function mapSchoolSummary(data: WireSchoolSummary): SchoolSummary {
+export function mapSchoolSummary(
+  data: sharedContract.SchoolSummary,
+): SchoolSummary {
   return {
     id: data.id,
     organizationId: data.organization_id,
@@ -268,7 +242,9 @@ export interface SchoolAccount {
   isActiveCaregiver: boolean;
 }
 
-export function mapSchoolAccount(data: WireSchoolAccount): SchoolAccount {
+export function mapSchoolAccount(
+  data: operatorSchoolsContract.SchoolAccount,
+): SchoolAccount {
   return {
     accountId: data.account_id,
     email: data.email,
@@ -292,7 +268,9 @@ export interface OrgAccount extends SchoolAccount {
   schoolName: string;
 }
 
-export function mapOrgAccount(data: WireOrgAccount): OrgAccount {
+export function mapOrgAccount(
+  data: sharedContract.OrganizationAccount,
+): OrgAccount {
   return {
     ...mapSchoolAccount(data),
     schoolId: data.school_id,
@@ -302,18 +280,22 @@ export function mapOrgAccount(data: WireOrgAccount): OrgAccount {
 
 // Request types (snake_case for backend)
 
-export type CreateOrganizationRequest = Required<createOrganizationRequest>;
+export type CreateOrganizationRequest =
+  Required<operatorOrganizationsContract.createOrganizationRequest>;
 
 /** Auftrag für ein Testsystem (#4658): Test-Träger mit Test-Schulen. */
 /** `federal_state`: Bundesland of every test school (#7174). */
-export type CreateTestTraegerRequest = Required<createTestTraegerRequest>;
+export type CreateTestTraegerRequest =
+  Required<operatorOrganizationsContract.createTestTraegerRequest>;
 
 export interface TestTraeger {
   organization: Organization;
   schools: School[];
 }
 
-export function mapTestTraeger(data: WireTestTraeger): TestTraeger {
+export function mapTestTraeger(
+  data: operatorOrganizationsContract.TestTraeger,
+): TestTraeger {
   return {
     organization: mapOrganization(data.organization),
     schools: (data.schools ?? []).map(mapSchool),
@@ -327,7 +309,7 @@ export interface SampleChildrenResult {
 }
 
 export function mapSampleChildrenResult(
-  data: WireSampleChildrenResult,
+  data: operatorOrganizationsContract.SampleChildrenResult,
 ): SampleChildrenResult {
   return {
     createdCount: data.created_count,
@@ -343,10 +325,10 @@ export function mapSampleChildrenResult(
  * `federal_state` is the ISO 3166-2 code of the Bundesland; required, there is
  * no default (#7174).
  */
-export type CreateSchoolRequest = createSchoolRequest &
+export type CreateSchoolRequest = operatorSchoolsContract.createSchoolRequest &
   Required<
     Pick<
-      createSchoolRequest,
+      operatorSchoolsContract.createSchoolRequest,
       "organization_id" | "name" | "slug" | "subdomain" | "federal_state"
     >
   >;
@@ -374,20 +356,24 @@ export const FEDERAL_STATES: readonly { value: string; label: string }[] = [
   { value: "DE-TH", label: "Thüringen" },
 ];
 
-export type InviteAdminRequest = inviteSchoolAdminRequest &
-  Required<Pick<inviteSchoolAdminRequest, "email">>;
+export type InviteAdminRequest =
+  operatorSchoolsContract.inviteSchoolAdminRequest &
+    Required<Pick<operatorSchoolsContract.inviteSchoolAdminRequest, "email">>;
 
-export type CreateAccountRequest = createSchoolAccountRequest &
-  Required<
-    Pick<
-      createSchoolAccountRequest,
-      "email" | "first_name" | "last_name" | "password" | "confirm_password"
-    >
-  >;
+export type CreateAccountRequest =
+  operatorSchoolsContract.createSchoolAccountRequest &
+    Required<
+      Pick<
+        operatorSchoolsContract.createSchoolAccountRequest,
+        "email" | "first_name" | "last_name" | "password" | "confirm_password"
+      >
+    >;
 
 // Mapping functions
 
-export function mapOrganization(data: WireOrganization): Organization {
+export function mapOrganization(
+  data: sharedContract.Organization,
+): Organization {
   return {
     id: data.id,
     name: data.name,
@@ -400,7 +386,7 @@ export function mapOrganization(data: WireOrganization): Organization {
   };
 }
 
-export function mapSchool(data: WireSchool): School {
+export function mapSchool(data: sharedContract.School): School {
   return {
     id: data.id,
     organizationId: data.organization_id,
@@ -423,7 +409,9 @@ export function mapSchool(data: WireSchool): School {
   };
 }
 
-export function mapInvitation(data: WireInvitation): Invitation {
+export function mapInvitation(
+  data: operatorSchoolsContract.operatorInvitationResponse,
+): Invitation {
   return {
     id: data.id,
     email: data.email,
@@ -443,16 +431,17 @@ export function mapInvitation(data: WireInvitation): Invitation {
   };
 }
 
-export type UpdateOrganizationRequest = Required<updateOrganizationRequest>;
+export type UpdateOrganizationRequest =
+  Required<operatorOrganizationsContract.updateOrganizationRequest>;
 
 /**
  * Kinderkontingent (#3567): `child_quota` absent keeps it, null removes it,
  * an object sets it.
  */
 export type UpdateSchoolRequest = Required<
-  Omit<updateSchoolRequest, "child_quota">
+  Omit<operatorSchoolsContract.updateSchoolRequest, "child_quota">
 > &
-  Pick<updateSchoolRequest, "child_quota">;
+  Pick<operatorSchoolsContract.updateSchoolRequest, "child_quota">;
 
 /** What a school still lacks of its required details (#7174). */
 export interface SchoolRequiredDetails {
@@ -462,7 +451,7 @@ export interface SchoolRequiredDetails {
 }
 
 export function mapSchoolRequiredDetails(
-  data: WireSchoolRequiredDetails,
+  data: operatorSchoolsContract.SchoolRequiredDetails,
 ): SchoolRequiredDetails {
   return {
     schoolId: data.school_id,
@@ -472,9 +461,12 @@ export function mapSchoolRequiredDetails(
 
 // Device creation / API key management
 
-export type CreateDeviceRequest = createDeviceRequest &
+export type CreateDeviceRequest = operatorDevicesContract.createDeviceRequest &
   Required<
-    Pick<createDeviceRequest, "school_id" | "device_id" | "device_type">
+    Pick<
+      operatorDevicesContract.createDeviceRequest,
+      "school_id" | "device_id" | "device_type"
+    >
   >;
 
 // Device types for operator device listing
@@ -498,7 +490,7 @@ export interface OperatorDevice {
 }
 
 export function mapOperatorDevice(
-  data: WireOperatorDevice,
+  data: sharedContract.OperatorDevice,
   includeCredential = false,
 ): OperatorDevice {
   return {
@@ -534,7 +526,7 @@ export interface DeviceTransferStatus {
 }
 
 export function mapDeviceTransferStatus(
-  data: WireDeviceTransferStatus,
+  data: operatorDevicesContract.DeviceTransferStatus,
 ): DeviceTransferStatus {
   return {
     canTransfer: data.can_transfer,
@@ -591,7 +583,9 @@ export interface OperatorPerson {
   createdAt: string;
 }
 
-export function mapOperatorPerson(data: WireOperatorPerson): OperatorPerson {
+export function mapOperatorPerson(
+  data: sharedContract.OperatorPerson,
+): OperatorPerson {
   return {
     id: data.id,
     firstName: data.first_name,
@@ -630,7 +624,7 @@ export interface UnregisteredTagScan {
 }
 
 export function mapUnregisteredTagScan(
-  data: WireUnregisteredTagScan,
+  data: operatorUnregisteredTagScansContract.scanResponse,
 ): UnregisteredTagScan {
   return {
     id: data.id,
@@ -688,7 +682,9 @@ export interface TraegerMember {
   activatedAt: string | null;
 }
 
-export function mapTraegerMember(data: WireTraegerMember): TraegerMember {
+export function mapTraegerMember(
+  data: operatorOrganizationsContract.TraegerMember,
+): TraegerMember {
   return {
     accountId: data.account_id,
     email: data.email,
@@ -700,10 +696,11 @@ export function mapTraegerMember(data: WireTraegerMember): TraegerMember {
   };
 }
 
-export type AssignTraegerMemberRequest = traegerMemberRequest & {
-  email: string;
-  roles: TraegerRole[];
-};
+export type AssignTraegerMemberRequest =
+  operatorOrganizationsContract.traegerMemberRequest & {
+    email: string;
+    roles: TraegerRole[];
+  };
 
 /** The operator's invitation into a Träger-Büro (#5144). */
 export type InviteTraegerMemberRequest = AssignTraegerMemberRequest;
@@ -722,7 +719,7 @@ export interface TraegerInvitation {
 }
 
 export function mapTraegerInvitation(
-  data: WireTraegerInvitation,
+  data: operatorOrganizationsContract.TraegerInvitation,
 ): TraegerInvitation {
   return {
     id: data.id,
@@ -763,7 +760,7 @@ export interface TraegerErasureOrder {
 }
 
 export function mapTraegerErasureOrder(
-  data: WireTraegerErasureOrder,
+  data: operatorOrganizationsContract.TraegerErasureOrder,
 ): TraegerErasureOrder {
   return {
     id: data.id,
@@ -788,7 +785,7 @@ export function mapTraegerErasureOrder(
 }
 
 export type RecordTraegerErasureOrderRequest =
-  recordTraegerErasureOrderRequest & {
+  operatorOrganizationsContract.recordTraegerErasureOrderRequest & {
     order_reference: string;
     confirmed_on: string;
     erase_not_before: string;
@@ -801,7 +798,7 @@ export type RecordTraegerErasureOrderRequest =
  * that was recorded without them (#4720), also once the erasure started.
  */
 export type RecordTraegerErasureOrderRecordsRequest =
-  recordTraegerErasureOrderRecordsRequest & {
+  operatorOrganizationsContract.recordTraegerErasureOrderRecordsRequest & {
     records_notice_acknowledged: boolean;
     records_choice: TraegerRecordsChoice;
   };
@@ -814,7 +811,9 @@ export interface OperatorCaterer {
   mfaEnabled: boolean;
 }
 
-export function mapOperatorCaterer(data: WireOperatorCaterer): OperatorCaterer {
+export function mapOperatorCaterer(
+  data: operatorCaterersContract.CatererSecurityResponse,
+): OperatorCaterer {
   return {
     id: data.id,
     accountId: data.account_id,

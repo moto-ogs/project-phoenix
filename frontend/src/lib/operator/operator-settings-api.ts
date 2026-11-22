@@ -2,6 +2,7 @@ import { ApiError } from "../api-error";
 import { operatorFetch } from "./api-helpers";
 import type { SettingsSchema } from "~/lib/settings-api";
 import { createLogger } from "~/lib/logger";
+import type * as operatorSchoolsContract from "~/lib/contract/operator-schools.generated";
 
 const logger = createLogger({ component: "OperatorSettingsApi" });
 
@@ -14,41 +15,28 @@ interface BookingAuthorityImpactChild {
 }
 
 export interface BookingAuthorityImpact {
-  referenceDate: string;
+  referenceDate: string | null;
   blockingChildren: BookingAuthorityImpactChild[];
   plannedCompletions: BookingAuthorityImpactChild[];
-}
-
-interface BookingAuthorityImpactWireChild {
-  student_id: string;
-  first_name: string;
-  last_name: string;
-  school_class: string;
-  first_bookingless_day?: string;
-}
-
-interface BookingAuthorityImpactWire {
-  reference_date: string;
-  blocking_children: BookingAuthorityImpactWireChild[];
-  planned_completions: BookingAuthorityImpactWireChild[];
 }
 
 export async function fetchBookingAuthorityImpact(
   schoolId: string,
 ): Promise<BookingAuthorityImpact> {
-  const wire = await operatorFetch<BookingAuthorityImpactWire>(
-    `/api/operator/schools/${schoolId}/settings/booking-authority-impact`,
-    { method: "GET" },
-  );
+  const wire =
+    await operatorFetch<operatorSchoolsContract.BookingAuthorityImpact>(
+      `/api/operator/schools/${schoolId}/settings/booking-authority-impact`,
+      { method: "GET" },
+    );
   return {
     referenceDate: wire.reference_date,
-    blockingChildren: wire.blocking_children.map(mapImpactChild),
-    plannedCompletions: wire.planned_completions.map(mapImpactChild),
+    blockingChildren: (wire.blocking_children ?? []).map(mapImpactChild),
+    plannedCompletions: (wire.planned_completions ?? []).map(mapImpactChild),
   };
 }
 
 function mapImpactChild(
-  child: BookingAuthorityImpactWireChild,
+  child: operatorSchoolsContract.BookingAuthorityImpactChild,
 ): BookingAuthorityImpactChild {
   return {
     studentId: child.student_id,

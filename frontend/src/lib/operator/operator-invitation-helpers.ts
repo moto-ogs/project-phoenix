@@ -1,5 +1,5 @@
-import type { PendingOperatorInvitationResponse as WirePendingInvitation } from "~/lib/contract/operator-invitations.generated";
-import type { OperatorListItem as WireOperatorListItem } from "~/lib/contract/shared.generated";
+import type * as operatorInvitationsContract from "~/lib/contract/operator-invitations.generated";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 
 /**
  * Answer of POST /api/operator/auth/invitations/validate. The route is
@@ -61,7 +61,7 @@ export interface AcceptOperatorInvitationRequest {
 // --- Mappers ---
 
 export function mapPendingInvitation(
-  data: WirePendingInvitation,
+  data: operatorInvitationsContract.PendingOperatorInvitationResponse,
 ): PendingOperatorInvitation {
   return {
     id: data.id,
@@ -77,7 +77,9 @@ export function mapPendingInvitation(
   };
 }
 
-export function mapOperatorInfo(data: WireOperatorListItem): OperatorInfo {
+export function mapOperatorInfo(
+  data: sharedContract.OperatorListItem,
+): OperatorInfo {
   return {
     id: data.id,
     email: data.email,
