@@ -82,13 +82,7 @@ func (loaded *answerContract) observe(r *http.Request, status int, data any, env
 	}
 	pattern := routeContext.RoutePattern()
 	routes, whole := loaded.candidates(r.Method, pattern, data)
-	plain, isPlain := envelope.(PlainAnswer)
-	if isPlain {
-		// RenderJSON writes many answers outside the contract; only a route
-		// registered as Plain reads it as its data.
-		routes = slices.DeleteFunc(routes, func(route contractmodel.Route) bool { return !route.Plain })
-		envelope = plain.Value
-	}
+	routes, envelope = plainCandidates(routes, envelope)
 	if len(routes) == 0 {
 		return nil
 	}
@@ -123,6 +117,18 @@ func (loaded *answerContract) observe(r *http.Request, status int, data any, env
 		scope = "the whole router"
 	}
 	return fmt.Errorf("the answer of %s %s (%s) leaves the contract in api/contract/contract.json; the BFF would answer 502. Fix the handler, or the registration and run gencontract.\n%s", r.Method, pattern, scope, strings.Join(reports, "\n"))
+}
+
+// plainCandidates keeps the routes an answer of RenderJSON may belong to:
+// it writes many answers outside the contract, and only a route registered
+// as Plain reads one as its data (#7808). The body to check is the value
+// itself.
+func plainCandidates(routes []contractmodel.Route, envelope any) ([]contractmodel.Route, any) {
+	plain, isPlain := envelope.(PlainAnswer)
+	if !isPlain {
+		return routes, envelope
+	}
+	return slices.DeleteFunc(routes, func(route contractmodel.Route) bool { return !route.Plain }), plain.Value
 }
 
 // readsAnUntypedBody tells whether the handler read a body the route's
