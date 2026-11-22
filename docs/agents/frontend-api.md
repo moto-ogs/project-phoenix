@@ -169,8 +169,9 @@ The key is the scope claim of the portal's session token
   path the contract does not register (a sign-in step, a stream, a bundle);
   `app/api/route-backend-paths.test.ts` fails a file whose backend paths are
   all registered.
-- Not served by a proxy: a route with response variants
-  (`GET /api/students/`).
+- A route with response variants (`GET /api/students/`) names its
+  `variantParam`; the proxy decodes the answer with the variant the query
+  asks for, else the default variant.
 - A Go type two resources answer with (the staff portal and moto schule
   mount the same notification feed) is written once, in
   `lib/contract/shared.generated.ts`, and imported by both resource files.
