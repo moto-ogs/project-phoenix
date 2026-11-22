@@ -1,7 +1,6 @@
 package account
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"time"
@@ -278,28 +277,6 @@ func (rs *Resource) renderAccountRoleMutationError(w http.ResponseWriter, r *htt
 		return
 	}
 	common.RenderError(w, r, accountRoleErrorRenderer(err))
-}
-
-// createPermission handles creating a new permission
-func (rs *Resource) createPermission(w http.ResponseWriter, r *http.Request) {
-	req := &CreatePermissionRequest{}
-	if err := render.Bind(r, req); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(err))
-		return
-	}
-
-	var permission identityaccess.Permission
-	err := rs.withinAdmin(r.Context(), func(ctx context.Context) error {
-		var createErr error
-		permission, createErr = rs.Sessions.CreatePermission(ctx, req.Name, req.Description, req.Resource, req.Action)
-		return createErr
-	})
-	if err != nil {
-		common.RenderError(w, r, common.ErrorInternalServer(err))
-		return
-	}
-
-	common.Respond(w, r, http.StatusCreated, toPermissionResponse(permission), "Permission created successfully")
 }
 
 // listPermissions handles listing permissions
