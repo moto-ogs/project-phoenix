@@ -1,6 +1,6 @@
 // Staff API service for fetching all staff members and their supervision status
 
-import type * as staffWire from "~/lib/contract/staff.generated";
+import type * as staffContract from "~/lib/contract/staff.generated";
 import type { RoleForm } from "~/lib/position-title";
 import { bffJson } from "./bff-fetch";
 import type { ActiveGroupResponse } from "~/lib/contract/active.generated";
@@ -19,10 +19,6 @@ import type {
   StaffRecordResponse,
   StammdatenResponse,
 } from "~/lib/contract/staff.generated";
-import type {
-  StaffAbsenceResponse,
-  VacationQuotaSummary,
-} from "~/lib/contract/shared.generated";
 import type * as sharedContract from "~/lib/contract/shared.generated";
 import type { ModelResponse } from "~/lib/contract/work-time-models.generated";
 import {
@@ -833,44 +829,40 @@ class WorkTimeModelService {
   }
 }
 
-// Staff history types (reuses time-tracking-helpers types)
-// Metrics can supply only intervals. History also carries the exact identity
-// and recorded minutes used by the correction dialog.
-interface StaffSessionBreak {
-  id?: string;
-  duration_minutes?: number;
-  started_at: string;
-  ended_at?: string | null;
-}
+// One session of the staff history: the fields the views read, with the
+// enums known and an open block's checkout as null. Metrics can supply only
+// intervals; the history also carries the exact identity and recorded
+// minutes the correction dialog uses. `net_minutes` already deducts a running
+// break (#1842); `pack_up_minutes` and `rounding_minutes` are the credits
+// inside it (#6851, #6852). `source`: `app` = self-service Web/App, `nfc` =
+// kiosk auto-stamp, `unknown` = pre-migration legacy row (#1368).
+export type StaffHistorySession = Pick<
+  sharedContract.HistorySessionResponse,
+  "date" | "net_minutes" | "check_in_time" | "break_minutes"
+> &
+  Partial<
+    Pick<
+      sharedContract.HistorySessionResponse,
+      | "id"
+      | "auto_checked_out"
+      | "notes"
+      | "edit_count"
+      | "audit_count"
+      | "pack_up_minutes"
+      | "rounding_minutes"
+    >
+  > & {
+    status?: "present" | "home_office";
+    source?: "app" | "nfc" | "unknown";
+    check_out_time: string | null;
+    breaks?: readonly StaffSessionBreak[] | null;
+  };
 
-export interface StaffHistorySession {
-  // Backend int64, quoted as a decimal string ON THE WIRE already
-  // (SessionResponse.MarshalJSON) and carried through unchanged: parsing it as
-  // a JSON number would round anything past 2^53 before any client-side
-  // .toString() could run, and the block-edit lookup matches on this id.
-  id?: string;
-  date: string;
-  status?: "present" | "home_office";
-  // Channel the row was created on. `app` = self-service Web/App,
-  // `nfc` = kiosk auto-stamp, `unknown` = pre-migration legacy row.
-  // Comes from active.work_sessions.source (Issue #1368).
-  source?: "app" | "nfc" | "unknown";
-  net_minutes: number;
-  check_in_time: string;
-  check_out_time: string | null;
-  break_minutes: number;
-  // Break rows for display. NOT needed to correct `net_minutes`: the server
-  // already deducts a running break from it (#1842).
-  breaks?: readonly StaffSessionBreak[] | null;
-  auto_checked_out?: boolean;
-  notes?: string;
-  edit_count?: number;
-  audit_count?: number;
-  // Credit inside `net_minutes` (#6851, #6852): pack-up time of a regular
-  // checkout and the signed change of the rounding. 0 for an open block.
-  pack_up_minutes?: number;
-  rounding_minutes?: number;
-}
+// A break of a history session; metrics supply only its interval.
+type StaffSessionBreak = Pick<sharedContract.WorkSessionBreak, "started_at"> &
+  Partial<Pick<sharedContract.WorkSessionBreak, "id" | "duration_minutes">> & {
+    ended_at?: string | null;
+  };
 
 /** Die Antwort der Verlaufsroute samt Wochensummen und ArbZG-Hinweisen. */
 export interface StaffHistoryDetails {
@@ -917,48 +909,44 @@ class StaffHistoryService {
   }
 }
 
-// Admin counterpart to /api/time-tracking/absences (which is self-scoped).
-// Backend response shape matches shared.StaffAbsenceResponse in time-tracking-helpers.ts.
-export interface StaffAbsenceRow {
-  // The contract decoder hands every identifier over as a decimal string.
-  id: string;
-  staff_id: string;
-  absence_type: string;
-  /** School-defined Abwesenheitsart (#2403); absent for the standard types. */
-  absence_type_id?: string | null;
-  /** The school's own wording; empty for the standard types. */
-  absence_type_label?: string;
-  date_start: string;
-  date_end: string;
-  half_day: boolean;
-  start_half_day?: boolean;
-  end_half_day?: boolean;
-  /** Go omits an empty note (`omitempty`). */
-  note?: string;
-  status: string;
-  approved_by?: string | null;
-  approved_at?: string | null;
-  decision_note?: string;
-  working_days?: number | null;
-  requested_at?: string;
-  duration_days?: number;
-}
+// An absence of a staff member, as the admin routes answer it and as the
+// metrics read it: the generated row, of which the metrics adapter of the
+// own time tracking (`adaptAbsenceForMetrics`) fills only what it knows.
+export type StaffAbsenceRow = Pick<
+  sharedContract.StaffAbsenceResponse,
+  | "id"
+  | "staff_id"
+  | "absence_type"
+  | "date_start"
+  | "date_end"
+  | "half_day"
+  | "status"
+> &
+  Partial<
+    Pick<
+      sharedContract.StaffAbsenceResponse,
+      | "absence_type_id"
+      | "absence_type_label"
+      | "start_half_day"
+      | "end_half_day"
+      | "note"
+      | "approved_by"
+      | "approved_at"
+      | "decision_note"
+      | "working_days"
+      | "requested_at"
+      | "duration_days"
+    >
+  >;
 
 // Eine Zeile des Anfragen-Moduls (#2433): der Antrag plus die Namen, die die
 // Liste anzeigt. Leere Namen heißen "Unbekannt" (gelöschtes Konto).
-export interface StaffAbsenceRequestRow extends Omit<
-  StaffAbsenceRow,
-  "id" | "staff_id" | "approved_by"
-> {
-  id: string;
-  staff_id: string;
-  approved_by?: string | null;
-  staff_name: string;
-  decided_by_name?: string;
-  /** Zeitpunkt der letzten Änderung; trägt bei zurückgezogenen Anträgen das
-   *  Rücknahme-Datum, für das es kein eigenes Feld gibt. */
-  updated_at?: string;
-}
+// `updated_at` trägt bei zurückgezogenen Anträgen das Rücknahme-Datum.
+export type StaffAbsenceRequestRow = StaffAbsenceRow &
+  Pick<staffContract.absenceRequestResponse, "staff_name"> &
+  Partial<
+    Pick<staffContract.absenceRequestResponse, "decided_by_name" | "updated_at">
+  >;
 
 // Eine Abwesenheit in Kraft, deren Schichten und Betreuungsblöcke ab heute
 // noch nicht als abwesend im Plan stehen (#7021): eingetragen oder genehmigt,
@@ -974,7 +962,7 @@ export interface AbsencePlanGap {
   openBlocks: number;
 }
 
-function mapAbsencePlanGap(row: staffWire.AbsencePlanGap): AbsencePlanGap {
+function mapAbsencePlanGap(row: staffContract.AbsencePlanGap): AbsencePlanGap {
   return {
     absenceId: row.absence_id,
     staffId: row.staff_id,
@@ -984,80 +972,6 @@ function mapAbsencePlanGap(row: staffWire.AbsencePlanGap): AbsencePlanGap {
     openShifts: row.open_shifts,
     openBlocks: row.open_blocks,
   };
-}
-
-// Vacation takeover at the moto introduction (#2132): days already taken
-// before the Stichtag in the previous system. The row is its own audit
-// record (Stichtag, entered Resturlaub, note, actor).
-export interface StaffVacationOpening {
-  id: string;
-  staff_id: string;
-  year: number;
-  effective_date: string;
-  taken_before_days: number;
-  entered_remaining_days: number;
-  note: string;
-  decided_by: string;
-  decided_at: string;
-}
-
-function mapStaffVacationOpening(
-  data: sharedContract.StaffVacationOpening,
-): StaffVacationOpening {
-  return {
-    id: data.id,
-    staff_id: data.staff_id,
-    year: data.year,
-    effective_date: data.effective_date,
-    taken_before_days: data.taken_before_days,
-    entered_remaining_days: data.entered_remaining_days,
-    note: data.note,
-    decided_by: data.decided_by,
-    decided_at: data.decided_at,
-  };
-}
-
-export interface StaffVacationQuotaSummary {
-  staff_id: string;
-  year: number;
-  entitled_days: number;
-  carryover_days: number;
-  taken_before_days: number;
-  taken_days: number;
-  reserved_days: number;
-  remaining_days: number;
-  opening?: StaffVacationOpening | null;
-}
-
-function mapStaffVacationQuotaSummary(
-  data: VacationQuotaSummary,
-): StaffVacationQuotaSummary {
-  return {
-    staff_id: data.staff_id,
-    year: data.year,
-    entitled_days: data.entitled_days,
-    carryover_days: data.carryover_days,
-    taken_before_days: data.taken_before_days,
-    taken_days: data.taken_days,
-    reserved_days: data.reserved_days,
-    remaining_days: data.remaining_days,
-    opening: data.opening ? mapStaffVacationOpening(data.opening) : undefined,
-  };
-}
-
-// Body for the admin "Abwesenheit anlegen" endpoint (POST
-// /api/staff/{id}/absences). Keys are snake_case to match the backend
-// CreateAbsenceRequest one-to-one; the route handler forwards them verbatim.
-// The backend struct only knows `half_day` (no per-boundary flags), so those
-// are intentionally absent — sending them would be silently dropped (#1843).
-// A `sick` absence triggers the Dienst-/Betreuungsplan cascade backend-side.
-interface AdminCreateAbsenceBody {
-  absence_type: string;
-  absence_type_id?: string;
-  date_start: string; // YYYY-MM-DD
-  date_end: string; // YYYY-MM-DD
-  half_day?: boolean;
-  note?: string;
 }
 
 // Stundenkonto projection for a planned Freizeitausgleich (#2873), shown in
@@ -1108,7 +1022,7 @@ class StaffAbsenceService {
   async getVacationQuota(
     staffId: string,
     year?: number,
-  ): Promise<StaffVacationQuotaSummary> {
+  ): Promise<sharedContract.VacationQuotaSummary> {
     const quota = await bffJson(
       "tenant",
       "GET /api/staff/{id}/vacation/quota",
@@ -1117,7 +1031,7 @@ class StaffAbsenceService {
         query: { year: year || undefined },
       },
     );
-    return mapStaffVacationQuotaSummary(quota);
+    return quota;
   }
 
   async setVacationQuota(
@@ -1129,7 +1043,7 @@ class StaffAbsenceService {
       /** Pflicht: erscheint im Änderungsprotokoll (#3256). */
       reason: string;
     },
-  ): Promise<StaffVacationQuotaSummary> {
+  ): Promise<sharedContract.VacationQuotaSummary> {
     const quota = await bffJson(
       "tenant",
       "PUT /api/staff/{id}/vacation/quota",
@@ -1139,7 +1053,7 @@ class StaffAbsenceService {
         errorMessage: "Der Urlaubsanspruch konnte nicht gespeichert werden.",
       },
     );
-    return mapStaffVacationQuotaSummary(quota);
+    return quota;
   }
 
   // Vacation takeover (#2132): the admin enters the Resturlaub as of the
@@ -1151,7 +1065,7 @@ class StaffAbsenceService {
       remainingDays: number;
       note: string;
     },
-  ): Promise<StaffVacationOpening> {
+  ): Promise<sharedContract.StaffVacationOpening> {
     const opening = await bffJson(
       "tenant",
       "POST /api/staff/{id}/vacation/opening",
@@ -1165,7 +1079,7 @@ class StaffAbsenceService {
         errorMessage: "Übernahme fehlgeschlagen",
       },
     );
-    return mapStaffVacationOpening(opening);
+    return opening;
   }
 
   async deleteVacationOpening(staffId: string, year: number): Promise<void> {
@@ -1265,7 +1179,7 @@ class StaffAbsenceService {
   // absent server-side (#1843). Returns the created StaffAbsence row.
   async createAbsence(
     staffId: string,
-    body: AdminCreateAbsenceBody,
+    body: sharedContract.CreateAbsenceRequest,
   ): Promise<StaffAbsenceRow> {
     return bffJson("tenant", "POST /api/staff/{id}/absences", {
       params: { id: staffId },
@@ -1335,7 +1249,8 @@ class StaffAbsenceService {
     );
     return {
       absences: (data.absences ?? []).filter(
-        (absence): absence is StaffAbsenceResponse => absence !== null,
+        (absence): absence is sharedContract.StaffAbsenceResponse =>
+          absence !== null,
       ),
       days: data.days,
       balanceDeltaMinutes: data.balance_delta_minutes,
@@ -1389,30 +1304,6 @@ import {
   type WorkDayLaborHint,
   type WorkSessionEdit,
 } from "./time-tracking-helpers";
-
-// Payload shape for admin edits and nachgetragene sessions. The backend
-// keys (date / check_in_time / ...) match SessionUpdateRequest and
-// AdminCreateSessionRequest one-to-one. The route handler decides which
-// it is via the HTTP verb (PUT vs POST). Notes is required for both flows.
-interface AdminSessionPayload {
-  date: string; // YYYY-MM-DD
-  check_in_time: string; // ISO 8601
-  check_out_time: string; // ISO 8601
-  break_minutes: number;
-  status: "present" | "home_office";
-  notes: string;
-}
-
-// An update leaves out a time it does not change: the backend keeps the
-// stored value for a missing field (#6293).
-interface AdminSessionUpdatePayload {
-  check_in_time?: string; // ISO 8601
-  check_out_time?: string; // ISO 8601
-  break_minutes: number;
-  breaks?: Array<{ id: string; duration_minutes: number }>;
-  status: "present" | "home_office";
-  notes: string;
-}
 
 class StaffSessionEditsService {
   async getEdits(
@@ -1558,7 +1449,7 @@ class StaffSessionService {
   async updateSession(
     staffId: string,
     sessionId: string,
-    payload: AdminSessionUpdatePayload,
+    payload: sharedContract.SessionUpdateRequest,
   ): Promise<void> {
     await bffJson(
       "tenant",
@@ -1571,7 +1462,7 @@ class StaffSessionService {
   // stamp. Backend route: /api/staff/{staffId}/time-tracking/sessions
   async createSession(
     staffId: string,
-    payload: AdminSessionPayload,
+    payload: staffContract.AdminCreateSessionRequest,
   ): Promise<void> {
     await bffJson("tenant", "POST /api/staff/{id}/time-tracking/sessions", {
       params: { id: staffId },

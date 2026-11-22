@@ -6,18 +6,9 @@
 // jeweiligen Liste (`class_handover`); ein SSE-Ereignis lädt die Listen nach
 // einer Übergabe neu.
 
+import type * as studentsContract from "~/lib/contract/students.generated";
 import { berlinClockFromISO } from "~/lib/date-helpers";
 import { schoolClassLabel } from "~/lib/school-class-label";
-
-/** Die heutige Übergabe eines Kindes mit seiner Klasse. */
-export interface ClassHandover {
-  school_class: string;
-  handed_over_at: string; // ISO-Zeitstempel
-  // Name der Lehrkraft; fehlt, wenn sie nicht mehr angelegt ist.
-  handed_over_by?: string;
-  // Die Lehrkraft hat das Kind als „nicht da“ markiert.
-  absent: boolean;
-}
 
 /**
  * Der Wortlaut vor der Klammer der Zeile am Kind. Bewusst ohne „Übergabe“:
@@ -27,12 +18,14 @@ export const HANDOVER_ABSENT_WORDING = "Nach dem Unterricht nicht da";
 export const HANDOVER_PRESENT_WORDING = "Nach dem Unterricht da";
 
 /** „Nach dem Unterricht da“ oder „Nach dem Unterricht nicht da“. */
-function handoverWording(handover: ClassHandover): string {
+function handoverWording(handover: studentsContract.ClassHandover): string {
   return handover.absent ? HANDOVER_ABSENT_WORDING : HANDOVER_PRESENT_WORDING;
 }
 
 /** Die Klammer der Zeile: „11:45 Uhr, Petra Lehrkraft“. */
-export function handoverDetail(handover: ClassHandover): string {
+export function handoverDetail(
+  handover: studentsContract.ClassHandover,
+): string {
   const clock = berlinClockFromISO(handover.handed_over_at);
   const parts = [
     clock ? `${clock} Uhr` : schoolClassLabel(handover.school_class),
@@ -42,6 +35,6 @@ export function handoverDetail(handover: ClassHandover): string {
 }
 
 /** Die ganze Zeile: „Nach dem Unterricht da (11:45 Uhr, Petra Lehrkraft)“. */
-export function handoverLine(handover: ClassHandover): string {
+export function handoverLine(handover: studentsContract.ClassHandover): string {
   return `${handoverWording(handover)} (${handoverDetail(handover)})`;
 }

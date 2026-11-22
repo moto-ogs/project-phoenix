@@ -254,6 +254,18 @@ describe("calendar-period-helpers", () => {
 
       expect(findPeriodForDate(periods, "2026-04-28")?.id).toBe("2");
     });
+
+    it("orders ids beyond 2^53 exactly (#7806)", () => {
+      // Number() rounds both to 9007199254740992 and keeps the input order.
+      const periods = [
+        period("9007199254740993", "Projektwoche", "2026-04-27", "2026-05-01"),
+        period("9007199254740992", "Schuljahr", "2025-08-01", "2026-07-31"),
+      ];
+
+      expect(findPeriodForDate(periods, "2026-04-28")?.id).toBe(
+        "9007199254740992",
+      );
+    });
   });
 
   describe("mapPeriodsForDates", () => {

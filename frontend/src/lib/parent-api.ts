@@ -449,6 +449,28 @@ async function fetchEnrollmentEndpoint(
 }
 
 /**
+ * The `data` of an enrollment answer. The catalog proxy always answers
+ * `{ status, data }`; without `data` the route is broken, a 502 as in
+ * bffJson (a write may have happened, so the person reloads first).
+ */
+async function readEnrollmentData<T>(
+  response: Response,
+  method: "GET" | "POST",
+): Promise<T> {
+  const answer = (await response.json().catch(() => undefined)) as
+    { data?: T } | undefined;
+  if (answer?.data === undefined || answer.data === null) {
+    throw new ApiError("Antwort konnte nicht gelesen werden", 502, {
+      code:
+        method === "GET"
+          ? "general.unavailable"
+          : "general.write_answer_unreadable",
+    });
+  }
+  return answer.data;
+}
+
+/**
  * Fetches the parent's autofill payload for the embedded enrollment
  * form, scoped to a specific tenant slug. Returns null on 401 so the
  * form can render without prefill rather than failing.
@@ -471,8 +493,7 @@ export async function fetchParentEnrollmentProfile(
       "parent_profile_request_failed",
     );
   }
-  const json = (await response.json()) as { data?: MeProfileResponse };
-  return (json.data ?? (json as unknown as MeProfileResponse)) || null;
+  return readEnrollmentData<MeProfileResponse>(response, "GET");
 }
 
 /**
@@ -502,16 +523,10 @@ export async function submitParentEnrollment(
       "parent_submit_failed",
     );
   }
-  const json = (await response.json()) as {
-    data?: sharedContract.SubmitEnrollmentResponse;
-    request_id?: string;
-    status_url?: string;
-  };
-  if (json.data) return json.data;
-  return {
-    request_id: json.request_id ?? "",
-    status_url: json.status_url ?? "",
-  };
+  return readEnrollmentData<sharedContract.SubmitEnrollmentResponse>(
+    response,
+    "POST",
+  );
 }
 
 /**

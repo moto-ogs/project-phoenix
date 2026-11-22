@@ -1,3 +1,6 @@
+import type * as activeContract from "~/lib/contract/active.generated";
+import type * as meContract from "~/lib/contract/me.generated";
+import type * as roomsContract from "~/lib/contract/rooms.generated";
 import type * as studentsContract from "~/lib/contract/students.generated";
 
 /**
@@ -35,23 +38,19 @@ export interface SupervisedRoom {
  * One released room as the rooms endpoint reports it
  * (GET /api/rooms?is_open_room=true).
  */
-export interface OpenRoomPayload {
-  /** A decimal string through the catalog proxy (#7563). */
-  id: number | string;
-  name: string;
-}
+export type OpenRoomPayload = Pick<roomsContract.RoomResponse, "id" | "name">;
 
 /**
- * One entry of /api/active/supervisors/all or /api/me/groups/supervised. The
- * catalog proxy hands the identifiers on as decimal strings (#2352).
+ * One entry of /api/active/supervisors/all or /api/me/groups/supervised: the
+ * fields both answers share. Only the own list names the activity.
  */
-export interface SupervisedGroupPayload {
-  id: number | string;
-  room_id?: number | string;
-  group_id: number | string | null;
-  room?: { id: number | string; name: string };
-  actual_group?: { id: number | string; name: string };
-}
+export type SupervisedGroupPayload = Pick<
+  meContract.ActiveGroup,
+  "id" | "room_id" | "group_id"
+> & {
+  room?: Pick<activeContract.RoomSimple, "id" | "name">;
+  actual_group?: Pick<meContract.SessionActivity, "id" | "name">;
+};
 
 /**
  * Raw payloads as fetched, before derivation. `null` means the request did

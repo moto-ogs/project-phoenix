@@ -6,6 +6,8 @@
  * mappers in timetable-helpers.ts.
  */
 
+import type * as timetableContract from "~/lib/contract/timetable.generated";
+
 export type InstanceStatus = "planned" | "active" | "completed" | "cancelled";
 
 /**
@@ -760,110 +762,72 @@ export interface MoveStaffResponse {
 }
 
 /**
- * Body for POST /api/timetable/instances. Mirrors the Go
- * createInstanceRequest shape; the caller passes ISO date and HH:MM
- * times (Berlin local), the backend handles normalisation.
+ * Body for POST /api/timetable/instances: the generated request with the
+ * fields the editor always sends. The caller passes ISO date and HH:MM times
+ * (Berlin local), the backend handles normalisation. `required_staff`:
+ * manual Personalbedarf override (#1839), null/omitted = derive.
  */
-export interface CreateInstanceBody {
-  date: string; // YYYY-MM-DD
-  start_time: string; // HH:MM
-  end_time: string; // HH:MM
-  title: string;
-  /** Identifiers travel as decimal strings since #2342. */
-  room_id: string;
-  description?: string;
-  notes?: string;
-  activity_group_id?: string;
-  /** May echo a stored value from a newer backend unchanged. */
-  list_kind?: string;
-  staff_ids?: string[];
-  student_ids?: string[];
-  /** Manual Personalbedarf override (#1839); null/omitted = derive. */
-  required_staff?: number | null;
-}
+export type CreateInstanceBody = timetableContract.createInstanceRequest &
+  Required<
+    Pick<
+      timetableContract.createInstanceRequest,
+      "date" | "start_time" | "end_time" | "title" | "room_id"
+    >
+  >;
 
 /**
  * Body for POST /api/timetable/templates. weekdays use ISO 8601
  * (Mo=1 … Fr=5). week_pattern: 0=every week, 1=A, 2=B.
  *
- * materialize_from / materialize_to are optional — when present the
- * backend triggers a materialization run for that window after the
- * template lands so fresh instances appear on the grid immediately.
+ * - `type` undefined: the stored block has a type this build does not know;
+ *   the backend refuses the save instead of the form guessing a type.
+ * - materialize_from / materialize_to: when present the backend triggers a
+ *   materialization run for that window after the template lands.
+ * - `include_closing_days` (#3594): the update keeps the stored value when
+ *   omitted.
+ * - Offering-source rule (#2137, target_group_type "angebot" only): with
+ *   sources set, student_ids must be empty. The update endpoint is
+ *   presence-aware: an omitted field keeps the stored value, only an
+ *   explicit null clears it, so always send null to mean "no source".
+ *   source_school_classes (#2482) excludes source_grade_levels.
+ * - `start_date` (#2135): series start within the calendar period; omitted =
+ *   the series starts with the period.
+ * - `weekday_assignments` (#2129): each entry fully replaces the shared
+ *   roster for that one weekday.
  */
-export interface CreateTemplateBody {
-  name: string;
-  /**
-   * undefined: the stored block has a type this build does not know; the
-   * backend refuses the save instead of the form guessing a type.
-   */
-  type: ActivityType | undefined;
-  list_kind?: TimetableListKind;
-  weekdays: number[];
-  start_time: string; // HH:MM
-  end_time: string; // HH:MM
-  /** Identifiers travel as decimal strings since #2342. */
-  room_id: string;
-  category_id: string;
-  planning_track_id?: string | null;
-  /** Durable Wochennotiz for the series (#1837 follow-up); omitted = none. */
-  notes?: string;
-  /** Also plan the series on closing days (#3594); the update keeps the
-   * stored value when omitted. */
-  include_closing_days?: boolean;
-  end_date?: string | null;
-  education_group_id?: string;
-  max_participants?: number | null;
-  /** Manual Personalbedarf override (#1839); null/omitted = derive. */
-  required_staff?: number | null;
-  week_pattern?: number;
-  calendar_period_id?: string;
-  target_group_type?: TargetGroupType;
-  target_grade_level?: number;
-  target_school_class?: string;
-  /** Offering-source rule (#2137, target_group_type "angebot" only). With
-   * sources set, student_ids must be empty — the roster derives from the
-   * union of the offerings' approved enrollments (Mehrfach-Quelle). The
-   * update endpoint is presence-aware: an omitted field keeps the stored
-   * value, only an explicit null clears it — so always send null, never
-   * undefined, to mean "no source". All offerings must belong to the same
-   * enrollment phase. */
-  source_care_offering_ids?: string[] | null;
-  source_grade_levels?: number[] | null;
-  /** Klassenfilter (#2482), gleiche Presence-Semantik. Schließt
-   * source_grade_levels aus: beide gesetzt ist ein 400. */
-  source_school_classes?: string[] | null;
-  /**
-   * Series start (#2135): schedules get it as valid_from, so no instances
-   * materialize before it and the roster becomes valid from it. Must lie
-   * within the calendar period. Omitted = series starts with the period.
-   */
-  start_date?: string;
-  targets?: Array<{
-    type: "jahrgang" | "klasse" | "gruppe";
-    grade_level?: number;
-    school_class?: string;
-    education_group_id?: string;
-  }>;
-  materialize_from?: string;
-  materialize_to?: string;
-  student_ids?: string[];
-  staff_ids?: string[];
-  primary_staff_id?: string;
-  /**
-   * Per-weekday roster deviations (#2129). Each entry fully replaces the
-   * shared `staff_ids` / `student_ids` / `primary_staff_id` above for that
-   * one weekday; weekdays without an entry keep the shared roster. Omitted
-   * or empty means the whole series shares one roster.
-   */
-  weekday_assignments?: WeekdayAssignmentBody[];
-}
+export type CreateTemplateBody = Omit<
+  timetableContract.createTemplateRequest,
+  | "type"
+  | "list_kind"
+  | "target_group_type"
+  | "weekday_assignments"
+  | "start_date"
+> &
+  Required<
+    Pick<
+      timetableContract.createTemplateRequest,
+      "name" | "start_time" | "end_time" | "room_id" | "category_id"
+    >
+  > & {
+    type: ActivityType | undefined;
+    list_kind?: TimetableListKind;
+    weekdays: number[];
+    target_group_type?: TargetGroupType;
+    weekday_assignments?: WeekdayAssignmentBody[];
+    start_date?: string;
+  };
 
-export interface WeekdayAssignmentBody {
-  weekday: number;
-  staff_ids: string[];
-  student_ids: string[];
-  primary_staff_id?: string;
-}
+/** One weekday's own roster of a series (#2129). */
+export type WeekdayAssignmentBody = Pick<
+  timetableContract.weekdayAssignmentRequest,
+  "primary_staff_id"
+> &
+  Required<
+    Pick<
+      timetableContract.weekdayAssignmentRequest,
+      "weekday" | "staff_ids" | "student_ids"
+    >
+  >;
 
 export type UpdateTemplateBody = Omit<
   CreateTemplateBody,
@@ -999,17 +963,17 @@ export interface ConvertInstanceToSeriesResult {
 
 /**
  * Body for POST /api/timetable/templates/{id}/split — the "ab Datum
- * ändern" flow. Carries every field of the regular update-template body
- * plus the required effective_date (YYYY-MM-DD) from which the new
- * template version applies. The optional materialize window triggers an
- * immediate materialization run for the new template, mirroring the
- * create-template behaviour.
+ * ändern" flow: every field of the update body plus the required
+ * effective_date (YYYY-MM-DD) from which the new template version applies.
+ * The optional materialize window triggers an immediate materialization run
+ * for the new template, as on create.
  */
-export interface SplitTemplateBody extends UpdateTemplateBody {
-  effective_date: string; // YYYY-MM-DD
-  materialize_from?: string; // YYYY-MM-DD
-  materialize_to?: string; // YYYY-MM-DD
-}
+export type SplitTemplateBody = UpdateTemplateBody &
+  Required<Pick<timetableContract.splitTemplateRequest, "effective_date">> &
+  Pick<
+    timetableContract.splitTemplateRequest,
+    "materialize_from" | "materialize_to"
+  >;
 
 export interface SplitTemplateResult {
   oldTemplateId: string;
