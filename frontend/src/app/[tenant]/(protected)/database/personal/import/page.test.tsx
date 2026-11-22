@@ -7,7 +7,10 @@ import {
 } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { sessionFetch } from "~/lib/session-cache";
+import { plainFetch } from "~/test/mocks/plain-session-fetch";
+
+const fetchMock = vi.hoisted(() => vi.fn());
+import { requireTenantSession } from "~/lib/session-cache";
 import { ApiError } from "~/lib/api-error";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { SWRConfig } from "~/lib/swr/testing";
@@ -37,11 +40,14 @@ const personnelSession = {
   },
   status: "authenticated",
 };
-// The session gate of bffJson is a spy over the plain transport, so a case
+// The session gate of bffJson is a spy over the plain gate, so a case
 // can let it refuse an expired session.
 vi.mock("~/lib/session-cache", async () => {
   const plain = await import("~/test/mocks/plain-session-fetch");
-  return { ...plain, sessionFetch: vi.fn(plain.sessionFetch) };
+  return {
+    ...plain,
+    requireTenantSession: vi.fn(plain.requireTenantSession),
+  };
 });
 
 vi.mock("next-auth/react", () => ({
@@ -196,7 +202,8 @@ function previewRow(
 describe("StaffImportPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    global.fetch = vi.fn();
+    // Plain answer objects of a case go out as Responses.
+    global.fetch = vi.fn(plainFetch(fetchMock));
   });
 
   afterEach(() => {
@@ -263,7 +270,7 @@ describe("StaffImportPage", () => {
 
   it("calls the teacher template endpoint on download", async () => {
     const mockBlob = new Blob(["test"], { type: "text/csv" });
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       blob: () => Promise.resolve(mockBlob),
     });
@@ -286,7 +293,7 @@ describe("StaffImportPage", () => {
   });
 
   it("handles download error gracefully", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: false,
       status: 503,
     });
@@ -304,7 +311,7 @@ describe("StaffImportPage", () => {
   });
 
   it("posts to the teacher preview endpoint on file upload", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () =>
         Promise.resolve({
@@ -330,7 +337,7 @@ describe("StaffImportPage", () => {
   });
 
   it("displays error when preview fails", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: false,
       status: 400,
       json: () =>
@@ -350,7 +357,7 @@ describe("StaffImportPage", () => {
   });
 
   it("retries the preview with the same file", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>)
+    fetchMock
       .mockResolvedValueOnce({
         ok: false,
         status: 503,
@@ -389,7 +396,7 @@ describe("StaffImportPage", () => {
   });
 
   it("shows a summary row when the preview has no issues", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () =>
         Promise.resolve({
@@ -414,7 +421,7 @@ describe("StaffImportPage", () => {
   });
 
   it("shows the import button label with the new count", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () =>
         Promise.resolve({
@@ -437,7 +444,7 @@ describe("StaffImportPage", () => {
   });
 
   it("renders a preview row with name, email and role", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () =>
         Promise.resolve({
@@ -480,7 +487,7 @@ describe("StaffImportPage", () => {
   });
 
   it("disables the import button when there are errors", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () =>
         Promise.resolve({
@@ -521,7 +528,7 @@ describe("StaffImportPage", () => {
   });
 
   it("resets the form on cancel", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () =>
         Promise.resolve({
@@ -550,7 +557,7 @@ describe("StaffImportPage", () => {
   });
 
   it("imports staff and shows a success toast", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>)
+    fetchMock
       .mockResolvedValueOnce({
         ok: true,
         json: () =>
@@ -599,7 +606,7 @@ describe("StaffImportPage", () => {
   });
 
   it("shows a warning toast on partial import", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>)
+    fetchMock
       .mockResolvedValueOnce({
         ok: true,
         json: () =>
@@ -662,7 +669,7 @@ describe("StaffImportPage", () => {
   });
 
   it("shows an error when the import call fails", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>)
+    fetchMock
       .mockResolvedValueOnce({
         ok: true,
         json: () =>
@@ -700,7 +707,7 @@ describe("StaffImportPage", () => {
   });
 
   it("shows saved rows and the blocking row on import_batch_failed", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>)
+    fetchMock
       .mockResolvedValueOnce({
         ok: true,
         json: () =>
@@ -780,7 +787,7 @@ describe("StaffImportPage", () => {
   });
 
   it("keeps import enabled after re-uploading a file whose first rows already exist", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>)
+    fetchMock
       .mockResolvedValueOnce({
         ok: true,
         json: () =>
@@ -883,7 +890,7 @@ describe("StaffImportPage", () => {
   });
 
   it("handles a valid file drop", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () =>
         Promise.resolve({
@@ -959,7 +966,7 @@ describe("StaffImportPage", () => {
       .mockImplementation(() => undefined);
     const useSession = await import("next-auth/react");
     // The gate reads the session cookie and refuses the expired session.
-    vi.mocked(sessionFetch).mockRejectedValueOnce(
+    vi.mocked(requireTenantSession).mockRejectedValueOnce(
       new ApiError("Authentication required", 401, {
         code: "general.permission",
       }),
@@ -987,7 +994,7 @@ describe("StaffImportPage", () => {
       status: "authenticated",
       update: vi.fn(),
     } as unknown as ReturnType<typeof useSession.useSession>);
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: true,
       json: () =>
         Promise.resolve({
@@ -1032,7 +1039,7 @@ describe("StaffImportPage", () => {
   });
 
   it("sends the chosen import mode with the preview and relabels the button", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: true,
       json: () =>
         Promise.resolve({
@@ -1055,7 +1062,6 @@ describe("StaffImportPage", () => {
         screen.getByText("3 Mitarbeitende übernehmen"),
       ).toBeInTheDocument();
     });
-    const fetchMock = global.fetch as ReturnType<typeof vi.fn>;
     const previewCall = fetchMock.mock.calls.find(
       (call) => call[0] === "/api/import/teachers/preview",
     );

@@ -7,7 +7,10 @@ import {
 } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { sessionFetch } from "~/lib/session-cache";
+import { plainFetch } from "~/test/mocks/plain-session-fetch";
+
+const fetchMock = vi.hoisted(() => vi.fn());
+import { requireTenantSession } from "~/lib/session-cache";
 import { ApiError } from "~/lib/api-error";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { catalogText } from "~/test/error-catalog-text";
@@ -19,11 +22,14 @@ function render(ui: ReactElement) {
 import StudentImportPage from "./page";
 
 // Mock next-auth/react
-// The session gate of bffJson is a spy over the plain transport, so a case
+// The session gate of bffJson is a spy over the plain gate, so a case
 // can let it refuse an expired session.
 vi.mock("~/lib/session-cache", async () => {
   const plain = await import("~/test/mocks/plain-session-fetch");
-  return { ...plain, sessionFetch: vi.fn(plain.sessionFetch) };
+  return {
+    ...plain,
+    requireTenantSession: vi.fn(plain.requireTenantSession),
+  };
 });
 
 vi.mock("next-auth/react", () => ({
@@ -161,7 +167,8 @@ vi.mock("~/components/import/student-row-card", () => ({
 describe("StudentImportPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    global.fetch = vi.fn();
+    // Plain answer objects of a case go out as Responses.
+    global.fetch = vi.fn(plainFetch(fetchMock));
   });
 
   afterEach(() => {
@@ -225,7 +232,7 @@ describe("StudentImportPage", () => {
 
   it("calls API when download button is clicked", async () => {
     const mockBlob = new Blob(["test"], { type: "text/csv" });
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       blob: () => Promise.resolve(mockBlob),
     });
@@ -261,7 +268,7 @@ describe("StudentImportPage", () => {
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(mockPreviewResponse),
     });
@@ -282,7 +289,7 @@ describe("StudentImportPage", () => {
   });
 
   it("displays error when API call fails", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: false,
       status: 400,
       json: () =>
@@ -302,7 +309,7 @@ describe("StudentImportPage", () => {
   });
 
   it("retries the preview with the same file", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>)
+    fetchMock
       .mockResolvedValueOnce({
         ok: false,
         status: 503,
@@ -379,7 +386,7 @@ describe("StudentImportPage", () => {
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(mockPreviewResponse),
     });
@@ -427,7 +434,7 @@ describe("StudentImportPage", () => {
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(mockPreviewResponse),
     });
@@ -491,7 +498,7 @@ describe("StudentImportPage", () => {
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(mockPreviewResponse),
     });
@@ -539,7 +546,7 @@ describe("StudentImportPage", () => {
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(mockPreviewResponse),
     });
@@ -565,7 +572,7 @@ describe("StudentImportPage", () => {
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(mockPreviewResponse),
     });
@@ -583,7 +590,7 @@ describe("StudentImportPage", () => {
   });
 
   it("handles download error gracefully", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: false,
     });
 
@@ -610,7 +617,7 @@ describe("StudentImportPage", () => {
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(mockPreviewResponse),
     });
@@ -648,7 +655,7 @@ describe("StudentImportPage", () => {
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>)
+    fetchMock
       .mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockPreviewResponse),
@@ -724,7 +731,7 @@ describe("StudentImportPage", () => {
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>)
+    fetchMock
       .mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockPreviewResponse),
@@ -775,7 +782,7 @@ describe("StudentImportPage", () => {
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>)
+    fetchMock
       .mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockPreviewResponse),
@@ -819,7 +826,7 @@ describe("StudentImportPage", () => {
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>)
+    fetchMock
       .mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockPreviewResponse),
@@ -889,7 +896,7 @@ describe("StudentImportPage", () => {
   });
 
   it("shows saved rows when import_batch_failed has a nil Errors slice", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>)
+    fetchMock
       .mockResolvedValueOnce({
         ok: true,
         json: () =>
@@ -943,7 +950,7 @@ describe("StudentImportPage", () => {
   });
 
   it("keeps import enabled after re-uploading a file whose first rows already exist", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>)
+    fetchMock
       .mockResolvedValueOnce({
         ok: true,
         json: () =>
@@ -1081,7 +1088,7 @@ describe("StudentImportPage", () => {
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(mockPreviewResponse),
     });
@@ -1121,7 +1128,7 @@ describe("StudentImportPage", () => {
       .mockImplementation(() => undefined);
     const useSession = await import("next-auth/react");
     // The gate reads the session cookie and refuses the expired session.
-    vi.mocked(sessionFetch).mockRejectedValueOnce(
+    vi.mocked(requireTenantSession).mockRejectedValueOnce(
       new ApiError("Authentication required", 401, {
         code: "general.permission",
       }),
@@ -1150,7 +1157,7 @@ describe("StudentImportPage", () => {
       .mockImplementation(() => undefined);
     const useSession = await import("next-auth/react");
     // The gate reads the session cookie and refuses the expired session.
-    vi.mocked(sessionFetch).mockRejectedValueOnce(
+    vi.mocked(requireTenantSession).mockRejectedValueOnce(
       new ApiError("Authentication required", 401, {
         code: "general.permission",
       }),
@@ -1174,7 +1181,7 @@ describe("StudentImportPage", () => {
   });
 
   it("handles valid file drop (csv)", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () =>
         Promise.resolve({
@@ -1215,7 +1222,7 @@ describe("StudentImportPage", () => {
   });
 
   it("handles valid file drop (xlsx)", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () =>
         Promise.resolve({
@@ -1282,7 +1289,7 @@ describe("StudentImportPage", () => {
 
   it("handles partial import failure with guardian info", async () => {
     // First call: preview
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () =>
         Promise.resolve({
@@ -1311,7 +1318,7 @@ describe("StudentImportPage", () => {
     });
 
     // Second call: import with partial failure including guardian info
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () =>
         Promise.resolve({
@@ -1370,7 +1377,7 @@ describe("StudentImportPage", () => {
   });
 
   it("sends the chosen import mode and labels the button accordingly", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: true,
       json: () =>
         Promise.resolve({
@@ -1400,7 +1407,6 @@ describe("StudentImportPage", () => {
       expect(screen.getByText("2 Kinder aktualisieren")).toBeInTheDocument();
     });
 
-    const fetchMock = global.fetch as ReturnType<typeof vi.fn>;
     const previewCalls = fetchMock.mock.calls.filter(
       (call) => call[0] === "/api/import/students/preview",
     );
@@ -1426,7 +1432,7 @@ describe("StudentImportPage", () => {
     });
 
     it("blocks the import when the new children do not fit", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      fetchMock.mockResolvedValueOnce(
         previewWithQuota({
           booked_places: 100,
           occupied_places: 88,
@@ -1454,7 +1460,7 @@ describe("StudentImportPage", () => {
     });
 
     it("names the free Kinderkontingent and keeps the import open when it fits", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      fetchMock.mockResolvedValueOnce(
         previewWithQuota({
           booked_places: 200,
           occupied_places: 100,
@@ -1478,7 +1484,7 @@ describe("StudentImportPage", () => {
     });
 
     it("explains a start the Kinderkontingent refused", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>)
+      fetchMock
         .mockResolvedValueOnce(
           previewWithQuota({
             booked_places: 200,
@@ -1540,7 +1546,7 @@ describe("StudentImportPage", () => {
     });
 
     it("keeps the saved rows when a later batch hits the Kinderkontingent", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>)
+      fetchMock
         .mockResolvedValueOnce(
           previewWithQuota({
             booked_places: 200,

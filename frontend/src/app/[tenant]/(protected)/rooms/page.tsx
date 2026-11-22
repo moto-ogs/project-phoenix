@@ -339,9 +339,7 @@ function RoomsPageContent() {
   }, [filteredRooms]);
 
   const exportRoomIds = useMemo(() => {
-    return filteredRooms
-      .map((room) => Number.parseInt(room.id, 10))
-      .filter((id) => Number.isFinite(id));
+    return filteredRooms.map((room) => room.id);
   }, [filteredRooms]);
 
   // „Wiederholen“ exportiert mit den aktuell gefilterten Räumen.
@@ -356,8 +354,8 @@ function RoomsPageContent() {
         await exportRoomSnapshot({
           format,
           title: "Wer ist wo",
-          room_ids: exportRoomIdsRef.current,
-          include_transit: true,
+          roomIds: exportRoomIdsRef.current,
+          includeTransit: true,
         });
       } catch (exportError) {
         void showError(exportError, {
