@@ -218,36 +218,46 @@ Only for what belongs to the browser and cannot live in Go:
   route file (`catalogProxyUnder`); `app/api/catalog-route-selection.test.ts`
   fails when one is missing.
 
+Such a JSON route stays typed: its `common.RouteContract` names `RouteFile`,
+one sentence why the route file serves it (`common.RouteFileSession` for a
+session step), beside its portal, `Request` and `Response` (or `NoData`,
+`File`, `Multipart`). `Plain: true` says the handler writes the data without
+the envelope (`common.RenderJSON`). The generator writes its types, decoder
+and route entry, so the route file calls `contractGet` or `contractWrite`
+(`frontend/src/lib/contract/client.server.ts`), and lists it in
+`routeFileRoutes` of `portals.generated.ts`, never in a proxy allowlist:
+the catalog proxy never hands a session step's tokens to the browser.
+Example: `SessionRouteContracts` in
+`backend/modules/identityaccess/inbound/account/route_contracts.go`.
+
 A reshaping, an ID or format check or a second backend call for the same
 screen moves into the Go handler; an aggregation of several reads is a Go
 view (#5018). A file whose only code forwards to the
 backend fails `app/api/proxy-routes.test.ts`; a file whose backend paths
-the contract registers, all of them, fails `app/api/route-backend-paths.test.ts`,
-and a file in front of a registered path fails
-`app/api/catalog-route-selection.test.ts`.
+are all in a proxy allowlist fails `app/api/route-backend-paths.test.ts`, as
+does a `RouteFile` route no route file serves; a file in front of a proxied
+path fails `app/api/catalog-route-selection.test.ts`.
 
 ## Routes outside the contract
 
-Every route of the catalog registers a contract, or
-`routesOutsideContract` (`backend/api/routes_outside_contract_registry_test.go`) names it
-with one reason of a closed set and a sentence why:
+A catalog line no portal calls for JSON registers `Outside` on its
+`common.RouteContract` instead of types: a reason of a closed set
+(`contractmodel.OutsideReasons`) and one sentence why
+(`common.OutsideRoutes(reason, why, "METHOD /pattern", …)`):
 
 | Reason | Applies to |
 |---|---|
-| `device` | the kiosk (PyrePortal) or the wall display, with a device key or token |
+| `device` | the kiosk (PyrePortal) with its device key; it reads numeric IDs |
 | `webdav`, `metrics`, `probe` | CalDAV, Prometheus, health and readiness |
-| `session` | a sign-in, second-factor, renewal or switch step whose answer the portal turns into its session cookie |
 | `stream` | a server-sent event stream |
 | `public-api`, `webhook` | a machine API with its own description, a provider's callback |
-| `browser-route` | a route file that must act around the call: purge a BFF cache, read a flow cookie, add the session's data to a public answer |
 
+Each line is named on its own, no prefix
+(`backend/api/route_contracts_outside.go`); `contract.json` lists them under
+`outside`, no generated TypeScript names them. Ordinary JSON is never a
+reason: it gets a contract, through the proxy or `RouteFile`.
 `TestEveryCatalogRouteHasAContractOrAReason` (`backend/api`) fails on a
-route with neither, on an entry for a registered or a missing route, and on
-an entry without its reason. Ordinary JSON is never a reason: it gets a
-contract. A new route outside the contract also fails
-`scripts/check-contract-shrink.mjs` until a new ADR names its catalog line. A named route builds its
-handlers from its portal's route wrapper (`frontend/src/lib/route-wrapper.server.ts`,
-`frontend/src/lib/<portal>/route-wrapper.server.ts`) and reads a registered
-route with `contractGet` or `contractWrite`
-(`frontend/src/lib/contract/client.server.ts`), so the answer passes the same
-decoder as on the proxy.
+catalog line that is not exactly one of proxied contract, `RouteFile`
+contract or `Outside`. A new `Outside` line also fails
+`scripts/check-contract-shrink.mjs` until a new ADR names its catalog line;
+a new `RouteFile` route needs none.
