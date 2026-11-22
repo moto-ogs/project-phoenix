@@ -1,9 +1,11 @@
 // lib/substitution-helpers.ts
 // Type definitions and helper functions for substitutions
 
+import { ApiError } from "~/lib/api-error";
 import { toISODate } from "~/lib/date-helpers";
 import { knownEnum } from "~/lib/contract/known-enum";
 import type {
+  SubstitutionAssignmentResponse,
   GroupHandover,
   RunningSupervision as RunningSupervisionWire,
   StaffRef,
@@ -63,40 +65,26 @@ export interface ScheduleSubstitutionOverview {
   staff: Array<{ id: string; name: string; isExternal: boolean }>;
 }
 
-export interface SubstitutionProxyEnvelope<T> {
-  data?: T;
-}
-
-export function unwrapSubstitutionProxyEnvelope<T>(
-  envelope: SubstitutionProxyEnvelope<T>,
-): T {
-  if (envelope.data === undefined) {
-    throw new Error("Ungültige Antwort für Gruppenübergaben.");
-  }
-  return envelope.data;
-}
-
 /** The kinds of assignment POST /api/substitutions answers (#2352). */
-export type SubstitutionAssignmentKind =
+type SubstitutionAssignmentKind =
   "group_handover" | "additional_supervision" | "schedule_substitution";
 
 /**
  * The result of an assignment. The backend names its shape in `type` and
- * carries the result under the member of that name (#2352). A body without
- * that member is not an answer of the kind the caller asked for.
+ * carries the result under the member of that name (#2352). An answer
+ * without that member is not one of the kind the caller asked for.
  */
-export function substitutionAssignmentResult<T>(
-  data: unknown,
-  kind: SubstitutionAssignmentKind,
-): T {
-  const member =
-    typeof data === "object" && data !== null
-      ? (data as Record<string, unknown>)[kind]
-      : undefined;
+export function substitutionAssignmentResult<
+  K extends SubstitutionAssignmentKind,
+>(
+  answer: SubstitutionAssignmentResponse,
+  kind: K,
+): NonNullable<SubstitutionAssignmentResponse[K]> {
+  const member = answer[kind];
   if (member === undefined || member === null) {
-    throw new Error("Ungültige Antwort für Gruppenübergaben.");
+    throw new ApiError(`substitution answer without ${kind}`, 502);
   }
-  return member as T;
+  return member as NonNullable<SubstitutionAssignmentResponse[K]>;
 }
 
 // Frontend types
