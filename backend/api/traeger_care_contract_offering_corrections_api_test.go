@@ -142,6 +142,11 @@ func TestOfferingCorrectionGivesImportedContractsANewVersion(t *testing.T) {
 		"Mia;Beispiel;03.05.2019;{school};Offene Ganztagsschule;01.08.2027;Eva Beispiel;eva.beispiel@example.org;70001",
 		"Ben;Beispiel;11.11.2020;{school};Offene Ganztagsschule;01.06.2028;Eva Beispiel;eva.beispiel@example.org;70001")
 	mia, ben := contracts[0], contracts[1]
+	// Mia's contract is terminated and runs until its last day: the monthly
+	// run bills it until then, so the correction reaches it.
+	_, err := f.db.ExecContext(context.Background(),
+		`UPDATE care_contract.contracts SET status = 'gekuendigt', ends_on = '2028-07-31' WHERE id = ?`, mia)
+	require.NoError(t, err)
 	const day = "2028-05-01"
 	file := offeringCorrectionFile(
 		fmt.Sprintf("%d;Mo-Mi;Offene Ganztagsschule;%s", mia, offeringCorrectionTarget),

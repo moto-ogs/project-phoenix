@@ -241,10 +241,16 @@ func (e *correctionEval) contract(group correctionGroup) (ports.CorrectableContr
 	switch {
 	case contract.FollowsBookings:
 		e.problem(line, carecontract.OfferingCorrectionFieldContract, carecontract.OfferingCorrectionProblemFollowsBookings)
-	case contract.Status != carecontract.StatusActive || len(contract.Versions) == 0:
+	case !correctableStatus(contract.Status) || len(contract.Versions) == 0:
 		e.problem(line, carecontract.OfferingCorrectionFieldContract, carecontract.OfferingCorrectionProblemNotActive)
 	}
 	return contract, len(e.result.Problems) == 0
+}
+
+// correctableStatus reports a contract that still runs: an active one, and a
+// terminated one until its last day, which the monthly run bills until then.
+func correctableStatus(status string) bool {
+	return status == carecontract.StatusActive || status == carecontract.StatusTerminated
 }
 
 // base is the version the correction starts from: the one in force on the

@@ -354,6 +354,7 @@ export const routes = {
     method: "POST",
     pattern: "/traeger/contract-imports/offering-corrections/preview",
     portals: ["org"],
+    noCommit: "a correction preview checks the file and saves no version",
     maxBodyBytes: 2359296,
     tooLargeCode: "care_contract.import_file_too_large",
     request: multipart,

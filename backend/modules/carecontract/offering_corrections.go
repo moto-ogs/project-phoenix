@@ -67,7 +67,9 @@ const (
 	// OfferingCorrectionProblemFollowsBookings is a contract with an
 	// application child: its modules follow the bookings of the school.
 	OfferingCorrectionProblemFollowsBookings = "follows_bookings"
-	// OfferingCorrectionProblemNotActive is a contract that is not aktiv.
+	// OfferingCorrectionProblemNotActive is a contract that does not run: it
+	// is neither aktiv nor gekuendigt. A terminated contract is corrected
+	// until its last day.
 	OfferingCorrectionProblemNotActive = "not_active"
 	// OfferingCorrectionProblemEnded is a contract that ends before the day.
 	OfferingCorrectionProblemEnded = "ended"

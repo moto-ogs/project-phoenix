@@ -18899,6 +18899,7 @@
         "ref": "OfferingCorrection"
       },
       "max_body_bytes": 2359296,
+      "no_commit": "a correction preview checks the file and saves no version",
       "multipart": true,
       "too_large_code": "care_contract.import_file_too_large"
     },

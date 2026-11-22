@@ -240,6 +240,25 @@ func TestOfferingCorrectionRefusesATargetThatEndsBeforeTheBooking(t *testing.T) 
 	assert.Equal(t, []string{carecontract.OfferingCorrectionProblemOutsidePhase}, problemCodes(candidate))
 }
 
+func TestOfferingCorrectionReachesATerminatedContractUntilItsLastDay(t *testing.T) {
+	t.Parallel()
+	terminated := correctionContract(12, correctionService("mon", 10, "OGS Mo-Mi", "16:00"))
+	terminated.Status = carecontract.StatusTerminated
+	lastDay := calendar.NewDate(2028, 1, 31)
+	terminated.EndsOn = &lastDay
+	candidate := correctionRows(t, terminated, [3]string{"Mo", "OGS Mo-Mi", "OGS Lang"})
+	assert.Equal(t, carecontract.OfferingCorrectionReady, candidate.contract.Status, "the monthly run bills a terminated contract until its last day")
+	require.NotNil(t, candidate.version)
+
+	ended := correctionContract(13, correctionService("mon", 10, "OGS Mo-Mi", "16:00"))
+	ended.Status = carecontract.StatusEnded
+	candidate = correctionRows(t, ended, [3]string{"Mo", "OGS Mo-Mi", "OGS Lang"})
+	assert.Equal(t, carecontract.OfferingCorrectionInvalid, candidate.contract.Status)
+	require.Len(t, candidate.contract.Problems, 1)
+	assert.Equal(t, carecontract.OfferingCorrectionProblemNotActive, candidate.contract.Problems[0].Code)
+	assert.Nil(t, candidate.version)
+}
+
 func TestOfferingCorrectionRefusesWhatItCannotDecide(t *testing.T) {
 	t.Parallel()
 	ended := correctionContract(4, correctionService("mon", 10, "OGS Mo-Mi", "16:00"))

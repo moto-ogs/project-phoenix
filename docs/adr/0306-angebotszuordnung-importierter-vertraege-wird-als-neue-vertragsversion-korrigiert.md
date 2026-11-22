@@ -63,6 +63,9 @@ Er ergänzt [ADR 0232](0232-bestandsvertraege-kommen-aus-einer-datei-ohne-anmeld
 6a. **Das Ziel trägt die Buchung bis zu ihrem Ende.** Das Zielmodul muss am
    Tag laufen, eingeschaltet sein, den Wochentag anbieten, und seine Phase
    endet nicht vor der Buchung. Die Buchung wird nie gekürzt.
+6b. **Der Vertrag läuft noch.** Korrigiert wird ein Vertrag im Status `aktiv`
+   oder `gekuendigt`, solange er am Tag nicht beendet ist: Einen gekündigten
+   Vertrag rechnet der Monatslauf bis zu seinem letzten Tag ab.
 7. **Nur Verträge ohne Anmeldungskind.** Ein Vertrag mit `request_child_id`
    folgt den Buchungen seiner Schule; der nächste Lauf von `AmendFromBookings`
    würde die Korrektur zurücknehmen. Die Korrektur lehnt ihn ab
