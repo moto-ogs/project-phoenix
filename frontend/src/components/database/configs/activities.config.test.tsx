@@ -37,7 +37,7 @@ describe("activitiesConfig", () => {
   });
 
   it("has correct API configuration", () => {
-    expect(activitiesConfig.api.basePath).toBe("/api/activities");
+    expect(activitiesConfig.api.routes.list).toBe("GET /api/activities/");
   });
 
   it("has form sections configured", () => {

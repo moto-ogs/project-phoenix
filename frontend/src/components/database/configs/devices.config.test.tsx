@@ -16,7 +16,7 @@ describe("devicesConfig", () => {
   });
 
   it("has correct API configuration", () => {
-    expect(devicesConfig.api.basePath).toBe("/api/iot");
+    expect(devicesConfig.api.routes.list).toBe("GET /api/iot/");
   });
 
   it("has form sections configured", () => {

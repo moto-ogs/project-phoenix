@@ -197,12 +197,12 @@ export function ActivityManagementModal({
         // Prepare the update data
         const updateData = {
           name: form.name.trim(),
-          category_id: Number.parseInt(form.category_id, 10),
+          category_id: form.category_id,
           max_participants: parseParticipantLimit(form.max_participants),
           // Include existing values that might be required
           is_open: activity.is_open_ags || false,
           supervisor_ids: activity.supervisor_id
-            ? [Number.parseInt(activity.supervisor_id, 10)]
+            ? [activity.supervisor_id]
             : [],
         };
 

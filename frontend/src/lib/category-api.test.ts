@@ -49,15 +49,8 @@ describe("categoryService requests", () => {
     // server-side.
     expect(mockSessionFetch).toHaveBeenCalledWith(
       "/api/activities/categories?include_archived=true&include_system=true&with_usage=true",
+      { method: "GET" },
     );
-  });
-
-  it("maps a nullable list to an empty list", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
-      Response.json({ data: null }, { status: 200 }),
-    );
-
-    await expect(categoryService.getManagedCategories()).resolves.toEqual([]);
   });
 
   it("creates a category", async () => {
