@@ -333,6 +333,26 @@ describe("bffJson", () => {
     ).rejects.toMatchObject({ status: 502, code: "general.unavailable" });
   });
 
+  it("lets a cleanup outlive the page with keepalive", async () => {
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+    await bffJson(
+      "org",
+      "DELETE /traeger/holiday-periods/{id}/form/documents/{documentId}",
+      { params: { id: "3", documentId: "9" }, keepalive: true },
+    );
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      "/api/traeger/holiday-periods/3/form/documents/9",
+      {
+        method: "DELETE",
+        keepalive: true,
+        credentials: "include",
+        cache: "no-store",
+      },
+    );
+  });
+
   it("passes the signal to the request", async () => {
     const controller = new AbortController();
     mockFetch.mockResolvedValueOnce(ok([]));

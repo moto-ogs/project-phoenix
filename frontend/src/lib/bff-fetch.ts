@@ -190,6 +190,11 @@ interface CallOptions {
    * and leaves the session as it is, without renewal or a login redirect.
    */
   authRefusals?: readonly ErrorCode[];
+  /**
+   * Lets the request outlive the page (`fetch` keepalive): a cleanup sent
+   * from `pagehide`, such as deleting a draft's upload.
+   */
+  keepalive?: boolean;
 }
 
 type BffOptions<R, V> = CallOptions & BodyOf<R> & ParamsOf<R> & QueryOf<R, V>;
@@ -375,13 +380,14 @@ async function send(
 /** The fetch init of a call: JSON serialized, FormData as is. */
 function requestInit(
   method: Method,
-  { body, signal, headers }: CallOptions & { body?: unknown },
+  { body, signal, headers, keepalive }: CallOptions & { body?: unknown },
 ): RequestInit {
   const isForm = body instanceof FormData;
   const json = body !== undefined && !isForm;
   return {
     method,
     ...(signal && { signal }),
+    ...(keepalive && { keepalive }),
     ...((json || headers) && {
       headers: json
         ? { "Content-Type": "application/json", ...headers }

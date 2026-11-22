@@ -17,8 +17,6 @@ const UNCONTRACTED_CALLERS: Readonly<Record<string, string>> = {
     "POST auth/switch-tenant: the session switch of the BFF (ADR 0270, sign-in steps)",
   "lib/traeger-api.ts":
     "POST traeger/auth/login, traeger/auth/mfa/step-up/verify: sign-in and session steps of the BFF, no backend route of their own",
-  "lib/traeger-holiday-form-api.ts":
-    "PUT traeger/holiday-periods/[id]/form: the contract leaves the editor's own body undescribed",
   "lib/operator/provisioning-api.ts":
     "POST operator/provisioning/revalidate-tenant: the route purges the cached tenant lookup and the ISR pages, no backend route",
   "lib/operator/operator-settings-api.ts":

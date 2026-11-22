@@ -1,4 +1,4 @@
-import { bffFile, bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the registration form of a holiday period (#5198): the
  * Träger-Büro builds the questions with the form builder of the online
@@ -7,7 +7,6 @@ import { bffFile, bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
  * /api/traeger/holiday-periods/{id}/form.
  */
 
-import { apiErrorFromResponse, transportFetch } from "./api-error";
 import type * as traegerHolidayPeriodsContract from "./contract/traeger-holiday-periods.generated";
 import type { FormLegalBlock } from "./enrollment-form-schema-api";
 import {
@@ -57,10 +56,6 @@ function formFromBackend(
   };
 }
 
-function formPath(periodId: string): string {
-  return `/api/traeger/holiday-periods/${encodeURIComponent(periodId)}/form`;
-}
-
 /** The current version of the form of a holiday period. */
 export async function fetchHolidayForm(periodId: string): Promise<HolidayForm> {
   return formFromBackend(
@@ -79,32 +74,22 @@ export async function saveHolidayForm(
   healthRequirement: HolidayHealthRequirement = "optional",
 ): Promise<HolidayForm> {
   return formFromBackend(
-    // The contract leaves the editor's own body undescribed
-    // (traeger_route_contracts.go); bff-fetch-uncontracted.test.ts names it.
-    await bffJsonUncontracted<traegerHolidayPeriodsContract.HolidayFormEditor>(
-      "org",
-      "PUT",
-      `/api/traeger/holiday-periods/${encodeURIComponent(periodId)}/form`,
-      {
-        body: {
-          fields,
-          address_requirement: addressRequirement,
-          health_requirement: healthRequirement,
-          legal_blocks: legalBlocks.map((block) => ({
-            ...block,
-            attachments: block.attachments?.map((a) => ({
-              label: a.label,
-              document_id: a.document_url,
-            })),
+    await bffJson("org", "PUT /traeger/holiday-periods/{id}/form", {
+      params: { id: periodId },
+      body: {
+        fields: [...fields],
+        address_requirement: addressRequirement,
+        health_requirement: healthRequirement,
+        legal_blocks: legalBlocks.map((block) => ({
+          ...block,
+          attachments: block.attachments?.map((a) => ({
+            label: a.label,
+            document_id: a.document_url,
           })),
-        },
+        })),
       },
-    ),
+    }),
   );
-}
-
-function holidayDocumentPath(periodId: string, documentId: string): string {
-  return `${formPath(periodId)}/documents/${encodeURIComponent(documentId)}`;
 }
 
 /** A PDF of the form's legal blocks, as the office reads it. */
@@ -143,23 +128,15 @@ export async function deleteHolidayDocument(
   id: string,
   options?: { keepalive?: boolean },
 ): Promise<void> {
-  if (options?.keepalive) {
-    // The draft's PDF goes when the page goes (pagehide): only a keepalive
-    // request outlives it, and bffJson does not send one (#7806).
-    const response = await transportFetch(holidayDocumentPath(periodId, id), {
-      method: "DELETE",
-      keepalive: true,
-    });
-    if (!response.ok)
-      throw await apiErrorFromResponse(response, "Holiday PDF request failed");
-    return;
-  }
   await bffJson(
     "org",
     "DELETE /traeger/holiday-periods/{id}/form/documents/{documentId}",
     {
       params: { id: periodId, documentId: id },
       errorMessage: "Holiday PDF request failed",
+      // The draft's PDF goes when the page goes (pagehide): only a keepalive
+      // request outlives it.
+      ...(options?.keepalive && { keepalive: true }),
     },
   );
 }

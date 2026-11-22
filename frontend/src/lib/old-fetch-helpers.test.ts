@@ -68,7 +68,6 @@ const PENDING: Readonly<Record<string, string>> = {
   "lib/shell-auth-context.tsx": "c4 #7887",
   "lib/staff-preview-api.ts": "c4 #7887",
   "lib/tenant-api.ts": "c4 #7887",
-  "lib/traeger-holiday-form-api.ts": "c5 #7886",
   "lib/enrollment-http.ts": "enrollment transport after c6/c7",
   "lib/parent-api.ts": "enrollment transport after c6/c7",
   "lib/api-error.ts": "transportFetch definition, removed when the slices land",
