@@ -154,6 +154,11 @@ func TestCorrectionSheetReadsBackAsUnchanged(t *testing.T) {
 	assert.Equal(t, []string{"7", "Grundschule Nord", "Lia Beispiel", "Beispiel, Eva | Anders | von der Heide, Jan Ole", "papier", "01.08.2026", ""}, sheet.Rows[0])
 	assert.Equal(t, []string{"online", "unbekannt"}, sheet.Rows[1][4:6])
 
+	// A further name beside the written ones adds a party and renames none.
+	extended := planCorrection(t, comma, "10", "Lia Beispiel", sheet.Rows[2][3]+" | Neu, Anna", "", "", "vertrag.pdf")
+	assert.Empty(t, extended.correction.Renames)
+	assert.Equal(t, []ports.CorrectionParty{{FirstName: "Anna", LastName: "Neu"}}, extended.correction.Adds)
+
 	index, missing := resolveCorrectionColumns(sheet.Headers)
 	require.Empty(t, missing)
 	check := newCorrectionCheck([]ports.CorrectionSubject{subject, unknown, comma})
@@ -181,9 +186,12 @@ func TestTakenOverContractHasNoWithdrawalPeriodUntilMotoProvidedTheNotice(t *tes
 	until := withdrawalUntil(&carecontract.Concluded{Method: carecontract.MethodElectronic, At: at, TakenOver: true, DateUnknown: true}, &informed, nil)
 	require.NotNil(t, until)
 	assert.Equal(t, calendar.NewDate(2026, 11, 16), *until)
-	corrected := withdrawalUntil(&carecontract.Concluded{Method: carecontract.MethodElectronic, At: at, TakenOver: true}, &informed, nil)
+	// A notice later than 12 months and 14 days after a corrected day still
+	// opens its 14 days: the day from a file caps no period.
+	late := time.Date(2027, 10, 1, 9, 0, 0, 0, calendar.Berlin)
+	corrected := withdrawalUntil(&carecontract.Concluded{Method: carecontract.MethodElectronic, At: at, TakenOver: true}, &late, nil)
 	require.NotNil(t, corrected)
-	assert.Equal(t, *until, *corrected, "a corrected day of the conclusion moves no period")
+	assert.Equal(t, calendar.NewDate(2027, 10, 15), *corrected, "a corrected day of the conclusion moves no period")
 	_, known := conclusionDay(&carecontract.Concluded{At: at, DateUnknown: true})
 	assert.False(t, known)
 }

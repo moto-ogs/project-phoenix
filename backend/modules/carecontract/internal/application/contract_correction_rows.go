@@ -100,9 +100,11 @@ type correctionEntry struct {
 	child      string
 	parties    []ports.CorrectionParty
 	hasParties bool
-	// partyCell is the cell of the parties as the file writes it.
-	partyCell string
-	method    string
+	// partyCell is the cell of the parties as the file writes it, partyNames
+	// the name of each party in it.
+	partyCell  string
+	partyNames []string
+	method     string
 	// date is the day of the conclusion the row names; unknown that it names
 	// none on purpose. Neither leaves the day alone.
 	date    *calendar.Date
@@ -167,7 +169,7 @@ func (e *correctionEntry) readParties(value string) {
 			e.problem(carecontract.ContractCorrectionFieldParties, carecontract.ContractCorrectionProblemTooLong)
 			return
 		}
-		e.parties = append(e.parties, party)
+		e.parties, e.partyNames = append(e.parties, party), append(e.partyNames, joinWords(name))
 	}
 	switch {
 	case len(e.parties) == 0:
@@ -361,7 +363,7 @@ func planParties(entry correctionEntry, subject ports.CorrectionSubject, plan *c
 	if !entry.hasParties || joinWords(entry.partyCell) == joinWords(correctionPartyCell(subject.Parties)) {
 		return
 	}
-	renames, adds, complete := matchCorrectionParties(subject.Parties, entry.parties)
+	renames, adds, complete := matchCorrectionParties(subject.Parties, writtenCorrectionParties(entry, subject.Parties))
 	if !complete {
 		plan.problem(carecontract.ContractCorrectionFieldParties, carecontract.ContractCorrectionProblemPartyRemoved)
 		return
@@ -387,6 +389,24 @@ func planParties(entry correctionEntry, subject ports.CorrectionSubject, plan *c
 	}
 	plan.row.After.Parties = after
 	plan.row.Changes = append(plan.row.Changes, carecontract.ContractCorrectionFieldParties)
+}
+
+// writtenCorrectionParties are the parties of the row, each name the list to
+// download wrote for a party of the contract read as that party: a stored
+// last name may carry a comma, which no other reading would keep.
+func writtenCorrectionParties(entry correctionEntry, stored []ports.CorrectionParty) []ports.CorrectionParty {
+	wanted, free := slices.Clone(entry.parties), slices.Clone(stored)
+	for n, name := range entry.partyNames {
+		at := slices.IndexFunc(free, func(party ports.CorrectionParty) bool {
+			return joinWords(correctionPartyCell([]ports.CorrectionParty{party})) == name
+		})
+		if at < 0 {
+			continue
+		}
+		wanted[n] = ports.CorrectionParty{FirstName: free[at].FirstName, LastName: free[at].LastName}
+		free = slices.Delete(free, at, at+1)
+	}
+	return wanted
 }
 
 // matchCorrectionParties pairs the parties of the contract with the names of

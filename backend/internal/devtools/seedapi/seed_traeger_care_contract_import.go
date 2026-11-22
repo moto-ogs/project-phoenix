@@ -141,6 +141,7 @@ type seedContractImportAnswer struct {
 			Duplicate int `json:"duplicate"`
 		} `json:"counts"`
 		Rows []struct {
+			Status         string `json:"status"`
 			ChildFirstName string `json:"child_first_name"`
 			ChildLastName  string `json:"child_last_name"`
 			ContractID     apiID  `json:"contract_id"`
@@ -167,7 +168,9 @@ func seedCareContractCorrections(client *Client, auth AuthRef, imported seedCont
 	rows := []string{"Vertrag-ID;Kind;Vertragsparteien;Abschlussart;Abschlussdatum;Beleg"}
 	for _, row := range imported.Data.Rows {
 		correction, ok := seedCorrections[row.ChildFirstName]
-		if !ok || row.ContractID == 0 {
+		// Only a contract this run took over: one an earlier run stored may
+		// carry corrections somebody made by hand since.
+		if !ok || row.ContractID == 0 || row.Status != "imported" {
 			continue
 		}
 		rows = append(rows, strings.Join([]string{fmt.Sprint(int64(row.ContractID)), row.ChildFirstName + " " + row.ChildLastName,

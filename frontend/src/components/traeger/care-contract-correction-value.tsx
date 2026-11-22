@@ -29,7 +29,7 @@ function PlainValue({ value }: Readonly<{ value: string }>) {
 }
 
 /** „alt → neu“; ohne Änderung nur der Wert. */
-export function ValueChange({
+function ValueChange({
   before,
   after,
   changed = true,
@@ -65,7 +65,7 @@ export function ValueChange({
  * Die Vertragsparteien Platz für Platz: Ein Name bleibt, wird an seiner
  * Stelle neu geschrieben („alt → neu“) oder kommt mit „+“ dazu.
  */
-export function PartiesChange({
+function PartiesChange({
   before,
   after,
   changed = true,
