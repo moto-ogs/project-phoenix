@@ -62,7 +62,7 @@ func (c *effectiveTimeCore[S, E, N, D]) writeLockedException(ctx context.Context
 	var zero E
 	fields := domain.EffectiveExceptionFields{
 		StudentID: studentID, Date: batch.date, Time: batch.value, Reason: batch.reason,
-		Source: careplan.ExceptionSourceStaff, CreatedBy: batch.staffID,
+		Source: careplan.ExceptionSourceStaff, CreatedBy: batch.staffID, EnteredByTraeger: careplan.EnteredByTraeger(ctx, batch.staffID),
 	}
 	if isZeroEntity(existing) {
 		row := c.domain.NewException(fields)
@@ -76,7 +76,7 @@ func (c *effectiveTimeCore[S, E, N, D]) writeLockedException(ctx context.Context
 		}
 		return row, nil
 	}
-	fields, err := c.reclaimedFields(existing, fields, batch.resolveStaffID)
+	fields, err := c.reclaimedFields(ctx, existing, fields, batch.resolveStaffID)
 	if err != nil {
 		return zero, err
 	}
