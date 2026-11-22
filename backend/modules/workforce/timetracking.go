@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -73,27 +72,11 @@ func formatOptionalID(id *int64) *string {
 }
 
 // BreakDurationUpdate corrects one break's duration inside a session edit.
+// ident.ID reads the break id as a decimal string, so a browser never rounds
+// it while correcting recorded intervals.
 type BreakDurationUpdate struct {
-	ID              int64 `json:"id"`
-	DurationMinutes int   `json:"duration_minutes"`
-}
-
-// UnmarshalJSON accepts exact decimal strings and legacy numeric break IDs.
-// Browsers must not round int64 IDs while correcting recorded intervals.
-func (b *BreakDurationUpdate) UnmarshalJSON(data []byte) error {
-	var wire struct {
-		ID              json.Number `json:"id"`
-		DurationMinutes int         `json:"duration_minutes"`
-	}
-	if err := json.Unmarshal(data, &wire); err != nil {
-		return err
-	}
-	id, err := strconv.ParseInt(wire.ID.String(), 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid break ID: %w", err)
-	}
-	b.ID, b.DurationMinutes = id, wire.DurationMinutes
-	return nil
+	ID              ident.ID `json:"id"`
+	DurationMinutes int      `json:"duration_minutes"`
 }
 
 // SessionUpdateRequest is the body of a session edit; nil leaves a field
@@ -313,64 +296,42 @@ type StaffAbsenceRequestItem struct {
 
 // CreateAbsenceRequest files an absence.
 type CreateAbsenceRequest struct {
-	AbsenceType   string `json:"absence_type"`
-	AbsenceTypeID *int64 `json:"absence_type_id"`
-	DateStart     string `json:"date_start"`
-	DateEnd       string `json:"date_end"`
-	HalfDay       bool   `json:"half_day"`
-	Note          string `json:"note"`
+	AbsenceType   string    `json:"absence_type"`
+	AbsenceTypeID *ident.ID `json:"absence_type_id"`
+	DateStart     string    `json:"date_start"`
+	DateEnd       string    `json:"date_end"`
+	HalfDay       bool      `json:"half_day"`
+	Note          string    `json:"note"`
 }
 
 // UpdateAbsenceRequest edits an absence; nil leaves a field untouched.
 // AbsenceTypeIDSet distinguishes an omitted absence_type_id from JSON null,
 // which clears a previously selected school-defined art.
 type UpdateAbsenceRequest struct {
-	AbsenceType      *string `json:"absence_type"`
-	AbsenceTypeID    *int64  `json:"absence_type_id"`
-	AbsenceTypeIDSet bool    `json:"-"`
-	DateStart        *string `json:"date_start"`
-	DateEnd          *string `json:"date_end"`
-	HalfDay          *bool   `json:"half_day"`
-	Note             *string `json:"note"`
+	AbsenceType      *string   `json:"absence_type"`
+	AbsenceTypeID    *ident.ID `json:"absence_type_id"`
+	AbsenceTypeIDSet bool      `json:"-"`
+	DateStart        *string   `json:"date_start"`
+	DateEnd          *string   `json:"date_end"`
+	HalfDay          *bool     `json:"half_day"`
+	Note             *string   `json:"note"`
 }
 
-// UnmarshalJSON accepts absence_type_id as decimal string: browser clients
-// cannot hold every BIGINT as a number.
-func (r *CreateAbsenceRequest) UnmarshalJSON(data []byte) error {
-	type plain CreateAbsenceRequest
-	var raw struct {
-		plain
-		AbsenceTypeID json.RawMessage `json:"absence_type_id"`
-	}
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	typeID, err := decimalID(raw.AbsenceTypeID)
-	if err != nil {
-		return fmt.Errorf("ungültige Abwesenheitsart-ID: %w", err)
-	}
-	*r = CreateAbsenceRequest(raw.plain)
-	r.AbsenceTypeID = typeID
-	return nil
-}
-
-// UnmarshalJSON accepts absence_type_id as decimal string and records whether
-// the field was sent at all, so JSON null can clear a school-defined type.
+// UnmarshalJSON reads the fields as encoding/json does and records whether
+// absence_type_id was sent at all, so JSON null can clear a school-defined
+// type.
 func (r *UpdateAbsenceRequest) UnmarshalJSON(data []byte) error {
 	type plain UpdateAbsenceRequest
-	var raw struct {
-		plain
+	var presence struct {
 		AbsenceTypeID json.RawMessage `json:"absence_type_id"`
 	}
-	if err := json.Unmarshal(data, &raw); err != nil {
+	if err := json.Unmarshal(data, (*plain)(r)); err != nil {
 		return err
 	}
-	typeID, err := decimalID(raw.AbsenceTypeID)
-	if err != nil {
-		return fmt.Errorf("ungültige Abwesenheitsart-ID: %w", err)
+	if err := json.Unmarshal(data, &presence); err != nil {
+		return err
 	}
-	*r = UpdateAbsenceRequest(raw.plain)
-	r.AbsenceTypeID, r.AbsenceTypeIDSet = typeID, len(raw.AbsenceTypeID) != 0
+	r.AbsenceTypeIDSet = len(presence.AbsenceTypeID) != 0
 	return nil
 }
 
@@ -440,59 +401,13 @@ type CompTimeBalancePreview struct {
 }
 
 // RebookAbsencesRequest moves stored absences of one staff member to another
-// type (#3258). Browser clients send the BIGINT identifiers as decimal
-// strings; numbers are accepted too.
+// type (#3258). The handler reads it from timetracking.RebookAbsencesBody.
 type RebookAbsencesRequest struct {
 	AbsenceIDs    []int64
 	AbsenceType   string
 	AbsenceTypeID *int64
 	Reason        string
 	DryRun        bool
-}
-
-func (r *RebookAbsencesRequest) UnmarshalJSON(data []byte) error {
-	var raw struct {
-		AbsenceIDs    []json.RawMessage `json:"absence_ids"`
-		AbsenceType   string            `json:"absence_type"`
-		AbsenceTypeID json.RawMessage   `json:"absence_type_id"`
-		Reason        string            `json:"reason"`
-		DryRun        bool              `json:"dry_run"`
-	}
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	r.AbsenceType, r.Reason, r.DryRun = raw.AbsenceType, raw.Reason, raw.DryRun
-	r.AbsenceIDs = make([]int64, 0, len(raw.AbsenceIDs))
-	for _, value := range raw.AbsenceIDs {
-		id, err := decimalID(value)
-		if err != nil || id == nil {
-			return fmt.Errorf("invalid absence_ids: %w", errors.Join(err, errors.New("id is required")))
-		}
-		r.AbsenceIDs = append(r.AbsenceIDs, *id)
-	}
-	typeID, err := decimalID(raw.AbsenceTypeID)
-	if err != nil {
-		return fmt.Errorf("invalid absence_type_id: %w", err)
-	}
-	r.AbsenceTypeID = typeID
-	return nil
-}
-
-// decimalID reads a BIGINT sent as JSON number or decimal string; absent and
-// null yield nil.
-func decimalID(raw json.RawMessage) (*int64, error) {
-	if len(raw) == 0 || string(raw) == "null" {
-		return nil, nil
-	}
-	var text string
-	if err := json.Unmarshal(raw, &text); err != nil {
-		text = string(raw)
-	}
-	id, err := strconv.ParseInt(text, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	return &id, nil
 }
 
 // AbsenceRebookingResult is what a rebooking does: the entries with their new

@@ -119,7 +119,7 @@ func TestLeadershipConversation_InvisibleWithoutPermission(t *testing.T) {
 	err = testpkg.TenantCommand1(t, ctx, f.db, f.svc.MarkUnread, f.leadershipThreadID)
 	require.ErrorIs(t, err, messaging.ErrThreadNotFound)
 
-	_, err = testpkg.TenantQuery4(t, ctx, f.db, f.svc.StartThread, f.chain.StudentID, f.chain.AccountID, "Hallo", communication.ParentMessageAudienceLeadership)
+	_, err = sendFirstMessage(t, ctx, f.db, f.svc, f.chain.StudentID, f.chain.AccountID, "Hallo", communication.ParentMessageAudienceLeadership)
 	require.ErrorIs(t, err, messaging.ErrForbidden, "only the leadership may start a leadership conversation")
 	_, _, err = listGuardians(t, ctx, f, communication.ParentMessageAudienceLeadership)
 	require.ErrorIs(t, err, messaging.ErrForbidden)
@@ -199,13 +199,13 @@ func TestLeadershipConversation_StartNeedsTheSchoolsChoice(t *testing.T) {
 	off := newLeadershipFixture(t, false)
 	ctx := off.ctx(t, customRolePermissions)
 	// The existing conversation stays open after the school switched it off.
-	detail, err := testpkg.TenantQuery4(t, ctx, off.db, off.svc.StartThread, off.chain.StudentID, off.chain.AccountID, "Antwort der Leitung", communication.ParentMessageAudienceLeadership)
+	detail, err := sendFirstMessage(t, ctx, off.db, off.svc, off.chain.StudentID, off.chain.AccountID, "Antwort der Leitung", communication.ParentMessageAudienceLeadership)
 	require.NoError(t, err)
 	assert.Equal(t, off.leadershipThreadID, detail.ThreadID)
 
 	// A guardian without a leadership conversation gets no new one.
 	other := testpkg.CreateTestParentGuardianChain(t, off.db)
-	_, err = testpkg.TenantQuery4(t, ctx, off.db, off.svc.StartThread, other.StudentID, other.AccountID, "Hallo", communication.ParentMessageAudienceLeadership)
+	_, err = sendFirstMessage(t, ctx, off.db, off.svc, other.StudentID, other.AccountID, "Hallo", communication.ParentMessageAudienceLeadership)
 	require.ErrorIs(t, err, communication.ErrParentMessageLeadershipUnavailable)
 	_, err = testpkg.TenantQuery3(t, ctx, off.db, off.svc.OpenThread, other.StudentID, other.AccountID, communication.ParentMessageAudienceLeadership)
 	require.ErrorIs(t, err, communication.ErrParentMessageLeadershipUnavailable)
@@ -213,11 +213,11 @@ func TestLeadershipConversation_StartNeedsTheSchoolsChoice(t *testing.T) {
 	on := newLeadershipFixture(t, true)
 	onCtx := on.ctx(t, adminPermissions)
 	fresh := testpkg.CreateTestParentGuardianChain(t, on.db)
-	started, err := testpkg.TenantQuery4(t, onCtx, on.db, on.svc.StartThread, fresh.StudentID, fresh.AccountID, "Hallo", communication.ParentMessageAudienceLeadership)
+	started, err := sendFirstMessage(t, onCtx, on.db, on.svc, fresh.StudentID, fresh.AccountID, "Hallo", communication.ParentMessageAudienceLeadership)
 	require.NoError(t, err)
 	assert.Equal(t, communication.ParentMessageAudienceLeadership, started.Audience)
 
-	_, err = testpkg.TenantQuery4(t, onCtx, on.db, on.svc.StartThread, fresh.StudentID, fresh.AccountID, "Hallo", "everyone")
+	_, err = sendFirstMessage(t, onCtx, on.db, on.svc, fresh.StudentID, fresh.AccountID, "Hallo", "everyone")
 	require.ErrorIs(t, err, communication.ErrParentMessageInvalidAudience)
 }
 

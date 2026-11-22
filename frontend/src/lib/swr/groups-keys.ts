@@ -1,7 +1,6 @@
 import { SWR_FAMILIES } from "./shell-keys";
 import { resourceKey } from "./resource-key";
 export type GroupFilters = {
-  search?: string;
   page?: number;
   pageSize?: number;
 };

@@ -11,6 +11,7 @@ const CodeImportFileUnreadable = "import.file_unreadable"
 const CodeImportImportBatchFailed = "import.import_batch_failed"
 const CodeImportModeForbidden = "import.mode_forbidden"
 const CodeImportNotTestTraeger = "import.not_test_traeger"
+const CodeImportStaffProfileRequired = "import.staff_profile_required"
 const CodeImportTestTraegerInactive = "import.test_traeger_inactive"
 
 var errorCodeClassesImport = []errorCodeClass{
@@ -24,6 +25,7 @@ var errorCodeClassesImport = []errorCodeClass{
 	{CodeImportImportBatchFailed, "server"},
 	{CodeImportModeForbidden, "permission"},
 	{CodeImportNotTestTraeger, "business_rejection"},
+	{CodeImportStaffProfileRequired, "permission"},
 	{CodeImportTestTraegerInactive, "business_rejection"},
 }
 

@@ -232,6 +232,11 @@ func successorSeries(old *StaffShiftSeries, input SplitSeriesInput, rootID int64
 		CreatedBy:           input.ActorStaffID,
 		WorkingTime:         input.WorkingTime,
 	}
+	// A successor the Träger-Büro writes has no staff author (#7818).
+	if account := input.TraegerAccountID; account > 0 {
+		successor.PlannedByTraeger = true
+		successor.TraegerAccountID = &account
+	}
 	if input.Weekdays != nil {
 		successor.Weekdays = input.Weekdays
 	}

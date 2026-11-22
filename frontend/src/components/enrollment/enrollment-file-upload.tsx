@@ -50,7 +50,7 @@ interface EnrollmentUploadTarget {
   readonly phaseId?: string;
   readonly lateInviteToken?: string;
   readonly statusToken?: string;
-  readonly uploadEndpoint?: string;
+  readonly viaParentPortal?: boolean;
   readonly upload?: (
     file: File,
     signal: AbortSignal,
@@ -73,7 +73,7 @@ export function useEnrollmentUploadTarget(params: {
   phaseId?: string;
   lateInviteToken?: string;
   statusToken?: string;
-  uploadEndpoint?: string;
+  viaParentPortal?: boolean;
   upload?: EnrollmentUploadTarget["upload"];
   locale: string;
   previewMode: boolean;
@@ -88,7 +88,7 @@ export function useEnrollmentUploadTarget(params: {
     phaseId,
     lateInviteToken,
     statusToken,
-    uploadEndpoint,
+    viaParentPortal,
     upload,
     locale,
     previewMode,
@@ -99,7 +99,7 @@ export function useEnrollmentUploadTarget(params: {
       phaseId: previewMode ? undefined : phaseId,
       lateInviteToken,
       statusToken,
-      uploadEndpoint,
+      viaParentPortal,
       upload: previewMode ? undefined : upload,
       locale,
       onPendingChange,
@@ -109,7 +109,7 @@ export function useEnrollmentUploadTarget(params: {
       phaseId,
       lateInviteToken,
       statusToken,
-      uploadEndpoint,
+      viaParentPortal,
       upload,
       previewMode,
       locale,
@@ -257,7 +257,7 @@ export function FileUploadInput({
             file,
             lateInviteToken: target.lateInviteToken,
             statusToken: target.statusToken,
-            uploadEndpoint: target.uploadEndpoint,
+            viaParentPortal: target.viaParentPortal,
             signal: controller.signal,
           });
       selectionOrder.current.set(uploadValueKey(uploaded), id);

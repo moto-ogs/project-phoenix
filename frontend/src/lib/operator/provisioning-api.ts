@@ -1,4 +1,4 @@
-import { bffJson } from "~/lib/bff-fetch";
+import { bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
 import type * as operatorDevicesContract from "~/lib/contract/operator-devices.generated";
 import type * as operatorSchoolsContract from "~/lib/contract/operator-schools.generated";
 import type * as operatorUnregisteredTagScansContract from "~/lib/contract/operator-unregistered-tag-scans.generated";
@@ -574,11 +574,12 @@ export const operatorProvisioningService = new OperatorProvisioningService();
 export async function revalidateTenantCache(slugs: string[]): Promise<void> {
   if (slugs.length === 0) return;
   try {
-    await fetch("/api/operator/provisioning/revalidate-tenant", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slugs }),
-    });
+    await bffJsonUncontracted<unknown>(
+      "platform",
+      "POST",
+      "/api/operator/provisioning/revalidate-tenant",
+      { body: { slugs } },
+    );
   } catch {
     // Cache self-heals in ≤5 min; don't block the success flow.
   }

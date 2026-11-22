@@ -90,12 +90,6 @@ type StaffRecordResponse struct {
 	Qualifications string `json:"qualifications,omitempty"`
 }
 
-// GroupResponse represents a simplified group response.
-type GroupResponse struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
-}
-
 // StaffWithRoleResponse represents a staff member with role information.
 type StaffWithRoleResponse struct {
 	ID                ident.ID  `json:"id"`

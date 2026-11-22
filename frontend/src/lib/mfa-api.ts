@@ -142,7 +142,7 @@ interface VerifyParams {
 // The Träger-Portal names the Träger the login resolved when it redeems the
 // code; the other portals have no such field.
 function organizationField(organizationId?: string) {
-  return organizationId ? { organization_id: Number(organizationId) } : {};
+  return organizationId ? { organization_id: organizationId } : {};
 }
 
 export async function verifyMFA(

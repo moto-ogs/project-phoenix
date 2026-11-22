@@ -76,7 +76,7 @@ func currentAccountID(ctx context.Context) int64 {
 
 var errLoginFieldsRequired = errors.New("email and password are required")
 
-type loginRequest struct {
+type parentLoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
@@ -85,7 +85,7 @@ type loginRequest struct {
 // challenge of a mailed code, unless the browser presents a device the
 // parents portal remembered.
 func (rs *Resource) login(w http.ResponseWriter, r *http.Request, after func(context.Context, string)) {
-	var request loginRequest
+	var request parentLoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return

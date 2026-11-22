@@ -124,17 +124,12 @@ func (b *builder) field(declaring, root reflect.Type, sf reflect.StructField, na
 		// identifier.
 		err, format = nil, ""
 	case errors.Is(err, errBareInt64):
-		err = b.numericID(&schema, declaring, at)
+		err = bareInt64(at)
 	}
 	if err == nil && namesIdentifier(name) && readsNumber(schema) {
 		// The name does not make an identifier, but a number under an
 		// identifier's name is one the type forgot (ADR 0300).
 		err = fmt.Errorf("%s: %q names an identifier but is a number. Use ident.ID", at, name)
-	}
-	if err == nil && !request && readsLax(schema) {
-		// An answer carries every identifier as a decimal string, and the
-		// generated decoder takes nothing else (ADR 0300).
-		err = fmt.Errorf("%s: an answer sends an identifier as a string; a reader of numbers belongs to a request (ADR 0300)", at)
 	}
 	if err == nil {
 		err = setFormat(&schema, format, at)
@@ -206,32 +201,11 @@ func (b *builder) omission(field *Field, t reflect.Type, options []string) {
 	}
 }
 
-// readsLax tells whether a value, or an element of it, reads an identifier
-// as a number or a string.
-func readsLax(schema Schema) bool {
-	for (schema.Kind == KindArray || schema.Kind == KindMap) && schema.Elem != nil {
-		schema = *schema.Elem
-	}
-	return schema.Kind == KindLaxID
-}
-
-// numericID decides a bare int64: on a request type whose own UnmarshalJSON
-// is registered as ReadsLaxIDs it reads a number or a string. Otherwise an
-// identifier is an ident.ID and a count or an amount an int or an int64
-// tagged contract:"number" (ADR 0270, ADR 0300).
-func (b *builder) numericID(schema *Schema, declaring reflect.Type, at string) error {
-	leaf := schema
-	for leaf.Kind == KindArray {
-		leaf = leaf.Elem
-	}
-	if leaf.Kind != KindInt {
-		return fmt.Errorf("%s: int64 inside a map is not supported", at)
-	}
-	if b.readers[declaring] != ReadsLaxIDs {
-		return fmt.Errorf("%s: int64 does not say what it is. Use ident.ID for an identifier, and int or contract:\"number\" for a count or an amount (ADR 0270)", at)
-	}
-	leaf.Kind = KindLaxID
-	return nil
+// bareInt64 refuses an int64 that does not say what it is: an identifier is
+// an ident.ID, a count or an amount an int or an int64 tagged
+// contract:"number" (ADR 0270, ADR 0300).
+func bareInt64(at string) error {
+	return fmt.Errorf("%s: int64 does not say what it is. Use ident.ID for an identifier, and int or contract:\"number\" for a count or an amount (ADR 0270)", at)
 }
 
 // namesIdentifier tells whether a JSON key is the name of an identifier.

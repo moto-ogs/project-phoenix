@@ -1369,6 +1369,18 @@ export const AttendanceResponseSchema: z.ZodType<AttendanceResponse, unknown> = 
   checked_in_at: nullable(str),
 });
 
+/** Go: timetablehttp.betreuungsplanExportRequest */
+export interface betreuungsplanExportRequest {
+  from?: string;
+  to?: string;
+  template?: string;
+  variant?: string;
+  format?: string;
+  group_id?: string | null;
+  staff_id?: string | null;
+  room_id?: string | null;
+}
+
 /** Go: timetablehttp.ClosingDayRequest */
 export interface ClosingDayRequest {
   start_date?: string;
@@ -2824,6 +2836,7 @@ export const routes = {
     method: "POST",
     pattern: "/api/timetable/betreuungsplan/export",
     portals: ["tenant"],
+    request: requestBody<betreuungsplanExportRequest>(),
     response: fileAnswer,
   },
   "POST /api/timetable/closing-days/": {

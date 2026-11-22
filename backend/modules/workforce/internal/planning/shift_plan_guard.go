@@ -336,8 +336,9 @@ func (g *planGuard) checkSeries(ctx context.Context, staffID int64, candidates [
 }
 
 // recordSeries appends the override of a series write, anchored on the
-// first occurrence it concerns.
-func (g *planGuard) recordSeries(ctx context.Context, override *planOverride, written []*workforce.ShiftRecord, actorStaffID int64) error {
+// first occurrence it concerns. actorAccountID names the Träger-Büro
+// account of a series planned without a staff member (#7818).
+func (g *planGuard) recordSeries(ctx context.Context, override *planOverride, written []*workforce.ShiftRecord, actorAccountID *int64, actorStaffID int64) error {
 	if override == nil || len(written) == 0 {
 		return nil
 	}
@@ -348,5 +349,5 @@ func (g *planGuard) recordSeries(ctx context.Context, override *planOverride, wr
 			break
 		}
 	}
-	return g.record(ctx, override, anchor, nil, actorStaffID)
+	return g.record(ctx, override, anchor, actorAccountID, actorStaffID)
 }

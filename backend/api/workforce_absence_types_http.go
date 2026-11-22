@@ -34,10 +34,24 @@ func absenceTypesRuntime(resolveActor func(context.Context) (int64, error)) abse
 		ParseIDParam:       common.ParseIDParam,
 		Success:            common.Respond,
 		Failure:            renderAbsenceTypesFailure,
-		ResolveActor:       resolveActor,
+		ResolveActor:       absenceTypesActor(resolveActor),
 		TimeTrackingOwn:    permissions.TimeTrackingOwn,
 		TimeTrackingManage: permissions.TimeTrackingManage,
 		VacationApprove:    permissions.VacationApprove,
+	}
+}
+
+// absenceTypesActor keeps an allowance change staff-only: it records its
+// staff member in changed_by. A valid session without a staff record, also
+// one opened through the Träger-Portal, is refused with its code; a failed
+// lookup stays the server's error (#7818).
+func absenceTypesActor(resolveActor func(context.Context) (int64, error)) func(context.Context) (int64, error) {
+	return func(ctx context.Context) (int64, error) {
+		staffID, err := resolveActor(ctx)
+		if callerHasNoStaffRecord(err) {
+			return 0, absencetypesHTTP.ErrNoStaffActor
+		}
+		return staffID, err
 	}
 }
 
@@ -57,8 +71,8 @@ func renderAbsenceTypesFailure(w http.ResponseWriter, r *http.Request, kind abse
 		common.RenderError(w, r, common.ErrorNotFound(err))
 	case absencetypesHTTP.FailureConflict:
 		common.RenderError(w, r, common.ErrorConflict(err))
-	case absencetypesHTTP.FailureUnauthorized:
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
+	case absencetypesHTTP.FailureForbidden:
+		common.RenderError(w, r, common.ErrorForbiddenWithCode(err, common.CodeWorkforceNoStaffProfile))
 	default:
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 	}

@@ -12,13 +12,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
-// The login address and the second factor hold for a whole account. A school
-// administrator changes them only while their school alone holds the account
-// (#6862); these tests drive the two routes through the composed router.
+// The second factor holds for a whole account. A school administrator resets
+// it only while their school alone holds the account (#6862); these tests
+// drive the reset route through the composed router.
 
 const sharedAccountCode = "identity.account_shared_across_schools"
 
@@ -73,14 +72,6 @@ func (e *accountIsolationEnv) secondFactorGeneration(t *testing.T, accountID int
 	return generation
 }
 
-func (e *accountIsolationEnv) storedAddress(t *testing.T, accountID int64) string {
-	t.Helper()
-	var address string
-	require.NoError(t, testpkg.SetupTestDB(t).NewSelect().Column("email").TableExpr("auth.accounts").
-		Where("id = ?", accountID).Scan(context.Background(), &address))
-	return address
-}
-
 // noticeRecipients lists the addresses the account's notices of one kind go
 // to, in any outbox: the school's or the global one. It reads the package's
 // pool, the database the env's resource writes to.
@@ -101,45 +92,6 @@ func requireSharedAccountRefusal(t *testing.T, rr *httptest.ResponseRecorder) {
 	}
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
 	assert.Equal(t, sharedAccountCode, body.Code)
-}
-
-func TestSchoolAdminCannotChangeLoginAddressOfSharedAccount(t *testing.T) {
-	t.Parallel()
-	e := newAccountIsolationEnv(t)
-
-	for name, shared := range map[string]func(*testing.T, string) (int64, string){
-		"another school":       e.accountAtBothSchools,
-		"Träger-Büro":          e.traegerMember,
-		"Träger parent access": e.traegerParent,
-	} {
-		t.Run(name, func(t *testing.T) {
-			id, address := shared(t, "shared-login-address")
-			err := e.updateEmail(e.schoolCtx(), id, fmt.Sprintf("taken-over-%d@example.test", id))
-
-			require.ErrorIs(t, err, identityaccess.ErrAccountSharedAcrossSchools)
-			assert.Equal(t, address, e.storedAddress(t, id), "the login address stays")
-			assert.Empty(t, e.noticeRecipients(t, "account_login_address_changed", id))
-		})
-	}
-}
-
-func TestSchoolAdminChangesLoginAddressOfOwnAccountAndPreviousAddressLearnsOfIt(t *testing.T) {
-	t.Parallel()
-	e := newAccountIsolationEnv(t)
-	id, previous := e.localAccount(t, "own-login-address")
-	// A name-only edit keeps the address and tells nobody.
-	username := fmt.Sprintf("own-login-%d", id)
-	require.NoError(t, e.tc.resource.Sessions.UpdateManageableAccount(e.schoolCtx(), identityaccess.AccountIdentityUpdate{
-		AccountID: id, Email: previous, Username: &username,
-	}))
-	assert.Empty(t, e.noticeRecipients(t, "account_login_address_changed", id))
-
-	changed := fmt.Sprintf("own-login-changed-%d@example.test", id)
-	require.NoError(t, e.updateEmail(e.schoolCtx(), id, changed))
-
-	assert.Equal(t, changed, e.storedAddress(t, id))
-	assert.Equal(t, []string{previous}, e.noticeRecipients(t, "account_login_address_changed", id),
-		"the notice goes to the address the login left, once")
 }
 
 func TestSchoolAdminCannotResetSecondFactorOfSharedAccount(t *testing.T) {
@@ -185,13 +137,16 @@ func TestSchoolAdminResetsSecondFactorOfOwnAccountAndHolderLearnsOfIt(t *testing
 	assert.Greater(t, e.secondFactorGeneration(t, id), before, "the reset reached the account")
 }
 
-// A school that links the account while the administrator changes its
-// address: the change waits for the link and then refuses, instead of
-// rewriting the login of an account that has become shared.
-func TestSchoolAdminAddressChangeWaitsForASchoolLinkingTheAccount(t *testing.T) {
+// A school that links the account while the administrator resets its second
+// factor: the reset waits for the link under the account lock and then
+// refuses, instead of resetting an account that has become shared.
+func TestSchoolAdminSecondFactorResetWaitsForASchoolLinkingTheAccount(t *testing.T) {
 	t.Parallel()
 	e := newAccountIsolationEnv(t)
-	id, address := e.localAccount(t, "linked-meanwhile")
+	// The second-factor routes are served by the composed flows.
+	e.tc.resource.MFAService = setupAuthModuleOn(t, e.tc.db).MFA
+	id, _ := e.localAccount(t, "linked-meanwhile")
+	before := e.secondFactorGeneration(t, id)
 	ctx := context.Background()
 
 	link, err := e.tc.db.BeginTx(ctx, nil)
@@ -203,10 +158,13 @@ func TestSchoolAdminAddressChangeWaitsForASchoolLinkingTheAccount(t *testing.T) 
 		VALUES (?, ?, 'active', NOW(), NOW())`, id, e.foreignTenantID)
 	require.NoError(t, err)
 
-	done := make(chan error, 1)
-	go func() { done <- e.updateEmail(e.schoolCtx(), id, fmt.Sprintf("linked-meanwhile-%d@example.test", id)) }()
+	done := make(chan *httptest.ResponseRecorder, 1)
+	go func() {
+		done <- e.execute(t, e.claims, http.MethodDelete, fmt.Sprintf("/auth/accounts/%d/mfa", id),
+			map[string]string{"reason": "lost mailbox"})
+	}()
 
-	// The change reaches the account and waits for the uncommitted link.
+	// The reset reaches the account and waits for the uncommitted link.
 	require.Eventually(t, func() bool {
 		var waiting bool
 		return testpkg.SetupTestDB(t).NewRaw(`SELECT EXISTS (SELECT FROM pg_stat_activity
@@ -214,7 +172,7 @@ func TestSchoolAdminAddressChangeWaitsForASchoolLinkingTheAccount(t *testing.T) 
 	}, 5*time.Second, 10*time.Millisecond)
 	require.NoError(t, link.Commit())
 
-	require.ErrorIs(t, <-done, identityaccess.ErrAccountSharedAcrossSchools)
-	assert.Equal(t, address, e.storedAddress(t, id), "the login address stays")
-	assert.Empty(t, e.noticeRecipients(t, "account_login_address_changed", id))
+	requireSharedAccountRefusal(t, <-done)
+	assert.Equal(t, before, e.secondFactorGeneration(t, id), "the refused reset leaves the second factor")
+	assert.Empty(t, e.noticeRecipients(t, "account_mfa_reset", id))
 }

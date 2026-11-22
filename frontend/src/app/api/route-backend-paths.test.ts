@@ -1,26 +1,35 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import ts from "typescript";
-import { describe, expect, it } from "vitest";
-import { portalRoutes } from "~/lib/contract/portals.generated";
+import { describe, expect, it, vi } from "vitest";
+import {
+  portalRoutes,
+  routeFileRoutes,
+} from "~/lib/contract/portals.generated";
+import { PORTALS } from "~/server/auth/portals";
+
+vi.mock("~/env", () => ({ env: { TENANT_DOMAIN: "localhost" } }));
 
 /**
- * A route file of its own calls the backend for a reason the contract cannot
- * carry (#2353): a sign-in step that installs the session, a stream, a
- * device header, a bundle of several calls. A route file whose backend
- * paths the contract registers, all of them, repeats what the portal's
- * catalog proxy already serves and fails here. Its backend path is
- * registered; the page calls the BFF path and `app/api/<portal>/[...path]`
- * answers it.
+ * A route file of its own calls the backend for a reason the catalog proxy
+ * cannot serve (#2353, #7808): a sign-in step that installs the session, a
+ * write that purges a cache, a device header. The backend marks each such
+ * route on its contract, as `RouteFile` (typed, listed in `routeFileRoutes`)
+ * or `Outside` (no contract: a stream, a device). A route file whose backend
+ * paths are all in a portal's proxy allowlist (`portalRoutes`) repeats what
+ * the portal's catalog proxy already serves and fails here. Its backend path
+ * is registered; the page calls the BFF path and `app/api/<portal>/[...path]`
+ * answers it. Every `RouteFile` route needs the route file that serves it.
  *
  * "Backend path" is every string or template in the file that names a route
- * of the backend's route catalog (`backend/api/testdata/routes`). The routes
- * the contract does not register only shrink
+ * of the backend's route catalog (`backend/api/testdata/routes`), and the
+ * file's own place below `app/api` (`auth/mfa/verify/route.ts` serves
+ * `/auth/mfa/verify`). New `Outside` lines need an ADR
  * (`scripts/check-contract-shrink.mjs`), so a new route file cannot reach a
- * new unregistered route either. Not seen here: a path a route file reaches
+ * new route without types either. Not seen here: a path a route file reaches
  * through a helper or a constant of another module, and a template that
- * starts with an expression (`${prefix}/groups`). One path without a contract
- * is enough for the whole file, the HTTP method is not compared.
+ * starts with an expression (`${prefix}/groups`). One path outside the
+ * allowlists is enough for the whole file, the HTTP method is not compared.
  */
 
 const apiDir = path.dirname(new URL(import.meta.url).pathname);
@@ -109,6 +118,20 @@ function reached(name: string) {
   return matches.filter((route) => rank(route.pattern) === best);
 }
 
+/**
+ * The backend paths a route file's place below `app/api` stands for: the
+ * BFF path itself and, for a portal's own auth steps, the path without
+ * `/api` (`api/operator/auth/mfa/verify` → `/operator/auth/mfa/verify`).
+ */
+function placeOf(file: string): string[] {
+  const parts = path.dirname(file).split(path.sep);
+  if (parts.some((part) => part.startsWith("[..."))) return [];
+  const bff = parts.map((part) =>
+    part.startsWith("[") ? `{${part.slice(1, -1)}}` : part,
+  );
+  return [`/api/${bff.join("/")}`, `/${bff.join("/")}`];
+}
+
 /** The backend paths a route file names, by whether the contract registers them. */
 function classify(file: string, text: string) {
   // "/" alone is a frontend redirect, never the backend's index.
@@ -135,6 +158,54 @@ const routeFiles = readdirSync(apiDir, { recursive: true, encoding: "utf8" })
     ...classify(file, readFileSync(path.join(apiDir, file), "utf8")),
   }))
   .sort((a, b) => a.route.localeCompare(b.route));
+
+/** "METHOD /pattern" of every route a portal's own route file serves. */
+const routeFileKeys = Object.values(routeFileRoutes).flatMap((routes) =>
+  routes.map((route) => key(route.method, segmentsOf(route.pattern))),
+);
+
+/**
+ * The paths the Auth.js handlers of every portal call through the portal
+ * table: the password sign-in, the renewal and the sign-out. Auth.js'
+ * catch-all route file serves them.
+ */
+const authJsPaths = Object.values(PORTALS).flatMap((portal) => [
+  `${portal.backend.authPrefix}/login`,
+  portal.backend.refresh.path,
+  portal.backend.logout.path,
+]);
+
+/** The server modules beside the route files that call the backend. */
+const serverAuthDir = path.resolve(apiDir, "../../server/auth");
+const serverAuthPaths = readdirSync(serverAuthDir, { encoding: "utf8" })
+  .filter((file) => file.endsWith(".ts") && !file.includes(".test."))
+  .flatMap((file) =>
+    pathsIn(file, readFileSync(path.join(serverAuthDir, file), "utf8")),
+  );
+
+/** Catalog rows some route file, or Auth.js through the portal table, names. */
+const named = new Set(
+  [
+    ...routeFiles.flatMap((file) => [...file.registered, ...file.unregistered]),
+    ...readdirSync(apiDir, { recursive: true, encoding: "utf8" })
+      .filter((file) => path.basename(file) === "route.ts")
+      .flatMap(placeOf),
+    ...authJsPaths,
+    ...serverAuthPaths,
+  ].flatMap((name) =>
+    reached(name).map((route) => `/${route.pattern.join("/")}`),
+  ),
+);
+
+describe("route served by a portal's own route file", () => {
+  it.each(routeFileKeys)("%s has its route file", (routeKey) => {
+    const pattern = routeKey.slice(routeKey.indexOf(" ") + 1);
+    expect(
+      named.has(pattern),
+      "the contract names RouteFile, but no route file serves the route: add it, or drop RouteFile so the catalog proxy serves it",
+    ).toBe(true);
+  });
+});
 
 describe("route file with backend calls of its own", () => {
   it("reads the route catalog and the contract", () => {

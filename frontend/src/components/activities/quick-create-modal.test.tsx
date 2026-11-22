@@ -9,6 +9,12 @@ import { QuickCreateActivityModal } from "./quick-create-modal";
 import { useActivityForm } from "~/hooks/useActivityForm";
 import { catalogText } from "~/test/error-catalog-text";
 
+// Die Sitzung kommt im Normalfall von einer Mitarbeiterin der Schule.
+const shell = vi.hoisted(() => ({ isViaTraeger: false }));
+vi.mock("~/lib/shell-auth-context", () => ({
+  useShellAuthSafe: () => ({ isViaTraeger: shell.isViaTraeger }),
+}));
+
 // Mock all dependencies
 vi.mock(
   "~/lib/session-cache",
@@ -107,6 +113,7 @@ describe("QuickCreateActivityModal", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    shell.isViaTraeger = false;
     vi.mocked(useActivityForm).mockReturnValue({
       form: {
         name: "",
@@ -144,6 +151,30 @@ describe("QuickCreateActivityModal", () => {
       ok: true,
       json: async () => ({ data: { id: "1", name: "New Activity" } }),
     });
+  });
+
+  it("tells staff they become the supervisor", () => {
+    render(<QuickCreateActivityModal isOpen={true} onClose={mockOnClose} />);
+
+    expect(
+      screen.getByRole("button", { name: /Aktivität erstellen/ }),
+    ).toHaveAttribute(
+      "tooltip",
+      "Legt die Aktivität sofort an und trägt dich als Leitung ein.",
+    );
+  });
+
+  // #7818: Das Träger-Büro hat keinen Mitarbeitereintrag an der Schule.
+  it("tells the Träger-Büro the activity starts without a supervisor", () => {
+    shell.isViaTraeger = true;
+    render(<QuickCreateActivityModal isOpen={true} onClose={mockOnClose} />);
+
+    expect(
+      screen.getByRole("button", { name: /Aktivität erstellen/ }),
+    ).toHaveAttribute(
+      "tooltip",
+      "Die Aktivität wird ohne Leitung angelegt. Du kannst sie danach eintragen.",
+    );
   });
 
   it("renders modal when open", () => {
