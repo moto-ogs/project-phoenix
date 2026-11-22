@@ -168,9 +168,9 @@ export default function SchoolParentLettersPage() {
         scope: `class-${previewClass}`,
         load: async () =>
           (await fetchClassDaySchool(previewClass, berlinTodayISO())).rows
-            .filter((row) => row.student_id > 0)
+            .filter((row) => !row.list_entry)
             .map((row) => ({
-              value: String(row.student_id),
+              value: row.student_id,
               label: `${row.first_name} ${row.last_name}`.trim(),
             })),
       }
