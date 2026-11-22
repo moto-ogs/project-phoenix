@@ -27,7 +27,7 @@ const (
 
 // ContractRetention lets the Elternabrechnung keep the retention record of
 // each contract and delete a contract after the period the Träger
-// instructed (ADR 0184). Both calls join the caller's administrative
+// instructed (ADR 0184). Every call joins the caller's administrative
 // transaction; the Elternabrechnung decides when a contract is due.
 type ContractRetention interface {
 	// RetentionFacts lists the contracts past their draft of one Träger

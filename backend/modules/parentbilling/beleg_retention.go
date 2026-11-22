@@ -304,7 +304,7 @@ type BelegRetention interface {
 
 // RetainedContracts is what the retention needs of the Betreuungsvertrag:
 // the facts of the concluded contracts and their deletion. The root binds
-// it to Care Contract; both calls join the caller's administrative
+// it to Care Contract; every call joins the caller's administrative
 // transaction.
 type RetainedContracts interface {
 	// ContractRetentionFacts lists the contracts past their draft of one
