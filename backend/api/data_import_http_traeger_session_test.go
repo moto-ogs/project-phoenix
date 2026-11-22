@@ -3,7 +3,6 @@ package api
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -16,7 +15,6 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
-	"github.com/moto-ogs/project-phoenix/modules/dataimport"
 	dataImportCompose "github.com/moto-ogs/project-phoenix/modules/dataimport/compose"
 	importAPI "github.com/moto-ogs/project-phoenix/modules/dataimport/http"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -125,15 +123,6 @@ func assertStaffProfileRequired(t *testing.T, code int, body string) {
 	assert.Contains(t, body, fmt.Sprintf("%q:%q", "code", common.CodeImportStaffProfileRequired))
 }
 
-// unusedOpeningBalances validates the Stichtag only: every request these
-// tests send is refused before an import is built.
-type unusedOpeningBalances struct{}
-
-func (unusedOpeningBalances) ValidateDate(raw string) (string, error) { return raw, nil }
-func (unusedOpeningBalances) ForUpload(string, string, int64) (dataimport.RowImporter[dataimport.OpeningBalanceImportRow], error) {
-	return nil, errors.New("opening balance import must not be built for a refused decider")
-}
-
 // TestOpeningBalancesRefuseAccountsWithoutStaffProfile pins #7818: the
 // opening balance records the staff member who decided it, so it stays with
 // staff, also in a session of the Träger-Büro. A session without staff
@@ -143,7 +132,7 @@ func TestOpeningBalancesRefuseAccountsWithoutStaffProfile(t *testing.T) {
 	db, svc, people, membership := setupImportModule(t)
 	tc := &testContext{db: db}
 	router := importAPI.NewResource(importAPI.Dependencies{Students: svc.Import, Staff: svc.StaffImport, ClassList: svc.ClassListImport,
-		Files: dataImportCompose.NewFileDecoder(), Runtime: dataImportHTTPRuntime(people, membership, unusedOpeningBalances{})}).Router()
+		Files: dataImportCompose.NewFileDecoder(), Runtime: dataImportHTTPRuntime(people, membership, svc.OpeningBalanceImport)}).Router()
 	for _, viaTraeger := range []bool{true, false} {
 		for _, action := range []string{"preview", "import"} {
 			var body bytes.Buffer
