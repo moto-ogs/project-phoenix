@@ -1,15 +1,10 @@
 import { describe, it, expect } from "vitest";
-import type {
-  StudentEnrollmentBody,
-  Activity,
-  ActivitySupervisor,
-} from "./activity-helpers";
+import type { Activity, ActivitySupervisor } from "./activity-helpers";
 import {
   formatSupervisorList,
   mapActivityResponse,
   mapActivityCategoryResponse,
-  mapStudentEnrollmentResponse,
-  mapStudentEnrollmentsResponse,
+  mapEnrolledStudentResponse,
   isActivityCreator,
   mapSupervisorOption,
   isSystemActivity,
@@ -274,79 +269,15 @@ describe("mapActivityResponse schedules", () => {
 
 // ===== STUDENT MAPPING TESTS =====
 
-describe("mapStudentEnrollmentResponse", () => {
-  it("maps enrollment with direct person fields", () => {
-    const enrollment: StudentEnrollmentBody = {
-      id: 100,
+describe("mapEnrolledStudentResponse", () => {
+  it("joins the name and keeps the string ID", () => {
+    const result = mapEnrolledStudentResponse({
+      id: "9007199254740993",
       first_name: "Anna",
       last_name: "Schmidt",
-      school_class: "3b",
-      current_location: "Anwesend",
-      activity_group_id: 5,
-      created_at: "2024-01-01T00:00:00Z",
-      updated_at: "2024-01-15T12:00:00Z",
-    };
+    });
 
-    const result = mapStudentEnrollmentResponse(enrollment);
-
-    expect(result.id).toBe("100");
-    expect(result.student_id).toBe("100"); // Backend returns id as student ID
-    expect(result.name).toBe("Anna Schmidt");
-    expect(result.school_class).toBe("3b");
-    expect(result.activity_id).toBe("5");
-    expect(result.current_location).toBe("Anwesend");
-  });
-
-  it("falls back to flattened fields when direct fields missing", () => {
-    const enrollment: StudentEnrollmentBody = {
-      id: 100,
-      person__first_name: "Peter",
-      person__last_name: "Mueller",
-      student__school_class: "4a",
-      student__current_location: "Schulhof",
-    };
-
-    const result = mapStudentEnrollmentResponse(enrollment);
-
-    expect(result.name).toBe("Peter Mueller");
-    expect(result.school_class).toBe("4a");
-    expect(result.current_location).toBe("Schulhof");
-  });
-
-  it("returns 'Unnamed Student' when no name info available", () => {
-    const enrollment: StudentEnrollmentBody = {
-      id: 100,
-    };
-
-    const result = mapStudentEnrollmentResponse(enrollment);
-
-    expect(result.name).toBe("Unnamed Student");
-  });
-
-  it("generates dates when not provided", () => {
-    const enrollment: StudentEnrollmentBody = {
-      id: 100,
-    };
-
-    const result = mapStudentEnrollmentResponse(enrollment);
-
-    expect(result.created_at).toBeInstanceOf(Date);
-    expect(result.updated_at).toBeInstanceOf(Date);
-  });
-});
-
-describe("mapStudentEnrollmentsResponse", () => {
-  it("maps array of enrollments", () => {
-    const enrollments: StudentEnrollmentBody[] = [
-      { id: 1, first_name: "Max", last_name: "Test" },
-      { id: 2, first_name: "Anna", last_name: "Schmidt" },
-    ];
-
-    const result = mapStudentEnrollmentsResponse(enrollments);
-
-    expect(result).toHaveLength(2);
-    expect(result[0]?.name).toBe("Max Test");
-    expect(result[1]?.name).toBe("Anna Schmidt");
+    expect(result).toEqual({ id: "9007199254740993", name: "Anna Schmidt" });
   });
 });
 

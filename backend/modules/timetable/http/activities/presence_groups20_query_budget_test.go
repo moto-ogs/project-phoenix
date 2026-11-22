@@ -42,7 +42,7 @@ func TestPresenceGroups20ActivitiesQueryBudget(t *testing.T) {
 	expectedGroups := map[int64]activitiesHTTP.ActivityResponse{group.ID: expectedGroup(group)}
 	var groups []int64
 	groups = append(groups, group.ID)
-	var students []activitiesHTTP.StudentResponse
+	var students []activitiesHTTP.EnrolledStudentResponse
 	var supervisors []activitiesHTTP.ActivitySupervisorResponse
 	var schedules []activitiesHTTP.ActivityScheduleResponse
 	counter := testpkg.CaptureQueries(t, db)
@@ -59,7 +59,7 @@ func TestPresenceGroups20ActivitiesQueryBudget(t *testing.T) {
 			child := testpkg.CreateTestStudent(t, db, "Activities20", fmt.Sprintf("Child%02d", i), "A20")
 			_, err := module.Timetable.CreateStudentEnrollment(testpkg.Ctx(t), timetable.StudentEnrollmentInput{StudentID: child.ID, ActivityGroupID: group.ID, ValidFrom: "2026-01-01"})
 			require.NoError(t, err)
-			students = append(students, activitiesHTTP.StudentResponse{ID: child.ID, FirstName: "Activities20", LastName: fmt.Sprintf("Child%02d", i)})
+			students = append(students, activitiesHTTP.EnrolledStudentResponse{ID: ident.ID(child.ID), FirstName: "Activities20", LastName: fmt.Sprintf("Child%02d", i)})
 			staff := testpkg.CreateTestStaff(t, db, "Activities20", fmt.Sprintf("Staff%02d", i))
 			supervisor, err := module.Timetable.CreatePlannedSupervisor(testpkg.Ctx(t), timetable.PlannedSupervisorInput{StaffID: staff.ID, GroupID: group.ID, ValidFrom: "2026-01-01"})
 			require.NoError(t, err)
@@ -86,7 +86,7 @@ func TestPresenceGroups20ActivitiesQueryBudget(t *testing.T) {
 		target.EnrollmentCount = n
 		target.Supervisors = supervisors
 		expectedGroups[group.ID] = target
-		for _, route := range []struct{ key, path string }{{"list", "/"}, {"detail", fmt.Sprintf("/%d", group.ID)}, {"students", fmt.Sprintf("/%d/students", group.ID)}, {"supervisors", fmt.Sprintf("/%d/supervisors", group.ID)}} {
+		for _, route := range []struct{ key, path string }{{"list", "/"}, {"detail", fmt.Sprintf("/%d", group.ID)}, {"students", fmt.Sprintf("/%d/students", group.ID)}} {
 			path := "/api/activities" + route.path
 			counter.Reset()
 			counter.Start()
@@ -103,13 +103,9 @@ func TestPresenceGroups20ActivitiesQueryBudget(t *testing.T) {
 			require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &envelope))
 			switch route.key {
 			case "students":
-				var rows []activitiesHTTP.StudentResponse
+				var rows []activitiesHTTP.EnrolledStudentResponse
 				require.NoError(t, json.Unmarshal(envelope.Data, &rows))
 				require.Equal(t, students, rows)
-			case "supervisors":
-				var rows []activitiesHTTP.ActivitySupervisorResponse
-				require.NoError(t, json.Unmarshal(envelope.Data, &rows))
-				require.Equal(t, supervisors, rows)
 			case "detail":
 				var row activitiesHTTP.ActivityResponse
 				require.NoError(t, json.Unmarshal(envelope.Data, &row))
@@ -158,12 +154,12 @@ func TestPresenceGroups20ActivitiesQueryBudget(t *testing.T) {
 			require.Equal(t, 401, denied.Code)
 		}
 	}
-	for _, suffix := range []string{"", "/students", "/supervisors"} {
+	for _, suffix := range []string{"", "/students"} {
 		path := fmt.Sprintf("/api/activities/%d%s", hidden.ID, suffix)
 		rr := testutil.ExecuteRequest(router, testutil.NewAuthenticatedRequest(t, "GET", path, nil, testutil.WithJWTBearer(token)))
 		require.Equal(t, 404, rr.Code)
 	}
-	for _, suffix := range []string{"/", fmt.Sprintf("/%d", group.ID), fmt.Sprintf("/%d/students", group.ID), fmt.Sprintf("/%d/supervisors", group.ID)} {
+	for _, suffix := range []string{"/", fmt.Sprintf("/%d", group.ID), fmt.Sprintf("/%d/students", group.ID)} {
 		denied := testutil.TeacherTestClaims(int(account.ID))
 		denied.Permissions = nil
 		rr := testutil.ExecuteRequest(router, testutil.NewAuthenticatedRequest(t, "GET", "/api/activities"+suffix, nil, testutil.WithJWTBearer(testutil.MintTestJWT(t, denied))))
@@ -189,10 +185,6 @@ func assertPresence20ActivitiesBudget(t *testing.T, key string, n int, queries q
 		querybudgets.AssertQueryBudget(t, "api.activities.presence20.students.n3", queries)
 	case "students.n8":
 		querybudgets.AssertQueryBudget(t, "api.activities.presence20.students.n8", queries)
-	case "supervisors.n3":
-		querybudgets.AssertQueryBudget(t, "api.activities.presence20.supervisors.n3", queries)
-	case "supervisors.n8":
-		querybudgets.AssertQueryBudget(t, "api.activities.presence20.supervisors.n8", queries)
 	default:
 		t.Fatalf("unknown key %s N%d", key, n)
 	}

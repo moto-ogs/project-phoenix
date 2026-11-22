@@ -155,12 +155,11 @@ Only for what belongs to the browser and cannot live in Go:
   purges the cached tenant lookup, `demo/access/sessions` sets the demo cookie;
 - a hand-off for a registered path that Next would give to a neighbouring
   route file (`catalogProxyUnder`); `app/api/catalog-route-selection.test.ts`
-  fails when one is missing;
-- an aggregation of several backend reads that has no Go view yet
-  (`activities/[id]/students`). A new one is a Go view instead (#5018).
+  fails when one is missing.
 
 A reshaping, an ID or format check or a second backend call for the same
-screen moves into the Go handler. A file whose only code forwards to the
+screen moves into the Go handler; an aggregation of several reads is a Go
+view (#5018). A file whose only code forwards to the
 backend fails `app/api/proxy-routes.test.ts`; a file whose backend paths
 the contract registers, all of them, fails `app/api/route-backend-paths.test.ts`,
 and a file in front of a registered path fails

@@ -1793,6 +1793,20 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/activities/{id}/students",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "EnrolledStudentResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/admin/grade-transitions/",
       "portals": [
         "tenant"
@@ -19732,6 +19746,21 @@
     },
     {
       "method": "PUT",
+      "pattern": "/api/activities/{id}/students",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "BatchEnrollmentRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "EnrollmentUpdateResponse"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/api/admin/grade-transitions/{id}/",
       "portals": [
         "tenant"
@@ -29392,6 +29421,24 @@
           "name": "group_mode",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "BatchEnrollmentRequest",
+      "go_type": "httpadapter.BatchEnrollmentRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "id"
+            }
           }
         }
       ]
@@ -48647,6 +48694,30 @@
       ]
     },
     {
+      "name": "EnrolledStudentResponse",
+      "go_type": "httpadapter.EnrolledStudentResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "EnrollmentAnswerFilterResponse",
       "go_type": "presenceprojectionhttp.EnrollmentAnswerFilterResponse",
       "fields": [
@@ -48872,6 +48943,47 @@
                 "kind": "ref",
                 "ref": "PhaseTranslatedTextRequest"
               }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "EnrollmentUpdateResponse",
+      "go_type": "httpadapter.EnrollmentUpdateResponse",
+      "fields": [
+        {
+          "name": "activity_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "activity_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "enrollment_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_participants",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "students_enrolled",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "id"
             }
           }
         }
