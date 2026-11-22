@@ -65,8 +65,8 @@ func (rs *StaffAdminResource) documentActor(r *http.Request) (workforce.StaffDoc
 
 // StaffDocumentResponse is one document on the wire.
 type StaffDocumentResponse struct {
-	ID          common.ID      `json:"id"`
-	StaffID     common.ID      `json:"staff_id"`
+	ID          ident.ID       `json:"id"`
+	StaffID     ident.ID       `json:"staff_id"`
 	Category    string         `json:"category"`
 	Filename    string         `json:"filename"`
 	SizeBytes   int64          `json:"size_bytes" contract:"number"`
@@ -80,7 +80,7 @@ type StaffDocumentResponse struct {
 // plus the caller's visible categories (drives the filter and the upload
 // category picker).
 type StaffDocumentListResponse struct {
-	StaffID           common.ID               `json:"staff_id"`
+	StaffID           ident.ID                `json:"staff_id"`
 	Documents         []StaffDocumentResponse `json:"documents"`
 	VisibleCategories []string                `json:"visible_categories"`
 }

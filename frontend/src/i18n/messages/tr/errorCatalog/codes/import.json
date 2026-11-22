@@ -9,5 +9,6 @@
   "import_batch_failed": "{object} işlenemedi. Daha sonra yeniden deneyin.",
   "mode_forbidden": "{object} için erişim izniniz yok. Okulla iletişime geçin.",
   "not_test_traeger": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "staff_profile_required": "Çocukları yalnızca personel profili olan biri içe aktarabilir. Hesabınızın bu okulda henüz bir profili yok. Lütfen okul yönetiminden bir profil oluşturmasını isteyin.",
   "test_traeger_inactive": "{object} değiştirilemedi. Güncel durumu kontrol edin."
 }

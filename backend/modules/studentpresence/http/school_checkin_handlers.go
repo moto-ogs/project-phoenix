@@ -38,7 +38,7 @@ type schoolCheckinRequest struct {
 // "Im Unterricht")
 // so PresenceBadge can update optimistically in the UI.
 type schoolCheckinResponse struct {
-	StudentID    common.ID  `json:"student_id"`
+	StudentID    ident.ID   `json:"student_id"`
 	Status       string     `json:"status"`
 	CheckInTime  *time.Time `json:"check_in_time,omitempty"`
 	CheckOutTime *time.Time `json:"check_out_time,omitempty"`
@@ -86,7 +86,7 @@ func (rs *Resource) schoolCheckinHandler(w http.ResponseWriter, r *http.Request)
 
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorForbidden(err))
+		renderSchoolCheckinActorError(w, r, err)
 		return
 	}
 
@@ -234,7 +234,7 @@ func (rs *Resource) schoolCheckinBatchHandler(w http.ResponseWriter, r *http.Req
 
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorForbidden(err))
+		renderSchoolCheckinActorError(w, r, err)
 		return
 	}
 

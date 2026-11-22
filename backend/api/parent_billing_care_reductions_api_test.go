@@ -64,6 +64,7 @@ type careReductionRunBody struct {
 			Name           string `json:"name"`
 			ChildRank      *int   `json:"child_rank"`
 			FamilyChildren *int   `json:"family_children"`
+			AllChildren    bool   `json:"sibling_all_children"`
 			AmountCents    int64  `json:"amount_cents"`
 		} `json:"reductions"`
 		TotalCents int64 `json:"total_cents"`

@@ -4,7 +4,7 @@
 // hier prüft das Feld vorab, damit das Büro den Fehler beim Tippen sieht. Das
 // Backend bleibt maßgeblich.
 
-import type { DebtorNumberFormat as WireDebtorNumberFormat } from "./contract/traeger-holiday-contributions.generated";
+import type * as traegerHolidayContributionsContract from "./contract/traeger-holiday-contributions.generated";
 
 /** The longest debtor number the backend keeps (#5621). */
 export const DEBTOR_NUMBER_MAX_LENGTH = 35;
@@ -24,7 +24,10 @@ export const NO_DEBTOR_NUMBER_FORMAT: DebtorNumberFormat = {
 
 /** Maps the contract's shape; a missing format means none. */
 export function debtorNumberFormatOf(
-  raw: Readonly<WireDebtorNumberFormat> | null | undefined,
+  raw:
+    | Readonly<traegerHolidayContributionsContract.DebtorNumberFormat>
+    | null
+    | undefined,
 ): DebtorNumberFormat {
   if (!raw?.digits_only) return NO_DEBTOR_NUMBER_FORMAT;
   return debtorNumberFormat(true, raw.min_digits, raw.max_digits);

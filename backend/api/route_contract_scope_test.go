@@ -84,6 +84,12 @@ func TestARegisteredRouteRunsBehindTheScopeOfItsOnePortal(t *testing.T) {
 	for _, route := range doc.Routes {
 		chain, known := chains[route.Key()]
 		require.Truef(t, known, "%s has no middleware golden", route.Key())
+		if route.RouteFile != "" {
+			// No proxy forwards a route file's route (#7808): a sign-in step
+			// runs before any session, and the route file decides what it
+			// sends.
+			continue
+		}
 		if shared, ok := sharedPortalRoutes[route.Key()]; ok {
 			assert.Equalf(t, shared.portals, route.Portals, "%s: the shared route's portals changed; review %q", route.Key(), shared.reason)
 			assert.Containsf(t, strings.Split(chain, " > "), shared.middleware, "%s no longer runs behind %s", route.Key(), shared.middleware)

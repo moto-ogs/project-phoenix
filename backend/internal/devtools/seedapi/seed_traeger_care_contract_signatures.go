@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedTraegerCareContractSignaturesStep signs the demo care contracts
@@ -85,8 +86,8 @@ func seedPaperContracts(client *Client, auth AuthRef, school int64, minimum int)
 	var drafts struct {
 		Data struct {
 			Contracts []struct {
-				ID        apiID  `json:"id"`
-				PartyName string `json:"party_name"`
+				ID        ident.ID `json:"id"`
+				PartyName string   `json:"party_name"`
 			} `json:"contracts"`
 		} `json:"data"`
 	}
@@ -173,8 +174,8 @@ func seedSendContractsToParents(rt *Runtime, auth AuthRef) error {
 	var drafts struct {
 		Data struct {
 			Contracts []struct {
-				ID         apiID  `json:"id"`
-				PartyEmail string `json:"party_email"`
+				ID         ident.ID `json:"id"`
+				PartyEmail string   `json:"party_email"`
 			} `json:"contracts"`
 		} `json:"data"`
 	}

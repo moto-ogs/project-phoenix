@@ -119,22 +119,6 @@ describe("active-service", () => {
         );
       });
 
-      it("handles paginated response format", async () => {
-        const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-        mockFetch.mockResolvedValueOnce({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              data: { data: [sampleBackendActiveGroup] },
-              pagination: { page: 1, total: 1 },
-            }),
-        } as Response);
-
-        const result = await activeService.getActiveGroups();
-
-        expect(result).toHaveLength(1);
-      });
-
       it("throws error on fetch failure", async () => {
         const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
         mockFetch.mockResolvedValueOnce({
@@ -143,9 +127,9 @@ describe("active-service", () => {
           text: () => Promise.resolve("Internal error"),
         } as Response);
 
-        await expect(activeService.getActiveGroups()).rejects.toThrow(
-          "Get active groups failed: 500",
-        );
+        await expect(activeService.getActiveGroups()).rejects.toMatchObject({
+          status: 500,
+        });
       });
     });
   });
@@ -248,7 +232,6 @@ describe("active-service", () => {
         await expect(
           activeService.assignTransitStudents(["50"], "1"),
         ).rejects.toMatchObject({
-          message: "Assign transit students failed: 409",
           status: 409,
           code: "presence.room_capacity_exceeded",
           details: { room_name: "Aula", max_capacity: 30 },
@@ -273,7 +256,6 @@ describe("active-service", () => {
         await expect(
           activeService.moveStudentsToOpenRoom(["50"], "7"),
         ).rejects.toMatchObject({
-          message: "Move students to open room failed: 409",
           status: 409,
           code: "presence.room_capacity_exceeded",
           details: { room_name: "Aula", max_capacity: 30 },
@@ -359,7 +341,7 @@ describe("active-service", () => {
         const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
         mockFetch.mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve({}),
+          json: () => Promise.resolve({ data: {} }),
         } as Response);
 
         await activeService.claimActiveGroup("1");
@@ -368,7 +350,6 @@ describe("active-service", () => {
           "/api/active/groups/1/claim",
           expect.objectContaining({
             method: "POST",
-            body: JSON.stringify({ role: "supervisor" }),
           }),
         );
       });
@@ -454,9 +435,9 @@ describe("active-service", () => {
           text: () => Promise.resolve("Internal error"),
         } as Response);
 
-        await expect(activeService.getSchulhofStatus()).rejects.toThrow(
-          "Get Schulhof status failed: 500",
-        );
+        await expect(activeService.getSchulhofStatus()).rejects.toMatchObject({
+          status: 500,
+        });
       });
     });
 

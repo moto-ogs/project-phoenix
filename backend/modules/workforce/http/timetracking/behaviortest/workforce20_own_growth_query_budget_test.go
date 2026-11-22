@@ -1,12 +1,10 @@
 package behaviortest_test
 
 import (
-	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
@@ -18,7 +16,7 @@ import (
 
 func TestWorkforce20OwnGrowth(t *testing.T) {
 	t.Parallel()
-	for _, route := range []string{"export", "month-summary", "schedule-targets", "edits", "breaks", "absences"} {
+	for _, route := range []string{"month-summary", "schedule-targets", "edits", "breaks", "absences"} {
 		t.Run(route, func(t *testing.T) {
 			testpkg.OwnTenant(t)
 			testpkg.SetupIsolatedTestDB(t)
@@ -75,19 +73,8 @@ func TestWorkforce20OwnGrowth(t *testing.T) {
 				var body struct {
 					Data any `json:"data"`
 				}
-				if route != "export" {
-					require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
-				}
+				require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
 				switch route {
-				case "export":
-					reader := csv.NewReader(strings.NewReader(strings.TrimPrefix(rec.Body.String(), "\xef\xbb\xbf")))
-					reader.Comma = ';'
-					rows, err := reader.ReadAll()
-					require.NoError(t, err)
-					require.Len(t, rows, n+1)
-					for i := range n {
-						require.Equal(t, fmt.Sprintf("%02d.01.2026", i+1), rows[i+1][0])
-					}
 				case "month-summary":
 					require.Equal(t, float64(n*480-n), body.Data.(map[string]any)["actual_minutes"])
 				case "schedule-targets":
@@ -128,8 +115,6 @@ func TestWorkforce20OwnGrowth(t *testing.T) {
 					}
 				}
 				switch route {
-				case "export":
-					querybudgets.AssertQueryBudget(t, "workforce.workforce20.own_export", counter.Measurement(counter.Queries()))
 				case "month-summary":
 					querybudgets.AssertQueryBudget(t, "workforce.workforce20.own_month_summary", counter.Measurement(counter.Queries()))
 				case "schedule-targets":

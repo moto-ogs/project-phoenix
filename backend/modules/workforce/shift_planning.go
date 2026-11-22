@@ -40,7 +40,10 @@ type StaffShiftInput struct {
 	OriginShiftID *int64
 	ActorStaffID  int64
 	// TraegerAccountID is the account of the Personalverwaltung when the
-	// Träger-Portal plans the shift (#4708); ActorStaffID is then 0.
+	// Träger-Portal plans the shift (#4708), or of the Träger-Büro in a school
+	// session without a staff record (#7818); ActorStaffID is then 0. A new
+	// shift has no staff author; a changed one keeps its author. Either way
+	// the shift is marked as planned or last changed by the Träger.
 	TraegerAccountID int64
 	// WorkingTime confirms the working-time warnings of the write (#4708).
 	WorkingTime WorkingTimeConfirmation
@@ -63,15 +66,18 @@ type UpdateStaffShift struct {
 
 // MoveStaffShift is the complete desired slot of one concrete shift.
 type MoveStaffShift struct {
-	ShiftID        int64
-	SourceStaffID  int64
-	TargetStaffID  int64
-	Date           string
-	StartTime      string
-	EndTime        string
-	BreakMinutes   int
-	ShiftTypeID    *int64
-	ActorStaffID   int64
+	ShiftID       int64
+	SourceStaffID int64
+	TargetStaffID int64
+	Date          string
+	StartTime     string
+	EndTime       string
+	BreakMinutes  int
+	ShiftTypeID   *int64
+	ActorStaffID  int64
+	// ActorAccountID names the acting account. Without ActorStaffID it is the
+	// Träger-Büro in a school session without a staff record (#7818), which
+	// marks the moved shift as last changed by the Träger.
 	ActorAccountID *int64
 	// WorkingTime confirms the working-time warnings of the move (#4708).
 	WorkingTime WorkingTimeConfirmation
@@ -104,6 +110,11 @@ type CancelStaffShift struct {
 	ShiftTypeID      *int64
 	Replacements     []ShiftReplacement
 	ActorStaffID     int64
+	// TraegerAccountID is the account of the Träger-Büro when it applies the
+	// cancellation in a school session without a staff record (#7818);
+	// ActorStaffID is then 0. The covers it creates carry the mark, and the
+	// origin is marked as last changed by the Träger-Büro.
+	TraegerAccountID int64
 	// WorkingTime confirms the working-time warnings of the covers (#4708).
 	WorkingTime WorkingTimeConfirmation
 }
@@ -132,6 +143,11 @@ type StaffShiftSeriesInput struct {
 	// days (#3820).
 	IncludeSchoolBreaks bool
 	ActorStaffID        int64
+	// TraegerAccountID is the account of the Träger-Büro when it plans the
+	// series in a school session without a staff record (#7818);
+	// ActorStaffID is then 0 and the series and its occurrences carry the
+	// mark.
+	TraegerAccountID int64
 	// WorkingTime confirms the working-time warnings of the occurrences
 	// (#4708).
 	WorkingTime WorkingTimeConfirmation
@@ -161,6 +177,11 @@ type SplitStaffShiftSeries struct {
 	// IncludeSchoolBreaks nil keeps the predecessor's opt-in (#3820).
 	IncludeSchoolBreaks *bool
 	ActorStaffID        int64
+	// TraegerAccountID is the account of the Träger-Büro when it splits the
+	// series in a school session without a staff record (#7818); the
+	// successor then carries the mark, and a current-day occurrence the split
+	// updates is marked as last changed by the Träger.
+	TraegerAccountID int64
 	// WorkingTime confirms the working-time warnings of the occurrences
 	// (#4708).
 	WorkingTime WorkingTimeConfirmation

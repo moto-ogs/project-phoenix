@@ -1,82 +1,58 @@
-import { apiErrorFromResponse, transportFetch } from "./api-error";
+import { bffFile, bffJson } from "./bff-fetch";
+import { knownEnum, requiredEnum } from "./contract/known-enum";
+import type * as statisticsContract from "./contract/statistics.generated";
 
 // Soll und Ist je Kind (#4774): client for the per-child comparison and the
 // overrun list of the school management. The definitions live in the
 // backend (studentpresence.CareTimeToleranceMinutes) and are repeated here
 // only as screen text.
 
-export type CareTimeDayKind =
-  | "within_plan"
-  | "overrun"
-  | "unbooked"
-  | "absent"
-  | "sick"
-  | "excused"
-  | "cancelled"
-  | "closed"
-  | "open"
-  | "no_plan"
-  | "end_unknown";
+const CARE_TIME_DAY_KINDS = [
+  "within_plan",
+  "overrun",
+  "unbooked",
+  "absent",
+  "sick",
+  "excused",
+  "cancelled",
+  "closed",
+  "open",
+  "no_plan",
+  "end_unknown",
+] as const;
 
-interface CareTimeSummary {
-  overrun_count: number;
-  overrun_days: number;
-  unbooked_days: number;
-  absent_days: number;
-  extra_minutes: number;
-  planned_minutes: number;
-  actual_minutes: number;
-  deviation_minutes: number;
-}
+export type CareTimeDayKind = (typeof CARE_TIME_DAY_KINDS)[number];
 
-export interface CareTimeDay {
-  date: string;
+/**
+ * Woher das Soll kommt: bestätigte Ferienbuchung (#5994), Vertrag des
+ * Trägers (#4683) oder Betreuungsplan.
+ */
+const PLANNED_SOURCES = ["holiday_booking", "contract", "care_plan"] as const;
+
+type CareTimePlannedSource = (typeof PLANNED_SOURCES)[number];
+
+/**
+ * Ein Tag mit Soll und Ist. `class_times` (#5656) sind Zeiten im Unterricht,
+ * nur als Hinweis; sie ändern keine Minuten.
+ */
+export type CareTimeDay = Omit<
+  statisticsContract.careTimeDayResponse,
+  "kind" | "planned_source" | "class_times"
+> & {
   kind: CareTimeDayKind;
-  overrun: boolean;
-  /**
-   * Woher das Soll kommt: bestätigte Ferienbuchung (#5994), Vertrag des
-   * Trägers (#4683) oder Betreuungsplan.
-   */
-  planned_source?: "holiday_booking" | "contract" | "care_plan" | "";
-  planned_start: string | null;
-  planned_end: string | null;
-  actual_start: string | null;
-  actual_end: string | null;
-  planned_minutes: number | null;
-  actual_minutes: number | null;
-  deviation_minutes: number | null;
-  early_minutes: number;
-  late_minutes: number;
-  /** Zeiten im Unterricht (#5656), nur als Hinweis; sie ändern keine Minuten. */
-  class_times?: { start: string | null; end: string | null }[];
-}
+  planned_source?: CareTimePlannedSource;
+  class_times?: statisticsContract.careTimeClassTimeResponse[];
+};
 
-export interface StudentCareTimes {
-  student_id: string;
-  from: string;
-  to: string;
-  data_from: string;
-  tolerance_minutes: number;
-  summary: CareTimeSummary;
-  days: CareTimeDay[];
-}
+export type StudentCareTimes = Omit<
+  statisticsContract.studentCareTimesResponse,
+  "days"
+> & { days: CareTimeDay[] };
 
-export interface CareTimeOverrunRow {
-  student_id: string;
-  first_name: string;
-  last_name: string;
-  school_class: string;
-  group_name: string;
-  summary: CareTimeSummary;
-}
-
-export interface CareTimeOverruns {
-  from: string;
-  to: string;
-  data_from: string;
-  tolerance_minutes: number;
-  students: CareTimeOverrunRow[];
-}
+export type CareTimeOverruns = Omit<
+  statisticsContract.careTimeOverrunsResponse,
+  "students"
+> & { students: statisticsContract.careTimeOverrunRowResponse[] };
 
 export type CareTimeExportFormat = "pdf" | "xlsx";
 
@@ -89,61 +65,75 @@ export interface CareTimeFilter {
   schoolClasses?: readonly string[];
 }
 
-function windowParams(
+function windowQuery(
   fromISO: string,
   toISO: string,
   filter: CareTimeFilter = {},
-): URLSearchParams {
-  const params = new URLSearchParams({ from: fromISO, to: toISO });
-  for (const id of filter.groupIds ?? []) params.append("group_id", id);
-  for (const name of filter.schoolClasses ?? [])
-    params.append("school_class", name);
-  return params;
+) {
+  return {
+    from: fromISO,
+    to: toISO,
+    group_id: filter.groupIds ?? [],
+    school_class: filter.schoolClasses ?? [],
+  };
 }
 
-async function readData<T>(url: string, failure: string): Promise<T> {
-  const response = await transportFetch(url, { cache: "no-store" });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `${failure} (${response.status})`,
-    );
-  }
-  const body = (await response.json()) as { data: T };
-  return body.data;
+function careTimeDay(day: statisticsContract.careTimeDayResponse): CareTimeDay {
+  const { planned_source, ...rest } = day;
+  const source = knownEnum(PLANNED_SOURCES, planned_source);
+  return {
+    ...rest,
+    // The day's pill has no text for a kind this build does not know.
+    kind: requiredEnum(CARE_TIME_DAY_KINDS, day.kind, "care time day kind"),
+    ...(source && { planned_source: source }),
+    class_times: day.class_times ?? [],
+  };
 }
 
-export function fetchStudentCareTimes(
+export async function fetchStudentCareTimes(
   studentId: string,
   fromISO: string,
   toISO: string,
 ): Promise<StudentCareTimes> {
-  return readData<StudentCareTimes>(
-    `/api/statistics/students/${encodeURIComponent(studentId)}/care-times?${windowParams(fromISO, toISO).toString()}`,
-    "student care times request failed",
+  const result = await bffJson(
+    "tenant",
+    "GET /api/statistics/students/{id}/care-times",
+    {
+      params: { id: studentId },
+      query: windowQuery(fromISO, toISO),
+      errorMessage: "student care times request failed",
+    },
   );
+  return { ...result, days: (result.days ?? []).map(careTimeDay) };
 }
 
-export function fetchCareTimeOverruns(
+export async function fetchCareTimeOverruns(
   fromISO: string,
   toISO: string,
   filter: CareTimeFilter = {},
 ): Promise<CareTimeOverruns> {
-  return readData<CareTimeOverruns>(
-    `/api/statistics/care-time-overruns?${windowParams(fromISO, toISO, filter).toString()}`,
-    "care time overruns request failed",
+  const result = await bffJson(
+    "tenant",
+    "GET /api/statistics/care-time-overruns",
+    {
+      query: windowQuery(fromISO, toISO, filter),
+      errorMessage: "care time overruns request failed",
+    },
   );
+  return { ...result, students: result.students ?? [] };
 }
 
-export function careTimeOverrunsExportUrl(
+/** The overrun list as a file; the caller reads body and file name. */
+export function fetchCareTimeOverrunsExport(
   fromISO: string,
   toISO: string,
   format: CareTimeExportFormat,
   filter: CareTimeFilter = {},
-): string {
-  const params = windowParams(fromISO, toISO, filter);
-  params.set("format", format);
-  return `/api/statistics/care-time-overruns/export?${params.toString()}`;
+): Promise<Response> {
+  return bffFile("tenant", "GET /api/statistics/care-time-overruns/export", {
+    query: { ...windowQuery(fromISO, toISO, filter), format },
+    errorMessage: "care time export failed",
+  });
 }
 
 /** Text und Farbe je Tag; die Markierung trägt immer den Text, nie nur Farbe. */

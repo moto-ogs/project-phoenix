@@ -1,21 +1,16 @@
-import type * as wire from "~/lib/contract/birthdays.generated";
+import type * as birthdaysContract from "~/lib/contract/birthdays.generated";
 import { knownEnum } from "~/lib/contract/known-enum";
-import { apiErrorFromResponse, unavailableApiError } from "./api-error";
-import { fetchWithAuth } from "./fetch-with-auth";
+import {
+  apiErrorFromResponse,
+  transportFetch,
+  unavailableApiError,
+} from "./api-error";
+import { bffJson } from "./bff-fetch";
 import {
   downloadBlob,
   filenameFromDisposition,
   openBlobForPrint,
 } from "~/lib/file-download";
-
-/** A request that never reached the API becomes `general.unavailable`. */
-async function authFetch(url: string, init?: RequestInit): Promise<Response> {
-  try {
-    return await (init ? fetchWithAuth(url, init) : fetchWithAuth(url));
-  } catch (error) {
-    throw unavailableApiError(error);
-  }
-}
 
 /**
  * Birthday display + staff birthday list (#1542).
@@ -55,7 +50,7 @@ export interface BirthdayOverview {
 }
 
 export function mapBirthdayOverview(
-  response: wire.overviewResponse,
+  response: birthdaysContract.overviewResponse,
 ): BirthdayOverview {
   return {
     enabled: response.enabled,
@@ -93,50 +88,27 @@ export function mapBirthdayOverview(
 export async function fetchBirthdayOverviewClient(
   weekStart?: string | null,
 ): Promise<BirthdayOverview> {
-  const query = weekStart ? `?week_start=${encodeURIComponent(weekStart)}` : "";
-  const response = await authFetch(`/api/birthdays${query}`);
-
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Birthday fetch failed: ${response.status}`,
-    );
-  }
-
-  const json = (await response.json()) as { data: wire.overviewResponse };
-  return mapBirthdayOverview(json.data);
+  return mapBirthdayOverview(
+    await bffJson("tenant", "GET /api/birthdays/", {
+      query: { week_start: weekStart || undefined },
+      errorMessage: "Birthday fetch failed",
+    }),
+  );
 }
 
 export async function fetchBirthdayOptOut(): Promise<boolean> {
-  const response = await authFetch("/api/birthdays/opt-out");
-
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Birthday opt-out fetch failed: ${response.status}`,
-    );
-  }
-
-  const json = (await response.json()) as { data: { opt_out: boolean } };
-  return json.data.opt_out;
+  const data = await bffJson("tenant", "GET /api/birthdays/opt-out", {
+    errorMessage: "Birthday opt-out fetch failed",
+  });
+  return data.opt_out;
 }
 
 export async function updateBirthdayOptOut(optOut: boolean): Promise<boolean> {
-  const response = await authFetch("/api/birthdays/opt-out", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ opt_out: optOut }),
+  const data = await bffJson("tenant", "PUT /api/birthdays/opt-out", {
+    body: { opt_out: optOut },
+    errorMessage: "Birthday opt-out update failed",
   });
-
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Birthday opt-out update failed: ${response.status}`,
-    );
-  }
-
-  const json = (await response.json()) as { data: { opt_out: boolean } };
-  return json.data.opt_out;
+  return data.opt_out;
 }
 
 export type StaffBirthdayExportFormat = "pdf" | "docx" | "xlsx";
@@ -152,9 +124,11 @@ export async function exportStaffBirthdays(
   request: StaffBirthdayExportRequest,
   printTarget?: Window,
 ): Promise<void> {
+  // The route registers no request type (#7808), so bffFile cannot send
+  // the body yet.
   let response: Response;
   try {
-    response = await fetch("/api/birthdays/staff-export", {
+    response = await transportFetch("/api/birthdays/staff-export", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(request),
@@ -162,7 +136,6 @@ export async function exportStaffBirthdays(
   } catch (error) {
     throw unavailableApiError(error);
   }
-
   if (!response.ok) {
     throw await apiErrorFromResponse(response, "Staff birthday export failed");
   }

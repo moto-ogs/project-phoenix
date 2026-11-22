@@ -225,7 +225,7 @@ func (c *contractImportCheck) candidate(cells []string, line int) importCandidat
 	}
 	c.decide(&candidate)
 	if row.Status == carecontract.ContractImportReady {
-		candidate.contract = importedContract(line, school, *row, booking, party, firstDate(concludedOn, fileStart), c.today)
+		candidate.contract = importedContract(line, school, *row, booking, party, concludedOn, fileStart, c.today)
 		if booking.endsOn != nil {
 			candidate.until = *booking.endsOn
 		}
@@ -354,20 +354,20 @@ func firstDate(dates ...*calendar.Date) *calendar.Date {
 }
 
 // importedContract is the contract a ready row stores: concluded on paper
-// on the day the file names (its conclusion, else its first day there, never
-// after today), its first version in force from the first day in moto.
+// on the day the file names, its first version in force from the first day
+// in moto. A file without a day of the conclusion leaves it unknown (#7767):
+// the contract keeps its first day there, never after today, as the instant
+// an active contract needs, marked as no date.
 func importedContract(line int, school importSchool, row carecontract.ContractImportRow, booking importBooking,
-	party ports.NewParty, concludedOn *calendar.Date, today calendar.Date) ports.ImportedContract {
+	party ports.NewParty, concludedOn, fileStart *calendar.Date, today calendar.Date) ports.ImportedContract {
 	from := *row.EffectiveFrom
-	concluded := from
-	if concludedOn != nil {
-		concluded = *concludedOn
-	}
+	concluded := *firstDate(concludedOn, fileStart, &from)
 	if concluded.After(today) {
 		concluded = today
 	}
 	return ports.ImportedContract{
-		Line: line, SchoolID: school.school.ID, ConcludedAt: concluded.BerlinMidnight(), Party: party, ImportKey: importOriginOf(row),
+		Line: line, SchoolID: school.school.ID, ConcludedAt: concluded.BerlinMidnight(), ConclusionDateUnknown: concludedOn == nil,
+		Party: party, ImportKey: importOriginOf(row),
 		Version: carecontract.Version{
 			Number: 1, Status: carecontract.VersionEffective, Source: carecontract.SourceImport, EffectiveFrom: from,
 			EndsOn: booking.endsOn, ChildFirstName: row.ChildFirstName, ChildLastName: row.ChildLastName,

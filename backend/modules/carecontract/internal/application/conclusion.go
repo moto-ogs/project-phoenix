@@ -75,7 +75,7 @@ func (c *Conclusions) ConcludeAccepted(ctx context.Context, organizationID int64
 				continue
 			}
 			draft, reason := c.conclusionDraft(key, reads, templates, existing, changed, today)
-			if err := c.concludeChild(ctx, organizationID, key, draft, reason, &run); err != nil {
+			if err := c.concludeChild(ctx, organizationID, key, draft, reason, reads, &run); err != nil {
 				return run, err
 			}
 		}
@@ -97,10 +97,11 @@ func (c *Conclusions) conclusionDraft(key carecontract.CandidateKey, reads []sch
 
 // concludeChild concludes the contract of one candidate, or records in run
 // why it waits for the next run; only an unexpected error ends the run.
+// reads are the schools the candidates were read from.
 func (c *Conclusions) concludeChild(ctx context.Context, organizationID int64, key carecontract.CandidateKey,
-	draft NewContract, reason string, run *carecontract.ConclusionRun) error {
+	draft NewContract, reason string, reads []schoolRead, run *carecontract.ConclusionRun) error {
 	if reason == "" {
-		id, err := c.concludeOne(ctx, organizationID, draft)
+		id, err := c.concludeOne(ctx, organizationID, draft, reads)
 		if reason = holdBackReason(err); reason == "" {
 			if err != nil {
 				return err
@@ -152,7 +153,7 @@ func (c *Conclusions) readContracts(ctx context.Context, organizationID int64, r
 		if rows, err = c.intake.store.Templates(txCtx, organizationID); err != nil {
 			return err
 		}
-		existing, err = c.intake.store.ContractKeys(txCtx, organizationID, readSchoolIDs(reads))
+		existing, _, err = c.intake.contractedKeys(txCtx, organizationID, reads)
 		return err
 	})
 	if err != nil {
@@ -206,9 +207,14 @@ func (c *Conclusions) readConcludingSchools(ctx context.Context, organizationID 
 // concludeOne writes, sends and concludes one contract in one Träger
 // transaction: a contract that cannot be sent rolls back whole and stays a
 // candidate, so no half-made draft blocks a later run or the Träger-Büro.
-func (c *Conclusions) concludeOne(ctx context.Context, organizationID int64, draft NewContract) (int64, error) {
+// Under the lock of the Träger's links it reads again whether an imported
+// contract covers the child now: then the draft is ErrContractExists (#7760).
+func (c *Conclusions) concludeOne(ctx context.Context, organizationID int64, draft NewContract, reads []schoolRead) (int64, error) {
 	var id int64
 	err := c.intake.runtime.WithinTraeger(ctx, organizationID, func(txCtx context.Context) error {
+		if err := c.intake.claimUncovered(txCtx, organizationID, reads, draft.Key); err != nil {
+			return err
+		}
 		var err error
 		if id, err = c.intake.store.InsertContract(txCtx, organizationID, 0, draft); err != nil {
 			return err

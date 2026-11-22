@@ -84,13 +84,14 @@ func TestContractSendPushesOncePerAddress(t *testing.T) {
 	assert.Equal(t, int64(id), queued[0].RelatedID)
 	assert.Regexp(t, fmt.Sprintf(`^care-contract-document:%d:[0-9a-f]{16}$`, id), queued[0].IdempotencyKey, "the key names no address")
 	var payload struct {
-		OrganizationID wireID `json:"organization_id"`
-		ContractID     wireID `json:"contract_id"`
+		// The outbox stores JSON with numbers (#7761).
+		OrganizationID int64  `json:"organization_id"`
+		ContractID     int64  `json:"contract_id"`
 		RecipientEmail string `json:"recipient_email"`
 	}
 	require.NoError(t, json.Unmarshal(queued[0].Payload, &payload))
 	assert.Equal(t, f.office.organization, int64(payload.OrganizationID))
-	assert.Equal(t, id, payload.ContractID)
+	assert.Equal(t, int64(id), payload.ContractID)
 	assert.Equal(t, "erika.muster@example.org", payload.RecipientEmail)
 
 	mailState("sent")

@@ -254,7 +254,7 @@ func composeServeRoot(
 		func() (err error) { feedback, err = owners.BuildServeFeedback(db, feedbackSettings); return },
 		func() (err error) {
 			structure = owners.BuildStructureRows(db, persons, people, peopleIdentity, rooms, membership, workTime)
-			presencePeople = owners.BuildPresencePeopleReads(db, env.Logger, persons, groups, organizations, people, env.Now)
+			presencePeople = owners.BuildPresencePeopleReads(db, persons, groups, people)
 			careRows = owners.BuildTimetableCareRows(carePlan)
 			devices, err = owners.NewDeviceFleet(db, env.Now)
 			return owners.StepError("compose device fleet", err)

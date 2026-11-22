@@ -29,6 +29,7 @@ import {
   createCareContracts,
 } from "~/lib/traeger-care-contracts-api";
 import {
+  importedContractReason,
   TEMPLATE_ISSUE_LABELS,
   TEMPLATE_ISSUE_REASONS,
   childName,
@@ -338,6 +339,11 @@ export function CareContractCreateModal({
                       />
                     )}
                   </span>
+                  {candidate.templateIssue === "imported_contract" ? (
+                    <span className="mt-0.5 block text-sm text-gray-700">
+                      {importedContractReason(candidate.importedContractId)}
+                    </span>
+                  ) : null}
                   {candidate.templateIssue !== null &&
                   TEMPLATE_ISSUE_REASONS[candidate.templateIssue] ? (
                     <span className="mt-0.5 block text-sm text-gray-700">

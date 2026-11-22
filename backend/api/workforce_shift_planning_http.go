@@ -17,6 +17,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
+	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	shifttypesHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/shifttypes"
@@ -56,11 +57,7 @@ func staffShiftsRuntime(deps staffShiftsDependencies) staffshiftsHTTP.Runtime {
 		Success:    common.Respond,
 		Failure:    renderStaffShiftsFailure,
 		ResolveActor: func(ctx context.Context) (staffshiftsHTTP.Actor, error) {
-			staffID, err := deps.ResolveStaffID(ctx)
-			if err != nil {
-				return staffshiftsHTTP.Actor{}, err
-			}
-			return staffshiftsHTTP.NewActor(staffID, deps.ActorAccountID(ctx))
+			return resolveStaffShiftsActor(ctx, deps)
 		},
 		MarkRollback: tenant.MarkRollback,
 		CanExportInternalPlan: func(ctx context.Context) bool {
@@ -70,6 +67,32 @@ func staffShiftsRuntime(deps staffShiftsDependencies) staffshiftsHTTP.Runtime {
 		SchedulesRead:      permissions.SchedulesRead,
 		UsersRead:          permissions.UsersRead,
 	}
+}
+
+// resolveStaffShiftsActor names who writes the Dienstplan. A person with a
+// staff record of the school writes as staff, also in a session opened
+// through the Träger-Portal. Without one, only such a session writes, as the
+// Träger-Büro (#7818, ADR 0084 section 5); every other account is refused.
+// A failed lookup stays the server's error.
+func resolveStaffShiftsActor(ctx context.Context, deps staffShiftsDependencies) (staffshiftsHTTP.Actor, error) {
+	staffID, err := deps.ResolveStaffID(ctx)
+	switch {
+	case err == nil:
+		return staffshiftsHTTP.NewActor(staffID, deps.ActorAccountID(ctx))
+	case !callerHasNoStaffRecord(err):
+		return staffshiftsHTTP.Actor{}, err
+	case sessiontoken.ClaimsFromCtx(ctx).ViaTraeger:
+		return staffshiftsHTTP.NewTraegerActor(deps.ActorAccountID(ctx))
+	default:
+		return staffshiftsHTTP.Actor{}, staffshiftsHTTP.ErrNoStaffActor
+	}
+}
+
+// callerHasNoStaffRecord reports a session whose account has no person or
+// no staff record at the school: the caller's missing profile, not a failed
+// lookup.
+func callerHasNoStaffRecord(err error) bool {
+	return errors.Is(err, identityaccess.ErrCallerNotLinkedToPerson) || errors.Is(err, identityaccess.ErrCallerNotLinkedToStaff)
 }
 
 // staffShiftErrorCodes names the refusals the Dienstplan explains on its own
@@ -93,6 +116,7 @@ var staffShiftErrorCodes = []struct {
 	{workforce.ErrStaffShiftDuplicate, common.CodeWorkforceShiftDuplicate},
 	{workforce.ErrShiftTypeInactive, common.CodeWorkforceShiftTypeInactive},
 	{workforce.ErrShiftTypeArchived, common.CodeWorkforceShiftTypeArchived},
+	{staffshiftsHTTP.ErrNoStaffActor, common.CodeWorkforceNoStaffProfile},
 }
 
 func staffShiftErrorCode(err error) string {
@@ -121,9 +145,11 @@ func renderStaffShiftsFailure(w http.ResponseWriter, r *http.Request, kind staff
 		common.RenderError(w, r, common.ErrorNotFound(err))
 	case staffshiftsHTTP.FailureConflict:
 		renderStaffShiftsConflict(w, r, code, err)
-	case staffshiftsHTTP.FailureUnauthorized:
-		common.RenderError(w, r, common.ErrorUnauthorized(err))
 	case staffshiftsHTTP.FailureForbidden:
+		if code != "" {
+			common.RenderError(w, r, common.ErrorForbiddenWithCode(err, code))
+			return
+		}
 		common.RenderError(w, r, common.ErrorForbidden(err))
 	default:
 		renderStaffShiftsInternal(w, r, err)

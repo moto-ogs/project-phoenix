@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the import of existing SEPA mandates (#6198): the preview of a
  * CSV file with its column mapping, the import of the ready rows and the log
@@ -7,13 +8,9 @@
  * Backend int64 IDs leave here as strings; calendar dates stay "YYYY-MM-DD".
  */
 
-import { apiErrorFromResponse, transportFetch } from "./api-error";
 import { knownEnum } from "./contract/known-enum";
 import type * as traegerSepaMandatesContract from "./contract/traeger-sepa-mandates.generated";
 import { type MandateSequence, knownMandateSequence } from "./traeger-sepa-api";
-import { readJson, traegerRequest } from "./traeger-api";
-
-const IMPORTS_PATH = "/api/traeger/sepa-mandates/imports";
 
 /** Largest file the backend reads, in bytes. */
 export const MAX_IMPORT_FILE_BYTES = 2 * 1024 * 1024;
@@ -233,7 +230,7 @@ function mapImportResult(
 }
 
 async function postImport(
-  path: string,
+  preview: boolean,
   request: ImportRequest,
 ): Promise<ImportResult> {
   const form = new FormData();
@@ -247,42 +244,29 @@ async function postImport(
   if (request.fingerprint) {
     form.append("fingerprint", request.fingerprint);
   }
-  const response = await transportFetch(path, {
-    method: "POST",
-    credentials: "include",
-    cache: "no-store",
-    body: form,
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Request failed (${response.status})`,
-    );
-  }
-  const data = await readJson(response);
-  return mapImportResult(
-    (data as { data: traegerSepaMandatesContract.SEPAMandateImport }).data,
-  );
+  const data = await (preview
+    ? bffJson("org", "POST /traeger/sepa-mandates/imports/preview", {
+        body: form,
+      })
+    : bffJson("org", "POST /traeger/sepa-mandates/imports", { body: form }));
+  return mapImportResult(data);
 }
 
 /** Reads the file and answers every row; stores nothing. */
 export function previewSepaImport(
   request: ImportRequest,
 ): Promise<ImportResult> {
-  return postImport(`${IMPORTS_PATH}/preview`, request);
+  return postImport(true, request);
 }
 
 /** Takes over the ready rows and the clarified ones. */
 export function applySepaImport(request: ImportRequest): Promise<ImportResult> {
-  return postImport(IMPORTS_PATH, request);
+  return postImport(false, request);
 }
 
 /** The imports of the Träger, newest first. */
 export async function fetchSepaImportLog(): Promise<ImportLogEntry[]> {
-  const entries =
-    await traegerRequest<traegerSepaMandatesContract.SEPAMandateImportEntry[]>(
-      IMPORTS_PATH,
-    );
+  const entries = await bffJson("org", "GET /traeger/sepa-mandates/imports");
   return entries.map((entry) => ({
     file: entry.file,
     accountId: entry.account_id,

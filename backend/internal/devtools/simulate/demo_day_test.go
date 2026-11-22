@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -22,12 +23,12 @@ func demoDayAt(t *testing.T, clock string) time.Time {
 	return at
 }
 
-func plannedBlock(id int64, start, end string, room int64, students ...apiID) demoBlock {
-	block := demoBlock{ID: apiID(id), Date: "2026-09-11", StartTime: start, EndTime: end, Title: fmt.Sprintf("Block %d", id), Status: "planned", RoomID: apiID(room), StudentIDs: students}
+func plannedBlock(id int64, start, end string, room int64, students ...ident.ID) demoBlock {
+	block := demoBlock{ID: ident.ID(id), Date: "2026-09-11", StartTime: start, EndTime: end, Title: fmt.Sprintf("Block %d", id), Status: "planned", RoomID: ident.ID(room), StudentIDs: students}
 	for _, studentID := range students {
 		block.Students = append(block.Students, struct {
-			StudentID apiID  `json:"student_id"`
-			Status    string `json:"status"`
+			StudentID ident.ID `json:"student_id"`
+			Status    string   `json:"status"`
 		}{StudentID: studentID, Status: "expected"})
 	}
 	return block
@@ -753,7 +754,7 @@ func TestDemoTickRunsAWeekdayWithoutKioskSessions(t *testing.T) {
 	state.Accounts.Betreuer = []AccountCredentials{{StaffID: 17}}
 	state.Activities = map[string]int64{"Hausaufgaben": 23}
 	studentID := state.Students[0].ID
-	client := &demoPlanClient{demoDayClient: *newDemoDayClient(plannedBlock(1, "14:45", "17:00", 5, apiID(studentID)))}
+	client := &demoPlanClient{demoDayClient: *newDemoDayClient(plannedBlock(1, "14:45", "17:00", 5, ident.ID(studentID)))}
 	client.arrivals[studentID] = "11:45"
 	now := demoDayAt(t, "15:00")
 	ticker, err := NewDemoTicker(DemoTickOptions{
@@ -782,8 +783,8 @@ func TestDemoTickWaitsForEachChildsRunningPlannedBlock(t *testing.T) {
 	futureID := currentID + 1
 	state.Students = append(state.Students, SeedStudent{ID: futureID, FirstName: "Mia", LastName: "S"})
 	client := &demoPlanClient{demoDayClient: *newDemoDayClient(
-		plannedBlock(1, "14:45", "17:00", 5, apiID(currentID)),
-		plannedBlock(2, "16:00", "17:00", 5, apiID(futureID)),
+		plannedBlock(1, "14:45", "17:00", 5, ident.ID(currentID)),
+		plannedBlock(2, "16:00", "17:00", 5, ident.ID(futureID)),
 	)}
 	client.arrivals[currentID], client.arrivals[futureID] = "11:45", "11:45"
 	now := demoDayAt(t, "15:00")
@@ -844,7 +845,7 @@ func TestDemoTickRunsAWeekendThatFollowsFridaysPlan(t *testing.T) {
 	state.Accounts.Betreuer = []AccountCredentials{{StaffID: 17}}
 	state.Activities = map[string]int64{"Hausaufgaben": 23}
 	studentID := state.Students[0].ID
-	saturdayBlock := plannedBlock(1, "14:45", "17:00", 5, apiID(studentID))
+	saturdayBlock := plannedBlock(1, "14:45", "17:00", 5, ident.ID(studentID))
 	saturdayBlock.Date = "2026-09-12"
 	client := &demoPlanClient{demoDayClient: *newDemoDayClient(saturdayBlock)}
 	client.arrivals[studentID] = "11:45"

@@ -31,7 +31,8 @@ import { SectionCard } from "~/components/ui/section-card";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useApiErrorDisplay, useApiLoadError } from "~/contexts/ToastContext";
-import { ApiError, apiErrorFromResponse } from "~/lib/api-error";
+import { ApiError } from "~/lib/api-error";
+import { bffFile } from "~/lib/bff-fetch";
 import {
   downloadCatererDeliveries,
   confirmCatererOrder,
@@ -443,13 +444,10 @@ export default function CatererOverviewPage() {
     const target = window.open("", "_blank");
     setExporting("print");
     try {
-      const params = new URLSearchParams({ from, to, format: "pdf" });
-      const response = await fetch(
-        `/api/caterer/orders/export?${params.toString()}`,
-      );
-      if (!response.ok) {
-        throw await apiErrorFromResponse(response, "caterer print failed");
-      }
+      const response = await bffFile("caterer", "GET /caterer/orders/export", {
+        query: { from, to, format: "pdf" },
+        errorMessage: "caterer print failed",
+      });
       await openBlobForPrint(await response.blob(), target);
     } catch (cause) {
       target?.close();

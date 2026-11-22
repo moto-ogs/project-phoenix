@@ -84,6 +84,7 @@ func NewResource(cfg ResourceConfig) *Resource {
 // today is the Berlin school day of the resource's clock.
 func (rs *Resource) today() calendar.Date { return calendar.DateFromTime(rs.Now()) }
 func (rs *Resource) Register(r chi.Router, withTx common.Middleware) {
+	r = r.With(markTraegerBueroAuthor)
 	r.With(common.RequiresPermission(permissions.UsersUpdate), withTx).Post("/master-data-change-requests/{requestId}/decide", rs.decideMasterDataChangeRequest)
 	r.With(common.RequiresPermission(permissions.UsersUpdate), withTx).Post("/care-schedule-change-requests/{requestId}/decide", rs.decideCareScheduleChangeRequest)
 	r.With(common.RequiresPermission(permissions.UsersUpdate), withTx).Get("/care-schedule-change-requests/{requestId}", rs.getCareScheduleChangeRequest)

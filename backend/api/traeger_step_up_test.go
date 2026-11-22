@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"testing"
 	"time"
 
@@ -45,7 +46,7 @@ func TestTraegerStepUpOpensASchoolWithoutRememberedDevices(t *testing.T) {
 	require.Equal(t, "mfa_required", login.Status)
 	rec := traegerRequest(t, portal, "/traeger/auth/mfa/verify", map[string]any{
 		"challenge_token": login.ChallengeToken, "code": lastTraegerCode(t, portal, account.Email),
-		"organization_id": organization, "remember_device": true,
+		"organization_id": strconv.FormatInt(organization, 10), "remember_device": true,
 	})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	_, byDevice := traegerLoginWithDevice(t, portal, account.Email, password, organization, traegerDeviceCookie(rec))
@@ -155,7 +156,7 @@ func TestTraegerStepUpNeedsTheSchoolSwitchRightAndTheOwnCode(t *testing.T) {
 	assert.Equal(t, "identity.mfa_code_invalid", refused.Code)
 	assert.Empty(t, refused.AccessToken)
 	rec := traegerRequest(t, portal, "/traeger/auth/mfa/verify", map[string]any{
-		"challenge_token": foreign.ChallengeToken, "code": foreignCode, "organization_id": organization,
+		"challenge_token": foreign.ChallengeToken, "code": foreignCode, "organization_id": strconv.FormatInt(organization, 10),
 	})
 	assert.Equal(t, http.StatusOK, rec.Code, "the refused step consumed nothing: %s", rec.Body.String())
 

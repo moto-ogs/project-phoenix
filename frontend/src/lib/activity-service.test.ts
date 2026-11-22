@@ -27,7 +27,7 @@ describe("ActivityService", () => {
       ];
       mockFetchActivities.mockResolvedValue(mockActivities);
 
-      const filters: ActivityFilter = { search: "active" };
+      const filters: ActivityFilter = { category_id: "3" };
       const result = await activityService.getActivities(filters);
 
       expect(mockFetchActivities).toHaveBeenCalledWith(filters);

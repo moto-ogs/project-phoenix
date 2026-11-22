@@ -10,17 +10,17 @@ import (
 )
 
 type moveStudentsToActiveGroupRequest struct {
-	StudentIDs          []common.ID `json:"student_ids"`
-	TargetActiveGroupID common.ID   `json:"target_active_group_id"`
+	StudentIDs          []ident.ID `json:"student_ids"`
+	TargetActiveGroupID ident.ID   `json:"target_active_group_id"`
 }
 
 // checkInStudentsToSessionRequest is the move request plus keep_present: the
 // check-in mode of „Alle Kinder“ leaves present children where they are,
 // the room page pulls them in (#6953).
 type checkInStudentsToSessionRequest struct {
-	StudentIDs          []common.ID `json:"student_ids"`
-	TargetActiveGroupID common.ID   `json:"target_active_group_id"`
-	KeepPresent         bool        `json:"keep_present"`
+	StudentIDs          []ident.ID `json:"student_ids"`
+	TargetActiveGroupID ident.ID   `json:"target_active_group_id"`
+	KeepPresent         bool       `json:"keep_present"`
 }
 
 func (rs *Resource) moveStudentsToActiveGroup(w http.ResponseWriter, r *http.Request) {

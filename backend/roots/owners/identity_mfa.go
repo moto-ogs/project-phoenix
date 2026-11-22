@@ -253,23 +253,6 @@ func (m MFAMailer) NotifyMFAResetByAdmin(ctx context.Context, message identityac
 	return err
 }
 
-// NotifyLoginAddressChanged queues the notice to the address an
-// administrator moved a login away from (#6862), in the transaction of the
-// change: the school's when its administrator changed it, otherwise a
-// global identity mail.
-func (m MFAMailer) NotifyLoginAddressChanged(ctx context.Context, message identityaccess.LoginAddressChangedMail, changeKey string) error {
-	if m.Enqueue == nil {
-		return email.ErrDeliveryUnavailable
-	}
-	const deliveryType = "account_login_address_changed"
-	_, err := m.Enqueue(ctx, DurableMail{
-		IdempotencyKey: fmt.Sprintf("%s:%s", deliveryType, changeKey), TenantID: message.TenantID,
-		Message: *identityMessage(m.From, email.NewEmail("", message.Recipient), identityaccess.LoginAddressChangedMailContent(message, m.FrontendURL)),
-		Type:    deliveryType, ReferenceID: message.ReferenceID, Backoff: m.Backoff,
-	})
-	return err
-}
-
 // operatorActionLog appends before returning, joining the triggering transaction.
 // A driver panic remains contained, as for the former detached writer.
 type operatorActionLog struct {

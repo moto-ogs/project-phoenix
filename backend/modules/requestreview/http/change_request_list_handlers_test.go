@@ -529,7 +529,7 @@ func TestAggregatedChangeRequests_InvalidQuery(t *testing.T) {
 
 func aggDirectCorrection(id int64, name string, changedAt time.Time) requestreview.Row {
 	return requestreview.Row{Type: requestreview.TypeDirectCorrection, ID: id, StudentID: 500 + id, StudentName: name, SortTime: changedAt, DecidedAt: changedAt,
-		Data: requestreview.DirectCorrectionResponse{ID: fmt.Sprint(id), StudentID: fmt.Sprint(500 + id), StudentName: name, ChangedAt: changedAt, ChangedByName: "Olga Office", Reason: "Telefonisch gemeldet", Diff: []requestreview.OfferingRequestDiffResponse{{OfferingID: "9", Label: "Mittagessen", Old: "Mo", New: "abgemeldet"}}},
+		Payload: requestreview.Payload{DirectCorrection: &requestreview.DirectCorrectionResponse{ID: fmt.Sprint(id), StudentID: fmt.Sprint(500 + id), StudentName: name, ChangedAt: changedAt, ChangedByName: "Olga Office", Reason: "Telefonisch gemeldet", Diff: []requestreview.OfferingRequestDiffResponse{{OfferingID: "9", Label: "Mittagessen", Old: "Mo", New: "abgemeldet"}}}},
 	}
 }
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Personen des Träger-Büros (#4650): wer im Träger-Portal arbeitet, mit
 // Namen (#4693) und Rolle, wer eingeladen ist und der Verlauf der Änderungen
 // (#5474).
@@ -39,7 +41,10 @@ import {
   type TraegerInvitation,
   type TraegerMember,
 } from "~/lib/traeger-api";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import { TRAEGER_ROLE_LABELS, type TraegerRole } from "~/lib/traeger-roles";
 import { traegerPath } from "~/lib/traeger-url";
 
@@ -313,7 +318,11 @@ export default function TraegerAccountsPage() {
 
   const exportItems = useTraegerListExportItems({
     download: (format) =>
-      downloadTraegerList("/api/traeger/accounts/export", format),
+      downloadTraegerList(
+        bffFile("org", "GET /traeger/accounts/export", {
+          query: listExportQuery(format),
+        }),
+      ),
     scope: "Träger-Büro",
     fallbackName: "mitglieder",
     errorObject: "die Liste der Personen",

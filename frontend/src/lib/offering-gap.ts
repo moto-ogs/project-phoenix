@@ -31,9 +31,7 @@ export interface OfferingGap {
 }
 
 // Wire type: the decoded response of the catalog proxy (#2353).
-export type OfferingGapsWire = offeringGapsResponse;
-
-export function mapOfferingGaps(raw: OfferingGapsWire): OfferingGap[] {
+export function mapOfferingGaps(raw: offeringGapsResponse): OfferingGap[] {
   return (raw.gaps ?? []).map((gap) => ({
     offering: { id: gap.offering.id, name: gap.offering.name },
     studentCount: gap.student_count,

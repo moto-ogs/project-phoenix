@@ -20,18 +20,25 @@ import (
 	tenant "github.com/moto-ogs/project-phoenix/tenant"
 )
 
-// getStaffIDFromJWT extracts the staff ID from JWT claims by looking up the person and staff
+// getStaffIDFromJWT resolves the staff member who enters Betreuungszeiten in
+// this request, by the account's person and staff record at the school.
+//
+// A person of the Träger-Büro in a school they opened through the Absprung
+// has neither (ADR 0084 section 5): the result is 0 without an error, and the
+// rows the request writes carry the mark of the Träger-Büro
+// (careplan.EnteredByTraeger). Everybody else without a staff record is
+// refused with errUserNotStaff or errPersonNotFoundForAccount.
 func (rs *Resource) getStaffIDFromJWT(r *http.Request) (int64, error) {
 	claims := sessiontoken.ClaimsFromCtx(r.Context())
 	if claims.ID == 0 {
-		return 0, errors.New("no valid JWT claims found")
+		return 0, errNoSessionAccount
 	}
 
 	// Get person from account ID
 	person, err := rs.PeopleDirectory.FindPersonByAccount(r.Context(), int64(claims.ID))
 	if err != nil {
 		if errors.Is(err, peopleModule.ErrPersonNotFound) {
-			return 0, errPersonNotFoundForAccount
+			return withoutStaffRecord(r, errPersonNotFoundForAccount)
 		}
 		return 0, fmt.Errorf("find person by account: %w", err)
 	}
@@ -42,10 +49,63 @@ func (rs *Resource) getStaffIDFromJWT(r *http.Request) (int64, error) {
 		return 0, fmt.Errorf("find staff by person: %w", err)
 	}
 	if !found {
-		return 0, errUserNotStaff
+		return withoutStaffRecord(r, errUserNotStaff)
 	}
 
 	return staffID, nil
+}
+
+// exceptionTakeoverStaffID is the resolver a guardian's exception is taken
+// over with, in the contract careplan declares for it: (0, nil) for an
+// account without a staff record, an error only for a failed lookup (#7818).
+// Care Plan then refuses a missing author with its own sentinel, and a failed
+// lookup stays a server error.
+func (rs *Resource) exceptionTakeoverStaffID(r *http.Request) func() (int64, error) {
+	return func() (int64, error) {
+		staffID, err := rs.getStaffIDFromJWT(r)
+		if errors.Is(err, errPersonNotFoundForAccount) || errors.Is(err, errUserNotStaff) {
+			return 0, nil
+		}
+		return staffID, err
+	}
+}
+
+// withoutStaffRecord answers a request whose account has no staff record at
+// the school: the Träger-Büro writes without one, everybody else is refused.
+func withoutStaffRecord(r *http.Request, refusal error) (int64, error) {
+	if careplan.EnteredByTraeger(r.Context(), 0) {
+		return 0, nil
+	}
+	return 0, refusal
+}
+
+// markTraegerBueroAuthor marks the request of a school session the
+// Träger-Büro opened through the Absprung, so that the rows it writes without
+// a staff author carry the mark of the Träger-Büro (#7766). The token's
+// via_traeger is minted and re-checked by Identity & Access only for a person
+// with the Träger right "In OGS wechseln"; the routes keep their own
+// permission checks.
+func markTraegerBueroAuthor(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if sessiontoken.ClaimsFromCtx(r.Context()).ViaTraeger {
+			r = r.WithContext(careplan.WithTraegerBueroAuthor(r.Context()))
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// renderScheduleAuthorError answers a failed author resolution. Only a
+// missing staff record or a missing right is the caller's to fix (403); a
+// failed lookup is the server's (500) and must not read as a missing right.
+func renderScheduleAuthorError(w http.ResponseWriter, r *http.Request, err error) {
+	switch {
+	case errors.Is(err, errPersonNotFoundForAccount), errors.Is(err, errUserNotStaff):
+		renderError(w, r, common.ErrorForbiddenWithCode(err, common.CodeStudentsScheduleStaffProfileRequired))
+	case errors.Is(err, errNoSessionAccount), errors.Is(err, errScheduleUpdatePermissionRequired):
+		renderError(w, r, common.ErrorForbidden(err))
+	default:
+		renderError(w, r, common.ErrorInternalServer(err))
+	}
 }
 
 // requirePickupReadAccess parses the student from URL params and checks read
@@ -247,12 +307,12 @@ func (rs *Resource) updateStudentPickupSchedules(w http.ResponseWriter, r *http.
 	// Get staff ID from JWT
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
-		renderError(w, r, common.ErrorForbidden(err))
+		renderScheduleAuthorError(w, r, err)
 		return
 	}
 
 	// Convert requests to schedule models
-	schedules := toPickupScheduleModels(req.Schedules, student.ID, staffID)
+	schedules := toPickupScheduleModels(r.Context(), req.Schedules, student.ID, staffID)
 
 	tenantID := tenant.FromContext(r.Context())
 	if err := withinTenant(r.Context(), tenantID, func(ctx context.Context) error {
@@ -298,7 +358,7 @@ func (rs *Resource) bulkUpsertPickupSchedules(w http.ResponseWriter, r *http.Req
 	}
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
-		renderError(w, r, common.ErrorForbidden(err))
+		renderScheduleAuthorError(w, r, err)
 		return
 	}
 	if rs.PickupAdjustmentService == nil {
@@ -362,7 +422,7 @@ func (rs *Resource) createStudentPickupException(w http.ResponseWriter, r *http.
 
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
-		renderError(w, r, common.ErrorForbidden(err))
+		renderScheduleAuthorError(w, r, err)
 		return
 	}
 
@@ -376,7 +436,7 @@ func (rs *Resource) createStudentPickupException(w http.ResponseWriter, r *http.
 	tenantID := tenant.FromContext(r.Context())
 	exception, err := rs.PickupScheduleService.CreateOrReclaimException(
 		r.Context(), student.ID, exceptionDate, pickupTime, req.Reason, staffID,
-		func() (int64, error) { return rs.getStaffIDFromJWT(r) },
+		rs.exceptionTakeoverStaffID(r),
 	)
 	if err != nil {
 		renderExceptionWriteError(w, r, err)
@@ -435,7 +495,7 @@ func (rs *Resource) updateStudentPickupException(w http.ResponseWriter, r *http.
 	tenantID := tenant.FromContext(r.Context())
 	exception, err := rs.PickupScheduleService.UpdateException(
 		r.Context(), exceptionID, student.ID, exceptionDate, req.Reason, pickupTime, req.ClearPickupTime,
-		func() (int64, error) { return rs.getStaffIDFromJWT(r) },
+		rs.exceptionTakeoverStaffID(r),
 	)
 	if err != nil {
 		renderExceptionWriteError(w, r, err)
@@ -508,11 +568,12 @@ func (rs *Resource) createStudentPickupNote(w http.ResponseWriter, r *http.Reque
 
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
-		renderError(w, r, common.ErrorForbidden(err))
+		renderScheduleAuthorError(w, r, err)
 		return
 	}
 
 	note := req.toModel(student.ID, staffID)
+	note.EnteredByTraeger = careplan.EnteredByTraeger(r.Context(), staffID)
 
 	tenantID := tenant.FromContext(r.Context())
 	if err := withinTenant(r.Context(), tenantID, func(ctx context.Context) error {
@@ -549,7 +610,7 @@ func (rs *Resource) replaceStudentWeekdayPickupNotes(w http.ResponseWriter, r *h
 
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
-		renderError(w, r, common.ErrorForbidden(err))
+		renderScheduleAuthorError(w, r, err)
 		return
 	}
 
@@ -597,6 +658,7 @@ func (rs *Resource) updateStudentPickupNote(w http.ResponseWriter, r *http.Reque
 	}
 
 	note := req.toModel(student.ID, existingNote.CreatedBy) // Preserve original creator
+	note.EnteredByTraeger = existingNote.EnteredByTraeger
 	note.ID = noteID
 	note.CreatedAt = existingNote.CreatedAt // Preserve original creation timestamp
 	note.SetTenantID(existingNote.TenantID)

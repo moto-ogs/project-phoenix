@@ -28,7 +28,7 @@ import { SectionLabel } from "~/components/ui/section-label";
 import { emailCodeFactorApi } from "~/lib/email-code-factor-api";
 import { signInConcept } from "~/lib/concepts/signIn";
 
-const parentFactorApi = emailCodeFactorApi("/api/parent/me/mfa");
+const parentFactorApi = emailCodeFactorApi("parent");
 
 type Translate = ReturnType<typeof useTranslations<"parentSignIn">>;
 

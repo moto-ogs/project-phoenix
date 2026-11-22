@@ -227,6 +227,7 @@ export const TRACKED_TRAEGER_ROUTE_TEMPLATES = [
   "/abrechnung/exporte/konten",
   "/abrechnung/familien",
   "/abrechnung/familien/:id",
+  "/abrechnung/familien/zahlung/:contractId",
   "/abrechnung/kinderzahl",
   "/abrechnung/kinderzahl/import",
   "/abrechnung/kostentraeger",
@@ -301,6 +302,9 @@ export const TRACKED_TRAEGER_ROUTE_TEMPLATES = [
   "/vertraege/:id",
   "/vertraege/bedingungen",
   "/vertraege/import",
+  "/vertraege/nachpflege",
+  "/vertraege/module-zuordnen",
+  "/vertraege/verknuepfen",
   "/zeitvergleich",
 ] as const;
 

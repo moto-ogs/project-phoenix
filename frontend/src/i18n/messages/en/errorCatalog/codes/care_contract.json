@@ -28,5 +28,8 @@
   "import_file_invalid": "{object} could not be saved. Please check your entries.",
   "import_file_too_large": "{object} could not be saved. Please check your entries.",
   "import_changed": "{object} could not be changed. Please check its current status.",
-  "letterhead_missing": "The sender in the letterhead is missing. No contract is sent without the provider's name and address. Please add it under “Letterhead and templates”."
+  "letterhead_missing": "The sender in the letterhead is missing. No contract is sent without the provider's name and address. Please add it under “Letterhead and templates”.",
+  "child_link_changed": "The details have changed since the check. Please check them again.",
+  "child_link_not_imported": "Only imported contracts can be linked here. This contract belongs to the child of its application.",
+  "child_link_refused": "The contract cannot be linked to this child record like this. Please check the details again."
 }

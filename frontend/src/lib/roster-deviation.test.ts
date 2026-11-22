@@ -340,7 +340,7 @@ describe("selection helpers", () => {
       "offering_ids=3%2C4&school_classes=1b",
     );
     expect(connectionBody(selection, "2026-10-28")).toEqual({
-      offering_ids: [3, 4],
+      offering_ids: ["3", "4"],
       grade_levels: [],
       school_classes: ["1b"],
       effective_date: "2026-10-28",

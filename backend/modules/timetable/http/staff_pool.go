@@ -23,16 +23,16 @@ import (
 // StaffPoolAssignmentResponse is one overlapping same-day assignment of a
 // pool member (the move source the frontend offers).
 type StaffPoolAssignmentResponse struct {
-	InstanceID   common.ID `json:"instance_id"`
-	Title        string    `json:"title"`
-	StartTime    string    `json:"start_time"`
-	EndTime      string    `json:"end_time"`
-	IsSubstitute bool      `json:"is_substitute"`
+	InstanceID   ident.ID `json:"instance_id"`
+	Title        string   `json:"title"`
+	StartTime    string   `json:"start_time"`
+	EndTime      string   `json:"end_time"`
+	IsSubstitute bool     `json:"is_substitute"`
 }
 
 // StaffPoolEntryResponse is one categorized staff member.
 type StaffPoolEntryResponse struct {
-	StaffID       common.ID                     `json:"staff_id"`
+	StaffID       ident.ID                      `json:"staff_id"`
 	DisplayName   string                        `json:"display_name"`
 	Category      string                        `json:"category"`
 	OnShift       bool                          `json:"on_shift"`
@@ -44,7 +44,7 @@ type StaffPoolEntryResponse struct {
 
 // StaffPoolResponse is the 200 body of GET /instances/{id}/staff-pool.
 type StaffPoolResponse struct {
-	InstanceID      common.ID                `json:"instance_id"`
+	InstanceID      ident.ID                 `json:"instance_id"`
 	Title           string                   `json:"title"`
 	Date            string                   `json:"date"`
 	StartTime       string                   `json:"start_time"`
@@ -85,7 +85,7 @@ func staffPoolResponseOf(pool timetable.StaffPool) StaffPoolResponse {
 		assignments := make([]StaffPoolAssignmentResponse, 0, len(entry.Assignments))
 		for _, assignment := range entry.Assignments {
 			assignments = append(assignments, StaffPoolAssignmentResponse{
-				InstanceID: common.ID(assignment.InstanceID), Title: assignment.Title, StartTime: assignment.StartTime,
+				InstanceID: ident.ID(assignment.InstanceID), Title: assignment.Title, StartTime: assignment.StartTime,
 				EndTime: assignment.EndTime, IsSubstitute: assignment.IsSubstitute,
 			})
 		}

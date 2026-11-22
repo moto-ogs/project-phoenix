@@ -3,6 +3,8 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedHolidayGuestGroupHint reads the Feriengruppen the group management
@@ -16,8 +18,8 @@ func seedHolidayGuestGroupHint(rt *Runtime, groupID int64) error {
 	}
 	var envelope struct {
 		Data []struct {
-			GroupID apiID `json:"group_id"`
-			Guests  int   `json:"guests"`
+			GroupID ident.ID `json:"group_id"`
+			Guests  int      `json:"guests"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {

@@ -345,7 +345,7 @@ func TestCareContractDraftFromTheAcceptedApplicationIsSentWithItsFrozenPDF(t *te
 	body := strings.TrimPrefix(rec.Body.String(), "\xEF\xBB\xBF")
 	lines := strings.Split(strings.TrimSpace(body), "\n")
 	require.Len(t, lines, 2, "the header and the one sent contract")
-	assert.Equal(t, "Nachname;Vorname;Betreuungsort;Module;Eltern;E-Mail;Beginn;Status;Seit", lines[0])
+	assert.Equal(t, "Vertrag Nr.;Nachname;Vorname;Betreuungsort;Module;Eltern;E-Mail;Beginn;Status;Seit;Kinderakte", lines[0])
 	assert.Contains(t, lines[1], ";Versendet;")
 	rec = traegerJSON(t, f.traeger, token, http.MethodGet, "/traeger/contracts/export?status=entwurf", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

@@ -1,8 +1,6 @@
 import type { Session } from "next-auth";
-import {
-  mapAccountTenant,
-  type AccountTenantBackend,
-} from "~/lib/account-tenants";
+import type { AccountTenantResponse } from "./contract/auth-account.generated";
+import { mapAccountTenant } from "~/lib/account-tenants";
 import { apiGet } from "~/lib/api-helpers.server";
 import {
   hasEffectiveAdminScope,
@@ -19,7 +17,7 @@ import { createLogger } from "~/lib/logger";
 import { mapProfileResponse } from "~/lib/profile-helpers";
 import { contractGet } from "~/lib/contract/client.server";
 import { routes as meRoutes } from "~/lib/contract/me.generated";
-import type { UnreadAnnouncement } from "~/lib/hooks/use-announcements";
+import type * as platformContract from "~/lib/contract/platform.generated";
 import type { RemindersResult } from "~/lib/reminders-api";
 import type { ShellBootstrap, ShellCounts } from "~/lib/shell-seed";
 import type { StaffNotice } from "~/lib/staff-notices-api";
@@ -341,7 +339,7 @@ export async function loadShellBootstrap(
       return mapProfileResponse(result.value.data);
     }),
     optional("accountTenants", async (signal) => {
-      const response = await apiGet<Envelope<AccountTenantBackend[] | null>>(
+      const response = await apiGet<Envelope<AccountTenantResponse[] | null>>(
         "/auth/account/tenants",
         token,
         { signal },
@@ -373,11 +371,9 @@ export async function loadShellBootstrap(
         })
       : Promise.resolve(undefined),
     optional("announcements", async (signal) => {
-      const response = await apiGet<Envelope<UnreadAnnouncement[] | null>>(
-        "/api/platform/announcements/unread",
-        token,
-        { signal },
-      );
+      const response = await apiGet<
+        Envelope<platformContract.PlatformAnnouncementResponse[] | null>
+      >("/api/platform/announcements/unread", token, { signal });
       return response.data ?? [];
     }),
     loadSupervision(session, tenant, token),

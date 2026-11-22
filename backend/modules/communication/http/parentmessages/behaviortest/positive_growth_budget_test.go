@@ -77,11 +77,12 @@ func TestParentMessagePositiveGrowthQueryBudget(t *testing.T) {
 			if created > 0 {
 				guardian = testpkg.CreateTestCoGuardianForStudent(t, db, chain.StudentID, "Guardian", fmt.Sprintf("%02d", created))
 			}
-			opened := request("POST", "/threads", fmt.Sprintf(`{"student_id":%q,"guardian_account_id":%q,"body":"message-%02d"}`, fmt.Sprint(chain.StudentID), fmt.Sprint(guardian.AccountID), created), false)
+			opened := request("POST", "/threads/open", fmt.Sprintf(`{"student_id":%q,"guardian_account_id":%q}`, fmt.Sprint(chain.StudentID), fmt.Sprint(guardian.AccountID)), false)
 			var detail struct {
 				Data messaging.ParentChatThreadDetailResponse
 			}
 			require.NoError(t, json.Unmarshal(opened.Body.Bytes(), &detail))
+			request("POST", "/threads/"+detail.Data.ThreadID, fmt.Sprintf(`{"body":"message-%02d"}`, created), false)
 			threadIDs = append(threadIDs, detail.Data.ThreadID)
 			guardianIDs = append(guardianIDs, fmt.Sprint(guardian.AccountID))
 			if created > 0 {

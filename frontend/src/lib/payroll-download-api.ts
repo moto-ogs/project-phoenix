@@ -2,7 +2,7 @@
 // (#4805). Öffentlich: keine Sitzung, der Link ist die Berechtigung. Nur ein
 // POST öffnet ihn, und das genau einmal.
 
-import { apiErrorFromResponse, transportFetch } from "./api-error";
+import { bffFile } from "./bff-fetch";
 import { downloadBlob, filenameFromDisposition } from "./file-download";
 
 const FALLBACK_FILENAME = "monatsdatei";
@@ -26,16 +26,11 @@ function payrollFilename(response: Response): string {
  * `workforce.payroll_download_unavailable`.
  */
 export async function downloadPayrollFile(link: string): Promise<void> {
-  const response = await transportFetch(
-    `/api/public/payroll-download/${encodeURIComponent(link)}`,
-    { method: "POST", cache: "no-store" },
+  const response = await bffFile(
+    "public",
+    "POST /public/payroll-download/{link}",
+    { params: { link }, errorMessage: "Payroll download failed" },
   );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Payroll download failed: ${response.status}`,
-    );
-  }
   const blob = await response.blob();
   downloadBlob(blob, payrollFilename(response));
 }

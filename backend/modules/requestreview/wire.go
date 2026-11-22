@@ -2,14 +2,41 @@ package requestreview
 
 import (
 	"encoding/json"
+	"reflect"
 	"time"
 )
 
 // The per-type "requested change" shapes. Each list item carries one of
-// them under "data", discriminated by request_type: the queue shape on the
-// open view, the history shape (queue shape plus decision facts) in the
-// history. The decide routes answer with the same queue shapes, so the
-// review card keeps working against the per-type routes.
+// them in the field named like its request_type: the queue shape in the open
+// list, the history shape (queue shape plus decision facts) in the history.
+// The decide routes answer with the same queue shapes, so the review card
+// keeps working against the per-type routes.
+
+// Payload is the projection of one row. Exactly the field of its type and
+// list is set: the owner queue binding fills it.
+type Payload struct {
+	MasterData          *MasterDataChangeRequestResponse
+	MasterDataHistory   *MasterDataChangeRequestHistoryResponse
+	CareSchedule        *CareRequestResponse
+	CareScheduleHistory *CareRequestHistoryResponse
+	Offering            *OfferingRequestResponse
+	OfferingHistory     *OfferingRequestHistoryResponse
+	Excused             *StaffExcusedRequestResponse
+	ExcusedHistory      *StaffExcusedRequestHistoryResponse
+	DirectCorrection    *DirectCorrectionResponse
+}
+
+// value is the one projection the payload holds, for the deprecated data
+// member of the list item; nil when none is set.
+func (p Payload) value() any {
+	for _, candidate := range []any{p.MasterData, p.MasterDataHistory, p.CareSchedule, p.CareScheduleHistory,
+		p.Offering, p.OfferingHistory, p.Excused, p.ExcusedHistory, p.DirectCorrection} {
+		if !reflect.ValueOf(candidate).IsNil() {
+			return candidate
+		}
+	}
+	return nil
+}
 
 // MasterDataChangeRequestResponse is the staff-facing projection of one parent
 // Stammdaten change request in the review queue.

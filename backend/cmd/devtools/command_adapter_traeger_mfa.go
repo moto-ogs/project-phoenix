@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // LoginTraeger signs in to the Träger-Portal. Every Träger session needs the
@@ -15,15 +18,15 @@ import (
 func (a *Adapter) LoginTraeger(ctx context.Context, email, password string, organizationID int64) (AuthRef, error) {
 	watermark := time.Now()
 	respBody, status, err := a.Raw(ctx, AuthRef{}, http.MethodPost, "/traeger/auth/login",
-		map[string]any{"email": email, "password": password, "organization_id": organizationID}, nil)
+		map[string]any{"email": email, "password": password, "organization_id": strconv.FormatInt(organizationID, 10)}, nil)
 	if err != nil {
 		return AuthRef{}, fmt.Errorf("traeger login request failed: %w", err)
 	}
 	var login struct {
-		Status         string `json:"status"`
-		AccessToken    string `json:"access_token"`
-		ChallengeToken string `json:"challenge_token"`
-		OrganizationID int64  `json:"organization_id"`
+		Status         string   `json:"status"`
+		AccessToken    string   `json:"access_token"`
+		ChallengeToken string   `json:"challenge_token"`
+		OrganizationID ident.ID `json:"organization_id"`
 	}
 	if err := json.Unmarshal(respBody, &login); err != nil {
 		return AuthRef{}, fmt.Errorf("parse traeger login response with status %d: %w", status, err)
@@ -60,13 +63,13 @@ func (a *Adapter) LoginTraeger(ctx context.Context, email, password string, orga
 
 // redeemTraegerCode reads the mailed code and exchanges it with the
 // challenge for the Träger session.
-func (a *Adapter) redeemTraegerCode(ctx context.Context, auth AuthRef, path, challengeToken, recipient string, organizationID int64, watermark time.Time) (string, error) {
+func (a *Adapter) redeemTraegerCode(ctx context.Context, auth AuthRef, path, challengeToken, recipient string, organizationID ident.ID, watermark time.Time) (string, error) {
 	code, err := a.fetchLatestMFACode(ctx, recipient, watermark)
 	if err != nil {
 		return "", err
 	}
 	respBody, status, err := a.Raw(ctx, auth, http.MethodPost, path,
-		map[string]any{"challenge_token": challengeToken, "code": code, "organization_id": organizationID}, nil)
+		map[string]any{"challenge_token": challengeToken, "code": code, "organization_id": organizationID.String()}, nil)
 	if err != nil {
 		return "", fmt.Errorf("POST %s: %w", path, err)
 	}

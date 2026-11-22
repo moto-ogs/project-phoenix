@@ -58,6 +58,23 @@ export const FamilyBillingSchema: z.ZodType<FamilyBilling, unknown> = object<Fam
   updated_at: instant,
 });
 
+/** Go: parentbilling.ContractFamilyBilling */
+export interface ContractFamilyBilling {
+  contract_id: string;
+  family_email: string;
+  party_first_name: string;
+  party_last_name: string;
+  family: FamilyBilling | null;
+}
+
+export const ContractFamilyBillingSchema: z.ZodType<ContractFamilyBilling, unknown> = object<ContractFamilyBilling>({
+  contract_id: int64String,
+  family_email: str,
+  party_first_name: str,
+  party_last_name: str,
+  family: nullable(FamilyBillingSchema),
+});
+
 /** Go: parentbillinghttp.FamilyBillingRequest */
 export interface FamilyBillingRequest {
   contract_id?: string;
@@ -88,6 +105,12 @@ export const routes = {
     pattern: "/traeger/family-billing/",
     portals: ["org"],
     response: success(z.array(FamilyBillingSchema)),
+  },
+  "GET /traeger/family-billing/contracts/{id}": {
+    method: "GET",
+    pattern: "/traeger/family-billing/contracts/{id}",
+    portals: ["org"],
+    response: success(ContractFamilyBillingSchema),
   },
   "PUT /traeger/family-billing/": {
     method: "PUT",

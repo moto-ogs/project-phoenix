@@ -24,29 +24,9 @@ type permissionRow struct {
 	UpdatedAt     time.Time `bun:"updated_at,nullzero,notnull"`
 }
 
-func permissionRecord(p domain.ManagedPermission) permissionRow {
-	return permissionRow{ID: p.ID, Name: p.Name, Description: p.Description, Resource: p.Resource,
-		Action: p.Action, CreatedAt: p.CreatedAt, UpdatedAt: p.UpdatedAt}
-}
-
 func (p permissionRow) domain() domain.ManagedPermission {
 	return domain.ManagedPermission{ID: p.ID, Name: p.Name, Description: p.Description, Resource: p.Resource,
 		Action: p.Action, CreatedAt: p.CreatedAt, UpdatedAt: p.UpdatedAt}
-}
-
-func (s *Store) CreatePermission(ctx context.Context, permission domain.ManagedPermission) (domain.ManagedPermission, error) {
-	if err := permission.Validate(); err != nil {
-		return domain.ManagedPermission{}, err
-	}
-	db, err := s.database(ctx)
-	if err != nil {
-		return domain.ManagedPermission{}, err
-	}
-	row := permissionRecord(permission)
-	if _, err := db.NewInsert().Model(&row).ModelTableExpr("auth.permissions").Returning("id, created_at, updated_at").Exec(ctx); err != nil {
-		return domain.ManagedPermission{}, fmt.Errorf("create: %w", err)
-	}
-	return row.domain(), nil
 }
 
 func (s *Store) FindPermission(ctx context.Context, id int64) (domain.ManagedPermission, bool, error) {

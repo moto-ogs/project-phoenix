@@ -479,6 +479,12 @@
       "legacy": "request_past"
     },
     {
+      "code": "students.schedule_staff_profile_required",
+      "class": "permission",
+      "parameters": [],
+      "legacy": "students.schedule_staff_profile_required"
+    },
+    {
       "code": "students.sick_excused_conflict",
       "class": "business_rejection",
       "parameters": [],

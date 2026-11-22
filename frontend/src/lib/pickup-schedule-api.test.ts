@@ -1,5 +1,12 @@
+import type * as studentsContract from "~/lib/contract/students.generated";
 import { ApiError } from "./api-error";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+// The session gate and its renewal are sessionFetch's own tests.
+vi.mock("./session-cache", () => ({
+  sessionFetch: (url: string, init?: RequestInit) =>
+    globalThis.fetch(url, init),
+}));
 import {
   fetchStudentPickupData,
   createStudentPickupException,
@@ -15,16 +22,13 @@ import {
   applyStudentPickupAdjustment,
 } from "./pickup-schedule-api";
 import type {
-  PickupDataWire,
   PickupExceptionFormData,
   PickupNoteFormData,
-  PickupExceptionWire,
-  PickupScheduleWire,
 } from "./pickup-schedule-helpers";
 import type { PickupNoteResponse } from "./contract/students.generated";
 
 // Mock data
-const mockBackendSchedule: PickupScheduleWire = {
+const mockBackendSchedule: studentsContract.PickupScheduleResponse = {
   id: "1",
   student_id: "123",
   weekday: 1,
@@ -37,7 +41,7 @@ const mockBackendSchedule: PickupScheduleWire = {
   updated_at: "2024-01-15T10:00:00Z",
 };
 
-const mockBackendException: PickupExceptionWire = {
+const mockBackendException: studentsContract.PickupExceptionResponse = {
   id: "2",
   student_id: "123",
   exception_date: "2024-01-20",
@@ -50,7 +54,7 @@ const mockBackendException: PickupExceptionWire = {
   updated_at: "2024-01-15T10:00:00Z",
 };
 
-const mockPickupDataWire: PickupDataWire = {
+const mockPickupDataWire: studentsContract.PickupDataResponse = {
   schedules: [mockBackendSchedule],
   exceptions: [mockBackendException],
   notes: [],
@@ -64,15 +68,12 @@ function createMockResponse(
   data?: unknown,
   jsonError?: boolean,
 ): Response {
-  return {
-    ok,
-    status,
-    statusText: ok ? "OK" : "Error",
-    json: () =>
-      jsonError
-        ? Promise.reject(new Error("JSON parse error"))
-        : Promise.resolve(data),
-  } as Response;
+  void ok;
+  if (status === 204) return new Response(null, { status });
+  if (jsonError || data === undefined) {
+    return new Response(jsonError ? "not JSON" : "", { status });
+  }
+  return Response.json(data, { status });
 }
 
 const originalFetch = global.fetch;
@@ -219,7 +220,7 @@ describe("pickup-schedule-api", () => {
         expect.objectContaining({
           method: "POST",
           body: JSON.stringify({
-            student_ids: [9, 4],
+            student_ids: ["9", "4"],
             schedules: [{ weekday: 1, pickup_time: "16:10" }],
           }),
         }),
@@ -245,7 +246,7 @@ describe("pickup-schedule-api", () => {
         "/api/students/pickup-schedules/bulk",
         expect.objectContaining({
           body: JSON.stringify({
-            student_ids: [9],
+            student_ids: ["9"],
             schedules: [{ weekday: 1, pickup_time: "16:10" }],
             confirmed_exception: true,
           }),
@@ -267,7 +268,7 @@ describe("pickup-schedule-api", () => {
 
       expect(global.fetch).toHaveBeenCalledWith(
         "/api/students/123/pickup-schedules",
-        undefined,
+        { method: "GET" },
       );
       expect(result.schedules).toHaveLength(1);
       expect(result.schedules[0]).toEqual({
@@ -312,22 +313,8 @@ describe("pickup-schedule-api", () => {
 
       expect(global.fetch).toHaveBeenCalledWith(
         "/api/students/123/pickup-schedules?from=2026-08-17&to=2026-08-21",
-        undefined,
+        { method: "GET" },
       );
-    });
-
-    it("returns empty arrays when data is undefined", async () => {
-      global.fetch = vi.fn().mockResolvedValue(
-        createMockResponse(true, 200, {
-          status: "success",
-          data: undefined,
-        }),
-      );
-
-      const result = await fetchStudentPickupData("123");
-
-      expect(result.schedules).toEqual([]);
-      expect(result.exceptions).toEqual([]);
     });
 
     it("throws the classified error on non-ok response with JSON error", async () => {
@@ -481,24 +468,8 @@ describe("pickup-schedule-api", () => {
       await expect(
         createStudentPickupException("123", exceptionData),
       ).rejects.toMatchObject({
-        status: 500,
-        code: "general.server",
-      });
-    });
-
-    it("throws error when data is missing", async () => {
-      global.fetch = vi.fn().mockResolvedValue(
-        createMockResponse(true, 200, {
-          status: "success",
-          data: null,
-        }),
-      );
-
-      await expect(
-        createStudentPickupException("123", exceptionData),
-      ).rejects.toMatchObject({
-        status: 500,
-        code: "general.server",
+        status: 502,
+        code: "general.write_answer_unreadable",
       });
     });
 
@@ -626,24 +597,8 @@ describe("pickup-schedule-api", () => {
       await expect(
         updateStudentPickupException("123", "456", exceptionData),
       ).rejects.toMatchObject({
-        status: 500,
-        code: "general.server",
-      });
-    });
-
-    it("throws error when data is missing", async () => {
-      global.fetch = vi.fn().mockResolvedValue(
-        createMockResponse(true, 200, {
-          status: "success",
-          data: null,
-        }),
-      );
-
-      await expect(
-        updateStudentPickupException("123", "456", exceptionData),
-      ).rejects.toMatchObject({
-        status: 500,
-        code: "general.server",
+        status: 502,
+        code: "general.write_answer_unreadable",
       });
     });
   });
@@ -668,6 +623,7 @@ describe("pickup-schedule-api", () => {
       global.fetch = vi.fn().mockResolvedValue(
         createMockResponse(true, 200, {
           status: "success",
+          data: null,
         }),
       );
 
@@ -785,20 +741,9 @@ describe("pickup-schedule-api", () => {
       await expect(
         createStudentPickupNote("123", noteData),
       ).rejects.toMatchObject({
-        status: 500,
-        code: "general.server",
+        status: 502,
+        code: "general.write_answer_unreadable",
       });
-    });
-
-    it("throws error when data is missing", async () => {
-      global.fetch = vi.fn().mockResolvedValue(
-        createMockResponse(true, 200, {
-          status: "success",
-          data: null,
-        }),
-      );
-
-      await expect(createStudentPickupNote("123", noteData)).rejects.toThrow();
     });
   });
 
@@ -867,22 +812,9 @@ describe("pickup-schedule-api", () => {
       await expect(
         updateStudentPickupNote("123", "10", noteData),
       ).rejects.toMatchObject({
-        status: 500,
-        code: "general.server",
+        status: 502,
+        code: "general.write_answer_unreadable",
       });
-    });
-
-    it("throws error when data is missing", async () => {
-      global.fetch = vi.fn().mockResolvedValue(
-        createMockResponse(true, 200, {
-          status: "success",
-          data: null,
-        }),
-      );
-
-      await expect(
-        updateStudentPickupNote("123", "10", noteData),
-      ).rejects.toThrow();
     });
   });
 
@@ -904,7 +836,7 @@ describe("pickup-schedule-api", () => {
       global.fetch = vi
         .fn()
         .mockResolvedValue(
-          createMockResponse(true, 200, { status: "success" }),
+          createMockResponse(true, 200, { status: "success", data: null }),
         );
 
       await expect(
@@ -939,7 +871,7 @@ describe("pickup-schedule-api", () => {
       global.fetch = vi
         .fn()
         .mockResolvedValue(
-          createMockResponse(true, 200, { status: "success" }),
+          createMockResponse(true, 200, { status: "success", data: null }),
         );
 
       await expect(

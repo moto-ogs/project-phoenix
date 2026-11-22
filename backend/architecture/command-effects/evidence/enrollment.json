@@ -6554,7 +6554,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.EnrollmentArrivalSchedules.CreateArrivalSchedule",
-      "binding_digest": "07503951db18242324a218940087f7ef",
+      "binding_digest": "a6dd49be8614154d9299260a38973937",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.WeeklyArrivalSchedules.CreateArrivalSchedule",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.EnrollmentArrivalSchedules.CreateArrivalSchedule",
@@ -6578,7 +6578,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.EnrollmentPickupSchedules.UpsertPickupSchedule",
-      "binding_digest": "06a2c9fe317d5b636e8382cfa7ca4845",
+      "binding_digest": "d348edf38f4a0820e5b8934db86f9f7d",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.WeeklyPickupSchedules.UpsertPickupSchedule",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.EnrollmentPickupSchedules.UpsertPickupSchedule",

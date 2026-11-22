@@ -80,7 +80,7 @@ func (s *RequestConflicts) WriteStaffValue(ctx context.Context, write carereques
 	}
 	return s.Plans.UpsertStudentPickupSchedule(ctx, &careplan.PickupSchedule{
 		StudentID: write.StudentID, Weekday: weekday, PickupTime: calendar.NormalizeWallClock(pickup),
-		Notes: &write.Reason, CreatedBy: staffID,
+		Notes: &write.Reason, CreatedBy: staffID, EnteredByTraeger: careplan.EnteredByTraeger(ctx, staffID),
 	})
 }
 

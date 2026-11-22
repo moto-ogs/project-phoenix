@@ -25,7 +25,7 @@ import (
 )
 
 type rosterDeviationResponse struct {
-	TemplateID common.ID `json:"template_id"`
+	TemplateID ident.ID `json:"template_id"`
 	// Offerings is the suggested source; several offerings combine (#5139).
 	Offerings     []templateRosterMaintenanceOfferingResponse `json:"offerings"`
 	GradeLevels   []int                                       `json:"grade_levels"`
@@ -46,9 +46,9 @@ type rosterDeviationResponse struct {
 }
 
 type rosterDeviationChildResponse struct {
-	StudentID common.ID `json:"student_id"`
-	Name      string    `json:"name"`
-	Weekdays  []int     `json:"weekdays"`
+	StudentID ident.ID `json:"student_id"`
+	Name      string   `json:"name"`
+	Weekdays  []int    `json:"weekdays"`
 }
 
 type rosterDeviationsResponse struct {
@@ -276,16 +276,16 @@ func rosterMaintenanceCombinations(combinations [][]timetable.OfferingRef) [][]t
 }
 
 type offeringPreviewStudentResponse struct {
-	StudentID common.ID `json:"student_id"`
-	Name      string    `json:"name"`
+	StudentID ident.ID `json:"student_id"`
+	Name      string   `json:"name"`
 }
 
 // offeringPreviewDroppedResponse is a child the preview drops, with the
 // weekdays the selection books it on, or the filter that leaves it out.
 type offeringPreviewDroppedResponse struct {
-	StudentID      common.ID `json:"student_id"`
-	Name           string    `json:"name"`
-	BookedWeekdays []int     `json:"booked_weekdays"`
+	StudentID      ident.ID `json:"student_id"`
+	Name           string   `json:"name"`
+	BookedWeekdays []int    `json:"booked_weekdays"`
 	// ExcludedBy is "school_class" or "grade_level" when the Klassen or
 	// Jahrgang filter leaves out a child the selection books.
 	ExcludedBy string `json:"excluded_by,omitempty"`
@@ -299,17 +299,17 @@ type offeringPreviewWeekdayResponse struct {
 }
 
 type offeringPreviewSegmentResponse struct {
-	TemplateID common.ID `json:"template_id"`
-	ValidFrom  *string   `json:"valid_from"`
-	ValidUntil *string   `json:"valid_until"`
+	TemplateID ident.ID `json:"template_id"`
+	ValidFrom  *string  `json:"valid_from"`
+	ValidUntil *string  `json:"valid_until"`
 }
 
 // offeringPreviewAlternativeResponse is an offering outside the selection
 // that would keep children the preview drops.
 type offeringPreviewAlternativeResponse struct {
-	OfferingID common.ID `json:"offering_id"`
-	Name       string    `json:"name"`
-	ChildCount int       `json:"child_count"`
+	OfferingID ident.ID `json:"offering_id"`
+	Name       string   `json:"name"`
+	ChildCount int      `json:"child_count"`
 }
 
 type offeringPreviewResponse struct {
@@ -560,17 +560,17 @@ func commaSeparatedInts(raw string) ([]int64, error) {
 }
 
 type offeringConnectionRequest struct {
-	OfferingIDs   []common.ID `json:"offering_ids"`
-	GradeLevels   []int       `json:"grade_levels"`
-	SchoolClasses []string    `json:"school_classes"`
-	EffectiveDate string      `json:"effective_date"`
+	OfferingIDs   []ident.ID `json:"offering_ids"`
+	GradeLevels   []int      `json:"grade_levels"`
+	SchoolClasses []string   `json:"school_classes"`
+	EffectiveDate string     `json:"effective_date"`
 }
 
 func (*offeringConnectionRequest) Bind(*http.Request) error { return nil }
 
 type offeringConnectionResponse struct {
-	TemplateIDs   []common.ID `json:"template_ids"`
-	EffectiveDate string      `json:"effective_date"`
+	TemplateIDs   []ident.ID `json:"template_ids"`
+	EffectiveDate string     `json:"effective_date"`
 }
 
 // connectTemplateOfferingSource handles POST

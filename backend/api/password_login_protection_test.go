@@ -219,6 +219,7 @@ func TestPasswordLoginRefusalsDoNotEnumerateAccountsAcrossPortals(t *testing.T) 
 			module, err := NewAuthTestModule(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db))
 			require.NoError(t, err)
 			root := chi.NewRouter()
+			var serve http.Handler = root
 			switch portal {
 			case "tenant":
 				resource := &accountHTTP.Resource{Sessions: module.Auth, MFAService: module.MFA}
@@ -226,7 +227,7 @@ func TestPasswordLoginRefusalsDoNotEnumerateAccountsAcrossPortals(t *testing.T) 
 			case "school":
 				_, resource, _, _ := setupSchoolRoute(t)
 				resource.AuthService, resource.MFAService = SchoolPortalAuth(module.Auth), SchoolPortalMFA(module.MFA)
-				root.Mount("/", newSchoolRouter(resource, resource.MFAService))
+				serve = newSchoolRouter(resource, resource.MFAService)
 			case "parent":
 				resource := &parentHTTP.Resource{Auth: parentPortalLogin(module.Auth)}
 				root.Mount("/", resource.RouterWithAuthRateLimiter(nil, ParentSessionChain))
@@ -240,7 +241,7 @@ func TestPasswordLoginRefusalsDoNotEnumerateAccountsAcrossPortals(t *testing.T) 
 				request := httptest.NewRequest(http.MethodPost, "/auth/login", strings.NewReader(string(body)))
 				request.Header.Set("Content-Type", "application/json")
 				response := httptest.NewRecorder()
-				root.ServeHTTP(response, request)
+				serve.ServeHTTP(response, request)
 				require.Equal(t, http.StatusUnauthorized, response.Code)
 				require.Zero(t, len(response.Result().Cookies()))
 				require.Empty(t, response.Header().Get("Retry-After"), "a lock must not have a distinct header")

@@ -50,8 +50,8 @@ type HolidayClosurePreviewRequest struct {
 	StartDate    calendar.Date                  `json:"start_date"`
 	EndDate      calendar.Date                  `json:"end_date"`
 	Reason       string                         `json:"reason"`
-	SchoolIDs    []common.ID                    `json:"school_ids"`
-	ClosingDayID common.ID                      `json:"closing_day_id"`
+	SchoolIDs    []ident.ID                     `json:"school_ids"`
+	ClosingDayID ident.ID                       `json:"closing_day_id"`
 	Previous     *capability.HolidayClosureSpan `json:"previous"`
 	Delete       bool                           `json:"delete"`
 }

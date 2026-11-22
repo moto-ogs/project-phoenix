@@ -60,6 +60,7 @@ describe("staffMonthCloseService", () => {
     expect(mockedSessionFetch).toHaveBeenNthCalledWith(
       1,
       "/api/staff/time-tracking/month-close?year=2026&month=6",
+      { method: "GET" },
     );
     expect(result).toEqual([
       {
@@ -82,9 +83,9 @@ describe("staffMonthCloseService", () => {
       statusText: "Bad Gateway",
     } as Response);
 
-    await expect(staffMonthCloseService.getStatus(2026, 6)).rejects.toThrow(
-      "Failed to fetch month close status: Bad Gateway",
-    );
+    await expect(
+      staffMonthCloseService.getStatus(2026, 6),
+    ).rejects.toBeInstanceOf(ApiError);
   });
 
   it("closes a month with backend request keys and maps the result", async () => {
@@ -150,7 +151,10 @@ describe("staffMonthCloseService", () => {
   });
 
   it("reopens one staff month with backend request keys", async () => {
-    mockedSessionFetch.mockResolvedValueOnce({ ok: true } as Response);
+    mockedSessionFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 204,
+    } as Response);
 
     await staffMonthCloseService.reopenMonth("12", {
       year: 2026,

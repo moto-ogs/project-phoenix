@@ -216,7 +216,7 @@ function SharingRecipients({
 }>) {
   if (state.family_protected)
     return <Alert type="info" message={t("protected")} />;
-  if (state.recipients.length === 0)
+  if ((state.recipients ?? []).length === 0)
     return <p className="text-sm text-gray-600">{t("noRecipients")}</p>;
   return (
     <fieldset className="space-y-2">
@@ -224,7 +224,7 @@ function SharingRecipients({
         {t("recipientLegend")}
       </legend>
       {hint ? <p className="text-sm text-gray-600">{hint}</p> : null}
-      {state.recipients.map((recipient) => (
+      {(state.recipients ?? []).map((recipient) => (
         <ChoiceTile
           key={recipient.guardian_profile_id}
           selected={selected.includes(recipient.guardian_profile_id)}

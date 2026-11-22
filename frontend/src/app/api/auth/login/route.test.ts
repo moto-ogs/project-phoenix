@@ -111,7 +111,10 @@ describe("POST /api/auth/login", () => {
     expect(requestInit.headers).not.toHaveProperty("User-Agent");
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ status: "authenticated" });
+    expect(await response.json()).toEqual({
+      status: "success",
+      data: { status: "authenticated" },
+    });
     expect(setTenantSession).toHaveBeenCalledWith("jwt-token", "refresh-token");
   });
 

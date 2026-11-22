@@ -11,14 +11,12 @@ import (
 // SignaturePorts bind the signature of a contract (#4679).
 type SignaturePorts = application.SignaturePorts
 
-// NewSigning builds the one-time mail link; it opens its own Träger
-// transaction.
+// NewSigning builds the one-time mail link; it opens its own Träger transaction.
 func NewSigning(ports SignaturePorts, now func() time.Time) carecontract.Signing {
 	return application.NewSignatures(storeOn(now), ports, application.Clock{Now: now}, nil)
 }
 
-// NewInboxSigning builds the signature in the parents portal, in the
-// Träger transaction the parents portal opens.
+// NewInboxSigning builds the signature in the parents portal, in the Träger transaction the parents portal opens.
 func NewInboxSigning(ports SignaturePorts, now func() time.Time) carecontract.InboxSigning {
 	return application.NewSignatures(storeOn(now), ports, application.Clock{Now: now}, nil)
 }

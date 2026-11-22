@@ -16,7 +16,7 @@ type activeSchools interface {
 
 // AccountOwnership decides whether one school alone holds an account
 // (#6862). A school administrator may rewrite what holds for the whole
-// account, its login address and its second factor, only then: an account
+// account, its second factor, only then: an account
 // that is also active at another school, belongs to a Träger-Büro or has
 // parents-portal access at a Träger signs in there with the same identity.
 type AccountOwnership struct {

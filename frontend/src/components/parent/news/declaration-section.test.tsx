@@ -41,6 +41,7 @@ function child(
   overrides: Partial<ParentDeclarationChild> = {},
 ): ParentDeclarationChild {
   return {
+    earlier_consent: null,
     student_id: "5",
     first_name: "Mia",
     last_name: "Muster",
@@ -551,7 +552,7 @@ describe("Einverständnis in the detail view", () => {
         body: "Alter Text: Abfahrt um 8 Uhr.",
       },
       submitted_at: "2026-09-01T08:30:00Z",
-      allowed_actions: ["revoked"] as const,
+      allowed_actions: ["revoked"],
     };
 
     render(
@@ -1060,6 +1061,7 @@ describe("a guardian who may no longer declare (#6290)", () => {
           {
             children: [
               child({
+                earlier_consent: null,
                 can_submit: false,
                 state: "no_signer",
                 my_action: "agreed",

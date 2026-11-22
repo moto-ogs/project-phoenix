@@ -1,5 +1,6 @@
 "use client";
 
+import type * as studentsContract from "~/lib/contract/students.generated";
 import { wireErrorCode } from "~/lib/api-error";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { FieldLabel } from "~/components/ui/field-label";
@@ -11,10 +12,7 @@ import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Input } from "~/components/ui/input";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
-import {
-  bulkUpsertPickupSchedules,
-  type BulkPickupScheduleInput,
-} from "~/lib/pickup-schedule-api";
+import { bulkUpsertPickupSchedules } from "~/lib/pickup-schedule-api";
 import { WEEKDAYS } from "~/lib/student-arrival-api";
 import { InsetPanel } from "~/components/ui/inset-panel";
 
@@ -44,7 +42,7 @@ export function SelectionBulkPickupModal({
     useState(false);
   const [exceptionConfirmed, setExceptionConfirmed] = useState(false);
   const exceptionHeadingRef = useRef<HTMLHeadingElement>(null);
-  const schedules = useMemo<BulkPickupScheduleInput[]>(
+  const schedules = useMemo<studentsContract.PickupScheduleInput[]>(
     () =>
       WEEKDAYS.flatMap(({ value }) => {
         const pickupTime = times[value]?.trim();

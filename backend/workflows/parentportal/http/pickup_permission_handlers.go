@@ -1,7 +1,6 @@
 package parent
 
 import (
-	"encoding/base64"
 	"errors"
 	"net/http"
 	"strconv"
@@ -189,50 +188,9 @@ func (rs *Resource) listPickupPermissionRequests(w http.ResponseWriter, r *http.
 	common.Respond(w, r, http.StatusOK, out, "Pickup permission requests retrieved")
 }
 
-// pickupProofResponse is the guardian's proof of one signed request.
-type pickupProofResponse struct {
-	RequestID   string                `json:"request_id"`
-	Kind        string                `json:"kind"`
-	ChildName   string                `json:"child_name"`
-	SchoolName  string                `json:"school_name"`
-	Procedure   string                `json:"procedure"`
-	Statement   string                `json:"statement"`
-	Summary     []pickupProofLine     `json:"summary"`
-	Status      string                `json:"status"`
-	CreatedAt   time.Time             `json:"created_at"`
-	ReviewedAt  *time.Time            `json:"reviewed_at,omitempty"`
-	Signature   *pickupProofSignature `json:"signature,omitempty"`
-	IntegrityOK bool                  `json:"integrity_ok"`
-	GeneratedAt time.Time             `json:"generated_at"`
-}
-
-type pickupProofLine struct {
-	Label string `json:"label"`
-	Old   string `json:"old,omitempty"`
-	New   string `json:"new"`
-}
-
-type pickupProofSignature struct {
-	Method       string    `json:"method"`
-	TypedName    string    `json:"typed_name,omitempty"`
-	SignerName   string    `json:"signer_name"`
-	ImageDataURL string    `json:"image_data_url"`
-	SignedAt     time.Time `json:"signed_at"`
-}
-
-// pickupRequestProof returns the guardian's proof of one signed request:
-// JSON for the portal page.
-func (rs *Resource) pickupRequestProof(w http.ResponseWriter, r *http.Request) {
-	rs.servePickupRequestProof(w, r, false)
-}
-
-// pickupRequestProofPDF returns the same proof as the moto PDF, on a path of
-// its own so the answer's form never depends on a query parameter (#2352).
+// pickupRequestProofPDF returns the guardian's proof of one signed request as
+// the moto PDF.
 func (rs *Resource) pickupRequestProofPDF(w http.ResponseWriter, r *http.Request) {
-	rs.servePickupRequestProof(w, r, true)
-}
-
-func (rs *Resource) servePickupRequestProof(w http.ResponseWriter, r *http.Request, pdf bool) {
 	accountID, ok := rs.parentAccountID(w, r)
 	if !ok {
 		return
@@ -252,31 +210,7 @@ func (rs *Resource) servePickupRequestProof(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	if pdf {
-		rs.writePickupProofPDF(w, r, proof)
-		return
-	}
-	common.Respond(w, r, http.StatusOK, toPickupProofResponse(proof, rs.Now()), "Pickup permission proof retrieved")
-}
-
-func toPickupProofResponse(proof *parentService.PickupProof, now time.Time) pickupProofResponse {
-	out := pickupProofResponse{
-		RequestID: strconv.FormatInt(proof.Request.ID, 10), Kind: proof.Request.RequestKind,
-		ChildName: proof.ChildName, SchoolName: proof.SchoolName, Procedure: pickupProcedureLabel,
-		Statement: proof.Statement, Summary: make([]pickupProofLine, 0, len(proof.Summary)),
-		Status: proof.Request.Status, CreatedAt: proof.Request.CreatedAt, ReviewedAt: proof.Request.ReviewedAt,
-		IntegrityOK: proof.Intact, GeneratedAt: now,
-	}
-	for _, line := range proof.Summary {
-		out.Summary = append(out.Summary, pickupProofLine{Label: line.Label, Old: line.Old, New: line.New})
-	}
-	if s := proof.Signature; s != nil {
-		out.Signature = &pickupProofSignature{
-			Method: s.Method, TypedName: s.TypedName, SignerName: s.SignerName, SignedAt: s.SignedAt,
-			ImageDataURL: "data:image/png;base64," + base64.StdEncoding.EncodeToString(s.PNG),
-		}
-	}
-	return out
+	rs.writePickupProofPDF(w, r, proof)
 }
 
 var pickupProofStatusLabels = map[string]string{
@@ -385,6 +319,5 @@ func (rs *Resource) mountPickupPermissionRoutes(r chi.Router) {
 	r.Post("/me/children/{studentId}/pickup-signature-statement", rs.pickupSignatureStatement)
 	r.Post("/me/children/{studentId}/guardians/{guardianProfileId}/pickup-permission-requests", rs.submitPickupPermissionRequest)
 	r.Get("/me/children/{studentId}/pickup-permission-requests", rs.listPickupPermissionRequests)
-	r.Get("/me/children/{studentId}/pickup-requests/{requestId}/proof", rs.pickupRequestProof)
 	r.Get("/me/children/{studentId}/pickup-requests/{requestId}/proof/pdf", rs.pickupRequestProofPDF)
 }

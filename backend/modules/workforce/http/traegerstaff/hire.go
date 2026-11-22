@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // HireRequest is „Person einstellen“ (#7206): the person, the contract and
@@ -36,8 +37,8 @@ type HireContract struct {
 
 // HireSite is one Einsatzort of a hire with its Soll Monday to Friday.
 type HireSite struct {
-	SchoolID       common.ID `json:"school_id"`
-	WeekdayMinutes []int     `json:"weekday_minutes"`
+	SchoolID       ident.ID `json:"school_id"`
+	WeekdayMinutes []int    `json:"weekday_minutes"`
 }
 
 func (req *HireRequest) Bind(*http.Request) error { return nil }

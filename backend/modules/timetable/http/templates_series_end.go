@@ -108,7 +108,7 @@ func (rs *Resource) prepareTemplateUpdate(
 		common.RenderError(w, r, bindErrorRenderer(err))
 		return false
 	}
-	parsed.req.CalendarPeriodID = (*common.ID)(updateCalendarPeriodID(
+	parsed.req.CalendarPeriodID = (*ident.ID)(updateCalendarPeriodID(
 		parsed.startDate, (*int64)(parsed.req.CalendarPeriodID), stored))
 	applyOfferingSourcePresence(parsed.req, stored)
 	if parsed.req.EndDate.Set && !rs.validateSeriesEnd(w, r, parsed.endDate, updateSeriesFirstDay(parsed.startDate, stored), (*int64)(parsed.req.CalendarPeriodID)) {

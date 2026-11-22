@@ -82,7 +82,7 @@ func shiftToCapability(shift *workforce.ShiftRecord) workforce.StaffShift {
 		ShiftTypeID: shift.ShiftTypeID, Notes: shift.Notes, SeriesID: shift.SeriesID, Detached: shift.Detached,
 		Cancelled: shift.Cancelled, ChangeReason: shift.ChangeReason, OriginShiftID: shift.OriginShiftID,
 		SickAbsenceID: shift.SickAbsenceID, CreatedBy: shift.CreatedBy, UpdatedBy: shift.UpdatedBy,
-		CreatedAt: shift.CreatedAt, UpdatedAt: shift.UpdatedAt,
+		PlannedByTraeger: shift.PlannedByTraeger, CreatedAt: shift.CreatedAt, UpdatedAt: shift.UpdatedAt,
 	}
 	if shift.SeriesOccurrenceDate != nil {
 		value.SeriesOccurrenceDate = shift.SeriesOccurrenceDate.String()
@@ -121,6 +121,7 @@ func applyShiftToRow(shift *workforce.ShiftRecord, value workforce.StaffShift) {
 	shift.SickAbsenceID = value.SickAbsenceID
 	shift.CreatedBy = value.CreatedBy
 	shift.UpdatedBy = value.UpdatedBy
+	shift.PlannedByTraeger = value.PlannedByTraeger
 }
 
 func seriesRowToCapability(series *planning.StaffShiftSeries) workforce.StaffShiftSeries {
@@ -134,7 +135,8 @@ func seriesRowToCapability(series *planning.StaffShiftSeries) workforce.StaffShi
 		ShiftTypeID: series.ShiftTypeID, Notes: series.Notes, CalendarPeriodID: series.CalendarPeriodID,
 		WeekPattern: series.WeekPattern, ValidFrom: series.ValidFrom.String(), SeriesRootID: series.SeriesRootID,
 		RetainedOccurrenceShiftID: series.RetainedOccurrenceShiftID, IncludeSchoolBreaks: series.IncludeSchoolBreaks,
-		CreatedBy: series.CreatedBy, UpdatedBy: series.UpdatedBy, CreatedAt: series.CreatedAt, UpdatedAt: series.UpdatedAt,
+		CreatedBy: series.CreatedBy, UpdatedBy: series.UpdatedBy, PlannedByTraeger: series.PlannedByTraeger,
+		CreatedAt: series.CreatedAt, UpdatedAt: series.UpdatedAt,
 	}
 	if series.ValidUntil != nil {
 		value.ValidUntil = series.ValidUntil.String()
@@ -177,6 +179,7 @@ func applySeriesToRow(series *planning.StaffShiftSeries, value workforce.StaffSh
 	series.IncludeSchoolBreaks = value.IncludeSchoolBreaks
 	series.CreatedBy = value.CreatedBy
 	series.UpdatedBy = value.UpdatedBy
+	series.PlannedByTraeger = value.PlannedByTraeger
 }
 
 // shiftWallClock reads only the time-of-day components; the year anchor and

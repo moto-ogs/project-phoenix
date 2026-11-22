@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -28,12 +29,16 @@ func TestOperatorPresenceHistoryWriterPostsChunksAsOperator(t *testing.T) {
 			w.WriteHeader(seedHTTPStatusNotFound)
 			return
 		}
+		var raw json.RawMessage
 		var body struct {
 			Days []presenceHistoryRouteDay `json:"days"`
 		}
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&raw))
+		require.NoError(t, json.Unmarshal(raw, &body))
 		if len(sizes) == 0 {
 			first = body.Days[0]
+			assert.Contains(t, string(raw), `"student_id":"1000"`, "identifiers travel as text")
+			assert.Contains(t, string(raw), `"room_id":"90"`)
 		}
 		sizes = append(sizes, len(body.Days))
 		auths = append(auths, r.Header.Get("Authorization"))
@@ -61,7 +66,7 @@ func TestOperatorPresenceHistoryWriterPostsChunksAsOperator(t *testing.T) {
 	assert.Equal(t, []int{500, 500, 100}, sizes, "no request exceeds the route's limit")
 	assert.Equal(t, []string{"Bearer operator-token", "Bearer operator-token", "Bearer operator-token"}, auths)
 	assert.Equal(t, date, first.Date)
-	assert.Equal(t, apiID(deviceID), first.DeviceID)
+	assert.Equal(t, ident.ID(deviceID), first.DeviceID)
 	assert.True(t, first.CheckIn.Equal(checkIn))
 	require.NotNil(t, first.Visit)
 	visit := *first.Visit

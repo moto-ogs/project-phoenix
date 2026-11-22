@@ -11,9 +11,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type { SepaMandate } from "~/lib/traeger-sepa-api";
-import { traegerRequest } from "~/lib/traeger-api";
 import { deferred } from "~/test/helpers/form-modal-pending";
-import { SepaMandateStatusCard } from "./sepa-mandate-status-card";
+import { testClockDay } from "~/test/clock";
+import {
+  SepaMandateStatusCard,
+  SepaMandateStatusView,
+  useSepaMandateStatus,
+} from "./sepa-mandate-status-card";
 import TraegerSepaMandatePage from "~/app/traeger/abrechnung/lastschrift/[contractId]/page";
 import { SepaMandatesCard } from "./sepa-mandates-card";
 
@@ -32,9 +36,10 @@ vi.mock("~/lib/traeger-sepa-api", async (importOriginal) => ({
 }));
 vi.mock("~/lib/traeger-url", () => ({ traegerPath: (path: string) => path }));
 vi.mock("~/lib/traeger-api", () => ({
-  traegerRequest: vi.fn(),
   fetchTraegerBuero: () => Promise.resolve({ members: [] }),
 }));
+const bffJson = vi.hoisted(() => vi.fn());
+vi.mock("~/lib/bff-fetch", () => ({ bffJson }));
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ contractId: "42" }),
@@ -119,6 +124,81 @@ describe("SepaMandatesCard (#4695)", () => {
       ).toBeVisible();
     },
   );
+
+  it.each([
+    ["an expired mandate", { expiresOn: testClockDay() }],
+    [
+      "a one-off mandate already collected",
+      { kind: "one_off", lastCollectedOn: testClockDay(-30) },
+    ],
+  ] as const)(
+    "does not call %s valid: the billing refuses it (#7770)",
+    async (_name, spent) => {
+      api.fetchSepaMandates.mockResolvedValue([{ ...MANDATE, ...spent }]);
+      render(
+        <TraegerResourceTestProvider>
+          <SepaMandateStatusCard contractId="42" />
+        </TraegerResourceTestProvider>,
+      );
+      expect(
+        await screen.findByText(
+          /Mit diesem Mandat kann nicht mehr abgebucht werden.*Widerrufe es/,
+        ),
+      ).toBeVisible();
+      expect(screen.getByText("Neues Mandat nötig")).toBeVisible();
+      expect(screen.queryByText("Gültig")).not.toBeInTheDocument();
+    },
+  );
+
+  it("names a used one-off mandate on the mandate page and how to replace it", async () => {
+    api.fetchSepaMandates.mockResolvedValue([
+      { ...MANDATE, kind: "one_off", lastCollectedOn: testClockDay(-30) },
+    ]);
+    renderCard();
+    expect(await screen.findByText("Verbraucht")).toBeVisible();
+    expect(
+      screen.getByText(/Das Mandat galt für eine Abbuchung/),
+    ).toBeVisible();
+    // No next debit for a mandate that authorizes none.
+    expect(screen.queryByText("Einmalige Lastschrift")).not.toBeInTheDocument();
+    expect(screen.queryByText("Gültig")).not.toBeInTheDocument();
+  });
+
+  it("promises no transfer invoice where staff choose the payment method", async () => {
+    api.fetchSepaMandates.mockResolvedValue([]);
+    function Card() {
+      return (
+        <SepaMandateStatusView
+          contractId="42"
+          read={useSepaMandateStatus("42")}
+          plainFallback
+        />
+      );
+    }
+    render(
+      <TraegerResourceTestProvider>
+        <Card />
+      </TraegerResourceTestProvider>,
+    );
+    expect(
+      await screen.findByText("Ohne gültiges Mandat wird nicht abgebucht."),
+    ).toBeVisible();
+    expect(
+      screen.queryByText(/Rechnung zum Überweisen/),
+    ).not.toBeInTheDocument();
+  });
+
+  it("calls a mandate valid until the day before it expires", async () => {
+    api.fetchSepaMandates.mockResolvedValue([
+      { ...MANDATE, expiresOn: testClockDay(1) },
+    ]);
+    render(
+      <TraegerResourceTestProvider>
+        <SepaMandateStatusCard contractId="42" />
+      </TraegerResourceTestProvider>,
+    );
+    expect(await screen.findByText("Gültig")).toBeVisible();
+  });
 
   it("reads the mandate history on every reopening", async () => {
     api.fetchSepaMandates.mockResolvedValue([MANDATE]);
@@ -213,7 +293,7 @@ describe("SepaMandatesCard (#4695)", () => {
     api.fetchSepaMandateHistory.mockImplementation(
       original.fetchSepaMandateHistory,
     );
-    vi.mocked(traegerRequest).mockResolvedValue([
+    bffJson.mockResolvedValue([
       {
         id: 1,
         action: "create",
@@ -243,8 +323,10 @@ describe("SepaMandatesCard (#4695)", () => {
     expect(
       await screen.findByText("Datei: ogs-connect.csv · Zeile 4"),
     ).toBeInTheDocument();
-    expect(traegerRequest).toHaveBeenCalledWith(
-      "/api/traeger/sepa-mandates/9/history",
+    expect(bffJson).toHaveBeenCalledWith(
+      "org",
+      "GET /traeger/sepa-mandates/{id}/history",
+      { params: { id: "9" } },
     );
     expect(screen.getAllByText(/^Datei:/)).toHaveLength(1);
   });

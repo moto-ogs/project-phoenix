@@ -1,3 +1,4 @@
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the heatmap of arrival and pickup times of the Träger portal
  * (#4714): when the children of each school arrive and are picked up, per
@@ -5,11 +6,11 @@
  * child. Backend int64 IDs leave as strings.
  */
 
-import { apiErrorFromBody, transportFetch } from "./api-error";
 import {
   downloadTraegerList,
   type TraegerListFile,
   type TraegerListFormat,
+  listExportQuery,
 } from "./traeger-list-export";
 import type * as traegerSchoolsContract from "./contract/traeger-schools.generated";
 import { requiredDay } from "./contract/required-day";
@@ -59,20 +60,6 @@ export interface ArrivalPickupPeriod {
   readonly to: string;
 }
 
-async function readJson(response: Response): Promise<unknown> {
-  const text = await response.text();
-  if (!text) return null;
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    return null;
-  }
-}
-
-function query(period: ArrivalPickupPeriod): string {
-  return new URLSearchParams({ from: period.from, to: period.to }).toString();
-}
-
 function heatmapOf(heatmap: {
   readonly weekdays: traegerSchoolsContract.ArrivalPickupWeekday[] | null;
 }): ArrivalPickupHeatmap {
@@ -93,20 +80,13 @@ function heatmapOf(heatmap: {
 export async function fetchTraegerArrivalPickupTimes(
   period: ArrivalPickupPeriod,
 ): Promise<TraegerArrivalPickupTimes> {
-  const response = await transportFetch(
-    `/api/traeger/schools/arrival-pickup-times?${query(period)}`,
-    { credentials: "include", cache: "no-store" },
+  const times = await bffJson(
+    "org",
+    "GET /traeger/schools/arrival-pickup-times",
+    {
+      query: { from: period.from, to: period.to },
+    },
   );
-  const data = await readJson(response);
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      data,
-    );
-  }
-  const times = (data as { data: traegerSchoolsContract.ArrivalPickupTimes })
-    .data;
   return {
     from: requiredDay(times.from, "arrival_pickup_times.from"),
     to: requiredDay(times.to, "arrival_pickup_times.to"),
@@ -133,8 +113,12 @@ export function downloadTraegerArrivalPickupTimes(
   schoolId?: string,
 ): Promise<TraegerListFile> {
   return downloadTraegerList(
-    "/api/traeger/schools/arrival-pickup-times/export",
-    format,
-    { from: period.from, to: period.to, school: schoolId },
+    bffFile("org", "GET /traeger/schools/arrival-pickup-times/export", {
+      query: listExportQuery(format, {
+        from: period.from,
+        to: period.to,
+        school: schoolId,
+      }),
+    }),
   );
 }

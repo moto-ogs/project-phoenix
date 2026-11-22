@@ -221,9 +221,8 @@ type ParentMessagingQuery interface {
 // GetParentMessageThread advances read state and is therefore a command.
 type ParentMessagingCommand interface {
 	GetParentMessageThread(context.Context, int64) (*ParentMessageThread, error)
-	// StartParentMessageThread and OpenParentMessageThread take the audience
-	// last; an empty audience is the team conversation.
-	StartParentMessageThread(ctx context.Context, studentID, guardianAccountID int64, body, audience string) (*ParentMessageThread, error)
+	// OpenParentMessageThread takes the audience last; an empty audience is
+	// the team conversation.
 	OpenParentMessageThread(ctx context.Context, studentID, guardianAccountID int64, audience string) (*ParentMessageThread, error)
 	PostParentMessage(context.Context, int64, string, int64) ([]ParentMessage, error)
 	// MarkParentMessageThreadUnread marks the conversation unread for the whole

@@ -1,17 +1,17 @@
 // Kalender in moto schule (#4798): Schließtage und Ferien als ganztägige
 // Einträge im Raster, das Formular eines Schultermins und seine Prüfung.
 
+import type * as schoolCalendarContract from "~/lib/contract/school-calendar.generated";
 import type {
   CalendarEvent,
   SchoolAppointmentParents,
   SchoolAppointmentRequest,
-  SchoolCalendarDays,
   SchoolCalendarResponse,
   SchoolEventType,
 } from "~/lib/personal-calendar-api";
 
 function daysAsEvents(
-  days: readonly SchoolCalendarDays[],
+  days: readonly schoolCalendarContract.SchoolDays[],
   source: "closing_day" | "holiday",
 ): CalendarEvent[] {
   return days.map((day) => ({

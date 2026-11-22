@@ -1,5 +1,5 @@
+import { bffJson } from "~/lib/bff-fetch";
 import type * as operatorStaffPersonMergesContract from "~/lib/contract/operator-staff-person-merges.generated";
-import { operatorFetch } from "./api-helpers";
 
 export type MergeSide = {
   personId: string;
@@ -31,9 +31,11 @@ function mapSide(side: operatorStaffPersonMergesContract.Side): MergeSide {
 export async function previewStaffPersonMerges(
   schoolId: string,
 ): Promise<StaffMergeCandidate[]> {
-  const candidates = await operatorFetch<
-    operatorStaffPersonMergesContract.StaffPersonMergeCandidate[]
-  >(`/api/operator/staff-person-merges/${encodeURIComponent(schoolId)}`);
+  const candidates = await bffJson(
+    "platform",
+    "GET /operator/staff-person-merges/{schoolId}",
+    { params: { schoolId } },
+  );
   return candidates.map((candidate) => ({
     keeper: mapSide(candidate.keeper),
     donor: mapSide(candidate.donor),
@@ -45,18 +47,15 @@ export async function executeStaffPersonMerges(
   candidates: StaffMergeCandidate[],
   schoolConfirmed: boolean,
 ): Promise<void> {
-  await operatorFetch(
-    `/api/operator/staff-person-merges/${encodeURIComponent(schoolId)}`,
-    {
-      method: "POST",
-      body: {
-        school_confirmed: schoolConfirmed,
-        cases: candidates.map((candidate) => ({
-          donor_id: candidate.donor.personId,
-          keeper_id: candidate.keeper.personId,
-          revision: candidate.revision,
-        })),
-      } satisfies operatorStaffPersonMergesContract.Request,
-    },
-  );
+  await bffJson("platform", "POST /operator/staff-person-merges/{schoolId}", {
+    params: { schoolId },
+    body: {
+      school_confirmed: schoolConfirmed,
+      cases: candidates.map((candidate) => ({
+        donor_id: candidate.donor.personId,
+        keeper_id: candidate.keeper.personId,
+        revision: candidate.revision,
+      })),
+    } satisfies operatorStaffPersonMergesContract.Request,
+  });
 }

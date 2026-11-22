@@ -52,23 +52,33 @@ Worked example, the same route from Go to the browser:
    may call it (`common.PortalTenant`, `PortalParent`, `PortalSchool`,
    `PortalTraeger`, `PortalCaterer`, `PortalOperator`, `PortalPublic`). `Query`
    lists every parameter the handler reads (`days` is `from`/`to` as
-   `QueryDate`); the proxy drops the others. Identifiers are `common.ID`
-   (`ident.ID` outside `http` roles), days are `calendar.Date`, closed value
+   `QueryDate`); the proxy drops the others. Identifiers are `ident.ID`
+   (`sharedkernel/ident`) in every role, days are `calendar.Date`, closed value
    sets go in `Enums`. A count is an `int`; an amount or a count kept as
    `int64` says so with `contract:"number"`. The generator refuses a bare
    `int64`, the json option `,string`, a number under an identifier's name
    (`id`, `*_id`, `*_ids`), a numeric identifier in an answer and an answer
-   whose shape depends on a query parameter.
+   whose shape depends on a query parameter. Outside the contract,
+   `TestNoNumericIdentifierRatchet` (`backend/test`) refuses a numeric
+   identifier in any struct of `api/` and of every `http` and `inbound`
+   role; only the kiosk device API (`/api/iot/*`, `/api/students/{id}/rfid`)
+   keeps numbers and tags them `contract:"number"`, because PyrePortal
+   v1.11.5 reads them. `ident.ID` still reads a JSON number in a request:
+   that is the one-release compatibility for browser tabs of the previous
+   frontend and goes after the next release (`backend/sharedkernel/ident/id.go`).
 3. **Mount.** A new contracts function gets one row in the matching
    `*ContractMounts()` list of `backend/api/route_contracts.go`, e.g.
    `{"/api/activities", timetableActivitiesHTTP.RouteContracts()}`. This
    route's function is mounted there under `/api/students` already. The
    generator refuses a contract the route catalog does not know.
-4. **Catalog and contract.** From `backend/`:
+4. **Catalog and contract.** A writing route needs its analytics
+   classification first (below); without it the golden run writes nothing.
+   Then, from `backend/`, in this order and once:
 
    ```bash
-   ../scripts/run-go-toolchain.sh go test ./api/ -run TestFullProductionRouterGolden -update-goldens
+   ../scripts/run-go-toolchain.sh go test -tags=testhooks ./api/ -run TestFullProductionRouterGolden -update-goldens
    ../scripts/run-go-toolchain.sh go run . gencontract
+   ../scripts/run-go-toolchain.sh go test -tags=testhooks ./api/ ./cmd/ -run 'TestFullProductionRouterGolden|TestTheCommittedContractIsCurrent'
    ```
 
    This writes the catalog line (`backend/api/testdata/routes/api/students.golden`),
@@ -96,8 +106,12 @@ Worked example, the same route from Go to the browser:
 
    `mapPartialAbsence` maps to the view type. A failure throws an `ApiError`
    for the shared error path; `errorMessage` keeps a client's own text.
-   The other portals and the rules for 204, 401 and a missing `data`:
-   [Browser calls](frontend-api.md#browser-calls).
+   Another portal is the first argument, with a pattern of that portal:
+   `bffJson("parent", "GET /parent/me/notifications/feed/")`,
+   `bffJson("org", …)`, `bffJson("platform", …)`; every portal has a real
+   example in [Browser calls](frontend-api.md#browser-calls), with the rules
+   for 204, 401, a missing `data` and the guards against the old helpers and
+   hand-written wire types.
    Components load through `useSWRAuth` and a key factory of `~/lib/swr`.
 7. **No route file.** The staff portal's catch-all `app/api/[...path]/route.ts`
    serves the path. Other portals call `/api/<portal>/…` for the backend's
@@ -121,18 +135,57 @@ Same steps; the contract names the body type, and the client sends it typed
 
 - Go's `Bind` validates and answers 400 with field errors; the generated
   request type has only optional fields and repeats no rule.
+- Every route whose handler reads a body names its type in `Request`, a
+  file export too. A test that reaches a handler reading a body its contract
+  does not type fails the answer check (`api/common/answer_contract_test_helpers.go`).
+  A Go type that a body and an answer both carry is generated twice: the
+  answer keeps its name, the body is `<Name>Input` with optional fields.
 - A route without an answer body registers `NoData: true`.
 - A route whose body carries a password or a code names why it must not be
   sent twice in `NoRetryAfterRenewal`.
 - A POST that commits nothing its caller asked for (a preview, a search)
   names why in `NoCommit`. When its answer does not match the contract, the
   proxy then offers a retry; every other write asks to reload.
-- Classify the writing route for analytics (`.claude/rules/usage-analytics.md`).
 - After the write, the component refreshes its SWR family with
   `useInvalidateFamily`.
 - Renaming or removing a registered field or route takes one release marked
   `Deprecated` / `DeprecatedFields`; `scripts/check-contract-compat.mjs` fails
   otherwise.
+
+### Registers a write route touches
+
+Checked on a copy of `POST /api/students/{id}/partial-absences` (#7811).
+Each register fails a named check when the entry is missing; none of them
+takes an exception for a new route.
+
+| Register | Entry for the example | Check that fails without it |
+|---|---|---|
+| Analytics classification, `backend/analytics/core_actions.go` | `{http.MethodPost, "/api/students/{id}/partial-absences"}: event("absence_reported")`; a write no one counts says `notCaptured` | `TestFullProductionRouterGolden` (“writing routes without a core-action classification”); rule: `.claude/rules/usage-analytics.md` |
+| Module rule, `backend/api/module_routes.go` | none: `{"/api/students", moduleRouteBasis}` covers it; a new path prefix needs a rule and, if borderline, a reason in `docs/reference/modulschalter.md` | `TestFullProductionRouterGolden` (“these routes belong to no module”) |
+| Facade budget, `backend/test/module_facade_width_ratchet_test.go` and `module_facade_method_set_ratchet_test.go` | none: the handler calls the existing `PartialAbsenceService.CreatePartialAbsence` | `TestModuleFacadeWidthRatchet`, `TestModuleFacadeMethodSetRatchet` |
+| Pass-through register, `backend/architecture/passthrough/` (ADR 0075, 0090) | none for a handler with branching; a new one-call method is a new entry | `scripts/backend-architecture.sh check` (“unregistered method”, “changed method evidence”) |
+| Command effects, `backend/architecture/command-effects/` | none unless a port's call path changes | `scripts/backend-architecture.sh check` (“binding changed”) |
+
+- **Facade budget.** An exported interface of a module's public package has
+  at most 12 methods; adding one to a wider facade (`ActivityService` has 34)
+  needs an ADR. Declare instead a narrow port with the one method in the
+  consuming `http` package and let the root bind the capability to it
+  (`.claude/rules/backend-conventions.md`, Rule 16).
+- **Pass-through.** The scanner (`backend/internal/passthrough/predicate.go`)
+  counts an exported method with a named receiver, at most 14 body lines and
+  exactly one call through a field of the receiver: `rs.Service.Create(…)`,
+  and also a getter `return x.ID.Int64()`. A conversion `int64(x.ID)` is no
+  call. Changing the body of a registered method updates its evidence text;
+  a new one needs a decision (ADR 0075).
+- **Command effects.** Renaming, adding or removing a function on a port's
+  call path changes its digest. Regenerate with
+  `scripts/backend-architecture.sh effects`; a binding that is a named
+  exception needs an ADR, the others a changed `reason`.
+- **Permission and module of a write into another area.** The route takes
+  the permission of the data it writes (`backend/auth/authorize/permissions`),
+  not of the page that calls it, and its module follows its path prefix. The
+  write itself goes through the owning module's capability or a workflow
+  (ADR 0067), never through the calling module's store.
 
 ## File and upload route
 
@@ -165,18 +218,46 @@ Only for what belongs to the browser and cannot live in Go:
   route file (`catalogProxyUnder`); `app/api/catalog-route-selection.test.ts`
   fails when one is missing.
 
+Such a JSON route stays typed: its `common.RouteContract` names `RouteFile`,
+one sentence why the route file serves it (`common.RouteFileSession` for a
+session step), beside its portal, `Request` and `Response` (or `NoData`,
+`File`, `Multipart`). `Plain: true` says the handler writes the data without
+the envelope (`common.RenderJSON`). The generator writes its types, decoder
+and route entry, so the route file calls `contractGet` or `contractWrite`
+(`frontend/src/lib/contract/client.server.ts`), and lists it in
+`routeFileRoutes` of `portals.generated.ts`, never in a proxy allowlist:
+the catalog proxy never hands a session step's tokens to the browser.
+Example: `SessionRouteContracts` in
+`backend/modules/identityaccess/inbound/account/route_contracts.go`.
+
 A reshaping, an ID or format check or a second backend call for the same
 screen moves into the Go handler; an aggregation of several reads is a Go
 view (#5018). A file whose only code forwards to the
 backend fails `app/api/proxy-routes.test.ts`; a file whose backend paths
-the contract registers, all of them, fails `app/api/route-backend-paths.test.ts`,
-and a file in front of a registered path fails
-`app/api/catalog-route-selection.test.ts`. A new backend route without a
-contract fails `scripts/check-contract-shrink.mjs`;
-a route the contract cannot carry (a sign-in step, a device or webhook
-endpoint) needs a new ADR that names its catalog line. A named route builds its
-handlers from its portal's route wrapper (`frontend/src/lib/route-wrapper.server.ts`,
-`frontend/src/lib/<portal>/route-wrapper.server.ts`) and reads a registered
-route with `contractGet` or `contractWrite`
-(`frontend/src/lib/contract/client.server.ts`), so the answer passes the same
-decoder as on the proxy.
+are all in a proxy allowlist fails `app/api/route-backend-paths.test.ts`, as
+does a `RouteFile` route no route file serves; a file in front of a proxied
+path fails `app/api/catalog-route-selection.test.ts`.
+
+## Routes outside the contract
+
+A catalog line no portal calls for JSON registers `Outside` on its
+`common.RouteContract` instead of types: a reason of a closed set
+(`contractmodel.OutsideReasons`) and one sentence why
+(`common.OutsideRoutes(reason, why, "METHOD /pattern", …)`):
+
+| Reason | Applies to |
+|---|---|
+| `device` | the kiosk (PyrePortal) with its device key; it reads numeric IDs |
+| `webdav`, `metrics`, `probe` | CalDAV, Prometheus, health and readiness |
+| `stream` | a server-sent event stream |
+| `public-api`, `webhook` | a machine API with its own description, a provider's callback |
+
+Each line is named on its own, no prefix
+(`backend/api/route_contracts_outside.go`); `contract.json` lists them under
+`outside`, no generated TypeScript names them. Ordinary JSON is never a
+reason: it gets a contract, through the proxy or `RouteFile`.
+`TestEveryCatalogRouteHasAContractOrAReason` (`backend/api`) fails on a
+catalog line that is not exactly one of proxied contract, `RouteFile`
+contract or `Outside`. A new `Outside` line also fails
+`scripts/check-contract-shrink.mjs` until a new ADR names its catalog line;
+a new `RouteFile` route needs none.

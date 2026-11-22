@@ -3,13 +3,14 @@ package traegerstaff
 import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 var traegerPortal = []common.PortalScope{common.PortalTraeger}
 
 // IDResponse names the record or type a write touched.
 type IDResponse struct {
-	ID common.ID `json:"id"`
+	ID ident.ID `json:"id"`
 }
 
 // PersonnelNumberRequest is the body PUT /{id}/personnel-number reads: the
