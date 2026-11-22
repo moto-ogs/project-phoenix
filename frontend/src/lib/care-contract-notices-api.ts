@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * The Träger-Büro's client of withdrawal and termination (#4682): what a
  * contract allows today, and a declaration the office received by mail or
@@ -10,22 +11,16 @@ import {
   type NoticeDeclaration,
   noticeOptionsFromBackend,
 } from "./care-contract-notices";
-import type * as traegerContractNoticesContract from "./contract/traeger-contract-notices.generated";
-import { traegerRequest } from "./traeger-api";
-
-const officePath = (id: string) =>
-  `/api/traeger/contract-notices/${encodeURIComponent(id)}`;
 
 export async function fetchContractNoticeOptions(
   id: string,
   receivedOn?: string,
 ): Promise<ContractNoticeOptions> {
   return noticeOptionsFromBackend(
-    await traegerRequest<traegerContractNoticesContract.NoticeOptions>(
-      receivedOn
-        ? `${officePath(id)}?${new URLSearchParams({ received_on: receivedOn })}`
-        : officePath(id),
-    ),
+    await bffJson("org", "GET /traeger/contract-notices/{id}", {
+      params: { id },
+      query: { received_on: receivedOn || undefined },
+    }),
   );
 }
 
@@ -38,13 +33,10 @@ export async function setContractNoticeEnd(
   endsOn: string,
 ): Promise<ContractNoticeOptions> {
   return noticeOptionsFromBackend(
-    await traegerRequest<traegerContractNoticesContract.NoticeOptions>(
-      `${officePath(id)}/ends-on`,
-      {
-        method: "PUT",
-        body: { ends_on: endsOn },
-      },
-    ),
+    await bffJson("org", "PUT /traeger/contract-notices/{id}/ends-on", {
+      params: { id },
+      body: { ends_on: endsOn },
+    }),
   );
 }
 
@@ -58,9 +50,10 @@ export async function rejectContractNoticeReason(
   expectedEndsOn: string,
 ): Promise<ContractNoticeOptions> {
   return noticeOptionsFromBackend(
-    await traegerRequest<traegerContractNoticesContract.NoticeOptions>(
-      `${officePath(id)}/reason-rejection`,
-      { method: "POST", body: { expected_ends_on: expectedEndsOn } },
+    await bffJson(
+      "org",
+      "POST /traeger/contract-notices/{id}/reason-rejection",
+      { params: { id }, body: { expected_ends_on: expectedEndsOn } },
     ),
   );
 }
@@ -74,18 +67,15 @@ export async function recordContractNotice(
   },
 ): Promise<ContractNoticeOptions> {
   return noticeOptionsFromBackend(
-    await traegerRequest<traegerContractNoticesContract.NoticeOptions>(
-      officePath(id),
-      {
-        method: "POST",
-        body: {
-          ...declarationBody(declaration),
-          received_on: declaration.receivedOn,
-          ...(declaration.kind === "widerruf"
-            ? { dispatched_on: declaration.dispatchedOn }
-            : {}),
-        },
+    await bffJson("org", "POST /traeger/contract-notices/{id}", {
+      params: { id },
+      body: {
+        ...declarationBody(declaration),
+        received_on: declaration.receivedOn,
+        ...(declaration.kind === "widerruf"
+          ? { dispatched_on: declaration.dispatchedOn }
+          : {}),
       },
-    ),
+    }),
   );
 }

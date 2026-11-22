@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Schließtage des Trägers und Feiertage seiner Schulen (#4702).
  *
@@ -12,10 +13,8 @@ import type * as traegerClosingDaysContract from "./contract/traeger-closing-day
 import type * as traegerHolidayClosuresContract from "./contract/traeger-holiday-closures.generated";
 import {
   type HolidayClosureNotice,
-  type HolidayClosureNoticeWire,
   mapHolidayClosureNotice,
 } from "./holiday-closure-notices";
-import { traegerRequest } from "./traeger-api";
 
 export interface TraegerClosingDay {
   readonly id: string;
@@ -116,8 +115,6 @@ export interface TraegerCalendar {
   readonly schools: readonly TraegerCalendarSchool[];
   readonly regions: readonly TraegerRegionHolidays[];
 }
-
-const basePath = "/api/traeger/closing-days";
 
 function mapTraegerClosingDay(
   day: traegerClosingDaysContract.ClosingDay,
@@ -250,8 +247,6 @@ function mapHolidayClosureImpact(
   };
 }
 
-const closuresPath = "/api/traeger/holiday-closures";
-
 /**
  * Welche Ferienbuchungen der geplante Schließtag betrifft (#6434). Beim
  * Ändern oder Löschen nennt `change` den gespeicherten Stand; dann zeigt die
@@ -262,18 +257,14 @@ export async function previewTraegerClosingDayHolidayBookings(
   change?: TraegerClosingDayChange,
 ): Promise<HolidayClosureImpact> {
   return mapHolidayClosureImpact(
-    await traegerRequest<traegerHolidayClosuresContract.HolidayClosureImpact>(
-      `${closuresPath}/preview`,
-      {
-        method: "POST",
-        body: {
-          ...backendInput(input),
-          // The preview of Enrollment names the schools as strings (#2342).
-          school_ids: [...input.schoolIds],
-          ...backendChange(change),
-        } satisfies traegerHolidayClosuresContract.HolidayClosurePreviewRequest,
-      },
-    ),
+    await bffJson("org", "POST /traeger/holiday-closures/preview", {
+      body: {
+        ...backendInput(input),
+        // The preview of Enrollment names the schools as strings (#2342).
+        school_ids: [...input.schoolIds],
+        ...backendChange(change),
+      } satisfies traegerHolidayClosuresContract.HolidayClosurePreviewRequest,
+    }),
   );
 }
 
@@ -283,9 +274,7 @@ export async function previewTraegerClosingDayHolidayBookings(
  * jeder beauftragte Hinweis mit seinem Versandstand.
  */
 export async function fetchPendingHolidayClosures(): Promise<PendingHolidayClosures> {
-  const data = await traegerRequest<traegerHolidayClosuresContract.Pending>(
-    `${closuresPath}/pending`,
-  );
+  const data = await bffJson("org", "GET /traeger/holiday-closures/pending/");
   return {
     ...mapHolidayClosureImpact(data),
     notices: (data.notices ?? []).map(mapTraegerNotice),
@@ -304,10 +293,10 @@ export async function notifyTraegerHolidayClosureNotice(
   token: string,
 ): Promise<HolidayClosureNotice> {
   return mapHolidayClosureNotice(
-    await traegerRequest<HolidayClosureNoticeWire>(
-      `${closuresPath}/pending/${encodeURIComponent(id)}/notify`,
-      { method: "POST", body: { revision, token } },
-    ),
+    await bffJson("org", "POST /traeger/holiday-closures/pending/{id}/notify", {
+      params: { id },
+      body: { revision, token },
+    }),
   );
 }
 
@@ -315,16 +304,15 @@ export async function notifyTraegerHolidayClosureNotice(
 export async function notifyPendingHolidayClosures(
   token: string,
 ): Promise<number> {
-  const result =
-    await traegerRequest<traegerHolidayClosuresContract.NotifiedPending>(
-      `${closuresPath}/pending/notify`,
-      {
-        method: "POST",
-        body: {
-          token,
-        } satisfies traegerHolidayClosuresContract.NotifyAllRequest,
-      },
-    );
+  const result = await bffJson(
+    "org",
+    "POST /traeger/holiday-closures/pending/notify",
+    {
+      body: {
+        token,
+      } satisfies traegerHolidayClosuresContract.NotifyAllRequest,
+    },
+  );
   return result.families;
 }
 
@@ -333,11 +321,8 @@ export async function fetchTraegerCalendar(
   from: string,
   to: string,
 ): Promise<TraegerCalendar> {
-  const query = new URLSearchParams({ from, to });
   return mapTraegerCalendar(
-    await traegerRequest<traegerClosingDaysContract.Calendar>(
-      `${basePath}?${query.toString()}`,
-    ),
+    await bffJson("org", "GET /traeger/closing-days/", { query: { from, to } }),
   );
 }
 
@@ -345,8 +330,7 @@ export async function createTraegerClosingDay(
   input: TraegerClosingDayInput,
 ): Promise<SavedTraegerClosingDay> {
   return mapSavedClosingDay(
-    await traegerRequest<traegerClosingDaysContract.ClosingDay>(basePath, {
-      method: "POST",
+    await bffJson("org", "POST /traeger/closing-days/", {
       body: backendInput(input),
     }),
   );
@@ -357,10 +341,10 @@ export async function updateTraegerClosingDay(
   input: TraegerClosingDayInput,
 ): Promise<SavedTraegerClosingDay> {
   return mapSavedClosingDay(
-    await traegerRequest<traegerClosingDaysContract.ClosingDay>(
-      `${basePath}/${encodeURIComponent(id)}`,
-      { method: "PUT", body: backendInput(input) },
-    ),
+    await bffJson("org", "PUT /traeger/closing-days/{id}", {
+      params: { id },
+      body: backendInput(input),
+    }),
   );
 }
 
@@ -373,13 +357,9 @@ export async function deleteTraegerClosingDay(
   id: string,
   holidayBookingsToken = "",
 ): Promise<number> {
-  const query = holidayBookingsToken
-    ? `?${new URLSearchParams({ holiday_bookings_token: holidayBookingsToken }).toString()}`
-    : "";
-  const result =
-    await traegerRequest<traegerClosingDaysContract.TraegerClosingDayDeleted>(
-      `${basePath}/${encodeURIComponent(id)}${query}`,
-      { method: "DELETE" },
-    );
+  const result = await bffJson("org", "DELETE /traeger/closing-days/{id}", {
+    params: { id },
+    query: { holiday_bookings_token: holidayBookingsToken || undefined },
+  });
   return result.notified_families;
 }

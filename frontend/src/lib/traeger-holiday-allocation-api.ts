@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the allocation by criteria in the Träger portal (#4700): the
  * criteria of the Träger, the allocation list of a holiday period and the
@@ -9,7 +10,6 @@
 import { knownEnum, requiredEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
 import type * as traegerHolidayPeriodsContract from "./contract/traeger-holiday-periods.generated";
-import { traegerRequest } from "./traeger-api";
 
 const SCOPES: readonly HolidayCriterionScope[] = ["family", "child"];
 const PLACEMENTS: readonly HolidayAllocationPlacement[] = [
@@ -78,14 +78,10 @@ function criteriaFromBackend(
   }));
 }
 
-const criteriaPath = "/api/traeger/holiday-periods/criteria";
-
 /** The criteria of the Träger, highest priority first. */
 export async function fetchHolidayCriteria(): Promise<HolidayCriterion[]> {
   return criteriaFromBackend(
-    await traegerRequest<traegerHolidayPeriodsContract.HolidayCriteriaCatalog>(
-      criteriaPath,
-    ),
+    await bffJson("org", "GET /traeger/holiday-periods/criteria"),
   );
 }
 
@@ -97,21 +93,17 @@ export async function saveHolidayCriteria(
   criteria: readonly HolidayCriterionInput[],
 ): Promise<HolidayCriterion[]> {
   return criteriaFromBackend(
-    await traegerRequest<traegerHolidayPeriodsContract.HolidayCriteriaCatalog>(
-      criteriaPath,
-      {
-        method: "PUT",
-        body: {
-          criteria: criteria.map((criterion) => ({
-            id: criterion.id ? criterion.id : "0",
-            name: criterion.name,
-            question: criterion.question,
-            scope: criterion.scope,
-            active: criterion.active,
-          })),
-        } satisfies traegerHolidayPeriodsContract.HolidayCriteriaRequest,
-      },
-    ),
+    await bffJson("org", "PUT /traeger/holiday-periods/criteria", {
+      body: {
+        criteria: criteria.map((criterion) => ({
+          id: criterion.id ? criterion.id : "0",
+          name: criterion.name,
+          question: criterion.question,
+          scope: criterion.scope,
+          active: criterion.active,
+        })),
+      } satisfies traegerHolidayPeriodsContract.HolidayCriteriaRequest,
+    }),
   );
 }
 
@@ -296,17 +288,14 @@ function boardFromBackend(
   };
 }
 
-const allocationPath = (periodId: string) =>
-  `/api/traeger/holiday-periods/${encodeURIComponent(periodId)}/allocation`;
-
 /** The open bookings of every week with the proposal, and the decisions. */
 export async function fetchHolidayAllocation(
   periodId: string,
 ): Promise<HolidayAllocationBoard> {
   return boardFromBackend(
-    await traegerRequest<traegerHolidayPeriodsContract.HolidayAllocationBoard>(
-      allocationPath(periodId),
-    ),
+    await bffJson("org", "GET /traeger/holiday-periods/{id}/allocation", {
+      params: { id: periodId },
+    }),
   );
 }
 
@@ -319,10 +308,11 @@ export async function decideHolidayAllocation(
   decisions: readonly HolidayAllocationDecisionInput[],
 ): Promise<HolidayAllocationBoard> {
   return boardFromBackend(
-    await traegerRequest<traegerHolidayPeriodsContract.HolidayAllocationBoard>(
-      `${allocationPath(periodId)}/decisions`,
+    await bffJson(
+      "org",
+      "POST /traeger/holiday-periods/{id}/allocation/decisions",
       {
-        method: "POST",
+        params: { id: periodId },
         body: {
           decisions: decisions.map((decision) => ({
             booking_id: decision.bookingId,

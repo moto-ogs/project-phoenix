@@ -101,7 +101,7 @@ func (rs *Resource) putStudentDepartureException(w http.ResponseWriter, r *http.
 	}
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
-		renderError(w, r, common.ErrorForbidden(err))
+		renderScheduleAuthorError(w, r, err)
 		return
 	}
 	saved, err := rs.PickupScheduleService.SetDayDeparture(r.Context(), student.ID, date, req.DepartureMode, req.Reason, staffID)

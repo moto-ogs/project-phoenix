@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Dokumente, die ein Träger mit Eltern und Schulen teilt (#4692).
  *
@@ -8,7 +9,7 @@
  */
 import { apiErrorFromBody, transportFetch } from "~/lib/api-error";
 import { filenameFromDisposition } from "~/lib/file-download";
-import { readJson, traegerRequest } from "~/lib/traeger-api";
+import { readJson } from "~/lib/traeger-api";
 import { knownEnum } from "./contract/known-enum";
 import type * as traegerDocumentsContract from "./contract/traeger-documents.generated";
 
@@ -136,10 +137,7 @@ const traegerDocumentsPath = "/api/traeger/documents";
 
 /** Die Dokumente des Trägers, das neueste zuerst. */
 export async function fetchTraegerDocuments(): Promise<TraegerDocument[]> {
-  const documents =
-    await traegerRequest<traegerDocumentsContract.TraegerDocument[]>(
-      traegerDocumentsPath,
-    );
+  const documents = await bffJson("org", "GET /traeger/documents/");
   return documents.map(mapDocument);
 }
 
@@ -147,9 +145,7 @@ export async function fetchTraegerDocuments(): Promise<TraegerDocument[]> {
 export async function fetchTraegerDocumentAudiences(): Promise<
   TraegerDocumentSchool[]
 > {
-  const schools = await traegerRequest<
-    traegerDocumentsContract.TraegerDocumentSchool[]
-  >(`${traegerDocumentsPath}/audiences`);
+  const schools = await bffJson("org", "GET /traeger/documents/audiences");
   return schools.map((school) => ({
     id: school.id,
     name: school.name,
@@ -196,18 +192,18 @@ export async function releaseTraegerDocument(
   documentId: string,
   input: TraegerDocumentReleaseInput,
 ): Promise<TraegerDocumentRelease> {
-  const release =
-    await traegerRequest<traegerDocumentsContract.TraegerDocumentRelease>(
-      `${traegerDocumentsPath}/${encodeURIComponent(documentId)}/releases`,
-      {
-        method: "POST",
-        body: {
-          audience: input.audience,
-          school_id: input.schoolId === null ? null : input.schoolId,
-          group_id: input.groupId === null ? null : input.groupId,
-        } satisfies traegerDocumentsContract.ReleaseRequest,
-      },
-    );
+  const release = await bffJson(
+    "org",
+    "POST /traeger/documents/{id}/releases",
+    {
+      params: { id: documentId },
+      body: {
+        audience: input.audience,
+        school_id: input.schoolId === null ? null : input.schoolId,
+        group_id: input.groupId === null ? null : input.groupId,
+      } satisfies traegerDocumentsContract.ReleaseRequest,
+    },
+  );
   const mapped = mapTraegerDocumentRelease(release);
   if (!mapped) {
     throw apiErrorFromBody("Release with an unknown audience", 502, release);
@@ -220,10 +216,9 @@ export async function revokeTraegerDocumentRelease(
   documentId: string,
   releaseId: string,
 ): Promise<void> {
-  await traegerRequest(
-    `${traegerDocumentsPath}/${encodeURIComponent(documentId)}/releases/${encodeURIComponent(releaseId)}`,
-    { method: "DELETE" },
-  );
+  await bffJson("org", "DELETE /traeger/documents/{id}/releases/{releaseId}", {
+    params: { id: documentId, releaseId },
+  });
 }
 
 /**
@@ -231,10 +226,9 @@ export async function revokeTraegerDocumentRelease(
  * Ablehnung; dann ist nichts geändert.
  */
 export async function deleteTraegerDocument(documentId: string): Promise<void> {
-  await traegerRequest(
-    `${traegerDocumentsPath}/${encodeURIComponent(documentId)}`,
-    { method: "DELETE" },
-  );
+  await bffJson("org", "DELETE /traeger/documents/{id}", {
+    params: { id: documentId },
+  });
 }
 
 async function downloadFrom(

@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the invoices and amounts per family in the Träger portal
  * (#4691). A family is the recipient of its documents; its ID is the ID of
@@ -17,7 +18,6 @@ import {
   type DebtorNumberFormat,
   debtorNumberFormatOf,
 } from "./debtor-number-format";
-import { traegerRequest } from "./traeger-api";
 import {
   type PaymentMethod,
   knownPaymentMethod,
@@ -218,17 +218,12 @@ function documentFromBackend(
   };
 }
 
-const FAMILIES_PATH = "/api/traeger/billing-families";
-
 /**
  * The families with an issued document or a number of their own, also the
  * families of the holiday care before their first invoice (#6692), by name.
  */
 export async function fetchBillingFamilies(): Promise<BillingFamily[]> {
-  const families =
-    await traegerRequest<traegerBillingFamiliesContract.BillingFamily[]>(
-      FAMILIES_PATH,
-    );
+  const families = await bffJson("org", "GET /traeger/billing-families/");
   return families.map(familyFromBackend);
 }
 
@@ -236,10 +231,9 @@ export async function fetchBillingFamilies(): Promise<BillingFamily[]> {
 export async function fetchBillingFamily(
   id: string,
 ): Promise<BillingFamilyDetail> {
-  const family =
-    await traegerRequest<traegerBillingFamiliesContract.BillingFamilyDetail>(
-      `${FAMILIES_PATH}/${encodeURIComponent(id)}`,
-    );
+  const family = await bffJson("org", "GET /traeger/billing-families/{id}", {
+    params: { id },
+  });
   return {
     ...familyFromBackend(family),
     documents: (family.documents ?? []).map(documentFromBackend),
@@ -254,17 +248,16 @@ export async function setFamilyDebtorNumber(
   familyEmail: string,
   debtorNumber: string,
 ): Promise<string> {
-  const saved =
-    await traegerRequest<traegerBillingFamiliesContract.FamilyDebtorNumber>(
-      `${FAMILIES_PATH}/debtor-number`,
-      {
-        method: "PUT",
-        body: {
-          family_email: familyEmail,
-          debtor_number: debtorNumber,
-        } satisfies traegerBillingFamiliesContract.FamilyDebtorNumberRequest,
-      },
-    );
+  const saved = await bffJson(
+    "org",
+    "PUT /traeger/billing-families/debtor-number",
+    {
+      body: {
+        family_email: familyEmail,
+        debtor_number: debtorNumber,
+      } satisfies traegerBillingFamiliesContract.FamilyDebtorNumberRequest,
+    },
+  );
   return saved.debtor_number;
 }
 
@@ -273,10 +266,10 @@ export async function setFamilyDebtorNumber(
  * and check it before the backend does, and whom they name (#7007).
  */
 export async function fetchDebtorNumberSettings(): Promise<DebtorNumberSettings> {
-  const raw =
-    await traegerRequest<traegerBillingFamiliesContract.debtorNumberSettings>(
-      `${FAMILIES_PATH}/debtor-number-format`,
-    );
+  const raw = await bffJson(
+    "org",
+    "GET /traeger/billing-families/debtor-number-format",
+  );
   return {
     format: debtorNumberFormatOf(raw),
     // "payer" is the backend's default scope (DebtorNumberScopePayer).
@@ -300,9 +293,10 @@ function childFromBackend(
  * and their own numbers (#7007).
  */
 export async function fetchFamilyChildren(): Promise<FamilyChildNumbers[]> {
-  const families = await traegerRequest<
-    traegerBillingFamiliesContract.FamilyChildNumbers[]
-  >(`${FAMILIES_PATH}/children`);
+  const families = await bffJson(
+    "org",
+    "GET /traeger/billing-families/children",
+  );
   return families.map((family) => ({
     familyEmail: family.family_email,
     recipientFirstName: family.recipient_first_name,
@@ -320,20 +314,19 @@ export async function setChildDebtorNumber(
   child: FamilyChild,
   debtorNumber: string,
 ): Promise<FamilyChild> {
-  const saved =
-    await traegerRequest<traegerBillingFamiliesContract.FamilyChild>(
-      `${FAMILIES_PATH}/child-debtor-number`,
-      {
-        method: "PUT",
-        body: {
-          family_email: familyEmail,
-          child_first_name: child.firstName,
-          child_last_name: child.lastName,
-          child_birth_date: child.birthDate,
-          debtor_number: debtorNumber,
-        } satisfies traegerBillingFamiliesContract.ChildDebtorNumberRequest,
-      },
-    );
+  const saved = await bffJson(
+    "org",
+    "PUT /traeger/billing-families/child-debtor-number",
+    {
+      body: {
+        family_email: familyEmail,
+        child_first_name: child.firstName,
+        child_last_name: child.lastName,
+        child_birth_date: child.birthDate,
+        debtor_number: debtorNumber,
+      } satisfies traegerBillingFamiliesContract.ChildDebtorNumberRequest,
+    },
+  );
   return childFromBackend(saved);
 }
 

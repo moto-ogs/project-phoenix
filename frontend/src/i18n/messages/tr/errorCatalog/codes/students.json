@@ -84,6 +84,7 @@
   "request_not_decided": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "request_not_past": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "request_past": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "schedule_staff_profile_required": "Bakım saatlerini yalnızca personel profili olan biri değiştirebilir. Hesabınızın bu okulda henüz bir profili yok. Lütfen okul yönetiminden bir profil oluşturmasını isteyin.",
   "sick_excused_conflict": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "staff_profile_required": "Bu saati veliler belirledi. Yalnızca personel profili olan biri değiştirebilir.",
   "staff_value_invalid": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",

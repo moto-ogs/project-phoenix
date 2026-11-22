@@ -1,3 +1,4 @@
+import { bffJson, bffPath } from "~/lib/bff-fetch";
 /**
  * Client of the Träger portal ("moto träger", #4649). Talks to the BFF
  * routes under /api/traeger, which forward to the backend with the Träger
@@ -10,12 +11,10 @@ import { ApiError, apiErrorFromBody, transportFetch } from "./api-error";
 import { knownEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
 import type * as sharedContract from "./contract/shared.generated";
-import type * as traegerAccessLogContract from "./contract/traeger-access-log.generated";
 import type * as traegerAccountsContract from "./contract/traeger-accounts.generated";
 import type * as traegerHolidayPeriodsContract from "./contract/traeger-holiday-periods.generated";
 import type * as traegerInvitationsContract from "./contract/traeger-invitations.generated";
 import type * as traegerMasterDataContract from "./contract/traeger-master-data.generated";
-import type * as traegerOrganizationContract from "./contract/traeger-organization.generated";
 import type * as traegerProfileContract from "./contract/traeger-profile.generated";
 import type * as traegerSchoolSessionsContract from "./contract/traeger-school-sessions.generated";
 import type * as traegerSchoolsContract from "./contract/traeger-schools.generated";
@@ -317,10 +316,7 @@ export interface TraegerCodeStep {
  * accepts no remembered device opens once the code is redeemed.
  */
 export async function startTraegerCodeStep(): Promise<TraegerCodeStep> {
-  const data = await traegerRequest<{
-    challenge_token?: string;
-    masked_email?: string;
-  } | null>("/api/traeger/auth/mfa/step-up", { method: "POST", body: {} });
+  const data = await bffJson("org", "POST /traeger/auth/mfa/step-up");
   if (!data?.challenge_token) {
     throw new ApiError("Code step without challenge", 502);
   }
@@ -636,10 +632,7 @@ function mapMember(
 
 /** The people and the open invitations of the Träger-Büro. */
 export async function fetchTraegerBuero(): Promise<TraegerBuero> {
-  const data =
-    await traegerRequest<traegerAccountsContract.TraegerAccountsResponse>(
-      "/api/traeger/accounts",
-    );
+  const data = await bffJson("org", "GET /traeger/accounts/");
   return {
     members: (data.members ?? []).map(mapMember),
     invitations: (data.invitations ?? []).map(mapInvitation),
@@ -678,11 +671,9 @@ export interface TraegerAccountHistoryPage {
 export async function fetchTraegerAccountHistory(
   before?: string,
 ): Promise<TraegerAccountHistoryPage> {
-  const query = before ? `?${new URLSearchParams({ before }).toString()}` : "";
-  const data =
-    await traegerRequest<traegerAccountsContract.TraegerHistoryResponse>(
-      `/api/traeger/accounts/history${query}`,
-    );
+  const data = await bffJson("org", "GET /traeger/accounts/history", {
+    query: { before: before || undefined },
+  });
   return {
     entries: (data.entries ?? []).map((entry) => ({
       id: entry.id,
@@ -703,27 +694,25 @@ export async function inviteTraegerAccount(input: {
   readonly email: string;
   readonly roles: readonly TraegerRole[];
 }): Promise<void> {
-  await traegerRequest("/api/traeger/accounts/invitations", {
-    method: "POST",
-    body: { email: input.email, roles: input.roles },
+  await bffJson("org", "POST /traeger/accounts/invitations", {
+    body: { email: input.email, roles: [...input.roles] },
   });
 }
 
 export async function revokeTraegerInvitation(id: string): Promise<void> {
-  await traegerRequest(
-    `/api/traeger/accounts/invitations/${encodeURIComponent(id)}`,
-    { method: "DELETE" },
-  );
+  await bffJson("org", "DELETE /traeger/accounts/invitations/{invitationId}", {
+    params: { invitationId: id },
+  });
 }
 
 export async function changeTraegerRoles(
   accountId: string,
   roles: readonly TraegerRole[],
 ): Promise<void> {
-  await traegerRequest(
-    `/api/traeger/accounts/${encodeURIComponent(accountId)}/roles`,
-    { method: "PUT", body: { roles } },
-  );
+  await bffJson("org", "PUT /traeger/accounts/{accountId}/roles", {
+    params: { accountId },
+    body: { roles: [...roles] },
+  });
 }
 
 /**
@@ -735,20 +724,17 @@ export async function changeTraegerMemberName(
   name: string,
 ): Promise<TraegerMember> {
   return mapMember(
-    await traegerRequest<traegerAccountsContract.TraegerMemberResponse>(
-      `/api/traeger/accounts/${encodeURIComponent(accountId)}/name`,
-      { method: "PUT", body: { name } },
-    ),
+    await bffJson("org", "PUT /traeger/accounts/{accountId}/name", {
+      params: { accountId },
+      body: { name },
+    }),
   );
 }
 
 export async function removeTraegerMember(accountId: string): Promise<void> {
-  await traegerRequest(
-    `/api/traeger/accounts/${encodeURIComponent(accountId)}`,
-    {
-      method: "DELETE",
-    },
-  );
+  await bffJson("org", "DELETE /traeger/accounts/{accountId}", {
+    params: { accountId },
+  });
 }
 
 /** Reads a redeemable invitation behind the link token. */
@@ -812,11 +798,7 @@ function mapProfile(
 
 /** The own account of the signed-in person (#4693); needs no extra right. */
 export async function fetchTraegerProfile(): Promise<TraegerProfile> {
-  return mapProfile(
-    await traegerRequest<traegerProfileContract.TraegerProfileResponse>(
-      "/api/traeger/profile",
-    ),
-  );
+  return mapProfile(await bffJson("org", "GET /traeger/profile/"));
 }
 
 /** Changes the own name and returns the profile as saved (trimmed). */
@@ -824,33 +806,22 @@ export async function changeTraegerProfileName(
   name: string,
 ): Promise<TraegerProfile> {
   return mapProfile(
-    await traegerRequest<traegerProfileContract.TraegerProfileResponse>(
-      "/api/traeger/profile/name",
-      {
-        method: "PUT",
-        body: { name },
-      },
-    ),
+    await bffJson("org", "PUT /traeger/profile/name", { body: { name } }),
   );
 }
 
-const holidayPeriodsPath = "/api/traeger/holiday-periods";
-
 /** Every holiday period of the signed-in person's Träger, newest first. */
 export async function fetchHolidayPeriods(): Promise<HolidayPeriod[]> {
-  const periods =
-    (await traegerRequest<traegerHolidayPeriodsContract.HolidayPeriod[]>(
-      holidayPeriodsPath,
-    )) ?? [];
+  const periods = (await bffJson("org", "GET /traeger/holiday-periods/")) ?? [];
   return periods.map(holidayPeriodFromBackend);
 }
 
 /** One holiday period of the Träger. */
 export async function fetchHolidayPeriod(id: string): Promise<HolidayPeriod> {
   return holidayPeriodFromBackend(
-    await traegerRequest<traegerHolidayPeriodsContract.HolidayPeriod>(
-      `${holidayPeriodsPath}/${encodeURIComponent(id)}`,
-    ),
+    await bffJson("org", "GET /traeger/holiday-periods/{id}", {
+      params: { id },
+    }),
   );
 }
 
@@ -859,13 +830,9 @@ export async function createHolidayPeriod(
   input: HolidayPeriodInput,
 ): Promise<HolidayPeriod> {
   return holidayPeriodFromBackend(
-    await traegerRequest<traegerHolidayPeriodsContract.HolidayPeriod>(
-      holidayPeriodsPath,
-      {
-        method: "POST",
-        body: holidayPeriodToBackend(input),
-      },
-    ),
+    await bffJson("org", "POST /traeger/holiday-periods/", {
+      body: holidayPeriodToBackend(input),
+    }),
   );
 }
 
@@ -875,20 +842,19 @@ export async function updateHolidayPeriod(
   input: HolidayPeriodInput,
 ): Promise<HolidayPeriod> {
   return holidayPeriodFromBackend(
-    await traegerRequest<traegerHolidayPeriodsContract.HolidayPeriod>(
-      `${holidayPeriodsPath}/${encodeURIComponent(id)}`,
-      { method: "PUT", body: holidayPeriodToBackend(input) },
-    ),
+    await bffJson("org", "PUT /traeger/holiday-periods/{id}", {
+      params: { id },
+      body: holidayPeriodToBackend(input),
+    }),
   );
 }
 
 /** Publishes a complete period for registration. */
 export async function publishHolidayPeriod(id: string): Promise<HolidayPeriod> {
   return holidayPeriodFromBackend(
-    await traegerRequest<traegerHolidayPeriodsContract.HolidayPeriod>(
-      `${holidayPeriodsPath}/${encodeURIComponent(id)}/publish`,
-      { method: "POST" },
-    ),
+    await bffJson("org", "POST /traeger/holiday-periods/{id}/publish", {
+      params: { id },
+    }),
   );
 }
 
@@ -942,14 +908,16 @@ function traegerAccessLogQuery(
   filter: TraegerAccessLogFilter,
   page?: number,
   asOf?: string,
-): string {
-  const params = new URLSearchParams({ from: filter.from, to: filter.to });
-  if (filter.schoolId) params.set("school_id", filter.schoolId);
-  if (filter.accountId) params.set("account_id", filter.accountId);
-  if (filter.kind) params.set("kind", filter.kind);
-  if (page !== undefined) params.set("page", String(page));
-  if (asOf) params.set("as_of", asOf);
-  return params.toString();
+) {
+  return {
+    from: filter.from,
+    to: filter.to,
+    school_id: filter.schoolId || undefined,
+    account_id: filter.accountId || undefined,
+    kind: filter.kind || undefined,
+    page,
+    as_of: asOf || undefined,
+  };
 }
 
 /**
@@ -962,9 +930,9 @@ export async function fetchTraegerAccessLog(
   page: number,
   asOf?: string,
 ): Promise<TraegerAccessLogPage> {
-  const data = await traegerRequest<traegerAccessLogContract.AccessLogPage>(
-    `/api/traeger/access-log?${traegerAccessLogQuery(filter, page, asOf)}`,
-  );
+  const data = await bffJson("org", "GET /traeger/access-log/", {
+    query: traegerAccessLogQuery(filter, page, asOf),
+  });
   return {
     entries: (data.entries ?? []).map((entry) => ({
       id: entry.id,
@@ -986,11 +954,10 @@ export async function fetchTraegerAccessLogPeople(
   from: string,
   to: string,
 ): Promise<TraegerAccessLogPerson[]> {
-  const query = new URLSearchParams({ from, to }).toString();
-  const data = await traegerRequest<traegerAccessLogContract.AccessLogPerson[]>(
-    `/api/traeger/access-log/people?${query}`,
-  );
-  return data.map((person) => ({
+  const data = await bffJson("org", "GET /traeger/access-log/people", {
+    query: { from, to },
+  });
+  return (data ?? []).map((person) => ({
     accountId: person.account_id,
     name: person.name,
   }));
@@ -1001,10 +968,16 @@ export async function downloadTraegerAccessLog(
   filter: TraegerAccessLogFilter,
   format: TraegerListFormat,
 ): Promise<{ readonly blob: Blob; readonly filename: string | null }> {
-  const query = new URLSearchParams(traegerAccessLogQuery(filter));
-  query.set("format", format);
   const response = await transportFetch(
-    `/api/traeger/access-log/export?${query.toString()}`,
+    bffPath(
+      "org",
+      "/traeger/access-log/export",
+      {},
+      {
+        ...traegerAccessLogQuery(filter),
+        format,
+      },
+    ),
     { credentials: "include", cache: "no-store" },
   );
   if (!response.ok) {
@@ -1022,15 +995,13 @@ export async function downloadTraegerAccessLog(
 
 // --- Träger-Einstellungen (ADR 0086, #4652) ---
 
-const traegerSettingValuePath = (key: string) =>
-  `/api/traeger/settings/values/${encodeURIComponent(key)}`;
-
 /**
  * The settings the Träger sets for all its schools: only settings with the
  * levels `beide` or `traeger`, each with the Träger value or the registry
  * default.
  */
 export async function fetchTraegerSettingsSchema(): Promise<SettingsSchema> {
+  // Moves to toSettingsSchema with bffJson once #7850 is merged.
   const schema = await traegerRequest<SettingsSchema | null>(
     "/api/traeger/settings/schema",
   );
@@ -1042,8 +1013,8 @@ export async function saveTraegerSettingValue(
   key: string,
   value: unknown,
 ): Promise<void> {
-  await traegerRequest(traegerSettingValuePath(key), {
-    method: "PUT",
+  await bffJson("org", "PUT /traeger/settings/values/{key}", {
+    params: { key },
     body: { value },
   });
 }
@@ -1053,7 +1024,9 @@ export async function saveTraegerSettingValue(
  * or keep their own value. Throws an ApiError on failure.
  */
 export async function clearTraegerSettingValue(key: string): Promise<void> {
-  await traegerRequest(traegerSettingValuePath(key), { method: "DELETE" });
+  await bffJson("org", "DELETE /traeger/settings/values/{key}", {
+    params: { key },
+  });
 }
 
 /** The Träger of the session, as the portal frame names and marks it. */
@@ -1068,10 +1041,7 @@ export interface TraegerOrganization {
 
 /** The Träger of the signed-in person's session. */
 export async function fetchTraegerOrganization(): Promise<TraegerOrganization> {
-  const organization =
-    await traegerRequest<traegerOrganizationContract.TraegerFrame | null>(
-      "/api/traeger/organization",
-    );
+  const organization = await bffJson("org", "GET /traeger/organization/");
   if (!organization) {
     throw apiErrorFromBody("Träger response without data", 502, organization);
   }
@@ -1174,8 +1144,6 @@ function backendBankAccount(
 }
 
 const masterDataPath = "/api/traeger/master-data";
-const bankAccountPath = (id: string) =>
-  `${masterDataPath}/bank-accounts/${encodeURIComponent(id)}`;
 
 /** The logo as an image source; the version reloads it after a change. */
 export function traegerLogoSrc(logo: TraegerLogo): string {
@@ -1184,10 +1152,7 @@ export function traegerLogoSrc(logo: TraegerLogo): string {
 
 /** Reads the master data of the Träger. The read is logged. */
 export async function fetchTraegerMasterData(): Promise<TraegerMasterData> {
-  const data =
-    await traegerRequest<traegerMasterDataContract.TraegerProfile>(
-      masterDataPath,
-    );
+  const data = await bffJson("org", "GET /traeger/master-data/");
   return {
     contact: { ...data.contact },
     withdrawal: { ...data.withdrawal },
@@ -1203,10 +1168,9 @@ export async function fetchTraegerMasterData(): Promise<TraegerMasterData> {
 export async function saveTraegerContact(
   contact: TraegerContact,
 ): Promise<TraegerContact> {
-  const saved = await traegerRequest<Partial<TraegerContact> | null>(
-    `${masterDataPath}/contact`,
-    { method: "PUT", body: contact },
-  );
+  const saved = await bffJson("org", "PUT /traeger/master-data/contact", {
+    body: contact,
+  });
   return {
     name: saved?.name ?? contact.name,
     phone: saved?.phone ?? contact.phone,
@@ -1221,9 +1185,10 @@ export async function saveTraegerContact(
 export async function saveTraegerWithdrawalContact(
   contact: TraegerWithdrawalContact,
 ): Promise<TraegerWithdrawalContact> {
-  const saved = await traegerRequest<Partial<TraegerWithdrawalContact> | null>(
-    `${masterDataPath}/withdrawal-contact`,
-    { method: "PUT", body: contact },
+  const saved = await bffJson(
+    "org",
+    "PUT /traeger/master-data/withdrawal-contact",
+    { body: contact },
   );
   return {
     phone: saved?.phone ?? contact.phone,
@@ -1259,7 +1224,7 @@ export async function uploadTraegerLogo(file: File): Promise<TraegerLogo> {
 
 /** Removes the logo. Throws an ApiError on failure. */
 export async function removeTraegerLogo(): Promise<void> {
-  await traegerRequest(`${masterDataPath}/logo`, { method: "DELETE" });
+  await bffJson("org", "DELETE /traeger/master-data/logo");
 }
 
 /** Adds a bank account. Throws an ApiError on failure. */
@@ -1267,13 +1232,9 @@ export async function createTraegerBankAccount(
   input: TraegerBankAccountInput,
 ): Promise<TraegerBankAccount> {
   return mapTraegerBankAccount(
-    await traegerRequest<traegerMasterDataContract.TraegerBankAccount>(
-      `${masterDataPath}/bank-accounts`,
-      {
-        method: "POST",
-        body: backendBankAccount(input),
-      },
-    ),
+    await bffJson("org", "POST /traeger/master-data/bank-accounts", {
+      body: backendBankAccount(input),
+    }),
   );
 }
 
@@ -1283,17 +1244,16 @@ export async function updateTraegerBankAccount(
   input: TraegerBankAccountInput,
 ): Promise<TraegerBankAccount> {
   return mapTraegerBankAccount(
-    await traegerRequest<traegerMasterDataContract.TraegerBankAccount>(
-      bankAccountPath(id),
-      {
-        method: "PUT",
-        body: backendBankAccount(input),
-      },
-    ),
+    await bffJson("org", "PUT /traeger/master-data/bank-accounts/{id}", {
+      params: { id },
+      body: backendBankAccount(input),
+    }),
   );
 }
 
 /** Deletes a bank account. Throws an ApiError on failure. */
 export async function deleteTraegerBankAccount(id: string): Promise<void> {
-  await traegerRequest(bankAccountPath(id), { method: "DELETE" });
+  await bffJson("org", "DELETE /traeger/master-data/bank-accounts/{id}", {
+    params: { id },
+  });
 }

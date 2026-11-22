@@ -18,7 +18,7 @@ func (n *StudentArrivalNote) Validate() error {
 	if len(n.Content) > scheduleNotesMaxLength {
 		return errors.New("content cannot exceed 500 characters")
 	}
-	if n.CreatedBy <= 0 {
+	if n.CreatedBy <= 0 && !n.EnteredByTraeger {
 		return errors.New(errMsgArrivalCreatedByRequired)
 	}
 	return nil

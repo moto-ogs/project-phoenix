@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the Jahresbescheide of the monthly care (#6219, ADR 0182): a
  * run assesses the months of a year from its first month to December in one
@@ -10,15 +11,12 @@
 import { knownEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
 import type * as traegerCareNoticeRunsContract from "./contract/traeger-care-notice-runs.generated";
-import { traegerRequest } from "./traeger-api";
 
 // Go does not register these sets; the contract types them as string. A value
 // this build does not know stays undefined instead of passing as a known one.
 const RUN_STATUS_VALUES = ["calculated", "released", "discarded"] as const;
 const NOTICE_KIND_VALUES = ["initial", "change"] as const;
 const LINE_KIND_VALUES = ["module", "reduction", "cost_share"] as const;
-
-const RUNS_PATH = "/api/traeger/care-notice-runs";
 
 export type CareNoticeRunStatus = (typeof RUN_STATUS_VALUES)[number];
 export type CareNoticeKind = (typeof NOTICE_KIND_VALUES)[number];
@@ -271,10 +269,7 @@ function detailFromBackend(
 }
 
 export async function fetchCareNoticeRuns(): Promise<CareNoticeRunList> {
-  const body =
-    await traegerRequest<traegerCareNoticeRunsContract.CareNoticeRunList>(
-      RUNS_PATH,
-    );
+  const body = await bffJson("org", "GET /traeger/care-notice-runs/");
   return {
     runs: (body.runs ?? []).map(runFromBackend),
     suggestedYear: body.suggested_year,
@@ -299,18 +294,14 @@ export async function startCareNoticeRun(
   input: CareNoticeRunStartInput,
 ): Promise<CareNoticeRun> {
   return runFromBackend(
-    await traegerRequest<traegerCareNoticeRunsContract.CareNoticeRun>(
-      RUNS_PATH,
-      {
-        method: "POST",
-        body: {
-          year: input.year,
-          from_month: input.fromMonth,
-          school_ids: [...input.schoolIds],
-          notice_date: input.noticeDate,
-        } satisfies traegerCareNoticeRunsContract.CareNoticeRunRequest,
-      },
-    ),
+    await bffJson("org", "POST /traeger/care-notice-runs/", {
+      body: {
+        year: input.year,
+        from_month: input.fromMonth,
+        school_ids: [...input.schoolIds],
+        notice_date: input.noticeDate,
+      } satisfies traegerCareNoticeRunsContract.CareNoticeRunRequest,
+    }),
   );
 }
 
@@ -318,9 +309,9 @@ export async function fetchCareNoticeRun(
   runId: string,
 ): Promise<CareNoticeRunDetail> {
   return detailFromBackend(
-    await traegerRequest<traegerCareNoticeRunsContract.CareNoticeRunDetail>(
-      `${RUNS_PATH}/${encodeURIComponent(runId)}`,
-    ),
+    await bffJson("org", "GET /traeger/care-notice-runs/{id}", {
+      params: { id: runId },
+    }),
   );
 }
 
@@ -332,17 +323,14 @@ export async function releaseCareNoticeRun(
   >,
 ): Promise<CareNoticeRunDetail> {
   return detailFromBackend(
-    await traegerRequest<traegerCareNoticeRunsContract.CareNoticeRunDetail>(
-      `${RUNS_PATH}/${encodeURIComponent(run.id)}/release`,
-      {
-        method: "POST",
-        body: {
-          document_count: run.previewCount,
-          total_cents: run.previewCents,
-          fingerprint: run.fingerprint,
-        },
+    await bffJson("org", "POST /traeger/care-notice-runs/{id}/release", {
+      params: { id: run.id },
+      body: {
+        document_count: run.previewCount,
+        total_cents: run.previewCents,
+        fingerprint: run.fingerprint,
       },
-    ),
+    }),
   );
 }
 
@@ -354,10 +342,9 @@ export async function discardCareNoticeRun(
   runId: string,
 ): Promise<CareNoticeRunDetail> {
   return detailFromBackend(
-    await traegerRequest<traegerCareNoticeRunsContract.CareNoticeRunDetail>(
-      `${RUNS_PATH}/${encodeURIComponent(runId)}/discard`,
-      { method: "POST" },
-    ),
+    await bffJson("org", "POST /traeger/care-notice-runs/{id}/discard", {
+      params: { id: runId },
+    }),
   );
 }
 
@@ -365,10 +352,11 @@ export async function fetchCareNoticeLetter(
   runId: string,
   contractId: string,
 ): Promise<CareNoticeLetter> {
-  const letter =
-    await traegerRequest<traegerCareNoticeRunsContract.CareNoticeLetter>(
-      `${RUNS_PATH}/${encodeURIComponent(runId)}/notices/${encodeURIComponent(contractId)}/letter`,
-    );
+  const letter = await bffJson(
+    "org",
+    "GET /traeger/care-notice-runs/{id}/notices/{contractID}/letter",
+    { params: { id: runId, contractID: contractId } },
+  );
   return {
     notice: noticeFromBackend(letter.notice),
     senderText: letter.sender_text,

@@ -193,7 +193,7 @@ func (rs *Resource) bindPartialAbsenceInput(w http.ResponseWriter, r *http.Reque
 	}
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
-		renderError(w, r, common.ErrorForbidden(err))
+		renderScheduleAuthorError(w, r, err)
 		return careplan.PartialAbsenceInput{}, false
 	}
 	date, _ := calendar.ParseDate(req.Date)
@@ -204,6 +204,7 @@ func (rs *Resource) bindPartialAbsenceInput(w http.ResponseWriter, r *http.Reque
 		FromTime:  fromTime,
 		Reason:    req.Reason,
 		StaffID:   staffID,
+		ByTraeger: careplan.EnteredByTraeger(r.Context(), staffID),
 	}, true
 }
 

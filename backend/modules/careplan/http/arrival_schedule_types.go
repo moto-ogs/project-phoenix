@@ -1,6 +1,7 @@
 package careplanhttp
 
 import (
+	"context"
 	errors "errors"
 	fmt "fmt"
 	http "net/http"
@@ -132,16 +133,17 @@ func validateArrivalScheduleItems(items []ArrivalScheduleRequestItem) error {
 // time format is already guaranteed valid at that point. An empty time parses
 // to the zero value on purpose — that is the care day whose time comes from the
 // class timetable (#2414).
-func toArrivalScheduleModels(items []ArrivalScheduleRequestItem, studentID, staffID int64) []*careplan.ArrivalSchedule {
+func toArrivalScheduleModels(ctx context.Context, items []ArrivalScheduleRequestItem, studentID, staffID int64) []*careplan.ArrivalSchedule {
 	schedules := make([]*careplan.ArrivalSchedule, 0, len(items))
 	for _, s := range items {
 		arrivalTime, _ := parseTimeOnly(s.ExpectedArrival)
 		schedules = append(schedules, &careplan.ArrivalSchedule{
-			StudentID:       studentID,
-			Weekday:         s.Weekday,
-			ExpectedArrival: arrivalTime,
-			Notes:           s.Notes,
-			CreatedBy:       staffID,
+			StudentID:        studentID,
+			Weekday:          s.Weekday,
+			ExpectedArrival:  arrivalTime,
+			Notes:            s.Notes,
+			CreatedBy:        staffID,
+			EnteredByTraeger: careplan.EnteredByTraeger(ctx, staffID),
 		})
 	}
 	return schedules

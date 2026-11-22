@@ -34,10 +34,10 @@ const errMsgGuardianAuthorRequired = "created_by_guardian is required for guardi
 // pickup and arrival exception models: a staff row needs created_by, a guardian
 // row needs created_by_guardian. An empty source is treated as staff to match
 // the DB default applied before insert.
-func validateExceptionAuthor(source string, createdBy int64, createdByGuardian *int64) error {
+func validateExceptionAuthor(source string, createdBy int64, enteredByTraeger bool, createdByGuardian *int64) error {
 	switch source {
 	case "", ExceptionSourceStaff:
-		if createdBy <= 0 {
+		if createdBy <= 0 && !enteredByTraeger {
 			return errors.New(errMsgCreatedByRequired)
 		}
 	case ExceptionSourceGuardian:
@@ -96,6 +96,9 @@ type StudentPickupSchedule struct {
 	PickupTime time.Time `bun:"pickup_time,notnull" json:"pickup_time"`
 	Notes      *string   `bun:"notes" json:"notes,omitempty"`
 	CreatedBy  int64     `bun:"created_by,nullzero" json:"created_by"`
+	// EnteredByTraeger marks a row a person of the Träger-Büro entered
+	// (#7766); CreatedBy is then 0.
+	EnteredByTraeger bool `bun:"entered_by_traeger,notnull,default:false" json:"entered_by_traeger,omitempty"`
 	// Source marks a stored staff override (default) or a legacy offering
 	// materialization. Read-time offering projections are synthetic and are
 	// never inserted into this table.
@@ -117,7 +120,7 @@ func (s *StudentPickupSchedule) Validate() error {
 	if s.PickupTime.IsZero() {
 		return errors.New("pickup_time is required")
 	}
-	if s.CreatedBy <= 0 && s.Source != PickupScheduleSourceCareOffering {
+	if s.CreatedBy <= 0 && !s.EnteredByTraeger && s.Source != PickupScheduleSourceCareOffering {
 		return errors.New(errMsgCreatedByRequired)
 	}
 	if s.Notes != nil && len(*s.Notes) > scheduleNotesMaxLength {
@@ -158,18 +161,23 @@ type StudentPickupException struct {
 	// ExcusedFrom turns this existing day-specific pickup override into the
 	// source for a partial excusal. PickupTime normally matches it, but may
 	// differ after an explicit pickup-time decision.
-	ExcusedFrom           *time.Time `bun:"excused_from" json:"excused_from,omitempty"`
-	ExcusedReason         *string    `bun:"excused_reason" json:"excused_reason,omitempty"`
-	ExcusedCreatedBy      *int64     `bun:"excused_created_by" json:"excused_created_by,omitempty"`
-	ExcusedOwnsPickupTime bool       `bun:"excused_owns_pickup_time,notnull,default:false" json:"excused_owns_pickup_time"`
+	ExcusedFrom      *time.Time `bun:"excused_from" json:"excused_from,omitempty"`
+	ExcusedReason    *string    `bun:"excused_reason" json:"excused_reason,omitempty"`
+	ExcusedCreatedBy *int64     `bun:"excused_created_by" json:"excused_created_by,omitempty"`
+	// ExcusedByTraeger marks a partial absence the Träger-Büro entered (#7766).
+	ExcusedByTraeger      bool `bun:"excused_by_traeger,notnull,default:false" json:"excused_by_traeger,omitempty"`
+	ExcusedOwnsPickupTime bool `bun:"excused_owns_pickup_time,notnull,default:false" json:"excused_owns_pickup_time"`
 	// ExcusedAuto marks a partial excusal that was derived automatically from a
 	// pulled-forward pickup time (#2360). Auto rows always mirror PickupTime,
 	// carry no staff author, and are re-synced (or released) whenever the
 	// pickup exception changes. Manual partial absences keep ExcusedAuto false
 	// and are never touched by the sync.
-	ExcusedAuto       bool   `bun:"excused_auto,notnull,default:false" json:"excused_auto"`
-	Source            string `bun:"source,nullzero,notnull,default:'staff'" json:"source"`
-	CreatedBy         int64  `bun:"created_by,nullzero" json:"created_by,omitempty"`
+	ExcusedAuto bool   `bun:"excused_auto,notnull,default:false" json:"excused_auto"`
+	Source      string `bun:"source,nullzero,notnull,default:'staff'" json:"source"`
+	CreatedBy   int64  `bun:"created_by,nullzero" json:"created_by,omitempty"`
+	// EnteredByTraeger marks a row a person of the Träger-Büro entered
+	// (#7766); CreatedBy is then 0.
+	EnteredByTraeger  bool   `bun:"entered_by_traeger,notnull,default:false" json:"entered_by_traeger,omitempty"`
 	CreatedByGuardian *int64 `bun:"created_by_guardian,nullzero" json:"created_by_guardian,omitempty"`
 }
 
@@ -212,7 +220,7 @@ func (e *StudentPickupException) Validate() error {
 	if err := e.validatePartialAbsence(); err != nil {
 		return err
 	}
-	if err := validateExceptionAuthor(e.Source, e.CreatedBy, e.CreatedByGuardian); err != nil {
+	if err := validateExceptionAuthor(e.Source, e.CreatedBy, e.EnteredByTraeger, e.CreatedByGuardian); err != nil {
 		return err
 	}
 	return nil
@@ -240,7 +248,10 @@ type StudentPickupNote struct {
 	NoteDate  calendar.Date `bun:"note_date,nullzero" json:"note_date,omitempty"`
 	Weekday   int           `bun:"weekday,nullzero" json:"weekday,omitempty"`
 	Content   string        `bun:"content,notnull" json:"content"`
-	CreatedBy int64         `bun:"created_by,notnull" json:"created_by"`
+	CreatedBy int64         `bun:"created_by,nullzero" json:"created_by"`
+	// EnteredByTraeger marks a row a person of the Träger-Büro entered
+	// (#7766); CreatedBy is then 0.
+	EnteredByTraeger bool `bun:"entered_by_traeger,notnull,default:false" json:"entered_by_traeger,omitempty"`
 }
 
 // ports.StudentPickupNoteRecords defines operations for managing student pickup notes
@@ -248,11 +259,11 @@ type StudentPickupNote struct {
 func (e *StudentPickupException) validatePartialAbsence() error {
 	switch {
 	case e.ExcusedFrom == nil:
-		if e.ExcusedReason != nil || e.ExcusedCreatedBy != nil || e.ExcusedOwnsPickupTime || e.ExcusedAuto {
+		if e.ExcusedReason != nil || e.ExcusedCreatedBy != nil || e.ExcusedByTraeger || e.ExcusedOwnsPickupTime || e.ExcusedAuto {
 			return errors.New("partial absence metadata requires excused_from")
 		}
 	case e.ExcusedAuto:
-		if e.ExcusedCreatedBy != nil {
+		if e.ExcusedCreatedBy != nil || e.ExcusedByTraeger {
 			return errors.New("auto partial absences must not carry excused_created_by")
 		}
 		if e.ExcusedOwnsPickupTime {
@@ -261,7 +272,7 @@ func (e *StudentPickupException) validatePartialAbsence() error {
 		if e.PickupTime == nil {
 			return errors.New("auto partial absences require a pickup time")
 		}
-	case e.ExcusedCreatedBy == nil || *e.ExcusedCreatedBy <= 0:
+	case !e.ExcusedByTraeger && (e.ExcusedCreatedBy == nil || *e.ExcusedCreatedBy <= 0):
 		return errors.New("excused_created_by is required for partial absences")
 	case e.ExcusedOwnsPickupTime && e.PickupTime == nil:
 		return errors.New("owned partial-absence pickup time is required")

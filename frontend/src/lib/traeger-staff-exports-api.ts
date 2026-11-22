@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Lohnexport und Zeitexport des Trägers über alle Schulen (#4712, ADR 0250).
  *
@@ -10,7 +11,7 @@ import { apiErrorFromBody, transportFetch } from "./api-error";
 import { filenameFromDisposition } from "./file-download";
 import type * as traegerStaffExportsContract from "./contract/traeger-staff-exports.generated";
 import { knownEnum } from "./contract/known-enum";
-import { readJson, traegerRequest } from "./traeger-api";
+import { readJson } from "./traeger-api";
 
 const BASE = "/api/traeger/staff-exports";
 
@@ -154,9 +155,9 @@ export async function fetchPayrollReport(
   format: PayrollFormat,
 ): Promise<PayrollReport> {
   return mapPayrollReport(
-    await traegerRequest<traegerStaffExportsContract.TraegerPayrollReport>(
-      `${BASE}/payroll?${monthQuery(year, month)}&format=${format}`,
-    ),
+    await bffJson("org", "GET /traeger/staff-exports/payroll", {
+      query: { year, month, format },
+    }),
   );
 }
 
@@ -165,9 +166,9 @@ export async function fetchTimeReport(
   month: number,
 ): Promise<TimeReport> {
   return mapTimeReport(
-    await traegerRequest<traegerStaffExportsContract.TraegerTimeReport>(
-      `${BASE}/times?${monthQuery(year, month)}`,
-    ),
+    await bffJson("org", "GET /traeger/staff-exports/times", {
+      query: { year, month },
+    }),
   );
 }
 

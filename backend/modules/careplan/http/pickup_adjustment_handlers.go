@@ -184,7 +184,7 @@ func (rs *Resource) applyStudentPickupAdjustment(w http.ResponseWriter, r *http.
 	}
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
-		renderError(w, r, common.ErrorForbidden(err))
+		renderScheduleAuthorError(w, r, err)
 		return
 	}
 	applyInput := rs.pickupAdjustmentApplyInput(r, input, body, staffID)

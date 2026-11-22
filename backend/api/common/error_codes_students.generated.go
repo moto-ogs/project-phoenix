@@ -91,6 +91,7 @@ const CodeStudentsReasonRequired = "students.reason_required"
 const CodeStudentsRequestNotDecided = "students.request_not_decided"
 const CodeStudentsRequestNotPast = "students.request_not_past"
 const CodeStudentsRequestPast = "students.request_past"
+const CodeStudentsScheduleStaffProfileRequired = "students.schedule_staff_profile_required"
 const CodeStudentsSickExcusedConflict = "students.sick_excused_conflict"
 const CodeStudentsStaffProfileRequired = "students.staff_profile_required"
 const CodeStudentsStaffValueInvalid = "students.staff_value_invalid"
@@ -192,6 +193,7 @@ var errorCodeClassesStudents = []errorCodeClass{
 	{CodeStudentsRequestNotDecided, "business_rejection"},
 	{CodeStudentsRequestNotPast, "business_rejection"},
 	{CodeStudentsRequestPast, "business_rejection"},
+	{CodeStudentsScheduleStaffProfileRequired, "permission"},
 	{CodeStudentsSickExcusedConflict, "business_rejection"},
 	{CodeStudentsStaffProfileRequired, "permission"},
 	{CodeStudentsStaffValueInvalid, "input"},
