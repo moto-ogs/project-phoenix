@@ -106,7 +106,10 @@ const config = {
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 export default withSentryConfig(withNextIntl(config), {
-  silent: true,
+  // Quiet without a token; with one the build log shows the upload result and
+  // its errors. `silent: true` also swallows upload failures, which hid the
+  // source maps going nowhere after the Sentry org rename.
+  silent: !process.env.SENTRY_AUTH_TOKEN,
 
   // Readable stack traces need the source maps in Sentry. The upload runs
   // only when the build has SENTRY_AUTH_TOKEN (plus SENTRY_ORG,
