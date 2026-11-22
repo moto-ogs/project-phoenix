@@ -234,19 +234,22 @@ func TestSEPADebitReleaseFollowsAConcurrentCollection(t *testing.T) {
 	assert.Equal(t, "RCUR", sequence, "the release follows the collection that turned the mandate to recurring")
 }
 
-func TestSEPADebitReleaseRejectsAConcurrentAccountChange(t *testing.T) {
+func TestSEPADebitReleaseRejectsAConcurrentMandateChange(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	const changeHolder = `UPDATE parent_billing.sepa_mandates SET account_holder_sealed = '\x03'::bytea WHERE id = ?`
 	const changeIBAN = `UPDATE parent_billing.sepa_mandates SET iban_sealed = '\x03'::bytea, iban_masked = 'DE•• 30 01' WHERE id = ?`
+	const revoke = `UPDATE parent_billing.sepa_mandates SET revoked_on = DATE '2029-05-20', revoked_at = clock_timestamp() WHERE id = ?`
 	for _, tc := range []struct {
 		name, update string
 		holiday      bool
 	}{
 		{"monthly holder", changeHolder, false},
 		{"monthly IBAN", changeIBAN, false},
+		{"monthly revocation", revoke, false},
 		{"holiday holder", changeHolder, true},
 		{"holiday IBAN", changeIBAN, true},
+		{"holiday revocation", revoke, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			organization, mandate, invoice := seedCareDebitRelease(t, db)

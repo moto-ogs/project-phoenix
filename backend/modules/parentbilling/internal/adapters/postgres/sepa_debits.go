@@ -32,6 +32,7 @@ JOIN parent_billing.sepa_mandates AS mandate
 	ON mandate.organization_id = invoice.organization_id AND mandate.id = invoice.mandate_id
 WHERE invoice.organization_id = ?0 AND invoice.id = ANY(?1) AND invoice.payment_method = 'direct_debit'
 	AND invoice.total_cents > 0 AND invoice.due_on IS NOT NULL
+	AND mandate.revoked_on IS NULL
 	AND mandate.account_holder_sealed = invoice.account_holder_sealed AND mandate.iban_masked = invoice.debtor_iban_masked
 ORDER BY mandate.id, invoice.id
 FOR UPDATE OF mandate`
@@ -48,14 +49,15 @@ JOIN parent_billing.sepa_mandates AS mandate
 	ON mandate.organization_id = document.organization_id AND mandate.id = document.mandate_id
 WHERE document.organization_id = ?0 AND document.id = ANY(?1) AND document.kind = 'invoice'
 	AND document.payment_method = 'direct_debit' AND document.total_cents > 0 AND document.due_on IS NOT NULL
+	AND mandate.revoked_on IS NULL
 	AND mandate.account_holder_sealed = document.account_holder_sealed AND mandate.iban_masked = document.debtor_iban_masked
 ORDER BY mandate.id, document.id
 FOR UPDATE OF mandate`
 
 // insertSEPADebits writes one debit for each invoice expected to collect.
-// The mandate lock gives the debit its current sequence (ADR 0181). If an
-// account edit changed the holder or mask since the invoice was prepared,
-// the locked row no longer matches. The caller rolls back the release.
+// The mandate lock gives the debit its current sequence (ADR 0181). The
+// locked row must still be in force and carry the announced holder and mask.
+// The caller rolls back the release if any expected debit is missing.
 func insertSEPADebits(ctx context.Context, db bun.IDB, organizationID int64, holiday bool, invoiceIDs []int64) error {
 	if len(invoiceIDs) == 0 {
 		return nil
