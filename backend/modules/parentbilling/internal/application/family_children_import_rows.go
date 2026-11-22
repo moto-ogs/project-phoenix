@@ -144,6 +144,9 @@ type familyImportContract struct {
 	name     string
 	birth    *calendar.Date
 	firstDay calendar.Date
+	// lastDay is the last day the contract is in force among the versions
+	// read, the end of the page's window for one that runs on.
+	lastDay calendar.Date
 }
 
 // familyImportContracts are the contracts of the versions, each with the
@@ -153,7 +156,7 @@ func familyImportContracts(versions []parentbilling.CareContractVersion) []famil
 	contracts := make([]familyImportContract, 0, len(order))
 	for _, id := range order {
 		list := byContract[id]
-		newest, first := list[0], list[0].From
+		newest, first, last := list[0], list[0].From, list[0].Until
 		for _, version := range list {
 			if version.From.After(newest.From) {
 				newest = version
@@ -161,10 +164,13 @@ func familyImportContracts(versions []parentbilling.CareContractVersion) []famil
 			if version.From.Before(first) {
 				first = version.From
 			}
+			if version.Until.After(last) {
+				last = version.Until
+			}
 		}
 		contracts = append(contracts, familyImportContract{id: id, schoolID: newest.SchoolID,
 			name:  foldFamilyImportName(newest.ChildFirstName) + "\x1f" + foldFamilyImportName(newest.ChildLastName),
-			birth: newest.ChildBirthDate, firstDay: first})
+			birth: newest.ChildBirthDate, firstDay: first, lastDay: last})
 	}
 	return contracts
 }
@@ -180,6 +186,9 @@ type familyImportTarget struct {
 	family     string
 	contractID int64
 	firstDay   calendar.Date
+	// lastDay is the last day any of the child's contracts of the family
+	// is in force.
+	lastDay calendar.Date
 }
 
 // familyImportCandidate is a row with the families its number goes to, the
@@ -383,9 +392,13 @@ func (c *familyImportCheck) targets(row *parentbilling.FamilyChildrenImportRow, 
 		position := slices.IndexFunc(targets, func(target familyImportTarget) bool { return target.family == family })
 		switch {
 		case position < 0:
-			targets = append(targets, familyImportTarget{family: family, contractID: contract.id, firstDay: contract.firstDay})
+			targets = append(targets, familyImportTarget{family: family, contractID: contract.id, firstDay: contract.firstDay, lastDay: contract.lastDay})
+			continue
 		case contract.firstDay.Before(targets[position].firstDay):
 			targets[position].contractID, targets[position].firstDay = contract.id, contract.firstDay
+		}
+		if contract.lastDay.After(targets[position].lastDay) {
+			targets[position].lastDay = contract.lastDay
 		}
 	}
 	if !repeated {

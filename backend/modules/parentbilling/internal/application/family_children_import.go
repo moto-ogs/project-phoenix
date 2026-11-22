@@ -159,7 +159,7 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 			}
 		}
 	}
-	decideImportedChildren(rows, current, familyImportDecisionDay(today))
+	decideImportedChildren(rows, current, familyImportDecisionDay(today, familyImportLastDays(candidates)))
 	var shown []parentbilling.FamilyChildTarget
 	seen := map[int64]bool{}
 	for i, row := range rows {
@@ -182,14 +182,32 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 // familyImportDecisionDay is the day a row's number has to hold on: the
 // later of today and the day the row names. A confirmation that ends before
 // the row's day is renewed from that day, and the months it covers keep it
-// (FamilyChildCount.InForceOn).
-func familyImportDecisionDay(today calendar.Date) func(importedChildren) calendar.Date {
+// (FamilyChildCount.InForceOn). Only a family whose contract of the child
+// is still in force on the row's day is decided ahead: for a family the
+// child has left, today decides, so the file does not renew its number for
+// a time the child is no longer part of it.
+func familyImportDecisionDay(today calendar.Date, lastDays map[string]calendar.Date) func(importedChildren) calendar.Date {
 	return func(row importedChildren) calendar.Date {
-		if row.number.ValidFrom.After(today) {
-			return row.number.ValidFrom
+		day := row.number.ValidFrom
+		if last, known := lastDays[row.family]; day.After(today) && known && !last.Before(day) {
+			return day
 		}
 		return today
 	}
+}
+
+// familyImportLastDays names per family the last day a contract of a row's
+// child is in force.
+func familyImportLastDays(candidates []familyImportCandidate) map[string]calendar.Date {
+	lastDays := map[string]calendar.Date{}
+	for _, candidate := range candidates {
+		for _, target := range candidate.targets {
+			if last, known := lastDays[target.family]; target.lastDay != "" && (!known || target.lastDay.After(last)) {
+				lastDays[target.family] = target.lastDay
+			}
+		}
+	}
+	return lastDays
 }
 
 // alignFamilyImportDays shows on the ready rows of one family the day the

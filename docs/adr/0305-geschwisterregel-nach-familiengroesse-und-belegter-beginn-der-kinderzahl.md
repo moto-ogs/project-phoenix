@@ -77,8 +77,11 @@ Punkt 5 den Satz zum Beginn der Zahl.
    übernimmt moto die Zahl als Nachfolger ab diesem Tag: Maßgeblich ist der
    spätere von heute und dem Tag der Zeile. Die Monate davor behalten die
    alte Bestätigung, weil die Historie der Bestätigungen je Tag entscheidet
-   (`FamilyChildCount.InForceOn`). Die Zahl hängt am Vertrag der Zeile, die
-   den frühesten Tag der Familie nennt.
+   (`FamilyChildCount.InForceOn`). Das gilt nur für eine Familie, in der ein Vertrag des Kindes
+   am Tag der Zeile noch läuft: Für eine Familie, die das Kind verlassen hat,
+   entscheidet heute, damit die Datei deren Zahl nicht für eine Zeit
+   erneuert, in der das Kind nicht mehr dazugehört. Die Zahl hängt am Vertrag
+   der Zeile, die den frühesten Tag der Familie nennt.
 7. **Der Vertragsimport bleibt.** Dort nennt die Datei den Vertragsbeginn
    selbst, je Zeile oder für alle Zeilen, und die Kinderzahl steht in
    derselben Zeile (ADR 0288 Punkt 4).
