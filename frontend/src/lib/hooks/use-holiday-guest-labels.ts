@@ -32,7 +32,7 @@ const HOLIDAY_GUEST_BADGES_OPTIONS = {
 } as const;
 
 export interface HolidayGuestCandidate {
-  readonly id: string | number;
+  readonly id: string;
   readonly school_class?: string | null;
 }
 
@@ -46,7 +46,7 @@ export function useHolidayGuestLabels(
 ): (student: HolidayGuestCandidate) => string | undefined {
   const guestIds = students
     .filter((student) => student.school_class === HOLIDAY_GUEST_SCHOOL_CLASS)
-    .map((student) => String(student.id));
+    .map((student) => student.id);
   const hasGuest = guestIds.length > 0;
   // Scheitert das Laden (etwa ohne das Recht der Kinderliste), bleibt die
   // Zeile bei „Feriengast“ wie vor #5630: die Liste selbst ist geladen, der
@@ -69,7 +69,7 @@ export function useHolidayGuestLabels(
   return useCallback(
     (student: HolidayGuestCandidate) =>
       student.school_class === HOLIDAY_GUEST_SCHOOL_CLASS
-        ? holidayGuestLabel(schools.get(String(student.id)) ?? "")
+        ? holidayGuestLabel(schools.get(student.id) ?? "")
         : undefined,
     [schools],
   );

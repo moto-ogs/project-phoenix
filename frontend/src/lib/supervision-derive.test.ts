@@ -19,14 +19,17 @@ const supervision = (
   roomName: string,
   activity?: string,
 ): SupervisedGroupPayload => ({
-  id,
-  room_id: roomId,
-  group_id: id,
-  room: { id: roomId, name: roomName },
-  ...(activity ? { actual_group: { id, name: activity } } : {}),
+  id: String(id),
+  room_id: String(roomId),
+  group_id: String(id),
+  room: { id: String(roomId), name: roomName },
+  ...(activity ? { actual_group: { id: String(id), name: activity } } : {}),
 });
 
-const openRoom = (id: number, name: string): OpenRoomPayload => ({ id, name });
+const openRoom = (id: number, name: string): OpenRoomPayload => ({
+  id: String(id),
+  name,
+});
 
 describe("deriveSupervision with released rooms", () => {
   it("recognizes a shared room through its room or legacy session id", () => {
