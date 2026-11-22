@@ -405,18 +405,16 @@ func reserveWrittenParties(entry correctionEntry, stored []ports.CorrectionParty
 	free, claimed := slices.Clone(stored), make([]bool, len(entry.parties))
 	for _, same := range []func(a, b string) bool{func(a, b string) bool { return a == b }, strings.EqualFold} {
 		for n, name := range entry.partyNames {
-			if claimed[n] {
-				continue
+			at := -1
+			if !claimed[n] {
+				at = slices.IndexFunc(free, func(party ports.CorrectionParty) bool {
+					return same(joinWords(correctionPartyCell([]ports.CorrectionParty{party})), name)
+				})
 			}
-			at := slices.IndexFunc(free, func(party ports.CorrectionParty) bool {
-				return same(joinWords(correctionPartyCell([]ports.CorrectionParty{party})), name)
-			})
 			if at < 0 {
 				continue
 			}
-			written := withStoredBoundary(name, free[at])
-			if written.FirstName != joinWords(free[at].FirstName) || written.LastName != joinWords(free[at].LastName) {
-				written.ID = free[at].ID
+			if written, changed := writtenParty(name, free[at]); changed {
 				renames = append(renames, written)
 			}
 			claimed[n], free = true, slices.Delete(free, at, at+1)
@@ -428,6 +426,14 @@ func reserveWrittenParties(entry correctionEntry, stored []ports.CorrectionParty
 		}
 	}
 	return renames, free, leftWanted
+}
+
+// writtenParty is party with the name as the row writes it; changed tells
+// that its spelling differs from the stored one.
+func writtenParty(name string, party ports.CorrectionParty) (ports.CorrectionParty, bool) {
+	written := withStoredBoundary(name, party)
+	written.ID = party.ID
+	return written, written.FirstName != joinWords(party.FirstName) || written.LastName != joinWords(party.LastName)
 }
 
 // withStoredBoundary splits a name written as the list to download writes
