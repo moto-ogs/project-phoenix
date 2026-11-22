@@ -125,18 +125,34 @@ func familiesUnderContract(contracted, keys []string) map[string]bool {
 	return contracts
 }
 
-// nameContractFamilies gives the families without a document that moto
-// knows only by their contract (ADR 0232) the name of the contract party,
-// in one read. Their key is no mail address and is not shown as one.
+// nameContractFamilies gives the families without a document the name of
+// the party of their contract, in one read: a family moto knows only by its
+// contract (ADR 0232), whose key is no mail address and is not shown as
+// one, and a family whose deviation the office set before its first invoice
+// (#7770), which would otherwise show its address as its name. Families
+// with a name read nothing.
 func (f *BillingFamilies) nameContractFamilies(ctx context.Context, organizationID int64, families []parentbilling.BillingFamily,
 	rows []parentbilling.FamilyBilling,
 ) error {
 	contractOf := map[string]int64{}
-	var ids []int64
 	for _, row := range rows {
-		if parentbilling.IsContractFamily(row.FamilyEmail) && row.ContractID > 0 {
+		if row.ContractID > 0 {
 			contractOf[row.FamilyEmail] = row.ContractID.Int64()
-			ids = append(ids, row.ContractID.Int64())
+		}
+	}
+	var unnamed []*parentbilling.BillingFamily
+	var ids []int64
+	for i := range families {
+		family := &families[i]
+		id, ok := contractOf[family.FamilyEmail]
+		if !ok || family.ID != 0 {
+			continue
+		}
+		if parentbilling.IsContractFamily(family.FamilyEmail) {
+			family.RecipientEmail = ""
+		}
+		if family.RecipientFirstName == "" && family.RecipientLastName == "" {
+			unnamed, ids = append(unnamed, family), append(ids, id)
 		}
 	}
 	if len(ids) == 0 {
@@ -146,16 +162,8 @@ func (f *BillingFamilies) nameContractFamilies(ctx context.Context, organization
 	if err != nil {
 		return fmt.Errorf("parent billing: read the contract parties of the families: %w", err)
 	}
-	for i := range families {
-		family := &families[i]
-		id, ok := contractOf[family.FamilyEmail]
-		if !ok || family.ID != 0 {
-			continue
-		}
-		family.RecipientEmail = ""
-		if family.RecipientFirstName == "" && family.RecipientLastName == "" {
-			family.RecipientFirstName, family.RecipientLastName = recipients[id].FirstName, recipients[id].LastName
-		}
+	for i, family := range unnamed {
+		family.RecipientFirstName, family.RecipientLastName = recipients[ids[i]].FirstName, recipients[ids[i]].LastName
 	}
 	return nil
 }
@@ -353,6 +361,11 @@ func noteDocument(family *parentbilling.BillingFamilyDetail, document parentbill
 	if family.LastIssuedOn.IsZero() || document.IssuedOn.After(family.LastIssuedOn) {
 		family.LastIssuedOn = document.IssuedOn
 	}
+	// The oldest document comes first: the latest monthly invoice names
+	// the contract.
+	if document.ContractID != 0 {
+		family.ContractID = ident.ID(document.ContractID)
+	}
 	if document.DebtorNumber != "" && !slices.Contains(family.DebtorNumbers, document.DebtorNumber) {
 		family.DebtorNumbers = append(family.DebtorNumbers, document.DebtorNumber)
 	}
@@ -439,7 +452,11 @@ func withFamilyRow(family parentbilling.BillingFamily, documents []parentbilling
 	})
 	family.HolidayOnly = !care && !hasContract
 	if row != nil {
-		family.FamilyDebtorNumber, family.FamilyPaymentMethod, family.ContractID = row.DebtorNumber, row.PaymentMethod, row.ContractID
+		family.FamilyDebtorNumber, family.FamilyPaymentMethod = row.DebtorNumber, row.PaymentMethod
+		// The contract the deviation was saved for wins over an invoice's.
+		if row.ContractID != 0 {
+			family.ContractID = row.ContractID
+		}
 	}
 	return family
 }

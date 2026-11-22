@@ -528,6 +528,8 @@ func TestFamilyPaymentMethodIsSetBeforeTheFirstInvoice(t *testing.T) {
 	}
 	type listedFamily struct {
 		ID                  wireID   `json:"id"`
+		RecipientFirstName  string   `json:"recipient_first_name"`
+		RecipientLastName   string   `json:"recipient_last_name"`
 		FamilyEmail         string   `json:"family_email"`
 		FamilyPaymentMethod string   `json:"family_payment_method"`
 		ContractID          wireID   `json:"contract_id"`
@@ -572,8 +574,9 @@ func TestFamilyPaymentMethodIsSetBeforeTheFirstInvoice(t *testing.T) {
 	// The list of families shows the choice before the first invoice.
 	families := listed()
 	require.Len(t, families, 1)
-	assert.Equal(t, listedFamily{FamilyEmail: family, FamilyPaymentMethod: "direct_debit", ContractID: wireID(contract),
-		PaymentMethods: []string{}}, families[0])
+	assert.Equal(t, listedFamily{RecipientFirstName: "Eva", RecipientLastName: "Beispiel", FamilyEmail: family,
+		FamilyPaymentMethod: "direct_debit", ContractID: wireID(contract), PaymentMethods: []string{}}, families[0],
+		"named by the party of its contract, not by its address")
 
 	// Nothing else happened: no run, no invoice, no debit, and the mandate
 	// is the one the office recorded.
@@ -640,4 +643,32 @@ func TestDirectDebitChoiceWithoutMandateStaysATransfer(t *testing.T) {
 	require.Len(t, preview.Invoices, 1)
 	assert.Equal(t, "transfer", preview.Invoices[0].Payment.Method, "no mandate, no debit")
 	assert.Equal(t, "mandate_missing", preview.Invoices[0].Payment.DebitGap)
+}
+
+// A family whose payment nobody set yet is opened by the contract of its
+// latest monthly invoice (#7770), so the list of families leads to its
+// recipient and payment without a deviation.
+func TestListedFamilyNamesTheContractOfItsMonthlyInvoice(t *testing.T) {
+	t.Parallel()
+	f := newCareBillingFixture(t, "Träger Familie Vertrag")
+	school := f.office.schools[0]
+	contract := careContract(t, f.db, f.office.organization, school, "Mia", careMonth, sjrServices()...)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	run := f.startRun(t, careMonth)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"),
+		termsRelease(termsRun(t, f, f.office.token, int64(run.ID))))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, "/traeger/billing-families", nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	listed := decodeSchoolPortalData[[]struct {
+		ContractID          wireID `json:"contract_id"`
+		FamilyPaymentMethod string `json:"family_payment_method"`
+		InvoiceCount        int    `json:"invoice_count"`
+	}](t, rec.Body.Bytes())
+	require.Len(t, listed, 1)
+	assert.Equal(t, wireID(contract), listed[0].ContractID)
+	assert.Empty(t, listed[0].FamilyPaymentMethod, "nobody set a payment method")
+	assert.Equal(t, 1, listed[0].InvoiceCount)
 }

@@ -113,6 +113,21 @@ export interface FamilyBilling {
   readonly updatedAt: string;
 }
 
+/**
+ * The family of a care contract with the deviation it has (#7770): what the
+ * Abrechnung sets without a run, before the first invoice.
+ */
+export interface ContractFamilyBilling {
+  readonly contractId: string;
+  /** The key of the family: its mail address, or the contract without one. */
+  readonly familyEmail: string;
+  /** The person in the contract, e.g. "Anna Muster"; "" without a name. */
+  readonly partyName: string;
+  readonly partyLastName: string;
+  /** null while the family has the terms of the contract and the services. */
+  readonly family: FamilyBilling | null;
+}
+
 export interface FamilyBillingInput {
   readonly contractId: string;
   readonly recipientKind: RecipientKind;
@@ -290,6 +305,25 @@ export async function saveServiceTerms(
 export async function fetchFamilyBillings(): Promise<FamilyBilling[]> {
   const families = await bffJson("org", "GET /traeger/family-billing/");
   return families.map(familyFromBackend);
+}
+
+/**
+ * The family of a contract with its deviation, read fresh for the form
+ * that sets it. A sibling's contract answers the same deviation.
+ */
+export async function fetchContractFamilyBilling(
+  contractId: string,
+): Promise<ContractFamilyBilling> {
+  const body = await traegerRequest<traegerFamilyBillingContract.ContractFamilyBilling>(
+    `${FAMILY_PATH}/contracts/${encodeURIComponent(contractId)}`,
+  );
+  return {
+    contractId: body.contract_id,
+    familyEmail: body.family_email,
+    partyName: `${body.party_first_name} ${body.party_last_name}`.trim(),
+    partyLastName: body.party_last_name,
+    family: body.family ? familyFromBackend(body.family) : null,
+  };
 }
 
 /** The request body of a deviation; exported for its test. */

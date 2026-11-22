@@ -103,8 +103,9 @@ type BillingFamily struct {
 	// FamilyPaymentMethod is the payment method the Abrechnung set for the
 	// family (#7770), empty while the terms of the services decide. It is
 	// what the next invoice takes; PaymentMethods are what issued invoices
-	// took. ContractID is the contract the deviation of the family was last
-	// saved for, 0 without one: it opens the family's recipient and payment.
+	// took. ContractID is a contract of the family, 0 without one: the one
+	// its deviation was last saved for, else the one of its latest monthly
+	// invoice. It opens the family's recipient and payment.
 	FamilyPaymentMethod string   `json:"family_payment_method"`
 	ContractID          ident.ID `json:"contract_id"`
 	BillingAmounts
@@ -147,12 +148,15 @@ type BillingFamilyDocument struct {
 	PaymentMethod string         `json:"payment_method"`
 	DueOn         *calendar.Date `json:"due_on"`
 
-	RecipientFirstName string   `json:"-"`
-	RecipientLastName  string   `json:"-"`
-	RecipientEmail     string   `json:"-"`
-	FamilyKey          string   `json:"-"`
-	CostBearerNames    []string `json:"-"`
-	Exempt             bool     `json:"-"`
+	RecipientFirstName string `json:"-"`
+	RecipientLastName  string `json:"-"`
+	RecipientEmail     string `json:"-"`
+	FamilyKey          string `json:"-"`
+	// ContractID is the care contract of a monthly invoice, 0 on a holiday
+	// document: it names the family where no deviation does (#7770).
+	ContractID      int64    `json:"-"`
+	CostBearerNames []string `json:"-"`
+	Exempt          bool     `json:"-"`
 }
 
 // BillingFamilyDetail is a family with all its documents, the newest first.

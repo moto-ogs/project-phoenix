@@ -21,18 +21,51 @@ function sepaMandatePath(contractId: string): string {
   );
 }
 
-export function SepaMandateStatusCard({
-  contractId,
-}: Readonly<{ contractId: string }>) {
+/** The mandates of a contract's family as the status card reads them. */
+export type SepaMandateStatusRead = ReturnType<typeof useSepaMandateStatus>;
+
+/**
+ * Reads the mandates of a contract's family for the status card. A page
+ * that also needs the answer (the payment form names a missing mandate,
+ * #7770) reads once and hands it to `SepaMandateStatusView`.
+ */
+export function useSepaMandateStatus(contractId: string) {
   // The page around it still works; the card says it could not load.
   const { data: mandates, failure } = useFreshTraegerResource(
     traegerBillingRunKeys.sepaMandates(contractId),
     () => fetchSepaMandates(contractId),
     "das Mandat",
   );
+  const inForce = mandates?.find((mandate) => !mandate.revokedOn);
+  return {
+    mandates,
+    failure,
+    inForce,
+    /**
+     * Whether a direct debit can be collected today: a mandate in force
+     * for the current creditor. null while loading or after a failed read.
+     */
+    collectable: mandates ? Boolean(inForce?.creditorCurrent) : null,
+  };
+}
+
+export function SepaMandateStatusCard({
+  contractId,
+}: Readonly<{ contractId: string }>) {
+  return (
+    <SepaMandateStatusView
+      contractId={contractId}
+      read={useSepaMandateStatus(contractId)}
+    />
+  );
+}
+
+export function SepaMandateStatusView({
+  contractId,
+  read: { mandates, failure, inForce },
+}: Readonly<{ contractId: string; read: SepaMandateStatusRead }>) {
   if (failure instanceof ApiError && failure.status === 403) return null;
   const failed = mandates === null && Boolean(failure);
-  const inForce = mandates?.find((mandate) => !mandate.revokedOn);
 
   return (
     <SectionCard

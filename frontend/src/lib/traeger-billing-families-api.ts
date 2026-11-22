@@ -78,6 +78,17 @@ export interface BillingFamily extends BillingAmounts {
   /** The family has an issued document, so it opens a page of its own. */
   readonly hasDocuments: boolean;
   /**
+   * The payment method the office set for the family (#7770): what its next
+   * invoice takes. "" or absent while the Abrechnungsvorgaben decide, also
+   * for one this build does not know.
+   */
+  readonly familyPaymentMethod?: PaymentMethod | "";
+  /**
+   * A contract of the family, absent or "" without one: it opens the
+   * family's recipient and payment.
+   */
+  readonly contractId?: string;
+  /**
    * The children and their own numbers when the Träger keeps a number per
    * child (#7007); absent when it keeps one per payer.
    */
@@ -98,6 +109,8 @@ export interface FamilyChild {
 
 /** A family with its children as the list of children answers it. */
 export interface FamilyChildNumbers {
+  /** A contract of the family, absent for a family known only by a number. */
+  readonly contractId?: string;
   readonly familyEmail: string;
   readonly recipientFirstName: string;
   readonly recipientLastName: string;
@@ -163,6 +176,11 @@ function knownPaymentMethods(
   });
 }
 
+/** A wire ID as the pages use it: "" where the backend sends 0 for none. */
+function idOrNone(id: string): string {
+  return id === "0" ? "" : id;
+}
+
 function familyFromBackend(
   family: traegerBillingFamiliesContract.BillingFamily,
 ): BillingFamily {
@@ -182,6 +200,8 @@ function familyFromBackend(
     familyDebtorNumber: family.family_debtor_number,
     holidayOnly: family.holiday_only,
     hasDocuments: family.id !== "0",
+    familyPaymentMethod: knownPaymentMethod(family.family_payment_method) ?? "",
+    contractId: idOrNone(family.contract_id),
     issuedCents: family.issued_cents,
     cancelledCents: family.cancelled_cents,
     creditedCents: family.credited_cents,
@@ -298,6 +318,7 @@ export async function fetchFamilyChildren(): Promise<FamilyChildNumbers[]> {
     "GET /traeger/billing-families/children",
   );
   return families.map((family) => ({
+    contractId: idOrNone(family.contract_id),
     familyEmail: family.family_email,
     recipientFirstName: family.recipient_first_name,
     recipientLastName: family.recipient_last_name,
@@ -342,10 +363,16 @@ export function withFamilyChildren(
   const byEmail = new Map(
     children.map((family) => [family.familyEmail, family]),
   );
-  const listed = families.map((family) => ({
-    ...family,
-    children: byEmail.get(family.familyEmail)?.children ?? [],
-  }));
+  const listed = families.map((family) => {
+    const known = byEmail.get(family.familyEmail);
+    return {
+      ...family,
+      // The contract of the family's deviation wins; a family without one
+      // takes a contract of its children.
+      contractId: family.contractId || known?.contractId || "",
+      children: known?.children ?? [],
+    };
+  });
   const known = new Set(families.map((family) => family.familyEmail));
   for (const family of children) {
     if (known.has(family.familyEmail)) continue;
@@ -365,6 +392,8 @@ export function withFamilyChildren(
       familyDebtorNumber: "",
       holidayOnly: false,
       hasDocuments: false,
+      familyPaymentMethod: "",
+      contractId: family.contractId ?? "",
       children: family.children,
       issuedCents: 0,
       cancelledCents: 0,

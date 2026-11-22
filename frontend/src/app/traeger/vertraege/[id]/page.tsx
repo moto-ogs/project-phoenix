@@ -6,6 +6,7 @@
 // behält sein PDF und lässt sich erneut senden. Ein abgeschlossener Vertrag
 // (#4680) zeigt, wann und wie er zustande kam; erneut senden lässt er sich mit demselben PDF.
 
+import { FamilyBillingStatusCard } from "~/components/traeger/family-billing-status-card";
 import { SepaMandateStatusCard } from "~/components/traeger/sepa-mandate-status-card";
 import { Download, RotateCw, Send, Trash2 } from "lucide-react";
 import {
@@ -699,6 +700,11 @@ function TraegerVertragView() {
                   </p>
                 )}
               </SectionCard>
+              {/* How the family pays is set here before the first invoice
+                  (#7770); a mandate alone does not choose the debit. */}
+              {party ? (
+                <FamilyBillingStatusCard contractId={contract.id} />
+              ) : null}
               {party?.email ? (
                 <SepaMandateStatusCard contractId={contract.id} />
               ) : null}
