@@ -431,6 +431,23 @@ test('shared backend quality fails when an analyzer executable is missing', t =>
   assert.match(result.stderr, /go: command not found/);
 });
 
+test('an uncommitted lint configuration lints every backend package', t => {
+  const f = fixture(t);
+  // Keep both scripts out of the diff: either one, changed, forces the full
+  // lint by itself. The selector stub narrows the committed change.
+  f.write('.git/info/exclude', 'scripts/backend-affected-packages.sh\nscripts/check-backend-quality.sh\n');
+  copyFileSync(join(source, 'check-backend-quality.sh'), join(f.root, 'scripts/check-backend-quality.sh'));
+  f.write('.devbox/nix/profile/default/bin/golangci-lint', '#!/bin/bash\necho "lint $*"\n');
+  f.write('scripts/backend-affected-packages.sh', '#!/bin/bash\necho ./example\n');
+  f.commit('backend/example/example.go', 'package example\n');
+  f.write('backend/.golangci.yml', 'version: "2"\n');
+  const result = f.run('bash', ['scripts/check-backend-quality.sh', 'lint', 'base'], {
+    env: { ...f.env, PATH: `${join(f.root, '.devbox/nix/profile/default/bin')}:${process.env.PATH}` },
+  });
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stdout, /^lint run .* \.\/\.\.\.$/m);
+});
+
 test('successful backend checks survive a docs-only follow-up and CI-only analysis stays out of pre-push', t => {
   const f = fixture(t);
   f.commit('backend/example.go', 'package example\n');
