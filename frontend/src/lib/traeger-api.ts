@@ -115,7 +115,7 @@ export interface TraegerSchoolsAlerts {
 }
 
 /** Reads a JSON body; null for an empty or unreadable one. */
-export async function readJson(response: Response): Promise<unknown> {
+async function readJson(response: Response): Promise<unknown> {
   const text = await response.text();
   if (!text) return null;
   try {
