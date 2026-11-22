@@ -5,8 +5,8 @@
 
 import { bffJson, bffJsonUncontracted } from "./bff-fetch";
 import { knownEnum } from "./contract/known-enum";
-import type { PayrollStatus as PayrollStatusWire } from "./contract/settings.generated";
-import type { PayrollDispatchView as PayrollDispatchViewWire } from "./contract/staff.generated";
+import type * as settingsContract from "./contract/settings.generated";
+import type * as staffContract from "./contract/staff.generated";
 import {
   knownMailOutcome,
   type MailOutcome,
@@ -93,7 +93,9 @@ function dispatchFormat(value: string | undefined): PayrollDispatchFormat {
     : "csv";
 }
 
-export function mapPayrollStatus(data: PayrollStatusWire): PayrollStatus {
+export function mapPayrollStatus(
+  data: settingsContract.PayrollStatus,
+): PayrollStatus {
   return {
     categories: (data.categories ?? []).map((cat) => ({
       id: cat.id,
@@ -214,7 +216,7 @@ function mailCounts(
 }
 
 function mapPayrollDispatch(
-  data: PayrollDispatchViewWire,
+  data: staffContract.PayrollDispatchView,
 ): PayrollDispatchView {
   return {
     year: data.year,

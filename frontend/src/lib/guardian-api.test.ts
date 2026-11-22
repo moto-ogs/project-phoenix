@@ -21,9 +21,9 @@ import type {
 } from "./guardian-helpers";
 import type {
   GuardianResponse,
-  GuardianWithRelationship as GuardianWithRelationshipWire,
   PhoneNumberResponse,
 } from "./contract/guardians.generated";
+import type * as guardiansContract from "./contract/guardians.generated";
 
 // Mock data helpers
 const mockBackendGuardian: GuardianResponse = {
@@ -57,19 +57,20 @@ const mockBackendGuardian: GuardianResponse = {
   account_id: undefined,
 };
 
-const mockBackendGuardianWithRelationship: GuardianWithRelationshipWire = {
-  guardian: mockBackendGuardian,
-  relationship_id: "10",
-  relationship_type: "parent",
-  is_primary: true,
-  is_emergency_contact: true,
-  can_pickup: true,
-  pickup_notes: "Can pickup anytime",
-  emergency_priority: 1,
-  guardian_role: "",
-  is_payer: false,
-  account_status: "",
-};
+const mockBackendGuardianWithRelationship: guardiansContract.GuardianWithRelationship =
+  {
+    guardian: mockBackendGuardian,
+    relationship_id: "10",
+    relationship_type: "parent",
+    is_primary: true,
+    is_emergency_contact: true,
+    can_pickup: true,
+    pickup_notes: "Can pickup anytime",
+    emergency_priority: 1,
+    guardian_role: "",
+    is_payer: false,
+    account_status: "",
+  };
 
 const mockLinkRequest: StudentGuardianLinkRequest = {
   guardianProfileId: "1",

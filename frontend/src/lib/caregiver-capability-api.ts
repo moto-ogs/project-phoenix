@@ -1,5 +1,5 @@
 import { ApiError, enrichApiError, problemDetail } from "./api-error";
-import type { CaregiverCapabilityState as CaregiverCapabilityStateWire } from "./contract/auth-accounts.generated";
+import type * as authAccountsContract from "./contract/auth-accounts.generated";
 import { createLogger } from "~/lib/logger";
 import type { ApiResponse } from "./api-envelope";
 
@@ -62,7 +62,7 @@ function formatCount(count: number, singular: string, plural: string): string {
 
 function translateCapabilityBlocker(
   blocker: string,
-  state?: CaregiverCapabilityStateWire,
+  state?: authAccountsContract.CaregiverCapabilityState,
 ): string {
   switch (blocker) {
     case "missing_usable_role":
@@ -131,7 +131,7 @@ export class CaregiverCapabilityApiError extends ApiError {
 }
 
 function mapCapabilityState(
-  state: CaregiverCapabilityStateWire,
+  state: authAccountsContract.CaregiverCapabilityState,
 ): CaregiverCapabilityState {
   return {
     accountId: state.account_id,
@@ -183,7 +183,8 @@ async function parseCapabilityResponse(
   response: Response,
 ): Promise<CaregiverCapabilityState> {
   const raw = (await response.json()) as
-    CaregiverCapabilityStateWire | ApiResponse<CaregiverCapabilityStateWire>;
+    | authAccountsContract.CaregiverCapabilityState
+    | ApiResponse<authAccountsContract.CaregiverCapabilityState>;
 
   const payload =
     typeof raw === "object" &&
@@ -191,7 +192,7 @@ async function parseCapabilityResponse(
     "data" in raw &&
     raw.data !== undefined
       ? raw.data
-      : (raw as CaregiverCapabilityStateWire);
+      : (raw as authAccountsContract.CaregiverCapabilityState);
 
   return mapCapabilityState(payload);
 }

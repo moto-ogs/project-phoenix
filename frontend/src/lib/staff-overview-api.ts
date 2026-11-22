@@ -8,10 +8,8 @@
 // ~/lib/auth-utils); it is not a fallback path but a different audience.
 
 import { bffJson } from "./bff-fetch";
-import type {
-  DashboardSummary as DashboardSummaryWire,
-  TimeTrackingOverviewRow,
-} from "./contract/staff.generated";
+import type { TimeTrackingOverviewRow } from "./contract/staff.generated";
+import type * as staffContract from "./contract/staff.generated";
 
 // ─── Frontend shapes (camelCase, string ids) ─────────────────────────────────
 
@@ -64,7 +62,7 @@ export interface TimeAccountOverview {
 }
 
 export function mapDashboardSummary(
-  data: DashboardSummaryWire,
+  data: staffContract.DashboardSummary,
 ): DashboardSummary {
   return {
     activeStaffCount: data.active_staff_count,

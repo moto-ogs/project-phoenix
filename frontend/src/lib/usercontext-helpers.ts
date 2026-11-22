@@ -1,10 +1,7 @@
 // lib/usercontext-helpers.ts
 
-import type {
-  ActiveGroup as WireActiveGroup,
-  CallerGroupRow,
-  Staff as WireStaff,
-} from "./contract/me.generated";
+import type { CallerGroupRow } from "./contract/me.generated";
+import type * as meContract from "./contract/me.generated";
 import type { EducationalGroup } from "./user-context-types";
 
 // Frontend types for UserContext (EducationalGroup is shared with the
@@ -39,9 +36,9 @@ export interface Staff {
 /** The answer of `GET /api/me/groups`. */
 export type EducationalGroupWire = CallerGroupRow;
 /** The answer of `GET /api/me/groups/supervised`. */
-export type ActiveGroupWire = WireActiveGroup;
+export type ActiveGroupWire = meContract.ActiveGroup;
 /** The answer of `GET /api/me/staff`. */
-export type StaffWire = WireStaff;
+export type StaffWire = meContract.Staff;
 
 export interface NavigationEducationalGroup {
   id: string;

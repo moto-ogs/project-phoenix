@@ -6,7 +6,7 @@
 
 import { bffJson } from "./bff-fetch";
 import { knownEnum } from "./contract/known-enum";
-import type { AuditLogEvent as AuditLogEventWire } from "./contract/staff.generated";
+import type * as staffContract from "./contract/staff.generated";
 import { createLogger } from "./logger";
 
 const logger = createLogger({ component: "StaffAuditLogApi" });
@@ -26,7 +26,9 @@ export type AuditLogSource =
   | "personnel_number";
 
 /** An event of a source this build can describe. */
-export type KnownAuditLogEvent = AuditLogEventWire & { source: AuditLogSource };
+export type KnownAuditLogEvent = staffContract.AuditLogEvent & {
+  source: AuditLogSource;
+};
 
 // ─── Frontend shapes ─────────────────────────────────────────────────────────
 
@@ -65,7 +67,9 @@ export const auditLogSourceLabels: Record<AuditLogSource, string> = {
 
 const SOURCES = Object.keys(auditLogSourceLabels) as AuditLogSource[];
 
-function isKnown(event: AuditLogEventWire | null): event is KnownAuditLogEvent {
+function isKnown(
+  event: staffContract.AuditLogEvent | null,
+): event is KnownAuditLogEvent {
   if (event === null) return false;
   if (knownEnum(SOURCES, event.source)) return true;
   // A source a newer backend added: this build has no sentence for it.
