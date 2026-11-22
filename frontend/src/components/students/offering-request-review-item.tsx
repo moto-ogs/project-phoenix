@@ -33,7 +33,6 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import { ConfirmationModal } from "~/components/ui/modal";
 import {
   type OfferingRequestPreview,
-  type OfferingRequestPreviewSelection,
   type StaffOfferingRequest,
   decideOfferingChangeRequest,
   previewOfferingChangeRequest,
@@ -143,7 +142,8 @@ export function OfferingRequestReviewItem({
   // Rule-added offerings the reviewer unticked for this request (#2370).
   const [excluded, setExcluded] = useState<readonly string[]>([]);
   const [preview, setPreview] = useState<
-    readonly OfferingRequestPreviewSelection[] | undefined
+    | readonly studentsContract.OfferingRequestPreviewSelectionResponse[]
+    | undefined
   >(undefined);
   const [approvalPreview, setApprovalPreview] =
     useState<OfferingRequestPreview | null>(null);
