@@ -14822,6 +14822,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "ShiftRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "ShiftResponse"
@@ -14845,6 +14849,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "SeriesRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "SeriesResponse"
@@ -20569,6 +20577,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "SeriesRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "SeriesResponse"
@@ -20580,6 +20592,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "ShiftRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "ShiftResponse"
@@ -20591,6 +20607,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "CancellationRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "CancellationResponse"
@@ -20602,6 +20622,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "MoveShiftRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "ShiftResponse"
@@ -33237,6 +33261,83 @@
             "kind": "ref",
             "nullable": true,
             "ref": "GuardianNoticeRequest"
+          }
+        }
+      ]
+    },
+    {
+      "name": "CancellationRequest",
+      "go_type": "staffshifts.CancellationRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "working_time_confirmed",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "working_time_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "cancelled",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "change_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "break_minutes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "shift_type_id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "replacements",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ReplacementRequest"
+            }
           }
         }
       ]
@@ -64906,6 +65007,77 @@
       ]
     },
     {
+      "name": "MoveShiftRequest",
+      "go_type": "staffshifts.MoveShiftRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "working_time_confirmed",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "working_time_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "source_staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "target_staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "date",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "break_minutes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "shift_type_id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "MoveStaffResponse",
       "go_type": "timetablehttp.MoveStaffResponse",
       "fields": [
@@ -77485,6 +77657,49 @@
       ]
     },
     {
+      "name": "ReplacementRequest",
+      "go_type": "staffshifts.ReplacementRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "break_minutes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "shift_type_id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "ReportDistrictRequest",
       "go_type": "traeger.ReportDistrictRequest",
       "request": true,
@@ -84921,6 +85136,134 @@
       ]
     },
     {
+      "name": "SeriesRequest",
+      "go_type": "staffshifts.SeriesRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "working_time_confirmed",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "working_time_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "weekdays",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "break_minutes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "shift_type_id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "calendar_period_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "week_pattern",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "valid_from",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "valid_until",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "effective_date",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "occurrence_shift_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "include_school_breaks",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "SeriesResponse",
       "go_type": "staffshifts.SeriesResponse",
       "fields": [
@@ -86261,6 +86604,101 @@
           "name": "id",
           "schema": {
             "kind": "id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ShiftRequest",
+      "go_type": "staffshifts.ShiftRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "working_time_confirmed",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "working_time_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "date",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "break_minutes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "shift_type_id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "cancelled",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "change_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "origin_shift_id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
           }
         }
       ]

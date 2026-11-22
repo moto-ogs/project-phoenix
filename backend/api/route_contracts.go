@@ -26,6 +26,7 @@ import (
 	schoolSearchHTTP "github.com/moto-ogs/project-phoenix/modules/schoolsearchview/http"
 	"github.com/moto-ogs/project-phoenix/modules/schoolsetup"
 	schoolSetupHTTP "github.com/moto-ogs/project-phoenix/modules/schoolsetup/http"
+	staffshiftsHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/staffshifts"
 
 	"github.com/moto-ogs/project-phoenix/analytics"
 	"github.com/moto-ogs/project-phoenix/api/common"
@@ -292,6 +293,11 @@ func ContractDocument() (contract.Document, error) {
 		reflect.TypeFor[enrollmentHTTP.EnrollmentPhaseRequest](): contract.ReadsFields,
 		// A school update tells an absent child quota from null (#3567).
 		reflect.TypeFor[provisioningOperatorAPI.ChildQuotaField](): contract.ReadsValue,
+		// The staff-shift writes tell an absent key from null.
+		reflect.TypeFor[staffshiftsHTTP.OptionalID]():     contract.ReadsValue,
+		reflect.TypeFor[staffshiftsHTTP.OptionalBool]():   contract.ReadsValue,
+		reflect.TypeFor[staffshiftsHTTP.OptionalInt]():    contract.ReadsValue,
+		reflect.TypeFor[staffshiftsHTTP.OptionalString](): contract.ReadsValue,
 	}
 	// Appointments and the whole-day substitution keep their own day types.
 	options.Dates = []reflect.Type{reflect.TypeFor[appointments.Date](), reflect.TypeOf(substitutions.Day)}
