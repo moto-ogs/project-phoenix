@@ -203,11 +203,11 @@ func TestOfferingCorrectionKnowsARenamedModule(t *testing.T) {
 // What a row names must be one booking, whatever the order of the rows.
 func TestOfferingCorrectionRefusesRowsItCannotTellApart(t *testing.T) {
 	t.Parallel()
-	// Monday books Kurz and Do-Fr, not Lang: the rows still hand Lang on.
-	gap := correctionContract(10, correctionService("mon", 12, "OGS Kurz", "14:00"), correctionService("mon", 11, "OGS Do-Fr", "16:00"))
-	chain := correctionRows(t, gap, [3]string{"Mo", "OGS Kurz", "OGS Lang"}, [3]string{"Mo", "OGS Lang", "OGS Do-Fr"})
+	// Monday books Kurz and Mo-Mi, not Lang: the rows still hand Lang on.
+	gap := correctionContract(10, correctionService("mon", 12, "OGS Kurz", "14:00"), correctionService("mon", 10, "OGS Mo-Mi", "16:00"))
+	chain := correctionRows(t, gap, [3]string{"Mo", "OGS Kurz", "OGS Lang"}, [3]string{"Mo", "OGS Lang", "OGS Mo-Mi"})
 	assert.Nil(t, chain.version)
-	assert.Contains(t, problemCodes(chain), carecontract.OfferingCorrectionProblemOverlapping)
+	assert.Equal(t, []string{carecontract.OfferingCorrectionProblemOverlapping, carecontract.OfferingCorrectionProblemOverlapping}, problemCodes(chain))
 
 	// One booking keeps the name the other module has today.
 	shadow := correctionContract(11, correctionService("mon", 12, "Kurz alt", "14:00"), correctionService("mon", 13, "OGS Kurz", "16:00"))

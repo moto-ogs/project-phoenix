@@ -88,7 +88,8 @@ const UNKNOWN_TEXT: Record<OfferingCorrectionField, string> = {
 const AMBIGUOUS_TEXT: Record<OfferingCorrectionField, string> = {
   contract: "Die Vertragsnummer ist nicht eindeutig.",
   weekday: "Der Wochentag ist nicht eindeutig.",
-  current_offering: "Mehrere Module der Schule heißen wie das bisherige.",
+  current_offering:
+    "Der Name passt an diesem Tag zu mehreren Buchungen. Nimm den Namen, der im Vertrag steht.",
   target_offering: "Mehrere Module der Schule heißen wie das neue.",
 };
 
