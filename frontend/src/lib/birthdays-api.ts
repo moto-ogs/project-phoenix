@@ -1,11 +1,6 @@
 import type * as birthdaysContract from "~/lib/contract/birthdays.generated";
 import { knownEnum } from "~/lib/contract/known-enum";
-import {
-  apiErrorFromResponse,
-  transportFetch,
-  unavailableApiError,
-} from "./api-error";
-import { bffJson } from "./bff-fetch";
+import { bffFile, bffJson } from "./bff-fetch";
 import {
   downloadBlob,
   filenameFromDisposition,
@@ -124,22 +119,10 @@ export async function exportStaffBirthdays(
   request: StaffBirthdayExportRequest,
   printTarget?: Window,
 ): Promise<void> {
-  // The route registers no request type (#7808), so bffFile cannot send
-  // the body yet.
-  let response: Response;
-  try {
-    response = await transportFetch("/api/birthdays/staff-export", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(request),
-    });
-  } catch (error) {
-    throw unavailableApiError(error);
-  }
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "Staff birthday export failed");
-  }
-
+  const response = await bffFile("tenant", "POST /api/birthdays/staff-export", {
+    body: request,
+    errorMessage: "Staff birthday export failed",
+  });
   const blob = await response.blob();
   if (printTarget) {
     await openBlobForPrint(blob, printTarget);

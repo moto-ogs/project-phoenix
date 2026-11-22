@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mockSessionFetch = vi.hoisted(() => vi.fn());
+const fetchMock = vi.hoisted(() => vi.fn());
 
-vi.mock("./session-cache", () => ({
-  sessionFetch: mockSessionFetch,
-}));
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
+
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
 
 import { ownShiftService, staffShiftService } from "./shift-api";
 import type { ShiftResponse } from "./contract/shared.generated";
@@ -70,8 +72,8 @@ describe("staffShiftService errors", () => {
     vi.clearAllMocks();
   });
 
-  it("preserves status and backend error detail for save failures", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+  it("keeps status and backend detail of a save failure beside the client's text", async () => {
+    fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ detail: "shift overlaps existing row" }), {
         status: 409,
         headers: { "content-type": "application/json" },
@@ -89,12 +91,13 @@ describe("staffShiftService errors", () => {
       }),
     ).rejects.toMatchObject({
       status: 409,
-      message: "shift overlaps existing row",
+      message: "Schicht konnte nicht gespeichert werden",
+      detail: "shift overlaps existing row",
     });
   });
 
-  it("preserves status for load failures with text bodies", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+  it("keeps the status class of a load failure without an error body", async () => {
+    fetchMock.mockResolvedValueOnce(
       new Response("database timeout", { status: 500 }),
     );
 
@@ -102,12 +105,13 @@ describe("staffShiftService errors", () => {
       staffShiftService.getShifts("2026-07-06", "2026-07-10"),
     ).rejects.toMatchObject({
       status: 500,
-      message: "database timeout",
+      message: "Schichten konnten nicht geladen werden",
+      code: "general.server",
     });
   });
 
   it("preserves backend errors when the weekly overview fails", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ detail: "overview unavailable" }), {
         status: 503,
         headers: { "content-type": "application/json" },
@@ -118,12 +122,13 @@ describe("staffShiftService errors", () => {
       staffShiftService.getOverview("2026-07-06", "2026-07-10"),
     ).rejects.toMatchObject({
       status: 503,
-      message: "overview unavailable",
+      message: "Dienstplan konnte nicht geladen werden",
+      detail: "overview unavailable",
     });
   });
 
   it("falls back when JSON error bodies are malformed", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       new Response("{", {
         status: 400,
         headers: { "content-type": "application/json" },
@@ -137,7 +142,7 @@ describe("staffShiftService errors", () => {
   });
 
   it("falls back when JSON error bodies omit detail", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ message: "wrong shape" }), {
         status: 422,
         headers: { "content-type": "application/json" },
@@ -166,7 +171,7 @@ describe("staffShiftService requests", () => {
   });
 
   it("maps nullable list responses to an empty list", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ data: null }, { status: 200 }),
     );
 
@@ -176,7 +181,7 @@ describe("staffShiftService requests", () => {
   });
 
   it("loads own shifts through the time-tracking endpoint", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ data: [backendShift] }, { status: 200 }),
     );
 
@@ -201,13 +206,16 @@ describe("staffShiftService requests", () => {
         originShiftId: null,
       },
     ]);
-    expect(mockSessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/time-tracking/shifts?from=2026-07-06&to=2026-07-10",
+      {
+        method: "GET",
+      },
     );
   });
 
   it("loads and maps the weekly shift-assignment overview", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ data: backendOverview }, { status: 200 }),
     );
 
@@ -228,8 +236,11 @@ describe("staffShiftService requests", () => {
         },
       ],
     });
-    expect(mockSessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/staff-shifts/overview?from=2026-07-06&to=2026-07-10",
+      {
+        method: "GET",
+      },
     );
   });
 
@@ -242,18 +253,18 @@ describe("staffShiftService requests", () => {
       breakMinutes: 30,
       shiftTypeId: null,
     };
-    mockSessionFetch
+    fetchMock
       .mockResolvedValueOnce(Response.json({ data: backendShift }))
       .mockResolvedValueOnce(Response.json({ data: backendShift }));
 
     await staffShiftService.createShift(payload);
     await staffShiftService.updateShift("42", payload);
 
-    expect(mockSessionFetch).toHaveBeenNthCalledWith(1, "/api/staff-shifts", {
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "/api/staff-shifts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        staff_id: 7,
+        staff_id: "7",
         date: "2026-07-06",
         start_time: "08:00",
         end_time: "16:00",
@@ -261,26 +272,22 @@ describe("staffShiftService requests", () => {
         shift_type_id: null,
       }),
     });
-    expect(mockSessionFetch).toHaveBeenNthCalledWith(
-      2,
-      "/api/staff-shifts/42",
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          staff_id: 7,
-          date: "2026-07-06",
-          start_time: "08:00",
-          end_time: "16:00",
-          break_minutes: 30,
-          shift_type_id: null,
-        }),
-      },
-    );
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/staff-shifts/42", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        staff_id: "7",
+        date: "2026-07-06",
+        start_time: "08:00",
+        end_time: "16:00",
+        break_minutes: 30,
+        shift_type_id: null,
+      }),
+    });
   });
 
-  it("serializes a linked shift type id to a number", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+  it("sends a linked shift type id as text", async () => {
+    fetchMock.mockResolvedValueOnce(
       Response.json({ data: { ...backendShift, shift_type_id: "5" } }),
     );
 
@@ -293,22 +300,22 @@ describe("staffShiftService requests", () => {
       shiftTypeId: "5",
     });
 
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/staff-shifts", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/staff-shifts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        staff_id: 7,
+        staff_id: "7",
         date: "2026-07-06",
         start_time: "08:00",
         end_time: "16:00",
         break_minutes: 30,
-        shift_type_id: 5,
+        shift_type_id: "5",
       }),
     });
   });
 
   it("serializes replacement origin IDs as strings without bigint rounding", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({
         data: { ...backendShift, origin_shift_id: "9223372036854775807" },
       }),
@@ -324,11 +331,11 @@ describe("staffShiftService requests", () => {
       originShiftId: "9223372036854775807",
     });
 
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/staff-shifts", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/staff-shifts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        staff_id: 7,
+        staff_id: "7",
         date: "2026-07-06",
         start_time: "08:00",
         end_time: "16:00",
@@ -340,7 +347,7 @@ describe("staffShiftService requests", () => {
   });
 
   it("serializes an atomic move with explicit source and target owners", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ data: { ...backendShift, staff_id: "8" } }),
     );
 
@@ -354,23 +361,23 @@ describe("staffShiftService requests", () => {
       shiftTypeId: "5",
     });
 
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/staff-shifts/42/move", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/staff-shifts/42/move", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        source_staff_id: 7,
-        target_staff_id: 8,
+        source_staff_id: "7",
+        target_staff_id: "8",
         date: "2026-07-07",
         start_time: "09:00",
         end_time: "15:00",
         break_minutes: 20,
-        shift_type_id: 5,
+        shift_type_id: "5",
       }),
     });
   });
 
   it("serializes notes and a nullable change reason when supplied", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ data: backendShift }, { status: 201 }),
     );
 
@@ -385,11 +392,11 @@ describe("staffShiftService requests", () => {
       changeReason: null,
     });
 
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/staff-shifts", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/staff-shifts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        staff_id: 7,
+        staff_id: "7",
         date: "2026-07-06",
         start_time: "08:00",
         end_time: "16:00",
@@ -402,16 +409,16 @@ describe("staffShiftService requests", () => {
   });
 
   it("returns cleanly after successful deletes", async () => {
-    mockSessionFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
 
     await expect(staffShiftService.deleteShift("42")).resolves.toBeUndefined();
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/staff-shifts/42", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/staff-shifts/42", {
       method: "DELETE",
     });
   });
 
   it("loads one staff member's shifts through the staff_id filter (#1844)", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ data: [backendShift] }, { status: 200 }),
     );
 
@@ -436,8 +443,11 @@ describe("staffShiftService requests", () => {
         originShiftId: null,
       },
     ]);
-    expect(mockSessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/staff-shifts?staff_id=7&from=2026-07-06&to=2026-07-10",
+      {
+        method: "GET",
+      },
     );
   });
 });
@@ -448,7 +458,7 @@ describe("ownShiftService assignments (#1844)", () => {
   });
 
   it("loads and maps the own Betreuungsplan assignments", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ data: [backendAssignment] }, { status: 200 }),
     );
 
@@ -473,13 +483,16 @@ describe("ownShiftService assignments (#1844)", () => {
         understaffedAck: false,
       },
     ]);
-    expect(mockSessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/time-tracking/assignments?from=2026-07-06&to=2026-07-10",
+      {
+        method: "GET",
+      },
     );
   });
 
   it("maps a nullable assignment list to an empty list", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ data: null }, { status: 200 }),
     );
 
@@ -489,7 +502,7 @@ describe("ownShiftService assignments (#1844)", () => {
   });
 
   it("preserves the backend error detail when the assignments load fails", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ detail: "assignments unavailable" }), {
         status: 500,
         headers: { "content-type": "application/json" },
@@ -500,12 +513,13 @@ describe("ownShiftService assignments (#1844)", () => {
       ownShiftService.getOwnAssignments("2026-07-06", "2026-07-10"),
     ).rejects.toMatchObject({
       status: 500,
-      message: "assignments unavailable",
+      message: "Einsätze konnten nicht geladen werden",
+      detail: "assignments unavailable",
     });
   });
 
   it("falls back to a default message when the assignments error body is empty", async () => {
-    mockSessionFetch.mockResolvedValueOnce(new Response("", { status: 502 }));
+    fetchMock.mockResolvedValueOnce(new Response("", { status: 502 }));
 
     await expect(
       ownShiftService.getOwnAssignments("2026-07-06", "2026-07-10"),

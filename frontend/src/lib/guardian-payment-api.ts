@@ -1,11 +1,9 @@
-import { apiErrorFromResponse } from "./api-error";
-import { bffJson } from "./bff-fetch";
+import { bffFile, bffJson } from "./bff-fetch";
 import {
   downloadBlob,
   filenameFromDisposition,
   openBlobForPrint,
 } from "./file-download";
-import { sessionFetch } from "./session-cache";
 
 /**
  * Guardian payment data (#2608). Bank details hang off the guardian, not off
@@ -130,20 +128,11 @@ export async function exportPaymentOverview(
   format: PaymentExportFormat,
   printTarget?: Window,
 ): Promise<void> {
-  const response = await sessionFetch(
-    "/api/guardians/payment-overview/export",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ format }),
-    },
+  const response = await bffFile(
+    "tenant",
+    "POST /api/guardians/payment-overview/export",
+    { body: { format }, errorMessage: "export payment overview failed" },
   );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      "export payment overview failed",
-    );
-  }
   const blob = await response.blob();
   if (printTarget) {
     await openBlobForPrint(blob, printTarget);
