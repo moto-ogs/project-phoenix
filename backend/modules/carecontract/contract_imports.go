@@ -375,6 +375,10 @@ type ContractImports interface {
 	ImportContracts(ctx context.Context, reviewer Reviewer, request ContractImportRequest) (ContractImport, error)
 	// ContractImportLog lists the imports of the Träger, newest first.
 	ContractImportLog(ctx context.Context, reviewer Reviewer) ([]ContractImportEntry, error)
+	// CorrectOfferings reads a correction file and answers every contract it
+	// names; with Apply it gives the ready contracts a new version in one go
+	// (#7764).
+	CorrectOfferings(ctx context.Context, reviewer Reviewer, request OfferingCorrectionRequest) (OfferingCorrection, error)
 }
 
 // ImportedDebtorNumber is the debtor number a row of an import file names

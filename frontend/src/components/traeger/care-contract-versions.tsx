@@ -50,6 +50,7 @@ const VERSION_SOURCE_LABELS: Record<
   abschluss: "Vertragsabschluss",
   buchungsaenderung: "Änderung der Betreuung",
   import: "Aus einer Datei importiert",
+  angebotskorrektur: "Module neu zugeordnet",
 };
 
 /** Where a version stands on a day, for its badge. */
@@ -175,8 +176,9 @@ export function changedWeekdays(
 
 /**
  * The next planned change of the care, if any: the earliest version from a
- * change that is not yet in force. A contract that only starts later is no
- * change.
+ * change that is not yet in force, from an approved change of the care or
+ * from a new assignment of the modules (#7764). A contract that only starts
+ * later is no change.
  */
 export function plannedVersion(
   versions: readonly ContractVersion[],
@@ -185,10 +187,20 @@ export function plannedVersion(
   return versions
     .filter(
       (version) =>
-        version.source === "buchungsaenderung" &&
+        (version.source === "buchungsaenderung" ||
+          version.source === "angebotskorrektur") &&
         versionPhase(version, today) === "planned",
     )
     .sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom))[0];
+}
+
+/** The notice above a contract with a planned version, by its source. */
+export function plannedVersionText(version: ContractVersion): string {
+  const reason =
+    version.source === "angebotskorrektur"
+      ? "Die Buchungen gehören dann zu anderen Modulen."
+      : "Eine Änderung der Betreuung ist freigegeben.";
+  return `Ab ${formatDate(version.effectiveFrom)} gilt Version ${version.number}. ${reason} Was sich ändert, steht unter „Versionen“.`;
 }
 
 export function CareContractVersions({
@@ -237,7 +249,7 @@ export function CareContractVersions({
           <StatusBadge label={`${versions.length} Versionen`} tone="gray" />
         ) : null
       }
-      description="Gibst du oder die Schule eine Änderung der Betreuung frei, entsteht eine neue Version. Frühere Versionen bleiben hier lesbar."
+      description="Gibst du oder die Schule eine Änderung der Betreuung frei oder ordnest du die Module neu zu, entsteht eine neue Version. Frühere Versionen bleiben hier lesbar."
     >
       <ResponsiveActionList>
         {ordered.map((version, index) => {

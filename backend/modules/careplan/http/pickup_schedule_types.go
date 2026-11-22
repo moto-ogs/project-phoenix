@@ -1,6 +1,7 @@
 package careplanhttp
 
 import (
+	"context"
 	errors "errors"
 	http "net/http"
 	strconv "strconv"
@@ -226,16 +227,17 @@ func validatePickupScheduleItems(items []PickupScheduleRequest) error {
 // via their Bind): the parse error below is intentionally discarded because the
 // time format is already guaranteed valid at that point. Mapping unvalidated
 // items here would silently persist a zero time.
-func toPickupScheduleModels(items []PickupScheduleRequest, studentID, staffID int64) []*careplan.PickupSchedule {
+func toPickupScheduleModels(ctx context.Context, items []PickupScheduleRequest, studentID, staffID int64) []*careplan.PickupSchedule {
 	schedules := make([]*careplan.PickupSchedule, 0, len(items))
 	for _, s := range items {
 		pickupTime, _ := parseTimeOnly(s.PickupTime)
 		schedules = append(schedules, &careplan.PickupSchedule{
-			StudentID:  studentID,
-			Weekday:    s.Weekday,
-			PickupTime: pickupTime,
-			Notes:      s.Notes,
-			CreatedBy:  staffID,
+			StudentID:        studentID,
+			Weekday:          s.Weekday,
+			PickupTime:       pickupTime,
+			Notes:            s.Notes,
+			CreatedBy:        staffID,
+			EnteredByTraeger: careplan.EnteredByTraeger(ctx, staffID),
 		})
 	}
 	return schedules
@@ -342,4 +344,8 @@ func (rs *Resource) verifyNoteOwnership(w http.ResponseWriter, r *http.Request, 
 var (
 	errPersonNotFoundForAccount = errors.New("person not found for account")
 	errUserNotStaff             = errors.New("user is not a staff member")
+	errNoSessionAccount         = errors.New("no valid JWT claims found")
+	// errScheduleUpdatePermissionRequired refuses weekly schedules attached to
+	// a new child without the right to edit Betreuungszeiten.
+	errScheduleUpdatePermissionRequired = errors.New("users:update permission required to create student schedules")
 )

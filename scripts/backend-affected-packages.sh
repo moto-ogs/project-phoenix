@@ -2,17 +2,17 @@
 # Prints changed backend packages. Production changes also select every package
 # whose production or test graph depends on them. Output is one import per line.
 #
-# --direct limits the selection to depth 1: only direct importers instead of
-# the transitive closure, and without the always-appended repo-wide ./test
-# ratchet package. scripts/test-changed.sh --fast separately selects source
-# ratchets by their filesystem inputs; CI keeps the default full closure.
+# --changed limits the selection to the changed packages themselves: no
+# importers and no always-appended repo-wide ./test ratchet package.
+# scripts/test-changed.sh --fast separately selects source ratchets by their
+# filesystem inputs; CI and the lint selection keep the default full closure.
 set -euo pipefail
 
 repo_root=$(git rev-parse --show-toplevel)
 cd "$repo_root"
-direct=false
-if [ "${1:-}" = --direct ]; then
-  direct=true
+changed_only=false
+if [ "${1:-}" = --changed ]; then
+  changed_only=true
   shift
 fi
 base=${1:-origin/development}
@@ -39,7 +39,7 @@ shared_fixture_dirs=$(
     done | sed -e 's|^backend/||' -e 's|/[^/]*$||' -e 's|^|test |'
 )
 
-changed_dirs=$({ printf '%s\n' "$shared_fixture_dirs"; printf '%s\n' "$backend_changes" | awk -v direct="$direct" '
+changed_dirs=$({ printf '%s\n' "$shared_fixture_dirs"; printf '%s\n' "$backend_changes" | awk -v changed_only="$changed_only" '
   /^backend\/.*\/testdata\// {
     path = $0
     sub(/^backend\//, "", path)
@@ -49,14 +49,14 @@ changed_dirs=$({ printf '%s\n' "$shared_fixture_dirs"; printf '%s\n' "$backend_c
   }
   /^backend\/architecture\/policy(\.json|\/)/ { print "test internal/architecture"; next }
   # Read by path from tests; no import edge leads to these files. Their
-  # readers in ./test come with every selection, or in --direct mode with the
+  # readers in ./test come with every selection, or in --changed mode with the
   # source ratchets of test-changed.sh.
   /^backend\/architecture\/composition\.json$/ { print "test cmd"; next }
   /^backend\/auth\/authorize\/permissions\/catalog\.json$/ { print "test modules/identityaccess/internal/domain"; next }
   /^backend\/architecture\/(command-effects|passthrough)(\.json|\/)/ { print "test internal/architecture"; print "test internal/passthrough"; print "test test"; next }
   /^backend\/test\/query-budgets\// { print "production test/query-budgets"; print "test internal/architecture"; next }
-  # CI needs the audit readers; --direct uses the source-test inventory instead.
-  /^backend\/database\/audits\/[^\/]+\.sql$/ { if (direct != "true") print "test test"; next }
+  # CI needs the audit readers; --changed uses the source-test inventory instead.
+  /^backend\/database\/audits\/[^\/]+\.sql$/ { if (changed_only != "true") print "test test"; next }
   /\.go$/ {
     path = $0
     kind = path ~ /_test\.go$/ ? "test" : "production"
@@ -166,29 +166,23 @@ production_changed=$(printf '%s\n' "$changed_dirs" | awk -v module="$module" '
   }
 ')
 
-# Depth of the importer expansion: .Deps is the transitive closure, .Imports
-# only the direct edges (--direct).
-deps_field=Deps
-if [ "$direct" = true ]; then
-  deps_field=Imports
-fi
-
 {
   printf '%s\n' "$changed"
   # The test package contains repository-wide source scanners and ratchets.
   # Import-graph selection cannot discover that dependency, so every non-empty
-  # backend selection must include it explicitly. --direct leaves the targeted
+  # backend selection must include it explicitly. --changed leaves the targeted
   # filesystem dependency selection to test-changed.sh instead of running all
   # of ./test (which includes database integration tests).
-  if [ "$direct" != true ]; then
+  if [ "$changed_only" != true ]; then
     printf '%s/test\n' "$module"
   fi
-  if [ -n "$production_changed" ]; then
+  # Importers run in CI; locally the lint step still type-checks them.
+  if [ "$changed_only" != true ] && [ -n "$production_changed" ]; then
     # -test includes the ordinary packages too, so load both graphs once.
     # ForTest maps test variants to their owner; Match retains ordinary
     # packages without tests and excludes generated test mains. Do not filter
     # by a .test suffix: a real package may legitimately have that name.
-    go list -tags=testhooks -test -f "{{if .ForTest}}{{.ForTest}}{{range .$deps_field}} {{.}}{{end}}{{else if .Match}}{{.ImportPath}}{{range .$deps_field}} {{.}}{{end}}{{end}}" ./... |
+    go list -tags=testhooks -test -f "{{if .ForTest}}{{.ForTest}}{{range .Deps}} {{.}}{{end}}{{else if .Match}}{{.ImportPath}}{{range .Deps}} {{.}}{{end}}{{end}}" ./... |
       awk 'NR == FNR { changed[$0] = 1; next }
         {
           for (field = 2; field <= NF; field++) {

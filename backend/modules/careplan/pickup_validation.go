@@ -5,10 +5,10 @@ import (
 	"unicode/utf8"
 )
 
-func validateExceptionAuthor(source string, createdBy int64, createdByGuardian *int64) error {
+func validateExceptionAuthor(source string, createdBy int64, enteredByTraeger bool, createdByGuardian *int64) error {
 	switch source {
 	case "", ExceptionSourceStaff:
-		if createdBy <= 0 {
+		if createdBy <= 0 && !enteredByTraeger {
 			return errors.New("created_by is required")
 		}
 	case ExceptionSourceGuardian:
@@ -32,7 +32,7 @@ func (s *PickupSchedule) Validate() error {
 	if s.PickupTime.IsZero() {
 		return errors.New("pickup_time is required")
 	}
-	if s.CreatedBy <= 0 && s.Source != ScheduleSourceCareOffering {
+	if s.CreatedBy <= 0 && !s.EnteredByTraeger && s.Source != ScheduleSourceCareOffering {
 		return errors.New("created_by is required")
 	}
 	if s.Notes != nil && len(*s.Notes) > 500 {
@@ -69,7 +69,7 @@ func (e *PickupException) Validate() error {
 	if err := e.validateExcusalFields(); err != nil {
 		return err
 	}
-	if err := validateExceptionAuthor(e.Source, e.CreatedBy, e.CreatedByGuardian); err != nil {
+	if err := validateExceptionAuthor(e.Source, e.CreatedBy, e.EnteredByTraeger, e.CreatedByGuardian); err != nil {
 		return err
 	}
 	return nil
@@ -95,7 +95,7 @@ func (n *PickupNote) Validate() error {
 	if len(n.Content) > 500 {
 		return errors.New("content cannot exceed 500 characters")
 	}
-	if n.CreatedBy <= 0 {
+	if n.CreatedBy <= 0 && !n.EnteredByTraeger {
 		return errors.New("created_by is required")
 	}
 	return nil
@@ -108,11 +108,11 @@ func (r *PickupNote) SetTenantID(id int64)      { r.TenantID = id }
 func (e *PickupException) validateExcusalFields() error {
 	switch {
 	case e.ExcusedFrom == nil:
-		if e.ExcusedReason != nil || e.ExcusedCreatedBy != nil || e.ExcusedOwnsPickupTime || e.ExcusedAuto {
+		if e.ExcusedReason != nil || e.ExcusedCreatedBy != nil || e.ExcusedByTraeger || e.ExcusedOwnsPickupTime || e.ExcusedAuto {
 			return errors.New("partial absence metadata requires excused_from")
 		}
 	case e.ExcusedAuto:
-		if e.ExcusedCreatedBy != nil {
+		if e.ExcusedCreatedBy != nil || e.ExcusedByTraeger {
 			return errors.New("auto partial absences must not carry excused_created_by")
 		}
 		if e.ExcusedOwnsPickupTime {
@@ -121,7 +121,7 @@ func (e *PickupException) validateExcusalFields() error {
 		if e.PickupTime == nil {
 			return errors.New("auto partial absences require a pickup time")
 		}
-	case e.ExcusedCreatedBy == nil || *e.ExcusedCreatedBy <= 0:
+	case !e.ExcusedByTraeger && (e.ExcusedCreatedBy == nil || *e.ExcusedCreatedBy <= 0):
 		return errors.New("excused_created_by is required for partial absences")
 	case e.ExcusedOwnsPickupTime && e.PickupTime == nil:
 		return errors.New("owned partial-absence pickup time is required")

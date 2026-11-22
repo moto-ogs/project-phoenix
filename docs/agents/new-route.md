@@ -208,10 +208,28 @@ view (#5018). A file whose only code forwards to the
 backend fails `app/api/proxy-routes.test.ts`; a file whose backend paths
 the contract registers, all of them, fails `app/api/route-backend-paths.test.ts`,
 and a file in front of a registered path fails
-`app/api/catalog-route-selection.test.ts`. A new backend route without a
-contract fails `scripts/check-contract-shrink.mjs`;
-a route the contract cannot carry (a sign-in step, a device or webhook
-endpoint) needs a new ADR that names its catalog line. A named route builds its
+`app/api/catalog-route-selection.test.ts`.
+
+## Routes outside the contract
+
+Every route of the catalog registers a contract, or
+`routesOutsideContract` (`backend/api/routes_outside_contract_registry_test.go`) names it
+with one reason of a closed set and a sentence why:
+
+| Reason | Applies to |
+|---|---|
+| `device` | the kiosk (PyrePortal) or the wall display, with a device key or token |
+| `webdav`, `metrics`, `probe` | CalDAV, Prometheus, health and readiness |
+| `session` | a sign-in, second-factor, renewal or switch step whose answer the portal turns into its session cookie |
+| `stream` | a server-sent event stream |
+| `public-api`, `webhook` | a machine API with its own description, a provider's callback |
+| `browser-route` | a route file that must act around the call: purge a BFF cache, read a flow cookie, add the session's data to a public answer |
+
+`TestEveryCatalogRouteHasAContractOrAReason` (`backend/api`) fails on a
+route with neither, on an entry for a registered or a missing route, and on
+an entry without its reason. Ordinary JSON is never a reason: it gets a
+contract. A new route outside the contract also fails
+`scripts/check-contract-shrink.mjs` until a new ADR names its catalog line. A named route builds its
 handlers from its portal's route wrapper (`frontend/src/lib/route-wrapper.server.ts`,
 `frontend/src/lib/<portal>/route-wrapper.server.ts`) and reads a registered
 route with `contractGet` or `contractWrite`

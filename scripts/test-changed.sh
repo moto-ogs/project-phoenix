@@ -5,9 +5,9 @@
 # Frontend: Dateisystem-Guards plus vitest --changed (wie im PR-Check).
 #
 # Usage: scripts/test-changed.sh [--fast] [base-ref]   (Default: origin/development)
-#   --fast: nur direkt geänderte Packages plus ihre direkten Importer
-#           (Depth 1 statt transitiver Closure) und gezielt betroffene
-#           Quelltext-Ratchets aus ./test. CI läuft die volle Closure.
+#   --fast: nur die geänderten Packages selbst, ohne Importer, und gezielt
+#           betroffene Quelltext-Ratchets aus ./test. Importer prüft lokal
+#           nur der Lint-Typecheck; CI läuft die volle Closure.
 set -euo pipefail
 repo_root=$(git rev-parse --show-toplevel)
 cd "$repo_root"
@@ -28,8 +28,8 @@ BASE=${1:-origin/development}
 
 affected=()
 if [ "$FAST" = true ]; then
-  echo "==> Schnellmodus: geänderte Packages, direkte Importer und betroffene Quelltext-Ratchets. CI läuft die volle Closure."
-  affected_output=$(scripts/backend-affected-packages.sh --direct "$BASE")
+  echo "==> Schnellmodus: geänderte Packages ohne Importer und betroffene Quelltext-Ratchets. CI läuft die volle Closure."
+  affected_output=$(scripts/backend-affected-packages.sh --changed "$BASE")
 else
   affected_output=$(scripts/backend-affected-packages.sh "$BASE")
 fi

@@ -237,6 +237,10 @@ var traegerCoreActions = map[RouteKey]CoreAction{
 	// to a school; the preview stores nothing.
 	{http.MethodPost, "/traeger/contract-imports/"}:        notCaptured,
 	{http.MethodPost, "/traeger/contract-imports/preview"}: notCaptured,
+	// The correction of the modules imported contracts book (#7764) belongs
+	// to the Träger like the import; the preview stores nothing.
+	{http.MethodPost, "/traeger/contract-imports/offering-corrections"}:         notCaptured,
+	{http.MethodPost, "/traeger/contract-imports/offering-corrections/preview"}: notCaptured,
 	// Withdrawal and termination (#4682): the Träger-Büro records a
 	// declaration it received and sets the end of an extraordinary
 	// termination it checked; the parents' own one in the parents portal.

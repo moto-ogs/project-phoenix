@@ -157,7 +157,7 @@ function shared(values: readonly string[]): string | null {
 }
 
 function childIds(offer: HolidayOffer): string {
-  return offer.children.map((child) => child.student_id).join(",");
+  return (offer.children ?? []).map((child) => child.student_id).join(",");
 }
 
 function useChildNames(offer: HolidayOffer): string {
@@ -165,7 +165,7 @@ function useChildNames(offer: HolidayOffer): string {
   return useMemo(
     () =>
       new Intl.ListFormat(locale, { type: "conjunction" }).format(
-        offer.children.map((child) => child.first_name),
+        (offer.children ?? []).map((child) => child.first_name),
       ),
     [locale, offer.children],
   );

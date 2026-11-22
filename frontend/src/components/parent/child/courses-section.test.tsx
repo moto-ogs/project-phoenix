@@ -28,6 +28,8 @@ const mockedWithdraw = vi.mocked(withdrawChildCourseRequest);
 
 function catalog(overrides: Partial<ChildCourses> = {}): ChildCourses {
   return {
+    can_request: true,
+    reason_required: false,
     enabled: true,
     effective_from: "2026-09-21",
     pending_submitted_by_self: false,

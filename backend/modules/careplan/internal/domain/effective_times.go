@@ -21,12 +21,14 @@ type EffectiveExceptionFields struct {
 	Reason            *string
 	Source            string
 	CreatedBy         int64
+	EnteredByTraeger  bool
 	CreatedByGuardian *int64
 	CreatedAt         time.Time
 	TenantID          int64
 	ExcusedFrom       *time.Time
 	ExcusedReason     *string
 	ExcusedCreatedBy  *int64
+	ExcusedByTraeger  bool
 	ExcusedOwnsTime   bool
 	ExcusedAuto       bool
 	TimeChanged       bool

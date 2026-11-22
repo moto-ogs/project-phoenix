@@ -85,17 +85,22 @@ func OverrunRouteContracts() []common.RouteContract {
 // with patterns relative to /traeger/contract-imports. The preview and the
 // import take the same upload: the file plus the form fields.
 func ImportRouteContracts() []common.RouteContract {
-	upload := func(pattern string) common.RouteContract {
+	upload := func(pattern string, response any) common.RouteContract {
 		return common.RouteContract{Method: "POST", Pattern: pattern, Portals: traegerPortal, Multipart: true,
 			MaxBodyBytes: carecontract.MaxContractImportFileBytes + importFormOverhead,
-			TooLargeCode: common.CodeCareContractImportFileTooLarge, Response: carecontract.ContractImport{}}
+			TooLargeCode: common.CodeCareContractImportFileTooLarge, Response: response}
 	}
-	preview := upload("/preview")
+	preview := upload("/preview", carecontract.ContractImport{})
 	preview.NoCommit = "an import preview checks the file and saves no row of it"
+	// The correction of the modules imported contracts book (#7764).
+	correctionPreview := upload("/offering-corrections/preview", carecontract.OfferingCorrection{})
+	correctionPreview.NoCommit = "a correction preview checks the file and saves no version"
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: []carecontract.ContractImportEntry{}},
-		upload("/"),
+		upload("/", carecontract.ContractImport{}),
 		preview,
+		upload("/offering-corrections", carecontract.OfferingCorrection{}),
+		correctionPreview,
 	}
 }
 
