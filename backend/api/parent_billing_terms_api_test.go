@@ -578,10 +578,10 @@ func TestFamilyPaymentMethodIsSetBeforeTheFirstInvoice(t *testing.T) {
 		FamilyPaymentMethod: "direct_debit", ContractID: wireID(contract), PaymentMethods: []string{}}, families[0],
 		"named by the party of its contract, not by its address")
 
-	// Saved again through the sibling's contract, the deviation hangs on
-	// the family's contract that runs longest, here the first of two equal
-	// ones, whichever contract it is saved through. A draft is refused:
-	// discarded, it would take the deviation along.
+	// Saved again through the sibling's contract, the deviation stays on
+	// the contract it hangs on: neither contract of the fixture runs on the
+	// test's day (the unit test of bindingContractOf covers running ones).
+	// A draft is refused: discarded, it would take the deviation along.
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyBillingPath, map[string]any{
 		"contract_id": sibling, "recipient_kind": "applicant", "payment_method": "direct_debit", "due_day": 10})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

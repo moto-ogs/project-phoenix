@@ -275,8 +275,10 @@ func (t *BillingTerms) SaveFamilyBilling(ctx context.Context, reviewer parentbil
 
 // familyContract is a contract of a family in force around today.
 type familyContract struct {
-	id    int64
-	until calendar.Date
+	id int64
+	// from and until are its first and last day within the window read; a
+	// contract without an end is clipped to the window's.
+	from, until calendar.Date
 }
 
 // bindingContract answers the contract the deviation of the family hangs
@@ -288,7 +290,7 @@ func (t *BillingTerms) bindingContract(ctx context.Context, organizationID int64
 	if err != nil {
 		return 0, err
 	}
-	_, until, ids := contractSpans(versions)
+	first, until, ids := contractSpans(versions)
 	recipients, err := t.contracts.Recipients(ctx, organizationID, ids)
 	if err != nil {
 		return 0, fmt.Errorf("parent billing: read the contract parties: %w", err)
@@ -296,7 +298,7 @@ func (t *BillingTerms) bindingContract(ctx context.Context, organizationID int64
 	var contracts []familyContract
 	for _, id := range ids {
 		if parentbilling.ContractFamilyKey(recipients[id].Email, id) == family {
-			contracts = append(contracts, familyContract{id: id, until: until[id]})
+			contracts = append(contracts, familyContract{id: id, from: first[id].From, until: until[id]})
 		}
 	}
 	held := int64(0)
@@ -306,26 +308,45 @@ func (t *BillingTerms) bindingContract(ctx context.Context, organizationID int64
 	return bindingContractOf(contracts, saved, held, t.today()), nil
 }
 
-// bindingContractOf picks the contract of the family that still runs and
-// ends last. Without one: the contract saved through when it is not in
-// force yet (sent, it will run), else the contract the deviation hangs on,
-// else the one saved through.
+// bindingContractOf picks the contract of the family that runs today and
+// ends last; a contract that only starts later does not count, it can
+// still be withdrawn. Among contracts ending on the same day (two without
+// an end look alike) the one saved through wins, then the one the
+// deviation hangs on. Without a running contract the deviation stays on
+// the contract it hangs on, and a new one takes the contract saved
+// through: nothing tells an old contract from one that is only sent.
 func bindingContractOf(contracts []familyContract, saved, held int64, today calendar.Date) int64 {
-	best, last, savedInForce := int64(0), calendar.Date(""), false
+	var last calendar.Date
 	for _, contract := range contracts {
-		savedInForce = savedInForce || contract.id == saved
-		if !contract.until.Before(today) && contract.until.After(last) {
-			best, last = contract.id, contract.until
+		if contract.runsOn(today) && contract.until.After(last) {
+			last = contract.until
+		}
+	}
+	best := int64(0)
+	for _, contract := range contracts {
+		if !contract.runsOn(today) || contract.until != last {
+			continue
+		}
+		if contract.id == saved {
+			return saved
+		}
+		if best == 0 || contract.id == held {
+			best = contract.id
 		}
 	}
 	switch {
 	case best != 0:
 		return best
-	case !savedInForce || held == 0:
-		return saved
-	default:
+	case held != 0:
 		return held
+	default:
+		return saved
 	}
+}
+
+// runsOn tells whether the contract has started and has not ended.
+func (c familyContract) runsOn(day calendar.Date) bool {
+	return !c.from.After(day) && !c.until.Before(day)
 }
 
 // removeFamilyBilling removes the row of a family that deviates in nothing
