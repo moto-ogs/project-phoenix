@@ -159,15 +159,7 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 			}
 		}
 	}
-	// A number has to hold on the later of today and the day the row names:
-	// a confirmation that ends before the row's day is renewed from that
-	// day, and the months it covers keep it (FamilyChildCount.InForceOn).
-	decideImportedChildren(rows, current, func(row importedChildren) calendar.Date {
-		if row.number.ValidFrom.After(today) {
-			return row.number.ValidFrom
-		}
-		return today
-	})
+	decideImportedChildren(rows, current, familyImportDecisionDay(today))
 	var shown []parentbilling.FamilyChildTarget
 	seen := map[int64]bool{}
 	for i, row := range rows {
@@ -185,6 +177,19 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 	}
 	alignFamilyImportDays(candidates)
 	return shown
+}
+
+// familyImportDecisionDay is the day a row's number has to hold on: the
+// later of today and the day the row names. A confirmation that ends before
+// the row's day is renewed from that day, and the months it covers keep it
+// (FamilyChildCount.InForceOn).
+func familyImportDecisionDay(today calendar.Date) func(importedChildren) calendar.Date {
+	return func(row importedChildren) calendar.Date {
+		if row.number.ValidFrom.After(today) {
+			return row.number.ValidFrom
+		}
+		return today
+	}
 }
 
 // alignFamilyImportDays shows on the ready rows of one family the day the
