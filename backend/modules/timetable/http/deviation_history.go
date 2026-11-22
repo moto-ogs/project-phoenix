@@ -28,17 +28,17 @@ import (
 
 // DeviationHistoryEvent is one protocol row in the response.
 type DeviationHistoryEvent struct {
-	ID               common.ID       `json:"id"`
-	ActivityGroupID  *common.ID      `json:"activity_group_id,omitempty"`
+	ID               ident.ID        `json:"id"`
+	ActivityGroupID  *ident.ID       `json:"activity_group_id,omitempty"`
 	OccurrenceDate   string          `json:"occurrence_date"`
 	StartTime        string          `json:"start_time"`
-	InstanceID       *common.ID      `json:"instance_id,omitempty"`
+	InstanceID       *ident.ID       `json:"instance_id,omitempty"`
 	EventType        string          `json:"event_type"`
-	SubjectStaffID   *common.ID      `json:"subject_staff_id,omitempty"`
+	SubjectStaffID   *ident.ID       `json:"subject_staff_id,omitempty"`
 	SubjectStaffName *string         `json:"subject_staff_name,omitempty"`
-	RelatedStaffID   *common.ID      `json:"related_staff_id,omitempty"`
+	RelatedStaffID   *ident.ID       `json:"related_staff_id,omitempty"`
 	RelatedStaffName *string         `json:"related_staff_name,omitempty"`
-	ActorAccountID   *common.ID      `json:"actor_account_id,omitempty"`
+	ActorAccountID   *ident.ID       `json:"actor_account_id,omitempty"`
 	ActorName        *string         `json:"actor_name,omitempty"`
 	OldValue         json.RawMessage `json:"old_value,omitempty"`
 	NewValue         json.RawMessage `json:"new_value,omitempty"`

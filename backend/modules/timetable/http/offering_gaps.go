@@ -208,8 +208,8 @@ func offeringGapResponseFrom(gap timetable.OfferingGap) offeringGapResponse {
 }
 
 type offeringGapAckRequest struct {
-	PeriodID     common.ID `json:"period_id"`
-	Acknowledged *bool     `json:"acknowledged"`
+	PeriodID     ident.ID `json:"period_id"`
+	Acknowledged *bool    `json:"acknowledged"`
 }
 
 func (req *offeringGapAckRequest) Bind(*http.Request) error {

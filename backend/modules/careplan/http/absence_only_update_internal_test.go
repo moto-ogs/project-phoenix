@@ -4,12 +4,12 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	careplanhttp "github.com/moto-ogs/project-phoenix/modules/careplan/http"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func TestIsAbsenceOnly(t *testing.T) {
@@ -33,7 +33,7 @@ func TestIsAbsenceOnly(t *testing.T) {
 		{"sick plus school class", &careplanhttp.UpdateStudentRequest{Sick: boolPtr(true), SchoolClass: strPtr("2b")}, false},
 		{"sick plus extra info", &careplanhttp.UpdateStudentRequest{Sick: boolPtr(true), ExtraInfo: strPtr("x")}, false},
 		{"sick plus health info", &careplanhttp.UpdateStudentRequest{Sick: boolPtr(true), HealthInfo: strPtr("x")}, false},
-		{"sick plus group move", &careplanhttp.UpdateStudentRequest{Sick: boolPtr(true), GroupID: func() *common.ID { id := common.ID(3); return &id }()}, false},
+		{"sick plus group move", &careplanhttp.UpdateStudentRequest{Sick: boolPtr(true), GroupID: func() *ident.ID { id := ident.ID(3); return &id }()}, false},
 		{"sick plus photo consent", &careplanhttp.UpdateStudentRequest{Sick: boolPtr(true), PhotoConsentGiven: boolPtr(true)}, false},
 		{"sick plus companions", &careplanhttp.UpdateStudentRequest{Sick: boolPtr(true), Companions: &[]careplanhttp.CompanionEntry{}}, false},
 		{"sick plus companion extension flag", &careplanhttp.UpdateStudentRequest{Sick: boolPtr(true), ExtendCompanionPlans: true}, false},

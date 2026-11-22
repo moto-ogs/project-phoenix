@@ -25,14 +25,14 @@ import (
 
 // InstanceParticipantResponse is one visible child in an instance.
 type InstanceParticipantResponse struct {
-	StudentID   common.ID `json:"student_id"`
-	DisplayName string    `json:"display_name"`
+	StudentID   ident.ID `json:"student_id"`
+	DisplayName string   `json:"display_name"`
 }
 
 // InstanceStaffNameResponse is one assigned staff member's display name.
 type InstanceStaffNameResponse struct {
-	StaffID     common.ID `json:"staff_id"`
-	DisplayName string    `json:"display_name"`
+	StaffID     ident.ID `json:"staff_id"`
+	DisplayName string   `json:"display_name"`
 }
 
 // InstanceParticipantsResponse is the wire shape of the participants list.
@@ -40,7 +40,7 @@ type InstanceStaffNameResponse struct {
 // block is exactly the overview the Leseansicht exists for; only child names
 // run through the CanReadStudent scope filter.
 type InstanceParticipantsResponse struct {
-	InstanceID   common.ID                     `json:"instance_id"`
+	InstanceID   ident.ID                      `json:"instance_id"`
 	Participants []InstanceParticipantResponse `json:"participants"`
 	Staff        []InstanceStaffNameResponse   `json:"staff"`
 }

@@ -14,17 +14,17 @@ import (
 )
 
 type updateInstanceRequest struct {
-	Date            string      `json:"date"`
-	StartTime       string      `json:"start_time"`
-	EndTime         string      `json:"end_time"`
-	Title           string      `json:"title"`
-	Description     *string     `json:"description,omitempty"`
-	Notes           *string     `json:"notes,omitempty"`
-	RoomID          common.ID   `json:"room_id"`
-	ActivityGroupID *common.ID  `json:"activity_group_id,omitempty"`
-	ListKind        *string     `json:"list_kind,omitempty"`
-	StaffIDs        []common.ID `json:"staff_ids,omitempty"`
-	StudentIDs      []common.ID `json:"student_ids,omitempty"`
+	Date            string     `json:"date"`
+	StartTime       string     `json:"start_time"`
+	EndTime         string     `json:"end_time"`
+	Title           string     `json:"title"`
+	Description     *string    `json:"description,omitempty"`
+	Notes           *string    `json:"notes,omitempty"`
+	RoomID          ident.ID   `json:"room_id"`
+	ActivityGroupID *ident.ID  `json:"activity_group_id,omitempty"`
+	ListKind        *string    `json:"list_kind,omitempty"`
+	StaffIDs        []ident.ID `json:"staff_ids,omitempty"`
+	StudentIDs      []ident.ID `json:"student_ids,omitempty"`
 	// RequiredStaff is the optional per-occurrence Personalbedarf pin (#1839);
 	// omitted/null clears the pin (inherit the template override, else derive
 	// from the Betreuungsschlüssel), a value = pin for this occurrence.

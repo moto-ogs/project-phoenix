@@ -146,7 +146,7 @@ func (rs *Resource) linkToTenant(w http.ResponseWriter, r *http.Request) {
 	// Return ONLY id, email and what was provisioned at THIS school — never leak
 	// roles, username, or active status from other tenants
 	common.Respond(w, r, http.StatusOK, LinkedAccountResponse{
-		ID:             common.ID(provisioned.Account.ID),
+		ID:             ident.ID(provisioned.Account.ID),
 		Email:          provisioned.Account.Email,
 		SchoolIdentity: buildSchoolIdentityResponse(provisioned.Identity),
 	}, "Account linked to tenant successfully")
