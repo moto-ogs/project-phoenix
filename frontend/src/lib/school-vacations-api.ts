@@ -3,12 +3,7 @@
 // Hinweis zählt geplante Regeltermine in den Ferien der nächsten acht Wochen.
 // Proxy: /api/timetable/school-vacations und /school-vacation-hints.
 
-import { apiErrorFromBody, transportFetch } from "~/lib/api-error";
-import type {
-  SchoolVacationAcknowledgedResponse,
-  SchoolVacationHintsResponse,
-  SchoolVacationsResponse,
-} from "~/lib/contract/timetable.generated";
+import { bffJson } from "~/lib/bff-fetch";
 
 import { timetableKeys } from "~/lib/swr/portal-keys";
 
@@ -41,31 +36,14 @@ export interface SchoolVacationHint {
   readonly count: number;
 }
 
-async function readData<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Anfrage fehlgeschlagen (HTTP ${response.status})`,
-      response.status,
-      await response.json().catch(() => undefined),
-    );
-  }
-  const envelope = (await response.json()) as { data: T };
-  return envelope.data;
-}
-
 /** Ferien im Fenster [from, to], beide Tage eingeschlossen (höchstens 400 Tage). */
 export async function getSchoolVacations(
   fromISO: string,
   toISO: string,
 ): Promise<SchoolVacations> {
-  const params = new URLSearchParams({ from: fromISO, to: toISO });
-  const data = await readData<SchoolVacationsResponse>(
-    await transportFetch(`/api/timetable/school-vacations?${params}`, {
-      method: "GET",
-      headers: { Accept: "application/json" },
-      credentials: "include",
-    }),
-  );
+  const data = await bffJson("tenant", "GET /api/timetable/school-vacations", {
+    query: { from: fromISO, to: toISO },
+  });
   return {
     federalState: data.federal_state,
     federalStateName: data.federal_state_name,
@@ -80,12 +58,9 @@ export async function getSchoolVacations(
 }
 
 export async function getSchoolVacationHints(): Promise<SchoolVacationHint[]> {
-  const data = await readData<SchoolVacationHintsResponse>(
-    await transportFetch("/api/timetable/school-vacation-hints", {
-      method: "GET",
-      headers: { Accept: "application/json" },
-      credentials: "include",
-    }),
+  const data = await bffJson(
+    "tenant",
+    "GET /api/timetable/school-vacation-hints",
   );
   return (data.hints ?? []).map((hint) => ({
     name: hint.name,
@@ -101,18 +76,9 @@ export async function acknowledgeSchoolVacation(
   startDate: string,
   endDate: string,
 ): Promise<void> {
-  await readData<SchoolVacationAcknowledgedResponse>(
-    await transportFetch(
-      "/api/timetable/school-vacation-hints/acknowledgements",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({ start_date: startDate, end_date: endDate }),
-      },
-    ),
+  await bffJson(
+    "tenant",
+    "POST /api/timetable/school-vacation-hints/acknowledgements",
+    { body: { start_date: startDate, end_date: endDate } },
   );
 }

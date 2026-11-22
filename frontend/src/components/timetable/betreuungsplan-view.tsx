@@ -946,12 +946,7 @@ function TimetablesContent() {
     () =>
       canFilterByRoom
         ? sortedFilterOptions(
-            new Map(
-              (filterRooms ?? []).map((room) => [
-                String(room.id),
-                room.name ?? room.room_name ?? "",
-              ]),
-            ),
+            new Map((filterRooms ?? []).map((room) => [room.id, room.name])),
           )
         : null,
     [canFilterByRoom, filterRooms],

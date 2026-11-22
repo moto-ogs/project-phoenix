@@ -76,16 +76,6 @@ export interface CalendarPeriod {
 }
 
 /** POST/PUT body — backend expects YYYY-MM-DD strings, not Date objects. */
-export interface CalendarPeriodInput {
-  name: string;
-  period_type: PeriodType;
-  start_date: string;
-  end_date: string;
-  week_cycle_length: number;
-  week_cycle_anchor?: string;
-  is_active: boolean;
-}
-
 export function mapPeriod(raw: CalendarPeriodResponse): CalendarPeriod {
   return {
     id: raw.id,
