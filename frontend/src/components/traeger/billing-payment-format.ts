@@ -171,11 +171,7 @@ export const FAMILY_PAYMENT_FROM_CONTRACT = "vertrag";
  * (#7770). The value travels in the address („?zahlung=ohne“), so the list
  * comes back filtered after a family was saved.
  */
-export const FAMILY_PAYMENT_FILTERS = [
-  "ohne",
-  "lastschrift",
-  "ueberweisung",
-] as const;
+const FAMILY_PAYMENT_FILTERS = ["ohne", "lastschrift", "ueberweisung"] as const;
 export type FamilyPaymentFilter = (typeof FAMILY_PAYMENT_FILTERS)[number];
 
 /** The filter a query value names, "" for none or an unknown one. */

@@ -485,18 +485,30 @@ export default function GuardianFormModal({
     }>;
   }> => {
     // Beim Bearbeiten heißt ein geleertes Feld „löschen“: "" kommt im Backend
-    // an, undefined ließe den alten Wert stehen.
-    const cleared = mode === "edit" ? "" : undefined;
+    // an, undefined ließe den alten Wert stehen. Nur ein Feld, das beim
+    // Öffnen einen Wert hatte, wird geleert; ein unberührt leeres Feld
+    // schreibt nichts.
+    const valueOrCleared = (value: string, stored?: string | null) =>
+      value.trim() || (mode === "edit" && stored ? "" : undefined);
     return entries.map((entry) => ({
       id: entry.id,
       guardianData: {
         firstName: entry.firstName.trim(),
         lastName: entry.lastName.trim(),
-        email: entry.email.trim() || cleared,
-        addressStreet: entry.addressStreet.trim() || cleared,
-        addressCity: entry.addressCity.trim() || cleared,
-        addressPostalCode: entry.addressPostalCode.trim() || cleared,
-        notes: entry.notes.trim() || cleared,
+        email: valueOrCleared(entry.email, initialData?.email),
+        addressStreet: valueOrCleared(
+          entry.addressStreet,
+          initialData?.addressStreet,
+        ),
+        addressCity: valueOrCleared(
+          entry.addressCity,
+          initialData?.addressCity,
+        ),
+        addressPostalCode: valueOrCleared(
+          entry.addressPostalCode,
+          initialData?.addressPostalCode,
+        ),
+        notes: valueOrCleared(entry.notes, initialData?.notes),
         languagePreference: entry.languagePreference || "de",
       },
       relationshipData: {

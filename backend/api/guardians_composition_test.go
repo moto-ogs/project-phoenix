@@ -75,8 +75,9 @@ type guardianCompositionContext struct {
 	pendingInvitation func(studentID, guardianID, requesterAccountID int64) int64
 	// invitationApproval reads the stored approval status of an invitation.
 	invitationApproval func(invitationID int64) string
-	// count runs a COUNT(*) query in the test tenant's database.
-	count func(query string, args ...any) int
+	// count runs a COUNT(*) query that takes one ID in the test tenant's
+	// database.
+	count func(query string, id int64) int
 }
 
 type financialChangeRow struct {
@@ -221,9 +222,9 @@ func setupGuardiansCompositionRoute(t *testing.T, appEnvs ...string) *guardianCo
 			link := testpkg.CreateTestStudentGuardianLinkForTenant(t, db, foreignTenantID, student.ID, guardian.ID, "primary_guardian")
 			return student.ID, guardian.ID, link.ID
 		},
-		count: func(query string, args ...any) int {
+		count: func(query string, id int64) int {
 			var n int
-			require.NoError(t, db.NewRaw(query, args...).Scan(ctx, &n))
+			require.NoError(t, db.NewRaw(query, id).Scan(ctx, &n))
 			return n
 		},
 		persistedLink: func(linkID int64) persistedLinkState {

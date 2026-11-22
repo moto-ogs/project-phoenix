@@ -701,10 +701,10 @@ function TraegerVertragView() {
                 )}
               </SectionCard>
               {/* How the family pays is set here before the first invoice
-                  (#7770); a mandate alone does not choose the debit. */}
-              {party ? (
-                <FamilyBillingStatusCard contractId={contract.id} />
-              ) : null}
+                  (#7770); a mandate alone does not choose the debit. Also
+                  for an imported contract without a party: it is a family
+                  of its own. */}
+              <FamilyBillingStatusCard contractId={contract.id} />
               {party?.email ? (
                 <SepaMandateStatusCard contractId={contract.id} />
               ) : null}

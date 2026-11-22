@@ -66,8 +66,8 @@ export const GUARDIAN_ROLE_HINTS: Record<GuardianRole, string> = {
   primary_guardian: FULL_ROLE_HINT,
   legal_guardian: FULL_ROLE_HINT,
   co_guardian: FULL_ROLE_HINT,
-  emergency_contact: "Wird im Notfall angerufen. Kein Zugang zur Eltern-App.",
-  pickup_only: "Darf das Kind abholen. Kein Zugang zur Eltern-App.",
+  emergency_contact: "Kein Zugang zur Eltern-App. Nur für den Notfall da.",
+  pickup_only: "Kein Zugang zur Eltern-App. Nur zum Abholen da.",
   social_worker:
     "Fachkraft vom Sozialdienst. Kein Zugang zur Eltern-App, keine Einladung.",
   custom:

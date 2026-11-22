@@ -114,6 +114,8 @@ describe("TraegerBillingFamiliesPage", () => {
       scope: "payer",
     });
     api.fetchFamilyChildren.mockReset();
+    // The list always reads the families with a contract (#7770).
+    api.fetchFamilyChildren.mockResolvedValue([]);
     api.setChildDebtorNumber.mockReset();
   });
 
@@ -202,7 +204,8 @@ describe("TraegerBillingFamiliesPage", () => {
 
   it("says when no family is known yet", async () => {
     // #6692: a family stands here from the confirmed holiday registration
-    // on, not only from the first released run.
+    // on, not only from the first released run; since #7770 also from its
+    // contract on.
     api.fetchBillingFamilies.mockResolvedValue([]);
     renderPage();
 
@@ -211,7 +214,7 @@ describe("TraegerBillingFamiliesPage", () => {
     ).toBeInTheDocument();
     expect(
       screen.getAllByText(
-        "Eine Familie steht hier, sobald du eine Ferienanmeldung bestätigst oder eine Rechnung freigibst.",
+        "Eine Familie steht hier, sobald sie einen Vertrag hat, du eine Ferienanmeldung bestätigst oder eine Rechnung freigibst.",
       )[0],
     ).toBeInTheDocument();
   });
@@ -539,6 +542,8 @@ describe("TraegerBillingFamiliesPage: payment method of a family (#7770)", () =>
       scope: "payer",
     });
     api.fetchFamilyChildren.mockReset();
+    // The list always reads the families with a contract (#7770).
+    api.fetchFamilyChildren.mockResolvedValue([]);
   });
 
   it("shows the payment method set for a family before its first invoice", async () => {
@@ -548,6 +553,43 @@ describe("TraegerBillingFamiliesPage: payment method of a family (#7770)", () =>
     await screen.findAllByText("Anna Muster");
     expect(screen.getAllByText("Festgelegt:")[0]).toBeInTheDocument();
     expect(screen.getAllByText("Lastschrift")[0]).toBeInTheDocument();
+  });
+
+  it("lists a family with only a contract when the Träger keeps the number per payer", async () => {
+    api.fetchBillingFamilies.mockResolvedValue([DEBIT]);
+    api.fetchFamilyChildren.mockResolvedValue([
+      {
+        contractId: "77",
+        familyEmail: "neu@example.org",
+        recipientFirstName: "Nora",
+        recipientLastName: "Neu",
+        children: [
+          {
+            firstName: "Nils",
+            lastName: "Neu",
+            birthDate: null,
+            debtorNumber: "",
+          },
+        ],
+      },
+    ]);
+    renderPage();
+
+    // Anker: the family known only by its contract stands in the list.
+    await screen.findAllByText("Nora Neu");
+    // The number stays the family's: no child numbers in payer scope.
+    expect(screen.queryByText("Nils")).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Aktionen für Nora Neu" })[0]!,
+    );
+    expect(
+      await screen.findByRole("menuitem", {
+        name: /Empfänger und Zahlung ändern/,
+      }),
+    ).toHaveAttribute(
+      "href",
+      expect.stringMatching(/\/abrechnung\/familien\/zahlung\/77$/),
+    );
   });
 
   it("names the invoices' method when it differs from the one set", async () => {

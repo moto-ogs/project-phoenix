@@ -1343,7 +1343,7 @@ describe("GuardianFormModal", () => {
       chooseRole("Nur Abholung");
 
       expect(
-        screen.getByText("Darf das Kind abholen. Kein Zugang zur Eltern-App."),
+        screen.getByText("Kein Zugang zur Eltern-App. Nur zum Abholen da."),
       ).toBeInTheDocument();
       expect(
         screen.queryByText(
@@ -1392,6 +1392,48 @@ describe("GuardianFormModal", () => {
       ];
       expect(guardians[0]?.guardianData.email).toBe("");
       expect(guardians[0]?.phoneNumbers).toEqual([]);
+    });
+
+    it("writes nothing for a field that was empty when the form opened", async () => {
+      mockOnSubmit.mockResolvedValue(undefined);
+      render(
+        <GuardianFormModal
+          isOpen={true}
+          onClose={mockOnClose}
+          onSubmit={mockOnSubmit}
+          mode="edit"
+          initialData={{
+            id: "guardian-7770-b",
+            firstName: "Opa",
+            lastName: "Abholung",
+            preferredContactMethod: "phone",
+            languagePreference: "de",
+            hasAccount: false,
+            phoneNumbers: [],
+            relationshipType: "relative",
+            guardianRole: "pickup_only",
+            isEmergencyContact: false,
+            isPrimary: false,
+            canPickup: true,
+            emergencyPriority: 1,
+            relationshipId: "rel-7770-b",
+          }}
+        />,
+      );
+
+      fireEvent.click(screen.getByText("Speichern"));
+
+      await waitFor(() => expect(mockOnSubmit).toHaveBeenCalledTimes(1));
+      const [guardians] = mockOnSubmit.mock.calls[0] as [
+        Array<{ guardianData: Record<string, unknown> }>,
+      ];
+      // An untouched empty field keeps whatever a colleague stored meanwhile.
+      expect(guardians[0]?.guardianData).toMatchObject({
+        firstName: "Opa",
+        email: undefined,
+        addressStreet: undefined,
+        notes: undefined,
+      });
     });
   });
 });

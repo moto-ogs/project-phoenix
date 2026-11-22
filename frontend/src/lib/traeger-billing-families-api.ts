@@ -354,11 +354,15 @@ export async function setChildDebtorNumber(
 /**
  * The families of the list with their children (#7007): each family takes
  * its children by its address, and a family with a contract or a child's
- * number but no document and no number of its own joins the list.
+ * number but no document and no number of its own joins the list. A Träger
+ * that keeps the number per payer (`perChild` false) gets the same families
+ * and their contract without the children (#7770): a family with a contract
+ * stands in the list before its first invoice, so its payment can be set.
  */
 export function withFamilyChildren(
   families: readonly BillingFamily[],
   children: readonly FamilyChildNumbers[],
+  perChild = true,
 ): BillingFamily[] {
   const byEmail = new Map(
     children.map((family) => [family.familyEmail, family]),
@@ -370,7 +374,7 @@ export function withFamilyChildren(
       // The contract of the family's deviation wins; a family without one
       // takes a contract of its children.
       contractId: family.contractId || known?.contractId || "",
-      children: known?.children ?? [],
+      ...(perChild ? { children: known?.children ?? [] } : {}),
     };
   });
   const known = new Set(families.map((family) => family.familyEmail));
@@ -394,7 +398,7 @@ export function withFamilyChildren(
       hasDocuments: false,
       familyPaymentMethod: "",
       contractId: family.contractId ?? "",
-      children: family.children,
+      ...(perChild ? { children: family.children } : {}),
       issuedCents: 0,
       cancelledCents: 0,
       creditedCents: 0,
