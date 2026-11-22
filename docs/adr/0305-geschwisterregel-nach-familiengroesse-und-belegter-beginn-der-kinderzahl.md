@@ -165,4 +165,14 @@ Entscheidung von Yannick am 22.11.2026.
   Änderungsbescheid rechnet dagegen alle Monate des Bescheids neu, auch
   frühere (ADR 0182). Dort gilt die neue Zählung also auch rückwirkend. Weil
   beide Punkte nur Kinder zur Zählung hinzunehmen, können Rang und
-  Familiengröße nur steigen: Ein Betrag wird dadurch nie höher.
+  Familiengröße nur steigen; was die Familie zusammen zahlt, sinkt oder
+  bleibt. Ein einzelner Vertrag kann trotzdem mehr zahlen, wenn ein
+  Höchstbetrag der Familie greift: Er verteilt den Überschuss neu auf die
+  Kinder (Beispiel: 100 € und 80 € bei 120 € Höchstbetrag waren 100 € und
+  20 €; mit 50 % für beide sind es 50 € und 40 €).
+- **Ein Kind zählt einmal.** Eine ausgestellte Rechnung eines Vertrags, der
+  den Monat nicht mehr berührt, zählt ihr Kind über die Identität, die der
+  Betreuungsvertrag hält (ADR 0158 E1: Schülerdatensatz, sonst Name und
+  Geburtsdatum), und reiht es nach diesem Geburtsdatum. Vorher zählte so ein
+  Kind unter einer eigenen Kennung und konnte doppelt zählen. Für eine solche
+  Familie kann ein Änderungsbescheid deshalb auch mehr verlangen als bisher.

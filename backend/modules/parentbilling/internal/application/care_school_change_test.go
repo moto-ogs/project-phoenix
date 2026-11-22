@@ -263,3 +263,33 @@ func TestCareReviewDoesNotWarnAboutAnIssuedOnlyFamily(t *testing.T) {
 	assert.Empty(t, review.uncountedContracts)
 	assert.Zero(t, review.uncounted, "no draft in the run needs a confirmation")
 }
+
+// An issued invoice of a contract outside the month ranks its child by the
+// birth date Care Contract keeps (#7863): with the same base price the older
+// sibling comes first and Mia, the younger, is the second child.
+func TestCarePreviewsRankAnIssuedChildOutsideTheMonthByBirthDate(t *testing.T) {
+	t.Parallel()
+	mia := sjrVersion(t, contractMia, schoolIspringen, 1, billingMonth, "2027-01-31", mon1400, tue1400)
+	mia.ChildBirthDate = ptr(day(t, "2019-05-01"))
+	const olderContract = contractLea + 1
+	in := careMonthInput{
+		month: day(t, billingMonth), rule: parentbilling.MonthRuleVersionOnFirst,
+		versions: []parentbilling.CareContractVersion{mia}, tariffs: chainTariffs(t), rules: familySiblingRule(false)(t),
+		recipients: map[int64]parentbilling.CareRecipient{contractMia: {Email: familyEva}},
+		issuedChildren: map[int64]parentbilling.CareContractChild{olderContract: {StudentID: ptr(int64(olderContract + 9000)),
+			FirstName: "Ben", LastName: "Beispiel", BirthDate: ptr(day(t, "2016-03-01"))}},
+		invoiced: map[int64]parentbilling.CareInvoice{olderContract: {
+			ContractID: ident.ID(olderContract), SchoolID: ident.ID(schoolIspringen), FamilyEmail: familyEva,
+			Positions: []parentbilling.CarePosition{{CareOfferingID: ident.ID(moduleUntil1630), AmountCents: 8000, PayableCents: 8000}},
+		}},
+	}
+	schools := []int64{schoolIspringen}
+	monthly, err := buildCareMonth(in)
+	require.NoError(t, err)
+	_, notice, err := computeNoticeMonth(in, in.invoiced, nil, schools)
+	require.NoError(t, err)
+	for name, preview := range map[string]careMonth{"monthly run": narrowMonth(monthly, schools, nil).careMonth, "fee notice": notice} {
+		require.Len(t, preview.invoices, 1, name)
+		assert.Equal(t, int64(4000), preview.invoices[0].TotalCents, name+": the younger child is the second and pays half")
+	}
+}

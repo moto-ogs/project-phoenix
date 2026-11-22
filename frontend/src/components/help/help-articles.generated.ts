@@ -12682,7 +12682,7 @@ export const traegerCareReductionsTopic =
             "Prüfe unter `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt. Hat die Datei keine Spalte für die Schule, wähle `Schule für alle Zeilen`.",
             "Wähle bei `Kinderzahl gilt ab` den Tag, ab dem die Zahlen der Datei belegt sind, zum Beispiel den Tag, an dem du die Liste erstellt hast. moto schlägt heute vor.",
             "Nennt deine Datei den Tag je Kind? Ordne die Spalte `Gültig ab` zu. Eine Spalte mit dem Namen `Kinderzahl gilt ab` erkennt moto von selbst. Eine Zeile ohne Tag bekommt den Tag, den du für die ganze Datei gewählt hast. Nennen Geschwister verschiedene Tage, gilt für die Familie der früheste Tag der Zeilen, die moto übernimmt.",
-            "Der Tag darf höchstens neun Monate voraus liegen. Eine Zeile mit einem späteren Tag übernimmt moto nicht. Ist der Vertrag des Kindes vor dem Tag der Zeile beendet, übernimmt moto die Zeile auch nicht.",
+            "Der Tag darf höchstens neun Monate voraus liegen. Eine Zeile mit einem späteren Tag übernimmt moto nicht. Endet der Vertrag des Kindes, bevor die neue Kinderzahl gelten kann, übernimmt moto die Zeile auch nicht.",
             "Prüfe die Zeilen unter `Prüfen und übernehmen`. `Bereit` übernimmt moto. Bei `Fehlerhaft` und `Widerspruch in der Datei` steht der Grund in der Spalte `Hinweis`.",
             "`Andere Zahl bestätigt` heißt: Für die Familie gilt schon eine andere Zahl. moto ändert sie nicht. Ändere sie in der Liste über `Kinderzahl ändern`.",
             "`Verschiedene Angaben` heißt: Für die Familie sind verschiedene Kinderzahlen bestätigt. Bestätige die Kinderzahl in der Familienliste. Die Datei löst diesen Widerspruch nicht.",

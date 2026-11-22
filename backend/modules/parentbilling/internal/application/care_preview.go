@@ -195,7 +195,7 @@ func chainCareMonth(result *careMonth, in careMonthInput, chained []*careChainEn
 	for i, entry := range chained {
 		entry.invoice = &result.invoices[i]
 	}
-	chained = append(chained, issuedCareEntries(in.invoiced, childOf, byContract)...)
+	chained = append(chained, issuedCareEntries(in.invoiced, childOf, byContract, in.issuedChildren)...)
 	result.billed = len(in.invoiced)
 	result.billedBySchool = make(map[int64]int)
 	result.feeNoticesBySchool = make(map[int64][]string)
@@ -265,7 +265,7 @@ func familyChildrenIn(counts []parentbilling.FamilyChildCount, recipients map[in
 
 // issuedCareEntries keeps earlier invoices independent of current pricing.
 func issuedCareEntries(invoiced map[int64]parentbilling.CareInvoice, childOf map[int64]string,
-	byContract map[int64][]parentbilling.CareContractVersion,
+	byContract map[int64][]parentbilling.CareContractVersion, issuedChildren map[int64]parentbilling.CareContractChild,
 ) []*careChainEntry {
 	var entries []*careChainEntry
 	// Issued invoices keep their saved recipient, base prices and net amounts,
@@ -279,6 +279,10 @@ func issuedCareEntries(invoiced map[int64]parentbilling.CareInvoice, childOf map
 		entry := &careChainEntry{invoice: &invoice, child: child, issued: true}
 		if versions := byContract[id]; len(versions) > 0 {
 			entry.birthDate = versions[0].ChildBirthDate
+		} else if identity, ok := issuedChildren[id]; ok {
+			// A contract outside the month still ranks its child by birth
+			// date, as its sibling's draft does (#7863).
+			entry.birthDate = identity.BirthDate
 		}
 		entries = append(entries, entry)
 	}
