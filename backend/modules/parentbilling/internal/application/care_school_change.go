@@ -33,13 +33,22 @@ import (
 // Contracts outside the versions in force (issued invoices of the month,
 // #7863) neither join nor stop a join; childKeys adds them afterwards.
 
+// schoolChangePerson is a spelled name with its date of birth, empty
+// without one.
+type schoolChangePerson struct {
+	first, last string
+	birth       calendar.Date
+}
+
 // schoolChangePart is what a child of E1 brings to a school change: the
 // spelled names with dates of birth of its contracts in force and their
-// families. complete is false when one of them has no date of birth.
+// families. complete is false when one of them has no date of birth;
+// recorded tells whether a contract names a record of the child.
 type schoolChangePart struct {
-	persons  []string
+	persons  []schoolChangePerson
 	families []string
 	complete bool
+	recorded bool
 }
 
 // contractFamilies is the family of every contract in force: the mail
@@ -101,13 +110,13 @@ func schoolChangePartOf(child []int64, byContract map[int64][]parentbilling.Care
 			continue
 		}
 		head := versions[0]
-		birth := ""
+		person := schoolChangePerson{first: schoolChangeName(head.ChildFirstName), last: schoolChangeName(head.ChildLastName)}
 		if head.ChildBirthDate != nil {
-			birth = head.ChildBirthDate.String()
+			person.birth = *head.ChildBirthDate
 		} else {
 			part.complete = false
 		}
-		person := schoolChangeName(head.ChildFirstName) + "\x1f" + schoolChangeName(head.ChildLastName) + "\x1f" + birth
+		part.recorded = part.recorded || head.StudentID != nil
 		if !slices.Contains(part.persons, person) {
 			part.persons = append(part.persons, person)
 		}
@@ -123,7 +132,7 @@ func schoolChangePartOf(child []int64, byContract map[int64][]parentbilling.Care
 // of a name without a date of birth goes into every bucket of that name,
 // where it stops the join.
 func schoolChangeBuckets(parts []schoolChangePart) [][]int {
-	index := map[string]int{}
+	index := map[schoolChangePerson]int{}
 	var buckets [][]int
 	for i, part := range parts {
 		for _, person := range part.persons {
@@ -150,20 +159,21 @@ func schoolChangeBuckets(parts []schoolChangePart) [][]int {
 }
 
 // birthless tells whether a spelled person carries no date of birth.
-func birthless(person string) bool { return strings.HasSuffix(person, "\x1f") }
+func birthless(person schoolChangePerson) bool { return person.birth == "" }
 
 // addToBucketsOfName puts a child into every bucket of the name, once.
-func addToBucketsOfName(buckets [][]int, index map[string]int, name string, child int) {
+func addToBucketsOfName(buckets [][]int, index map[schoolChangePerson]int, name schoolChangePerson, child int) {
 	for key, at := range index {
-		if strings.HasPrefix(key, name) && !slices.Contains(buckets[at], child) {
+		if key.first == name.first && key.last == name.last && !slices.Contains(buckets[at], child) {
 			buckets[at] = append(buckets[at], child)
 		}
 	}
 }
 
 // bucketJoins tells whether the children of a bucket are one child: each
-// with one name, one date of birth and one family, all the same family, at
-// different schools and one after the other.
+// with a record (without one E1 already decides by the name), one name,
+// one date of birth and one family, all the same family, at different
+// schools and one after the other.
 func bucketJoins(bucket []int, parts []schoolChangePart, children [][]int64, byContract map[int64][]parentbilling.CareContractVersion) bool {
 	if len(bucket) < 2 {
 		return false
@@ -171,7 +181,7 @@ func bucketJoins(bucket []int, parts []schoolChangePart, children [][]int64, byC
 	family := parts[bucket[0]].families
 	for _, i := range bucket {
 		part := parts[i]
-		if !part.complete || len(part.persons) != 1 || len(part.families) != 1 || part.families[0] != family[0] {
+		if !part.recorded || !part.complete || len(part.persons) != 1 || len(part.families) != 1 || part.families[0] != family[0] {
 			return false
 		}
 	}

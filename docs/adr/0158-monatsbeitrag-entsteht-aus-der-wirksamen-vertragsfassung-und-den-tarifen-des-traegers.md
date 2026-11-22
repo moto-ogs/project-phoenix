@@ -248,8 +248,10 @@ Kind zusammen, wenn alle Bedingungen gelten:
    zusammengefassten Leerzeichen: „Müller“, „Mueller“ und ein zerlegt
    eingefügtes „Müller“ sind derselbe Name. Ohne Geburtsdatum legt moto
    nichts zusammen.
-3. Die Kinder liegen an verschiedenen Schulen. Innerhalb einer Schule
-   entscheidet weiter der Datensatz: Zwei Datensätze dort sind zwei Kinder.
+3. Jedes der Kinder hat an seiner Schule einen Datensatz, und die Kinder
+   liegen an verschiedenen Schulen. Innerhalb einer Schule entscheidet weiter
+   der Datensatz: Zwei Datensätze dort sind zwei Kinder. Verträge ohne
+   Datensatz gruppiert weiter E1 allein.
 4. Die Verträge laufen nacheinander: An keinem Tag laufen Verträge zweier
    dieser Kinder zugleich. Zwillinge gleichen Namens an zwei Schulen haben
    gleichzeitig laufende Verträge und bleiben zwei Kinder.
@@ -269,8 +271,9 @@ Tage ab. Verträge, die nur eine ausgestellte Rechnung des Monats in die Kette
 bringen (#7863), legen nichts zusammen und verhindern nichts: Sie kommen erst
 nach der Gruppierung der laufenden Verträge dazu, zum Kind ihres Datensatzes
 oder ohne Datensatz zum einen Kind, dessen Datensätze ihren Namen und ihr
-Geburtsdatum tragen. So gruppieren E2 bis E4 und die Geschwisterregel die
-laufenden Verträge gleich. Der Schlüssel eines Kindes in der Kette hängt nur
+Geburtsdatum tragen, sonst zum Kind der laufenden Verträge ohne Datensatz
+mit diesem Namen und Geburtsdatum. So gruppieren E2 bis E4 und die Geschwisterregel die
+laufenden Verträge gleich; der Monat berechnet die Gruppierung einmal. Der Schlüssel eines Kindes in der Kette hängt nur
 an seinen eigenen Verträgen (kleinste Vertragsnummer); ein Zusammenlegen in
 einer Familie ändert die Reihenfolge gleichrangiger Kinder einer anderen
 nicht. Dieselbe Gruppierung zählt die Kinder einer Familie

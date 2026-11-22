@@ -23,13 +23,12 @@ import (
 // same calendar day (E3). A child with a duplicate is held with all its
 // contracts (E4). It returns one entry per doubly billed module and
 // weekday, each naming every contract of its child, and the held contracts.
-func childMonthHolds(month calendar.Date, rule string, byContract map[int64][]parentbilling.CareContractVersion, order []int64,
-	families map[int64]string,
+func childMonthHolds(month calendar.Date, rule string, byContract map[int64][]parentbilling.CareContractVersion, children [][]int64,
+	entries map[int64]bool,
 ) ([]parentbilling.CareDuplicate, map[int64]bool) {
 	duplicates := []parentbilling.CareDuplicate{}
 	held := map[int64]bool{}
-	entries := monthEntries(month, byContract, order, families)
-	for _, child := range childrenOf(byContract, order, families) {
+	for _, child := range children {
 		doubled := doublyBilled(month, rule, child, byContract, entries)
 		if len(doubled) == 0 {
 			continue
@@ -146,17 +145,20 @@ func groupCareChildren(identities map[int64]parentbilling.CareContractChild, ord
 // their name and date of birth; they never regroup the contracts in force.
 // A key depends only on the contracts of its own child, so a change in one
 // family does not reorder the children of another.
-func childKeys(byContract map[int64][]parentbilling.CareContractVersion, order []int64, issued map[int64]parentbilling.CareContractChild,
-	families map[int64]string,
-) map[int64]string {
+func childKeys(byContract map[int64][]parentbilling.CareContractVersion, children [][]int64, issued map[int64]parentbilling.CareContractChild) map[int64]string {
 	keys := map[int64]string{}
 	byRecord := map[int64]string{}
 	byPerson := map[string][]string{}
-	for _, child := range childrenOf(byContract, order, families) {
+	personless := map[string][]string{}
+	for _, child := range children {
 		key := fmt.Sprintf("child:%019d", slices.Min(child))
 		for _, contractID := range child {
 			keys[contractID] = key
-			addRecordKey(byRecord, byPerson, childOfVersion(byContract[contractID][0]), key)
+			identity := childOfVersion(byContract[contractID][0])
+			addRecordKey(byRecord, byPerson, identity, key)
+			if person := personOf(identity); identity.StudentID == nil && !slices.Contains(personless[person], key) {
+				personless[person] = append(personless[person], key)
+			}
 		}
 	}
 	var unrecorded []int64
@@ -178,13 +180,23 @@ func childKeys(byContract map[int64][]parentbilling.CareContractVersion, order [
 	}
 	for _, contractID := range unrecorded {
 		child := issued[contractID]
-		if found := byPerson[personOf(child)]; len(found) == 1 {
-			keys[contractID] = found[0]
-			continue
-		}
-		keys[contractID] = "person:" + personOf(child)
+		keys[contractID] = unrecordedKey(personOf(child), byPerson, personless)
 	}
 	return keys
+}
+
+// unrecordedKey is the child of a contract without a record (E1): the one
+// child whose records carry its name and date of birth, else the child of
+// the contracts in force without a record of that name and date of birth,
+// else that name and date of birth.
+func unrecordedKey(person string, byPerson, personless map[string][]string) string {
+	if found := byPerson[person]; len(found) == 1 {
+		return found[0]
+	}
+	if found := personless[person]; len(found) == 1 {
+		return found[0]
+	}
+	return "person:" + person
 }
 
 // addRecordKey notes the key of a child under its record and under the
@@ -289,11 +301,9 @@ func billedSlots(month calendar.Date, rule string, versions []parentbilling.Care
 // contract that begins later bills nothing that month, and a child with a
 // contract on the first has no entry. On the same start day the earlier
 // contract of the order is the entry.
-func monthEntries(month calendar.Date, byContract map[int64][]parentbilling.CareContractVersion, order []int64,
-	families map[int64]string,
-) map[int64]bool {
+func monthEntries(month calendar.Date, byContract map[int64][]parentbilling.CareContractVersion, children [][]int64) map[int64]bool {
 	entries := map[int64]bool{}
-	for _, child := range childrenOf(byContract, order, families) {
+	for _, child := range children {
 		entry := int64(0)
 		for _, contractID := range child {
 			versions := byContract[contractID]
