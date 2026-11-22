@@ -177,8 +177,10 @@ func childKeys(byContract map[int64][]parentbilling.CareContractVersion, order [
 // of each child's first contract in the order. The sibling chain breaks a
 // tie by that key, so a child keeps its place, and its order against the
 // invoices a run of the month already issued, whatever this grouping joins
-// or keeps together elsewhere. E1 over both only splits the children in
-// force further, so no two children in force share a place.
+// or keeps together elsewhere. Two children in force share a place only
+// where E1 over both groups their first contracts together, as the chain
+// counted them before #7874 (an issued contract lends a record a second
+// spelling a contract in force without a record carries).
 func e1Places(byContract map[int64][]parentbilling.CareContractVersion, order []int64,
 	issued map[int64]parentbilling.CareContractChild,
 ) map[int64]int {

@@ -514,3 +514,24 @@ func TestCareChildKeysKeepThePlacesOfE1WithIssuedNamesakes(t *testing.T) {
 	assert.Equal(t, "child:3", keys[703])
 	assert.Equal(t, "contract:799", keys[799])
 }
+
+// An issued contract lends a record the spelling a contract in force
+// without a record carries. E2 keeps the two contracts in force apart, the
+// sibling chain counts them as one child, as before #7874: this pins the
+// behaviour until a decision changes it.
+func TestCareIssuedSpellingGroupsTheChainAsBefore(t *testing.T) {
+	t.Parallel()
+	anna := func(contract int64, student *int64, last string) parentbilling.CareContractVersion {
+		version := sjrVersion(t, contract, schoolIspringen, 1, billingMonth, "2027-01-31", mon1400)
+		version.StudentID, version.ChildFirstName, version.ChildLastName, version.ChildBirthDate = student, "Anna", last, ptr(day(t, noahBirth))
+		return version
+	}
+	byContract, order := versionsByContract([]parentbilling.CareContractVersion{anna(501, ptr(int64(9501)), "Müller"), anna(502, nil, "Mueller")})
+	children := childrenOf(byContract, order, contractFamilies(byContract, nil))
+	issued := map[int64]parentbilling.CareContractChild{503: {StudentID: ptr(int64(9501)), FirstName: "Anna", LastName: "Mueller",
+		BirthDate: ptr(day(t, noahBirth))}}
+	keys := childKeys(byContract, order, children, issued)
+	assert.Len(t, children, 2, "E2 keeps them apart")
+	assert.Equal(t, keys[501], keys[502])
+	assert.Equal(t, keys[501], keys[503])
+}
