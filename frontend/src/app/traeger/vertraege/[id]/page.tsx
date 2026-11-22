@@ -24,9 +24,11 @@ import {
   childName,
   formatConclusion,
   formatService,
+  knownConclusionAt,
   serviceDays,
 } from "~/components/traeger/care-contract-format";
 import { CareContractChangeCard } from "~/components/traeger/care-contract-change-card";
+import { CareContractCorrectionsCard } from "~/components/traeger/care-contract-corrections-card";
 import {
   CONTRACT_DELIVERY_SECTION_ID,
   CONTRACT_DETAIL_TABS,
@@ -665,7 +667,13 @@ function TraegerVertragView() {
                 </DataGrid>
               </SectionCard>
               <SectionCard concept={parentsConcept} title="Eltern">
-                {party ? (
+                {contract.parties.length > 1 ? (
+                  <DataGrid>
+                    <DataField label="Vertrag mit" fullWidth>
+                      <ContractPartyList parties={contract.parties} />
+                    </DataField>
+                  </DataGrid>
+                ) : party ? (
                   <DataGrid>
                     {/* „Vertragspartner“ names the Träger's side on this
                         page; the family's side is named by what it is. */}
@@ -689,6 +697,11 @@ function TraegerVertragView() {
                   </p>
                 )}
               </SectionCard>
+              {contract.corrections.length > 0 ? (
+                <CareContractCorrectionsCard
+                  corrections={contract.corrections}
+                />
+              ) : null}
               {party?.email ? (
                 <SepaMandateStatusCard contractId={contract.id} />
               ) : null}
@@ -862,7 +875,7 @@ function TraegerVertragView() {
                 <CareContractNoticeCard
                   contractId={contract.id}
                   status={contract.status}
-                  concludedAt={contract.concluded.at}
+                  concludedAt={knownConclusionAt(contract.concluded)}
                   onChanged={() => void afterCardWrite()}
                 />
               ) : null}
@@ -1107,6 +1120,36 @@ function StatusNotice({
     );
   }
   return null;
+}
+
+/**
+ * Several parties of one contract (#7767), each with its address and
+ * whether a parents account is linked. One party keeps its own fields.
+ */
+function ContractPartyList({
+  parties,
+}: Readonly<{ parties: CareContractDetail["parties"] }>) {
+  return (
+    <ul className="divide-y divide-gray-100">
+      {parties.map((entry, n) => (
+        <li
+          // Two parties may share a name; the place keeps them apart.
+          key={`${n}-${entry.firstName}-${entry.lastName}`}
+          className="py-2 first:pt-0 last:pb-0"
+        >
+          <span className="block">
+            {`${entry.firstName} ${entry.lastName}`.trim() || "–"}
+          </span>
+          <span className="block text-sm font-normal text-gray-500">
+            <span className="wrap-anywhere">
+              {entry.email || "Keine E-Mail-Adresse"}
+            </span>
+            {` · ${entry.hasAccount ? "Konto verknüpft" : "Kein Konto verknüpft"}`}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 function StatuteValue({

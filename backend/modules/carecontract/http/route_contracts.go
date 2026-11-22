@@ -97,6 +97,24 @@ func ImportRouteContracts() []common.RouteContract {
 	}
 }
 
+// CorrectionRouteContracts registers the correction of contracts from an
+// import (#7767), with patterns relative to /traeger/contract-corrections.
+// The preview and the correction take the same upload; the list to fill in
+// answers a file.
+func CorrectionRouteContracts() []common.RouteContract {
+	upload := func(pattern string) common.RouteContract {
+		return common.RouteContract{Method: "POST", Pattern: pattern, Portals: traegerPortal, Multipart: true,
+			MaxBodyBytes: carecontract.MaxContractImportFileBytes + importFormOverhead,
+			TooLargeCode: common.CodeCareContractImportFileTooLarge, Response: carecontract.ContractCorrectionRun{}}
+	}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: []carecontract.ContractCorrectionEntry{}},
+		{Method: "GET", Pattern: "/list", Portals: traegerPortal, File: true},
+		upload("/"),
+		upload("/preview"),
+	}
+}
+
 // The bodies the link reads: the drawn signature as base64 PNG, and a number.
 const (
 	signBodyBytes           = 400 << 10

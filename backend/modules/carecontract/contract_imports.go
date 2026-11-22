@@ -21,6 +21,8 @@ import (
 //   - An imported contract is concluded: status aktiv, its first version
 //     wirksam from the day the file names, the method papier, with the name
 //     of the file, its line and the account that imported it in the trail.
+//     A file that names no day of the conclusion leaves it unknown; a
+//     correction (contract_corrections.go, #7767) completes it later.
 //   - It books modules of its school as every contract does, with the
 //     conditions the Träger keeps for them; a module without conditions
 //     takes over no contract.

@@ -389,6 +389,9 @@ type ContractDetail struct {
 	TermText   string `json:"term_text"`
 	NoticeText string `json:"notice_text"`
 	FeeText    string `json:"fee_text"`
+	// Corrections are the corrections of a contract from an import, newest
+	// first (#7767, contract_corrections.go); empty for every other.
+	Corrections []ContractCorrection `json:"corrections"`
 }
 
 // File is a rendered PDF.

@@ -3674,6 +3674,21 @@ export const CareModuleSchema: z.ZodType<CareModule, unknown> = object<CareModul
   contract_count: safeInt,
 });
 
+/** Go: carecontract.ContractCorrectionValues */
+export interface ContractCorrectionValues {
+  parties: string[] | null;
+  method: string;
+  concluded_on: string | null;
+  date_unknown: boolean;
+}
+
+export const ContractCorrectionValuesSchema: z.ZodType<ContractCorrectionValues, unknown> = object<ContractCorrectionValues>({
+  parties: nullable(arr(str)),
+  method: str,
+  concluded_on: nullable(calendarDate),
+  date_unknown: bool,
+});
+
 /** Go: parentbilling.HolidaySiblingChild */
 export interface HolidaySiblingChild {
   id: string;

@@ -145,10 +145,12 @@ SELECT c.line, c.id AS contract_id FROM contract AS c`
 
 // concludeImportedContractsSQL concludes the contracts the statement above
 // stored: the parents hold them on paper, so each counts as sent and
-// concluded at the instant its row names.
+// concluded at the instant its row names, marked where the file named no
+// day of the conclusion (#7767).
 const concludeImportedContractsSQL = `UPDATE care_contract.contracts AS c
-	SET status = ?, sent_at = u.concluded_at, concluded_at = u.concluded_at, conclusion_method = ?
-	FROM jsonb_to_recordset(?::jsonb) AS u(contract_id bigint, concluded_at timestamptz)
+	SET status = ?, sent_at = u.concluded_at, concluded_at = u.concluded_at, conclusion_method = ?,
+		conclusion_date_unknown = u.date_unknown
+	FROM jsonb_to_recordset(?::jsonb) AS u(contract_id bigint, concluded_at timestamptz, date_unknown boolean)
 	WHERE c.organization_id = ? AND c.id = u.contract_id AND c.status = ?`
 
 // InsertImportedContracts stores the contracts of an import file, each
@@ -166,9 +168,10 @@ func (Store) InsertImportedContracts(ctx context.Context, organizationID, accoun
 	}
 	records := make([]importedRecord, len(contracts))
 	concluded := make(map[int]string, len(contracts))
+	unknown := make(map[int]bool, len(contracts))
 	for i, contract := range contracts {
 		records[i] = importedRecordOf(contract)
-		concluded[contract.Line] = records[i].ConcludedAt
+		concluded[contract.Line], unknown[contract.Line] = records[i].ConcludedAt, contract.ConclusionDateUnknown
 	}
 	encoded, err := json.Marshal(records)
 	if err != nil {
@@ -188,11 +191,12 @@ func (Store) InsertImportedContracts(ctx context.Context, organizationID, accoun
 	type conclusion struct {
 		ContractID  int64  `json:"contract_id"`
 		ConcludedAt string `json:"concluded_at"`
+		DateUnknown bool   `json:"date_unknown"`
 	}
 	conclusions := make([]conclusion, len(rows))
 	for i, row := range rows {
 		stored[row.Line] = row.ContractID
-		conclusions[i] = conclusion{ContractID: row.ContractID, ConcludedAt: concluded[row.Line]}
+		conclusions[i] = conclusion{ContractID: row.ContractID, ConcludedAt: concluded[row.Line], DateUnknown: unknown[row.Line]}
 	}
 	encoded, err = json.Marshal(conclusions)
 	if err != nil {

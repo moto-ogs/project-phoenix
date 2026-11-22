@@ -1,0 +1,183 @@
+package application
+
+import (
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/modules/carecontract"
+	"github.com/moto-ogs/project-phoenix/modules/carecontract/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+)
+
+var correctionToday = calendar.NewDate(2026, 11, 22)
+
+// correctionSubject is an imported contract of Lia with her mother as its
+// only party, concluded on paper on a day the import assumed.
+func correctionSubject() ports.CorrectionSubject {
+	at := calendar.NewDate(2026, 8, 1).BerlinMidnight()
+	return ports.CorrectionSubject{ContractID: 7, SchoolID: 1, SchoolName: "Grundschule Nord", ChildFirstName: "Lia",
+		ChildLastName: "Beispiel", Imported: true, ConcludedAt: &at, Method: carecontract.MethodPaper,
+		Parties: []ports.CorrectionParty{{ID: 70, FirstName: "Eva", LastName: "Beispiel"}}}
+}
+
+func planCorrection(t *testing.T, subject ports.CorrectionSubject, cells ...string) correctionPlan {
+	t.Helper()
+	headers := []string{"Vertrag-ID", "Kind", "Vertragsparteien", "Abschlussart", "Abschlussdatum", "Beleg"}
+	index, missing := resolveCorrectionColumns(headers)
+	require.Empty(t, missing)
+	return newCorrectionCheck([]ports.CorrectionSubject{subject}).plan(readCorrectionEntry(index, cells, 2, correctionToday))
+}
+
+func problemCodes(row carecontract.ContractCorrectionRow) map[string]string {
+	codes := map[string]string{}
+	for _, problem := range row.Problems {
+		codes[problem.Field] = problem.Code
+	}
+	return codes
+}
+
+func TestCorrectionSeparatesTheDayOfConclusionFromTheStartAndNeverGuessesIt(t *testing.T) {
+	t.Parallel()
+	known := planCorrection(t, correctionSubject(), "7", "Lia Beispiel", "", "online", "12.03.2026", "vertrag.pdf")
+	require.Equal(t, carecontract.ContractCorrectionChange, known.row.Status, known.row.Problems)
+	assert.Equal(t, []string{"method", "concluded_on"}, known.row.Changes)
+	assert.Equal(t, calendar.NewDate(2026, 3, 12).BerlinMidnight(), known.correction.ConcludedAt)
+	assert.Equal(t, carecontract.MethodElectronic, known.correction.Method)
+	assert.False(t, known.correction.DateUnknown)
+
+	unknown := planCorrection(t, correctionSubject(), "7", "Beispiel, Lia", "", "", "Unbekannt", "kein Datum im Vertrag")
+	require.Equal(t, carecontract.ContractCorrectionChange, unknown.row.Status, unknown.row.Problems)
+	assert.True(t, unknown.correction.DateUnknown)
+	assert.Equal(t, *correctionSubject().ConcludedAt, unknown.correction.ConcludedAt, "the instant the takeover recorded stays; the mark says it is no date")
+	assert.Nil(t, unknown.row.After.ConcludedOn)
+	assert.True(t, unknown.row.After.DateUnknown)
+
+	subject := correctionSubject()
+	subject.DateUnknown = true
+	again := planCorrection(t, subject, "7", "Lia Beispiel", "Beispiel, Eva", "papier", "unbekannt", "")
+	assert.Equal(t, carecontract.ContractCorrectionUnchanged, again.row.Status, "a repeated row changes nothing and needs no proof")
+	assert.False(t, again.correction.Conclusion)
+}
+
+func TestCorrectionAddsPartiesAndNeverRemovesOne(t *testing.T) {
+	t.Parallel()
+	added := planCorrection(t, correctionSubject(), "7", "Lia Beispiel", "Tom Beispiel; Beispiel, Eva", "", "", "vertrag.pdf")
+	require.Equal(t, carecontract.ContractCorrectionChange, added.row.Status, added.row.Problems)
+	assert.Empty(t, added.correction.Renames, "the party the contract has stays as it is, whatever its place in the file")
+	assert.Equal(t, []ports.CorrectionParty{{FirstName: "Tom", LastName: "Beispiel"}}, added.correction.Adds)
+	assert.Equal(t, []string{"Eva Beispiel", "Tom Beispiel"}, added.row.After.Parties)
+
+	renamed := planCorrection(t, correctionSubject(), "7", "Lia Beispiel", "von der Heide, Eva Maria | Tom Beispiel", "", "", "vertrag.pdf")
+	assert.Equal(t, []ports.CorrectionParty{{ID: 70, FirstName: "Eva Maria", LastName: "von der Heide"}}, renamed.correction.Renames)
+	assert.Equal(t, []string{"Eva Maria von der Heide", "Tom Beispiel"}, renamed.row.After.Parties)
+
+	two := correctionSubject()
+	two.Parties = append(two.Parties, ports.CorrectionParty{ID: 71, FirstName: "Tom", LastName: "Beispiel"})
+	removed := planCorrection(t, two, "7", "Lia Beispiel", "Eva Beispiel", "", "", "vertrag.pdf")
+	assert.Equal(t, carecontract.ContractCorrectionInvalid, removed.row.Status)
+	assert.Equal(t, map[string]string{"parties": "party_removed"}, problemCodes(removed.row))
+	assert.Equal(t, removed.row.Before, removed.row.After, "an invalid row shows no change")
+
+	recased := planCorrection(t, two, "7", "Lia Beispiel", "tom beispiel | Ute Beispiel | Eva Beispiel", "", "", "vertrag.pdf")
+	assert.Equal(t, []ports.CorrectionParty{{ID: 71, FirstName: "tom", LastName: "beispiel"}}, recased.correction.Renames,
+		"a name in another case is its own party written anew")
+	assert.Equal(t, []ports.CorrectionParty{{FirstName: "Ute", LastName: "Beispiel"}}, recased.correction.Adds)
+}
+
+func TestCorrectionNamesItsContractUnambiguously(t *testing.T) {
+	t.Parallel()
+	for name, c := range map[string]struct {
+		cells    []string
+		problems map[string]string
+	}{
+		"another child":  {[]string{"7", "Ole Anders", "", "online", "", "b"}, map[string]string{"child": "child_differs"}},
+		"no child":       {[]string{"7", "", "", "online", "", "b"}, map[string]string{"child": "missing"}},
+		"unknown number": {[]string{"8", "Lia Beispiel", "", "online", "", "b"}, map[string]string{"contract_id": "unknown"}},
+		"no number":      {[]string{"x7", "Lia Beispiel", "", "online", "", "b"}, map[string]string{"contract_id": "invalid"}},
+		"no proof":       {[]string{"7", "Lia Beispiel", "", "online", "", ""}, map[string]string{"evidence": "missing"}},
+		"a future day":   {[]string{"7", "Lia Beispiel", "", "", "23.11.2026", "b"}, map[string]string{"concluded_on": "future"}},
+		"no day":         {[]string{"7", "Lia Beispiel", "", "", "bald", "b"}, map[string]string{"concluded_on": "invalid"}},
+		"no method":      {[]string{"7", "Lia Beispiel", "", "fax", "", "b"}, map[string]string{"method": "invalid"}},
+		"a bare comma":   {[]string{"7", "Lia Beispiel", ", Eva", "", "", "b"}, map[string]string{"parties": "invalid"}},
+	} {
+		plan := planCorrection(t, correctionSubject(), c.cells...)
+		assert.Equal(t, carecontract.ContractCorrectionInvalid, plan.row.Status, name)
+		assert.Equal(t, c.problems, problemCodes(plan.row), name)
+	}
+
+	own := correctionSubject()
+	own.Imported = false
+	assert.Equal(t, map[string]string{"contract_id": "not_imported"},
+		problemCodes(planCorrection(t, own, "7", "Lia Beispiel", "", "online", "", "b").row), "moto records the conclusion of its own contracts")
+
+	ended := correctionSubject()
+	received := calendar.NewDate(2026, 9, 30)
+	ended.FirstNoticeOn = &received
+	assert.Equal(t, map[string]string{"concluded_on": "after_notice"},
+		problemCodes(planCorrection(t, ended, "7", "Lia Beispiel", "", "", "01.10.2026", "b").row))
+
+	check := newCorrectionCheck([]ports.CorrectionSubject{correctionSubject()})
+	index, _ := resolveCorrectionColumns([]string{"Moto-Vertrag-ID", "Kind", "Abschlussart", "Nachweis"})
+	first := check.plan(readCorrectionEntry(index, []string{"7", "Lia Beispiel", "online", "b"}, 2, correctionToday))
+	second := check.plan(readCorrectionEntry(index, []string{"7", "Lia Beispiel", "papier", "b"}, 3, correctionToday))
+	assert.Equal(t, carecontract.ContractCorrectionChange, first.row.Status, "a worklist's own headers name the columns too")
+	assert.Equal(t, map[string]string{"contract_id": "repeated"}, problemCodes(second.row))
+	assert.Equal(t, 2, second.row.RepeatsLine)
+}
+
+func TestCorrectionSheetReadsBackAsUnchanged(t *testing.T) {
+	t.Parallel()
+	subject := correctionSubject()
+	subject.Parties = append(subject.Parties, ports.CorrectionParty{ID: 71, LastName: "Anders"},
+		ports.CorrectionParty{ID: 72, FirstName: "Jan Ole", LastName: "von der Heide"})
+	unknown := correctionSubject()
+	unknown.ContractID, unknown.DateUnknown, unknown.Method = 8, true, carecontract.MethodElectronic
+	own := correctionSubject()
+	own.ContractID, own.Imported = 9, false
+	sheet := correctionSheet([]ports.CorrectionSubject{subject, unknown, own})
+	require.Len(t, sheet.Rows, 2, "only contracts from an import are listed")
+	assert.Equal(t, []string{"7", "Grundschule Nord", "Lia Beispiel", "Beispiel, Eva | Anders | von der Heide, Jan Ole", "papier", "01.08.2026", ""}, sheet.Rows[0])
+	assert.Equal(t, []string{"online", "unbekannt"}, sheet.Rows[1][4:6])
+
+	index, missing := resolveCorrectionColumns(sheet.Headers)
+	require.Empty(t, missing)
+	check := newCorrectionCheck([]ports.CorrectionSubject{subject, unknown})
+	for n, cells := range sheet.Rows {
+		plan := check.plan(readCorrectionEntry(index, cells, n+2, correctionToday))
+		assert.Equal(t, carecontract.ContractCorrectionUnchanged, plan.row.Status, "%v: %v", cells, plan.row.Problems)
+	}
+}
+
+// A contract from an import has no withdrawal period moto dates: neither
+// the method a correction sets nor an unknown day opens one, so a
+// correction changes no deadline (#7767).
+func TestTakenOverContractHasNoWithdrawalPeriodUntilMotoProvidedTheNotice(t *testing.T) {
+	t.Parallel()
+	at := calendar.NewDate(2026, 8, 1).BerlinMidnight()
+	online := &carecontract.Concluded{Method: carecontract.MethodElectronic, At: at, TakenOver: true}
+	assert.Nil(t, withdrawalUntil(online, nil, nil))
+	assert.False(t, hasWithdrawalPeriod(&carecontract.Concluded{Method: carecontract.MethodElectronic, At: at, TakenOver: true, DateUnknown: true}, nil))
+	assert.NotNil(t, withdrawalUntil(&carecontract.Concluded{Method: carecontract.MethodElectronic, At: at}, nil, nil),
+		"a contract moto concluded keeps its period")
+
+	// Once moto provided the notice, an unknown day counts from the notice
+	// alone.
+	informed := time.Date(2026, 11, 2, 9, 0, 0, 0, calendar.Berlin)
+	until := withdrawalUntil(&carecontract.Concluded{Method: carecontract.MethodElectronic, At: at, TakenOver: true, DateUnknown: true}, &informed, nil)
+	require.NotNil(t, until)
+	assert.Equal(t, calendar.NewDate(2026, 11, 16), *until)
+	_, known := conclusionDay(&carecontract.Concluded{At: at, DateUnknown: true})
+	assert.False(t, known)
+}
+
+func TestImportLeavesTheDayOfConclusionUnknownWithoutOneInTheFile(t *testing.T) {
+	t.Parallel()
+	check := importCheckOf(t)
+	candidate := check.candidate(importRow(nil), 2)
+	require.Equal(t, carecontract.ContractImportReady, candidate.row.Status, candidate.row.Problems)
+	assert.True(t, candidate.contract.ConclusionDateUnknown, "the first day of the contract is no day of its conclusion")
+	assert.Equal(t, calendar.NewDate(2026, 8, 1).BerlinMidnight(), candidate.contract.ConcludedAt)
+}

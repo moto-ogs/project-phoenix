@@ -24,13 +24,17 @@ type ContractChild struct {
 
 // ImportedContract is a contract an import file names (#4723): its school,
 // its key, the instant of its conclusion, its first version and its party.
+// A file that names no day of the conclusion leaves it unknown (#7767):
+// ConcludedAt then is the first day of the contract, which the store needs
+// for an active contract, and ConclusionDateUnknown says that it is no date.
 type ImportedContract struct {
-	Line        int
-	SchoolID    int64
-	ImportKey   string
-	ConcludedAt time.Time
-	Version     carecontract.Version
-	Party       NewParty
+	Line                  int
+	SchoolID              int64
+	ImportKey             string
+	ConcludedAt           time.Time
+	ConclusionDateUnknown bool
+	Version               carecontract.Version
+	Party                 NewParty
 }
 
 // ImportActionDetail is the key of a trail entry that names the file an

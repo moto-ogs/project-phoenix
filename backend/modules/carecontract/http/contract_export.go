@@ -86,6 +86,8 @@ func contractStatusDay(contract carecontract.ContractSummary) string {
 		return "zum " + contract.EndsOn.Format("02.01.2006")
 	case contract.Status == carecontract.StatusWithdrawn:
 		return ""
+	case contract.Concluded != nil && contract.Concluded.DateUnknown:
+		return "Abschlussdatum unbekannt"
 	case contract.Concluded != nil:
 		return contract.Concluded.At.In(calendar.Berlin).Format("02.01.2006")
 	case contract.SentAt != nil:

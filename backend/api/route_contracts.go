@@ -119,6 +119,7 @@ func traegerBillingContractMounts() []contractMount {
 		{"/traeger/contract-changes", careContractHTTP.ChangeRouteContracts()},
 		{"/traeger/care-time-overruns", careContractHTTP.OverrunRouteContracts()},
 		{"/traeger/contract-imports", careContractHTTP.ImportRouteContracts()},
+		{"/traeger/contract-corrections", careContractHTTP.CorrectionRouteContracts()},
 	}
 }
 

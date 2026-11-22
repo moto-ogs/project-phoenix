@@ -11886,7 +11886,8 @@ export const traegerBriefkopfTopic =
  * der Eltern und den Papiervertrag erfassen; Versionen nach einer Änderung;
  * Kündigung und Widerruf (#4682); Änderungswünsche der Eltern freigeben (#5979);
  * Kinder und bestehende Verträge aus einer Datei importieren (#4723), auch
- * ohne Mail-Adresse der Eltern (#7360).
+ * ohne Mail-Adresse der Eltern (#7360), und ihre Vertragsangaben aus den
+ * Originalunterlagen nachpflegen (#7767).
  */
 export const traegerCareContractsTopic =
   function traegerCareContractsTopic(): HelpTopic {
@@ -12013,6 +12014,22 @@ export const traegerCareContractsTopic =
           ],
         },
         {
+          title: "Vertragsangaben importierter Verträge nachpflegen",
+          description:
+            "Der Import kennt nur einen Vertragspartner, den Abschluss auf Papier und ein Abschlussdatum. Aus den Originalunterlagen ergänzt du weitere Vertragsparteien, die Abschlussart und das Abschlussdatum. Es entsteht kein neuer Vertrag. Die Eltern bekommen keine Mail.",
+          steps: [
+            "Wähle in der Navigation `Verträge`. Wähle oben rechts das Menü mit den drei Punkten und dann `Vertragsangaben nachpflegen`.",
+            "Wähle bei `1. Liste herunterladen` den Knopf `Liste herunterladen`. Die Liste enthält jeden importierten Vertrag mit seinen Angaben in moto.",
+            "Ergänze die Liste. `Vertragsparteien`: Namen als „Nachname, Vorname“, getrennt mit „ | “. Ein weiterer Name kommt dazu. Schreibst du einen Namen anders, ändert moto die Schreibweise. Keine Partei fällt weg. Mail-Adresse und Elternkonto bleiben.",
+            "`Abschlussart`: „online“ oder „papier“. `Abschlussdatum`: ein Datum wie 12.03.2026, oder „unbekannt“, wenn du den Tag nicht belegen kannst.",
+            "Trage bei `Beleg` in jeder geänderten Zeile ein, woher die Angabe stammt, zum Beispiel den Namen der PDF mit dem Vertrag. Eine leere Zelle ändert nichts. `Vertrag-ID` und `Kind` änderst du nicht.",
+            "Speichere die Liste als CSV-Datei. Ziehe sie bei `2. Ausgefüllte Liste hochladen` in das Feld oder wähle `Datei wählen`.",
+            "Prüfe die Vorschau. Je Zeile steht der alte Wert durchgestrichen und daneben der neue. `Wird geändert` ändert moto. `Bereits aktuell` bleibt, wie es ist. Bei `Fehler` steht der Grund in der Spalte, zu der er gehört.",
+            "Wähle unten zum Beispiel `3 Verträge ändern`. moto fragt noch einmal. Bestätige.",
+            "Auf der Vertragsseite steht danach die Karte `Nachgepflegte Angaben` mit dem Tag, dem Beleg und der Änderung. Lädst du dieselbe Liste noch einmal hoch, ändert sich nichts.",
+          ],
+        },
+        {
           title: "Änderungswunsch der Eltern freigeben",
           steps: [
             "Die Eltern beantragen in der Eltern-App andere Tage oder Module. Du oder die Schule entscheidet.",
@@ -12081,7 +12098,9 @@ export const traegerCareContractsTopic =
         "Beim Import steht `Für das Modul fehlen die Vertragsbedingungen`? Trage unter `Vertragsbedingungen` Laufzeit und Frist für das Modul ein. Wähle danach im Import `Erneut prüfen` oder lade die Datei noch einmal.",
         "Beim Import steht `Dieses Modul gibt es an der Schule nicht`? Der Name in der Datei muss so heißen wie das Angebot der Schule. Ändere den Namen in der Datei, oder wähle `Modul für alle Zeilen`.",
         "Beim Import steht `„Kinder in der Familie“ ist keine ganze Zahl von 1 bis 20`? moto übernimmt die Zeile nicht. Korrigiere die Zahl in der Datei und lade die Datei noch einmal.",
-        "Ein importierter Vertrag ist falsch? Einen übernommenen Vertrag kannst du nicht löschen und nicht noch einmal importieren. Trage für ihn eine Kündigung ein. Prüfe die Vorschau deshalb, bevor du übernimmst.",
+        "Ein importierter Vertrag ist falsch? Einen übernommenen Vertrag kannst du nicht löschen und nicht noch einmal importieren. Fehlen nur Vertragsparteien, die Abschlussart oder das Abschlussdatum, ergänze sie unter `Vertragsangaben nachpflegen`. Sonst trage für ihn eine Kündigung ein. Prüfe die Vorschau deshalb, bevor du übernimmst.",
+        "Beim Nachpflegen steht `Dieser Vertrag kommt nicht aus einem Import`? Nachpflegen geht nur für importierte Verträge. Die Angaben der anderen Verträge stammen aus moto.",
+        "Beim Nachpflegen steht `Eine Vertragspartei fehlt`? Die Zeile nennt weniger Namen als der Vertrag hat. Nimm alle Namen aus der heruntergeladenen Liste und ergänze nur neue.",
         "In `Vertrag beenden` steht `Die Mitteilung zum Vertragsende ging nicht raus`? Der Hinweis nennt den Grund: Der Vertrag ist mit keinem Kind aus den `Kinderdaten` der Schule verknüpft. Oder keine Adresse des Vertrags gehört noch einer Bezugsperson, die für das Kind handeln darf. Bei älteren Entscheidungen kennt moto den Grund nicht. Die Entscheidung gilt trotzdem. Schicke den Eltern die Mitteilung per Brief. Sie steht darunter als `Mitteilung zum Vertragsende (nicht verschickt)`.",
         "`Vertragsende festlegen` oder `Grund nicht anerkennen` meldet, dass kein Ende mehr offen ist? Eine andere Person hat schon entschieden. Lade die Seite neu. Die Entscheidung steht in `Vertrag beenden`.",
         "Bei einem Änderungswunsch fehlt `Freigeben`? Die Eltern melden damit die ganze Betreuung ab. Das ist eine Kündigung. Trage sie unter `Vertrag beenden` ein, oder lehne den Wunsch ab.",
