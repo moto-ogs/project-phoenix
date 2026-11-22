@@ -1,4 +1,4 @@
-import { apiErrorFromResponse, transportFetch } from "./api-error";
+import { apiErrorFromResponse, unavailableApiError } from "./api-error";
 // Client API for the info-point display domain (issue #1325).
 // Admin CRUD goes through the portal's catalog proxy under /api/display;
 // the public dashboard fetch is token-only.
@@ -7,58 +7,6 @@ import { bffJson } from "~/lib/bff-fetch";
 import type * as displayContract from "~/lib/contract/display.generated";
 import type { InfoDisplay } from "~/lib/display-helpers";
 import { mapDisplayResponse } from "~/lib/display-helpers";
-
-// ---------------------------------------------------------------------------
-// Public dashboard payload (mirrors backend services/display DashboardPayload)
-// ---------------------------------------------------------------------------
-
-export interface DashboardRoomOccupancy {
-  name: string;
-  group_name?: string;
-  category_name?: string;
-  student_count: number;
-  capacity?: number | null;
-  is_occupied: boolean;
-}
-
-export interface DashboardRunningActivity {
-  id: string;
-  name: string;
-  category: string;
-  room_name: string;
-  participants: number;
-  max_capacity?: number | null;
-}
-
-export interface DashboardUpcomingActivity {
-  id: string;
-  name: string;
-  category: string;
-  start_time: string; // HH:MM
-  room_name: string;
-}
-
-export interface DashboardPickupBucket {
-  time: string; // HH:MM
-  count: number;
-}
-
-export interface DashboardPayload {
-  status: "active" | "inactive";
-  school_name?: string;
-  display_name?: string;
-  server_time?: string;
-  date?: string; // YYYY-MM-DD
-  room_occupancy?: DashboardRoomOccupancy[];
-  running_activities?: DashboardRunningActivity[];
-  upcoming_activities?: DashboardUpcomingActivity[];
-  pickup_times?: DashboardPickupBucket[];
-  totals?: {
-    students_present: number;
-    rooms_occupied: number;
-    activities_running: number;
-  };
-}
 
 /**
  * Fetches the public dashboard aggregate. No session required — the token
@@ -69,19 +17,30 @@ export interface DashboardPayload {
 export async function fetchDisplayDashboard(
   token: string,
   signal?: AbortSignal,
-): Promise<DashboardPayload> {
-  const response = await transportFetch("/api/display/dashboard", {
-    cache: "no-store",
-    signal,
-    headers: { "X-Display-Token": token },
-  });
+): Promise<displayContract.DashboardResponse> {
+  // The wall display has no session and its answer has no envelope
+  // (`plain`): neither fits a portal of bffJson, so it fetches the route
+  // file itself (old-fetch-helpers.test.ts lists it).
+  let response: Response;
+  try {
+    response = await fetch("/api/display/dashboard", {
+      cache: "no-store",
+      signal,
+      headers: { "X-Display-Token": token },
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw error;
+    }
+    throw unavailableApiError(error);
+  }
   if (!response.ok) {
     throw await apiErrorFromResponse(
       response,
       `display dashboard request failed with status ${response.status}`,
     );
   }
-  return (await response.json()) as DashboardPayload;
+  return (await response.json()) as displayContract.DashboardResponse;
 }
 
 // ---------------------------------------------------------------------------

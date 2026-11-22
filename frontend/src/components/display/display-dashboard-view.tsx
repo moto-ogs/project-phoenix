@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
-import type { DashboardPayload } from "~/lib/display-api";
+import type * as displayContract from "~/lib/contract/display.generated";
 import { fetchDisplayDashboard } from "~/lib/display-api";
 import { RoomOccupancyPanel } from "./room-occupancy-panel";
 import { ActivitiesPanel } from "./activities-panel";
@@ -24,7 +24,7 @@ type ViewState =
   | { kind: "loading" }
   | { kind: "invalid" } // unknown/revoked token (404)
   | { kind: "inactive" } // known display, deactivated by the school
-  | { kind: "active"; payload: DashboardPayload };
+  | { kind: "active"; payload: displayContract.DashboardResponse };
 
 interface DisplayDashboardViewProps {
   readonly token: string;

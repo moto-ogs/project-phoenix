@@ -7,6 +7,8 @@ import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const UNCONTRACTED_CALLERS: Readonly<Record<string, string>> = {
+  "lib/invitation-api.ts":
+    "POST invitations/accept: a new account accepts without a session, an existing one with the owner's; the route's contract names only the tenant portal",
   "lib/email-code-factor-api.ts":
     "POST caterer/account/mfa/confirm, parent/me/mfa/confirm: the route installs the renewed session",
   "lib/staff-preview-api.ts":

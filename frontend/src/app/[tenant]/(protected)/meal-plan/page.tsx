@@ -152,7 +152,7 @@ function draftsFromEntries(
 export default function MealPlanPage() {
   const toast = useToast();
   const router = useTenantRouter();
-  // Gate the initial fetch on session readiness: sessionFetch needs the
+  // Gate the initial fetch on session readiness: the staff session gate needs the
   // client-side token, which isn't available for a tick on a hard reload /
   // direct navigation. Without this gate the one-shot load races auth, throws
   // "No authentication token available", and never retries — leaving the page
