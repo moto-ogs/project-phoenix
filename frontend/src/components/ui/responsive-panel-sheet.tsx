@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useRef,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
   type RefObject,
@@ -8,7 +9,7 @@ import {
 
 import { Drawer, DrawerContent, DrawerTitle } from "./drawer";
 import { FOCUSABLE_SELECTOR } from "./hooks/useScrollRegion";
-import { SCROLL_AREA_PROPS } from "./overlay-stack";
+import { SCROLL_AREA_PROPS, useOverlay } from "./overlay-stack";
 
 export interface ResponsivePanelSheetProps {
   readonly open: boolean;
@@ -17,8 +18,6 @@ export interface ResponsivePanelSheetProps {
   readonly returnFocusRef: RefObject<HTMLElement | null>;
   readonly initialFocus?: (sheet: HTMLElement) => HTMLElement | null;
   readonly children: ReactNode;
-  readonly sheetRef: RefObject<HTMLDivElement | null>;
-  readonly isTopmost: () => boolean;
 }
 
 // Ein Zug im Blatt gehört nur ihm. React reicht Zeigerereignisse durch das
@@ -34,9 +33,15 @@ export function ResponsivePanelSheet({
   returnFocusRef,
   initialFocus,
   children,
-  sheetRef,
-  isTopmost,
 }: ResponsivePanelSheetProps) {
+  const sheetRef = useRef<HTMLDivElement | null>(null);
+  // Auf dem Stapel der Overlays: Ein Popover, das im Blatt aufgeht, gehört
+  // zu ihm, und ein Dialog darüber verdrängt es wie jedes Popover.
+  const { isTopmost } = useOverlay(open, "popover", {
+    elementRef: sheetRef,
+    onCovered: () => onOpenChange(false),
+  });
+
   return (
     <Drawer
       open={open}

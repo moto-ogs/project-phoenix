@@ -10,7 +10,6 @@ import {
 } from "react";
 
 import { BELOW_SM, useMediaQuery } from "~/lib/hooks/use-media-query";
-import { useOverlay } from "./overlay-stack";
 import type { ResponsivePanelSheetProps } from "./responsive-panel-sheet";
 
 /**
@@ -76,14 +75,7 @@ export function ResponsivePanel({
   const asSheet = useResponsivePanelSheet();
   const [Sheet, setSheet] =
     useState<ComponentType<ResponsivePanelSheetProps> | null>(null);
-  const sheetRef = useRef<HTMLDivElement | null>(null);
   const sheetOpen = open && asSheet;
-  // Auf dem Stapel der Overlays: Ein Popover, das im Blatt aufgeht, gehört
-  // zu ihm, und ein Dialog darüber verdrängt es wie jedes Popover.
-  const { isTopmost } = useOverlay(sheetOpen, "popover", {
-    elementRef: sheetRef,
-    onCovered: () => onOpenChange(false),
-  });
 
   // Wechselt die Breite über `sm` (Telefon drehen), passt die offene
   // Darstellung nicht mehr: Das Panel schließt, wie ein Popover beim
@@ -119,8 +111,6 @@ export function ResponsivePanel({
           label={label}
           returnFocusRef={returnFocusRef}
           initialFocus={initialFocus}
-          sheetRef={sheetRef}
-          isTopmost={isTopmost}
         >
           {children(true)}
         </Sheet>
