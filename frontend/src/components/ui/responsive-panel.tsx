@@ -1,19 +1,17 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode, type RefObject } from "react";
-import dynamic from "next/dynamic";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ComponentType,
+  type ReactNode,
+  type RefObject,
+} from "react";
 
 import { BELOW_SM, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { useOverlay } from "./overlay-stack";
-
-// Der Vaul-Zweig gehört nur auf das Telefon. Desktop-Popover laden ihn nicht.
-const ResponsivePanelSheet = dynamic(
-  () =>
-    import("./responsive-panel-sheet").then(
-      (module) => module.ResponsivePanelSheet,
-    ),
-  { ssr: false },
-);
+import type { ResponsivePanelSheetProps } from "./responsive-panel-sheet";
 
 /**
  * Ob ein Panel am Auslöser gerade als Blatt von unten erscheint: unter `sm`
@@ -76,6 +74,8 @@ export function ResponsivePanel({
   children,
 }: ResponsivePanelProps) {
   const asSheet = useResponsivePanelSheet();
+  const [Sheet, setSheet] =
+    useState<ComponentType<ResponsivePanelSheetProps> | null>(null);
   const sheetRef = useRef<HTMLDivElement | null>(null);
   const sheetOpen = open && asSheet;
   // Auf dem Stapel der Overlays: Ein Popover, das im Blatt aufgeht, gehört
@@ -95,11 +95,25 @@ export function ResponsivePanel({
     if (open) onOpenChange(false);
   }, [asSheet, open, onOpenChange]);
 
+  // Das Blatt und Vaul braucht nur ein Telefon. Ein Import im Effekt landet
+  // nicht im Desktop-Preload-Graph der Menüs, ist auf dem Telefon aber vor
+  // dem ersten Öffnen geladen.
+  useEffect(() => {
+    if (!asSheet || Sheet) return undefined;
+    let current = true;
+    void import("./responsive-panel-sheet").then((module) => {
+      if (current) setSheet(() => module.ResponsivePanelSheet);
+    });
+    return () => {
+      current = false;
+    };
+  }, [asSheet, Sheet]);
+
   return (
     <>
       {trigger}
-      {asSheet ? (
-        <ResponsivePanelSheet
+      {asSheet && Sheet ? (
+        <Sheet
           open={sheetOpen}
           onOpenChange={onOpenChange}
           label={label}
@@ -109,7 +123,7 @@ export function ResponsivePanel({
           isTopmost={isTopmost}
         >
           {children(true)}
-        </ResponsivePanelSheet>
+        </Sheet>
       ) : open ? (
         children(false)
       ) : null}

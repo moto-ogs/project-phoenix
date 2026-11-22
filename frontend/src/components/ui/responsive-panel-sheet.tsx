@@ -10,7 +10,7 @@ import { Drawer, DrawerContent, DrawerTitle } from "./drawer";
 import { FOCUSABLE_SELECTOR } from "./hooks/useScrollRegion";
 import { SCROLL_AREA_PROPS } from "./overlay-stack";
 
-interface ResponsivePanelSheetProps {
+export interface ResponsivePanelSheetProps {
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
   readonly label: string;
