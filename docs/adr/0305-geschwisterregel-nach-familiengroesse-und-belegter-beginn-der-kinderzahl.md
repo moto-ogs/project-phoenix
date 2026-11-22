@@ -111,3 +111,53 @@ Punkt 5 den Satz zum Beginn der Zahl.
   danach (ADR 0164 Punkt 6). Frühere Monate rechnet moto erst zum
   Geschwisterpreis, wenn das Büro einen früheren Tag nennt.
 - Migration `20261122070000`: zwei Spalten mit Standard `false`, zwei Checks.
+
+## Nachtrag 22.11.2026: Grenzen der Kinderzahl-Datei (#7863 Punkte 3 bis 5)
+
+- **Tag weiter als neun Monate voraus.** moto liest Verträge bis
+  `evidenceLookAhead` (273 Tage) voraus. Liegt der Tag einer Zeile dahinter,
+  ob aus ihrer Spalte oder aus dem Tag der Datei, hält moto die Zeile zurück
+  (`too_far_ahead` an „Gültig ab“). Sie zeigt damit nie „Schon bestätigt“
+  für eine Zeit, für die moto die Familie nicht kennt. Ihre Zahl spricht wie
+  bei einem ungültigen Tag weiter gegen die Zeilen der Geschwister.
+- **Vergleich mit der Bestätigung des Tages.** Beginnt die neueste
+  Bestätigung erst nach dem Tag, an dem die Zeile entscheidet, vergleicht
+  die Zeile mit der Zahl, die an diesem Tag gilt. Gilt an dem Tag keine,
+  vergleicht sie weiter mit der geplanten Bestätigung: Die Datei übernimmt
+  nie eine Zahl vor einer geplanten (Punkt 6, ADR 0288). Die Liste der
+  Familien bleibt bei `countOn`.
+- **Beendete Verträge.** Ein Vertrag, dessen Versionen alle vor heute
+  enden, nennt eine Familie, die das Kind verlassen hat. Die Zeile spricht
+  nicht für sie: keine erneuerte und keine neue Zahl, auch kein Widerspruch
+  gegen ihre Zeilen. Hat das Kind an der Schule keinen laufenden oder
+  späteren Vertrag, hält moto die Zeile zurück (`contract_ended`).
+
+## Nachtrag 22.11.2026: Jeder Vertrag im Monat zählt, die Schulen der Regel zählen immer (#7863 Punkte 1 und 2)
+
+Entscheidung von Yannick am 22.11.2026.
+
+- **Jeder Vertrag im Monat zählt (Punkt 1).** Bei Vollmonatsabrechnung
+  rechnet nur ein Vertrag des Kindes den Monat ab (ADR 0158, Nachtrag
+  Kind-Monat E2). Für die Geschwisterregel zählt das Kind trotzdem an jeder
+  Schule, an der ein Vertrag von ihm an einem Tag des Monats Betreuung bucht,
+  Tag für Tag gelesen wie bei taggenauer Abrechnung. Der Vertrag ohne
+  Positionen bekommt keine Rechnung; er steht wie ein Vertrag ohne Preis als
+  Ort des Kindes in der Kette (`unbilled`). Ein Vertrag an einer zählenden
+  Schule geht einem Vertrag an einer anderen Schule vor. Folgen: Im
+  Größenmodus zählt das Kind zur Familiengröße. Im Rangmodus mit Kinderzahl
+  geht es nicht mehr als Kind „an anderer Schule“ von der Zahl ab; es steht
+  ohne Beitrag hinter den gereihten Kindern (ADR 0115 Punkt 3), deshalb
+  ändert sich dort kein Rang und kein Betrag, nur die Kinderzahl auf der
+  Ermäßigung („2. Kind von 3“ statt „von 2“). Die taggenaue Abrechnung
+  rechnet wie bisher.
+- **Die Schulen der Regel zählen immer (Punkt 2).** Das ersetzt in
+  Entscheidung 2 den Satz „Der Rangmodus zählt wie bisher nur die gewählten
+  Schulen.“ In beiden Modi zählen die Schulen der Regel und dazu die unter
+  „Geschwister zählen auch an“ gewählten. Eine bestehende Rangregel, deren
+  Auswahl die eigene Schule nicht nennt, ermäßigt damit ab dem nächsten Lauf
+  an ihrer eigenen Schule. Die Maske bietet nur noch die anderen Schulen an;
+  beim Speichern fallen die Schulen der Regel aus der Auswahl. Gespeicherte
+  Regeln bleiben ohne Migration gültig, weil die Kette die Schulen der Regel
+  selbst dazunimmt.
+- **Ausgestellte Rechnungen bleiben.** Beides wirkt auf Entwürfe. Eine
+  ausgestellte Rechnung behält ihre gespeicherten Ermäßigungen.

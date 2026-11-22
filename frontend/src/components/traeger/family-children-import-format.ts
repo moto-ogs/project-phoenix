@@ -117,6 +117,10 @@ export function familyImportProblemText(
         : `Das Kind steht schon in Zeile ${row.repeatsLine}.`;
     case "rows_differ":
       return "Geschwister derselben Familie nennen verschiedene Zahlen. moto übernimmt keine.";
+    case "too_far_ahead":
+      return "Der Tag liegt mehr als neun Monate voraus. So weit voraus übernimmt moto keine Zahl.";
+    case "contract_ended":
+      return "Der Vertrag des Kindes ist schon beendet. moto übernimmt die Zahl nicht.";
     case "confirmations_differ":
       return "Für diese Familie sind verschiedene Kinderzahlen bestätigt. Bestätige die Kinderzahl in der Familienliste.";
     default:

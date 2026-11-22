@@ -135,9 +135,29 @@ func (n *familyNumbers) count() (count *parentbilling.FamilyChildCount, differin
 	return first, false
 }
 
+// confirmedForImport is the confirmation a row of the Kinderzahl-Datei
+// compares with on day (#7863): the newest one, but while it only starts
+// after day, the number that holds on day. Without a number that holds on
+// day the newest one stays, so the file never takes over a number in front
+// of a confirmation planned for later.
+func (n *familyNumbers) confirmedForImport(day calendar.Date) *parentbilling.FamilyChildCount {
+	count := n.confirmed()
+	if count == nil || count.ValidFrom == nil || !count.ValidFrom.After(day) {
+		return count
+	}
+	number, holds := n.confirmedOn(day)
+	if !holds {
+		return count
+	}
+	held := *count
+	held.ConfirmedChildren, held.ValidUntil = &number, nil
+	return &held
+}
+
 // countOn combines the current confirmation with the latest parental
 // statement for the office. Import decisions keep count's longest validity
-// so that they also protect confirmations scheduled for a later day.
+// so that they also protect confirmations scheduled for a later day; they
+// compare with the number in force on their day (confirmedForImport).
 func (n *familyNumbers) countOn(day calendar.Date) (*parentbilling.FamilyChildCount, bool) {
 	count, _ := n.count()
 	ownStarted := false

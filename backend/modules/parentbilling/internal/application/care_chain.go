@@ -45,8 +45,9 @@ type careChainInput struct {
 	// reduces; nil collects nothing.
 	uncounted map[string][]int64
 	// unbilled are the contracts in force in the month without a draft in
-	// the chain (a missing price, a child billed twice): they bill nothing
-	// yet but still place their child at its school.
+	// the chain (a missing price, a child billed twice, a month another
+	// contract of the child bills): they bill nothing here but still place
+	// their child at its school.
 	unbilled []careContractPlace
 }
 
@@ -317,19 +318,12 @@ func compareCareChildren(a, b *rankedCareChild) int {
 }
 
 // countingSchools are the schools whose children a sibling rule counts:
-// the chosen ones, else the rule's own schools. A rule of the family's size
-// (#7765) counts its own schools with the chosen ones: it reduces every
-// child with a contract there once the family is large enough, so a child
-// at a school of the rule is never left out of its own family.
+// its own schools and the ones chosen with them (#7863, ADR 0305 Nachtrag).
+// A rule reduces at its own schools, so a child there is never left out of
+// its own family, by rank or by the family's size.
 func countingSchools(rule *parentbilling.ContributionRule) []int64 {
-	if len(rule.CountSchoolIDs) == 0 {
-		return ident.Int64s(rule.SchoolIDs)
-	}
-	counting := ident.Int64s(rule.CountSchoolIDs)
-	if !rule.SiblingAllChildren {
-		return counting
-	}
-	for _, school := range ident.Int64s(rule.SchoolIDs) {
+	counting := ident.Int64s(rule.SchoolIDs)
+	for _, school := range ident.Int64s(rule.CountSchoolIDs) {
 		if !slices.Contains(counting, school) {
 			counting = append(counting, school)
 		}
@@ -391,7 +385,9 @@ func siblingRuleReduces(rule *parentbilling.ContributionRule, rank, familyChildr
 // 08.11.2026, each location apart). Such children come off the stated
 // number. Siblings without a contract belong to no school and count at every
 // one. A rule that counts both schools counts them all; the choice is the
-// rule's setting „Geschwister zählen an“.
+// rule's setting „Geschwister zählen auch an“. A child with a contract at a
+// counting school on any day of the month counts there, also in a month
+// another contract of the child bills (#7863).
 //
 // A child with a contract at a counting school is a child with a contract
 // even when the rule's part of it costs nothing (a price of 0 €, a full

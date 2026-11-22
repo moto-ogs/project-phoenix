@@ -47,7 +47,7 @@ func (c *CareReductions) ImportFamilyChildren(ctx context.Context, reviewer pare
 		result.Mapping = *request.Mapping
 	}
 	result.Mapping = settleFamilyImportMapping(result.Mapping, schools, c.today())
-	index, err := resolveFamilyImportMapping(table.headers, result.Mapping, schools)
+	index, err := resolveFamilyImportMapping(table.headers, result.Mapping, schools, c.today())
 	if err != nil {
 		return parentbilling.FamilyChildrenImport{}, err
 	}
@@ -159,7 +159,7 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 			}
 		}
 	}
-	decideImportedChildren(rows, current, familyImportDecisionDay(today, familyImportTargets(candidates)))
+	decideImportedChildren(rows, familyImportCurrent(numbers), familyImportDecisionDay(today, familyImportTargets(candidates)))
 	var shown []parentbilling.FamilyChildTarget
 	seen := map[int64]bool{}
 	for i, row := range rows {
@@ -177,6 +177,17 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 	}
 	alignFamilyImportDays(candidates)
 	return shown
+}
+
+// familyImportCurrent answers the confirmation a row of a family compares
+// with on its day (familyNumbers.confirmedForImport), nil without one.
+func familyImportCurrent(numbers map[string]*familyNumbers) func(string, calendar.Date) *parentbilling.FamilyChildCount {
+	return func(family string, day calendar.Date) *parentbilling.FamilyChildCount {
+		if found, ok := numbers[family]; ok {
+			return found.confirmedForImport(day)
+		}
+		return nil
+	}
 }
 
 // familyImportDecisionDay is the day a row's number has to hold on: the

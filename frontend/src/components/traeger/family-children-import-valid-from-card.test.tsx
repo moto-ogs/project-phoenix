@@ -69,14 +69,16 @@ describe("FamilyChildrenImportValidFromCard", () => {
     });
   });
 
-  it("says that rows with their own day take it and siblings share the earliest", () => {
+  // moto takes over the earliest day of the rows it stores: when only the
+  // later sibling's row is taken over, its day applies (#7863).
+  it("says that rows with their own day take it and siblings share the earliest of the rows moto takes over", () => {
     renderCard({
       ...mapping,
       columns: { ...mapping.columns, valid_from: "Stichtag" },
     });
     expect(
       screen.getByText(
-        /Zeilen mit einem Tag in der Spalte „Stichtag“ nehmen ihren Tag\. Dieser Tag gilt für alle anderen Zeilen\. Nennen Geschwister verschiedene Tage, gilt für die Familie der früheste\./,
+        /Zeilen mit einem Tag in der Spalte „Stichtag“ nehmen ihren Tag\. Dieser Tag gilt für alle anderen Zeilen\. Nennen Geschwister verschiedene Tage, gilt für die Familie der früheste\. Übernimmt moto nur eine dieser Zeilen, gilt ihr Tag\./,
       ),
     ).toBeInTheDocument();
   });

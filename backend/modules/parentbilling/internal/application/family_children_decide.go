@@ -45,12 +45,13 @@ func importedChildrenFamily(number parentbilling.ImportedFamilyChildren) string 
 	return previewChildrenFamily(number.Line)
 }
 
-// decideImportedChildren gives every row its status. current answers the
-// number the Abrechnung confirmed for a family, nil without one; day the
-// day a row's number has to hold on. A confirmation that ended before that
-// day no longer speaks: the file renews it from the day after its end, so
-// the months it covered keep what they had.
-func decideImportedChildren(rows []importedChildren, current func(family string) *parentbilling.FamilyChildCount,
+// decideImportedChildren gives every row its status. day answers the day
+// a row's number has to hold on; current the number the Abrechnung
+// confirmed for a family that decides that day, nil without one. A
+// confirmation that ended before that day no longer speaks: the file renews
+// it from the day after its end, so the months it covered keep what they
+// had.
+func decideImportedChildren(rows []importedChildren, current func(family string, day calendar.Date) *parentbilling.FamilyChildCount,
 	day func(row importedChildren) calendar.Date,
 ) {
 	distinct := distinctImportedChildren(rows)
@@ -59,7 +60,7 @@ func decideImportedChildren(rows []importedChildren, current func(family string)
 		if row.status != "" || row.witness {
 			continue
 		}
-		count := current(row.family)
+		count := current(row.family, day(*row))
 		switch {
 		case len(distinct[row.family]) > 1:
 			row.status = parentbilling.ImportedChildrenRowsDiffer
@@ -199,7 +200,7 @@ func (f *FamilyNumbers) DecideImportedFamilyChildren(ctx context.Context, review
 	}
 	// An import of contracts has no clock of its own: a confirmation that
 	// ended before the first day of the row's contract has run out.
-	decideImportedChildren(rows, func(family string) *parentbilling.FamilyChildCount { return confirmed[family] },
+	decideImportedChildren(rows, func(family string, _ calendar.Date) *parentbilling.FamilyChildCount { return confirmed[family] },
 		func(row importedChildren) calendar.Date { return row.number.ValidFrom })
 	if save {
 		if err := f.saveImportedChildren(ctx, reviewer, rows); err != nil {

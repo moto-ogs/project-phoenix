@@ -157,6 +157,9 @@ func buildCareMonth(in careMonthInput) (careMonth, error) {
 			continue
 		}
 		if len(invoice.Positions) == 0 {
+			// Another contract of the child bills the month (ADR 0158 E2):
+			// this one gets no invoice, but its child counts at its school.
+			unbilled = appendInForce(unbilled, in, byContract[contractID], entries[contractID], childOf[contractID])
 			continue
 		}
 		invoice.Recipient = in.recipients[contractID]
@@ -214,12 +217,22 @@ func (m *careMonth) countFree(in careMonthInput, versions []parentbilling.CareCo
 // appendInForce adds the place of a contract that books care in the month
 // but gets no draft, so a sibling rule still sees its child at its school.
 func appendInForce(places []careContractPlace, in careMonthInput, versions []parentbilling.CareContractVersion, entry bool, child string) []careContractPlace {
-	if len(tracksOf(in.month, in.rule, versions, entry)) == 0 {
+	if !booksCareIn(in, versions, entry) {
 		return places
 	}
 	head := versions[0]
 	family := parentbilling.ContractFamilyKey(in.recipients[head.ContractID].Email, head.ContractID)
 	return append(places, careContractPlace{family: family, child: child, school: head.SchoolID})
+}
+
+// booksCareIn tells whether a contract books care on a day of the month.
+// Under the full month a contract may bill nothing because another contract
+// of its child bills the month (ADR 0158 E2); it still books care on its
+// days, read day by day like pro rata, and counts for a sibling rule at its
+// school (#7863, ADR 0305 Nachtrag).
+func booksCareIn(in careMonthInput, versions []parentbilling.CareContractVersion, entry bool) bool {
+	return len(tracksOf(in.month, in.rule, versions, entry)) > 0 ||
+		len(tracksOf(in.month, parentbilling.MonthRuleProRata, versions, false)) > 0
 }
 
 // familyChildrenIn keys the confirmed numbers valid in the month by the

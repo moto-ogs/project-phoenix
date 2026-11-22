@@ -955,6 +955,58 @@ func TestCareMonthRuleChainTable(t *testing.T) {
 			uncounted: 1,
 			totals:    map[int64]int64{contractMia: 8000},
 		},
+		{
+			// #7863 point 2: a rank rule at Ispringen names only Birkenfeld
+			// under „Geschwister zählen auch an“. Its own school counts with
+			// it: Noah (45,00 € at Birkenfeld) is the 1st, Mia (40,00 € at
+			// Ispringen) the 2nd: 20,00 €. Noah's school is none of the
+			// rule's, he pays in full.
+			name: "rank: the rule's own schools count with the chosen ones",
+			children: []careChainChild{
+				{contractMia, schoolIspringen, familyEva, "2017-03-01", []parentbilling.CareContractService{mon1400}},
+				{contractNoah, schoolBirkenfeld, familyEva, "2015-03-01", []parentbilling.CareContractService{mon1400}},
+			},
+			rules:  rankRuleCountingOnly(false, schoolBirkenfeld),
+			totals: map[int64]int64{contractMia: 2000, contractNoah: 4500},
+			lines:  map[int64][]reductionOf{contractMia: {{parentbilling.RuleSibling, -2000, 2}}},
+		},
+		{
+			// The same rule ranks the child at its own school by the base
+			// price: Mia (80,00 € at Ispringen) is the 1st and pays in
+			// full, Noah the 2nd at a school the rule does not reduce.
+			name: "rank: the first child at the rule's own school pays in full",
+			children: []careChainChild{
+				{contractMia, schoolIspringen, familyEva, "2017-03-01", []parentbilling.CareContractService{mon1400, tue1400}},
+				{contractNoah, schoolBirkenfeld, familyEva, "2015-03-01", []parentbilling.CareContractService{mon1400}},
+			},
+			rules:  rankRuleCountingOnly(false, schoolBirkenfeld),
+			totals: map[int64]int64{contractMia: 8000, contractNoah: 4500},
+		},
+		{
+			// The same choice with the family's number: two stated, only
+			// Mia with a contract, at the rule's own school. Her sibling
+			// without one comes first, Mia is the 2nd: 40,00 €.
+			name: "rank: the rule's own school counts the family's number without a child at the chosen school",
+			children: []careChainChild{
+				{contractMia, schoolIspringen, familyEva, "2017-03-01", []parentbilling.CareContractService{mon1400, tue1400}},
+			},
+			rules:    rankRuleCountingOnly(true, schoolBirkenfeld),
+			families: confirmedFamily(familyEva, 2, "2026-09-01", nil),
+			totals:   map[int64]int64{contractMia: 4000},
+			lines:    map[int64][]reductionOf{contractMia: {{parentbilling.RuleSibling, -4000, 2}}},
+		},
+		{
+			// Without a confirmed number the family of a child at the
+			// rule's own school is named as uncounted, as under a rule
+			// without a choice.
+			name: "rank: the rule's own school names the family without a number",
+			children: []careChainChild{
+				{contractMia, schoolIspringen, familyEva, "2017-03-01", []parentbilling.CareContractService{mon1400, tue1400}},
+			},
+			rules:     rankRuleCountingOnly(true, schoolBirkenfeld),
+			uncounted: 1,
+			totals:    map[int64]int64{contractMia: 8000},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1208,6 +1260,16 @@ func familySiblingRule(counts bool) func(t *testing.T) []parentbilling.Contribut
 	return func(t *testing.T) []parentbilling.ContributionRule {
 		return []parentbilling.ContributionRule{careRule(t, ruleSiblingIspringen, parentbilling.RuleSibling, []int64{schoolIspringen},
 			func(rule *parentbilling.ContributionRule) { halfFromSecond(rule); rule.CountsFamilyChildren = counts })}
+	}
+}
+
+// rankRuleCountingOnly is half from the second child at Ispringen whose
+// choice „Geschwister zählen auch an“ names only other schools (#7863).
+func rankRuleCountingOnly(counts bool, chosen ...int64) func(t *testing.T) []parentbilling.ContributionRule {
+	return func(t *testing.T) []parentbilling.ContributionRule {
+		rules := familySiblingRule(counts)(t)
+		rules[0].CountSchoolIDs = ident.IDs(chosen)
+		return rules
 	}
 }
 

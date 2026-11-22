@@ -87,6 +87,12 @@ const (
 	// FamilyImportProblemConfirmationsDiffer requires an office decision
 	// between conflicting stored confirmations, not a correction of the file.
 	FamilyImportProblemConfirmationsDiffer = "confirmations_differ"
+	// FamilyImportProblemTooFarAhead is a day beyond the contracts moto
+	// reads ahead: moto cannot tell who belongs to the family then (#7863).
+	FamilyImportProblemTooFarAhead = "too_far_ahead"
+	// FamilyImportProblemContractEnded is a child whose contracts at the
+	// school all ended before today: the row speaks for no family (#7863).
+	FamilyImportProblemContractEnded = "contract_ended"
 )
 
 // FamilyChildrenImportColumns names per field the header of the column it
