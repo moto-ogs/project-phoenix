@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -76,20 +77,22 @@ func postCalendarAppointment(rt *Runtime, appointment map[string]any) (int64, er
 	return id, nil
 }
 
-// parseAppointmentID reads the id of the created appointment's detail.
+// parseAppointmentID reads the id of the created appointment's detail; the
+// API sends backend ids as strings.
 func parseAppointmentID(raw []byte) (int64, error) {
 	var envelope struct {
 		Data struct {
 			Appointment struct {
-				ID int64 `json:"id"`
+				ID string `json:"id"`
 			} `json:"appointment"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
 		return 0, err
 	}
-	if envelope.Data.Appointment.ID <= 0 {
+	id, err := strconv.ParseInt(envelope.Data.Appointment.ID, 10, 64)
+	if err != nil || id <= 0 {
 		return 0, fmt.Errorf("no appointment id in the answer")
 	}
-	return envelope.Data.Appointment.ID, nil
+	return id, nil
 }

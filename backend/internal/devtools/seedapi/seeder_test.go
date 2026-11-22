@@ -2129,10 +2129,10 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			})
 
 		case "/api/calendar/appointments":
-			// The detail of the created appointment (#7663 reads its id).
+			// The detail of the created appointment (#7663 reads its string id).
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"status": "success",
-				"data":   map[string]any{"appointment": map[string]any{"id": idCounter}},
+				"data":   map[string]any{"appointment": map[string]any{"id": fmt.Sprint(idCounter)}},
 			})
 
 		case "/api/active/visits", "/api/time-tracking/holidays", "/api/timetable/closing-days/":
