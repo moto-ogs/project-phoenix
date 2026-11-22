@@ -48,7 +48,7 @@ func reviewRouteContracts(decisions DecisionResponses) []common.RouteContract {
 		{Method: "POST", Pattern: "/master-data-change-requests/{requestId}/decide", Portals: portals, Request: DecideMasterDataChangeRequestBody{}, Response: decisions.MasterDataDecision},
 		{Method: "POST", Pattern: "/care-schedule-change-requests/{requestId}/decide", Portals: portals, Request: DecideCareRequestBody{}, Response: decisions.CareDecision},
 		{Method: "GET", Pattern: "/care-schedule-change-requests/{requestId}", Portals: portals, Response: decisions.CareDetail},
-		{Method: "POST", Pattern: "/offering-change-requests/{requestId}/preview", Portals: portals, Request: PreviewOfferingRequestBody{}, Response: OfferingRequestPreviewResponse{}},
+		{Method: "POST", Pattern: "/offering-change-requests/{requestId}/preview", Portals: portals, NoCommit: "the preview shows the decided offerings and saves nothing", Request: PreviewOfferingRequestBody{}, Response: OfferingRequestPreviewResponse{}},
 		{Method: "POST", Pattern: "/offering-change-requests/{requestId}/decide", Portals: portals, Request: DecideOfferingRequestBody{}, Response: offeringDecisionResponse{}},
 		// The AG waiting lists left their reshaping route file in #7563.
 		{
@@ -75,12 +75,12 @@ func careExitRouteContracts() []common.RouteContract {
 		{Name: "search", Kind: common.QueryString}, {Name: "school_class", Kind: common.QueryString, Repeated: true},
 	}, page...)
 	return []common.RouteContract{
-		{Method: "POST", Pattern: "/care-end/preview", Portals: portals, Request: careExitRequest{}, Response: careExitPreviewResponse{}},
+		{Method: "POST", Pattern: "/care-end/preview", Portals: portals, NoCommit: "the preview shows what a care end changes and saves nothing", Request: careExitRequest{}, Response: careExitPreviewResponse{}},
 		{Method: "POST", Pattern: "/care-end", Portals: portals, Request: careExitRequest{}, Response: careExitConfirmedResponse{}},
 		{Method: "POST", Pattern: "/care-end/cancel", Portals: portals, Request: careExitCancelRequest{}, Response: careExitCancelledResponse{}},
 		{Method: "GET", Pattern: "/care-withdrawals", Portals: portals, Query: withdrawals, Response: careWithdrawalPageResponse{}},
 		{Method: "GET", Pattern: "/{id}/care-withdrawals", Portals: portals, Query: page, Response: careWithdrawalPageResponse{}},
-		{Method: "POST", Pattern: "/care-withdrawals/{completionId}/care-end/preview", Portals: portals, Request: careWithdrawalExitRequest{}, Response: careExitPreviewResponse{}},
+		{Method: "POST", Pattern: "/care-withdrawals/{completionId}/care-end/preview", Portals: portals, NoCommit: "the preview shows what a care end changes and saves nothing", Request: careWithdrawalExitRequest{}, Response: careExitPreviewResponse{}},
 		{Method: "POST", Pattern: "/care-withdrawals/{completionId}/care-end", Portals: portals, Request: careWithdrawalExitRequest{}, Response: careExitConfirmedResponse{}},
 		{Method: "POST", Pattern: "/{id}/care-end/resume", Portals: portals, Request: careResumeRequest{}, Response: careResumedResponse{}},
 		{Method: "GET", Pattern: "/ended-care", Portals: portals, Query: ended, Response: endedCarePageResponse{}},
@@ -94,7 +94,7 @@ func pickupRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/{id}/pickup-schedules", Portals: portals, Query: days, Response: PickupDataResponse{}},
 		{Method: "PUT", Pattern: "/{id}/pickup-schedules", Portals: portals, Request: BulkPickupScheduleRequest{}, Response: PickupDataResponse{}},
-		{Method: "POST", Pattern: "/{id}/pickup-schedules/preview", Portals: portals, Request: pickupAdjustmentRequest{}, Response: pickupAdjustmentPreviewResponse{}},
+		{Method: "POST", Pattern: "/{id}/pickup-schedules/preview", Portals: portals, NoCommit: "the preview shows the pickup times a change would set and saves nothing", Request: pickupAdjustmentRequest{}, Response: pickupAdjustmentPreviewResponse{}},
 		{Method: "POST", Pattern: "/{id}/pickup-schedules/apply", Portals: portals, Request: pickupAdjustmentRequest{}, Response: pickupAdjustmentResponse{}},
 		{Method: "POST", Pattern: "/{id}/pickup-schedules/reset-offering", Portals: portals, Request: ResetOfferingPickupRequest{}, Response: PickupDataResponse{}},
 		{Method: "POST", Pattern: "/pickup-schedules/bulk", Portals: portals, Request: BulkPickupSchedulePatchRequest{}, Response: careplan.BulkUpsertResult{}},
@@ -133,7 +133,7 @@ func arrivalRouteContracts() []common.RouteContract {
 		{Method: "PUT", Pattern: "/{id}/arrival-notes/{noteId}", Portals: portals, Request: ArrivalNoteRequest{}, Response: ArrivalNoteResponse{}},
 		{Method: "DELETE", Pattern: "/{id}/arrival-notes/{noteId}", Portals: portals, NoData: true},
 		{Method: "POST", Pattern: "/arrival-schedules/bulk", Portals: portals, Request: BulkUpsertArrivalScheduleRequest{}, Response: careplan.BulkUpsertResult{}},
-		{Method: "POST", Pattern: "/arrival-schedules/status", Portals: portals, Request: BulkEffectiveTimeRequest{}, Response: ArrivalScheduleStatusResponse{}},
+		{Method: "POST", Pattern: "/arrival-schedules/status", Portals: portals, NoCommit: "reads the arrival times of the children the body names", Request: BulkEffectiveTimeRequest{}, Response: ArrivalScheduleStatusResponse{}},
 		{Method: "GET", Pattern: "/class-arrival-times/{schoolClass}", Portals: portals, Response: ClassArrivalTimesResponse{}},
 		{
 			Method: "GET", Pattern: "/class-arrival-exceptions/{schoolClass}", Portals: portals,

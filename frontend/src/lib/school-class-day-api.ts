@@ -8,10 +8,9 @@ import { authFetch } from "./api-helpers";
 import type { StudentStatusKind } from "./student-status-days-api";
 import type { ClassDayReport, MorningAttendanceStatus } from "./class-day-api";
 import type {
-  ClassArrivalException,
-  ClassArrivalExceptionInput,
-  ClassArrivalExceptionList,
-} from "./student-arrival-api";
+  ClassArrivalExceptionListResponse,
+  ClassArrivalExceptionResponse,
+} from "./contract/students.generated";
 import type { ApiResponse } from "./api-envelope";
 import { requiredDay } from "./contract/required-day";
 import type {
@@ -169,9 +168,9 @@ function arrivalExceptionPath(schoolClass: string, date: string): string {
 
 export async function fetchClassArrivalExceptionsSchool(
   schoolClass: string,
-): Promise<ClassArrivalExceptionList> {
+): Promise<ClassArrivalExceptionListResponse> {
   const params = new URLSearchParams({ class: schoolClass });
-  const response = await authFetch<ApiResponse<ClassArrivalExceptionList>>(
+  const response = await authFetch<ApiResponse<ClassArrivalExceptionListResponse>>(
     `/api/school/class-day/arrival-exceptions?${params.toString()}`,
   );
   return response.data;
@@ -180,9 +179,9 @@ export async function fetchClassArrivalExceptionsSchool(
 export async function upsertClassArrivalExceptionSchool(
   schoolClass: string,
   date: string,
-  input: ClassArrivalExceptionInput,
-): Promise<ClassArrivalException> {
-  const response = await authFetch<ApiResponse<ClassArrivalException>>(
+  input: ArrivalExceptionRequest,
+): Promise<ClassArrivalExceptionResponse> {
+  const response = await authFetch<ApiResponse<ClassArrivalExceptionResponse>>(
     arrivalExceptionPath(schoolClass, date),
     { method: "PUT", body: input satisfies ArrivalExceptionRequest },
   );

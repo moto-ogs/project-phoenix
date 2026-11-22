@@ -7,9 +7,6 @@ import type { CourseWaitlistResponse } from "~/lib/contract/students.generated";
  * normale Freigabe der ersten Anfrage in /anfragen.
  */
 
-/** The contract's waiting list of one AG (GET …/course-waitlists). */
-export type CourseWaitlistWire = CourseWaitlistResponse;
-
 interface CourseWaitlistEntry {
   readonly requestId: string;
   readonly studentId: string;
@@ -31,18 +28,18 @@ export interface CourseWaitlist {
 }
 
 export function mapCourseWaitlists(
-  wire: readonly CourseWaitlistWire[],
+  wire: readonly CourseWaitlistResponse[],
 ): CourseWaitlist[] {
   return wire.map((waitlist) => ({
-    activityGroupId: String(waitlist.activity_group_id),
+    activityGroupId: waitlist.activity_group_id,
     name: waitlist.name,
     participantLimit: waitlist.participant_limit ?? null,
     participants: waitlist.participants,
     freeSlots: waitlist.free_slots ?? null,
     slotFreeForNext: waitlist.slot_free_for_next,
     entries: (waitlist.entries ?? []).map((entry) => ({
-      requestId: String(entry.request_id),
-      studentId: String(entry.student_id),
+      requestId: entry.request_id,
+      studentId: entry.student_id,
       studentName: entry.student_name,
       rank: entry.rank,
       submittedAt: entry.submitted_at,

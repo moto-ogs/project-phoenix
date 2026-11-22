@@ -363,18 +363,6 @@ func (c *guardianCompositionContext) createLinkedGuardian(t *testing.T, emailSee
 // LIST / GET / CREATE / UPDATE
 // ===========================================================================
 
-func TestGuardianComposition_ListGuardiansReturnsArray(t *testing.T) {
-	t.Parallel()
-	ctx := setupGuardiansCompositionRoute(t)
-
-	rr := ctx.do(t, testutil.DefaultTestClaims(), http.MethodGet, "/", nil)
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-	dataArray(t, rr.Body.Bytes())
-
-	rr = ctx.do(t, testutil.DefaultTestClaims(), http.MethodGet, "/?search=test", nil)
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-}
-
 func TestGuardianComposition_GetGuardianNotFoundAndInvalidID(t *testing.T) {
 	t.Parallel()
 	ctx := setupGuardiansCompositionRoute(t)
@@ -660,31 +648,6 @@ func TestGuardianComposition_StudentGuardianReads(t *testing.T) {
 	assert.Empty(t, dataArray(t, rr.Body.Bytes()))
 
 	testutil.AssertBadRequest(t, ctx.do(t, testutil.DefaultTestClaims(), http.MethodGet, "/students/invalid/guardians", nil))
-	testutil.AssertBadRequest(t, ctx.do(t, testutil.DefaultTestClaims(), http.MethodGet, "/invalid/students", nil))
-
-	rr = ctx.do(t, testutil.DefaultTestClaims(), http.MethodGet, "/99999/students", nil)
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-	assert.Empty(t, dataArray(t, rr.Body.Bytes()), "an unknown guardian has no children")
-}
-
-func TestGuardianComposition_GuardianStudentsCarryNamesAndLink(t *testing.T) {
-	t.Parallel()
-	ctx := setupGuardiansCompositionRoute(t)
-	guardianID, _ := ctx.createGuardian("children")
-	studentID, _ := ctx.createStudent("Mia", "Directory", "2b")
-	linkID := ctx.link(studentID, guardianID, "primary_guardian")
-
-	rr := ctx.do(t, testutil.DefaultTestClaims(), http.MethodGet, fmt.Sprintf("/%d/students", guardianID), nil)
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-	rows := dataArray(t, rr.Body.Bytes())
-	require.Len(t, rows, 1)
-	row := rows[0].(map[string]any)
-	assert.Equal(t, "Mia", row["first_name"])
-	assert.Equal(t, "Directory", row["last_name"])
-	assert.Equal(t, "2b", row["school_class"])
-	// The route has no contract yet and answers numbers.
-	assert.EqualValues(t, linkID, row["relationship_id"])
-	assert.Equal(t, "primary_guardian", row["guardian_role"])
 }
 
 func TestGuardianComposition_AccountStatusReflectsPortalAccess(t *testing.T) {

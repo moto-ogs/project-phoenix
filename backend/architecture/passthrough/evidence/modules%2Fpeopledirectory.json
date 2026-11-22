@@ -758,23 +758,9 @@
     },
     {
       "build": "production",
-      "evidence": "func (p GroupRoutePeople) FindPerson(ctx context.Context, personID int64) (peopleModule.Person, error) {\n\tperson, err := p.persons.Get(ctx, personID)\n\tif err != nil {\n\t\treturn peopleModule.Person{}, err\n\t}\n\tif person == nil {\n\t\treturn peopleModule.Person{}, fmt.Errorf(\"person %d: %w\", personID, peopleModule.ErrPersonNotFound)\n\t}\n\treturn studentRoutePerson(person), nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/GroupRoutePeople.FindPerson",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
       "evidence": "func (p GroupRoutePeople) GroupStudents(ctx context.Context, groupID int64) ([]peopleModule.StudentRecord, error) {\n\tstudents, err := p.persons.StudentRows().FindByGroupID(ctx, groupID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]peopleModule.StudentRecord, 0, len(students))\n\tfor _, student := range students {\n\t\tif student != nil {\n\t\t\tresult = append(result, studentRouteRecord(student))\n\t\t}\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/GroupRoutePeople.GroupStudents",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
-      "evidence": "func (p GroupRoutePeople) ListPersonsByID(ctx context.Context, personIDs []int64) (map[int64]peopleModule.Person, error) {\n\tpersons, err := p.persons.GetByIDs(ctx, personIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64]peopleModule.Person, len(persons))\n\tfor id, person := range persons {\n\t\tif person != nil {\n\t\t\tresult[id] = studentRoutePerson(person)\n\t\t}\n\t}\n\treturn result, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/GroupRoutePeople.ListPersonsByID",
       "owner": "modules/peopledirectory"
     },
     {

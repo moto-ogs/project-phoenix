@@ -11,7 +11,7 @@
 
 import { knownEnum } from "~/lib/contract/known-enum";
 import type * as wire from "~/lib/contract/timetable.generated";
-import { legacyBffJson } from "./bff-fetch";
+import { bffJson } from "./bff-fetch";
 
 /** Arrival/pickup slot source — mirrors SlotSource* in the backend. */
 type CarePlanSlotSource = "schedule" | "exception" | "none";
@@ -143,9 +143,10 @@ export async function fetchStudentCarePlanDay(
   date: string,
 ): Promise<CarePlanDay> {
   return mapDay(
-    await legacyBffJson<wire.StudentDayResponse>(
-      `/api/timetable/student/${encodeURIComponent(studentId)}/day?date=${date}`,
-    ),
+    await bffJson("tenant", "GET /api/timetable/student/{id}/day", {
+      params: { id: studentId },
+      query: { date },
+    }),
   );
 }
 
@@ -156,54 +157,37 @@ export async function fetchStudentCarePlanWeek(
   to: string,
 ): Promise<CarePlanWeek> {
   return mapWeek(
-    await legacyBffJson<wire.StudentWeekResponse>(
-      `/api/timetable/student/${encodeURIComponent(studentId)}/week?from=${from}&to=${to}`,
-    ),
+    await bffJson("tenant", "GET /api/timetable/student/{id}/week", {
+      params: { id: studentId },
+      query: { from, to },
+    }),
   );
 }
 
-/** One recorded correction of a child's attendance in a block. */
-export interface AttendanceCorrection {
-  readonly field_name: string;
-  readonly old_value?: string | null;
-  readonly new_value?: string | null;
-  readonly reason: string;
-  readonly actor_name?: string | null;
-  readonly corrected_at: string;
-}
-
-/** The fields a correction changes, with the reason it is made. */
-interface AttendanceCorrectionInput {
-  reason: string;
-  status?: string;
-  substatus?: string | null;
-  note?: string | null;
-}
-
-function correctionPath(instanceId: string, studentId: string): string {
-  return `/api/timetable/instances/${encodeURIComponent(instanceId)}/students/${encodeURIComponent(studentId)}`;
-}
-
-/** The correction trail of a child's attendance in one block. */
+/** The recorded corrections of a child's attendance in a block, oldest first. */
 export async function fetchAttendanceCorrections(
   instanceId: string,
   studentId: string,
-): Promise<AttendanceCorrection[]> {
-  const trail = await legacyBffJson<{ corrections?: AttendanceCorrection[] }>(
-    `${correctionPath(instanceId, studentId)}/corrections`,
+): Promise<wire.attendanceCorrectionResponse[]> {
+  const trail = await bffJson(
+    "tenant",
+    "GET /api/timetable/instances/{instance_id}/students/{student_id}/corrections",
+    { params: { instance_id: instanceId, student_id: studentId } },
   );
   return trail.corrections ?? [];
 }
 
+/** Changes a recorded attendance; `reason` says why. */
 export async function correctAttendance(
   instanceId: string,
   studentId: string,
-  correction: AttendanceCorrectionInput,
+  correction: wire.CorrectAttendanceRequest,
 ): Promise<void> {
-  await legacyBffJson<unknown>(
-    `${correctionPath(instanceId, studentId)}/correction`,
+  await bffJson(
+    "tenant",
+    "POST /api/timetable/instances/{instance_id}/students/{student_id}/correction",
     {
-      method: "POST",
+      params: { instance_id: instanceId, student_id: studentId },
       body: correction,
     },
   );

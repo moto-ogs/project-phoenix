@@ -1,8 +1,4 @@
-import { legacyBffJson } from "~/lib/bff-fetch";
-import type {
-  SchoolSearchRequest,
-  SearchResult,
-} from "~/lib/contract/search.generated";
+import { bffJson } from "~/lib/bff-fetch";
 import { mapSchoolSearchResult } from "~/lib/school-search-wire";
 import type { SchoolSearchResult } from "~/lib/school-search-types";
 
@@ -26,9 +22,8 @@ export async function searchSchool(
   query: string,
   signal?: AbortSignal,
 ): Promise<SchoolSearchResult> {
-  const result = await legacyBffJson<SearchResult>("/api/search", {
-    method: "POST",
-    body: { query } satisfies SchoolSearchRequest,
+  const result = await bffJson("tenant", "POST /api/search/", {
+    body: { query },
     signal,
   });
   return mapSchoolSearchResult(result);

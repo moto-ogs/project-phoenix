@@ -86,8 +86,7 @@ describe("bffJson", () => {
     expect(first).toBe("7");
     expect(mockSessionFetch).toHaveBeenCalledWith(
       "/api/activities/categories?include_archived=true",
-      { method: "GET", headers: {} },
-      {},
+      { method: "GET" },
     );
   });
 
@@ -115,7 +114,7 @@ describe("bffJson", () => {
     const [url, multipart] = mockSessionFetch.mock.calls[1] ?? [];
     expect(url).toBe("/api/students/4/photo");
     expect(multipart?.body).toBe(form);
-    expect(multipart?.headers).toEqual({});
+    expect(multipart?.headers).toBeUndefined();
   });
 
   it("resolves a 204 and an answer without data to null", async () => {
@@ -146,6 +145,30 @@ describe("bffJson", () => {
     });
 
     expect(page).toEqual({ data: [], pagination });
+  });
+
+  it("returns the variant the query names", async () => {
+    mockSessionFetch.mockResolvedValue(
+      ok([{ id: "1", first_name: "A", last_name: "B" }], {
+        pagination: {
+          current_page: 1,
+          page_size: 50,
+          total_pages: 1,
+          total_records: 1,
+        },
+      }),
+    );
+
+    const names = await bffJson("tenant", "GET /api/students/", {
+      query: { view: "names", page: 1 },
+    });
+
+    const first: { first_name: string } | undefined = names.data[0];
+    expect(first?.first_name).toBe("A");
+    expect(mockSessionFetch).toHaveBeenCalledWith(
+      "/api/students?view=names&page=1",
+      { method: "GET" },
+    );
   });
 
   it("turns a refusal into an ApiError with the envelope and the caller's text", async () => {
@@ -250,7 +273,6 @@ describe("bffJson", () => {
       "/api/traeger/absence-types",
       {
         method: "GET",
-        headers: {},
         credentials: "include",
         cache: "no-store",
       },
@@ -312,6 +334,10 @@ describe("bffJson", () => {
         query: { from: "2026-09-01", to: "2026-09-30" },
       });
       void bffJson("platform", "GET /operator/stats");
+      void bffJson("tenant", "GET /api/students/", {
+        // @ts-expect-error: the route has no such variant
+        query: { view: "wide" },
+      });
       // @ts-expect-error: the route belongs to the Träger portal
       void bffJson("tenant", "GET /traeger/absence-types/");
       // @ts-expect-error: the path parameter is missing

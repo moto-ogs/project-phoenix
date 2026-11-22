@@ -127,7 +127,7 @@ type CareLetterMailing struct {
 	RecipientFirstName string        `json:"recipient_first_name"`
 	RecipientLastName  string        `json:"recipient_last_name"`
 	RecipientEmail     string        `json:"recipient_email"`
-	TotalCents         int64         `json:"total_cents"`
+	TotalCents         int64         `json:"total_cents" contract:"number"`
 	Reason             string        `json:"reason,omitempty"`
 	Cancelled          bool          `json:"cancelled"`
 	CancellationNumber string        `json:"cancellation_number,omitempty"`

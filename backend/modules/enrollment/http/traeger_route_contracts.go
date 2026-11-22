@@ -74,6 +74,6 @@ func HolidayPeriodRouteContracts() []common.RouteContract {
 // /traeger/holiday-closures.
 func HolidayClosureRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
-		{Method: "POST", Pattern: "/preview", Portals: traegerPortal, Request: HolidayClosurePreviewRequest{}, Response: capability.HolidayClosureImpact{}},
+		{Method: "POST", Pattern: "/preview", Portals: traegerPortal, Request: HolidayClosurePreviewRequest{}, NoCommit: "the preview counts the bookings a closure would touch and saves nothing", Response: capability.HolidayClosureImpact{}},
 	}
 }

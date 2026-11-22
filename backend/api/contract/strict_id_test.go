@@ -21,8 +21,16 @@ type laxListAnswer struct {
 	IDs []laxID `json:"ids"`
 }
 
-type taggedAnswer struct {
-	ID wireID `json:"id" contract:"legacy-id"`
+type intAnswer struct {
+	RoomID int `json:"room_id"`
+}
+
+type numberAnswer struct {
+	GroupIDs []int64 `json:"group_ids" contract:"number"`
+}
+
+type untaggedCentsAnswer struct {
+	PriceCents int64 `json:"price_cents"`
 }
 
 type bareAnswer struct {
@@ -51,8 +59,10 @@ func TestAnAnswerIdentifierIsOnlyAString(t *testing.T) {
 		"a lax identifier type":        {laxAnswer{}, "a reader of numbers belongs to a request"},
 		"a list of lax identifiers":    {laxListAnswer{}, "a reader of numbers belongs to a request"},
 		"a numeric reader as answer":   {ownReader{}, "a reader of numbers belongs to a request"},
-		"the retired legacy-id tag":    {taggedAnswer{}, `contract:"legacy-id"`},
 		"a bare int64 without a claim": {bareAnswer{}, "int64 does not say what it is"},
+		"an int under an id name":      {intAnswer{}, `"room_id" names an identifier but is a number`},
+		"a number under an id name":    {numberAnswer{}, `"group_ids" names an identifier but is a number`},
+		"an amount without its tag":    {untaggedCentsAnswer{}, "int64 does not say what it is"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()

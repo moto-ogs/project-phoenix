@@ -19,7 +19,7 @@ checklist. Local values belong in `.env.local` using `.env.example` as the templ
 | `NEXTAUTH_URL` / `NEXTAUTH_SECRET` | Server          | NextAuth base URL + JWT secret                                |
 | `SKIP_ENV_VALIDATION`              | Build           | `true` skips env validation (Docker builds)                   |
 
-**`getServerApiUrl()`** (`lib/server-api-url.ts`) returns the startup-validated `process.env.API_URL` — no fallback chain; never `NEXT_PUBLIC_API_URL` on the server. Every server call to the backend goes through `sendBackend` (`lib/backend-client.server.ts`), its only reader: base URL, bearer, client identity, timeout, log line and metric in one place. Browser code calls only the BFF under `/api/`.
+**`getServerApiUrl()`** (`lib/server-api-url.ts`) returns the startup-validated `process.env.API_URL` — no fallback chain; never `NEXT_PUBLIC_API_URL` on the server. Every server call to the backend goes through `sendBackend` (`lib/backend-client.server.ts`), its only reader: base URL, bearer, client identity, timeout, log line and metric in one place. Depcruise (`backend-only-through-send-backend`) rejects importing `server-api-url.ts` elsewhere; oxlint (`backend-url/only-server-api-url`) rejects reading `API_URL` from `process.env` or `~/env` outside it. Browser code calls only the BFF under `/api/`.
 
 ### Server-Only Import Isolation (`.server.ts`)
 
@@ -169,8 +169,9 @@ The key is the scope claim of the portal's session token
   path the contract does not register (a sign-in step, a stream, a bundle);
   `app/api/route-backend-paths.test.ts` fails a file whose backend paths are
   all registered.
-- Not served by a proxy: a route with response variants
-  (`GET /api/students/`).
+- A route with response variants (`GET /api/students/`) names its
+  `variantParam`; the proxy decodes the answer with the variant the query
+  asks for, else the default variant.
 - A Go type two resources answer with (the staff portal and moto schule
   mount the same notification feed) is written once, in
   `lib/contract/shared.generated.ts`, and imported by both resource files.
@@ -314,7 +315,10 @@ slash is dropped and each parameter encoded.
 
 - **Answer:** the `data` of the envelope; a paginated list resolves to
   `{ data, pagination }`; a route without data and a 204 resolve to `null`.
-- **Missing `data`:** a 2xx answer that is not `{ status: "success", data }`
+- **Variants:** a route with response variants (`GET /api/students/`) takes
+  the variant in its query (`query: { view: "names" }`), and the answer has
+  that variant's type; without it the route's default variant.
+- **Missing `data`:** a 2xx answer without a `data` member
   is an `ApiError` 502, `general.write_answer_unreadable` for a write (as
   `decodeContract`). There is no fallback value.
 - **Failure:** an `ApiError` with the backend's code, field errors and
