@@ -193,7 +193,7 @@ func (g *familyGroups) family(key string, contractID int64) *parentbilling.Famil
 // once.
 func (g *familyGroups) addContracts(versions []parentbilling.CareContractVersion) {
 	byContract, contractOrder := versionsByContract(versions)
-	children := childKeys(byContract, contractOrder, childrenOf(byContract, contractOrder, contractFamilies(byContract, g.recipients)), nil)
+	children := childKeys(byContract, contractOrder, nil, contractFamilies(byContract, g.recipients))
 	seen := map[string]bool{}
 	for _, contract := range evidenceContracts(versions) {
 		key := parentbilling.ContractFamilyKey(g.recipients[contract.ContractID.Int64()].Email, contract.ContractID.Int64())

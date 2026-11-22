@@ -269,22 +269,16 @@ der Vertrag an der neuen Schule nichts; er zählt das Kind an seiner Schule
 (ADR 0305, Nachtrag #7863). Unter „anteilig“ rechnet jeder Vertrag seine
 Tage ab. Ist der Monat an der alten Schule beitragsfrei (#6196), zahlt das
 Kind im Monat des Wechsels bei „voller Monat“ nichts, wie beim Wechsel mit
-einem Datensatz. Verträge, die nur eine ausgestellte Rechnung des Monats in die Kette
-bringen (#7863), legen nichts zusammen und verhindern nichts: Sie kommen erst
-nach der Gruppierung der laufenden Verträge dazu, wie E1 sie mit ihnen
-gruppiert hätte: zum Kind ihres Datensatzes, dem sie auch ihre Schreibweise
-des Namens leihen; ein Datensatz, den kein laufender Vertrag nennt, zum einen
-laufenden Kind ohne Datensatz mit Namen und Geburtsdatum, wenn kein anderer
-Datensatz sie trägt; ohne Datensatz zum einen Kind, dessen Datensätze ihren
-Namen und ihr Geburtsdatum tragen, sonst zum Kind der laufenden Verträge ohne
-Datensatz mit diesem Namen und Geburtsdatum. So gruppieren E2 bis E4 und die Geschwisterregel die
-laufenden Verträge gleich; der Monat berechnet die Gruppierung einmal. Die
-Schlüssel der Kette bleiben die Plätze, die E1 über laufende und ausgestellte
-Verträge zusammen vergibt (#7863): Jedes Kind nimmt den Platz seines ersten
-Vertrags, ein zusammengelegtes Kind den seines ersten Teils; ungenutzte
-Plätze bleiben leer. So behält jedes andere Kind seinen Schlüssel und gleichrangige Kinder
-ihre Reihenfolge, auch gegenüber Rechnungen, die ein Lauf des Monats schon
-ausgestellt hat. Dieselbe Gruppierung zählt die Kinder einer Familie
+einem Datensatz. Die beiden Gruppierungen aus E1 bleiben, wie sie vor diesem Nachtrag waren:
+die laufenden Verträge für E2 bis E4 und die Prüfung, die laufenden Verträge
+zusammen mit denen, die nur eine ausgestellte Rechnung des Monats in die Kette
+bringen (#7863), für die Geschwisterregel, mit denselben Schlüsseln. Moto legt
+ein Kind nur zusammen, wenn jeder Teil auch in der zweiten Gruppierung ein
+Kind für sich ist (kein ausgestellter Vertrag verbindet ihn mit einem anderen
+laufenden Vertrag); dann ändert sich in beiden dasselbe. Das zusammengelegte
+Kind behält den Schlüssel seines ersten Teils, kein anderes Kind ändert seinen
+Schlüssel, und gleichrangige Kinder behalten ihre Reihenfolge, auch gegenüber
+Rechnungen, die ein Lauf des Monats schon ausgestellt hat. Dieselbe Gruppierung zählt die Kinder einer Familie
 in der Kinderzahl-Übersicht.
 
 **Sichtbar.** Hier entscheidet der Name, nicht eine Kinderakte. Die Prüfung

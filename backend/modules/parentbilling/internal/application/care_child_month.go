@@ -88,15 +88,52 @@ func holdView(holds []parentbilling.CareRunHold) []parentbilling.CareDuplicate {
 	return shown
 }
 
-// childrenOf groups the contracts by child (E1), in the order of the
-// contracts: by the child record, without one by the normalized name and
-// date of birth. A contract without a record joins the child whose record's
-// contracts carry the same name and date of birth when exactly one does.
-// Records at two schools of a child that changed its school are one child
-// (joinSchoolChanges).
-func childrenOf(byContract map[int64][]parentbilling.CareContractVersion, order []int64, families map[int64]string) [][]int64 {
-	children, _ := joinSchoolChanges(groupCareChildren(contractChildrenOf(byContract), order), byContract, families)
-	return children
+// careGrouping is how one month (or span) groups its contracts by child
+// (ADR 0158 E1): children over the contracts in force for the billed days
+// (E2), the duplicates (E3) and the review, and keys over the contracts in
+// force together with the contracts an issued invoice bills outside them for
+// the sibling chain (#7863), each as before #7874. A child that changed its
+// school with a record at each school is one child in both (joinSchoolChanges);
+// joined names it by its place in children.
+type careGrouping struct {
+	children [][]int64
+	keys     map[int64]string
+	joined   []int
+}
+
+// groupCare groups the contracts of a month by child.
+func groupCare(byContract map[int64][]parentbilling.CareContractVersion, order []int64, families map[int64]string,
+	issued map[int64]parentbilling.CareContractChild,
+) careGrouping {
+	chain := chainChildren(byContract, order, issued)
+	keys := chainKeys(byContract, chain)
+	place := map[int64]int{}
+	for i, child := range chain {
+		for _, contractID := range child {
+			place[contractID] = i
+		}
+	}
+	// A part joins only where the chain sees it as one child of its own:
+	// then both groupings change in the same way.
+	aligned := func(part []int64) bool {
+		inForce := 0
+		for _, contractID := range chain[place[part[0]]] {
+			if _, ok := byContract[contractID]; ok {
+				inForce++
+			}
+		}
+		return inForce == len(part) && !slices.ContainsFunc(part, func(contractID int64) bool { return place[contractID] != place[part[0]] })
+	}
+	children, joined := joinSchoolChanges(groupCareChildren(contractChildrenOf(byContract), order), byContract, families, aligned)
+	for _, first := range joined {
+		key := keys[children[first][0]]
+		for _, contractID := range children[first] {
+			for _, member := range chain[place[contractID]] {
+				keys[member] = key
+			}
+		}
+	}
+	return careGrouping{children: children, keys: keys, joined: joined}
 }
 
 func contractChildrenOf(byContract map[int64][]parentbilling.CareContractVersion) map[int64]parentbilling.CareContractChild {
@@ -139,214 +176,44 @@ func groupCareChildren(identities map[int64]parentbilling.CareContractChild, ord
 }
 
 // childKeys names per contract the child the sibling chain counts it as
-// (ADR 0158 E1): the contracts in force grouped as E2 and E3 group them
-// (childrenOf), then the contracts an issued invoice of the month bills
-// outside the versions in force (#7863). Those join the child that carries
-// their record, or without a record the one child whose records carry
-// their name and date of birth; they never regroup the contracts in force.
-// A key depends only on the contracts of its own child, so a change in one
-// family does not reorder the children of another.
-func childKeys(byContract map[int64][]parentbilling.CareContractVersion, order []int64, children [][]int64,
-	issued map[int64]parentbilling.CareContractChild,
+// (groupCare).
+func childKeys(byContract map[int64][]parentbilling.CareContractVersion, order []int64, issued map[int64]parentbilling.CareContractChild,
+	families map[int64]string,
 ) map[int64]string {
-	keys := map[int64]string{}
-	byRecord := map[int64]string{}
-	byPerson := map[string][]string{}
-	personless := map[string][]string{}
-	places := e1Places(byContract, order, issued)
-	for _, child := range children {
-		if len(child) == 0 {
-			continue
-		}
-		key := "child:" + strconv.Itoa(places[child[0]])
-		for _, contractID := range child {
-			keys[contractID] = key
-			identity := childOfVersion(byContract[contractID][0])
-			addRecordKey(byRecord, byPerson, identity, key)
-			if person := personOf(identity); identity.StudentID == nil && !slices.Contains(personless[person], key) {
-				personless[person] = append(personless[person], key)
-			}
-		}
-	}
-	attachIssued(keys, childIndex{byRecord: byRecord, byPerson: byPerson, personless: personless}, byContract, issued)
-	return keys
+	return groupCare(byContract, order, families, issued).keys
 }
 
-// e1Places numbers the contracts in force as E1 numbered the children over
-// the contracts in force and the issued ones together (#7863): by the place
-// of each child's first contract in the order. The sibling chain breaks a
-// tie by that key, so a child keeps its place, and its order against the
-// invoices a run of the month already issued, whatever this grouping joins
-// or keeps together elsewhere. Two children in force share a place only
-// where E1 over both groups their first contracts together, as the chain
-// counted them before #7874 (an issued contract lends a record a second
-// spelling a contract in force without a record carries).
-func e1Places(byContract map[int64][]parentbilling.CareContractVersion, order []int64,
+// chainChildren groups the contracts in force and any issued contracts with
+// retained identities together (ADR 0158 E1). Issued contracts outside the
+// month only take part in the sibling chain, not the billed days (E2).
+func chainChildren(byContract map[int64][]parentbilling.CareContractVersion, order []int64,
 	issued map[int64]parentbilling.CareContractChild,
-) map[int64]int {
+) [][]int64 {
 	identities := contractChildrenOf(byContract)
-	all := slices.Clone(order)
-	for _, contractID := range slices.Sorted(maps.Keys(issued)) {
-		if _, inForce := identities[contractID]; !inForce {
-			identities[contractID] = issued[contractID]
-			all = append(all, contractID)
+	order = slices.Clone(order)
+	for _, id := range slices.Sorted(maps.Keys(issued)) {
+		if _, inForce := identities[id]; !inForce {
+			identities[id] = issued[id]
+			order = append(order, id)
 		}
 	}
-	places := map[int64]int{}
-	for place, child := range groupCareChildren(identities, all) {
+	return groupCareChildren(identities, order)
+}
+
+// chainKeys names the children of the chain by their place, a child only
+// issued contracts bill by its first contract.
+func chainKeys(byContract map[int64][]parentbilling.CareContractVersion, chain [][]int64) map[int64]string {
+	keys := map[int64]string{}
+	for i, child := range chain {
+		key := "child:" + strconv.Itoa(i)
+		if _, inForce := byContract[child[0]]; !inForce {
+			key = "contract:" + strconv.FormatInt(child[0], 10)
+		}
 		for _, contractID := range child {
-			places[contractID] = place
-		}
-	}
-	return places
-}
-
-// childIndex finds the child of a contract by its record or by the name
-// and date of birth its records or its contracts without a record carry.
-type childIndex struct {
-	byRecord   map[int64]string
-	byPerson   map[string][]string
-	personless map[string][]string
-}
-
-// attachIssued keys the contracts an issued invoice bills outside the
-// versions in force as E1 would group them with the contracts in force,
-// without regrouping those: a record known in force keeps its child and
-// lends it the name the issued contract spells; a new record joins the
-// one child in force without a record of its name and date of birth when
-// no other record carries them; a contract without a record goes by
-// unrecordedKey.
-func attachIssued(keys map[int64]string, index childIndex, byContract map[int64][]parentbilling.CareContractVersion,
-	issued map[int64]parentbilling.CareContractChild,
-) {
-	recorded, unrecorded := outsideInForce(byContract, issued)
-	records := recordsByPerson(byContract, issued, recorded)
-	byRecord := map[int64][]int64{}
-	var order []int64
-	for _, contractID := range recorded {
-		record := *issued[contractID].StudentID
-		if _, seen := byRecord[record]; !seen {
-			order = append(order, record)
-		}
-		byRecord[record] = append(byRecord[record], contractID)
-	}
-	for _, record := range order {
-		key, known := index.byRecord[record]
-		if !known {
-			key = newRecordKey(record, byRecord[record], issued, records, index.personless)
-		}
-		for _, contractID := range byRecord[record] {
-			addRecordKey(index.byRecord, index.byPerson, issued[contractID], key)
 			keys[contractID] = key
 		}
 	}
-	for _, contractID := range unrecorded {
-		keys[contractID] = unrecordedKey(personOf(issued[contractID]), index.byPerson, index.personless)
-	}
-	keyIssuedChildren(keys, issued, byContract)
-}
-
-// keyIssuedChildren names a child only issued contracts bill by its first
-// contract, as E1 did (#7863): "contract:" and the smallest of them.
-func keyIssuedChildren(keys map[int64]string, issued map[int64]parentbilling.CareContractChild,
-	byContract map[int64][]parentbilling.CareContractVersion,
-) {
-	first := map[string]int64{}
-	for _, contractID := range slices.Sorted(maps.Keys(issued)) {
-		if _, inForce := byContract[contractID]; inForce || strings.HasPrefix(keys[contractID], "child:") {
-			continue
-		}
-		if _, seen := first[keys[contractID]]; !seen {
-			first[keys[contractID]] = contractID
-		}
-	}
-	for contractID, key := range keys {
-		if id, issuedOnly := first[key]; issuedOnly {
-			keys[contractID] = "contract:" + strconv.FormatInt(id, 10)
-		}
-	}
-}
-
-// outsideInForce splits the issued contracts outside the versions in force
-// into those with a record and those without, each sorted.
-func outsideInForce(byContract map[int64][]parentbilling.CareContractVersion, issued map[int64]parentbilling.CareContractChild) (recorded, unrecorded []int64) {
-	for _, contractID := range slices.Sorted(maps.Keys(issued)) {
-		if _, inForce := byContract[contractID]; inForce {
-			continue
-		}
-		if issued[contractID].StudentID == nil {
-			unrecorded = append(unrecorded, contractID)
-		} else {
-			recorded = append(recorded, contractID)
-		}
-	}
-	return recorded, unrecorded
-}
-
-// recordsByPerson names per name and date of birth the records the
-// contracts in force and the issued contracts with a record carry.
-func recordsByPerson(byContract map[int64][]parentbilling.CareContractVersion, issued map[int64]parentbilling.CareContractChild,
-	recorded []int64,
-) map[string][]int64 {
-	records := map[string][]int64{}
-	note := func(child parentbilling.CareContractChild) {
-		if person := personOf(child); child.StudentID != nil && !slices.Contains(records[person], *child.StudentID) {
-			records[person] = append(records[person], *child.StudentID)
-		}
-	}
-	for _, versions := range byContract {
-		note(childOfVersion(versions[0]))
-	}
-	for _, contractID := range recorded {
-		note(issued[contractID])
-	}
-	return records
-}
-
-// newRecordKey is the child of the issued contracts of a record no contract
-// in force names: the one child in force without a record that one of
-// their spellings names, when the record is the only one of that name and
-// date of birth (E1), else the record's own.
-func newRecordKey(record int64, contracts []int64, issued map[int64]parentbilling.CareContractChild, records map[string][]int64,
-	personless map[string][]string,
-) string {
-	var found []string
-	for _, contractID := range contracts {
-		person := personOf(issued[contractID])
-		if candidates := personless[person]; len(records[person]) == 1 && len(candidates) == 1 && !slices.Contains(found, candidates[0]) {
-			found = append(found, candidates[0])
-		}
-	}
-	if len(found) == 1 {
-		return found[0]
-	}
-	return fmt.Sprintf("student:%d", record)
-}
-
-// unrecordedKey is the child of a contract without a record (E1): the one
-// child whose records carry its name and date of birth, else the child of
-// the contracts in force without a record of that name and date of birth,
-// else that name and date of birth.
-func unrecordedKey(person string, byPerson, personless map[string][]string) string {
-	if found := byPerson[person]; len(found) == 1 {
-		return found[0]
-	}
-	if found := personless[person]; len(found) == 1 {
-		return found[0]
-	}
-	return "person:" + person
-}
-
-// addRecordKey notes the key of a child under its record and under the
-// name and date of birth its record carries.
-func addRecordKey(byRecord map[int64]string, byPerson map[string][]string, child parentbilling.CareContractChild, key string) {
-	if child.StudentID == nil {
-		return
-	}
-	byRecord[*child.StudentID] = key
-	if person := personOf(child); !slices.Contains(byPerson[person], key) {
-		byPerson[person] = append(byPerson[person], key)
-	}
+	return keys
 }
 
 // childKeyOf is the child a contract bills: its record, the one record

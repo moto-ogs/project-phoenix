@@ -136,17 +136,17 @@ func buildCareMonth(in careMonthInput) (careMonth, error) {
 	}
 	// One grouping of the children for the billed days (E2), the
 	// duplicates (E3), the sibling chain and the review (ADR 0158 E1).
-	children, joined := joinSchoolChanges(groupCareChildren(contractChildrenOf(byContract), order), byContract,
-		contractFamilies(byContract, in.recipients))
+	grouping := groupCare(byContract, order, contractFamilies(byContract, in.recipients), in.issuedChildIdentities())
+	children := grouping.children
 	entries := monthEntries(in.month, byContract, children)
 	duplicates, held := childMonthHolds(in.month, in.rule, byContract, children, entries)
 	prices := newPriceBook(in.tariffs)
 	free := newFreeMonths(in.lists)
 	result := careMonth{invoices: []parentbilling.CareInvoice{}, unpriced: []parentbilling.CareUnpriced{}, duplicates: duplicates,
-		joined: joinedChildren(children, joined, byContract), freeBySchool: map[int64]int{}}
+		joined: joinedChildren(children, grouping.joined, byContract), freeBySchool: map[int64]int{}}
 	var chained []*careChainEntry
 	var unbilled []careContractPlace
-	childOf := childKeys(byContract, order, children, in.issuedChildIdentities())
+	childOf := grouping.keys
 	for _, contractID := range order {
 		if _, issued := in.invoiced[contractID]; issued {
 			continue

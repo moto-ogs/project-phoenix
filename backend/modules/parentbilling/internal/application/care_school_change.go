@@ -65,14 +65,16 @@ func contractFamilies(byContract map[int64][]parentbilling.CareContractVersion, 
 // first part stood, and the places of its other parts stay empty, so every
 // other child keeps its place and the sibling chain its key. joined names
 // the joined children by their place.
-func joinSchoolChanges(children [][]int64, byContract map[int64][]parentbilling.CareContractVersion, families map[int64]string) (result [][]int64, joined []int) {
+func joinSchoolChanges(children [][]int64, byContract map[int64][]parentbilling.CareContractVersion, families map[int64]string,
+	aligned func(part []int64) bool,
+) (result [][]int64, joined []int) {
 	parts := make([]schoolChangePart, len(children))
 	for i, child := range children {
 		parts[i] = schoolChangePartOf(child, byContract, families)
 	}
 	result = children
 	for _, bucket := range schoolChangeBuckets(parts) {
-		if !bucketJoins(bucket, parts, children, byContract) {
+		if !bucketJoins(bucket, parts, children, byContract) || slices.ContainsFunc(bucket, func(part int) bool { return !aligned(children[part]) }) {
 			continue
 		}
 		if joined == nil {
