@@ -113,6 +113,18 @@ function closeOverlayLeftBehind(
   close?.click();
 }
 
+/** Schließt das geöffnete ResponsivePanel am Tour-Ziel, sonst nichts. */
+function closeResponsivePanelAt(target: Element): void {
+  const trigger =
+    target instanceof HTMLButtonElement &&
+    target.matches('[aria-expanded="true"][aria-haspopup="dialog"]')
+      ? target
+      : target.querySelector<HTMLButtonElement>(
+          '[aria-expanded="true"][aria-haspopup="dialog"]',
+        );
+  trigger?.click();
+}
+
 interface TourState<K extends string> {
   step: K;
   index: number;
@@ -186,6 +198,9 @@ export function useSetupTour<K extends string>(
   // Der Stand, an dem ein verzögerter Klick-Wechsel prüft, ob die Tour
   // inzwischen schon weiter ist.
   const tourRef = useRef(tour);
+  // Der Klick, der ein Blatt wieder schließt, darf nicht ein zweites
+  // Voranschreiten derselben Station auslösen.
+  const ignoredPanelCloseRef = useRef<Element | null>(null);
   useEffect(() => {
     tourRef.current = tour;
   }, [tour]);
@@ -493,6 +508,10 @@ export function useSetupTour<K extends string>(
       )) {
         return;
       }
+      if (ignoredPanelCloseRef.current === clickTarget) {
+        ignoredPanelCloseRef.current = null;
+        return;
+      }
       if (branch) {
         setTour((current) =>
           current ? { step: current.step, index: 0, branch } : current,
@@ -503,13 +522,26 @@ export function useSetupTour<K extends string>(
       // Ist die Tour bis dahin schon weiter (etwa weil das Fenster schneller
       // da war), bleibt der Wechsel aus; sonst setzte er sie zurück.
       const clicked = tourRef.current;
+      const nextStop = tour ? definition?.stops[tour.index + 1] : undefined;
+      if (
+        asSheet &&
+        nextStop?.mobileTarget !== undefined &&
+        clickTarget.matches(nextStop.mobileTarget)
+      ) {
+        // Der Auslöser öffnet das Blatt im Click-Handler. Erst danach
+        // schließen, damit seine Ausblendung vor der nächsten Station läuft.
+        window.setTimeout(() => {
+          ignoredPanelCloseRef.current = clickTarget;
+          closeResponsivePanelAt(clickTarget);
+        }, 0);
+      }
       window.setTimeout(() => {
         if (tourRef.current === clicked) next();
       }, ADVANCE_DELAY_MS);
     };
     document.addEventListener("click", onClick, true);
     return () => document.removeEventListener("click", onClick, true);
-  }, [stop, target, next]);
+  }, [stop, target, next, definition, tour, asSheet]);
 
   return {
     active:

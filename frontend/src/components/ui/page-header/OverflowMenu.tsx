@@ -728,7 +728,7 @@ export function OverflowMenu({
 
                 if (item.href != null && !item.disabled) {
                   const onLinkActivate = () => {
-                    setIsOpen(false);
+                    closeBeforeAction();
                     item.onClick();
                   };
                   if (item.external) {

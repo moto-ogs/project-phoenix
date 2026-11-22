@@ -582,6 +582,18 @@ describe("SchoolSetupWizard", () => {
 
       // Eine Person mit E-Mail-Adresse steht schon da: Eintragen entfällt.
       const menuButton = visibleTarget("guardian-menu");
+      if (asSheet) {
+        menuButton.setAttribute("aria-haspopup", "dialog");
+        menuButton.setAttribute("aria-expanded", "false");
+        menuButton.addEventListener("click", () => {
+          menuButton.setAttribute(
+            "aria-expanded",
+            menuButton.getAttribute("aria-expanded") === "true"
+              ? "false"
+              : "true",
+          );
+        });
+      }
       await waitForHighlight();
       fireEvent.click(tab);
       expect(
@@ -598,6 +610,9 @@ describe("SchoolSetupWizard", () => {
         await screen.findByRole("dialog", { name: "Einladen" }),
       ).toBeInTheDocument();
       await waitForHighlight();
+      if (asSheet) {
+        expect(menuButton).toHaveAttribute("aria-expanded", "false");
+      }
       // Am Handy liegt die Markierung weiter auf dem Auslöser. Er darf diese
       // Station aber nicht beenden; das übernimmt der Menüeintrag im Blatt.
       fireEvent.click(menuButton);

@@ -830,6 +830,7 @@ describe("OverflowMenu am Handy", () => {
             {
               label: "Umbenennen",
               noDescription: "Test",
+              href: "/umbenennen",
               onClick: () => setDialogOpen(true),
             },
           ]}
