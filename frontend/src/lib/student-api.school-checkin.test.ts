@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // The route answers through sessionFetch; `mockRoute` stands for the BFF
 // route: it receives the request as sent and returns the route's JSON
-// answer, which the real legacyBffJson then reads.
+// answer, which the real bffJson then reads.
 
 const { mockRoute } = vi.hoisted(() => ({ mockRoute: vi.fn() }));
 

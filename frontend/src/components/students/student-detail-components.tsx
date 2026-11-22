@@ -1,5 +1,9 @@
 "use client";
 
+import type {
+  StudentEnrollmentExtraFieldGroup,
+  changeHistoryEntry,
+} from "~/lib/contract/students.generated";
 import { FramedList } from "~/components/ui/framed-list";
 import { ListRowLink } from "~/components/ui/list-row-link";
 import { studentKeys } from "~/lib/swr/portal-keys";
@@ -32,8 +36,6 @@ import {
   resumeRoomHistory,
   stopRoomHistory,
   type RoomHistoryStop,
-  type StudentEnrollmentExtraFieldGroup,
-  type StudentFieldChange,
 } from "~/lib/student-api";
 import { Alert } from "~/components/ui/alert";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
@@ -185,7 +187,7 @@ function FieldHistoryInfo({
   studentId,
   fields,
 }: Readonly<{ studentId: string; fields: readonly string[] }>) {
-  const { data } = useSWRAuth<StudentFieldChange[]>(
+  const { data } = useSWRAuth<changeHistoryEntry[]>(
     studentKeys.changeHistory(studentId),
     () => fetchStudentChangeHistory(studentId),
     {
@@ -1093,7 +1095,7 @@ function EnrollmentExtraInfoItems({
   return (
     <>
       {groups.flatMap((group) =>
-        group.fields.map((field) => {
+        (group.fields ?? []).map((field) => {
           const value = formatCustomValue(field.value, field);
           if (value === null) return null;
           const label =

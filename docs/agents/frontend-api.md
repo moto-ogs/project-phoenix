@@ -314,6 +314,9 @@ slash is dropped and each parameter encoded.
 
 - **Answer:** the `data` of the envelope; a paginated list resolves to
   `{ data, pagination }`; a route without data and a 204 resolve to `null`.
+- **Variants:** a route with response variants (`GET /api/students/`) takes
+  the variant in its query (`query: { view: "names" }`), and the answer has
+  that variant's type; without it the route's default variant.
 - **Missing `data`:** a 2xx answer without a `data` member
   is an `ApiError` 502, `general.write_answer_unreadable` for a write (as
   `decodeContract`). There is no fallback value.
