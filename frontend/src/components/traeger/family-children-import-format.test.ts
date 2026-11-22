@@ -51,7 +51,7 @@ describe("familyImportProblemText", () => {
         row,
       ),
     ).toBe(
-      "Der Vertrag des Kindes endet vor dem Tag der Zeile. moto übernimmt die Zahl nicht.",
+      "Der Vertrag des Kindes endet, bevor die neue Kinderzahl gelten kann. moto übernimmt die Zahl nicht.",
     );
   });
 });
