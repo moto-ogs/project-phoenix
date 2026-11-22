@@ -4,7 +4,7 @@
 
 import { bffJson } from "~/lib/bff-fetch";
 import { requiredDay } from "~/lib/contract/required-day";
-import type { HolidayRegistrationStatusResponse as WireHolidayRegistrationStatus } from "~/lib/contract/traeger-holiday-registrations.generated";
+import type * as traegerHolidayRegistrationsContract from "~/lib/contract/traeger-holiday-registrations.generated";
 import {
   entryStatus,
   knownHolidayPlacement,
@@ -56,7 +56,7 @@ export interface HolidayRegistrationStatus {
 }
 
 function holidayRegistrationStatusFromBackend(
-  body: WireHolidayRegistrationStatus,
+  body: traegerHolidayRegistrationsContract.HolidayRegistrationStatusResponse,
 ): HolidayRegistrationStatus {
   return {
     traegerName: body.traeger_name,

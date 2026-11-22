@@ -15,16 +15,16 @@ import {
 } from "~/components/enrollment/offering-occupancy";
 import { type CareOffering, listCareOfferings } from "~/lib/care-offering-api";
 import {
-  type CareOfferingBookingStats,
   fetchCareOfferingBookingStats,
   totalFreePlaces,
 } from "~/lib/care-offering-booking-stats";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import { useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 
 interface OccupancyData {
   offerings: CareOffering[];
-  stats: Record<string, CareOfferingBookingStats>;
+  stats: Record<string, enrollmentContract.CareOfferingBookingStatsResponse>;
 }
 
 export function PhaseOfferingOccupancy({

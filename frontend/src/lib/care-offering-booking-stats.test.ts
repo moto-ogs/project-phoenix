@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type * as enrollmentContract from "./contract/enrollment.generated";
 import {
-  type CareOfferingBookingStats,
   fetchCareOfferingBookingStats,
   formatOfferingOccupancy,
   offeringIsFull,
@@ -8,9 +8,11 @@ import {
   totalFreePlaces,
 } from "./care-offering-booking-stats";
 
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
+
 const stats = (
-  overrides: Partial<CareOfferingBookingStats> = {},
-): CareOfferingBookingStats => ({
+  overrides: Partial<enrollmentContract.CareOfferingBookingStatsResponse> = {},
+): enrollmentContract.CareOfferingBookingStatsResponse => ({
   offering_id: "1",
   capacity: 20,
   booked: 5,
@@ -49,30 +51,18 @@ describe("fetchCareOfferingBookingStats", () => {
 
     expect(spy).toHaveBeenCalledWith(
       "/api/enrollment/care-offerings/booking-stats?phase_id=42",
-      { cache: "no-store" },
+      expect.objectContaining({ method: "GET" }),
     );
     expect(Object.keys(result)).toEqual(["7", "9"]);
     expect(result["7"]?.booked).toBe(5);
   });
 
-  it("accepts a bare array as well as an envelope", async () => {
-    mockFetch({ json: () => Promise.resolve([stats({ offering_id: "3" })]) });
-    await expect(fetchCareOfferingBookingStats("1")).resolves.toHaveProperty(
-      "3",
-    );
-  });
-
-  it("tolerates an envelope without data", async () => {
-    mockFetch({ json: () => Promise.resolve({ status: "success" }) });
-    await expect(fetchCareOfferingBookingStats("1")).resolves.toEqual({});
-  });
-
   it("encodes the phase id", async () => {
-    const spy = mockFetch({ json: () => Promise.resolve([]) });
-    await fetchCareOfferingBookingStats("a b");
+    const spy = mockFetch({ json: () => Promise.resolve({ data: [] }) });
+    await fetchCareOfferingBookingStats("a b&c");
     expect(spy).toHaveBeenCalledWith(
-      "/api/enrollment/care-offerings/booking-stats?phase_id=a%20b",
-      { cache: "no-store" },
+      "/api/enrollment/care-offerings/booking-stats?phase_id=a+b%26c",
+      expect.objectContaining({ method: "GET" }),
     );
   });
 
@@ -110,12 +100,12 @@ describe("formatOfferingOccupancy", () => {
   });
 
   it("handles unlimited offerings", () => {
-    expect(formatOfferingOccupancy(stats({ capacity: null, booked: 0 }))).toBe(
-      "Unbegrenzte Plätze",
-    );
-    expect(formatOfferingOccupancy(stats({ capacity: null, booked: 7 }))).toBe(
-      "7 gebucht · unbegrenzte Plätze",
-    );
+    expect(
+      formatOfferingOccupancy(stats({ capacity: undefined, booked: 0 })),
+    ).toBe("Unbegrenzte Plätze");
+    expect(
+      formatOfferingOccupancy(stats({ capacity: undefined, booked: 7 })),
+    ).toBe("7 gebucht · unbegrenzte Plätze");
   });
 });
 
@@ -123,7 +113,9 @@ describe("offeringIsFull", () => {
   it("is false without stats or without a capacity limit", () => {
     expect(offeringIsFull(null)).toBe(false);
     expect(offeringIsFull(undefined)).toBe(false);
-    expect(offeringIsFull(stats({ capacity: null, booked: 99 }))).toBe(false);
+    expect(offeringIsFull(stats({ capacity: undefined, booked: 99 }))).toBe(
+      false,
+    );
   });
 
   it("is true once bookings reach the capacity", () => {
@@ -157,7 +149,9 @@ describe("offeringOccupancy (#4782)", () => {
   });
 
   it("reports only the occupancy without a limit", () => {
-    expect(offeringOccupancy(stats({ capacity: null, booked: 4 }))).toEqual({
+    expect(
+      offeringOccupancy(stats({ capacity: undefined, booked: 4 })),
+    ).toEqual({
       booked: 4,
       capacity: null,
       free: null,
@@ -174,7 +168,7 @@ describe("totalFreePlaces (#4782)", () => {
   const byId = {
     a: stats({ offering_id: "a", capacity: 10, booked: 7 }),
     b: stats({ offering_id: "b", capacity: 20, booked: 25 }),
-    c: stats({ offering_id: "c", capacity: null, booked: 9 }),
+    c: stats({ offering_id: "c", capacity: undefined, booked: 9 }),
   };
 
   it("sums the free places of the limited offerings", () => {
