@@ -86,8 +86,7 @@ describe("bffJson", () => {
     expect(first).toBe("7");
     expect(mockSessionFetch).toHaveBeenCalledWith(
       "/api/activities/categories?include_archived=true",
-      { method: "GET", headers: {} },
-      {},
+      { method: "GET" },
     );
   });
 
@@ -115,7 +114,7 @@ describe("bffJson", () => {
     const [url, multipart] = mockSessionFetch.mock.calls[1] ?? [];
     expect(url).toBe("/api/students/4/photo");
     expect(multipart?.body).toBe(form);
-    expect(multipart?.headers).toEqual({});
+    expect(multipart?.headers).toBeUndefined();
   });
 
   it("resolves a 204 and an answer without data to null", async () => {
@@ -221,7 +220,6 @@ describe("bffJson", () => {
       "/api/traeger/absence-types",
       {
         method: "GET",
-        headers: {},
         credentials: "include",
         cache: "no-store",
       },

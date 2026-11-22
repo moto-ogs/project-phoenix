@@ -131,7 +131,9 @@ const PORTALS: Readonly<Record<Portal, PortalRow>> = {
     mount: "/api",
     bff: "/api",
     send: (url, init, { authRefusals }) =>
-      sessionFetch(url, init, authRefusals ? { authRefusals } : {}),
+      authRefusals
+        ? sessionFetch(url, init, { authRefusals })
+        : sessionFetch(url, init),
   },
   parent: {
     mount: "/parent",
@@ -203,13 +205,15 @@ async function call<T>(
 ): Promise<T> {
   const { body, signal, headers, errorMessage } = options;
   const isForm = body instanceof FormData;
+  const json = body !== undefined && !isForm;
   const init: RequestInit = {
     method,
     ...(signal && { signal }),
-    headers:
-      body === undefined || isForm
-        ? { ...headers }
-        : { "Content-Type": "application/json", ...headers },
+    ...((json || headers) && {
+      headers: json
+        ? { "Content-Type": "application/json", ...headers }
+        : { ...headers },
+    }),
     ...(body !== undefined && { body: isForm ? body : JSON.stringify(body) }),
   };
   const response = await PORTALS[portal].send(url, init, options);

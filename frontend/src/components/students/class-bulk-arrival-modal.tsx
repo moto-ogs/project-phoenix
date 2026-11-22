@@ -16,8 +16,8 @@ import { createLogger } from "~/lib/logger";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useFreshSWR, useSWRAuth } from "~/lib/swr";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
+import type { ArrivalScheduleInput } from "~/lib/contract/students.generated";
 import {
-  type ArrivalScheduleInput,
   type BulkArrivalFilter,
   type SchoolPeriod,
   WEEKDAYS,
@@ -183,7 +183,7 @@ export function FilteredBulkArrivalModal({
       return;
     const next = initialDraft();
     for (const day of WEEKDAYS) {
-      next[day.value] = classTimesData.times[DAY_CODES[day.value] ?? ""] ?? "";
+      next[day.value] = classTimesData.times?.[DAY_CODES[day.value] ?? ""] ?? "";
     }
     setDraft(next);
     setLastChanged(classTimesData.updated_at ?? null);
