@@ -249,6 +249,33 @@ function closingDayText(change: DayChange): string {
     : `Die OGS ist heute geschlossen: ${name}.`;
 }
 
+/** „1 Kind aus Klasse 3a ist“, „12 Kinder aus Klasse 3a sind“ (#7681). */
+function classChildren(change: DayChange): string {
+  const count = change.schoolClass?.children ?? 0;
+  const klass =
+    schoolClassLabel(change.schoolClass?.name ?? "") || "einer Klasse";
+  return count === 1
+    ? `1 Kind aus ${klass} ist`
+    : `${count} Kinder aus ${klass} sind`;
+}
+
+/** Ein Ausflug einer Klasse; nie ein Name oder ein Grund (#7681). */
+function classTripText(change: DayChange): string {
+  if (!change.schoolClass) return "";
+  const time = change.schoolClass.time;
+  return time
+    ? `${classChildren(change)} heute auf Ausflug und ${change.schoolClass.children === 1 ? "kommt" : "kommen"} um ${time} Uhr zurück.`
+    : `${classChildren(change)} heute den ganzen Tag unterwegs.`;
+}
+
+/** Ein geänderter Unterrichtsschluss einer Klasse (#7681). */
+function classDismissalText(change: DayChange): string {
+  const klass = schoolClassLabel(change.schoolClass?.name ?? "");
+  const time = change.schoolClass?.time;
+  if (!klass || !time) return "";
+  return `Bei ${klass} endet der Unterricht heute um ${time} Uhr.`;
+}
+
 /** Der Satz je Art. Eine unbekannte Art zeigt die Übersicht nicht. */
 const DAY_CHANGE_TEXTS: Readonly<
   Record<string, (change: DayChange) => string>
@@ -280,6 +307,9 @@ const DAY_CHANGE_TEXTS: Readonly<
   block_substitution: blockStaffText,
   block_change_count: blockChangeCountText,
   closing_day: closingDayText,
+  // Ausflug und Unterrichtsschluss einer Klasse (#7681).
+  class_trip: classTripText,
+  class_dismissal_changed: classDismissalText,
 };
 
 export function dayChangeText(change: DayChange): string | null {
@@ -335,11 +365,13 @@ const SOURCE_FAILURE_TEXTS: Readonly<Record<string, string>> = {
   staff:
     "Ausfälle, Vertretungen und Dienste konnten gerade nicht geladen werden.",
   children:
-    "Krankmeldungen und Abholzeiten der Kinder konnten gerade nicht geladen werden.",
+    "Krankmeldungen, Abholzeiten und Ausflüge der Kinder konnten gerade nicht geladen werden.",
   notices: "Hinweise der Leitung konnten gerade nicht geladen werden.",
   activities:
     "Änderungen an Angeboten und AGs konnten gerade nicht geladen werden.",
   closing_days: "Schließtage konnten gerade nicht geladen werden.",
+  classes:
+    "Änderungen am Unterrichtsschluss der Klassen konnten gerade nicht geladen werden.",
 };
 
 export function sourceFailureText(source: string): string {

@@ -58,7 +58,7 @@ func TestSeedTodaysBlockStaffMarksAbsenceAndCover(t *testing.T) {
 	require.Contains(t, bodies[1], "substitutions", "the next one is covered")
 	cover := bodies[1]["substitutions"].([]any)[0].(map[string]any)
 	assert.Equal(t, float64(32), cover["absent_staff_id"])
-	assert.Equal(t, float64(100+len(DemoStaff)-1), cover["substitute_staff_id"], "the free colleague with the largest id")
+	assert.Equal(t, float64(100+len(DemoStaff)-2), cover["substitute_staff_id"], "the free internal colleague with the largest id")
 
 	paths = nil
 	saturday := seedDate{Time: time.Date(2026, time.October, 24, 0, 0, 0, 0, time.UTC)}

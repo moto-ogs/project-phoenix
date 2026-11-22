@@ -3,6 +3,7 @@ package classday
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -41,6 +42,17 @@ var (
 	// ErrArrivalExceptionNotFound means there is nothing to delete.
 	ErrArrivalExceptionNotFound = errors.New("class arrival exception not found")
 )
+
+// ClassTripArrivalReason is the reason of each child's arrival exception a
+// day outing with a return time writes (#4799): "Ausflug", or "Ausflug: "
+// and the Lehrkraft's own reason.
+const ClassTripArrivalReason = "Ausflug"
+
+// IsClassTripArrival reports whether an arrival exception's reason marks a
+// day outing of the class ("Heute anders", #7681).
+func IsClassTripArrival(reason string) bool {
+	return reason == ClassTripArrivalReason || strings.HasPrefix(reason, ClassTripArrivalReason+": ")
+}
 
 // ErrClassTripsNotConfigured is returned by the class-trip capability when
 // the projection was composed without its write seams. The HTTP adapter

@@ -110,6 +110,16 @@ export interface DayChange {
   readonly roomName?: string | null;
   /** Wo der Termin sonst ist, wenn er heute in einem anderen Raum liegt. */
   readonly previousRoomName?: string | null;
+  /**
+   * Die Klasse eines Ausflugs oder eines geänderten Unterrichtsschlusses
+   * (#7681): ihr Name, die Uhrzeit („13:00“, Rückkehr oder Schluss) und bei
+   * einem Ausflug die Zahl der Kinder.
+   */
+  readonly schoolClass?: {
+    readonly name: string;
+    readonly time: string | null;
+    readonly children: number;
+  } | null;
 }
 
 export interface DayChangesOverview {
@@ -204,6 +214,13 @@ function mapEntry(entry: Entry, day: string): DayChange {
       : null,
     roomName: entry.room?.name ?? null,
     previousRoomName: entry.previous_room?.name ?? null,
+    schoolClass: entry.class
+      ? {
+          name: entry.class.name,
+          time: entry.class.time,
+          children: entry.class.children,
+        }
+      : null,
   };
 }
 

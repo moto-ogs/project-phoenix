@@ -8,6 +8,8 @@ package api
 // child, so without it the source has nothing to show. Children of the
 // caller's groups stand one by one under "Betrifft dich"; the rest of the
 // school is summed up per group, or per class for a child without a group.
+// The class trips of the day come from the same reads (#7681,
+// day_changes_classes.go).
 
 import (
 	"context"
@@ -29,11 +31,14 @@ type dayChangesCarePlan interface {
 	ListPickupExceptions(context.Context, careplan.StudentScheduleFilter) ([]careplan.PickupException, error)
 	ListPickupNotes(context.Context, careplan.StudentScheduleFilter) ([]careplan.PickupNote, error)
 	ListDepartureExceptions(context.Context, careplan.StudentScheduleFilter) ([]careplan.DepartureException, error)
+	// ListArrivalExceptions reads the day outings of a class (#7681).
+	ListArrivalExceptions(context.Context, careplan.StudentScheduleFilter) ([]careplan.ArrivalException, error)
 }
 
-// dayChangesStudents is the People Directory read of the children.
+// dayChangesStudents is the People Directory read of the children: names,
+// class and group in one statement (#7681). Class trips retain the placement
+// of a deleted person, but normal child changes do not display that person.
 type dayChangesStudents interface {
-	ListStudentsByID(context.Context, []int64) ([]peopledirectory.Student, error)
 	ListStudentNamesByID(context.Context, []int64) ([]peopledirectory.StudentName, error)
 }
 
@@ -72,48 +77,64 @@ func (s dayChangesChildren) ChildChanges(ctx context.Context, day calendar.Date)
 	if !visible {
 		return nil, nil
 	}
-	changes, err := s.changes(ctx, day)
-	if err != nil || len(changes) == 0 {
+	changes, trips, err := s.changes(ctx, day)
+	if err != nil || len(changes)+len(trips) == 0 {
 		return nil, err
 	}
-	ids := make(map[int64]bool, len(changes))
+	ids := make(map[int64]bool, len(changes)+len(trips))
 	for _, change := range changes {
 		ids[change.child.StudentID] = true
+	}
+	for _, trip := range trips {
+		ids[trip.studentID] = true
 	}
 	children, err := s.children(ctx, sortedIDs(ids))
 	if err != nil {
 		return nil, err
 	}
-	ownGroups, err := s.sources.Caller.MyGroupIDs(ctx)
+	ownGroups, err := s.ownGroups(ctx, day)
 	if err != nil {
-		return nil, fmt.Errorf("resolve caller groups: %w", err)
+		return nil, err
 	}
 	builder := newChildEntryBuilder(children, ownGroups)
 	for _, change := range changes {
 		builder.add(change)
 	}
-	return builder.finish(ctx, s.sources.Groups)
+	entries, err := builder.finish(ctx, s.sources.Groups)
+	if err != nil || len(trips) == 0 {
+		return entries, err
+	}
+	mine, err := callerClasses(ctx, s.sources.Caller)
+	if err != nil {
+		return nil, err
+	}
+	return append(entries, classTripEntries(trips, children, ownGroups, mine)...), nil
 }
 
-// changes reads the four kinds of the day, each in one statement for the
-// whole school, in the order of the kinds.
-func (s dayChangesChildren) changes(ctx context.Context, day calendar.Date) ([]childChange, error) {
+// changes reads the four kinds of the day and the day outings, each in one
+// statement for the whole school, in the order of the kinds, and the
+// children on a class trip (#7681).
+func (s dayChangesChildren) changes(ctx context.Context, day calendar.Date) ([]childChange, []classTripChild, error) {
 	date := careplan.Date(day.String())
 	statusDays, err := s.sources.CarePlan.ListStudentStatusDays(ctx, careplan.StudentStatusDayFilter{Date: date, ActiveOnly: true})
 	if err != nil {
-		return nil, fmt.Errorf("list status days: %w", err)
+		return nil, nil, fmt.Errorf("list status days: %w", err)
 	}
 	exceptions, err := s.sources.CarePlan.ListPickupExceptions(ctx, careplan.StudentScheduleFilter{Date: date})
 	if err != nil {
-		return nil, fmt.Errorf("list pickup exceptions: %w", err)
+		return nil, nil, fmt.Errorf("list pickup exceptions: %w", err)
 	}
 	departures, err := s.sources.CarePlan.ListDepartureExceptions(ctx, careplan.StudentScheduleFilter{Date: date})
 	if err != nil {
-		return nil, fmt.Errorf("list day departures: %w", err)
+		return nil, nil, fmt.Errorf("list day departures: %w", err)
 	}
 	notes, err := s.sources.CarePlan.ListPickupNotes(ctx, careplan.StudentScheduleFilter{Date: date})
 	if err != nil {
-		return nil, fmt.Errorf("list pickup notes: %w", err)
+		return nil, nil, fmt.Errorf("list pickup notes: %w", err)
+	}
+	arrivals, err := s.sources.CarePlan.ListArrivalExceptions(ctx, careplan.StudentScheduleFilter{Date: date})
+	if err != nil {
+		return nil, nil, fmt.Errorf("list arrival exceptions: %w", err)
 	}
 	absent := map[int64]bool{}
 	changes := absentChildren(statusDays, absent)
@@ -131,12 +152,12 @@ func (s dayChangesChildren) changes(ctx context.Context, day calendar.Date) ([]c
 			changes = append(changes, childChange{kind: daychangesview.KindChildPickupNote, child: daychangesview.Child{StudentID: note.StudentID, Note: &content}})
 		}
 	}
-	return changes, nil
+	return changes, classTripChildren(statusDays, arrivals), nil
 }
 
 // absentChildren keeps one status per child, sick before excused, as on the
-// detail page. A class trip belongs to the school source (#7664). The
-// status's note never leaves the source.
+// detail page. A class trip is an entry of its class (#7681). The status's
+// note never leaves the source.
 func absentChildren(days []careplan.StudentStatusDay, absent map[int64]bool) []childChange {
 	status := map[int64]daychangesview.ChildStatus{}
 	order := []int64{}
@@ -189,31 +210,23 @@ func pickupChanges(exceptions []careplan.PickupException, absent map[int64]bool)
 
 // childRecord is what the source needs to know about a child.
 type childRecord struct {
-	first, last string
-	groupID     *int64
-	class       string
+	first, last   string
+	groupID       *int64
+	class         string
+	personDeleted bool
 }
 
-// children reads the group, class and name of every child in two
-// statements. A child the directory does not know stays out.
+// children reads the group, class and name of every child in one statement
+// (#7681). A deleted person remains only for a class-trip count, never a
+// normal child change.
 func (s dayChangesChildren) children(ctx context.Context, ids []int64) (map[int64]childRecord, error) {
-	students, err := s.sources.Students.ListStudentsByID(ctx, ids)
-	if err != nil {
-		return nil, fmt.Errorf("list students: %w", err)
-	}
-	names, err := s.sources.Students.ListStudentNamesByID(ctx, ids)
+	names, err := s.sources.Students.ListStudentNamesByID(peopledirectory.WithDeletedStudentPlacements(ctx), ids)
 	if err != nil {
 		return nil, fmt.Errorf("list student names: %w", err)
 	}
-	records := make(map[int64]childRecord, len(students))
-	for _, student := range students {
-		records[student.ID] = childRecord{groupID: student.GroupID, class: student.SchoolClass}
-	}
+	records := make(map[int64]childRecord, len(names))
 	for _, name := range names {
-		if record, ok := records[name.StudentID]; ok {
-			record.first, record.last = name.FirstName, name.LastName
-			records[name.StudentID] = record
-		}
+		records[name.StudentID] = childRecord{first: name.FirstName, last: name.LastName, groupID: name.GroupID, class: name.SchoolClass, personDeleted: name.PersonDeleted}
 	}
 	return records, nil
 }
@@ -234,20 +247,16 @@ type childEntryBuilder struct {
 	groupIDs  map[int64]bool
 }
 
-func newChildEntryBuilder(children map[int64]childRecord, ownGroups []int64) *childEntryBuilder {
-	own := make(map[int64]bool, len(ownGroups))
-	for _, id := range ownGroups {
-		own[id] = true
-	}
+func newChildEntryBuilder(children map[int64]childRecord, ownGroups map[int64]bool) *childEntryBuilder {
 	return &childEntryBuilder{
-		children: children, ownGroups: own,
+		children: children, ownGroups: ownGroups,
 		summaries: map[childSummaryKey]*daychangesview.ChildSummary{}, groupIDs: map[int64]bool{},
 	}
 }
 
 func (b *childEntryBuilder) add(change childChange) {
 	record, known := b.children[change.child.StudentID]
-	if !known {
+	if !known || record.personDeleted {
 		return
 	}
 	child := change.child

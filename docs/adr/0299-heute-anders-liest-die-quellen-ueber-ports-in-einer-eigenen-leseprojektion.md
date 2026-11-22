@@ -282,3 +282,42 @@ Projektion nutzt „change“.
   dem bestehenden Join der Vorlage, und die Quellen eines Savepoints lesen die
   Personalnamen gemeinsam. `api.day_changes.today` bleibt bei 19,
   `api.day_changes.today_activities` bei 20 Anweisungen.
+
+## Nachtrag 2026-11-21: Klassenausflug und Unterrichtsschluss einer Klasse (#7681)
+
+- **Klassenausflug** gehört zur Quelle Kinder (Betreuungsplan). Ein Ausflug
+  über den ganzen Tag ist der Status-Tag `class_trip` je Kind, den die Quelle
+  ohnehin liest. Ein Tagesausflug mit Rückkehrzeit ist die Ankunfts-Ausnahme
+  je Kind mit dem Grund „Ausflug“ (`classday.IsClassTripArrival`); dafür liest
+  die Quelle die Ankunfts-Ausnahmen des Tages in einer Anweisung. Die Klasse
+  kommt mit Namen und Gruppe der Kinder aus derselben Lesung des People
+  Directory (`ListStudentNamesByID` trägt jetzt Klasse und Gruppe). Eine
+  eigene Quelle hätte Status-Tage und Kinder ein zweites Mal gelesen. Der
+  Eintrag `class_trip` nennt Klasse, Rückkehrzeit und Zahl der Kinder, nie
+  ein Kind oder einen Grund.
+- **Geänderter Unterrichtsschluss** ist die Quelle `classes`. Timetable liest
+  die klassenweiten Ankunfts-Ausnahmen aller Klassen eines Tages in einer
+  Anweisung (`ClassArrivalDayQuery`). Der Eintrag
+  `class_dismissal_changed` nennt Klasse und Uhrzeit, nie den Grund.
+- Rechte-Regel beider Arten: `users:read` (oder Admin), das Recht der Seite
+  eines Kindes und der Klassen-Ausnahmen. Ohne Recht fehlen die Einträge,
+  die Quelle bleibt „geladen“.
+- **Personal der Klasse** ist, wer der Klasse zugeordnet ist
+  (`MySchoolClasses`, Identity & Access). Beim Ausflug zählt auch die
+  Betreuung eines Kindes auf dem Ausflug (eigene Gruppe oder heute vertreten).
+  Diese Einträge stehen unter „Betrifft dich“, alle anderen unter „Schule“.
+- Live: Ein Tagesausflug und ein geänderter Unterrichtsschluss senden
+  `arrival_schedule_changed`, ein Klassenfahrt-Status `student_updated`. Der
+  Baustein lädt auf beide neu.
+- **Budget:** Die eigenen Lehrkraft-Gruppen liest die Root jetzt in einer
+  Anweisung von School Membership über den Personal-Datensatz
+  (`TeacherStaffIDs`), statt über Identity & Access (Lehrkraft, Zuordnungen,
+  Gruppen: drei Anweisungen). Personal und Kinder teilen das Ergebnis im
+  Savepoint. Die Kinder kommen mit Namen in einer statt zwei Anweisungen.
+  Dafür kommen die Ankunfts-Ausnahmen des Tages, die Klassen-Ausnahmen des
+  Tages und die Klassen der Sitzung dazu. `api.day_changes.today` sinkt von
+  19 auf 17, `api.day_changes.today.children` bleibt bei 24 (gemessen mit
+  Ausflügen und Klassen-Ausnahmen), `api.day_changes.today_activities` bei 20.
+- Die eigenen Gruppen der Quelle Kinder sind die Lehrkraft-Gruppen und die
+  Vertretungen der Sitzung am Tag der Übersicht, wie `MyGroupIDs` sie
+  bestimmt, aber für den Tag der Übersicht statt für den Kalendertag der Uhr.

@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain"
 	internalports "github.com/moto-ogs/project-phoenix/modules/timetable/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 type ClassArrivalRecords interface {
@@ -114,6 +115,27 @@ func (q classArrivalQueries) ListClassArrivalExceptions(ctx context.Context, cla
 	started := time.Now()
 	rows, stats, err := q.store.ListClassArrivalExceptionRecords(ctx, keys, from, to)
 	q.observe(internalports.Observation{Operation: "list_class_arrival_exceptions", Duration: time.Since(started), Stats: stats, Err: err})
+	if err != nil {
+		return nil, err
+	}
+	result := make([]timetable.ClassArrivalException, len(rows))
+	for i, row := range rows {
+		result[i] = nativeClassArrivalException(row)
+	}
+	return result, nil
+}
+
+// ListClassArrivalExceptionsOn returns the exceptions of every class of the
+// school on one day, in one statement (#7681): "Heute anders" names the
+// classes whose Unterrichtsschluss changes today without knowing them first.
+func (q classArrivalQueries) ListClassArrivalExceptionsOn(ctx context.Context, day calendar.Date) ([]timetable.ClassArrivalException, error) {
+	if !timetable.ValidDate(day.String()) {
+		return nil, timetable.ErrInvalidClassArrivalExceptionRange
+	}
+	started := time.Now()
+	// Nil classes read every class of the school.
+	rows, stats, err := q.store.ListClassArrivalExceptionRecords(ctx, nil, day.String(), day.String())
+	q.observe(internalports.Observation{Operation: "list_class_arrival_exceptions_on", Duration: time.Since(started), Stats: stats, Err: err})
 	if err != nil {
 		return nil, err
 	}

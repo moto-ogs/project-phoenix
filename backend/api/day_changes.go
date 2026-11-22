@@ -26,6 +26,7 @@ import (
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
 	schoolstructureCompose "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
+	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -33,13 +34,14 @@ import (
 )
 
 // dayChangesCaller is the Identity & Access read of the caller's staff
-// record and own groups. The groups the caller covers on the day come from
-// the day's Gruppenübergaben the source reads anyway (#7661, #7664): one
-// read less, and the same day as the overview.
+// record and classes. The caller's teacher groups come from School
+// Membership by staff record (#7681); the groups it covers on the day from
+// the day's Gruppenübergaben the source reads anyway (#7661, #7664): fewer
+// reads, and the same day as the overview.
 type dayChangesCaller interface {
 	CurrentStaffID(ctx context.Context) (int64, bool, error)
-	MyGroupIDs(ctx context.Context) ([]int64, error)
-	MyTeacherGroupIDs(ctx context.Context) ([]int64, error)
+	// MySchoolClasses are the classes the caller is staff of (#7681).
+	MySchoolClasses(ctx context.Context) ([]string, error)
 }
 
 // dayChangesWorkforce is the Workforce read of absences, substitutions and
@@ -105,8 +107,14 @@ type DayChangesSources struct {
 	// BlockStaff is Timetable's read of the day's blocks with an absent or
 	// covering supervisor, for the Personal source (#7675).
 	BlockStaff dayChangesBlockStaff
-	Today      func() calendar.Date
-	Logger     *slog.Logger
+	// Assignments is School Membership's read of the caller's teacher
+	// groups by staff record (#7681).
+	Assignments dayChangesAssignments
+	// ClassArrivals is Timetable's class arrival query; its day read gives
+	// the class-wide arrival exceptions of the day (#7681).
+	ClassArrivals timetable.ClassArrivalQuery
+	Today         func() calendar.Date
+	Logger        *slog.Logger
 }
 
 // NewDayChanges binds the sources to the projection's ports.
@@ -126,6 +134,13 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 	if sources.Blocks == nil {
 		return nil, fmt.Errorf("%w: timetable source", daychangesview.ErrDependencies)
 	}
+	if sources.Assignments == nil || sources.ClassArrivals == nil {
+		return nil, fmt.Errorf("%w: class sources", daychangesview.ErrDependencies)
+	}
+	classDay, err := timetable.ClassArrivalDayOf(sources.ClassArrivals)
+	if err != nil {
+		return nil, err
+	}
 	// One name read per request for the sources that name staff (#7675).
 	sources.Names = memoStaffNames{inner: sources.Names}
 	return daychangesview.New(daychangesview.Dependencies{
@@ -136,6 +151,7 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 		Notices:    dayChangesNotices{reads: sources.Notices},
 		Closing:    dayChangesClosingDays{reads: sources.ClosingDays},
 		Activities: dayChangesActivities{sources: sources},
+		Classes:    dayChangesClasses{sources: sources, classDay: classDay},
 		Logger:     sources.Logger,
 	})
 }
@@ -148,7 +164,7 @@ type dayChangesSavepoints struct{}
 func (dayChangesSavepoints) Run(ctx context.Context, read func(context.Context) error) error {
 	// The sources of one savepoint read the staff names once (#7675).
 	return tenant.WithSavepoint(ctx, func(ctx context.Context) error {
-		return read(withDayChangesNameMemo(ctx))
+		return read(withDayChangesGroupMemo(withDayChangesNameMemo(ctx)))
 	})
 }
 
@@ -273,9 +289,11 @@ func (s dayChangesStaff) viewer(ctx context.Context) (staffViewer, error) {
 		return viewer, nil
 	}
 	viewer.selfID = staffID
-	groupIDs, err := s.sources.Caller.MyTeacherGroupIDs(ctx)
+	// The teacher groups come from School Membership in one statement by
+	// staff record (#7681), as the Kinder source reads them.
+	groupIDs, err := s.sources.teacherGroups(ctx, staffID)
 	if err != nil {
-		return staffViewer{}, fmt.Errorf("resolve caller groups: %w", err)
+		return staffViewer{}, err
 	}
 	for _, id := range groupIDs {
 		viewer.groups[id] = true

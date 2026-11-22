@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // ClassArrivalPlan preserves the entered class label and recurring dismissal
@@ -52,4 +54,23 @@ type ClassArrivalQuery interface {
 	ListClassArrivalTimes(context.Context, []string) (map[string]map[string]string, error)
 	ListClassArrivalPlans(context.Context, []string) ([]ClassArrivalPlan, error)
 	ListClassArrivalExceptions(context.Context, []string, string, string) ([]ClassArrivalException, error)
+}
+
+// ClassArrivalDayQuery reads the class-wide dismissal changes of every class
+// on one day (#7681).
+type ClassArrivalDayQuery interface {
+	ListClassArrivalExceptionsOn(ctx context.Context, day calendar.Date) ([]ClassArrivalException, error)
+}
+
+// ErrNoClassArrivalDay reports a class arrival query without the day read.
+var ErrNoClassArrivalDay = errors.New("timetable class arrivals: the query reads no day of every class")
+
+// ClassArrivalDayOf is the day read of the class arrival query the owner
+// composed.
+func ClassArrivalDayOf(query ClassArrivalQuery) (ClassArrivalDayQuery, error) {
+	day, ok := query.(ClassArrivalDayQuery)
+	if !ok {
+		return nil, ErrNoClassArrivalDay
+	}
+	return day, nil
 }

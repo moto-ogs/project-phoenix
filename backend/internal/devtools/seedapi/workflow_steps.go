@@ -406,6 +406,8 @@ func fullDemoSetupSteps(seeder *Seeder) []Step {
 		seedMasterDataStep{seeder: seeder},
 		seedPlanningDemoStep{},
 		seedStudentStatusVariantsStep{},
+		// Class trips of today for "Heute anders" (#7681).
+		seedDayChangesClassesStep{},
 		seedOperationsDemoStep{},
 		// Before the parents' invitations queue up in the outbox.
 		seedMealCatererInvitationStep{seeder: seeder},

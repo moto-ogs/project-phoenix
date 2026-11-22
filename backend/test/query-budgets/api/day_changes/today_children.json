@@ -2,6 +2,6 @@
   "scenario": "api.day_changes.today.children",
   "max": 24,
   "exact": false,
-  "description": "GET /day-changes/today with the Kinder source (#7665) for care staff with users:read: the Personal source and today's staff notices of api.day_changes.today, plus the day's status days, pickup exceptions, day departures and pickup notes of the school, the children and their names and the group names, each in one batched read inside the source's savepoint. TestDayChangesChildrenQueryBudget compares one with four children per group and kind.",
+  "description": "GET /day-changes/today with the Kinder source (#7665) and the classes (#7681) for care staff with users:read and a class: the Personal source and today's staff notices of api.day_changes.today, plus the day's status days, pickup exceptions, day departures, pickup notes and arrival exceptions of the school, the caller's covers of the day, the children with their names, classes and groups, the group names, the class-wide arrival exceptions of the day and the caller's classes, each in one batched read inside the sources' savepoint. TestDayChangesChildrenQueryBudget compares one with four children per group and kind, class trips, day outings and changed Unterrichtsschluss.",
   "route": "GET /api/day-changes/today"
 }
