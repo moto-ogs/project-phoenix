@@ -56,7 +56,6 @@ jobs:
       contents: read
     # Must equal "Frontend build" in lint.yml; part of the key.
     env:
-      NEXT_PUBLIC_API_URL: "http://localhost:8080"
       SKIP_ENV_VALIDATION: "true"
       API_URL: "http://localhost:8080"
       NEXT_PUBLIC_OPERATOR_HOSTNAME: "operator.localhost:3000"

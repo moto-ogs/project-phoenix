@@ -15,7 +15,7 @@ if [[ "${1:-quality}" == react-doctor ]]; then
   exit 0
 fi
 # Static-analysis placeholders, shared by local checks and CI. No servers run.
-export NEXT_PUBLIC_API_URL=http://localhost:8080 SKIP_ENV_VALIDATION=true
+export SKIP_ENV_VALIDATION=true
 export API_URL=http://localhost:8080 TENANT_DOMAIN=localhost
 export NEXT_PUBLIC_OPERATOR_HOSTNAME=operator.localhost:3000
 export NEXT_PUBLIC_PARENTS_HOSTNAME=parents.localhost:3000
