@@ -1,14 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockFetch, mockWarn } = vi.hoisted(() => ({
-  mockFetch: vi.fn(),
-  mockWarn: vi.fn(),
-}));
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 
-vi.mock("~/lib/logger", () => ({
-  createLogger: () => ({
-    warn: mockWarn,
-  }),
+const { mockFetch } = vi.hoisted(() => ({
+  mockFetch: vi.fn(),
 }));
 
 global.fetch = mockFetch as unknown as typeof fetch;
@@ -81,10 +79,7 @@ describe("caregiverCapabilityService", () => {
 
     expect(mockFetch).toHaveBeenCalledWith(
       "/api/auth/accounts/42%2Funsafe/caregiver-capability",
-      expect.objectContaining({
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-      }),
+      expect.objectContaining({ method: "GET" }),
     );
     expect(result).toMatchObject({
       accountId: "42",
@@ -113,7 +108,7 @@ describe("caregiverCapabilityService", () => {
   it("posts operator enable requests with a JSON body", async () => {
     mockFetch.mockResolvedValue({
       ok: true,
-      json: async () => backendState,
+      json: async () => ({ data: backendState }),
     });
 
     await caregiverCapabilityService.enableOperatorAccountCapability(
@@ -161,7 +156,7 @@ describe("caregiverCapabilityService", () => {
     });
   });
 
-  it("falls back to the status text when the error body cannot be parsed", async () => {
+  it("keeps the class code when the error body cannot be parsed", async () => {
     mockFetch.mockResolvedValue({
       ok: false,
       status: 500,
@@ -176,14 +171,11 @@ describe("caregiverCapabilityService", () => {
     ).rejects.toEqual(
       expect.objectContaining<Partial<CaregiverCapabilityApiError>>({
         name: "CaregiverCapabilityApiError",
-        message: "Server exploded",
+        message: "Betreuung konnte nicht geändert werden",
         status: 500,
+        code: "general.server",
         blockers: [],
       }),
-    );
-    expect(mockWarn).toHaveBeenCalledWith(
-      "failed to parse caregiver capability error response",
-      expect.objectContaining({ status: 500 }),
     );
   });
 });

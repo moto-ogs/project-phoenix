@@ -1,9 +1,6 @@
-import { ApiError, enrichApiError, problemDetail } from "./api-error";
+import { ApiError, enrichApiError } from "./api-error";
+import { bffJson } from "./bff-fetch";
 import type * as authAccountsContract from "./contract/auth-accounts.generated";
-import { createLogger } from "~/lib/logger";
-import type { ApiResponse } from "./api-envelope";
-
-const logger = createLogger({ component: "CaregiverCapabilityAPI" });
 
 export interface BlockerSupervision {
   id: string;
@@ -108,16 +105,6 @@ function translateCapabilityBlocker(
   }
 }
 
-interface EnableCaregiverCapabilityRequest {
-  first_name?: string;
-  last_name?: string;
-  position?: string;
-}
-
-interface CapabilityErrorPayload {
-  blockers?: string[];
-}
-
 export class CaregiverCapabilityApiError extends ApiError {
   status: number;
   blockers: string[];
@@ -179,124 +166,112 @@ function mapCapabilityState(
   };
 }
 
-async function parseCapabilityResponse(
-  response: Response,
-): Promise<CaregiverCapabilityState> {
-  const raw = (await response.json()) as
-    | authAccountsContract.CaregiverCapabilityState
-    | ApiResponse<authAccountsContract.CaregiverCapabilityState>;
-
-  const payload =
-    typeof raw === "object" &&
-    raw !== null &&
-    "data" in raw &&
-    raw.data !== undefined
-      ? raw.data
-      : (raw as authAccountsContract.CaregiverCapabilityState);
-
-  return mapCapabilityState(payload);
-}
-
-async function handleCapabilityError(response: Response): Promise<never> {
-  let message = response.statusText || "Unbekannter Fehler";
-  let blockers: string[] = [];
-  let body: unknown;
-
-  try {
-    const payload = (await response.json()) as CapabilityErrorPayload;
-    body = payload;
-    message = problemDetail(payload) ?? message;
-    blockers = (payload.blockers ?? []).map((blocker) =>
-      translateCapabilityBlocker(blocker),
-    );
-  } catch (error) {
-    logger.warn("failed to parse caregiver capability error response", {
-      error: error instanceof Error ? error.message : String(error),
-      status: response.status,
-    });
-  }
-
+/**
+ * A refusal as CaregiverCapabilityApiError: a 409 names the People Directory
+ * blockers in its `blockers` extension member, translated for the dialog.
+ */
+function capabilityError(error: unknown): never {
+  if (!(error instanceof ApiError)) throw error;
+  const raw = error.problem?.blockers;
+  const blockers = Array.isArray(raw)
+    ? raw
+        .filter((blocker): blocker is string => typeof blocker === "string")
+        .map((blocker) => translateCapabilityBlocker(blocker))
+    : [];
   throw enrichApiError(
-    new CaregiverCapabilityApiError(message, response.status, blockers),
-    body,
+    new CaregiverCapabilityApiError(
+      error.detail ?? error.message,
+      error.status ?? 500,
+      blockers,
+    ),
+    error.problem,
   );
 }
 
-async function requestCapability(
-  endpoint: string,
-  options: RequestInit = {},
+const FAILED = "Betreuung konnte nicht geändert werden";
+
+function tenant(
+  answer: Promise<authAccountsContract.CaregiverCapabilityState>,
 ): Promise<CaregiverCapabilityState> {
-  const response = await fetch(endpoint, {
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers ?? {}),
-    },
-    ...options,
-  });
+  return answer.then(mapCapabilityState, capabilityError);
+}
 
-  if (!response.ok) {
-    await handleCapabilityError(response);
-  }
-
-  return parseCapabilityResponse(response);
+// The operator routes carry no answer type in their contract (`z.unknown()`);
+// Go answers with the same CaregiverCapabilityState as the tenant route.
+function operator(answer: Promise<unknown>): Promise<CaregiverCapabilityState> {
+  return answer.then(
+    (state) =>
+      mapCapabilityState(
+        state as authAccountsContract.CaregiverCapabilityState,
+      ),
+    capabilityError,
+  );
 }
 
 class CaregiverCapabilityService {
   getTenantAccountCapability(accountId: string) {
-    return requestCapability(
-      `/api/auth/accounts/${encodeURIComponent(accountId)}/caregiver-capability`,
+    return tenant(
+      bffJson("tenant", "GET /auth/accounts/{accountId}/caregiver-capability", {
+        params: { accountId },
+        errorMessage: FAILED,
+      }),
     );
   }
 
   enableTenantAccountCapability(
     accountId: string,
-    body: EnableCaregiverCapabilityRequest,
+    body: authAccountsContract.EnableCaregiverCapabilityRequest,
   ) {
-    return requestCapability(
-      `/api/auth/accounts/${encodeURIComponent(accountId)}/caregiver-capability`,
-      {
-        method: "POST",
-        body: JSON.stringify(body),
-      },
+    return tenant(
+      bffJson(
+        "tenant",
+        "POST /auth/accounts/{accountId}/caregiver-capability",
+        { params: { accountId }, body, errorMessage: FAILED },
+      ),
     );
   }
 
   disableTenantAccountCapability(accountId: string) {
-    return requestCapability(
-      `/api/auth/accounts/${encodeURIComponent(accountId)}/caregiver-capability`,
-      {
-        method: "DELETE",
-      },
+    return tenant(
+      bffJson(
+        "tenant",
+        "DELETE /auth/accounts/{accountId}/caregiver-capability",
+        { params: { accountId }, errorMessage: FAILED },
+      ),
     );
   }
 
   getOperatorAccountCapability(schoolId: string, accountId: string) {
-    return requestCapability(
-      `/api/operator/schools/${encodeURIComponent(schoolId)}/accounts/${encodeURIComponent(accountId)}/caregiver-capability`,
+    return operator(
+      bffJson(
+        "platform",
+        "GET /operator/schools/{id}/accounts/{accountId}/caregiver-capability/",
+        { params: { id: schoolId, accountId }, errorMessage: FAILED },
+      ),
     );
   }
 
   enableOperatorAccountCapability(
     schoolId: string,
     accountId: string,
-    body: EnableCaregiverCapabilityRequest,
+    body: authAccountsContract.EnableCaregiverCapabilityRequest,
   ) {
-    return requestCapability(
-      `/api/operator/schools/${encodeURIComponent(schoolId)}/accounts/${encodeURIComponent(accountId)}/caregiver-capability`,
-      {
-        method: "POST",
-        body: JSON.stringify(body),
-      },
+    return operator(
+      bffJson(
+        "platform",
+        "POST /operator/schools/{id}/accounts/{accountId}/caregiver-capability/",
+        { params: { id: schoolId, accountId }, body, errorMessage: FAILED },
+      ),
     );
   }
 
   disableOperatorAccountCapability(schoolId: string, accountId: string) {
-    return requestCapability(
-      `/api/operator/schools/${encodeURIComponent(schoolId)}/accounts/${encodeURIComponent(accountId)}/caregiver-capability`,
-      {
-        method: "DELETE",
-      },
+    return operator(
+      bffJson(
+        "platform",
+        "DELETE /operator/schools/{id}/accounts/{accountId}/caregiver-capability/",
+        { params: { id: schoolId, accountId }, errorMessage: FAILED },
+      ),
     );
   }
 }

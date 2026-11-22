@@ -11,9 +11,9 @@ import { ReviewDiffPanel } from "~/components/students/review-diff-panel";
 import { Checkbox } from "~/components/ui/checkbox";
 import { SectionLabel } from "~/components/ui/section-label";
 import { StatusBadge } from "~/components/ui/status-badge";
+import type * as studentsContract from "~/lib/contract/students.generated";
 import type {
   OfferingRequestDiffLine,
-  OfferingRequestPreviewSelection,
   StaffOfferingRequest,
 } from "~/lib/offering-request-review-api";
 
@@ -64,7 +64,7 @@ export function OfferingRequestChanges({
   waitlist,
 }: Readonly<{
   row: Pick<StaffOfferingRequest, "id" | "diff" | "unchanged" | "note">;
-  preview?: readonly OfferingRequestPreviewSelection[];
+  preview?: readonly studentsContract.OfferingRequestPreviewSelectionResponse[];
   excluded?: readonly string[];
   busy?: boolean;
   onToggleExcluded?: (offeringId: string) => Promise<void>;
