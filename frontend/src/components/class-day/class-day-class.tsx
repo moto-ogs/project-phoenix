@@ -1,4 +1,5 @@
 "use client";
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 
 // Eine Klasse an einem Tag ("moto schule", #1772/#2294).
@@ -54,7 +55,6 @@ import { createLogger } from "~/lib/logger";
 import {
   type ClassDayClasses,
   type ClassTripReportInput,
-  type ClassTripReportResult,
   type ClassHandoverChildren,
   deleteDayHintSchool,
   type MorningAttendanceMark,
@@ -168,7 +168,7 @@ export interface ClassDayClassProps {
   readonly reportClassTrip?: (
     schoolClass: string,
     input: ClassTripReportInput,
-  ) => Promise<ClassTripReportResult>;
+  ) => Promise<schoolClassDayContract.ClassTripResult>;
   /**
    * Speichert die Anwesenheit am Vormittag (#4790). Ohne sie bleibt die
    * Anwesenheit eine Anzeige.

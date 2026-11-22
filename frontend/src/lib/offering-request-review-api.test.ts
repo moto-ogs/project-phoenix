@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 const { loggerError } = vi.hoisted(() => ({
   loggerError: vi.fn(),
 }));
@@ -45,11 +50,11 @@ describe("decideOfferingChangeRequest", () => {
     ).resolves.toBeUndefined();
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/students/offering-change-requests/request%2F77/decide",
-      {
+      expect.objectContaining({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ approve: true, reason: "" }),
-      },
+      }),
     );
   });
 
@@ -129,11 +134,11 @@ describe("previewOfferingChangeRequest", () => {
     ).resolves.toEqual(preview);
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/students/offering-change-requests/request%2F77/preview",
-      {
+      expect.objectContaining({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ excluded_offering_ids: ["9", "12"] }),
-      },
+      }),
     );
   });
 

@@ -1,8 +1,15 @@
 // grade-transition-api.test.ts
 // Mapper tests for the Jahrgangsstufenwechsel admin API client (#405)
 
-import type * as wire from "~/lib/contract/admin.generated";
+import type * as adminContract from "~/lib/contract/admin.generated";
 import { describe, it, expect, vi, afterEach } from "vitest";
+
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
+import { pagedJson } from "~/test/mocks/plain-session-fetch";
 import {
   listGradeTransitions,
   mapTransition,
@@ -13,7 +20,7 @@ import {
 } from "./grade-transition-api";
 
 describe("mapTransition", () => {
-  const backend: wire.TransitionResponse = {
+  const backend: adminContract.TransitionResponse = {
     id: "7",
     academic_year: "2026-2027",
     status: "draft",
@@ -71,7 +78,7 @@ describe("mapTransition", () => {
 });
 
 describe("mapPreview", () => {
-  const backend: wire.TransitionPreviewResponse = {
+  const backend: adminContract.TransitionPreviewResponse = {
     fingerprint: "",
     transition_id: "7",
     academic_year: "2026-2027",
@@ -110,7 +117,7 @@ describe("mapPreview", () => {
 });
 
 describe("mapResult", () => {
-  const backend: wire.TransitionResultResponse = {
+  const backend: adminContract.TransitionResultResponse = {
     transition_id: "7",
     status: "applied",
     students_promoted: 40,
@@ -132,7 +139,7 @@ describe("mapResult", () => {
 
 describe("mapSuggestion", () => {
   it("maps a promotion suggestion", () => {
-    const backend: wire.SuggestedMappingResponse = {
+    const backend: adminContract.SuggestedMappingResponse = {
       from_class: "1a",
       to_class: "2a",
       student_count: 20,
@@ -147,7 +154,7 @@ describe("mapSuggestion", () => {
   });
 
   it("maps a graduation suggestion (no to_class)", () => {
-    const backend: wire.SuggestedMappingResponse = {
+    const backend: adminContract.SuggestedMappingResponse = {
       from_class: "4b",
       student_count: 12,
       is_graduating: true,
@@ -160,7 +167,7 @@ describe("mapSuggestion", () => {
 
 describe("mapHistoryEntry", () => {
   it("maps a history row", () => {
-    const backend: wire.TransitionHistoryResponse = {
+    const backend: adminContract.TransitionHistoryResponse = {
       student_state: "alumnus",
       id: "3",
       transition_id: "7",
@@ -196,7 +203,7 @@ describe("mapHistoryEntry", () => {
     const states = ["alumnus", "restored", "purged"] as const;
 
     for (const state of states) {
-      const backend: wire.TransitionHistoryResponse = {
+      const backend: adminContract.TransitionHistoryResponse = {
         id: "3",
         transition_id: "7",
         student_id: "99",
@@ -284,7 +291,7 @@ describe("int64 ids on the wire", () => {
   });
 
   it("does not collapse two ids that share a double", async () => {
-    const row = (id: string): wire.TransitionResponse => ({
+    const row = (id: string): adminContract.TransitionResponse => ({
       id,
       academic_year: "2026-2027",
       status: "applied",
@@ -302,7 +309,7 @@ describe("int64 ids on the wire", () => {
       vi.fn(async () => ({
         ok: true,
         status: 200,
-        json: async () => ({ data: rows }),
+        json: async () => pagedJson(rows),
       })) as unknown as typeof fetch,
     );
 
@@ -312,7 +319,7 @@ describe("int64 ids on the wire", () => {
 });
 
 describe("listGradeTransitions", () => {
-  const makeRow = (id: number): wire.TransitionResponse => ({
+  const makeRow = (id: number): adminContract.TransitionResponse => ({
     id: String(id),
     academic_year: "2026-2027",
     status: "applied",
@@ -331,7 +338,7 @@ describe("listGradeTransitions", () => {
   // after a window has been served and before the next request, modelling a
   // concurrent writer.
   const stubFetch = (
-    store: wire.TransitionResponse[],
+    store: adminContract.TransitionResponse[],
     afterRequest?: (requestIndex: number) => void,
   ) => {
     const urls: string[] = [];
@@ -350,7 +357,7 @@ describe("listGradeTransitions", () => {
         afterRequest?.(urls.length - 1);
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ data }),
+          json: () => Promise.resolve(pagedJson(data)),
         } as unknown as Response);
       }),
     );

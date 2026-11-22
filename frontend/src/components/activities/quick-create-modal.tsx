@@ -12,7 +12,7 @@ import {
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
 import { InsetPanel } from "~/components/ui/inset-panel";
-import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
 import { Button } from "~/components/ui/button";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { Checkbox } from "~/components/ui/checkbox";
@@ -121,30 +121,14 @@ export function QuickCreateActivityModal({
     await save.run(async (op) => {
       try {
         // Prepare the request data
-        const requestData = {
-          name: form.name.trim(),
-          category_id: Number.parseInt(form.category_id, 10),
-          max_participants: parseParticipantLimit(form.max_participants),
-        };
-
-        // Call the quick-create API endpoint
-        const response = await transportFetch("/api/activities/quick-create", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
+        await bffJson("tenant", "POST /api/activities/quick-create", {
+          body: {
+            name: form.name.trim(),
+            category_id: form.category_id,
+            max_participants: parseParticipantLimit(form.max_participants),
           },
-          credentials: "include",
-          body: JSON.stringify(requestData),
+          errorMessage: "activity quick-create failed",
         });
-
-        if (!response.ok) {
-          throw await apiErrorFromResponse(
-            response,
-            `activity quick-create failed (${response.status})`,
-          );
-        }
-
-        await response.json();
 
         toastSuccess(`Die Aktivität „${form.name.trim()}“ ist angelegt.`);
 
