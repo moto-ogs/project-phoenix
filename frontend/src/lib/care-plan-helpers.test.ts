@@ -184,12 +184,11 @@ describe("resolveDayDeviation", () => {
       status,
       label: status === "sick" ? "Krank" : "Entschuldigt",
       reported_at: "",
-      cleared_at: cleared ? "2026-07-20T00:00:00Z" : null,
+      ...(cleared && { cleared_at: "2026-07-20T00:00:00Z" }),
       source: "manual",
-      note: null,
       created_at: "",
       updated_at: "",
-    }) as StudentStatusDay;
+    }) satisfies StudentStatusDay;
 
   it("returns the active status-day row for the date", () => {
     const result = resolveDayDeviation("2026-07-20", [

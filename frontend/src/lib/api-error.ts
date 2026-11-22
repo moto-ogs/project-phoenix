@@ -22,6 +22,11 @@ export class ApiError extends Error {
   retryAfterSeconds?: number;
   /** No HTTP response arrived; the status is a stand-in (unavailableApiError). */
   noResponse?: boolean;
+  /**
+   * The parsed RFC 9457 body, for the extension members of a domain refusal
+   * (a 409's `conflicts`). Undefined when the body was not JSON.
+   */
+  problem?: Readonly<Record<string, unknown>>;
 
   constructor(
     message: string,
@@ -240,6 +245,7 @@ export function apiErrorFromBody(
     errors,
     instance: typeof data.instance === "string" ? data.instance : undefined,
   });
+  if (body && typeof body === "object") error.problem = data;
   if (isSessionRefusalCode(error.code)) {
     reportSessionTenantMismatch(error.code);
   }
