@@ -4048,6 +4048,7 @@ export const inviteGuardiansTopic = function inviteGuardiansTopic(): HelpTopic {
       "Hinter dem Namen steht, wie weit die Person ist: `Kein Konto`, `Einladung offen`, `Link gilt nicht mehr` oder `Konto aktiv`.",
       "Bei `Einladung offen` heißt der Knopf `Erneut einladen`. Damit geht die E-Mail noch einmal raus.",
       "Eine Person mit mehreren Kindern lädst du nur einmal ein. Sie sieht danach alle ihre Kinder.",
+      "Holt jemand das Kind nur ab, wähle `Portalrolle` `Nur Abholung`. Dann sind `E-Mail` und Telefon freiwillig. Die Person bekommt keinen Zugang zur Eltern-App.",
     ],
     differences: [
       "Steht bei der Person `Konto aktiv, kein Portalzugriff`, heißt der Knopf `Zugriff gewähren`.",
@@ -11747,6 +11748,18 @@ export const traegerBillingTermsTopic =
           ],
         },
         {
+          title: "Zahlungsweg einer Familie festlegen",
+          description:
+            "Das geht, sobald der Vertrag der Familie da ist, also schon vor der ersten Rechnung. Speichern erstellt keine Rechnung und bucht nichts ab.",
+          steps: [
+            "Wähle in der Navigation `Familien und Zahlung`. Der Reiter `Familien` ist schon offen.",
+            "Wähle in der Zeile der Familie das Menü mit den drei Punkten und dann `Empfänger und Zahlung ändern`. Es öffnet sich eine eigene Seite.",
+            "Wähle den `Zahlungsweg`: `Lastschrift` oder `Überweisung`. `Wie in den Abrechnungsvorgaben` nimmt den dort eingestellten Zahlungsweg.",
+            "Wähle `Speichern`. Du kommst zurück zur Liste. In der Spalte `Zahlung` steht jetzt `Festgelegt:` und der Zahlungsweg.",
+            "Wähle oben `Alle Zahlungswege` und dann `Zahlungsweg nicht festgelegt`. Dann siehst du nur die Familien, die noch fehlen.",
+          ],
+        },
+        {
           title: "Empfänger und Zahlung einer Familie ändern",
           description:
             "Das gilt für alle Rechnungen dieser Familie, auch für Geschwister. Die Familie ist die E-Mail-Adresse der Person im Vertrag.",
@@ -11757,7 +11770,7 @@ export const traegerBillingTermsTopic =
             "Bei `Beide Eltern` trägst du den Namen des zweiten Elternteils ein. Beide Namen stehen dann auf der Rechnung.",
             "Bei `Andere Person` trägst du Name, E-Mail-Adresse und Anschrift ein. Die Rechnung geht dann an diese Person. Mit dem Standardtext von moto beginnt das Schreiben mit „Guten Tag“ und ihrem Namen und spricht sie mit „du“ an. Eine eigene Vorlage behält ihren Wortlaut.",
             "Wähle bei Bedarf einen eigenen `Zahlungsweg`. `Wie in den Abrechnungsvorgaben` nimmt den dort eingestellten Zahlungsweg.",
-            "Wähle bei Bedarf einen `Eigenen Zahltag`, zum Beispiel den 15. des Monats.",
+            "Wähle bei Bedarf einen `Zahltag`, zum Beispiel den 15. des Monats.",
             "Wähle `Speichern`.",
           ],
         },
@@ -11771,11 +11784,13 @@ export const traegerBillingTermsTopic =
         "Den QR-Code schaltest du unter `Briefkopf und Vorlagen` bei `GiroCode drucken` aus. Dann steht er auf keinem neuen Schreiben.",
         "Der Verwendungszweck im QR-Code ist die Nummer der Rechnung. Hat die Familie eine Debitorennummer, steht sie dahinter. Bei einem Bescheid heißt sie Buchungszeichen.",
         "Keinen QR-Code haben: Schreiben mit `Lastschrift`, Schreiben mit 0 €, Storno, Gutschrift und Jahresbescheide. Ein Jahresbescheid wird in Raten bezahlt.",
-        "Unter `Familien und Zahlung` siehst du bei jeder Familie den Zahlungsweg ihrer Rechnungen.",
+        "Ein SEPA-Mandat allein stellt eine Familie nicht auf `Lastschrift` um. Den Zahlungsweg legst du selbst fest.",
+        "Unter `Familien und Zahlung` siehst du bei jeder Familie den festgelegten Zahlungsweg und den Zahlungsweg ihrer Rechnungen.",
         "Beim Erstellen der Schreiben stehen die Fälligkeiten bereits fest. Das Feld `Zahlen bis` gilt nur für ältere Rechnungen ohne eigenes Datum.",
         "Welches Datum gilt: zuerst der eigene Zahltag der Familie, dann das Datum des Laufs, sonst das Zahlungsziel der Leistung.",
       ],
       differences: [
+        "Die Familie steht nicht in der Liste? Öffne unter `Verträge` ihren Vertrag. Wähle in der Karte `Empfänger und Zahlung` den Knopf `Ändern`.",
         "Eine Rechnung zeigt keinen Zahlungsweg? Sie wurde ausgestellt, bevor es diese Angaben gab.",
         "Bei einem freigegebenen Lauf fehlt `Ändern` beim Feld `Fällig`? Ausgestellte Rechnungen ändern sich nicht mehr.",
         "Änderst du eine Fälligkeit, nachdem du die Prüfliste geprüft hast, lehnt moto die Freigabe ab. Lade die Seite neu und prüfe den Lauf noch einmal.",
@@ -12013,6 +12028,23 @@ export const traegerCareContractsTopic =
           ],
         },
         {
+          title: "Module importierter Verträge neu zuordnen",
+          description:
+            "Hast du deine Module nach dem Import neu geordnet? Dann buchen die importierten Verträge noch die alten Module. Mit einer CSV-Datei ordnest du die Buchungen den neuen Modulen zu. Jeder geänderte Vertrag bekommt eine neue Version. Wochentage und Endzeiten bleiben. Die Eltern bekommen keine Nachricht.",
+          steps: [
+            "Wähle in der Navigation `Verträge`. Wähle oben rechts das Menü mit den drei Punkten und dann `Module neu zuordnen`.",
+            "Du kennst den Aufbau noch nicht? Wähle `Beispieldatei`. Die Datei hat die Spalten `Vertrag`, `Wochentag`, `Bisheriges_Modul` und `Neues_Modul`.",
+            "Schreibe je Vertrag, Wochentag und bisherigem Modul eine Zeile. Bei `Vertrag` steht die Vertragsnummer aus moto. Bei `Wochentag` geht zum Beispiel `Mo`, `Mo-Fr` oder `Montag`.",
+            "Weißt du das neue Modul noch nicht? Lass `Neues_Modul` leer. moto stellt den ganzen Vertrag dann zurück und ändert ihn nicht.",
+            "Wähle bei `Gilt ab` den Tag, ab dem die neuen Module gelten. Vorgeschlagen ist der Erste des nächsten Monats. Frühestens geht heute.",
+            "Ziehe die Datei in das Feld oder wähle `Datei wählen`.",
+            "Prüfe die Verträge unter `Prüfen und ändern`. Bei `Änderung` steht links das bisherige und rechts das neue Modul. `Wird geändert` ändert moto. `Schon zugeordnet` bucht schon die neuen Module. `Zurückgestellt` wartet auf deine Entscheidung. Bei `Nicht möglich` steht der Grund mit der Zeile der Datei in der Spalte `Hinweis`.",
+            "Änderst du `Gilt ab`, prüft moto die Datei sofort neu.",
+            "Wähle unten den grünen Knopf, zum Beispiel `12 Verträge ändern`. moto fragt vorher nach. Bestätige im Fenster noch einmal.",
+            "Beim Vertrag steht die neue Version im Reiter `Versionen` mit `Module neu zugeordnet`. Frühere Versionen bleiben lesbar.",
+          ],
+        },
+        {
           title: "Änderungswunsch der Eltern freigeben",
           steps: [
             "Die Eltern beantragen in der Eltern-App andere Tage oder Module. Du oder die Schule entscheidet.",
@@ -12081,6 +12113,8 @@ export const traegerCareContractsTopic =
         "Beim Import steht `Für das Modul fehlen die Vertragsbedingungen`? Trage unter `Vertragsbedingungen` Laufzeit und Frist für das Modul ein. Wähle danach im Import `Erneut prüfen` oder lade die Datei noch einmal.",
         "Beim Import steht `Dieses Modul gibt es an der Schule nicht`? Der Name in der Datei muss so heißen wie das Angebot der Schule. Ändere den Namen in der Datei, oder wähle `Modul für alle Zeilen`.",
         "Beim Import steht `„Kinder in der Familie“ ist keine ganze Zahl von 1 bis 20`? moto übernimmt die Zeile nicht. Korrigiere die Zahl in der Datei und lade die Datei noch einmal.",
+        "Beim Neuzuordnen der Module steht `Der Vertrag kommt aus einer Anmeldung`? Ändern lassen sich nur importierte Verträge. Die Module eines Vertrags aus einer Anmeldung folgen den Buchungen der Schule. Die Schule ändert dort die Buchung.",
+        "Beim Neuzuordnen der Module steht `Der Vertrag ändert sich schon später`? Für den Vertrag ist schon eine neue Version geplant. Wähle bei `Gilt ab` einen Tag ab dieser Version.",
         "Ein importierter Vertrag ist falsch? Einen übernommenen Vertrag kannst du nicht löschen und nicht noch einmal importieren. Trage für ihn eine Kündigung ein. Prüfe die Vorschau deshalb, bevor du übernimmst.",
         "In `Vertrag beenden` steht `Die Mitteilung zum Vertragsende ging nicht raus`? Der Hinweis nennt den Grund: Der Vertrag ist mit keinem Kind aus den `Kinderdaten` der Schule verknüpft. Oder keine Adresse des Vertrags gehört noch einer Bezugsperson, die für das Kind handeln darf. Bei älteren Entscheidungen kennt moto den Grund nicht. Die Entscheidung gilt trotzdem. Schicke den Eltern die Mitteilung per Brief. Sie steht darunter als `Mitteilung zum Vertragsende (nicht verschickt)`.",
         "`Vertragsende festlegen` oder `Grund nicht anerkennen` meldet, dass kein Ende mehr offen ist? Eine andere Person hat schon entschieden. Lade die Seite neu. Die Entscheidung steht in `Vertrag beenden`.",

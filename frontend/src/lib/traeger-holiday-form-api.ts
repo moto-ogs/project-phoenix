@@ -1,3 +1,4 @@
+import { bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
 /**
  * Client of the registration form of a holiday period (#5198): the
  * Träger-Büro builds the questions with the form builder of the online
@@ -16,7 +17,6 @@ import {
   type HolidayHealthRequirement,
   type HolidayFormField,
 } from "./holiday-form-field";
-import { traegerRequest } from "./traeger-api";
 
 export {
   HOLIDAY_FORM_FIELD_TYPES,
@@ -64,9 +64,9 @@ function formPath(periodId: string): string {
 /** The current version of the form of a holiday period. */
 export async function fetchHolidayForm(periodId: string): Promise<HolidayForm> {
   return formFromBackend(
-    await traegerRequest<traegerHolidayPeriodsContract.HolidayFormEditor>(
-      formPath(periodId),
-    ),
+    await bffJson("org", "GET /traeger/holiday-periods/{id}/form", {
+      params: { id: periodId },
+    }),
   );
 }
 
@@ -79,10 +79,13 @@ export async function saveHolidayForm(
   healthRequirement: HolidayHealthRequirement = "optional",
 ): Promise<HolidayForm> {
   return formFromBackend(
-    await traegerRequest<traegerHolidayPeriodsContract.HolidayFormEditor>(
-      formPath(periodId),
+    // The contract leaves the editor's own body undescribed
+    // (traeger_route_contracts.go); bff-fetch-uncontracted.test.ts names it.
+    await bffJsonUncontracted<traegerHolidayPeriodsContract.HolidayFormEditor>(
+      "org",
+      "PUT",
+      `/api/traeger/holiday-periods/${encodeURIComponent(periodId)}/form`,
       {
-        method: "PUT",
         body: {
           fields,
           address_requirement: addressRequirement,

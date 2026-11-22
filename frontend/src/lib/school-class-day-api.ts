@@ -4,7 +4,7 @@
 // Backend mit dem school-Token unter /school/class-day auf.
 
 import { ApiError } from "./api-error";
-import { bffJson } from "./bff-fetch";
+import { bffFile, bffJson } from "./bff-fetch";
 import type { StudentStatusKind } from "./student-status-days-api";
 import type { ClassDayReport, MorningAttendanceStatus } from "./class-day-api";
 import type {
@@ -462,36 +462,32 @@ export interface AbsenceListQuery {
   readonly period?: { readonly from: string; readonly to: string };
 }
 
-function absenceListParams(query: AbsenceListQuery): URLSearchParams {
-  const params = new URLSearchParams({ class: query.schoolClass });
-  if (query.period) {
-    params.set("from", query.period.from);
-    params.set("to", query.period.to);
-  }
-  return params;
+function absenceListQuery(query: AbsenceListQuery) {
+  return {
+    class: query.schoolClass,
+    from: query.period?.from,
+    to: query.period?.to,
+  };
 }
 
 export async function fetchAbsenceListSchool(
   query: AbsenceListQuery,
 ): Promise<AbsenceList> {
   const report = await bffJson("school", "GET /school/class-day/absence-list", {
-    query: {
-      class: query.schoolClass,
-      from: query.period?.from,
-      to: query.period?.to,
-    },
+    query: absenceListQuery(query),
   });
   return mapAbsenceList(report);
 }
 
 export type AbsenceListExportFormat = "pdf" | "xlsx";
 
-/** Adresse des Exports als PDF oder Excel (#4793). */
-export function absenceListExportPath(
+/** Der Export als PDF oder Excel (#4793); die Antwort trägt die Datei. */
+export function fetchAbsenceListExport(
   query: AbsenceListQuery,
   format: AbsenceListExportFormat,
-): string {
-  const params = absenceListParams(query);
-  params.set("format", format);
-  return `/api/school/class-day/absence-list/export?${params.toString()}`;
+): Promise<Response> {
+  return bffFile("school", "GET /school/class-day/absence-list/export", {
+    query: { ...absenceListQuery(query), format },
+    errorMessage: "absence list export failed",
+  });
 }

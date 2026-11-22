@@ -1,17 +1,18 @@
-import type { ParentConferenceOffer } from "~/lib/parent-conferences";
+import {
+  mapParentConferenceOffer,
+  type ParentConferenceOffer,
+} from "~/lib/parent-conferences";
 import type { MessageAttachment } from "~/lib/message-attachments";
 import {
   type HolidayRegistrationEntry,
   holidayRegistrationEntriesFromBackend,
 } from "~/lib/parent-holiday-registration-entries";
-import type { CareContractStatus } from "./traeger-care-contracts-api";
 import type * as parentMeContract from "./contract/parent-me.generated";
-import {
-  ApiError,
-  transportFetch as fetchTransport,
-  unavailableApiError,
-  apiErrorFromBody,
-} from "./api-error";
+import type * as sharedContract from "./contract/shared.generated";
+import { knownEnum } from "./contract/known-enum";
+import { requiredDay } from "./contract/required-day";
+import { bffFile, bffJson } from "./bff-fetch";
+import { ApiError, unavailableApiError } from "./api-error";
 /**
  * Parent-portal client API. Symmetric to the operator-api / tenant
  * api-helpers split. Every call goes through a Next.js proxy route
@@ -23,7 +24,11 @@ import {
  */
 
 import type { AppLocale } from "~/i18n/locales";
-import type { SurveyAnswersRequest, SurveyForm } from "~/lib/survey-form";
+import type {
+  SurveyAnswersRequest,
+  SurveyForm,
+  SurveyQuestionKind,
+} from "~/lib/survey-form";
 import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
 import { createLogger } from "~/lib/logger";
 import {
@@ -33,9 +38,7 @@ import {
 import {
   type ChatMessage,
   type MessageAudience,
-  type RequestDiffEntry,
   type SchoolReaders,
-  audienceQuery,
 } from "~/lib/messaging-status";
 import { readEnrollmentError } from "~/lib/enrollment-api-error";
 import { type SignatureValue, signatureRequestBody } from "~/lib/signature";
@@ -57,24 +60,6 @@ import {
   PARENT_ACCESS_REFUSED_EVENT,
 } from "~/lib/parent-access-refusal";
 
-// Capture the originating account before awaiting the cookie-bound request.
-const responseOrigins = new WeakMap<
-  Response,
-  { account: string | null; method: string }
->();
-async function transportFetch(
-  input: RequestInfo | URL,
-  init?: RequestInit,
-): Promise<Response> {
-  const account = boundSessionAccount();
-  const response = await fetchTransport(input, init);
-  responseOrigins.set(response, {
-    account,
-    method: (init?.method ?? "GET").toUpperCase(),
-  });
-  return response;
-}
-
 const logger = createLogger({ component: "ParentAPI" });
 
 export type Child = parentMeContract.ChildResponse;
@@ -93,54 +78,17 @@ export type ParentProfile = parentMeContract.ParentProfileResponse;
 export type StudentStatusKind = "sick" | "excused";
 
 // One reported sick/excused day. Mirrors api/parent.StatusDayResponse.
-export interface StatusDay {
-  readonly id: string;
-  readonly student_id: string;
-  readonly date: string; // YYYY-MM-DD
-  readonly status: StudentStatusKind;
-  readonly reported_at: string; // ISO timestamp
-  readonly source: string;
-  readonly note?: string;
-}
-
-// The lifecycle of a parent absence request while the OGS decision is pending
-// or after it was decided. Mirrors the backend's legacy-named request states.
-type ExcusedRequestStatus = "pending" | "approved" | "rejected" | "withdrawn";
+export type StatusDay = parentMeContract.StatusDayResponse;
 
 // One sick or excused absence request awaiting (or having received) an OGS
 // decision. Mirrors api/parent.ParentExcusedRequestResponse; the type and route
 // retain their legacy names. `dates` are YYYY-MM-DD.
-export interface ExcusedRequest {
-  readonly id: string;
-  readonly student_id: string;
-  readonly absence_status: StudentStatusKind;
-  readonly status: ExcusedRequestStatus;
-  readonly dates: string[]; // YYYY-MM-DD
-  readonly note: string;
-  readonly decision_reason?: string;
-  readonly created_at: string; // ISO timestamp
-  readonly reviewed_at?: string; // ISO timestamp
-  // is_self is true only for the calling guardian's own request. In a
-  // multi-guardian family only the submitter may change it (the backend rejects
-  // a non-submitter's edit), so the UI shows "Anfrage bearbeiten" only when this
-  // is true.
-  readonly is_self: boolean;
-}
+export type ExcusedRequest = parentMeContract.ParentExcusedRequestResponse;
 
 export type ParentRequestShareType =
   "master_data" | "care_schedule" | "pickup_change" | "offering" | "excused";
 
-interface RequestSharingRecipient {
-  readonly guardian_profile_id: string;
-  readonly first_name: string;
-  readonly last_name: string;
-  readonly selected: boolean;
-}
-
-export interface RequestSharingState {
-  readonly family_protected: boolean;
-  readonly recipients: RequestSharingRecipient[];
-}
+export type RequestSharingState = parentMeContract.requestSharingResponse;
 
 /**
  * One entry of a request's append-only history (backend
@@ -148,11 +96,7 @@ export interface RequestSharingState {
  * current `version`, which every guardian edit must send back as
  * `expected_version` so a concurrent OGS decision is never overwritten.
  */
-export interface ParentRequestEvent {
-  readonly event_type: string;
-  readonly version: string;
-  readonly created_at: string; // ISO timestamp
-}
+export type ParentRequestEvent = parentMeContract.ParentRequestEventResponse;
 
 /** Reads the history of one request (oldest first). */
 export async function listParentRequestEvents(
@@ -160,25 +104,25 @@ export async function listParentRequestEvents(
   requestType: ParentRequestShareType,
   requestId: string,
 ): Promise<ParentRequestEvent[]> {
-  return getJson<ParentRequestEvent[]>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/requests/${encodeURIComponent(requestType)}/${encodeURIComponent(requestId)}/events`,
+  return parentCall(
+    bffJson(
+      "parent",
+      "GET /parent/me/children/{studentId}/requests/{requestType}/{requestId}/events",
+      { params: { studentId, requestType, requestId } },
+    ),
   );
 }
 
 export async function getRequestSharingOptions(
   studentId: string,
 ): Promise<RequestSharingState> {
-  return getJson<RequestSharingState>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/request-sharing-options`,
+  return parentCall(
+    bffJson(
+      "parent",
+      "GET /parent/me/children/{studentId}/request-sharing-options",
+      { params: { studentId } },
+    ),
   );
-}
-
-function requestSharingURL(
-  studentId: string,
-  requestType: ParentRequestShareType,
-  requestId: string,
-): string {
-  return `/api/parent/me/children/${encodeURIComponent(studentId)}/request-sharing/${encodeURIComponent(requestType)}/${encodeURIComponent(requestId)}`;
 }
 
 export async function getRequestSharing(
@@ -186,8 +130,12 @@ export async function getRequestSharing(
   requestType: ParentRequestShareType,
   requestId: string,
 ): Promise<RequestSharingState> {
-  return getJson<RequestSharingState>(
-    requestSharingURL(studentId, requestType, requestId),
+  return parentCall(
+    bffJson(
+      "parent",
+      "GET /parent/me/children/{studentId}/request-sharing/{requestType}/{requestId}",
+      { params: { studentId, requestType, requestId } },
+    ),
   );
 }
 
@@ -197,18 +145,21 @@ export async function setRequestSharing(
   requestId: string,
   recipientGuardianProfileIds: string[],
 ): Promise<RequestSharingState> {
-  return putJson<RequestSharingState>(
-    requestSharingURL(studentId, requestType, requestId),
-    { recipient_guardian_profile_ids: recipientGuardianProfileIds },
+  return parentCall(
+    bffJson(
+      "parent",
+      "PUT /parent/me/children/{studentId}/request-sharing/{requestType}/{requestId}",
+      {
+        params: { studentId, requestType, requestId },
+        body: { recipient_guardian_profile_ids: recipientGuardianProfileIds },
+      },
+    ),
   );
 }
 
 // Normalized response of POST .../sick-note. Direct submissions carry the
 // recorded days; approval-gated submissions carry an empty array.
-export interface SickNoteSubmitResult {
-  readonly status_days: StatusDay[];
-  readonly pending_request?: ExcusedRequest;
-}
+export type SickNoteSubmitResult = parentMeContract.SickNoteEnvelopeResponse;
 
 // Resolved per-tenant parent-portal feature toggles for a child.
 export type ChildFeatures = parentMeContract.ChildFeaturesResponse;
@@ -227,34 +178,7 @@ export interface MealPlanEntry {
 // One day's pickup override plus OGS-owned arrival state for display.
 // Times are "HH:MM" wall-clock strings; a missing leg has no override that day.
 // `source` is "guardian" for parent-set entries, "staff" for ones the team set.
-export interface CareException {
-  readonly date: string;
-  readonly pickup_time?: string;
-  readonly arrival_time?: string;
-  readonly reason?: string;
-  readonly source: string;
-  readonly pickup_source: string;
-  readonly updated_at: string;
-  // True when a pickup-exception row exists for the day but carries no time —
-  // staff's "not coming today" absence marker (StudentPickupException.IsAbsent).
-  // Distinct from a missing pickup_time meaning "no pickup override this day":
-  // the tile resolves this to an absence, not the base-plan pickup. Absent (and
-  // thus undefined) for ordinary rows.
-  readonly pickup_absent?: boolean;
-  // The arrival-leg counterpart: an arrival-exception row with no expected time
-  // ("not coming today", StudentArrivalException.IsAbsent). Like pickup_absent it
-  // creates no status day, so today_absent misses it; either leg being absent
-  // resolves the tile to an absence rather than the base-plan pickup. Undefined
-  // for ordinary rows.
-  readonly arrival_absent?: boolean;
-  // Die Abholart, die die OGS für diesen Tag eingetragen oder bestätigt hat
-  // (#3945). Fehlt sie, gilt die Abholart aus dem Wochenplan.
-  readonly departure_mode?: DayDepartureMode;
-  // „HH:MM“, ab der die OGS das Kind an diesem Tag entschuldigt hat (eine
-  // Teil-Abwesenheit). Eine Abmeldung für den ganzen Tag lehnt der Server an
-  // diesem Tag ab; der Dialog nennt ihn deshalb vorher (#5698).
-  readonly excused_from?: string;
-}
+export type CareException = parentMeContract.CareExceptionResponse;
 
 // Abholarten, die Eltern für einen einzelnen Tag anfragen können (#3945).
 // „In Begleitung“ setzt nur die OGS, weil sie das Begleitkind verknüpft.
@@ -268,41 +192,12 @@ export type DayDepartureMode =
 
 // Eine Abholänderungsanfrage für einen Tag. pickup_time oder departure_mode
 // ist null, wenn die Anfrage diesen Teil nicht ändert (#3945).
-export interface PickupChangeRequest {
-  readonly id: string;
-  readonly date: string;
-  readonly pickup_time: string | null;
-  readonly previous_pickup_time?: string;
-  readonly departure_mode?: DayDepartureMode | null;
-  readonly previous_departure_modes?: readonly DayDepartureMode[];
-  readonly reason: string;
-  readonly status: "pending" | "approved" | "rejected" | "withdrawn";
-  readonly decision_reason?: string;
-  readonly created_at: string;
-  readonly reviewed_at?: string;
-  readonly is_self?: boolean;
-  /** Die Kontaktperson, die das Kind an diesem Tag abholt (#4780). */
-  readonly pickup_person?: string;
-  /** Die ID der Kontaktperson zum erneuten Bearbeiten der Anfrage (#4780). */
-  readonly pickup_person_guardian_profile_id?: string;
-  /** Die Anfrage trägt eine Unterschrift; ihr Nachweis ist als PDF abrufbar. */
-  readonly signed?: boolean;
-}
+export type PickupChangeRequest = parentMeContract.PickupChangeRequestResponse;
 
 // Eine Anfrage, eine Kontaktperson dauerhaft oder an Wochentagen abholen zu
 // lassen (#4780). weekdays leer: an allen Tagen.
-export interface PickupPermissionRequest {
-  readonly id: string;
-  readonly guardian_profile_id: string;
-  readonly person_name: string;
-  readonly weekdays: readonly number[];
-  readonly status: "pending" | "approved" | "rejected" | "withdrawn";
-  readonly decision_reason?: string;
-  readonly created_at: string;
-  readonly reviewed_at?: string;
-  readonly is_self: boolean;
-  readonly signed: boolean;
-}
+export type PickupPermissionRequest =
+  parentMeContract.pickupPermissionRequestResponse;
 
 // A guardian linked to the child, with portal-access status.
 export type RelatedAccount = parentMeContract.relatedAccountResponse;
@@ -327,125 +222,55 @@ export type CreateGuardianContactPayload =
 export type GuardianRelationshipPayload =
   parentMeContract.updateGuardianRelationshipRequest;
 
-interface ApiEnvelope<T> {
-  readonly status?: string;
-  readonly data?: T;
-}
-
 /**
- * Unwraps the backend's `{ status, data }` envelope. Some routes return the
- * payload directly, so a response without a `data` key is passed through as-is.
- * Shared by every GET/PUT helper here so envelope handling lives in one place.
+ * Records a failed parent request: the access-refused event when the
+ * account that sent it is still the signed-in one, and the log line. The
+ * log carries status and code, never the path with its IDs.
  */
-function unwrapEnvelope<T>(json: ApiEnvelope<T>): T {
-  if (json && typeof json === "object" && "data" in json) {
-    return json.data as T;
-  }
-  return json as unknown as T;
-}
-
-/**
- * Reads the backend error message + code off a failed response, logs it, and
- * (on 401) bounces the user to the parents login. Shared by
- * getJson/postJson/deleteJson so the error/redirect/logging path lives in
- * exactly one place. Always throws an ApiError with status, code, field
- * errors and request ID from the envelope.
- */
-async function throwResponseError(
-  url: string,
-  response: Response,
-  checksPortalAccess = false,
-): Promise<never> {
-  let body: unknown;
-  try {
-    body = await response.json();
-  } catch {
-    // Body was not JSON; the status still classifies.
-  }
-  const error = apiErrorFromBody(
-    `Request failed (${response.status})`,
-    response.status,
-    body,
-  );
-  const origin = responseOrigins.get(response);
-  const account = origin?.account;
+function noteParentFailure(
+  error: ApiError,
+  origin: { account: string | null; method: string },
+  checksPortalAccess: boolean,
+): void {
   if (
     typeof window !== "undefined" &&
-    account &&
-    account === boundSessionAccount() &&
-    isParentAccessRefusal(error, origin?.method, checksPortalAccess)
+    origin.account &&
+    origin.account === boundSessionAccount() &&
+    isParentAccessRefusal(error, origin.method, checksPortalAccess)
   ) {
     window.dispatchEvent(
       new CustomEvent(PARENT_ACCESS_REFUSED_EVENT, {
-        detail: { account, error },
+        detail: { account: origin.account, error },
       }),
     );
   }
-  const context = {
-    url,
-    status: response.status,
-    message: error.message,
-    code: error.code,
-  };
-  if (response.status === 401) {
+  const context = { status: error.status, code: error.code };
+  if (error.status === 401) {
     logger.warn("parent_api_request_failed", context);
-    if (typeof window !== "undefined") {
-      window.location.assign("/parents/login");
-    }
   } else {
     logger.error("parent_api_request_failed", context);
   }
-  throw error;
 }
 
-async function getJson<T>(url: string, checksPortalAccess = false): Promise<T> {
-  const response = await transportFetch(url, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  });
-  if (!response.ok) await throwResponseError(url, response, checksPortalAccess);
-  return unwrapEnvelope((await response.json()) as ApiEnvelope<T>);
-}
-
-async function postJson<T>(url: string, body: unknown): Promise<T> {
-  const response = await transportFetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) await throwResponseError(url, response);
-  return unwrapEnvelope((await response.json()) as ApiEnvelope<T>);
-}
-
-/** A DELETE without a result answers 204. */
-async function deleteJson<T>(url: string): Promise<T> {
-  const response = await transportFetch(url, {
-    method: "DELETE",
-    headers: { "Content-Type": "application/json" },
-  });
-  if (!response.ok) await throwResponseError(url, response);
-  if (response.status === 204) return undefined as T;
-  return unwrapEnvelope((await response.json()) as ApiEnvelope<T>);
-}
-
-async function patchJson<T>(url: string, body: unknown): Promise<T> {
-  const response = await transportFetch(url, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) await throwResponseError(url, response);
-  return unwrapEnvelope((await response.json()) as ApiEnvelope<T>);
-}
-
-async function putJson<T>(url: string, body: unknown): Promise<T> {
-  const response = await transportFetch(url, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) await throwResponseError(url, response);
-  return unwrapEnvelope((await response.json()) as ApiEnvelope<T>);
+/**
+ * Watches a JSON call of the parent portal (#7806). bffJson sends, decodes
+ * and bounces a 401 to the login; this adds what only the parent portal
+ * does with a failure (noteParentFailure). `checksPortalAccess` marks the
+ * reads that require only parent_portal.access.
+ */
+async function parentCall<T>(
+  call: Promise<T>,
+  checksPortalAccess = false,
+): Promise<T> {
+  const account = boundSessionAccount();
+  try {
+    return await call;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      noteParentFailure(error, { account, method: "GET" }, checksPortalAccess);
+    }
+    throw error;
+  }
 }
 
 /**
@@ -454,15 +279,17 @@ async function putJson<T>(url: string, body: unknown): Promise<T> {
  * to first name to last name) by the backend.
  */
 export async function listMyChildren(): Promise<Child[]> {
-  return getJson<Child[]>("/api/parent/me/children");
+  return parentCall(bffJson("parent", "GET /parent/me/children"));
 }
 
 /** Reads the four current consent and acknowledgement states for one child. */
 export async function getChildConsents(
   studentId: string,
 ): Promise<ChildConsent[]> {
-  return getJson<ChildConsent[]>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/consents`,
+  return parentCall(
+    bffJson("parent", "GET /parent/me/children/{studentId}/consents", {
+      params: { studentId },
+    }),
   );
 }
 
@@ -470,8 +297,10 @@ export async function getChildConsents(
 export async function withdrawChildPhotoConsent(
   studentId: string,
 ): Promise<ChildConsent[]> {
-  return deleteJson<ChildConsent[]>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/consents/photo`,
+  return parentCall(
+    bffJson("parent", "DELETE /parent/me/children/{studentId}/consents/photo", {
+      params: { studentId },
+    }),
   );
 }
 
@@ -479,9 +308,10 @@ export async function withdrawChildPhotoConsent(
 export async function grantChildPhotoConsent(
   studentId: string,
 ): Promise<ChildConsent[]> {
-  return putJson<ChildConsent[]>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/consents/photo`,
-    {},
+  return parentCall(
+    bffJson("parent", "PUT /parent/me/children/{studentId}/consents/photo", {
+      params: { studentId },
+    }),
   );
 }
 
@@ -494,14 +324,15 @@ export async function grantChildPhotoConsent(
 export type ChildRoomHistoryStop =
   parentMeContract.ChildRoomHistoryStopResponse;
 
-const roomHistoryStopUrl = (studentId: string) =>
-  `/api/parent/me/children/${encodeURIComponent(studentId)}/room-history-stop`;
-
 /** Reads the stop of the child's room history and mood. */
 export async function getChildRoomHistoryStop(
   studentId: string,
 ): Promise<ChildRoomHistoryStop> {
-  return getJson<ChildRoomHistoryStop>(roomHistoryStopUrl(studentId));
+  return parentCall(
+    bffJson("parent", "GET /parent/me/children/{studentId}/room-history-stop", {
+      params: { studentId },
+    }),
+  );
 }
 
 /**
@@ -511,28 +342,40 @@ export async function getChildRoomHistoryStop(
 export async function stopChildRoomHistory(
   studentId: string,
 ): Promise<ChildRoomHistoryStop> {
-  return putJson<ChildRoomHistoryStop>(roomHistoryStopUrl(studentId), {});
+  return parentCall(
+    bffJson("parent", "PUT /parent/me/children/{studentId}/room-history-stop", {
+      params: { studentId },
+    }),
+  );
 }
 
 /** Lifts the stop; moto records again from now on. */
 export async function resumeChildRoomHistory(
   studentId: string,
 ): Promise<ChildRoomHistoryStop> {
-  return deleteJson<ChildRoomHistoryStop>(roomHistoryStopUrl(studentId));
+  return parentCall(
+    bffJson(
+      "parent",
+      "DELETE /parent/me/children/{studentId}/room-history-stop",
+      { params: { studentId } },
+    ),
+  );
 }
-
-const parentConferencesUrl = (studentId: string) =>
-  `/api/parent/me/children/${encodeURIComponent(studentId)}/parent-conferences`;
 
 /** The coming Elternsprechtage of the child's class (#4801). */
 export async function fetchChildParentConferences(
   studentId: string,
 ): Promise<ParentConferenceOffer[]> {
-  return (
-    (await getJson<ParentConferenceOffer[] | null>(
-      parentConferencesUrl(studentId),
-    )) ?? []
+  const offers = await parentCall(
+    bffJson(
+      "parent",
+      "GET /parent/me/children/{studentId}/parent-conferences",
+      {
+        params: { studentId },
+      },
+    ),
   );
+  return (offers ?? []).map(mapParentConferenceOffer);
 }
 
 /** Books the slot for the child, or moves the child's booking there. */
@@ -541,9 +384,17 @@ export async function bookChildParentConference(
   conferenceId: string,
   startTime: string,
 ): Promise<ParentConferenceOffer> {
-  return putJson<ParentConferenceOffer>(
-    `${parentConferencesUrl(studentId)}/${encodeURIComponent(conferenceId)}/booking`,
-    { start_time: startTime },
+  return mapParentConferenceOffer(
+    await parentCall(
+      bffJson(
+        "parent",
+        "PUT /parent/me/children/{studentId}/parent-conferences/{conferenceId}/booking",
+        {
+          params: { studentId, conferenceId },
+          body: { start_time: startTime },
+        },
+      ),
+    ),
   );
 }
 
@@ -552,8 +403,12 @@ export async function cancelChildParentConference(
   studentId: string,
   conferenceId: string,
 ): Promise<void> {
-  await deleteJson<unknown>(
-    `${parentConferencesUrl(studentId)}/${encodeURIComponent(conferenceId)}/booking`,
+  await parentCall(
+    bffJson(
+      "parent",
+      "DELETE /parent/me/children/{studentId}/parent-conferences/{conferenceId}/booking",
+      { params: { studentId, conferenceId } },
+    ),
   );
 }
 
@@ -565,25 +420,21 @@ export async function cancelChildParentConference(
  * picker at /parents/anmeldung.
  */
 export async function listEnrollableSchools(): Promise<EnrollablePhase[]> {
-  return getJson<EnrollablePhase[]>("/api/parent/me/enrollable-schools");
+  return parentCall(bffJson("parent", "GET /parent/me/enrollable-schools"));
 }
 
 export async function fetchParentProfile(): Promise<ParentProfile> {
-  return getJson<ParentProfile>("/api/parent/me/profile");
+  return parentCall(bffJson("parent", "GET /parent/me/profile"));
 }
 
 export async function updateParentPortalLocale(
   locale: AppLocale,
 ): Promise<ParentProfile> {
-  const url = "/api/parent/me/profile";
-  const response = await transportFetch(url, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ portal_locale: locale }),
-  });
-  if (!response.ok) await throwResponseError(url, response);
-  const json = (await response.json()) as ApiEnvelope<ParentProfile>;
-  return unwrapEnvelope(json);
+  return parentCall(
+    bffJson("parent", "PUT /parent/me/profile", {
+      body: { portal_locale: locale },
+    }),
+  );
 }
 
 /**
@@ -685,14 +536,16 @@ export async function submitSickNote(
   recipientGuardianProfileIds: string[] = [],
 ): Promise<SickNoteSubmitResult> {
   // The backend answers {status_days, pending_request} (#2352).
-  return postJson<SickNoteSubmitResult>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/sick-note`,
-    {
-      dates,
-      reason,
-      status,
-      recipient_guardian_profile_ids: recipientGuardianProfileIds,
-    },
+  return parentCall(
+    bffJson("parent", "POST /parent/me/children/{studentId}/sick-note", {
+      params: { studentId },
+      body: {
+        dates,
+        reason,
+        status,
+        recipient_guardian_profile_ids: recipientGuardianProfileIds,
+      },
+    }),
   );
 }
 
@@ -706,13 +559,19 @@ export async function updateExcusedRequest(
   requestId: string,
   input: { dates: string[]; note: string; expectedVersion: string },
 ): Promise<ExcusedRequest> {
-  return putJson<ExcusedRequest>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/excused-requests/${encodeURIComponent(requestId)}`,
-    {
-      dates: input.dates,
-      note: input.note,
-      expected_version: input.expectedVersion,
-    },
+  return parentCall(
+    bffJson(
+      "parent",
+      "PUT /parent/me/children/{studentId}/excused-requests/{requestId}",
+      {
+        params: { studentId, requestId },
+        body: {
+          dates: input.dates,
+          note: input.note,
+          expected_version: input.expectedVersion,
+        },
+      },
+    ),
   );
 }
 
@@ -723,8 +582,10 @@ export async function updateExcusedRequest(
 export async function listExcusedRequests(
   studentId: string,
 ): Promise<ExcusedRequest[]> {
-  return getJson<ExcusedRequest[]>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/excused-requests`,
+  return parentCall(
+    bffJson("parent", "GET /parent/me/children/{studentId}/excused-requests", {
+      params: { studentId },
+    }),
   );
 }
 
@@ -737,8 +598,10 @@ export async function listExcusedRequests(
 export async function getChildFeatures(
   studentId: string,
 ): Promise<ChildFeatures> {
-  return getJson<ChildFeatures>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/features`,
+  return parentCall(
+    bffJson("parent", "GET /parent/me/children/{studentId}/features", {
+      params: { studentId },
+    }),
     true, // This endpoint requires only parent_portal.access.
   );
 }
@@ -765,7 +628,7 @@ export const UNKNOWN_CHILD_TODAY: ChildToday = {
  * Faellt auf `unknown` zurueck, statt zu werfen: der Endpunkt kann fehlen
  * (404, waehrend das Backend nachzieht) oder der Zugriff auf das Kind ist
  * entzogen (403). Beides ist "wir wissen es nicht", kein Fehlerzustand, den ein
- * Elternteil sehen muesste. 401 laesst throwResponseError weiterhin zur
+ * Elternteil sehen muesste. 401 laesst bffJson weiterhin zur
  * Anmeldung umleiten.
  *
  * Genau diese zwei Codes, nicht "ab 403": ein 500er oder ein ausgefallener
@@ -775,8 +638,10 @@ export const UNKNOWN_CHILD_TODAY: ChildToday = {
  */
 export async function getChildToday(studentId: string): Promise<ChildToday> {
   try {
-    return await getJson<ChildToday>(
-      `/api/parent/me/children/${encodeURIComponent(studentId)}/today`,
+    return await parentCall(
+      bffJson("parent", "GET /parent/me/children/{studentId}/today", {
+        params: { studentId },
+      }),
       true, // This endpoint requires only parent_portal.access.
     );
   } catch (err) {
@@ -800,12 +665,11 @@ export async function getChildMealPlan(
   studentId: string,
   weekStart: string,
 ): Promise<MealPlanEntry[]> {
-  const entries = await getJson<
-    Array<Omit<MealPlanEntry, "allergens"> & { allergens?: string[] | null }>
-  >(
-    `/api/parent/me/children/${encodeURIComponent(
-      studentId,
-    )}/meal-plan?week_start=${encodeURIComponent(weekStart)}`,
+  const entries = await parentCall(
+    bffJson("parent", "GET /parent/me/children/{studentId}/meal-plan", {
+      params: { studentId },
+      query: { week_start: weekStart },
+    }),
   );
   return (entries ?? []).map((entry) => ({
     ...entry,
@@ -813,43 +677,13 @@ export async function getChildMealPlan(
   }));
 }
 
-// "absent": excused or on a class trip; "closed": a closing day or public
-// holiday, nobody eats (#3873).
-type MealParticipationSource =
-  "none" | "regular" | "override" | "sick" | "absent" | "closed";
-
-interface MealParticipationDay {
-  readonly date: string;
-  readonly participating: boolean;
-  // What the regular days alone give on this day: false in school holidays
-  // and on closed days (#3873).
-  readonly regular_participating: boolean;
-  readonly source: MealParticipationSource;
-  // True while the parent may still register or cancel the day (#3873).
-  readonly changeable: boolean;
-  readonly can_register: boolean;
-  readonly can_cancel: boolean;
-  // RFC 3339 instants: the deadlines of this day.
-  readonly register_until: string;
-  readonly cancel_until: string;
-}
-
-// How the school's parents register (#3873): until one deadline per day, with
-// a separate cancellation deadline, or once for the school year.
-type MealRegistrationModel = "ongoing_single" | "ongoing_split" | "annual";
-
-export interface MealParticipation {
+export type MealParticipation = Omit<
+  parentMeContract.MealParticipationResponse,
+  "weekdays" | "days"
+> & {
   readonly weekdays: number[];
-  readonly effective_from?: string;
-  readonly cutoff_time: string;
-  readonly model: MealRegistrationModel;
-  // False once the school year registration closed: only the school changes
-  // the regular days then.
-  readonly schedule_changeable: boolean;
-  // True when a sick note after the cancellation deadline still cancels.
-  readonly sick_cancels_after_deadline: boolean;
-  readonly days: MealParticipationDay[];
-}
+  readonly days: parentMeContract.MealParticipationDayResponse[];
+};
 
 // The days a week change changed, and the days it left because their
 // deadline had passed.
@@ -863,18 +697,36 @@ export async function getMealParticipation(
   from: string,
   to: string,
 ): Promise<MealParticipation> {
-  return getJson<MealParticipation>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/meal-participation?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+  const participation = await parentCall(
+    bffJson(
+      "parent",
+      "GET /parent/me/children/{studentId}/meal-participation",
+      {
+        params: { studentId },
+        query: { from, to },
+      },
+    ),
   );
+  return {
+    ...participation,
+    weekdays: participation.weekdays ?? [],
+    days: participation.days ?? [],
+  };
 }
 
 export async function replaceMealParticipationSchedule(
   studentId: string,
   weekdays: number[],
 ): Promise<{ effective_from: string }> {
-  return putJson<{ effective_from: string }>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/meal-participation`,
-    { weekdays },
+  return parentCall(
+    bffJson(
+      "parent",
+      "PUT /parent/me/children/{studentId}/meal-participation",
+      {
+        params: { studentId },
+        body: { weekdays },
+      },
+    ),
   );
 }
 
@@ -883,9 +735,12 @@ export async function setMealParticipationDay(
   date: string,
   participating: boolean,
 ): Promise<void> {
-  await putJson<unknown>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/meal-participation/${encodeURIComponent(date)}`,
-    { participating },
+  await parentCall(
+    bffJson(
+      "parent",
+      "PUT /parent/me/children/{studentId}/meal-participation/{date}",
+      { params: { studentId, date }, body: { participating } },
+    ),
   );
 }
 
@@ -895,18 +750,26 @@ export async function setMealParticipationWeek(
   date: string,
   participating: boolean,
 ): Promise<MealWeekChange> {
-  return putJson<MealWeekChange>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/meal-participation/weeks/${encodeURIComponent(date)}`,
-    { participating },
+  const change = await parentCall(
+    bffJson(
+      "parent",
+      "PUT /parent/me/children/{studentId}/meal-participation/weeks/{date}",
+      { params: { studentId, date }, body: { participating } },
+    ),
   );
+  return { changed: change.changed ?? [], locked: change.locked ?? [] };
 }
 
 export async function clearMealParticipationDay(
   studentId: string,
   date: string,
 ): Promise<void> {
-  await deleteJson<unknown>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/meal-participation/${encodeURIComponent(date)}`,
+  await parentCall(
+    bffJson(
+      "parent",
+      "DELETE /parent/me/children/{studentId}/meal-participation/{date}",
+      { params: { studentId, date } },
+    ),
   );
 }
 
@@ -915,8 +778,10 @@ export async function clearMealParticipationDay(
  * Used to show already-reported days on the child page.
  */
 export async function listSickDays(studentId: string): Promise<StatusDay[]> {
-  return getJson<StatusDay[]>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/sick-note`,
+  return parentCall(
+    bffJson("parent", "GET /parent/me/children/{studentId}/sick-note", {
+      params: { studentId },
+    }),
   );
 }
 
@@ -975,174 +840,39 @@ interface ParentReaders {
   readonly school: SchoolReaders;
 }
 
-// One parent-news feed entry (#1669). read/acknowledged are THIS guardian's
-// state; requires_acknowledgement tells the app whether to offer the
-// "gelesen und bestätigt" action.
-/** The letter one of the family's children got (#4813). */
-interface ParentAnnouncementLetter {
-  readonly student_id: string;
-  readonly first_name: string;
-  readonly last_name: string;
-  readonly body: string;
-}
-
-export interface ParentAnnouncement {
-  readonly id: string;
-  readonly title: string;
-  readonly body: string;
-  /**
-   * An Elternbrief that names each child (#4813): one letter per own child,
-   * body is the first. Absent for every other announcement.
-   */
-  readonly letters?: readonly ParentAnnouncementLetter[];
-  readonly priority: "info" | "important";
-  readonly link_url?: string;
-  readonly requires_acknowledgement: boolean;
-  /**
-   * "letter" is a binding Elternbrief (#2384): the full text also went out by
-   * e-mail, and the confirmation here in the portal is the one that counts.
-   */
-  readonly delivery_mode?: "standard" | "letter" | "declaration";
-  readonly school_name: string;
-  /**
-   * A class letter of a Lehrkraft (#4800): her name and the class. Absent on
-   * letters of the OGS, which the school name alone signs.
-   */
-  readonly sender_name?: string;
-  readonly sender_school_class?: string;
-  readonly published_at?: string; // ISO timestamp
-  readonly expires_at?: string; // ISO timestamp
-  readonly read: boolean;
-  readonly acknowledged: boolean;
-
-  // Umfrage fields (#1371). "none" is a plain Mitteilung; a choice type comes
-  // with the answer options and the guardian's own children this poll reaches
-  // (one answer row per child).
-  readonly response_type: "none" | "single_choice" | "multi_choice";
-  readonly response_deadline?: string; // ISO timestamp
-  readonly options?: readonly ParentAnnouncementOption[];
-  readonly children?: readonly ParentAnnouncementPollChild[];
-
-  // Set on rows the system wrote on the school's behalf (#2601). A
-  // cancellation notice is labelled as such instead of "Elternbrief".
-  readonly system_kind?: "care_cancellation" | "survey";
-
-  // Umfrage mit Fragebogen (#4781), present when system_kind is "survey".
-  // `participated` is this parent account's own flag, never anyone else's.
-  readonly survey?: ParentAnnouncementSurvey;
-
-  // Scheduled reminder (#3162): set once the school's reminder went out. The
-  // feed sorts the item back to the top; read/acknowledged stay as they were.
-  readonly reminder_sent_at?: string; // ISO timestamp
-  readonly reminder_text?: string;
-
-  // Einverständnis (#3430): present when delivery_mode is "declaration".
-  readonly declaration?: ParentDeclaration;
-}
+export type ParentAnnouncement = parentMeContract.AnnouncementResponse;
 
 /** The feed part of an Umfrage with Fragebogen (#4781). */
-export interface ParentAnnouncementSurvey {
-  readonly survey_id: string;
-  readonly anonymous: boolean;
-  readonly closes_at: string; // ISO timestamp
-  readonly participated: boolean;
-}
+export type ParentAnnouncementSurvey =
+  parentMeContract.AnnouncementSurveyResponse;
 
 /** What a guardian can do or did for one child in an Einverständnis. */
 export type ParentDeclarationAction = "agreed" | "declined" | "revoked";
 
 /** Per-child state of an Einverständnis for its current version. */
-export type ParentDeclarationState =
-  | "open"
-  | "partial"
-  | "agreed"
-  | "declined"
-  | "revoked"
-  | "no_signer"
-  | "expired";
+export const PARENT_DECLARATION_STATES = [
+  "open",
+  "partial",
+  "agreed",
+  "declined",
+  "revoked",
+  "no_signer",
+  "expired",
+] as const;
+export type ParentDeclarationState = (typeof PARENT_DECLARATION_STATES)[number];
 
-export interface ParentDeclarationChild {
-  readonly student_id: string;
-  readonly first_name: string;
-  readonly last_name: string;
-  /** False: this account sees the Einverständnis but may not act for the child. */
-  readonly can_submit: boolean;
-  readonly state: ParentDeclarationState;
-  readonly my_action: ParentDeclarationAction | null;
-  readonly my_submitted_at: string | null;
-  /** Computed by the server; the portal shows exactly these buttons. */
-  readonly allowed_actions: readonly ParentDeclarationAction[];
-  readonly other_signers: readonly {
-    readonly first_name: string;
-    readonly last_name: string;
-    readonly action: ParentDeclarationAction | null;
-    readonly submitted_at: string | null;
-  }[];
-  /**
-   * This guardian's consent to an older wording that still stands after the
-   * school changed the text (#6303). It stays revocable; null without one.
-   */
-  readonly earlier_consent?: ParentDeclarationEarlierConsent | null;
-}
+export type ParentDeclarationChild =
+  parentMeContract.parentDeclarationChildResponse;
 
-/** A standing consent to an older wording of an Einverständnis. */
-interface ParentDeclarationEarlierConsent {
-  readonly version: {
-    readonly id: string;
-    readonly version_no: number;
-    readonly content_hash: string;
-    readonly title: string;
-    readonly body: string;
-  };
-  readonly submitted_at: string;
-  readonly allowed_actions: readonly ParentDeclarationAction[];
-}
+export type ParentDeclaration =
+  parentMeContract.AnnouncementDeclarationResponse;
 
-export interface ParentDeclaration {
-  readonly kind: "consent";
-  readonly signers: "any" | "all";
-  readonly requires_password: boolean;
-  /** Agreeing needs a signature with finger, pen or mouse (#4785). */
-  readonly requires_signature: boolean;
-  readonly deadline: string | null;
-  readonly closed: boolean;
-  /**
-   * The school no longer shows this Einverständnis (withdrawn, deactivated
-   * or expired).
-   * It stays in the feed because this guardian answered it; only revoking an
-   * own consent remains (#6290).
-   */
-  readonly ended: boolean;
-  readonly version: {
-    readonly id: string;
-    readonly version_no: number;
-    readonly content_hash: string;
-  };
-  readonly children: readonly ParentDeclarationChild[];
-}
-
-export interface ParentDeclarationSubmission {
-  readonly id: string;
-  readonly action: ParentDeclarationAction;
-  readonly submitted_at: string;
-  readonly version_no: number;
-  readonly content_hash: string;
-  readonly record_hash: string;
-  readonly password_confirmed: boolean;
-}
-
-interface ParentAnnouncementOption {
-  readonly id: string;
-  readonly label: string;
-}
+export type ParentDeclarationSubmission =
+  parentMeContract.parentDeclarationSubmissionResponse;
 
 /** One of the guardian's children, with the options selected for that child. */
-export interface ParentAnnouncementPollChild {
-  readonly student_id: string;
-  readonly first_name: string;
-  readonly last_name: string;
-  readonly selected_options: readonly string[];
-}
+export type ParentAnnouncementPollChild =
+  parentMeContract.AnnouncementPollChild;
 
 // A child's full conversation (messages oldest-first). `thread_id` is empty
 // when the guardian has not written about this child yet.
@@ -1172,27 +902,20 @@ export interface ThreadView {
  * carries the row's audience.
  */
 export async function listMessageThreads(): Promise<ThreadSummary[]> {
-  const threads = await getJson<ThreadSummary[]>("/api/parent/me/messages");
-  return Array.isArray(threads) ? threads : [];
+  const threads = await parentCall(
+    bffJson("parent", "GET /parent/me/messages"),
+  );
+  return (threads ?? []).map(threadSummaryOf);
 }
 
 /** A holiday period a parent can register children for (#6671). */
-export interface HolidayOffer {
-  /** The key of the period's registration link. */
-  token: string;
-  name: string;
-  traeger_name: string;
-  /** "YYYY-MM-DD" */
-  registration_opens_on: string;
-  /** "YYYY-MM-DD", the last day of the registration. */
-  registration_closes_on: string;
-  /** First and last care day, absent while the period has no weeks. */
-  first_day?: string;
-  last_day?: string;
-  open: boolean;
-  /** The account's children the period is for. */
-  children: { student_id: string; first_name: string }[];
-}
+export type HolidayOffer = Omit<
+  parentMeContract.HolidayRegistrationOfferResponse,
+  "registration_opens_on" | "registration_closes_on"
+> & {
+  readonly registration_opens_on: string;
+  readonly registration_closes_on: string;
+};
 
 /**
  * The published holiday periods of the Träger of the account's children
@@ -1200,10 +923,21 @@ export interface HolidayOffer {
  * register.
  */
 export async function listHolidayOffers(): Promise<HolidayOffer[]> {
-  const offers = await getJson<HolidayOffer[]>(
-    "/api/parent/me/holiday-registrations",
+  const offers = await parentCall(
+    bffJson("parent", "GET /parent/me/holiday-registrations"),
   );
-  return Array.isArray(offers) ? offers : [];
+  // Go always sets the registration window of an offer.
+  return (offers ?? []).map((offer) => ({
+    ...offer,
+    registration_opens_on: requiredDay(
+      offer.registration_opens_on,
+      "holiday_offer.registration_opens_on",
+    ),
+    registration_closes_on: requiredDay(
+      offer.registration_closes_on,
+      "holiday_offer.registration_closes_on",
+    ),
+  }));
 }
 
 /**
@@ -1213,10 +947,9 @@ export async function listHolidayOffers(): Promise<HolidayOffer[]> {
 export async function listHolidayRegistrationEntries(): Promise<
   HolidayRegistrationEntry[]
 > {
-  const body =
-    await getJson<parentMeContract.HolidayRegistrationEntriesResponse>(
-      "/api/parent/me/holiday-registration-entries",
-    );
+  const body = await parentCall(
+    bffJson("parent", "GET /parent/me/holiday-registration-entries"),
+  );
   return holidayRegistrationEntriesFromBackend(body);
 }
 
@@ -1239,7 +972,7 @@ export async function fetchMessagesUnreadCount(): Promise<number> {
  * server-side from the JWT account.
  */
 export async function listAnnouncements(): Promise<ParentAnnouncement[]> {
-  return getJson<ParentAnnouncement[]>("/api/parent/me/news");
+  return parentCall(bffJson("parent", "GET /parent/me/news"));
 }
 
 /**
@@ -1247,20 +980,15 @@ export async function listAnnouncements(): Promise<ParentAnnouncement[]> {
  * letters, pending read confirmations, and unanswered open surveys.
  */
 export async function fetchAnnouncementsUnreadCount(): Promise<number> {
-  const result = await getJson<{ unread_count: number }>(
-    "/api/parent/me/news/unread-count",
+  const result = await parentCall(
+    bffJson("parent", "GET /parent/me/news/unread-count"),
   );
   return result.unread_count ?? 0;
 }
 
 /** One file attached to an announcement (#2890). */
-export interface ParentAnnouncementAttachment {
-  id: string;
-  filename: string;
-  size_bytes: number;
-  content_type: string;
-  uploaded_at: string;
-}
+export type ParentAnnouncementAttachment =
+  sharedContract.AnnouncementAttachmentResponse;
 
 /**
  * Attachments of one announcement. Loaded when the guardian opens the message,
@@ -1274,10 +1002,10 @@ export interface ParentAnnouncementAttachment {
 export async function listAnnouncementAttachments(
   announcementId: string,
 ): Promise<ParentAnnouncementAttachment[]> {
-  const result = await getJson<{
-    attachments: ParentAnnouncementAttachment[];
-  }>(
-    `/api/parent/parent-news-attachments/${encodeURIComponent(announcementId)}`,
+  const result = await parentCall(
+    bffJson("parent", "GET /parent-news-attachments/{announcementId}", {
+      params: { announcementId },
+    }),
   );
   return result.attachments ?? [];
 }
@@ -1300,9 +1028,11 @@ export async function markAnnouncementRead(
   announcementId: string,
   publishedAt: string,
 ): Promise<void> {
-  await postJson<{ read: boolean }>(
-    `/api/parent/me/news/${encodeURIComponent(announcementId)}/read`,
-    { published_at: publishedAt },
+  await parentCall(
+    bffJson("parent", "POST /parent/me/news/{announcementId}/read", {
+      params: { announcementId },
+      body: { published_at: publishedAt },
+    }),
   );
 }
 
@@ -1315,9 +1045,11 @@ export async function acknowledgeAnnouncement(
   announcementId: string,
   publishedAt: string,
 ): Promise<void> {
-  await postJson<{ acknowledged: boolean }>(
-    `/api/parent/me/news/${encodeURIComponent(announcementId)}/acknowledge`,
-    { published_at: publishedAt },
+  await parentCall(
+    bffJson("parent", "POST /parent/me/news/{announcementId}/acknowledge", {
+      params: { announcementId },
+      body: { published_at: publishedAt },
+    }),
   );
 }
 
@@ -1333,24 +1065,48 @@ export async function respondToAnnouncement(
   optionIds: readonly string[],
   publishedAt: string,
 ): Promise<void> {
-  await postJson<{ answered: boolean }>(
-    `/api/parent/me/news/${encodeURIComponent(announcementId)}/respond`,
-    {
-      student_id: studentId,
-      option_ids: optionIds,
-      published_at: publishedAt,
-    },
+  await parentCall(
+    bffJson("parent", "POST /parent/me/news/{announcementId}/respond", {
+      params: { announcementId },
+      body: {
+        student_id: studentId,
+        option_ids: [...optionIds],
+        published_at: publishedAt,
+      },
+    }),
   );
 }
 
 /** The questionnaire of an Umfrage in the feed (#4781). */
-export function fetchParentSurveyForm(
+export async function fetchParentSurveyForm(
   announcementId: string,
 ): Promise<SurveyForm> {
-  return getJson<SurveyForm>(
-    `/api/parent/me/news/${encodeURIComponent(announcementId)}/survey`,
+  const form = await parentCall(
+    bffJson("parent", "GET /parent/me/news/{announcementId}/survey", {
+      params: { announcementId },
+    }),
   );
+  return {
+    ...form,
+    survey: {
+      ...form.survey,
+      // A question kind this build does not know cannot be answered here.
+      questions: (form.survey.questions ?? []).flatMap((question) => {
+        const kind = knownEnum(SURVEY_QUESTION_KINDS, question.kind);
+        return kind
+          ? [{ ...question, kind, options: question.options ?? [] }]
+          : [];
+      }),
+    },
+  };
 }
+
+const SURVEY_QUESTION_KINDS = [
+  "single",
+  "multiple",
+  "scale",
+  "text",
+] as const satisfies readonly SurveyQuestionKind[];
 
 /**
  * Submits the answers to an Umfrage once per parent account (#4781). The
@@ -1360,9 +1116,11 @@ export async function submitParentSurveyAnswers(
   announcementId: string,
   body: SurveyAnswersRequest,
 ): Promise<void> {
-  await postJson<{ submitted: boolean }>(
-    `/api/parent/me/news/${encodeURIComponent(announcementId)}/survey`,
-    body,
+  await parentCall(
+    bffJson("parent", "POST /parent/me/news/{announcementId}/survey", {
+      params: { announcementId },
+      body,
+    }),
   );
 }
 
@@ -1384,76 +1142,24 @@ export async function submitDeclaration(
     readonly signature?: SignatureValue;
   },
 ): Promise<{ submission: ParentDeclarationSubmission; created: boolean }> {
-  return postJson<{
-    submission: ParentDeclarationSubmission;
-    created: boolean;
-  }>(`/api/parent/me/news/${encodeURIComponent(announcementId)}/declaration`, {
-    student_id: input.studentId,
-    action: input.action,
-    version_id: input.versionId,
-    ...(input.password === undefined ? {} : { password: input.password }),
-    ...(input.signature === undefined
-      ? {}
-      : { signature: signatureRequestBody(input.signature) }),
-  });
-}
-
-/** A stored signature as the own proof shows it (#4785). */
-interface ParentDeclarationProofSignature {
-  readonly method: "drawn" | "typed";
-  readonly typed_name: string | null;
-  /** `data:image/png;base64,…` */
-  readonly image_data_url: string;
-  readonly image_sha256: string;
-  readonly signed_at: string;
-}
-
-/** One version of an Einverständnis as frozen on publishing (#3430). */
-interface ParentDeclarationProofVersion {
-  readonly id: string;
-  readonly version_no: number;
-  readonly title: string;
-  readonly body: string;
-  readonly content_hash: string;
-  readonly published_at: string;
-  readonly attachments: readonly {
-    readonly id: string;
-    readonly filename: string;
-    readonly content_type: string;
-    readonly size_bytes: number;
-    readonly sha256: string;
-  }[];
-}
-
-/** One own submission for the child, newest first. */
-interface ParentDeclarationProofEntry {
-  readonly id: string;
-  readonly action: ParentDeclarationAction;
-  readonly submitted_at: string;
-  readonly signer_name: string;
-  readonly guardian_role: string;
-  readonly version_no: number;
-  readonly password_confirmed: boolean;
-  readonly method: string;
-  readonly content_hash: string;
-  readonly record_hash: string;
-  readonly signature: ParentDeclarationProofSignature | null;
+  return parentCall(
+    bffJson("parent", "POST /parent/me/news/{announcementId}/declaration", {
+      params: { announcementId },
+      body: {
+        student_id: input.studentId,
+        action: input.action,
+        version_id: input.versionId,
+        ...(input.password === undefined ? {} : { password: input.password }),
+        ...(input.signature === undefined
+          ? {}
+          : { signature: signatureRequestBody(input.signature) }),
+      },
+    }),
+  );
 }
 
 /** The proof (Nachweis) of this account's Einverständnis for one child. */
-export interface ParentDeclarationProof {
-  readonly title: string;
-  readonly school_name: string;
-  readonly child_name: string;
-  readonly kind: "consent";
-  readonly method_label: string;
-  readonly generated_at: string;
-  /** False when a stored text or answer was changed after the fact. */
-  readonly integrity_ok: boolean;
-  /** Only the versions this account declared on, newest first. */
-  readonly versions: readonly ParentDeclarationProofVersion[];
-  readonly submissions: readonly ParentDeclarationProofEntry[];
-}
+export type ParentDeclarationProof = parentMeContract.declarationProofResponse;
 
 /**
  * Downloads the proof as the school's PDF (#3430), under the file name the
@@ -1464,9 +1170,13 @@ export async function downloadDeclarationProofPdf(
   announcementId: string,
   studentId: string,
 ): Promise<void> {
-  const url = `/api/parent/me/news/${encodeURIComponent(announcementId)}/declaration/proof/pdf?student_id=${encodeURIComponent(studentId)}`;
-  const response = await transportFetch(url, { method: "GET" });
-  if (!response.ok) await throwResponseError(url, response);
+  const response = await parentCall(
+    bffFile(
+      "parent",
+      "GET /parent/me/news/{announcementId}/declaration/proof/pdf",
+      { params: { announcementId }, query: { student_id: studentId } },
+    ),
+  );
   const blob = await response.blob();
   downloadBlob(
     blob,
@@ -1482,8 +1192,15 @@ export async function fetchDeclarationProof(
   announcementId: string,
   studentId: string,
 ): Promise<ParentDeclarationProof> {
-  return getJson<ParentDeclarationProof>(
-    `/api/parent/me/news/${encodeURIComponent(announcementId)}/declaration/proof?student_id=${encodeURIComponent(studentId)}`,
+  return parentCall(
+    bffJson(
+      "parent",
+      "GET /parent/me/news/{announcementId}/declaration/proof",
+      {
+        params: { announcementId },
+        query: { student_id: studentId },
+      },
+    ),
   );
 }
 
@@ -1513,8 +1230,13 @@ export async function getChildConversation(
   studentId: string,
   audience: MessageAudience = "team",
 ): Promise<ThreadView> {
-  return getJson<ThreadView>(
-    `/api/parent/me/messages/children/${encodeURIComponent(studentId)}${audienceQuery(audience)}`,
+  return threadViewOf(
+    await parentCall(
+      bffJson("parent", "GET /parent/me/messages/children/{studentId}", {
+        params: { studentId },
+        query: { audience: audience === "leadership" ? audience : undefined },
+      }),
+    ),
   );
 }
 
@@ -1525,9 +1247,12 @@ export async function getChildConversation(
 export async function listChildThreads(
   studentId: string,
 ): Promise<ThreadSummary[]> {
-  return getJson<ThreadSummary[]>(
-    `/api/parent/me/messages/children/${encodeURIComponent(studentId)}/threads`,
+  const threads = await parentCall(
+    bffJson("parent", "GET /parent/me/messages/children/{studentId}/threads", {
+      params: { studentId },
+    }),
   );
+  return (threads ?? []).map(threadSummaryOf);
 }
 
 /**
@@ -1543,17 +1268,20 @@ export async function postChildMessage(
   attachmentIds?: readonly string[],
 ): Promise<ThreadView> {
   // An answer to a group thread always goes to the team conversation.
-  return postJson<ThreadView>(
-    `/api/parent/me/messages/children/${encodeURIComponent(studentId)}`,
-    // JSON drops undefined keys: a team message sends only its body.
-    {
-      body,
-      client_message_id: clientMessageId,
-      group_thread_id: groupThreadId,
-      attachment_ids: attachmentIds?.length ? attachmentIds : undefined,
-      audience: groupThreadId || audience === "team" ? undefined : audience,
-    },
+  const view = await parentCall(
+    bffJson("parent", "POST /parent/me/messages/children/{studentId}", {
+      params: { studentId },
+      // JSON drops undefined keys: a team message sends only its body.
+      body: {
+        body,
+        client_message_id: clientMessageId,
+        group_thread_id: groupThreadId,
+        attachment_ids: attachmentIds?.length ? [...attachmentIds] : undefined,
+        audience: groupThreadId || audience === "team" ? undefined : audience,
+      },
+    }),
   );
+  return threadViewOf(view);
 }
 
 // Gruppennachrichten (#4784): the OGS writes to a group, class or AG. The
@@ -1561,11 +1289,7 @@ export async function postChildMessage(
 // goes into the child's conversation with the OGS.
 
 /** One of the guardian's own children a group thread reached. */
-export interface GroupThreadChild {
-  readonly student_id: string;
-  readonly first_name: string;
-  readonly last_name: string;
-}
+export type GroupThreadChild = parentMeContract.GroupThreadChildResponse;
 
 /** One row of the guardian's group thread list. */
 export interface GroupThreadSummary {
@@ -1597,17 +1321,156 @@ export interface GroupThreadView extends GroupThreadSummary {
   readonly messages: readonly GroupThreadMessage[];
 }
 
+// The messaging answers type attachments and every enum as plain strings
+// (#7808). These readers map them once into the views the conversation UI
+// shares with the staff portal.
+const SENDER_KINDS = [
+  "guardian",
+  "staff",
+  "system",
+] as const satisfies readonly ChatMessage["sender_kind"][];
+const MESSAGE_KINDS = [
+  "message",
+  "event",
+  "request",
+] as const satisfies readonly NonNullable<ChatMessage["kind"]>[];
+const REQUEST_TYPES = [
+  "care_schedule",
+  "pickup_change",
+  "master_data",
+  "excused_absence",
+  "sick_absence",
+  "care_offering",
+] as const satisfies readonly NonNullable<ChatMessage["request_type"]>[];
+const REQUEST_STATUSES = [
+  "offen",
+  "erledigt",
+  "abgelehnt",
+  "zurueckgezogen",
+] as const satisfies readonly NonNullable<ChatMessage["request_status"]>[];
+const AUDIENCES = [
+  "team",
+  "leadership",
+] as const satisfies readonly MessageAudience[];
+const READER_KINDS = [
+  "all_staff",
+  "leadership",
+] as const satisfies readonly SchoolReaders["kind"][];
+
+function isAttachment(value: unknown): value is MessageAttachment {
+  if (value === null || typeof value !== "object") return false;
+  const row = value as Record<string, unknown>;
+  return (
+    typeof row.id === "string" &&
+    typeof row.filename === "string" &&
+    typeof row.size_bytes === "number" &&
+    typeof row.content_type === "string"
+  );
+}
+
+/** The attachment list the contract types as unknown; malformed rows drop. */
+function attachmentsOf(raw: unknown): MessageAttachment[] | undefined {
+  return Array.isArray(raw) ? raw.filter(isAttachment) : undefined;
+}
+
+function readersOf(raw: parentMeContract.ParentReadersResponse): ParentReaders {
+  return {
+    ...(raw.guardian ? { guardian: raw.guardian } : {}),
+    school: {
+      kind: knownEnum(READER_KINDS, raw.school.kind) ?? "all_staff",
+      names: raw.school.names ?? [],
+      unnamed_count: raw.school.unnamed_count,
+    },
+  };
+}
+
+function parentMessageOf(
+  raw: parentMeContract.ParentMessageResponse,
+): ParentMessage | null {
+  const senderKind = knownEnum(SENDER_KINDS, raw.sender_kind);
+  if (!senderKind) return null;
+  return {
+    ...raw,
+    sender_kind: senderKind,
+    kind: knownEnum(MESSAGE_KINDS, raw.kind),
+    request_type: knownEnum(REQUEST_TYPES, raw.request_type),
+    request_status: knownEnum(REQUEST_STATUSES, raw.request_status),
+    payload: raw.payload,
+    attachments: attachmentsOf(raw.attachments),
+  };
+}
+
+function threadSummaryOf(
+  raw: parentMeContract.ThreadSummaryResponse,
+): ThreadSummary {
+  const senderKind = knownEnum(SENDER_KINDS, raw.last_sender_kind);
+  return {
+    ...raw,
+    last_sender_kind: senderKind === "system" ? undefined : senderKind,
+    last_message_kind: knownEnum(MESSAGE_KINDS, raw.last_message_kind),
+    audience: knownEnum(AUDIENCES, raw.audience),
+    readers: readersOf(raw.readers),
+  };
+}
+
+function threadViewOf(raw: parentMeContract.ThreadViewResponse): ThreadView {
+  return {
+    ...raw,
+    audience: knownEnum(AUDIENCES, raw.audience),
+    readers: readersOf(raw.readers),
+    leadership_option: {
+      ...raw.leadership_option,
+      names: raw.leadership_option.names ?? [],
+    },
+    messages: (raw.messages ?? []).flatMap((message) => {
+      const mapped = parentMessageOf(message);
+      return mapped ? [mapped] : [];
+    }),
+  };
+}
+
+function groupThreadSummaryOf(
+  raw: parentMeContract.GroupThreadSummaryResponse,
+): GroupThreadSummary {
+  return {
+    ...raw,
+    children: raw.children ?? [],
+    readers: readersOf(raw.readers),
+  };
+}
+
+function groupThreadViewOf(
+  raw: parentMeContract.GroupThreadViewResponse,
+): GroupThreadView {
+  return {
+    ...groupThreadSummaryOf(raw),
+    messages: (raw.messages ?? []).map((message) => ({
+      ...message,
+      attachments: attachmentsOf(message.attachments),
+    })),
+  };
+}
+
 /** Lists the group threads that reached the guardian, newest first. */
 export async function listGroupThreads(): Promise<GroupThreadSummary[]> {
-  return getJson<GroupThreadSummary[]>("/api/parent/me/messages/group-threads");
+  const threads = await parentCall(
+    bffJson("parent", "GET /parent/me/messages/group-threads"),
+  );
+  return (threads ?? []).map(groupThreadSummaryOf);
 }
 
 /** Opens one group thread. Reading marks it read server-side. */
 export async function getGroupThread(
   groupThreadId: string,
 ): Promise<GroupThreadView> {
-  return getJson<GroupThreadView>(
-    `/api/parent/me/messages/group-threads/${encodeURIComponent(groupThreadId)}`,
+  return groupThreadViewOf(
+    await parentCall(
+      bffJson(
+        "parent",
+        "GET /parent/me/messages/group-threads/{groupThreadId}",
+        { params: { groupThreadId } },
+      ),
+    ),
   );
 }
 
@@ -1634,25 +1497,28 @@ export async function submitCareException(
     signatureStatement?: string;
   },
 ): Promise<PickupChangeRequest> {
-  return postJson<PickupChangeRequest>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/care-exception`,
-    {
-      date: params.date,
-      pickup_time: params.pickupTime || undefined,
-      departure_mode: params.departureMode || undefined,
-      reason: params.reason,
-      recipient_guardian_profile_ids: params.recipientGuardianProfileIds ?? [],
-      pickup_person_guardian_profile_id:
-        params.pickupPersonGuardianProfileId || undefined,
-      ...(params.signature
-        ? {
-            signature: signatureRequestBody(
-              params.signature,
-              params.signatureStatement,
-            ),
-          }
-        : {}),
-    },
+  return parentCall(
+    bffJson("parent", "POST /parent/me/children/{studentId}/care-exception", {
+      params: { studentId },
+      body: {
+        date: params.date,
+        pickup_time: params.pickupTime || undefined,
+        departure_mode: params.departureMode || undefined,
+        reason: params.reason,
+        recipient_guardian_profile_ids:
+          params.recipientGuardianProfileIds ?? [],
+        pickup_person_guardian_profile_id:
+          params.pickupPersonGuardianProfileId || undefined,
+        ...(params.signature
+          ? {
+              signature: signatureRequestBody(
+                params.signature,
+                params.signatureStatement,
+              ),
+            }
+          : {}),
+      },
+    }),
   );
 }
 
@@ -1671,25 +1537,31 @@ export async function updatePickupChangeRequest(
     signatureStatement?: string;
   },
 ): Promise<PickupChangeRequest> {
-  return putJson<PickupChangeRequest>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/pickup-change-requests/${encodeURIComponent(requestId)}`,
-    {
-      date: input.date,
-      pickup_time: input.pickupTime,
-      departure_mode: input.departureMode ?? "",
-      reason: input.reason,
-      expected_version: input.expectedVersion,
-      pickup_person_guardian_profile_id:
-        input.pickupPersonGuardianProfileId ?? "",
-      ...(input.signature
-        ? {
-            signature: signatureRequestBody(
-              input.signature,
-              input.signatureStatement,
-            ),
-          }
-        : {}),
-    },
+  return parentCall(
+    bffJson(
+      "parent",
+      "PUT /parent/me/children/{studentId}/pickup-change-requests/{requestId}",
+      {
+        params: { studentId, requestId },
+        body: {
+          date: input.date,
+          pickup_time: input.pickupTime,
+          departure_mode: input.departureMode ?? "",
+          reason: input.reason,
+          expected_version: input.expectedVersion,
+          pickup_person_guardian_profile_id:
+            input.pickupPersonGuardianProfileId ?? "",
+          ...(input.signature
+            ? {
+                signature: signatureRequestBody(
+                  input.signature,
+                  input.signatureStatement,
+                ),
+              }
+            : {}),
+        },
+      },
+    ),
   );
 }
 
@@ -1701,9 +1573,13 @@ export async function downloadPickupRequestProofPdf(
   studentId: string,
   requestId: string,
 ): Promise<void> {
-  const url = `/api/parent/me/children/${encodeURIComponent(studentId)}/pickup-requests/${encodeURIComponent(requestId)}/proof/pdf`;
-  const response = await transportFetch(url, { method: "GET" });
-  if (!response.ok) await throwResponseError(url, response);
+  const response = await parentCall(
+    bffFile(
+      "parent",
+      "GET /parent/me/children/{studentId}/pickup-requests/{requestId}/proof/pdf",
+      { params: { studentId, requestId } },
+    ),
+  );
   const blob = await response.blob();
   downloadBlob(
     blob,
@@ -1715,8 +1591,12 @@ export async function downloadPickupRequestProofPdf(
 export async function listPickupPermissionRequests(
   studentId: string,
 ): Promise<PickupPermissionRequest[]> {
-  return getJson<PickupPermissionRequest[]>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/pickup-permission-requests`,
+  return parentCall(
+    bffJson(
+      "parent",
+      "GET /parent/me/children/{studentId}/pickup-permission-requests",
+      { params: { studentId } },
+    ),
   );
 }
 
@@ -1733,15 +1613,21 @@ export async function getPickupSignatureStatement(
   studentId: string,
   input: PickupSignatureStatementInput,
 ): Promise<string> {
-  const response = await postJson<{ statement: string }>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/pickup-signature-statement`,
-    {
-      kind: input.kind,
-      person_name: input.personName,
-      weekdays: input.weekdays,
-      date: input.date,
-      departure_mode: input.departureMode,
-    },
+  const response = await parentCall(
+    bffJson(
+      "parent",
+      "POST /parent/me/children/{studentId}/pickup-signature-statement",
+      {
+        params: { studentId },
+        body: {
+          kind: input.kind,
+          person_name: input.personName,
+          weekdays: input.weekdays ? [...input.weekdays] : undefined,
+          date: input.date,
+          departure_mode: input.departureMode,
+        },
+      },
+    ),
   );
   return response.statement;
 }
@@ -1761,22 +1647,32 @@ export async function submitPickupPermissionRequest(
     relationship?: GuardianRelationshipPayload;
   },
 ): Promise<PickupPermissionRequest> {
-  return postJson<PickupPermissionRequest>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/guardians/${encodeURIComponent(guardianProfileId)}/pickup-permission-requests`,
-    {
-      weekdays: input.weekdays,
-      reason: input.reason ?? "",
-      signature: signatureRequestBody(input.signature, input.statement),
-      relationship: input.relationship,
-    },
+  return parentCall(
+    bffJson(
+      "parent",
+      "POST /parent/me/children/{studentId}/guardians/{guardianProfileId}/pickup-permission-requests",
+      {
+        params: { studentId, guardianProfileId },
+        body: {
+          weekdays: [...input.weekdays],
+          reason: input.reason ?? "",
+          signature: signatureRequestBody(input.signature, input.statement),
+          relationship: input.relationship,
+        },
+      },
+    ),
   );
 }
 
 export async function listPickupChangeRequests(
   studentId: string,
 ): Promise<PickupChangeRequest[]> {
-  return getJson<PickupChangeRequest[]>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/pickup-change-requests`,
+  return parentCall(
+    bffJson(
+      "parent",
+      "GET /parent/me/children/{studentId}/pickup-change-requests",
+      { params: { studentId } },
+    ),
   );
 }
 
@@ -1786,8 +1682,10 @@ export async function listPickupChangeRequests(
 export async function listRelatedAccounts(
   studentId: string,
 ): Promise<RelatedAccount[]> {
-  return getJson<RelatedAccount[]>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/related-accounts`,
+  return parentCall(
+    bffJson("parent", "GET /parent/me/children/{studentId}/related-accounts", {
+      params: { studentId },
+    }),
   );
 }
 
@@ -1797,8 +1695,10 @@ export async function listRelatedAccounts(
 export async function listChildGuardians(
   studentId: string,
 ): Promise<ChildGuardian[]> {
-  return getJson<ChildGuardian[]>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/guardians`,
+  return parentCall(
+    bffJson("parent", "GET /parent/me/children/{studentId}/guardians", {
+      params: { studentId },
+    }),
   );
 }
 
@@ -1807,9 +1707,11 @@ export async function createGuardianContact(
   studentId: string,
   payload: CreateGuardianContactPayload,
 ): Promise<ChildGuardian> {
-  return postJson<ChildGuardian>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/guardians`,
-    payload,
+  return parentCall(
+    bffJson("parent", "POST /parent/me/children/{studentId}/guardians", {
+      params: { studentId },
+      body: payload,
+    }),
   );
 }
 
@@ -1819,9 +1721,12 @@ export async function updateGuardianContact(
   guardianProfileId: string,
   payload: GuardianContactPayload,
 ): Promise<ChildGuardian> {
-  return putJson<ChildGuardian>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/guardians/${encodeURIComponent(guardianProfileId)}/contact`,
-    payload,
+  return parentCall(
+    bffJson(
+      "parent",
+      "PUT /parent/me/children/{studentId}/guardians/{guardianProfileId}/contact",
+      { params: { studentId, guardianProfileId }, body: payload },
+    ),
   );
 }
 
@@ -1831,9 +1736,12 @@ export async function updateGuardianRelationship(
   guardianProfileId: string,
   payload: GuardianRelationshipPayload,
 ): Promise<ChildGuardian> {
-  return putJson<ChildGuardian>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/guardians/${encodeURIComponent(guardianProfileId)}/pickup`,
-    payload,
+  return parentCall(
+    bffJson(
+      "parent",
+      "PUT /parent/me/children/{studentId}/guardians/{guardianProfileId}/pickup",
+      { params: { studentId, guardianProfileId }, body: payload },
+    ),
   );
 }
 
@@ -1851,16 +1759,18 @@ export async function inviteRelatedAccount(
     confirmRoleUpgrade?: boolean;
   },
 ): Promise<InviteRelatedAccountResult> {
-  return postJson<InviteRelatedAccountResult>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/related-accounts`,
-    {
-      email,
-      first_name: options?.firstName ?? "",
-      last_name: options?.lastName ?? "",
-      // Only sent when confirming an upgrade; a plain invite keeps the
-      // historical three-field body.
-      ...(options?.confirmRoleUpgrade ? { confirm_role_upgrade: true } : {}),
-    },
+  return parentCall(
+    bffJson("parent", "POST /parent/me/children/{studentId}/related-accounts", {
+      params: { studentId },
+      body: {
+        email,
+        first_name: options?.firstName ?? "",
+        last_name: options?.lastName ?? "",
+        // Only sent when confirming an upgrade; a plain invite keeps the
+        // historical three-field body.
+        ...(options?.confirmRoleUpgrade ? { confirm_role_upgrade: true } : {}),
+      },
+    }),
   );
 }
 
@@ -1876,11 +1786,11 @@ export async function listCareExceptions(
   studentId: string,
   range?: { readonly from: string; readonly to: string },
 ): Promise<CareException[]> {
-  const query = range
-    ? `?from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`
-    : "";
-  return getJson<CareException[]>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/care-exception${query}`,
+  return parentCall(
+    bffJson("parent", "GET /parent/me/children/{studentId}/care-exception", {
+      params: { studentId },
+      query: { from: range?.from, to: range?.to },
+    }),
   );
 }
 
@@ -1889,62 +1799,18 @@ export async function deleteCareException(
   studentId: string,
   date: string,
 ): Promise<void> {
-  await deleteJson<null>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/care-exception?date=${encodeURIComponent(date)}`,
+  await parentCall(
+    bffJson("parent", "DELETE /parent/me/children/{studentId}/care-exception", {
+      params: { studentId },
+      query: { date },
+    }),
   );
 }
 
 // --- Care schedule (standard weekly plan + permanent change requests, #1803) ---
 
-// One weekday of the child's standard weekly care plan. Mirrors
-// api/parent.CareScheduleWeekdayResponse. `weekday` is ISO (Monday=1 .. Friday=5).
-// `arrival`/`pickup` are "HH:MM" wall-clock strings, absent/empty when unset.
-// `modes` are the allowed departure-mode keys for the day (e.g. ["bus","pickup"]).
-interface CareScheduleWeekday {
-  readonly weekday: number;
-  readonly status: "scheduled" | "not_scheduled" | "unknown";
-  readonly arrival?: string;
-  readonly pickup?: string;
-  readonly modes: string[];
-}
-
-// The guardian's still-open permanent change request for the care schedule.
-// Mirrors api/parent.PendingCareRequestResponse. `diff` reuses the shared
-// RequestDiffEntry wire shape (label/old/new + structured discriminators), so
-// the localized parents portal can render each row in the guardian's language.
-// `submitted_by_self` is true only for the calling guardian's own request —
-// "Anfrage bearbeiten" is offered only then.
-interface PendingCareRequest {
-  readonly id: string;
-  readonly created_at: string; // ISO timestamp
-  readonly diff: RequestDiffEntry[];
-  readonly submitted_by_self: boolean;
-}
-
 // The read view of a child's care schedule. Mirrors api/parent.CareScheduleResponse.
-export interface ChildCareSchedule {
-  readonly weekdays: CareScheduleWeekday[];
-  readonly pending_request?: PendingCareRequest;
-  readonly can_request: boolean;
-  readonly request_capabilities: {
-    readonly arrival: boolean;
-    readonly pickup: boolean;
-    readonly departure_mode: boolean;
-  };
-  // True when the child has any active scheduled absence today (sick, excused,
-  // or class trip — any source). The parent-safe absence signal for the "Heute
-  // → Abholung" tile: the windowed sick-day list (listSickDays) hides
-  // staff-created excused/class-trip days, so the tile relies on this boolean to
-  // avoid showing a pickup time for a child the school has recorded as off.
-  readonly today_absent: boolean;
-  // The Berlin calendar day (YYYY-MM-DD) the backend resolved today_absent
-  // against — its "today" at request-handling time. The "Heute" tile binds its
-  // cached absence signal to THIS date rather than the browser's request-start
-  // day, so a response that crosses Berlin midnight can't stamp the new day's
-  // today_absent onto yesterday's pickup tile (#1725). Only the GET read view
-  // populates it; absent on the request-write responses.
-  readonly today_date?: string;
-}
+export type ChildCareSchedule = parentMeContract.CareScheduleResponse;
 
 /**
  * Fetches the child's standard weekly care plan (Mon-Fr), the guardian's own
@@ -1954,8 +1820,10 @@ export interface ChildCareSchedule {
 export async function getChildCareSchedule(
   studentId: string,
 ): Promise<ChildCareSchedule> {
-  return getJson<ChildCareSchedule>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/care-schedule`,
+  return parentCall(
+    bffJson("parent", "GET /parent/me/children/{studentId}/care-schedule", {
+      params: { studentId },
+    }),
   );
 }
 
@@ -1978,92 +1846,24 @@ export async function submitCareScheduleRequest(
   signature?: SignatureValue | null,
   signatureStatement?: string,
 ): Promise<ChildCareSchedule> {
-  return postJson<ChildCareSchedule>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/care-schedule/requests`,
-    {
-      payload,
-      ...(signature
-        ? { signature: signatureRequestBody(signature, signatureStatement) }
-        : {}),
-    },
+  return parentCall(
+    bffJson(
+      "parent",
+      "POST /parent/me/children/{studentId}/care-schedule/requests",
+      {
+        params: { studentId },
+        body: {
+          payload: { ...payload },
+          ...(signature
+            ? { signature: signatureRequestBody(signature, signatureStatement) }
+            : {}),
+        },
+      },
+    ),
   );
 }
 
 // --- Booked care offerings (#1665, #2303) ---
-
-/** One booked care offering of the child's current care period. */
-interface CareOfferingItem {
-  readonly id: string;
-  readonly name: string;
-  readonly description?: string;
-  /** Booked ISO weekdays (1=Mon..7=Sun); empty when the offering has no per-day choice. */
-  readonly weekdays: number[];
-  readonly price_cents?: number;
-  readonly includes_lunch: boolean;
-  readonly includes_holiday_care: boolean;
-  /** First day of a scheduled future booking (YYYY-MM-DD). */
-  readonly valid_from?: string;
-  /** Last day of a superseded booking (YYYY-MM-DD). */
-  readonly valid_until?: string;
-  /** True while a booked offering has not started yet. */
-  readonly starts_later?: boolean;
-}
-
-/** One "current -> requested" line of a pending offering change. */
-interface OfferingDiffLine {
-  readonly label: string;
-  readonly old_state: "not_booked" | "booked";
-  /** Canonical day keys; empty for an all-day booking. */
-  readonly old_days: string[];
-  readonly new_state: "removed" | "booked";
-  /** Canonical day keys; empty for an all-day booking. */
-  readonly new_days: string[];
-  /** Share of new_days added by a co-booking rule or required lunch (#2365). */
-  readonly new_automatic_days?: string[];
-  /** Rule-derived part of new_automatic_days, excluding required-lunch days. */
-  readonly new_rule_days?: string[];
-  /** Names of the selected offerings whose rule added new_rule_days. */
-  readonly auto_trigger_names?: string[];
-  /** True for a Kurs. The Kurse section owns those lines (#3075). */
-  readonly is_course?: boolean;
-}
-
-/** The child's open offering change request. */
-interface PendingOfferingChange {
-  readonly id: string;
-  readonly created_at: string;
-  /** Date the switch would take effect (YYYY-MM-DD). */
-  readonly effective_from: string;
-  readonly note?: string;
-  readonly diff: OfferingDiffLine[];
-  readonly submitted_by_self: boolean;
-}
-
-/** One offering of a decided request. */
-interface OfferingRequestedItem {
-  readonly id: string;
-  readonly name: string;
-  /** ISO weekdays (1=Mon..7=Sun); empty means every care day. */
-  readonly weekdays: number[];
-}
-
-/** A decided change request: the outcome plus a rejection's reason. */
-interface OfferingDecision {
-  readonly id: string;
-  readonly status: "approved" | "rejected";
-  readonly decided_at: string;
-  /** Date the switch took (or would have taken) effect (YYYY-MM-DD). */
-  readonly effective_from: string;
-  readonly reason?: string;
-  readonly complete_withdrawal?: boolean;
-  /** What the family asked for, so the decision stays readable on its own. */
-  readonly requested: OfferingRequestedItem[];
-  /** The frozen diff the decision was made on; absent for older decisions. */
-  readonly applied?: OfferingDiffLine[];
-  /** Rule-added offerings the school excluded for this one request (#2370). */
-  readonly overridden_names?: string[];
-  readonly submitted_by_self?: boolean;
-}
 
 /** Why the change button is unavailable. Stable identifiers from the backend. */
 export type OfferingChangesDisabledReason =
@@ -2074,65 +1874,32 @@ export type OfferingChangesDisabledReason =
   | "no_time_remaining";
 
 /** Parent-facing view of what the child is booked into. */
-export interface ChildCareOfferings {
-  readonly period_name?: string;
-  readonly period_start?: string;
-  readonly period_end?: string;
-  readonly offerings: CareOfferingItem[];
-  readonly can_request: boolean;
-  readonly pending_request?: PendingOfferingChange;
-  /** Earliest date a new request may take effect (YYYY-MM-DD). */
-  readonly earliest_effective_from?: string;
-  /** Most recent decided request, dropped once it ages out of the window. */
-  readonly last_decision?: OfferingDecision;
-  readonly changes_disabled_reason?: OfferingChangesDisabledReason;
-}
+export type ChildCareOfferings = parentMeContract.CareOfferingsResponse;
 
 /** One selectable offering in the change-request modal. */
-export interface OfferingCatalogItem {
-  readonly id: string;
-  readonly name: string;
-  readonly description?: string;
-  /** "fixed" = the school sets the days; "parent_choice" = the family picks. */
-  readonly days_of_week_mode: string;
-  readonly available_days: string[];
-  readonly selection_group?: string;
-  readonly selection_rule: string;
-  readonly is_required: boolean;
-  readonly price_cents?: number;
-  readonly includes_lunch: boolean;
-  readonly includes_holiday_care: boolean;
-  readonly selected: boolean;
-  readonly selected_days: string[];
-  /** True when the current booking is derived from another offering. */
-  readonly automatic?: boolean;
-  /** False for a booking retained after the school deactivated the offering. */
-  readonly is_active?: boolean;
-  readonly capacity?: number;
-  readonly free_slots?: number;
-}
+export type OfferingCatalogItem = Omit<
+  parentMeContract.OfferingCatalogItemResponse,
+  "available_days"
+> & { readonly available_days: string[] };
 
 /** The selectable catalog plus the allowed effective-date window. */
-export interface OfferingCatalog {
-  readonly phase_name: string;
-  readonly selection_mode: string;
-  readonly earliest_effective_from: string;
-  readonly latest_effective_from: string;
-  readonly items: OfferingCatalogItem[];
-}
+export type OfferingCatalog = Omit<
+  parentMeContract.OfferingCatalogResponse,
+  "items"
+> & { readonly items: OfferingCatalogItem[] };
 
 /** One desired offering in a submission. */
-export interface OfferingChangeSelectionInput {
-  readonly offering_id: string;
-  readonly selected_days: string[];
-}
+export type OfferingChangeSelectionInput =
+  parentMeContract.OfferingSelectionBody;
 
 /** Returns the care offerings the child is booked into. */
 export async function getChildCareOfferings(
   studentId: string,
 ): Promise<ChildCareOfferings> {
-  return getJson<ChildCareOfferings>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/care-offerings`,
+  return parentCall(
+    bffJson("parent", "GET /parent/me/children/{studentId}/care-offerings", {
+      params: { studentId },
+    }),
   );
 }
 
@@ -2141,12 +1908,20 @@ export async function getChildOfferingCatalog(
   studentId: string,
   effectiveFrom?: string,
 ): Promise<OfferingCatalog> {
-  const params = effectiveFrom
-    ? `?effective_from=${encodeURIComponent(effectiveFrom)}`
-    : "";
-  return getJson<OfferingCatalog>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/care-offerings/catalog${params}`,
+  const catalog = await parentCall(
+    bffJson(
+      "parent",
+      "GET /parent/me/children/{studentId}/care-offerings/catalog",
+      { params: { studentId }, query: { effective_from: effectiveFrom } },
+    ),
   );
+  return {
+    ...catalog,
+    items: (catalog.items ?? []).map((item) => ({
+      ...item,
+      available_days: item.available_days ?? [],
+    })),
+  };
 }
 
 /**
@@ -2164,12 +1939,18 @@ export async function submitOfferingChangeRequest(
   },
   recipientGuardianProfileIds: string[] = [],
 ): Promise<ChildCareOfferings> {
-  return postJson<ChildCareOfferings>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/care-offerings/requests`,
-    {
-      ...input,
-      recipient_guardian_profile_ids: recipientGuardianProfileIds,
-    },
+  return parentCall(
+    bffJson(
+      "parent",
+      "POST /parent/me/children/{studentId}/care-offerings/requests",
+      {
+        params: { studentId },
+        body: {
+          ...input,
+          recipient_guardian_profile_ids: recipientGuardianProfileIds,
+        },
+      },
+    ),
   );
 }
 
@@ -2190,58 +1971,34 @@ export async function updateOfferingChangeRequest(
   },
 ): Promise<ChildCareOfferings> {
   const { expectedVersion, ...body } = input;
-  return putJson<ChildCareOfferings>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/care-offerings/requests/${encodeURIComponent(requestId)}`,
-    { ...body, expected_version: expectedVersion },
+  return parentCall(
+    bffJson(
+      "parent",
+      "PUT /parent/me/children/{studentId}/care-offerings/requests/{requestId}",
+      {
+        params: { studentId, requestId },
+        body: { ...body, expected_version: expectedVersion },
+      },
+    ),
   );
 }
 
 // --- Kurse (AG requests through the offering path, #3075) ---
 
-/** Why a school shows no courses. Mirrors the backend identifiers. */
-type CoursesDisabledReason =
-  "school_disabled" | "no_enrollment" | "no_courses" | "no_permission";
-
 /** One course a family can see for their child. */
-export interface CourseItem {
-  readonly id: string;
-  readonly activity_group_id: string;
-  readonly name: string;
-  readonly description?: string;
-  /** Canonical day keys ("mon" … "sun") the course runs on. */
-  readonly available_days: string[];
-  /** Effective participant limit; absent means unlimited. */
-  readonly capacity?: number;
-  readonly free_slots?: number;
-  readonly booked: boolean;
-  readonly requested: boolean;
-  /** A requested course that was full when it was asked for. */
-  readonly waitlisted: boolean;
-  readonly waitlist_position?: number;
-}
+export type CourseItem = parentMeContract.CourseItemResponse;
 
 /** The Kurse section of a child. Empty with a reason when switched off. */
-export interface ChildCourses {
-  readonly enabled: boolean;
-  readonly can_request?: boolean;
-  readonly reason_required?: boolean;
-  readonly disabled_reason?: CoursesDisabledReason;
-  readonly phase_name?: string;
-  /** Date a new request would take effect on (YYYY-MM-DD). */
-  readonly effective_from?: string;
-  readonly pending_request_id?: string;
-  readonly pending_submitted_by_self: boolean;
-  /** An open care-offering request blocks a new course request. */
-  readonly other_request_pending: boolean;
-  readonly items: CourseItem[];
-}
+export type ChildCourses = parentMeContract.CoursesResponse;
 
 /** Returns the school's courses with this child's state. */
 export async function getChildCourses(
   studentId: string,
 ): Promise<ChildCourses> {
-  return getJson<ChildCourses>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/courses`,
+  return parentCall(
+    bffJson("parent", "GET /parent/me/children/{studentId}/courses", {
+      params: { studentId },
+    }),
   );
 }
 
@@ -2251,9 +2008,11 @@ export async function requestChildCourse(
   courseId: string,
   note?: string,
 ): Promise<ChildCourses> {
-  return postJson<ChildCourses>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/courses/requests`,
-    { course_id: courseId, note: note ?? "" },
+  return parentCall(
+    bffJson("parent", "POST /parent/me/children/{studentId}/courses/requests", {
+      params: { studentId },
+      body: { course_id: courseId, note: note ?? "" },
+    }),
   );
 }
 
@@ -2262,9 +2021,12 @@ export async function withdrawChildCourseRequest(
   studentId: string,
   requestId: string,
 ): Promise<ChildCourses> {
-  return postJson<ChildCourses>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/courses/requests/${encodeURIComponent(requestId)}/withdraw`,
-    {},
+  return parentCall(
+    bffJson(
+      "parent",
+      "POST /parent/me/children/{studentId}/courses/requests/{requestId}/withdraw",
+      { params: { studentId, requestId } },
+    ),
   );
 }
 
@@ -2282,8 +2044,10 @@ export type ChildMasterData = parentMeContract.MasterDataResponse;
 export async function getChildMasterData(
   studentId: string,
 ): Promise<ChildMasterData> {
-  return getJson<ChildMasterData>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/master-data`,
+  return parentCall(
+    bffJson("parent", "GET /parent/me/children/{studentId}/master-data", {
+      params: { studentId },
+    }),
   );
 }
 
@@ -2297,9 +2061,12 @@ export async function updateMasterDataField(
   field: string,
   value: unknown,
 ): Promise<ChildMasterData> {
-  return patchJson<ChildMasterData>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/master-data/${encodeURIComponent(target)}/${encodeURIComponent(field)}`,
-    { value },
+  return parentCall(
+    bffJson(
+      "parent",
+      "PATCH /parent/me/children/{studentId}/master-data/{target}/{field}",
+      { params: { studentId, target, field }, body: { value } },
+    ),
   );
 }
 
@@ -2316,12 +2083,18 @@ export async function submitMasterDataRequest(
   changes: MasterDataChangeInput[],
   recipientGuardianProfileIds: string[] = [],
 ): Promise<MasterDataChange[]> {
-  return postJson<MasterDataChange[]>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/master-data/requests`,
-    {
-      changes,
-      recipient_guardian_profile_ids: recipientGuardianProfileIds,
-    },
+  return parentCall(
+    bffJson(
+      "parent",
+      "POST /parent/me/children/{studentId}/master-data/requests",
+      {
+        params: { studentId },
+        body: {
+          changes,
+          recipient_guardian_profile_ids: recipientGuardianProfileIds,
+        },
+      },
+    ),
   );
 }
 
@@ -2331,9 +2104,18 @@ export async function updateMasterDataRequest(
   requestId: string,
   input: { newValue: unknown; expectedVersion: string },
 ): Promise<MasterDataChange> {
-  return putJson<MasterDataChange>(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/master-data/requests/${encodeURIComponent(requestId)}`,
-    { new_value: input.newValue, expected_version: input.expectedVersion },
+  return parentCall(
+    bffJson(
+      "parent",
+      "PUT /parent/me/children/{studentId}/master-data/requests/{requestId}",
+      {
+        params: { studentId, requestId },
+        body: {
+          new_value: input.newValue,
+          expected_version: input.expectedVersion,
+        },
+      },
+    ),
   );
 }
 
@@ -2342,13 +2124,13 @@ export async function removeRelatedAccount(
   studentId: string,
   guardianProfileId: string,
 ): Promise<void> {
-  const response = await transportFetch(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/related-accounts/${encodeURIComponent(guardianProfileId)}`,
-    { method: "DELETE" },
+  await parentCall(
+    bffJson(
+      "parent",
+      "DELETE /parent/me/children/{studentId}/related-accounts/{guardianProfileId}",
+      { params: { studentId, guardianProfileId } },
+    ),
   );
-  // Logged under a fixed label; the path carries the other guardian's ID.
-  if (!response.ok)
-    await throwResponseError("remove_related_account", response);
 }
 
 // ── Dokumente (#4671) ──────────────────────────────────────────────────────
@@ -2359,61 +2141,10 @@ export async function removeRelatedAccount(
  * Mirrors backend BillingDocumentResponse; dates are "YYYY-MM-DD", sent_at
  * an instant.
  */
-export interface ParentDocument {
-  readonly id: string;
-  readonly organization_id: string;
-  readonly traeger_name: string;
-  /**
-   * The confirmation letter, the letter of its Storno or Gutschrift (#4690),
-   * a care contract (#4678), or the letter of a monthly invoice and of its
-   * Storno (#4684), named „Monatsbeitrag Januar 2027“ in `period_name`, or
-   * a Jahresbescheid and its Änderungsbescheid (#6347), named
-   * „Betreuung 2027“.
-   */
-  readonly kind:
-    | "confirmation_letter"
-    | "cancellation_letter"
-    | "credit_letter"
-    | "care_invoice_letter"
-    | "care_cancellation_letter"
-    | "care_fee_notice"
-    | "care_change_notice"
-    | "care_contract";
-  readonly number: string;
-  readonly period_name: string;
-  readonly service_from: string;
-  readonly service_until: string;
-  readonly issued_on: string;
-  readonly total_cents: number;
-  readonly child_names: readonly string[];
-  readonly sent_at: string;
-  /** The state of a care contract (#4679); absent for a letter. */
-  readonly contract_status?: CareContractStatus;
-  readonly can_sign?: boolean;
-  readonly signed_at?: string | null;
-  /**
-   * A care contract version that a change on its own first day replaced
-   * (#4681): it holds on no day; the changed version holds from
-   * `service_from`.
-   */
-  readonly replaced?: boolean;
-  /** The last day of a terminated care contract (#4682). */
-  readonly ends_on?: string;
-  /**
-   * The account may withdraw or terminate this contract: its relationship
-   * to the child grants the right (#4682). Absent when it may only read.
-   */
-  readonly can_end_contract?: boolean;
-  /**
-   * `can_end_contract` holds and the withdrawal period may still run: the
-   * inbox shows „Vertrag widerrufen“ (§ 356a BGB, #6105).
-   */
-  readonly can_withdraw_contract?: boolean;
-  readonly sepa_mandate?: {
-    readonly enabled: boolean;
-    readonly collection_eligible: boolean;
-  };
-}
+export type ParentDocument = Omit<
+  parentMeContract.BillingDocumentResponse,
+  "service_from"
+> & { readonly service_from: string };
 
 /**
  * The documents the Träger of the account's schools sent to the family:
@@ -2434,22 +2165,13 @@ export interface ParentDocumentInbox {
  * (#4692): a house rule, a letter, a list. It is the same for every family
  * the release covers, so it names no child and no amount.
  */
-export interface ParentSharedDocument {
-  readonly id: string;
-  readonly organization_id: string;
-  readonly traeger_name: string;
-  readonly title: string;
-  readonly file_name: string;
-  readonly content_type: string;
-  readonly size_bytes: number;
-  readonly released_at: string;
-}
+export type ParentSharedDocument = parentMeContract.SharedDocumentResponse;
 
 export async function listMyDocuments(): Promise<ParentDocumentInbox> {
   const [letters, contracts, shared] = await Promise.allSettled([
-    getJson<ParentDocument[]>("/api/parent/me/documents"),
-    getJson<ParentDocument[]>("/api/parent/me/documents/contracts"),
-    getJson<ParentSharedDocument[]>("/api/parent/me/documents/shared"),
+    parentCall(bffJson("parent", "GET /parent/me/documents")),
+    parentCall(bffJson("parent", "GET /parent/me/documents/contracts")),
+    parentCall(bffJson("parent", "GET /parent/me/documents/shared")),
   ]);
   if (
     letters.status === "rejected" &&
@@ -2459,15 +2181,21 @@ export async function listMyDocuments(): Promise<ParentDocumentInbox> {
     throw letters.reason;
   }
   const documents = [
-    ...(letters.status === "fulfilled" ? letters.value : []),
-    ...(contracts.status === "fulfilled" ? contracts.value : []),
-  ].sort(
-    (a, b) =>
-      Date.parse(b.sent_at) - Date.parse(a.sent_at) ||
-      // Newer ID first; decimal strings compare exactly by length, then text.
-      b.id.length - a.id.length ||
-      (b.id > a.id ? 1 : b.id < a.id ? -1 : 0),
-  );
+    ...(letters.status === "fulfilled" ? (letters.value ?? []) : []),
+    ...(contracts.status === "fulfilled" ? (contracts.value ?? []) : []),
+  ]
+    // Go always sets the first day a document covers.
+    .map((document) => ({
+      ...document,
+      service_from: requiredDay(document.service_from, "document.service_from"),
+    }))
+    .sort(
+      (a, b) =>
+        Date.parse(b.sent_at) - Date.parse(a.sent_at) ||
+        // Newer ID first; decimal strings compare exactly by length, then text.
+        b.id.length - a.id.length ||
+        (b.id > a.id ? 1 : b.id < a.id ? -1 : 0),
+    );
   const failed = [
     ["letters", letters],
     ["contracts", contracts],
@@ -2477,7 +2205,7 @@ export async function listMyDocuments(): Promise<ParentDocumentInbox> {
   const firstFailure = failures[0];
   return {
     documents,
-    shared: shared.status === "fulfilled" ? shared.value : [],
+    shared: shared.status === "fulfilled" ? (shared.value ?? []) : [],
     failedSource:
       failures.length > 1 ? "several" : firstFailure ? firstFailure[0] : null,
     error:
@@ -2494,9 +2222,18 @@ export async function listMyDocuments(): Promise<ParentDocumentInbox> {
 export async function downloadMySharedDocument(
   document: Pick<ParentSharedDocument, "id" | "organization_id" | "file_name">,
 ): Promise<void> {
-  const url = `/api/parent/me/documents/${encodeURIComponent(document.organization_id)}/shared/${encodeURIComponent(document.id)}/file`;
-  const response = await transportFetch(url, { method: "GET" });
-  if (!response.ok) await throwResponseError(url, response);
+  const response = await parentCall(
+    bffFile(
+      "parent",
+      "GET /parent/me/documents/{organizationId}/shared/{documentId}/file",
+      {
+        params: {
+          organizationId: document.organization_id,
+          documentId: document.id,
+        },
+      },
+    ),
+  );
   const blob = await response.blob();
   downloadBlob(blob, filenameFromDisposition(response) ?? document.file_name);
 }
@@ -2509,14 +2246,29 @@ export async function downloadMySharedDocument(
 export async function downloadMyDocument(
   document: Pick<ParentDocument, "id" | "organization_id" | "number" | "kind">,
 ): Promise<void> {
-  const organization = encodeURIComponent(document.organization_id);
-  const id = encodeURIComponent(document.id);
-  const url =
+  const response = await parentCall(
     document.kind === "care_contract"
-      ? `/api/parent/me/documents/${organization}/contracts/${id}/pdf`
-      : `/api/parent/me/documents/${organization}/${id}/pdf`;
-  const response = await transportFetch(url, { method: "GET" });
-  if (!response.ok) await throwResponseError(url, response);
+      ? bffFile(
+          "parent",
+          "GET /parent/me/documents/{organizationId}/contracts/{contractId}/pdf",
+          {
+            params: {
+              organizationId: document.organization_id,
+              contractId: document.id,
+            },
+          },
+        )
+      : bffFile(
+          "parent",
+          "GET /parent/me/documents/{organizationId}/{documentId}/pdf",
+          {
+            params: {
+              organizationId: document.organization_id,
+              documentId: document.id,
+            },
+          },
+        ),
+  );
   const blob = await response.blob();
   downloadBlob(
     blob,
@@ -2525,9 +2277,6 @@ export async function downloadMyDocument(
 }
 
 // ── Kündigung und Widerruf (#4682) ─────────────────────────────────────────
-
-const contractNoticePath = (organizationId: string, contractId: string) =>
-  `/api/parent/me/documents/${encodeURIComponent(organizationId)}/contracts/${encodeURIComponent(contractId)}/notice`;
 
 /**
  * What the parents can declare today on a care contract sent to them, or
@@ -2540,8 +2289,12 @@ export async function fetchMyContractNoticeOptions(
   contractId: string,
 ): Promise<ContractNoticeOptions> {
   return noticeOptionsFromBackend(
-    await getJson<parentMeContract.ContractNoticeOptions>(
-      contractNoticePath(organizationId, contractId),
+    await parentCall(
+      bffJson(
+        "parent",
+        "GET /parent/me/documents/{organizationId}/contracts/{contractId}/notice",
+        { params: { organizationId, contractId } },
+      ),
     ),
   );
 }
@@ -2553,9 +2306,15 @@ export async function declareMyContractNotice(
   declaration: NoticeDeclaration,
 ): Promise<ContractNoticeOptions> {
   return noticeOptionsFromBackend(
-    await postJson<parentMeContract.ContractNoticeOptions>(
-      contractNoticePath(organizationId, contractId),
-      declarationBody(declaration),
+    await parentCall(
+      bffJson(
+        "parent",
+        "POST /parent/me/documents/{organizationId}/contracts/{contractId}/notice",
+        {
+          params: { organizationId, contractId },
+          body: declarationBody(declaration),
+        },
+      ),
     ),
   );
 }

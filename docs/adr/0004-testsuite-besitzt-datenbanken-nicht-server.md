@@ -146,9 +146,8 @@ Produktions-Assets (Locales, Export-Schriften/-Logo) zählen wie Produktionscode
 Goldens und E-Mail-Templates laufen in ihrem besitzenden Test-Package.
 
 Der lokale Changed-Loop nutzt höchstens die Hälfte der erkannten CPUs und
-maximal vier Package-Binaries. `GOMAXPROCS` pro Binary wird so berechnet, dass
-auch zusammen höchstens die halbe Maschine belegt wird; `-parallel` ist auf
-acht begrenzt. CI und der explizite Volllauf-Wrapper behalten für den
+maximal vier Package-Binaries. `GOMAXPROCS` pro Go-Prozess ist fest: vier,
+unter macOS eins; `-parallel` ist auf acht begrenzt. CI und der explizite Volllauf-Wrapper behalten für den
 Post-Merge-Volllauf `-p 6 -parallel 8`. Changed-only-PRs laufen auf dem
 4-vCPU-Runner mit `-p 4` statt den doppelten Minutenpreis des 8-vCPU-Runners
 zu zahlen. Vitest nutzt lokal ebenfalls höchstens die Hälfte beziehungsweise

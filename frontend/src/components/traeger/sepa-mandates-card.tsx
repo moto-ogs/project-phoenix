@@ -46,6 +46,7 @@ import { traegerPath } from "~/lib/traeger-url";
 import { SepaMandateModal } from "./sepa-mandate-modal";
 import {
   mandateExpired,
+  mandateUsedUp,
   mandateKindLabel,
   mandateEventActor,
   mandateEventLabel,
@@ -313,6 +314,12 @@ function FamilyMandates({
                     ? formatDate(inForce.lastCollectedOn)
                     : "Noch nicht mit moto"}
                 </span>
+                {mandateUsedUp(inForce) ? (
+                  <span className="text-moto-red-strong block">
+                    Verbraucht: Das Mandat galt für eine Abbuchung. Widerrufe
+                    dieses Mandat und erfasse ein neues.
+                  </span>
+                ) : null}
               </DataField>
               {inForce.expiresOn ? (
                 <DataField label="Gültig bis">

@@ -28,6 +28,7 @@ const render: typeof baseRender = ((ui: React.ReactElement) =>
 
 function poll(overrides: Partial<ParentAnnouncement> = {}): ParentAnnouncement {
   return {
+    delivery_mode: "informational",
     id: "42",
     title: "Kommt Ihr Kind zur Murmelparty?",
     body: "Am Freitag ab 15 Uhr.",
@@ -90,6 +91,7 @@ function declaration(
       },
       children: [
         {
+          earlier_consent: null,
           student_id: "10",
           first_name: "Felix",
           last_name: "Schneider",

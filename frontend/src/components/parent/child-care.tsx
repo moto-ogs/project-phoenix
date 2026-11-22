@@ -27,6 +27,7 @@ import {
 } from "~/components/parent/request-sharing-control";
 import { TimeField } from "~/components/ui/time-field";
 import { ISODatePicker } from "~/components/ui/date-picker";
+import { knownEnum } from "~/lib/contract/known-enum";
 import { useLocalizedDatePicker } from "~/lib/hooks/use-localized-date-picker";
 import {
   type CareException,
@@ -287,7 +288,8 @@ export function resolveTodayPickup(params: {
     // stale plan could wrongly flag "changed". When the plan isn't loaded we
     // treat the base as unknown and never mark a difference (#1725 review).
     const base = weekPlanLoaded
-      ? weekdays.find((entry) => entry.weekday === isoWeekday(today))?.pickup
+      ? (weekdays ?? []).find((entry) => entry.weekday === isoWeekday(today))
+          ?.pickup
       : undefined;
     const changed = base !== undefined && base !== override.pickup_time;
     return { kind: "time", time: override.pickup_time, changed };
@@ -295,7 +297,9 @@ export function resolveTodayPickup(params: {
 
   if (!weekPlanLoaded) return { kind: "unknown" };
 
-  const base = weekdays.find((entry) => entry.weekday === isoWeekday(today));
+  const base = (weekdays ?? []).find(
+    (entry) => entry.weekday === isoWeekday(today),
+  );
   if (base?.pickup) return { kind: "time", time: base.pickup, changed: false };
   return { kind: "none" };
 }
@@ -480,13 +484,13 @@ export function useChildCare(
       // A direct write (sick note, or an excused absence without the approval
       // gate) returns the just-recorded days. Merge them into the loaded list
       // (replacing same-date entries) so previously reported absences stay.
-      if (status_days.length > 0) {
-        const submittedDates = new Set(status_days.map((d) => d.date));
+      if ((status_days ?? []).length > 0) {
+        const submittedDates = new Set((status_days ?? []).map((d) => d.date));
         void reloadSick(
           (prev) =>
             [
               ...(prev ?? []).filter((d) => !submittedDates.has(d.date)),
-              ...status_days,
+              ...(status_days ?? []),
             ].sort((a, b) => a.date.localeCompare(b.date)),
           { revalidate: false },
         );
@@ -494,7 +498,7 @@ export function useChildCare(
         // reads today_absent exclusively, so the "Heute → Abholung" tile
         // follows at once; the server signal agrees on the next load (#1725
         // review). The day is stamped so the midnight guard trusts it.
-        if (status_days.some((d) => d.date === day)) {
+        if ((status_days ?? []).some((d) => d.date === day)) {
           void reloadSchedule(
             (plan) => plan && { ...plan, today_absent: true, today_date: day },
             { revalidate: false },
@@ -524,7 +528,7 @@ export function useChildCare(
         // idempotently (#1845 review).
         throw new ChildCareRefreshError();
       }
-      return status_days.length > 0
+      return (status_days ?? []).length > 0
         ? ("partly_pending" as const)
         : ("pending" as const);
     },
@@ -560,7 +564,9 @@ export function useChildCare(
       if (currentStudentIdRef.current !== studentId) return;
       void reloadExceptions(
         (prev) => (prev ?? []).filter((e) => e.date !== date),
-        { revalidate: false },
+        {
+          revalidate: false,
+        },
       );
     },
     [reloadExceptions, studentId],
@@ -1334,9 +1340,10 @@ export function PickupTimeModal({
   const prefillDate = request || existing ? date : "";
   const prefillTime = request?.pickup_time ?? existing?.pickup_time ?? "";
   const prefillMode =
-    request?.departure_mode && request.departure_mode !== "accompanied"
-      ? request.departure_mode
-      : "";
+    knownEnum(
+      REQUESTABLE_DAY_DEPARTURE_MODES,
+      request?.departure_mode ?? undefined,
+    ) ?? "";
   const prefillReason = request?.reason ?? existing?.reason ?? "";
   const prefillPerson = request?.pickup_person_guardian_profile_id ?? "";
   useEffect(() => {
@@ -2017,7 +2024,7 @@ export function SickStatusSummary({
     .map((r) => ({
       id: r.id,
       label: requestLabel(r),
-      dates: r.dates.filter(
+      dates: (r.dates ?? []).filter(
         (d) =>
           isOutOfWindow(d) &&
           !(
@@ -2060,7 +2067,7 @@ export function SickStatusSummary({
         <div key={r.id} className="space-y-0.5">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <p className="text-sm font-semibold text-gray-900">
-              {requestLabel(r)}: {rangeLabel(r.dates)}
+              {requestLabel(r)}: {rangeLabel(r.dates ?? [])}
             </p>
             <StatusColorBadge
               color={LOCATION_COLORS.WARNING}
@@ -2093,7 +2100,7 @@ export function SickStatusSummary({
         <div key={r.id} className="space-y-0.5">
           <div className="flex flex-wrap items-center gap-x-2">
             <p className="text-sm font-semibold text-gray-900">
-              {requestLabel(r)}: {rangeLabel(r.dates)}
+              {requestLabel(r)}: {rangeLabel(r.dates ?? [])}
             </p>
             <StatusBadge
               tone="red"
@@ -2123,7 +2130,7 @@ export function SickStatusSummary({
           request={{
             type: "excused",
             id: editing.id,
-            dates: [...editing.dates],
+            dates: [...(editing.dates ?? [])],
             note: editing.note,
           }}
           onClose={() => setEditing(null)}

@@ -184,7 +184,7 @@ func (s *GuardianPickupExceptions) update(ctx context.Context, row careplan.Pick
 	row.PickupTime = change.PickupTime
 	row.Reason = change.Reason
 	row.Source = careplan.ExceptionSourceGuardian
-	row.CreatedBy = 0
+	row.CreatedBy, row.EnteredByTraeger = 0, false
 	row.CreatedByGuardian = &guardianID
 	// Scanned TIME values (e.g. a carried-over excused_from) land on year 0.
 	row.NormalizeWallClockTimes()

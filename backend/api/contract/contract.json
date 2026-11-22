@@ -10310,6 +10310,12 @@
       "portals": [
         "org"
       ],
+      "query": [
+        {
+          "name": "numbers",
+          "kind": "bool"
+        }
+      ],
       "response": {
         "kind": "array",
         "elem": {
@@ -11411,6 +11417,17 @@
           "kind": "ref",
           "ref": "FamilyBilling"
         }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/family-billing/contracts/{id}",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ContractFamilyBilling"
       }
     },
     {
@@ -18871,6 +18888,35 @@
         "ref": "ContractImport"
       },
       "max_body_bytes": 2359296,
+      "multipart": true,
+      "too_large_code": "care_contract.import_file_too_large"
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/contract-imports/offering-corrections",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "OfferingCorrection"
+      },
+      "max_body_bytes": 2359296,
+      "multipart": true,
+      "too_large_code": "care_contract.import_file_too_large"
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/contract-imports/offering-corrections/preview",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "OfferingCorrection"
+      },
+      "max_body_bytes": 2359296,
+      "no_commit": "a correction preview checks the file and saves no version",
       "multipart": true,
       "too_large_code": "care_contract.import_file_too_large"
     },
@@ -30509,6 +30555,18 @@
           }
         },
         {
+          "name": "family_payment_method",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contract_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
           "name": "issued_cents",
           "schema": {
             "kind": "int"
@@ -30634,6 +30692,18 @@
           "name": "holiday_only",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "family_payment_method",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contract_id",
+          "schema": {
+            "kind": "id"
           }
         },
         {
@@ -42158,6 +42228,44 @@
       ]
     },
     {
+      "name": "ContractFamilyBilling",
+      "go_type": "parentbilling.ContractFamilyBilling",
+      "fields": [
+        {
+          "name": "contract_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "family_email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "party_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "party_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "family",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "FamilyBilling"
+          }
+        }
+      ]
+    },
+    {
       "name": "ContractFamilyChildren",
       "go_type": "care.ContractFamilyChildren",
       "fields": [
@@ -50467,6 +50575,12 @@
       "name": "FamilyChildNumbers",
       "go_type": "parentbilling.FamilyChildNumbers",
       "fields": [
+        {
+          "name": "contract_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
         {
           "name": "family_email",
           "schema": {
@@ -65228,6 +65342,272 @@
         {
           "name": "contract_partner",
           "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OfferingCorrection",
+      "go_type": "carecontract.OfferingCorrection",
+      "fields": [
+        {
+          "name": "encoding",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "delimiter",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "headers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "missing_columns",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "effective_from",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "applied",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "counts",
+          "schema": {
+            "kind": "ref",
+            "ref": "OfferingCorrectionCounts"
+          }
+        },
+        {
+          "name": "contracts",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OfferingCorrectionContract"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "OfferingCorrectionChange",
+      "go_type": "carecontract.OfferingCorrectionChange",
+      "fields": [
+        {
+          "name": "weekdays",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "from",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "to",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OfferingCorrectionContract",
+      "go_type": "carecontract.OfferingCorrectionContract",
+      "fields": [
+        {
+          "name": "reference",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "line",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "contract_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "effective_from",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "version_number",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "changes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OfferingCorrectionChange"
+            }
+          }
+        },
+        {
+          "name": "problems",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OfferingCorrectionProblem"
+            }
+          }
+        },
+        {
+          "name": "hints",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "OfferingCorrectionCounts",
+      "go_type": "carecontract.OfferingCorrectionCounts",
+      "fields": [
+        {
+          "name": "ready",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "unchanged",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "held",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "invalid",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "corrected",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OfferingCorrectionProblem",
+      "go_type": "carecontract.OfferingCorrectionProblem",
+      "fields": [
+        {
+          "name": "line",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "field",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "code",
           "schema": {
             "kind": "string"
           }

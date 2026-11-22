@@ -200,4 +200,51 @@ describe("TraegerBillingFamilyPage", () => {
 
     expect(mockPush).toHaveBeenCalledWith("/abrechnung/3");
   });
+
+  it("shows the method of the invoices, the one for new invoices and „Ändern“ with a contract (#7770)", async () => {
+    api.fetchBillingFamily.mockResolvedValue({
+      ...FAMILY,
+      paymentMethods: ["transfer"],
+      familyPaymentMethod: "direct_debit",
+      contractId: "42",
+    });
+    renderPage();
+    await screen.findByRole("heading", { name: "Sabine Schneider" });
+
+    expect(
+      screen.getByText("Zahlungsweg auf den Rechnungen"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Überweisung")).toBeInTheDocument();
+    expect(
+      screen.getByText("Zahlungsweg für neue Rechnungen"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Lastschrift (für die Familie festgelegt)"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ändern" })).toHaveAttribute(
+      "href",
+      "/abrechnung/familien/zahlung/42",
+    );
+  });
+
+  it("takes the Abrechnungsvorgaben and offers no „Ändern“ without a contract (#7770)", async () => {
+    api.fetchBillingFamily.mockResolvedValue({
+      ...FAMILY,
+      familyPaymentMethod: "",
+      contractId: "",
+    });
+    renderPage();
+    await screen.findByRole("heading", { name: "Sabine Schneider" });
+
+    // Anker: the payment fields of the loaded family.
+    expect(
+      screen.getByText("Zahlungsweg für neue Rechnungen"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Wie in den Abrechnungsvorgaben"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Ändern" }),
+    ).not.toBeInTheDocument();
+  });
 });

@@ -84,6 +84,7 @@
   "request_not_decided": "{object} ist noch nicht entschieden. Bitte entscheide zuerst.",
   "request_not_past": "Die Anfrage betrifft noch kommende Tage. Bitte entscheide sie.",
   "request_past": "Die Anfrage betrifft nur vergangene Tage. Du kannst sie nur ablehnen oder als erledigt markieren.",
+  "schedule_staff_profile_required": "Betreuungszeiten kann nur jemand mit Personalprofil ändern. Dein Konto hat an dieser Schule noch keins. Bitte lass dir von der Verwaltung der Schule eins anlegen.",
   "sick_excused_conflict": "{object} wurde inzwischen geändert. Bitte prüfe deine Angaben erneut.",
   "staff_profile_required": "Diese Zeit haben die Eltern gesetzt. Ändern kann sie nur jemand mit Personalprofil.",
   "staff_value_invalid": "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",

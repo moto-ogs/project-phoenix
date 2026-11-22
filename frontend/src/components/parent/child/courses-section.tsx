@@ -92,8 +92,8 @@ export function CoursesSection({
   >(() => undefined);
 
   const dayList = useCallback(
-    (days: string[]) => {
-      const weekdays = days.flatMap((day) => {
+    (days: readonly string[] | null) => {
+      const weekdays = (days ?? []).flatMap((day) => {
         const weekday = DAY_KEY_TO_WEEKDAY[day];
         return weekday === undefined ? [] : [weekday];
       });
@@ -190,12 +190,11 @@ export function CoursesSection({
 
   const requestable =
     courses.enabled &&
-    (courses.can_request ?? true) &&
+    courses.can_request &&
     !careEnded &&
     !courses.other_request_pending &&
     !courses.pending_request_id;
-  const reasonMissing =
-    (courses.reason_required ?? false) && note.trim() === "";
+  const reasonMissing = courses.reason_required && note.trim() === "";
 
   return (
     <ParentSection
@@ -204,7 +203,7 @@ export function CoursesSection({
       concept={activitiesConcept}
     >
       <FormErrorAlert message={actionErrors.error} />
-      {courses.items.length === 0 ? (
+      {(courses.items ?? []).length === 0 ? (
         <EmptyState
           className="border-t border-gray-100"
           title={
@@ -215,7 +214,7 @@ export function CoursesSection({
         />
       ) : (
         <ul className="space-y-2">
-          {courses.items.map((course) => (
+          {(courses.items ?? []).map((course) => (
             <li
               key={course.id}
               className="moto-content-surface flex flex-wrap items-start justify-between gap-3 rounded-xl border p-3"
@@ -279,17 +278,17 @@ export function CoursesSection({
           required
         />
       ) : null}
-      {courses.items.length > 0 && careEnded ? (
+      {(courses.items ?? []).length > 0 && careEnded ? (
         <p className="text-sm text-gray-500">{t("courses.careEnded")}</p>
       ) : null}
-      {courses.items.length > 0 &&
+      {(courses.items ?? []).length > 0 &&
       !careEnded &&
       courses.can_request === false ? (
         <p className="text-sm text-gray-500">
           {t("courses.noSubmitPermission")}
         </p>
       ) : null}
-      {courses.items.length > 0 && courses.effective_from ? (
+      {(courses.items ?? []).length > 0 && courses.effective_from ? (
         <p className="text-sm text-gray-500">
           {t("courses.effectiveFrom", {
             date: formatDate(courses.effective_from, false, locale),

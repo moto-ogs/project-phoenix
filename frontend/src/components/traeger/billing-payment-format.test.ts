@@ -1,16 +1,26 @@
-import { describe, expect, it } from "vitest";
-import type { FamilyBilling } from "~/lib/traeger-billing-terms-api";
+import { describe, expect, it, vi } from "vitest";
+import type {
+  BillingTerms,
+  FamilyBilling,
+  ServiceTerms,
+} from "~/lib/traeger-billing-terms-api";
 import {
   bundleLabel,
   dueDaysLabel,
   dueSourceHint,
+  familiesPath,
+  familyPaymentFilterOf,
+  familyPaymentPath,
   findFamilyBilling,
   invoiceDueDatesText,
   paymentMethodsText,
   recipientKindLabel,
   recipientLine,
   runDueDatesText,
+  termsPaymentText,
 } from "./billing-payment-format";
+
+vi.mock("~/lib/traeger-url", () => ({ traegerPath: (path: string) => path }));
 
 function family(patch: Partial<FamilyBilling>): FamilyBilling {
   return {
@@ -158,5 +168,80 @@ describe("billing payment format", () => {
         recipientEmail: "nobody@example.org",
       }),
     ).toBeNull();
+  });
+});
+
+function terms(...entries: Partial<ServiceTerms>[]): BillingTerms {
+  return {
+    services: [],
+    terms: entries.map((entry) => ({
+      service: "care",
+      paymentMethod: "transfer",
+      dueDays: 14,
+      bundleWith: "",
+      custom: false,
+      updatedAt: null,
+      ...entry,
+    })),
+  };
+}
+
+describe("family payment without a run (#7770)", () => {
+  it("names one payment method for all services, else each service", () => {
+    expect(
+      termsPaymentText(
+        terms(
+          { service: "care", paymentMethod: "transfer" },
+          { service: "meal", paymentMethod: "transfer" },
+        ),
+      ),
+    ).toBe("Überweisung für alle Leistungen");
+    expect(
+      termsPaymentText(
+        terms(
+          { service: "care", paymentMethod: "direct_debit" },
+          { service: "meal", paymentMethod: "transfer" },
+          { service: "holiday", paymentMethod: undefined },
+        ),
+      ),
+    ).toBe(
+      "Monatsbeitrag Betreuung per Lastschrift, Mittagessen per Überweisung",
+    );
+    expect(
+      termsPaymentText(terms({ service: "care", paymentMethod: undefined })),
+    ).toBeNull();
+    expect(termsPaymentText(terms())).toBeNull();
+  });
+
+  it("builds the payment page's address with its way back", () => {
+    expect(familyPaymentPath("42")).toBe(
+      "/traeger/abrechnung/familien/zahlung/42",
+    );
+    expect(familyPaymentPath("42", { contract: true })).toBe(
+      "/traeger/abrechnung/familien/zahlung/42?von=vertrag",
+    );
+    expect(familyPaymentPath("42", { filter: "ohne" })).toBe(
+      "/traeger/abrechnung/familien/zahlung/42?zahlung=ohne",
+    );
+    expect(familyPaymentPath("42", { filter: "" })).toBe(
+      "/traeger/abrechnung/familien/zahlung/42",
+    );
+    expect(familyPaymentPath("4/2?x")).toBe(
+      "/traeger/abrechnung/familien/zahlung/4%2F2%3Fx",
+    );
+  });
+
+  it("keeps the list's payment filter in the address", () => {
+    expect(familiesPath()).toBe("/traeger/abrechnung/familien");
+    expect(familiesPath("")).toBe("/traeger/abrechnung/familien");
+    expect(familiesPath("lastschrift")).toBe(
+      "/traeger/abrechnung/familien?zahlung=lastschrift",
+    );
+    expect(familyPaymentFilterOf("ohne")).toBe("ohne");
+    expect(familyPaymentFilterOf("ueberweisung")).toBe("ueberweisung");
+    expect(familyPaymentFilterOf("bar")).toBe("");
+    expect(familyPaymentFilterOf("")).toBe("");
+    expect(familyPaymentFilterOf(null)).toBe("");
+    expect(familyPaymentFilterOf(undefined)).toBe("");
   });
 });

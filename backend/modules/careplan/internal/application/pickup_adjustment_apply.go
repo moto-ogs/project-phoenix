@@ -109,7 +109,7 @@ func (s *PickupAdjustments) applyPickupArrivalSchedules(
 	if input.ArrivalSchedules == nil || !appliesArrivalSchedulesOn(resolution, input.EffectiveFrom, today) {
 		return nil
 	}
-	rows, err := pickupArrivalScheduleRows(input.StudentID, input.CreatedByStaffID, *input.ArrivalSchedules)
+	rows, err := pickupArrivalScheduleRows(ctx, input.StudentID, input.CreatedByStaffID, *input.ArrivalSchedules)
 	if err != nil {
 		return err
 	}
@@ -149,7 +149,7 @@ func directOfferingInput(input careplan.PickupAdjustmentApplyInput) careplan.Dir
 }
 
 func (s *PickupAdjustments) applyPickupException(ctx context.Context, input careplan.PickupAdjustmentApplyInput, preview *careplan.PickupAdjustmentPreview) error {
-	rows, err := pickupScheduleRows(input.StudentID, input.CreatedByStaffID, input.Schedules)
+	rows, err := pickupScheduleRows(ctx, input.StudentID, input.CreatedByStaffID, input.Schedules)
 	if err != nil {
 		return err
 	}

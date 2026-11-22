@@ -327,13 +327,14 @@ func preserveInactivePickupRows(
 
 func pickupRowForRewrite(row *careplan.PickupSchedule) *careplan.PickupSchedule {
 	return &careplan.PickupSchedule{
-		StudentID:      row.StudentID,
-		Weekday:        row.Weekday,
-		PickupTime:     calendar.NormalizeWallClock(row.PickupTime),
-		Notes:          row.Notes,
-		CreatedBy:      row.CreatedBy,
-		Source:         row.Source,
-		CareOfferingID: row.CareOfferingID,
+		StudentID:        row.StudentID,
+		Weekday:          row.Weekday,
+		PickupTime:       calendar.NormalizeWallClock(row.PickupTime),
+		Notes:            row.Notes,
+		CreatedBy:        row.CreatedBy,
+		EnteredByTraeger: row.EnteredByTraeger,
+		Source:           row.Source,
+		CareOfferingID:   row.CareOfferingID,
 	}
 }
 

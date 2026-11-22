@@ -18,8 +18,10 @@ import {
 } from "~/components/traeger/billing-family-format";
 import {
   PAYMENT_METHOD_LABELS,
+  familyPaymentPath,
   paymentMethodsText,
 } from "~/components/traeger/billing-payment-format";
+import { ButtonLink } from "~/components/ui/button";
 import { BILLING_DOCUMENT_KIND_LABELS } from "~/components/traeger/billing-format";
 import { formatEuro } from "~/components/traeger/contribution-format";
 import { formatDateRange } from "~/components/traeger/holiday-period-format";
@@ -250,6 +252,18 @@ export default function TraegerBillingFamilyPage() {
             leading={<ConceptIconTile concept={billingConcept} />}
             title="Empfänger und Zahlung"
             description="An diese Adresse gehen die Schreiben. Wer zahlt und der Zahlungsweg stehen auf jeder Rechnung."
+            actions={
+              family.contractId ? (
+                <ButtonLink
+                  href={familyPaymentPath(family.contractId)}
+                  variant="outline"
+                  size="md"
+                  tooltip="Öffnet die Seite, auf der du Empfänger, Zahlungsweg und Zahltag der Familie festlegst."
+                >
+                  Ändern
+                </ButtonLink>
+              ) : undefined
+            }
           >
             <DataGrid columns={2}>
               <DataField label="E-Mail-Adresse">
@@ -270,11 +284,18 @@ export default function TraegerBillingFamilyPage() {
                   "Keine eingetragen"
                 )}
               </DataField>
-              <DataField label="Zahlungsweg">
+              <DataField label="Zahlungsweg auf den Rechnungen">
                 {paymentMethodsText(family.paymentMethods) ??
                   (validInvoices > 0
                     ? "Auf den Rechnungen nicht genannt"
                     : "Steht auf neuen Rechnungen")}
+              </DataField>
+              {/* What the next invoice takes (#7770), apart from what the
+                  issued ones took. */}
+              <DataField label="Zahlungsweg für neue Rechnungen">
+                {family.familyPaymentMethod
+                  ? `${PAYMENT_METHOD_LABELS[family.familyPaymentMethod]} (für die Familie festgelegt)`
+                  : "Wie in den Abrechnungsvorgaben"}
               </DataField>
               <DataField label="Wer zahlt" fullWidth>
                 {family.payments.length > 0 ? (

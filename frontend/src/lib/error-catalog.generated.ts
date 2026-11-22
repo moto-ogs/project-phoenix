@@ -63,7 +63,7 @@ export const ERROR_CATALOG = {
       "care_contract.field_invalid":
         "Einige Angaben stimmen nicht. Bitte prüfe deine Eingaben.",
       "care_contract.import_changed":
-        "Seit der Vorschau hat sich etwas geändert. Bitte prüfe die Vorschau noch einmal und übernimm dann.",
+        "Seit der Vorschau hat sich etwas geändert. moto prüft die Datei neu. Sieh dir die neue Vorschau an und bestätige dann noch einmal.",
       "care_contract.import_file_invalid":
         "Die Datei lässt sich nicht lesen. Bitte wähle eine CSV-Datei mit Überschriften in der ersten Zeile.",
       "care_contract.import_file_too_large":
@@ -1524,6 +1524,8 @@ export const ERROR_CATALOG = {
         "Die Anfrage betrifft noch kommende Tage. Bitte entscheide sie.",
       "students.request_past":
         "Die Anfrage betrifft nur vergangene Tage. Du kannst sie nur ablehnen oder als erledigt markieren.",
+      "students.schedule_staff_profile_required":
+        "Betreuungszeiten kann nur jemand mit Personalprofil ändern. Dein Konto hat an dieser Schule noch keins. Bitte lass dir von der Verwaltung der Schule eins anlegen.",
       "students.sick_excused_conflict":
         "{object} wurde inzwischen geändert. Bitte prüfe deine Angaben erneut.",
       "students.staff_profile_required":
@@ -2848,6 +2850,8 @@ export const ERROR_CATALOG = {
         "{object} could not be changed. Please check the current state.",
       "students.reason_required":
         "A reason is missing for {object}. Please enter one.",
+      "students.schedule_staff_profile_required":
+        "Only someone with a staff profile can change care times. Your account does not have one at this school yet. Please ask the school's administration to create one for you.",
       "students.staff_profile_required":
         "The parents set this time. Only someone with a staff profile can change it.",
       "students.status_day_conflict":
@@ -3542,6 +3546,8 @@ export const ERROR_CATALOG = {
       "students.pickup_proof_not_found":
         "{object}: изменить не удалось. Пожалуйста, проверьте текущее состояние.",
       "students.reason_required": "Не указана причина: {object}. Укажите её.",
+      "students.schedule_staff_profile_required":
+        "Изменять время присмотра может только сотрудник с профилем персонала. У вашей учётной записи в этой школе его пока нет. Попросите администрацию школы создать его.",
       "students.staff_profile_required":
         "Это время установили родители. Изменить его может только сотрудник с профилем персонала.",
       "students.status_day_conflict":
@@ -4195,6 +4201,8 @@ export const ERROR_CATALOG = {
         "{object} nuk mund të ndryshohej. Ju lutemi kontrolloni gjendjen aktuale.",
       "students.reason_required":
         "Mungon arsyeja: {object}. Ju lutemi shkruani një.",
+      "students.schedule_staff_profile_required":
+        "Oraret e kujdesit mund t'i ndryshojë vetëm dikush me profil stafi. Llogaria juaj nuk ka ende një të tillë në këtë shkollë. Ju lutemi kërkoni nga administrata e shkollës ta krijojë.",
       "students.staff_profile_required":
         "Këtë orë e kanë vendosur prindërit. Vetëm dikush me profil stafi mund ta ndryshojë.",
       "students.status_day_conflict":
@@ -4835,6 +4843,8 @@ export const ERROR_CATALOG = {
       "students.pickup_proof_not_found":
         "{object} nie udało się zmienić. Proszę sprawdzić aktualny stan.",
       "students.reason_required": "Brakuje uzasadnienia: {object}. Wpisz je.",
+      "students.schedule_staff_profile_required":
+        "Godziny opieki może zmieniać tylko osoba z profilem pracownika. Pana/Pani konto nie ma go jeszcze w tej szkole. Proszę poprosić administrację szkoły o jego utworzenie.",
       "students.staff_profile_required":
         "Ten czas ustawili rodzice. Zmienić go może tylko osoba z profilem pracownika.",
       "students.status_day_conflict":
@@ -5481,6 +5491,8 @@ export const ERROR_CATALOG = {
         "{object} değiştirilemedi. Lütfen güncel durumu kontrol edin.",
       "students.reason_required":
         "{object} için gerekçe eksik. Lütfen bir gerekçe girin.",
+      "students.schedule_staff_profile_required":
+        "Bakım saatlerini yalnızca personel profili olan biri değiştirebilir. Hesabınızın bu okulda henüz bir profili yok. Lütfen okul yönetiminden bir profil oluşturmasını isteyin.",
       "students.staff_profile_required":
         "Bu saati veliler belirledi. Yalnızca personel profili olan biri değiştirebilir.",
       "students.status_day_conflict":
@@ -6119,6 +6131,8 @@ export const ERROR_CATALOG = {
       "students.pickup_proof_not_found":
         "{object}: змінити не вдалося. Будь ласка, перевірте поточний стан.",
       "students.reason_required": "Не вказано причину: {object}. Вкажіть її.",
+      "students.schedule_staff_profile_required":
+        "Змінювати час догляду може лише працівник із профілем персоналу. Ваш обліковий запис у цій школі його ще не має. Попросіть адміністрацію школи створити його.",
       "students.staff_profile_required":
         "Цей час встановили батьки. Змінити його може лише працівник із профілем персоналу.",
       "students.status_day_conflict":

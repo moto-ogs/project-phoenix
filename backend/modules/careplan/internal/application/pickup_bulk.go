@@ -137,7 +137,7 @@ func (s *pickupScheduleService) patchPickupWeek(ctx context.Context, student por
 		byWeekday[row.Weekday] = row
 	}
 	for _, input := range inputs {
-		row := &careplan.PickupSchedule{StudentID: student.ID, Weekday: input.Weekday, PickupTime: parsed[input.Weekday], CreatedBy: createdBy}
+		row := &careplan.PickupSchedule{StudentID: student.ID, Weekday: input.Weekday, PickupTime: parsed[input.Weekday], CreatedBy: createdBy, EnteredByTraeger: careplan.EnteredByTraeger(ctx, createdBy)}
 		if err := s.preservePickupNotes(ctx, student, row, byWeekday[input.Weekday], result); err != nil {
 			return err
 		}

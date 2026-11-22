@@ -10,7 +10,7 @@ import {
 } from "./traeger-catalog-api";
 
 const request = vi.hoisted(() => vi.fn());
-vi.mock("./traeger-api", () => ({ traegerRequest: request }));
+vi.mock("~/lib/bff-fetch", () => ({ bffJson: request }));
 afterEach(() => request.mockReset());
 
 // The decoded answer of the proxy: string IDs, every field Go always sends.
@@ -116,9 +116,9 @@ describe("Träger catalog requests (#4704)", () => {
         schoolIds: ["11", "12"],
       });
 
-      const [path, init] = request.mock.lastCall!;
-      expect(path).toBe("/api/traeger/catalog/phases/7");
-      expect(init.method).toBe("PUT");
+      const [, route, init] = request.mock.lastCall!;
+      expect(route).toBe("PUT /traeger/catalog/phases/{id}");
+      expect(init.params).toEqual({ id: "7" });
       const body = JSON.parse(JSON.stringify(init.body));
       expect(body.name).toBe("Umbenannt");
       expect(body.is_active).toBe(isActive ?? null);
@@ -150,9 +150,9 @@ describe("Träger catalog requests (#4704)", () => {
         fields: { ...offering.draft.fields, name: "Umbenannt" },
       });
 
-      const [path, init] = request.mock.lastCall!;
-      expect(path).toBe("/api/traeger/catalog/offerings/31");
-      expect(init.method).toBe("PUT");
+      const [, route, init] = request.mock.lastCall!;
+      expect(route).toBe("PUT /traeger/catalog/offerings/{id}");
+      expect(init.params).toEqual({ id: "31" });
       const body = JSON.parse(JSON.stringify(init.body));
       expect(body.fields.name).toBe("Umbenannt");
       expect(body.fields.is_active).toBe(isActive ?? null);
@@ -163,7 +163,11 @@ describe("Träger catalog requests (#4704)", () => {
     request.mockResolvedValue(backendPhase);
     const phase = await fetchTraegerPhase("7");
 
-    expect(request).toHaveBeenCalledWith("/api/traeger/catalog/phases/7");
+    expect(request).toHaveBeenCalledWith(
+      "org",
+      "GET /traeger/catalog/phases/{id}",
+      { params: { id: "7" } },
+    );
     expect(phase.id).toBe("7");
     expect(phase.draft.audience).toBe("open");
     expect(phase.draft.careOverflowMode).toBe("waitlist");
@@ -221,7 +225,7 @@ describe("Träger catalog requests (#4704)", () => {
     await updateTraegerPhase("7", input);
     await updateTraegerPhase("7", { ...input, allSchools: true });
 
-    const [first, second] = request.mock.calls.map(([, init]) => init.body);
+    const [first, second] = request.mock.calls.map(([, , init]) => init.body);
     expect(first).toMatchObject({
       name: "Schuljahr",
       all_schools: false,
@@ -261,8 +265,9 @@ describe("Träger catalog requests (#4704)", () => {
       contractTemplate: null,
     });
 
-    const [path, init] = request.mock.calls[0]!;
-    expect(path).toBe("/api/traeger/catalog/phases/7/offerings");
+    const [, route, init] = request.mock.calls[0]!;
+    expect(route).toBe("POST /traeger/catalog/phases/{id}/offerings");
+    expect(init.params).toEqual({ id: "7" });
     expect(init.body.fields.description).toBeNull();
     expect(init.body.prices).toEqual([
       { days_per_week: 3, monthly_cents: 9000, meal_extra: true },
@@ -317,11 +322,9 @@ describe("Träger catalog requests (#4704)", () => {
     } satisfies traegerCatalogContract.Rollout);
     const rollout = await rolloutTraegerPhase("7", preview.fingerprint);
     expect(request).toHaveBeenLastCalledWith(
-      "/api/traeger/catalog/phases/7/rollout",
-      {
-        method: "POST",
-        body: { fingerprint: "abc" },
-      },
+      "org",
+      "POST /traeger/catalog/phases/{id}/rollout",
+      { params: { id: "7" }, body: { fingerprint: "abc" } },
     );
     expect(rollout.schools).toEqual([
       { schoolId: "11", outcome: "stale", errorCode: null, careBeyondEnd: 0 },
@@ -354,7 +357,7 @@ describe("Träger catalog round trip (#2353)", () => {
       schoolIds: ["11"],
     });
 
-    expect(request.mock.calls[1]![1].body.is_active).toBe(false);
+    expect(request.mock.calls[1]![2].body.is_active).toBe(false);
   });
 
   it("keeps a switched-off offering draft switched off when it is saved again", async () => {
@@ -376,7 +379,7 @@ describe("Träger catalog round trip (#2353)", () => {
     request.mockResolvedValue(offeringWire);
     await updateTraegerOffering("31", phase.offerings[0]!.draft);
 
-    expect(request.mock.calls[1]![1].body.fields.is_active).toBe(false);
+    expect(request.mock.calls[1]![2].body.fields.is_active).toBe(false);
   });
 
   it.each([

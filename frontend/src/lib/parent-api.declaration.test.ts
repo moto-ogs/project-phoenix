@@ -39,7 +39,7 @@ describe("downloadDeclarationProofPdf (#3430)", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/parent/me/news/42/declaration/proof/pdf?student_id=5",
-      { method: "GET" },
+      expect.objectContaining({ method: "GET" }),
     );
     expect(downloadBlobMock).toHaveBeenCalledWith(
       expect.any(Blob),
