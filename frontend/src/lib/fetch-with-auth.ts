@@ -9,8 +9,9 @@ interface FetchOptions extends RequestInit {
 }
 
 /**
- * Custom fetch wrapper that handles token refresh automatically
- * This is used for client-side fetch requests to Next.js API routes
+ * Fetch to a BFF route that, on a 401, asks the session to renew once
+ * (handleAuthFailure) and repeats the request. The browser holds no token
+ * (#5005). New clients call bffJson (lib/bff-fetch.ts).
  */
 export async function fetchWithAuth(
   url: string,
