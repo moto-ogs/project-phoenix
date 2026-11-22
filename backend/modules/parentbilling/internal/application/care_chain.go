@@ -317,12 +317,24 @@ func compareCareChildren(a, b *rankedCareChild) int {
 }
 
 // countingSchools are the schools whose children a sibling rule counts:
-// the chosen ones, else the rule's own schools.
+// the chosen ones, else the rule's own schools. A rule of the family's size
+// (#7765) counts its own schools with the chosen ones: it reduces every
+// child with a contract there once the family is large enough, so a child
+// at a school of the rule is never left out of its own family.
 func countingSchools(rule *parentbilling.ContributionRule) []int64 {
-	if len(rule.CountSchoolIDs) > 0 {
-		return ident.Int64s(rule.CountSchoolIDs)
+	if len(rule.CountSchoolIDs) == 0 {
+		return ident.Int64s(rule.SchoolIDs)
 	}
-	return ident.Int64s(rule.SchoolIDs)
+	counting := ident.Int64s(rule.CountSchoolIDs)
+	if !rule.SiblingAllChildren {
+		return counting
+	}
+	for _, school := range ident.Int64s(rule.SchoolIDs) {
+		if !slices.Contains(counting, school) {
+			counting = append(counting, school)
+		}
+	}
+	return counting
 }
 
 // applyCareSiblingRule ranks the children of every family that have a

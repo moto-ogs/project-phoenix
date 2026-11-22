@@ -847,6 +847,23 @@ func TestCareMonthRuleChainTable(t *testing.T) {
 			totals: map[int64]int64{contractMia: 2000},
 		},
 		{
+			// The rule applies at Ispringen and names only Birkenfeld under
+			// „Geschwister zählen an“. Its own school counts with it: Mia at
+			// Ispringen (80,00 €) and Noah at Birkenfeld are a family of
+			// two, Mia pays 40,00 €. Noah's school is none of the rule's.
+			name: "family size: the rule's own schools count with the chosen ones",
+			children: []careChainChild{
+				{contractMia, schoolIspringen, familyEva, "2017-03-01", []parentbilling.CareContractService{mon1400, tue1400}},
+				{contractNoah, schoolBirkenfeld, familyEva, "2015-03-01", []parentbilling.CareContractService{mon1400}},
+			},
+			rules: func(t *testing.T) []parentbilling.ContributionRule {
+				rules := familySizeRule(false, 2)(t)
+				rules[0].CountSchoolIDs = []ident.ID{ident.ID(schoolBirkenfeld)}
+				return rules
+			},
+			totals: map[int64]int64{contractMia: 4000, contractNoah: 4500},
+		},
+		{
 			// Only the afternoon module (102) is reduced. Mia books none,
 			// but she has a contract at the school: with Noah (60,00 € and
 			// Tue 40,00 €) the family has two, Noah's 102 costs 30,00 €.

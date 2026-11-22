@@ -159,7 +159,15 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 			}
 		}
 	}
-	decideImportedChildren(rows, current, func(importedChildren) calendar.Date { return today })
+	// A number has to hold on the later of today and the day the row names:
+	// a confirmation that ends before the row's day is renewed from that
+	// day, and the months it covers keep it (FamilyChildCount.InForceOn).
+	decideImportedChildren(rows, current, func(row importedChildren) calendar.Date {
+		if row.number.ValidFrom.After(today) {
+			return row.number.ValidFrom
+		}
+		return today
+	})
 	var shown []parentbilling.FamilyChildTarget
 	seen := map[int64]bool{}
 	for i, row := range rows {
@@ -179,24 +187,21 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 	return shown
 }
 
-// alignFamilyImportDays gives the ready rows of one family the day the
+// alignFamilyImportDays shows on the ready rows of one family the day the
 // family's number is stored from: the earliest its ready rows name
 // (newImportedChildren). The preview then shows every row the day that
 // counts, also when siblings name different days. A row the import leaves
-// out lends no day.
+// out lends no day. The rows keep their own days: the number is stored on
+// the contract of the row that names the earliest.
 func alignFamilyImportDays(candidates []familyImportCandidate) {
-	taken := takenFamilyImportRows(candidates)
 	earliest := map[string]calendar.Date{}
-	for _, row := range taken {
+	for _, row := range takenFamilyImportRows(candidates) {
 		if day, seen := earliest[row.family]; !seen || row.number.ValidFrom.Before(day) {
 			earliest[row.family] = row.number.ValidFrom
 		}
 	}
-	for _, row := range taken {
-		row.number.ValidFrom = earliest[row.family]
-	}
 	for i := range candidates {
-		candidates[i].showDay()
+		candidates[i].showDay(earliest)
 	}
 }
 
@@ -217,20 +222,20 @@ func takenFamilyImportRows(candidates []familyImportCandidate) []*importedChildr
 	return taken
 }
 
-// showDay names on a ready row every day its number counts from: the
-// earliest of the families that take it over and, when they differ, each
-// later one, so the preview hides no day the import stores. Any other row
-// names none: a confirmed number keeps its own validity, which the row does
-// not name.
-func (c *familyImportCandidate) showDay() {
+// showDay names on a ready row every day its number counts from, by the
+// day each of its families is stored from: the earliest and, when they
+// differ, each later one, so the preview hides no day the import stores.
+// Any other row names none: a confirmed number keeps its own validity,
+// which the row does not name.
+func (c *familyImportCandidate) showDay(stored map[string]calendar.Date) {
 	c.row.ValidFrom, c.row.LaterValidFrom = nil, []calendar.Date{}
 	if c.row.Status != parentbilling.FamilyImportReady {
 		return
 	}
 	var days []calendar.Date
 	for _, row := range c.decided {
-		if row.status == parentbilling.ImportedChildrenNew && !slices.Contains(days, row.number.ValidFrom) {
-			days = append(days, row.number.ValidFrom)
+		if day := stored[row.family]; row.status == parentbilling.ImportedChildrenNew && !slices.Contains(days, day) {
+			days = append(days, day)
 		}
 	}
 	if len(days) == 0 {

@@ -74,6 +74,54 @@ func TestFamilyImportRowsCountFromTheDayTheOfficeNames(t *testing.T) {
 	numbers := newImportedChildren(kept)
 	require.Len(t, numbers, 1, "the family is stored once")
 	assert.Equal(t, calendar.NewDate(2026, 10, 15), numbers[0].ValidFrom)
+	// The number is stored on the contract of the row that names the
+	// earliest day, also when that row comes second in the file.
+	check = familyImportCheck{index: index, schools: schools,
+		recipients: map[int64]parentbilling.CareRecipient{1: {Email: family}, 2: {Email: family}},
+		contracts:  familyImportContracts([]parentbilling.CareContractVersion{contract(1, "Mia"), contract(2, "Noah")})}
+	reversed := []familyImportCandidate{
+		check.candidate([]string{"Noah", "Beispiel", "2", ""}, 2),
+		check.candidate([]string{"Mia", "Beispiel", "2", "15.10.2026"}, 3),
+	}
+	decideFamilyImport(reversed, map[string]*familyNumbers{}, calendar.NewDate(2026, 11, 22))
+	kept = nil
+	for _, sibling := range reversed {
+		assert.Equal(t, calendar.NewDate(2026, 10, 15), *sibling.row.ValidFrom, "line %d shows the family's day", sibling.row.Line)
+		kept = append(kept, sibling.decided...)
+	}
+	numbers = newImportedChildren(kept)
+	require.Len(t, numbers, 1)
+	assert.Equal(t, calendar.NewDate(2026, 10, 15), numbers[0].ValidFrom)
+	assert.Equal(t, int64(1), numbers[0].ContractID, "Mia's row names the day, her contract carries the number")
+}
+
+// A file for the time after a confirmation that still holds today (#7765):
+// the confirmation ends on 31.07.2027, the file counts from 01.08.2027. The
+// row is taken over as the successor from its own day, whether it names the
+// same number or another; the months before keep the confirmation. A file
+// day inside the confirmation's time changes nothing.
+func TestFamilyImportRenewsAConfirmationThatEndsBeforeTheFileDay(t *testing.T) {
+	t.Parallel()
+	const family = "familie@example.org"
+	today, ends := calendar.NewDate(2026, 11, 22), calendar.NewDate(2027, 7, 31)
+	decide := func(children int, from calendar.Date) parentbilling.FamilyChildrenImportRow {
+		candidates := []familyImportCandidate{{
+			row:       parentbilling.FamilyChildrenImportRow{Line: 2, Children: ptr(children)},
+			targets:   []familyImportTarget{{family: family, contractID: 1}},
+			validFrom: from,
+		}}
+		numbers := map[string]*familyNumbers{family: {brought: []*parentbilling.FamilyChildCount{{
+			FamilyEmail: family, ConfirmedChildren: ptr(3), ValidFrom: ptr(calendar.NewDate(2026, 8, 1)), ValidUntil: &ends}}}}
+		decideFamilyImport(candidates, numbers, today)
+		return candidates[0].row
+	}
+	for _, children := range []int{3, 4} {
+		row := decide(children, ends.AddDays(1))
+		require.Equal(t, parentbilling.FamilyImportReady, row.Status, "%d children after the end are a successor", children)
+		assert.Equal(t, ends.AddDays(1), *row.ValidFrom)
+	}
+	assert.Equal(t, parentbilling.FamilyImportSame, decide(3, ends).Status, "the confirmation still holds on the file's day")
+	assert.Equal(t, parentbilling.FamilyImportDiffers, decide(4, ends).Status, "a number that holds is never overwritten")
 }
 
 // A child whose contracts belong to three families gives its number to

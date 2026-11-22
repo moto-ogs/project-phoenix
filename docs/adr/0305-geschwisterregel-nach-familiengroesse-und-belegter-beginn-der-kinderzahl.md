@@ -46,7 +46,11 @@ Punkt 5 den Satz zum Beginn der Zahl.
    einer zählenden Schule, auch wenn der Teil der Regel bei ihm nichts kostet
    (0 €, anderes Modul, noch kein Beleg). Im Rangmodus steht so ein Kind
    hinter den gereihten Kindern und ändert nichts; bei der Größe würde sein
-   Fehlen die Familie unter die Schwelle drücken.
+   Fehlen die Familie unter die Schwelle drücken. Im Größenmodus zählen die
+   Schulen der Regel immer mit, auch wenn „Geschwister zählen an“ nur andere
+   nennt: Sonst bekäme ein Kind an einer Schule der Regel die Ermäßigung
+   seiner eigenen Familie nicht. Der Rangmodus zählt wie bisher nur die
+   gewählten Schulen.
 3. **Wirkung, Reihenfolge und Höchstbetrag bleiben.** Anteil, Betrag, fester
    Preis und Preis laut Preisliste wirken je ermäßigtem Kind wie im
    Rangmodus. Die Ferienkette hat ihre eigene Regel und bleibt unberührt.
@@ -69,11 +73,12 @@ Punkt 5 den Satz zum Beginn der Zahl.
    steht im Fingerabdruck. Gehören die Verträge eines Kindes zu mehreren
    Familien und gilt die Zahl für sie ab verschiedenen Tagen, nennt die Zeile
    der Vorschau jeden dieser Tage (`valid_from`, `later_valid_from`). Liegt
-   der Tag der Datei nach dem Ende einer noch geltenden Bestätigung, bleibt
-   die Zeile „schon bestätigt“ und speichert nichts: moto hält je Familie
-   eine Bestätigung, und ein Übernehmen würde die geltende überschreiben.
-   Das Büro verlängert sie über „Kinderzahl ändern“; eine Nachfolge je
-   Familie wäre ein eigenes Speichermodell.
+   der Tag der Zeile nach dem Ende einer Bestätigung, die heute noch gilt,
+   übernimmt moto die Zahl als Nachfolger ab diesem Tag: Maßgeblich ist der
+   spätere von heute und dem Tag der Zeile. Die Monate davor behalten die
+   alte Bestätigung, weil die Historie der Bestätigungen je Tag entscheidet
+   (`FamilyChildCount.InForceOn`). Die Zahl hängt am Vertrag der Zeile, die
+   den frühesten Tag der Familie nennt.
 7. **Der Vertragsimport bleibt.** Dort nennt die Datei den Vertragsbeginn
    selbst, je Zeile oder für alle Zeilen, und die Kinderzahl steht in
    derselben Zeile (ADR 0288 Punkt 4).
