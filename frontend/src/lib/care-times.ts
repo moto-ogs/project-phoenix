@@ -29,7 +29,7 @@ export type CareTimeDayKind = (typeof CARE_TIME_DAY_KINDS)[number];
  */
 const PLANNED_SOURCES = ["holiday_booking", "contract", "care_plan"] as const;
 
-export type CareTimePlannedSource = (typeof PLANNED_SOURCES)[number];
+type CareTimePlannedSource = (typeof PLANNED_SOURCES)[number];
 
 /**
  * Ein Tag mit Soll und Ist. `class_times` (#5656) sind Zeiten im Unterricht,
