@@ -252,8 +252,8 @@ export default function TraegerContractChildLinkPage() {
                 <ul className="mb-4 list-disc space-y-1 pl-5 text-sm text-gray-700">
                   <li>
                     Die Vertragsnummer steht auf der Seite des Vertrags unter
-                    „Vertragsangaben“ bei „Vertrag Nr.“. Alle Nummern auf einmal
-                    bekommst du in der Vertragsliste im Menü unter
+                    „Vertragsangaben“, im Feld „Vertrag Nr.“ Alle Nummern auf
+                    einmal bekommst du in der Vertragsliste im Menü unter
                     „Herunterladen“.
                   </li>
                   <li>

@@ -229,7 +229,7 @@ export function childLinkContractCount(count: number): string {
 
 /** Eine Beispieldatei mit den Spalten, die moto von selbst erkennt. */
 export const CHILD_LINK_SAMPLE = [
-  "Vertragsnummer;Kinderakte",
+  "Vertrag Nr.;Kinderakte",
   "1001;5012",
   "1002;5013",
 ].join("\r\n");
