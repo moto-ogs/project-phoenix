@@ -38,7 +38,7 @@ type schoolCheckinRequest struct {
 // "Im Unterricht")
 // so PresenceBadge can update optimistically in the UI.
 type schoolCheckinResponse struct {
-	StudentID    common.ID  `json:"student_id"`
+	StudentID    ident.ID   `json:"student_id"`
 	Status       string     `json:"status"`
 	CheckInTime  *time.Time `json:"check_in_time,omitempty"`
 	CheckOutTime *time.Time `json:"check_out_time,omitempty"`

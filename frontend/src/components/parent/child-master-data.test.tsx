@@ -110,6 +110,18 @@ const mockSetRequestSharing = vi.mocked(setRequestSharing);
 
 function features(overrides: Partial<ChildFeatures> = {}): ChildFeatures {
   return {
+    conference_book_allowed: false,
+    care_ended: false,
+    excused_note_enabled: false,
+    pickup_change_mode_enabled: false,
+    pickup_change_cutoff_time: "",
+    pickup_change_today_closed: false,
+    pickup_change_care_day_ended: false,
+    pickup_manage_allowed: false,
+    emergency_contact_manage_allowed: false,
+    absence_request_edit_enabled: false,
+    reason_required: false,
+    care_facility_term: "",
     sick_note_enabled: true,
     sick_requires_approval: false,
     notes_enabled: true,
@@ -834,6 +846,7 @@ describe("ChildMasterDataView", () => {
       masterData({
         pending_changes: [
           {
+            is_self: false,
             id: "900",
             target: "person",
             field_key: "first_name",
@@ -874,6 +887,7 @@ describe("ChildMasterDataView", () => {
   it("keeps identity request success when the pending refresh fails", async () => {
     mockSubmit.mockResolvedValueOnce([
       {
+        is_self: false,
         id: "900",
         target: "person",
         field_key: "first_name",
@@ -946,6 +960,7 @@ describe("ChildMasterDataView", () => {
       masterData({
         pending_changes: [
           {
+            is_self: false,
             id: "901",
             target: "person",
             field_key: "birthday",
@@ -972,6 +987,7 @@ describe("ChildMasterDataView", () => {
       masterData({
         pending_changes: [
           {
+            is_self: false,
             id: "901",
             target: "departure",
             field_key: "allowed_departure_modes",
@@ -1109,6 +1125,7 @@ describe("ChildMasterDataView", () => {
   it("keeps departure request success when the pending refresh fails", async () => {
     mockSubmit.mockResolvedValueOnce([
       {
+        is_self: false,
         id: "901",
         target: "departure",
         field_key: "allowed_departure_modes",

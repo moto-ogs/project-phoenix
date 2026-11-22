@@ -12,7 +12,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	validation "github.com/go-ozzo/ozzo-validation"
-	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
@@ -87,22 +86,22 @@ func (rs *Resource) Router() chi.Router {
 
 // PersonResponse is the wire shape of one directory entry.
 type PersonResponse struct {
-	ID        common.ID `json:"id"`
+	ID        ident.ID  `json:"id"`
 	FirstName string    `json:"first_name"`
 	LastName  string    `json:"last_name"`
 	Email     string    `json:"email,omitempty"`
 	TagID     string    `json:"tag_id,omitempty"`
-	AccountID common.ID `json:"account_id,omitempty"`
+	AccountID ident.ID  `json:"account_id,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // DirectoryPersonRequest is the create and update payload.
 type DirectoryPersonRequest struct {
-	FirstName string    `json:"first_name"`
-	LastName  string    `json:"last_name"`
-	TagID     string    `json:"tag_id,omitempty"`
-	AccountID common.ID `json:"account_id,omitempty"`
+	FirstName string   `json:"first_name"`
+	LastName  string   `json:"last_name"`
+	TagID     string   `json:"tag_id,omitempty"`
+	AccountID ident.ID `json:"account_id,omitempty"`
 }
 
 // Bind reports every blank name as its own field (#2511); the shared error

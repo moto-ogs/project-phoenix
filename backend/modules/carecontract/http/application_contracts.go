@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ApplicationContractResource serves /care-contracts in the staff portal
@@ -69,8 +70,8 @@ type ApplicationContractConclusion struct {
 // ApplicationContractResponse is the contract of one child of the
 // application.
 type ApplicationContractResponse struct {
-	RequestChildID common.ID                      `json:"request_child_id"`
-	ContractID     common.ID                      `json:"contract_id"`
+	RequestChildID ident.ID                       `json:"request_child_id"`
+	ContractID     ident.ID                       `json:"contract_id"`
 	Status         string                         `json:"status"`
 	SentAt         *time.Time                     `json:"sent_at"`
 	Concluded      *ApplicationContractConclusion `json:"concluded"`
@@ -131,7 +132,7 @@ func applicationContractResponse(contract carecontract.ApplicationContract) Appl
 			EndsAt: service.EndsAt, LastDay: service.LastDay}
 	}
 	response := ApplicationContractResponse{
-		RequestChildID: common.ID(contract.RequestChildID), ContractID: common.ID(contract.ContractID),
+		RequestChildID: ident.ID(contract.RequestChildID), ContractID: ident.ID(contract.ContractID),
 		Status: contract.Status, SentAt: contract.SentAt, EndsOn: contract.EndsOn,
 		EffectiveFrom: contract.EffectiveFrom, Services: services,
 	}

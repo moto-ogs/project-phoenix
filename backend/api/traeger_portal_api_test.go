@@ -211,12 +211,13 @@ type traegerLoginAnswer struct {
 	RefreshToken   string `json:"refresh_token"`
 	ChallengeToken string `json:"challenge_token"`
 	MaskedEmail    string `json:"masked_email"`
-	OrganizationID wireID `json:"organization_id"`
+	// The Träger sign-in is outside the contract and answers numbers.
+	OrganizationID int64 `json:"organization_id"`
 	// The remember-device offer of the code step (#6955).
 	TrustedDeviceEnabled *bool `json:"trusted_device_enabled"`
 	TrustedDeviceDays    *int  `json:"trusted_device_days"`
 	Organizations        []struct {
-		ID   wireID `json:"id"`
+		ID   int64  `json:"id"`
 		Name string `json:"name"`
 	} `json:"organizations"`
 	Code string `json:"code"`

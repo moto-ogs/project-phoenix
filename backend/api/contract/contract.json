@@ -7652,6 +7652,17 @@
     },
     {
       "method": "GET",
+      "pattern": "/auth/guardian-invitations/{token}",
+      "portals": [
+        "public"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "GuardianInvitationValidateResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/auth/holiday-parent-setups/{token}",
       "portals": [
         "public"
@@ -53320,6 +53331,59 @@
         },
         {
           "name": "token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GuardianInvitationValidateResponse",
+      "go_type": "account.GuardianInvitationValidateResponse",
+      "fields": [
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expires_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "school_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "tenant_slug",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_logo_url",
           "optional": true,
           "schema": {
             "kind": "string"

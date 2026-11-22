@@ -24,6 +24,7 @@ vi.mock("~/lib/hooks/use-parent-resources", () => ({
 
 function child(studentId: string, schoolName: string): Child {
   return {
+    care_ended: false,
     student_id: studentId,
     tenant_id: `t-${schoolName}`,
     first_name: `Kind ${studentId}`,

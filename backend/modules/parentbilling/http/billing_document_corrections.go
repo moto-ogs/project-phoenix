@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -26,9 +27,9 @@ func (req *BillingCancellationRequest) Bind(*http.Request) error { return nil }
 // /traeger/billing-runs/{id}/documents/{documentID}/credits: the child, the
 // amount in whole cent and the reason of the Gutschrift (#4690).
 type BillingCreditRequest struct {
-	ChildID     common.ID `json:"child_id"`
-	AmountCents int64     `json:"amount_cents" contract:"number"`
-	Reason      string    `json:"reason"`
+	ChildID     ident.ID `json:"child_id"`
+	AmountCents int64    `json:"amount_cents" contract:"number"`
+	Reason      string   `json:"reason"`
 }
 
 // Bind accepts the body; the Owner validates the credit.

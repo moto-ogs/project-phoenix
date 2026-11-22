@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -20,9 +21,9 @@ import (
 // RevenueAccountRequest is the body of PUT …/booking-accounts/revenue-accounts:
 // the scope and its account, empty to remove it.
 type RevenueAccountRequest struct {
-	Scope   string    `json:"scope"`
-	ScopeID common.ID `json:"scope_id"`
-	Account string    `json:"account"`
+	Scope   string   `json:"scope"`
+	ScopeID ident.ID `json:"scope_id"`
+	Account string   `json:"account"`
 }
 
 // Bind accepts the body; the owner validates it.
@@ -30,10 +31,10 @@ func (req *RevenueAccountRequest) Bind(*http.Request) error { return nil }
 
 // CostCenterRequest is the body of POST …/booking-accounts/cost-centers.
 type CostCenterRequest struct {
-	Scope     string    `json:"scope"`
-	ScopeID   common.ID `json:"scope_id"`
-	ValidFrom string    `json:"valid_from"`
-	Code      string    `json:"code"`
+	Scope     string   `json:"scope"`
+	ScopeID   ident.ID `json:"scope_id"`
+	ValidFrom string   `json:"valid_from"`
+	Code      string   `json:"code"`
 }
 
 // Bind reads the day; the owner validates the rest.
