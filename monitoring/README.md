@@ -119,6 +119,16 @@ UI so the two do not fire side by side. Verify in Explore that
 rule; a different label means the Alloy mapping differs and both rules need
 the same correction. Runbook: [`runbooks/server-errors.md`](runbooks/server-errors.md).
 
+## Contract decode failures
+
+`grafana/provisioning/alerting/contract-decode.yml` alerts once per route on
+every `contract_decode_failed` line of the frontend in 5 minutes (#7809). The
+catalog proxy writes that line and answers 502 when a backend answer does not
+match the generated decoder. It is prepared, not deployed; deploy it alone with
+`scripts/deploy-grafana-provisioning.sh <ssh-host> alerting/contract-decode.yml`.
+`scripts/contract-decode-alerts.integration.test.mjs` runs its LogQL against an
+isolated Loki. Runbook: [`runbooks/contract-decode.md`](runbooks/contract-decode.md).
+
 ## DB pool utilization
 
 `DB Pool Utilization High` in `alerting/infrastructure.yml` (UID
