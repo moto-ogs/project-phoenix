@@ -32,6 +32,7 @@ JOIN parent_billing.sepa_mandates AS mandate
 	ON mandate.organization_id = invoice.organization_id AND mandate.id = invoice.mandate_id
 WHERE invoice.organization_id = ?0 AND invoice.id = ANY(?1) AND invoice.payment_method = 'direct_debit'
 	AND invoice.total_cents > 0 AND invoice.due_on IS NOT NULL
+	AND mandate.account_holder_sealed = invoice.account_holder_sealed AND mandate.iban_masked = invoice.debtor_iban_masked
 ORDER BY mandate.id, invoice.id
 FOR UPDATE OF mandate`
 
@@ -47,38 +48,45 @@ JOIN parent_billing.sepa_mandates AS mandate
 	ON mandate.organization_id = document.organization_id AND mandate.id = document.mandate_id
 WHERE document.organization_id = ?0 AND document.id = ANY(?1) AND document.kind = 'invoice'
 	AND document.payment_method = 'direct_debit' AND document.total_cents > 0 AND document.due_on IS NOT NULL
+	AND mandate.account_holder_sealed = document.account_holder_sealed AND mandate.iban_masked = document.debtor_iban_masked
 ORDER BY mandate.id, document.id
 FOR UPDATE OF mandate`
 
-// insertSEPADebits writes the debits of the invoices just issued, in the
-// statement after their insert, so they hold the account of the mandate at
-// the release (ADR 0181). It locks the mandates like a confirmation does and
-// takes the sequence type from the mandate under that lock: a confirmation
-// that collected a mandate while the run was being released turns its
-// mandate to RCUR, and the new debit follows it instead of the FRST the
-// preview read. holiday names holiday documents, else monthly
-// invoices.
+// insertSEPADebits writes one debit for each invoice expected to collect.
+// The mandate lock gives the debit its current sequence (ADR 0181). If an
+// account edit changed the holder or mask since the invoice was prepared,
+// the locked row no longer matches. The caller rolls back the release.
 func insertSEPADebits(ctx context.Context, db bun.IDB, organizationID int64, holiday bool, invoiceIDs []int64) error {
 	if len(invoiceIDs) == 0 {
 		return nil
 	}
-	var err error
+	var query *bun.RawQuery
+	ids := pgdialect.Array(invoiceIDs)
 	if holiday {
-		_, err = db.NewRaw(insertHolidayDebitsSQL, organizationID, pgdialect.Array(invoiceIDs)).Exec(ctx)
+		query = db.NewRaw(insertHolidayDebitsSQL, organizationID, ids)
 	} else {
-		_, err = db.NewRaw(insertCareDebitsSQL, organizationID, pgdialect.Array(invoiceIDs)).Exec(ctx)
+		query = db.NewRaw(insertCareDebitsSQL, organizationID, ids)
 	}
+	result, err := query.Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("insert SEPA debits: %w", err)
+	}
+	inserted, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("count inserted SEPA debits: %w", err)
+	}
+	if inserted != int64(len(invoiceIDs)) {
+		return parentbilling.ErrBillingRunChanged
 	}
 	return nil
 }
 
-// careInvoiceIDs are the IDs of monthly invoices just inserted.
-func careInvoiceIDs(rows []careInvoiceRow) []int64 {
-	ids := make([]int64, len(rows))
-	for i, row := range rows {
-		ids[i] = row.ID
+func careDebitInvoiceIDs(rows []careInvoiceRow) []int64 {
+	var ids []int64
+	for _, row := range rows {
+		if row.MandateID != nil && row.TotalCents > 0 {
+			ids = append(ids, row.ID)
+		}
 	}
 	return ids
 }

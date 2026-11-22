@@ -508,8 +508,13 @@ func (s *Store) IssueDocuments(ctx context.Context, organizationID int64, run pa
 	if err != nil {
 		return err
 	}
-	// The debits of the file hold the account of the mandate now (#4697).
-	return insertSEPADebits(ctx, db, organizationID, true, ids)
+	var debitIDs []int64
+	for i, document := range documents {
+		if document.TotalCents > 0 && document.Payment != nil && document.Payment.Mandate != nil {
+			debitIDs = append(debitIDs, ids[i])
+		}
+	}
+	return insertSEPADebits(ctx, db, organizationID, true, debitIDs)
 }
 
 // insertDocuments stores numbered documents with their positions and
