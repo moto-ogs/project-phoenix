@@ -1,6 +1,7 @@
 import type * as adminContract from "~/lib/contract/admin.generated";
 import { knownEnum } from "~/lib/contract/known-enum";
 import type { ErrorCode } from "~/lib/error-codes.generated";
+import { ApiError } from "./api-error";
 import { bffJson } from "./bff-fetch";
 // grade-transition-api.ts
 // Client for the Jahrgangsstufenwechsel (grade transition) admin flow (#405).
@@ -283,6 +284,14 @@ export const NOT_DRAFT_CODE: ErrorCode = "grade_transition.not_draft";
  */
 export const NOT_APPLIED_CODE: ErrorCode = "grade_transition.not_applied";
 
+/** A failure keeps the backend's code; its message names the HTTP status. */
+function statusMessage(error: unknown): never {
+  if (error instanceof ApiError && error.status !== undefined) {
+    error.message = `HTTP ${error.status}`;
+  }
+  throw error;
+}
+
 // ---------------------------------------------------------------------------
 // API calls
 // ---------------------------------------------------------------------------
@@ -333,9 +342,8 @@ export async function listGradeTransitions(): Promise<GradeTransition[]> {
   for (let window = 0; window < LIST_PAGE_LIMIT; window++) {
     const page = await bffJson("tenant", "GET /api/admin/grade-transitions/", {
       query: { after_id: afterID, page_size: LIST_PAGE_SIZE },
-      errorMessage: "Jahrgangswechsel konnten nicht geladen werden",
-    });
-    const data = page.data;
+    }).catch(statusMessage);
+    const data = page.data ?? [];
     for (const transition of data) {
       byID.set(transition.id, transition);
     }
@@ -357,8 +365,7 @@ export async function createGradeTransition(
         notes: input.notes,
         mappings: toBackendMappings(input.mappings),
       },
-      errorMessage: "Jahrgangswechsel konnte nicht angelegt werden",
-    }),
+    }).catch(statusMessage),
   );
 }
 
@@ -379,16 +386,14 @@ export async function updateGradeTransition(
           ? toBackendMappings(input.mappings)
           : undefined,
       },
-      errorMessage: "Jahrgangswechsel konnte nicht gespeichert werden",
-    }),
+    }).catch(statusMessage),
   );
 }
 
 export async function deleteGradeTransition(id: string): Promise<void> {
   await bffJson("tenant", "DELETE /api/admin/grade-transitions/{id}/", {
     params: { id },
-    errorMessage: "Jahrgangswechsel konnte nicht gelöscht werden",
-  });
+  }).catch(statusMessage);
 }
 
 export async function previewGradeTransition(
@@ -397,8 +402,7 @@ export async function previewGradeTransition(
   return mapPreview(
     await bffJson("tenant", "GET /api/admin/grade-transitions/{id}/preview", {
       params: { id },
-      errorMessage: "Vorschau konnte nicht geladen werden",
-    }),
+    }).catch(statusMessage),
   );
 }
 
@@ -417,8 +421,7 @@ export async function applyGradeTransition(
       body: expectedFingerprint
         ? { expected_fingerprint: expectedFingerprint }
         : {},
-      errorMessage: "Jahrgangswechsel konnte nicht ausgeführt werden",
-    }),
+    }).catch(statusMessage),
   );
 }
 
@@ -428,16 +431,17 @@ export async function revertGradeTransition(
   return mapResult(
     await bffJson("tenant", "POST /api/admin/grade-transitions/{id}/revert", {
       params: { id },
-      errorMessage: "Jahrgangswechsel konnte nicht zurückgesetzt werden",
-    }),
+    }).catch(statusMessage),
   );
 }
 
 export async function fetchTransitionClasses(): Promise<string[]> {
   return (
-    (await bffJson("tenant", "GET /api/admin/grade-transitions/classes", {
-      errorMessage: "Klassen konnten nicht geladen werden",
-    })) ?? []
+    (await bffJson(
+      "tenant",
+      "GET /api/admin/grade-transitions/classes",
+      {},
+    ).catch(statusMessage)) ?? []
   );
 }
 
@@ -445,8 +449,7 @@ export async function fetchSuggestedMappings(): Promise<SuggestedMapping[]> {
   const data = await bffJson(
     "tenant",
     "GET /api/admin/grade-transitions/suggest",
-    { errorMessage: "Vorschläge konnten nicht geladen werden" },
-  );
+  ).catch(statusMessage);
   return (data ?? []).map(mapSuggestion);
 }
 
@@ -458,9 +461,8 @@ export async function fetchTransitionHistory(
     "GET /api/admin/grade-transitions/{id}/history",
     {
       params: { id },
-      errorMessage: "Verlauf konnte nicht geladen werden",
     },
-  );
+  ).catch(statusMessage);
   return (data ?? []).map(mapHistoryEntry);
 }
 
@@ -478,6 +480,5 @@ export async function fetchTransitionHistory(
 export async function purgeGraduatedStudent(studentId: string): Promise<void> {
   await bffJson("tenant", "DELETE /api/students/{id}/purge", {
     params: { id: studentId },
-    errorMessage: "Kind konnte nicht gelöscht werden",
-  });
+  }).catch(statusMessage);
 }
