@@ -4,11 +4,13 @@ import { ApiError } from "./api-error";
 import {
   DAY_LOG_STATUS_COLORS,
   DAY_LOG_STATUS_ORDER,
-  dayLogExportUrl,
   dayLogSourceLabel,
   fetchDayLog,
+  fetchDayLogExport,
   type DayLogResponse,
 } from "./day-log-api";
+
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -76,8 +78,44 @@ describe("fetchDayLog", () => {
     await expect(fetchDayLog("2026-07-24")).resolves.toEqual(dayLogPayload);
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/students/day-log?date=2026-07-24",
-      { cache: "no-store" },
+      expect.objectContaining({ method: "GET" }),
     );
+  });
+
+  it("fails the read for a status this build does not know", async () => {
+    const group = dayLogPayload.groups[0]!;
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        data: {
+          ...dayLogPayload,
+          groups: [
+            {
+              ...group,
+              students: [{ ...group.students[0]!, status: "teleported" }],
+            },
+          ],
+        },
+      }),
+    );
+
+    await expect(fetchDayLog("2026-07-24")).rejects.toThrow(
+      "day log status has an unknown value",
+    );
+  });
+
+  it("reads null lists as empty lists", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        data: {
+          ...dayLogPayload,
+          groups: [{ ...dayLogPayload.groups[0]!, students: null }],
+        },
+      }),
+    );
+
+    await expect(fetchDayLog("2026-07-24")).resolves.toMatchObject({
+      groups: [{ group_id: "7", students: [] }],
+    });
   });
 
   it("narrows the request to one group via group_id", async () => {
@@ -87,7 +125,7 @@ describe("fetchDayLog", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/students/day-log?date=2026-07-24&group_id=7",
-      { cache: "no-store" },
+      expect.objectContaining({ method: "GET" }),
     );
   });
 
@@ -113,7 +151,7 @@ describe("fetchDayLog", () => {
       errors: [{ field: "date", reason: "unavailable" }],
       requestId: "request-day-log-403",
       // The diagnostic is retained separately and never shown to the user.
-      message: "day log request failed (403)",
+      message: "day log request failed",
       detail: "feature_disabled",
     });
   });
@@ -156,7 +194,7 @@ describe("fetchDayLog", () => {
 
     await expect(fetchDayLog("2026-07-24")).rejects.toMatchObject({
       code: "general.unavailable",
-      message: "day log request failed (504)",
+      message: "day log request failed",
     });
   });
 
@@ -169,21 +207,35 @@ describe("fetchDayLog", () => {
   });
 });
 
-describe("dayLogExportUrl", () => {
-  it("builds the export URL for all groups", () => {
-    expect(dayLogExportUrl("2026-07-24", "pdf")).toBe(
+describe("fetchDayLogExport", () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchMock = vi.fn().mockResolvedValue(new Response("file"));
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("requests the export for all groups", async () => {
+    await fetchDayLogExport("2026-07-24", "pdf");
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
       "/api/students/day-log/export?date=2026-07-24&format=pdf",
     );
   });
 
-  it("builds the export URL for one group", () => {
-    expect(dayLogExportUrl("2026-07-24", "xlsx", "7")).toBe(
+  it("requests the export for one group", async () => {
+    await fetchDayLogExport("2026-07-24", "xlsx", "7");
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
       "/api/students/day-log/export?date=2026-07-24&format=xlsx&group_id=7",
     );
   });
 
-  it("builds the Word export URL the backend already accepts", () => {
-    expect(dayLogExportUrl("2026-07-24", "docx")).toBe(
+  it("requests the Word export the backend already accepts", async () => {
+    await fetchDayLogExport("2026-07-24", "docx");
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
       "/api/students/day-log/export?date=2026-07-24&format=docx",
     );
   });

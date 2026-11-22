@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { exportEmergencySnapshot } from "./emergency-export-api";
 
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
+
 const originalFetch = globalThis.fetch;
 const originalCreateObjectURL = URL.createObjectURL;
 const originalRevokeObjectURL = URL.revokeObjectURL;
@@ -42,7 +44,7 @@ describe("exportEmergencySnapshot", () => {
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
       "/api/emergency/snapshot/export",
-      { method: "POST" },
+      expect.objectContaining({ method: "POST" }),
     );
     expect(createElement).toHaveBeenCalledWith("a");
     expect(append).toHaveBeenCalled();
