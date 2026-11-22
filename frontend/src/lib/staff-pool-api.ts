@@ -8,9 +8,8 @@
  * anderen Schule nennt nur diese Schule. Die Personalverwaltung sieht jede
  * Blockung und hebt sie auf. Jede Ansicht steht im Zugriffsprotokoll.
  */
-import { apiErrorFromResponse } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
 import type * as wire from "~/lib/contract/shared.generated";
-import { sessionFetch } from "~/lib/session-cache";
 import { traegerRequest } from "~/lib/traeger-api";
 import {
   downloadTraegerList,
@@ -116,63 +115,35 @@ function mapPoolWeek(week: wire.PoolWeek): PoolWeek {
   };
 }
 
-async function tenantRequest<T>(
-  path: string,
-  init: { method: string; body?: unknown } = { method: "GET" },
-  failure: string,
-): Promise<T> {
-  const response = await sessionFetch(path, {
-    method: init.method,
-    credentials: "include",
-    cache: "no-store",
-    headers:
-      init.body === undefined
-        ? undefined
-        : { "Content-Type": "application/json" },
-    body: init.body === undefined ? undefined : JSON.stringify(init.body),
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, failure);
-  }
-  const envelope = (await response.json()) as { data?: T } | null;
-  return envelope?.data as T;
-}
-
 /** Die Springer der Woche, in der `weekStart` liegt, für die eigene Schule. */
 export async function fetchSchoolPoolWeek(
   weekStart: string,
 ): Promise<PoolWeek> {
-  const week = await tenantRequest<wire.PoolWeek>(
-    `/api/staff-pool?week=${encodeURIComponent(weekStart)}`,
-    { method: "GET" },
-    "staff pool load failed",
-  );
+  const week = await bffJson("tenant", "GET /api/staff-pool/", {
+    query: { week: weekStart },
+    errorMessage: "staff pool load failed",
+  });
   return mapPoolWeek(week);
 }
 
 export async function blockSpringer(input: PoolBlockInput): Promise<PoolBlock> {
-  const block = await tenantRequest<wire.PoolBlock>(
-    "/api/staff-pool/blocks",
-    {
-      method: "POST",
-      body: {
-        staff_record_id: input.recordId,
-        date: input.date,
-        start_time: input.startTime,
-        end_time: input.endTime,
-      },
+  const block = await bffJson("tenant", "POST /api/staff-pool/blocks", {
+    body: {
+      staff_record_id: input.recordId,
+      date: input.date,
+      start_time: input.startTime,
+      end_time: input.endTime,
     },
-    "staff pool block failed",
-  );
+    errorMessage: "staff pool block failed",
+  });
   return mapPoolBlock(block);
 }
 
 export async function liftSchoolBlock(blockId: string): Promise<void> {
-  await tenantRequest<unknown>(
-    `/api/staff-pool/blocks/${encodeURIComponent(blockId)}`,
-    { method: "DELETE" },
-    "staff pool lift failed",
-  );
+  await bffJson("tenant", "DELETE /api/staff-pool/blocks/{id}", {
+    params: { id: blockId },
+    errorMessage: "staff pool lift failed",
+  });
 }
 
 /** Der ganze Pool des Trägers in der Woche von `weekStart`. */
