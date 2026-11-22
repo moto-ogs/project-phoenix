@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 import { fetchPickupExtensions } from "./pickup-extension-api";
 
 // Shape the catalog proxy sends: the backend's envelope around { tasks }

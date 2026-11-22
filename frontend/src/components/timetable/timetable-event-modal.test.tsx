@@ -8,6 +8,12 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { pagedJson } from "~/test/mocks/plain-session-fetch";
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 import type { ReactElement, ReactNode } from "react";
 import { SWRConfig } from "~/lib/swr/testing";
 import { setTestClock } from "~/test/clock";
@@ -326,28 +332,36 @@ function setupRefs() {
   ]);
 }
 
-function setupRepeatableReferenceFetch() {
+function stubReferenceFetch({
+  groups = [{ id: "31", name: "Klasse 1a" }],
+  categories = [{ id: "2", name: "AG" }],
+}: {
+  groups?: readonly unknown[];
+  categories?: readonly unknown[];
+} = {}) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: unknown) => {
       const url = String(input);
       if (url.includes("/api/rooms")) {
         return {
-          json: async () => ({
-            data: [{ id: 3, name: "Mensa", building: "Haus A" }],
-          }),
+          json: async () =>
+            pagedJson([{ id: "3", name: "Mensa", building: "Haus A" }]),
         };
       }
       if (url.includes("/api/activities/categories")) {
-        return {
-          json: async () => ({ data: [{ id: "2", name: "AG" }] }),
-        };
+        return { json: async () => ({ data: categories }) };
       }
-      return {
-        json: async () => ({ data: [{ id: 31, name: "Klasse 1a" }] }),
-      };
+      if (url.includes("/api/groups")) {
+        return { json: async () => pagedJson(groups) };
+      }
+      return { json: async () => ({ data: [] }) };
     }),
   );
+}
+
+function setupRepeatableReferenceFetch() {
+  stubReferenceFetch();
 }
 
 function renderModal(
@@ -1523,22 +1537,7 @@ describe("TimetableEventModal", () => {
     // #2025: since Speichern only exists on the last step, the blocked
     // "Weiter" is what surfaces each step's errors — same texts, same
     // "nothing written" guarantee.
-    vi.stubGlobal(
-      "fetch",
-      vi
-        .fn()
-        .mockResolvedValueOnce({
-          json: async () => ({
-            data: [{ id: 3, name: "Mensa", building: "Haus A" }],
-          }),
-        })
-        .mockResolvedValueOnce({
-          json: async () => ({ data: [] }),
-        })
-        .mockResolvedValueOnce({
-          json: async () => ({ data: [] }),
-        }),
-    );
+    stubReferenceFetch({ groups: [], categories: [] });
     renderModal({ showPeriodField: true, defaultCalendarPeriodId: "" });
 
     await waitFor(() => expect(screen.getByLabelText("Raum")).toBeEnabled());
@@ -2867,22 +2866,7 @@ describe("TimetableEventModal", () => {
 
   it("auto-expands when a hidden field fails validation", async () => {
     // No categories — the hidden Kategorie field cannot auto-default.
-    vi.stubGlobal(
-      "fetch",
-      vi
-        .fn()
-        .mockResolvedValueOnce({
-          json: async () => ({
-            data: [{ id: 3, name: "Mensa", building: "Haus A" }],
-          }),
-        })
-        .mockResolvedValueOnce({
-          json: async () => ({ data: [] }),
-        })
-        .mockResolvedValueOnce({
-          json: async () => ({ data: [] }),
-        }),
-    );
+    stubReferenceFetch({ groups: [], categories: [] });
     renderModal({ variant: "quick" });
 
     await waitFor(() => expect(screen.getByLabelText("Raum")).toBeEnabled());
@@ -4567,9 +4551,12 @@ describe("TimetableEventModal", () => {
         if (url.includes("/api/activities/categories")) {
           return { json: async () => ({ data: [{ id: "2", name: "AG" }] }) };
         }
-        return {
-          json: async () => ({ data: [{ id: 31, name: "Klasse 1a" }] }),
-        };
+        if (url.includes("/api/groups")) {
+          return {
+            json: async () => pagedJson([{ id: "31", name: "Klasse 1a" }]),
+          };
+        }
+        return { json: async () => ({ data: [] }) };
       }),
     );
     renderModal();
@@ -5518,19 +5505,8 @@ describe("TimetableEventModal", () => {
     // Choosing a Wiederholung in step 2 retroactively makes Kategorie (a
     // step-1 field) required. "Weiter" must not carry the user to step 3 with
     // that error hidden behind them — it jumps back and shows it.
-    vi.stubGlobal(
-      "fetch",
-      vi
-        .fn()
-        .mockResolvedValueOnce({
-          json: async () => ({
-            data: [{ id: 3, name: "Mensa", building: "Haus A" }],
-          }),
-        })
-        // Empty category catalog — nothing to preselect, so Kategorie is empty.
-        .mockResolvedValueOnce({ json: async () => ({ data: [] }) })
-        .mockResolvedValueOnce({ json: async () => ({ data: [] }) }),
-    );
+    // Empty category catalog — nothing to preselect, so Kategorie is empty.
+    stubReferenceFetch({ groups: [], categories: [] });
     renderModal({ showPeriodField: true });
 
     await waitFor(() => expect(screen.getByLabelText("Raum")).toBeEnabled());

@@ -43,3 +43,26 @@ export function sessionFetch(
 }
 
 export function clearSessionCache(): void {}
+
+/** The answer of a paginated list route with all rows on one page. */
+export function pagedJson(rows: readonly unknown[]): {
+  status: "success";
+  data: readonly unknown[];
+  pagination: {
+    current_page: number;
+    page_size: number;
+    total_pages: number;
+    total_records: number;
+  };
+} {
+  return {
+    status: "success",
+    data: rows,
+    pagination: {
+      current_page: 1,
+      page_size: Math.max(rows.length, 1),
+      total_pages: 1,
+      total_records: rows.length,
+    },
+  };
+}
