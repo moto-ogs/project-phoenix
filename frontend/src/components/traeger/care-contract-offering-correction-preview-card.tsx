@@ -100,29 +100,32 @@ function ChangeCell({
           <span className="pt-px text-xs leading-5 font-medium text-gray-700 tabular-nums">
             {contractImportWeekdays(change.weekdays)}
           </span>
-          {change.from === change.to ? (
-            <span className="wrap-anywhere text-gray-900">{change.to}</span>
-          ) : (
-            // The old module stays quiet, the new one carries the weight;
-            // the arrow never parts from its target when the cell wraps.
-            <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-              <span className="wrap-anywhere text-gray-500">{change.from}</span>
-              <span className="inline-flex min-w-0 items-center gap-1.5">
-                <ArrowRight
-                  className="h-3.5 w-3.5 shrink-0 text-gray-500"
-                  aria-hidden="true"
-                />
-                <span className="sr-only">wird zu</span>
-                {change.to ? (
-                  <span className="font-medium wrap-anywhere text-gray-900">
-                    {change.to}
-                  </span>
-                ) : (
-                  <StatusBadge tone="orange" size="xs" label="noch offen" />
-                )}
-              </span>
+          {/* The old module stays quiet, the new one carries the weight;
+              the arrow never parts from its target when the cell wraps. */}
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <span className="wrap-anywhere text-gray-500">{change.from}</span>
+            <span className="inline-flex min-w-0 items-center gap-1.5">
+              <ArrowRight
+                className="h-3.5 w-3.5 shrink-0 text-gray-500"
+                aria-hidden="true"
+              />
+              <span className="sr-only">wird zu</span>
+              {change.to ? (
+                <span className="font-medium wrap-anywhere text-gray-900">
+                  {change.to}
+                </span>
+              ) : (
+                <StatusBadge tone="orange" size="xs" label="noch offen" />
+              )}
             </span>
-          )}
+            {change.from === change.to && (
+              // A renamed module whose old name a new module took: the
+              // names match, the modules and their prices do not.
+              <span className="basis-full text-xs text-gray-500">
+                Anderes Modul mit gleichem Namen
+              </span>
+            )}
+          </span>
         </li>
       ))}
     </ul>

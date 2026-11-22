@@ -107,7 +107,7 @@ function problemSentence(problem: OfferingCorrectionProblem): string {
     case "follows_bookings":
       return "Der Vertrag kommt aus einer Anmeldung. Ändere die Buchung bei der Schule.";
     case "not_active":
-      return "Der Vertrag läuft nicht: Er ist noch nicht geschlossen oder schon beendet.";
+      return "Der Vertrag läuft nicht: Er ist noch nicht abgeschlossen oder schon beendet.";
     case "ended":
       return "Der Vertrag endet vor dem Tag bei „Gilt ab“.";
     case "later_version":
