@@ -141,7 +141,12 @@ const traegerCarePlanAuthorDownSQL = `
 DELETE FROM users.student_care_exit_source_removals
 	WHERE kind IN ('pickup_schedule', 'arrival_schedule', 'pickup_exception', 'arrival_exception', 'departure_exception')
 		AND jsonb_typeof(snapshot) = 'object'
-		AND (snapshot ->> 'entered_by_traeger' = 'true' OR snapshot ->> 'excused_by_traeger' = 'true');
+		AND snapshot ->> 'entered_by_traeger' = 'true';
+UPDATE users.student_care_exit_source_removals
+	SET snapshot = snapshot || '{"excused_from": null, "excused_reason": null, "excused_owns_pickup_time": false, "excused_by_traeger": false}'::jsonb
+	WHERE kind = 'pickup_exception'
+		AND jsonb_typeof(snapshot) = 'object'
+		AND snapshot ->> 'excused_by_traeger' = 'true';
 DELETE FROM schedule.student_arrival_schedules WHERE created_by IS NULL;
 DELETE FROM schedule.student_arrival_notes WHERE created_by IS NULL;
 DELETE FROM schedule.student_pickup_notes WHERE created_by IS NULL;
