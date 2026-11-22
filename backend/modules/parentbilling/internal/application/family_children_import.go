@@ -160,6 +160,11 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 	seen := map[int64]bool{}
 	for i, row := range rows {
 		if row.witness {
+			// A contradicted witness holds its whole row back, as the
+			// family it speaks for did before point 5 (#7863).
+			if row.status == parentbilling.ImportedChildrenRowsDiffer {
+				candidates[owner[i]].decided = append(candidates[owner[i]].decided, row)
+			}
 			continue
 		}
 		candidates[owner[i]].decided = append(candidates[owner[i]].decided, row)

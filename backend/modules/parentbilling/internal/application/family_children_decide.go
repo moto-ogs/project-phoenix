@@ -63,7 +63,15 @@ func decideImportedChildren(rows []importedChildren, current func(family string,
 	}
 	for i := range rows {
 		row := &rows[i]
-		if row.status != "" || row.witness {
+		if row.status != "" {
+			continue
+		}
+		if row.witness {
+			// A witness takes over nothing, but its row holds back when it
+			// contradicts the rows of the family (#7863).
+			if importedRowsDiffer(byFamily[row.family], *row) {
+				row.status = parentbilling.ImportedChildrenRowsDiffer
+			}
 			continue
 		}
 		decisionDay := day(*row)

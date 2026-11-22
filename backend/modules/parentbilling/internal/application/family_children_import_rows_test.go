@@ -540,9 +540,18 @@ func importSiblingRows(t *testing.T, today calendar.Date, versions []parentbilli
 	counts []parentbilling.FamilyChildCount, lines string,
 ) []parentbilling.ImportedFamilyChildren {
 	t.Helper()
-	contracts := familySourceContracts{versions: versions, recipients: map[int64]parentbilling.CareRecipient{
+	return importFamilyRows(t, today, versions, map[int64]parentbilling.CareRecipient{
 		contractMia: {Email: "family@example.org"}, contractNoah: {Email: "family@example.org"}, contractLea: {Email: "family@example.org"},
-	}}
+	}, counts, lines)
+}
+
+// importFamilyRows previews and applies the lines with the recipients given
+// and returns the numbers stored.
+func importFamilyRows(t *testing.T, today calendar.Date, versions []parentbilling.CareContractVersion,
+	recipients map[int64]parentbilling.CareRecipient, counts []parentbilling.FamilyChildCount, lines string,
+) []parentbilling.ImportedFamilyChildren {
+	t.Helper()
+	contracts := familySourceContracts{versions: versions, recipients: recipients}
 	store := &siblingFamilyImportStore{familySourceStore: familySourceStore{counts: counts}}
 	clock := func() calendar.Date { return today }
 	imports := CareReductions{FamilyNumbers: NewFamilyChildren(store, contracts, clock), contracts: contracts,
@@ -591,4 +600,41 @@ func TestFamilyImportLeftFamilyWitnessSpeaksBeyondTheLookBack(t *testing.T) {
 	stored := importSiblingRows(t, today, []parentbilling.CareContractVersion{mia, noah}, expired,
 		"Mia;Beispiel;3;10.08.2026\nNoah;Beispiel;2;01.10.2026\n")
 	assert.Empty(t, stored, "contradicting sibling rows must not save a family count")
+}
+
+// A row that contradicts a sibling in a family the child left takes over
+// nothing, also not for its new family (#7863), as before point 5: Mia left
+// family A on 31.10. for family B; her row says 3, Noah's in A says 2.
+func TestFamilyImportContradictedRowStoresForNoOtherFamily(t *testing.T) {
+	t.Parallel()
+	today := calendar.NewDate(2026, 11, 22)
+	left := sjrVersion(t, contractMia, schoolIspringen, 1, "2026-09-01", "2026-10-31")
+	joined := sjrVersion(t, contractLea, schoolIspringen, 3, "2026-11-01", "2027-06-30")
+	noah := sjrVersion(t, contractNoah, schoolIspringen, 2, "2026-09-01", "2027-06-30")
+	noah.ChildFirstName = "Noah"
+	expired := []parentbilling.FamilyChildCount{{ID: 5, ContractID: ident.ID(contractNoah), FamilyEmail: "family@example.org",
+		ConfirmedChildren: ptr(4), ValidFrom: ptr(calendar.NewDate(2026, 8, 1)), ValidUntil: ptr(calendar.NewDate(2026, 11, 15))}}
+	stored := importFamilyRows(t, today, []parentbilling.CareContractVersion{left, joined, noah}, map[int64]parentbilling.CareRecipient{
+		contractMia: {Email: "family@example.org"}, contractNoah: {Email: "family@example.org"}, contractLea: {Email: "other@example.org"},
+	}, expired, "Mia;Beispiel;3;01.11.2026\nNoah;Beispiel;2;01.11.2026\n")
+	assert.Empty(t, stored, "contradicting sibling rows must not save a family count")
+}
+
+// An ended contract of the child in the same family as its running one is
+// no witness (#7863): it would hide the running contract's day. The
+// renewal from 01.01. after the confirmation ran out on 15.12. is taken.
+func TestFamilyImportEndedContractOfTheSameFamilyKeepsTheRenewal(t *testing.T) {
+	t.Parallel()
+	today := calendar.NewDate(2026, 11, 22)
+	ended := sjrVersion(t, contractLea, schoolIspringen, 3, "2026-09-01", "2026-10-31")
+	ended.ChildFirstName = "Noah"
+	running := sjrVersion(t, contractNoah, schoolIspringen, 2, "2026-11-01", "2027-06-30")
+	running.ChildFirstName = "Noah"
+	confirmed := []parentbilling.FamilyChildCount{{ID: 5, ContractID: ident.ID(contractNoah), FamilyEmail: "family@example.org",
+		ConfirmedChildren: ptr(2), ValidFrom: ptr(calendar.NewDate(2026, 8, 1)), ValidUntil: ptr(calendar.NewDate(2026, 12, 15))}}
+	stored := importSiblingRows(t, today, []parentbilling.CareContractVersion{ended, running}, confirmed,
+		"Noah;Beispiel;3;01.01.2027\n")
+	require.Len(t, stored, 1)
+	assert.Equal(t, 3, stored[0].Children)
+	assert.Equal(t, calendar.NewDate(2027, 1, 1), stored[0].ValidFrom)
 }
