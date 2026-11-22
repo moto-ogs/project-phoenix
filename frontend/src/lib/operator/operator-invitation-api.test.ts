@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { InvitationsListResponse as WireInvitationsListResponse } from "~/lib/contract/operator-invitations.generated";
+import type * as operatorInvitationsContract from "~/lib/contract/operator-invitations.generated";
 import { ApiError } from "~/lib/api-error";
 import type { InvitationValidationBody } from "./operator-invitation-helpers";
 
@@ -49,7 +49,7 @@ describe("operator invitation api", () => {
 
   describe("listInvitations", () => {
     it("returns mapped invitations and operators", async () => {
-      const raw: WireInvitationsListResponse = {
+      const raw: operatorInvitationsContract.InvitationsListResponse = {
         invitations: [
           {
             id: "1",
@@ -88,7 +88,7 @@ describe("operator invitation api", () => {
     });
 
     it("skips null entries the contract allows in both lists (#2353)", async () => {
-      const raw: WireInvitationsListResponse = {
+      const raw: operatorInvitationsContract.InvitationsListResponse = {
         invitations: [null],
         operators: [
           null,
@@ -271,7 +271,7 @@ describe("validateOperatorInvitation", () => {
     });
   });
 
-  it("handles unwrapped response (no envelope)", async () => {
+  it("maps a null display name to undefined", async () => {
     const backendData: InvitationValidationBody = {
       email: "direct@example.com",
       display_name: null,
@@ -280,7 +280,7 @@ describe("validateOperatorInvitation", () => {
 
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => backendData,
+      json: async () => ({ status: "success", data: backendData }),
     });
 
     const result = await validateOperatorInvitation("flow-1");

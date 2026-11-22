@@ -1,8 +1,4 @@
-import type {
-  Request as StaffPersonMergeRequest,
-  Side as WireSide,
-  StaffPersonMergeCandidate as WireCandidate,
-} from "~/lib/contract/operator-staff-person-merges.generated";
+import type * as operatorStaffPersonMergesContract from "~/lib/contract/operator-staff-person-merges.generated";
 import { operatorFetch } from "./api-helpers";
 
 export type MergeSide = {
@@ -20,7 +16,7 @@ export type StaffMergeCandidate = {
   donor: MergeSide;
   revision: string;
 };
-function mapSide(side: WireSide): MergeSide {
+function mapSide(side: operatorStaffPersonMergesContract.Side): MergeSide {
   return {
     personId: side.person.id,
     name: `${side.person.first_name} ${side.person.last_name}`,
@@ -35,9 +31,9 @@ function mapSide(side: WireSide): MergeSide {
 export async function previewStaffPersonMerges(
   schoolId: string,
 ): Promise<StaffMergeCandidate[]> {
-  const candidates = await operatorFetch<WireCandidate[]>(
-    `/api/operator/staff-person-merges/${encodeURIComponent(schoolId)}`,
-  );
+  const candidates = await operatorFetch<
+    operatorStaffPersonMergesContract.StaffPersonMergeCandidate[]
+  >(`/api/operator/staff-person-merges/${encodeURIComponent(schoolId)}`);
   return candidates.map((candidate) => ({
     keeper: mapSide(candidate.keeper),
     donor: mapSide(candidate.donor),
@@ -60,7 +56,7 @@ export async function executeStaffPersonMerges(
           keeper_id: candidate.keeper.personId,
           revision: candidate.revision,
         })),
-      } satisfies StaffPersonMergeRequest,
+      } satisfies operatorStaffPersonMergesContract.Request,
     },
   );
 }

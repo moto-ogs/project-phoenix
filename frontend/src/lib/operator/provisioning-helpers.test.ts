@@ -1,17 +1,7 @@
 import { describe, it, expect } from "vitest";
-import type {
-  SchoolAccount as WireSchoolAccount,
-  operatorInvitationResponse as WireInvitation,
-} from "~/lib/contract/operator-schools.generated";
-import type { scanResponse as WireUnregisteredTagScan } from "~/lib/contract/operator-unregistered-tag-scans.generated";
-import type {
-  OperatorDevice as WireOperatorDevice,
-  OperatorPerson as WireOperatorPerson,
-  Organization as WireOrganization,
-  OrganizationAccount as WireOrgAccount,
-  School as WireSchool,
-  SchoolSummary as WireSchoolSummary,
-} from "~/lib/contract/shared.generated";
+import type * as operatorSchoolsContract from "~/lib/contract/operator-schools.generated";
+import type * as operatorUnregisteredTagScansContract from "~/lib/contract/operator-unregistered-tag-scans.generated";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import {
   generateSlug,
   isValidSlug,
@@ -140,7 +130,7 @@ describe("isValidSlug", () => {
 
 describe("mapOrganization", () => {
   it("maps backend organization to frontend format", () => {
-    const backend: WireOrganization = {
+    const backend: sharedContract.Organization = {
       test_system: false,
       id: "42",
       name: "Test Org",
@@ -165,7 +155,7 @@ describe("mapOrganization", () => {
 
 describe("mapSchool", () => {
   it("maps backend school to frontend format", () => {
-    const backend: WireSchool = {
+    const backend: sharedContract.School = {
       child_quota_bundles: null,
       child_quota_bundle_size: 0,
       device_slots: null,
@@ -199,7 +189,7 @@ describe("mapSchool", () => {
   });
 
   it("maps hidden: true correctly", () => {
-    const backend: WireSchool = {
+    const backend: sharedContract.School = {
       child_quota_bundles: null,
       child_quota_bundle_size: 0,
       device_slots: null,
@@ -227,7 +217,7 @@ describe("mapSchool", () => {
   });
 
   it("maps deleted_at timestamp correctly", () => {
-    const backend: WireSchool = {
+    const backend: sharedContract.School = {
       child_quota_bundles: null,
       child_quota_bundle_size: 0,
       device_slots: null,
@@ -255,7 +245,7 @@ describe("mapSchool", () => {
   });
 
   it("maps deleted_at: null correctly", () => {
-    const backend: WireSchool = {
+    const backend: sharedContract.School = {
       child_quota_bundles: null,
       child_quota_bundle_size: 0,
       device_slots: null,
@@ -283,7 +273,7 @@ describe("mapSchool", () => {
   });
 
   it("maps nested organization when present", () => {
-    const backend: WireSchool = {
+    const backend: sharedContract.School = {
       child_quota_bundles: null,
       child_quota_bundle_size: 0,
       device_slots: null,
@@ -326,7 +316,7 @@ describe("mapSchool", () => {
 
 describe("mapInvitation", () => {
   it("maps backend invitation to frontend format", () => {
-    const backend: WireInvitation = {
+    const backend: operatorSchoolsContract.operatorInvitationResponse = {
       id: "5",
       email: "admin@test.de",
       role_id: "1",
@@ -361,7 +351,7 @@ describe("mapInvitation", () => {
   });
 
   it("handles null optional fields", () => {
-    const backend: WireInvitation = {
+    const backend: operatorSchoolsContract.operatorInvitationResponse = {
       caregiver_enabled: false,
       id: "5",
       email: "admin@test.de",
@@ -385,7 +375,7 @@ describe("mapInvitation", () => {
   });
 
   it("handles email_error when present", () => {
-    const backend: WireInvitation = {
+    const backend: operatorSchoolsContract.operatorInvitationResponse = {
       caregiver_enabled: false,
       id: "6",
       email: "fail@test.de",
@@ -481,7 +471,7 @@ describe("summary adapters", () => {
 });
 
 describe("mapSchoolSummary", () => {
-  const backend: WireSchoolSummary = {
+  const backend: sharedContract.SchoolSummary = {
     device_slots: null,
     id: "10",
     organization_id: "5",
@@ -526,7 +516,7 @@ describe("mapSchoolSummary", () => {
 
 describe("mapSchoolAccount", () => {
   it("maps all fields from backend to frontend format", () => {
-    const backend: WireSchoolAccount = {
+    const backend: operatorSchoolsContract.SchoolAccount = {
       has_admin_role: false,
       has_user_role: false,
       has_caregiver_profile: false,
@@ -560,7 +550,7 @@ describe("mapSchoolAccount", () => {
   });
 
   it("converts numeric account_id to string", () => {
-    const backend: WireSchoolAccount = {
+    const backend: operatorSchoolsContract.SchoolAccount = {
       has_admin_role: false,
       has_user_role: false,
       has_caregiver_profile: false,
@@ -579,7 +569,7 @@ describe("mapSchoolAccount", () => {
   });
 
   it("preserves boolean active field", () => {
-    const backend: WireSchoolAccount = {
+    const backend: operatorSchoolsContract.SchoolAccount = {
       has_admin_role: false,
       has_user_role: false,
       has_caregiver_profile: false,
@@ -600,7 +590,7 @@ describe("mapSchoolAccount", () => {
 
 describe("mapOrgAccount", () => {
   it("maps all fields including school info", () => {
-    const backend: WireOrgAccount = {
+    const backend: sharedContract.OrganizationAccount = {
       has_admin_role: false,
       has_user_role: false,
       has_caregiver_profile: false,
@@ -638,7 +628,7 @@ describe("mapOrgAccount", () => {
   });
 
   it("converts school_id to string", () => {
-    const backend: WireOrgAccount = {
+    const backend: sharedContract.OrganizationAccount = {
       has_admin_role: false,
       has_user_role: false,
       has_caregiver_profile: false,
@@ -659,7 +649,7 @@ describe("mapOrgAccount", () => {
   });
 
   it("includes all SchoolAccount fields via spread", () => {
-    const backend: WireOrgAccount = {
+    const backend: sharedContract.OrganizationAccount = {
       has_admin_role: false,
       has_user_role: false,
       has_caregiver_profile: false,
@@ -692,7 +682,7 @@ describe("mapOrgAccount", () => {
 });
 
 describe("mapOperatorDevice", () => {
-  const fullBackendDevice: WireOperatorDevice = {
+  const fullBackendDevice: sharedContract.OperatorDevice = {
     id: "200",
     device_id: "dev-001",
     device_type: "raspberry_pi",
@@ -733,7 +723,7 @@ describe("mapOperatorDevice", () => {
   });
 
   it("defaults name to empty string when undefined", () => {
-    const backend: WireOperatorDevice = {
+    const backend: sharedContract.OperatorDevice = {
       ...fullBackendDevice,
       name: undefined,
     };
@@ -749,7 +739,7 @@ describe("mapOperatorDevice", () => {
   });
 
   it("defaults api_key to empty string when undefined", () => {
-    const backend: WireOperatorDevice = {
+    const backend: sharedContract.OperatorDevice = {
       ...fullBackendDevice,
       api_key: undefined,
     };
@@ -758,7 +748,7 @@ describe("mapOperatorDevice", () => {
   });
 
   it("defaults last_seen to null when undefined", () => {
-    const backend: WireOperatorDevice = {
+    const backend: sharedContract.OperatorDevice = {
       ...fullBackendDevice,
       last_seen: undefined,
     };
@@ -767,7 +757,7 @@ describe("mapOperatorDevice", () => {
   });
 
   it("handles offline device with missing optional fields", () => {
-    const backend: WireOperatorDevice = {
+    const backend: sharedContract.OperatorDevice = {
       ...fullBackendDevice,
       is_online: false,
       last_seen: undefined,
@@ -793,7 +783,7 @@ describe("mapOperatorDevice", () => {
 });
 
 describe("mapOperatorPerson", () => {
-  const fullBackendPerson: WireOperatorPerson = {
+  const fullBackendPerson: sharedContract.OperatorPerson = {
     id: "42",
     first_name: "Max",
     last_name: "Mustermann",
@@ -843,7 +833,7 @@ describe("mapOperatorPerson", () => {
   });
 
   it("handles null account_email", () => {
-    const backend: WireOperatorPerson = {
+    const backend: sharedContract.OperatorPerson = {
       ...fullBackendPerson,
       account_email: undefined,
     };
@@ -852,7 +842,7 @@ describe("mapOperatorPerson", () => {
   });
 
   it("handles undefined account_email", () => {
-    const backend: WireOperatorPerson = {
+    const backend: sharedContract.OperatorPerson = {
       ...fullBackendPerson,
       account_email: undefined,
     };
@@ -861,7 +851,7 @@ describe("mapOperatorPerson", () => {
   });
 
   it("maps student-only person correctly", () => {
-    const backend: WireOperatorPerson = {
+    const backend: sharedContract.OperatorPerson = {
       ...fullBackendPerson,
       is_staff: false,
       is_student: true,
@@ -879,7 +869,7 @@ describe("mapOperatorPerson", () => {
   });
 
   it("preserves boolean fields accurately", () => {
-    const backend: WireOperatorPerson = {
+    const backend: sharedContract.OperatorPerson = {
       ...fullBackendPerson,
       has_account: false,
       has_rfid_card: false,
@@ -896,7 +886,7 @@ describe("mapOperatorPerson", () => {
 });
 
 describe("mapUnregisteredTagScan", () => {
-  const fullBackendScan: WireUnregisteredTagScan = {
+  const fullBackendScan: operatorUnregisteredTagScansContract.scanResponse = {
     id: "300",
     tenant_id: "10",
     tag_uid: "04AABBCCDD",
@@ -937,7 +927,7 @@ describe("mapUnregisteredTagScan", () => {
   });
 
   it("normalizes nullable backend fields to null", () => {
-    const backend: WireUnregisteredTagScan = {
+    const backend: operatorUnregisteredTagScansContract.scanResponse = {
       ...fullBackendScan,
       device_id: undefined,
       resolved_at: undefined,
