@@ -194,6 +194,9 @@ export default function GuardianList({
         icon: <Send className="h-4 w-4" aria-hidden />,
         disabled: isInviting,
         onClick: () => onInvite?.(guardian),
+        // Ziel der Eltern-Tour, wenn der Eintrag am Handy allein als Knopf
+        // steht (setup-tours.ts, #7799).
+        tourTarget: "guardian-invite",
       });
     }
     if (onEdit) {

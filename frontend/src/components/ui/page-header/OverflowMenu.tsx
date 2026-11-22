@@ -19,6 +19,8 @@ import { ActionHint } from "~/components/ui/action-hint";
 import { useKitDefault } from "~/components/ui/kit-locale";
 import {
   BLOCKED_ACTIVATION_PROPS,
+  Button,
+  ButtonLink,
   buttonClassName,
 } from "~/components/ui/button";
 import type { ButtonSize, ButtonVariant } from "~/components/ui/button-styles";
@@ -400,6 +402,19 @@ export function OverflowMenu({
     if (disabled) setIsOpen(false);
   }, [disabled]);
 
+  // Unter `sm` steht ein Kebab-Menü mit nur einer Aktion als beschrifteter
+  // Knopf da (#7799): Das spart den zweiten Tipp. Ein Auslöser mit eigenem
+  // Inhalt oder ein Reiter bleibt Menü, er sagt schon, was er öffnet.
+  const soleItem =
+    asSheet && triggerContent == null && triggerRole === undefined
+      ? soleActionItem(items)
+      : null;
+  // Ein offenes Menü, das zum Knopf wird, ist danach nicht mehr offen.
+  const asSoleButton = soleItem !== null;
+  useEffect(() => {
+    if (asSoleButton) setIsOpen(false);
+  }, [asSoleButton]);
+
   // Schließt vor der Aktion eines Eintrags; der Fokus geht an den Auslöser,
   // ein Dialog, den die Aktion öffnet, gibt ihn dorthin zurück (#7502). Die
   // Fokusfalle des Blatts ließe ihn erst nach dem Schließen hinaus.
@@ -482,6 +497,32 @@ export function OverflowMenu({
     triggerContent != null && !labelKeepsText ? ariaLabelProp : undefined;
 
   const blocked = disabled && Boolean(disabledReason);
+
+  if (soleItem !== null) {
+    return (
+      <div
+        className={`relative ${wrapperClassName}`}
+        {...iconOnlyMarker(false)}
+        data-setup-tour={tourTarget}
+      >
+        <SoleActionButton
+          item={soleItem}
+          // Ein eigener Name des Menüs nennt meist das Objekt der Zeile
+          // („Aktionen für Mia“); er folgt der Beschriftung als verborgener
+          // Text, wie am Auslöser mit Inhalt (WCAG 2.5.3).
+          context={
+            ariaLabelProp !== undefined && ariaLabelProp !== "Weitere Aktionen"
+              ? ariaLabelProp
+              : undefined
+          }
+          disabled={disabled}
+          disabledReason={disabledReason}
+          tabIndex={triggerTabIndex}
+        />
+      </div>
+    );
+  }
+
   const triggerHint = blocked
     ? disabledReason
     : (triggerTooltip ??
@@ -822,4 +863,94 @@ function plainText(node: ReactNode): string {
       : "";
   }
   return "";
+}
+
+/**
+ * Die einzige Aktion eines Menüs, wenn es sonst nichts enthält: ein
+ * gewöhnlicher Eintrag, keine Auswahl (Radio, Häkchen) und keine
+ * Überschrift. Trennlinien zählen nicht. Sonst `null`.
+ */
+function soleActionItem(
+  items: readonly OverflowMenuEntry[],
+): OverflowMenuItem | null {
+  const entries = items.filter(
+    (entry) => !("kind" in entry && entry.kind === "separator"),
+  );
+  const [only] = entries;
+  if (entries.length !== 1 || only === undefined || "kind" in only) {
+    return null;
+  }
+  return only;
+}
+
+/**
+ * Der Knopf, der am Telefon ein Menü mit einer Aktion ersetzt (#7799). Er
+ * trägt Beschriftung, Symbol, Zeile (als Hinweis), Tour-Ziel und Farbe des
+ * Eintrags; eine löschende Aktion fragt weiter selbst nach.
+ */
+function SoleActionButton({
+  item,
+  context,
+  disabled,
+  disabledReason,
+  tabIndex,
+}: Readonly<{
+  item: OverflowMenuItem;
+  context: string | undefined;
+  disabled: boolean;
+  disabledReason: string | undefined;
+  tabIndex: number | undefined;
+}>) {
+  const variant = item.destructive ? "outline_danger" : "outline";
+  const explanation = item.description
+    ? { tooltip: item.description }
+    : { noTooltip: item.noDescription ?? "Die Beschriftung nennt die Aktion." };
+  const content = (
+    <>
+      {item.icon != null ? (
+        <span className="flex size-4 shrink-0 items-center justify-center">
+          {item.icon}
+        </span>
+      ) : null}
+      <span className="truncate">{item.label}</span>
+      {item.badge != null ? (
+        <span className="tabular-nums">{item.badge}</span>
+      ) : null}
+      {context ? <span className="sr-only">{`, ${context}`}</span> : null}
+    </>
+  );
+  const blocked = disabled || Boolean(item.disabled);
+  if (item.href != null && !blocked) {
+    return (
+      <ButtonLink
+        {...explanation}
+        href={item.href}
+        newTab={item.external}
+        variant={variant}
+        size="compact"
+        className="max-w-full"
+        tabIndex={tabIndex}
+        data-setup-tour={item.tourTarget}
+        onClick={item.onClick}
+      >
+        {content}
+      </ButtonLink>
+    );
+  }
+  return (
+    <Button
+      {...explanation}
+      type="button"
+      variant={variant}
+      size="compact"
+      className="max-w-full"
+      tabIndex={tabIndex}
+      data-setup-tour={item.tourTarget}
+      disabled={blocked}
+      disabledReason={disabled ? disabledReason : undefined}
+      onClick={item.onClick}
+    >
+      {content}
+    </Button>
+  );
 }
