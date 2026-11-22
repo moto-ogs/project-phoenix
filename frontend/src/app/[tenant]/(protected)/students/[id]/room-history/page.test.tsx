@@ -599,7 +599,7 @@ describe("StudentRoomHistoryPage", () => {
       expect.stringContaining(
         `/api/students/42/attendance-history/export?format=pdf&from=${testClockDay(-29)}&to=${TEST_CLOCK_TODAY}`,
       ),
-      undefined,
+      { method: "GET" },
     );
   });
 

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "./api-error";
 
 vi.mock("./session-cache", () => ({
   sessionFetch: vi.fn(),
@@ -103,6 +104,7 @@ describe("fetchPayrollTargetCoverage", () => {
     });
     expect(mockedSessionFetch).toHaveBeenCalledWith(
       "/api/staff/time-tracking/target-coverage",
+      { method: "GET" },
     );
   });
 });
@@ -122,6 +124,7 @@ describe("fetchPayrollStatus", () => {
 
     expect(mockedSessionFetch).toHaveBeenCalledWith(
       "/api/settings/payroll-status",
+      { method: "GET" },
     );
     expect(status.categories[0]?.settingKey).toBe(
       "payroll.lohnart_regelarbeit",
@@ -135,9 +138,7 @@ describe("fetchPayrollStatus", () => {
       statusText: "Forbidden",
     } as Response);
 
-    await expect(fetchPayrollStatus()).rejects.toThrow(
-      "Failed to fetch payroll status: Forbidden",
-    );
+    await expect(fetchPayrollStatus()).rejects.toBeInstanceOf(ApiError);
   });
 });
 
@@ -206,7 +207,7 @@ describe("savePayrollSetting", () => {
   });
 
   it("sends the value in its schema type", async () => {
-    mockedSessionFetch.mockResolvedValue({ ok: true } as Response);
+    mockedSessionFetch.mockResolvedValue({ ok: true, status: 204 } as Response);
 
     await savePayrollSetting("payroll.dispatch_auto", true);
     await savePayrollSetting("payroll.dispatch_channel", "email");
@@ -262,6 +263,7 @@ describe("fetchPayrollDispatch", () => {
 
     expect(mockedSessionFetch).toHaveBeenCalledWith(
       "/api/staff/time-tracking/payroll-dispatch",
+      { method: "GET" },
     );
     expect(latest).toEqual({
       year: 2026,
