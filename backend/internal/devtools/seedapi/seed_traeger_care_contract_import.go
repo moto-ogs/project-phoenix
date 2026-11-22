@@ -142,10 +142,10 @@ type seedContractImportAnswer struct {
 			Duplicate int `json:"duplicate"`
 		} `json:"counts"`
 		Rows []struct {
-			Status         string `json:"status"`
-			ChildFirstName string `json:"child_first_name"`
-			ChildLastName  string `json:"child_last_name"`
-			ContractID     apiID  `json:"contract_id"`
+			Status         string   `json:"status"`
+			ChildFirstName string   `json:"child_first_name"`
+			ChildLastName  string   `json:"child_last_name"`
+			ContractID     ident.ID `json:"contract_id"`
 		} `json:"rows"`
 	} `json:"data"`
 }
