@@ -169,7 +169,6 @@ type harness struct {
 	absenceLbl     map[int64]string
 	genders        map[int64]string // staffID -> stated gender
 
-	groups        []staffHTTP.Group
 	classes       []string
 	setClasses    []string
 	setClassActor int64
@@ -316,7 +315,6 @@ func newHarness(t *testing.T, membership *fakeMembership) *harness {
 		RetryQueuedDocumentCleanups: func(_ context.Context, source string) {
 			h.retryCalls = append(h.retryCalls, source)
 		},
-		TeacherGroups: func(context.Context, int64) ([]staffHTTP.Group, error) { return h.groups, nil },
 		SchoolClasses: func(context.Context, int64) ([]string, error) {
 			if h.classErr != nil {
 				return nil, h.classErr
@@ -685,26 +683,6 @@ func TestServeAvatarFallsBackToNotFound(t *testing.T) {
 
 	invalid := h.do(t, http.MethodGet, "/staff/abc/avatar", nil)
 	assert.Equal(t, http.StatusBadRequest, invalid.Code)
-}
-
-func TestGetStaffGroupsAnswersEmptyForNonTeachers(t *testing.T) {
-	t.Parallel()
-	h := withPersons(newHarness(t, directoryFixture()))
-	h.allow("users:read")
-	h.groups = []staffHTTP.Group{{ID: 5, Name: "Gruppe A"}}
-
-	nonTeacher := h.do(t, http.MethodGet, "/staff/1/groups", nil)
-	require.Equal(t, http.StatusOK, nonTeacher.Code)
-	body := decode(t, nonTeacher)
-	assert.Equal(t, "Staff member is not a teacher and has no assigned groups", body.Message)
-	assert.Equal(t, "[]", string(body.Data))
-
-	teacher := h.do(t, http.MethodGet, "/staff/2/groups", nil)
-	require.Equal(t, http.StatusOK, teacher.Code)
-	assert.Equal(t, `[{"id":5,"name":"Gruppe A"}]`, string(decode(t, teacher).Data))
-
-	missing := h.do(t, http.MethodGet, "/staff/99/groups", nil)
-	assert.Equal(t, http.StatusNotFound, missing.Code)
 }
 
 func TestSchoolClassesRoundTripAndValidation(t *testing.T) {

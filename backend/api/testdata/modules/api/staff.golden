@@ -36,7 +36,6 @@ GET /api/staff/{id}/absences -> zeiterfassung
 GET /api/staff/{id}/avatar -> basis
 GET /api/staff/{id}/documents -> personalakte
 GET /api/staff/{id}/documents/{documentId}/download -> personalakte
-GET /api/staff/{id}/groups -> basis
 GET /api/staff/{id}/payroll-number -> zeiterfassung
 GET /api/staff/{id}/qualifications -> basis
 GET /api/staff/{id}/schedule -> zeiterfassung
