@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type seedParentEngagementStep struct{}
@@ -313,14 +315,14 @@ func seedStudentGroupID(rt *Runtime, studentID int64) (int64, error) {
 	}
 	var resp struct {
 		Data struct {
-			GroupID any `json:"group_id"`
+			GroupID ident.ID `json:"group_id"`
 		} `json:"data"`
 	}
 	if err := parseJSON(raw, &resp); err != nil {
 		return 0, fmt.Errorf("parse student %d: %w", studentID, err)
 	}
-	groupID, err := parseSeedID(resp.Data.GroupID)
-	if err != nil || groupID == 0 {
+	groupID := int64(resp.Data.GroupID)
+	if groupID == 0 {
 		return 0, fmt.Errorf("student %d has no group", studentID)
 	}
 	return groupID, nil

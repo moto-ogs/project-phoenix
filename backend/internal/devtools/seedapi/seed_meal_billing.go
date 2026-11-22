@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedMealBillingStep gives the demo its Mensa billing (#4686) through the
@@ -72,10 +73,10 @@ func seedMealPrices(client *Client, auth AuthRef, month calendar.Date) (int, err
 	var envelope struct {
 		Data struct {
 			Schools []struct {
-				ID apiID `json:"id"`
+				ID ident.ID `json:"id"`
 			} `json:"schools"`
 			Tariffs []struct {
-				SchoolID apiID `json:"school_id"`
+				SchoolID ident.ID `json:"school_id"`
 			} `json:"tariffs"`
 		} `json:"data"`
 	}

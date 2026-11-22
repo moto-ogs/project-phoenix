@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"maps"
 	"strconv"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedConclusionEnrollment submits a new parent's agreement through Enrollment,
@@ -82,9 +84,9 @@ func seedContractAcceptanceText(rt *Runtime, offeringID int64) (string, error) {
 	}
 	var envelope struct {
 		Data []struct {
-			SchoolID       apiID  `json:"school_id"`
-			OfferingID     apiID  `json:"offering_id"`
-			AcceptanceText string `json:"acceptance_text"`
+			SchoolID       ident.ID `json:"school_id"`
+			OfferingID     ident.ID `json:"offering_id"`
+			AcceptanceText string   `json:"acceptance_text"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {

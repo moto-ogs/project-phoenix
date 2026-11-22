@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -114,10 +114,9 @@ func TestSchoolAdminCannotChangeLoginAddressOfSharedAccount(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			id, address := shared(t, "shared-login-address")
-			rr := e.execute(t, e.claims, http.MethodPut, fmt.Sprintf("/auth/accounts/%d", id),
-				map[string]string{"email": fmt.Sprintf("taken-over-%d@example.test", id)})
+			err := e.updateEmail(e.schoolCtx(), id, fmt.Sprintf("taken-over-%d@example.test", id))
 
-			requireSharedAccountRefusal(t, rr)
+			require.ErrorIs(t, err, identityaccess.ErrAccountSharedAcrossSchools)
 			assert.Equal(t, address, e.storedAddress(t, id), "the login address stays")
 			assert.Empty(t, e.noticeRecipients(t, "account_login_address_changed", id))
 		})
@@ -128,15 +127,15 @@ func TestSchoolAdminChangesLoginAddressOfOwnAccountAndPreviousAddressLearnsOfIt(
 	t.Parallel()
 	e := newAccountIsolationEnv(t)
 	id, previous := e.localAccount(t, "own-login-address")
-	path := fmt.Sprintf("/auth/accounts/%d", id)
-
 	// A name-only edit keeps the address and tells nobody.
-	assertAccountActionStatus(t, e, e.claims, http.MethodPut, path,
-		map[string]string{"email": previous, "username": fmt.Sprintf("own-login-%d", id)}, http.StatusNoContent)
+	username := fmt.Sprintf("own-login-%d", id)
+	require.NoError(t, e.tc.resource.Sessions.UpdateManageableAccount(e.schoolCtx(), identityaccess.AccountIdentityUpdate{
+		AccountID: id, Email: previous, Username: &username,
+	}))
 	assert.Empty(t, e.noticeRecipients(t, "account_login_address_changed", id))
 
 	changed := fmt.Sprintf("own-login-changed-%d@example.test", id)
-	assertAccountActionStatus(t, e, e.claims, http.MethodPut, path, map[string]string{"email": changed}, http.StatusNoContent)
+	require.NoError(t, e.updateEmail(e.schoolCtx(), id, changed))
 
 	assert.Equal(t, changed, e.storedAddress(t, id))
 	assert.Equal(t, []string{previous}, e.noticeRecipients(t, "account_login_address_changed", id),
@@ -204,10 +203,8 @@ func TestSchoolAdminAddressChangeWaitsForASchoolLinkingTheAccount(t *testing.T) 
 		VALUES (?, ?, 'active', NOW(), NOW())`, id, e.foreignTenantID)
 	require.NoError(t, err)
 
-	req := testutil.NewJSONRequest(t, http.MethodPut, fmt.Sprintf("/auth/accounts/%d", id),
-		map[string]string{"email": fmt.Sprintf("linked-meanwhile-%d@example.test", id)})
-	done := make(chan *httptest.ResponseRecorder, 1)
-	go func() { done <- testutil.ExecuteWithAuth(t, e.router, req, e.claims) }()
+	done := make(chan error, 1)
+	go func() { done <- e.updateEmail(e.schoolCtx(), id, fmt.Sprintf("linked-meanwhile-%d@example.test", id)) }()
 
 	// The change reaches the account and waits for the uncommitted link.
 	require.Eventually(t, func() bool {
@@ -217,7 +214,7 @@ func TestSchoolAdminAddressChangeWaitsForASchoolLinkingTheAccount(t *testing.T) 
 	}, 5*time.Second, 10*time.Millisecond)
 	require.NoError(t, link.Commit())
 
-	requireSharedAccountRefusal(t, <-done)
+	require.ErrorIs(t, <-done, identityaccess.ErrAccountSharedAcrossSchools)
 	assert.Equal(t, address, e.storedAddress(t, id), "the login address stays")
 	assert.Empty(t, e.noticeRecipients(t, "account_login_address_changed", id))
 }

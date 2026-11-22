@@ -119,3 +119,26 @@ func TestAcceptGuardianInvitation_BadRequest_PasswordMismatch(t *testing.T) {
 
 	testutil.AssertBadRequest(t, rr)
 }
+
+// A guardian accepts a valid invitation through the auth router under its
+// /auth mount, so the answer is held to its registered route (#7808).
+func TestAcceptGuardianInvitation_CreatesTheAccount(t *testing.T) {
+	t.Parallel()
+	db, authRoute := setupAuthDependenciesRoute(t)
+	resource := authAPI.NewResource(authRoute.AuthService, authRoute.Invitations, nil, authRoute.Sessions, identityaccessCompose.TenantUnitOfWork{}, transactionFailures.IsConstraintViolation, authRoute.SettingsService)
+	router := testutil.NewTenantRouter(db)
+	router.Mount("/auth", resource.Router(rootAPI.TenantSessionChain))
+
+	profile := testpkg.CreateTestGuardianProfile(t, db, "guardian-accept-route")
+	invitation, err := authRoute.GuardianInvitations.CreateGuardianInvitation(testpkg.Ctx(t), identityaccess.GuardianInvitationRequest{
+		GuardianProfileID: profile.ID, CreatedBy: testpkg.CreateTestAccount(t, db, "guardian-accept-route-inviter").ID,
+	})
+	require.NoError(t, err)
+
+	password := testpkg.NewTestPassword()
+	rr := testutil.ExecuteRequest(router, testutil.NewJSONRequest(t, http.MethodPost, "/auth/guardian-invitations/"+url.PathEscape(invitation.Token)+"/accept", map[string]any{
+		"password": password, "confirm_password": password,
+	}))
+	require.Equal(t, http.StatusCreated, rr.Code, rr.Body.String())
+	assert.Contains(t, rr.Body.String(), *profile.Email)
+}

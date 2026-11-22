@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedStaffPersonMergeStep leaves an explicit legacy repair example for the
@@ -82,7 +84,7 @@ func hasSeededStaffPersonMerge(rt *Runtime, personID int64) (bool, error) {
 		Data []struct {
 			Keeper struct {
 				Person struct {
-					ID apiID `json:"id"`
+					ID ident.ID `json:"id"`
 				} `json:"person"`
 			} `json:"keeper"`
 		} `json:"data"`

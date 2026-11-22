@@ -26,8 +26,8 @@ func seedHolidayWaitlist(rt *Runtime, auth AuthRef, token string, periodID int64
 	}
 	var places struct {
 		Data []struct {
-			WeekID apiID `json:"week_id"`
-			Placed int   `json:"placed"`
+			WeekID ident.ID `json:"week_id"`
+			Placed int      `json:"placed"`
 		} `json:"data"`
 	}
 	placed, found := 0, false
