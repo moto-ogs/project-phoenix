@@ -49,7 +49,7 @@ func TestApplyGrouping_SlotDisambiguatesDistinctInstances(t *testing.T) {
 		// input order: instance 1 → (1), instance 2 → (2).
 		byInstance := map[int64]string{}
 		for _, r := range rows {
-			byInstance[r.InstanceID] = r.GroupTitle
+			byInstance[r.InstanceID.Int64()] = r.GroupTitle
 		}
 		assert.Equal(t, "Angebot: Fußball 14:00–15:00 (1)", byInstance[1])
 		assert.Equal(t, "Angebot: Fußball 14:00–15:00 (2)", byInstance[2])
@@ -64,7 +64,7 @@ func TestApplyGrouping_SlotDisambiguatesDistinctInstances(t *testing.T) {
 		applyGrouping(rows, classday.GroupBySlot)
 		byInstance := map[int64]string{}
 		for _, r := range rows {
-			byInstance[r.InstanceID] = r.GroupTitle
+			byInstance[r.InstanceID.Int64()] = r.GroupTitle
 		}
 		assert.Equal(t, "Angebot: AG 14:00 (Raum A)", byInstance[1])
 		assert.Equal(t, "Angebot: AG 14:00 (1)", byInstance[2])
@@ -88,7 +88,7 @@ func TestApplyGrouping_SlotDisambiguatesDistinctInstances(t *testing.T) {
 		applyGrouping(rows, classday.GroupBySlot)
 		byInstance := map[int64]string{}
 		for _, r := range rows {
-			byInstance[r.InstanceID] = r.GroupTitle
+			byInstance[r.InstanceID.Int64()] = r.GroupTitle
 		}
 		// The unique room keeps its name; the ordinal pass skips the " (1)" string
 		// the room already claimed and starts at " (2)".

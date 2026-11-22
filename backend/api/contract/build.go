@@ -430,7 +430,7 @@ func (b *builder) wrapped(t reflect.Type, where string) (Schema, error) {
 	at := where + "." + t.Name() + ".Value"
 	s, err := b.schema(sf.Type, at, true)
 	if errors.Is(err, errBareInt64) {
-		err = b.numericID(&s, t, sf.Name, false, at)
+		err = b.numericID(&s, t, sf.Name, at)
 	}
 	return s, err
 }

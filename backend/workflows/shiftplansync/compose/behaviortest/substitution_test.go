@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -452,12 +453,12 @@ func TestScheduleSubstitutionExternalInterfaceReturnsNarrowOverview(t *testing.T
 	require.Len(t, overview.ScheduleAppointments[0].Staff, 2)
 	canEnd := false
 	for _, row := range overview.ScheduleAppointments[0].Staff {
-		if row.Staff.ID == replacement.ID {
+		if row.Staff.ID.Int64() == replacement.ID {
 			canEnd = row.CanEnd
 		}
 	}
 	require.True(t, canEnd)
-	require.Contains(t, overview.ScheduleTargets, substitution.StaffRef{ID: replacement.ID, FullName: "Nils Vertretung"})
+	require.Contains(t, overview.ScheduleTargets, substitution.StaffRef{ID: ident.ID(replacement.ID), FullName: "Nils Vertretung"})
 	readOnly := scheduleSubstitutionCaller(t)
 	readOnly.HasPermission = func(required string) bool { return required == "schedules:read" }
 	readOnlyOverview, err := testpkg.TenantQuery2(t, testpkg.Ctx(t), db, service.Overview, readOnly, substitution.OverviewQuery{
@@ -492,7 +493,7 @@ func TestScheduleSubstitutionExternalInterfaceMarksExternalTargets(t *testing.T)
 	require.NoError(t, err)
 	targets := make(map[int64]substitution.StaffRef, len(overview.ScheduleTargets))
 	for _, target := range overview.ScheduleTargets {
-		targets[target.ID] = target
+		targets[target.ID.Int64()] = target
 	}
 	require.Contains(t, targets, internal.ID)
 	require.False(t, targets[internal.ID].IsExternal)

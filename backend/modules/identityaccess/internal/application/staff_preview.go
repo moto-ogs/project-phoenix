@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Admin staff-view preview (#2893): a read-only, access-only token that sees
@@ -211,7 +212,7 @@ func (l *AccountLifecycle) ListStaffPreviewCandidates(ctx context.Context, tenan
 		}
 		result := make([]identityaccess.StaffPreviewCandidate, 0, len(candidates))
 		for _, candidate := range candidates {
-			result = append(result, identityaccess.StaffPreviewCandidate(candidate))
+			result = append(result, identityaccess.StaffPreviewCandidate{AccountID: ident.ID(candidate.AccountID), FirstName: candidate.FirstName, LastName: candidate.LastName, Email: candidate.Email, Roles: candidate.Roles})
 		}
 		return result, nil
 	}

@@ -287,7 +287,7 @@ func (s supervisionSessions) Unclaimed(ctx context.Context) ([]supervisiondashbo
 	}
 	result := make([]supervisiondashboard.UnclaimedGroup, 0, len(unclaimed))
 	for _, group := range unclaimed {
-		item := supervisiondashboard.UnclaimedGroup{ID: group.ID}
+		item := supervisiondashboard.UnclaimedGroup{ID: ident.ID(group.ID)}
 		if group.Room != nil {
 			item.RoomName = group.Room.Name
 		}
@@ -415,7 +415,7 @@ func (g supervisionGroups) MyGroups(ctx context.Context) ([]supervisiondashboard
 	}
 	result := make([]supervisiondashboard.EducationalGroup, 0, len(myGroups))
 	for _, group := range myGroups {
-		result = append(result, supervisiondashboard.EducationalGroup{ID: group.ID, Name: group.Name, RoomName: roomNames[group.ID]})
+		result = append(result, supervisiondashboard.EducationalGroup{ID: ident.ID(group.ID), Name: group.Name, RoomName: roomNames[group.ID]})
 	}
 	return result, nil
 }
@@ -694,7 +694,7 @@ func (p supervisionPlanning) Pickups(ctx context.Context, studentIDs []int64, da
 			IsException: pickup.IsException, DayDepartureMode: pickup.DayDepartureMode,
 			Notes: pickup.Notes,
 			DayNotes: owners.CalendarMapSlice(pickup.DayNotes, func(note careplan.NoteData) supervisiondashboard.DashboardDayNote {
-				return supervisiondashboard.DashboardDayNote{ID: note.ID, Content: note.Content}
+				return supervisiondashboard.DashboardDayNote{ID: ident.ID(note.ID), Content: note.Content}
 			}),
 		}
 	}
@@ -722,7 +722,7 @@ func (p supervisionPlanning) Arrivals(ctx context.Context, studentIDs []int64, d
 			IsException: arrival.IsException,
 			Notes:       arrival.Notes,
 			DayNotes: owners.CalendarMapSlice(arrival.DayNotes, func(note careplan.ArrivalNoteData) supervisiondashboard.DashboardDayNote {
-				return supervisiondashboard.DashboardDayNote{ID: note.ID, Content: note.Content}
+				return supervisiondashboard.DashboardDayNote{ID: ident.ID(note.ID), Content: note.Content}
 			}),
 		}
 	}
@@ -788,7 +788,7 @@ func (b supervisionTeacherHints) TeacherHints(ctx context.Context, studentIDs []
 	result := make([]supervisiondashboard.SupervisionTeacherHint, 0, len(rows))
 	for _, hint := range rows {
 		result = append(result, supervisiondashboard.SupervisionTeacherHint{
-			StudentID: hint.StudentID, Body: hint.Body, AuthorName: hint.AuthorName, SchoolClass: hint.SchoolClass,
+			StudentID: ident.ID(hint.StudentID), Body: hint.Body, AuthorName: hint.AuthorName, SchoolClass: hint.SchoolClass,
 		})
 	}
 	return result, nil

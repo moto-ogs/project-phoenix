@@ -51,8 +51,8 @@ type WeeklySummaryResponse struct {
 }
 
 type ShiftTypeMinutesResponse struct {
-	ShiftTypeID    *int64 `json:"shift_type_id,string"`
-	PlannedMinutes int    `json:"planned_minutes"`
+	ShiftTypeID    *ident.ID `json:"shift_type_id"`
+	PlannedMinutes int       `json:"planned_minutes"`
 }
 
 type OverviewResponse struct {
@@ -103,7 +103,7 @@ func toOverviewResponse(overview workforce.StaffScheduleOverview) OverviewRespon
 	for _, summary := range overview.WeeklySummaries {
 		byType := make([]ShiftTypeMinutesResponse, 0, len(summary.ByShiftType))
 		for _, entry := range summary.ByShiftType {
-			byType = append(byType, ShiftTypeMinutesResponse{ShiftTypeID: entry.ShiftTypeID, PlannedMinutes: entry.Minutes})
+			byType = append(byType, ShiftTypeMinutesResponse{ShiftTypeID: (*ident.ID)(entry.ShiftTypeID), PlannedMinutes: entry.Minutes})
 		}
 		weeklySummaries = append(weeklySummaries, WeeklySummaryResponse{
 			StaffID:            ident.ID(summary.StaffID),

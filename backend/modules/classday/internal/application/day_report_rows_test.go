@@ -253,7 +253,7 @@ func TestBuildClassDayReportListEntryProjection(t *testing.T) {
 	require.Len(t, report.Rows, 2)
 	entryRow := report.Rows[1]
 	require.True(t, entryRow.ListEntry)
-	assert.Equal(t, int64(101), entryRow.ListEntryID)
+	assert.Equal(t, int64(101), entryRow.ListEntryID.Int64())
 	assert.Zero(t, entryRow.StudentID)
 	assert.False(t, entryRow.StaysToday)
 	// "Keine Betreuung" is the whole statement: no departure text at all —

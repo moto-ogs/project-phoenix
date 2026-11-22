@@ -6,7 +6,7 @@
 // reader's audience never arrive at all. The client renders that answer and
 // never computes its own.
 
-import { bffJson } from "./bff-fetch";
+import { legacyBffJson } from "./bff-fetch";
 import type {
   noteSubjectsResponse,
   studentNoteRequestBody,
@@ -143,7 +143,7 @@ class StudentNotesService {
   /** kind narrows the read to one lifetime; omit it for the whole card. */
   async list(studentId: string, kind?: string): Promise<StudentNote[]> {
     const query = kind ? `?kind=${encodeURIComponent(kind)}` : "";
-    const notes = await bffJson<studentNoteResponse[]>(
+    const notes = await legacyBffJson<studentNoteResponse[]>(
       `${notesPath(studentId)}${query}`,
     );
     return (notes ?? []).map(mapNote);
@@ -154,7 +154,7 @@ class StudentNotesService {
    * against the same read, so the form never offers one it would refuse.
    */
   async listActivities(studentId: string): Promise<StudentNoteActivity[]> {
-    const subjects = await bffJson<noteSubjectsResponse>(
+    const subjects = await legacyBffJson<noteSubjectsResponse>(
       `/api/students/${encodeURIComponent(studentId)}/note-subjects`,
     );
     return (subjects.activities ?? []).map((activity) => ({
@@ -168,10 +168,13 @@ class StudentNotesService {
     studentId: string,
     draft: StudentNoteDraft,
   ): Promise<StudentNote> {
-    const note = await bffJson<studentNoteResponse>(notesPath(studentId), {
-      method: "POST",
-      body: toPayload(draft),
-    });
+    const note = await legacyBffJson<studentNoteResponse>(
+      notesPath(studentId),
+      {
+        method: "POST",
+        body: toPayload(draft),
+      },
+    );
     return mapNote(note);
   }
 
@@ -180,7 +183,7 @@ class StudentNotesService {
     noteId: string,
     draft: StudentNoteDraft,
   ): Promise<StudentNote> {
-    const note = await bffJson<studentNoteResponse>(
+    const note = await legacyBffJson<studentNoteResponse>(
       notesPath(studentId, noteId),
       { method: "PUT", body: toPayload(draft) },
     );
@@ -193,7 +196,7 @@ class StudentNotesService {
    * zero means nobody else in the team may read the notes.
    */
   async informTeam(studentId: string, noteId: string): Promise<number> {
-    const result = await bffJson<studentNoteTeamInformedResponse>(
+    const result = await legacyBffJson<studentNoteTeamInformedResponse>(
       `${notesPath(studentId, noteId)}/team-notices`,
       { method: "POST", body: {} },
     );
@@ -202,7 +205,7 @@ class StudentNotesService {
 
   /** The reader's notes shared by the team and not yet read, newest first. */
   async listTeamNotices(): Promise<StudentNoteTeamNotice[]> {
-    const notices = await bffJson<studentNoteTeamNoticeResponse[]>(
+    const notices = await legacyBffJson<studentNoteTeamNoticeResponse[]>(
       "/api/students/team-notices",
     );
     return (notices ?? []).map(mapTeamNotice);
@@ -216,7 +219,7 @@ class StudentNotesService {
     studentId: string,
     observed: readonly StudentNoteTeamNoticeRevision[],
   ): Promise<StudentNoteTeamNotice[]> {
-    const notices = await bffJson<studentNoteTeamNoticeResponse[]>(
+    const notices = await legacyBffJson<studentNoteTeamNoticeResponse[]>(
       `/api/students/${encodeURIComponent(studentId)}/team-notices/read`,
       {
         method: "POST",
@@ -232,7 +235,9 @@ class StudentNotesService {
   }
 
   async remove(studentId: string, noteId: string): Promise<void> {
-    await bffJson<unknown>(notesPath(studentId, noteId), { method: "DELETE" });
+    await legacyBffJson<unknown>(notesPath(studentId, noteId), {
+      method: "DELETE",
+    });
   }
 }
 

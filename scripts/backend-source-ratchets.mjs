@@ -27,6 +27,7 @@ export const sourceRatchets = [
   entry('calendar_fixture_ratchet', 'TestCalendarFixtureClockRatchet', go),
   entry('wall_clock_verification', 'TestActivityInstanceWallClockRatchet', go),
   entry('test_skip_ratchet', 'TestTestSkipRatchet', go),
+  entry('json_string_option_ratchet', 'TestNoJSONStringOptionRatchet', go),
   entry('account_credential_writer', 'TestAccountCredentialHasOneWriter', production),
   entry('ordered_lock_acquirers', 'TestOrderedLocksHaveOneAcquirer', production),
   entry('row_lock_admission', 'TestRowLocksAreAdmittedThroughTheLockOrder', production),

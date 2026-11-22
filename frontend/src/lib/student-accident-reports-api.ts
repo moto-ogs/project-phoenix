@@ -8,7 +8,7 @@ import type {
   AccidentReportResponse,
   StudentDocumentResponse,
 } from "~/lib/contract/students.generated";
-import { bffJson } from "./bff-fetch";
+import { legacyBffJson } from "./bff-fetch";
 import { signatureRequestBody, type SignatureValue } from "./signature";
 
 type AccidentReportStatus = "open" | "signed";
@@ -95,7 +95,10 @@ async function writeReport(
   method: "POST" | "PUT",
   body: unknown,
 ): Promise<string> {
-  const report = await bffJson<StudentDocumentResponse>(url, { method, body });
+  const report = await legacyBffJson<StudentDocumentResponse>(url, {
+    method,
+    body,
+  });
   return report.id;
 }
 
@@ -158,7 +161,7 @@ class StudentAccidentReportsService {
   ): Promise<void> {
     const formData = new FormData();
     formData.append("file", file);
-    await bffJson<unknown>(
+    await legacyBffJson<unknown>(
       `${reportsPath(studentId, reportIdValue)}/paper-copy`,
       {
         method: "POST",

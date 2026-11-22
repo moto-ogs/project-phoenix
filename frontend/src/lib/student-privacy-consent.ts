@@ -4,7 +4,7 @@
 // answers with the school's defaults (gdpr.privacy_consent_retention_days).
 
 import { ApiError } from "./api-error";
-import { bffJson } from "./bff-fetch";
+import { legacyBffJson } from "./bff-fetch";
 import { createLogger } from "./logger";
 import type { PrivacyConsentResponse } from "./contract/students.generated";
 
@@ -53,7 +53,7 @@ export async function writeStudentConsent(
   studentId: string,
   pair: ConsentPair,
 ): Promise<void> {
-  await bffJson<unknown>(
+  await legacyBffJson<unknown>(
     `/api/students/${encodeURIComponent(studentId)}/privacy-consent`,
     {
       method: "PUT",
@@ -74,7 +74,7 @@ async function readStudentConsent(
   studentId: string,
 ): Promise<ConsentPair | null> {
   try {
-    const consent = await bffJson<PrivacyConsentResponse>(
+    const consent = await legacyBffJson<PrivacyConsentResponse>(
       `/api/students/${encodeURIComponent(studentId)}/privacy-consent`,
     );
     return {

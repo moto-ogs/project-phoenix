@@ -5,7 +5,7 @@
 // caller may see plus the caller's visible categories.
 
 import type * as wire from "~/lib/contract/students.generated";
-import { bffJson } from "./bff-fetch";
+import { legacyBffJson } from "./bff-fetch";
 import {
   mapAccidentReport,
   type AccidentReportDetails,
@@ -63,7 +63,7 @@ function documentsPath(studentId: string, documentId?: string): string {
 
 class StudentDocumentsService {
   async list(studentId: string): Promise<StudentDocumentList> {
-    const list = await bffJson<wire.StudentDocumentListResponse>(
+    const list = await legacyBffJson<wire.StudentDocumentListResponse>(
       documentsPath(studentId),
     );
     return {
@@ -76,14 +76,14 @@ class StudentDocumentsService {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("category", category);
-    await bffJson<unknown>(documentsPath(studentId), {
+    await legacyBffJson<unknown>(documentsPath(studentId), {
       method: "POST",
       body: formData,
     });
   }
 
   async delete(studentId: string, documentId: string): Promise<void> {
-    await bffJson<unknown>(documentsPath(studentId, documentId), {
+    await legacyBffJson<unknown>(documentsPath(studentId, documentId), {
       method: "DELETE",
     });
   }

@@ -3,7 +3,7 @@
 // marker per approved one-day pickup request and staff member; a corrected
 // decision sets it unread again as taken back.
 
-import { bffJson } from "./bff-fetch";
+import { legacyBffJson } from "./bff-fetch";
 import type {
   pickupChangeNoticeResponse as WirePickupChangeNotice,
   pickupChangeNoticesReadRequest as WirePickupChangeNoticesReadRequest,
@@ -44,7 +44,7 @@ function mapNotice(data: WirePickupChangeNotice): PickupChangeNotice {
 export const pickupChangeNoticesService = {
   /** The reader's unseen changes on days from today on, newest first. */
   async list(): Promise<PickupChangeNotice[]> {
-    const notices = await bffJson<WirePickupChangeNotice[]>(
+    const notices = await legacyBffJson<WirePickupChangeNotice[]>(
       "/api/students/pickup-change-notices",
     );
     return notices.map(mapNotice);
@@ -58,7 +58,7 @@ export const pickupChangeNoticesService = {
     studentId: string,
     observed: readonly PickupChangeNoticeRevision[],
   ): Promise<PickupChangeNotice[]> {
-    const notices = await bffJson<WirePickupChangeNotice[]>(
+    const notices = await legacyBffJson<WirePickupChangeNotice[]>(
       `/api/students/${encodeURIComponent(studentId)}/pickup-change-notices/read`,
       {
         method: "POST",

@@ -178,6 +178,6 @@ func TestShiftCoverageProjection_BatchesEffectiveSeriesReadsAndIsolatesTenant(t 
 	assert.Equal(t, nextWednesday.String(), warnings[0].Date)
 	for _, warning := range warnings {
 		assert.Equal(t, ident.ID(localBase.ID), warning.StaffID)
-		assert.NotEqual(t, foreignStaff.ID, warning.StaffID)
+		assert.NotEqual(t, foreignStaff.ID, warning.StaffID.Int64())
 	}
 }

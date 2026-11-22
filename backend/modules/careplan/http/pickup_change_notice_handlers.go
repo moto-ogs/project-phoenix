@@ -10,6 +10,7 @@ import (
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	careplan "github.com/moto-ogs/project-phoenix/modules/careplan"
 	sessiontoken "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // pickupChangeNoticeResponse is one unread marker of a changed pickup time
@@ -60,7 +61,7 @@ func (rs *Resource) readPickupChangeNotices(w http.ResponseWriter, r *http.Reque
 	}
 	observed := make([]careplan.PickupChangeNoticeRevision, 0, len(body.Notices))
 	for _, notice := range body.Notices {
-		observed = append(observed, careplan.PickupChangeNoticeRevision{RequestID: notice.RequestID, InformedAt: notice.InformedAt})
+		observed = append(observed, careplan.PickupChangeNoticeRevision{RequestID: notice.RequestID.Int64(), InformedAt: notice.InformedAt})
 	}
 	notices, err := rs.PickupChangeNotices.MarkPickupChangeNoticesRead(r.Context(), int64(sessiontoken.ClaimsFromCtx(r.Context()).ID), studentID, observed)
 	if err != nil {
@@ -77,7 +78,7 @@ type pickupChangeNoticesReadRequest struct {
 }
 
 type pickupChangeNoticeRevision struct {
-	RequestID  int64     `json:"request_id,string"`
+	RequestID  ident.ID  `json:"request_id"`
 	InformedAt time.Time `json:"informed_at"`
 }
 
