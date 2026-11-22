@@ -326,10 +326,9 @@ slash is dropped and each parameter encoded.
   `/parents/login`. Träger, moto schule and caterer: the error stays on the
   page. A parent client that reports refusals (`PARENT_ACCESS_REFUSED_EVENT`)
   catches the `ApiError` itself.
-- **No contract:** a named `route.ts` the contract cannot carry is called
-  with `bffJsonUncontracted<T>(portal, method, path)`; each caller is listed
-  with its reason in `bff-fetch-uncontracted.test.ts`, and the list only
-  shrinks. A backend route without a contract gets one first (#7808).
+- **No contract:** a backend route without a contract gets one first
+  (#7808); its client waits until then. A named `route.ts` the contract
+  cannot carry (`activities/[id]/students`) keeps its own call.
 - Files and downloads keep their own path (`fetch` of the file URL).
 
 ### API clients and data mapping

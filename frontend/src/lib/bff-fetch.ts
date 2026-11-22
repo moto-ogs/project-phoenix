@@ -91,7 +91,7 @@ interface CallOptions {
   authRefusals?: readonly ErrorCode[];
 }
 
-export type BffOptions<R> = CallOptions & BodyOf<R> & ParamsOf<R> & QueryOf<R>;
+type BffOptions<R> = CallOptions & BodyOf<R> & ParamsOf<R> & QueryOf<R>;
 
 type OptionalArg<R> =
   object extends BffOptions<R>
@@ -276,21 +276,6 @@ export function bffJson<P extends Portal, K extends RouteKey<P>>(
   };
   const url = bffPath(portal, route.slice(space + 1), opts.params, opts.query);
   return call(portal, method, url, opts);
-}
-
-/**
- * The same call for a BFF path no Go route registers: a named `route.ts`
- * that aggregates backend reads (`app/api/activities/[id]/students`). The
- * caller names the answer's type; every call site is listed with its reason
- * in `bff-fetch-uncontracted.test.ts`, and the list only shrinks.
- */
-export function bffJsonUncontracted<T>(
-  portal: Portal,
-  method: Method,
-  path: string,
-  options: CallOptions & { body?: unknown } = {},
-): Promise<T> {
-  return call(portal, method, path, options);
 }
 
 /**
