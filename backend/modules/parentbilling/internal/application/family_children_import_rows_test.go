@@ -581,8 +581,10 @@ func TestFamilyImportWitnessCoversEveryContractOfTheFamily(t *testing.T) {
 func TestFamilyImportLeftFamilyWitnessSpeaksBeyondTheLookBack(t *testing.T) {
 	t.Parallel()
 	today := calendar.NewDate(2026, 11, 22)
-	mia := sjrVersion(t, contractMia, schoolIspringen, 1, "2026-08-01", "2026-10-31")
-	noah := sjrVersion(t, contractNoah, schoolIspringen, 2, "2026-08-01", "2027-06-30")
+	// VersionsInForce reads from 92 days back: Mia's contract from 01.08.
+	// arrives starting on 22.08.
+	mia := sjrVersion(t, contractMia, schoolIspringen, 1, "2026-08-22", "2026-10-31")
+	noah := sjrVersion(t, contractNoah, schoolIspringen, 2, "2026-08-22", "2027-06-30")
 	noah.ChildFirstName = "Noah"
 	expired := []parentbilling.FamilyChildCount{{ID: 5, ContractID: ident.ID(contractNoah), FamilyEmail: "family@example.org",
 		ConfirmedChildren: ptr(4), ValidFrom: ptr(calendar.NewDate(2026, 8, 1)), ValidUntil: ptr(calendar.NewDate(2026, 11, 15))}}
