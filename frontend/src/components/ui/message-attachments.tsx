@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Download } from "lucide-react";
 
 import type * as sharedContract from "~/lib/contract/shared.generated";
@@ -79,7 +79,6 @@ export function MessageAttachments({
   labels?: MessageAttachmentLabels;
 }>) {
   const [viewing, setViewing] = useState<number | null>(null);
-  if (attachments.length === 0) return null;
 
   const images = attachments.filter((item) => isViewerImage(item.content_type));
   const files = attachments.filter((item) => !isViewerImage(item.content_type));
@@ -92,6 +91,18 @@ export function MessageAttachments({
     sizeBytes: item.size_bytes,
     downloadHref: downloadUrl(item.id),
   }));
+  const viewingId = ordered[viewing ?? -1]?.id;
+  const viewingSrc = viewerItems[viewing ?? -1]?.src;
+  // Chat refreshes can replace attachment objects without changing the PDF.
+  const loadViewingFile = useCallback(
+    (src: string) =>
+      loadFile && viewingId !== undefined && src === viewingSrc
+        ? loadFile(viewingId)
+        : Promise.reject(new Error("unknown attachment")),
+    [loadFile, viewingId, viewingSrc],
+  );
+  if (attachments.length === 0) return null;
+
   const tiles = images.slice(0, MAX_TILES);
   const hidden = images.length - tiles.length;
   const single = images.length === 1 ? images[0] : undefined;
@@ -202,15 +213,7 @@ export function MessageAttachments({
         index={viewing}
         onIndexChange={setViewing}
         onClose={() => setViewing(null)}
-        loadFile={
-          loadFile &&
-          ((src) => {
-            const item = ordered[viewerItems.findIndex((v) => v.src === src)];
-            return item
-              ? loadFile(item.id)
-              : Promise.reject(new Error("unknown attachment"));
-          })
-        }
+        loadFile={loadFile && loadViewingFile}
         labels={labels.lightbox}
       />
     </div>

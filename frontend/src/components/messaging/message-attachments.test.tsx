@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -285,6 +286,72 @@ describe("Anhänge in der Sprechblase (#6685)", () => {
       }),
     ).toHaveAttribute("download", "bastelliste.pdf");
     fetchSpy.mockRestore();
+  });
+
+  it("behält ein geöffnetes PDF bei Chat-Updates und lädt bei einem neuen Loader neu", async () => {
+    const user = userEvent.setup();
+    const loadFile = vi
+      .fn<MessageAttachmentRoutes["loadFile"]>()
+      .mockResolvedValue(new Blob(["%PDF-1.7"]));
+    URL.createObjectURL = vi
+      .fn()
+      .mockReturnValueOnce("blob:first")
+      .mockReturnValueOnce("blob:second");
+    URL.revokeObjectURL = vi.fn();
+    const props = {
+      body: "Anhang",
+      own: false,
+      senderName: "OGS",
+      createdAt: "2026-08-16T06:50:00Z",
+      attachments: [PHOTO, LIST],
+      attachmentFiles: { ...files, loadFile },
+    };
+    const { rerender, unmount } = render(<ChatBubble {...props} />);
+    await user.click(
+      screen.getByRole("button", { name: "Datei öffnen: bastelliste.pdf" }),
+    );
+    const frame = await screen.findByTitle("bastelliste.pdf");
+    expect(frame).toHaveAttribute("src", "blob:first#view=FitH&navpanes=0");
+    expect(loadFile).toHaveBeenCalledWith(LIST.id);
+
+    await act(async () => {
+      rerender(
+        <ChatBubble
+          {...props}
+          body="Aktualisierte Nachricht"
+          attachments={props.attachments.map((item) => ({ ...item }))}
+          attachmentFiles={{
+            ...props.attachmentFiles,
+            downloadUrl: (id) => `/files/${id}`,
+          }}
+        />,
+      );
+    });
+    expect(screen.getByTitle("bastelliste.pdf")).toBe(frame);
+    expect(frame).toHaveAttribute("src", "blob:first#view=FitH&navpanes=0");
+    expect(loadFile).toHaveBeenCalledTimes(1);
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
+    expect(URL.revokeObjectURL).not.toHaveBeenCalled();
+
+    const replacementLoader = vi
+      .fn<MessageAttachmentRoutes["loadFile"]>()
+      .mockResolvedValue(new Blob(["%PDF-1.7 updated"]));
+    rerender(
+      <ChatBubble
+        {...props}
+        attachmentFiles={{ ...files, loadFile: replacementLoader }}
+      />,
+    );
+    await waitFor(() =>
+      expect(screen.getByTitle("bastelliste.pdf")).toHaveAttribute(
+        "src",
+        "blob:second#view=FitH&navpanes=0",
+      ),
+    );
+    expect(replacementLoader).toHaveBeenCalledWith(LIST.id);
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:first");
+    unmount();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:second");
   });
 
   it("bietet eine Word-Datei in der Ansicht zum Herunterladen an", async () => {
