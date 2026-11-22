@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { handleDomainApiError, authFetch, fetchWithRetry } from "./api-helpers";
+import { handleDomainApiError, fetchWithRetry } from "./api-helpers";
 import { ApiError, errorClassCode, problemTitle } from "./api-error";
 import {
   handleApiError,
@@ -646,105 +646,6 @@ describe("handleDomainApiError", () => {
 
 // Type for mocked fetch function
 type MockedFetch = ReturnType<typeof vi.fn<typeof fetch>>;
-
-describe("authFetch", () => {
-  let originalFetch: typeof fetch;
-  let mockFetch: MockedFetch;
-
-  beforeEach(() => {
-    originalFetch = globalThis.fetch;
-    mockFetch = vi.fn();
-    globalThis.fetch = mockFetch;
-  });
-
-  afterEach(() => {
-    globalThis.fetch = originalFetch;
-  });
-
-  // The browser holds no token (#5005): the BFF reads the session cookie.
-  it("makes GET request without headers", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve({ data: "test" }),
-    } as Response);
-
-    await authFetch<{ data: string }>("http://api.test/endpoint");
-
-    expect(mockFetch).toHaveBeenCalledWith("http://api.test/endpoint", {
-      method: "GET",
-      credentials: "include",
-      cache: "no-store",
-      headers: undefined,
-    });
-  });
-
-  it("makes POST request with body", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve({ success: true }),
-    } as Response);
-
-    const body = { name: "Test" };
-    await authFetch("http://api.test/endpoint", {
-      method: "POST",
-      body,
-    });
-
-    expect(mockFetch).toHaveBeenCalledWith("http://api.test/endpoint", {
-      method: "POST",
-      credentials: "include",
-      cache: "no-store",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-  });
-
-  it("returns empty object for 204 No Content", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 204,
-    } as Response);
-
-    const result = await authFetch<Record<string, unknown>>(
-      "http://api.test/endpoint",
-      {
-        method: "DELETE",
-      },
-    );
-
-    expect(result).toEqual({});
-  });
-
-  it("throws error for non-ok response", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 404,
-      statusText: "Not Found",
-    } as Response);
-
-    await expect(authFetch("http://api.test/endpoint")).rejects.toThrow(
-      "API error (404): Not Found",
-    );
-  });
-
-  it("normalizes a transport failure as a retryable unavailable error", async () => {
-    mockFetch.mockRejectedValueOnce(new TypeError("Failed to fetch"));
-
-    const error = await authFetch("http://api.test/endpoint").catch(
-      (caught: unknown) => caught,
-    );
-
-    expect(error).toBeInstanceOf(ApiError);
-    expect(error).toMatchObject({
-      status: 503,
-      code: "general.unavailable",
-    });
-  });
-});
 
 describe("fetchWithRetry", () => {
   const consoleSpies = suppressConsole("error", "warn");

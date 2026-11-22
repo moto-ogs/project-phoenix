@@ -28,14 +28,7 @@ const REMAINING_IMPORTERS: Readonly<Record<string, string>> = {
     "sessionFetch: the payment export has no request type in the contract (#7808)",
   "components/settings/personalization-tab.tsx":
     "sessionFetch: the login image route has no contract (#7808)",
-  "lib/email-code-factor-api.ts":
-    "authFetch: the second factor of caterer and parents; confirm installs a new session in its own route.ts (#7806)",
-  "lib/caterer-api.ts": "authFetch: caterer portal, #7806 Teil B",
   "lib/staff-pool-api.ts": "traegerRequest: Träger portal, #7806 Teil B",
-  "lib/traeger-holiday-form-api.ts":
-    "traegerRequest: Träger portal, #7806 Teil B",
-  "lib/operator/operator-settings-api.ts":
-    "operatorFetch: operator portal, #7806 Teil B",
 };
 
 const SRC = join(import.meta.dirname, "..");

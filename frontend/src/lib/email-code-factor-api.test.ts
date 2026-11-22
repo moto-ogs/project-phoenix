@@ -8,7 +8,7 @@ describe("emailCodeFactorApi", () => {
     global.fetch = originalFetch;
   });
 
-  it("reads the state and the start in the catalog proxy's envelope (#2352)", async () => {
+  it("reads the parent's state and start in the catalog proxy's envelope (#2352)", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
@@ -20,41 +20,38 @@ describe("emailCodeFactorApi", () => {
       .mockResolvedValueOnce(
         Response.json({
           status: "success",
-          data: { enabled: true, masked_email: "e***@x.de" },
-        }),
-      )
-      .mockResolvedValueOnce(
-        Response.json({
-          status: "success",
-          data: { challenge_token: "first" },
-        }),
-      )
-      .mockResolvedValueOnce(
-        Response.json({
-          status: "success",
           data: { challenge_token: "wrapped", masked_email: "e***@x.de" },
         }),
       );
     global.fetch = fetchMock as unknown as typeof global.fetch;
-    const api = emailCodeFactorApi("/api/parent/me/mfa");
+    const api = emailCodeFactorApi("parent");
 
     await expect(api.status()).resolves.toEqual({
       enabled: false,
       available: false,
       maskedEmail: "e***@x.de",
     });
-    // The caterer's state names no availability: its factor is always available.
-    await expect(api.status()).resolves.toEqual({
-      enabled: true,
-      available: true,
-      maskedEmail: "e***@x.de",
-    });
-    await expect(api.start()).resolves.toEqual({
-      challengeToken: "first",
-      maskedEmail: "",
-    });
     await expect(api.start()).resolves.toEqual({
       challengeToken: "wrapped",
+      maskedEmail: "e***@x.de",
+    });
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "/api/parent/me/mfa",
+      "/api/parent/me/mfa/start",
+    ]);
+  });
+
+  it("reads the caterer's factor as always available", async () => {
+    global.fetch = vi.fn().mockResolvedValueOnce(
+      Response.json({
+        status: "success",
+        data: { enabled: true, masked_email: "e***@x.de" },
+      }),
+    ) as unknown as typeof global.fetch;
+
+    await expect(emailCodeFactorApi("caterer").status()).resolves.toEqual({
+      enabled: true,
+      available: true,
       maskedEmail: "e***@x.de",
     });
   });
@@ -65,7 +62,7 @@ describe("emailCodeFactorApi", () => {
       .mockResolvedValueOnce(Response.json({ status: "success", data: null }));
     global.fetch = fetchMock as unknown as typeof global.fetch;
 
-    await emailCodeFactorApi("/api/caterer/account/mfa").disable("Passw0rd!");
+    await emailCodeFactorApi("caterer").disable("Passw0rd!");
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("/api/caterer/account/mfa/disable");

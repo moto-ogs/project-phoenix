@@ -7,6 +7,8 @@ import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const UNCONTRACTED_CALLERS: Readonly<Record<string, string>> = {
+  "lib/email-code-factor-api.ts":
+    "POST caterer/account/mfa/confirm, parent/me/mfa/confirm: the route installs the renewed session",
   "lib/payroll-api.ts":
     "PUT settings/values/[key]: the route purges the cached tenant lookup",
   "lib/staff-preview-api.ts":

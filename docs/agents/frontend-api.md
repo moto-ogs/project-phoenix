@@ -347,9 +347,10 @@ slash is dropped and each parameter encoded.
   Read it as an empty list where the screen needs one, once, in the client
   (`slot-lists-api.ts` derives `WithLists<…>` from the generated type); do not
   copy the answer into a hand-written type.
-- **Guards:** `old-fetch-helpers.test.ts` lists the files that still import
-  `sessionFetch` for JSON, `authFetch`, `traegerRequest` or `operatorFetch`,
-  each with its blocker; a new importer fails. `scripts/backend-wire-types.mjs`
+- **Guards:** `fetchWithAuth`, `authFetch` and `operatorFetch` are gone.
+  `old-fetch-helpers.test.ts` lists the files that still import
+  `sessionFetch` for JSON or `traegerRequest`, each with its blocker; a new
+  importer fails, and the list only shrinks. `scripts/backend-wire-types.mjs`
   finds hand-written wire types by their form (two `snake_case` fields of
   their own, a generated type imported under another name, a type that only
   renames a generated one); its baseline only shrinks.
