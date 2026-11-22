@@ -102,6 +102,7 @@ type WorkerDependencies struct {
 	StudentLifecycleRepo      StudentLifecycleRepository
 	StudentLifecycleAudit     StudentLifecycleAuditor
 	CareExitEffector          CareExitEffector
+	DemoCRMWorker             OutboxJobRunner
 	OutboxWorker              OutboxWorkerRunner
 	EmailReconciliation       EmailDeliveryReconciler
 	// SettleExpiredTransfers terminalizes ambiguous manual uploads, never retries them.

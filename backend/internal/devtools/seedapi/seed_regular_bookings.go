@@ -321,7 +321,7 @@ func primaryGuardianOf(rt *Runtime, auth AuthRef, studentID int64) (seedPrimaryG
 				LastName  string  `json:"last_name"`
 				Email     *string `json:"email"`
 			} `json:"guardian"`
-			RelationshipID   int64  `json:"relationship_id"`
+			RelationshipID   apiID  `json:"relationship_id"`
 			RelationshipType string `json:"relationship_type"`
 			IsPrimary        bool   `json:"is_primary"`
 		} `json:"data"`
@@ -333,7 +333,7 @@ func primaryGuardianOf(rt *Runtime, auth AuthRef, studentID int64) (seedPrimaryG
 		if row.IsPrimary && row.Guardian.Email != nil && *row.Guardian.Email != "" {
 			return seedPrimaryGuardian{
 				FirstName: row.Guardian.FirstName, LastName: row.Guardian.LastName, Email: *row.Guardian.Email,
-				RelationshipID: row.RelationshipID, RelationshipType: row.RelationshipType,
+				RelationshipID: int64(row.RelationshipID), RelationshipType: row.RelationshipType,
 			}, nil
 		}
 	}

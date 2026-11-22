@@ -291,7 +291,7 @@ export function priceRowsAt(
       if (days !== null) {
         steps[days] = tariff.monthlyCents;
         if (sibling !== null) siblingSteps[days] = sibling;
-      } else if (tariff.weekday !== "") {
+      } else if (tariff.weekday) {
         prices[tariff.weekday] = tariff.monthlyCents;
         if (sibling !== null) siblingPrices[tariff.weekday] = sibling;
       }

@@ -355,7 +355,7 @@ func TestOperationsCreateAndStartSpontaneous(t *testing.T) {
 	assert.Equal(t, "14:00", service.lastSpontaneousInput.StartTime.Format("15:04"))
 	assert.Equal(t, "15:00", service.lastSpontaneousInput.EndTime.Format("15:04"))
 	assert.Equal(t, int64(241), service.lastInstanceID)
-	assert.Contains(t, rr.Body.String(), `"active_group_id":341`)
+	assert.Contains(t, rr.Body.String(), `"active_group_id":"341"`)
 }
 
 func TestOperationsCreateAndStartSpontaneousRollsBackNon5xxFailures(t *testing.T) {

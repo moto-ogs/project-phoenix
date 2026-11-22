@@ -3,6 +3,7 @@ package appointments
 import (
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/require"
 )
 
@@ -82,13 +83,13 @@ func TestAppointmentRecipientValidate(t *testing.T) {
 		recipient AppointmentRecipient
 		wantErr   string
 	}{
-		{name: "staff valid", recipient: AppointmentRecipient{AppointmentID: 1, RecipientType: RecipientTypeStaff, StaffID: &staffID, Status: ResponseStatusPending}},
-		{name: "guardian valid", recipient: AppointmentRecipient{AppointmentID: 1, RecipientType: RecipientTypeGuardianProfile, GuardianProfileID: &guardianID, Status: ResponseStatusInfo}},
-		{name: "appointment required", recipient: AppointmentRecipient{RecipientType: RecipientTypeStaff, StaffID: &staffID, Status: ResponseStatusPending}, wantErr: "appointment_id is required"},
-		{name: "staff exact subject", recipient: AppointmentRecipient{AppointmentID: 1, RecipientType: RecipientTypeStaff, StaffID: &staffID, GuardianProfileID: &guardianID, Status: ResponseStatusPending}, wantErr: "staff recipient requires staff_id only"},
-		{name: "guardian exact subject", recipient: AppointmentRecipient{AppointmentID: 1, RecipientType: RecipientTypeGuardianProfile, StaffID: &staffID, GuardianProfileID: &guardianID, Status: ResponseStatusPending}, wantErr: "guardian recipient requires guardian_profile_id only"},
+		{name: "staff valid", recipient: AppointmentRecipient{AppointmentID: 1, RecipientType: RecipientTypeStaff, StaffID: (*ident.ID)(&staffID), Status: ResponseStatusPending}},
+		{name: "guardian valid", recipient: AppointmentRecipient{AppointmentID: 1, RecipientType: RecipientTypeGuardianProfile, GuardianProfileID: (*ident.ID)(&guardianID), Status: ResponseStatusInfo}},
+		{name: "appointment required", recipient: AppointmentRecipient{RecipientType: RecipientTypeStaff, StaffID: (*ident.ID)(&staffID), Status: ResponseStatusPending}, wantErr: "appointment_id is required"},
+		{name: "staff exact subject", recipient: AppointmentRecipient{AppointmentID: 1, RecipientType: RecipientTypeStaff, StaffID: (*ident.ID)(&staffID), GuardianProfileID: (*ident.ID)(&guardianID), Status: ResponseStatusPending}, wantErr: "staff recipient requires staff_id only"},
+		{name: "guardian exact subject", recipient: AppointmentRecipient{AppointmentID: 1, RecipientType: RecipientTypeGuardianProfile, StaffID: (*ident.ID)(&staffID), GuardianProfileID: (*ident.ID)(&guardianID), Status: ResponseStatusPending}, wantErr: "guardian recipient requires guardian_profile_id only"},
 		{name: "invalid type", recipient: AppointmentRecipient{AppointmentID: 1, RecipientType: "class", Status: ResponseStatusPending}, wantErr: "invalid recipient_type"},
-		{name: "invalid status", recipient: AppointmentRecipient{AppointmentID: 1, RecipientType: RecipientTypeStaff, StaffID: &staffID, Status: "maybe"}, wantErr: "invalid recipient status"},
+		{name: "invalid status", recipient: AppointmentRecipient{AppointmentID: 1, RecipientType: RecipientTypeStaff, StaffID: (*ident.ID)(&staffID), Status: "maybe"}, wantErr: "invalid recipient status"},
 	}
 
 	for _, tt := range tests {

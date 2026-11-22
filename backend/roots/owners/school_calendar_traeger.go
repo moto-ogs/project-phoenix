@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar"
 	"github.com/moto-ogs/project-phoenix/modules/schoolclosingdaysview"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -42,7 +43,7 @@ func (s traegerCalendarSchools) TraegerSchools(ctx context.Context, organization
 	schools = slices.DeleteFunc(schools, func(school organizationtenancy.School) bool { return school.IsDeleted() })
 	ids := make([]int64, 0, len(schools))
 	for _, school := range schools {
-		ids = append(ids, school.ID)
+		ids = append(ids, school.ID.Int64())
 	}
 	states, err := schoolFederalStates(ctx, s.settings, ids)
 	if err != nil {
@@ -50,7 +51,7 @@ func (s traegerCalendarSchools) TraegerSchools(ctx context.Context, organization
 	}
 	result := make([]traegercalendar.SchoolState, 0, len(schools))
 	for _, school := range schools {
-		result = append(result, traegercalendar.SchoolState{ID: school.ID, Name: school.Name, FederalState: states[school.ID]})
+		result = append(result, traegercalendar.SchoolState{ID: school.ID.Int64(), Name: school.Name, FederalState: states[school.ID.Int64()]})
 	}
 	slices.SortFunc(result, func(a, b traegercalendar.SchoolState) int {
 		if a.Name != b.Name {
@@ -135,7 +136,7 @@ func (c holidaySchoolCalendar) authorizeHostSchools(ctx context.Context, schoolI
 	}
 	for _, id := range schoolIDs {
 		if !slices.ContainsFunc(schools, func(school organizationtenancy.School) bool {
-			return school.ID == id && school.OrganizationID == organizationID && !school.IsDeleted()
+			return school.ID == ident.ID(id) && school.OrganizationID == ident.ID(organizationID) && !school.IsDeleted()
 		}) {
 			return enrollment.ErrHolidayHostSchoolOutsideTraeger
 		}

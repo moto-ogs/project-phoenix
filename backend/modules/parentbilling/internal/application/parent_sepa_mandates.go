@@ -13,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/sepa"
 )
 
@@ -167,10 +168,10 @@ func (p *ParentMandates) withMandate(ctx context.Context, organizationID int64, 
 	if err != nil {
 		return parentbilling.ParentMandate{}, fmt.Errorf("parent billing: open the account holder of mandate %d: %w", mandate.ID, err)
 	}
-	summary := &parentbilling.ParentMandateSummary{CollectionEligible: parentbilling.MandateCollectionGap(mc.creditor, &mandate, p.today()) == "", ID: mandate.ID, Reference: mandate.Reference, SignedOn: mandate.SignedOn,
+	summary := &parentbilling.ParentMandateSummary{CollectionEligible: parentbilling.MandateCollectionGap(mc.creditor, &mandate, p.today()) == "", ID: mandate.ID.Int64(), Reference: mandate.Reference, SignedOn: mandate.SignedOn,
 		Kind: mandate.Kind, AccountHolder: string(holder), IBANMasked: mandate.IBANMasked, BIC: mandate.BIC, Source: mandate.Source,
 		CreditorID: mandate.CreditorID, RevokedOn: mandate.RevokedOn}
-	consent, err := p.store.SEPAMandateConsent(ctx, organizationID, mandate.ID)
+	consent, err := p.store.SEPAMandateConsent(ctx, organizationID, mandate.ID.Int64())
 	if err != nil {
 		return parentbilling.ParentMandate{}, err
 	}
@@ -340,7 +341,7 @@ func (p *ParentMandates) GrantParentSEPAMandate(ctx context.Context, organizatio
 		return parentbilling.ParentMandate{}, err
 	}
 	if err := p.store.InsertSEPAMandateConsent(ctx, organizationID, parentbilling.SEPAMandateConsent{
-		MandateID: stored.ID, ContractID: reader.ContractID, AccountID: reader.AccountID, Channel: parentbilling.ChannelParentAccount,
+		MandateID: stored.ID.Int64(), ContractID: reader.ContractID, AccountID: reader.AccountID, Channel: parentbilling.ChannelParentAccount,
 		TextVersion: parentbilling.MandateTextVersion, TextSHA256: checksum, TextSealed: sealedText, HolderConfirmed: true,
 		CreditorName: draft.fields.CreditorName, CreditorAddress: draft.fields.CreditorAddress,
 		DebtorStreet: draft.fields.Street, DebtorPostalCode: draft.fields.PostalCode, DebtorCity: draft.fields.City,
@@ -369,7 +370,7 @@ func (p *ParentMandates) insertMandate(ctx context.Context, organizationID int64
 		return parentbilling.SEPAMandate{}, fmt.Errorf("parent billing: seal the account holder: %w", err)
 	}
 	return p.store.InsertSEPAMandate(ctx, organizationID, reader.AccountID, parentbilling.SealedSEPAMandate{
-		Mandate: parentbilling.SEPAMandate{ContractID: reader.ContractID, FamilyEmail: mc.family, Reference: reference,
+		Mandate: parentbilling.SEPAMandate{ContractID: ident.ID(reader.ContractID), FamilyEmail: mc.family, Reference: reference,
 			SignedOn: draft.fields.SignedOn, Kind: parentbilling.MandateRecurring, Sequence: parentbilling.SequenceFirst,
 			CreditorID: mc.creditor.CreditorID, IBANMasked: draft.fields.IBANMasked, BIC: draft.account.BIC,
 			Source: parentbilling.MandateFromParent},
@@ -391,14 +392,14 @@ func (p *ParentMandates) RevokeParentSEPAMandate(ctx context.Context, organizati
 	if inForce == nil {
 		return parentbilling.ParentMandate{}, parentbilling.ErrSEPAMandateNotFound
 	}
-	if _, err := p.store.SEPAMandate(ctx, organizationID, inForce.ID, true); err != nil {
+	if _, err := p.store.SEPAMandate(ctx, organizationID, inForce.ID.Int64(), true); err != nil {
 		return parentbilling.ParentMandate{}, err
 	}
 	today := p.today()
 	if today.Before(inForce.SignedOn) {
 		today = inForce.SignedOn
 	}
-	revoked, err := p.store.RevokeSEPAMandate(ctx, organizationID, reader.AccountID, inForce.ID, today)
+	revoked, err := p.store.RevokeSEPAMandate(ctx, organizationID, reader.AccountID, inForce.ID.Int64(), today)
 	if err != nil {
 		return parentbilling.ParentMandate{}, err
 	}

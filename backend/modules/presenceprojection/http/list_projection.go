@@ -3,6 +3,7 @@ package presenceprojectionhttp
 import (
 	time "time"
 
+	common "github.com/moto-ogs/project-phoenix/api/common"
 	departure "github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
@@ -24,9 +25,9 @@ const (
 // one it is a wire projection: filters, sorting, pagination and access run on
 // the full responses first.
 type NameStudentResponse struct {
-	ID        int64  `json:"id"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
+	ID        common.ID `json:"id"`
+	FirstName string    `json:"first_name"`
+	LastName  string    `json:"last_name"`
 }
 
 func nameStudentResponses(responses []StudentResponse) []NameStudentResponse {
@@ -59,10 +60,10 @@ func nameStudentResponses(responses []StudentResponse) []NameStudentResponse {
 // Kindersuche. Before adding, check that the page actually reads it —
 // TestListStudents_SlimProjection pins the forbidden set.
 type SlimStudentResponse struct {
-	ID          int64  `json:"id"`
-	FirstName   string `json:"first_name"`
-	LastName    string `json:"last_name"`
-	SchoolClass string `json:"school_class"`
+	ID          common.ID `json:"id"`
+	FirstName   string    `json:"first_name"`
+	LastName    string    `json:"last_name"`
+	SchoolClass string    `json:"school_class"`
 
 	// Live location + the badge context it is rendered with. The *_since
 	// timestamps are part of StudentLocationContext (frontend
@@ -73,7 +74,7 @@ type SlimStudentResponse struct {
 	Location       string     `json:"current_location"`
 	LocationSince  *time.Time `json:"location_since,omitempty"`
 	RoomColor      *string    `json:"current_room_color,omitempty"`
-	GroupID        int64      `json:"group_id,omitempty"`
+	GroupID        common.ID  `json:"group_id,omitempty"`
 	GroupName      string     `json:"group_name,omitempty"`
 	Sick           bool       `json:"sick"`
 	SickSince      *time.Time `json:"sick_since,omitempty"`
@@ -110,7 +111,7 @@ type SlimStudentResponse struct {
 	ActualPickupTime     *string `json:"actual_pickup_time,omitempty" contract:"clock"`
 
 	// "Nach Laufgemeinschaft" grouping; only with include_companions=true.
-	CompanionStudentIDs []int64 `json:"companion_student_ids,omitempty"`
+	CompanionStudentIDs []common.ID `json:"companion_student_ids,omitempty"`
 
 	// Photo + consent. photo_consent_given is carried because the page probes
 	// its PRESENCE (not its value) to decide whether the "Fotoerlaubnis" filter

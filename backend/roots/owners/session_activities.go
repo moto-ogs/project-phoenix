@@ -5,6 +5,7 @@ import (
 
 	presenceCompose "github.com/moto-ogs/project-phoenix/modules/studentpresence/compose"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // SessionActivityRecords are the Timetable activity group reads, in the
@@ -53,45 +54,45 @@ func sessionActivity(row *timetable.Group) *presenceCompose.SessionActivity {
 		return nil
 	}
 	result := &presenceCompose.SessionActivity{
-		ID:                    row.ID,
-		TenantID:              row.TenantID,
+		ID:                    ident.ID(row.ID),
+		TenantID:              ident.ID(row.TenantID),
 		CreatedAt:             row.CreatedAt,
 		UpdatedAt:             row.UpdatedAt,
 		Name:                  row.Name,
 		MaxParticipants:       row.MaxParticipants,
 		RequiredStaff:         row.RequiredStaff,
 		IsOpen:                row.IsOpen,
-		CategoryID:            row.CategoryID,
-		PlanningTrackID:       row.PlanningTrackID,
-		PlannedRoomID:         row.PlannedRoomID,
-		CreatedBy:             row.CreatedBy,
+		CategoryID:            ident.ID(row.CategoryID),
+		PlanningTrackID:       (*ident.ID)(row.PlanningTrackID),
+		PlannedRoomID:         (*ident.ID)(row.PlannedRoomID),
+		CreatedBy:             (*ident.ID)(row.CreatedBy),
 		Type:                  row.Type,
-		EducationGroupID:      row.EducationGroupID,
+		EducationGroupID:      (*ident.ID)(row.EducationGroupID),
 		ListKind:              row.ListKind,
 		IsTemplate:            row.IsTemplate,
 		IsSystem:              row.IsSystem,
 		ArchivedAt:            row.ArchivedAt,
 		SeriesRootID:          row.SeriesRootID,
-		CalendarPeriodID:      row.CalendarPeriodID,
+		CalendarPeriodID:      (*ident.ID)(row.CalendarPeriodID),
 		TargetGroupType:       row.TargetGroupType,
 		TargetGradeLevel:      row.TargetGradeLevel,
 		TargetSchoolClass:     row.TargetSchoolClass,
-		SourceCareOfferingIDs: row.SourceCareOfferingIDs,
+		SourceCareOfferingIDs: ident.IDs(row.SourceCareOfferingIDs),
 		SourceGradeLevels:     row.SourceGradeLevels,
 		SourceSchoolClasses:   row.SourceSchoolClasses,
 		Notes:                 row.Notes,
 	}
 	if row.Category != nil {
 		result.Category = &presenceCompose.SessionActivityCategory{
-			ID:          row.Category.ID,
-			TenantID:    row.Category.TenantID,
+			ID:          ident.ID(row.Category.ID),
+			TenantID:    ident.ID(row.Category.TenantID),
 			CreatedAt:   row.Category.CreatedAt,
 			UpdatedAt:   row.Category.UpdatedAt,
 			Name:        row.Category.Name,
 			Description: row.Category.Description,
 			Color:       row.Category.Color,
 			IsSystem:    row.Category.IsSystem,
-			ShiftTypeID: row.Category.ShiftTypeID,
+			ShiftTypeID: (*ident.ID)(row.Category.ShiftTypeID),
 			ArchivedAt:  row.Category.ArchivedAt,
 		}
 	}

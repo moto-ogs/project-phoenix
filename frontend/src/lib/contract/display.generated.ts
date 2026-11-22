@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   bool,
   instant,
-  int64StringOrNumber,
+  int64String,
   noData,
   object,
   requestBody,
@@ -22,8 +22,8 @@ export interface InfoDisplayResponse {
 }
 
 export const InfoDisplayResponseSchema: z.ZodType<InfoDisplayResponse, unknown> = object<InfoDisplayResponse>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
   created_at: instant,
   updated_at: instant,
   name: str,

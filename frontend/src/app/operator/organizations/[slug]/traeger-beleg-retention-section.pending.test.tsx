@@ -60,7 +60,7 @@ import { TraegerBelegRetentionSection } from "./traeger-beleg-retention-section"
 const overview: BelegRetentionOverview = mapBelegRetentionOverview({
   instructions: [
     {
-      id: 3,
+      id: "3",
       beleg_type: "holiday_document",
       trigger_event: "issued",
       period: 8,
@@ -69,6 +69,8 @@ const overview: BelegRetentionOverview = mapBelegRetentionOverview({
       instructed_by: "Kämmerei",
       instructed_on: testClockDay(-8),
       instruction_reference: "AVV-Nachtrag",
+      statutes_not_applicable_confirmed: false,
+      organization_id: "1",
       recorded_at: `${testClockDay(-8)}T10:00:00Z`,
     },
   ],
@@ -102,12 +104,15 @@ const overview: BelegRetentionOverview = mapBelegRetentionOverview({
       review_on: testClockDay(29),
       responsible: "Florian (Abstimmung mit dem Träger)",
       last_review: {
-        id: 5,
+        id: "5",
         note: "Bank prüft den letzten Einzug",
+        beleg_type: "sepa_mandate",
+        reason: "no_collection",
         escalated: true,
         escalation_reason: "Träger antwortet nicht",
         reviewed_on: testClockDay(-1),
         next_review_on: testClockDay(29),
+        reviewed_at: `${testClockDay(-1)}T10:00:00Z`,
       },
     },
   ],

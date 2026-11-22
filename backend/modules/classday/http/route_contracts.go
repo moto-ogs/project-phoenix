@@ -49,8 +49,8 @@ func RouteContracts() []common.RouteContract {
 func SlotListRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalTenant}
 	return []common.RouteContract{
-		{Method: "POST", Pattern: "/lists/options", Portals: portals, Request: slotListOptionsRequest{}, Response: classday.OptionsResult{}},
-		{Method: "POST", Pattern: "/lists/preview", Portals: portals, Request: slotListRequest{}, Response: classday.ClassdayResult{}},
+		{Method: "POST", Pattern: "/lists/options", Portals: portals, NoCommit: "reads the choices for a list the body describes", Request: slotListOptionsRequest{}, Response: classday.OptionsResult{}},
+		{Method: "POST", Pattern: "/lists/preview", Portals: portals, NoCommit: "builds the list the body describes and saves nothing", Request: slotListRequest{}, Response: classday.ClassdayResult{}},
 		{Method: "POST", Pattern: "/lists/export", Portals: portals, Request: slotListRequest{}, File: true},
 	}
 }

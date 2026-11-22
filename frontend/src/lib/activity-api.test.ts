@@ -2,11 +2,7 @@
 // Comprehensive tests for activity API service
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type {
-  BackendStudentEnrollment,
-  Activity,
-  UpdateActivityRequest,
-} from "./activity-helpers";
+import type { Activity, UpdateActivityRequest } from "./activity-helpers";
 import { mapActivityResponse } from "./activity-helpers";
 import { buildBackendActivity } from "~/test/fixtures/activities";
 
@@ -79,14 +75,6 @@ const sampleBackendActivity = buildBackendActivity({
   supervisor_id: "10",
   enrollment_count: 15,
 });
-
-const sampleBackendEnrollment: BackendStudentEnrollment = {
-  id: 1,
-  first_name: "Jane",
-  last_name: "Smith",
-  school_class: "5a",
-  current_location: "room_101",
-};
 
 describe("activity-api", () => {
   beforeEach(() => {
@@ -198,7 +186,10 @@ describe("activity-api", () => {
         "fetch",
         vi.fn().mockResolvedValueOnce({
           ok: true,
-          json: async () => ({ success: true, data: sampleBackendActivity }),
+          json: async () => ({
+            status: "success",
+            data: sampleBackendActivity,
+          }),
         }),
       );
 
@@ -309,55 +300,56 @@ describe("activity-api", () => {
   });
 
   describe("getEnrolledStudents", () => {
-    it("fetches enrolled students in browser context", async () => {
+    it("reads the contract's roster and maps it to the view", async () => {
       vi.stubGlobal("window", {});
       mockedGetSession.mockResolvedValueOnce({
         user: { id: "1" },
         expires: "2099-01-01",
       });
-
-      const mockResponse = {
+      const fetchMock = vi.fn().mockResolvedValueOnce({
         ok: true,
+        status: 200,
         json: async () => ({
-          data: [
-            {
-              id: "42",
-              student_id: "42",
-              name: "Jane Smith",
-              school_class: "3A",
-              current_location: null,
-              activity_id: "1",
-              created_at: "2024-01-15T08:00:00Z",
-              updated_at: "2024-01-15T08:00:00Z",
-            },
-          ],
+          status: "success",
+          data: [{ id: "42", first_name: "Jane", last_name: "Smith" }],
         }),
-      };
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(mockResponse));
+      });
+      vi.stubGlobal("fetch", fetchMock);
 
       const result = await activityApi.getEnrolledStudents("1");
 
-      expect(result).toHaveLength(1);
-      expect(result[0]?.student_id).toBe("42");
-      expect(result[0]?.name).toBe("Jane Smith");
+      expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/activities/1/students");
+      expect(result).toEqual([{ id: "42", name: "Jane Smith" }]);
     });
 
-    it("handles direct array response", async () => {
+    it("throws the API error of a failed read", async () => {
       vi.stubGlobal("window", {});
       mockedGetSession.mockResolvedValueOnce({
         user: { id: "1" },
         expires: "2099-01-01",
       });
+      vi.stubGlobal(
+        "fetch",
+        vi
+          .fn()
+          .mockResolvedValueOnce(
+            new Response(
+              JSON.stringify({
+                status: 403,
+                code: "general.forbidden",
+                detail: "no",
+              }),
+              {
+                status: 403,
+                headers: { "Content-Type": "application/problem+json" },
+              },
+            ),
+          ),
+      );
 
-      const mockResponse = {
-        ok: true,
-        json: async () => [sampleBackendEnrollment],
-      };
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(mockResponse));
-
-      const result = await activityApi.getEnrolledStudents("1");
-
-      expect(result).toHaveLength(1);
+      await expect(activityApi.getEnrolledStudents("1")).rejects.toMatchObject({
+        status: 403,
+      });
     });
   });
 });

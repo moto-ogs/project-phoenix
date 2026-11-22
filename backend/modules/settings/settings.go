@@ -85,6 +85,7 @@ const (
 	KeyPrivacyConsentRetentionDays           = configModel.KeyPrivacyConsentRetentionDays
 	KeyRequirePickupOfferingReview           = configModel.KeyRequirePickupOfferingReview
 	KeyRoomDetailVisibleDays                 = configModel.KeyRoomDetailVisibleDays
+	KeyParentRoomHistoryStopEnabled          = configModel.KeyParentRoomHistoryStopEnabled
 	KeySessionEndTime                        = configModel.KeySessionEndTime
 	KeySlotListLongDayCutoff                 = configModel.KeySlotListLongDayCutoff
 	KeySlotListShortDayCutoff                = configModel.KeySlotListShortDayCutoff

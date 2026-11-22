@@ -137,7 +137,7 @@ func publicPerson(entity *peopleValues.DirectoryPersonSnapshot) *workforceModule
 		return nil
 	}
 	return &workforceModule.Person{
-		ID: entity.ID, FirstName: entity.FirstName, LastName: entity.LastName, Birthday: optionalDateString(entity.Birthday), AccountID: entity.AccountID,
+		ID: entity.ID.Int64(), FirstName: entity.FirstName, LastName: entity.LastName, Birthday: optionalDateString(entity.Birthday), AccountID: (*int64)(entity.AccountID),
 	}
 }
 
@@ -148,14 +148,14 @@ func publicStaffProfile(entity *peopleValues.Staff) *workforceModule.StaffProfil
 		return nil
 	}
 	profile := &workforceModule.StaffProfile{
-		ID: entity.ID, PersonID: entity.PersonID, EmploymentType: entity.EmploymentType, WorkTimeModelID: entity.WorkTimeModelID,
+		ID: entity.ID.Int64(), PersonID: entity.PersonID.Int64(), EmploymentType: entity.EmploymentType, WorkTimeModelID: (*int64)(entity.WorkTimeModelID),
 		RotationAnchorDate: optionalDateString(entity.RotationAnchorDate), PersonnelNumber: entity.PersonnelNumber,
 	}
 	if entity.Person != nil {
 		profile.FirstName = entity.Person.FirstName
 		profile.LastName = entity.Person.LastName
 		profile.Birthday = optionalDateString(entity.Person.Birthday)
-		profile.AccountID = entity.Person.AccountID
+		profile.AccountID = (*int64)(entity.Person.AccountID)
 	}
 	return profile
 }

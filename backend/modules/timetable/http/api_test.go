@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -332,7 +333,7 @@ func TestMapPeriodToResponse(t *testing.T) {
 
 		resp := mapPeriodToResponse(p)
 
-		assert.Equal(t, int64(42), resp.ID)
+		assert.Equal(t, ident.ID(int64(42)), resp.ID)
 		assert.Equal(t, "School Year 2025/2026", resp.Name)
 		assert.Equal(t, "school_year", resp.PeriodType)
 		assert.Equal(t, "2025-08-01", resp.StartDate)
@@ -360,7 +361,7 @@ func TestMapPeriodToResponse(t *testing.T) {
 
 		resp := mapPeriodToResponse(p)
 
-		assert.Equal(t, int64(43), resp.ID)
+		assert.Equal(t, ident.ID(int64(43)), resp.ID)
 		assert.Equal(t, "semester", resp.PeriodType)
 		assert.Equal(t, 2, resp.WeekCycleLength)
 		require.NotNil(t, resp.WeekCycleAnchor)
@@ -876,7 +877,7 @@ func TestCreatePeriodOverlapWarnings(t *testing.T) {
 		require.Len(t, env.Data.Warnings, 1)
 		warning := env.Data.Warnings[0]
 		assert.Equal(t, "overlapping_active_periods", warning.Code)
-		assert.Equal(t, []int64{other.ID}, warning.OverlappingPeriodIDs)
+		assert.Equal(t, []ident.ID{ident.ID(other.ID)}, warning.OverlappingPeriodIDs)
 		assert.Equal(t, []string{other.Name}, warning.OverlappingPeriodNames)
 		assert.Contains(t, warning.Message, "Schuljahr 2030/2031")
 		assert.Contains(t, warning.Message, "01.08.2030")

@@ -100,13 +100,13 @@ func TestSelectedOpenRoomSessionReusesUnmergedVisits(t *testing.T) {
 				return
 			}
 			require.Len(t, projection.Visits, 2)
-			assert.Equal(t, int64(101), projection.Visits[0].StudentID, "preserve owner order, not room name order")
-			assert.Equal(t, int64(12), projection.Visits[0].ActiveGroupID, "room deduplication must not replace the selected session's visit")
+			assert.Equal(t, int64(101), projection.Visits[0].StudentID.Int64(), "preserve owner order, not room name order")
+			assert.Equal(t, int64(12), projection.Visits[0].ActiveGroupID.Int64(), "room deduplication must not replace the selected session's visit")
 			assert.Equal(t, entry, projection.Visits[0].CheckInTime)
-			assert.Equal(t, int64(102), projection.Visits[1].StudentID)
+			assert.Equal(t, int64(102), projection.Visits[1].StudentID.Int64())
 			yard := openRoomByName(t, projection, "Schulhof")
 			require.Len(t, yard.Students, 2)
-			assert.Equal(t, int64(11), yard.Students[1].ActiveGroupID, "the room still picks the earlier stay")
+			assert.Equal(t, int64(11), yard.Students[1].ActiveGroupID.Int64(), "the room still picks the earlier stay")
 		})
 	}
 }
@@ -240,7 +240,7 @@ func TestOpenRoomSessionsCarryTheParticipantLimit(t *testing.T) {
 
 	require.NoError(t, err)
 	yard := openRoomByName(t, projection, "Schulhof")
-	require.Equal(t, int64(11), yard.Sessions[0].ActiveGroupID)
+	require.Equal(t, int64(11), yard.Sessions[0].ActiveGroupID.Int64())
 	require.NotNil(t, yard.Sessions[0].ParticipantLimit)
 	assert.Equal(t, 1, *yard.Sessions[0].ParticipantLimit)
 	assert.Equal(t, 2, yard.Sessions[0].StudentCount, "two children against a limit of one")

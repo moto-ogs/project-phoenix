@@ -31,23 +31,23 @@ func vacationOpeningRowsByStaff(ctx context.Context, records timetracking.Vacati
 		return nil, err
 	}
 	for _, value := range values {
-		result[value.StaffID] = value
+		result[value.StaffID.Int64()] = value
 	}
 	return result, nil
 }
 
 func balanceAdjustmentRecord(value workforce.StaffBalanceAdjustment) *timetracking.StaffBalanceAdjustment {
 	entity := &timetracking.StaffBalanceAdjustment{}
-	entity.ID = value.ID
+	entity.ID = value.ID.Int64()
 	entity.CreatedAt = value.CreatedAt
 	entity.UpdatedAt = value.UpdatedAt
-	entity.TenantID = value.TenantID
-	entity.StaffID = value.StaffID
+	entity.TenantID = value.TenantID.Int64()
+	entity.StaffID = value.StaffID.Int64()
 	entity.Type = value.Type
 	entity.MinutesDelta = value.MinutesDelta
 	entity.EffectiveDate = calendar.Date(value.EffectiveDate)
 	entity.Note = value.Note
-	entity.DecidedBy = value.DecidedBy
+	entity.DecidedBy = value.DecidedBy.Int64()
 	entity.DecidedAt = value.DecidedAt
 	return entity
 }

@@ -13,6 +13,7 @@ import (
 	studentPresenceCompose "github.com/moto-ogs/project-phoenix/modules/studentpresence/compose"
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -129,7 +130,7 @@ func (a traegerChildAttendance) ChildAttendance(ctx context.Context, schoolID, a
 		children = make([]traegerview.ChildAttendance, 0, len(report.Students))
 		for _, row := range report.Students {
 			children = append(children, traegerview.ChildAttendance{
-				StudentID: row.StudentID, FirstName: row.FirstName, LastName: row.LastName, SchoolClass: row.SchoolClass,
+				StudentID: ident.ID(row.StudentID), FirstName: row.FirstName, LastName: row.LastName, SchoolClass: row.SchoolClass,
 				GroupName: row.GroupName, CareDays: row.CareDays, PresentDays: row.PresentDays, SickDays: row.SickDays,
 				ExcusedDays: row.ExcusedDays, UnexplainedDays: row.UnexplainedDays, AttendanceRate: row.AttendanceRate,
 			})

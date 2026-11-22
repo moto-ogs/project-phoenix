@@ -52,8 +52,8 @@ type handoverReport struct {
 		AbsentCount  int       `json:"absent_count"`
 	} `json:"handover"`
 	Rows []struct {
-		StudentID      int64 `json:"student_id"`
-		HandoverAbsent bool  `json:"handover_absent"`
+		StudentID      testpkg.ID `json:"student_id"`
+		HandoverAbsent bool       `json:"handover_absent"`
 	} `json:"rows"`
 }
 
@@ -70,7 +70,7 @@ func (f *morningAttendanceFixture) handoverReport(t *testing.T, date string, per
 
 func (r handoverReport) absent(studentID int64) bool {
 	for _, row := range r.Rows {
-		if row.StudentID == studentID {
+		if int64(row.StudentID) == studentID {
 			return row.HandoverAbsent
 		}
 	}

@@ -1,12 +1,16 @@
 package contract
 
-import "time"
+import (
+	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+)
 
 // GroupRoom is the Facilities room a group is assigned to, as the
 // room-enriched group reads carry it (#2665). facilities.rooms belongs to
 // that owner; School Structure only keeps this projection.
 type GroupRoom struct {
-	ID        int64     `json:"id"`
+	ID        ident.ID  `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Name      string    `json:"name"`

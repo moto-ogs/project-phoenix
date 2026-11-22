@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The changes a Träger closing day makes (#6434, #6457): its saved version
@@ -26,7 +27,7 @@ func (h *HolidayClosures) traegerChanges(ctx context.Context, organizationID int
 		}
 		current := make(map[int64]bool, len(traeger.Schools))
 		for _, school := range traeger.Schools {
-			current[school.ID] = true
+			current[school.ID.Int64()] = true
 		}
 		// Historical references survive a transfer. Only current schools
 		// can reopen here; newly requested schools still pass the calendar's
@@ -34,7 +35,7 @@ func (h *HolidayClosures) traegerChanges(ctx context.Context, organizationID int
 		previous := *closure.Previous
 		previous.SchoolIDs = nil
 		for _, school := range closure.Previous.SchoolIDs {
-			if current[school] {
+			if current[school.Int64()] {
 				previous.SchoolIDs = append(previous.SchoolIDs, school)
 			}
 		}
@@ -84,7 +85,7 @@ func closureSpan(closure enrollment.HolidayClosure) ([]int64, calendar.Date, cal
 		widen(closure.SchoolIDs, closure.StartsOn, closure.EndsOn)
 	}
 	if closure.Previous != nil {
-		widen(closure.Previous.SchoolIDs, closure.Previous.StartsOn, closure.Previous.EndsOn)
+		widen(ident.Int64s(closure.Previous.SchoolIDs), closure.Previous.StartsOn, closure.Previous.EndsOn)
 	}
 	return slices.Compact(slices.Sorted(slices.Values(schools))), from, to
 }

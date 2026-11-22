@@ -4,6 +4,7 @@ const sessionFetch = vi.hoisted(() => vi.fn());
 vi.mock("./session-cache", () => ({ sessionFetch }));
 
 import { substitutionService } from "./substitution-api";
+import { routes } from "./contract/substitutions.generated";
 
 const handover = {
   id: "5",
@@ -29,7 +30,7 @@ describe("substitutionService", () => {
           targets: [],
           schedule_appointments: [
             {
-              id: 42,
+              id: "42",
               type: "schedule_substitution",
               date: "2026-08-31",
               start_time: "12:00",
@@ -38,8 +39,8 @@ describe("substitutionService", () => {
               status: "planned",
               staff: [
                 {
-                  assignment_id: 9,
-                  staff: { id: 7, full_name: "Ada Alt" },
+                  assignment_id: "9",
+                  staff: { id: "7", full_name: "Ada Alt" },
                   is_absent: true,
                   is_substitute: false,
                   can_end: false,
@@ -47,7 +48,7 @@ describe("substitutionService", () => {
               ],
             },
           ],
-          schedule_targets: [{ id: 8, full_name: "Nora Neu" }],
+          schedule_targets: [{ id: "8", full_name: "Nora Neu" }],
         },
       }),
     });
@@ -78,14 +79,16 @@ describe("substitutionService", () => {
     ).rejects.toMatchObject({ name: "ApiError", code: "general.server" });
   });
 
-  it("assigns an appointment-scoped schedule substitution", async () => {
+  it("preserves string IDs in every appointment-scoped change", async () => {
+    const instanceId = "9007199254740993";
+    const staffId = "9007199254740995";
     sessionFetch.mockResolvedValue({
       ok: true,
       json: async () => ({
         data: {
           type: "schedule_substitution",
           schedule_substitution: {
-            instance_id: 42,
+            instance_id: instanceId,
             cancelled: false,
             understaffed_ack: false,
             affected_instances: [],
@@ -95,13 +98,22 @@ describe("substitutionService", () => {
       }),
     });
 
-    await substitutionService.applyScheduleSubstitution("42", {
+    await substitutionService.applyScheduleSubstitution(instanceId, {
+      understaffedAck: true,
+      understaffedNote: "Vertretung offen",
+      absences: [{ staffId, reason: "Krank", instanceIds: [instanceId] }],
       substitutions: [
         {
-          absentStaffId: "7",
+          absentStaffId: staffId,
           substituteStaffId: "8",
-          instanceIds: ["42", "43"],
+          instanceIds: [instanceId, "43"],
         },
+      ],
+      substitutionRemovals: [{ staffId, instanceIds: ["43"] }],
+      presences: [
+        { staffId, instanceIds: [instanceId] },
+        { staffId: "12", instanceIds: [] },
+        { staffId: "13" },
       ],
     });
 
@@ -109,49 +121,69 @@ describe("substitutionService", () => {
       {
         type: "schedule_substitution",
         schedule_substitution: {
-          instance_id: 42,
+          instance_id: instanceId,
+          understaffed_ack: true,
+          understaffed_note: "Vertretung offen",
+          absences: [
+            { staff_id: staffId, reason: "Krank", instance_ids: [instanceId] },
+          ],
           substitutions: [
             {
-              absent_staff_id: 7,
-              substitute_staff_id: 8,
-              instance_ids: [42, 43],
+              absent_staff_id: staffId,
+              substitute_staff_id: "8",
+              instance_ids: [instanceId, "43"],
             },
+          ],
+          substitution_removals: [{ staff_id: staffId, instance_ids: ["43"] }],
+          presences: [
+            { staff_id: staffId, instance_ids: [instanceId] },
+            { staff_id: "12", instance_ids: [] },
+            { staff_id: "13" },
           ],
         },
       },
     );
   });
 
-  it("assigns day-wide substitutions through the same module", async () => {
-    sessionFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        data: {
-          type: "schedule_substitution",
-          schedule_substitution: { days: [], total_affected: 0 },
-        },
-      }),
-    });
+  it.each([
+    {
+      substituteStaffId: "9007199254740995",
+      expectedTarget: { substitute_staff_id: "9007199254740995" },
+    },
+    { substituteStaffId: undefined, expectedTarget: {} },
+  ])(
+    "preserves day-wide string IDs with target $substituteStaffId",
+    async ({ substituteStaffId, expectedTarget }) => {
+      sessionFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          data: {
+            type: "schedule_substitution",
+            schedule_substitution: { days: [], total_affected: 0 },
+          },
+        }),
+      });
 
-    await substitutionService.applyBulkSubstitution({
-      absentStaffId: "7",
-      substituteStaffId: "8",
-      dates: ["2026-08-31", "2026-09-01"],
-    });
+      await substitutionService.applyBulkSubstitution({
+        absentStaffId: "9007199254740993",
+        substituteStaffId,
+        dates: ["2026-08-31", "2026-09-01"],
+      });
 
-    expect(JSON.parse(sessionFetch.mock.calls[0]?.[1]?.body as string)).toEqual(
-      {
+      expect(
+        JSON.parse(sessionFetch.mock.calls[0]?.[1]?.body as string),
+      ).toEqual({
         type: "schedule_substitution",
         schedule_substitution: {
           whole_days: {
-            absent_staff_id: 7,
-            substitute_staff_id: 8,
+            absent_staff_id: "9007199254740993",
+            ...expectedTarget,
             dates: ["2026-08-31", "2026-09-01"],
           },
         },
-      },
-    );
-  });
+      });
+    },
+  );
 
   it("maps the proxy-wrapped overview response", async () => {
     sessionFetch.mockResolvedValue({
@@ -214,17 +246,15 @@ describe("substitutionService", () => {
     });
   });
 
-  it("rejects a malformed overview instead of showing an empty plan", async () => {
-    sessionFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({
+  // A malformed overview never reaches the client: the catalog proxy's
+  // decoder refuses it and answers 502, so no empty plan is shown.
+  it("refuses a malformed overview at the proxy instead of showing an empty plan", () => {
+    expect(
+      routes["GET /api/substitutions/"].response.safeParse({
+        status: "success",
         data: { group_handovers: null, targets: [] },
-      }),
-    });
-
-    await expect(substitutionService.fetchSubstitutions()).rejects.toThrow(
-      "Ungültige Antwort",
-    );
+      }).success,
+    ).toBe(false);
   });
 
   // The catalog proxy hands over the backend's answer, which names its

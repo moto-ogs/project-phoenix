@@ -6,6 +6,11 @@ import {
   transportFetch,
   type ApiError,
 } from "~/lib/api-error";
+import type {
+  CompleteHolidayParentSetupRequest as WireCompleteHolidayParentSetupRequest,
+  CompleteHolidayParentSetupResponse as WireCompleteHolidayParentSetupResponse,
+  HolidayParentSetupResponse as WireHolidayParentSetup,
+} from "~/lib/contract/auth-holiday-parent-setups.generated";
 
 export interface HolidayParentSetup {
   /** The address the link went to; the account's login. */
@@ -13,12 +18,6 @@ export interface HolidayParentSetup {
   readonly traegerName: string;
   /** The address already has an account: no password is set here. */
   readonly accountExists: boolean;
-}
-
-interface BackendSetup {
-  email: string;
-  traeger_name: string;
-  account_exists: boolean;
 }
 
 function setupPath(token: string): string {
@@ -50,7 +49,7 @@ export async function fetchHolidayParentSetup(
   if (!response.ok) {
     throw await readError(response, "Elternkonto konnte nicht geladen werden");
   }
-  const data = unwrap<BackendSetup>(await response.json());
+  const data = unwrap<WireHolidayParentSetup>(await response.json());
   return {
     email: data.email,
     traegerName: data.traeger_name,
@@ -76,7 +75,7 @@ export async function completeHolidayParentSetup(
             password: passwords.password,
             confirm_password: passwords.confirmPassword,
           }
-        : {},
+        : ({} satisfies WireCompleteHolidayParentSetupRequest),
     ),
   });
   if (!response.ok) {
@@ -85,7 +84,7 @@ export async function completeHolidayParentSetup(
       "Elternkonto konnte nicht eingerichtet werden",
     );
   }
-  const data = unwrap<{ account_exists?: boolean } | null>(
+  const data = unwrap<WireCompleteHolidayParentSetupResponse | null>(
     await response.json().catch(() => null),
   );
   return { accountExists: data?.account_exists === true };

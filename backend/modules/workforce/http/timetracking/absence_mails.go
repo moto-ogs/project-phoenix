@@ -74,7 +74,7 @@ func (rs *Resource) getOwnAbsenceRequestMails(w http.ResponseWriter, r *http.Req
 	ids := make([]int64, 0, len(waiting))
 	for _, absence := range waiting {
 		if absence != nil {
-			ids = append(ids, absence.ID)
+			ids = append(ids, absence.ID.Int64())
 		}
 	}
 	mails, err := rs.absenceMails.AbsenceRequestMails(r.Context(), ids)

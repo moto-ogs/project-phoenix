@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
@@ -99,7 +100,7 @@ func (b occupancyBookings) book(student, offering int64, status string, validFro
 func occupancyOf(t *testing.T, got traegerview.Occupancy, school int64) traegerview.SchoolOccupancy {
 	t.Helper()
 	for _, row := range got.Schools {
-		if row.ID == school {
+		if row.ID == ident.ID(school) {
 			return row
 		}
 	}
@@ -165,8 +166,8 @@ func TestTraegerOccupancyCountsTheRosterByGroupAndCareForm(t *testing.T) {
 	assert.Equal(t, 1, bach.WithoutGroup)
 	capacity := 25
 	assert.Equal(t, []traegerview.OccupancyCareForm{
-		{ID: early, Name: "Frühbetreuung", Children: 1, Active: true},
-		{ID: ogs, Name: "OGS bis 16 Uhr", Children: 2, Capacity: &capacity, Active: true},
+		{ID: ident.ID(early), Name: "Frühbetreuung", Children: 1, Active: true},
+		{ID: ident.ID(ogs), Name: "OGS bis 16 Uhr", Children: 2, Capacity: &capacity, Active: true},
 	}, bach.CareForms, "only offerings that count as care with a booking valid today; an undecided child, an ended and a future booking do not count")
 	assert.Equal(t, 1, bach.WithoutCareForm, "Cem has only lunch and bookings that are not valid today")
 
@@ -278,14 +279,14 @@ func TestTraegerOccupancyListsRunningOfferingsWithoutBooking(t *testing.T) {
 	var oneDay int64
 	for _, form := range teich.CareForms {
 		if form.Name == "Tagesangebot" {
-			oneDay = form.ID
+			oneDay = form.ID.Int64()
 		}
 	}
 	assert.Equal(t, []traegerview.OccupancyCareForm{
-		{ID: retired, Name: "Auslaufendes Angebot", Children: 1, Capacity: &six, Active: false},
-		{ID: full, Name: "Kurzbetreuung", Children: 1, Capacity: &one, Active: true},
-		{ID: empty, Name: "Nachmittagsbetreuung", Children: 0, Capacity: &ten, Active: true},
-		{ID: oneDay, Name: "Tagesangebot", Children: 0, Capacity: &four, Active: true},
+		{ID: ident.ID(retired), Name: "Auslaufendes Angebot", Children: 1, Capacity: &six, Active: false},
+		{ID: ident.ID(full), Name: "Kurzbetreuung", Children: 1, Capacity: &one, Active: true},
+		{ID: ident.ID(empty), Name: "Nachmittagsbetreuung", Children: 0, Capacity: &ten, Active: true},
+		{ID: ident.ID(oneDay), Name: "Tagesangebot", Children: 0, Capacity: &four, Active: true},
 	}, teich.CareForms, "running offerings without a booking count 0 children; an inactive offering shows only with a booking and says so; ended, future and lunch offerings do not appear")
 	assert.Zero(t, teich.WithoutCareForm)
 

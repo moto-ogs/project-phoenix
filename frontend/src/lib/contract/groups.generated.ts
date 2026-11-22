@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   arr,
   instant,
-  int64StringOrNumber,
+  int64String,
   noData,
   object,
   optional,
@@ -21,7 +21,7 @@ export interface Room {
 }
 
 export const RoomSchema: z.ZodType<Room, unknown> = object<Room>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
 });
 
@@ -37,8 +37,8 @@ export interface TeacherResponse {
 }
 
 export const TeacherResponseSchema: z.ZodType<TeacherResponse, unknown> = object<TeacherResponse>({
-  id: int64StringOrNumber,
-  staff_id: int64StringOrNumber,
+  id: int64String,
+  staff_id: int64String,
   first_name: str,
   last_name: str,
   specialization: str,
@@ -61,11 +61,11 @@ export interface GroupResponse {
 }
 
 export const GroupResponseSchema: z.ZodType<GroupResponse, unknown> = object<GroupResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
-  room_id: optional(int64StringOrNumber),
+  room_id: optional(int64String),
   room: optional(RoomSchema),
-  representative_id: optional(int64StringOrNumber),
+  representative_id: optional(int64String),
   representative: optional(TeacherResponseSchema),
   teachers: optional(arr(TeacherResponseSchema)),
   student_count: safeInt,
@@ -76,8 +76,8 @@ export const GroupResponseSchema: z.ZodType<GroupResponse, unknown> = object<Gro
 /** Go: schoolstructurehttp.GroupRequest */
 export interface GroupRequest {
   name?: string;
-  room_id?: number | null;
-  teacher_ids?: number[] | null;
+  room_id?: string | null;
+  teacher_ids?: string[] | null;
 }
 
 /** Query of GET /api/groups/ */

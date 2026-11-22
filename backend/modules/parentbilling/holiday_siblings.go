@@ -3,6 +3,8 @@ package parentbilling
 import (
 	"context"
 	"errors"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Siblings from separate holiday registrations (#5628, ADR 0115 addendum).
@@ -45,8 +47,8 @@ var (
 // HolidaySiblingGroup is a sibling group of a period by its registrations,
 // by number.
 type HolidaySiblingGroup struct {
-	ID              int64   `json:"id"`
-	RegistrationIDs []int64 `json:"registration_ids"`
+	ID              ident.ID   `json:"id"`
+	RegistrationIDs []ident.ID `json:"registration_ids"`
 }
 
 // HolidaySiblingMember is one registration of a sibling group.
@@ -57,15 +59,15 @@ type HolidaySiblingMember struct {
 
 // HolidaySiblingChild names a child of another registration of the group.
 type HolidaySiblingChild struct {
-	ID        int64  `json:"id"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
+	ID        ident.ID `json:"id"`
+	FirstName string   `json:"first_name"`
+	LastName  string   `json:"last_name"`
 }
 
 // HolidaySibling is another registration of the group of a registration,
 // as the Träger-Büro sees it in the registration.
 type HolidaySibling struct {
-	RegistrationID int64                 `json:"registration_id"`
+	RegistrationID ident.ID              `json:"registration_id"`
 	Status         string                `json:"status"`
 	Children       []HolidaySiblingChild `json:"children"`
 }

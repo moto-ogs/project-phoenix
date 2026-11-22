@@ -22,6 +22,7 @@ import {
   STAFF_ONBOARDING_STEP_KEYS,
   type StaffOnboardingStepKey,
 } from "../src/lib/staff-onboarding-api";
+import type { StaffWriteStatus } from "../src/lib/contract/staff-onboarding.generated";
 import { loadSeedAccess } from "../scripts/seed-state";
 import { expect, test } from "./a11y/scan";
 import { Deadline } from "./deadline";
@@ -308,6 +309,10 @@ async function markHighlightedTarget(
   }, selector);
 }
 
+function targetForDevice(stop: SetupTourStop, mobile: boolean): string {
+  return mobile ? (stop.mobileTarget ?? stop.target) : stop.target;
+}
+
 /** Die besuchten Stationen stehen im Bericht jedes Tests. */
 function annotateStations(visited: readonly string[]): void {
   test.info().annotations.push({
@@ -337,6 +342,7 @@ function expectSidebarPath(
 async function walkTour(
   page: Page,
   tour: SetupTour,
+  mobile: boolean,
 ): Promise<{ visited: string[]; stoppedAt: SetupTourStop | null }> {
   const visited: string[] = [];
   const bubble = tourBubble(page);
@@ -353,12 +359,13 @@ async function walkTour(
       continue;
     }
     const { position, stop } = station;
+    const target = targetForDevice(stop, mobile);
     const label = `Station ${position.index + 1} von ${position.total} „${stop.title}“`;
     visited.push(stop.title);
 
     await expect(
       page.locator("div.ring-2.ring-moto-green"),
-      `${label}: kein grüner Rahmen, die Stelle ${stop.target} fehlt.`,
+      `${label}: kein grüner Rahmen, die Stelle ${target} fehlt.`,
     ).toBeVisible();
     await expect(bubble, label).not.toContainText(TARGET_MISSING);
     if (stop.missingText) {
@@ -393,10 +400,10 @@ async function walkTour(
       .poll(
         async () => {
           moved = JSON.stringify(await tourPosition(page)) !== here;
-          return moved || (await markHighlightedTarget(page, stop.target));
+          return moved || (await markHighlightedTarget(page, target));
         },
         {
-          message: `${label}: Der Rahmen liegt auf keiner Stelle zu ${stop.target}.`,
+          message: `${label}: Der Rahmen liegt auf keiner Stelle zu ${target}.`,
           timeout: 10_000,
         },
       )
@@ -413,7 +420,7 @@ async function walkTour(
     // Rendert die Seite die Stelle neu, geht die Markierung mit dem alten
     // Element verloren; dann die neue markieren.
     await expect(async () => {
-      expect(await markHighlightedTarget(page, stop.target)).toBe(true);
+      expect(await markHighlightedTarget(page, target)).toBe(true);
       await expect(page.locator("[data-e2e-tour-target]")).toBeVisible({
         timeout: 1_000,
       });
@@ -434,7 +441,7 @@ async function walkTour(
       // Menü gleich wieder.
       let navHref: string | null = null;
       await expect(async () => {
-        expect(await markHighlightedTarget(page, stop.target)).toBe(true);
+        expect(await markHighlightedTarget(page, target)).toBe(true);
         const free = await page
           .locator("[data-e2e-tour-target]")
           .evaluate((element) => {
@@ -573,7 +580,7 @@ for (const device of VIEWPORTS) {
     test("Team: über „+ Personal“ bis „Einladung senden“", async ({ page }) => {
       const tour = SETUP_TOURS.team!;
       await startTour(page, SCHOOL_SETUP_STEP_CONTENT.team.title);
-      const { visited, stoppedAt } = await walkTour(page, tour);
+      const { visited, stoppedAt } = await walkTour(page, tour, device.mobile);
       expect(stoppedAt?.title).toBe("Einladung senden");
       expectSidebarPath(tour, visited, device.mobile);
       // Die Schule darf auch Externe anlegen: „+ Personal“ klappt auf, und
@@ -607,7 +614,7 @@ for (const device of VIEWPORTS) {
       });
       const tour = SETUP_TOURS.guardians!;
       await startTour(page, SCHOOL_SETUP_STEP_CONTENT.guardians.title);
-      const { visited, stoppedAt } = await walkTour(page, tour);
+      const { visited, stoppedAt } = await walkTour(page, tour, device.mobile);
       // Steht beim Kind schon jemand mit E-Mail-Adresse, endet die Tour am
       // Menü „Einladen“, sonst am Speichern der neuen Person.
       expect(["Einladen", "Speichern"]).toContain(stoppedAt?.title);
@@ -624,7 +631,7 @@ for (const device of VIEWPORTS) {
     }) => {
       const tour = SETUP_TOURS.worktime!;
       await startTour(page, SCHOOL_SETUP_STEP_CONTENT.worktime.title);
-      const { visited, stoppedAt } = await walkTour(page, tour);
+      const { visited, stoppedAt } = await walkTour(page, tour, device.mobile);
       // Die Tour öffnet die Zeitkonten selbst, mit dem Filter „ohne Soll“ und
       // im Monat, den die Checkliste gezählt hat (#6919). Der Reiter ist dann
       // schon gewählt; seine Station entfällt.
@@ -691,7 +698,11 @@ for (const device of VIEWPORTS) {
       test(`${title}: Tour bis zum Ende`, async ({ page }) => {
         const saves = recordStepSaves(page, step);
         await startTour(page, title);
-        const { visited, stoppedAt } = await walkTour(page, tours[step]);
+        const { visited, stoppedAt } = await walkTour(
+          page,
+          tours[step],
+          device.mobile,
+        );
         expect(stoppedAt, visited.join(" → ")).toBeNull();
         // Die Betreuungskraft sieht jede Station auf den Seiten der Tour. Eine
         // optionale Station (etwa ein Reiter der Kindakte), deren Stelle
@@ -722,10 +733,8 @@ for (const device of VIEWPORTS) {
           saved.text(),
         );
         expect(saved.ok(), text).toBe(true);
-        const body = JSON.parse(text) as { data?: object };
-        expect(mapStaffOnboardingState(body.data ?? body).doneSteps).toContain(
-          step,
-        );
+        const body = JSON.parse(text) as { data: StaffWriteStatus };
+        expect(mapStaffOnboardingState(body.data).doneSteps).toContain(step);
         const checklist = page.getByRole("region", {
           name: "Erste Schritte mit moto",
         });

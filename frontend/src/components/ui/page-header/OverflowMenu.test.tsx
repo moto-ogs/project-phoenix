@@ -1,7 +1,16 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import {
+  act,
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+} from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
+import { useState } from "react";
 
+import { usePhoneViewport } from "~/test/helpers/viewport";
+import { Modal } from "../modal";
 import { OverflowMenu } from "./OverflowMenu";
 
 describe("OverflowMenu", () => {
@@ -801,5 +810,105 @@ describe("OverflowMenu", () => {
     fireEvent.scroll(window);
 
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+});
+
+describe("OverflowMenu am Handy", () => {
+  usePhoneViewport();
+
+  function MenuWithDialog({ onExport }: { readonly onExport: () => void }) {
+    const [dialogOpen, setDialogOpen] = useState(false);
+    return (
+      <>
+        <OverflowMenu
+          items={[
+            {
+              label: "Exportieren",
+              noDescription: "Test",
+              onClick: onExport,
+            },
+            {
+              label: "Umbenennen",
+              noDescription: "Test",
+              href: "/umbenennen",
+              onClick: () => setDialogOpen(true),
+            },
+          ]}
+        />
+        <Modal
+          isOpen={dialogOpen}
+          onClose={() => setDialogOpen(false)}
+          title="Umbenennen"
+        >
+          <input aria-label="Name" />
+        </Modal>
+      </>
+    );
+  }
+
+  /** Vaul hält das Blatt bis zum Ende seiner Animation; happy-dom spielt keine. */
+  async function finishSheetClosing() {
+    const sheet = screen.queryByRole("dialog", { name: "Weitere Aktionen" });
+    if (sheet !== null) {
+      await waitFor(() =>
+        expect(sheet).toHaveAttribute("data-state", "closed"),
+      );
+      const end = new Event("animationend");
+      Object.assign(end, {
+        animationName: getComputedStyle(sheet).animationName,
+      });
+      act(() => {
+        sheet.dispatchEvent(end);
+      });
+    }
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Weitere Aktionen" }),
+      ).not.toBeInTheDocument(),
+    );
+  }
+
+  it("öffnet als Blatt; ein Eintrag führt seine Aktion aus oder öffnet seinen Dialog und schließt das Blatt", async () => {
+    const onExport = vi.fn();
+    render(<MenuWithDialog onExport={onExport} />);
+    const trigger = screen.getByRole("button", { name: "Weitere Aktionen" });
+    expect(trigger).toHaveAttribute("aria-haspopup", "dialog");
+
+    fireEvent.click(trigger);
+    const sheet = await screen.findByRole("dialog", {
+      name: "Weitere Aktionen",
+    });
+    expect(sheet).toHaveAttribute("id");
+    expect(trigger).toHaveAttribute("aria-controls", sheet.id);
+    expect(sheet).toContainElement(
+      screen.getByRole("menu", { name: "Weitere Aktionen" }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("menuitem", { name: "Exportieren" }),
+      ).toHaveFocus(),
+    );
+
+    fireEvent.click(screen.getByRole("menuitem", { name: "Exportieren" }));
+    expect(onExport).toHaveBeenCalledTimes(1);
+    await finishSheetClosing();
+    expect(trigger).toHaveFocus();
+
+    fireEvent.click(trigger);
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Umbenennen" }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Umbenennen" });
+    await finishSheetClosing();
+    expect(dialog).toContainElement(document.activeElement as HTMLElement);
+
+    // Der Dialog gibt den Fokus an den Auslöser zurück, nicht ins Leere.
+    fireEvent.click(screen.getByRole("button", { name: "Modal schließen" }));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Umbenennen" }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(trigger).toHaveFocus();
   });
 });

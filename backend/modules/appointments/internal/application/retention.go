@@ -55,7 +55,7 @@ func (r *Retention) DeleteExpiredAppointments(ctx context.Context, retentionDays
 	var expired []int64
 	for _, candidate := range candidates {
 		if last, ok := candidate.LastDay(); ok && last.Before(cutoff) {
-			expired = append(expired, candidate.Appointment.ID)
+			expired = append(expired, candidate.Appointment.ID.Int64())
 		}
 	}
 	if len(expired) == 0 {
@@ -68,7 +68,7 @@ func (r *Retention) DeleteExpiredAppointments(ctx context.Context, retentionDays
 	expired = expired[:0]
 	for _, candidate := range locked {
 		if last, ok := candidate.LastDay(); ok && last.Before(cutoff) {
-			expired = append(expired, candidate.Appointment.ID)
+			expired = append(expired, candidate.Appointment.ID.Int64())
 		}
 	}
 	if len(expired) == 0 {

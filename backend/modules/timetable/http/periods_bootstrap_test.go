@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -111,7 +112,7 @@ func TestCreatePeriodOverlapWarningsEndToEnd(t *testing.T) {
 	require.Len(t, overlapResp.Warnings, 1)
 	warning := overlapResp.Warnings[0]
 	assert.Equal(t, "overlapping_active_periods", warning.Code)
-	assert.Equal(t, []int64{seedResp.ID}, warning.OverlappingPeriodIDs)
+	assert.Equal(t, []ident.ID{seedResp.ID}, warning.OverlappingPeriodIDs)
 	assert.Equal(t, []string{seed.Name}, warning.OverlappingPeriodNames)
 	assert.Contains(t, warning.Message, seed.Name)
 	assert.Contains(t, warning.Message, "01.08.2030 – 31.07.2031")

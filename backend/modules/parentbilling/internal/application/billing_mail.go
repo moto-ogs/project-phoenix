@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // MailStore persists the sends of the letters of a Träger in its Träger
@@ -63,16 +64,16 @@ func (m *BillingLetterMail) LetterMailings(ctx context.Context, reviewer parentb
 	if err != nil {
 		return parentbilling.BillingLetterMailings{}, err
 	}
-	states, err := m.states(ctx, reviewer.OrganizationID, current.run.ID)
+	states, err := m.states(ctx, reviewer.OrganizationID, current.run.ID.Int64())
 	if err != nil {
 		return parentbilling.BillingLetterMailings{}, err
 	}
 	mailings := parentbilling.BillingLetterMailings{Documents: make([]parentbilling.BillingLetterMailing, len(current.documents))}
 	for i, document := range current.documents {
-		mailings.Documents[i] = documentMailing(document, current.mailings[document.ID], states)
+		mailings.Documents[i] = documentMailing(document, current.mailings[document.ID.Int64()], states)
 	}
 	m.readProviderBlocks(ctx, mailings.Documents)
-	if err := m.recordRead(ctx, reviewer, current.run.ID, map[string]any{"mail": "status"}); err != nil {
+	if err := m.recordRead(ctx, reviewer, current.run.ID.Int64(), map[string]any{"mail": "status"}); err != nil {
 		return parentbilling.BillingLetterMailings{}, err
 	}
 	return mailings, nil
@@ -86,7 +87,7 @@ func (m *BillingLetterMail) MailBillingLetters(ctx context.Context, reviewer par
 	if err != nil {
 		return parentbilling.BillingLetterSeries{}, err
 	}
-	files, err := m.store.RunLetterFiles(ctx, reviewer.OrganizationID, current.run.ID)
+	files, err := m.store.RunLetterFiles(ctx, reviewer.OrganizationID, current.run.ID.Int64())
 	if err != nil {
 		return parentbilling.BillingLetterSeries{}, fmt.Errorf("parent billing: read letters: %w", err)
 	}
@@ -98,14 +99,14 @@ func (m *BillingLetterMail) MailBillingLetters(ctx context.Context, reviewer par
 	var series parentbilling.BillingLetterSeries
 	for _, document := range current.documents {
 		switch {
-		case len(current.mailings[document.ID]) > 0:
+		case len(current.mailings[document.ID.Int64()]) > 0:
 			series.Already++
 			continue
 		case strings.TrimSpace(document.RecipientEmail) == "":
 			series.WithoutEmail++
 			continue
 		}
-		file, ok := byDocument[document.ID]
+		file, ok := byDocument[document.ID.Int64()]
 		if !ok {
 			return parentbilling.BillingLetterSeries{}, parentbilling.ErrBillingLetterNotFound
 		}
@@ -115,7 +116,7 @@ func (m *BillingLetterMail) MailBillingLetters(ctx context.Context, reviewer par
 		}
 		series.Queued++
 	}
-	if err := m.recordRead(ctx, reviewer, current.run.ID, map[string]any{
+	if err := m.recordRead(ctx, reviewer, current.run.ID.Int64(), map[string]any{
 		"mail": "series", "queued": series.Queued, "already": series.Already, "without_email": series.WithoutEmail,
 	}); err != nil {
 		return parentbilling.BillingLetterSeries{}, err
@@ -159,11 +160,11 @@ func (m *BillingLetterMail) MailBillingLetter(ctx context.Context, reviewer pare
 	if strings.TrimSpace(document.RecipientEmail) == "" {
 		return parentbilling.BillingLetterMailing{}, parentbilling.ErrRecipientEmailMissing
 	}
-	states, err := m.states(ctx, reviewer.OrganizationID, current.run.ID)
+	states, err := m.states(ctx, reviewer.OrganizationID, current.run.ID.Int64())
 	if err != nil {
 		return parentbilling.BillingLetterMailing{}, err
 	}
-	last := documentMailing(document, current.mailings[document.ID], states)
+	last := documentMailing(document, current.mailings[document.ID.Int64()], states)
 	if last.Status == parentbilling.LetterMailQueued {
 		return parentbilling.BillingLetterMailing{}, parentbilling.ErrLetterMailPending
 	}
@@ -179,7 +180,7 @@ func (m *BillingLetterMail) MailBillingLetter(ctx context.Context, reviewer pare
 	case parentbilling.LetterProviderBlockUnreadable:
 		return parentbilling.BillingLetterMailing{}, parentbilling.ErrLetterMailBlockUnreadable
 	}
-	file, err := m.store.DocumentLetter(ctx, reviewer.OrganizationID, current.run.ID, document.ID)
+	file, err := m.store.DocumentLetter(ctx, reviewer.OrganizationID, current.run.ID.Int64(), document.ID.Int64())
 	if err != nil {
 		return parentbilling.BillingLetterMailing{}, err
 	}
@@ -193,7 +194,7 @@ func (m *BillingLetterMail) MailBillingLetter(ctx context.Context, reviewer pare
 	}
 	// The mail just waits on the outbox.
 	states[mailing.DeliveryID] = parentbilling.BillingLetterMailState{DeliveryID: mailing.DeliveryID, Status: parentbilling.LetterMailQueued}
-	mailings := append(current.mailings[document.ID], mailing)
+	mailings := append(current.mailings[document.ID.Int64()], mailing)
 	return documentMailing(document, mailings, states), nil
 }
 
@@ -204,7 +205,7 @@ func (m *BillingLetterMail) PrintBillingLetters(ctx context.Context, reviewer pa
 	if err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
-	files, err := m.store.RunLetterFiles(ctx, reviewer.OrganizationID, current.run.ID)
+	files, err := m.store.RunLetterFiles(ctx, reviewer.OrganizationID, current.run.ID.Int64())
 	if err != nil {
 		return parentbilling.BillingLetterFile{}, fmt.Errorf("parent billing: read letters: %w", err)
 	}
@@ -220,7 +221,7 @@ func (m *BillingLetterMail) PrintBillingLetters(ctx context.Context, reviewer pa
 	if err != nil {
 		return parentbilling.BillingLetterFile{}, fmt.Errorf("parent billing: combine letters: %w", err)
 	}
-	if err := m.recordRead(ctx, reviewer, current.run.ID, map[string]any{"letter": "print", "document_count": len(files)}); err != nil {
+	if err := m.recordRead(ctx, reviewer, current.run.ID.Int64(), map[string]any{"letter": "print", "document_count": len(files)}); err != nil {
 		return parentbilling.BillingLetterFile{}, err
 	}
 	return file, nil
@@ -246,18 +247,18 @@ func (m *BillingLetterMail) letterRun(ctx context.Context, reviewer parentbillin
 	if run.Status != parentbilling.RunReleased {
 		return letterRun{}, parentbilling.ErrBillingRunNotReleased
 	}
-	letters, err := m.store.RunLetters(ctx, reviewer.OrganizationID, run.ID)
+	letters, err := m.store.RunLetters(ctx, reviewer.OrganizationID, run.ID.Int64())
 	if err != nil {
 		return letterRun{}, fmt.Errorf("parent billing: read letters: %w", err)
 	}
 	if letters == nil {
 		return letterRun{}, parentbilling.ErrBillingLettersMissing
 	}
-	documents, err := m.store.RunDocuments(ctx, reviewer.OrganizationID, run.ID)
+	documents, err := m.store.RunDocuments(ctx, reviewer.OrganizationID, run.ID.Int64())
 	if err != nil {
 		return letterRun{}, fmt.Errorf("parent billing: read invoices: %w", err)
 	}
-	stored, err := m.store.RunMailings(ctx, reviewer.OrganizationID, run.ID)
+	stored, err := m.store.RunMailings(ctx, reviewer.OrganizationID, run.ID.Int64())
 	if err != nil {
 		return letterRun{}, fmt.Errorf("parent billing: read mails: %w", err)
 	}
@@ -275,8 +276,8 @@ func (m *BillingLetterMail) send(ctx context.Context, reviewer parentbilling.Hol
 	file parentbilling.BillingLetterFile, traeger string) (parentbilling.BillingLetterSend, error) {
 	recipient := strings.TrimSpace(document.RecipientEmail)
 	deliveryID, err := m.post.EnqueueLetterMail(ctx, parentbilling.BillingLetterMail{
-		OrganizationID: reviewer.OrganizationID, RunID: current.run.ID, DocumentID: document.ID, Recipient: recipient,
-		IdempotencyKey: fmt.Sprintf("parent-billing-letter:%d:%d", document.ID, len(current.mailings[document.ID])+1),
+		OrganizationID: reviewer.OrganizationID, RunID: current.run.ID.Int64(), DocumentID: document.ID.Int64(), Recipient: recipient,
+		IdempotencyKey: fmt.Sprintf("parent-billing-letter:%d:%d", document.ID, len(current.mailings[document.ID.Int64()])+1),
 		GuardianName:   strings.TrimSpace(document.RecipientFirstName + " " + document.RecipientLastName),
 		TraegerName:    traeger, PeriodName: current.run.PeriodName, Number: document.Number,
 		DocumentKind: document.Kind, LetterKind: letterKindOf(document.DocumentKind), Filename: file.Filename, PDF: file.Data,
@@ -284,8 +285,8 @@ func (m *BillingLetterMail) send(ctx context.Context, reviewer parentbilling.Hol
 	if err != nil {
 		return parentbilling.BillingLetterSend{}, fmt.Errorf("parent billing: enqueue letter mail: %w", err)
 	}
-	mailing, err := m.store.InsertMailing(ctx, reviewer.OrganizationID, current.run.ID, reviewer.AccountID,
-		parentbilling.BillingLetterSend{DocumentID: document.ID, DeliveryID: deliveryID, RecipientEmail: recipient})
+	mailing, err := m.store.InsertMailing(ctx, reviewer.OrganizationID, current.run.ID.Int64(), reviewer.AccountID,
+		parentbilling.BillingLetterSend{DocumentID: document.ID.Int64(), DeliveryID: deliveryID, RecipientEmail: recipient})
 	if err != nil {
 		return parentbilling.BillingLetterSend{}, fmt.Errorf("parent billing: record letter mail: %w", err)
 	}
@@ -293,11 +294,11 @@ func (m *BillingLetterMail) send(ctx context.Context, reviewer parentbilling.Hol
 	// push that says so goes with the first stored send only (ADR 0126). The
 	// stored sends decide, not the outbox key: Delivery forgets ended pushes
 	// after its retention period, the sends stay with the letter.
-	if len(current.mailings[document.ID]) > 0 {
+	if len(current.mailings[document.ID.Int64()]) > 0 {
 		return mailing, nil
 	}
 	if err := m.post.EnqueueDocumentNotice(ctx, parentbilling.BillingDocumentNotice{
-		OrganizationID: reviewer.OrganizationID, DocumentID: document.ID, RecipientEmail: recipient,
+		OrganizationID: reviewer.OrganizationID, DocumentID: document.ID.Int64(), RecipientEmail: recipient,
 	}); err != nil {
 		return parentbilling.BillingLetterSend{}, fmt.Errorf("parent billing: enqueue document notice: %w", err)
 	}
@@ -375,7 +376,7 @@ func documentMailing(document parentbilling.BillingDocument, mailings []parentbi
 
 func findDocument(documents []parentbilling.BillingDocument, documentID int64) (parentbilling.BillingDocument, bool) {
 	for _, document := range documents {
-		if document.ID == documentID {
+		if document.ID == ident.ID(documentID) {
 			return document, true
 		}
 	}

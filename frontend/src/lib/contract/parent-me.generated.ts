@@ -7,7 +7,6 @@ import {
   fileAnswer,
   instant,
   int64String,
-  int64StringOrNumber,
   json,
   multipart,
   noData,
@@ -63,6 +62,21 @@ export interface ParentConferenceCancelledResponse {
 
 export const ParentConferenceCancelledResponseSchema: z.ZodType<ParentConferenceCancelledResponse, unknown> = object<ParentConferenceCancelledResponse>({
   status: str,
+});
+
+/** Go: parent.ChildRoomHistoryStopResponse */
+export interface ChildRoomHistoryStopResponse {
+  offered: boolean;
+  stopped: boolean;
+  stopped_at?: string;
+  can_change: boolean;
+}
+
+export const ChildRoomHistoryStopResponseSchema: z.ZodType<ChildRoomHistoryStopResponse, unknown> = object<ChildRoomHistoryStopResponse>({
+  offered: bool,
+  stopped: bool,
+  stopped_at: optional(instant),
+  can_change: bool,
 });
 
 /** Go: parent.ParentCalendarResponse */
@@ -1123,8 +1137,8 @@ export interface ContractNoticeOptions {
 }
 
 export const ContractNoticeOptionsSchema: z.ZodType<ContractNoticeOptions, unknown> = object<ContractNoticeOptions>({
-  contract_id: int64StringOrNumber,
-  organization_id: int64StringOrNumber,
+  contract_id: int64String,
+  organization_id: int64String,
   traeger_name: str,
   status: str,
   child_name: str,
@@ -1309,7 +1323,7 @@ export interface HolidayRegistrationEntryResponse {
 }
 
 export const HolidayRegistrationEntryResponseSchema: z.ZodType<HolidayRegistrationEntryResponse, unknown> = object<HolidayRegistrationEntryResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   traeger_name: str,
   period_name: str,
   first_day: nullable(calendarDate),
@@ -2066,7 +2080,7 @@ export interface notificationFeedEntryResponse {
 }
 
 export const notificationFeedEntryResponseSchema: z.ZodType<notificationFeedEntryResponse, unknown> = object<notificationFeedEntryResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   type: str,
   title: str,
   body: str,
@@ -2709,6 +2723,12 @@ export const routes = {
     portals: ["parent"],
     response: noData,
   },
+  "DELETE /parent/me/children/{studentId}/room-history-stop": {
+    method: "DELETE",
+    pattern: "/parent/me/children/{studentId}/room-history-stop",
+    portals: ["parent"],
+    response: success(ChildRoomHistoryStopResponseSchema),
+  },
   "DELETE /parent/me/mfa/trusted-devices/{deviceId}": {
     method: "DELETE",
     pattern: "/parent/me/mfa/trusted-devices/{deviceId}",
@@ -2889,6 +2909,12 @@ export const routes = {
     pattern: "/parent/me/children/{studentId}/requests/{requestType}/{requestId}/events",
     portals: ["parent"],
     response: success(z.array(ParentRequestEventResponseSchema)),
+  },
+  "GET /parent/me/children/{studentId}/room-history-stop": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/room-history-stop",
+    portals: ["parent"],
+    response: success(ChildRoomHistoryStopResponseSchema),
   },
   "GET /parent/me/children/{studentId}/sick-note": {
     method: "GET",
@@ -3214,6 +3240,7 @@ export const routes = {
     method: "POST",
     pattern: "/parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate/preview",
     portals: ["parent"],
+    noCommit: "renders the mandate text and grants no mandate",
     request: requestBody<SEPAMandateInput>(),
     response: success(SEPAMandateTextSchema),
   },
@@ -3411,6 +3438,12 @@ export const routes = {
     portals: ["parent"],
     request: requestBody<requestSharingBody>(),
     response: success(requestSharingResponseSchema),
+  },
+  "PUT /parent/me/children/{studentId}/room-history-stop": {
+    method: "PUT",
+    pattern: "/parent/me/children/{studentId}/room-history-stop",
+    portals: ["parent"],
+    response: success(ChildRoomHistoryStopResponseSchema),
   },
   "PUT /parent/me/documents/{organizationId}/contracts/{contractId}/family-children": {
     method: "PUT",

@@ -83,11 +83,11 @@ function tenantResponse() {
     JSON.stringify({
       status: "success",
       data: {
-        tenant_id: 1,
+        tenant_id: "1",
         slug: "school-a",
         name: "School A",
         subdomain: "school-a",
-        organization_id: 2,
+        organization_id: "2",
         organization_name: "Organization",
         settings: {},
         grade_level_max: 4,
@@ -234,11 +234,11 @@ describe("TenantLayout", () => {
         JSON.stringify({
           status: "success",
           data: {
-            tenant_id: 1,
+            tenant_id: "1",
             slug: "school-a",
             name: "School A",
             subdomain: "school-a",
-            organization_id: 2,
+            organization_id: "2",
             organization_name: "Organization",
             settings: {},
             grade_level_max: 4,
@@ -258,7 +258,7 @@ describe("TenantLayout", () => {
     expect(fetchSpy).toHaveBeenCalledOnce();
     expect(fetchSpy).toHaveBeenCalledWith(
       "http://server:8080/auth/tenant/resolve?slug=school-a",
-      { headers: {}, cache: "no-store" },
+      expect.objectContaining({ headers: {}, cache: "no-store" }),
     );
   });
 
@@ -336,11 +336,11 @@ describe("TenantLayout", () => {
         JSON.stringify({
           status: "success",
           data: {
-            tenant_id: 1,
+            tenant_id: "1",
             slug: "school-a",
             name: "School A",
             subdomain: "school-a",
-            organization_id: 2,
+            organization_id: "2",
             organization_name: "Organization",
             settings: {},
             grade_level_max: 4,
@@ -374,13 +374,13 @@ describe("TenantLayout", () => {
 
     expect(fetchSpy).toHaveBeenCalledExactlyOnceWith(
       "http://server:8080/auth/tenant/resolve?slug=school-a",
-      {
+      expect.objectContaining({
         headers: {
           "X-Forwarded-For": "203.0.113.5",
           "User-Agent": "Browser/1",
         },
         cache: "no-store",
-      },
+      }),
     );
   });
 
@@ -482,11 +482,11 @@ describe("TenantLayout", () => {
         JSON.stringify({
           status: "success",
           data: {
-            tenant_id: 1,
+            tenant_id: "1",
             slug: "school-a",
             name: "School A",
             subdomain: "school-a",
-            organization_id: 2,
+            organization_id: "2",
             organization_name: "Organization",
             settings: {},
             grade_level_max: 4,
@@ -521,11 +521,11 @@ describe("TenantLayout", () => {
         JSON.stringify({
           status: "success",
           data: {
-            tenant_id: 1,
+            tenant_id: "1",
             slug: "school-a",
             name: "School A",
             subdomain: "school-a",
-            organization_id: 2,
+            organization_id: "2",
             organization_name: "Organization",
             settings: {},
             grade_level_max: 4,
@@ -545,7 +545,7 @@ describe("TenantLayout", () => {
     const { loadShellBootstrap } = await import("~/lib/shell-bootstrap.server");
     expect(loadShellBootstrap).toHaveBeenCalledWith(
       session,
-      expect.objectContaining({ tenantId: 1 }),
+      expect.objectContaining({ tenantId: "1" }),
       "backend-access",
     );
   });
@@ -562,11 +562,11 @@ describe("TenantLayout", () => {
           JSON.stringify({
             status: "success",
             data: {
-              tenant_id: 1,
+              tenant_id: "1",
               slug: "school-a",
               name: "School A",
               subdomain: "school-a",
-              organization_id: 2,
+              organization_id: "2",
               organization_name: "Organization",
               settings: {},
               grade_level_max: 4,
@@ -604,11 +604,11 @@ describe("TenantLayout", () => {
           JSON.stringify({
             status: "success",
             data: {
-              tenant_id: 1,
+              tenant_id: "1",
               slug: "school-a",
               name: "School A",
               subdomain: "school-a",
-              organization_id: 2,
+              organization_id: "2",
               organization_name: "Organization",
               settings: {},
               grade_level_max: 4,
@@ -642,11 +642,11 @@ describe("TenantLayout", () => {
           JSON.stringify({
             status: "success",
             data: {
-              tenant_id: 1,
+              tenant_id: "1",
               slug: "school-a",
               name: "School A",
               subdomain: "school-a",
-              organization_id: 2,
+              organization_id: "2",
               organization_name: "Organization",
               settings: {},
               grade_level_max: 4,
@@ -677,11 +677,11 @@ describe("TenantLayout", () => {
           JSON.stringify({
             status: "success",
             data: {
-              tenant_id: 1,
+              tenant_id: "1",
               slug: "school-a",
               name: "School A",
               subdomain: "school-a",
-              organization_id: 2,
+              organization_id: "2",
               organization_name: "Organization",
               settings: {},
               grade_level_max: 4,

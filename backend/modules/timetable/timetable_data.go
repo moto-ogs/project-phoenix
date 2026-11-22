@@ -264,7 +264,7 @@ func CanReopenInstance(instance ScheduledInstance, accountID int64, isAdmin bool
 	if instance.ReopenUntil == nil || now.After(*instance.ReopenUntil) || !instance.HasCompletionSnapshot {
 		return false
 	}
-	return CanReopenAsActor(true, instance.CompletedBy, accountID, isAdmin)
+	return CanReopenAsActor(true, (*int64)(instance.CompletedBy), accountID, isAdmin)
 }
 
 // AttendanceUnchangedSinceCompletion reports whether no slot of the block was

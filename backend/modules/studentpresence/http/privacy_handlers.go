@@ -10,6 +10,7 @@ import (
 	render "github.com/go-chi/render"
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	studentpresence "github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	tenant "github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -87,7 +88,7 @@ func (rs *Resource) getStudentPrivacyConsent(w http.ResponseWriter, r *http.Requ
 			return
 		}
 		response := PrivacyConsentResponse{
-			StudentID:         student.ID,
+			StudentID:         ident.ID(student.ID),
 			PolicyVersion:     defaults.PolicyVersion,
 			Accepted:          defaults.Accepted,
 			RenewalRequired:   true,

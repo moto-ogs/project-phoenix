@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The changes of single invoices in the review of a monthly run (#6197).
@@ -62,8 +63,8 @@ type careInvoiceCorrectionRow struct {
 // amendment is the correction as an issued invoice shows it.
 func (row careInvoiceCorrectionRow) amendment() parentbilling.CareAmendment {
 	return parentbilling.CareAmendment{
-		ID: row.ID, Kind: row.Kind, Label: row.Label, AmountCents: row.AmountCents, PositionKey: row.PositionKey,
-		Before: row.BeforeValue, After: row.AfterValue, Reason: row.Reason, AccountID: row.AccountID, AmendedAt: row.AmendedAt,
+		ID: ident.ID(row.ID), Kind: row.Kind, Label: row.Label, AmountCents: row.AmountCents, PositionKey: row.PositionKey,
+		Before: row.BeforeValue, After: row.AfterValue, Reason: row.Reason, AccountID: (*ident.ID)(row.AccountID), AmendedAt: row.AmendedAt,
 		Carried: row.CarriedFromNumber != "", CarriedFromNumber: row.CarriedFromNumber,
 	}
 }
@@ -199,11 +200,11 @@ func insertCareCorrections(ctx context.Context, db bun.IDB, organizationID int64
 				OrganizationID: organizationID, InvoiceID: rows[i].ID, Position: position, Kind: amendment.Kind,
 				Label: amendment.Label, AmountCents: amendment.AmountCents, PositionKey: amendment.PositionKey,
 				BeforeValue: issuedBefore(amendment), AfterValue: amendment.After, Reason: amendment.Reason,
-				AccountID: amendment.AccountID, AmendedAt: amendment.AmendedAt, CarriedFromNumber: amendment.CarriedFromNumber,
+				AccountID: (*int64)(amendment.AccountID), AmendedAt: amendment.AmendedAt, CarriedFromNumber: amendment.CarriedFromNumber,
 			}
 			if !amendment.Carried {
 				id := amendment.ID
-				row.AmendmentID = &id
+				row.AmendmentID = (*int64)(&id)
 			}
 			corrections = append(corrections, row)
 		}

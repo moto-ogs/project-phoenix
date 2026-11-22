@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	scheduleModels "github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain/schedulerecords"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Start conflicts (WP-B9, matrix reworked in #2139: only person
@@ -105,7 +106,7 @@ func (c activeStaffConflicts) staffWarning(row *scheduleModels.InstanceStaff, ro
 func staffStartWarning(staffID int64, message string) timetable.InstanceConflictWarning {
 	return timetable.InstanceConflictWarning{
 		Kind:        timetable.ConflictKindStaff,
-		ResourceID:  staffID,
+		ResourceID:  ident.ID(staffID),
 		Message:     message,
 		CanOverride: true,
 	}
@@ -151,7 +152,7 @@ func (d *conflictDetection) studentStartConflicts(ctx context.Context, instanceI
 		}
 		warnings = append(warnings, timetable.InstanceConflictWarning{
 			Kind:        timetable.ConflictKindStudent,
-			ResourceID:  studentID,
+			ResourceID:  ident.ID(studentID),
 			Message:     fmt.Sprintf("Kind hat bereits einen aktiven Aufenthalt in Gruppe #%d", visit.ActiveGroupID),
 			CanOverride: true,
 		})

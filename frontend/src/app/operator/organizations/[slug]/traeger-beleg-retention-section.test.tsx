@@ -59,7 +59,7 @@ beforeEach(() => setTestClock("2026-09-09T12:00:00+02:00"));
 const overview: BelegRetentionOverview = mapBelegRetentionOverview({
   instructions: [
     {
-      id: 3,
+      id: "3",
       beleg_type: "holiday_document",
       trigger_event: "issued",
       period: 8,
@@ -68,6 +68,8 @@ const overview: BelegRetentionOverview = mapBelegRetentionOverview({
       instructed_by: "Kämmerei",
       instructed_on: "2026-09-01",
       instruction_reference: "AVV-Nachtrag",
+      statutes_not_applicable_confirmed: false,
+      organization_id: "1",
       recorded_at: "2026-09-01T10:00:00Z",
     },
   ],
@@ -101,12 +103,15 @@ const overview: BelegRetentionOverview = mapBelegRetentionOverview({
       review_on: "2026-10-08",
       responsible: "Florian (Abstimmung mit dem Träger)",
       last_review: {
-        id: 5,
+        id: "5",
         note: "Bank prüft den letzten Einzug",
+        beleg_type: "sepa_mandate",
+        reason: "no_collection",
         escalated: true,
         escalation_reason: "Träger antwortet nicht",
         reviewed_on: "2026-09-08",
         next_review_on: "2026-10-08",
+        reviewed_at: "2026-09-08T10:00:00Z",
       },
     },
   ],
@@ -479,7 +484,7 @@ describe("TraegerBelegRetentionSection", () => {
       mapBelegRetentionOverview({
         instructions: [
           {
-            id: 7,
+            id: "7",
             beleg_type: "sepa_debit",
             trigger_event: "issued",
             period: 1,
@@ -490,10 +495,15 @@ describe("TraegerBelegRetentionSection", () => {
             instructed_on: "2026-09-01",
             instruction_reference: "Mail vom 01.09.2026",
             statutes_not_applicable_confirmed: true,
+            organization_id: "1",
             confirmed_at: "2026-09-02T10:00:00Z",
             recorded_at: "2026-09-02T10:00:00Z",
           },
         ],
+        suspensions: null,
+        summary: null,
+        clarifications: null,
+        deletions: null,
       }),
     );
 
@@ -641,20 +651,54 @@ describe("TraegerBelegRetentionSection reload errors", () => {
 });
 
 describe("mapBelegRetentionOverview", () => {
-  it("maps IDs to strings and keeps a missing day as null", () => {
+  it("keeps a missing day as null and a missing list as empty", () => {
     const mapped = mapBelegRetentionOverview({
-      instructions: [{ id: 42, beleg_type: "care_notice" }],
-      suspensions: [
-        { id: 4, beleg_type: "sepa_debit", review_on: "2027-01-01" },
+      instructions: [
+        {
+          id: "42",
+          organization_id: "1",
+          beleg_type: "care_notice",
+          trigger_event: "issued",
+          period: 8,
+          basis: "booking_voucher",
+          legal_basis: "§ 147 AO",
+          instructed_by: "Kämmerei",
+          instructed_on: "2026-09-01",
+          instruction_reference: "AVV-Nachtrag",
+          statutes_not_applicable_confirmed: false,
+          recorded_at: "2026-09-01T10:00:00Z",
+        },
       ],
-      summary: [{ beleg_type: "care_notice", scheduled: 0 }],
+      suspensions: [
+        {
+          id: "4",
+          organization_id: "1",
+          beleg_type: "sepa_debit",
+          reason: "Prüfung",
+          scope: "Alle",
+          responsible: "Kämmerei",
+          review_on: "2027-01-01",
+          created_at: "2026-09-01T10:00:00Z",
+        },
+      ],
+      summary: [
+        {
+          beleg_type: "care_notice",
+          scheduled: 0,
+          running: 0,
+          clarification: 0,
+          suspended: 0,
+        },
+      ],
+      clarifications: null,
+      deletions: null,
     });
-    expect(mapped.instructions[0]?.id).toBe(String(42));
+    expect(mapped.instructions[0]?.id).toBe("42");
     expect(mapped.suspensions[0]?.belegId).toBeNull();
     expect(mapped.summary[0]?.nextEnd).toBeNull();
     expect(mapped.evaluatedOn).toBeNull();
     expect(mapped.clarifications).toEqual([]);
-    expect(mapped.instructions[0]?.basis).toBe("");
+    expect(mapped.instructions[0]?.basisJustification).toBe("");
     expect(mapped.instructions[0]?.statutesNotApplicableConfirmed).toBe(false);
     expect(mapped.instructions[0]?.confirmedAt).toBeNull();
   });

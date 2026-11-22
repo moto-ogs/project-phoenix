@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
@@ -37,8 +38,8 @@ func (p *PayrollNumberRequest) Bind(_ *http.Request) error {
 
 // PayrollNumberResponse mirrors the stored state after a read or write.
 type PayrollNumberResponse struct {
-	StaffID         int64   `json:"staff_id"`
-	PersonnelNumber *string `json:"personnel_number"`
+	StaffID         common.ID `json:"staff_id"`
+	PersonnelNumber *string   `json:"personnel_number"`
 	// KeptByTraeger is true when the Träger keeps the number in its staff
 	// record (#4705); the school reads it and cannot change it.
 	KeptByTraeger bool `json:"kept_by_traeger"`
@@ -62,7 +63,7 @@ func (rs *StaffAdminResource) getPayrollNumber(w http.ResponseWriter, r *http.Re
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
-	common.Respond(w, r, http.StatusOK, &PayrollNumberResponse{StaffID: staff.ID, PersonnelNumber: staff.PersonnelNumber, KeptByTraeger: kept}, "Personnel number retrieved successfully")
+	common.Respond(w, r, http.StatusOK, &PayrollNumberResponse{StaffID: ident.ID(staff.ID), PersonnelNumber: staff.PersonnelNumber, KeptByTraeger: kept}, "Personnel number retrieved successfully")
 }
 
 // keptByTraeger reports whether the Träger keeps the employment in its
@@ -109,5 +110,5 @@ func (rs *StaffAdminResource) updatePayrollNumber(w http.ResponseWriter, r *http
 		}
 		return
 	}
-	common.Respond(w, r, http.StatusOK, &PayrollNumberResponse{StaffID: staff.ID, PersonnelNumber: staff.PersonnelNumber}, "Personnel number updated successfully")
+	common.Respond(w, r, http.StatusOK, &PayrollNumberResponse{StaffID: ident.ID(staff.ID), PersonnelNumber: staff.PersonnelNumber}, "Personnel number updated successfully")
 }

@@ -16,6 +16,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Träger-Büro account routes (ADR 0084 section 4, #4650). The member
@@ -58,7 +59,7 @@ func (rs *Resource) invitationRouter(authRateLimiter func(http.Handler) http.Han
 // TraegerMemberResponse is a person of the Träger-Büro with the name the person
 // carries at this Träger (#4693), empty until set.
 type TraegerMemberResponse struct {
-	AccountID   int64      `json:"account_id"`
+	AccountID   ident.ID   `json:"account_id"`
 	Email       string     `json:"email"`
 	Name        string     `json:"name"`
 	Roles       []string   `json:"roles"`
@@ -67,7 +68,7 @@ type TraegerMemberResponse struct {
 
 // TraegerInvitationResponse is an open invitation.
 type TraegerInvitationResponse struct {
-	ID        int64     `json:"id"`
+	ID        ident.ID  `json:"id"`
 	Email     string    `json:"email"`
 	Roles     []string  `json:"roles"`
 	ExpiresAt time.Time `json:"expires_at"`
@@ -82,7 +83,7 @@ type TraegerAccountsResponse struct {
 
 // TraegerHistoryEntryResponse is one change of the Träger-Büro (#5474).
 type TraegerHistoryEntryResponse struct {
-	ID          int64     `json:"id"`
+	ID          ident.ID  `json:"id"`
 	OccurredAt  time.Time `json:"occurred_at"`
 	Action      string    `json:"action"`
 	ActorEmail  string    `json:"actor_email"`
@@ -196,7 +197,7 @@ func (rs *Resource) listHistory(w http.ResponseWriter, r *http.Request) {
 	response := TraegerHistoryResponse{Entries: make([]TraegerHistoryEntryResponse, 0, len(history.Entries)), HasMore: history.HasMore}
 	for _, entry := range history.Entries {
 		response.Entries = append(response.Entries, TraegerHistoryEntryResponse{
-			ID: entry.ID, OccurredAt: entry.OccurredAt, Action: entry.Action,
+			ID: ident.ID(entry.ID), OccurredAt: entry.OccurredAt, Action: entry.Action,
 			ActorEmail: entry.ActorEmail, TargetEmail: entry.TargetEmail, TargetName: entry.TargetName,
 			RolesBefore: entry.RolesBefore, RolesAfter: entry.RolesAfter,
 		})
@@ -380,9 +381,9 @@ func renderAccountError(err error) render.Renderer {
 }
 
 func memberResponse(member identityaccess.TraegerMember) TraegerMemberResponse {
-	return TraegerMemberResponse{AccountID: member.AccountID, Email: member.Email, Name: member.Name, Roles: member.Roles, ActivatedAt: member.ActivatedAt}
+	return TraegerMemberResponse{AccountID: ident.ID(member.AccountID), Email: member.Email, Name: member.Name, Roles: member.Roles, ActivatedAt: member.ActivatedAt}
 }
 
 func invitationResponse(invitation identityaccess.TraegerInvitation) TraegerInvitationResponse {
-	return TraegerInvitationResponse{ID: invitation.ID, Email: invitation.Email, Roles: invitation.Roles, ExpiresAt: invitation.ExpiresAt, CreatedAt: invitation.CreatedAt}
+	return TraegerInvitationResponse{ID: ident.ID(invitation.ID), Email: invitation.Email, Roles: invitation.Roles, ExpiresAt: invitation.ExpiresAt, CreatedAt: invitation.CreatedAt}
 }

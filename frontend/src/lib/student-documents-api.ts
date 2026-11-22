@@ -4,11 +4,11 @@
 // student_documents:legal, rest → users:update) and returns only what the
 // caller may see plus the caller's visible categories.
 
+import type * as wire from "~/lib/contract/students.generated";
 import { bffJson } from "./bff-fetch";
 import {
   mapAccidentReport,
   type AccidentReportDetails,
-  type BackendAccidentReport,
 } from "./student-accident-reports-api";
 
 interface StudentDocumentCategoryOption {
@@ -38,36 +38,10 @@ export interface StudentDocumentList {
   visibleCategories: StudentDocumentCategoryOption[];
 }
 
-interface BackendStudentDocument {
-  id: number | string;
-  student_id: number | string;
-  category: string;
-  category_label: string;
-  filename: string;
-  size_bytes: number;
-  content_type: string;
-  uploaded_at: string;
-  sensitive: boolean;
-  has_file: boolean;
-  accident_report?: BackendAccidentReport;
-}
-
-interface BackendStudentDocumentCategory {
-  value: string;
-  label: string;
-  sensitive: boolean;
-}
-
-interface BackendStudentDocumentList {
-  student_id: number | string;
-  documents: BackendStudentDocument[];
-  visible_categories: BackendStudentDocumentCategory[];
-}
-
-function mapDocument(data: BackendStudentDocument): StudentDocument {
+function mapDocument(data: wire.StudentDocumentResponse): StudentDocument {
   return {
-    id: data.id.toString(),
-    studentId: data.student_id.toString(),
+    id: data.id,
+    studentId: data.student_id,
     category: data.category,
     categoryLabel: data.category_label,
     filename: data.filename,
@@ -82,19 +56,18 @@ function mapDocument(data: BackendStudentDocument): StudentDocument {
   };
 }
 
-function documentsPath(studentId: string, documentId?: string): string {
-  const base = `/api/students/${encodeURIComponent(studentId)}/documents`;
-  return documentId ? `${base}/${encodeURIComponent(documentId)}` : base;
+function documentsPath(studentId: string, documentId: string): string {
+  return `/api/students/${encodeURIComponent(studentId)}/documents/${encodeURIComponent(documentId)}`;
 }
 
 class StudentDocumentsService {
   async list(studentId: string): Promise<StudentDocumentList> {
-    const list = await bffJson<BackendStudentDocumentList>(
-      documentsPath(studentId),
-    );
+    const list = await bffJson("tenant", "GET /api/students/{id}/documents", {
+      params: { id: studentId },
+    });
     return {
-      documents: list.documents.map(mapDocument),
-      visibleCategories: list.visible_categories,
+      documents: (list.documents ?? []).map(mapDocument),
+      visibleCategories: list.visible_categories ?? [],
     };
   }
 
@@ -102,16 +75,20 @@ class StudentDocumentsService {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("category", category);
-    await bffJson<unknown>(documentsPath(studentId), {
-      method: "POST",
+    await bffJson("tenant", "POST /api/students/{id}/documents", {
+      params: { id: studentId },
       body: formData,
     });
   }
 
   async delete(studentId: string, documentId: string): Promise<void> {
-    await bffJson<unknown>(documentsPath(studentId, documentId), {
-      method: "DELETE",
-    });
+    await bffJson(
+      "tenant",
+      "DELETE /api/students/{id}/documents/{documentId}",
+      {
+        params: { id: studentId, documentId },
+      },
+    );
   }
 
   /** Same-origin proxy URL for the authenticated download. */

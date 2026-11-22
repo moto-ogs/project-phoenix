@@ -46,7 +46,6 @@ GET /api/enrollment/requests/{statusToken}/signature-proof -> online_anmeldung  
 GET /api/enrollment/schema/ -> online_anmeldung
 GET /api/enrollment/schema/preview -> online_anmeldung
 GET /api/enrollment/schema/versions -> online_anmeldung
-GET /api/enrollment/schema/{id} -> online_anmeldung
 PATCH /api/enrollment/requests/{statusToken} -> online_anmeldung  (Anmeldung: Statuslink schließt mit dem Modul)
 PATCH /api/enrollment/schema/{id} -> online_anmeldung
 POST /api/enrollment/admin/change-requests/{id}/approve -> online_anmeldung

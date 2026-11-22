@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/classday"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // HomeworkEntry is one homework entry of a class and day as the projection
@@ -123,7 +124,7 @@ func (h homework) applyFeedback(ctx context.Context, report *classday.DayReport,
 	studentIDs := make([]int64, 0, len(report.Rows))
 	for _, row := range report.Rows {
 		if !row.NoCare() && row.StudentID > 0 {
-			studentIDs = append(studentIDs, row.StudentID)
+			studentIDs = append(studentIDs, row.StudentID.Int64())
 		}
 	}
 	if len(studentIDs) == 0 {
@@ -143,7 +144,7 @@ func (h homework) applyFeedback(ctx context.Context, report *classday.DayReport,
 	}
 	for i := range report.Rows {
 		row := &report.Rows[i]
-		if value, ok := byStudent[row.StudentID]; ok && !row.NoCare() {
+		if value, ok := byStudent[row.StudentID.Int64()]; ok && !row.NoCare() {
 			row.HomeworkFeedback = &value
 		}
 	}
@@ -151,7 +152,7 @@ func (h homework) applyFeedback(ctx context.Context, report *classday.DayReport,
 }
 
 func dayHomework(entry HomeworkEntry) *classday.DayHomework {
-	out := &classday.DayHomework{ID: entry.ID, Description: entry.Description}
+	out := &classday.DayHomework{ID: ident.ID(entry.ID), Description: entry.Description}
 	if entry.Subject != nil {
 		out.Subject = *entry.Subject
 	}

@@ -14,6 +14,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -191,7 +192,7 @@ func TestAssignmentService_PropagatesGroupError(t *testing.T) {
 	t.Parallel()
 
 	groupID := int64(50)
-	inst := &timetable.ScheduledInstance{Title: "Lernzeit", RoomID: 100, ActivityGroupID: &groupID, StartTime: wall(10, 0), EndTime: wall(11, 0)}
+	inst := &timetable.ScheduledInstance{Title: "Lernzeit", RoomID: 100, ActivityGroupID: (*ident.ID)(&groupID), StartTime: wall(10, 0), EndTime: wall(11, 0)}
 	inst.ID = 1
 	svc := assignmentServiceFixture(
 		&asInstanceStaffRepo{rows: []*timetable.InstanceStaff{instanceStaffRow(1, 7)}},
@@ -220,14 +221,14 @@ func TestAssignmentService_EnrichesAndSorts(t *testing.T) {
 
 	instA := &timetable.ScheduledInstance{ // later date, primary block, resolved group
 		Date: calendar.NewDate(2026, time.March, 11), Title: "Lernzeit",
-		ActivityGroupID: &grp1, RoomID: 100, StartTime: wall(9, 0), EndTime: wall(10, 0),
+		ActivityGroupID: (*ident.ID)(&grp1), RoomID: 100, StartTime: wall(9, 0), EndTime: wall(10, 0),
 		Status: timetable.InstanceStatusPlanned,
 	}
 	instA.ID = 1
 	cancelReason := "Ausflug"
 	instB := &timetable.ScheduledInstance{ // earlier date, cancelled, vanished group, room override
 		Date: calendar.NewDate(2026, time.March, 10), Title: "Fußball-AG",
-		ActivityGroupID: &grp2, RoomID: 100, StartTime: wall(14, 0), EndTime: wall(15, 0),
+		ActivityGroupID: (*ident.ID)(&grp2), RoomID: 100, StartTime: wall(14, 0), EndTime: wall(15, 0),
 		Status: timetable.InstanceStatusCancelled, CancelReason: &cancelReason, UnderstaffedAck: true,
 	}
 	instB.ID = 2

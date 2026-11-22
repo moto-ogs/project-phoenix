@@ -4,6 +4,11 @@
 // Proxy: /api/timetable/school-vacations und /school-vacation-hints.
 
 import { apiErrorFromBody, transportFetch } from "~/lib/api-error";
+import type {
+  SchoolVacationAcknowledgedResponse,
+  SchoolVacationHintsResponse,
+  SchoolVacationsResponse,
+} from "~/lib/contract/timetable.generated";
 
 import { timetableKeys } from "~/lib/swr/portal-keys";
 
@@ -36,28 +41,6 @@ export interface SchoolVacationHint {
   readonly count: number;
 }
 
-interface BackendSchoolVacation {
-  readonly name: string;
-  readonly start_date: string;
-  readonly end_date: string;
-  readonly acknowledged: boolean;
-}
-
-interface BackendSchoolVacations {
-  readonly federal_state: string;
-  readonly federal_state_name: string;
-  readonly synced_at: string | null;
-  readonly vacations: BackendSchoolVacation[] | null;
-}
-
-interface BackendSchoolVacationHint {
-  readonly name: string;
-  readonly start_date: string;
-  readonly end_date: string;
-  readonly cancel_from: string;
-  readonly count: number;
-}
-
 async function readData<T>(response: Response): Promise<T> {
   if (!response.ok) {
     throw apiErrorFromBody(
@@ -76,7 +59,7 @@ export async function getSchoolVacations(
   toISO: string,
 ): Promise<SchoolVacations> {
   const params = new URLSearchParams({ from: fromISO, to: toISO });
-  const data = await readData<BackendSchoolVacations>(
+  const data = await readData<SchoolVacationsResponse>(
     await transportFetch(`/api/timetable/school-vacations?${params}`, {
       method: "GET",
       headers: { Accept: "application/json" },
@@ -97,7 +80,7 @@ export async function getSchoolVacations(
 }
 
 export async function getSchoolVacationHints(): Promise<SchoolVacationHint[]> {
-  const data = await readData<{ hints: BackendSchoolVacationHint[] | null }>(
+  const data = await readData<SchoolVacationHintsResponse>(
     await transportFetch("/api/timetable/school-vacation-hints", {
       method: "GET",
       headers: { Accept: "application/json" },
@@ -118,7 +101,7 @@ export async function acknowledgeSchoolVacation(
   startDate: string,
   endDate: string,
 ): Promise<void> {
-  await readData<unknown>(
+  await readData<SchoolVacationAcknowledgedResponse>(
     await transportFetch(
       "/api/timetable/school-vacation-hints/acknowledgements",
       {

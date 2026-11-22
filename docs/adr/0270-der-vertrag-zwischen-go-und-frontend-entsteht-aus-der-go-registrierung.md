@@ -4,6 +4,10 @@ status: accepted
 
 # Der Vertrag zwischen Go und Frontend entsteht aus der Go-Registrierung
 
+> Ergänzt am 2026-11-21 durch [ADR 0300](0300-kennungen-sind-ein-typ-des-shared-kernel.md):
+> `common.ID` ist ein Alias auf `sharedkernel/ident.ID`, und Phase 2 geht
+> abweichend von Punkt 5 in einem Deploy hinaus.
+
 Entscheidung vom 2026-11-16 für
 [#2342](https://github.com/moto-ogs/project-phoenix/issues/2342), Schritt A von
 [#2341](https://github.com/moto-ogs/project-phoenix/issues/2341). Sie steht
@@ -172,6 +176,8 @@ Body als JSON. Jede dieser Routen brauchte deshalb eine eigene Datei.
 - Die Upload-Antwort ist JSON und läuft durch den Decoder der Route; sie hat
   danach die Hülle des Katalogs (`success`, `message`, `data`) statt der des
   Backends. Ein Client, der mehr als `data` liest, zieht beim Umzug mit.
+  Berichtigt im Nachtrag vom 2026-11-21: Die Antwort hat seitdem die Hülle
+  des Backends.
 - Ein gestreamter Upload läuft unter dem Header-Timeout des Backend-Clients
   (90 s ab Beginn des Sendens). Bisher lief er erst nach dem vollständigen
   Lesen an.
@@ -273,7 +279,8 @@ beiden öffentlichen als Dateien stehen. Dieser Nachtrag ersetzt ihn.
    lehnt jeden anderen Teil mit 400 ab, bevor er speichert. Größe, Inhalt
    und Endung prüfte das Backend schon.
 5. **Antwort.** JSON durch den Decoder der Route in der Hülle des Katalogs,
-   `private, no-store`, Status des Backends (201).
+   `private, no-store`, Status des Backends (201). Seit dem Nachtrag vom
+   2026-11-21 ist das die Hülle des Backends.
 
 ### Grenzen
 
@@ -372,3 +379,75 @@ diese Fälle nicht mehr.
 - Ein neuer Cache-Wert braucht einen Nachtrag und einen Eintrag in beiden
   Listen.
 - Uploads ohne Sitzung folgen dem Nachtrag „Öffentliche Uploads“.
+
+## Nachtrag vom 2026-11-21: Die Antwort hat die Hülle des Backends
+
+Für [#2353](https://github.com/moto-ogs/project-phoenix/issues/2353)
+(Kriterium 1). Der BFF schrieb jede Erfolgsantwort in eine eigene Hülle
+`{ success, message, data }` (`wrapInApiResponse`), das Backend antwortet in
+`{ status, data, message }` (`common.Response`), eine Liste dazu mit
+`pagination` (`common.PaginatedResponse`). Zwei Formen für dieselbe Antwort
+hießen: jeder Client musste wissen, welche Schicht er vor sich hat, ein
+Payload mit eigenem `success`-Schlüssel ging ungewrappt durch, und eine Liste
+durch die Datenbank-Dienste verlor die Seite des Backends.
+
+### Entscheidung
+
+1. **Der BFF reicht die Hülle des Backends mit den dekodierten Daten durch.**
+   Der Katalog-Proxy antwortet `status`, die vom Decoder der Route geprüften
+   `data`, die `pagination` einer Liste und die `message` des Backends, auch
+   bei Uploads und öffentlichen JSON-Routen. Eine eigene `route.ts` antwortet
+   über `successResponse` in derselben Form (`{ status: "success", data }`).
+   Der geteilte Typ ist `ApiResponse` / `PaginatedApiResponse` in
+   `frontend/src/lib/api-envelope.ts`; Clients führen keine eigene Hülle.
+2. **Ohne Daten.** Eine `NoData`-Route antwortet `{ status: "success",
+   data: null }` mit der Nachricht des Backends; ein DELETE ohne Daten
+   antwortet weiter 204, wie bisher.
+3. **Kein nacktes Payload.** Gegen eine Antwort nur aus `data` spricht, dass
+   rund 130 Client-Dateien `.data` lesen und alle mitziehen müssten, ohne
+   dass ein Leser etwas gewinnt; für sie spräche nur ein kürzerer Body. Die
+   Hülle des Backends behält, was Clients schon lesen, und streicht die
+   zweite Form.
+4. **Ein Schritt.** Es läuft eine Instanz, der Deploy kommt am Ende; offene
+   Tabs laden nach dem Release neu. Kein externer Client liest die Hülle des
+   BFF: PyrePortal ruft das Backend direkt, Dateien und Feeds streamen ohne
+   Hülle.
+
+### Grenzen
+
+- Eine `route.ts`, die selbst eine Antwort baut (`Response.json`), bleibt
+  dafür verantwortlich, keine dritte Hülle zu erfinden; Auth-Schritte mit
+  eigener Form (Tokens, `session_renewed`) sind keine Erfolgshülle in diesem
+  Sinn.
+- Der Statuscode des Backends geht nur bei Uploads durch; JSON-Routen
+  antworten 200 wie zuvor.
+
+## Nachtrag vom 2026-11-22: Ausdrückliche Merkmale statt Namen
+
+Nach der Kette #2341 hielt der Generator noch zwei Regeln, die man nur aus
+der Geschichte verstand (#7808): Ein `int64`, dessen Go-Name auf `Cents`
+endete, galt als Betrag (124 Felder), entgegen Punkt 4. Und welche POST-Route
+nichts festschreibt, stand als Liste von 23 Einträgen ohne Grund im Frontend
+(`READ_ONLY_POST_ROUTES`), außerhalb des Vertrags.
+
+Entscheidung:
+
+1. **Ein Betrag oder Zähler als `int64` sagt es mit `contract:"number"`.**
+   Die Namensregel `Cents` entfällt. Ein nacktes `int64` bleibt ein Fehler.
+2. **Eine Zahl unter dem Namen einer Kennung bricht ab.** Ein Feld `id`,
+   `*_id` oder `*_ids`, dessen Wert eine Zahl ist (`int`, `int64` mit
+   `contract:"number"`), lehnt der Generator ab. Der Name macht keine Kennung,
+   wie Punkt 4 sagt; er fängt nur die vergessene: Die Abnahme in #2353 ließ
+   ein `RoomID int` unerkannt durch.
+3. **`NoCommit` ist ein Merkmal der Route.** Eine POST-Route, die nichts
+   festschreibt, worum ihr Aufrufer bitten kann (Vorschau, Suche, Lesen mit
+   Body), nennt den Grund in `common.RouteContract.NoCommit`. Der Generator
+   schreibt ihn an die Route; Katalog-Proxy und `contractWrite` lesen ihn und
+   bieten bei einer unlesbaren Antwort Wiederholen statt Neuladen an. Nur ein
+   POST darf ihn tragen. Er ist nicht die Freigabeliste der Lesevorschau
+   (`api/common/readonly_preview.go`): Eine Import-Vorschau schreibt nichts
+   fest, aber eine Audit-Zeile.
+4. **`contract.Legacy` entfällt.** Die Wurzel baut ihre `Options` selbst; die
+   eine Route mit Query-Varianten (`GET /api/students/`, Punkt 3) steht dort
+   mit Verweis auf diesen ADR. Die Art `legacy_id` verlässt auch die
+   Kompatibilitätsprüfung.

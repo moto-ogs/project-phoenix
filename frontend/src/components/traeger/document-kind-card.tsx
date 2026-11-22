@@ -52,7 +52,11 @@ export function DocumentKindCard({
   legalRemedyMissing?: boolean;
   onSaved: (overview: DocumentKindOverview) => void;
 }>) {
-  const [draft, setDraft] = useState<DocumentKind>(service.documentKind);
+  // undefined: the stored kind is one this build does not know; no radio
+  // is chosen until the office picks one.
+  const [draft, setDraft] = useState<DocumentKind | undefined>(
+    service.documentKind,
+  );
   const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
   const formErrors = useApiFormError(formRef);
@@ -65,6 +69,7 @@ export function DocumentKindCard({
   const standard = service.choices[0];
 
   const save = async () => {
+    if (!draft) return;
     formErrors.clear();
     setSaving(true);
     try {

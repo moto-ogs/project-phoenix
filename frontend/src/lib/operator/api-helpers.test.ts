@@ -62,9 +62,9 @@ describe("operatorFetch", () => {
     expect(result).toEqual({});
   });
 
-  it("unwraps proxy response envelope", async () => {
+  it("unwraps the backend's envelope", async () => {
     const actualData = { id: "1", value: 42 };
-    const envelope = { success: true, data: actualData, message: "Success" };
+    const envelope = { status: "success", data: actualData, message: "ok" };
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
       status: 200,

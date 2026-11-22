@@ -257,9 +257,14 @@ function SchoolSetupWizardForAdmin({
       total: stopTotal,
       target,
       missing,
+      usesMobileTarget,
     } = tour.active;
     return (
       <CoachMark
+        // Der Menü-Stopp zeigt am Telefon wieder auf den Auslöser. Das Blatt
+        // des vorigen Stopps muss vorher aus dem Overlay-Stapel verschwinden,
+        // sonst verdeckt es die neue Sprechblase.
+        key={usesMobileTarget ? `mobile-target-${stopIndex}` : undefined}
         // Dasselbe Element über alle Stationen: Die Abdunklung bleibt beim
         // Wechsel stehen, der Bildschirm blitzt nicht auf. Solange die Stelle
         // gesucht wird, wartet nur die Sprechblase; in der Mitte steht sie

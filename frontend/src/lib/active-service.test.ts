@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type { BackendSchulhofStatus } from "./active-helpers";
+import type { SchulhofStatusWire } from "./active-helpers";
 import { suppressConsole } from "~/test/helpers/console";
 import { mockSessionData } from "~/test/mocks/next-auth";
 import {
@@ -13,15 +13,6 @@ vi.mock("next-auth/react", () => ({
   getSession: vi.fn(),
 }));
 
-vi.mock("./api", () => ({
-  default: {
-    get: vi.fn(),
-    post: vi.fn(),
-    put: vi.fn(),
-    delete: vi.fn(),
-  },
-}));
-
 // Import after mocks are set up
 import { getSession } from "next-auth/react";
 import { activeService } from "./active-service";
@@ -31,41 +22,35 @@ const mockedGetSession = vi.mocked(getSession);
 
 // Sample backend data
 const sampleBackendActiveGroup = buildBackendActiveSession({
-  id: 1,
-  group_id: 10,
-  room_id: 5,
+  id: "1",
+  group_id: "10",
+  room_id: "5",
   start_time: "2024-01-15T08:00:00Z",
   end_time: "2024-01-15T12:00:00Z",
   is_active: true,
-  notes: "Morning session",
   visit_count: 25,
   supervisor_count: 2,
-  room: { id: 5, name: "Room A", category: "classroom" },
-  actual_group: { id: 10, name: "Class 3A" },
+  room: { id: "5", name: "Room A", color: "#5080D8" },
 });
 
 const sampleBackendVisit = buildBackendVisit({
-  id: 100,
-  student_id: 50,
-  active_group_id: 1,
+  id: "100",
+  student_id: "50",
+  active_group_id: "1",
   check_in_time: "2024-01-15T08:30:00Z",
   check_out_time: "2024-01-15T11:45:00Z",
   is_active: false,
-  notes: "Early checkout",
   student_name: "Max Mustermann",
-  school_class: "3a",
-  group_name: "OGS Group A",
   active_group_name: "Morning Session",
 });
 
 const sampleBackendSupervisor = buildBackendSupervisor({
-  id: 200,
-  staff_id: 30,
-  active_group_id: 1,
+  id: "200",
+  staff_id: "30",
+  active_group_id: "1",
   start_time: "2024-01-15T08:00:00Z",
   end_time: "2024-01-15T12:00:00Z",
   is_active: true,
-  notes: "Primary supervisor",
   staff_name: "Frau Schmidt",
   active_group_name: "Morning Session",
 });
@@ -222,10 +207,10 @@ describe("active-service", () => {
           json: () =>
             Promise.resolve({
               data: {
-                assigned: [50],
+                assigned: ["50"],
                 skipped: [],
-                active_group_id: 1,
-                room_id: 5,
+                active_group_id: "1",
+                room_id: "5",
               },
             }),
         } as Response);
@@ -237,12 +222,12 @@ describe("active-service", () => {
           expect.objectContaining({
             method: "POST",
             body: JSON.stringify({
-              student_ids: [50],
-              active_group_id: 1,
+              student_ids: ["50"],
+              active_group_id: "1",
             }),
           }),
         );
-        expect(result.assigned).toEqual([50]);
+        expect(result.assigned).toEqual(["50"]);
       });
 
       it("keeps the code and details of a refused assignment (#3633)", async () => {
@@ -302,11 +287,11 @@ describe("active-service", () => {
           json: () =>
             Promise.resolve({
               data: {
-                moved: [50, 51],
+                moved: ["50", "51"],
                 unchanged: [],
                 skipped: [],
-                active_group_id: 1,
-                room_id: 5,
+                active_group_id: "1",
+                room_id: "5",
               },
             }),
         } as Response);
@@ -321,12 +306,12 @@ describe("active-service", () => {
           expect.objectContaining({
             method: "POST",
             body: JSON.stringify({
-              student_ids: [50, 51],
-              target_active_group_id: 1,
+              student_ids: ["50", "51"],
+              target_active_group_id: "1",
             }),
           }),
         );
-        expect(result.moved).toEqual([50, 51]);
+        expect(result.moved).toEqual(["50", "51"]);
       });
     });
   });
@@ -393,20 +378,20 @@ describe("active-service", () => {
   describe("Schulhof (Schoolyard)", () => {
     describe("getSchulhofStatus", () => {
       it("fetches Schulhof status via proxy in browser context", async () => {
-        const sampleBackendStatus: BackendSchulhofStatus = {
+        const sampleBackendStatus: SchulhofStatusWire = {
           exists: true,
-          room_id: 42,
+          room_id: "42",
           room_name: "Schulhof",
-          activity_group_id: 10,
-          active_group_id: 5,
+          activity_group_id: "10",
+          active_group_id: "5",
           is_user_supervising: true,
-          supervision_id: 123,
+          supervision_id: "123",
           supervisor_count: 2,
           student_count: 15,
           supervisors: [
             {
-              id: 1,
-              staff_id: 100,
+              id: "1",
+              staff_id: "100",
               name: "Frau Schmidt",
               is_current_user: true,
             },
@@ -439,7 +424,7 @@ describe("active-service", () => {
       });
 
       it("handles non-existent Schulhof", async () => {
-        const sampleBackendStatus: BackendSchulhofStatus = {
+        const sampleBackendStatus: SchulhofStatusWire = {
           exists: false,
           room_name: "",
           is_user_supervising: false,
@@ -510,7 +495,7 @@ describe("active-service", () => {
         "/api/active/tracking-indicators",
         expect.objectContaining({
           method: "POST",
-          body: JSON.stringify({ student_ids: [10, 20] }),
+          body: JSON.stringify({ student_ids: ["10", "20"] }),
         }),
       );
     });
@@ -530,7 +515,7 @@ describe("active-service", () => {
       const callBody = JSON.parse(
         (mockFetch.mock.calls[0] as [string, RequestInit])[1].body as string,
       ) as { student_ids: number[] };
-      expect(callBody.student_ids).toEqual([42, 99]);
+      expect(callBody.student_ids).toEqual(["42", "99"]);
     });
 
     it("returns empty response on non-ok HTTP status", async () => {

@@ -89,7 +89,7 @@ func contractLetter(record ContractRecord, head carecontract.Letterhead) Letter 
 	for _, party := range record.Parties {
 		recipientLines = append(recipientLines, fullName(party.FirstName, party.LastName))
 	}
-	facts := []LetterFact{{Label: "Vertrag", Value: "Nr. " + strconv.FormatInt(record.Summary.ID, 10)}}
+	facts := []LetterFact{{Label: "Vertrag", Value: "Nr. " + strconv.FormatInt(record.Summary.ID.Int64(), 10)}}
 	if !version.EffectiveFrom.IsZero() {
 		facts = append(facts, LetterFact{Label: "Beginn", Value: germanDate(version.EffectiveFrom)})
 	}
@@ -103,7 +103,7 @@ func contractLetter(record ContractRecord, head carecontract.Letterhead) Letter 
 		}
 	}
 	return Letter{
-		Title:       "Betreuungsvertrag Nr. " + strconv.FormatInt(record.Summary.ID, 10),
+		Title:       "Betreuungsvertrag Nr. " + strconv.FormatInt(record.Summary.ID.Int64(), 10),
 		AccentColor: head.AccentColor, Logo: head.Logo,
 		Sender:    textLines(head.SenderText),
 		Recipient: nonBlank(recipientLines...),
@@ -249,7 +249,7 @@ func ServiceText(service carecontract.Service) string {
 func moduleCount(services []carecontract.Service) int {
 	offerings := map[int64]bool{}
 	for _, service := range services {
-		offerings[service.CareOfferingID] = true
+		offerings[service.CareOfferingID.Int64()] = true
 	}
 	return len(offerings)
 }
@@ -318,7 +318,7 @@ func letterBlocks(blocks []templates.Block) []LetterBlock {
 
 // documentFilenameBase names the PDF of a contract without a child's name.
 func documentFilenameBase(record ContractRecord) string {
-	return "betreuungsvertrag-" + strconv.FormatInt(record.Summary.ID, 10)
+	return "betreuungsvertrag-" + strconv.FormatInt(record.Summary.ID.Int64(), 10)
 }
 
 func questionText(head carecontract.Letterhead) string {

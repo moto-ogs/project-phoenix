@@ -117,7 +117,7 @@ func New(deps Dependencies, bindings Bindings) DeviceScan {
 		Groups:     bindings.Groups,
 		Pickups:    bindings.Pickups,
 		OpenRooms:  deps.OpenRooms,
-		Settings:   settings{settings: deps.Settings, presenceModes: deps.Active},
+		Settings:   settings{ScanSettings: deps.Settings, presenceModes: deps.Active},
 		UnitOfWork: unitOfWork{},
 		Clock:      bindings.Clock,
 		Logger:     logger,

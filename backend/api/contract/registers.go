@@ -2,23 +2,21 @@ package contract
 
 import (
 	"reflect"
-	"slices"
 )
 
-// Options are the two legacy registers of ADR 0270. Both only shrink: an
-// entry leaves when its route is migrated, and Build fails on an entry that
-// no registration uses.
+// Options carry the types the root names and the one register of ADR 0270
+// point 3. Build fails on an entry that no registration uses. Every int64 on
+// a registered type is an ident.ID, or a count or an amount tagged
+// contract:"number" (ADR 0300).
 type Options struct {
-	// NumericIDs lists the identifier fields that existing routes still send
-	// as JSON numbers, as "package.Type.GoField". Every other int64 on a
-	// registered type must be a common.ID. On a request type the entry is a
-	// field Go reads only as a JSON number.
-	NumericIDs []string
 	// QueryVariants lists the routes whose response shape a query parameter
-	// selects, as "METHOD /pattern".
+	// selects, as "METHOD /pattern". It only shrinks: GET /api/students/ is
+	// the one named debt of ADR 0270 point 3, and no route joins it.
 	QueryVariants []string
 	// Identifiers maps the Go identifier types to KindID or KindLaxID. The
-	// root names them, so this package stays free of the HTTP packages.
+	// root names them, so this package stays free of the HTTP packages. A
+	// KindLaxID type reads a number or a string and may only appear in a
+	// request.
 	Identifiers map[reflect.Type]string
 	// Readers says what the own UnmarshalJSON of a request type reads:
 	// ReadsFields or ReadsLaxIDs. A request type with its own UnmarshalJSON
@@ -37,7 +35,7 @@ const (
 	// ReadsFields: the reader takes the fields as encoding/json would.
 	ReadsFields = "fields"
 	// ReadsLaxIDs: as ReadsFields, and every int64 field takes a JSON number
-	// or a decimal string.
+	// or a decimal string. Only a request type may name it.
 	ReadsLaxIDs = "lax_ids"
 	// ReadsValue: the type is a wrapper that reads one JSON value, null
 	// included, into its field Value and notes that the key was present.
@@ -63,6 +61,9 @@ type Registration struct {
 	// common.RouteContract.
 	NoRetryAfterRenewal string
 	MaxBodyBytes        int
+	// NoCommit is the marker of common.RouteContract for a POST that commits
+	// nothing its caller asked for.
+	NoCommit string
 	// File, Multipart and TooLargeCode are the file traits of
 	// common.RouteContract.
 	File         bool
@@ -93,19 +94,4 @@ type EnumSpec struct {
 	Type   any
 	Fields []string
 	Values []string
-}
-
-// legacyNumericIDs names the fields that still travel as numbers on the
-// wire, as "package.Type.GoField".
-// The list is kept in two files by package name, sorted.
-var legacyNumericIDs = slices.Concat(legacyNumericIDsAToO, legacyNumericIDsPToZ)
-
-// Legacy returns the registers of the routes registered today, with the
-// identifier types the root names.
-func Legacy(identifiers map[reflect.Type]string) Options {
-	return Options{
-		Identifiers:   identifiers,
-		NumericIDs:    legacyNumericIDs,
-		QueryVariants: []string{"GET /api/students/"},
-	}
 }

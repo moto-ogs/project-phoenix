@@ -17,11 +17,11 @@ vi.mock("next/navigation", () => ({
 
 function makeTenant(displayEnabled: boolean): TenantInfo {
   return {
-    tenantId: 1,
+    tenantId: "1",
     slug: "demo",
     name: "Demo",
     subdomain: "demo",
-    organizationId: 10,
+    organizationId: "10",
     organizationName: "Org",
     settings: {},
     presenceMode: "detailed",

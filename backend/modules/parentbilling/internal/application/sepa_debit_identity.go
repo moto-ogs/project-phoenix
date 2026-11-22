@@ -22,14 +22,14 @@ func messageIDOf(runKind string, runID int64, plan debitPlan) string {
 		sepaText(plan.account.AccountHolder, maxSEPAName), sepa.Compact(plan.account.IBAN), sepa.Compact(plan.account.BIC))
 	for _, entry := range plan.included {
 		_, _ = fmt.Fprintf(hash, "%d|%d|%q|%s;", entry.Debit.ID, entry.Debit.AmountCents,
-			entry.Debit.SequenceType, plan.collectOn[entry.Debit.ID])
+			entry.Debit.SequenceType, plan.collectOn[entry.Debit.ID.Int64()])
 		if isNoticeRate(entry.Debit) {
 			// An installment takes the account of the mandate now: a change
 			// of it is a different file.
 			_, _ = fmt.Fprintf(hash, "%d|%d;", entry.Debit.MandateID, entry.MandateUpdatedAt.UnixNano())
 		}
 	}
-	earliest := plan.collectOn[plan.included[0].Debit.ID]
+	earliest := plan.collectOn[plan.included[0].Debit.ID.Int64()]
 	for _, on := range plan.collectOn {
 		earliest = min(earliest, on)
 	}

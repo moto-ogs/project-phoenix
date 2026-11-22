@@ -12,6 +12,7 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Staff Stammdaten (#1423). Section-scoped sub-resources under
@@ -55,10 +56,10 @@ type StammdatenArbeitsvertragPayload struct {
 // StammdatenQualificationPayload is one qualification row received on the
 // wire. IDs accept legacy JSON numbers as well as decimal strings.
 type StammdatenQualificationPayload struct {
-	ID *common.JSONID `json:"id,omitempty"`
+	ID *common.ID `json:"id,omitempty"`
 	// TypeID names the kind of proof (#4808); null is "Sonstiges" with the
 	// free-text name.
-	TypeID     *common.JSONID `json:"type_id"`
+	TypeID     *common.ID     `json:"type_id"`
 	Name       string         `json:"name"`
 	AcquiredOn *calendar.Date `json:"acquired_on"`
 	ExpiresOn  *calendar.Date `json:"expires_on"`
@@ -77,7 +78,7 @@ type StammdatenQualificationResponse struct {
 
 // StammdatenResponse is the aggregate GET for the non-sensitive sections.
 type StammdatenResponse struct {
-	StaffID         int64                             `json:"staff_id"`
+	StaffID         common.ID                         `json:"staff_id"`
 	Person          StammdatenPersonPayload           `json:"person"`
 	Kontakt         StammdatenKontaktPayload          `json:"kontakt"`
 	Arbeitsvertrag  StammdatenArbeitsvertragPayload   `json:"arbeitsvertrag"`
@@ -147,10 +148,10 @@ func (r *StammdatenFinancialRequest) Bind(_ *http.Request) error { return nil }
 
 // StammdatenFinancialMaskedResponse is the default financial read.
 type StammdatenFinancialMaskedResponse struct {
-	StaffID                    int64   `json:"staff_id"`
-	IBANMasked                 *string `json:"iban_masked"`
-	TaxIDMasked                *string `json:"tax_id_masked"`
-	SocialSecurityNumberMasked *string `json:"social_security_number_masked"`
+	StaffID                    common.ID `json:"staff_id"`
+	IBANMasked                 *string   `json:"iban_masked"`
+	TaxIDMasked                *string   `json:"tax_id_masked"`
+	SocialSecurityNumberMasked *string   `json:"social_security_number_masked"`
 	// KeptByTraeger is true when the Träger keeps the values in its staff
 	// record (#4705); the school then holds none.
 	KeptByTraeger bool `json:"kept_by_traeger"`
@@ -159,10 +160,10 @@ type StammdatenFinancialMaskedResponse struct {
 // StammdatenFinancialRevealResponse carries the unmasked values after the
 // audited reveal.
 type StammdatenFinancialRevealResponse struct {
-	StaffID              int64   `json:"staff_id"`
-	IBAN                 *string `json:"iban"`
-	TaxID                *string `json:"tax_id"`
-	SocialSecurityNumber *string `json:"social_security_number"`
+	StaffID              common.ID `json:"staff_id"`
+	IBAN                 *string   `json:"iban"`
+	TaxID                *string   `json:"tax_id"`
+	SocialSecurityNumber *string   `json:"social_security_number"`
 }
 
 // --- handlers --------------------------------------------------------------
@@ -193,7 +194,7 @@ func (rs *StaffAdminResource) getStammdaten(w http.ResponseWriter, r *http.Reque
 
 func newStammdatenResponse(data *workforce.StaffStammdaten, types []workforce.QualificationType) *StammdatenResponse {
 	resp := &StammdatenResponse{
-		StaffID:         data.Staff.ID,
+		StaffID:         ident.ID(data.Staff.ID),
 		Qualifikationen: make([]StammdatenQualificationResponse, 0, len(data.Qualifications)),
 	}
 	typeNames := make(map[int64]string, len(types))
@@ -239,7 +240,7 @@ func newStammdatenResponse(data *workforce.StaffStammdaten, types []workforce.Qu
 // StammdatenAck is the uniform PUT response; the tab refetches the section
 // afterwards, so the ack carries no data.
 type StammdatenAck struct {
-	StaffID int64 `json:"staff_id"`
+	StaffID common.ID `json:"staff_id"`
 }
 
 // runStammdatenUpdate is the shared PUT shape for non-financial sections:
@@ -267,7 +268,7 @@ func (rs *StaffAdminResource) runStammdatenUpdate(w http.ResponseWriter, r *http
 		}
 		return
 	}
-	common.Respond(w, r, http.StatusOK, &StammdatenAck{StaffID: id}, "Stammdaten updated successfully")
+	common.Respond(w, r, http.StatusOK, &StammdatenAck{StaffID: ident.ID(id)}, "Stammdaten updated successfully")
 }
 
 func (rs *StaffAdminResource) updateStammdatenPerson(w http.ResponseWriter, r *http.Request) {
@@ -397,7 +398,7 @@ func (rs *StaffAdminResource) getStammdatenFinancial(w http.ResponseWriter, r *h
 		return
 	}
 	common.Respond(w, r, http.StatusOK, &StammdatenFinancialMaskedResponse{
-		StaffID:                    masked.StaffID,
+		StaffID:                    ident.ID(masked.StaffID),
 		IBANMasked:                 masked.IBANMasked,
 		TaxIDMasked:                masked.TaxIDMasked,
 		SocialSecurityNumberMasked: masked.SocialSecurityNumberMasked,
@@ -431,7 +432,7 @@ func (rs *StaffAdminResource) revealStammdatenFinancial(w http.ResponseWriter, r
 		return
 	}
 	common.Respond(w, r, http.StatusOK, &StammdatenFinancialRevealResponse{
-		StaffID:              plain.StaffID,
+		StaffID:              ident.ID(plain.StaffID),
 		IBAN:                 plain.IBAN,
 		TaxID:                plain.TaxID,
 		SocialSecurityNumber: plain.SocialSecurityNumber,
@@ -470,5 +471,5 @@ func (rs *StaffAdminResource) updateStammdatenFinancial(w http.ResponseWriter, r
 		}
 		return
 	}
-	common.Respond(w, r, http.StatusOK, &StammdatenAck{StaffID: staffID}, "Stammdaten updated successfully")
+	common.Respond(w, r, http.StatusOK, &StammdatenAck{StaffID: ident.ID(staffID)}, "Stammdaten updated successfully")
 }

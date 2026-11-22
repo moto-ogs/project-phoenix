@@ -8,6 +8,10 @@ package templates
 type kindCatalog struct {
 	placeholders []Placeholder
 	standard     Template
+	// forOne is the body of the standard template for a letter to one
+	// person, another payer: the same text in the du-form (ADR 0294, #7463).
+	// Only the kinds parent billing writes to a payer have one.
+	forOne Template
 }
 
 var (
@@ -90,6 +94,15 @@ var catalog = map[Kind]kindCatalog{
 				"{{rueckfragen}}",
 			Closing: standardClosing,
 		},
+		forOne: Template{
+			Subject: "Bestätigung und Rechnung: {{zeitraum}}",
+			Body: "wir bestätigen die Anmeldung von {{kinder}} für „{{zeitraum}}“. Diese Betreuung ist gebucht:\n\n" +
+				"{{positionen}}\n\n" +
+				"**{{zahlungshinweis}}**\n\n" +
+				"# Bitte beachte\n{{hinweise}}\n\n" +
+				"# Notfallnummern\nIn dringenden Fällen und wenn das Kind krank ist, erreichst du die Betreuung hier:\n{{notfallnummern}}\n\n" +
+				"{{rueckfragen}}",
+		},
 	},
 	KindInvoice: {
 		placeholders: with(pPeriod, pNumber, pDebtorNumber, pPositions, pTotal, pDue, pPaymentNote),
@@ -99,6 +112,11 @@ var catalog = map[Kind]kindCatalog{
 			Body: "für {{kinder}} berechnen wir euch:\n\n{{positionen}}\n\n" +
 				"**{{zahlungshinweis}}**\n\n{{rueckfragen}}",
 			Closing: standardClosing,
+		},
+		forOne: Template{
+			Subject: "Rechnung {{rechnungsnummer}}: {{zeitraum}}",
+			Body: "für {{kinder}} berechnen wir dir:\n\n{{positionen}}\n\n" +
+				"**{{zahlungshinweis}}**\n\n{{rueckfragen}}",
 		},
 	},
 	KindFeeNotice: {
@@ -112,6 +130,11 @@ var catalog = map[Kind]kindCatalog{
 			Body: "für die Betreuung von {{kinder}} setzen wir für {{zeitraum}} diesen Elternbeitrag fest:\n\n{{positionen}}\n\n" +
 				"**{{zahlungshinweis}}**\n\n{{rueckfragen}}",
 			Closing: standardClosing,
+		},
+		forOne: Template{
+			Subject: "Bescheid über den Elternbeitrag {{bescheidnummer}}",
+			Body: "für die Betreuung von {{kinder}} setzen wir für {{zeitraum}} diesen Elternbeitrag fest:\n\n{{positionen}}\n\n" +
+				"**{{zahlungshinweis}}**\n\n{{rueckfragen}}",
 		},
 	},
 	KindContract: {

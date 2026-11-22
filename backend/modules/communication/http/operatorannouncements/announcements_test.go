@@ -19,6 +19,8 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/communication/http/operatorannouncements"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // Test constants used in mock assertions (not DB-dependent)
@@ -412,11 +414,11 @@ func TestGetAnnouncement_ResponseIncludesTargetingFields(t *testing.T) {
 	var response map[string]any
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
 	data := response["data"].(map[string]any)
-	assert.Equal(t, float64(3), data["target_org_ids"].([]any)[0])
+	assert.Equal(t, []int64{3}, testpkg.JSONIDs(t, data["target_org_ids"]))
 	tenantIDs := data["target_tenant_ids"].([]any)
 	assert.Len(t, tenantIDs, 2)
-	assert.Equal(t, float64(7), tenantIDs[0])
-	assert.Equal(t, float64(8), tenantIDs[1])
+	assert.Equal(t, "7", tenantIDs[0])
+	assert.Equal(t, "8", tenantIDs[1])
 }
 
 // --- List includes org/tenant IDs ---
@@ -451,7 +453,7 @@ func TestListAnnouncements_IncludesOrgAndTenantIDs(t *testing.T) {
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
 	item := response["data"].([]any)[0].(map[string]any)
 	orgIDs := item["target_org_ids"].([]any)
-	assert.Equal(t, float64(1), orgIDs[0])
+	assert.Equal(t, "1", orgIDs[0])
 	tenantIDs := item["target_tenant_ids"].([]any)
 	assert.Len(t, tenantIDs, 2)
 }
@@ -870,7 +872,7 @@ func TestGetStats_ResponseStructure(t *testing.T) {
 	mock := &mockAnnouncementService{
 		getStatsFn: func(_ context.Context, id int64) (*platform.AnnouncementStats, error) {
 			return &platform.AnnouncementStats{
-				AnnouncementID: id,
+				AnnouncementID: ident.ID(id),
 				TargetCount:    42,
 				SeenCount:      10,
 				DismissedCount: 3,
@@ -921,7 +923,7 @@ func TestGetViewDetails_ResponseStructure(t *testing.T) {
 	require.Len(t, data, 2)
 
 	first := data[0].(map[string]any)
-	assert.Equal(t, float64(10), first["user_id"])
+	assert.Equal(t, int64(10), testpkg.JSONID(t, first["user_id"]))
 	assert.Equal(t, "Max Mustermann", first["user_name"])
 	assert.NotEmpty(t, first["seen_at"])
 	assert.Equal(t, shownAt.Format(time.RFC3339), first["shown_at"])

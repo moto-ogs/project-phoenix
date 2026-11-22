@@ -30,7 +30,7 @@ const (
 func (seedShiftSeriesStep) Name() string { return "Seeding shift series around the Ferien" }
 
 type seedCalendarPeriod struct {
-	ID              int64   `json:"id"`
+	ID              apiID   `json:"id"`
 	Name            string  `json:"name"`
 	PeriodType      string  `json:"period_type"`
 	StartDate       string  `json:"start_date"`

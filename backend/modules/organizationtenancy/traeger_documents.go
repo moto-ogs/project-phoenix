@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Shared documents of a Träger (#4692, spec #4611 user stories 98 and 99):
@@ -63,10 +65,10 @@ var (
 // means every school of the Träger; GroupID names a group of that school,
 // GroupName its name when it was released.
 type TraegerDocumentRelease struct {
-	ID         int64                   `json:"id"`
+	ID         ident.ID                `json:"id"`
 	Audience   TraegerDocumentAudience `json:"audience"`
-	SchoolID   *int64                  `json:"school_id"`
-	GroupID    *int64                  `json:"group_id"`
+	SchoolID   *ident.ID               `json:"school_id"`
+	GroupID    *ident.ID               `json:"group_id"`
 	GroupName  string                  `json:"group_name"`
 	ReleasedAt time.Time               `json:"released_at"`
 }
@@ -74,7 +76,7 @@ type TraegerDocumentRelease struct {
 // TraegerDocument is a document of the Träger with its active releases and
 // how often parents and schools opened it.
 type TraegerDocument struct {
-	ID          int64                    `json:"id"`
+	ID          ident.ID                 `json:"id"`
 	Title       string                   `json:"title"`
 	FileName    string                   `json:"file_name"`
 	ContentType string                   `json:"content_type"`
@@ -94,8 +96,8 @@ type TraegerDocumentUpload struct {
 // TraegerDocumentReleaseInput names whom a document is released for.
 type TraegerDocumentReleaseInput struct {
 	Audience TraegerDocumentAudience `json:"audience"`
-	SchoolID *int64                  `json:"school_id"`
-	GroupID  *int64                  `json:"group_id"`
+	SchoolID *ident.ID               `json:"school_id"`
+	GroupID  *ident.ID               `json:"group_id"`
 }
 
 // TraegerDocumentFile is the stored file of a document.
@@ -107,13 +109,13 @@ type TraegerDocumentFile struct {
 
 // TraegerDocumentGroup is a group of a school a release may name.
 type TraegerDocumentGroup struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 // TraegerDocumentSchool is a school of the Träger with its groups.
 type TraegerDocumentSchool struct {
-	ID     int64                  `json:"id"`
+	ID     ident.ID               `json:"id"`
 	Name   string                 `json:"name"`
 	Groups []TraegerDocumentGroup `json:"groups"`
 }
@@ -222,7 +224,7 @@ type TraegerDocumentParent struct {
 // SharedDocument is a document as a parent or a school sees it: what it
 // is and whom the Träger released it for.
 type SharedDocument struct {
-	ID          int64                    `json:"id"`
+	ID          ident.ID                 `json:"id"`
 	Title       string                   `json:"title"`
 	FileName    string                   `json:"file_name"`
 	ContentType string                   `json:"content_type"`

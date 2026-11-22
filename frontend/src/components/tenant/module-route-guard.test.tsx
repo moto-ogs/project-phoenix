@@ -13,7 +13,7 @@ vi.mock("next-auth/react", () => ({
   useSession: () => ({ data: null, status: "unauthenticated" }),
 }));
 
-const TENANT = { tenantId: 1, slug: "demo" } as TenantInfo;
+const TENANT = { tenantId: "1", slug: "demo" } as TenantInfo;
 
 function DataPage() {
   childRender();

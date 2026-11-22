@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/exporttransfer"
 	"github.com/moto-ogs/project-phoenix/modules/exporttransfer/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/exporttransfer/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // TraegerService is the Träger scope of Export Transfer (ADR 0218, ADR
@@ -75,7 +76,7 @@ func (s *TraegerService) view(recipient domain.StoredRecipient) exporttransfer.T
 	_, opens := s.openPassword(recipient)
 	missing := recipient.MissingFields(opens)
 	view := exporttransfer.TraegerRecipient{
-		ID: recipient.ID, Name: recipient.Name, Enabled: recipient.Enabled, Ready: recipient.Enabled && len(missing) == 0,
+		ID: ident.ID(recipient.ID), Name: recipient.Name, Enabled: recipient.Enabled, Ready: recipient.Enabled && len(missing) == 0,
 		Host: recipient.Host, Port: recipient.Port, Username: recipient.Username,
 		RemoteDirectory: recipient.RemoteDirectory, HostKeyFingerprint: recipient.HostKeyFingerprint,
 		PasswordSet: opens, MissingFields: missing, Formats: recipient.Formats, UpdatedAt: recipient.UpdatedAt,
@@ -130,7 +131,7 @@ func (s *TraegerService) recipientsPage(ctx context.Context, organizationID int6
 	for _, format := range domain.Formats {
 		assignment := exporttransfer.TraegerAssignment{Format: format}
 		if id, ok := receiver[format]; ok {
-			assignment.RecipientID = &id
+			assignment.RecipientID = (*ident.ID)(&id)
 		}
 		page.Assignments = append(page.Assignments, assignment)
 	}
@@ -320,7 +321,7 @@ func (s *TraegerService) AssignFormats(ctx context.Context, organizationID, acto
 		for _, assignment := range assignments {
 			var recipientID int64
 			if assignment.RecipientID != nil {
-				recipientID = *assignment.RecipientID
+				recipientID = (*assignment.RecipientID).Int64()
 			}
 			assigned, err := s.recipients.AssignFormat(txCtx, organizationID, assignment.Format, recipientID, actorAccountID)
 			if err != nil {
@@ -346,9 +347,9 @@ func journalEntries(rows []domain.TraegerJournalRow) []exporttransfer.TraegerTra
 }
 
 func journalEntry(row domain.TraegerJournalRow) exporttransfer.TraegerTransferEntry {
-	return exporttransfer.TraegerTransferEntry{ID: row.ID, CreatedAt: row.CreatedAt, Format: row.Format,
+	return exporttransfer.TraegerTransferEntry{ID: ident.ID(row.ID), CreatedAt: row.CreatedAt, Format: row.Format,
 		Filename: row.Filename, ByteSize: int(row.ByteSize), TargetHost: row.TargetHost, TargetDirectory: row.TargetDirectory,
-		RecipientID: row.RecipientID, RecipientName: row.RecipientName, State: journalState(row), Reason: row.Reason}
+		RecipientID: (*ident.ID)(row.RecipientID), RecipientName: row.RecipientName, State: journalState(row), Reason: row.Reason}
 }
 
 // journalState names a row: settled, still within its fence, or unknown.

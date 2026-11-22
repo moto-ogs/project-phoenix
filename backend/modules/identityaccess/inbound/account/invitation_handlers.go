@@ -18,6 +18,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/portalauth"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Error messages (S1192 - avoid duplicate string literals)
@@ -29,7 +30,7 @@ type CreateSchoolInvitationRequest struct {
 	ResetQualifications bool                            `json:"reset_qualifications"`
 	ResetWorkTime       bool                            `json:"reset_work_time"`
 	Email               string                          `json:"email"`
-	RoleID              common.JSONID                   `json:"role_id"`
+	RoleID              common.ID                       `json:"role_id"`
 	FirstName           string                          `json:"first_name"`
 	LastName            string                          `json:"last_name"`
 	Position            string                          `json:"position"`
@@ -53,7 +54,7 @@ func (req *CreateSchoolInvitationRequest) Bind(_ *http.Request) error {
 	return validation.ValidateStruct(req,
 		validation.Field(&req.Email, validation.Required, is.Email),
 		validation.Field(&req.RoleID, validation.Required, validation.By(func(value interface{}) error {
-			roleID, ok := value.(common.JSONID)
+			roleID, ok := value.(common.ID)
 			if !ok || roleID.Int64() <= 0 {
 				return errors.New("role_id is required")
 			}
@@ -75,16 +76,16 @@ type SchoolInvitationResponse struct {
 	ResetMasterData     bool                            `json:"reset_master_data"`
 	ResetQualifications bool                            `json:"reset_qualifications"`
 	ResetWorkTime       bool                            `json:"reset_work_time"`
-	ID                  int64                           `json:"id"`
+	ID                  common.ID                       `json:"id"`
 	Email               string                          `json:"email"`
-	RoleID              int64                           `json:"role_id,string"`
+	RoleID              ident.ID                        `json:"role_id"`
 	RoleName            string                          `json:"role_name,omitempty"`
 	Token               string                          `json:"token,omitempty"`
 	ExpiresAt           time.Time                       `json:"expires_at"`
 	FirstName           *string                         `json:"first_name,omitempty"`
 	LastName            *string                         `json:"last_name,omitempty"`
 	Position            *string                         `json:"position,omitempty"`
-	CreatedBy           int64                           `json:"created_by"`
+	CreatedBy           common.ID                       `json:"created_by"`
 	Creator             string                          `json:"creator,omitempty"`
 	DeliveryStatus      string                          `json:"delivery_status"`
 	EmailSentAt         *time.Time                      `json:"email_sent_at,omitempty"`
@@ -222,16 +223,16 @@ func toInvitationResponse(invitation identityaccess.SchoolInvitation) SchoolInvi
 	return SchoolInvitationResponse{
 		EmploymentAction: invitation.EmploymentAction,
 		ResetMasterData:  invitation.ResetMasterData, ResetQualifications: invitation.ResetQualifications, ResetWorkTime: invitation.ResetWorkTime,
-		ID:              invitation.ID,
+		ID:              ident.ID(invitation.ID),
 		Email:           invitation.Email,
-		RoleID:          invitation.RoleID,
+		RoleID:          ident.ID(invitation.RoleID),
 		RoleName:        invitation.RoleName,
 		Token:           invitation.Token,
 		ExpiresAt:       invitation.ExpiresAt,
 		FirstName:       invitation.FirstName,
 		LastName:        invitation.LastName,
 		Position:        invitation.Position,
-		CreatedBy:       invitationCreatedByValue(invitation.CreatedBy),
+		CreatedBy:       ident.ID(invitationCreatedByValue(invitation.CreatedBy)),
 		Creator:         invitation.CreatorEmail,
 		DeliveryStatus:  deriveDeliveryStatus(invitation.Delivery.SentAt, invitation.Delivery.Error),
 		EmailSentAt:     invitation.Delivery.SentAt,

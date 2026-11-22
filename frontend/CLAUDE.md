@@ -33,7 +33,7 @@ read [frontend API and server boundaries](../docs/agents/frontend-api.md).
 
 ## Multi-Tenancy & Routing
 
-The proxy (`src/proxy.ts`) routes by hostname from one `PortalHost` table: each portal host → `/<portal>/*`, `{slug}.TENANT_DOMAIN` → `/[tenant]/*`; reserved slugs (`src/lib/reserved-slugs.ts`) are blocked. A new page folder needs `pnpm generate:portal-pages`, a new BFF route of a portal page an entry in its API allow-list. Cross-host paths redirect (307) back to their canonical subdomain (defense-in-depth on top of cookie isolation). Portal/session/cookie details: `docs/agents/contracts.md`.
+The proxy (`src/proxy.ts`) routes by hostname from one `PortalHost` table: each portal host → `/<portal>/*`, `{slug}.TENANT_DOMAIN` → `/[tenant]/*`; reserved slugs (`src/lib/reserved-slugs.ts`) are blocked. A new page folder needs `pnpm generate:portal-pages`; a BFF path outside the portal's `/api/<portal>/` prefix needs an entry in that host's API allow-list. Cross-host paths redirect (307) back to their canonical subdomain (defense-in-depth on top of cookie isolation). Portal/session/cookie details: `docs/agents/contracts.md`.
 
 ### Tenant Context & Navigation
 
@@ -62,10 +62,10 @@ When a change alters what a school user sees (new screen, migrated component, la
 
 ## Data contracts
 
-Backend `int64` IDs become frontend strings; preserve nullable fields and
-map backend `snake_case` to frontend `camelCase` in existing domain helpers.
-Use the affected portal's route wrapper for authentication and error handling;
-SSE streaming is the explicit exception in the SSE contract below.
+Response types come from the generated `src/lib/contract/*.generated.ts`;
+identifiers arrive as strings. New or changed route:
+[new API route](../docs/agents/new-route.md). Map `snake_case` to `camelCase`
+in the domain helper; keep nullable fields nullable.
 
 ## Date Handling (MANDATORY)
 

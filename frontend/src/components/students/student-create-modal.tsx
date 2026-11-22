@@ -70,9 +70,9 @@ import { useFreshSWR, useSWRAuth } from "~/lib/swr";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import {
   mapBulkPickupScheduleFormToBackend,
-  type BackendPickupScheduleRequest,
   type PickupScheduleFormData,
 } from "~/lib/pickup-schedule-helpers";
+import type { PickupScheduleRequest } from "~/lib/contract/students.generated";
 import { careTimesConcept } from "~/lib/concepts/careTimes";
 import { groupsConcept } from "~/lib/concepts/groups";
 import { InsetPanel } from "~/components/ui/inset-panel";
@@ -89,7 +89,7 @@ type GuardianSubmitEntry = {
   phoneNumbers: Array<{
     id?: string;
     phoneNumber: string;
-    phoneType: PhoneType;
+    phoneType: PhoneType | undefined;
     label?: string;
     isPrimary: boolean;
   }>;
@@ -143,7 +143,7 @@ function toExistingGuardianPayload(
   relationship: RelationshipFormData,
 ): StudentGuardianPayload {
   return {
-    guardian_profile_id: Number(guardian.id),
+    guardian_profile_id: guardian.id,
     first_name: guardian.firstName,
     last_name: guardian.lastName,
     relationship_type: relationship.relationshipType,
@@ -167,7 +167,7 @@ function relationshipLabel(value: string): string {
 // from the care-plan form via mapBulkPickupScheduleFormToBackend.
 export type CreateStudentSchedules = {
   arrival_schedules?: ArrivalScheduleFormEntry[];
-  pickup_schedules?: BackendPickupScheduleRequest[];
+  pickup_schedules?: PickupScheduleRequest[];
 };
 
 // The two things "+ Kinder" can create (#2382): a regular OGS child, or a
@@ -396,7 +396,7 @@ export function StudentCreateModal({
     guardian: Guardian,
     relationship: RelationshipFormData,
   ) => {
-    const profileId = Number(guardian.id);
+    const profileId = guardian.id;
     setGuardians((prev) =>
       prev.some((g) => g.guardian_profile_id === profileId)
         ? prev
@@ -426,8 +426,7 @@ export function StudentCreateModal({
   // guardians that are already on this child.
   const addedProfileIds = guardians
     .map((g) => g.guardian_profile_id)
-    .filter((id): id is number => id !== undefined)
-    .map((id) => id.toString());
+    .filter((id): id is string => id !== undefined);
 
   // Prüfung vor dem Senden: gleicher Kasten wie ein Fehler vom Server, die
   // Felder heißen wie in der API, damit Markierung und Fokus sie finden.

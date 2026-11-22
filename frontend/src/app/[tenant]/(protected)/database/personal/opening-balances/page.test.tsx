@@ -87,7 +87,7 @@ function fillParams() {
   });
 }
 
-const TENANT = { tenantId: 1, slug: "demo" } as TenantInfo;
+const TENANT = { tenantId: "1", slug: "demo" } as TenantInfo;
 
 function previewResponse(overrides: Record<string, unknown> = {}) {
   return {

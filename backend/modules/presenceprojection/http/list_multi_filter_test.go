@@ -29,7 +29,7 @@ func listMultiFilterStudentIDs(t *testing.T, tc *testContext, query string) ([]i
 
 	var resp struct {
 		Data []struct {
-			ID int64 `json:"id"`
+			ID testpkg.ID `json:"id"`
 		} `json:"data"`
 		Pagination struct {
 			TotalRecords int `json:"total_records"`
@@ -39,7 +39,7 @@ func listMultiFilterStudentIDs(t *testing.T, tc *testContext, query string) ([]i
 
 	ids := make([]int64, 0, len(resp.Data))
 	for _, student := range resp.Data {
-		ids = append(ids, student.ID)
+		ids = append(ids, int64(student.ID))
 	}
 	return ids, resp.Pagination.TotalRecords
 }

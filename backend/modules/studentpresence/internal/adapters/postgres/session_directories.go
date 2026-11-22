@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
 )
@@ -38,7 +39,7 @@ func attachDevices(ctx context.Context, directory ports.DeviceDirectory, groups 
 		if group == nil || group.DeviceID == nil {
 			continue
 		}
-		if device, ok := byID[*group.DeviceID]; ok && device.TenantID == group.TenantID {
+		if device, ok := byID[(*group.DeviceID).Int64()]; ok && ident.ID(device.TenantID) == group.TenantID {
 			group.Device = sessionDevice(device)
 		}
 	}
@@ -49,7 +50,7 @@ func deviceIDs(groups []*ActiveGroupRow) []int64 {
 	ids := make([]int64, 0, len(groups))
 	for _, group := range groups {
 		if group != nil && group.DeviceID != nil {
-			ids = append(ids, *group.DeviceID)
+			ids = append(ids, (*group.DeviceID).Int64())
 		}
 	}
 	return ids
@@ -57,8 +58,8 @@ func deviceIDs(groups []*ActiveGroupRow) []int64 {
 
 func sessionDevice(device ports.DirectoryDevice) *ports.SessionDevice {
 	return &ports.SessionDevice{
-		ID: device.ID, CreatedAt: device.CreatedAt, UpdatedAt: device.UpdatedAt,
-		TenantID: device.TenantID, DeviceID: device.DeviceID, DeviceType: device.DeviceType,
+		ID: ident.ID(device.ID), CreatedAt: device.CreatedAt, UpdatedAt: device.UpdatedAt,
+		TenantID: ident.ID(device.TenantID), DeviceID: device.DeviceID, DeviceType: device.DeviceType,
 		Name: device.Name, Status: device.Status, LastSeen: device.LastSeen,
 	}
 }
@@ -104,8 +105,8 @@ func roomsByID(ctx context.Context, directory ports.RoomDirectory, ids []int64) 
 // group consumers (location snapshot colours included) see the same shape.
 func sessionRoom(room ports.DirectoryRoom) *studentpresence.SessionRoom {
 	return &studentpresence.SessionRoom{
-		ID:         room.ID,
-		TenantID:   room.TenantID,
+		ID:         ident.ID(room.ID),
+		TenantID:   ident.ID(room.TenantID),
 		CreatedAt:  room.CreatedAt,
 		UpdatedAt:  room.UpdatedAt,
 		Name:       room.Name,
@@ -123,7 +124,7 @@ func sessionRoom(room ports.DirectoryRoom) *studentpresence.SessionRoom {
 func (r *SessionRepository) loadRoomsForGroups(ctx context.Context, groups []*ActiveGroupRow) error {
 	roomIDs := make([]int64, 0, len(groups))
 	for _, group := range groups {
-		roomIDs = append(roomIDs, group.RoomID)
+		roomIDs = append(roomIDs, group.RoomID.Int64())
 	}
 	if len(uniquePositive(roomIDs)) == 0 {
 		return nil
@@ -133,7 +134,7 @@ func (r *SessionRepository) loadRoomsForGroups(ctx context.Context, groups []*Ac
 		return r.errors.WrapRecordError("find group rooms by IDs", err)
 	}
 	for _, group := range groups {
-		if room, ok := rooms[group.RoomID]; ok {
+		if room, ok := rooms[group.RoomID.Int64()]; ok {
 			group.Room = sessionRoom(room)
 		}
 	}
@@ -166,7 +167,7 @@ func (r *SessionRepository) loadAndAssignActivityGroups(ctx context.Context, gro
 	}
 	byID := make(map[int64]*ports.SessionActivity, len(activities))
 	for _, activity := range activities {
-		byID[activity.ID] = activity
+		byID[activity.ID.Int64()] = activity
 	}
 	for _, group := range groups {
 		if templateID, ok := group.TemplateID(); ok {

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -54,7 +55,7 @@ func TestTemplateDutyRoundTripWithoutRoom(t *testing.T) {
 	withRoom["room_id"] = s.roomID
 	updateW = doTemplateJSON(t, router, http.MethodPut, fmt.Sprintf("/templates/%d", created.TemplateID), withRoom)
 	require.Equal(t, http.StatusOK, updateW.Code, "body=%s", updateW.Body.String())
-	assert.Equal(t, s.roomID, *decodeTemplateData[templateResponse](t, updateW).RoomID)
+	assert.Equal(t, ident.ID(s.roomID), *decodeTemplateData[templateResponse](t, updateW).RoomID)
 }
 
 func TestTemplateDutyRejectsChildrenAndRoomlessCare(t *testing.T) {

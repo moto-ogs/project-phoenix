@@ -45,7 +45,7 @@ func analyticsSchoolNames(tracker owners.ProductEventTracker) owners.SchoolNames
 	return func(schools []organizationModule.School) int {
 		named := make([]analytics.School, 0, len(schools))
 		for _, school := range schools {
-			named = append(named, analytics.School{ID: school.ID, Name: school.Name})
+			named = append(named, analytics.School{ID: school.ID.Int64(), Name: school.Name})
 		}
 		return analytics.IdentifySchools(tracker, named)
 	}

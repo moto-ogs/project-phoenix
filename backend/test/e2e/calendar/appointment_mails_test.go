@@ -34,7 +34,7 @@ func createMailedAppointment(t *testing.T, router http.Handler, token string, gu
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	var created createAppointmentE2EResponse
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &created))
-	return strconv.FormatInt(created.Data.Appointment.ID, 10)
+	return strconv.FormatInt(int64(created.Data.Appointment.ID), 10)
 }
 
 func readAppointmentMails(t *testing.T, router http.Handler, token, appointmentID string) appointmentMailsResponse {

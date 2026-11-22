@@ -5,6 +5,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // CaregiverPlannedSupervisionBlockers serves People Directory's caregiver
@@ -24,7 +25,7 @@ func (b CaregiverPlannedSupervisionBlockers) ListPlannedSupervisionBlockers(ctx 
 	result := make([]peopledirectory.BlockerActivity, 0, len(rows))
 	for _, row := range rows {
 		result = append(result, peopledirectory.BlockerActivity{
-			ID: row.ID, ActivityID: row.ActivityID, ActivityName: row.ActivityName, IsPrimary: row.IsPrimary,
+			ID: ident.ID(row.ID), ActivityID: ident.ID(row.ActivityID), ActivityName: row.ActivityName, IsPrimary: row.IsPrimary,
 		})
 	}
 	return result, nil

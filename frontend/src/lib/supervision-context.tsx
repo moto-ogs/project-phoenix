@@ -33,6 +33,7 @@ import {
 } from "~/lib/supervision-derive";
 import type { NavigationGroup } from "~/lib/contract/students.generated";
 import type { NavigationEducationalGroup } from "~/lib/usercontext-helpers";
+import type { ApiResponse } from "./api-envelope";
 
 const logger = createLogger({ component: "SupervisionContext" });
 
@@ -213,7 +214,10 @@ export function SupervisionProvider({
   // nothing is fetched, and the generation discards answers that were already
   // under way when the school changed.
   const tenantContext = useTenantSafe();
-  const sessionTenantId = session?.user?.tenantId;
+  // The session claim is a number, the page's school a string (#2342).
+  const sessionClaim = session?.user?.tenantId;
+  const sessionTenantId =
+    sessionClaim === undefined ? undefined : String(sessionClaim);
   const urlTenantSlug = tenantContext?.tenantSlug;
   const urlTenantRoutingMode = tenantContext?.routingMode;
   const urlTenantId = tenantContext?.tenant?.tenantId;
@@ -375,11 +379,9 @@ export function SupervisionProvider({
 
       let supervised: SupervisedGroupPayload[] | null = null;
       if (response.ok) {
-        const responseData = (await response.json()) as {
-          success: boolean;
-          message: string;
-          data: SupervisedGroupPayload[] | null;
-        };
+        const responseData = (await response.json()) as ApiResponse<
+          SupervisedGroupPayload[] | null
+        >;
         supervised = responseData.data ?? [];
       }
 

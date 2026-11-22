@@ -33,21 +33,6 @@ func (s *ActivityService) AddSchedule(ctx context.Context, groupID int64, schedu
 	return schedule, nil
 }
 
-// GetSchedule retrieves a schedule by ID
-func (s *ActivityService) GetSchedule(ctx context.Context, id int64) (*activityContract.Schedule, error) {
-	value, err := s.scheduleRepo.FindSchedule(ctx, id)
-	if err != nil {
-		err = legacyActivityScheduleError("find by id", err)
-		// Convert "no rows" (bare or DatabaseError-wrapped) to our own error
-		if isRepositoryNotFound(err) {
-			return nil, &activityContract.ActivityError{Op: opGetSchedule, Err: activityContract.ErrScheduleNotFound}
-		}
-		return nil, &activityContract.ActivityError{Op: opGetSchedule, Err: err}
-	}
-
-	return legacySchedule(value), nil
-}
-
 // GetGroupSchedules retrieves all schedules for a group
 func (s *ActivityService) GetGroupSchedules(ctx context.Context, groupID int64) ([]*activityContract.Schedule, error) {
 	values, err := s.scheduleRepo.ListSchedules(ctx, timetable.ScheduleFilter{GroupIDs: []int64{groupID}})

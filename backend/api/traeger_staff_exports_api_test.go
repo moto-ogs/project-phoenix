@@ -270,7 +270,7 @@ func linkStaffRecord(t *testing.T, router http.Handler, office traegerOffice, me
 	}
 	rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{"members": list})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	return decode[staffRecordBody](t, rec).ID
+	return int64(decode[staffRecordBody](t, rec).ID)
 }
 
 func setPersonnelNumber(t *testing.T, router http.Handler, office traegerOffice, recordID int64, number string) {

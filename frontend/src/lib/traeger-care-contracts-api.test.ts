@@ -15,7 +15,8 @@ describe("care contract requests", () => {
     const ids = Array.from({ length: 401 }, (_, i) => String(i + 1));
     request.mockImplementation(async (_path, init) => ({
       created: [],
-      sent: init?.body?.contract_ids ?? [],
+      // The catalog proxy hands the IDs on as strings.
+      sent: (init?.body?.contract_ids ?? []).map(String),
       skipped: [],
     }));
     await createCareContracts(
@@ -38,14 +39,14 @@ describe("care contract requests", () => {
   });
 
   it("retries one contract at the explicit corrected address", async () => {
-    request.mockResolvedValue({ sent: [7], skipped: [] });
+    request.mockResolvedValue({ sent: ["7"], skipped: [] });
     expect(await resendCareContract("7", "neu@example.org")).toEqual({
       sent: ["7"],
       skipped: [],
     });
     expect(request).toHaveBeenCalledWith("/api/traeger/contracts/send", {
       method: "POST",
-      body: { contract_ids: [7], recipient_email: "neu@example.org" },
+      body: { contract_ids: ["7"], recipient_email: "neu@example.org" },
     });
   });
 
@@ -69,5 +70,19 @@ describe("care contract requests", () => {
       offset: "1000",
     });
     expect(result.hasMore).toBe(true);
+  });
+});
+
+// ADR 0270 point 6: a reason a newer backend adds still counts as a skip.
+describe("care contract unknown values (#2353)", () => {
+  it("keeps a skip for an unknown reason a skip", async () => {
+    request.mockResolvedValue({
+      sent: [],
+      skipped: [{ id: "7", reason: "mail_quarantined" }],
+    });
+    expect(await sendCareContracts(["7"])).toEqual({
+      sent: [],
+      skipped: [{ id: "7", reason: "other" }],
+    });
   });
 });

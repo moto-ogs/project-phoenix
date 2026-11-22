@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // fixed reference time so the RFC3339 string assertions are stable.
@@ -32,7 +33,7 @@ func TestNewTrustedDeviceDTO_FullRow(t *testing.T) {
 
 	dto := common.NewTrustedDeviceDTO(row)
 
-	assert.Equal(t, int64(42), dto.ID)
+	assert.Equal(t, ident.ID(int64(42)), dto.ID)
 	assert.Equal(t, &ua, dto.UserAgent)
 	assert.Equal(t, "203.0.113.10", dto.IPAddress)
 	assert.Equal(t, "2026-05-01T12:00:00Z", dto.CreatedAt)
@@ -55,7 +56,7 @@ func TestNewTrustedDeviceDTO_OmitsNilOptionalFields(t *testing.T) {
 
 	dto := common.NewTrustedDeviceDTO(row)
 
-	assert.Equal(t, int64(7), dto.ID)
+	assert.Equal(t, ident.ID(int64(7)), dto.ID)
 	assert.Nil(t, dto.UserAgent)
 	assert.Equal(t, "", dto.IPAddress, "nil net.IP must not emit an address string")
 	assert.Equal(t, "2026-05-01T12:00:00Z", dto.CreatedAt)
@@ -126,10 +127,10 @@ func TestMapTrustedDevices_PreservesOrderAndProjection(t *testing.T) {
 	})
 
 	if assert.Len(t, out, 2) {
-		assert.Equal(t, int64(1), out[0].ID)
+		assert.Equal(t, ident.ID(int64(1)), out[0].ID)
 		assert.Equal(t, ua1, *out[0].UserAgent)
 		assert.NotNil(t, out[0].LastUsedAt)
-		assert.Equal(t, int64(2), out[1].ID)
+		assert.Equal(t, ident.ID(int64(2)), out[1].ID)
 		assert.Equal(t, ua2, *out[1].UserAgent)
 		assert.Nil(t, out[1].LastUsedAt, "second row had nil LastUsed — must remain nil after projection")
 	}

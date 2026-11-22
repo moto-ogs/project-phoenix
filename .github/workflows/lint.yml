@@ -88,6 +88,17 @@ jobs:
           git fetch --no-tags --depth=1 origin "$BASE_SHA"
           node scripts/check-contract-compat.mjs "$BASE_SHA"
 
+      # Numeric identifiers and backend routes without a contract only shrink
+      # (#2353). The checkout is the merge of the PR into its base; its first
+      # parent is the base that merge was built on, while base.sha can be
+      # older and would blame this PR for what landed on the base since.
+      # Commits and trees suffice: the check reads only changed files' blobs.
+      - name: Refuse new numeric identifiers and routes without a contract
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --no-tags --depth=2 origin "$GITHUB_SHA"
+          node scripts/check-contract-shrink.mjs HEAD^1
+
       - name: Setup Go with cache
         id: go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -224,18 +235,6 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # Fails before the install: the check reads only the register files of
-      # the base. A backend route belongs in the contract, not in a new
-      # pass-through route file (#2352).
-      - name: Refuse new pass-through route files
-        if: github.event_name == 'pull_request'
-        # The checkout is the merge of the PR into its base. Its first parent
-        # is the base that merge was built on; base.sha can be older and
-        # would blame this PR for routes that landed on the base since.
-        run: |
-          git fetch --no-tags --depth=2 origin "$GITHUB_SHA"
-          node scripts/check-proxy-routes.mjs HEAD^1
-
       - name: Enable corepack
         run: corepack enable
 
@@ -344,7 +343,6 @@ jobs:
       - name: Build frontend merge integration
         working-directory: frontend
         env:
-          NEXT_PUBLIC_API_URL: "http://localhost:8080"
           SKIP_ENV_VALIDATION: "true"
           API_URL: "http://localhost:8080"
           NEXT_PUBLIC_OPERATOR_HOSTNAME: "operator.localhost:3000"
@@ -400,7 +398,6 @@ jobs:
       # Only for the approval label step below.
       pull-requests: read
     env:
-      NEXT_PUBLIC_API_URL: "http://localhost:8080"
       SKIP_ENV_VALIDATION: "true"
       API_URL: "http://localhost:8080"
       NEXT_PUBLIC_OPERATOR_HOSTNAME: "operator.localhost:3000"

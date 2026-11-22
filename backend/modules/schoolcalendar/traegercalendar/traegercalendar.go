@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Closing days of a Träger (#4702). The Träger-Büro plans a closing day,
@@ -40,15 +41,19 @@ var (
 // ClosingDay is one closing day range of a Träger with the schools it
 // applies to. A single day has StartDate == EndDate.
 type ClosingDay struct {
-	ID        int64         `json:"id"`
+	ID        ident.ID      `json:"id"`
 	StartDate calendar.Date `json:"start_date"`
 	EndDate   calendar.Date `json:"end_date"`
 	Reason    string        `json:"reason"`
-	SchoolIDs []int64       `json:"school_ids"`
+	SchoolIDs []ident.ID    `json:"school_ids"`
 	UpdatedAt time.Time     `json:"updated_at"`
 	// NotifiedFamilies counts the families a save told about the closing
 	// day in their booked holiday weeks (#6434); zero on a read.
 	NotifiedFamilies int `json:"notified_families"`
+	// AffectedSchoolIDs names every school whose calendar changed through this
+	// write. It includes schools removed from an updated closing day and is not
+	// part of the HTTP response.
+	AffectedSchoolIDs []int64 `json:"-"`
 }
 
 // ClosingDayInput is a closing day as the Träger-Büro writes it.
@@ -80,7 +85,7 @@ type ClosingDaySpan struct {
 // CalendarSchool is a school of the Träger with the federal state its
 // statutory holidays come from.
 type CalendarSchool struct {
-	ID           int64                        `json:"id"`
+	ID           ident.ID                     `json:"id"`
 	Name         string                       `json:"name"`
 	FederalState schoolcalendar.HolidayRegion `json:"federal_state"`
 }
@@ -110,8 +115,8 @@ type ClosingDays interface {
 	UpdateClosingDay(ctx context.Context, organizationID, closingDayID int64, input ClosingDayInput) (ClosingDay, error)
 	// DeleteClosingDay removes a closing day and tells the parents of the
 	// holiday bookings whose days open again; holidayBookingsToken confirms
-	// that preview (#6457). It returns the families told.
-	DeleteClosingDay(ctx context.Context, organizationID, closingDayID int64, holidayBookingsToken string) (int, error)
+	// that preview (#6457). It returns the deleted day and the families told.
+	DeleteClosingDay(ctx context.Context, organizationID, closingDayID int64, holidayBookingsToken string) (ClosingDay, error)
 }
 
 // SchoolState is a school of a Träger with its federal-state ISO code, as

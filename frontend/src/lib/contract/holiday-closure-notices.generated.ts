@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   bool,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   optional,
@@ -39,10 +39,10 @@ export interface NoticeResponse {
 
 export const NoticeResponseSchema: z.ZodType<NoticeResponse, unknown> = object<NoticeResponse>({
   token: str,
-  id: int64StringOrNumber,
-  school_id: int64StringOrNumber,
+  id: int64String,
+  school_id: int64String,
   school_name: optional(str),
-  closing_day_id: int64StringOrNumber,
+  closing_day_id: int64String,
   reason: str,
   previous: nullable(RangeSchema),
   current: nullable(RangeSchema),

@@ -11,17 +11,19 @@ import {
   mapStaffShift,
   summaryLabel,
   summaryTone,
-  type BackendOwnAssignment,
-  type BackendStaffScheduleOverview,
-  type BackendStaffShift,
   type SummaryDelta,
 } from "./shift-helpers";
+import type { ShiftResponse } from "./contract/shared.generated";
+import type { OverviewResponse } from "./contract/staff-shifts.generated";
+import type { assignmentResponse } from "./contract/time-tracking.generated";
 
 describe("mapStaffShift", () => {
   it("maps snake_case backend shape to camelCase with string ids", () => {
-    const backend: BackendStaffShift = {
+    const backend: ShiftResponse = {
+      detached: false,
+      cancelled: false,
       id: "9223372036854775807",
-      staff_id: 7,
+      staff_id: "7",
       date: "2026-07-06",
       start_time: "08:00",
       end_time: "16:00",
@@ -50,13 +52,15 @@ describe("mapStaffShift", () => {
 
   it("maps the embedded Dienstart name and color (#1844)", () => {
     const mapped = mapStaffShift({
+      detached: false,
+      cancelled: false,
       id: "42",
-      staff_id: 7,
+      staff_id: "7",
       date: "2026-07-06",
       start_time: "08:00",
       end_time: "16:00",
       break_minutes: 0,
-      shift_type_id: 5,
+      shift_type_id: "5",
       shift_type_name: "Betreuung",
       shift_type_color: "#83CD2D",
     });
@@ -66,19 +70,23 @@ describe("mapStaffShift", () => {
 
   it("maps shift_type_id to a string id and defaults it to null", () => {
     const typed = mapStaffShift({
+      detached: false,
+      cancelled: false,
       id: "42",
-      staff_id: 7,
+      staff_id: "7",
       date: "2026-07-06",
       start_time: "08:00",
       end_time: "16:00",
       break_minutes: 0,
-      shift_type_id: 5,
+      shift_type_id: "5",
     });
     expect(typed.shiftTypeId).toBe("5");
 
     const untyped = mapStaffShift({
+      detached: false,
+      cancelled: false,
       id: "43",
-      staff_id: 7,
+      staff_id: "7",
       date: "2026-07-06",
       start_time: "08:00",
       end_time: "16:00",
@@ -89,8 +97,9 @@ describe("mapStaffShift", () => {
 
   it("maps a series-backed shift to a string series id and keeps detached", () => {
     const mapped = mapStaffShift({
+      cancelled: false,
       id: "44",
-      staff_id: 7,
+      staff_id: "7",
       date: "2026-07-06",
       start_time: "08:00",
       end_time: "16:00",
@@ -104,8 +113,10 @@ describe("mapStaffShift", () => {
 
   it("maps the source date of a moved series occurrence", () => {
     const mapped = mapStaffShift({
+      detached: false,
+      cancelled: false,
       id: "44",
-      staff_id: 7,
+      staff_id: "7",
       date: "2026-07-07",
       start_time: "08:00",
       end_time: "16:00",
@@ -118,9 +129,11 @@ describe("mapStaffShift", () => {
   });
 
   it("truncates HH:MM:SS times and defaults missing notes", () => {
-    const backend: BackendStaffShift = {
+    const backend: ShiftResponse = {
+      detached: false,
+      cancelled: false,
       id: "1",
-      staff_id: 2,
+      staff_id: "2",
       date: "2026-07-06",
       start_time: "08:00:00",
       end_time: "16:30:00",
@@ -136,13 +149,14 @@ describe("mapStaffShift", () => {
 
 describe("mapStaffScheduleOverview", () => {
   it("maps the complete weekly bridge and every int64 id to strings", () => {
-    const backend: BackendStaffScheduleOverview = {
+    const backend: OverviewResponse = {
+      dienstplan_used_weeks: null,
       from: "2026-07-06",
       to: "2026-07-10",
       dienstplan_in_use: true,
       weekly_summaries: [
         {
-          staff_id: 7,
+          staff_id: "7",
           week_start: "2026-07-06",
           planned_minutes: 1080,
           target_minutes: 1215,
@@ -153,35 +167,38 @@ describe("mapStaffScheduleOverview", () => {
           ],
         },
         {
-          staff_id: 8,
+          planned_by_shift_type: null,
+          staff_id: "8",
           week_start: "2026-07-06",
           planned_minutes: 270,
           target_minutes: null,
           delta_minutes: null,
         },
       ],
-      staff: [{ id: 7, first_name: "Ada", last_name: "Lovelace" }],
+      staff: [{ id: "7", first_name: "Ada", last_name: "Lovelace" }],
       shifts: [
         {
+          detached: false,
+          cancelled: false,
           id: "42",
-          staff_id: 7,
+          staff_id: "7",
           date: "2026-07-06",
           start_time: "08:00:00",
           end_time: "16:00:00",
           break_minutes: 30,
-          shift_type_id: 5,
+          shift_type_id: "5",
           notes: "Frühdienst",
         },
       ],
       assignments: [
         {
-          instance_id: 81,
-          staff_id: 7,
+          instance_id: "81",
+          staff_id: "7",
           date: "2026-07-06",
           start_time: "07:30:00",
           end_time: "09:15:00",
           activity_title: "Frühbetreuung",
-          room_id: 12,
+          room_id: "12",
           room_name: "Sonnenraum",
           status: "planned",
           is_absent: false,
@@ -268,7 +285,9 @@ describe("mapStaffScheduleOverview", () => {
   });
 
   it("preserves absence and Dienstplan-not-used reasons without inventing warnings", () => {
-    const backend: BackendStaffScheduleOverview = {
+    const backend: OverviewResponse = {
+      dienstplan_used_weeks: null,
+      weekly_summaries: null,
       from: "2026-07-06",
       to: "2026-07-10",
       dienstplan_in_use: false,
@@ -276,13 +295,13 @@ describe("mapStaffScheduleOverview", () => {
       shifts: [],
       assignments: [
         {
-          instance_id: 81,
-          staff_id: 7,
+          instance_id: "81",
+          staff_id: "7",
           date: "2026-07-06",
           start_time: "08:00",
           end_time: "09:00",
           activity_title: "Frühbetreuung",
-          room_id: 12,
+          room_id: "12",
           room_name: "Sonnenraum",
           status: "planned",
           is_absent: true,
@@ -293,13 +312,13 @@ describe("mapStaffScheduleOverview", () => {
           uncovered_intervals: [],
         },
         {
-          instance_id: 82,
-          staff_id: 8,
+          instance_id: "82",
+          staff_id: "8",
           date: "2026-07-06",
           start_time: "09:00",
           end_time: "10:00",
           activity_title: "Lernzeit",
-          room_id: 13,
+          room_id: "13",
           room_name: "Mondraum",
           status: "active",
           is_absent: false,
@@ -335,8 +354,8 @@ describe("mapStaffScheduleOverview", () => {
 
 describe("mapOwnAssignment", () => {
   it("maps the full snake_case shape to camelCase with a string id (#1844)", () => {
-    const backend: BackendOwnAssignment = {
-      instance_id: 81,
+    const backend: assignmentResponse = {
+      instance_id: "81",
       title: "Fußball-AG",
       group_name: "Sport",
       room_name: "Turnhalle",
@@ -375,8 +394,9 @@ describe("mapOwnAssignment", () => {
   });
 
   it("defaults the optional group/room/reason fields to null or empty", () => {
-    const backend: BackendOwnAssignment = {
-      instance_id: 82,
+    const backend: assignmentResponse = {
+      is_spontaneous: false,
+      instance_id: "82",
       title: "Spontan",
       date: "2026-07-06",
       start_time: "08:00",
@@ -394,7 +414,8 @@ describe("mapOwnAssignment", () => {
     expect(mapped.roomName).toBe("");
     expect(mapped.absenceReason).toBeNull();
     expect(mapped.cancelReason).toBeNull();
-    expect(mapped.isSpontaneous).toBeUndefined();
+    // Go always sends is_spontaneous; it is never absent.
+    expect(mapped.isSpontaneous).toBe(false);
     // Times already in HH:MM are left intact by the slice.
     expect(mapped.startTime).toBe("08:00");
     expect(mapped.endTime).toBe("09:00");
@@ -421,8 +442,10 @@ describe("formatDeltaHours", () => {
 describe("formatShiftLabel", () => {
   it("renders start–end", () => {
     const shift = mapStaffShift({
+      detached: false,
+      cancelled: false,
       id: "1",
-      staff_id: 2,
+      staff_id: "2",
       date: "2026-07-06",
       start_time: "08:00",
       end_time: "16:00",
@@ -497,12 +520,14 @@ describe("summaryLabel", () => {
 describe("groupShiftsByStaffAndDate", () => {
   it("groups by staff id then date, preserving order", () => {
     const shifts = [
-      { id: "1", staff_id: 7, date: "2026-07-06" },
-      { id: "2", staff_id: 7, date: "2026-07-06" },
-      { id: "3", staff_id: 7, date: "2026-07-07" },
-      { id: "4", staff_id: 8, date: "2026-07-06" },
+      { id: "1", staff_id: "7", date: "2026-07-06" },
+      { id: "2", staff_id: "7", date: "2026-07-06" },
+      { id: "3", staff_id: "7", date: "2026-07-07" },
+      { id: "4", staff_id: "8", date: "2026-07-06" },
     ].map((s) =>
       mapStaffShift({
+        detached: false,
+        cancelled: false,
         ...s,
         start_time: "08:00",
         end_time: "16:00",

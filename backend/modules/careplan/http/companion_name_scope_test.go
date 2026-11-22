@@ -60,10 +60,10 @@ func TestGetStudentCompanions_NamesVisibleAcrossGroups(t *testing.T) {
 
 	var resp struct {
 		Data []struct {
-			CompanionStudentID int64    `json:"companion_student_id"`
-			FirstName          string   `json:"first_name"`
-			LastName           string   `json:"last_name"`
-			Weekdays           []string `json:"weekdays"`
+			CompanionStudentID testpkg.ID `json:"companion_student_id"`
+			FirstName          string     `json:"first_name"`
+			LastName           string     `json:"last_name"`
+			Weekdays           []string   `json:"weekdays"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
@@ -74,7 +74,7 @@ func TestGetStudentCompanions_NamesVisibleAcrossGroups(t *testing.T) {
 		weekdays    []string
 	}{}
 	for _, entry := range resp.Data {
-		byID[entry.CompanionStudentID] = struct {
+		byID[int64(entry.CompanionStudentID)] = struct {
 			first, last string
 			weekdays    []string
 		}{entry.FirstName, entry.LastName, entry.Weekdays}

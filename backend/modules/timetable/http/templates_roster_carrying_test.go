@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // withPickup sets the offering's pickup time on every weekday it books.
@@ -34,9 +35,9 @@ func carryingClassBookings(class []int64) []timetableModule.OfferingWeekdayBooki
 }
 
 var carryingClassOfferings = []templateRosterMaintenanceOfferingResponse{
-	{ID: rosterReviewOfferingID, Name: "Randstunde"},
-	{ID: rosterReviewOfferingID + 1, Name: "Ganztag"},
-	{ID: rosterReviewOfferingID + 2, Name: "Ganztag spät"},
+	{ID: ident.ID(rosterReviewOfferingID), Name: "Randstunde"},
+	{ID: ident.ID(rosterReviewOfferingID + 1), Name: "Ganztag"},
+	{ID: ident.ID(rosterReviewOfferingID + 2), Name: "Ganztag spät"},
 }
 
 // TestTemplateRosterDeviationsTakeEveryCarryingOffering: the hint for a
@@ -59,7 +60,7 @@ func TestTemplateRosterDeviationsTakeEveryCarryingOffering(t *testing.T) {
 	got := deviations[0]
 	assert.False(t, got.Ambiguous)
 	assert.ElementsMatch(t, carryingClassOfferings, got.Offerings)
-	assert.NotContains(t, got.Candidates, templateRosterMaintenanceOfferingResponse{ID: rosterReviewOfferingID + 3, Name: "Früh"})
+	assert.NotContains(t, got.Candidates, templateRosterMaintenanceOfferingResponse{ID: ident.ID(rosterReviewOfferingID + 3), Name: "Früh"})
 	assert.Equal(t, 1, got.UnbookedCount, "class[5] books only Früh")
 }
 

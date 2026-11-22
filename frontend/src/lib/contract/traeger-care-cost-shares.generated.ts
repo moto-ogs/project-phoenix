@@ -5,7 +5,7 @@ import {
   calendarDate,
   fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   requestBody,
@@ -37,10 +37,10 @@ export interface CareCostShare {
 }
 
 export const CareCostShareSchema: z.ZodType<CareCostShare, unknown> = object<CareCostShare>({
-  id: int64StringOrNumber,
-  contract_id: int64StringOrNumber,
+  id: int64String,
+  contract_id: int64String,
   kind: str,
-  cost_bearer_id: int64StringOrNumber,
+  cost_bearer_id: int64String,
   cost_bearer_name: str,
   share_basis_points: nullable(safeInt),
   share_cents: nullable(safeInt),
@@ -64,8 +64,8 @@ export interface CareCostShareContract {
 }
 
 export const CareCostShareContractSchema: z.ZodType<CareCostShareContract, unknown> = object<CareCostShareContract>({
-  contract_id: int64StringOrNumber,
-  school_id: int64StringOrNumber,
+  contract_id: int64String,
+  school_id: int64String,
   school_name: str,
   child_first_name: str,
   child_last_name: str,
@@ -89,9 +89,9 @@ export const CareCostShareSetSchema: z.ZodType<CareCostShareSet, unknown> = obje
 
 /** Go: parentbillinghttp.CareCostShareRequest */
 export interface CareCostShareRequest {
-  contract_id?: number;
+  contract_id?: string;
   kind?: string;
-  cost_bearer_id?: number;
+  cost_bearer_id?: string;
   share_basis_points?: number | null;
   share_cents?: number | null;
   scope?: string;

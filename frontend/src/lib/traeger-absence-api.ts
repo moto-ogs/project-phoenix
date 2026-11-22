@@ -9,6 +9,8 @@
  * Schulen. Kontingente sind Personendaten: jede Anfrage steht im
  * Zugriffsprotokoll der Schulen, nichts wird zwischengespeichert.
  */
+import type * as traegerAbsenceTypesContract from "~/lib/contract/traeger-absence-types.generated";
+import type * as traegerStaffRecordsContract from "~/lib/contract/traeger-staff-records.generated";
 import { traegerRequest } from "~/lib/traeger-api";
 
 const TYPES = "/api/traeger/absence-types";
@@ -86,58 +88,11 @@ export interface TraegerAbsenceAccount {
   readonly schools: readonly TraegerAbsenceSchoolUse[];
 }
 
-interface BackendTypeSchool {
-  school_id: number;
-  school_name: string;
-  carried: boolean;
-  offered: boolean;
-  school_limit_days: number | null;
-}
-
-interface BackendType {
-  id: number;
-  name: string;
-  allowance_enabled: boolean;
-  standard_days: number;
-  carryover_until: string;
-  requestable: boolean;
-  is_active: boolean;
-  schools: BackendTypeSchool[] | null;
-}
-
-interface BackendAccount {
-  absence_type_id: number;
-  absence_type_name: string;
-  year: number;
-  entitled_days: number;
-  individual: boolean;
-  standard_days: number;
-  taken_days: number;
-  reserved_days: number;
-  remaining_days: number;
-  expires_on: string;
-  expired_days: number;
-  carried_in: {
-    year: number;
-    remaining_days: number;
-    expired_days: number;
-    expires_on: string;
-  } | null;
-  schools:
-    | {
-        school_id: number;
-        school_name: string;
-        taken_days: number;
-        reserved_days: number;
-        limit_days: number | null;
-        offered: boolean;
-      }[]
-    | null;
-}
-
-function mapType(data: BackendType): TraegerAbsenceType {
+function mapType(
+  data: traegerAbsenceTypesContract.TraegerAbsenceType,
+): TraegerAbsenceType {
   return {
-    id: String(data.id),
+    id: data.id,
     name: data.name,
     allowanceEnabled: data.allowance_enabled,
     standardDays: data.standard_days,
@@ -145,7 +100,7 @@ function mapType(data: BackendType): TraegerAbsenceType {
     requestable: data.requestable,
     isActive: data.is_active,
     schools: (data.schools ?? []).map((school) => ({
-      schoolId: String(school.school_id),
+      schoolId: school.school_id,
       schoolName: school.school_name,
       carried: school.carried,
       offered: school.offered,
@@ -154,9 +109,11 @@ function mapType(data: BackendType): TraegerAbsenceType {
   };
 }
 
-function mapAccount(data: BackendAccount): TraegerAbsenceAccount {
+function mapAccount(
+  data: traegerStaffRecordsContract.TraegerAbsenceAccount,
+): TraegerAbsenceAccount {
   return {
-    absenceTypeId: String(data.absence_type_id),
+    absenceTypeId: data.absence_type_id,
     absenceTypeName: data.absence_type_name,
     year: data.year,
     entitledDays: data.entitled_days,
@@ -176,7 +133,7 @@ function mapAccount(data: BackendAccount): TraegerAbsenceAccount {
         }
       : null,
     schools: (data.schools ?? []).map((school) => ({
-      schoolId: String(school.school_id),
+      schoolId: school.school_id,
       schoolName: school.school_name,
       takenDays: school.taken_days,
       reservedDays: school.reserved_days,
@@ -186,7 +143,9 @@ function mapAccount(data: BackendAccount): TraegerAbsenceAccount {
   };
 }
 
-function typeBody(input: TraegerAbsenceTypeInput) {
+function typeBody(
+  input: TraegerAbsenceTypeInput,
+): traegerAbsenceTypesContract.AbsenceTypeRequest {
   return {
     name: input.name.trim(),
     allowance_enabled: input.allowanceEnabled,
@@ -198,13 +157,12 @@ function typeBody(input: TraegerAbsenceTypeInput) {
 }
 
 export async function fetchTraegerAbsenceTypes(): Promise<TraegerAbsenceTypeList> {
-  const data = await traegerRequest<{
-    release: unknown;
-    schools: unknown[] | null;
-    types: BackendType[] | null;
-  }>(TYPES);
+  const data =
+    await traegerRequest<traegerAbsenceTypesContract.TraegerAbsenceTypeList>(
+      TYPES,
+    );
   return {
-    released: data.release !== null && data.release !== undefined,
+    released: data.release !== null,
     schoolCount: (data.schools ?? []).length,
     types: (data.types ?? []).map(mapType),
   };
@@ -214,10 +172,13 @@ export async function createTraegerAbsenceType(
   input: TraegerAbsenceTypeInput,
 ): Promise<TraegerAbsenceType> {
   return mapType(
-    await traegerRequest<BackendType>(TYPES, {
-      method: "POST",
-      body: typeBody(input),
-    }),
+    await traegerRequest<traegerAbsenceTypesContract.TraegerAbsenceType>(
+      TYPES,
+      {
+        method: "POST",
+        body: typeBody(input),
+      },
+    ),
   );
 }
 
@@ -226,10 +187,13 @@ export async function updateTraegerAbsenceType(
   input: TraegerAbsenceTypeInput,
 ): Promise<TraegerAbsenceType> {
   return mapType(
-    await traegerRequest<BackendType>(`${TYPES}/${encodeURIComponent(id)}`, {
-      method: "PUT",
-      body: typeBody(input),
-    }),
+    await traegerRequest<traegerAbsenceTypesContract.TraegerAbsenceType>(
+      `${TYPES}/${encodeURIComponent(id)}`,
+      {
+        method: "PUT",
+        body: typeBody(input),
+      },
+    ),
   );
 }
 
@@ -237,9 +201,10 @@ export async function fetchTraegerAbsenceAccounts(
   recordId: string,
   year: number,
 ): Promise<readonly TraegerAbsenceAccount[]> {
-  const data = await traegerRequest<{ accounts: BackendAccount[] | null }>(
-    `${RECORDS}/${encodeURIComponent(recordId)}/absence-accounts?year=${year}`,
-  );
+  const data =
+    await traegerRequest<traegerStaffRecordsContract.TraegerAbsenceAccounts>(
+      `${RECORDS}/${encodeURIComponent(recordId)}/absence-accounts?year=${year}`,
+    );
   return (data.accounts ?? []).map(mapAccount);
 }
 
@@ -256,7 +221,7 @@ export async function setTraegerAbsenceAllowance(
         year: input.year,
         entitled_days: input.entitledDays,
         reason: input.reason.trim(),
-      },
+      } satisfies traegerStaffRecordsContract.AbsenceAllowanceRequest,
     },
   );
 }

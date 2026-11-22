@@ -311,7 +311,7 @@ export default function StudentGuardianManager({
       relationshipData: RelationshipFormData;
       phoneNumbers?: Array<{
         phoneNumber: string;
-        phoneType: PhoneType;
+        phoneType: PhoneType | undefined;
         label?: string;
         isPrimary: boolean;
       }>;
@@ -393,7 +393,7 @@ export default function StudentGuardianManager({
       relationshipData: RelationshipFormData;
       phoneNumbers?: Array<{
         phoneNumber: string;
-        phoneType: PhoneType;
+        phoneType: PhoneType | undefined;
         label?: string;
         isPrimary: boolean;
         id?: string; // Existing phone ID (if editing)
@@ -438,7 +438,7 @@ export default function StudentGuardianManager({
     guardianId: string,
     formPhones: Array<{
       phoneNumber: string;
-      phoneType: PhoneType;
+      phoneType: PhoneType | undefined;
       label?: string;
       isPrimary: boolean;
       id?: string;
@@ -466,7 +466,7 @@ export default function StudentGuardianManager({
     guardianId: string,
     formPhones: Array<{
       phoneNumber: string;
-      phoneType: PhoneType;
+      phoneType: PhoneType | undefined;
       label?: string;
       isPrimary: boolean;
       id?: string;

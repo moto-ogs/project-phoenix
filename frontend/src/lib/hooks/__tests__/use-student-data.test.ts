@@ -416,7 +416,7 @@ describe("mapStudentResponse helper logic", () => {
         second_name: "Mustermann",
         name: "Max Mustermann",
       },
-      success: true,
+      status: "success",
       message: "OK",
     };
 

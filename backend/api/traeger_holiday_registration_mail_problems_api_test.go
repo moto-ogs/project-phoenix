@@ -65,7 +65,7 @@ func (f reviewFixture) mailProblems(t *testing.T) map[int64][]enrollment.Holiday
 	}](t, rec.Body.Bytes())
 	problems := map[int64][]enrollment.HolidayRegistrationMailProblem{}
 	for _, registration := range answer.Registrations {
-		problems[registration.RegistrationID] = registration.MailProblems
+		problems[registration.RegistrationID.Int64()] = registration.MailProblems
 	}
 	return problems
 }

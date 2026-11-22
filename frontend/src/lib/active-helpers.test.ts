@@ -4,10 +4,10 @@ import {
   mapVisitResponse,
   mapSupervisorResponse,
   mapSchulhofStatusResponse,
-  type BackendActiveGroup,
-  type BackendVisit,
-  type BackendSupervisor,
-  type BackendSchulhofStatus,
+  type ActiveGroupWire,
+  type VisitWire,
+  type SupervisorWire,
+  type SchulhofStatusWire,
 } from "./active-helpers";
 import {
   buildBackendActiveSession,
@@ -15,43 +15,37 @@ import {
   buildBackendSupervisor,
 } from "~/test/fixtures/sessions";
 
-// Sample backend data matching actual API responses
+// Decoded responses of the catalog proxy: identifiers arrive as strings.
 const sampleBackendActiveGroup = buildBackendActiveSession({
-  id: 1,
-  group_id: 10,
-  room_id: 5,
+  id: "1",
+  group_id: "10",
+  room_id: "5",
   start_time: "2024-01-15T08:00:00Z",
   end_time: "2024-01-15T12:00:00Z",
   is_active: true,
-  notes: "Morning session",
   visit_count: 25,
   supervisor_count: 2,
-  room: { id: 5, name: "Room A", category: "classroom" },
-  actual_group: { id: 10, name: "Class 3A" },
+  room: { id: "5", name: "Room A", color: "#5080D8" },
 });
 
 const sampleBackendVisit = buildBackendVisit({
-  id: 100,
-  student_id: 50,
-  active_group_id: 1,
+  id: "100",
+  student_id: "50",
+  active_group_id: "1",
   check_in_time: "2024-01-15T08:30:00Z",
   check_out_time: "2024-01-15T11:45:00Z",
   is_active: false,
-  notes: "Early checkout",
   student_name: "Max Mustermann",
-  school_class: "3a",
-  group_name: "OGS Group A",
   active_group_name: "Morning Session",
 });
 
 const sampleBackendSupervisor = buildBackendSupervisor({
-  id: 200,
-  staff_id: 30,
-  active_group_id: 1,
+  id: "200",
+  staff_id: "30",
+  active_group_id: "1",
   start_time: "2024-01-15T08:00:00Z",
   end_time: "2024-01-15T12:00:00Z",
   is_active: true,
-  notes: "Primary supervisor",
   staff_name: "Frau Schmidt",
   active_group_name: "Morning Session",
 });
@@ -67,24 +61,22 @@ describe("active-helpers", () => {
       expect(result.startTime).toEqual(new Date("2024-01-15T08:00:00Z"));
       expect(result.endTime).toEqual(new Date("2024-01-15T12:00:00Z"));
       expect(result.isActive).toBe(true);
-      expect(result.notes).toBe("Morning session");
       expect(result.visitCount).toBe(25);
       expect(result.supervisorCount).toBe(2);
       expect(result.room).toEqual({
-        id: 5,
+        id: "5",
         name: "Room A",
-        category: "classroom",
+        color: "#5080D8",
       });
-      expect(result.actualGroup).toEqual({ id: 10, name: "Class 3A" });
       expect(result.createdAt).toEqual(new Date("2024-01-01T00:00:00Z"));
       expect(result.updatedAt).toEqual(new Date("2024-01-15T08:00:00Z"));
     });
 
     it("handles undefined optional fields", () => {
-      const minimalGroup: BackendActiveGroup = {
-        id: 1,
-        group_id: 10,
-        room_id: 5,
+      const minimalGroup: ActiveGroupWire = {
+        id: "1",
+        group_id: "10",
+        room_id: "5",
         start_time: "2024-01-15T08:00:00Z",
         is_active: true,
         created_at: "2024-01-01T00:00:00Z",
@@ -94,19 +86,18 @@ describe("active-helpers", () => {
       const result = mapActiveGroupResponse(minimalGroup);
 
       expect(result.endTime).toBeUndefined();
-      expect(result.notes).toBeUndefined();
       expect(result.visitCount).toBeUndefined();
       expect(result.supervisorCount).toBeUndefined();
       expect(result.room).toBeUndefined();
-      expect(result.actualGroup).toBeUndefined();
     });
 
-    it("converts numeric IDs to strings", () => {
-      const result = mapActiveGroupResponse(sampleBackendActiveGroup);
+    // A spontaneous session has no parent template (WP-B6).
+    it("keeps a null group_id as null", () => {
+      const result = mapActiveGroupResponse(
+        buildBackendActiveSession({ group_id: null }),
+      );
 
-      expect(typeof result.id).toBe("string");
-      expect(typeof result.groupId).toBe("string");
-      expect(typeof result.roomId).toBe("string");
+      expect(result.groupId).toBeNull();
     });
   });
 
@@ -120,18 +111,15 @@ describe("active-helpers", () => {
       expect(result.checkInTime).toEqual(new Date("2024-01-15T08:30:00Z"));
       expect(result.checkOutTime).toEqual(new Date("2024-01-15T11:45:00Z"));
       expect(result.isActive).toBe(false);
-      expect(result.notes).toBe("Early checkout");
       expect(result.studentName).toBe("Max Mustermann");
-      expect(result.schoolClass).toBe("3a");
-      expect(result.groupName).toBe("OGS Group A");
       expect(result.activeGroupName).toBe("Morning Session");
     });
 
     it("handles undefined optional fields", () => {
-      const minimalVisit: BackendVisit = {
-        id: 100,
-        student_id: 50,
-        active_group_id: 1,
+      const minimalVisit: VisitWire = {
+        id: "100",
+        student_id: "50",
+        active_group_id: "1",
         check_in_time: "2024-01-15T08:30:00Z",
         is_active: true,
         created_at: "2024-01-15T08:30:00Z",
@@ -141,45 +129,8 @@ describe("active-helpers", () => {
       const result = mapVisitResponse(minimalVisit);
 
       expect(result.checkOutTime).toBeUndefined();
-      expect(result.notes).toBeUndefined();
       expect(result.studentName).toBeUndefined();
-      expect(result.schoolClass).toBeUndefined();
-      expect(result.groupName).toBeUndefined();
       expect(result.activeGroupName).toBeUndefined();
-      expect(result.actualArrivalTime).toBeUndefined();
-      expect(result.actualPickupTime).toBeUndefined();
-    });
-
-    it("preserves actual_arrival_time and actual_pickup_time as HH:MM strings", () => {
-      // The backend sends the wall-clock string already formatted in Berlin
-      // time (`timezone.FormatBerlinClock`). The mapper must NOT parse it
-      // into a Date — that would re-anchor it to today's local TZ and
-      // break diff calculations against `plannedTime` strings.
-      const visit = buildBackendVisit({
-        actual_arrival_time: "08:30",
-        actual_pickup_time: "16:05",
-      });
-
-      const result = mapVisitResponse(visit);
-
-      expect(result.actualArrivalTime).toBe("08:30");
-      expect(result.actualPickupTime).toBe("16:05");
-      expect(typeof result.actualArrivalTime).toBe("string");
-    });
-
-    it("threads only actual_arrival_time when student is still checked in", () => {
-      const visit = buildBackendVisit({
-        actual_arrival_time: "08:00",
-        actual_pickup_time: undefined,
-        check_out_time: undefined,
-        is_active: true,
-      });
-
-      const result = mapVisitResponse(visit);
-
-      expect(result.actualArrivalTime).toBe("08:00");
-      expect(result.actualPickupTime).toBeUndefined();
-      expect(result.checkOutTime).toBeUndefined();
     });
   });
 
@@ -193,16 +144,15 @@ describe("active-helpers", () => {
       expect(result.startTime).toEqual(new Date("2024-01-15T08:00:00Z"));
       expect(result.endTime).toEqual(new Date("2024-01-15T12:00:00Z"));
       expect(result.isActive).toBe(true);
-      expect(result.notes).toBe("Primary supervisor");
       expect(result.staffName).toBe("Frau Schmidt");
       expect(result.activeGroupName).toBe("Morning Session");
     });
 
     it("handles undefined optional fields", () => {
-      const minimalSupervisor: BackendSupervisor = {
-        id: 200,
-        staff_id: 30,
-        active_group_id: 1,
+      const minimalSupervisor: SupervisorWire = {
+        id: "200",
+        staff_id: "30",
+        active_group_id: "1",
         start_time: "2024-01-15T08:00:00Z",
         is_active: true,
         created_at: "2024-01-15T08:00:00Z",
@@ -212,7 +162,6 @@ describe("active-helpers", () => {
       const result = mapSupervisorResponse(minimalSupervisor);
 
       expect(result.endTime).toBeUndefined();
-      expect(result.notes).toBeUndefined();
       expect(result.staffName).toBeUndefined();
       expect(result.activeGroupName).toBeUndefined();
     });
@@ -220,26 +169,26 @@ describe("active-helpers", () => {
 
   describe("mapSchulhofStatusResponse", () => {
     it("maps all fields correctly with complete data", () => {
-      const backendStatus: BackendSchulhofStatus = {
+      const backendStatus: SchulhofStatusWire = {
         exists: true,
-        room_id: 42,
+        room_id: "42",
         room_name: "Schulhof",
-        activity_group_id: 10,
-        active_group_id: 5,
+        activity_group_id: "10",
+        active_group_id: "5",
         is_user_supervising: true,
-        supervision_id: 123,
+        supervision_id: "123",
         supervisor_count: 3,
         student_count: 25,
         supervisors: [
           {
-            id: 1,
-            staff_id: 100,
+            id: "1",
+            staff_id: "100",
             name: "Frau Schmidt",
             is_current_user: true,
           },
           {
-            id: 2,
-            staff_id: 101,
+            id: "2",
+            staff_id: "101",
             name: "Herr Müller",
             is_current_user: false,
           },
@@ -273,7 +222,7 @@ describe("active-helpers", () => {
     });
 
     it("handles non-existent Schulhof with minimal data", () => {
-      const backendStatus: BackendSchulhofStatus = {
+      const backendStatus: SchulhofStatusWire = {
         exists: false,
         room_name: "",
         is_user_supervising: false,
@@ -297,7 +246,7 @@ describe("active-helpers", () => {
     });
 
     it("handles undefined optional fields as null", () => {
-      const backendStatus: BackendSchulhofStatus = {
+      const backendStatus: SchulhofStatusWire = {
         exists: true,
         room_name: "Schulhof",
         is_user_supervising: false,
@@ -315,39 +264,22 @@ describe("active-helpers", () => {
       expect(result.supervisionId).toBeNull();
     });
 
-    it("converts numeric IDs to strings", () => {
-      const backendStatus: BackendSchulhofStatus = {
+    // The contract allows a null list; Go sends [] (#2353).
+    it("reads a null supervisor list as empty", () => {
+      const result = mapSchulhofStatusResponse({
         exists: true,
-        room_id: 99,
-        room_name: "Test Room",
-        activity_group_id: 88,
-        active_group_id: 77,
-        is_user_supervising: true,
-        supervision_id: 66,
-        supervisor_count: 1,
-        student_count: 10,
-        supervisors: [
-          {
-            id: 999,
-            staff_id: 888,
-            name: "Test",
-            is_current_user: true,
-          },
-        ],
-      };
+        room_name: "Schulhof",
+        is_user_supervising: false,
+        supervisor_count: 0,
+        student_count: 0,
+        supervisors: null,
+      });
 
-      const result = mapSchulhofStatusResponse(backendStatus);
-
-      expect(typeof result.roomId).toBe("string");
-      expect(typeof result.activityGroupId).toBe("string");
-      expect(typeof result.activeGroupId).toBe("string");
-      expect(typeof result.supervisionId).toBe("string");
-      expect(typeof result.supervisors[0]!.id).toBe("string");
-      expect(typeof result.supervisors[0]!.staffId).toBe("string");
+      expect(result.supervisors).toEqual([]);
     });
 
     it("maps supervisor array correctly", () => {
-      const backendStatus: BackendSchulhofStatus = {
+      const backendStatus: SchulhofStatusWire = {
         exists: true,
         room_name: "Schulhof",
         is_user_supervising: false,
@@ -355,14 +287,14 @@ describe("active-helpers", () => {
         student_count: 0,
         supervisors: [
           {
-            id: 1,
-            staff_id: 10,
+            id: "1",
+            staff_id: "10",
             name: "Supervisor One",
             is_current_user: false,
           },
           {
-            id: 2,
-            staff_id: 20,
+            id: "2",
+            staff_id: "20",
             name: "Supervisor Two",
             is_current_user: true,
           },
@@ -377,7 +309,7 @@ describe("active-helpers", () => {
     });
 
     it("handles empty supervisors array", () => {
-      const backendStatus: BackendSchulhofStatus = {
+      const backendStatus: SchulhofStatusWire = {
         exists: true,
         room_name: "Schulhof",
         is_user_supervising: false,

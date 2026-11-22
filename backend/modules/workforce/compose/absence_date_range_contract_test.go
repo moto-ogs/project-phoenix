@@ -5,6 +5,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,12 +26,12 @@ func TestStaffAbsenceDateRangeContract(t *testing.T) {
 		nextWeek := today.AddDays(7)
 
 		absence := workforce.StaffAbsence{
-			StaffID:     staff.ID,
+			StaffID:     ident.ID(staff.ID),
 			AbsenceType: workforce.AbsenceTypeSick,
 			DateStart:   tomorrow.String(),
 			DateEnd:     nextWeek.String(),
 			Status:      workforce.AbsenceStatusReported,
-			CreatedBy:   staff.ID,
+			CreatedBy:   ident.ID(staff.ID),
 		}
 		absence, err := repo.CreateStaffAbsence(ctx, &absence)
 		require.NoError(t, err)
@@ -71,12 +72,12 @@ func TestStaffAbsenceDateRangeContract(t *testing.T) {
 
 		// Create absence spanning yesterday to tomorrow
 		absence := workforce.StaffAbsence{
-			StaffID:     staff.ID,
+			StaffID:     ident.ID(staff.ID),
 			AbsenceType: workforce.AbsenceTypeVacation,
 			DateStart:   yesterday.String(),
 			DateEnd:     tomorrow.String(),
 			Status:      workforce.AbsenceStatusApproved,
-			CreatedBy:   staff.ID,
+			CreatedBy:   ident.ID(staff.ID),
 		}
 		_, err := repo.CreateStaffAbsence(ctx, &absence)
 		require.NoError(t, err)

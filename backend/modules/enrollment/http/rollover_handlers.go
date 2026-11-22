@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // --- request/response payloads ---
@@ -22,13 +23,13 @@ import (
 // RolloverCreateRequest is the body of POST /admin/phases/{id}/rollover.
 // Dates come in as ISO-8601 strings; the handler parses them.
 type RolloverCreateRequest struct {
-	Name              string  `json:"name"`
-	Kind              string  `json:"kind"`
-	ServiceStartDate  string  `json:"service_start_date"`
-	ServiceEndDate    string  `json:"service_end_date"`
-	EnrollmentOpenAt  *string `json:"enrollment_open_at,omitempty"`
-	EnrollmentCloseAt *string `json:"enrollment_close_at,omitempty"`
-	FormSchemaID      *int64  `json:"form_schema_id,omitempty"`
+	Name              string     `json:"name"`
+	Kind              string     `json:"kind"`
+	ServiceStartDate  string     `json:"service_start_date"`
+	ServiceEndDate    string     `json:"service_end_date"`
+	EnrollmentOpenAt  *string    `json:"enrollment_open_at,omitempty"`
+	EnrollmentCloseAt *string    `json:"enrollment_close_at,omitempty"`
+	FormSchemaID      *common.ID `json:"form_schema_id,omitempty"`
 
 	RolloverMode        string `json:"rollover_mode"`
 	RolloverAutoApprove bool   `json:"rollover_auto_approve"`
@@ -60,19 +61,19 @@ type RolloverSummary struct {
 
 // ReviewItemResponse is one row in the admin review queue UI.
 type ReviewItemResponse struct {
-	ChildID           int64   `json:"child_id"`
-	RequestID         int64   `json:"request_id"`
-	FirstName         string  `json:"first_name"`
-	LastName          string  `json:"last_name"`
-	TargetGradeLevel  *int16  `json:"target_grade_level,omitempty"`
-	ReviewReason      *string `json:"review_reason,omitempty"`
-	SourceGradeLevel  *int16  `json:"source_grade_level,omitempty"`
-	SourceFirstName   string  `json:"source_first_name,omitempty"`
-	SourceLastName    string  `json:"source_last_name,omitempty"`
-	GuardianFirstName string  `json:"guardian_first_name"`
-	GuardianLastName  string  `json:"guardian_last_name"`
-	GuardianEmail     string  `json:"guardian_email"`
-	StatusToken       string  `json:"status_token"`
+	ChildID           common.ID `json:"child_id"`
+	RequestID         common.ID `json:"request_id"`
+	FirstName         string    `json:"first_name"`
+	LastName          string    `json:"last_name"`
+	TargetGradeLevel  *int16    `json:"target_grade_level,omitempty"`
+	ReviewReason      *string   `json:"review_reason,omitempty"`
+	SourceGradeLevel  *int16    `json:"source_grade_level,omitempty"`
+	SourceFirstName   string    `json:"source_first_name,omitempty"`
+	SourceLastName    string    `json:"source_last_name,omitempty"`
+	GuardianFirstName string    `json:"guardian_first_name"`
+	GuardianLastName  string    `json:"guardian_last_name"`
+	GuardianEmail     string    `json:"guardian_email"`
+	StatusToken       string    `json:"status_token"`
 }
 
 // RolloverReviewDecisionRequest is the body of POST
@@ -216,8 +217,8 @@ func (rs *Resource) listRolloverReview(w http.ResponseWriter, r *http.Request) {
 	out := make([]ReviewItemResponse, 0, len(items))
 	for _, it := range items {
 		row := ReviewItemResponse{
-			ChildID:           it.Child.ID,
-			RequestID:         it.Request.ID,
+			ChildID:           ident.ID(it.Child.ID),
+			RequestID:         ident.ID(it.Request.ID),
 			FirstName:         it.Child.FirstName,
 			LastName:          it.Child.LastName,
 			TargetGradeLevel:  it.Child.TargetGradeLevel,
@@ -277,7 +278,7 @@ func parseRolloverCreateRequest(sourceID int64, body *RolloverCreateRequest, adm
 		SourcePhaseID:       sourceID,
 		Name:                body.Name,
 		Kind:                body.Kind,
-		FormSchemaID:        body.FormSchemaID,
+		FormSchemaID:        (*int64)(body.FormSchemaID),
 		RolloverMode:        body.RolloverMode,
 		RolloverAutoApprove: body.RolloverAutoApprove,
 		AdminAccountID:      adminAccountID,

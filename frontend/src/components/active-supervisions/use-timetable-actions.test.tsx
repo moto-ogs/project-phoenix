@@ -187,7 +187,7 @@ describe("useTimetableActions lifecycle reload (#3888)", () => {
     });
   });
 
-  it("keeps a selected external caregiver's large staff ID as a decimal string", async () => {
+  it("keeps selected room, activity and staff IDs as decimal strings", async () => {
     vi.mocked(
       timetableOperationsApi.createAndStartSpontaneous,
     ).mockResolvedValue({
@@ -200,7 +200,8 @@ describe("useTimetableActions lifecycle reload (#3888)", () => {
     await act(async () => {
       await result.current.handleStartSpontaneousActivity({
         title: "Musik-AG",
-        roomId: "20",
+        roomId: "9007199254740993",
+        activityGroupId: "9007199254740995",
         additionalStaffIds: ["9007199254740993"],
       });
     });
@@ -209,8 +210,8 @@ describe("useTimetableActions lifecycle reload (#3888)", () => {
       timetableOperationsApi.createAndStartSpontaneous,
     ).toHaveBeenCalledWith({
       title: "Musik-AG",
-      room_id: 20,
-      activity_group_id: undefined,
+      room_id: "9007199254740993",
+      activity_group_id: "9007199254740995",
       staff_ids: ["1", "9007199254740993"],
     });
   });

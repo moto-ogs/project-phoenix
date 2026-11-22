@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/moto-ogs/project-phoenix/tenant/tenanttest"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -211,7 +212,7 @@ func TestProcessSessionTimeoutByID_ContinuesWhenSSECollectionFails(t *testing.T)
 
 	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, Logger: slog.Default(), GroupRepo: &mockGroupRepository{
 		findByIDFunc: func(context.Context, interface{}) (*ports.ActiveGroup, error) {
-			return &ports.ActiveGroup{ID: 100, GroupID: &activityID}, nil
+			return &ports.ActiveGroup{ID: 100, GroupID: (*ident.ID)(&activityID)}, nil
 		},
 	}, SchoolPresence: &mockVisitRepository{
 		findByActiveGroupIDFunc: func(context.Context, int64) ([]*studentpresence.Visit, error) {
@@ -663,7 +664,7 @@ func TestAssignMultipleSupervisorsNonCritical_WorkSessionBestEffortBranches(t *t
 	created := map[int64]bool{}
 	svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, Logger: slog.Default(), SupervisorRepo: &mockGroupSupervisorRepository{
 		createFunc: func(_ context.Context, supervisor *ports.GroupSupervisor) error {
-			created[supervisor.StaffID] = true
+			created[supervisor.StaffID.Int64()] = true
 			return nil
 		},
 	}, WorkSessionService: &workSessionServiceForSessionUnitTest{
@@ -836,7 +837,7 @@ func TestCreateSessionBase_Branches(t *testing.T) {
 
 		require.NoError(t, err)
 		require.NotNil(t, group)
-		assert.Equal(t, int64(45), group.ID)
+		assert.Equal(t, ident.ID(int64(45)), group.ID)
 		assert.Equal(t, 2, transferred)
 		assert.Zero(t, locationUpdates)
 	})
@@ -848,10 +849,10 @@ func TestOpenSessionForActivityJoinsOnlyIndependentDeviceLessStays(t *testing.T)
 	activityID := int64(10)
 	otherID := int64(11)
 	deviceID := int64(20)
-	kiosk := &ports.ActiveGroup{GroupID: &activityID, DeviceID: &deviceID, RoomID: 1}
-	independent := &ports.ActiveGroup{GroupID: &activityID, RoomID: 1}
-	planner := &ports.ActiveGroup{GroupID: &activityID, RoomID: 1}
-	other := &ports.ActiveGroup{GroupID: &otherID, RoomID: 1}
+	kiosk := &ports.ActiveGroup{GroupID: (*ident.ID)(&activityID), DeviceID: (*ident.ID)(&deviceID), RoomID: 1}
+	independent := &ports.ActiveGroup{GroupID: (*ident.ID)(&activityID), RoomID: 1}
+	planner := &ports.ActiveGroup{GroupID: (*ident.ID)(&activityID), RoomID: 1}
+	other := &ports.ActiveGroup{GroupID: (*ident.ID)(&otherID), RoomID: 1}
 
 	t.Run("device-owned session of the activity wins", func(t *testing.T) {
 		got := joinableOpenSession([]*ports.ActiveGroup{independent, kiosk}, activityID, true)
@@ -880,11 +881,11 @@ func TestActivityRunningElsewhereTreatsPlannerSessionsAsConflicts(t *testing.T) 
 	activityID := int64(10)
 	deviceID := int64(20)
 	otherDevice := int64(21)
-	sameDevice := &ports.ActiveGroup{GroupID: &activityID, DeviceID: &deviceID, RoomID: 1}
-	independent := &ports.ActiveGroup{GroupID: &activityID, RoomID: 1}
-	planner := &ports.ActiveGroup{GroupID: &activityID, RoomID: 1}
-	elsewhere := &ports.ActiveGroup{GroupID: &activityID, DeviceID: &otherDevice, RoomID: 2}
-	otherDeviceSameRoom := &ports.ActiveGroup{GroupID: &activityID, DeviceID: &otherDevice, RoomID: 1}
+	sameDevice := &ports.ActiveGroup{GroupID: (*ident.ID)(&activityID), DeviceID: (*ident.ID)(&deviceID), RoomID: 1}
+	independent := &ports.ActiveGroup{GroupID: (*ident.ID)(&activityID), RoomID: 1}
+	planner := &ports.ActiveGroup{GroupID: (*ident.ID)(&activityID), RoomID: 1}
+	elsewhere := &ports.ActiveGroup{GroupID: (*ident.ID)(&activityID), DeviceID: (*ident.ID)(&otherDevice), RoomID: 2}
+	otherDeviceSameRoom := &ports.ActiveGroup{GroupID: (*ident.ID)(&activityID), DeviceID: (*ident.ID)(&otherDevice), RoomID: 1}
 
 	assert.False(t, activityRunningElsewhere([]*ports.ActiveGroup{sameDevice}, 1, deviceID, false))
 	assert.False(t, activityRunningElsewhere([]*ports.ActiveGroup{independent}, 1, deviceID, true))
@@ -898,8 +899,8 @@ func TestActivityConflictDestination(t *testing.T) {
 	t.Parallel()
 
 	activityID := int64(10)
-	inGym := &ports.ActiveGroup{GroupID: &activityID, RoomID: 1}
-	inYard := &ports.ActiveGroup{GroupID: &activityID, RoomID: 2}
+	inGym := &ports.ActiveGroup{GroupID: (*ident.ID)(&activityID), RoomID: 1}
+	inYard := &ports.ActiveGroup{GroupID: (*ident.ID)(&activityID), RoomID: 2}
 
 	assert.Equal(t, int64(9), activityConflictDestination([]*ports.ActiveGroup{inGym}, 9),
 		"a planned room is the kiosk preflight destination")
@@ -965,7 +966,7 @@ func TestCreateSessionWithMultipleSupervisors_TransferredVisitsBranch(t *testing
 		},
 	}, SupervisorRepo: &mockGroupSupervisorRepository{
 		createFunc: func(_ context.Context, supervisor *ports.GroupSupervisor) error {
-			assigned = append(assigned, supervisor.StaffID)
+			assigned = append(assigned, supervisor.StaffID.Int64())
 			return nil
 		},
 	}, DeviceRepo: &deviceRepoForSessionUnitTest{}},
@@ -1050,7 +1051,7 @@ func TestDetermineRoomIDWithStrategy_NoSelectionAndNoPlannedRoom(t *testing.T) {
 		plannedRoom := int64(7)
 		svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal,
 			ActivityGroupRepo: &activityGroupRepoForRoomUnitTest{
-				group: &ports.SessionActivity{PlannedRoomID: &plannedRoom},
+				group: &ports.SessionActivity{PlannedRoomID: (*ident.ID)(&plannedRoom)},
 			},
 		}}
 
@@ -1288,7 +1289,7 @@ func TestTransferActiveSupervisorsBetweenGroups_ErrorBranches(t *testing.T) {
 		assert.Equal(t, 1, count)
 		assert.Equal(t, []int64{10, 11}, ended)
 		require.Len(t, created, 1)
-		assert.Equal(t, int64(30), created[0].StaffID)
+		assert.Equal(t, ident.ID(int64(30)), created[0].StaffID)
 		assert.Equal(t, "helper", created[0].Role)
 	})
 
@@ -1526,11 +1527,11 @@ func TestSupervisorReplacement_PreservesAdditionalSupervisors(t *testing.T) {
 			return []*ports.GroupSupervisor{primary, additional}, nil
 		},
 		updateFunc: func(_ context.Context, supervisor *ports.GroupSupervisor) error {
-			updatedIDs = append(updatedIDs, supervisor.ID)
+			updatedIDs = append(updatedIDs, supervisor.ID.Int64())
 			return nil
 		},
 		createFunc: func(_ context.Context, supervisor *ports.GroupSupervisor) error {
-			createdStaffIDs = append(createdStaffIDs, supervisor.StaffID)
+			createdStaffIDs = append(createdStaffIDs, supervisor.StaffID.Int64())
 			return nil
 		},
 	}}}
@@ -1654,12 +1655,12 @@ func TestEndDailySessions_RepositoryFailures(t *testing.T) {
 
 		require.NoError(t, err)
 		// One school-wide refresh for the whole close (#5017).
-		assert.Equal(t, []supervisionRefresh{{activeGroupID: activeGroup.ID, reason: activeSupervisionReasonActivityEnded}}, publisher.refreshes)
+		assert.Equal(t, []supervisionRefresh{{activeGroupID: activeGroup.ID.Int64(), reason: activeSupervisionReasonActivityEnded}}, publisher.refreshes)
 		assert.True(t, result.Success)
 		assert.Equal(t, 2, result.VisitsEnded)
 		assert.Equal(t, 1, result.SessionsEnded)
 		assert.Equal(t, 3, result.SupervisorsEnded)
-		assert.Equal(t, []int64{activeGroup.ID}, result.EndedActiveGroupIDs)
+		assert.Equal(t, []int64{activeGroup.ID.Int64()}, result.EndedActiveGroupIDs)
 	})
 }
 
@@ -1725,7 +1726,7 @@ func TestStillAbandonedRejudgesTheLockedSession(t *testing.T) {
 	recent, stale := presenceTestNow(), presenceTestNow().Add(-2*time.Hour)
 	lookupErr := errors.New("selection failed")
 	candidate := func(id int64, lastSeen *time.Time) *ports.ActiveGroup {
-		return &ports.ActiveGroup{ID: id, Device: &ports.SessionDevice{LastSeen: lastSeen}}
+		return &ports.ActiveGroup{ID: ident.ID(id), Device: &ports.SessionDevice{LastSeen: lastSeen}}
 	}
 
 	for _, tc := range []struct {

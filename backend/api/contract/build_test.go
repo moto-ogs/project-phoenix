@@ -47,15 +47,12 @@ type row struct {
 	Mode     mode           `json:"mode"`
 	Status   string         `json:"status"`
 	Count    int            `json:"count"`
-	Legacy   int64          `json:"legacy_id"`
-	Quoted   int64          `json:"quoted_id,string"`
-	Lax      laxID          `json:"lax_id"`
 	Weights  map[string]int `json:"weights,omitempty"`
 	Hidden   string         `json:"-"`
 	Born     string         `json:"born,omitempty" contract:"date"`
 	Pickup   *string        `json:"pickup,omitempty" contract:"clock"`
 	// An amount in cent and a running number travel as plain numbers.
-	PriceCents int64            `json:"price_cents"`
+	PriceCents int64            `json:"price_cents" contract:"number"`
 	Next       int64            `json:"next" contract:"number"`
 	Image      []byte           `json:"image"`
 	BySchool   map[int64]string `json:"by_school"`
@@ -72,10 +69,6 @@ type ownReader struct {
 }
 
 func (*ownReader) UnmarshalJSON([]byte) error { return nil }
-
-type legacyBody struct {
-	Group int64 `json:"group_id"`
-}
 
 func post(request any) Registration {
 	return Registration{Method: "POST", Pattern: "/api/rows/", Portals: []string{"tenant"}, Request: request, Response: inner{}}
@@ -107,7 +100,7 @@ func rowRoute() Registration {
 	return route
 }
 
-var rowOptions = Options{NumericIDs: []string{"contract.row.Legacy"}, Identifiers: identifiers}
+var rowOptions = Options{Identifiers: identifiers}
 
 func fieldsOf(t *testing.T, doc Document, name string) map[string]Field {
 	t.Helper()
@@ -159,13 +152,10 @@ func TestBuildFollowsEncodingJSON(t *testing.T) {
 	assert.Equal(t, Schema{Kind: KindEnum, Ref: "mode"}, schema("mode"))
 	assert.Equal(t, Schema{Kind: KindEnum, Ref: "Status"}, schema("status"))
 	assert.Equal(t, KindInt, schema("count").Kind)
-	assert.Equal(t, KindLegacyID, schema("legacy_id").Kind)
-	assert.Equal(t, Schema{Kind: KindInt}, schema("price_cents"), "an amount in cent is a number")
+	assert.Equal(t, Schema{Kind: KindInt}, schema("price_cents"), "an amount tagged contract:\"number\" is a number")
 	assert.Equal(t, Schema{Kind: KindInt}, schema("next"), "a running number tagged number stays a number")
 	assert.Equal(t, Schema{Kind: KindString, Nullable: true}, schema("image"), "[]byte renders base64, nil as null")
 	assert.Equal(t, KindMap, schema("by_school").Kind, "an integer key renders as its decimal string")
-	assert.Equal(t, KindID, schema("quoted_id").Kind)
-	assert.Equal(t, KindLaxID, schema("lax_id").Kind)
 	assert.True(t, fields["nick"].Deprecated)
 	assert.NotContains(t, fields, "Hidden")
 	assert.Equal(t, []Enum{{Name: "Status", Values: []string{"off", "on"}}, {Name: "mode", Values: []string{"a", "b"}}}, doc.Enums)
@@ -240,6 +230,9 @@ func TestBuildRejects(t *testing.T) {
 	uploadOnGet.Method = "GET"
 	uploadRetry := upload()
 	uploadRetry.NoRetryAfterRenewal = "stores the file twice"
+	commitsOnPut := post(body{})
+	commitsOnPut.Method = "PUT"
+	commitsOnPut.NoCommit = "a PUT changes"
 	strayCode := post(body{})
 	strayCode.TooLargeCode = "files.file_too_large"
 	jsonCache := get("/api/rows/", inner{})
@@ -254,7 +247,7 @@ func TestBuildRejects(t *testing.T) {
 		options Options
 		message string
 	}{
-		"an int64 that does not say what it is": {[]Registration{rowRoute()}, Options{Identifiers: identifiers}, "int64 does not say what it is"},
+		"an int64 that does not say what it is": {[]Registration{get("/api/rows/", bareAnswer{})}, Options{Identifiers: identifiers}, "int64 does not say what it is"},
 		"a response shape chosen by the query":  {[]Registration{variants}, Options{Identifiers: identifiers}, "depends on ?view"},
 		"an anonymous struct": {[]Registration{get("/api/rows/", struct {
 			S stamp `json:"s"`
@@ -263,7 +256,6 @@ func TestBuildRejects(t *testing.T) {
 		"a response on a route without data":         {[]Registration{bothAnswers}, Options{Identifiers: identifiers}, "registers a response and no data"},
 		"a route without a portal":                   {[]Registration{noPortal}, Options{Identifiers: identifiers}, "names no portal"},
 		"a route registered twice":                   {[]Registration{get("/api/rows/", inner{}), get("/api/rows/", inner{})}, Options{Identifiers: identifiers}, "registered twice"},
-		"a numeric id entry nothing uses":            {[]Registration{get("/api/rows/", inner{})}, Options{NumericIDs: []string{"gone.Type.ID"}, Identifiers: identifiers}, "numeric id gone.Type.ID"},
 		"a variant entry nothing uses":               {[]Registration{get("/api/rows/", inner{})}, Options{QueryVariants: []string{"GET /api/gone/"}, Identifiers: identifiers}, "query variant GET /api/gone/"},
 		"a format tag on a field that is no string":  {[]Registration{get("/api/rows/", misformatted{})}, Options{Identifiers: identifiers}, `contract:"clock" needs a string field`},
 		"an unknown format tag":                      {[]Registration{get("/api/rows/", unknownFormat{})}, Options{Identifiers: identifiers}, `contract:"week" needs a string field`},
@@ -297,6 +289,7 @@ func TestBuildRejects(t *testing.T) {
 		"an upload with a file response":             {[]Registration{uploadAndFile}, Options{Identifiers: identifiers}, "a multipart upload cannot answer a file"},
 		"an upload on a GET":                         {[]Registration{uploadOnGet}, Options{Identifiers: identifiers}, "is a POST, PUT or PATCH"},
 		"an upload that names a retry":               {[]Registration{uploadRetry}, Options{Identifiers: identifiers}, "is sent once"},
+		"a PUT that claims to commit nothing":        {[]Registration{commitsOnPut}, Options{Identifiers: identifiers}, "only a POST names NoCommit"},
 		"a too large code without an upload":         {[]Registration{strayCode}, Options{Identifiers: identifiers}, "TooLargeCode belongs to a multipart upload"},
 		"a private cache trait on a JSON route":      {[]Registration{jsonCache}, Options{Identifiers: identifiers}, "PrivateCache belongs to a file route of a session portal"},
 		"a cache trait on a public file":             {[]Registration{publicCache}, Options{Identifiers: identifiers}, "PrivateCache belongs to a file route of a session portal"},
@@ -331,6 +324,23 @@ func TestARequestBodyHasOnlyOptionalFields(t *testing.T) {
 	for name, field := range fieldsOf(t, doc, "body") {
 		assert.Truef(t, field.Optional, "%s", name)
 	}
+}
+
+// A request field of the strict identifier type is a string in the client
+// and has no decoder: Go reads it (common.ID reads a string or a number), so
+// a legacy request field moves to common.ID without a generator change.
+func TestARequestIdentifierIsAStringWithoutDecoder(t *testing.T) {
+	t.Parallel()
+	doc, err := Build([]Registration{post(body{})}, Options{Identifiers: identifiers})
+	require.NoError(t, err)
+	assert.Equal(t, KindID, fieldsOf(t, doc, "body")["id"].Schema.Kind)
+	files, err := TypeScript(doc)
+	require.NoError(t, err)
+	source := files["rows.generated.ts"]
+	assert.Contains(t, source, "  id?: string;")
+	assert.Contains(t, source, "    request: requestBody<body>(),")
+	assert.NotContains(t, source, "bodySchema", "a request has no decoder")
+	assert.NotContains(t, source, "int64StringOrNumber", "the answer carries only strict identifiers")
 }
 
 // ownDay is a day type an owner keeps beside calendar.Date: it writes
@@ -382,36 +392,22 @@ func TestARequestTypeNamesWhatGoReads(t *testing.T) {
 	t.Parallel()
 	options := Options{
 		Identifiers: identifiers,
-		NumericIDs:  []string{"contract.legacyBody.Group"},
 		Readers:     map[reflect.Type]string{reflect.TypeFor[ownReader](): ReadsLaxIDs},
 	}
-	lax := post(ownReader{})
-	legacy := Registration{Method: "PUT", Pattern: "/api/rows/{id}", Portals: []string{"tenant"}, Request: legacyBody{}, Response: inner{}}
-	doc, err := Build([]Registration{lax, legacy}, options)
+	doc, err := Build([]Registration{post(ownReader{})}, options)
 	require.NoError(t, err)
 	assert.Equal(t, KindLaxID, fieldsOf(t, doc, "ownReader")["friend_id"].Schema.Kind, "its reader takes a number or a string")
-	assert.Equal(t, KindLegacyID, fieldsOf(t, doc, "legacyBody")["group_id"].Schema.Kind)
 
 	files, err := TypeScript(doc)
 	require.NoError(t, err)
 	source := files["rows.generated.ts"]
 	for _, line := range []string{
 		"  friend_id?: string;",
-		"  group_id?: number;",
 		"    request: requestBody<ownReader>(),",
-		"    request: requestBody<legacyBody>(),",
 	} {
 		assert.Contains(t, source, line)
 	}
-	assert.NotContains(t, source, "legacyBodySchema", "a request has no decoder")
-
-	// The same entry on a response still leaves the decoder as a string.
-	response := get("/api/legacy/", legacyBody{})
-	doc, err = Build([]Registration{response}, Options{Identifiers: identifiers, NumericIDs: []string{"contract.legacyBody.Group"}})
-	require.NoError(t, err)
-	files, err = TypeScript(doc)
-	require.NoError(t, err)
-	assert.Contains(t, files["legacy.generated.ts"], "  group_id: string;")
+	assert.NotContains(t, source, "ownReaderSchema", "a request has no decoder")
 }
 
 func TestTypeScriptWritesTypesBeforeTheirUse(t *testing.T) {
@@ -430,7 +426,6 @@ func TestTypeScriptWritesTypesBeforeTheirUse(t *testing.T) {
 		"  tags: string[] | null;",
 		"  mode: OpenEnum<mode>;",
 		"  /** @deprecated leaves the contract with the next release */\n  nick?: string;",
-		"  legacy_id: int64StringOrNumber,",
 		"  friend_ids: optional(arr(int64String)),",
 		"  day: nullable(calendarDate),",
 		"  hint: optional(str),",
@@ -503,7 +498,10 @@ func TestTypeScriptWritesTheProxyTraitsOfARoute(t *testing.T) {
 	once.NoRetryAfterRenewal = "a renewed session would mail the code twice"
 	once.MaxBodyBytes = 64 * 1024
 	plain := get("/api/rows/{id}", inner{})
-	doc, err := Build([]Registration{once, plain}, Options{Identifiers: identifiers})
+	preview := post(body{})
+	preview.Pattern = "/api/rows/preview"
+	preview.NoCommit = "a preview saves nothing"
+	doc, err := Build([]Registration{once, plain, preview}, Options{Identifiers: identifiers})
 	require.NoError(t, err)
 	encoded, err := json.Marshal(doc.Routes)
 	require.NoError(t, err)
@@ -515,6 +513,9 @@ func TestTypeScriptWritesTheProxyTraitsOfARoute(t *testing.T) {
 	assert.Contains(t, source, "    pattern: \"/api/rows/\",\n    portals: [\"tenant\"],\n    noRetryAfterRenewal: \"a renewed session would mail the code twice\",\n    maxBodyBytes: 65536,\n")
 	assert.Equal(t, 1, strings.Count(source, "noRetryAfterRenewal"))
 	assert.Equal(t, 1, strings.Count(source, "maxBodyBytes"))
+	assert.Contains(t, string(encoded), `"no_commit":"a preview saves nothing"`)
+	assert.Contains(t, source, "    pattern: \"/api/rows/preview\",\n    portals: [\"tenant\"],\n    noCommit: \"a preview saves nothing\",\n")
+	assert.Equal(t, 1, strings.Count(source, "noCommit"))
 }
 
 func fileRoute(pattern string) Registration {
@@ -636,7 +637,7 @@ type stored struct {
 // presence tells an absent key from null, as the template writes do.
 type presence struct {
 	Set   bool
-	Value *int64
+	Value *wireID
 }
 
 func (p *presence) UnmarshalJSON(data []byte) error {
@@ -652,7 +653,6 @@ func TestARawValueAndAValueReaderTravelAsWhatTheyHold(t *testing.T) {
 	t.Parallel()
 	options := Options{
 		Identifiers: identifiers,
-		NumericIDs:  []string{"contract.presence.Value"},
 		Readers:     map[reflect.Type]string{reflect.TypeFor[presence](): ReadsValue},
 	}
 	doc, err := Build([]Registration{get("/api/stored/", stored{}), post(presenceBody{})}, options)
@@ -662,15 +662,15 @@ func TestARawValueAndAValueReaderTravelAsWhatTheyHold(t *testing.T) {
 	assert.Equal(t, Schema{Kind: KindJSON, Nullable: true}, fields["old"].Schema, "omitempty leaves an empty value out; a stored null still travels")
 	assert.Equal(t, Schema{Kind: KindJSON, Nullable: true}, fields["any"].Schema, "an empty interface holds any JSON")
 	assert.True(t, fields["old"].Optional)
-	assert.Equal(t, Schema{Kind: KindLegacyID, Nullable: true}, fieldsOf(t, doc, "presenceBody")["track_id"].Schema, "the wrapper reads its Value")
+	assert.Equal(t, Schema{Kind: KindID, Nullable: true}, fieldsOf(t, doc, "presenceBody")["track_id"].Schema, "the wrapper reads its Value")
 
 	files, err := TypeScript(doc)
 	require.NoError(t, err)
 	assert.Contains(t, files["stored.generated.ts"], "  raw: unknown | null;")
 	assert.Contains(t, files["stored.generated.ts"], "raw: nullable(json),")
-	assert.Contains(t, files["rows.generated.ts"], "  track_id?: number | null;")
+	assert.Contains(t, files["rows.generated.ts"], "  track_id?: string | null;")
 
-	_, err = Build([]Registration{post(presenceBody{})}, Options{Identifiers: identifiers, NumericIDs: options.NumericIDs})
+	_, err = Build([]Registration{post(presenceBody{})}, Options{Identifiers: identifiers})
 	require.ErrorContains(t, err, "has its own UnmarshalJSON", "without an entry the wrapper stops the generator")
 }
 

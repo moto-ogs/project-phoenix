@@ -10,6 +10,7 @@
 import type { MailOutcomeCounts } from "./email-delivery-status";
 import type { MessageAttachment } from "~/lib/message-attachments";
 import { ApiError, apiErrorFromText, transportFetch } from "~/lib/api-error";
+import type { ApiResponse } from "./api-envelope";
 
 export type GroupTargetType = "group" | "class" | "activity_group";
 
@@ -76,10 +77,6 @@ export interface GroupTarget {
   type: GroupTargetType;
   id: string;
   label: string;
-}
-
-interface ApiResponse<T> {
-  data?: T;
 }
 
 async function request<T>(

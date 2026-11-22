@@ -11,6 +11,12 @@ import { staffWithoutTargetHref } from "~/lib/time-account-links";
  */
 export interface SetupTourStop {
   target: string;
+  /**
+   * Unter `sm` ersetzt dieser Selektor `target`. Ein Menü im
+   * `ResponsivePanel` liegt dort im Blatt über der Sprechblase; die Tour
+   * zeigt deshalb auf seinen weiter sichtbaren Auslöser.
+   */
+  mobileTarget?: string;
   title: string;
   text: string;
   advance: "click" | "next";
@@ -376,6 +382,7 @@ export const SETUP_TOURS: Readonly<
       },
       {
         target: '[role="menu"]',
+        mobileTarget: GUARDIAN_MENU,
         pathPattern: CHILD_RECORD,
         title: "Einladen",
         text: "Wähle „Einladen“. Die Person bekommt eine E-Mail mit einem Link zur Eltern-App.",

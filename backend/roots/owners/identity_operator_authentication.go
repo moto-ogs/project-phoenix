@@ -101,7 +101,7 @@ func (d tenancyDirectory) ListSchools(ctx context.Context, ids []int64) ([]ident
 	result := make([]identityaccess.School, 0, len(schools))
 	for _, school := range schools {
 		result = append(result, identityaccess.School{
-			ID: school.ID, OrganizationID: school.OrganizationID, Name: school.Name, Slug: school.Slug,
+			ID: school.ID.Int64(), OrganizationID: school.OrganizationID.Int64(), Name: school.Name, Slug: school.Slug,
 			Active: school.Active, Deleted: school.IsDeleted(),
 		})
 	}
@@ -115,7 +115,7 @@ func (d tenancyDirectory) ListOrganizationNames(ctx context.Context, ids []int64
 	}
 	result := make([]identityPorts.OrganizationName, 0, len(organizations))
 	for _, organization := range organizations {
-		result = append(result, identityPorts.OrganizationName{ID: organization.ID, Name: organization.Name})
+		result = append(result, identityPorts.OrganizationName{ID: organization.ID.Int64(), Name: organization.Name})
 	}
 	return result, nil
 }
@@ -153,10 +153,10 @@ func (p schoolIdentityProvisioner) ListAccountPersons(ctx context.Context, accou
 			continue
 		}
 		identity := identityPorts.AccountPersonIdentity{
-			ID: person.ID, TenantID: person.TenantID, FirstName: person.FirstName, LastName: person.LastName, Deleted: !peopledirectory.PersonIsLive(person.DeletedAt),
+			ID: person.ID.Int64(), TenantID: person.TenantID.Int64(), FirstName: person.FirstName, LastName: person.LastName, Deleted: !peopledirectory.PersonIsLive(person.DeletedAt),
 		}
 		if !identity.Deleted {
-			isStudent, err := p.personIsStudent(ctx, person.ID)
+			isStudent, err := p.personIsStudent(ctx, person.ID.Int64())
 			if err != nil {
 				return nil, err
 			}

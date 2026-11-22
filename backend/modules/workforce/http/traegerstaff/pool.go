@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Vertretungspool (#4709, ADR 0089 section 9). The school reads and
@@ -75,10 +76,10 @@ func (rs *SchoolPoolResource) week(w http.ResponseWriter, r *http.Request) {
 
 // blockRequest blocks a Springer on one day from start to end.
 type blockRequest struct {
-	RecordID  int64  `json:"staff_record_id,string"`
-	Date      string `json:"date"`
-	StartTime string `json:"start_time"`
-	EndTime   string `json:"end_time"`
+	RecordID  ident.ID `json:"staff_record_id"`
+	Date      string   `json:"date"`
+	StartTime string   `json:"start_time"`
+	EndTime   string   `json:"end_time"`
 }
 
 func (req *blockRequest) Bind(*http.Request) error {
@@ -110,7 +111,7 @@ func (rs *SchoolPoolResource) block(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	block, err := rs.pool.BlockSpringer(r.Context(), actor, workforce.PoolBlockInput{
-		RecordID: req.RecordID, Date: calendar.Date(req.Date), StartTime: req.StartTime, EndTime: req.EndTime,
+		RecordID: req.RecordID.Int64(), Date: calendar.Date(req.Date), StartTime: req.StartTime, EndTime: req.EndTime,
 	})
 	if err != nil {
 		common.RenderError(w, r, poolErrors(err))

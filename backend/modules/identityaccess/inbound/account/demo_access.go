@@ -130,7 +130,7 @@ func (rs *DemoResource) requestAccess(w http.ResponseWriter, r *http.Request) {
 	// the address belongs to, and one answer for every address tells nothing
 	// about who asked for a demo before.
 	render.Status(r, http.StatusAccepted)
-	render.JSON(w, r, map[string]bool{"link_sent": true})
+	common.RenderJSON(w, r, map[string]bool{"link_sent": true})
 }
 
 func (rs *DemoResource) accessStatus(w http.ResponseWriter, r *http.Request) {
@@ -147,7 +147,7 @@ func (rs *DemoResource) accessStatus(w http.ResponseWriter, r *http.Request) {
 		// Only now the school's subdomain resolves.
 		response["school_url"] = strings.TrimRight(rs.origins.School(progress.SchoolSlug), "/")
 	}
-	render.JSON(w, r, response)
+	common.RenderJSON(w, r, response)
 }
 
 // demoSessionResponse is the token pair plus what the demo banner shows and
@@ -186,7 +186,7 @@ func (rs *DemoResource) createSession(w http.ResponseWriter, r *http.Request) {
 		rs.renderError(w, r, err)
 		return
 	}
-	render.JSON(w, r, demoSessionResponse{
+	common.RenderJSON(w, r, demoSessionResponse{
 		TokenResponse: portalauth.TokenResponse{AccessToken: entry.AccessToken, RefreshToken: entry.RefreshToken},
 		Demo:          demoSessionFacts{AccessID: strconv.FormatInt(entry.AccessID, 10), Role: entry.Role, Source: entry.Source, FixedRole: entry.FixedRole, Traeger: entry.Traeger},
 	})
@@ -209,7 +209,7 @@ func (rs *DemoResource) resetAccess(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	render.Status(r, http.StatusAccepted)
-	render.JSON(w, r, map[string]string{
+	common.RenderJSON(w, r, map[string]string{
 		"status":    identityaccess.DemoSchoolPreparing,
 		"entry_url": rs.origins.Waiting + "/demo#token=" + body.Token,
 	})

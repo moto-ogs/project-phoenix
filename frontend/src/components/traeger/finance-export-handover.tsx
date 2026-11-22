@@ -107,6 +107,8 @@ export function recipientOfFormat(
 
 /** What the export page shows itself for a DATEV handover, as for the download. */
 export interface DatevHandoverNotices {
+  /** A handover starts: the notices of the last attempt end. */
+  readonly onAttempt: () => void;
   /** No new bookings, or another file took them first. */
   readonly onNothingNew: (run: HandoverRun, taken: boolean) => void;
   /** Invoices whose bookings DATEV would refuse, each with its problems. */
@@ -145,6 +147,7 @@ export function useFinanceHandover(
     async (attempt: HandoverAttempt) => {
       setRunning(attemptKey(attempt));
       setNotice(null);
+      datev?.onAttempt();
       let arrived: HandoverResult | null = null;
       try {
         const result = await handOverRunFile(
@@ -261,7 +264,11 @@ export function useFinanceHandover(
   };
 }
 
-/** The result of the last handover that did not simply arrive. */
+/**
+ * The result of the last handover that did not simply arrive. A file that
+ * was not made or did not arrive is an error without an X (#7704): it ends
+ * with the next handover. An unclear result keeps its X.
+ */
 function HandoverNoticeAlert({
   notice,
   onRetry,
@@ -278,7 +285,6 @@ function HandoverNoticeAlert({
         type="warning"
         title={`Für die ${HANDOVER_FORMAT_LABELS[notice.attempt.format]} fehlt der Empfänger`}
         message={`${label} wurde nicht erstellt. Ordne der Datei zuerst einen bereiten Empfänger zu.`}
-        onDismiss={onDismiss}
         action={
           <ButtonLink
             href={traegerPath(EXPORT_RECIPIENT_PATH)}
@@ -310,7 +316,6 @@ function HandoverNoticeAlert({
       type="warning"
       title={`${label} ist${at} nicht angekommen`}
       message={`${handoverReasonText(notice.result.reason)} Die Datei ${notice.result.fileName} steht trotzdem im Exportprotokoll.`}
-      onDismiss={onDismiss}
       actionLayout="responsive"
       action={
         <span className="flex flex-wrap gap-2">

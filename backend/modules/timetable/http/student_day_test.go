@@ -20,6 +20,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -152,7 +153,7 @@ func TestGetStudentDay_HappyPath_WithScheduleAndEnrolledInstance(t *testing.T) {
 	var got StudentDayResponse
 	decodeEnvelope(t, w, &got)
 
-	assert.Equal(t, s.studentID, got.StudentID)
+	assert.Equal(t, ident.ID(s.studentID), got.StudentID)
 	assert.Equal(t, "2026-04-22", got.Date)
 	assert.Equal(t, 3, got.Weekday)
 
@@ -170,7 +171,7 @@ func TestGetStudentDay_HappyPath_WithScheduleAndEnrolledInstance(t *testing.T) {
 	// instances list: one enrolled, no is_unplanned.
 	require.Len(t, got.Instances, 1)
 	i := got.Instances[0]
-	assert.Equal(t, inst.ID, i.ID)
+	assert.Equal(t, ident.ID(inst.ID), i.ID)
 	assert.Equal(t, "Lernzeit-3a", i.Title)
 	assert.Equal(t, "14:00", i.StartTime)
 	assert.Equal(t, "15:00", i.EndTime)
@@ -286,7 +287,7 @@ func TestGetStudentDay_EnrolledPlusVisit_NoDuplicate(t *testing.T) {
 	require.Len(t, got.Instances, 1,
 		"enrolled student with a matching visit must appear exactly once, not duplicated")
 	entry := got.Instances[0]
-	assert.Equal(t, inst.ID, entry.ID)
+	assert.Equal(t, ident.ID(inst.ID), entry.ID)
 	assert.False(t, entry.Attendance.IsUnplanned,
 		"enrolled row must win over the visit-side path (is_unplanned=false)")
 	assert.Equal(t, timetable.SlotAttendancePresent, entry.Attendance.Status)
@@ -328,7 +329,7 @@ func TestGetStudentDay_UnplannedStudent(t *testing.T) {
 
 	require.Len(t, got.Instances, 1, "must surface the walk-in as an instance")
 	entry := got.Instances[0]
-	assert.Equal(t, inst.ID, entry.ID)
+	assert.Equal(t, ident.ID(inst.ID), entry.ID)
 	assert.True(t, entry.Attendance.IsUnplanned, "must flag is_unplanned")
 	assert.Equal(t, timetable.SlotAttendancePresent, entry.Attendance.Status)
 	assert.Nil(t, entry.Attendance.Substatus)
@@ -429,7 +430,7 @@ func TestGetStudentWeek_HappyPath_ReturnsEntryPerDay(t *testing.T) {
 	assert.Equal(t, "2026-04-24", got.To)
 	require.Len(t, got.Days, 5, "must return one entry per day in the range (inclusive)")
 	for i, d := range got.Days {
-		assert.Equal(t, s.studentID, d.StudentID)
+		assert.Equal(t, ident.ID(s.studentID), d.StudentID)
 		// Days in ascending order.
 		if i > 0 {
 			assert.True(t, d.Date > got.Days[i-1].Date, "days must be ascending")

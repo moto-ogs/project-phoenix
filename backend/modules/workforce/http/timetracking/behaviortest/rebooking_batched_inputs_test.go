@@ -41,7 +41,7 @@ func TestRebookBatchedTargetsPreserveVersionsOrderAndHalfDayRounding(t *testing.
 		require.Len(t, result.Data.Allowances, 1)
 		require.Equal(t, 1.5, result.Data.Allowances[0].BookingDays)
 		for i, absence := range result.Data.Absences {
-			require.Equal(t, f.Absences[len(f.Absences)-1-i], absence.ID)
+			require.Equal(t, f.Absences[len(f.Absences)-1-i], int64(absence.ID))
 		}
 		if dryRun {
 			require.Equal(t, before, f.AugustBalance(t))
@@ -58,7 +58,7 @@ func TestRebookingCandidateBatchKeepsStaffAndTenantBoundaries(t *testing.T) {
 	rows, err := capability.ListStaffAbsences(ctx, workforce.StaffAbsenceFilter{StaffID: f.SubjectID, IDs: []int64{f.Absences[2], f.Absences[0]}})
 	require.NoError(t, err)
 	require.Len(t, rows, 2)
-	require.ElementsMatch(t, []int64{f.Absences[0], f.Absences[2]}, []int64{rows[0].ID, rows[1].ID})
+	require.ElementsMatch(t, []int64{f.Absences[0], f.Absences[2]}, []int64{rows[0].ID.Int64(), rows[1].ID.Int64()})
 	rows, err = capability.ListStaffAbsences(ctx, workforce.StaffAbsenceFilter{IDs: []int64{}})
 	require.NoError(t, err)
 	require.Empty(t, rows)

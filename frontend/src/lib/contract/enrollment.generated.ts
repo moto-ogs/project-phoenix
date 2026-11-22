@@ -6,7 +6,7 @@ import {
   calendarDate,
   fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   json,
   multipart,
   noData,
@@ -278,7 +278,7 @@ export const AdminRequestChildSchema: z.ZodType<AdminRequestChild, unknown> = ob
   status: str,
   status_reason: optional(str),
   reviewed_at: optional(instant),
-  reviewed_by: optional(int64StringOrNumber),
+  reviewed_by: optional(int64String),
   activation_mode: str,
   created_student_id: optional(str),
   matched_student_id: optional(str),
@@ -364,7 +364,7 @@ export interface ChangeRequestMessageResponse {
 export const ChangeRequestMessageResponseSchema: z.ZodType<ChangeRequestMessageResponse, unknown> = object<ChangeRequestMessageResponse>({
   id: str,
   author_type: str,
-  author_account_id: optional(int64StringOrNumber),
+  author_account_id: optional(int64String),
   body: str,
   internal_only: bool,
   created_at: instant,
@@ -482,7 +482,7 @@ export const ChangeRequestResponseSchema: z.ZodType<ChangeRequestResponse, unkno
   created_at: instant,
   updated_at: instant,
   reviewed_at: optional(instant),
-  reviewed_by_account_id: optional(int64StringOrNumber),
+  reviewed_by_account_id: optional(int64String),
   request: optional(AdminRequestSummarySchema),
   messages: optional(arr(ChangeRequestMessageResponseSchema)),
   roster_impacts: optional(arr(enrollmentChildRosterImpactResponseSchema)),
@@ -1170,8 +1170,8 @@ export interface ReviewItemResponse {
 }
 
 export const ReviewItemResponseSchema: z.ZodType<ReviewItemResponse, unknown> = object<ReviewItemResponse>({
-  child_id: int64StringOrNumber,
-  request_id: int64StringOrNumber,
+  child_id: int64String,
+  request_id: int64String,
   first_name: str,
   last_name: str,
   target_grade_level: optional(safeInt),
@@ -1583,8 +1583,8 @@ export interface CareOfferingAvailabilityRuleRequest {
 
 /** Go: enrollmenthttp.CareOfferingRequest */
 export interface CareOfferingRequest {
-  phase_id?: number;
-  activity_group_id?: number | null;
+  phase_id?: string;
+  activity_group_id?: string | null;
   name?: string;
   description?: string | null;
   days_of_week_mode?: string;
@@ -1608,7 +1608,7 @@ export interface CareOfferingRequest {
 
 /** Go: enrollmenthttp.CloneCareOfferingRequest */
 export interface CloneCareOfferingRequest {
-  target_phase_id?: number;
+  target_phase_id?: string;
 }
 
 /** Go: enrollmenthttp.enrollmentLegalDocumentResponse */
@@ -1684,14 +1684,14 @@ export const AdminCreateLateInviteResponseSchema: z.ZodType<AdminCreateLateInvit
 
 /** Go: enrollmenthttp.AdminManualApprovedEnrollmentRequest */
 export interface AdminManualApprovedEnrollmentRequest {
-  phase_id?: number;
+  phase_id?: string;
   guardian_first_name?: string;
   guardian_last_name?: string;
   guardian_email?: string;
   guardian_phone?: string | null;
   additional_guardians?: SubmitGuardianRequest[] | null;
   consent_flags?: Record<string, unknown | null> | null;
-  form_schema_id?: number;
+  form_schema_id?: string;
   custom_data?: Record<string, unknown | null> | null;
   children?: SubmitChildRequest[] | null;
   captcha_token?: string;
@@ -1730,7 +1730,7 @@ export interface RolloverCreateRequest {
   service_end_date?: string;
   enrollment_open_at?: string | null;
   enrollment_close_at?: string | null;
-  form_schema_id?: number | null;
+  form_schema_id?: string | null;
   rollover_mode?: string;
   rollover_auto_approve?: boolean;
   rollover_deadline?: string;
@@ -1771,14 +1771,14 @@ export const RolloverCreateResponseSchema: z.ZodType<RolloverCreateResponse, unk
 
 /** Go: enrollmenthttp.CreateChangeRequestRequest */
 export interface CreateChangeRequestRequest {
-  phase_id?: number;
+  phase_id?: string;
   guardian_first_name?: string;
   guardian_last_name?: string;
   guardian_email?: string;
   guardian_phone?: string | null;
   additional_guardians?: SubmitGuardianRequest[] | null;
   consent_flags?: Record<string, unknown | null> | null;
-  form_schema_id?: number;
+  form_schema_id?: string;
   custom_data?: Record<string, unknown | null> | null;
   children?: SubmitChildRequest[] | null;
   captcha_token?: string;
@@ -1871,7 +1871,7 @@ export const AdminChildOfferingsResponseSchema: z.ZodType<AdminChildOfferingsRes
   status: str,
   status_reason: optional(str),
   reviewed_at: optional(instant),
-  reviewed_by: optional(int64StringOrNumber),
+  reviewed_by: optional(int64String),
   activation_mode: str,
   created_student_id: optional(str),
   matched_student_id: optional(str),
@@ -2335,13 +2335,6 @@ export const routes = {
     pattern: "/api/enrollment/schema/versions",
     portals: ["tenant"],
     response: success(z.array(FormSchemaResponseSchema)),
-  },
-  "GET /api/enrollment/schema/{id}": {
-    method: "GET",
-    pattern: "/api/enrollment/schema/{id}",
-    portals: ["tenant"],
-    deprecated: true,
-    response: success(FormSchemaResponseSchema),
   },
   "PATCH /api/enrollment/requests/{statusToken}": {
     method: "PATCH",

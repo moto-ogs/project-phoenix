@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The signature of a care contract (#4679, ADR 0088 section 3): the parents
@@ -108,8 +109,8 @@ type Reminder struct {
 // signature. The link opens without an account, so the view carries only
 // what the signing page shows; the terms stand in the PDF.
 type SigningView struct {
-	ContractID       int64             `json:"contract_id"`
-	OrganizationID   int64             `json:"organization_id"`
+	ContractID       ident.ID          `json:"contract_id"`
+	OrganizationID   ident.ID          `json:"organization_id"`
 	Status           string            `json:"status"`
 	TraegerName      string            `json:"traeger_name"`
 	PartyName        string            `json:"party_name"`

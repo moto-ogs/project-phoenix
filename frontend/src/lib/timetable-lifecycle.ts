@@ -70,7 +70,7 @@ export function completeAvailableClock(
  */
 export function canReinstateInstance(
   instance: {
-    status: string;
+    status: string | undefined;
     date: string;
     startTime: string;
     endTime: string;

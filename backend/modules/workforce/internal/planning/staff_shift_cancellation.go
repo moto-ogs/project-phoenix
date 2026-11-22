@@ -3,6 +3,7 @@ package planning
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
@@ -78,11 +79,7 @@ func (s *staffShiftService) ApplyCancellation(ctx context.Context, input CancelS
 	if existing.OriginShiftID != nil {
 		return nil, fmt.Errorf("%w: a replacement shift cannot be cancelled", ErrShiftInvalid)
 	}
-	lockedStaffIDs, err := s.lockCancellationStaff(ctx, existing, input.Replacements)
-	if err != nil {
-		return nil, err
-	}
-	existing, err = s.reloadLockedCancellationOrigin(ctx, input.ShiftID, existing.StaffID)
+	existing, lockedStaffIDs, err := s.lockCancellation(ctx, existing, input)
 	if err != nil {
 		return nil, err
 	}
@@ -121,6 +118,25 @@ func (s *staffShiftService) ApplyCancellation(ctx context.Context, input CancelS
 	)
 	s.broadcastTimeTrackingChanged(ctx)
 	return result, nil
+}
+
+// lockCancellation takes the cancellation's locks before its first write:
+// the staff-shift gates of everybody it touches, then — under them — the
+// re-read origin and the staff rows of everybody it writes (#7683). It
+// returns the locked origin and the gated staff IDs.
+func (s *staffShiftService) lockCancellation(ctx context.Context, existing *workforce.ShiftRecord, input CancelShiftInput) (*workforce.ShiftRecord, map[int64]bool, error) {
+	lockedStaffIDs, err := s.lockCancellationStaff(ctx, existing, input.Replacements)
+	if err != nil {
+		return nil, nil, err
+	}
+	origin, err := s.reloadLockedCancellationOrigin(ctx, input.ShiftID, existing.StaffID)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := s.lockCancellationStaffRows(ctx, origin, input.Replacements); err != nil {
+		return nil, nil, err
+	}
+	return origin, lockedStaffIDs, nil
 }
 
 // lockCancellationStaff takes the advisory lock set of a cancellation and
@@ -167,6 +183,49 @@ func (s *staffShiftService) lockCancellationStaff(ctx context.Context, existing 
 		}
 	}
 	return lockedStaffIDs, nil
+}
+
+// WithStaffShiftStaffRowLocks binds the batch lock on the School Membership
+// staff rows (ascending, in the caller's transaction) a cancellation takes
+// before its first write (#7683). Unit tests without a database bind none.
+func WithStaffShiftStaffRowLocks(lock func(ctx context.Context, staffIDs []int64) error) StaffShiftOption {
+	return func(s *staffShiftService) {
+		s.lockStaffRows = lock
+	}
+}
+
+// lockCancellationStaffRows takes the School Membership staff rows of
+// everybody this cancellation writes, ascending in one batch, before its
+// first write.
+//
+// Each write of an upcoming shift locks its own person's staff row: the
+// origin's update first, then every cover's create in request order. Staff
+// rows are taken ascending across the whole transaction (#6702), so a cover
+// whose staff ID is below the origin's, or covers listed in descending order,
+// were refused with tenant.ErrLockOrder (#7683). Locking the origin's staff
+// and every cover's staff here first turns those later row locks into
+// re-acquisitions. Like the writes, a past shift locks no staff row. The
+// cover staff is validated first, so an unknown person stays the invalid
+// input the cover's create reports.
+func (s *staffShiftService) lockCancellationStaffRows(ctx context.Context, origin *workforce.ShiftRecord, replacements []ShiftReplacementInput) error {
+	if s.lockStaffRows == nil || origin.Date.Before(s.today()) {
+		return nil
+	}
+	staffIDs := []int64{origin.StaffID}
+	for _, r := range replacements {
+		if slices.Contains(staffIDs, r.StaffID) {
+			continue
+		}
+		staff, err := s.staffRepo.FindByID(ctx, r.StaffID)
+		if err := validateShiftStaff(staff, err); err != nil {
+			return err
+		}
+		staffIDs = append(staffIDs, r.StaffID)
+	}
+	if err := s.lockStaffRows(ctx, staffIDs); err != nil {
+		return fmt.Errorf("lock staff rows of the cancellation: %w", err)
+	}
+	return nil
 }
 
 // reloadLockedCancellationOrigin re-reads the origin after the lock is held.

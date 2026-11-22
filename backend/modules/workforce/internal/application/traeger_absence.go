@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Abwesenheitsarten of a Träger (#4710, ADR 0089 section 10 with its
@@ -116,7 +117,7 @@ func (t *TraegerStaff) refuseRenameOfBookedType(ctx context.Context, organizatio
 		return err
 	}
 	for _, school := range schools {
-		err := t.ports.Runtime.WithinSchool(ctx, school.ID, func(ctx context.Context) error {
+		err := t.ports.Runtime.WithinSchool(ctx, school.ID.Int64(), func(ctx context.Context) error {
 			row, found, err := t.carriedRow(ctx, id)
 			if err != nil || !found {
 				return err
@@ -158,12 +159,12 @@ func (t *TraegerStaff) carryAbsenceType(ctx context.Context, actor workforce.Tra
 	for _, school := range schools {
 		// A school that fails keeps its previous state and shows as not
 		// carried; the next change of the type tries it again.
-		err := t.ports.Runtime.WithinSchool(ctx, school.ID, func(ctx context.Context) error {
+		err := t.ports.Runtime.WithinSchool(ctx, school.ID.Int64(), func(ctx context.Context) error {
 			if err := t.carryInto(ctx, value); err != nil {
 				return err
 			}
 			rows, err := t.store.SchoolAbsenceTypes(ctx)
-			carried[school.ID] = rows
+			carried[school.ID.Int64()] = rows
 			return err
 		})
 		if err != nil {
@@ -205,9 +206,9 @@ func (t *TraegerStaff) carryInto(ctx context.Context, value domain.TraegerAbsenc
 func (t *TraegerStaff) schoolAbsenceTypes(ctx context.Context, schools []workforce.TraegerStaffSchool) (map[int64][]domain.StaffAbsenceType, error) {
 	result := make(map[int64][]domain.StaffAbsenceType, len(schools))
 	for _, school := range schools {
-		err := t.ports.Runtime.WithinSchool(ctx, school.ID, func(ctx context.Context) error {
+		err := t.ports.Runtime.WithinSchool(ctx, school.ID.Int64(), func(ctx context.Context) error {
 			rows, err := t.store.SchoolAbsenceTypes(ctx)
-			result[school.ID] = rows
+			result[school.ID.Int64()] = rows
 			return err
 		})
 		if err != nil {
@@ -219,13 +220,13 @@ func (t *TraegerStaff) schoolAbsenceTypes(ctx context.Context, schools []workfor
 
 func publicTraegerAbsenceType(value domain.TraegerAbsenceType, schools []workforce.TraegerStaffSchool, carried map[int64][]domain.StaffAbsenceType) workforce.TraegerAbsenceType {
 	result := workforce.TraegerAbsenceType{
-		ID: value.ID, Name: value.Name, AllowanceEnabled: value.AllowanceEnabled, StandardDays: value.StandardDays,
+		ID: ident.ID(value.ID), Name: value.Name, AllowanceEnabled: value.AllowanceEnabled, StandardDays: value.StandardDays,
 		CarryoverUntil: value.CarryoverUntil, Requestable: value.Requestable, IsActive: value.IsActive,
 		Schools: make([]workforce.TraegerAbsenceTypeSchool, 0, len(schools)), CreatedAt: value.CreatedAt,
 	}
 	for _, school := range schools {
 		entry := workforce.TraegerAbsenceTypeSchool{SchoolID: school.ID, SchoolName: school.Name}
-		for _, row := range carried[school.ID] {
+		for _, row := range carried[school.ID.Int64()] {
 			if row.TraegerAbsenceTypeID != nil && *row.TraegerAbsenceTypeID == value.ID {
 				entry.Carried, entry.Offered, entry.SchoolLimitDays = true, row.Offered, row.SchoolLimitDays
 				break

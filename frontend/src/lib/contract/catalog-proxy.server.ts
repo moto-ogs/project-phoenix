@@ -12,13 +12,13 @@ import type { ErrorCode } from "~/lib/error-codes.generated";
 import { fileResponse } from "~/lib/file-response.server";
 import type { makePortalHandlers } from "~/lib/portal-handlers.server";
 import { applyPrivateNoStore } from "~/lib/private-no-store";
+import type { ApiResponse, PaginatedApiResponse } from "~/lib/api-envelope";
 import {
   parseRequestBody,
-  wrapInApiResponse,
   type RouteContext,
 } from "~/lib/route-wrapper-utils.server";
 import { underOutsideHead } from "./catalog-outside-mounts";
-import { decodeContract } from "./client.server";
+import { commits, decodeContract } from "./client.server";
 import { fileAnswer, multipart } from "./runtime";
 
 /** A generated route entry, as `portalRoutes` lists it. */
@@ -35,6 +35,8 @@ export interface CatalogRoute {
   readonly defaultVariant?: string;
   /** Why the request runs only once, also after a session renewal. */
   readonly noRetryAfterRenewal?: string;
+  /** Why a POST commits nothing its caller asked for (a preview, a search). */
+  readonly noCommit?: string;
   /** The largest request body read; a larger one is answered 413. */
   readonly maxBodyBytes?: number;
   /** `multipart` for an upload; a JSON body names no runtime value. */
@@ -355,9 +357,9 @@ export interface PublicCatalog {
  * A path the portal's list does not name is answered 404 before the session
  * is read and before any backend call. The backend path is built from the
  * request's segments, each encoded again, and only the registered query
- * parameters travel. Session, the single 401 renewal and the response
- * envelope are the portal's own handlers; a route's contract can switch the
- * renewal's retry off and bound the body.
+ * parameters travel. Session and the single 401 renewal are the portal's
+ * own handlers; the answer is the backend's envelope with the decoded data.
+ * A route's contract can switch the renewal's retry off and bound the body.
  *
  * `publics` names the routes of the pseudo-portal `public` (#2352). They run
  * on a path of their own that never reads the session and sends no bearer:
@@ -442,25 +444,34 @@ export function makeCatalogProxy(
     return { route: found.route, endpoint: `${endpoint}${search}` };
   }
 
-  function decoded(route: ServedRoute, request: NextRequest, answer: unknown) {
+  /**
+   * The backend's envelope with the decoded data: `status`, `data`, the
+   * page of a paginated list and the backend's message pass on as the
+   * backend wrote them (#2353).
+   */
+  function decoded(
+    route: ServedRoute,
+    request: NextRequest,
+    answer: unknown,
+  ): ApiResponse<unknown> | PaginatedApiResponse<unknown> {
     const result = decodeContract(
       `${route.method} ${route.pattern}`,
       decoderOf(route, request),
       answer,
+      commits(route),
     );
     if (!result.ok) throw result.error.cause;
-    const value = result.value as { data: unknown; pagination?: unknown };
-    // A paginated answer keeps its page beside the data, as the backend
-    // sends it; the envelope then passes through the portal's handler.
-    if (value.pagination !== undefined) {
-      return {
-        success: true,
-        message: "Success",
-        data: value.data,
-        pagination: value.pagination,
-      };
-    }
-    return value.data;
+    const value = result.value as {
+      data: unknown;
+      pagination?: PaginatedApiResponse<unknown>["pagination"];
+    };
+    const message = (answer as { message?: unknown } | undefined)?.message;
+    return {
+      status: "success",
+      data: value.data,
+      ...(value.pagination !== undefined && { pagination: value.pagination }),
+      ...(typeof message === "string" && message !== "" && { message }),
+    };
   }
 
   const read = async (
@@ -472,7 +483,7 @@ export function makeCatalogProxy(
     const answer = await portal.api(method, endpoint, token, undefined, {
       request,
     });
-    return decoded(route, request, answer);
+    return NextResponse.json(decoded(route, request, answer));
   };
 
   /** A DELETE forwards a JSON body, such as a reason, when it carries one. */
@@ -493,8 +504,13 @@ export function makeCatalogProxy(
       { request },
     );
     // A DELETE may answer 204; every other empty answer breaks the contract.
+    // A DELETE without data answers 204 as well, whatever envelope the
+    // backend wrote around nothing.
     if (answer === undefined) return null;
-    return decoded(route, request, answer);
+    const envelope = decoded(route, request, answer);
+    return envelope.data === null && !("pagination" in envelope)
+      ? null
+      : NextResponse.json(envelope);
   };
 
   const write = async (
@@ -508,7 +524,7 @@ export function makeCatalogProxy(
       idempotencyKey: request.headers.get("Idempotency-Key"),
       request,
     });
-    return decoded(route, request, answer);
+    return NextResponse.json(decoded(route, request, answer));
   };
 
   /**
@@ -561,10 +577,9 @@ export function makeCatalogProxy(
     }
     if (counted.exceeded()) throw tooLarge();
     const answer = await readBackendJson<unknown>(response);
-    return NextResponse.json(
-      wrapInApiResponse(decoded(route as ServedRoute, request, answer)),
-      { status: response.status === 204 ? 200 : response.status },
-    );
+    return NextResponse.json(decoded(route as ServedRoute, request, answer), {
+      status: response.status === 204 ? 200 : response.status,
+    });
   }
 
   /**
@@ -701,9 +716,7 @@ export function makeCatalogProxy(
         request,
       }),
     );
-    return NextResponse.json(
-      wrapInApiResponse(decoded(route, request, answer)),
-    );
+    return NextResponse.json(decoded(route, request, answer));
   }
 
   return async (request: NextRequest, context: RouteContext) => {

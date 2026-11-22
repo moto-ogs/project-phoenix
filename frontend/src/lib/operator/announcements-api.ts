@@ -1,10 +1,9 @@
 import { operatorFetch } from "./api-helpers";
+import type * as operatorAnnouncementsContract from "~/lib/contract/operator-announcements.generated";
 import type {
-  BackendAnnouncement,
   Announcement,
   AnnouncementStats,
   AnnouncementViewDetail,
-  BackendAnnouncementViewDetail,
   CreateAnnouncementRequest,
   UpdateAnnouncementRequest,
 } from "./announcements-helpers";
@@ -12,24 +11,26 @@ import { mapAnnouncement, mapViewDetail } from "./announcements-helpers";
 
 class OperatorAnnouncementsService {
   async fetchAll(includeInactive = true): Promise<Announcement[]> {
-    const data = await operatorFetch<BackendAnnouncement[]>(
-      `/api/operator/announcements?include_inactive=${includeInactive}`,
-    );
+    const data = await operatorFetch<
+      operatorAnnouncementsContract.OperatorAnnouncementResponse[]
+    >(`/api/operator/announcements?include_inactive=${includeInactive}`);
     return data.map(mapAnnouncement);
   }
 
   async fetchById(id: string): Promise<Announcement> {
-    const data = await operatorFetch<BackendAnnouncement>(
-      `/api/operator/announcements/${id}`,
-    );
+    const data =
+      await operatorFetch<operatorAnnouncementsContract.OperatorAnnouncementResponse>(
+        `/api/operator/announcements/${id}`,
+      );
     return mapAnnouncement(data);
   }
 
   async create(data: CreateAnnouncementRequest): Promise<Announcement> {
-    const result = await operatorFetch<BackendAnnouncement>(
-      "/api/operator/announcements",
-      { method: "POST", body: data },
-    );
+    const result =
+      await operatorFetch<operatorAnnouncementsContract.OperatorAnnouncementResponse>(
+        "/api/operator/announcements",
+        { method: "POST", body: data },
+      );
     return mapAnnouncement(result);
   }
 
@@ -37,10 +38,11 @@ class OperatorAnnouncementsService {
     id: string,
     data: UpdateAnnouncementRequest,
   ): Promise<Announcement> {
-    const result = await operatorFetch<BackendAnnouncement>(
-      `/api/operator/announcements/${id}`,
-      { method: "PUT", body: data },
-    );
+    const result =
+      await operatorFetch<operatorAnnouncementsContract.OperatorAnnouncementResponse>(
+        `/api/operator/announcements/${id}`,
+        { method: "PUT", body: data },
+      );
     return mapAnnouncement(result);
   }
 
@@ -63,9 +65,9 @@ class OperatorAnnouncementsService {
   }
 
   async fetchViewDetails(id: string): Promise<AnnouncementViewDetail[]> {
-    const data = await operatorFetch<BackendAnnouncementViewDetail[]>(
-      `/api/operator/announcements/${id}/views`,
-    );
+    const data = await operatorFetch<
+      operatorAnnouncementsContract.AnnouncementViewDetailResponse[]
+    >(`/api/operator/announcements/${id}/views`);
     return data.map(mapViewDetail);
   }
 }

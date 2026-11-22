@@ -112,7 +112,7 @@ type catalogField struct {
 type catalogPreviewBody struct {
 	Fingerprint string `json:"fingerprint"`
 	Schools     []struct {
-		SchoolID  int64  `json:"school_id"`
+		SchoolID  wireID `json:"school_id"`
 		Action    string `json:"action"`
 		Outcome   string `json:"outcome"`
 		ErrorCode string `json:"error_code"`
@@ -125,7 +125,7 @@ type catalogPreviewBody struct {
 
 type catalogResult struct {
 	ErrorCode string `json:"error_code"`
-	SchoolID  int64  `json:"school_id"`
+	SchoolID  wireID `json:"school_id"`
 	Outcome   string `json:"outcome"`
 }
 
@@ -134,14 +134,14 @@ type catalogRolloutBody struct {
 }
 
 type catalogPhaseBody struct {
-	ID      int64 `json:"id"`
+	ID      wireID `json:"id"`
 	Schools []struct {
-		SchoolID       int64  `json:"school_id"`
+		SchoolID       wireID `json:"school_id"`
 		Outcome        string `json:"outcome"`
 		AppliedVersion *int   `json:"applied_version"`
 	} `json:"schools"`
 	Offerings []struct {
-		ID int64 `json:"id"`
+		ID wireID `json:"id"`
 	} `json:"offerings"`
 }
 
@@ -190,7 +190,7 @@ func TestTraegerCatalogRollsOutIntoEverySchoolAndKeepsTheSchoolsChanges(t *testi
 		assert.Equal(t, "create", school.Action)
 	}
 	rollout := catalogRollout(t, router, office.token, phasePath, preview.Fingerprint)
-	assert.Equal(t, []catalogResult{{SchoolID: office.schools[0], Outcome: "applied"}, {SchoolID: office.schools[1], Outcome: "applied"}}, rollout.Schools)
+	assert.Equal(t, []catalogResult{{SchoolID: wireID(office.schools[0]), Outcome: "applied"}, {SchoolID: wireID(office.schools[1]), Outcome: "applied"}}, rollout.Schools)
 
 	// The list and the phase with its offerings, as the catalog page reads them.
 	rec = traegerJSON(t, router, office.token, http.MethodGet, "/traeger/catalog/phases", nil)
@@ -201,7 +201,7 @@ func TestTraegerCatalogRollsOutIntoEverySchoolAndKeepsTheSchoolsChanges(t *testi
 	rec = traegerJSON(t, router, office.token, http.MethodGet, phasePath, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	detail := decodeSchoolPortalData[struct {
-		ID        int64                      `json:"id"`
+		ID        wireID                     `json:"id"`
 		Offerings []careplan.TraegerOffering `json:"offerings"`
 	}](t, rec.Body.Bytes())
 	assert.Equal(t, phase.ID, detail.ID)
@@ -395,7 +395,7 @@ func TestTraegerCatalogChangesSelectionGroupsTogether(t *testing.T) {
 		delete(draft, "contract_template")
 		rec = traegerJSON(t, router, office.token, http.MethodPost, path+"/offerings", draft)
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-		ids = append(ids, decodeSchoolPortalData[careplan.TraegerOffering](t, rec.Body.Bytes()).ID)
+		ids = append(ids, (decodeSchoolPortalData[careplan.TraegerOffering](t, rec.Body.Bytes()).ID).Int64())
 	}
 	preview := catalogPreview(t, router, office.token, path)
 	catalogRollout(t, router, office.token, path, preview.Fingerprint)
@@ -446,7 +446,7 @@ func TestTraegerCatalogStatementCountDoesNotGrowWithOfferings(t *testing.T) {
 			draft["fields"].(map[string]any)["name"] = fmt.Sprintf("Modul %d", index)
 			rec = traegerJSON(t, router, office.token, http.MethodPost, path+"/offerings", draft)
 			require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-			ids = append(ids, decodeSchoolPortalData[careplan.TraegerOffering](t, rec.Body.Bytes()).ID)
+			ids = append(ids, (decodeSchoolPortalData[careplan.TraegerOffering](t, rec.Body.Bytes()).ID).Int64())
 		}
 		counter.Reset()
 		preview := catalogPreview(t, counted, office.token, path)

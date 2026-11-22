@@ -25,6 +25,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // isoWeekday returns 1..7 (Mon..Sun) for the weekday of d.
@@ -125,7 +126,7 @@ func (rs *Resource) getStudentWeek(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := StudentWeekResponse{
-		StudentID: studentID,
+		StudentID: ident.ID(studentID),
 		From:      from.String(),
 		To:        to.String(),
 		Days:      days,
@@ -243,7 +244,7 @@ func buildStudentDayFromPreload(pre *timetable.StudentWeek, studentID int64, dat
 	instances := make([]InstanceDayResponse, 0, len(enrolledRows)+len(dayInstances))
 	for _, row := range enrolledRows {
 		instances = append(instances, mapEnrolledInstance(row))
-		enrolledInstanceIDs[row.Instance.ID] = true
+		enrolledInstanceIDs[row.Instance.ID.Int64()] = true
 	}
 
 	instances = appendUnplannedInstances(instances, pre, dayInstances, enrolledInstanceIDs)
@@ -253,7 +254,7 @@ func buildStudentDayFromPreload(pre *timetable.StudentWeek, studentID int64, dat
 	})
 
 	return StudentDayResponse{
-		StudentID: studentID,
+		StudentID: ident.ID(studentID),
 		Date:      date.String(),
 		Weekday:   isoWeekday(date),
 		Arrival:   resolveArrivalSlotFromPreload(pre, date, planWeekday),
@@ -273,14 +274,14 @@ func appendUnplannedInstances(
 	enrolledInstanceIDs map[int64]bool,
 ) []InstanceDayResponse {
 	for _, inst := range dayInstances {
-		if inst.ActiveGroupID == nil || enrolledInstanceIDs[inst.ID] {
+		if inst.ActiveGroupID == nil || enrolledInstanceIDs[inst.ID.Int64()] {
 			continue
 		}
 		if inst.Status != timetable.InstanceStatusActive &&
 			inst.Status != timetable.InstanceStatusCompleted {
 			continue
 		}
-		if visits := pre.VisitsByActiveGroup[*inst.ActiveGroupID]; len(visits) > 0 {
+		if visits := pre.VisitsByActiveGroup[(*inst.ActiveGroupID).Int64()]; len(visits) > 0 {
 			instances = append(instances, mapUnplannedInstance(inst, visits[0]))
 		}
 	}

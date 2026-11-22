@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // dispatchContactList creates one additional guardian profile (or reuses an
@@ -310,6 +311,9 @@ func sliceFromAny(v any) []any {
 }
 
 func int64FromAny(v any) int64 {
+	if typed, ok := v.(ident.ID); ok {
+		v = typed.Int64()
+	}
 	switch typed := v.(type) {
 	case int64:
 		return typed

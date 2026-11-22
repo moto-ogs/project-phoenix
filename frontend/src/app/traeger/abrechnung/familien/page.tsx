@@ -70,6 +70,7 @@ import {
 } from "~/lib/traeger-billing-families-api";
 import { downloadTraegerList } from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
+import { labelOf } from "~/lib/label-of";
 
 type OpenFilter = "" | "offen" | "ausgeglichen";
 
@@ -355,7 +356,7 @@ function familyColumns(
                   <StatusBadge
                     key={`${payment.kind}-${payment.costBearerName}`}
                     label={paymentLabel(payment)}
-                    tone={PAYMENT_TONES[payment.kind]}
+                    tone={labelOf(PAYMENT_TONES, payment.kind, "gray")}
                     truncate
                   />
                 ))}

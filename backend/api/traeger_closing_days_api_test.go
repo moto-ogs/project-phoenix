@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,18 +15,43 @@ import (
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
 
+type traegerClosingDaySignals struct {
+	mu    sync.Mutex
+	calls []traegerClosingDaySignal
+}
+
+type traegerClosingDaySignal struct {
+	tenantID int64
+	source   string
+}
+
+func (s *traegerClosingDaySignals) AnnounceStaffingChanged(tenantID int64, source string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.calls = append(s.calls, traegerClosingDaySignal{tenantID: tenantID, source: source})
+	return nil
+}
+
+func (s *traegerClosingDaySignals) take() []traegerClosingDaySignal {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	calls := s.calls
+	s.calls = nil
+	return calls
+}
+
 type traegerClosingDayBody struct {
-	ID        int64   `json:"id"`
-	StartDate string  `json:"start_date"`
-	EndDate   string  `json:"end_date"`
-	Reason    string  `json:"reason"`
-	SchoolIDs []int64 `json:"school_ids"`
+	ID        wireID   `json:"id"`
+	StartDate string   `json:"start_date"`
+	EndDate   string   `json:"end_date"`
+	Reason    string   `json:"reason"`
+	SchoolIDs []wireID `json:"school_ids"`
 }
 
 type traegerCalendarBody struct {
 	ClosingDays []traegerClosingDayBody `json:"closing_days"`
 	Schools     []struct {
-		ID           int64 `json:"id"`
+		ID           wireID `json:"id"`
 		FederalState struct {
 			Code string `json:"code"`
 			Name string `json:"name"`
@@ -63,7 +89,7 @@ func TestTraegerPlansClosingDaysAndSeesEachSchoolsFederalState(t *testing.T) {
 	office := newTraegerOffice(t, db, router, "Träger Schließtage", identityaccess.TraegerRoleAdministration)
 
 	rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/closing-days/", traegerClosingDayBody{
-		StartDate: "2027-05-07", EndDate: "2027-05-07", Reason: "  Brückentag ", SchoolIDs: []int64{office.schools[0]},
+		StartDate: "2027-05-07", EndDate: "2027-05-07", Reason: "  Brückentag ", SchoolIDs: []wireID{wireID(office.schools[0])},
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	created := decodeSchoolPortalData[traegerClosingDayBody](t, rec.Body.Bytes())
@@ -71,7 +97,7 @@ func TestTraegerPlansClosingDaysAndSeesEachSchoolsFederalState(t *testing.T) {
 
 	view := traegerCalendarOf(t, router, office)
 	require.Len(t, view.ClosingDays, 1)
-	assert.Equal(t, []int64{office.schools[0]}, view.ClosingDays[0].SchoolIDs)
+	assert.Equal(t, []int64{office.schools[0]}, testpkg.IDs(view.ClosingDays[0].SchoolIDs))
 	require.Len(t, view.Schools, 2)
 	for _, school := range view.Schools {
 		assert.Equal(t, "DE-NW", school.FederalState.Code, "the federal state the moto team set, read only")
@@ -83,11 +109,11 @@ func TestTraegerPlansClosingDaysAndSeesEachSchoolsFederalState(t *testing.T) {
 		Name string `json:"name"`
 	}{Date: "2027-05-27", Name: "Fronleichnam"})
 
-	created.SchoolIDs = office.schools
+	created.SchoolIDs = testpkg.IDsOf[wireID](office.schools)
 	created.EndDate = "2027-05-08"
-	rec = traegerJSON(t, router, office.token, http.MethodPut, traegerClosingDayPath(created.ID), created)
+	rec = traegerJSON(t, router, office.token, http.MethodPut, traegerClosingDayPath(int64(created.ID)), created)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.ElementsMatch(t, office.schools, traegerCalendarOf(t, router, office).ClosingDays[0].SchoolIDs)
+	assert.ElementsMatch(t, office.schools, testpkg.IDs(traegerCalendarOf(t, router, office).ClosingDays[0].SchoolIDs))
 
 	// The list as a file, for the window of the page (#4718).
 	exportPath := "/traeger/closing-days/export?from=2027-01-01&to=2027-12-31"
@@ -99,14 +125,50 @@ func TestTraegerPlansClosingDaysAndSeesEachSchoolsFederalState(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rec.Code, "the export needs the window: "+rec.Body.String())
 
 	rec = traegerJSON(t, router, office.token, http.MethodPost, "/traeger/closing-days/", traegerClosingDayBody{
-		StartDate: "2027-05-07", EndDate: "2027-05-06", Reason: "Rückwärts", SchoolIDs: office.schools,
+		StartDate: "2027-05-07", EndDate: "2027-05-06", Reason: "Rückwärts", SchoolIDs: testpkg.IDsOf[wireID](office.schools),
 	})
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	assert.Equal(t, "traeger.closing_day_invalid", refusalOf(t, rec).Code)
 
-	rec = traegerJSON(t, router, office.token, http.MethodDelete, traegerClosingDayPath(created.ID), nil)
+	rec = traegerJSON(t, router, office.token, http.MethodDelete, traegerClosingDayPath(int64(created.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Empty(t, traegerCalendarOf(t, router, office).ClosingDays)
+}
+
+// A Träger write has no school in its request context, but every named school
+// can display the day in "Heute anders". Create and delete wake their named
+// schools; an update also wakes a school removed from the day. The callbacks
+// run only after the Träger transaction commits.
+func TestTraegerClosingDayWritesWakeAffectedSchoolPages(t *testing.T) {
+	t.Parallel()
+	signals := &traegerClosingDaySignals{}
+	db, router := newTraegerPortalWithStaffing(t, signals)
+	office := newTraegerOffice(t, db, router, "Träger Live Schließtage", identityaccess.TraegerRoleAdministration)
+
+	rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/closing-days/", traegerClosingDayBody{
+		StartDate: "2027-05-07", EndDate: "2027-05-07", Reason: "Brückentag", SchoolIDs: []wireID{wireID(office.schools[0])},
+	})
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	created := decodeSchoolPortalData[traegerClosingDayBody](t, rec.Body.Bytes())
+	assert.Equal(t, []traegerClosingDaySignal{{tenantID: office.schools[0], source: "closing_days"}}, signals.take())
+
+	created.SchoolIDs = []wireID{wireID(office.schools[1])}
+	rec = traegerJSON(t, router, office.token, http.MethodPut, traegerClosingDayPath(int64(created.ID)), created)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.ElementsMatch(t, []traegerClosingDaySignal{
+		{tenantID: office.schools[0], source: "closing_days"},
+		{tenantID: office.schools[1], source: "closing_days"},
+	}, signals.take(), "the old and new school both need to refetch")
+
+	rec = traegerJSON(t, router, office.token, http.MethodDelete, traegerClosingDayPath(int64(created.ID)), nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.Equal(t, []traegerClosingDaySignal{{tenantID: office.schools[1], source: "closing_days"}}, signals.take())
+
+	rec = traegerJSON(t, router, office.token, http.MethodPost, "/traeger/closing-days/", traegerClosingDayBody{
+		StartDate: "2027-05-07", EndDate: "2027-05-07", SchoolIDs: []wireID{wireID(office.schools[0])},
+	})
+	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
+	assert.Empty(t, signals.take(), "a rejected write must not wake school pages")
 }
 
 // Planning needs the right "Einstellungen verwalten"; every Träger role reads
@@ -118,7 +180,7 @@ func TestTraegerClosingDaysNeedTheSettingsRightAndStayWithTheirTraeger(t *testin
 	own := newTraegerOffice(t, db, router, "Träger Schließtage Eigen", identityaccess.TraegerRoleAdministration)
 	other := newTraegerOffice(t, db, router, "Träger Schließtage Fremd", identityaccess.TraegerRoleAdministration)
 	rec := traegerJSON(t, router, own.token, http.MethodPost, "/traeger/closing-days/", traegerClosingDayBody{
-		StartDate: "2027-05-07", EndDate: "2027-05-07", Reason: "Brückentag", SchoolIDs: own.schools,
+		StartDate: "2027-05-07", EndDate: "2027-05-07", Reason: "Brückentag", SchoolIDs: testpkg.IDsOf[wireID](own.schools),
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	day := decodeSchoolPortalData[traegerClosingDayBody](t, rec.Body.Bytes())
@@ -126,9 +188,9 @@ func TestTraegerClosingDaysNeedTheSettingsRightAndStayWithTheirTraeger(t *testin
 	reader := newTraegerOffice(t, db, router, "Träger Schließtage Lesend", identityaccess.TraegerRoleReadOnly)
 	assert.Empty(t, traegerCalendarOf(t, router, reader).ClosingDays, "a reader sees its own Träger only")
 	for i, write := range []*httptest.ResponseRecorder{
-		traegerJSON(t, router, reader.token, http.MethodPost, "/traeger/closing-days/", traegerClosingDayBody{StartDate: "2027-05-07", EndDate: "2027-05-07", Reason: "X", SchoolIDs: reader.schools}),
-		traegerJSON(t, router, reader.token, http.MethodPut, traegerClosingDayPath(day.ID), day),
-		traegerJSON(t, router, reader.token, http.MethodDelete, traegerClosingDayPath(day.ID), nil),
+		traegerJSON(t, router, reader.token, http.MethodPost, "/traeger/closing-days/", traegerClosingDayBody{StartDate: "2027-05-07", EndDate: "2027-05-07", Reason: "X", SchoolIDs: testpkg.IDsOf[wireID](reader.schools)}),
+		traegerJSON(t, router, reader.token, http.MethodPut, traegerClosingDayPath(int64(day.ID)), day),
+		traegerJSON(t, router, reader.token, http.MethodDelete, traegerClosingDayPath(int64(day.ID)), nil),
 	} {
 		assert.Equal(t, http.StatusForbidden, write.Code, "write %d: %s", i, write.Body.String())
 	}
@@ -136,20 +198,20 @@ func TestTraegerClosingDaysNeedTheSettingsRightAndStayWithTheirTraeger(t *testin
 	view := traegerCalendarOf(t, router, other)
 	assert.Empty(t, view.ClosingDays)
 	for _, school := range view.Schools {
-		assert.NotContains(t, own.schools, school.ID, "another Träger's schools stay hidden")
+		assert.NotContains(t, own.schools, int64(school.ID), "another Träger's schools stay hidden")
 	}
 	rec = traegerJSON(t, router, other.token, http.MethodPost, "/traeger/closing-days/", traegerClosingDayBody{
-		StartDate: "2027-05-07", EndDate: "2027-05-07", Reason: "Fremd", SchoolIDs: own.schools,
+		StartDate: "2027-05-07", EndDate: "2027-05-07", Reason: "Fremd", SchoolIDs: testpkg.IDsOf[wireID](own.schools),
 	})
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	assert.Equal(t, "traeger.closing_day_school_outside", refusalOf(t, rec).Code)
 	day.Reason = "Übernommen"
-	rec = traegerJSON(t, router, other.token, http.MethodPut, traegerClosingDayPath(day.ID), traegerClosingDayBody{
-		StartDate: day.StartDate, EndDate: day.EndDate, Reason: day.Reason, SchoolIDs: other.schools,
+	rec = traegerJSON(t, router, other.token, http.MethodPut, traegerClosingDayPath(int64(day.ID)), traegerClosingDayBody{
+		StartDate: day.StartDate, EndDate: day.EndDate, Reason: day.Reason, SchoolIDs: testpkg.IDsOf[wireID](other.schools),
 	})
 	require.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 	assert.Equal(t, "traeger.closing_day_not_found", refusalOf(t, rec).Code)
-	rec = traegerJSON(t, router, other.token, http.MethodDelete, traegerClosingDayPath(day.ID), nil)
+	rec = traegerJSON(t, router, other.token, http.MethodDelete, traegerClosingDayPath(int64(day.ID)), nil)
 	require.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 
 	kept := traegerCalendarOf(t, router, own).ClosingDays
@@ -165,7 +227,7 @@ func TestTraegerClosingDaysQueryBudget(t *testing.T) {
 	office := newTraegerOffice(t, db, router, "Träger Budget Schließtage", identityaccess.TraegerRoleAdministration)
 	plan := func(day string) {
 		rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/closing-days/", traegerClosingDayBody{
-			StartDate: day, EndDate: day, Reason: "Schließtag", SchoolIDs: office.schools,
+			StartDate: day, EndDate: day, Reason: "Schließtag", SchoolIDs: testpkg.IDsOf[wireID](office.schools),
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	}

@@ -102,7 +102,7 @@ func postSeedWorkTimeTemplate(rt *Runtime, template seedWorkTimeTemplate, anchor
 	}
 	var payload struct {
 		Data struct {
-			ID int64 `json:"id"`
+			ID apiID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(resp, &payload); err != nil {
@@ -111,5 +111,5 @@ func postSeedWorkTimeTemplate(rt *Runtime, template seedWorkTimeTemplate, anchor
 	if payload.Data.ID == 0 {
 		return 0, fmt.Errorf("work time template %q: response carries no id", template.name)
 	}
-	return payload.Data.ID, nil
+	return int64(payload.Data.ID), nil
 }

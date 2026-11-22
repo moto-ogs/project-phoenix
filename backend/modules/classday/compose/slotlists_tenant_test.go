@@ -37,7 +37,7 @@ func TestBuildList_TenantIsolation(t *testing.T) {
 	own, err := f.svc.BuildList(ctx, params)
 	require.NoError(t, err)
 	for _, slot := range own.Slots {
-		assert.NotEqual(t, instance.ID, slot.InstanceID, "the other school's slot must not be listed")
+		assert.NotEqual(t, instance.ID, slot.InstanceID.Int64(), "the other school's slot must not be listed")
 	}
 	assert.Nil(t, rowByStudent(own.Rows, otherStudent.ID), "the other school's child must not be listed")
 	require.NotNil(t, rowByStudent(own.Rows, f.plannedID))
@@ -45,7 +45,7 @@ func TestBuildList_TenantIsolation(t *testing.T) {
 	other, err := f.svc.BuildList(testpkg.TenantContext(otherTenant), params)
 	require.NoError(t, err)
 	require.Len(t, other.Slots, 1)
-	assert.Equal(t, instance.ID, other.Slots[0].InstanceID)
+	assert.Equal(t, instance.ID, other.Slots[0].InstanceID.Int64())
 	assert.Empty(t, other.Rows, "the other school has no roster and no visits on its slot")
 	assert.Nil(t, rowByStudent(other.Rows, f.plannedID))
 }

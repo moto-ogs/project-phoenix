@@ -19,6 +19,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -93,13 +94,13 @@ func TestShiftCoverage_ExactWarningAndConcreteDeviationSemantics(t *testing.T) {
 
 	recorder := postShiftCoverage(t, router, ShiftCoverageRequest{
 		Dates: []string{s.date.String()}, StartTime: "14:30", EndTime: "15:30",
-		StaffIDs: []int64{planned.ID, substitute.ID}, ExcludeInstanceID: &instance.ID,
+		StaffIDs: []ident.ID{ident.ID(planned.ID), ident.ID(substitute.ID)}, ExcludeInstanceID: (*ident.ID)(&instance.ID),
 	})
 	require.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
 	result := decodeShiftCoverage(t, recorder)
 	require.Len(t, result.CoverageWarnings, 1, "absent planned staff is skipped; substitute is checked")
 	warning := result.CoverageWarnings[0]
-	assert.Equal(t, substitute.ID, warning.StaffID)
+	assert.Equal(t, ident.ID(substitute.ID), warning.StaffID)
 	assert.Contains(t, warning.StaffName, "Active Sub-")
 	assert.Equal(t, s.date.String(), warning.Date)
 	assert.Equal(t, "14:30", warning.StartTime)
@@ -110,7 +111,7 @@ func TestShiftCoverage_ExactWarningAndConcreteDeviationSemantics(t *testing.T) {
 	createCoverageShift(t, s, substitute.ID, s.date, "15:00", "15:30")
 	coveredRecorder := postShiftCoverage(t, router, ShiftCoverageRequest{
 		Dates: []string{s.date.String()}, StartTime: "14:30", EndTime: "15:30",
-		StaffIDs: []int64{planned.ID, substitute.ID}, ExcludeInstanceID: &instance.ID,
+		StaffIDs: []ident.ID{ident.ID(planned.ID), ident.ID(substitute.ID)}, ExcludeInstanceID: (*ident.ID)(&instance.ID),
 	})
 	require.Equal(t, http.StatusOK, coveredRecorder.Code, coveredRecorder.Body.String())
 	assert.Empty(t, decodeShiftCoverage(t, coveredRecorder).CoverageWarnings, "adjacent shifts fully cover the active substitute")
@@ -144,8 +145,8 @@ func TestShiftCoverage_MultiDatePeriodAndABFiltering(t *testing.T) {
 			weekA.String(), weekA.AddDays(2).String(), weekA.String(),
 			weekB.String(), weekB.AddDays(2).String(), weekB.AddDays(14).String(),
 		},
-		StartTime: "09:00", EndTime: "10:00", StaffIDs: []int64{target.ID},
-		CalendarPeriodID: &period.ID, WeekPattern: &weekPattern,
+		StartTime: "09:00", EndTime: "10:00", StaffIDs: []ident.ID{ident.ID(target.ID)},
+		CalendarPeriodID: (*ident.ID)(&period.ID), WeekPattern: &weekPattern,
 	})
 	require.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
 	result := decodeShiftCoverage(t, recorder)
@@ -167,7 +168,7 @@ func TestShiftCoverage_SuppressesEachUnusedWorkWeekIndependently(t *testing.T) {
 
 	recorder := postShiftCoverage(t, router, ShiftCoverageRequest{
 		Dates:     []string{usedMonday.String(), unusedMonday.String()},
-		StartTime: "09:00", EndTime: "10:00", StaffIDs: []int64{target.ID},
+		StartTime: "09:00", EndTime: "10:00", StaffIDs: []ident.ID{ident.ID(target.ID)},
 	})
 	require.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
 	result := decodeShiftCoverage(t, recorder)
@@ -196,17 +197,17 @@ func TestShiftCoverage_ValidationAndStableErrors(t *testing.T) {
 		name string
 		body any
 	}{
-		{name: "dates required", body: ShiftCoverageRequest{StartTime: "09:00", EndTime: "10:00", StaffIDs: []int64{99}}},
-		{name: "invalid date", body: ShiftCoverageRequest{Dates: []string{"bad"}, StartTime: "09:00", EndTime: "10:00", StaffIDs: []int64{99}}},
-		{name: "end before start", body: ShiftCoverageRequest{Dates: []string{validDate.String()}, StartTime: "10:00", EndTime: "09:00", StaffIDs: []int64{99}}},
-		{name: "positive staff IDs", body: ShiftCoverageRequest{Dates: []string{validDate.String()}, StartTime: "09:00", EndTime: "10:00", StaffIDs: []int64{0}}},
-		{name: "staff count bound", body: ShiftCoverageRequest{Dates: []string{validDate.String()}, StartTime: "09:00", EndTime: "10:00", StaffIDs: tooManyStaff}},
-		{name: "multi-date instance requires concrete date", body: ShiftCoverageRequest{Dates: []string{validDate.String(), validDate.AddDays(1).String()}, StartTime: "09:00", EndTime: "10:00", StaffIDs: []int64{99}, ExcludeInstanceID: &excludeID}},
-		{name: "concrete date requires instance", body: ShiftCoverageRequest{Dates: []string{validDate.String(), concreteDate}, StartTime: "09:00", EndTime: "10:00", StaffIDs: []int64{99}, ConcreteInstanceDate: &concreteDate}},
-		{name: "replan group and instance are exclusive", body: ShiftCoverageRequest{Dates: []string{validDate.String()}, StartTime: "09:00", EndTime: "10:00", StaffIDs: []int64{99}, ExcludeInstanceID: &excludeID, ReplanActivityGroupID: &groupID, CalendarPeriodID: &periodID, WeekPattern: &weekPattern}},
-		{name: "period pair", body: ShiftCoverageRequest{Dates: []string{validDate.String()}, StartTime: "09:00", EndTime: "10:00", StaffIDs: []int64{99}, CalendarPeriodID: &periodID}},
-		{name: "week pattern range", body: ShiftCoverageRequest{Dates: []string{validDate.String()}, StartTime: "09:00", EndTime: "10:00", StaffIDs: []int64{99}, CalendarPeriodID: &periodID, WeekPattern: func() *int { v := 3; return &v }()}},
-		{name: "span bound", body: ShiftCoverageRequest{Dates: []string{validDate.String(), validDate.AddDays(367).String()}, StartTime: "09:00", EndTime: "10:00", StaffIDs: []int64{99}, CalendarPeriodID: &periodID, WeekPattern: &weekPattern}},
+		{name: "dates required", body: ShiftCoverageRequest{StartTime: "09:00", EndTime: "10:00", StaffIDs: []ident.ID{99}}},
+		{name: "invalid date", body: ShiftCoverageRequest{Dates: []string{"bad"}, StartTime: "09:00", EndTime: "10:00", StaffIDs: []ident.ID{99}}},
+		{name: "end before start", body: ShiftCoverageRequest{Dates: []string{validDate.String()}, StartTime: "10:00", EndTime: "09:00", StaffIDs: []ident.ID{99}}},
+		{name: "positive staff IDs", body: ShiftCoverageRequest{Dates: []string{validDate.String()}, StartTime: "09:00", EndTime: "10:00", StaffIDs: []ident.ID{0}}},
+		{name: "staff count bound", body: ShiftCoverageRequest{Dates: []string{validDate.String()}, StartTime: "09:00", EndTime: "10:00", StaffIDs: ident.IDs(tooManyStaff)}},
+		{name: "multi-date instance requires concrete date", body: ShiftCoverageRequest{Dates: []string{validDate.String(), validDate.AddDays(1).String()}, StartTime: "09:00", EndTime: "10:00", StaffIDs: []ident.ID{99}, ExcludeInstanceID: (*ident.ID)(&excludeID)}},
+		{name: "concrete date requires instance", body: ShiftCoverageRequest{Dates: []string{validDate.String(), concreteDate}, StartTime: "09:00", EndTime: "10:00", StaffIDs: []ident.ID{99}, ConcreteInstanceDate: &concreteDate}},
+		{name: "replan group and instance are exclusive", body: ShiftCoverageRequest{Dates: []string{validDate.String()}, StartTime: "09:00", EndTime: "10:00", StaffIDs: []ident.ID{99}, ExcludeInstanceID: (*ident.ID)(&excludeID), ReplanActivityGroupID: (*ident.ID)(&groupID), CalendarPeriodID: (*ident.ID)(&periodID), WeekPattern: &weekPattern}},
+		{name: "period pair", body: ShiftCoverageRequest{Dates: []string{validDate.String()}, StartTime: "09:00", EndTime: "10:00", StaffIDs: []ident.ID{99}, CalendarPeriodID: (*ident.ID)(&periodID)}},
+		{name: "week pattern range", body: ShiftCoverageRequest{Dates: []string{validDate.String()}, StartTime: "09:00", EndTime: "10:00", StaffIDs: []ident.ID{99}, CalendarPeriodID: (*ident.ID)(&periodID), WeekPattern: func() *int { v := 3; return &v }()}},
+		{name: "span bound", body: ShiftCoverageRequest{Dates: []string{validDate.String(), validDate.AddDays(367).String()}, StartTime: "09:00", EndTime: "10:00", StaffIDs: []ident.ID{99}, CalendarPeriodID: (*ident.ID)(&periodID), WeekPattern: &weekPattern}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -220,7 +221,7 @@ func TestShiftCoverage_ValidationAndStableErrors(t *testing.T) {
 		resource := newResourceForTest(Dependencies{ConflictDetection: failingShiftCoverage{err: errors.New("dependencies are not wired")}})
 		failureRouter := shiftCoverageRouter(s.ctx, resource)
 		recorder := postShiftCoverage(t, failureRouter, ShiftCoverageRequest{
-			Dates: []string{validDate.String()}, StartTime: "09:00", EndTime: "10:00", StaffIDs: []int64{99},
+			Dates: []string{validDate.String()}, StartTime: "09:00", EndTime: "10:00", StaffIDs: []ident.ID{99},
 		})
 		assert.Equal(t, http.StatusInternalServerError, recorder.Code)
 		assert.Contains(t, recorder.Body.String(), `"detail":"shift coverage could not be checked"`)

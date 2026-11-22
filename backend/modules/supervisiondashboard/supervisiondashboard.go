@@ -15,6 +15,7 @@ import (
 	"time"
 
 	sharedcalendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ErrForbiddenGroup indicates that the requested active group is outside the
@@ -89,13 +90,13 @@ type SpontaneousStartAvailability struct {
 // session tab. The wire shape carries only what the page renders: the session
 // label, room label, color, and ids for selection.
 type DashboardGroup struct {
-	ID                       int64   `json:"id,string"`
-	Name                     string  `json:"name"`
-	RoomID                   *int64  `json:"room_id,string,omitempty"`
-	RoomName                 string  `json:"room_name,omitempty"`
-	RoomColor                *string `json:"room_color,omitempty"`
-	IsCurrentUserSupervising bool    `json:"is_current_user_supervising"`
-	CanAssign                bool    `json:"can_assign"`
+	ID                       ident.ID  `json:"id"`
+	Name                     string    `json:"name"`
+	RoomID                   *ident.ID `json:"room_id,omitempty"`
+	RoomName                 string    `json:"room_name,omitempty"`
+	RoomColor                *string   `json:"room_color,omitempty"`
+	IsCurrentUserSupervising bool      `json:"is_current_user_supervising"`
+	CanAssign                bool      `json:"can_assign"`
 	// ParticipantLimit is the started activity's limit; nil without one.
 	// The page compares it with the session's children (#3634).
 	ParticipantLimit *int `json:"participant_limit,omitempty"`
@@ -105,69 +106,69 @@ type DashboardGroup struct {
 }
 
 type UnclaimedGroup struct {
-	ID       int64  `json:"id,string"`
-	RoomName string `json:"room_name,omitempty"`
+	ID       ident.ID `json:"id"`
+	RoomName string   `json:"room_name,omitempty"`
 }
 
 type EducationalGroup struct {
-	ID       int64  `json:"id,string"`
-	Name     string `json:"name"`
-	RoomName string `json:"room_name,omitempty"`
+	ID       ident.ID `json:"id"`
+	Name     string   `json:"name"`
+	RoomName string   `json:"room_name,omitempty"`
 }
 
 // SchulhofStatus mirrors the Facilities owner's Schulhof workflow state on
 // the wire; the yard port maps it field by field.
 type SchulhofStatus struct {
 	Exists            bool         `json:"exists"`
-	RoomID            *int64       `json:"room_id,omitempty"`
+	RoomID            *ident.ID    `json:"room_id,omitempty"`
 	RoomName          string       `json:"room_name"`
-	ActivityGroupID   *int64       `json:"activity_group_id,omitempty"`
-	ActiveGroupID     *int64       `json:"active_group_id,omitempty"`
+	ActivityGroupID   *ident.ID    `json:"activity_group_id,omitempty"`
+	ActiveGroupID     *ident.ID    `json:"active_group_id,omitempty"`
 	IsUserSupervising bool         `json:"is_user_supervising"`
-	SupervisionID     *int64       `json:"supervision_id,omitempty"`
+	SupervisionID     *ident.ID    `json:"supervision_id,omitempty"`
 	SupervisorCount   int          `json:"supervisor_count"`
 	StudentCount      int          `json:"student_count"`
 	Supervisors       []Supervisor `json:"supervisors"`
 }
 
 type Supervisor struct {
-	ID            int64  `json:"id"`
-	StaffID       int64  `json:"staff_id"`
-	Name          string `json:"name"`
-	IsCurrentUser bool   `json:"is_current_user"`
+	ID            ident.ID `json:"id"`
+	StaffID       ident.ID `json:"staff_id"`
+	Name          string   `json:"name"`
+	IsCurrentUser bool     `json:"is_current_user"`
 }
 
 // ActiveSession is one running instance seen from its live session (#2265).
 // StartTime/EndTime are the plan window (HH:MM), not the actual start.
 type ActiveSession struct {
-	ActiveGroupID int64  `json:"active_group_id"`
-	InstanceID    int64  `json:"instance_id"`
-	Title         string `json:"title"`
-	StartTime     string `json:"start_time"`
-	EndTime       string `json:"end_time"`
+	ActiveGroupID ident.ID `json:"active_group_id"`
+	InstanceID    ident.ID `json:"instance_id"`
+	Title         string   `json:"title"`
+	StartTime     string   `json:"start_time"`
+	EndTime       string   `json:"end_time"`
 }
 
 // PlannedInstance mirrors the Timetable owner's planned-now row on the wire.
 type PlannedInstance struct {
-	ID                    int64   `json:"id"`
-	Title                 string  `json:"title"`
-	Date                  string  `json:"date"`
-	StartTime             string  `json:"start_time"`
-	EndTime               string  `json:"end_time"`
-	RoomID                int64   `json:"room_id"`
-	RoomName              *string `json:"room_name,omitempty"`
-	Status                string  `json:"status"`
-	IsOverdue             bool    `json:"is_overdue"`
-	MinutesUntilStart     int     `json:"minutes_until_start"`
-	ExpectedStudentsCount int     `json:"expected_students_count"`
-	PresentStudentsCount  int     `json:"present_students_count"`
-	NotScheduledCount     int     `json:"not_scheduled_students_count"`
+	ID                    ident.ID `json:"id"`
+	Title                 string   `json:"title"`
+	Date                  string   `json:"date"`
+	StartTime             string   `json:"start_time"`
+	EndTime               string   `json:"end_time"`
+	RoomID                ident.ID `json:"room_id"`
+	RoomName              *string  `json:"room_name,omitempty"`
+	Status                string   `json:"status"`
+	IsOverdue             bool     `json:"is_overdue"`
+	MinutesUntilStart     int      `json:"minutes_until_start"`
+	ExpectedStudentsCount int      `json:"expected_students_count"`
+	PresentStudentsCount  int      `json:"present_students_count"`
+	NotScheduledCount     int      `json:"not_scheduled_students_count"`
 	// CurrentStudentsCount is the children still there; PresentStudentsCount
 	// keeps the ones who left (#3921).
 	CurrentStudentsCount int               `json:"current_students_count"`
 	PlannedStudentsCount int               `json:"planned_students_count"`
 	IsSpontaneous        bool              `json:"is_spontaneous"`
-	AssignedStaffIDs     []int64           `json:"assigned_staff_ids"`
+	AssignedStaffIDs     []ident.ID        `json:"assigned_staff_ids"`
 	IsAssigned           bool              `json:"is_assigned"`
 	IsPrimary            bool              `json:"is_primary"`
 	IsSubstitute         bool              `json:"is_substitute"`
@@ -179,7 +180,7 @@ type PlannedInstance struct {
 	CanStart             bool              `json:"can_start"`
 	StartAvailableAt     string            `json:"start_available_at"`
 	StartExpiresAt       string            `json:"start_expires_at"`
-	ActiveGroupID        *int64            `json:"active_group_id,omitempty"`
+	ActiveGroupID        *ident.ID         `json:"active_group_id,omitempty"`
 	CancelReason         *string           `json:"cancel_reason,omitempty"`
 	PlanningTrackName    *string           `json:"planning_track_name,omitempty"`
 	PlanningTrackColor   *string           `json:"planning_track_color,omitempty"`
@@ -189,21 +190,21 @@ type PlannedInstance struct {
 
 // StaffName is one assigned staff member on a planned block.
 type StaffName struct {
-	StaffID      int64  `json:"staff_id"`
-	DisplayName  string `json:"display_name"`
-	IsSubstitute bool   `json:"is_substitute"`
+	StaffID      ident.ID `json:"staff_id"`
+	DisplayName  string   `json:"display_name"`
+	IsSubstitute bool     `json:"is_substitute"`
 }
 
 // RosterRow is one child on a planned block's roster preview.
 type RosterRow struct {
-	StudentID         int64             `json:"student_id"`
+	StudentID         ident.ID          `json:"student_id"`
 	StudentName       string            `json:"student_name"`
 	SchoolClass       string            `json:"school_class"`
 	GroupName         string            `json:"group_name"`
 	Planned           bool              `json:"planned"`
 	IsUnplanned       bool              `json:"is_unplanned"`
 	CurrentlyPresent  bool              `json:"currently_present"`
-	VisitID           *int64            `json:"visit_id,omitempty"`
+	VisitID           *ident.ID         `json:"visit_id,omitempty"`
 	Status            string            `json:"status"`
 	Substatus         *string           `json:"substatus,omitempty"`
 	Note              *string           `json:"note,omitempty"`
@@ -220,45 +221,45 @@ type RosterRow struct {
 
 // RosterWarning is one arrival or group warning on a roster row.
 type RosterWarning struct {
-	Kind                  string  `json:"kind"`
-	Message               string  `json:"message"`
-	ExpectedArrival       *string `json:"expected_arrival,omitempty"`
-	SlotStart             *string `json:"slot_start,omitempty"`
-	ExpectedGroupID       *int64  `json:"expected_group_id,omitempty"`
-	ExpectedGroupName     *string `json:"expected_group_name,omitempty"`
-	CurrentEducationGroup *int64  `json:"current_education_group_id,omitempty"`
+	Kind                  string    `json:"kind"`
+	Message               string    `json:"message"`
+	ExpectedArrival       *string   `json:"expected_arrival,omitempty"`
+	SlotStart             *string   `json:"slot_start,omitempty"`
+	ExpectedGroupID       *ident.ID `json:"expected_group_id,omitempty"`
+	ExpectedGroupName     *string   `json:"expected_group_name,omitempty"`
+	CurrentEducationGroup *ident.ID `json:"current_education_group_id,omitempty"`
 }
 
 // ParallelPresence identifies the other running instance a roster row's
 // parallel-presence hint points at (#2265).
 type ParallelPresence struct {
-	InstanceID int64  `json:"instance_id"`
-	Title      string `json:"title"`
-	StartTime  string `json:"start_time"`
-	EndTime    string `json:"end_time"`
+	InstanceID ident.ID `json:"instance_id"`
+	Title      string   `json:"title"`
+	StartTime  string   `json:"start_time"`
+	EndTime    string   `json:"end_time"`
 }
 
 // ConflictWarning is one staff or student conflict on a planned block.
 type ConflictWarning struct {
-	Kind                  string `json:"kind"`
-	ResourceID            int64  `json:"resource_id"`
-	Message               string `json:"message"`
-	CanOverride           bool   `json:"can_override"`
-	Fingerprint           string `json:"fingerprint,omitempty"`
-	ConflictingInstanceID int64  `json:"conflicting_instance_id,omitempty"`
-	ConflictingTitle      string `json:"conflicting_title,omitempty"`
-	OverlapStart          string `json:"overlap_start,omitempty"`
-	OverlapEnd            string `json:"overlap_end,omitempty"`
+	Kind                  string   `json:"kind"`
+	ResourceID            ident.ID `json:"resource_id"`
+	Message               string   `json:"message"`
+	CanOverride           bool     `json:"can_override"`
+	Fingerprint           string   `json:"fingerprint,omitempty"`
+	ConflictingInstanceID ident.ID `json:"conflicting_instance_id,omitempty"`
+	ConflictingTitle      string   `json:"conflicting_title,omitempty"`
+	OverlapStart          string   `json:"overlap_start,omitempty"`
+	OverlapEnd            string   `json:"overlap_end,omitempty"`
 }
 
 // Visit mirrors the fields the page renders from the former per-group
 // /active/groups/{id}/visits/display endpoint, restricted to open visits.
 type Visit struct {
-	StudentID         int64      `json:"student_id,string"`
+	StudentID         ident.ID   `json:"student_id"`
 	StudentName       string     `json:"student_name"`
 	SchoolClass       string     `json:"school_class"`
 	GroupName         string     `json:"group_name"`
-	ActiveGroupID     int64      `json:"active_group_id,string"`
+	ActiveGroupID     ident.ID   `json:"active_group_id"`
 	CheckInTime       time.Time  `json:"check_in_time"`
 	ActualArrivalTime *string    `json:"actual_arrival_time,omitempty"`
 	ActualPickupTime  *string    `json:"actual_pickup_time,omitempty"`
@@ -277,8 +278,8 @@ type DashboardTrackingIndicators struct {
 }
 
 type DashboardDayNote struct {
-	ID      int64  `json:"id,string"`
-	Content string `json:"content"`
+	ID      ident.ID `json:"id"`
+	Content string   `json:"content"`
 }
 
 type Capabilities struct {
@@ -289,9 +290,9 @@ type DashboardProjection struct {
 	BusinessDay                  Date                         `json:"business_day"`
 	SpontaneousStartAvailability SpontaneousStartAvailability `json:"spontaneous_start_availability"`
 	Groups                       []DashboardGroup             `json:"groups"`
-	SelectedGroupID              *int64                       `json:"selected_group_id,string,omitempty"`
+	SelectedGroupID              *ident.ID                    `json:"selected_group_id,omitempty"`
 	UnclaimedGroups              []UnclaimedGroup             `json:"unclaimed_groups"`
-	CurrentStaffID               *int64                       `json:"current_staff_id,string,omitempty"`
+	CurrentStaffID               *ident.ID                    `json:"current_staff_id,omitempty"`
 	EducationalGroups            []EducationalGroup           `json:"educational_groups"`
 	// Schulhof is nil only when the caller has no staff identity (and thus no
 	// Schulhof workflow) — never because a sub-load failed.
@@ -392,7 +393,7 @@ func (s *service) Dashboard(ctx context.Context, requestedGroupID int64) (*Dashb
 	if err != nil {
 		return nil, fmt.Errorf("load current staff: %w", err)
 	}
-	projection.CurrentStaffID = staffID
+	projection.CurrentStaffID = (*ident.ID)(staffID)
 
 	caller, err := s.deps.Access.Caller(ctx)
 	if err != nil {
@@ -421,7 +422,7 @@ func (s *service) Dashboard(ctx context.Context, requestedGroupID int64) (*Dashb
 	if err != nil {
 		return nil, err
 	}
-	projection.SelectedGroupID = selected
+	projection.SelectedGroupID = (*ident.ID)(selected)
 
 	if err := s.loadStaticSections(ctx, projection); err != nil {
 		return nil, err
@@ -463,9 +464,9 @@ func (s *service) resolveGroups(ctx context.Context, caller Caller, staffID *int
 	result := make([]DashboardGroup, 0, len(sessions))
 	for _, session := range sessions {
 		item := DashboardGroup{
-			ID:                       session.ID,
+			ID:                       ident.ID(session.ID),
 			Name:                     session.Name,
-			RoomID:                   session.RoomID,
+			RoomID:                   (*ident.ID)(session.RoomID),
 			RoomName:                 session.RoomName,
 			RoomColor:                session.RoomColor,
 			IsCurrentUserSupervising: !caller.OperationalOverview,
@@ -510,20 +511,20 @@ func selectGroup(groups []DashboardGroup, schulhof *SchulhofStatus, requestedGro
 		for _, group := range groups {
 			if group.IsCurrentUserSupervising {
 				id := group.ID
-				return &id, nil
+				return (*int64)(&id), nil
 			}
 		}
 		id := groups[0].ID
-		return &id, nil
+		return (*int64)(&id), nil
 	}
 	for _, group := range groups {
-		if group.ID == requestedGroupID {
+		if group.ID.Int64() == requestedGroupID {
 			id := group.ID
-			return &id, nil
+			return (*int64)(&id), nil
 		}
 	}
 	if schulhof != nil && schulhof.IsUserSupervising &&
-		schulhof.ActiveGroupID != nil && *schulhof.ActiveGroupID == requestedGroupID {
+		schulhof.ActiveGroupID != nil && *schulhof.ActiveGroupID == ident.ID(requestedGroupID) {
 		id := requestedGroupID
 		return &id, nil
 	}
@@ -669,11 +670,11 @@ func (s *service) buildVisits(rows []VisitRecord, attendance map[int64]Attendanc
 
 func (s *service) buildVisit(row VisitRecord, attendance map[int64]Attendance, fullAccess, photosEnabled bool) Visit {
 	visit := Visit{
-		StudentID:     row.StudentID,
+		StudentID:     ident.ID(row.StudentID),
 		StudentName:   strings.TrimSpace(row.FirstName + " " + row.LastName),
 		SchoolClass:   row.SchoolClass,
 		GroupName:     row.GroupName,
-		ActiveGroupID: row.ActiveGroupID,
+		ActiveGroupID: ident.ID(row.ActiveGroupID),
 		CheckInTime:   row.EntryTime,
 		Sick:          row.Sick,
 		SickSince:     row.SickSince,

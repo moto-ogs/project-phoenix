@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -121,7 +122,7 @@ func TestPublicChangeBeforeAPlannedVersionHoldsUntilItAndEveryDayHasOneVersion(t
 			[]calendar.Date{february.From, february.Until})
 		monday := calendar.NewDate(2100, 2, 8)
 		require.Len(t, february.Version.ServicesOn(monday), 1)
-		assert.Equal(t, school.offering+1, february.Version.ServicesOn(monday)[0].CareOfferingID,
+		assert.Equal(t, ident.ID(school.offering+1), february.Version.ServicesOn(monday)[0].CareOfferingID,
 			"a Monday in February books the module until 16:30")
 		march := periods[2]
 		assert.Equal(t, 2, march.Version.Number, "the planned version stays as it is")

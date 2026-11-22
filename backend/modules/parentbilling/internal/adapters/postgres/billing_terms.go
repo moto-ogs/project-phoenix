@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The terms of the services, the deviations of the families and the due
@@ -73,7 +74,7 @@ type familyBillingRow struct {
 
 func (r familyBillingRow) family() parentbilling.FamilyBilling {
 	family := parentbilling.FamilyBilling{
-		ID: r.ID, FamilyEmail: r.FamilyEmail, ContractID: idOf(r.CareContractID), RecipientKind: r.RecipientKind,
+		ID: ident.ID(r.ID), FamilyEmail: r.FamilyEmail, ContractID: ident.ID(idOf(r.CareContractID)), RecipientKind: r.RecipientKind,
 		SecondFirstName: r.SecondFirstName, SecondLastName: r.SecondLastName, PayerFirstName: r.PayerFirstName,
 		PayerLastName: r.PayerLastName, PayerEmail: r.PayerEmail, DueDay: r.DueDay, UpdatedAt: r.UpdatedAt,
 		DebtorNumber: textOf(r.DebtorNumber), HolderFirstName: r.HolderFirstName, HolderLastName: r.HolderLastName,
@@ -174,7 +175,7 @@ func (s *Store) SaveFamilyBilling(ctx context.Context, organizationID, accountID
 		return parentbilling.FamilyBilling{}, err
 	}
 	row := &familyBillingRow{
-		OrganizationID: organizationID, FamilyEmail: family.FamilyEmail, CareContractID: idRef(family.ContractID),
+		OrganizationID: organizationID, FamilyEmail: family.FamilyEmail, CareContractID: idRef(family.ContractID.Int64()),
 		RecipientKind: family.RecipientKind, SecondFirstName: family.SecondFirstName, SecondLastName: family.SecondLastName,
 		PayerFirstName: family.PayerFirstName, PayerLastName: family.PayerLastName, PayerEmail: family.PayerEmail,
 		DueDay: family.DueDay, DebtorNumber: textRef(family.DebtorNumber), UpdatedByAccountID: accountRef(accountID), UpdatedAt: s.now(),
@@ -238,7 +239,7 @@ func (s *Store) InsertFamilyBillingEvents(ctx context.Context, organizationID, a
 	}
 	rows, now := make([]familyBillingEventRow, len(families)), s.now()
 	for i, family := range families {
-		rows[i] = familyBillingEventRow{OrganizationID: organizationID, FamilyBillingID: family.ID, CareContractID: idRef(family.ContractID),
+		rows[i] = familyBillingEventRow{OrganizationID: organizationID, FamilyBillingID: family.ID.Int64(), CareContractID: idRef(family.ContractID.Int64()),
 			Action: action, ActorAccountID: accountRef(accountID), OccurredAt: now}
 	}
 	if _, err := db.NewInsert().Model(&rows).Exec(ctx); err != nil {
@@ -404,7 +405,7 @@ func snapshotOf(payment *parentbilling.InvoicePayment) paymentSnapshot {
 		DebitGap: textRef(payment.DebitGap)}
 	if mandate := payment.Mandate; mandate != nil {
 		id, signedOn := mandate.MandateID, mandate.SignedOn
-		snapshot.MandateID, snapshot.MandateReference, snapshot.MandateSignedOn = &id, textRef(mandate.Reference), &signedOn
+		snapshot.MandateID, snapshot.MandateReference, snapshot.MandateSignedOn = (*int64)(&id), textRef(mandate.Reference), &signedOn
 		snapshot.CreditorID, snapshot.DebtorIBANMasked = textRef(mandate.CreditorID), textRef(mandate.IBANMasked)
 		snapshot.SequenceType = textRef(mandate.SequenceType)
 		snapshot.HolderSealed = mandate.HolderSealed
@@ -420,7 +421,7 @@ func (s paymentSnapshot) payment() *parentbilling.InvoicePayment {
 	}
 	payment := &parentbilling.InvoicePayment{Method: *s.PaymentMethod, DueOn: *s.DueOn, DueSource: *s.DueSource, DebitGap: textOf(s.DebitGap)}
 	if s.MandateID != nil && s.MandateSignedOn != nil {
-		payment.Mandate = &parentbilling.InvoiceMandate{MandateID: *s.MandateID, Reference: textOf(s.MandateReference),
+		payment.Mandate = &parentbilling.InvoiceMandate{MandateID: ident.ID(*s.MandateID), Reference: textOf(s.MandateReference),
 			SignedOn: *s.MandateSignedOn, CreditorID: textOf(s.CreditorID), IBANMasked: textOf(s.DebtorIBANMasked),
 			SequenceType: textOf(s.SequenceType), HolderSealed: s.HolderSealed}
 	}
@@ -475,7 +476,7 @@ func (s *Store) SetFamilyDebtorNumbers(ctx context.Context, organizationID, acco
 	}
 	families := make([]parentbilling.FamilyBilling, len(saved))
 	for i, row := range saved {
-		families[i] = parentbilling.FamilyBilling{ID: row.ID, ContractID: idOf(row.CareContractID)}
+		families[i] = parentbilling.FamilyBilling{ID: ident.ID(row.ID), ContractID: ident.ID(idOf(row.CareContractID))}
 	}
 	return s.InsertFamilyBillingEvents(ctx, organizationID, accountID, "save", families)
 }

@@ -6,14 +6,39 @@
  * Backend int64 IDs leave here as strings; calendar dates stay "YYYY-MM-DD".
  */
 
+import type * as traegerSepaCreditorContract from "./contract/traeger-sepa-creditor.generated";
+import type * as traegerSepaMandatesContract from "./contract/traeger-sepa-mandates.generated";
+import { knownEnum } from "./contract/known-enum";
 import { traegerRequest } from "./traeger-api";
 
-export type MissingMandate = "transfer" | "block";
-export type MandateKind = "recurring" | "one_off";
-export type MandateSequence = "first" | "recurring";
-export type MandateSource = "office" | "import" | "parent";
-export type MandateAction =
-  "create" | "update" | "revoke" | "read" | "reveal" | "collect";
+// Go does not register these sets; the contract types them as string. A value
+// this build does not know stays undefined instead of passing as a known one.
+const MISSING_MANDATE_VALUES = ["transfer", "block"] as const;
+const MANDATE_KIND_VALUES = ["recurring", "one_off"] as const;
+const MANDATE_SEQUENCE_VALUES = ["first", "recurring"] as const;
+const MANDATE_SOURCE_VALUES = ["office", "import", "parent"] as const;
+const EVENT_SOURCE_VALUES = [...MANDATE_SOURCE_VALUES, "run"] as const;
+const MANDATE_ACTION_VALUES = [
+  "create",
+  "update",
+  "revoke",
+  "read",
+  "reveal",
+  "collect",
+] as const;
+
+export type MissingMandate = (typeof MISSING_MANDATE_VALUES)[number];
+export type MandateKind = (typeof MANDATE_KIND_VALUES)[number];
+export type MandateSequence = (typeof MANDATE_SEQUENCE_VALUES)[number];
+export type MandateSource = (typeof MANDATE_SOURCE_VALUES)[number];
+export type MandateAction = (typeof MANDATE_ACTION_VALUES)[number];
+
+/** The sequence a value names, or undefined for one this build does not know. */
+export function knownMandateSequence(
+  value: string | undefined,
+): MandateSequence | undefined {
+  return knownEnum(MANDATE_SEQUENCE_VALUES, value);
+}
 
 export const MIN_PRENOTIFICATION_DAYS = 1;
 export const MAX_PRENOTIFICATION_DAYS = 30;
@@ -22,7 +47,8 @@ export interface SepaCreditor {
   /** Gläubiger-Identifikationsnummer; "" until the Träger sets one. */
   readonly creditorId: string;
   readonly prenotificationDays: number;
-  readonly missingMandate: MissingMandate;
+  /** undefined: a choice this build does not know. */
+  readonly missingMandate: MissingMandate | undefined;
   readonly updatedAt: string | null;
 }
 
@@ -33,10 +59,11 @@ export interface SepaMandate {
   readonly partyFirstName: string;
   readonly partyLastName: string;
   readonly reference: string;
-  /** Calendar date of the signature, "YYYY-MM-DD". */
-  readonly signedOn: string;
-  readonly kind: MandateKind;
-  readonly sequence: MandateSequence;
+  /** Calendar date of the signature, "YYYY-MM-DD"; null when the backend has none. */
+  readonly signedOn: string | null;
+  /** undefined: a kind this build does not know. */
+  readonly kind: MandateKind | undefined;
+  readonly sequence: MandateSequence | undefined;
   readonly accountHolder: string;
   /** The creditor identifier the mandate was given to. */
   readonly creditorId: string;
@@ -45,7 +72,7 @@ export interface SepaMandate {
   /** The IBAN with only country and last four characters visible. */
   readonly ibanMasked: string;
   readonly bic: string;
-  readonly source: MandateSource;
+  readonly source: MandateSource | undefined;
   /** Calendar date the revocation arrived; null while in force. */
   readonly revokedOn: string | null;
   /** Day of the last collection moto counted (#4697); null before one. */
@@ -69,8 +96,8 @@ export interface SepaMandateInput {
 
 export interface SepaMandateEvent {
   readonly id: string;
-  readonly action: MandateAction;
-  readonly source: MandateSource | "run";
+  readonly action: MandateAction | undefined;
+  readonly source: MandateSource | "run" | undefined;
   /** The fields a change touched, never their values. */
   readonly fields: readonly string[];
   /** The account that acted; null once the account is deleted. */
@@ -80,75 +107,39 @@ export interface SepaMandateEvent {
   readonly importLine: number | null;
 }
 
-interface BackendCreditor {
-  creditor_id: string;
-  prenotification_days: number;
-  missing_mandate: MissingMandate;
-  updated_at: string | null;
-}
-
-interface BackendMandate {
-  id: number | string;
-  contract_id: number | string;
-  family_email: string;
-  party_first_name: string;
-  party_last_name: string;
-  reference: string;
-  signed_on: string;
-  kind: MandateKind;
-  sequence: MandateSequence;
-  account_holder: string;
-  creditor_id: string;
-  creditor_current: boolean;
-  iban_masked: string;
-  bic: string;
-  source: MandateSource;
-  revoked_on: string | null;
-  last_collected_on?: string | null;
-  expires_on?: string | null;
-  created_at: string;
-}
-
-interface BackendEvent {
-  id: number | string;
-  action: MandateAction;
-  source: MandateSource | "run";
-  fields: string[] | null;
-  account_id: number | string | null;
-  occurred_at: string;
-  import_file?: string;
-  import_line?: number;
-}
-
-function creditorFromBackend(creditor: BackendCreditor): SepaCreditor {
+function creditorFromBackend(
+  creditor: traegerSepaCreditorContract.SEPACreditor,
+): SepaCreditor {
   return {
     creditorId: creditor.creditor_id,
     prenotificationDays: creditor.prenotification_days,
-    missingMandate: creditor.missing_mandate,
+    missingMandate: knownEnum(MISSING_MANDATE_VALUES, creditor.missing_mandate),
     updatedAt: creditor.updated_at,
   };
 }
 
-function mandateFromBackend(mandate: BackendMandate): SepaMandate {
+function mandateFromBackend(
+  mandate: traegerSepaMandatesContract.SEPAMandate,
+): SepaMandate {
   return {
-    id: String(mandate.id),
-    contractId: String(mandate.contract_id),
+    id: mandate.id,
+    contractId: mandate.contract_id,
     familyEmail: mandate.family_email,
     partyFirstName: mandate.party_first_name,
     partyLastName: mandate.party_last_name,
     reference: mandate.reference,
     signedOn: mandate.signed_on,
-    kind: mandate.kind,
-    sequence: mandate.sequence,
+    kind: knownEnum(MANDATE_KIND_VALUES, mandate.kind),
+    sequence: knownMandateSequence(mandate.sequence),
     accountHolder: mandate.account_holder,
     creditorId: mandate.creditor_id,
     creditorCurrent: mandate.creditor_current,
     ibanMasked: mandate.iban_masked,
     bic: mandate.bic,
-    source: mandate.source,
+    source: knownEnum(MANDATE_SOURCE_VALUES, mandate.source),
     revokedOn: mandate.revoked_on,
-    lastCollectedOn: mandate.last_collected_on ?? null,
-    expiresOn: mandate.expires_on || null,
+    lastCollectedOn: mandate.last_collected_on,
+    expiresOn: mandate.expires_on,
     createdAt: mandate.created_at,
   };
 }
@@ -159,25 +150,27 @@ const MANDATES_PATH = "/api/traeger/sepa-mandates";
 /** The creditor of the Träger, the defaults where it set nothing. */
 export async function fetchSepaCreditor(): Promise<SepaCreditor> {
   return creditorFromBackend(
-    await traegerRequest<BackendCreditor>(CREDITOR_PATH),
+    await traegerRequest<traegerSepaCreditorContract.SEPACreditor>(
+      CREDITOR_PATH,
+    ),
   );
 }
 
-export async function saveSepaCreditor(
-  creditor: Pick<
-    SepaCreditor,
-    "creditorId" | "prenotificationDays" | "missingMandate"
-  >,
-): Promise<SepaCreditor> {
+export async function saveSepaCreditor(creditor: {
+  readonly creditorId: string;
+  readonly prenotificationDays: number;
+  readonly missingMandate: MissingMandate;
+}): Promise<SepaCreditor> {
+  const body: traegerSepaCreditorContract.SEPACreditorRequest = {
+    creditor_id: creditor.creditorId.trim(),
+    prenotification_days: creditor.prenotificationDays,
+    missing_mandate: creditor.missingMandate,
+  };
   return creditorFromBackend(
-    await traegerRequest<BackendCreditor>(CREDITOR_PATH, {
-      method: "PUT",
-      body: {
-        creditor_id: creditor.creditorId.trim(),
-        prenotification_days: creditor.prenotificationDays,
-        missing_mandate: creditor.missingMandate,
-      },
-    }),
+    await traegerRequest<traegerSepaCreditorContract.SEPACreditor>(
+      CREDITOR_PATH,
+      { method: "PUT", body },
+    ),
   );
 }
 
@@ -188,16 +181,18 @@ export async function fetchSepaMandates(
   const query = contractId
     ? `?contract_id=${encodeURIComponent(contractId)}`
     : "";
-  const mandates = await traegerRequest<BackendMandate[] | null>(
-    `${MANDATES_PATH}${query}`,
-  );
-  return (mandates ?? []).map(mandateFromBackend);
+  const mandates = await traegerRequest<
+    traegerSepaMandatesContract.SEPAMandate[]
+  >(`${MANDATES_PATH}${query}`);
+  return mandates.map(mandateFromBackend);
 }
 
 /** The request body of a new mandate. */
-function sepaMandateBody(input: SepaMandateInput) {
+function sepaMandateBody(
+  input: SepaMandateInput,
+): traegerSepaMandatesContract.SEPAMandateRequest {
   return {
-    contract_id: Number(input.contractId),
+    contract_id: input.contractId,
     reference: input.reference.trim(),
     signed_on: input.signedOn,
     kind: input.kind,
@@ -212,10 +207,13 @@ export async function createSepaMandate(
   input: SepaMandateInput,
 ): Promise<SepaMandate> {
   return mandateFromBackend(
-    await traegerRequest<BackendMandate>(MANDATES_PATH, {
-      method: "POST",
-      body: sepaMandateBody(input),
-    }),
+    await traegerRequest<traegerSepaMandatesContract.SEPAMandate>(
+      MANDATES_PATH,
+      {
+        method: "POST",
+        body: sepaMandateBody(input),
+      },
+    ),
   );
 }
 
@@ -225,9 +223,14 @@ export async function revokeSepaMandate(
   revokedOn: string,
 ): Promise<SepaMandate> {
   return mandateFromBackend(
-    await traegerRequest<BackendMandate>(
+    await traegerRequest<traegerSepaMandatesContract.SEPAMandate>(
       `${MANDATES_PATH}/${encodeURIComponent(id)}/revoke`,
-      { method: "POST", body: { revoked_on: revokedOn } },
+      {
+        method: "POST",
+        body: {
+          revoked_on: revokedOn,
+        } satisfies traegerSepaMandatesContract.SEPAMandateRevokeRequest,
+      },
     ),
   );
 }
@@ -236,15 +239,15 @@ export async function revokeSepaMandate(
 export async function fetchSepaMandateHistory(
   id: string,
 ): Promise<SepaMandateEvent[]> {
-  const events = await traegerRequest<BackendEvent[] | null>(
-    `${MANDATES_PATH}/${encodeURIComponent(id)}/history`,
-  );
-  return (events ?? []).map((event) => ({
-    id: String(event.id),
-    action: event.action,
-    source: event.source,
+  const events = await traegerRequest<
+    traegerSepaMandatesContract.SEPAMandateEvent[]
+  >(`${MANDATES_PATH}/${encodeURIComponent(id)}/history`);
+  return events.map((event) => ({
+    id: event.id,
+    action: knownEnum(MANDATE_ACTION_VALUES, event.action),
+    source: knownEnum(EVENT_SOURCE_VALUES, event.source),
     fields: event.fields ?? [],
-    accountId: event.account_id === null ? null : String(event.account_id),
+    accountId: event.account_id,
     occurredAt: event.occurred_at,
     importFile: event.import_file ?? null,
     importLine: event.import_line ?? null,

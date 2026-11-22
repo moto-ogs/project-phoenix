@@ -10,6 +10,7 @@ import (
 
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // StudentNoteTeamReach names the colleagues who may read a child's notes and
@@ -137,7 +138,7 @@ func (rs *Resource) readStudentNoteTeamNotices(w http.ResponseWriter, r *http.Re
 	}
 	observed := make([]peopleModule.StudentNoteTeamNoticeRevision, 0, len(body.Notices))
 	for _, notice := range body.Notices {
-		observed = append(observed, peopleModule.StudentNoteTeamNoticeRevision{NoteID: notice.NoteID, InformedAt: notice.InformedAt})
+		observed = append(observed, peopleModule.StudentNoteTeamNoticeRevision{NoteID: notice.NoteID.Int64(), InformedAt: notice.InformedAt})
 	}
 	notices, err := rs.StudentNoteTeam.MarkStudentNoteTeamNoticesRead(r.Context(), callerAccountID(r), studentID, observed)
 	if err != nil {
@@ -154,7 +155,7 @@ type studentNoteTeamReadRequest struct {
 }
 
 type studentNoteTeamNoticeRevision struct {
-	NoteID     int64     `json:"note_id,string"`
+	NoteID     ident.ID  `json:"note_id"`
 	InformedAt time.Time `json:"informed_at"`
 }
 

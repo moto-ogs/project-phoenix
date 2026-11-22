@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -24,7 +25,7 @@ func (s *service) loadMoveSupervisedGroupIDs(ctx context.Context, staffID int64,
 		if supervision == nil || supervision.GroupID <= 0 || !IsSupervisorActive(supervision, s.now()) {
 			continue
 		}
-		ids[supervision.GroupID] = struct{}{}
+		ids[supervision.GroupID.Int64()] = struct{}{}
 	}
 	return ids, nil
 }
@@ -48,7 +49,7 @@ func (s *service) authorizeStudentMove(
 	opts moveOptions,
 ) error {
 	targetGroup, openAttendance, currentVisits := plan.target, plan.openAttendance, plan.currentVisits
-	allowed, supervisedGroups, err := s.moveTargetAccess(ctx, auth, targetGroup.ID, op)
+	allowed, supervisedGroups, err := s.moveTargetAccess(ctx, auth, targetGroup.ID.Int64(), op)
 	if err != nil {
 		return err
 	}
@@ -67,7 +68,7 @@ func (s *service) authorizeStudentMove(
 		if currentVisit == nil {
 			return studentMoveForbidden(op)
 		}
-		if currentVisit.ActiveGroupID == targetGroup.ID {
+		if ident.ID(currentVisit.ActiveGroupID) == targetGroup.ID {
 			continue
 		}
 		if _, ok := supervisedGroups[currentVisit.ActiveGroupID]; !ok {
@@ -142,7 +143,7 @@ func (s *service) schoolWideAttendanceMoveAllowed(ctx context.Context, staffID i
 // running sessions (ambiguous assignment) or into a session nobody supervises
 // right now.
 func (s *service) ensureMoveTargetIsSupervised(ctx context.Context, targetGroup *ports.ActiveGroup, op string) error {
-	groupsInRoom, err := s.GroupRepo.FindActiveByRoomID(ctx, targetGroup.RoomID)
+	groupsInRoom, err := s.GroupRepo.FindActiveByRoomID(ctx, targetGroup.RoomID.Int64())
 	if err != nil {
 		return &ActiveError{Op: op, Err: ErrDatabaseOperation}
 	}
@@ -150,7 +151,7 @@ func (s *service) ensureMoveTargetIsSupervised(ctx context.Context, targetGroup 
 		return studentMoveForbidden(op)
 	}
 
-	supervisors, err := s.SupervisorRepo.FindByActiveGroupIDForUpdate(ctx, targetGroup.ID)
+	supervisors, err := s.SupervisorRepo.FindByActiveGroupIDForUpdate(ctx, targetGroup.ID.Int64())
 	if err != nil {
 		return &ActiveError{Op: op, Err: ErrDatabaseOperation}
 	}
@@ -176,7 +177,7 @@ func (s *service) requireArrivalSupervision(ctx context.Context, plan *studentMo
 // ensureSessionHasSupervisor requires a running supervision in the target
 // session, under the session lock the move already holds.
 func (s *service) ensureSessionHasSupervisor(ctx context.Context, targetGroup *ports.ActiveGroup, op string) error {
-	supervisors, err := s.SupervisorRepo.FindByActiveGroupIDForUpdate(ctx, targetGroup.ID)
+	supervisors, err := s.SupervisorRepo.FindByActiveGroupIDForUpdate(ctx, targetGroup.ID.Int64())
 	if err != nil {
 		return &ActiveError{Op: op, Err: ErrDatabaseOperation}
 	}

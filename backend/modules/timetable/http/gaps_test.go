@@ -16,6 +16,7 @@ import (
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -126,7 +127,7 @@ func TestGaps_OneGapPlannedNoStaff(t *testing.T) {
 
 	got := decodeGaps(t, w)
 	require.Len(t, got.Gaps, 1)
-	assert.Equal(t, inst.ID, got.Gaps[0].InstanceID)
+	assert.Equal(t, ident.ID(inst.ID), got.Gaps[0].InstanceID)
 	assert.Equal(t, "14:00", got.Gaps[0].StartTime)
 	assert.Equal(t, 0, got.Gaps[0].AssignedStaffCount)
 	assert.Equal(t, 0, got.Gaps[0].AbsentStaffCount)
@@ -188,7 +189,7 @@ func TestGaps_PartiallyStaffed_IsAGap(t *testing.T) {
 
 	got := decodeGaps(t, w)
 	require.Len(t, got.Gaps, 1)
-	assert.Equal(t, inst.ID, got.Gaps[0].InstanceID)
+	assert.Equal(t, ident.ID(inst.ID), got.Gaps[0].InstanceID)
 	assert.Equal(t, 2, got.Gaps[0].AssignedStaffCount)
 	assert.Equal(t, 1, got.Gaps[0].AbsentStaffCount)
 	assert.Equal(t, 1, got.Gaps[0].PresentStaffCount)
@@ -298,7 +299,7 @@ func TestGaps_UnderstaffedAck_MovedToAcknowledged(t *testing.T) {
 	assert.Equal(t, "Open-Gap", got.Gaps[0].Title)
 
 	require.Len(t, got.Acknowledged, 1, "the acknowledged block moves to its own bucket")
-	assert.Equal(t, ack.ID, got.Acknowledged[0].InstanceID)
+	assert.Equal(t, ident.ID(ack.ID), got.Acknowledged[0].InstanceID)
 	require.NotNil(t, got.Acknowledged[0].UnderstaffedNote)
 	assert.Equal(t, "bewusst ohne Personal", *got.Acknowledged[0].UnderstaffedNote)
 }

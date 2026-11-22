@@ -18,15 +18,15 @@ func TestHolidayPlacesRebookingKeepsTheFrozenContribution(t *testing.T) {
 	t.Parallel()
 	f := newReviewFixture(t, "Plätze Beitrag Umbuchung")
 	registration := f.submitPlaces(t, "umbuchung.beitrag@example.org", map[string][]int{"Tom": {0}})
-	require.Equal(t, http.StatusOK, f.confirmWith(t, registration.ID, nil).Code)
-	child := f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(registration.ID, ""), nil)).Children[0].ID
+	require.Equal(t, http.StatusOK, f.confirmWith(t, int64(registration.ID), nil).Code)
+	child := f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(int64(registration.ID), ""), nil)).Children[0].ID
 	second := f.offer.Weeks[1]
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(f.period.ID, registration.ID, child), map[string]any{
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(int64(f.period.ID), int64(registration.ID), int64(child)), map[string]any{
 		"bookings": []map[string]any{{"week_id": second.ID, "time_model_id": second.TimeModels[0].ID}},
 	})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Zero(t, f.mails(t, "holiday_place_granted", registration.ID), "a direct rebooking is not a promotion")
-	assert.Equal(t, f.offer.Weeks[0].TimeModels[0].PriceCents, f.contributionTotal(t, registration.ID), "a direct rebooking keeps the frozen contribution instead of billing both weeks")
+	assert.Zero(t, f.mails(t, "holiday_place_granted", int64(registration.ID)), "a direct rebooking is not a promotion")
+	assert.Equal(t, f.offer.Weeks[0].TimeModels[0].PriceCents, f.contributionTotal(t, int64(registration.ID)), "a direct rebooking keeps the frozen contribution instead of billing both weeks")
 }
 
 func TestHolidayPlacesPromotionUpdatesAnInvoicedContribution(t *testing.T) {
@@ -34,29 +34,29 @@ func TestHolidayPlacesPromotionUpdatesAnInvoicedContribution(t *testing.T) {
 	f := newReviewFixture(t, "Plätze Beitrag Rechnung")
 	billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
 	first, second := f.offer.Weeks[0], f.offer.Weeks[1]
-	f.setCapacity(t, first.ID, 2)
+	f.setCapacity(t, int64(first.ID), 2)
 	registration := f.submitPlaces(t, "nachruecken.rechnung@example.org", map[string][]int{"Tom": {0, 1}})
-	require.Equal(t, http.StatusOK, f.confirmWith(t, registration.ID, nil).Code)
+	require.Equal(t, http.StatusOK, f.confirmWith(t, int64(registration.ID), nil).Code)
 	setNumberRange(t, f, billing, "FE-{NNNN}")
-	run := billingRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(run))
+	run := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(run))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	before := correctedRun(t, f, billing, run.ID).Documents
-	require.Equal(t, []int64{registration.ID}, f.setCapacity(t, first.ID, 3).MovedUp)
-	contribution := f.cancelledContribution(t, registration.ID)
+	before := correctedRun(t, f, billing, int64(run.ID)).Documents
+	require.Equal(t, []int64{int64(registration.ID)}, testpkg.IDs(f.setCapacity(t, int64(first.ID), 3).MovedUp))
+	contribution := f.cancelledContribution(t, int64(registration.ID))
 	assert.Equal(t, first.TimeModels[0].PriceCents+second.TimeModels[0].PriceCents, contribution.TotalCents)
 	assert.True(t, contribution.CorrectionNeeded, "the new contribution must expose the difference to the issued invoice")
-	assert.Equal(t, before, correctedRun(t, f, billing, run.ID).Documents, "issued invoice positions stay immutable")
+	assert.Equal(t, before, correctedRun(t, f, billing, int64(run.ID)).Documents, "issued invoice positions stay immutable")
 	var invoice int64
 	for _, document := range before {
 		if document.Kind == "invoice" && document.RegistrationID == registration.ID {
-			invoice = document.ID
+			invoice = int64(document.ID)
 		}
 	}
 	require.NotZero(t, invoice)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(run.ID, invoice), map[string]any{"reason": "Weitere Ferienwoche zugeteilt"})
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(int64(run.ID), invoice), map[string]any{"reason": "Weitere Ferienwoche zugeteilt"})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	next := billingRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
+	next := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
 	assert.Equal(t, contribution.TotalCents, next.PreviewCents, "the replacement invoice includes the newly placed week")
 }
 
@@ -64,47 +64,47 @@ func TestHolidayPlacesNotifyEachPromotionOfARebookedWeek(t *testing.T) {
 	t.Parallel()
 	f := newReviewFixture(t, "Plätze Erneut Nachrücken")
 	first, second := f.offer.Weeks[0], f.offer.Weeks[1]
-	f.setCapacity(t, first.ID, 2)
+	f.setCapacity(t, int64(first.ID), 2)
 	registration := f.submitPlaces(t, "erneut.nachruecken@example.org", map[string][]int{"Tom": {0}})
-	f.setCapacity(t, first.ID, 3)
-	require.Equal(t, 1, f.mails(t, "holiday_place_granted", registration.ID))
-	child := f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(registration.ID, ""), nil)).Children[0].ID
+	f.setCapacity(t, int64(first.ID), 3)
+	require.Equal(t, 1, f.mails(t, "holiday_place_granted", int64(registration.ID)))
+	child := f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(int64(registration.ID), ""), nil)).Children[0].ID
 	rebook := func(week, model int64) {
 		t.Helper()
-		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(f.period.ID, registration.ID, child), map[string]any{
+		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(int64(f.period.ID), int64(registration.ID), int64(child)), map[string]any{
 			"bookings": []map[string]any{{"week_id": week, "time_model_id": model}},
 		})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	}
-	rebook(second.ID, second.TimeModels[0].ID)
+	rebook(int64(second.ID), int64(second.TimeModels[0].ID))
 	var promotionRecorded bool
 	require.NoError(t, f.db.NewRaw(`SELECT details->'before'->0->>'promoted_at' IS NOT NULL
   FROM enrollment.holiday_registration_audit WHERE holiday_registration_id=? AND action='rebook' ORDER BY id DESC LIMIT 1`, registration.ID).Scan(t.Context(), &promotionRecorded))
 	assert.True(t, promotionRecorded, "rebooking preserves the previous promotion timestamp for historical care")
-	f.setCapacity(t, first.ID, 2)
-	rebook(first.ID, first.TimeModels[0].ID)
-	before := f.mails(t, "holiday_place_granted", registration.ID)
-	f.setCapacity(t, first.ID, 3)
-	assert.Equal(t, before+1, f.mails(t, "holiday_place_granted", registration.ID), "each new booking generation gets its own promotion notice")
-	f.setCapacity(t, first.ID, 3)
-	assert.Equal(t, before+1, f.mails(t, "holiday_place_granted", registration.ID), "repeating the capacity does not duplicate the notice")
+	f.setCapacity(t, int64(first.ID), 2)
+	rebook(int64(first.ID), int64(first.TimeModels[0].ID))
+	before := f.mails(t, "holiday_place_granted", int64(registration.ID))
+	f.setCapacity(t, int64(first.ID), 3)
+	assert.Equal(t, before+1, f.mails(t, "holiday_place_granted", int64(registration.ID)), "each new booking generation gets its own promotion notice")
+	f.setCapacity(t, int64(first.ID), 3)
+	assert.Equal(t, before+1, f.mails(t, "holiday_place_granted", int64(registration.ID)), "repeating the capacity does not duplicate the notice")
 }
 
 func TestHolidayPlacesRebookingStillPromotesAWaitingSibling(t *testing.T) {
 	t.Parallel()
 	f := newReviewFixture(t, "Plätze Umbuchung Geschwister")
 	first, second := f.offer.Weeks[0], f.offer.Weeks[1]
-	f.setCapacity(t, first.ID, 3)
+	f.setCapacity(t, int64(first.ID), 3)
 	registration := f.submitPlaces(t, "umbuchung.geschwister@example.org", map[string][]int{"Tom": {0}, "Ida": {0}})
-	require.Equal(t, http.StatusOK, f.confirmWith(t, registration.ID, nil).Code)
-	detail := f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(registration.ID, ""), nil))
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(f.period.ID, registration.ID, detail.Children[0].ID), map[string]any{
+	require.Equal(t, http.StatusOK, f.confirmWith(t, int64(registration.ID), nil).Code)
+	detail := f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(int64(registration.ID), ""), nil))
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(int64(f.period.ID), int64(registration.ID), int64(detail.Children[0].ID)), map[string]any{
 		"bookings": []map[string]any{{"week_id": second.ID, "time_model_id": second.TimeModels[0].ID}},
 	})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Empty(t, f.places(t)[first.ID].Waitlist, "the sibling receives the freed place")
-	assert.Equal(t, 1, f.mails(t, "holiday_place_granted", registration.ID))
-	assert.Equal(t, 2*first.TimeModels[0].PriceCents, f.contributionTotal(t, registration.ID), "only the waiting sibling adds a week; the rebooked child keeps its frozen price")
+	assert.Empty(t, f.places(t)[int64(first.ID)].Waitlist, "the sibling receives the freed place")
+	assert.Equal(t, 1, f.mails(t, "holiday_place_granted", int64(registration.ID)))
+	assert.Equal(t, 2*first.TimeModels[0].PriceCents, f.contributionTotal(t, int64(registration.ID)), "only the waiting sibling adds a week; the rebooked child keeps its frozen price")
 }
 
 func TestHolidayPlacesDelayedReplacementKeepsTheFrozenCharge(t *testing.T) {
@@ -112,27 +112,27 @@ func TestHolidayPlacesDelayedReplacementKeepsTheFrozenCharge(t *testing.T) {
 	f := newReviewFixture(t, "Plätze Ersatz Warteliste")
 	first, second := f.offer.Weeks[0], f.offer.Weeks[1]
 	registration := f.submitPlaces(t, "ersatz.warteliste@example.org", map[string][]int{"Tom": {0}})
-	require.Equal(t, http.StatusOK, f.confirmWith(t, registration.ID, nil).Code)
-	original := f.contributionTotal(t, registration.ID)
-	full := f.places(t)[second.ID].Placed
-	f.setCapacity(t, second.ID, full)
-	child := f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(registration.ID, ""), nil)).Children[0].ID
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(f.period.ID, registration.ID, child), map[string]any{
+	require.Equal(t, http.StatusOK, f.confirmWith(t, int64(registration.ID), nil).Code)
+	original := f.contributionTotal(t, int64(registration.ID))
+	full := f.places(t)[int64(second.ID)].Placed
+	f.setCapacity(t, int64(second.ID), full)
+	child := f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(int64(registration.ID), ""), nil)).Children[0].ID
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(int64(f.period.ID), int64(registration.ID), int64(child)), map[string]any{
 		"bookings": []map[string]any{{"week_id": second.ID, "time_model_id": second.TimeModels[0].ID}},
 	})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, original, f.contributionTotal(t, registration.ID), "a replacement on the waiting list keeps the frozen charge")
-	require.Equal(t, []int64{registration.ID}, f.setCapacity(t, second.ID, full+1).MovedUp)
-	assert.Equal(t, original, f.contributionTotal(t, registration.ID), "promotion must not charge both the original and its replacement")
-	assert.Equal(t, 1, f.mails(t, "holiday_place_granted", registration.ID))
+	assert.Equal(t, original, f.contributionTotal(t, int64(registration.ID)), "a replacement on the waiting list keeps the frozen charge")
+	require.Equal(t, []int64{int64(registration.ID)}, testpkg.IDs(f.setCapacity(t, int64(second.ID), full+1).MovedUp))
+	assert.Equal(t, original, f.contributionTotal(t, int64(registration.ID)), "promotion must not charge both the original and its replacement")
+	assert.Equal(t, 1, f.mails(t, "holiday_place_granted", int64(registration.ID)))
 	// A later rebooking back through the same lineage also replaces a paid week.
-	f.setCapacity(t, first.ID, 2)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(f.period.ID, registration.ID, child), map[string]any{
+	f.setCapacity(t, int64(first.ID), 2)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(int64(f.period.ID), int64(registration.ID), int64(child)), map[string]any{
 		"bookings": []map[string]any{{"week_id": first.ID, "time_model_id": first.TimeModels[0].ID}},
 	})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	f.setCapacity(t, first.ID, 3)
-	assert.Equal(t, original, f.contributionTotal(t, registration.ID))
+	f.setCapacity(t, int64(first.ID), 3)
+	assert.Equal(t, original, f.contributionTotal(t, int64(registration.ID)))
 }
 
 func TestHolidayPlacesFullyWaitingFamilyCanKeepItsExemption(t *testing.T) {
@@ -141,22 +141,22 @@ func TestHolidayPlacesFullyWaitingFamilyCanKeepItsExemption(t *testing.T) {
 	billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
 	createContributionRule(t, f, billing, benefitsExemption())
 	first := f.offer.Weeks[0]
-	f.setCapacity(t, first.ID, 2)
+	f.setCapacity(t, int64(first.ID), 2)
 	body := placesRegistration(f, "warteliste.befreit@example.org", map[string][]int{"Tom": {0}})
 	body["benefits_declared"] = true
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(f.period.PublicToken), body)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	registration := decodeSchoolPortalData[receiptBody](t, rec.Body.Bytes()).ID
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayContributionPath(f.period.ID, registration), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayContributionPath(int64(f.period.ID), int64(registration)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	preview := decodeSchoolPortalData[contributionBody](t, rec.Body.Bytes())
 	assert.True(t, preview.ExemptionAvailable)
 	assert.True(t, preview.BenefitsExemption)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(f.period.ID, registration), map[string]any{"benefits_exemption": true})
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(f.period.ID), int64(registration)), map[string]any{"benefits_exemption": true})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Zero(t, f.contributionTotal(t, registration))
-	f.setCapacity(t, first.ID, 3)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayContributionPath(f.period.ID, registration), nil)
+	assert.Zero(t, f.contributionTotal(t, int64(registration)))
+	f.setCapacity(t, int64(first.ID), 3)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayContributionPath(int64(f.period.ID), int64(registration)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	promoted := decodeSchoolPortalData[contributionBody](t, rec.Body.Bytes())
 	assert.True(t, promoted.BenefitsExemption)
@@ -166,12 +166,12 @@ func TestHolidayPlacesFullyWaitingFamilyCanKeepItsExemption(t *testing.T) {
 func TestHolidayPlacesQueryBudgetIsFlat(t *testing.T) {
 	t.Parallel()
 	f := newReviewFixture(t, "Plätze Query-Budget")
-	f.setCapacity(t, f.offer.Weeks[0].ID, 2)
+	f.setCapacity(t, int64(f.offer.Weeks[0].ID), 2)
 	f.submitPlaces(t, "budget.erstes@example.org", map[string][]int{"Tom": {0}})
 	measure := func() testpkg.QueryMeasurement {
 		t.Helper()
 		counter := testpkg.CaptureQueriesForContext(t, f.db)
-		req := httptest.NewRequest(http.MethodGet, holidayPlacesPath(f.period.ID), nil)
+		req := httptest.NewRequest(http.MethodGet, holidayPlacesPath(int64(f.period.ID)), nil)
 		req.Header.Set("Authorization", "Bearer "+f.office.token)
 		rec := httptest.NewRecorder()
 		testpkg.MeasuredHTTPRequest(counter, f.traeger, rec, req.WithContext(counter.Context(req.Context())))
@@ -198,15 +198,15 @@ func TestHolidayWaitlistRanksKeepTheWholeWeekWhenReadingOneRegistration(t *testi
 	t.Parallel()
 	f := newReviewFixture(t, "Plätze Rang Einzelanmeldung")
 	first := f.offer.Weeks[0]
-	f.setCapacity(t, first.ID, 2)
+	f.setCapacity(t, int64(first.ID), 2)
 	tom := f.submitPlaces(t, "rang.tom@example.org", map[string][]int{"Tom": {0}})
 	ida := f.submitPlaces(t, "rang.ida@example.org", map[string][]int{"Ida": {0}})
-	detail := f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(ida.ID, ""), nil))
+	detail := f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(int64(ida.ID), ""), nil))
 	require.NotNil(t, detail.Children[0].Bookings[0].WaitlistPosition)
 	assert.Equal(t, 2, *detail.Children[0].Bookings[0].WaitlistPosition)
-	rec := f.cancel(t, f.office.token, tom.ID)
+	rec := f.cancel(t, f.office.token, int64(tom.ID))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	detail = f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(ida.ID, ""), nil))
+	detail = f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(int64(ida.ID), ""), nil))
 	require.NotNil(t, detail.Children[0].Bookings[0].WaitlistPosition)
 	assert.Equal(t, 1, *detail.Children[0].Bookings[0].WaitlistPosition)
 }

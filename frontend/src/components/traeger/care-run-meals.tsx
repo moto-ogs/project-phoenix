@@ -21,6 +21,7 @@ import { formatEuro } from "./contribution-format";
 import { InvoiceLine } from "./invoice-line";
 import { mealPlanConcept } from "~/lib/concepts/mealPlan";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
+import { labelOf } from "~/lib/label-of";
 
 /** A Mensa month on an invoice: „2 Mittagessen im Januar 2026 à 4,80 €“. */
 export function MealPositionLine({
@@ -56,7 +57,10 @@ function groupBySchool(
   return bySchool;
 }
 
-const UNBILLED_REASONS: Record<CareMealUnbilled["reason"], string> = {
+const UNBILLED_REASONS: Record<
+  NonNullable<CareMealUnbilled["reason"]>,
+  string
+> = {
   no_contract: "Kein Vertrag an der Schule in diesem Monat.",
   contract_billed:
     "Die Rechnung dieses Monats ist schon ausgestellt. Der Lauf des nächsten Monats rechnet die Mensa ab.",
@@ -92,7 +96,7 @@ function UnbilledGroup({
       </p>
       <p className="text-sm text-gray-600">
         {entries.length} {entries.length === 1 ? "Kind" : "Kinder"} mit {meals}{" "}
-        Essen nicht abgerechnet. {UNBILLED_REASONS[first.reason]}
+        Essen nicht abgerechnet. {labelOf(UNBILLED_REASONS, first.reason, "")}
       </p>
       <ul
         id={listId}

@@ -5,6 +5,7 @@ import {
   fetchDatevRunStates,
   resetSollMapping,
 } from "./traeger-finance-exports-api";
+import { fetchSepaMandateCollections } from "./traeger-sepa-debits-api";
 import { applySepaImport, previewSepaImport } from "./traeger-sepa-import-api";
 import { ApiError } from "./api-error";
 import {
@@ -18,7 +19,9 @@ import {
   fetchHolidayPeriods,
   fetchTraegerBuero,
   fetchTraegerSchools,
+  fetchTraegerSchoolsAlerts,
   publishHolidayPeriod,
+  startTraegerSchoolSession,
   traegerLogin,
   updateHolidayPeriod,
 } from "./traeger-api";
@@ -40,6 +43,17 @@ describe("traeger-api", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it("names the school of the Absprung as a string", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, { status: "success", data: { handoff_token: "t" } }),
+    );
+
+    await expect(startTraegerSchoolSession("12")).resolves.toBe("t");
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({
+      school_id: "12",
+    });
   });
 
   // The DATEV states of the export page (#6433): one request per page of
@@ -128,6 +142,11 @@ describe("traeger-api", () => {
               updated_at: null,
             },
             file_numbers: { next: 9, started: true },
+            datev: {
+              ready: false,
+              missing_settings: null,
+              invalid_settings: null,
+            },
           },
         }),
       );
@@ -139,7 +158,7 @@ describe("traeger-api", () => {
       ["/api/traeger/finance-exports/settings", "GET"],
     ]);
     expect(settings.custom).toBe(false);
-    expect(settings.mapping.columns).toEqual([
+    expect(settings.mapping?.columns).toEqual([
       { field: "invoice_number", header: "Rechnung", value: "" },
     ]);
     expect(settings.nextFileNumber).toBe(9);
@@ -172,6 +191,59 @@ describe("traeger-api", () => {
       expect(result.counts.duplicate).toBe(2);
       expect(result.counts.debtorConflicts).toBe(0);
     }
+  });
+
+  // ADR 0270 point 6: a value a newer backend adds is not passed on as a
+  // known one. A debit left out for a new reason stays out of the file.
+  it("keeps unknown SEPA values apart from the known ones", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, {
+        data: [
+          {
+            id: "1",
+            mandate_id: "2",
+            contract_id: "3",
+            invoice_number: "MB-1",
+            recipient_name: "Familie Muster",
+            amount_cents: 100,
+            due_on: null,
+            sequence_type: "NEXT",
+            mandate_reference: "R1",
+            iban_masked: "DE** 1234",
+            status: "pending",
+            left: "new_reason",
+            submitted_at: null,
+          },
+        ],
+      }),
+    );
+    const [debit] = await fetchSepaMandateCollections("2");
+    expect(debit).toMatchObject({
+      id: "1",
+      dueOn: null,
+      sequenceType: undefined,
+      left: "other",
+    });
+
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, {
+        data: {
+          mapping: {
+            columns: {},
+            payer_key: "iban",
+            creditor_from_traeger: false,
+          },
+          counts: {},
+          rows: [{ line: 2, status: "later", sequence: "x", problems: null }],
+        },
+      }),
+    );
+    const result = await previewSepaImport({
+      file: new File(["csv"], "mandate.csv"),
+      mapping: null,
+    });
+    expect(result.mapping.payerKey).toBeNull();
+    expect(result.rows[0]).toMatchObject({ status: undefined, sequence: "" });
   });
 
   it("sends the chosen Träger as a number and returns only session status", async () => {
@@ -289,17 +361,32 @@ describe("traeger-api", () => {
     expect((error as ApiError).status).toBe(403);
   });
 
+  it("preserves a large school ID when starting a school session", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, { data: { handoff_token: "handoff" } }),
+    );
+
+    await expect(startTraegerSchoolSession("9007199254740993")).resolves.toBe(
+      "handoff",
+    );
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe("/api/traeger/school-sessions");
+    expect(JSON.parse(init?.body as string)).toEqual({
+      school_id: "9007199254740993",
+    });
+  });
+
   it("maps the schools of the Träger with string IDs", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse(200, {
         status: "success",
         data: [
           {
-            id: 2,
+            id: "2",
             name: "OGS Am Bach",
             slug: "am-bach",
             subdomain: "am-bach",
-            city: null,
+            city: "",
           },
         ],
       }),
@@ -317,18 +404,63 @@ describe("traeger-api", () => {
     expect(fetchMock.mock.calls[0]![0]).toBe("/api/traeger/schools");
   });
 
+  // ADR 0270 point 6: a hint kind a newer backend adds is left out instead
+  // of reaching the dashboard as a known kind (#2353).
+  it("keeps only the dashboard hints this build knows", async () => {
+    const figures = {
+      children_total: 10,
+      children_present: 8,
+      children_sick: 2,
+      staff_total: 2,
+      staff_present: 1,
+      care_ratio: 8,
+      as_of: "2026-09-09T10:00:00+02:00",
+    };
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, {
+        data: {
+          thresholds: {
+            children_per_staff: 6,
+            sick_percent: 20,
+            open_enrollments: 5,
+          },
+          schools: [
+            {
+              id: "2",
+              name: "OGS Am Bach",
+              slug: "am-bach",
+              subdomain: "am-bach",
+              city: "",
+              figures,
+              open_enrollments: 0,
+              alerts: ["staff_shortage", "heat_warning"],
+            },
+          ],
+          as_of: "2026-09-09T10:00:00+02:00",
+        },
+      }),
+    );
+    const alerts = await fetchTraegerSchoolsAlerts();
+    expect(alerts.schools[0]?.alerts).toEqual(["staff_shortage"]);
+  });
+
   it("maps the Träger-Büro and keeps only known roles (#4650)", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse(200, {
         status: "success",
         data: {
           members: [
-            { account_id: 3, email: "a@b.de", roles: ["billing", "unknown"] },
-            { account_id: 4, email: "e@f.de", name: "Eva Müller", roles: [] },
+            {
+              account_id: "3",
+              email: "a@b.de",
+              name: "",
+              roles: ["billing", "unknown"],
+            },
+            { account_id: "4", email: "e@f.de", name: "Eva Müller", roles: [] },
           ],
           invitations: [
             {
-              id: 9,
+              id: "9",
               email: "c@d.de",
               roles: ["read_only"],
               expires_at: "2026-09-11T10:00:00Z",
@@ -378,7 +510,7 @@ describe("traeger-api", () => {
       jsonResponse(200, {
         status: "success",
         data: {
-          account_id: 4,
+          account_id: "4",
           email: "e@f.de",
           name: "Eva Müller",
           roles: ["billing"],
@@ -404,13 +536,13 @@ describe("traeger-api", () => {
       .mockResolvedValueOnce(
         jsonResponse(200, {
           status: "success",
-          data: { account_id: 4, email: "e@f.de", name: "" },
+          data: { account_id: "4", email: "e@f.de", name: "" },
         }),
       )
       .mockResolvedValueOnce(
         jsonResponse(200, {
           status: "success",
-          data: { account_id: 4, email: "e@f.de", name: "Eva" },
+          data: { account_id: "4", email: "e@f.de", name: "Eva" },
         }),
       );
 
@@ -445,7 +577,7 @@ describe("traeger-api holiday periods", () => {
   });
 
   const backendPeriod = {
-    id: 5,
+    id: "5",
     name: "Osterferien",
     registration_opens_on: "2027-01-11",
     registration_closes_on: "2027-02-26",
@@ -455,13 +587,13 @@ describe("traeger-api holiday periods", () => {
     published_at: null,
     weeks: [
       {
-        id: 7,
+        id: "7",
         starts_on: "2027-03-22",
         ends_on: "2027-03-26",
-        host_school_id: 31,
+        host_school_id: "31",
         time_models: [
           {
-            id: 9,
+            id: "9",
             name: "bis 13 Uhr",
             starts_at: "08:00",
             ends_at: "13:00",
@@ -492,7 +624,7 @@ describe("traeger-api holiday periods", () => {
     });
   });
 
-  it("sends kept IDs as numbers, leaves them out for new rows and archives (#5994)", async () => {
+  it("sends kept IDs as strings, leaves them out for new rows and archives (#5994)", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse(200, { status: "success", data: backendPeriod }),
     );
@@ -545,10 +677,10 @@ describe("traeger-api holiday periods", () => {
       allocation_mode: "arrival",
       weeks: [
         {
-          id: 7,
+          id: "7",
           starts_on: "2027-03-22",
           ends_on: "2027-03-26",
-          host_school_id: 31,
+          host_school_id: "31",
           booking_unit: "week",
           time_models: [
             {
@@ -559,7 +691,7 @@ describe("traeger-api holiday periods", () => {
               archived: false,
             },
             {
-              id: 9,
+              id: "9",
               name: "bis 13 Uhr",
               starts_at: "08:00",
               ends_at: "13:00",
@@ -602,7 +734,7 @@ describe("traeger-api holiday periods", () => {
           },
           bank_accounts: [
             {
-              id: 7,
+              id: "7",
               label: "Elternbeiträge",
               account_holder: "Träger e.V.",
               iban: "DE89370400440532013000",
@@ -643,7 +775,7 @@ describe("traeger-api holiday periods", () => {
       jsonResponse(201, {
         status: "success",
         data: {
-          id: 9,
+          id: "9",
           label: "Mensa",
           account_holder: "Träger e.V.",
           iban: "GB82WEST12345698765432",

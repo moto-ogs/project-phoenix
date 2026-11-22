@@ -23,7 +23,8 @@ func shiftToPublic(value domain.StaffShift) workforce.StaffShift {
 		ID: value.ID, TenantID: value.TenantID, StaffID: value.StaffID, Date: value.Date,
 		StartTime: value.StartTime, EndTime: value.EndTime, BreakMinutes: value.BreakMinutes,
 		ShiftTypeID: value.ShiftTypeID, Notes: value.Notes, SeriesID: value.SeriesID, Detached: value.Detached, SeriesOverride: value.SeriesOverride,
-		SeriesOccurrenceDate: value.SeriesOccurrenceDate, Cancelled: value.Cancelled, ChangeReason: value.ChangeReason,
+		SeriesOccurrenceDate: value.SeriesOccurrenceDate, SeriesStartTime: value.SeriesStartTime, SeriesEndTime: value.SeriesEndTime,
+		Cancelled: value.Cancelled, ChangeReason: value.ChangeReason,
 		OriginShiftID: value.OriginShiftID, SickAbsenceID: value.SickAbsenceID, CreatedBy: value.CreatedBy,
 		UpdatedBy: value.UpdatedBy, PlannedByTraeger: value.PlannedByTraeger, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt,
 	}
@@ -47,7 +48,8 @@ func shiftFilterToDomain(filter workforce.StaffShiftFilter) domain.StaffShiftFil
 	}
 	return domain.StaffShiftFilter{
 		StaffID: filter.StaffID, StaffIDs: filter.StaffIDs, From: filter.From, To: filter.To, Dates: filter.Dates,
-		SeriesID: filter.SeriesID, OriginShiftID: filter.OriginShiftID, OriginShiftIDs: filter.OriginShiftIDs,
+		IncludeSeriesOccurrenceDate: filter.IncludeSeriesOccurrenceDate,
+		SeriesID:                    filter.SeriesID, OriginShiftID: filter.OriginShiftID, OriginShiftIDs: filter.OriginShiftIDs,
 		SickAbsenceID: filter.SickAbsenceID, Cancelled: filter.Cancelled, Detached: filter.Detached,
 		Order: order, Limit: filter.Limit, Offset: filter.Offset,
 	}

@@ -50,6 +50,8 @@ func TestTraegerLevelKeysOfVersionOne(t *testing.T) {
 		// What the holiday care wish does in a holiday period (#4703).
 		config.KeyHolidayRegistrationWishMode,
 		config.KeyParentBillingCareMonthChange,
+		// Whether parents may stop the room history of their child (#3844).
+		config.KeyParentRoomHistoryStopEnabled,
 		// The changes of a single invoice the review allows (#6197).
 		config.KeyParentBillingCareReviewAddress, config.KeyParentBillingCareReviewAmount,
 		config.KeyParentBillingCareReviewPositions, config.KeyParentBillingCareReviewRecipient,

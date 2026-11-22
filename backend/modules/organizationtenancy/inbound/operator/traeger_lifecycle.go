@@ -75,7 +75,9 @@ func (rs *ProvisioningResource) TraegerErasureOrder(w http.ResponseWriter, r *ht
 		return
 	}
 	if !found {
-		common.Respond(w, r, http.StatusOK, nil, "No open erasure order")
+		// A typed nil writes "data": null; a bare nil drops the member,
+		// which the contract's nullable answer does not accept.
+		common.Respond(w, r, http.StatusOK, (*organizationtenancy.TraegerErasureOrder)(nil), "No open erasure order")
 		return
 	}
 	common.Respond(w, r, http.StatusOK, order, "Erasure order retrieved successfully")

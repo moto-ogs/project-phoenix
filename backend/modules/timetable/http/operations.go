@@ -20,17 +20,18 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
 type spontaneousStartRequest struct {
-	Title           string          `json:"title"`
-	Description     *string         `json:"description,omitempty"`
-	Notes           *string         `json:"notes,omitempty"`
-	RoomID          int64           `json:"room_id"`
-	ActivityGroupID *int64          `json:"activity_group_id,omitempty"`
-	StaffIDs        []common.JSONID `json:"staff_ids,omitempty"`
-	StudentIDs      []int64         `json:"student_ids,omitempty"`
+	Title           string      `json:"title"`
+	Description     *string     `json:"description,omitempty"`
+	Notes           *string     `json:"notes,omitempty"`
+	RoomID          common.ID   `json:"room_id"`
+	ActivityGroupID *common.ID  `json:"activity_group_id,omitempty"`
+	StaffIDs        []common.ID `json:"staff_ids,omitempty"`
+	StudentIDs      []common.ID `json:"student_ids,omitempty"`
 }
 
 func (req *spontaneousStartRequest) Bind(_ *http.Request) error {
@@ -178,9 +179,9 @@ func (rs *Resource) operationsStart(w http.ResponseWriter, r *http.Request) {
 			return nil, err
 		}
 		return startOperationResponse{
-			InstanceID:    result.InstanceID,
+			InstanceID:    ident.ID(result.InstanceID),
 			Status:        result.Status,
-			ActiveGroupID: result.ActiveGroupID,
+			ActiveGroupID: ident.ID(result.ActiveGroupID),
 			Warnings:      result.Warnings,
 		}, nil
 	}, "Timetable instance started")
@@ -193,7 +194,7 @@ func (rs *Resource) operationsReopen(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return nil, err
 		}
-		return startOperationResponse{InstanceID: result.InstanceID, Status: result.Status, ActiveGroupID: result.ActiveGroupID, Warnings: result.Warnings}, nil
+		return startOperationResponse{InstanceID: ident.ID(result.InstanceID), Status: result.Status, ActiveGroupID: ident.ID(result.ActiveGroupID), Warnings: result.Warnings}, nil
 	}, "Timetable instance reopened")
 }
 
@@ -217,7 +218,7 @@ func (rs *Resource) operationsCreateAndStartSpontaneous(w http.ResponseWriter, r
 		renderWorkdayRefusal(w, r, err, "")
 		return
 	}
-	activityGroupID, err := rs.TimetableData.ResolveSpontaneousActivity(r.Context(), req.Title, req.ActivityGroupID, createdBy)
+	activityGroupID, err := rs.TimetableData.ResolveSpontaneousActivity(r.Context(), req.Title, (*int64)(req.ActivityGroupID), createdBy)
 	if err != nil {
 		renderSpontaneousActivityResolutionError(w, r, err)
 		return
@@ -239,7 +240,7 @@ func (rs *Resource) operationsCreateAndStartSpontaneous(w http.ResponseWriter, r
 		Title:            req.Title,
 		Description:      req.Description,
 		Notes:            req.Notes,
-		RoomID:           req.RoomID,
+		RoomID:           req.RoomID.Int64(),
 		ActivityGroupID:  activityGroupID,
 		StaffIDs:         staffIDs,
 		CreatedByStaffID: &createdBy,
@@ -249,9 +250,9 @@ func (rs *Resource) operationsCreateAndStartSpontaneous(w http.ResponseWriter, r
 		return
 	}
 	common.Respond(w, r, http.StatusCreated, startOperationResponse{
-		InstanceID:    result.InstanceID,
+		InstanceID:    ident.ID(result.InstanceID),
 		Status:        result.Status,
-		ActiveGroupID: result.ActiveGroupID,
+		ActiveGroupID: ident.ID(result.ActiveGroupID),
 		Warnings:      result.Warnings,
 	}, "Spontaneous timetable instance created and started")
 }
@@ -294,7 +295,7 @@ func (rs *Resource) admitSpontaneousStart(w http.ResponseWriter, r *http.Request
 			return nil, 0, false
 		}
 	}
-	if !rs.validateSpontaneousRoom(w, r, req.RoomID) {
+	if !rs.validateSpontaneousRoom(w, r, req.RoomID.Int64()) {
 		return nil, 0, false
 	}
 
@@ -398,7 +399,7 @@ func (rs *Resource) operationsComplete(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("confirmed_present_student_ids is required")))
 		return
 	}
-	r = r.WithContext(timetable.WithCompletionConfirmation(r.Context(), body.ConfirmedPresentStudentIDs))
+	r = r.WithContext(timetable.WithCompletionConfirmation(r.Context(), ident.Int64s(body.ConfirmedPresentStudentIDs)))
 	rs.withOperationInstance(w, r, func(instanceID int64) (any, error) {
 		accountID, isAdmin := operationActor(r.Context())
 		return rs.OperationsService.Complete(r.Context(), accountID, isAdmin, instanceID)
@@ -432,7 +433,7 @@ func (rs *Resource) operationsCheckInStudent(w http.ResponseWriter, r *http.Requ
 const maxBulkCheckInStudents = 500
 
 type bulkCheckInRequest struct {
-	StudentIDs []common.JSONID `json:"student_ids"`
+	StudentIDs []common.ID `json:"student_ids"`
 	studentIDs []int64
 }
 
@@ -586,14 +587,14 @@ func (rs *Resource) attachTeacherHints(ctx context.Context, roster *timetable.Op
 	}
 	studentIDs := make([]int64, 0, len(roster.Rows))
 	for _, row := range roster.Rows {
-		studentIDs = append(studentIDs, row.StudentID)
+		studentIDs = append(studentIDs, row.StudentID.Int64())
 	}
 	hints, err := rs.TeacherHints.TeacherHints(ctx, studentIDs, day)
 	if err != nil {
 		return fmt.Errorf("teacher hints: %w", err)
 	}
 	for i := range roster.Rows {
-		roster.Rows[i].TeacherHints = hints[roster.Rows[i].StudentID]
+		roster.Rows[i].TeacherHints = hints[roster.Rows[i].StudentID.Int64()]
 	}
 	return nil
 }
@@ -666,9 +667,9 @@ func parseOperationID(w http.ResponseWriter, r *http.Request, key string) (int64
 }
 
 type startOperationResponse struct {
-	InstanceID    int64                               `json:"instance_id"`
+	InstanceID    common.ID                           `json:"instance_id"`
 	Status        string                              `json:"status"`
-	ActiveGroupID int64                               `json:"active_group_id"`
+	ActiveGroupID common.ID                           `json:"active_group_id"`
 	Warnings      []timetable.InstanceConflictWarning `json:"warnings"`
 }
 

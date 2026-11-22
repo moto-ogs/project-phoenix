@@ -19,7 +19,7 @@ function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
 }
 
 const backendPeriod = {
-  id: 5,
+  id: "5",
   name: "Schuljahr 2026/2027",
   period_type: "school_year",
   start_date: "2026-08-01",
@@ -72,7 +72,7 @@ describe("calendarPeriodService", () => {
               {
                 code: "overlapping_active_periods",
                 message: "Überschneidung mit aktiven Zeiträumen",
-                overlapping_period_ids: [3],
+                overlapping_period_ids: ["3"],
                 overlapping_period_names: ["Halbjahr 1"],
               },
             ],

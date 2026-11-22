@@ -137,8 +137,8 @@ func mapScheduleWarnings(source []timetable.SubstituteTimeConflict) []education.
 	result := make([]education.ScheduleTimeConflict, 0, len(source))
 	for _, item := range source {
 		result = append(result, education.ScheduleTimeConflict{
-			Kind: item.Kind, InstanceID: item.InstanceID,
-			OtherID: item.OtherID, Message: item.Message,
+			Kind: item.Kind, InstanceID: item.InstanceID.Int64(),
+			OtherID: item.OtherID.Int64(), Message: item.Message,
 		})
 	}
 	return result

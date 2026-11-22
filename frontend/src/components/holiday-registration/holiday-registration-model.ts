@@ -911,9 +911,9 @@ export function quoteBookings(
   offer: HolidayRegistrationOffer,
 ): HolidayQuoteChild {
   return bookedWeeks(child, offer).map((booking) => ({
-    week_id: Number(booking.weekId),
-    time_model_id: Number(booking.timeModelId),
-    ...(booking.days.length > 0 ? { days: booking.days } : {}),
+    week_id: booking.weekId,
+    time_model_id: booking.timeModelId,
+    ...(booking.days.length > 0 ? { days: [...booking.days] } : {}),
     ...(booking.lunch ? { lunch: true } : {}),
   }));
 }
@@ -969,7 +969,7 @@ export function payloadFromDraft(
         first_name: child.firstName.trim(),
         last_name: child.lastName.trim(),
         birth_date: child.birthDate,
-        home_school_id: guest ? 0 : Number(child.school),
+        home_school_id: guest ? "0" : child.school,
         guest_school_name: guest ? child.guestSchoolName.trim() : "",
         ...healthPayload(childHealthValues(child, offer.form)),
         bookings: quoteBookings(child, offer),

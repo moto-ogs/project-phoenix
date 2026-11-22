@@ -1,4 +1,6 @@
 import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
+import { knownEnum } from "~/lib/contract/known-enum";
+import type * as wire from "~/lib/contract/timetable.generated";
 import { schoolClassesLabel } from "~/lib/school-class-label";
 import { describeGapWeekdays } from "~/lib/offering-gap";
 
@@ -103,65 +105,6 @@ export interface OfferingPreview {
   otherOfferings?: OfferingPreviewAlternative[];
 }
 
-interface BackendOfferingRef {
-  id: number;
-  name: string;
-}
-
-interface BackendRosterDeviationChild {
-  student_id: number;
-  name: string;
-  weekdays?: number[] | null;
-}
-
-interface BackendRosterDeviation {
-  template_id: number;
-  offerings?: BackendOfferingRef[] | null;
-  grade_levels?: number[] | null;
-  school_classes?: string[] | null;
-  unbooked_count: number;
-  missing_count: number;
-  unbooked?: BackendRosterDeviationChild[] | null;
-  missing?: BackendRosterDeviationChild[] | null;
-  candidates?: BackendOfferingRef[] | null;
-  combinations?: BackendOfferingRef[][] | null;
-  ambiguous?: boolean;
-}
-
-export interface BackendRosterDeviationsResponse {
-  deviations?: BackendRosterDeviation[] | null;
-}
-
-interface BackendPreviewChild {
-  student_id: number;
-  name: string;
-}
-
-interface BackendPreviewDroppedChild extends BackendPreviewChild {
-  booked_weekdays?: number[] | null;
-  excluded_by?: "school_class" | "grade_level" | null;
-}
-
-export interface BackendOfferingPreview {
-  from: string;
-  weekdays?: Array<{
-    weekday: number;
-    added?: BackendPreviewChild[] | null;
-    removed?: BackendPreviewDroppedChild[] | null;
-    kept_count: number;
-  }> | null;
-  segments?: Array<{
-    template_id: number;
-    valid_from: string;
-    valid_until?: string | null;
-  }> | null;
-  other_offerings?: Array<{
-    offering_id: number;
-    name: string;
-    child_count: number;
-  }> | null;
-}
-
 export interface OfferingConnectionBody {
   offering_ids: number[];
   grade_levels: number[];
@@ -169,24 +112,30 @@ export interface OfferingConnectionBody {
   effective_date: string;
 }
 
-const offeringRef = (offering: BackendOfferingRef) => ({
-  id: String(offering.id),
+const EXCLUSIONS: readonly NonNullable<
+  OfferingPreviewDroppedChild["excludedBy"]
+>[] = ["school_class", "grade_level"];
+
+const offeringRef = (
+  offering: wire.templateRosterMaintenanceOfferingResponse,
+) => ({
+  id: offering.id,
   name: offering.name,
 });
 
 const deviationChild = (
-  child: BackendRosterDeviationChild,
+  child: wire.rosterDeviationChildResponse,
 ): RosterDeviationChild => ({
-  studentId: String(child.student_id),
+  studentId: child.student_id,
   name: child.name,
   weekdays: child.weekdays ?? [],
 });
 
 export function mapRosterDeviations(
-  raw: BackendRosterDeviationsResponse,
+  raw: wire.rosterDeviationsResponse,
 ): RosterDeviation[] {
   return (raw.deviations ?? []).map((deviation) => ({
-    templateId: String(deviation.template_id),
+    templateId: deviation.template_id,
     offerings: (deviation.offerings ?? []).map(offeringRef),
     gradeLevels: deviation.grade_levels ?? [],
     schoolClasses: deviation.school_classes ?? [],
@@ -196,27 +145,32 @@ export function mapRosterDeviations(
     missing: (deviation.missing ?? []).map(deviationChild),
     candidates: (deviation.candidates ?? []).map(offeringRef),
     combinations: (deviation.combinations ?? []).map((combination) =>
-      combination.map(offeringRef),
+      (combination ?? []).map(offeringRef),
     ),
-    ambiguous: deviation.ambiguous ?? false,
+    ambiguous: deviation.ambiguous,
   }));
 }
 
-const previewChild = (child: BackendPreviewChild): OfferingPreviewChild => ({
-  studentId: String(child.student_id),
+const previewChild = (
+  child: wire.offeringPreviewStudentResponse,
+): OfferingPreviewChild => ({
+  studentId: child.student_id,
   name: child.name,
 });
 
 const droppedChild = (
-  child: BackendPreviewDroppedChild,
-): OfferingPreviewDroppedChild => ({
-  ...previewChild(child),
-  ...(child.booked_weekdays ? { bookedWeekdays: child.booked_weekdays } : {}),
-  ...(child.excluded_by ? { excludedBy: child.excluded_by } : {}),
-});
+  child: wire.offeringPreviewDroppedResponse,
+): OfferingPreviewDroppedChild => {
+  const excludedBy = knownEnum(EXCLUSIONS, child.excluded_by);
+  return {
+    ...previewChild(child),
+    ...(child.booked_weekdays ? { bookedWeekdays: child.booked_weekdays } : {}),
+    ...(excludedBy ? { excludedBy } : {}),
+  };
+};
 
 export function mapOfferingPreview(
-  raw: BackendOfferingPreview,
+  raw: wire.offeringPreviewResponse,
 ): OfferingPreview {
   return {
     from: raw.from,
@@ -227,12 +181,12 @@ export function mapOfferingPreview(
       keptCount: day.kept_count,
     })),
     segments: (raw.segments ?? []).map((segment) => ({
-      templateId: String(segment.template_id),
-      validFrom: segment.valid_from,
+      templateId: segment.template_id,
+      validFrom: segment.valid_from ?? "",
       validUntil: segment.valid_until ?? undefined,
     })),
     otherOfferings: (raw.other_offerings ?? []).map((offering) => ({
-      offeringId: String(offering.offering_id),
+      offeringId: offering.offering_id,
       name: offering.name,
       childCount: offering.child_count,
     })),

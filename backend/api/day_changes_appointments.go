@@ -22,6 +22,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // maxAppointmentSpanDays bounds how far back a multi-day date of a series
@@ -84,11 +85,11 @@ func (s dayChangesAppointments) AppointmentChanges(ctx context.Context, day cale
 // todaysOverrides reads the overrides of the dates that may reach today,
 // keyed by appointment. A non-recurring appointment has none: a single
 // date is cancelled on the appointment itself.
-func (s dayChangesAppointments) todaysOverrides(ctx context.Context, visible []*appointments.Appointment, today appointments.Date) (map[int64][]*appointments.AppointmentOccurrenceOverride, error) {
+func (s dayChangesAppointments) todaysOverrides(ctx context.Context, visible []*appointments.Appointment, today appointments.Date) (map[ident.ID][]*appointments.AppointmentOccurrenceOverride, error) {
 	ids := []int64{}
 	span := 0
 	for _, appointment := range visible {
-		ids = append(ids, appointment.ID)
+		ids = append(ids, appointment.ID.Int64())
 		span = max(span, min(appointment.StartDate.DaysUntil(appointment.EndDate), maxAppointmentSpanDays))
 	}
 	if len(ids) == 0 {
@@ -102,9 +103,9 @@ func (s dayChangesAppointments) todaysOverrides(ctx context.Context, visible []*
 	if err != nil {
 		return nil, fmt.Errorf("list occurrence overrides: %w", err)
 	}
-	byAppointment := make(map[int64][]*appointments.AppointmentOccurrenceOverride, len(rows))
+	byAppointment := make(map[ident.ID][]*appointments.AppointmentOccurrenceOverride, len(rows))
 	for _, row := range rows {
-		byAppointment[row.AppointmentID] = append(byAppointment[row.AppointmentID], row)
+		byAppointment[ident.ID(row.AppointmentID)] = append(byAppointment[ident.ID(row.AppointmentID)], row)
 	}
 	return byAppointment, nil
 }
@@ -112,11 +113,11 @@ func (s dayChangesAppointments) todaysOverrides(ctx context.Context, visible []*
 // cancelledSeriesRules reads the rules of the cancelled appointments whose
 // own dates miss today: only a series reaches today then, and its rule
 // decides whether today is one of its dates.
-func (s dayChangesAppointments) cancelledSeriesRules(ctx context.Context, visible []*appointments.Appointment, today appointments.Date) (map[int64]*appointments.RecurrenceRule, error) {
+func (s dayChangesAppointments) cancelledSeriesRules(ctx context.Context, visible []*appointments.Appointment, today appointments.Date) (map[ident.ID]*appointments.RecurrenceRule, error) {
 	ids := []int64{}
 	for _, appointment := range visible {
 		if appointment.CancelledAt != nil && !overlapsDay(appointment, today) {
-			ids = append(ids, appointment.ID)
+			ids = append(ids, appointment.ID.Int64())
 		}
 	}
 	if len(ids) == 0 {
@@ -126,7 +127,7 @@ func (s dayChangesAppointments) cancelledSeriesRules(ctx context.Context, visibl
 	if err != nil {
 		return nil, fmt.Errorf("list recurrence rules: %w", err)
 	}
-	rules := make(map[int64]*appointments.RecurrenceRule, len(rows))
+	rules := make(map[ident.ID]*appointments.RecurrenceRule, len(rows))
 	for _, rule := range rows {
 		rules[rule.AppointmentID] = rule
 	}
@@ -142,7 +143,7 @@ func overlapsDay(appointment *appointments.Appointment, day appointments.Date) b
 // checks the date, and editing the series drops its overrides. Overrides that
 // change nothing are skipped, so another date of an overlapping series still
 // counts.
-func appointmentChange(appointment *appointments.Appointment, overrides []*appointments.AppointmentOccurrenceOverride, rules map[int64]*appointments.RecurrenceRule, today appointments.Date) (daychangesview.SourceEntry, bool) {
+func appointmentChange(appointment *appointments.Appointment, overrides []*appointments.AppointmentOccurrenceOverride, rules map[ident.ID]*appointments.RecurrenceRule, today appointments.Date) (daychangesview.SourceEntry, bool) {
 	length := appointment.StartDate.DaysUntil(appointment.EndDate)
 	for _, override := range overrides {
 		if override.OccurrenceDate.AddDays(length).Before(today) {

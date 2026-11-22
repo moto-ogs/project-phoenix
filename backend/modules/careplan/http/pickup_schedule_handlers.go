@@ -16,6 +16,7 @@ import (
 	securityruntime "github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	realtime "github.com/moto-ogs/project-phoenix/realtime"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	tenant "github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -308,7 +309,7 @@ func (rs *Resource) bulkUpsertPickupSchedules(w http.ResponseWriter, r *http.Req
 	claims := sessiontoken.ClaimsFromCtx(r.Context())
 	result, err := rs.PickupAdjustmentService.ApplyBulkExceptions(
 		r.Context(), careplan.PickupAdjustmentBulkInput{
-			StudentIDs: req.StudentIDs, Schedules: req.Schedules,
+			StudentIDs: ident.Int64s(req.StudentIDs), Schedules: req.Schedules,
 			ConfirmedException: req.ConfirmedException, CreatedByStaffID: staffID,
 			ActorAccountID: int64(claims.ID),
 			Authorize: func(ctx context.Context, student careplan.ScheduleStudent) (bool, error) {

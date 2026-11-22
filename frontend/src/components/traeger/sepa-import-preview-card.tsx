@@ -17,7 +17,7 @@ import { formatDate } from "~/lib/date-helpers";
 import type { MandateSequence } from "~/lib/traeger-sepa-api";
 import type { ImportResult, ImportRow } from "~/lib/traeger-sepa-import-api";
 import {
-  IMPORT_STATUS,
+  importStatusBadge,
   type ImportFilter,
   importDebtorNumberText,
   importChangesLabel,
@@ -211,8 +211,8 @@ export function SepaImportPreviewCard({
       header: "Stand",
       render: (row) => (
         <StatusBadge
-          tone={IMPORT_STATUS[row.status].tone}
-          label={IMPORT_STATUS[row.status].label}
+          tone={importStatusBadge(row.status).tone}
+          label={importStatusBadge(row.status).label}
         />
       ),
       stacked: "meta",

@@ -33,7 +33,7 @@ func (s *service) applyPlannedActivities(ctx context.Context, state *buildState,
 	}
 	for i := range state.projected {
 		if state.projected[i].fullAccess {
-			state.projected[i].PlannedActivities = activities[state.projected[i].ID]
+			state.projected[i].PlannedActivities = activities[state.projected[i].ID.Int64()]
 		}
 	}
 	return nil

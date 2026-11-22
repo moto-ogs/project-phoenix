@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/uptrace/bun"
 )
 
@@ -108,7 +109,7 @@ func (s *Store) List(ctx context.Context, tenantID int64, limit int) ([]domain.G
 
 func toDomain(row groupRow) domain.Group {
 	return domain.Group{
-		ID: row.ID, TenantID: row.TenantID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
-		Name: row.Name, RoomID: row.RoomID,
+		ID: ident.ID(row.ID), TenantID: ident.ID(row.TenantID), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
+		Name: row.Name, RoomID: (*ident.ID)(row.RoomID),
 	}
 }

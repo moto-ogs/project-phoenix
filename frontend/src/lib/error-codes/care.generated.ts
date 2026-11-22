@@ -81,6 +81,7 @@ export const codes = [
   "care.request_not_found",
   "care.request_not_open",
   "care.request_sharing_invalid",
+  "care.room_history_stop_disabled",
   "care.sick_note_disabled",
   "care.staff_managed_guardian_protected",
 ] as const;
@@ -167,6 +168,7 @@ export const classes = {
   "care.request_not_found": "business_rejection",
   "care.request_not_open": "business_rejection",
   "care.request_sharing_invalid": "input",
+  "care.room_history_stop_disabled": "permission",
   "care.sick_note_disabled": "permission",
   "care.staff_managed_guardian_protected": "permission",
 } as const;
@@ -253,6 +255,7 @@ export const parameters = {
   "care.request_not_found": [],
   "care.request_not_open": [],
   "care.request_sharing_invalid": [],
+  "care.room_history_stop_disabled": [],
   "care.sick_note_disabled": [],
   "care.staff_managed_guardian_protected": [],
 } as const;

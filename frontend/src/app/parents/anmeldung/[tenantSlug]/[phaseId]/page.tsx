@@ -96,9 +96,10 @@ function ParentEnrollFormPageContent({ params }: PageProps) {
         // prefill the parent types the guardian fields.
         fetchParentEnrollmentProfile(tenantSlug).catch(() => null),
       ]);
-      // Without the school's grade setting the form cannot be built; the
-      // page shows its load-failed text.
-      if (!tenant || !isSupportedGradeLevelMax(tenant.gradeLevelMax)) {
+      // A failed school lookup rejects with its code (#2353). Without the
+      // school's grade setting the form cannot be built; the page shows its
+      // load-failed text.
+      if (!isSupportedGradeLevelMax(tenant.gradeLevelMax)) {
         return null;
       }
       return {

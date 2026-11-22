@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // getTrackingIndicators handles POST /tracking-indicators
@@ -53,7 +54,7 @@ func (rs *Resource) getTrackingIndicators(w http.ResponseWriter, r *http.Request
 	}
 
 	// Get tracking indicator results from the service.
-	results, err := rs.Operations.GetTrackingIndicators(ctx, req.StudentIDs, labels)
+	results, err := rs.Operations.GetTrackingIndicators(ctx, ident.Int64s(req.StudentIDs), labels)
 	if err != nil {
 		common.RenderError(w, r, ErrorRenderer(err))
 		return

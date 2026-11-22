@@ -32,12 +32,12 @@ func NewSchulhofResource(schulhofService SchulhofStatusQuery, currentStaff func(
 // SchulhofStatusResponse represents the API response for Schulhof status.
 type SchulhofStatusResponse struct {
 	Exists            bool                     `json:"exists"`
-	RoomID            *int64                   `json:"room_id,omitempty"`
+	RoomID            *common.ID               `json:"room_id,omitempty"`
 	RoomName          string                   `json:"room_name"`
-	ActivityGroupID   *int64                   `json:"activity_group_id,omitempty"`
-	ActiveGroupID     *int64                   `json:"active_group_id,omitempty"`
+	ActivityGroupID   *common.ID               `json:"activity_group_id,omitempty"`
+	ActiveGroupID     *common.ID               `json:"active_group_id,omitempty"`
 	IsUserSupervising bool                     `json:"is_user_supervising"`
-	SupervisionID     *int64                   `json:"supervision_id,omitempty"`
+	SupervisionID     *common.ID               `json:"supervision_id,omitempty"`
 	SupervisorCount   int                      `json:"supervisor_count"`
 	StudentCount      int                      `json:"student_count"`
 	Supervisors       []SupervisorInfoResponse `json:"supervisors"`
@@ -45,10 +45,10 @@ type SchulhofStatusResponse struct {
 
 // SupervisorInfoResponse represents supervisor information in API responses.
 type SupervisorInfoResponse struct {
-	ID            int64  `json:"id"`
-	StaffID       int64  `json:"staff_id"`
-	Name          string `json:"name"`
-	IsCurrentUser bool   `json:"is_current_user"`
+	ID            common.ID `json:"id"`
+	StaffID       common.ID `json:"staff_id"`
+	Name          string    `json:"name"`
+	IsCurrentUser bool      `json:"is_current_user"`
 }
 
 // getSchulhofStatus handles GET /api/active/schulhof/status

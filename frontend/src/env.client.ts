@@ -10,10 +10,6 @@ function optional(value: string | undefined): string | undefined {
 }
 
 export const clientEnv = {
-  NEXT_PUBLIC_API_URL: required(
-    "NEXT_PUBLIC_API_URL",
-    process.env.NEXT_PUBLIC_API_URL,
-  ),
   NEXT_PUBLIC_TENANT_DOMAIN: required(
     "NEXT_PUBLIC_TENANT_DOMAIN",
     process.env.NEXT_PUBLIC_TENANT_DOMAIN,

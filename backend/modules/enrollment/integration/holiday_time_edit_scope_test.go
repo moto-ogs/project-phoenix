@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment/internal/adapters/postgres"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -38,7 +39,7 @@ func TestHolidayTimeEditsKeepForeignOrganizationUntouchedBeneathRLS(t *testing.T
   ON model.holiday_period_week_id = week.id WHERE week.organization_id = ?`, foreign).Scan(context.Background(), &ids))
 	input := enrollment.HolidayPeriodInput{Name: "Fremd geändert", RegistrationOpensOn: calendar.NewDate(2026, 1, 1), RegistrationClosesOn: calendar.NewDate(2026, 6, 1),
 		Weeks: []enrollment.HolidayWeekInput{{ID: ids.Week, StartsOn: monday, EndsOn: monday.AddDays(4), HostSchoolID: school,
-			TimeModels: []enrollment.HolidayTimeModelInput{{ID: ids.Model, Name: "Geändert", StartsAt: "09:00", EndsAt: "13:00", PriceCents: 4500}}}}}
+			TimeModels: []enrollment.HolidayTimeModelInput{{ID: ident.ID(ids.Model), Name: "Geändert", StartsAt: "09:00", EndsAt: "13:00", PriceCents: 4500}}}}}
 	ctx := tenant.WithUnitOfWork(context.Background(), testpkg.TenantRuntime(t, db))
 	require.NoError(t, tenant.WithinTraeger(ctx, org, func(ctx context.Context) error {
 		if err := testpkg.WithoutRequestRole(ctx); err != nil {

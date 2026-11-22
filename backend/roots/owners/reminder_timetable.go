@@ -37,7 +37,7 @@ func (r ReminderTimetableReader) FindByTenantAndDate(ctx context.Context, date s
 	result := make([]*ports.ActivityInstance, 0, len(values))
 	for _, value := range values {
 		result = append(result, &ports.ActivityInstance{
-			ID: value.ID, Date: value.Date, Title: value.Title, RoomID: value.RoomID,
+			ID: value.ID.Int64(), Date: value.Date, Title: value.Title, RoomID: value.RoomID.Int64(),
 			StartTime: value.StartTime, EndTime: value.EndTime, Status: value.Status,
 			IsSpontaneous: value.IsSpontaneous,
 		})
@@ -55,7 +55,7 @@ func (r ReminderTimetableReader) FindActiveByTenant(ctx context.Context) ([]*por
 	result := make([]*ports.ActivityInstance, 0, len(values))
 	for _, value := range values {
 		result = append(result, &ports.ActivityInstance{
-			ID: value.ID, Date: value.Date, Title: value.Title, RoomID: value.RoomID,
+			ID: value.ID.Int64(), Date: value.Date, Title: value.Title, RoomID: value.RoomID.Int64(),
 			StartTime: value.StartTime, EndTime: value.EndTime, Status: value.Status,
 			IsSpontaneous: value.IsSpontaneous,
 		})

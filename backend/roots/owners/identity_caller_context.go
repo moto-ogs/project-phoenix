@@ -91,7 +91,7 @@ func (p callerPeople) FindPersonByAccount(ctx context.Context, accountID int64) 
 		return identityaccess.CallerPerson{}, false, err
 	}
 	return identityaccess.CallerPerson{
-		ID: person.ID, FirstName: person.FirstName, LastName: person.LastName, TagID: person.TagID,
+		ID: person.ID.Int64(), FirstName: person.FirstName, LastName: person.LastName, TagID: person.TagID,
 		CreatedAt: person.CreatedAt, UpdatedAt: person.UpdatedAt,
 	}, true, nil
 }

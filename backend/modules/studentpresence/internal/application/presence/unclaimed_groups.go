@@ -7,6 +7,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ======== Unclaimed Groups Management (Deviceless Claiming) ========
@@ -39,17 +40,17 @@ func (s *service) GetUnclaimedActiveGroups(ctx context.Context) ([]*ports.Active
 	}
 	roomsByID := make(map[int64]*studentpresence.SessionRoom, len(rooms))
 	for _, room := range rooms {
-		roomsByID[room.ID] = room
+		roomsByID[room.ID.Int64()] = room
 	}
 	templatesByID := make(map[int64]*ports.SessionActivity, len(templates))
 	for _, template := range templates {
 		// This endpoint historically includes the template without its category relation.
 		copy := *template
 		copy.Category = nil
-		templatesByID[copy.ID] = &copy
+		templatesByID[copy.ID.Int64()] = &copy
 	}
 	for _, row := range rows {
-		group := &ports.ActiveGroup{ID: row.ID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, StartTime: row.StartTime, EndTime: row.EndTime, LastActivity: row.LastActivity, TimeoutMinutes: row.TimeoutMinutes, GroupID: row.GroupID, DeviceID: row.DeviceID, RoomID: row.RoomID}
+		group := &ports.ActiveGroup{ID: ident.ID(row.ID), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, StartTime: row.StartTime, EndTime: row.EndTime, LastActivity: row.LastActivity, TimeoutMinutes: row.TimeoutMinutes, GroupID: (*ident.ID)(row.GroupID), DeviceID: (*ident.ID)(row.DeviceID), RoomID: ident.ID(row.RoomID)}
 		group.SetTenantID(row.TenantID)
 		group.Room = roomsByID[row.RoomID]
 		if group.Room == nil || group.Room.Name != "Schulhof" {
@@ -87,7 +88,7 @@ func (s *service) ClaimActiveGroup(ctx context.Context, groupID, staffID int64, 
 		if err != nil {
 			return err
 		}
-		result = &ports.GroupSupervisor{ID: row.ID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, GroupID: row.GroupID, StaffID: row.StaffID, Role: row.Role, StartDate: date}
+		result = &ports.GroupSupervisor{ID: ident.ID(row.ID), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, GroupID: ident.ID(row.GroupID), StaffID: ident.ID(row.StaffID), Role: row.Role, StartDate: date}
 		result.SetTenantID(row.TenantID)
 		source := stampSourceApp
 		if s.attendancePrincipal(txCtx).IsIoT {

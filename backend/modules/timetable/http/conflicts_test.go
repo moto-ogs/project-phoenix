@@ -16,6 +16,7 @@ import (
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -194,8 +195,8 @@ func TestConflicts_StaffWarning(t *testing.T) {
 	got := decodePlannedConflicts(t, w)
 	require.Len(t, got.Warnings, 1)
 	assert.Equal(t, timetable.ConflictKindStaff, got.Warnings[0].Kind)
-	assert.Equal(t, staff.ID, got.Warnings[0].ResourceID)
-	assert.Equal(t, inst.ID, got.Warnings[0].ConflictingInstanceID)
+	assert.Equal(t, ident.ID(staff.ID), got.Warnings[0].ResourceID)
+	assert.Equal(t, ident.ID(inst.ID), got.Warnings[0].ConflictingInstanceID)
 }
 
 func TestConflicts_StudentWarning(t *testing.T) {
@@ -215,8 +216,8 @@ func TestConflicts_StudentWarning(t *testing.T) {
 	got := decodePlannedConflicts(t, w)
 	require.Len(t, got.Warnings, 1)
 	assert.Equal(t, timetable.ConflictKindStudent, got.Warnings[0].Kind)
-	assert.Equal(t, student.ID, got.Warnings[0].ResourceID)
-	assert.Equal(t, inst.ID, got.Warnings[0].ConflictingInstanceID)
+	assert.Equal(t, ident.ID(student.ID), got.Warnings[0].ResourceID)
+	assert.Equal(t, ident.ID(inst.ID), got.Warnings[0].ConflictingInstanceID)
 }
 
 func TestConflicts_ExcludeInstance(t *testing.T) {

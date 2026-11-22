@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Mensa-Monatsfreigabe (#4686, ADR 0168): at the end of a month the
@@ -44,13 +45,13 @@ const (
 // registered for lunch, the meals counted and, before the release, the
 // registered days it was not present (Fehlzeiten).
 type BillingMonthChild struct {
-	StudentID      int64  `json:"student_id"`
-	FirstName      string `json:"first_name"`
-	LastName       string `json:"last_name"`
-	SchoolClass    string `json:"school_class"`
-	RegisteredDays int    `json:"registered_days"`
-	MealDays       int    `json:"meal_days"`
-	AbsentDates    []Date `json:"absent_dates"`
+	StudentID      ident.ID `json:"student_id"`
+	FirstName      string   `json:"first_name"`
+	LastName       string   `json:"last_name"`
+	SchoolClass    string   `json:"school_class"`
+	RegisteredDays int      `json:"registered_days"`
+	MealDays       int      `json:"meal_days"`
+	AbsentDates    []Date   `json:"absent_dates"`
 }
 
 // BillingMonth is a month as the OGS-Leitung checks it: before the release

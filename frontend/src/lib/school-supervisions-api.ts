@@ -1,4 +1,6 @@
+import type { ApiResponse } from "./api-envelope";
 import { apiErrorFromBody, transportFetch } from "./api-error";
+import { requiredDay } from "./contract/required-day";
 // Client-seitige API für die Aufsichten im Schul-Portal ("moto schule", #2527).
 //
 // Gleiche Nutzlast wie die OGS-Aufsicht (lib/timetable-operations-types), aber
@@ -6,11 +8,11 @@ import { apiErrorFromBody, transportFetch } from "./api-error";
 // /school/supervisions sprechen. Das Backend beschränkt jede Antwort auf die
 // Blöcke, in die diese Lehrkraft im Betreuungsplan eingeteilt ist.
 
+import type * as schoolSupervisionsContract from "./contract/school-supervisions.generated";
+import type * as sharedContract from "./contract/shared.generated";
 import type {
   AttendancePatchBody,
   HomeworkFeedbackBody,
-  BackendStartOperationResult,
-  BackendTimetableRoster,
   PlannedTimetableInstance,
   StartOperationResult,
   TimetableRoster,
@@ -20,10 +22,6 @@ import {
   mapRoster,
   mapStartOperation,
 } from "./timetable-operations-types";
-
-interface ApiEnvelope<T> {
-  data: T;
-}
 
 /** Eine Kontaktperson auf dem Kind-Infoblatt. */
 export interface SupervisionContact {
@@ -49,26 +47,9 @@ export interface SupervisionStudentSheet {
   emergencyContacts: SupervisionContact[];
 }
 
-interface BackendSupervisionStudentSheet {
-  student_id: string | number;
-  first_name: string;
-  last_name: string;
-  school_class?: string;
-  date: string;
-  arrival?: string;
-  pickup?: string;
-  departure: string;
-  status?: string;
-  pickup_contacts: BackendSupervisionContact[];
-  emergency_contacts: BackendSupervisionContact[];
-}
-
-/** Wire-Form: `phones` fehlt, sobald eine Antwort aus einer älteren Version kommt. */
-type BackendSupervisionContact = Omit<SupervisionContact, "phones"> & {
-  phones?: string[];
-};
-
-function mapContact(raw: BackendSupervisionContact): SupervisionContact {
+function mapContact(
+  raw: schoolSupervisionsContract.SupervisionContact,
+): SupervisionContact {
   return { ...raw, phones: raw.phones ?? [] };
 }
 
@@ -80,7 +61,7 @@ async function unwrap<T>(response: Response): Promise<T> {
       await response.json().catch(() => undefined),
     );
   }
-  const envelope = (await response.json()) as ApiEnvelope<T>;
+  const envelope = (await response.json()) as ApiResponse<T>;
   return envelope.data;
 }
 
@@ -97,14 +78,14 @@ function jsonRequest(method: string, body?: unknown): RequestInit {
 }
 
 function mapSheet(
-  raw: BackendSupervisionStudentSheet,
+  raw: schoolSupervisionsContract.SupervisionStudentSheet,
 ): SupervisionStudentSheet {
   return {
-    studentId: raw.student_id.toString(),
+    studentId: raw.student_id,
     firstName: raw.first_name,
     lastName: raw.last_name,
     schoolClass: raw.school_class,
-    date: raw.date,
+    date: requiredDay(raw.date, "supervision_student_sheet.date"),
     arrival: raw.arrival,
     pickup: raw.pickup,
     departure: raw.departure,
@@ -119,19 +100,18 @@ const base = "/api/school/supervisions";
 export const schoolSupervisionsApi = {
   /** Die eigenen Aufsichten von heute, in jedem Zustand. */
   async myDay(): Promise<PlannedTimetableInstance[]> {
-    const raw = await unwrap<{
-      instances: Parameters<typeof mapPlannedInstance>[0][] | null;
-    }>(
-      await transportFetch(base, {
-        credentials: "include",
-        headers: { Accept: "application/json" },
-      }),
-    );
+    const raw =
+      await unwrap<schoolSupervisionsContract.SchoolSupervisionsResponse>(
+        await transportFetch(base, {
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        }),
+      );
     return (raw.instances ?? []).map(mapPlannedInstance);
   },
 
   async roster(instanceId: string): Promise<TimetableRoster> {
-    const raw = await unwrap<BackendTimetableRoster>(
+    const raw = await unwrap<sharedContract.OperationRoster>(
       await transportFetch(`${base}/${instanceId}/roster`, {
         credentials: "include",
         headers: { Accept: "application/json" },
@@ -141,7 +121,7 @@ export const schoolSupervisionsApi = {
   },
 
   async start(instanceId: string): Promise<StartOperationResult> {
-    const raw = await unwrap<BackendStartOperationResult>(
+    const raw = await unwrap<sharedContract.startOperationResponse>(
       await transportFetch(`${base}/${instanceId}/start`, jsonRequest("POST")),
     );
     return mapStartOperation(raw);
@@ -155,8 +135,8 @@ export const schoolSupervisionsApi = {
       await transportFetch(
         `${base}/${instanceId}/complete`,
         jsonRequest("POST", {
-          confirmed_present_student_ids: confirmedPresentStudentIds.map(Number),
-        }),
+          confirmed_present_student_ids: confirmedPresentStudentIds,
+        } satisfies sharedContract.CompleteOperationRequest),
       ),
     );
   },
@@ -165,7 +145,7 @@ export const schoolSupervisionsApi = {
     instanceId: string,
     studentId: string,
   ): Promise<TimetableRoster> {
-    const raw = await unwrap<BackendTimetableRoster>(
+    const raw = await unwrap<sharedContract.OperationRoster>(
       await transportFetch(
         `${base}/${instanceId}/students/${studentId}/check-in`,
         jsonRequest("POST"),
@@ -178,7 +158,7 @@ export const schoolSupervisionsApi = {
     instanceId: string,
     studentId: string,
   ): Promise<TimetableRoster> {
-    const raw = await unwrap<BackendTimetableRoster>(
+    const raw = await unwrap<sharedContract.OperationRoster>(
       await transportFetch(
         `${base}/${instanceId}/students/${studentId}/check-out`,
         jsonRequest("POST"),
@@ -219,15 +199,16 @@ export const schoolSupervisionsApi = {
     instanceId: string,
     studentId: string,
   ): Promise<SupervisionStudentSheet> {
-    const raw = await unwrap<BackendSupervisionStudentSheet>(
-      await transportFetch(
-        `${base}/${instanceId}/students/${studentId}/sheet`,
-        {
-          credentials: "include",
-          headers: { Accept: "application/json" },
-        },
-      ),
-    );
+    const raw =
+      await unwrap<schoolSupervisionsContract.SupervisionStudentSheet>(
+        await transportFetch(
+          `${base}/${instanceId}/students/${studentId}/sheet`,
+          {
+            credentials: "include",
+            headers: { Accept: "application/json" },
+          },
+        ),
+      );
     return mapSheet(raw);
   },
 };

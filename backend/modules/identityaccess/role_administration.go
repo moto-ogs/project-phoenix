@@ -194,7 +194,6 @@ type RoleCommand interface {
 
 // PermissionQuery reads permissions and role selections.
 type PermissionQuery interface {
-	GetPermission(ctx context.Context, id int64) (Permission, error)
 	GetPermissionByName(ctx context.Context, name string) (Permission, error)
 	ListPermissions(ctx context.Context, filter PermissionFilter) ([]Permission, error)
 	GetRolePermissions(ctx context.Context, roleID int64) ([]Permission, error)

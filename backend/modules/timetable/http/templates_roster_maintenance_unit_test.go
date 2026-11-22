@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -58,22 +59,22 @@ func TestAttachRosterMaintenance_DerivesEveryTemplateInOneRead(t *testing.T) {
 	resource := newResourceForTest(Dependencies{OfferingSourceOptions: sources})
 	templates := []templateResponse{
 		{
-			ID:              classTemplateID,
+			ID:              ident.ID(classTemplateID),
 			TargetGroupType: timetable.TargetGroupTypeSchoolClass,
 			Targets:         []templateTargetResponse{{Type: timetable.TargetGroupTypeSchoolClass, SchoolClass: &schoolClass}},
 		},
 		{
-			ID:                    sourcedTemplateID,
-			CalendarPeriodID:      &calendarPeriodID,
+			ID:                    ident.ID(sourcedTemplateID),
+			CalendarPeriodID:      (*ident.ID)(&calendarPeriodID),
 			TargetGroupType:       timetable.TargetGroupTypeOffering,
-			SourceCareOfferingIDs: []int64{7},
+			SourceCareOfferingIDs: []ident.ID{7},
 			SourceGradeLevels:     []int{2},
 			Schedules: []templateScheduleResponse{{
-				CalendarPeriodID: &schedulePeriodID,
+				CalendarPeriodID: (*ident.ID)(&schedulePeriodID),
 			}},
 		},
 		{
-			ID:              linkedTemplateID,
+			ID:              ident.ID(linkedTemplateID),
 			TargetGroupType: timetable.TargetGroupTypeEducationGroup,
 			Targets:         []templateTargetResponse{{Type: timetable.TargetGroupTypeEducationGroup}},
 		},
@@ -130,8 +131,8 @@ func TestAttachRosterMaintenance_PeriodFreeReadOmitsIndicator(t *testing.T) {
 	resource := newResourceForTest(Dependencies{OfferingSourceOptions: sources})
 	templates := []templateResponse{{
 		ID:                    202,
-		SourceCareOfferingIDs: []int64{7},
-		Schedules:             []templateScheduleResponse{{CalendarPeriodID: &periodID}},
+		SourceCareOfferingIDs: []ident.ID{7},
+		Schedules:             []templateScheduleResponse{{CalendarPeriodID: (*ident.ID)(&periodID)}},
 	}}
 
 	resource.attachRosterMaintenance(context.Background(), templates, nil)
@@ -151,16 +152,16 @@ func TestAttachRosterMaintenance_UsesVisibleCalendarPeriod(t *testing.T) {
 	templates := []templateResponse{
 		{
 			ID:                    301,
-			CalendarPeriodID:      &templatePeriodID,
-			SourceCareOfferingIDs: []int64{7},
+			CalendarPeriodID:      (*ident.ID)(&templatePeriodID),
+			SourceCareOfferingIDs: []ident.ID{7},
 			Schedules: []templateScheduleResponse{{
-				CalendarPeriodID: &schedulePeriodID,
+				CalendarPeriodID: (*ident.ID)(&schedulePeriodID),
 			}, {
-				CalendarPeriodID: &requestedPeriodID,
+				CalendarPeriodID: (*ident.ID)(&requestedPeriodID),
 			}},
 		},
-		{ID: 302, CalendarPeriodID: &templatePeriodID, SourceCareOfferingIDs: []int64{8}},
-		{ID: 303, SourceCareOfferingIDs: []int64{9}},
+		{ID: 302, CalendarPeriodID: (*ident.ID)(&templatePeriodID), SourceCareOfferingIDs: []ident.ID{8}},
+		{ID: 303, SourceCareOfferingIDs: []ident.ID{9}},
 	}
 
 	resource.attachRosterMaintenance(context.Background(), templates, &requestedPeriodID)

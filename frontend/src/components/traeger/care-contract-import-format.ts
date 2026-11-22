@@ -184,20 +184,22 @@ export function contractImportProblemText(
   problem: ContractImportRow["problems"][number],
   row: ContractImportRow,
 ): string {
-  const label = CONTRACT_IMPORT_FIELD_LABELS[problem.field] ?? problem.field;
+  const { field } = problem;
+  if (field === undefined) return "Ein Feld dieser Zeile prüfen.";
+  const label = CONTRACT_IMPORT_FIELD_LABELS[field] ?? field;
   switch (problem.code) {
     case "missing":
-      return MISSING_TEXT[problem.field] ?? `${label} fehlt.`;
+      return MISSING_TEXT[field] ?? `${label} fehlt.`;
     case "invalid":
-      return INVALID_TEXT[problem.field] ?? `${label} prüfen.`;
+      return INVALID_TEXT[field] ?? `${label} prüfen.`;
     case "too_long":
       return `${label} ist zu lang.`;
     case "future":
       return `${label} liegt in der Zukunft.`;
     case "unknown":
-      return UNKNOWN_TEXT[problem.field] ?? `${label} prüfen.`;
+      return UNKNOWN_TEXT[field] ?? `${label} prüfen.`;
     case "ambiguous":
-      return AMBIGUOUS_TEXT[problem.field] ?? `${label} ist nicht eindeutig.`;
+      return AMBIGUOUS_TEXT[field] ?? `${label} ist nicht eindeutig.`;
     case "conditions_missing":
       return "Für das Modul fehlen die Vertragsbedingungen.";
     case "conditions_differ":

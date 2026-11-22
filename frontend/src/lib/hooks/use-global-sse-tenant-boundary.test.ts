@@ -17,7 +17,7 @@ vi.mock("next-auth/react", () => ({
   useSession: () => ({ data: session, status: "authenticated" }),
 }));
 vi.mock("~/lib/tenant-context", () => ({
-  useTenantSafe: () => ({ tenant: { tenantId: 1 } }),
+  useTenantSafe: () => ({ tenant: { tenantId: "1" } }),
   // The family invalidation scopes its keys to the school of the URL.
   useTenantSlugSafe: () => "school-a",
 }));

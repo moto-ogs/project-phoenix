@@ -615,7 +615,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.CaregiverDirectory.FindCaregiverPersons",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.DirectoryPersonSnapshot.GetTenantID; modules/peopledirectory/record_metadata.go:5. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.DirectoryPersonSnapshot.GetTenantID; modules/peopledirectory/record_metadata.go:5. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "school-membership",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.DirectoryPersonSnapshot.GetTenantID",
       "target_owner": "people-directory"
@@ -625,7 +625,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.CaregiverDirectory.FindCaregiverPersons",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.PersonRepository.FindByIDs; modules/peopledirectory/ports/repository_contracts.go:46. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.PersonRepository.FindByIDs; modules/peopledirectory/ports/repository_contracts.go:46. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "school-membership",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -1963,6 +1963,16 @@
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.StaffAssignmentLockQuery.ListStaff",
       "reason": "The assignment guard reaches the existing ListStaff capability. TenantFromContext only reads the ambient tenant identity; the staff locks remain inside Membership ListStaff with ForMutation (#6702, ADR 0098).",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListStaff",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.StaffAssignmentLockQuery.ListStaff",
+      "reason": "Read-only target already reviewed as query: school-membership reaches tenant.TenantFromContext (tenant-runtime) through modules/schoolmembership.Owner.ListStaff. No persistent, lock or scope effect; attributed to the StaffAssignmentLockQuery port by the Dienstplan staff row batch lock (#7683).",
       "source_owner": "school-membership",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"

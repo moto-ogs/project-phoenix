@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	activeSvc "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -52,7 +53,7 @@ func TestGetDeviceCurrentSession_HasSession(t *testing.T) {
 	assert.NotNil(t, currentSession)
 	assert.Equal(t, session.ID, currentSession.ID)
 	require.NotNil(t, currentSession.GroupID)
-	assert.Equal(t, activityGroup.ID, *currentSession.GroupID)
+	assert.Equal(t, ident.ID(activityGroup.ID), *currentSession.GroupID)
 }
 
 // TestGetDeviceCurrentSession_NoSession verifies error when device has no active session
@@ -96,7 +97,7 @@ func TestEndDailySessions_WithActiveSessions(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create visit and supervisor
-	visit := testpkg.CreateTestVisit(t, db, student.ID, session.ID, time.Now(), nil)
+	visit := testpkg.CreateTestVisit(t, db, student.ID, session.ID.Int64(), time.Now(), nil)
 	require.NotNil(t, visit)
 
 	// ACT: End all daily sessions
@@ -296,7 +297,7 @@ func TestCleanupAbandonedSessions_KeepsSessionWithChildrenInRoom(t *testing.T) {
 
 	session, err := service.StartActivitySessionWithSupervisors(ctx, activityGroup.ID, device.ID, []int64{staff.ID}, &room.ID)
 	require.NoError(t, err)
-	testpkg.CreateTestVisit(t, db, student.ID, session.ID, time.Now().Add(-3*time.Hour), nil)
+	testpkg.CreateTestVisit(t, db, student.ID, session.ID.Int64(), time.Now().Add(-3*time.Hour), nil)
 
 	// The terminal is offline and nobody used the session for two hours.
 	oldTime := time.Now().Add(-2 * time.Hour)
@@ -309,7 +310,7 @@ func TestCleanupAbandonedSessions_KeepsSessionWithChildrenInRoom(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Zero(t, cleanedCount, "a session with children in the room is not abandoned")
-	group, err := service.GetActiveGroup(ctx, session.ID)
+	group, err := service.GetActiveGroup(ctx, session.ID.Int64())
 	require.NoError(t, err)
 	assert.Nil(t, group.EndTime, "the supervision keeps running")
 }
@@ -406,7 +407,7 @@ func TestUpdateActiveGroupSupervisors_ReactivateEndedSupervisor(t *testing.T) {
 	// 1. End staff1 (because all current supervisors are ended)
 	// 2. Reactivate staff1 (because they're in the new list) ← covers reactivateSupervisor
 	// 3. Create staff2 (new supervisor)
-	_, err = service.UpdateActiveGroupSupervisors(ctx, session.ID, []int64{staff1.ID, staff2.ID})
+	_, err = service.UpdateActiveGroupSupervisors(ctx, session.ID.Int64(), []int64{staff1.ID, staff2.ID})
 
 	// ASSERT
 	require.NoError(t, err)
@@ -444,9 +445,9 @@ func TestEndDailySessions_WithMultipleVisitsAndSupervisors(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create 2 active visits (no end time)
-	visit1 := testpkg.CreateTestVisit(t, db, student1.ID, session.ID, time.Now(), nil)
+	visit1 := testpkg.CreateTestVisit(t, db, student1.ID, session.ID.Int64(), time.Now(), nil)
 	require.NotNil(t, visit1)
-	visit2 := testpkg.CreateTestVisit(t, db, student2.ID, session.ID, time.Now(), nil)
+	visit2 := testpkg.CreateTestVisit(t, db, student2.ID, session.ID.Int64(), time.Now(), nil)
 	require.NotNil(t, visit2)
 
 	// ACT: End all daily sessions (should end both visits, supervisor, and session)
@@ -483,7 +484,7 @@ func TestEndActivitySession_BySessionID(t *testing.T) {
 	require.NotNil(t, session)
 
 	// ACT: End the session by ID
-	_, err = service.EndActivitySession(ctx, session.ID)
+	_, err = service.EndActivitySession(ctx, session.ID.Int64())
 
 	// ASSERT
 	require.NoError(t, err)

@@ -8,9 +8,9 @@ const list = routes["GET /api/students/"].response;
 const detail = routes["GET /api/students/{id}"].response;
 
 const page = `"pagination":{"current_page":1,"page_size":50,"total_pages":1,"total_records":1},"message":"ok"`;
-const fullRow = `{"id":7,"person_id":8,"first_name":"Ada","last_name":"Beispiel","birthday":"2018-03-04","school_class":"2a","current_location":"Raum 1","location_since":"2026-09-09T12:00:00+02:00","group_id":3,"pickup_time":"15:30","companion_student_ids":[9,10],"departure_days":{"mon":"pickup"},"bus":false,"sick":true,"sick_since":"2026-09-09T10:00:00Z","excused":false,"class_trip":false,"photo_consent_given":false,"photo_consent_given_by":11,"has_full_access":true,"created_at":"2026-09-09T10:00:00.123456789Z","updated_at":"2026-09-09T10:00:00Z"}`;
-const slimRow = `{"id":7,"first_name":"Ada","last_name":"Beispiel","school_class":"2a","current_location":"Raum 1","sick":false,"excused":false,"class_trip":false,"departure_modes":["pickup","by_boat"],"has_full_access":true}`;
-const detailBody = `{"status":"success","data":${fullRow.slice(0, -1)},"has_write_access":true,"has_absence_write_access":true,"has_sick_excused_write_access":false,"consents":[{"key":"photo","state":"granted"}],"group_supervisors":[{"id":5,"first_name":"Cem","last_name":"Lehrer","role":"staff"}],"attendance_log_enabled":false,"feedback_enabled":true,"actual_arrival_by":{"kind":"staff","name":"Cem Lehrer"}},"message":"ok"}`;
+const fullRow = `{"id":"7","person_id":"8","first_name":"Ada","last_name":"Beispiel","birthday":"2018-03-04","school_class":"2a","current_location":"Raum 1","location_since":"2026-09-09T12:00:00+02:00","group_id":"3","pickup_time":"15:30","companion_student_ids":["9","10"],"departure_days":{"mon":"pickup"},"bus":false,"sick":true,"sick_since":"2026-09-09T10:00:00Z","excused":false,"class_trip":false,"photo_consent_given":false,"photo_consent_given_by":"11","has_full_access":true,"created_at":"2026-09-09T10:00:00.123456789Z","updated_at":"2026-09-09T10:00:00Z"}`;
+const slimRow = `{"id":"7","first_name":"Ada","last_name":"Beispiel","school_class":"2a","current_location":"Raum 1","sick":false,"excused":false,"class_trip":false,"departure_modes":["pickup","by_boat"],"has_full_access":true}`;
+const detailBody = `{"status":"success","data":${fullRow.slice(0, -1)},"has_write_access":true,"has_absence_write_access":true,"has_sick_excused_write_access":false,"consents":[{"key":"photo","state":"granted"}],"group_supervisors":[{"id":"5","first_name":"Cem","last_name":"Lehrer","role":"staff"}],"attendance_log_enabled":false,"feedback_enabled":true,"actual_arrival_by":{"kind":"staff","name":"Cem Lehrer"}},"message":"ok"}`;
 
 const body = (text: string): unknown => JSON.parse(text);
 const edited = (text: string, change: (root: any) => void): unknown => {
@@ -121,7 +121,7 @@ describe("student contract decoders", () => {
   });
 
   it("keeps the maximum int64 when it arrives as a string", () => {
-    const row = fullRow.replace(`"id":7`, `"id":"9223372036854775807"`);
+    const row = fullRow.replace(`"id":"7"`, `"id":"9223372036854775807"`);
     expect(StudentResponseSchema.parse(body(row)).id).toBe(
       "9223372036854775807",
     );
@@ -129,7 +129,7 @@ describe("student contract decoders", () => {
 
   it("rejects an identifier that JSON.parse has already rounded", () => {
     // 9223372036854775807 as a JSON number becomes 9223372036854775808.
-    const row = fullRow.replace(`"id":7`, `"id":9223372036854775807`);
+    const row = fullRow.replace(`"id":"7"`, `"id":9223372036854775807`);
     expect(StudentResponseSchema.safeParse(body(row)).success).toBe(false);
   });
 });

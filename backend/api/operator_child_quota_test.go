@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken/tokentest"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type childQuotaProvisioning struct {
@@ -63,7 +64,7 @@ func TestOperatorSetsTheKinderkontingentOnTheSchoolRoute(t *testing.T) {
 	provisioning := &childQuotaProvisioning{
 		updateSchoolFn: func(_ context.Context, id int64, changes organizationtenancy.SchoolChanges, operatorID int64, _ net.IP) (*organizationtenancy.School, error) {
 			got, actor = changes, operatorID
-			return &organizationtenancy.School{ID: id, ChildQuotaBundles: &bundles, ChildQuotaBundleSize: 50}, nil
+			return &organizationtenancy.School{ID: ident.ID(id), ChildQuotaBundles: &bundles, ChildQuotaBundleSize: 50}, nil
 		},
 	}
 	router := childQuotaRouter(t, provisioning)

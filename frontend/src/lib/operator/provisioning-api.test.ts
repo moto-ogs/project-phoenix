@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type * as operatorSchoolsContract from "~/lib/contract/operator-schools.generated";
+import type * as operatorUnregisteredTagScansContract from "~/lib/contract/operator-unregistered-tag-scans.generated";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 
 const { mockOperatorFetch } = vi.hoisted(() => ({
   mockOperatorFetch: vi.fn(),
@@ -9,33 +12,27 @@ vi.mock("./api-helpers", () => ({
 }));
 
 import { operatorProvisioningService } from "./provisioning-api";
-import type {
-  BackendOrganization,
-  BackendSchool,
-  BackendSchoolAccount,
-  BackendOrgAccount,
-  BackendOperatorDevice,
-  BackendInvitation,
-  BackendOperatorPerson,
-  BackendUnregisteredTagScan,
-} from "./provisioning-helpers";
 
 const NOW = "2026-03-15T10:00:00Z";
 
-const mockBackendOrg: BackendOrganization = {
-  id: 5,
+const mockBackendOrg: sharedContract.Organization = {
+  test_system: false,
+  id: "5",
   name: "Stadt Köln",
   slug: "stadt-koeln",
   active: true,
-  deleted_at: null,
-  settings: null,
+  deleted_at: undefined,
+  settings: undefined,
   created_at: NOW,
   updated_at: NOW,
 };
 
-const mockBackendSchool: BackendSchool = {
-  id: 10,
-  organization_id: 5,
+const mockBackendSchool: sharedContract.School = {
+  child_quota_bundles: null,
+  child_quota_bundle_size: 0,
+  device_slots: null,
+  id: "10",
+  organization_id: "5",
   name: "GGS Europaschule",
   slug: "ggs-europa",
   subdomain: "ggs-europa",
@@ -46,14 +43,18 @@ const mockBackendSchool: BackendSchool = {
   email: "info@ggs-europa.de",
   active: true,
   hidden: false,
-  deleted_at: null,
-  settings: null,
+  deleted_at: undefined,
+  settings: undefined,
   created_at: NOW,
   updated_at: NOW,
 };
 
-const mockBackendSchoolAccount: BackendSchoolAccount = {
-  account_id: 1,
+const mockBackendSchoolAccount: operatorSchoolsContract.SchoolAccount = {
+  has_admin_role: false,
+  has_user_role: false,
+  has_caregiver_profile: false,
+  is_active_caregiver: false,
+  account_id: "1",
   email: "teacher@school.de",
   active: true,
   first_name: "Maria",
@@ -63,14 +64,14 @@ const mockBackendSchoolAccount: BackendSchoolAccount = {
   status: "active",
 };
 
-const mockBackendOrgAccount: BackendOrgAccount = {
+const mockBackendOrgAccount: sharedContract.OrganizationAccount = {
   ...mockBackendSchoolAccount,
-  school_id: 10,
+  school_id: "10",
   school_name: "GGS Europaschule",
 };
 
-const mockBackendDevice: BackendOperatorDevice = {
-  id: 1,
+const mockBackendDevice: sharedContract.OperatorDevice = {
+  id: "1",
   device_id: "dev-001",
   device_type: "terminal",
   name: "Eingang Hauptgebäude",
@@ -79,45 +80,48 @@ const mockBackendDevice: BackendOperatorDevice = {
   masked_api_key: "dk_...abc",
   last_seen: NOW,
   is_online: true,
-  school_id: 10,
+  school_id: "10",
   school_name: "GGS Europaschule",
-  organization_id: 5,
+  organization_id: "5",
   organization_name: "Stadt Köln",
   created_at: NOW,
   updated_at: NOW,
 };
 
-const mockBackendInvitation: BackendInvitation = {
-  id: 1,
-  email: "admin@example.com",
-  role_id: 4,
-  role_name: "admin",
-  expires_at: NOW,
-  first_name: "Ada",
-  last_name: "Lovelace",
-  created_by: 0,
-  delivery_status: "pending",
-  email_retry_count: 0,
-};
+const mockBackendInvitation: operatorSchoolsContract.operatorInvitationResponse =
+  {
+    caregiver_enabled: false,
+    id: "1",
+    email: "admin@example.com",
+    role_id: "4",
+    role_name: "admin",
+    expires_at: NOW,
+    first_name: "Ada",
+    last_name: "Lovelace",
+    created_by: "0",
+    delivery_status: "pending",
+    email_retry_count: 0,
+  };
 
-const mockBackendUnregisteredTagScan: BackendUnregisteredTagScan = {
-  id: 300,
-  tenant_id: 10,
-  tag_uid: "04AABBCCDD",
-  device_id: 1,
-  scanned_at: NOW,
-  resolved_at: null,
-  resolved_by_operator_id: null,
-  resolution_note: null,
-  created_at: NOW,
-  updated_at: NOW,
-  school_id: 10,
-  school_name: "GGS Europaschule",
-  organization_id: 5,
-  organization_name: "Stadt Köln",
-  device_identifier: "dev-001",
-  device_name: "Eingang Hauptgebäude",
-};
+const mockBackendUnregisteredTagScan: operatorUnregisteredTagScansContract.scanResponse =
+  {
+    id: "300",
+    tenant_id: "10",
+    tag_uid: "04AABBCCDD",
+    device_id: "1",
+    scanned_at: NOW,
+    resolved_at: undefined,
+    resolved_by_operator_id: undefined,
+    resolution_note: undefined,
+    created_at: NOW,
+    updated_at: NOW,
+    school_id: "10",
+    school_name: "GGS Europaschule",
+    organization_id: "5",
+    organization_name: "Stadt Köln",
+    device_identifier: "dev-001",
+    device_name: "Eingang Hauptgebäude",
+  };
 
 describe("OperatorProvisioningService", () => {
   beforeEach(() => {
@@ -189,8 +193,8 @@ describe("OperatorProvisioningService", () => {
       mockOperatorFetch.mockResolvedValue({
         created_count: 30,
         schools: [
-          { school_id: 1, created_count: 24, skipped_count: 0 },
-          { school_id: 2, created_count: 6, skipped_count: 18 },
+          { school_id: "1", created_count: 24, skipped_count: 0 },
+          { school_id: "2", created_count: 6, skipped_count: 18 },
         ],
       });
 
@@ -210,7 +214,7 @@ describe("OperatorProvisioningService", () => {
       mockOperatorFetch.mockResolvedValue(mockBackendSchool);
 
       const updateData = {
-        organization_id: 5,
+        organization_id: "5",
         name: "Updated School",
         slug: "updated-school",
         subdomain: "updated-school",
@@ -234,7 +238,7 @@ describe("OperatorProvisioningService", () => {
       mockOperatorFetch.mockResolvedValue(mockBackendSchool);
 
       const result = await operatorProvisioningService.updateSchool("10", {
-        organization_id: 5,
+        organization_id: "5",
         name: "GGS Europaschule",
         slug: "ggs-europa",
         subdomain: "ggs-europa",
@@ -318,7 +322,7 @@ describe("OperatorProvisioningService", () => {
       mockOperatorFetch.mockResolvedValue(mockBackendSchool);
 
       await operatorProvisioningService.createSchool({
-        organization_id: 5,
+        organization_id: "5",
         name: "GGS Europaschule",
         slug: "ggs-europa",
         subdomain: "ggs-europa",
@@ -329,7 +333,7 @@ describe("OperatorProvisioningService", () => {
       expect(mockOperatorFetch).toHaveBeenCalledWith("/api/operator/schools", {
         method: "POST",
         body: {
-          organization_id: 5,
+          organization_id: "5",
           name: "GGS Europaschule",
           slug: "ggs-europa",
           subdomain: "ggs-europa",
@@ -588,7 +592,7 @@ describe("OperatorProvisioningService", () => {
       mockOperatorFetch.mockResolvedValue(mockBackendDevice);
 
       const createData = {
-        school_id: 10,
+        school_id: "10",
         device_id: "DEV-001",
         device_type: "terminal",
         name: "Eingang Hauptgebäude",
@@ -609,7 +613,7 @@ describe("OperatorProvisioningService", () => {
       });
 
       const result = await operatorProvisioningService.createDevice({
-        school_id: 10,
+        school_id: "10",
         device_id: "DEV-001",
         device_type: "terminal",
       });
@@ -690,9 +694,10 @@ describe("OperatorProvisioningService", () => {
       mockOperatorFetch.mockResolvedValue({
         can_transfer: false,
         is_online: true,
+        is_protected: false,
         last_seen: NOW,
         active_session: {
-          id: 77,
+          id: "77",
           started_at: NOW,
           activity_name: "Mensa",
           room_name: "Speisesaal",
@@ -708,6 +713,7 @@ describe("OperatorProvisioningService", () => {
       expect(result).toEqual({
         canTransfer: false,
         isOnline: true,
+        isProtected: false,
         lastSeen: NOW,
         activeSession: {
           id: "77",
@@ -718,10 +724,10 @@ describe("OperatorProvisioningService", () => {
       });
     });
 
-    it("posts the numeric target school and maps the transferred device", async () => {
+    it("posts the target school as a string and maps the transferred device", async () => {
       mockOperatorFetch.mockResolvedValue({
         ...mockBackendDevice,
-        school_id: 20,
+        school_id: "20",
         school_name: "Walbach",
       });
 
@@ -732,7 +738,7 @@ describe("OperatorProvisioningService", () => {
 
       expect(mockOperatorFetch).toHaveBeenCalledWith(
         "/api/operator/devices/1%2Funsafe/transfer",
-        { method: "POST", body: { target_school_id: 20 } },
+        { method: "POST", body: { target_school_id: "20" } },
       );
       expect(result.schoolId).toBe("20");
       expect(result.schoolName).toBe("Walbach");
@@ -749,7 +755,7 @@ describe("OperatorProvisioningService", () => {
     };
 
     it("calls correct endpoint with POST method", async () => {
-      mockOperatorFetch.mockResolvedValue({ id: 99, email: "new@school.de" });
+      mockOperatorFetch.mockResolvedValue({ id: "99", email: "new@school.de" });
 
       await operatorProvisioningService.createSchoolAccount(
         "10",
@@ -763,7 +769,7 @@ describe("OperatorProvisioningService", () => {
     });
 
     it("encodes school id in URL", async () => {
-      mockOperatorFetch.mockResolvedValue({ id: 99, email: "new@school.de" });
+      mockOperatorFetch.mockResolvedValue({ id: "99", email: "new@school.de" });
 
       await operatorProvisioningService.createSchoolAccount(
         "10/evil",
@@ -777,7 +783,7 @@ describe("OperatorProvisioningService", () => {
     });
 
     it("maps response data correctly", async () => {
-      mockOperatorFetch.mockResolvedValue({ id: 99, email: "new@school.de" });
+      mockOperatorFetch.mockResolvedValue({ id: "99", email: "new@school.de" });
 
       const result = await operatorProvisioningService.createSchoolAccount(
         "10",
@@ -792,8 +798,8 @@ describe("OperatorProvisioningService", () => {
   });
 
   describe("listSchoolPersons", () => {
-    const mockBackendPerson: BackendOperatorPerson = {
-      id: 42,
+    const mockBackendPerson: sharedContract.OperatorPerson = {
+      id: "42",
       first_name: "Max",
       last_name: "Mustermann",
       has_account: true,
@@ -801,9 +807,9 @@ describe("OperatorProvisioningService", () => {
       has_rfid_card: true,
       is_staff: true,
       is_student: false,
-      school_id: 10,
+      school_id: "10",
       school_name: "GGS Europaschule",
-      organization_id: 5,
+      organization_id: "5",
       organization_name: "Stadt Köln",
       created_at: NOW,
     };
@@ -1135,8 +1141,8 @@ describe("OperatorProvisioningService", () => {
   describe("listSchoolRequiredDetails", () => {
     it("maps the missing details of every school (#7174)", async () => {
       mockOperatorFetch.mockResolvedValue([
-        { school_id: 7, reply_address_missing: true },
-        { school_id: 8, reply_address_missing: false },
+        { school_id: "7", reply_address_missing: true },
+        { school_id: "8", reply_address_missing: false },
       ]);
 
       const details =
@@ -1218,8 +1224,8 @@ describe("OperatorProvisioningService", () => {
     });
 
     it("maps each returned person", async () => {
-      const backendPerson: BackendOperatorPerson = {
-        id: 5,
+      const backendPerson: sharedContract.OperatorPerson = {
+        id: "5",
         first_name: "Anna",
         last_name: "Beispiel",
         has_account: true,
@@ -1227,9 +1233,9 @@ describe("OperatorProvisioningService", () => {
         has_rfid_card: false,
         is_staff: true,
         is_student: false,
-        school_id: 10,
+        school_id: "10",
         school_name: "Schule A",
-        organization_id: 42,
+        organization_id: "42",
         organization_name: "Träger A",
         created_at: NOW,
       };

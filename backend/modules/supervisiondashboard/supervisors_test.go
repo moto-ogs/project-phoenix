@@ -46,7 +46,7 @@ func TestSupervisorsAreNamedForSessionsAndOpenRooms(t *testing.T) {
 	yard := openRoomByName(t, projection, "Schulhof")
 	bySession := map[int64][]SessionSupervisor{}
 	for _, session := range yard.Sessions {
-		bySession[session.ActiveGroupID] = session.Supervisors
+		bySession[session.ActiveGroupID.Int64()] = session.Supervisors
 	}
 	// Sorted by name, not by staff id.
 	assert.Equal(t, []SessionSupervisor{{StaffID: 8, Name: "Anna Alt"}, {StaffID: 7, Name: "Zora Zahn"}}, bySession[11])

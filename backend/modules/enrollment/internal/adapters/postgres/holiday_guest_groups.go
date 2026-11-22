@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // guestGroupsQuery reads the group of every hosted week of a published
@@ -27,8 +28,8 @@ const guestGroupsQuery = `SELECT host_group.group_id, week.id AS week_id, week.s
 	ORDER BY week.starts_on, week.id`
 
 type holidayGuestGroupRow struct {
-	GroupID  int64         `bun:"group_id"`
-	WeekID   int64         `bun:"week_id"`
+	GroupID  ident.ID      `bun:"group_id"`
+	WeekID   ident.ID      `bun:"week_id"`
 	StartsOn calendar.Date `bun:"starts_on"`
 	EndsOn   calendar.Date `bun:"ends_on"`
 	Guests   int           `bun:"guests"`

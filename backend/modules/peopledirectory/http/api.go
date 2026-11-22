@@ -12,8 +12,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	validation "github.com/go-ozzo/ozzo-validation"
+	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type Middleware = func(http.Handler) http.Handler
@@ -77,9 +79,7 @@ func (rs *Resource) Router() chi.Router {
 	router := chi.NewRouter()
 	router.Use(render.SetContentType(render.ContentTypeJSON))
 	rs.runtime.Protected(router, func(protected chi.Router, withTx Middleware) {
-		protected.With(rs.runtime.Permission(permissions.UsersRead), withTx).Get("/", rs.listPersons)
 		protected.With(rs.runtime.Permission(permissions.UsersRead), withTx).Get("/{id}", rs.getPerson)
-		protected.With(rs.runtime.Permission(permissions.UsersCreate), withTx).Post("/", rs.createPerson)
 		protected.With(rs.runtime.Permission(permissions.UsersUpdate), withTx).Put("/{id}", rs.updatePerson)
 	})
 	return router
@@ -87,22 +87,22 @@ func (rs *Resource) Router() chi.Router {
 
 // PersonResponse is the wire shape of one directory entry.
 type PersonResponse struct {
-	ID        int64     `json:"id"`
+	ID        common.ID `json:"id"`
 	FirstName string    `json:"first_name"`
 	LastName  string    `json:"last_name"`
 	Email     string    `json:"email,omitempty"`
 	TagID     string    `json:"tag_id,omitempty"`
-	AccountID int64     `json:"account_id,omitempty"`
+	AccountID common.ID `json:"account_id,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // DirectoryPersonRequest is the create and update payload.
 type DirectoryPersonRequest struct {
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	TagID     string `json:"tag_id,omitempty"`
-	AccountID int64  `json:"account_id,omitempty"`
+	FirstName string    `json:"first_name"`
+	LastName  string    `json:"last_name"`
+	TagID     string    `json:"tag_id,omitempty"`
+	AccountID common.ID `json:"account_id,omitempty"`
 }
 
 // Bind reports every blank name as its own field (#2511); the shared error
@@ -121,30 +121,6 @@ func (request *DirectoryPersonRequest) Bind(*http.Request) error {
 	return missing
 }
 
-func (rs *Resource) listPersons(w http.ResponseWriter, r *http.Request) {
-	page, pageSize := rs.runtime.ParsePagination(r)
-	pageSize = min(pageSize, peopledirectory.MaxPageSize)
-	filter := peopledirectory.PersonFilter{
-		FirstNamePrefix: r.URL.Query().Get("first_name"),
-		LastNamePrefix:  r.URL.Query().Get("last_name"),
-		TagID:           r.URL.Query().Get("tag_id"),
-		Page:            page,
-		PageSize:        pageSize,
-	}
-	persons, err := rs.directory.SearchPersons(r.Context(), filter)
-	if err != nil {
-		rs.moduleFailure(w, r, err)
-		return
-	}
-	responses, err := rs.personResponses(r.Context(), persons)
-	if err != nil {
-		rs.failure(w, r, FailureInternal, err, "internal_error")
-		return
-	}
-	rs.runtime.SuccessPaginated(w, r, http.StatusOK, responses, Pagination{Page: page, PageSize: pageSize, Total: len(responses)}, "Persons retrieved successfully")
-	rs.runtime.ObserveResponse(http.StatusOK, "none")
-}
-
 func (rs *Resource) getPerson(w http.ResponseWriter, r *http.Request) {
 	id, ok := rs.parseID(w, r)
 	if !ok {
@@ -156,30 +132,6 @@ func (rs *Resource) getPerson(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rs.respondPerson(w, r, http.StatusOK, person, "Person retrieved successfully")
-}
-
-func (rs *Resource) createPerson(w http.ResponseWriter, r *http.Request) {
-	request := &DirectoryPersonRequest{}
-	if err := render.Bind(r, request); err != nil {
-		rs.failure(w, r, FailureInvalidRequest, err, "invalid_request")
-		return
-	}
-	input := peopledirectory.CreatePerson{FirstName: request.FirstName, LastName: request.LastName}
-	if request.TagID != "" {
-		input.TagID = &request.TagID
-	}
-	if request.AccountID != 0 {
-		input.AccountID = &request.AccountID
-	}
-	if !rs.referencesExist(w, r, input.TagID, input.AccountID) {
-		return
-	}
-	person, err := rs.directory.CreatePerson(r.Context(), input)
-	if err != nil {
-		rs.moduleFailure(w, r, err)
-		return
-	}
-	rs.respondPerson(w, r, http.StatusCreated, person, "Person created successfully")
 }
 
 func (rs *Resource) updatePerson(w http.ResponseWriter, r *http.Request) {
@@ -209,9 +161,9 @@ func (rs *Resource) updatePerson(w http.ResponseWriter, r *http.Request) {
 		input.TagID = &request.TagID
 		changedTag = &request.TagID
 	}
-	if request.AccountID != 0 && (existing.AccountID == nil || *existing.AccountID != request.AccountID) {
-		input.AccountID = &request.AccountID
-		changedAccount = &request.AccountID
+	if request.AccountID != 0 && (existing.AccountID == nil || ident.ID(*existing.AccountID) != request.AccountID) {
+		input.AccountID = (*int64)(&request.AccountID)
+		changedAccount = (*int64)(&request.AccountID)
 	}
 	if !rs.referencesExist(w, r, changedTag, changedAccount) {
 		return
@@ -352,14 +304,14 @@ func statusOf(kind FailureKind) int {
 
 func newPersonResponse(person peopledirectory.Person, email string) PersonResponse {
 	response := PersonResponse{
-		ID: person.ID, FirstName: person.FirstName, LastName: person.LastName,
+		ID: ident.ID(person.ID), FirstName: person.FirstName, LastName: person.LastName,
 		Email: email, CreatedAt: person.CreatedAt, UpdatedAt: person.UpdatedAt,
 	}
 	if person.TagID != nil {
 		response.TagID = *person.TagID
 	}
 	if person.AccountID != nil {
-		response.AccountID = *person.AccountID
+		response.AccountID = ident.ID(*person.AccountID)
 	}
 	return response
 }

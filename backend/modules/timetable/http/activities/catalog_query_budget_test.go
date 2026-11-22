@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
 	"testing"
 	"time"
 
@@ -64,7 +65,7 @@ func TestActivityCategoriesListQueryBudgetIsFlat(t *testing.T) {
 			category := insertCatalogCategory(t, db, index)
 			insertCatalogUsage(t, db, testpkg.Tenant(t), category.ID, index%3)
 			expected = append(expected, map[string]any{
-				"id": category.ID, "name": category.Name, "description": category.Description,
+				"id": strconv.FormatInt(category.ID, 10), "name": category.Name, "description": category.Description,
 				"color": category.Color, "is_system": false, "usage_count": index % 3,
 				"created_at": category.CreatedAt, "updated_at": category.UpdatedAt,
 			})

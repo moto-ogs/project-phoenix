@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/classday"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Class trips and day outings through "moto schule" (#4799): the Lehrkraft
@@ -27,9 +28,9 @@ import (
 
 // ClassTripRequest is the body of POST /school/class-day/class-trips/{schoolClass}.
 type ClassTripRequest struct {
-	From       string  `json:"from"`
-	To         string  `json:"to"`
-	StudentIDs []int64 `json:"student_ids"`
+	From       string      `json:"from"`
+	To         string      `json:"to"`
+	StudentIDs []common.ID `json:"student_ids"`
 	// ReturnTime is "HH:MM", only for a one-day outing.
 	ReturnTime *string `json:"return_time,omitempty"`
 	Reason     *string `json:"reason,omitempty"`
@@ -165,7 +166,7 @@ func (rs *Resource) postClassTrip(w http.ResponseWriter, r *http.Request) {
 		SchoolClass: class,
 		From:        classday.Date(from.String()),
 		To:          classday.Date(to.String()),
-		StudentIDs:  req.StudentIDs,
+		StudentIDs:  ident.Int64s(req.StudentIDs),
 		Reason:      req.Reason,
 		ReturnTime:  req.returnTime,
 		CreatedBy:   staffID,

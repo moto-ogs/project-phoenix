@@ -10,6 +10,8 @@ import {
   type TraegerListFile,
   type TraegerListFormat,
 } from "./traeger-list-export";
+import type * as traegerSchoolsContract from "./contract/traeger-schools.generated";
+import { requiredDay } from "./contract/required-day";
 import type { TraegerSchool } from "./traeger-api";
 
 interface TraegerOccupancyGroup {
@@ -44,29 +46,6 @@ export interface TraegerOccupancy {
   readonly schools: readonly TraegerSchoolOccupancy[];
 }
 
-interface BackendOccupancy {
-  day: string;
-  as_of: string;
-  schools?: {
-    id: number;
-    name: string;
-    slug: string;
-    subdomain: string;
-    city?: string;
-    children: number;
-    without_group: number;
-    groups?: { id: number; name: string; children: number }[];
-    without_care_form: number;
-    care_forms?: {
-      id: number;
-      name: string;
-      children: number;
-      capacity: number | null;
-      active: boolean;
-    }[];
-  }[];
-}
-
 async function readJson(response: Response): Promise<unknown> {
   const text = await response.text();
   if (!text) return null;
@@ -91,29 +70,29 @@ export async function fetchTraegerOccupancy(): Promise<TraegerOccupancy> {
       data,
     );
   }
-  const occupancy = (data as { data: BackendOccupancy }).data;
+  const occupancy = (data as { data: traegerSchoolsContract.Occupancy }).data;
   return {
-    day: occupancy.day,
+    day: requiredDay(occupancy.day, "occupancy.day"),
     asOf: occupancy.as_of,
     schools: (occupancy.schools ?? []).map((school) => ({
-      id: String(school.id),
+      id: school.id,
       name: school.name,
       slug: school.slug,
       subdomain: school.subdomain,
-      city: school.city ?? "",
+      city: school.city,
       children: school.children,
       withoutGroup: school.without_group,
       groups: (school.groups ?? []).map((group) => ({
-        id: String(group.id),
+        id: group.id,
         name: group.name,
         children: group.children,
       })),
       withoutCareForm: school.without_care_form,
       careForms: (school.care_forms ?? []).map((form) => ({
-        id: String(form.id),
+        id: form.id,
         name: form.name,
         children: form.children,
-        capacity: form.capacity ?? null,
+        capacity: form.capacity,
         active: form.active,
       })),
     })),

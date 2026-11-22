@@ -7,6 +7,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // LockExceptionDay serializes status-day writes against Care Plan's
@@ -183,9 +184,9 @@ func (p *presenceFacade) CreateGroupSupervisor(ctx context.Context, supervision 
 
 func liveGroup(group *ports.ActiveGroup) studentpresence.LiveGroup {
 	return studentpresence.LiveGroup{
-		ID: group.ID, TenantID: group.TenantID, CreatedAt: group.CreatedAt, UpdatedAt: group.UpdatedAt,
+		ID: group.ID.Int64(), TenantID: group.TenantID.Int64(), CreatedAt: group.CreatedAt, UpdatedAt: group.UpdatedAt,
 		StartTime: group.StartTime, LastActivity: group.LastActivity, EndTime: group.EndTime,
-		TimeoutMinutes: group.TimeoutMinutes, ActivityGroupID: group.GroupID, DeviceID: group.DeviceID, RoomID: group.RoomID,
+		TimeoutMinutes: group.TimeoutMinutes, ActivityGroupID: (*int64)(group.GroupID), DeviceID: (*int64)(group.DeviceID), RoomID: group.RoomID.Int64(),
 	}
 }
 
@@ -195,11 +196,11 @@ func groupRow(group studentpresence.LiveGroup) *ports.ActiveGroup {
 		EndTime:        group.EndTime,
 		LastActivity:   group.LastActivity,
 		TimeoutMinutes: group.TimeoutMinutes,
-		GroupID:        group.ActivityGroupID,
-		DeviceID:       group.DeviceID,
-		RoomID:         group.RoomID,
+		GroupID:        (*ident.ID)(group.ActivityGroupID),
+		DeviceID:       (*ident.ID)(group.DeviceID),
+		RoomID:         ident.ID(group.RoomID),
 	}
-	row.ID, row.CreatedAt, row.UpdatedAt = group.ID, group.CreatedAt, group.UpdatedAt
+	row.ID, row.CreatedAt, row.UpdatedAt = ident.ID(group.ID), group.CreatedAt, group.UpdatedAt
 	row.SetTenantID(group.TenantID)
 	return row
 }
@@ -209,15 +210,15 @@ func sessionDetail(group *ports.ActiveGroup) *studentpresence.SessionDetail {
 		return nil
 	}
 	detail := &studentpresence.SessionDetail{
-		ID: group.ID, TenantID: group.TenantID, CreatedAt: group.CreatedAt, UpdatedAt: group.UpdatedAt,
+		ID: group.ID.Int64(), TenantID: group.TenantID.Int64(), CreatedAt: group.CreatedAt, UpdatedAt: group.UpdatedAt,
 		StartTime: group.StartTime, LastActivity: group.LastActivity, EndTime: group.EndTime,
-		TimeoutMinutes: group.TimeoutMinutes, ActivityGroupID: group.GroupID, DeviceID: group.DeviceID, RoomID: group.RoomID,
+		TimeoutMinutes: group.TimeoutMinutes, ActivityGroupID: (*int64)(group.GroupID), DeviceID: (*int64)(group.DeviceID), RoomID: group.RoomID.Int64(),
 		Room: sessionRoom(group.Room),
 	}
 	if activity := group.ActualGroup; activity != nil {
 		detail.Activity = &studentpresence.SessionActivitySummary{
-			ID: activity.ID, Name: activity.Name, MaxParticipants: activity.MaxParticipants,
-			PlannedRoomID: activity.PlannedRoomID, IsSystem: activity.IsSystem, IsOpen: activity.IsOpen,
+			ID: activity.ID.Int64(), Name: activity.Name, MaxParticipants: activity.MaxParticipants,
+			PlannedRoomID: (*int64)(activity.PlannedRoomID), IsSystem: activity.IsSystem, IsOpen: activity.IsOpen,
 		}
 	}
 	if group.Supervisors != nil {
@@ -235,12 +236,12 @@ func sessionRoom(room *studentpresence.SessionRoom) *studentpresence.SessionRoom
 	if room == nil {
 		return nil
 	}
-	return &studentpresence.SessionRoomSummary{ID: room.ID, Name: room.Name, Building: room.Building, Category: room.Category, Color: room.Color}
+	return &studentpresence.SessionRoomSummary{ID: room.ID.Int64(), Name: room.Name, Building: room.Building, Category: room.Category, Color: room.Color}
 }
 
 func groupSupervision(row *ports.GroupSupervisor) studentpresence.GroupSupervision {
 	result := studentpresence.GroupSupervision{
-		ID: row.ID, TenantID: row.TenantID, GroupID: row.GroupID, StaffID: row.StaffID,
+		ID: row.ID.Int64(), TenantID: row.TenantID.Int64(), GroupID: row.GroupID.Int64(), StaffID: row.StaffID.Int64(),
 		CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Role: row.Role, StartDate: row.StartDate.String(),
 	}
 	if row.EndDate != nil {
@@ -256,10 +257,10 @@ func supervisorRow(row studentpresence.GroupSupervision) (*ports.GroupSupervisor
 		return nil, &studentpresence.OperationError{Op: "ParseSupervisionDate", Err: studentpresence.ErrInvalidData}
 	}
 	supervisor := &ports.GroupSupervisor{
-		StaffID: row.StaffID, GroupID: row.GroupID, Role: row.Role, StartDate: start,
+		StaffID: ident.ID(row.StaffID), GroupID: ident.ID(row.GroupID), Role: row.Role, StartDate: start,
 		SkipPresenceStamp: row.SkipPresenceStamp,
 	}
-	supervisor.ID, supervisor.CreatedAt, supervisor.UpdatedAt = row.ID, row.CreatedAt, row.UpdatedAt
+	supervisor.ID, supervisor.CreatedAt, supervisor.UpdatedAt = ident.ID(row.ID), row.CreatedAt, row.UpdatedAt
 	supervisor.SetTenantID(row.TenantID)
 	if row.EndDate != nil {
 		end, err := calendar.ParseDate(*row.EndDate)

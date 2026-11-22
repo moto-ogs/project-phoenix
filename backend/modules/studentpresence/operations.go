@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Presence modes resolved from the tenant's presence_mode setting.
@@ -242,20 +244,20 @@ type StudentMoveAuthorization struct {
 
 // StudentMoveSkipped names a student a move could not relocate.
 type StudentMoveSkipped struct {
-	StudentID int64  `json:"student_id"`
-	Reason    string `json:"reason"`
+	StudentID ident.ID `json:"student_id"`
+	Reason    string   `json:"reason"`
 }
 
 // StudentMoveResult is the wire result of a bulk room or transit move.
 type StudentMoveResult struct {
-	Moved         []int64              `json:"moved"`
-	Unchanged     []int64              `json:"unchanged"`
+	Moved         []ident.ID           `json:"moved"`
+	Unchanged     []ident.ID           `json:"unchanged"`
 	Skipped       []StudentMoveSkipped `json:"skipped"`
-	ActiveGroupID *int64               `json:"active_group_id,omitempty"`
-	RoomID        *int64               `json:"room_id,omitempty"`
+	ActiveGroupID *ident.ID            `json:"active_group_id,omitempty"`
+	RoomID        *ident.ID            `json:"room_id,omitempty"`
 	// CheckedIn names the children a check-in into a session (#6953) checked
 	// in to the school; a plain move leaves it empty.
-	CheckedIn []int64 `json:"checked_in,omitempty"`
+	CheckedIn []ident.ID `json:"checked_in,omitempty"`
 	// PreviousActiveGroupIDs records the source observed after move serialization.
 	// It is service metadata and intentionally not part of the bulk-move API.
 	PreviousActiveGroupIDs map[int64]int64 `json:"-"`
@@ -275,17 +277,17 @@ const (
 
 // TransitAssignSkipped names a student a transit assignment left out.
 type TransitAssignSkipped struct {
-	StudentID int64  `json:"student_id"`
-	Reason    string `json:"reason"`
+	StudentID ident.ID `json:"student_id"`
+	Reason    string   `json:"reason"`
 }
 
 // TransitAssignResult is the wire result of assigning transit students to a
 // room session.
 type TransitAssignResult struct {
-	Assigned      []int64                `json:"assigned"`
+	Assigned      []ident.ID             `json:"assigned"`
 	Skipped       []TransitAssignSkipped `json:"skipped"`
-	ActiveGroupID int64                  `json:"active_group_id"`
-	RoomID        int64                  `json:"room_id"`
+	ActiveGroupID ident.ID               `json:"active_group_id"`
+	RoomID        ident.ID               `json:"room_id"`
 }
 
 // VisitDisplay joins an open visit with the tenant-scoped student display

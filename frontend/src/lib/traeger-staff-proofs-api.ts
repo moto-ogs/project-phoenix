@@ -15,13 +15,24 @@ import {
   type TraegerListFile,
   type TraegerListFormat,
 } from "./traeger-list-export";
+import type * as traegerStaffProofsContract from "./contract/traeger-staff-proofs.generated";
+import type * as sharedContract from "./contract/shared.generated";
+import { knownEnum } from "./contract/known-enum";
 import { traegerRequest } from "~/lib/traeger-api";
 
 const BASE = "/api/traeger/staff-proofs";
 
+// Go does not register the set; the contract types it as string. A value
+// this build does not know stays undefined and shows as „–“.
+const STAFF_PROOF_STATUS_VALUES = [
+  "valid",
+  "expiring_soon",
+  "expired",
+  "missing",
+] as const;
+
 /** Stand eines Nachweises, wie bei den Nachweisen der Schule (#4808). */
-export type StaffProofStatus =
-  "valid" | "expiring_soon" | "expired" | "missing";
+export type StaffProofStatus = (typeof STAFF_PROOF_STATUS_VALUES)[number];
 
 export interface StaffProofType {
   readonly id: string;
@@ -51,8 +62,11 @@ export interface StaffProof {
   readonly mandatory: boolean;
   readonly policeCertificate: boolean;
   readonly held: boolean;
-  /** Leer für eine freiwillige Art ohne Nachweis. */
-  readonly status: StaffProofStatus | "";
+  /**
+   * Leer für eine freiwillige Art ohne Nachweis; undefined für einen Stand,
+   * den dieser Build nicht kennt.
+   */
+  readonly status: StaffProofStatus | "" | undefined;
   readonly presentedOn: string;
   readonly issuedOn: string;
   readonly noRelevantEntry: boolean;
@@ -75,7 +89,8 @@ export interface StaffProofEntry {
   readonly schools: readonly string[];
   readonly typeId: string;
   readonly typeName: string;
-  readonly status: StaffProofStatus;
+  /** undefined: ein Stand, den dieser Build nicht kennt. */
+  readonly status: StaffProofStatus | undefined;
   readonly presentedOn: string;
   readonly expiresOn: string;
 }
@@ -106,66 +121,11 @@ export interface SchoolProofKinds {
   readonly kinds: readonly SchoolProofKind[];
 }
 
-interface BackendType {
-  id: number;
-  standard_key?: string;
-  name: string;
-  validity_months: number | null;
-  reminder_lead_weeks: number;
-  mandatory: boolean;
-  archived: boolean;
-  police_certificate: boolean;
-}
-
-export interface BackendProof {
-  type_id: number;
-  type_name: string;
-  mandatory: boolean;
-  police_certificate: boolean;
-  held: boolean;
-  status: StaffProofStatus | "";
-  presented_on?: string;
-  issued_on?: string;
-  no_relevant_entry: boolean;
-  expires_on?: string;
-}
-
-interface BackendList {
-  today: string;
-  types: BackendType[] | null;
-  entries:
-    | {
-        staff_record_id: number;
-        first_name: string;
-        last_name: string;
-        personnel_number: string | null;
-        schools: string[] | null;
-        type_id: number;
-        type_name: string;
-        status: StaffProofStatus;
-        presented_on?: string;
-        expires_on?: string;
-      }[]
-    | null;
-  counts: {
-    expired: number;
-    expiring_soon: number;
-    missing: number;
-    valid: number;
-  };
-}
-
-interface BackendSchoolKinds {
-  school_id: number;
-  school_name: string;
-  kinds:
-    | { school_type_id: number; name: string; proof_type_id: number | null }[]
-    | null;
-}
-
-function mapType(kind: BackendType): StaffProofType {
+function mapType(
+  kind: traegerStaffProofsContract.TraegerStaffProofType,
+): StaffProofType {
   return {
-    id: String(kind.id),
+    id: kind.id,
     standardKey: kind.standard_key ?? "",
     name: kind.name,
     validityMonths: kind.validity_months,
@@ -177,14 +137,19 @@ function mapType(kind: BackendType): StaffProofType {
 }
 
 /** Der Stand einer Art an einer Akte, wie Akte und Speichern ihn liefern. */
-export function mapStaffProof(proof: BackendProof): StaffProof {
+export function mapStaffProof(
+  proof: sharedContract.TraegerStaffProof,
+): StaffProof {
   return {
-    typeId: String(proof.type_id),
+    typeId: proof.type_id,
     typeName: proof.type_name,
     mandatory: proof.mandatory,
     policeCertificate: proof.police_certificate,
     held: proof.held,
-    status: proof.status,
+    status:
+      proof.status === ""
+        ? ""
+        : knownEnum(STAFF_PROOF_STATUS_VALUES, proof.status),
     presentedOn: proof.presented_on ?? "",
     issuedOn: proof.issued_on ?? "",
     noRelevantEntry: proof.no_relevant_entry,
@@ -192,33 +157,37 @@ export function mapStaffProof(proof: BackendProof): StaffProof {
   };
 }
 
-function mapSchoolKinds(data: BackendSchoolKinds[] | null): SchoolProofKinds[] {
-  return (data ?? []).map((school) => ({
-    schoolId: String(school.school_id),
+function mapSchoolKinds(
+  data: traegerStaffProofsContract.TraegerSchoolProofKinds[],
+): SchoolProofKinds[] {
+  return data.map((school) => ({
+    schoolId: school.school_id,
     schoolName: school.school_name,
     kinds: (school.kinds ?? []).map((kind) => ({
-      schoolTypeId: String(kind.school_type_id),
+      schoolTypeId: kind.school_type_id,
       name: kind.name,
-      proofTypeId:
-        kind.proof_type_id === null ? null : String(kind.proof_type_id),
+      proofTypeId: kind.proof_type_id,
     })),
   }));
 }
 
 export async function fetchStaffProofList(): Promise<StaffProofList> {
-  const data = await traegerRequest<BackendList>(BASE);
+  const data =
+    await traegerRequest<traegerStaffProofsContract.TraegerStaffProofList>(
+      BASE,
+    );
   return {
     today: data.today,
     types: (data.types ?? []).map(mapType),
     entries: (data.entries ?? []).map((entry) => ({
-      recordId: String(entry.staff_record_id),
+      recordId: entry.staff_record_id,
       firstName: entry.first_name,
       lastName: entry.last_name,
       personnelNumber: entry.personnel_number,
       schools: entry.schools ?? [],
-      typeId: String(entry.type_id),
+      typeId: entry.type_id,
       typeName: entry.type_name,
-      status: entry.status,
+      status: knownEnum(STAFF_PROOF_STATUS_VALUES, entry.status),
       presentedOn: entry.presented_on ?? "",
       expiresOn: entry.expires_on ?? "",
     })),
@@ -231,7 +200,9 @@ export async function fetchStaffProofList(): Promise<StaffProofList> {
   };
 }
 
-function typeBody(input: StaffProofTypeInput) {
+function typeBody(
+  input: StaffProofTypeInput,
+): traegerStaffProofsContract.ProofTypeRequest {
   return {
     name: input.name,
     validity_months: input.validityMonths,
@@ -246,7 +217,7 @@ export async function saveStaffProofType(
   input: StaffProofTypeInput,
 ): Promise<StaffProofType> {
   return mapType(
-    await traegerRequest<BackendType>(
+    await traegerRequest<traegerStaffProofsContract.TraegerStaffProofType>(
       id === null ? `${BASE}/types` : `${BASE}/types/${encodeURIComponent(id)}`,
       { method: id === null ? "POST" : "PUT", body: typeBody(input) },
     ),
@@ -255,7 +226,9 @@ export async function saveStaffProofType(
 
 export async function fetchSchoolProofKinds(): Promise<SchoolProofKinds[]> {
   return mapSchoolKinds(
-    await traegerRequest<BackendSchoolKinds[] | null>(`${BASE}/school-kinds`),
+    await traegerRequest<traegerStaffProofsContract.TraegerSchoolProofKinds[]>(
+      `${BASE}/school-kinds`,
+    ),
   );
 }
 
@@ -265,14 +238,17 @@ export async function mapSchoolProofKind(
   proofTypeId: string | null,
 ): Promise<SchoolProofKinds[]> {
   return mapSchoolKinds(
-    await traegerRequest<BackendSchoolKinds[] | null>(`${BASE}/school-kinds`, {
-      method: "PUT",
-      body: {
-        school_id: Number(schoolId),
-        school_type_id: Number(schoolTypeId),
-        proof_type_id: proofTypeId === null ? null : Number(proofTypeId),
+    await traegerRequest<traegerStaffProofsContract.TraegerSchoolProofKinds[]>(
+      `${BASE}/school-kinds`,
+      {
+        method: "PUT",
+        body: {
+          school_id: schoolId,
+          school_type_id: schoolTypeId,
+          proof_type_id: proofTypeId === null ? null : proofTypeId,
+        } satisfies traegerStaffProofsContract.ProofMappingRequest,
       },
-    }),
+    ),
   );
 }
 
@@ -284,7 +260,7 @@ export async function saveStaffProof(
   typeId: string,
   input: StaffProofInput,
 ): Promise<StaffProof[]> {
-  const data = await traegerRequest<BackendProof[] | null>(
+  const data = await traegerRequest<sharedContract.TraegerStaffProof[]>(
     proofPath(recordId, typeId),
     {
       method: "PUT",
@@ -293,21 +269,21 @@ export async function saveStaffProof(
         issued_on: input.issuedOn,
         no_relevant_entry: input.noRelevantEntry,
         expires_on: input.expiresOn,
-      },
+      } satisfies traegerStaffProofsContract.ProofRequest,
     },
   );
-  return (data ?? []).map(mapStaffProof);
+  return data.map(mapStaffProof);
 }
 
 export async function deleteStaffProof(
   recordId: string,
   typeId: string,
 ): Promise<StaffProof[]> {
-  const data = await traegerRequest<BackendProof[] | null>(
+  const data = await traegerRequest<sharedContract.TraegerStaffProof[]>(
     proofPath(recordId, typeId),
     { method: "DELETE" },
   );
-  return (data ?? []).map(mapStaffProof);
+  return data.map(mapStaffProof);
 }
 
 /** Die Ablaufliste als CSV, mit dem Dateinamen des Backends. */

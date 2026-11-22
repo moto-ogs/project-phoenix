@@ -89,7 +89,7 @@ const providers = [
           staffMessagingEnabled: false,
           displayEnabled: false,
           gradeLevelMax: 4,
-          tenantId: 7,
+          tenantId: "7",
           slug: "school-a",
           settings: {},
           presenceMode: "detailed",
@@ -98,7 +98,7 @@ const providers = [
           nfcEnabled: false,
           subdomain: "school-a",
           name: "School A",
-          organizationId: 1,
+          organizationId: "1",
           organizationName: "Org",
         }}
         routingMode="subdomain"

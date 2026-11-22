@@ -37,7 +37,7 @@ func (rs *Resource) validateSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	render.JSON(w, r, sessionClaimsResponse(claims))
+	common.RenderJSON(w, r, sessionClaimsResponse(claims))
 }
 
 // sessionClaimsResponse renders the validated claims in the access-token

@@ -76,7 +76,7 @@ func TestEnrollmentSchemaReadQueryBudgets(t *testing.T) {
 		return counter.Measurement(queries)
 	}
 	add(3, 3)
-	paths := []string{"/schema/", "/schema/versions", fmt.Sprintf("/schema/%d", schemaIDs[0])}
+	paths := []string{"/schema/", "/schema/versions"}
 	small := make([]testpkg.QueryMeasurement, len(paths))
 	for i, path := range paths {
 		rows := 0
@@ -89,15 +89,12 @@ func TestEnrollmentSchemaReadQueryBudgets(t *testing.T) {
 		require.NoError(t, testpkg.TenantCommand2(t, testpkg.Ctx(t), db, owner.SetSchemaActive, id, false))
 	}
 	add(5, 8)
-	scenarios := []string{"api.enrollment.schema.active.reads", "api.enrollment.schema.versions.reads", "api.enrollment.schema.by_id.reads"}
+	scenarios := []string{"api.enrollment.schema.active.reads", "api.enrollment.schema.versions.reads"}
 	largeQueries := make([]testpkg.QueryMeasurement, len(paths))
 	for i, path := range paths {
 		rows := 0
 		if i == 1 {
 			rows = 8
-		}
-		if i == 2 {
-			path = fmt.Sprintf("/schema/%d", schemaIDs[len(schemaIDs)-1])
 		}
 		large := run(path, rows, 8)
 		require.Equal(t, len(small[i].Statements), len(large.Statements), path)
@@ -107,5 +104,4 @@ func TestEnrollmentSchemaReadQueryBudgets(t *testing.T) {
 
 	querybudgets.AssertQueryBudget(t, "api.enrollment.schema.active.reads", largeQueries[0])
 	querybudgets.AssertQueryBudget(t, "api.enrollment.schema.versions.reads", largeQueries[1])
-	querybudgets.AssertQueryBudget(t, "api.enrollment.schema.by_id.reads", largeQueries[2])
 }

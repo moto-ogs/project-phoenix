@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/driver/pgdriver"
 )
@@ -260,7 +261,7 @@ func (s *Store) setDeleted(ctx context.Context, id int64, deleted bool) (domain.
 
 func toDomain(row organizationRow) organizationtenancy.Organization {
 	return organizationtenancy.Organization{
-		ID: row.ID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
+		ID: ident.ID(row.ID), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
 		Name: row.Name, Slug: row.Slug, Active: row.Active,
 		DeletedAt: row.DeletedAt, Settings: row.Settings, TestSystem: row.TestSystem,
 	}

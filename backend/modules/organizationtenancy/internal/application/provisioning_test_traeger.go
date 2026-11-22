@@ -23,7 +23,7 @@ func (p *Provisioning) CreateTestTraeger(ctx context.Context, input organization
 		if err != nil {
 			return nil, mapOrganizationError(err, 0)
 		}
-		if err := p.recordAction(adminCtx, operatorID, domain.AuditActionCreate, domain.AuditResourceOrganization, &organization.ID, clientIP, map[string]any{
+		if err := p.recordAction(adminCtx, operatorID, domain.AuditActionCreate, domain.AuditResourceOrganization, (*int64)(&organization.ID), clientIP, map[string]any{
 			"name":        organization.Name,
 			"slug":        organization.Slug,
 			"test_system": true,

@@ -126,12 +126,17 @@ func (s *studentDirectoryReads) ListNamesByIDs(ctx context.Context, ids []int64)
 		return nil, directoryStats{}, err
 	}
 	rows := []directory.StudentName{}
-	query := withStudentTenant(s.studentRows(db, scope).
-		ColumnExpr(`"student".id AS student_id, "person".first_name, "person".last_name`).
-		Join(`JOIN users.persons AS "person" ON "person".tenant_id = "student".tenant_id AND "person".id = "student".person_id`).
-		Where(`"student".id IN (?)`, bun.List(ids)).
-		Where(`"person".deleted_at IS NULL`), scope).
-		OrderExpr(`"student".id ASC`)
+	includeDeletedPlacements := directory.IncludeDeletedStudentPlacements(ctx)
+	query := s.studentRows(db, scope).
+		ColumnExpr(`"student".id AS student_id, "person".first_name, "person".last_name, "student".school_class, "student".group_id`)
+	if includeDeletedPlacements {
+		query = query.ColumnExpr(`"person".id IS NULL AS person_deleted`).
+			Join(`LEFT JOIN users.persons AS "person" ON "person".tenant_id = "student".tenant_id AND "person".id = "student".person_id AND "person".deleted_at IS NULL`)
+	} else {
+		query = query.Join(`JOIN users.persons AS "person" ON "person".tenant_id = "student".tenant_id AND "person".id = "student".person_id`).
+			Where(`"person".deleted_at IS NULL`)
+	}
+	query = withStudentTenant(query.Where(`"student".id IN (?)`, bun.List(ids)), scope).OrderExpr(`"student".id ASC`)
 	stats := directoryStats{Queries: 1}
 	started := time.Now()
 	err = query.Scan(ctx, &rows)

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The utilization of the schools of a Träger over time (#4713, ADR 0241): for
@@ -60,21 +61,21 @@ var ErrInvalidUtilizationWindow = errors.New("traeger view: invalid utilization 
 // UtilizationOffering is one care offering of a school with its booked
 // children per day of the window.
 type UtilizationOffering struct {
-	ID       int64  `json:"id"`
-	Name     string `json:"name"`
-	Capacity *int   `json:"capacity"`
-	Active   bool   `json:"active"`
-	Booked   []int  `json:"booked"`
+	ID       ident.ID `json:"id"`
+	Name     string   `json:"name"`
+	Capacity *int     `json:"capacity"`
+	Active   bool     `json:"active"`
+	Booked   []int    `json:"booked"`
 }
 
 // UtilizationRoom is one room of a school with its children and its peak per
 // day of the window.
 type UtilizationRoom struct {
-	ID       int64  `json:"id"`
-	Name     string `json:"name"`
-	Capacity *int   `json:"capacity"`
-	Children []*int `json:"children"`
-	Peak     []*int `json:"peak"`
+	ID       ident.ID `json:"id"`
+	Name     string   `json:"name"`
+	Capacity *int     `json:"capacity"`
+	Children []*int   `json:"children"`
+	Peak     []*int   `json:"peak"`
 }
 
 // SchoolUtilization is the utilization of one school of the Träger. Every
@@ -194,7 +195,7 @@ type UtilizationPorts struct {
 // the reasons of the others. AttendanceRate is present over care days in
 // percent, nil without a care day.
 type ChildAttendance struct {
-	StudentID       int64    `json:"student_id"`
+	StudentID       ident.ID `json:"student_id"`
 	FirstName       string   `json:"first_name"`
 	LastName        string   `json:"last_name"`
 	SchoolClass     string   `json:"school_class"`

@@ -2,15 +2,14 @@ package httpadapter
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
 
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/tenant"
@@ -59,8 +58,8 @@ func (rs *Resource) fetchSupervisorsBySpecialization(ctx context.Context, specia
 			supervisors = append(supervisors, ActivitySupervisorResponse{
 				// Available supervisor selections are persisted back as supervisor_ids,
 				// so this identifier must remain the staff ID for safe round-tripping.
-				ID:        staff.ID,
-				StaffID:   teacher.StaffID,
+				ID:        ident.ID(staff.ID),
+				StaffID:   ident.ID(teacher.StaffID),
 				FirstName: staff.Person.FirstName,
 				LastName:  staff.Person.LastName,
 				IsPrimary: false,
@@ -88,8 +87,8 @@ func (rs *Resource) fetchAllSupervisors(ctx context.Context) ([]ActivitySupervis
 
 		supervisors = append(supervisors, ActivitySupervisorResponse{
 			// Keep the public ID aligned with the staff ID expected by activity writes.
-			ID:        staffMember.ID,
-			StaffID:   staffMember.ID,
+			ID:        ident.ID(staffMember.ID),
+			StaffID:   ident.ID(staffMember.ID),
 			FirstName: staffMember.Person.FirstName,
 			LastName:  staffMember.Person.LastName,
 			IsPrimary: false,
@@ -100,32 +99,6 @@ func (rs *Resource) fetchAllSupervisors(ctx context.Context) ([]ActivitySupervis
 }
 
 // SUPERVISOR ASSIGNMENT HANDLERS
-
-// getActivitySupervisors retrieves all supervisors for a specific activity
-func (rs *Resource) getActivitySupervisors(w http.ResponseWriter, r *http.Request) {
-	activity, ok := rs.parseAndGetActivity(w, r)
-	if !ok {
-		return
-	}
-
-	// Get supervisors for the activity
-	supervisors, err := rs.ActivityService.GetGroupSupervisors(r.Context(), activity.ID)
-	if err != nil {
-		common.RenderError(w, r, ErrorRenderer(err))
-		return
-	}
-
-	// Convert to response objects
-	responses := make([]ActivitySupervisorResponse, 0, len(supervisors))
-	for _, supervisor := range supervisors {
-		if supervisor == nil {
-			continue // Skip nil supervisors to prevent panic
-		}
-		responses = append(responses, newSupervisorResponse(supervisor))
-	}
-
-	common.Respond(w, r, http.StatusOK, responses, fmt.Sprintf("Supervisors for activity '%s' retrieved successfully", activity.Name))
-}
 
 // getAvailableSupervisors retrieves available supervisors for assignment
 func (rs *Resource) getAvailableSupervisors(w http.ResponseWriter, r *http.Request) {
@@ -170,41 +143,6 @@ func parseSupervisorReplacement(r *http.Request) (*activitySupervisorReplacement
 	}
 
 	return &activitySupervisorReplacement{ReplacementStaffID: &replacementStaffID}, nil
-}
-
-// assignSupervisor assigns a supervisor to an activity
-func (rs *Resource) assignSupervisor(w http.ResponseWriter, r *http.Request) {
-	activity, ok := rs.parseAndGetActivity(w, r)
-	if !ok {
-		return
-	}
-
-	// Parse request
-	var req SupervisorRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(err))
-		return
-	}
-
-	// Validate request
-	if err := req.Bind(r); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(err))
-		return
-	}
-
-	// Assign supervisor
-	tenantID := tenant.FromContext(r.Context())
-	var supervisor *activityContract.SupervisorPlanned
-	if err := rs.transactions.WithinTenant(r.Context(), tenantID, func(ctx context.Context) error {
-		var txErr error
-		supervisor, txErr = rs.ActivityService.AddSupervisor(ctx, activity.ID, req.StaffID, req.IsPrimary)
-		return txErr
-	}); err != nil {
-		common.RenderError(w, r, ErrorRenderer(err))
-		return
-	}
-
-	common.Respond(w, r, http.StatusCreated, newSupervisorResponse(supervisor), "Supervisor assigned successfully")
 }
 
 // removeSupervisor removes a supervisor from an activity

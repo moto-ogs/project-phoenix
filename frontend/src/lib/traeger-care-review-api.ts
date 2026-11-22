@@ -5,10 +5,10 @@
  * calendar dates stay "YYYY-MM-DD".
  */
 
+import type * as traegerCareBillingRunsContract from "./contract/traeger-care-billing-runs.generated";
 import { traegerRequest } from "./traeger-api";
 import { type BillingFile, billingFile } from "./traeger-billing-api";
 import {
-  type BackendRunDetail,
   type CareInvoice,
   type CareRunDetail,
   detailFromBackend,
@@ -35,17 +35,12 @@ export async function fetchCareRunSchools(
   month: string,
 ): Promise<CareRunSchool[]> {
   const schools = await traegerRequest<
-    | {
-        id: number | string;
-        name: string;
-        open_run_id: number | string | null;
-      }[]
-    | null
+    traegerCareBillingRunsContract.CareRunSchool[]
   >(`${RUNS_PATH}/schools?month=${encodeURIComponent(month)}`);
-  return (schools ?? []).map((school) => ({
-    id: String(school.id),
+  return schools.map((school) => ({
+    id: school.id,
     name: school.name,
-    openRunId: school.open_run_id === null ? null : String(school.open_run_id),
+    openRunId: school.open_run_id,
   }));
 }
 
@@ -55,10 +50,15 @@ export async function setCareRunInvoiceDate(
   invoiceDate: string | null,
 ): Promise<CareRunDetail> {
   return detailFromBackend(
-    await traegerRequest<BackendRunDetail>(`${runPath(runId)}/invoice-date`, {
-      method: "PUT",
-      body: { invoice_date: invoiceDate },
-    }),
+    await traegerRequest<traegerCareBillingRunsContract.CareRunDetail>(
+      `${runPath(runId)}/invoice-date`,
+      {
+        method: "PUT",
+        body: {
+          invoice_date: invoiceDate,
+        } satisfies traegerCareBillingRunsContract.CareInvoiceDateRequest,
+      },
+    ),
   );
 }
 
@@ -78,14 +78,17 @@ export async function excludeCareInvoice(
   reason: string,
 ): Promise<CareRunDetail> {
   return detailFromBackend(
-    await traegerRequest<BackendRunDetail>(`${runPath(runId)}/exclusions`, {
-      method: "POST",
-      body: {
-        contract_id: Number(invoice.contractId),
-        service: invoice.service,
-        reason,
+    await traegerRequest<traegerCareBillingRunsContract.CareRunDetail>(
+      `${runPath(runId)}/exclusions`,
+      {
+        method: "POST",
+        body: {
+          contract_id: invoice.contractId,
+          service: invoice.service,
+          reason,
+        } satisfies traegerCareBillingRunsContract.CareExclusionRequest,
       },
-    }),
+    ),
   );
 }
 
@@ -95,13 +98,16 @@ export async function includeCareInvoice(
   invoice: CareInvoiceRef,
 ): Promise<CareRunDetail> {
   return detailFromBackend(
-    await traegerRequest<BackendRunDetail>(`${runPath(runId)}/inclusions`, {
-      method: "POST",
-      body: {
-        contract_id: Number(invoice.contractId),
-        service: invoice.service,
+    await traegerRequest<traegerCareBillingRunsContract.CareRunDetail>(
+      `${runPath(runId)}/inclusions`,
+      {
+        method: "POST",
+        body: {
+          contract_id: invoice.contractId,
+          service: invoice.service,
+        } satisfies traegerCareBillingRunsContract.CareInclusionRequest,
       },
-    }),
+    ),
   );
 }
 

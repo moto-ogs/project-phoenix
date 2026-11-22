@@ -42,7 +42,7 @@ import {
 
 /** A route-wrapper success answer. */
 function ok(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify({ success: true, message: "", data }), {
+  return new Response(JSON.stringify({ status: "success", data }), {
     status,
     headers: { "Content-Type": "application/json" },
   });
@@ -57,7 +57,7 @@ function problem(status: number, body: unknown): Response {
 
 /** A paginated answer of the catalog proxy: the page beside the data. */
 function pageOf(data: unknown[], pagination: unknown): Response {
-  return Response.json({ success: true, message: "Success", data, pagination });
+  return Response.json({ status: "success", data, pagination });
 }
 
 function calledUrl(index = 0): string {
@@ -163,7 +163,6 @@ describe("fetchStudents", () => {
 
     await fetchStudents({
       search: "Max",
-      inHouse: false,
       groupId: ["5", "a,b"],
       schoolClass: "3a",
       gradeLevel: ["1", "2"],
@@ -187,8 +186,6 @@ describe("fetchStudents", () => {
     const params = new URL(calledUrl(), "http://x").searchParams;
     expect(Object.fromEntries(params)).toEqual({
       search: "Max",
-      // false is a filter of its own on in_house.
-      in_house: "false",
       group_id: "5,a\\,b",
       school_class: "3a",
       grade_level: "1,2",
@@ -242,9 +239,9 @@ describe("child list filter options", () => {
       headers: { "Content-Type": "application/json" },
     });
 
-  it("maps the care offerings of the contract with string ids", async () => {
+  it("maps the care offerings of the contract", async () => {
     mockSessionFetch.mockResolvedValueOnce(
-      answer([{ id: 12, name: "OGS Ganztag" }]),
+      answer([{ id: "12", name: "OGS Ganztag" }]),
     );
 
     await expect(fetchCareOfferingOptions()).resolves.toEqual([

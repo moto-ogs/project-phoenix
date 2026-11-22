@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -79,8 +80,14 @@ func RecordingUnprotectedGroupFunc(called *bool) func(chi.Router, func(chi.Route
 func IdentityMiddleware(next http.Handler) http.Handler { return next }
 
 func RespondSuccess(w http.ResponseWriter, r *http.Request, status int, data any, message string) {
-	render.Status(r, status)
-	render.JSON(w, r, Response{Status: "success", Data: data, Message: message})
+	// Identifiers travel as strings, as in production (ADR 0300, addendum).
+	body, err := wire.Marshal(Response{Status: "success", Data: data, Message: message})
+	if err != nil {
+		panic(err)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_, _ = w.Write(append(body, '\n'))
 }
 
 func RespondNoContent(w http.ResponseWriter, r *http.Request) { render.NoContent(w, r) }

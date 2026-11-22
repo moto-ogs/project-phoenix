@@ -24,11 +24,11 @@ function note(overrides: Partial<PickupNote>): PickupNote {
 describe("recurring weekday notes", () => {
   it("maps a recurring note without a date", () => {
     const mapped = mapPickupNoteResponse({
-      id: 7,
-      student_id: 42,
+      id: "7",
+      student_id: "42",
       weekday: 3,
       content: "Mittwochs bei den Großeltern",
-      created_by: 1,
+      created_by: "1",
       created_at: "2026-09-01T00:00:00Z",
       updated_at: "2026-09-01T00:00:00Z",
     });

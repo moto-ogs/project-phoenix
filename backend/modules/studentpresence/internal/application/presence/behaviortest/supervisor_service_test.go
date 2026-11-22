@@ -10,6 +10,7 @@ import (
 	active "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -48,8 +49,8 @@ func TestActiveService_CreateGroupSupervisor(t *testing.T) {
 
 		now := calendar.NewDate(2026, 8, 24)
 		supervisor := &ports.GroupSupervisor{
-			GroupID:   activeGroup.ID,
-			StaffID:   staff.ID,
+			GroupID:   ident.ID(activeGroup.ID),
+			StaffID:   ident.ID(staff.ID),
 			Role:      "supervisor",
 			StartDate: now,
 		}
@@ -77,7 +78,7 @@ func TestActiveService_CreateGroupSupervisor(t *testing.T) {
 		now := calendar.NewDate(2026, 8, 24)
 		supervisor := &ports.GroupSupervisor{
 			GroupID:   99999999, // invalid
-			StaffID:   staff.ID,
+			StaffID:   ident.ID(staff.ID),
 			Role:      "supervisor",
 			StartDate: now,
 		}
@@ -104,8 +105,8 @@ func TestActiveService_CreateGroupSupervisor(t *testing.T) {
 		require.NoError(t, err)
 
 		supervisor := &ports.GroupSupervisor{
-			GroupID:   activeGroup.ID,
-			StaffID:   staff.ID,
+			GroupID:   ident.ID(activeGroup.ID),
+			StaffID:   ident.ID(staff.ID),
 			Role:      "supervisor",
 			StartDate: calendar.NewDate(2026, 8, 24),
 		}
@@ -150,8 +151,8 @@ func TestPresence_QuerySupervisions(t *testing.T) {
 
 		now := calendar.TodayDate()
 		supervisor := &ports.GroupSupervisor{
-			GroupID:   activeGroup.ID,
-			StaffID:   staff.ID,
+			GroupID:   ident.ID(activeGroup.ID),
+			StaffID:   ident.ID(staff.ID),
 			Role:      "supervisor",
 			StartDate: now,
 		}
@@ -201,8 +202,8 @@ func TestPresence_QueryActiveStaffSupervisions(t *testing.T) {
 
 		now := calendar.TodayDate()
 		supervisor := &ports.GroupSupervisor{
-			GroupID:   activeGroup.ID,
-			StaffID:   staff.ID,
+			GroupID:   ident.ID(activeGroup.ID),
+			StaffID:   ident.ID(staff.ID),
 			Role:      "supervisor",
 			StartDate: now,
 		}
@@ -257,8 +258,8 @@ func TestPresence_QueryActiveSessionSupervisions(t *testing.T) {
 
 		now := calendar.TodayDate()
 		supervisor := &ports.GroupSupervisor{
-			GroupID:   activeGroup.ID,
-			StaffID:   staff.ID,
+			GroupID:   ident.ID(activeGroup.ID),
+			StaffID:   ident.ID(staff.ID),
 			Role:      "supervisor",
 			StartDate: now,
 		}
@@ -314,8 +315,8 @@ func TestPresence_QueryActiveSupervisionsForSessions(t *testing.T) {
 		staff := testpkg.CreateTestStaff(t, db, "Multi", "Supervisor")
 
 		now := calendar.TodayDate()
-		sup1 := &ports.GroupSupervisor{GroupID: group1.ID, StaffID: staff.ID, Role: "supervisor", StartDate: now}
-		sup2 := &ports.GroupSupervisor{GroupID: group2.ID, StaffID: staff.ID, Role: "supervisor", StartDate: now}
+		sup1 := &ports.GroupSupervisor{GroupID: ident.ID(group1.ID), StaffID: ident.ID(staff.ID), Role: "supervisor", StartDate: now}
+		sup2 := &ports.GroupSupervisor{GroupID: ident.ID(group2.ID), StaffID: ident.ID(staff.ID), Role: "supervisor", StartDate: now}
 		err := service.CreateGroupSupervisor(ctx, sup1)
 		require.NoError(t, err)
 		err = service.CreateGroupSupervisor(ctx, sup2)
@@ -360,8 +361,8 @@ func TestActiveService_EndSupervision(t *testing.T) {
 
 		now := calendar.NewDate(2026, 8, 24)
 		supervisor := &ports.GroupSupervisor{
-			GroupID:   activeGroup.ID,
-			StaffID:   staff.ID,
+			GroupID:   ident.ID(activeGroup.ID),
+			StaffID:   ident.ID(staff.ID),
 			Role:      "supervisor",
 			StartDate: now,
 		}
@@ -369,13 +370,13 @@ func TestActiveService_EndSupervision(t *testing.T) {
 		require.NoError(t, err)
 
 		// ACT
-		err = service.EndSupervision(ctx, supervisor.ID)
+		err = service.EndSupervision(ctx, supervisor.ID.Int64())
 
 		// ASSERT
 		require.NoError(t, err)
 
 		// Verify end time set
-		ended, found := storedSupervision(t, db, ctx, supervisor.ID)
+		ended, found := storedSupervision(t, db, ctx, supervisor.ID.Int64())
 		require.True(t, found)
 		assert.NotNil(t, ended.EndDate)
 	})
@@ -424,8 +425,8 @@ func TestPresence_QueryCurrentStaffGroups(t *testing.T) {
 
 		now := calendar.TodayDate()
 		supervisor := &ports.GroupSupervisor{
-			GroupID:   activeGroup.ID,
-			StaffID:   staff.ID,
+			GroupID:   ident.ID(activeGroup.ID),
+			StaffID:   ident.ID(staff.ID),
 			Role:      "supervisor",
 			StartDate: now,
 		}

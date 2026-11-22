@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -47,13 +48,13 @@ func TestActiveSupervisionsCarryTheirStaffMember(t *testing.T) {
 
 	byStaff := make(map[int64]*ports.GroupSupervisor, len(rows))
 	for _, row := range rows {
-		byStaff[row.StaffID] = row
+		byStaff[row.StaffID.Int64()] = row
 	}
 	require.NotNil(t, byStaff[present.ID].Staff)
-	assert.Equal(t, present.ID, byStaff[present.ID].Staff.ID)
-	assert.Equal(t, present.PersonID, byStaff[present.ID].Staff.PersonID)
+	assert.Equal(t, ident.ID(present.ID), byStaff[present.ID].Staff.ID)
+	assert.Equal(t, ident.ID(present.PersonID), byStaff[present.ID].Staff.PersonID)
 	require.NotNil(t, byStaff[offboarded.ID].Staff, "an offboarded supervisor still resolves")
-	assert.Equal(t, offboarded.PersonID, byStaff[offboarded.ID].Staff.PersonID)
+	assert.Equal(t, ident.ID(offboarded.PersonID), byStaff[offboarded.ID].Staff.PersonID)
 
 	bulk, err := sessionSupervisors(factoryPresence.ActiveGroup).FindByActiveGroupIDs(ctx, []int64{group.ID}, false)
 	require.NoError(t, err)
@@ -67,13 +68,13 @@ func createAbsence(tb testing.TB, ctx context.Context, factory *api.StaffAbsence
 	tb.Helper()
 	today := calendar.TodayDate()
 	absence := &workforce.StaffAbsence{
-		StaffID:     staffID,
+		StaffID:     ident.ID(staffID),
 		AbsenceType: workforce.AbsenceTypeVacation,
 		DateStart:   today.String(),
 		DateEnd:     today.String(),
 		Status:      workforce.AbsenceStatusRequested,
-		ApprovedBy:  approvedBy,
-		CreatedBy:   staffID,
+		ApprovedBy:  (*ident.ID)(approvedBy),
+		CreatedBy:   ident.ID(staffID),
 		RequestedAt: time.Now(),
 	}
 	_, err := factory.StaffAbsence.CreateStaffAbsence(ctx, absence)

@@ -78,7 +78,7 @@ func (rs *Resource) verifyMFA(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	common.SetTrustedDevice(w, session.TrustedDeviceCookie, session.TrustedDeviceExpiresAt)
-	render.JSON(w, r, portalauth.TokenResponse{AccessToken: session.AccessToken, RefreshToken: session.RefreshToken})
+	common.RenderJSON(w, r, portalauth.TokenResponse{AccessToken: session.AccessToken, RefreshToken: session.RefreshToken})
 }
 
 // resendMFA mails a new code for a caterer challenge.
@@ -93,7 +93,7 @@ func (rs *Resource) resendMFA(w http.ResponseWriter, r *http.Request) {
 		renderFailure(w, r, err)
 		return
 	}
-	render.JSON(w, r, common.MFAResendResponse{ChallengeToken: renewed})
+	common.RenderJSON(w, r, common.MFAResendResponse{ChallengeToken: renewed})
 }
 
 // passkeyLoginOptions starts a passkey sign-in on the caterer portal.
@@ -103,7 +103,7 @@ func (rs *Resource) passkeyLoginOptions(w http.ResponseWriter, r *http.Request) 
 		renderPasskeyLoginFailure(w, r, err)
 		return
 	}
-	render.JSON(w, r, options)
+	common.RenderJSON(w, r, options)
 }
 
 // passkeyLoginVerify completes the passkey sign-in.
@@ -121,7 +121,7 @@ func (rs *Resource) passkeyLoginVerify(w http.ResponseWriter, r *http.Request) {
 		renderPasskeyLoginFailure(w, r, err)
 		return
 	}
-	render.JSON(w, r, LoginResponse{
+	common.RenderJSON(w, r, LoginResponse{
 		Status: string(identityaccess.CatererLoginAuthenticated), AccessToken: result.AccessToken, RefreshToken: result.RefreshToken,
 	})
 }

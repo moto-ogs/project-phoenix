@@ -148,18 +148,17 @@ function datevProblemLines(problems: readonly DatevBookingProblem[]): string[] {
 
 /**
  * The invoices a refused DATEV download named. No file left moto and no
- * number was used.
+ * number was used. An error has no X (#7704): it stays until the next
+ * download or handover.
  */
 export function DatevRefusedNotice({
   runKind,
   runLabel,
   problems,
-  onDismiss,
 }: Readonly<{
   runKind: ExportRun["runKind"];
   runLabel: string;
   problems: readonly DatevBookingProblem[];
-  onDismiss: () => void;
 }>) {
   const debtor = problems.some((problem) => problem.field === "debtor_number");
   const accounts = problems.some((problem) =>
@@ -192,8 +191,6 @@ export function DatevRefusedNotice({
         ) : undefined
       }
       details={<BulletList lines={datevProblemLines(problems)} />}
-      onDismiss={onDismiss}
-      dismissLabel="Hinweis schließen"
     />
   );
 }

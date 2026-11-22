@@ -249,7 +249,7 @@ describe("useDienstplanData", () => {
       (key: string | null, fetcher: () => Promise<unknown>) => {
         if (key === null) return swrResult(undefined);
         void fetcher();
-        if (key === 'staff-directory-list-{"strict":true}') {
+        if (key === "staff-directory-list-{}") {
           return swrResult(legacyStaffData, { mutate: mutateLegacyStaff });
         }
         if (key.startsWith("dienstplan-shifts-")) {
@@ -266,8 +266,7 @@ describe("useDienstplanData", () => {
 
     // Legacy path used, overview not used.
     expect(mocks.getAllStaff).toHaveBeenCalledTimes(1);
-    // A failed staff load must reject, not look like an empty plan.
-    expect(mocks.getAllStaff).toHaveBeenCalledWith({}, { strict: true });
+    expect(mocks.getAllStaff).toHaveBeenCalledWith({});
     expect(mocks.getShifts).toHaveBeenCalledWith(weekFrom, weekTo);
     expect(mocks.getOverview).not.toHaveBeenCalled();
 
@@ -311,7 +310,7 @@ describe("useDienstplanData", () => {
     );
     const shiftsError = new Error("shifts down");
     mocks.useSWRAuth.mockImplementation((key: string | null) => {
-      if (key === 'staff-directory-list-{"strict":true}') {
+      if (key === "staff-directory-list-{}") {
         return swrResult(legacyStaffData);
       }
       if (typeof key === "string" && key.startsWith("dienstplan-shifts-")) {

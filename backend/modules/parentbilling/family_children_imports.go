@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The children of the families from a file (#7356). A Träger that counts
@@ -99,7 +100,7 @@ type FamilyChildrenImportColumns struct {
 // SchoolID names the school of every row.
 type FamilyChildrenImportMapping struct {
 	Columns  FamilyChildrenImportColumns `json:"columns"`
-	SchoolID int64                       `json:"school_id"`
+	SchoolID ident.ID                    `json:"school_id"`
 }
 
 // FamilyChildrenImportRequest is one look at a file: the preview when Apply
@@ -133,7 +134,7 @@ type FamilyChildrenImportRow struct {
 	Children *int `json:"children"`
 	// ContractID is the contract of the child the number goes to and
 	// ValidFrom its first day, from which the number counts.
-	ContractID int64          `json:"contract_id,omitempty"`
+	ContractID ident.ID       `json:"contract_id,omitempty"`
 	ValidFrom  *calendar.Date `json:"valid_from"`
 	// ConfirmedChildren is the number the Abrechnung confirmed before, for
 	// FamilyImportSame and FamilyImportDiffers.

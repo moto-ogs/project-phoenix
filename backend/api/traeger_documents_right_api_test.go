@@ -23,20 +23,20 @@ func TestTraegerDocumentWritesNeedTheDocumentsRight(t *testing.T) {
 	t.Parallel()
 	f := newTraegerDocumentsFixture(t)
 	document := f.uploaded(t, f.office.token, "Elternbrief")
-	release := f.released(t, f.office.token, document.ID, map[string]any{"audience": "schools"})
+	release := f.released(t, f.office.token, int64(document.ID), map[string]any{"audience": "schools"})
 
 	administration := f.member(t, f.office, identityaccess.TraegerRoleAdministration)
 	assert.Contains(t, traegerTokenClaims(t, administration)["permissions"], identityaccess.TraegerRightEnrollmentManage)
 	assert.NotContains(t, traegerTokenClaims(t, administration)["permissions"], identityaccess.TraegerRightDocumentsManage)
 	readOnly := f.member(t, f.office, identityaccess.TraegerRoleReadOnly)
 	for name, token := range map[string]string{"Verwaltung": administration, "Nur lesen": readOnly} {
-		assert.Equal(t, []int64{document.ID}, documentIDs(f.documents(t, token)), "%s reads the documents", name)
+		assert.Equal(t, []int64{int64(document.ID)}, documentIDs(f.documents(t, token)), "%s reads the documents", name)
 		writes := map[string]int{
 			"upload":    f.upload(t, token, "Fremd", "brief.pdf", samplePDF).Code,
 			"audiences": traegerJSON(t, f.router, token, http.MethodGet, "/traeger/documents/audiences", nil).Code,
-			"release":   f.release(t, token, document.ID, map[string]any{"audience": "parents"}).Code,
-			"revoke":    f.revoke(t, token, document.ID, release.ID).Code,
-			"delete":    f.deleteDocument(t, token, document.ID).Code,
+			"release":   f.release(t, token, int64(document.ID), map[string]any{"audience": "parents"}).Code,
+			"revoke":    f.revoke(t, token, int64(document.ID), int64(release.ID)).Code,
+			"delete":    f.deleteDocument(t, token, int64(document.ID)).Code,
 		}
 		for route, code := range writes {
 			assert.Equal(t, http.StatusForbidden, code, "%s without Dokumente verwalten: %s", name, route)
@@ -52,10 +52,10 @@ func TestTraegerDocumentWritesNeedTheDocumentsRight(t *testing.T) {
 	other := f.uploaded(t, documents, "Hausordnung")
 	audiences := traegerJSON(t, f.router, documents, http.MethodGet, "/traeger/documents/audiences", nil)
 	assert.Equal(t, http.StatusOK, audiences.Code, audiences.Body.String())
-	revocable := f.released(t, documents, other.ID, map[string]any{"audience": "parents"})
-	rec := f.revoke(t, documents, other.ID, revocable.ID)
+	revocable := f.released(t, documents, int64(other.ID), map[string]any{"audience": "parents"})
+	rec := f.revoke(t, documents, int64(other.ID), int64(revocable.ID))
 	assert.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	rec = f.deleteDocument(t, documents, other.ID)
+	rec = f.deleteDocument(t, documents, int64(other.ID))
 	assert.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 }
 
@@ -77,6 +77,6 @@ func TestTraegerDocumentsKeepTheMigratedVerwaltung(t *testing.T) {
 	assert.Contains(t, rights, identityaccess.TraegerRightEnrollmentManage)
 	assert.Contains(t, rights, identityaccess.TraegerRightDocumentsManage)
 	document := f.uploaded(t, answer.AccessToken, "Elternbrief")
-	rec := f.release(t, answer.AccessToken, document.ID, map[string]any{"audience": "schools"})
+	rec := f.release(t, answer.AccessToken, int64(document.ID), map[string]any{"audience": "schools"})
 	assert.Equal(t, http.StatusCreated, rec.Code, fmt.Sprintf("the migrated Verwaltung releases: %s", rec.Body.String()))
 }

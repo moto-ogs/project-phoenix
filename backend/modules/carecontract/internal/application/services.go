@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // booked is the care one application child books at its school: the
@@ -40,7 +41,7 @@ func bookedCare(read schoolRead, application carecontract.Application, today cal
 				continue
 			}
 			result.services = append(result.services, carecontract.Service{
-				Weekday: day, CareOfferingID: offering.ID, ModuleName: offering.Name, EndsAt: offering.EndTimes[day],
+				Weekday: day, CareOfferingID: ident.ID(offering.ID), ModuleName: offering.Name, EndsAt: offering.EndTimes[day],
 				LastDay: lastDay(booking.ValidUntil),
 			})
 			added = true

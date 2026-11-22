@@ -262,7 +262,7 @@ func (r TeacherMembershipRepository) hydrateTeacherPersons(ctx context.Context, 
 		if !found {
 			continue
 		}
-		person, found := persons[staff.PersonID]
+		person, found := persons[staff.PersonID.Int64()]
 		if !found {
 			continue
 		}
@@ -386,7 +386,7 @@ func (d caregiverDirectory) FindCaregiverPersons(ctx context.Context, personIDs 
 	result := make(map[int64]schoolmembership.CaregiverPerson, len(persons))
 	for id, person := range persons {
 		if person != nil {
-			result[id] = schoolmembership.CaregiverPerson{ID: person.ID, TenantID: person.GetTenantID(), AccountID: person.AccountID, FirstName: person.FirstName, LastName: person.LastName}
+			result[id] = schoolmembership.CaregiverPerson{ID: person.ID.Int64(), TenantID: person.GetTenantID(), AccountID: (*int64)(person.AccountID), FirstName: person.FirstName, LastName: person.LastName}
 		}
 	}
 	return result, nil

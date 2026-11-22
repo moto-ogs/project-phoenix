@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The frozen holiday contributions (#4664, ADR 0115). The request role may
@@ -63,7 +64,7 @@ func (l holidayContributionLineRow) line() parentbilling.HolidayContributionLine
 	return parentbilling.HolidayContributionLine{
 		Kind: l.Kind, AmountCents: l.AmountCents, WeekStartsOn: l.WeekStartsOn, WeekEndsOn: l.WeekEndsOn,
 		TimeModelName: l.TimeModelName, ChildRank: l.ChildRank, DiscountBasisPoints: l.DiscountBasisPoints,
-		DiscountCents: l.DiscountCents, Note: l.Note, CostBearerID: l.CostBearerID, CostBearerName: l.CostBearerName,
+		DiscountCents: l.DiscountCents, Note: l.Note, CostBearerID: (*ident.ID)(l.CostBearerID), CostBearerName: l.CostBearerName,
 		WeekID: valueOrZero(l.HolidayPeriodWeekID), BookedDays: l.BookedDays,
 	}
 }
@@ -123,7 +124,7 @@ func (s *Store) HolidayContributions(ctx context.Context, organizationID, regist
 			childLines = []parentbilling.HolidayContributionLine{}
 		}
 		contribution.Children[i] = parentbilling.HolidayChildContribution{
-			ChildID: row.HolidayRegistrationChildID, Position: i + 1, Lines: childLines, TotalCents: row.TotalCents,
+			ChildID: ident.ID(row.HolidayRegistrationChildID), Position: i + 1, Lines: childLines, TotalCents: row.TotalCents,
 		}
 		contribution.TotalCents += row.TotalCents
 	}
@@ -154,7 +155,7 @@ func (s *Store) InsertHolidayContributions(ctx context.Context, organizationID, 
 	for i, child := range contribution.Children {
 		rows[i] = holidayContributionRow{
 			OrganizationID: organizationID, HolidayPeriodID: periodID, HolidayRegistrationID: registrationID,
-			HolidayRegistrationChildID: child.ChildID, TotalCents: child.TotalCents, Version: version, ConfirmedByAccountID: &accountID,
+			HolidayRegistrationChildID: child.ChildID.Int64(), TotalCents: child.TotalCents, Version: version, ConfirmedByAccountID: &accountID,
 			SiblingRank: contribution.Chain.SiblingRank, CostTakeoverOrder: contribution.Chain.CostTakeoverOrder,
 		}
 		if confirmedAt != nil {
@@ -171,7 +172,7 @@ func (s *Store) InsertHolidayContributions(ctx context.Context, organizationID, 
 				OrganizationID: organizationID, HolidayContributionID: rows[i].ID, Position: position + 1,
 				Kind: line.Kind, AmountCents: line.AmountCents, WeekStartsOn: line.WeekStartsOn, WeekEndsOn: line.WeekEndsOn,
 				TimeModelName: line.TimeModelName, ChildRank: line.ChildRank, DiscountBasisPoints: line.DiscountBasisPoints,
-				DiscountCents: line.DiscountCents, Note: line.Note, CostBearerID: line.CostBearerID, CostBearerName: line.CostBearerName,
+				DiscountCents: line.DiscountCents, Note: line.Note, CostBearerID: (*int64)(line.CostBearerID), CostBearerName: line.CostBearerName,
 				HolidayPeriodWeekID: zeroOrNil(line.WeekID), BookedDays: line.BookedDays,
 			})
 		}

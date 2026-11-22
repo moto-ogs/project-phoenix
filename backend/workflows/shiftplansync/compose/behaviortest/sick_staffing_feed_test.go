@@ -60,7 +60,7 @@ func TestSickReportTellsThePersonAndTheGroupOnce(t *testing.T) {
 			AbsenceType: "sick", DateStart: "2030-06-11", DateEnd: "2030-06-13",
 		})
 		if created != nil {
-			sickReportID = created.ID
+			sickReportID = created.ID.Int64()
 		}
 		return err
 	}))

@@ -315,8 +315,10 @@ function RoleStammdatenTab({
             />
           ) : null}
           <StatusBadge
-            label={`${role.permissions?.length ?? 0} ${
-              role.permissions?.length === 1 ? "Berechtigung" : "Berechtigungen"
+            label={`${role.permissionNames?.length ?? 0} ${
+              role.permissionNames?.length === 1
+                ? "Berechtigung"
+                : "Berechtigungen"
             }`}
             tone="purple"
           />
@@ -336,7 +338,7 @@ function RoleStammdatenTab({
         <DataGrid>
           <DataField label="Name">{getRoleDisplayName(role.name)}</DataField>
           <DataField label="Berechtigungen">
-            {role.permissions?.length ?? 0}
+            {role.permissionNames?.length ?? 0}
           </DataField>
           <DataField label="Gilt als">
             {getBaseRoleLabel(role.baseRole)}

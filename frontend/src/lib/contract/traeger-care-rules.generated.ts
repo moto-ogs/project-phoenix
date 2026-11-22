@@ -35,9 +35,9 @@ export interface CareRuleRequest {
   name?: string;
   valid_from?: string | null;
   valid_until?: string | null;
-  school_ids?: number[] | null;
-  care_offering_ids?: number[] | null;
-  count_school_ids?: number[] | null;
+  school_ids?: string[] | null;
+  care_offering_ids?: string[] | null;
+  count_school_ids?: string[] | null;
   sibling_from_child?: number | null;
   discount_basis_points?: number | null;
   discount_cents?: number | null;

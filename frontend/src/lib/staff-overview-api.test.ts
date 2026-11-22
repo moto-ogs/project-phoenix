@@ -4,9 +4,11 @@ import {
   mapDashboardSummary,
   mapTimeAccountRow,
   staffOverviewService,
-  type BackendDashboardSummary,
-  type BackendTimeTrackingOverviewRow,
 } from "./staff-overview-api";
+import {
+  type DashboardSummary as DashboardSummaryWire,
+  routes,
+} from "./contract/staff.generated";
 
 const sessionFetch = vi.hoisted(() => vi.fn());
 vi.mock("./session-cache", () => ({ sessionFetch }));
@@ -18,7 +20,7 @@ function jsonResponse(data: unknown): Response {
   } as unknown as Response;
 }
 
-const summaryFixture: BackendDashboardSummary = {
+const summaryFixture: DashboardSummaryWire = {
   active_staff_count: 18,
   sick_today: 2,
   vacation_today: 1,
@@ -47,19 +49,34 @@ describe("mapDashboardSummary", () => {
 });
 
 describe("mapTimeAccountRow", () => {
-  it("turns the int64 staff id into a string", () => {
-    const row: BackendTimeTrackingOverviewRow = {
-      staff_id: 42,
-      first_name: "Anna",
-      last_name: "Müller",
-      name: "Anna Müller",
-      employment_type: "part_time",
-      soll_minutes: 600,
-      has_target: false,
-      ist_minutes: 660,
-      balance_minutes: 60,
-      remaining_vacation_days: 12.5,
-    };
+  it("reads the int64 staff id the proxy decoded as a string", () => {
+    // Go sends the id as a string; the catalog proxy hands it on unchanged.
+    const decoded = routes[
+      "GET /api/staff/time-tracking/overview"
+    ].response.parse({
+      status: "success",
+      data: {
+        year: 2026,
+        month: 9,
+        rows: [
+          {
+            staff_id: "42",
+            first_name: "Anna",
+            last_name: "Müller",
+            name: "Anna Müller",
+            employment_type: "part_time",
+            soll_minutes: 600,
+            has_target: false,
+            ist_minutes: 660,
+            balance_minutes: 60,
+            remaining_vacation_days: 12.5,
+            labor_hint_days: 0,
+          },
+        ],
+      },
+    });
+    const row = decoded.data.rows?.[0];
+    if (!row) throw new Error("decoded row missing");
 
     expect(mapTimeAccountRow(row).staffId).toBe("42");
     expect(mapTimeAccountRow(row).remainingVacationDays).toBe(12.5);

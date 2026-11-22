@@ -44,7 +44,7 @@ func TestOperatorSchoolRequiredDetails(t *testing.T) {
 		require.NoError(t, err)
 		statements := counter.Queries()
 		for _, detail := range details {
-			byID[detail.SchoolID] = detail
+			byID[detail.SchoolID.Int64()] = detail
 		}
 		return byID, statements
 	}

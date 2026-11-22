@@ -14,10 +14,10 @@ import { FormModal } from "~/components/ui/form-modal";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Textarea } from "~/components/ui/textarea";
 import { useApiFormError } from "~/contexts/ToastContext";
+import type { attendanceCorrectionResponse } from "~/lib/contract/timetable.generated";
 import {
   correctAttendance,
   fetchAttendanceCorrections,
-  type AttendanceCorrection,
 } from "~/lib/student-care-plan-api";
 import { createLogger } from "~/lib/logger";
 import { useSWRAuth } from "~/lib/swr";
@@ -25,7 +25,7 @@ import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 
 const logger = createLogger({ component: "AttendanceCorrectionModal" });
 
-const NO_CORRECTIONS: readonly AttendanceCorrection[] = [];
+const NO_CORRECTIONS: readonly attendanceCorrectionResponse[] = [];
 
 const REASON_MAX_LENGTH = 500;
 const NOTE_MAX_LENGTH = 500;

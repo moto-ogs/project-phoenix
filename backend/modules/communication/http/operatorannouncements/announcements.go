@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // AnnouncementsResource handles operator announcements endpoints
@@ -33,35 +34,35 @@ func NewAnnouncementsResource(announcementService communication.Capability, now 
 
 // OperatorAnnouncementResponse represents an announcement in the response
 type OperatorAnnouncementResponse struct {
-	ID              int64    `json:"id"`
-	Title           string   `json:"title"`
-	Content         string   `json:"content"`
-	Type            string   `json:"type"`
-	Severity        string   `json:"severity"`
-	Version         *string  `json:"version,omitempty"`
-	Active          bool     `json:"active"`
-	PublishedAt     *string  `json:"published_at,omitempty"`
-	ExpiresAt       *string  `json:"expires_at,omitempty"`
-	TargetRoles     []string `json:"target_roles"`
-	TargetOrgIDs    []int64  `json:"target_org_ids"`
-	TargetTenantIDs []int64  `json:"target_tenant_ids"`
-	CreatedBy       int64    `json:"created_by"`
-	CreatedAt       string   `json:"created_at"`
-	UpdatedAt       string   `json:"updated_at"`
-	Status          string   `json:"status"` // draft, published, expired
+	ID              common.ID   `json:"id"`
+	Title           string      `json:"title"`
+	Content         string      `json:"content"`
+	Type            string      `json:"type"`
+	Severity        string      `json:"severity"`
+	Version         *string     `json:"version,omitempty"`
+	Active          bool        `json:"active"`
+	PublishedAt     *string     `json:"published_at,omitempty"`
+	ExpiresAt       *string     `json:"expires_at,omitempty"`
+	TargetRoles     []string    `json:"target_roles"`
+	TargetOrgIDs    []common.ID `json:"target_org_ids"`
+	TargetTenantIDs []common.ID `json:"target_tenant_ids"`
+	CreatedBy       common.ID   `json:"created_by"`
+	CreatedAt       string      `json:"created_at"`
+	UpdatedAt       string      `json:"updated_at"`
+	Status          string      `json:"status"` // draft, published, expired
 }
 
 // CreateAnnouncementRequest represents the create announcement request body
 type CreateAnnouncementRequest struct {
-	Title           string   `json:"title"`
-	Content         string   `json:"content"`
-	Type            string   `json:"type"`
-	Severity        string   `json:"severity"`
-	Version         *string  `json:"version,omitempty"`
-	ExpiresAt       *string  `json:"expires_at,omitempty"`
-	TargetRoles     []string `json:"target_roles,omitempty"`
-	TargetOrgIDs    []int64  `json:"target_org_ids,omitempty"`
-	TargetTenantIDs []int64  `json:"target_tenant_ids,omitempty"`
+	Title           string      `json:"title"`
+	Content         string      `json:"content"`
+	Type            string      `json:"type"`
+	Severity        string      `json:"severity"`
+	Version         *string     `json:"version,omitempty"`
+	ExpiresAt       *string     `json:"expires_at,omitempty"`
+	TargetRoles     []string    `json:"target_roles,omitempty"`
+	TargetOrgIDs    []common.ID `json:"target_org_ids,omitempty"`
+	TargetTenantIDs []common.ID `json:"target_tenant_ids,omitempty"`
 }
 
 // Bind validates the create announcement request
@@ -70,26 +71,26 @@ func (req *CreateAnnouncementRequest) Bind(r *http.Request) error {
 		req.TargetRoles = []string{}
 	}
 	if req.TargetOrgIDs == nil {
-		req.TargetOrgIDs = []int64{}
+		req.TargetOrgIDs = []ident.ID{}
 	}
 	if req.TargetTenantIDs == nil {
-		req.TargetTenantIDs = []int64{}
+		req.TargetTenantIDs = []ident.ID{}
 	}
 	return nil
 }
 
 // UpdateAnnouncementRequest represents the update announcement request body
 type UpdateAnnouncementRequest struct {
-	Title           string   `json:"title"`
-	Content         string   `json:"content"`
-	Type            string   `json:"type"`
-	Severity        string   `json:"severity"`
-	Version         *string  `json:"version,omitempty"`
-	Active          *bool    `json:"active,omitempty"`
-	ExpiresAt       *string  `json:"expires_at,omitempty"`
-	TargetRoles     []string `json:"target_roles,omitempty"`
-	TargetOrgIDs    []int64  `json:"target_org_ids,omitempty"`
-	TargetTenantIDs []int64  `json:"target_tenant_ids,omitempty"`
+	Title           string      `json:"title"`
+	Content         string      `json:"content"`
+	Type            string      `json:"type"`
+	Severity        string      `json:"severity"`
+	Version         *string     `json:"version,omitempty"`
+	Active          *bool       `json:"active,omitempty"`
+	ExpiresAt       *string     `json:"expires_at,omitempty"`
+	TargetRoles     []string    `json:"target_roles,omitempty"`
+	TargetOrgIDs    []common.ID `json:"target_org_ids,omitempty"`
+	TargetTenantIDs []common.ID `json:"target_tenant_ids,omitempty"`
 }
 
 // Bind validates the update announcement request
@@ -98,10 +99,10 @@ func (req *UpdateAnnouncementRequest) Bind(r *http.Request) error {
 		req.TargetRoles = []string{}
 	}
 	if req.TargetOrgIDs == nil {
-		req.TargetOrgIDs = []int64{}
+		req.TargetOrgIDs = []ident.ID{}
 	}
 	if req.TargetTenantIDs == nil {
-		req.TargetTenantIDs = []int64{}
+		req.TargetTenantIDs = []ident.ID{}
 	}
 	return nil
 }
@@ -167,8 +168,8 @@ func (rs *AnnouncementsResource) CreateAnnouncement(w http.ResponseWriter, r *ht
 		Severity:        req.Severity,
 		Version:         req.Version,
 		TargetRoles:     req.TargetRoles,
-		TargetOrgIDs:    req.TargetOrgIDs,
-		TargetTenantIDs: req.TargetTenantIDs,
+		TargetOrgIDs:    ident.Int64s(req.TargetOrgIDs),
+		TargetTenantIDs: ident.Int64s(req.TargetTenantIDs),
 		Active:          true,
 	}
 
@@ -230,8 +231,8 @@ func (rs *AnnouncementsResource) UpdateAnnouncement(w http.ResponseWriter, r *ht
 	existing.Severity = req.Severity
 	existing.Version = req.Version
 	existing.TargetRoles = req.TargetRoles
-	existing.TargetOrgIDs = req.TargetOrgIDs
-	existing.TargetTenantIDs = req.TargetTenantIDs
+	existing.TargetOrgIDs = ident.Int64s(req.TargetOrgIDs)
+	existing.TargetTenantIDs = ident.Int64s(req.TargetTenantIDs)
 	if req.Active != nil {
 		existing.Active = *req.Active
 	}
@@ -277,12 +278,12 @@ func (rs *AnnouncementsResource) GetStats(w http.ResponseWriter, r *http.Request
 
 // AnnouncementViewDetailResponse represents a view detail in the response
 type AnnouncementViewDetailResponse struct {
-	UserID      int64   `json:"user_id"`
-	UserName    string  `json:"user_name"`
-	SeenAt      string  `json:"seen_at"`
-	ShownAt     *string `json:"shown_at"`
-	DismissedAt *string `json:"dismissed_at"`
-	Dismissed   bool    `json:"dismissed"`
+	UserID      common.ID `json:"user_id"`
+	UserName    string    `json:"user_name"`
+	SeenAt      string    `json:"seen_at"`
+	ShownAt     *string   `json:"shown_at"`
+	DismissedAt *string   `json:"dismissed_at"`
+	Dismissed   bool      `json:"dismissed"`
 }
 
 // GetViewDetails handles getting detailed view information for an announcement
@@ -301,7 +302,7 @@ func (rs *AnnouncementsResource) GetViewDetails(w http.ResponseWriter, r *http.R
 	responses := make([]AnnouncementViewDetailResponse, 0, len(details))
 	for _, detail := range details {
 		response := AnnouncementViewDetailResponse{
-			UserID:    detail.UserID,
+			UserID:    ident.ID(detail.UserID),
 			UserName:  detail.UserName,
 			SeenAt:    detail.SeenAt.Format(time.RFC3339),
 			Dismissed: detail.Dismissed,
@@ -351,7 +352,7 @@ func newAnnouncementResponse(a *communication.Announcement, now time.Time) Opera
 	}
 
 	response := OperatorAnnouncementResponse{
-		ID:              a.ID,
+		ID:              ident.ID(a.ID),
 		Title:           a.Title,
 		Content:         a.Content,
 		Type:            a.Type,
@@ -359,9 +360,9 @@ func newAnnouncementResponse(a *communication.Announcement, now time.Time) Opera
 		Version:         a.Version,
 		Active:          a.Active,
 		TargetRoles:     targetRoles,
-		TargetOrgIDs:    targetOrgIDs,
-		TargetTenantIDs: targetTenantIDs,
-		CreatedBy:       a.CreatedBy,
+		TargetOrgIDs:    ident.IDs(targetOrgIDs),
+		TargetTenantIDs: ident.IDs(targetTenantIDs),
+		CreatedBy:       ident.ID(a.CreatedBy),
 		CreatedAt:       a.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:       a.UpdatedAt.Format(time.RFC3339),
 	}

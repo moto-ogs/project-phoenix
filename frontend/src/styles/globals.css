@@ -552,14 +552,30 @@
    lift the card above a sticky save bar. A trigger whose layer is portaled to
    `body` (`OverflowMenu`, `data-portaled-layer`) needs no lift either: lifted
    to 60, the card would cover the top of its own menu at `Z_LAYER.dropdown`
-   (#7403). */
+   (#7403).
+   The level is unlayered and beats the surface's own `z-*`. The position sits
+   in `components`, below Tailwind's utilities: a surface that positions
+   itself (`sticky`, `fixed`, `absolute`, also `md:sticky`) keeps that
+   position. Unlayered, `relative` replaced it: the sticky selection bar
+   jumped down by its `top-2` and stopped sticking while its select was
+   open. */
+@layer components {
+  .moto-content-surface:has(
+    [aria-expanded="true"]:not(
+      [data-section-collapse-toggle],
+      [data-portaled-layer]
+    )
+  ) {
+    position: relative;
+  }
+}
+
 .moto-content-surface:has(
   [aria-expanded="true"]:not(
     [data-section-collapse-toggle],
     [data-portaled-layer]
   )
 ) {
-  position: relative;
   z-index: 60;
 }
 

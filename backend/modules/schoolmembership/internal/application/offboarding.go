@@ -171,7 +171,9 @@ func retirementRevision(snapshot retirementSnapshot) ([]byte, error) {
 			return revisionClassAssignment(row)
 		}),
 		Groups: revisionRows(snapshot.Groups, func(row schoolmembership.GroupAssignment) revisionGroupAssignment {
-			return revisionGroupAssignment(row)
+			// TeacherStaffID is a read-only join, not a fact of the revision.
+			return revisionGroupAssignment{ID: row.ID, TenantID: row.TenantID, CreatedAt: row.CreatedAt,
+				UpdatedAt: row.UpdatedAt, GroupID: row.GroupID, TeacherID: row.TeacherID}
 		})})
 }
 

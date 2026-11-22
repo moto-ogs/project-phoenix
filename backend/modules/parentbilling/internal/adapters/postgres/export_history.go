@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The history of one issued invoice (#4693): its issue with the count of
@@ -167,7 +168,7 @@ func (s *Store) InvoiceHistory(ctx context.Context, organizationID int64, kind s
 	}
 	entries := make([]parentbilling.InvoiceHistoryEntry, len(steps))
 	for i, step := range steps {
-		entries[i] = parentbilling.InvoiceHistoryEntry{Kind: step.Kind, At: step.At, AccountID: step.AccountID,
+		entries[i] = parentbilling.InvoiceHistoryEntry{Kind: step.Kind, At: step.At, AccountID: (*ident.ID)(step.AccountID),
 			Positions: step.Positions, Note: step.Note, RunID: step.RunID, DeliveryID: step.DeliveryID}
 	}
 	exports := make([]parentbilling.ExportProtocolEntry, len(files))

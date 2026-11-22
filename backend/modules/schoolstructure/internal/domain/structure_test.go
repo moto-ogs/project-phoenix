@@ -3,6 +3,8 @@ package domain
 import (
 	"errors"
 	"testing"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func TestGroupValidateRequiresAndTrimsTheName(t *testing.T) {
@@ -15,7 +17,7 @@ func TestGroupValidateRequiresAndTrimsTheName(t *testing.T) {
 		wantErr bool
 	}{
 		{"valid group", Group{Name: "Class 1A"}, false},
-		{"valid group with room", Group{Name: "Class 2B", RoomID: &roomID}, false},
+		{"valid group with room", Group{Name: "Class 2B", RoomID: (*ident.ID)(&roomID)}, false},
 		{"empty name", Group{Name: ""}, true},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

@@ -8,6 +8,7 @@ import (
 	strings "strings"
 	utf8 "unicode/utf8"
 
+	common "github.com/moto-ogs/project-phoenix/api/common"
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	departure "github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
 
@@ -66,12 +67,12 @@ type StudentRequest struct {
 	// Legacy guardian fields (optional - use guardian_profiles system instead)
 
 	// Optional fields
-	GroupID           *int64  `json:"group_id,omitempty"`
-	AddressStreet     string  `json:"address_street,omitempty"`
-	AddressCity       string  `json:"address_city,omitempty"`
-	AddressPostalCode string  `json:"address_postal_code,omitempty"`
-	ExtraInfo         *string `json:"extra_info,omitempty"`  // Extra information visible to supervisors
-	HealthInfo        *string `json:"health_info,omitempty"` // Static health and medical information
+	GroupID           *common.ID `json:"group_id,omitempty"`
+	AddressStreet     string     `json:"address_street,omitempty"`
+	AddressCity       string     `json:"address_city,omitempty"`
+	AddressPostalCode string     `json:"address_postal_code,omitempty"`
+	ExtraInfo         *string    `json:"extra_info,omitempty"`  // Extra information visible to supervisors
+	HealthInfo        *string    `json:"health_info,omitempty"` // Static health and medical information
 	// DepartureDays is the authoritative per-weekday departure mode
 	// (alone/bus/pickup). When provided it supersedes the legacy PickupStatus /
 	// PickupDays / Bus / BusDays inputs below, which remain accepted for clients
@@ -113,13 +114,13 @@ type UpdateStudentRequest struct {
 	TagID     *string `json:"tag_id,omitempty"`
 
 	// Student-specific details (optional for update)
-	SchoolClass       *string `json:"school_class,omitempty"`
-	GroupID           *int64  `json:"group_id,omitempty"`
-	AddressStreet     *string `json:"address_street,omitempty"`
-	AddressCity       *string `json:"address_city,omitempty"`
-	AddressPostalCode *string `json:"address_postal_code,omitempty"`
-	HealthInfo        *string `json:"health_info,omitempty"` // Static health and medical information
-	ExtraInfo         *string `json:"extra_info,omitempty"`  // Extra information visible to supervisors
+	SchoolClass       *string    `json:"school_class,omitempty"`
+	GroupID           *common.ID `json:"group_id,omitempty"`
+	AddressStreet     *string    `json:"address_street,omitempty"`
+	AddressCity       *string    `json:"address_city,omitempty"`
+	AddressPostalCode *string    `json:"address_postal_code,omitempty"`
+	HealthInfo        *string    `json:"health_info,omitempty"` // Static health and medical information
+	ExtraInfo         *string    `json:"extra_info,omitempty"`  // Extra information visible to supervisors
 	// AllowedDepartureModes supersedes the legacy exclusive departure/pickup/bus
 	// inputs below when provided.
 	AllowedDepartureModes *departure.AllowedDepartureModes `json:"allowed_departure_modes,omitempty"`

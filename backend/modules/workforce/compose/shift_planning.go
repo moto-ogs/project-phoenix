@@ -148,7 +148,8 @@ type ShiftPlanningDependencies struct {
 	CategoryLinker planning.CategoryLinker
 	// DB carries the per-staff advisory lock that makes the overlap check safe
 	// under concurrency.
-	DB *bun.DB
+	DB                   *bun.DB
+	LockStaffAssignments func(ctx context.Context, staffIDs []int64) error // staff rows, ascending, one batch (#7683)
 	// Broadcaster and Logger are optional.
 	Broadcaster realtime.Broadcaster
 	Logger      *slog.Logger
@@ -182,18 +183,16 @@ func NewShiftPlanning(deps ShiftPlanningDependencies) (*ShiftPlanning, error) {
 		return nil, errors.New("shift planning: the staff directory is required")
 	case deps.CalendarPeriods == nil:
 		return nil, errors.New("shift planning: the calendar period lookup is required")
-	case deps.Instances == nil || deps.InstanceStaff == nil || deps.Rooms == nil:
-		return nil, errors.New("shift planning: the instance, assignment and room readers are required")
-	case deps.ActivityGroups == nil:
-		return nil, errors.New("shift planning: the activity group reader is required")
-	case deps.DB == nil:
-		return nil, errors.New("shift planning: the database handle is required for the per-staff write lock")
+	case deps.Instances == nil || deps.InstanceStaff == nil || deps.Rooms == nil || deps.ActivityGroups == nil:
+		return nil, errors.New("shift planning: the instance, assignment, room and activity group readers are required")
+	case deps.DB == nil || deps.LockStaffAssignments == nil:
+		return nil, errors.New("shift planning: the database handle and the staff row lock are required for the per-staff write locks")
 	}
 
 	logger := deps.Logger
 	shiftTypes := planning.NewShiftTypeService(deps.Workforce, logger)
 
-	shiftOptions := planning.ShiftOptions(deps.Workforce, deps.Broadcaster, deps.Today)
+	shiftOptions := planning.ShiftOptions(deps.Workforce, deps.Broadcaster, deps.Today, deps.LockStaffAssignments)
 	if deps.ShiftMoveAudit != nil {
 		shiftOptions = append(shiftOptions, planning.WithStaffShiftDeviationEvents(deps.ShiftMoveAudit))
 	}

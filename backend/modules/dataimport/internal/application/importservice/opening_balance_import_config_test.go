@@ -12,6 +12,7 @@ import (
 
 	importModels "github.com/moto-ogs/project-phoenix/modules/dataimport"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -126,7 +127,7 @@ func TestOpeningBalanceValidate_RowWithoutValues(t *testing.T) {
 	errs := c.Validate(context.Background(), row)
 
 	assert.Contains(t, errorCodes(errs), "no_values")
-	assert.Equal(t, openingStaffAnnaID, row.StaffID, "the person still resolves")
+	assert.Equal(t, ident.ID(openingStaffAnnaID), row.StaffID, "the person still resolves")
 }
 
 func TestOpeningBalanceProcessingOrder_SortsResolvedStaffIDs(t *testing.T) {
@@ -212,7 +213,7 @@ func TestOpeningBalanceValidate_PersonnelNumberMatchIsCaseInsensitive(t *testing
 	errs := c.Validate(context.Background(), row)
 
 	assert.Empty(t, errs)
-	assert.Equal(t, openingStaffAnnaID, row.StaffID)
+	assert.Equal(t, ident.ID(openingStaffAnnaID), row.StaffID)
 }
 
 func TestOpeningBalanceValidate_NegativeHoursBalanceBecomesMinutes(t *testing.T) {
@@ -419,7 +420,7 @@ func TestOpeningBalanceValidate_AcceptsCompleteRow(t *testing.T) {
 	errs := c.Validate(context.Background(), row)
 
 	require.Empty(t, errs)
-	assert.Equal(t, openingStaffAnnaID, row.StaffID)
+	assert.Equal(t, ident.ID(openingStaffAnnaID), row.StaffID)
 	require.NotNil(t, row.HoursBalanceMinutes)
 	assert.Equal(t, 750, *row.HoursBalanceMinutes)
 	require.NotNil(t, row.VacationEntitledDays)
@@ -468,7 +469,7 @@ func TestOpeningBalanceConfig_FindExistingAlwaysNew(t *testing.T) {
 
 	c := newOpeningConfig()
 
-	existing, err := c.FindExisting(context.Background(), importModels.OpeningBalanceImportRow{StaffID: openingStaffAnnaID})
+	existing, err := c.FindExisting(context.Background(), importModels.OpeningBalanceImportRow{StaffID: ident.ID(openingStaffAnnaID)})
 
 	require.NoError(t, err)
 	assert.Nil(t, existing, "duplicates are reported per side in Validate, not here")

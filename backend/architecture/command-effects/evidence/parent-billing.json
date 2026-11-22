@@ -266,7 +266,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingCareContracts.VersionsInForce",
-      "binding_digest": "8a588f241a5498af836442ca4545cc48",
+      "binding_digest": "c416e12e4458d0427960188977f89e06",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.VersionsInForce",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.VersionsInForce",
@@ -530,7 +530,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingBillingRegistrations.ConfirmedHolidayRegistrations",
-      "binding_digest": "8dee8ac53ee0f8fd6c667eb0ff1605f5",
+      "binding_digest": "038deea1836a1bf6b7908d8b294dff64",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.HolidayBillingRegistrations.ConfirmedHolidayRegistrations",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayRegistrationReview.ListHolidayRegistrationRecipients",
@@ -554,7 +554,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingBillingRegistrations.HolidayProofRegistrations",
-      "binding_digest": "2899d854d6a99991f62d08c7f0bccb50",
+      "binding_digest": "22d6e48784980f95b61af900cb7bc9a2",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.HolidayBillingRegistrations.HolidayProofRegistrations",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayRegistrationReview.ListHolidayRegistrationRecipients",
@@ -666,7 +666,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingHolidayRegistrations.HolidayWeeks",
-      "binding_digest": "a889b75f68c2283c309a3fe8bb02d2a7",
+      "binding_digest": "d627f75d75f7a4ce0240fa9213b1cc6f",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.HolidayRegistrations.HolidayWeeks",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayRegistrations.HolidayRegistrationOffer",
@@ -786,7 +786,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingPlaceChanges.RebookHolidayChild",
-      "binding_digest": "9263355ee0714bdaac28b90a58bc104d",
+      "binding_digest": "6ad9166c90cd13bd7bcf431244583813",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http.HolidayPlaceChanges.RebookHolidayChild",
       "source_owner": "parent-billing",
       "target": "*github.com/moto-ogs/project-phoenix/workflows/holidayallocation.Workflow.RebookHolidayChild",
@@ -794,7 +794,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingPlaceChanges.SetHolidayWeekCapacity",
-      "binding_digest": "70f7cb6e961a10785b36c84181d2af2d",
+      "binding_digest": "7282681ffbd5c71a13f4f5fc61b3c43a",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http.HolidayPlaceChanges.SetHolidayWeekCapacity",
       "source_owner": "parent-billing",
       "target": "*github.com/moto-ogs/project-phoenix/workflows/holidayallocation.Workflow.SetHolidayWeekCapacity",

@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The invoices and amounts of a family (spec #4611 user story 81, #4691).
@@ -61,10 +62,10 @@ var ErrFamilyNotFound = errors.New("no document or number of the Träger names t
 // what its invoices asked for, what the cancellations took back, what the
 // credits took back, and what is still open.
 type BillingAmounts struct {
-	IssuedCents    int64 `json:"issued_cents"`
-	CancelledCents int64 `json:"cancelled_cents"`
-	CreditedCents  int64 `json:"credited_cents"`
-	OpenCents      int64 `json:"open_cents"`
+	IssuedCents    int64 `json:"issued_cents" contract:"number"`
+	CancelledCents int64 `json:"cancelled_cents" contract:"number"`
+	CreditedCents  int64 `json:"credited_cents" contract:"number"`
+	OpenCents      int64 `json:"open_cents" contract:"number"`
 }
 
 // BillingPayment is who pays an invoice: the family, a cost bearer by the
@@ -78,7 +79,7 @@ type BillingPayment struct {
 // latest document, the debtor numbers its documents carry, who pays its
 // invoices, and its sums.
 type BillingFamily struct {
-	ID                 int64            `json:"id"`
+	ID                 ident.ID         `json:"id"`
 	RecipientFirstName string           `json:"recipient_first_name"`
 	RecipientLastName  string           `json:"recipient_last_name"`
 	RecipientEmail     string           `json:"recipient_email"`
@@ -117,23 +118,23 @@ type BillingFamilyDocument struct {
 	// RecipientKind and RecipientSecondName say who got the invoice (#4689).
 	RecipientKind       string          `json:"recipient_kind"`
 	RecipientSecondName string          `json:"recipient_second_name"`
-	ID                  int64           `json:"id"`
-	RunID               int64           `json:"run_id"`
+	ID                  ident.ID        `json:"id"`
+	RunID               ident.ID        `json:"run_id"`
 	Kind                string          `json:"kind"`
 	Number              string          `json:"number"`
 	IssuedOn            calendar.Date   `json:"issued_on"`
 	PeriodName          string          `json:"period_name"`
 	ServiceFrom         calendar.Date   `json:"service_from"`
 	ServiceUntil        calendar.Date   `json:"service_until"`
-	ReferenceDocumentID *int64          `json:"reference_document_id"`
+	ReferenceDocumentID *ident.ID       `json:"reference_document_id"`
 	ReferenceNumber     string          `json:"reference_number"`
 	Reason              string          `json:"reason"`
 	ChildNames          []string        `json:"child_names"`
 	DebtorNumber        string          `json:"debtor_number"`
-	TotalCents          int64           `json:"total_cents"`
+	TotalCents          int64           `json:"total_cents" contract:"number"`
 	Payment             *BillingPayment `json:"payment"`
 	Status              string          `json:"status"`
-	OpenCents           int64           `json:"open_cents"`
+	OpenCents           int64           `json:"open_cents" contract:"number"`
 	// PaymentMethod and DueOn are how and by when the invoice is paid
 	// (#4689); empty and nil on documents issued before.
 	PaymentMethod string         `json:"payment_method"`

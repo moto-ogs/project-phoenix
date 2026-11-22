@@ -12,6 +12,7 @@ import { signOut } from "next-auth/react";
 
 import { apiErrorFromResponse } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
+import type { StaffPreviewCandidate as StaffPreviewCandidateWire } from "~/lib/contract/auth-staff-preview.generated";
 import { sessionFetch, clearSessionCache } from "~/lib/session-cache";
 
 const logger = createLogger({ component: "StaffPreviewApi" });
@@ -24,23 +25,15 @@ export interface StaffPreviewCandidate {
   roles: string[];
 }
 
-interface BackendStaffPreviewCandidate {
-  // int64 on the backend, serialized as a string so no ID passes through a
-  // JavaScript number.
-  account_id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  roles: string[];
-}
-
 export interface StaffPreviewSession {
   expiresIn: number;
   targetAccountId: string;
   targetName: string;
 }
 
-interface BackendStaffPreviewStartResponse {
+// The answer of /api/auth/staff-preview: the BFF route sets the session and
+// is outside the generated contract (#2353).
+interface StaffPreviewStartBody {
   expires_in: number;
   target_account_id: string;
   target_name: string;
@@ -99,16 +92,16 @@ export async function fetchStaffPreviewCandidates(): Promise<
       `Failed to load preview candidates: ${response.status}`,
     );
   }
-  // createGetHandler wraps GET responses in { status, data }.
+  // The catalog proxy passes the backend's envelope { status, data } through.
   const envelope = (await response.json()) as {
-    data?: BackendStaffPreviewCandidate[] | null;
+    data?: StaffPreviewCandidateWire[] | null;
   };
   return (envelope.data ?? []).map((candidate) => ({
     accountId: candidate.account_id,
     firstName: candidate.first_name,
     lastName: candidate.last_name,
     email: candidate.email,
-    roles: candidate.roles,
+    roles: candidate.roles ?? [],
   }));
 }
 
@@ -126,7 +119,7 @@ async function startStaffPreview(
       `Failed to start preview: ${response.status}`,
     );
   }
-  const data = (await response.json()) as BackendStaffPreviewStartResponse;
+  const data = (await response.json()) as StaffPreviewStartBody;
   return {
     expiresIn: data.expires_in,
     targetAccountId: data.target_account_id,

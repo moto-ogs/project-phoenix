@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -43,7 +44,7 @@ func TestHolidayAllocationHoldsTheCatalogUntilCommit(t *testing.T) {
 		}))
 	}
 	withinTraeger(t, db, w.organization, func(ctx context.Context) {
-		_, err := allocation.DecideHolidayAllocation(ctx, reviewer, w.period, []enrollment.HolidayAllocationChoice{{BookingID: bookingID, Placement: "placed", Proposal: "placed"}})
+		_, err := allocation.DecideHolidayAllocation(ctx, reviewer, w.period, []enrollment.HolidayAllocationChoice{{BookingID: ident.ID(bookingID), Placement: "placed", Proposal: "placed"}})
 		require.NoError(t, err)
 		probe(false)
 	})

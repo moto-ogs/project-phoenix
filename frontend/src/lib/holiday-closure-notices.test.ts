@@ -19,9 +19,9 @@ function json(body: unknown, status = 200): Response {
 }
 
 const backendNotice = {
-  id: 7,
-  school_id: 3,
-  closing_day_id: 11,
+  id: "7",
+  school_id: "3",
+  closing_day_id: "11",
   reason: "Teamtag",
   previous: { start_date: "2026-10-05", end_date: "2026-10-05" },
   current: null,
@@ -104,11 +104,11 @@ describe("holiday closure notices (ADR 0196)", () => {
               children: 1,
               weeks: [
                 {
-                  week_id: 5,
+                  week_id: "5",
                   period_name: "Herbstferien",
                   starts_on: "2026-10-05",
                   ends_on: "2026-10-09",
-                  host_school_id: 3,
+                  host_school_id: "3",
                   closed_days: null,
                   reopened_days: [{ date: "2026-10-05", reason: "Teamtag" }],
                   children: 1,
@@ -158,9 +158,9 @@ describe("holiday closure notices (ADR 0196)", () => {
     expect(
       JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string),
     ).toMatchObject({
-      closing_day_id: 9,
+      closing_day_id: "9",
       previous: {
-        school_ids: [3],
+        school_ids: ["3"],
         start_date: "2026-10-05",
         end_date: "2026-10-06",
       },
@@ -169,5 +169,21 @@ describe("holiday closure notices (ADR 0196)", () => {
     expect(fetchMock.mock.calls[1]![0]).toBe(
       "/api/traeger/closing-days/9?holiday_bookings_token=d1",
     );
+  });
+});
+
+// ADR 0270 point 6 (#2353): a state a newer backend adds reads as "unknown",
+// the state the backend names an unreadable one itself.
+describe("holiday closure notice states a newer backend adds", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("reads an unknown state as unknown", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    fetchMock.mockResolvedValueOnce(
+      json({ data: [{ ...backendNotice, status: "queued_later" }] }),
+    );
+    const [notice] = await fetchHolidayClosureNotices();
+    expect(notice?.status).toBe("unknown");
   });
 });

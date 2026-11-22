@@ -101,7 +101,7 @@ func TestFileStorageRuntimeEvidence(t *testing.T) {
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		var uploaded struct {
 			Data struct {
-				ID common.JSONID `json:"id"`
+				ID common.ID `json:"id"`
 			} `json:"data"`
 		}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &uploaded))

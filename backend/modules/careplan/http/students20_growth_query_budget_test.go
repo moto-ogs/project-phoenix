@@ -18,6 +18,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/settings"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/require"
@@ -40,7 +41,7 @@ func TestStudents20ArrivalGrowthQueryBudget(t *testing.T) {
 	for i, weekdayName := range []string{"Montag", "Dienstag", "Mittwoch"} {
 		row := testpkg.CreateTestArrivalSchedule(t, tc.db, child.ID, i+1, staff.ID, "08:15")
 		require.NoError(t, tc.db.NewSelect().Model(row).WherePK().Scan(testpkg.Ctx(t)))
-		expectedSchedules = append(expectedSchedules, studentsAPI.ArrivalScheduleResponse{ID: row.ID, StudentID: child.ID, Weekday: i + 1, WeekdayName: weekdayName, ExpectedArrival: "08:15", Source: "staff", CreatedBy: staff.ID, CreatedAt: row.CreatedAt.Format(time.RFC3339), UpdatedAt: row.UpdatedAt.Format(time.RFC3339)})
+		expectedSchedules = append(expectedSchedules, studentsAPI.ArrivalScheduleResponse{ID: ident.ID(row.ID), StudentID: ident.ID(child.ID), Weekday: i + 1, WeekdayName: weekdayName, ExpectedArrival: "08:15", Source: "staff", CreatedBy: ident.ID(staff.ID), CreatedAt: row.CreatedAt.Format(time.RFC3339), UpdatedAt: row.UpdatedAt.Format(time.RFC3339)})
 	}
 	var expectedExceptions []studentsAPI.StudentArrivalExceptionResponse
 	var expectedNotes []studentsAPI.ArrivalNoteResponse
@@ -53,8 +54,8 @@ func TestStudents20ArrivalGrowthQueryBudget(t *testing.T) {
 			require.NoError(t, tc.db.NewSelect().Model(exception).WherePK().Scan(testpkg.Ctx(t)))
 			require.NoError(t, tc.db.NewSelect().Model(note).WherePK().Scan(testpkg.Ctx(t)))
 
-			expectedExceptions = append(expectedExceptions, studentsAPI.StudentArrivalExceptionResponse{ID: exception.ID, StudentID: child.ID, ExceptionDate: date.String(), Reason: &reason, Source: "staff", CreatedBy: staff.ID, CreatedAt: exception.CreatedAt.Format(time.RFC3339), UpdatedAt: exception.UpdatedAt.Format(time.RFC3339)})
-			expectedNotes = append(expectedNotes, studentsAPI.ArrivalNoteResponse{ID: note.ID, StudentID: child.ID, NoteDate: date.String(), Content: note.Content, CreatedBy: staff.ID, CreatedAt: note.CreatedAt.Format(time.RFC3339), UpdatedAt: note.UpdatedAt.Format(time.RFC3339)})
+			expectedExceptions = append(expectedExceptions, studentsAPI.StudentArrivalExceptionResponse{ID: ident.ID(exception.ID), StudentID: ident.ID(child.ID), ExceptionDate: date.String(), Reason: &reason, Source: "staff", CreatedBy: ident.ID(staff.ID), CreatedAt: exception.CreatedAt.Format(time.RFC3339), UpdatedAt: exception.UpdatedAt.Format(time.RFC3339)})
+			expectedNotes = append(expectedNotes, studentsAPI.ArrivalNoteResponse{ID: ident.ID(note.ID), StudentID: ident.ID(child.ID), NoteDate: date.String(), Content: note.Content, CreatedBy: ident.ID(staff.ID), CreatedAt: note.CreatedAt.Format(time.RFC3339), UpdatedAt: note.UpdatedAt.Format(time.RFC3339)})
 		}
 		counter.Reset()
 		req := testutil.NewRequest(http.MethodGet, fmt.Sprintf("/%d/arrival-schedules", child.ID), nil)
@@ -141,10 +142,10 @@ func TestStudents20CompanionsGrowthQueryBudget(t *testing.T) {
 	_ = testpkg.CreateTestStudent(t, tc.db, "Companion", "Unrelated", "S20")
 	putStudent(t, tc, child.ID, accompaniedPlanBody(nil))
 	type companion struct {
-		ID       int64    `json:"companion_student_id"`
-		First    string   `json:"first_name"`
-		Last     string   `json:"last_name"`
-		Weekdays []string `json:"weekdays"`
+		ID       testpkg.ID `json:"companion_student_id"`
+		First    string     `json:"first_name"`
+		Last     string     `json:"last_name"`
+		Weekdays []string   `json:"weekdays"`
 	}
 	expected := make([]companion, 0, 8)
 	ids := make([]int64, 0, 8)
@@ -155,7 +156,7 @@ func TestStudents20CompanionsGrowthQueryBudget(t *testing.T) {
 			name := fmt.Sprintf("Partner%02d", len(expected))
 			partner := testpkg.CreateTestStudent(t, tc.db, "Companion", name, "OtherClass")
 			putStudent(t, tc, partner.ID, accompaniedPlanBody(nil))
-			expected = append(expected, companion{partner.ID, "Companion", name, []string{"mon"}})
+			expected = append(expected, companion{testpkg.ID(partner.ID), "Companion", name, []string{"mon"}})
 			ids = append(ids, partner.ID)
 		}
 		entries := make([]map[string]any, 0, n)
@@ -361,7 +362,7 @@ func TestStudents20DocumentsGrowthQueryBudget(t *testing.T) {
 			filename := fmt.Sprintf("Document%02d.pdf", len(expected))
 			doc, createErr := documents.CreateStudentDocument(testpkg.Ctx(t), careplan.CreateStudentDocumentInput{StudentID: child.ID, Category: careplan.StudentDocumentCategorySonstiges, FilenameDisplay: filename, FilenameStored: "s20-" + filename, SizeBytes: 42, ContentType: "application/pdf"}, writer)
 			require.NoError(t, createErr)
-			expected = append([]studentsAPI.StudentDocumentResponse{{ID: doc.ID, StudentID: child.ID, Category: "sonstiges", CategoryLabel: "Sonstiges", Filename: filename, SizeBytes: 42, ContentType: "application/pdf", UploadedAt: doc.CreatedAt, Sensitive: false, HasFile: true}}, expected...)
+			expected = append([]studentsAPI.StudentDocumentResponse{{ID: ident.ID(doc.ID), StudentID: ident.ID(child.ID), Category: "sonstiges", CategoryLabel: "Sonstiges", Filename: filename, SizeBytes: 42, ContentType: "application/pdf", UploadedAt: doc.CreatedAt, Sensitive: false, HasFile: true}}, expected...)
 		}
 		counter.Reset()
 		req := testutil.NewRequest(http.MethodGet, fmt.Sprintf("/%d/documents", child.ID), nil)
@@ -372,7 +373,7 @@ func TestStudents20DocumentsGrowthQueryBudget(t *testing.T) {
 			Data studentsAPI.StudentDocumentListResponse `json:"data"`
 		}
 		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
-		require.Equal(t, child.ID, body.Data.StudentID)
+		require.Equal(t, ident.ID(child.ID), body.Data.StudentID)
 		require.Equal(t, expected, body.Data.Documents)
 		require.Equal(t, []studentsAPI.StudentDocumentCategory{{Value: "betreuungsvertrag", Label: "Betreuungsvertrag"}, {Value: "abholvollmacht", Label: "Abholvollmacht"}, {Value: "schwimmerlaubnis", Label: "Schwimmerlaubnis"}, {Value: "attest", Label: "Ärztliches Attest", Sensitive: true}, {Value: "impfnachweis", Label: "Impfnachweis", Sensitive: true}, {Value: "medikamentenplan", Label: "Medikamentenplan", Sensitive: true}, {Value: "sorgerecht", Label: "Sorgerechtsnachweis", Sensitive: true}, {Value: "unfallanzeige", Label: "Unfallanzeige", Sensitive: true}, {Value: "sonstiges", Label: "Sonstiges"}}, body.Data.VisibleCategories)
 		require.Zero(t, counter.WriteRows())

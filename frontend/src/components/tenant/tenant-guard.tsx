@@ -93,6 +93,17 @@ installSessionTenantMismatchObserver();
  * the entry before the demo token is redeemed. The entry page of the
  * Absprung from the Träger portal (#4654) is exempt for the same reason.
  */
+
+/**
+ * The school a session is bound to. The session claim is a number; the
+ * school of the page names its identifier as a string (#2342).
+ */
+function sessionSchoolOf(
+  session: { user?: { tenantId?: number } } | null | undefined,
+): string | undefined {
+  const claim = session?.user?.tenantId;
+  return claim === undefined ? undefined : String(claim);
+}
 export function TenantGuard(props: TenantGuardProps) {
   const pathname = usePathname();
   const { tenant } = useTenant();
@@ -126,17 +137,17 @@ function GuardedTenant({
   // session of a revoked family that the server reads as ended (#5399).
   const onLoginEntry = isLoginEntryPath(usePathname(), tenantSlug);
   const switchAttempts = useRef({
-    targetTenantId: null as number | null,
+    targetTenantId: null as string | null,
     count: 0,
   });
   const switchInFlight = useRef(false);
-  const [failedTenantId, setFailedTenantId] = useState<number | null>(null);
-  const [mfaRequiredTenantId, setMfaRequiredTenantId] = useState<number | null>(
+  const [failedTenantId, setFailedTenantId] = useState<string | null>(null);
+  const [mfaRequiredTenantId, setMfaRequiredTenantId] = useState<string | null>(
     null,
   );
   // A session from the Träger-Portal that the target school refused for
   // its remembered device (#6955): the way back leads to the Träger-Portal.
-  const [traegerCodeTenantId, setTraegerCodeTenantId] = useState<number | null>(
+  const [traegerCodeTenantId, setTraegerCodeTenantId] = useState<string | null>(
     null,
   );
   const [recheck, setRecheck] = useState(0);
@@ -285,7 +296,7 @@ function GuardedTenant({
         const known = current.session;
         if (
           hasSessionAccess(known) &&
-          known?.user?.tenantId !== current.tenant?.tenantId
+          sessionSchoolOf(known) !== current.tenant?.tenantId
         ) {
           return;
         }
@@ -299,14 +310,14 @@ function GuardedTenant({
   // refusal, hands over to the mismatch handling below. An answer with this
   // tab's school counts only as the check's own result.
   const providerNamesOtherSchool =
-    hasSessionAccess(session) && session?.user?.tenantId !== tenant?.tenantId;
+    hasSessionAccess(session) && sessionSchoolOf(session) !== tenant?.tenantId;
   useEffect(() => {
     if (refusal === null || !providerNamesOtherSchool) return;
     refusalRun.current += 1;
     setRefusal(null);
   }, [refusal, providerNamesOtherSchool, setRefusal]);
 
-  const sessionTenantId = session?.user?.tenantId;
+  const sessionTenantId = sessionSchoolOf(session);
   const sessionScope = session?.user?.scope;
   // The browser session carries no token (#5005); a stripped session always
   // carries an error.

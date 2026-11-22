@@ -78,12 +78,14 @@ export const CATALOG_PUBLIC_OUTSIDE_MOUNTS = {
     "/public/enrollment-form-legal-documents",
     "/auth/password-reset",
     // The links of an invitation mail and of the holiday registration, and
-    // the school list (#2352). Each names its exact path: `/auth/invitations`
-    // also holds the staff portal's session routes.
+    // the school list (#2352), and the tenant lookup (#2342). Each names its
+    // exact path: `/auth/invitations` also holds the staff portal's session
+    // routes.
     "/auth/invitations/{token}/",
     "/auth/guardian-invitations/{token}/accept",
     "/auth/holiday-parent-setups/{token}/",
     "/auth/tenants/",
+    "/auth/tenant/resolve/",
   ],
 } as const satisfies Record<string, readonly string[]>;
 

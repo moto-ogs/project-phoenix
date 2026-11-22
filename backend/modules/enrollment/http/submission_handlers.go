@@ -15,6 +15,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // SubmitChildRequest is the wire shape for a single child within the
@@ -29,7 +30,7 @@ import (
 // selected_days is a non-empty subset of the offering's
 // available_days.
 type SubmitChildRequest struct {
-	ID                *int64                  `json:"id,omitempty,string"`
+	ID                *ident.ID               `json:"id,omitempty"`
 	FirstName         string                  `json:"first_name"`
 	LastName          string                  `json:"last_name"`
 	DateOfBirth       string                  `json:"date_of_birth"`
@@ -37,7 +38,7 @@ type SubmitChildRequest struct {
 	TargetSchoolClass *string                 `json:"target_school_class,omitempty"`
 	HolidayCareWish   *bool                   `json:"holiday_care_wish,omitempty"`
 	CustomData        map[string]any          `json:"custom_data,omitempty"`
-	OfferingIDs       []int64                 `json:"offering_ids,omitempty"`
+	OfferingIDs       []common.ID             `json:"offering_ids,omitempty"`
 	OfferingDays      []SubmitOfferingDaysRow `json:"offering_days,omitempty"`
 }
 
@@ -47,8 +48,8 @@ type SubmitChildRequest struct {
 // these offerings" set; OfferingDays only refines the day selection
 // for parent_choice offerings.
 type SubmitOfferingDaysRow struct {
-	OfferingID   int64    `json:"offering_id"`
-	SelectedDays []string `json:"selected_days"`
+	OfferingID   common.ID `json:"offering_id"`
+	SelectedDays []string  `json:"selected_days"`
 }
 
 // SubmitGuardianRequest is the wire shape for one additional guardian
@@ -66,7 +67,7 @@ type SubmitGuardianRequest struct {
 // etc.). CaptchaToken is the Turnstile widget output; verified before
 // any DB write.
 type SubmitEnrollmentRequest struct {
-	PhaseID             int64                   `json:"phase_id"`
+	PhaseID             common.ID               `json:"phase_id"`
 	GuardianFirstName   string                  `json:"guardian_first_name"`
 	GuardianLastName    string                  `json:"guardian_last_name"`
 	GuardianEmail       string                  `json:"guardian_email"`
@@ -74,7 +75,7 @@ type SubmitEnrollmentRequest struct {
 	AdditionalGuardians []SubmitGuardianRequest `json:"additional_guardians,omitempty"`
 	ConsentFlags        map[string]any          `json:"consent_flags,omitempty"`
 	// FormSchemaID is the form version the page showed (#4680).
-	FormSchemaID    int64                `json:"form_schema_id,omitempty"`
+	FormSchemaID    common.ID            `json:"form_schema_id,omitempty"`
 	CustomData      map[string]any       `json:"custom_data,omitempty"`
 	Children        []SubmitChildRequest `json:"children"`
 	CaptchaToken    string               `json:"captcha_token,omitempty"`
@@ -208,7 +209,7 @@ func bindSubmitEnrollmentRequest(r *http.Request) (string, *SubmitEnrollmentRequ
 func buildServiceRequest(wireReq *SubmitEnrollmentRequest, tenantID int64, remoteIP string) (SubmitRequest, error) {
 	out := SubmitRequest{
 		TenantID:              tenantID,
-		PhaseID:               wireReq.PhaseID,
+		PhaseID:               wireReq.PhaseID.Int64(),
 		RemoteIP:              remoteIP,
 		GuardianFirstName:     wireReq.GuardianFirstName,
 		GuardianLastName:      wireReq.GuardianLastName,
@@ -217,7 +218,7 @@ func buildServiceRequest(wireReq *SubmitEnrollmentRequest, tenantID int64, remot
 		ConsentFlags:          formValues(wireReq.ConsentFlags),
 		CustomData:            formValues(wireReq.CustomData),
 		LateInviteToken:       wireReq.LateInviteToken,
-		DisplayedFormSchemaID: wireReq.FormSchemaID,
+		DisplayedFormSchemaID: wireReq.FormSchemaID.Int64(),
 		Signature:             wireReq.Signature.value(),
 	}
 	for _, g := range wireReq.AdditionalGuardians {
@@ -237,12 +238,12 @@ func buildServiceRequest(wireReq *SubmitEnrollmentRequest, tenantID int64, remot
 		offeringDays := make([]SubmitOfferingDays, 0, len(c.OfferingDays))
 		for _, row := range c.OfferingDays {
 			offeringDays = append(offeringDays, SubmitOfferingDays{
-				OfferingID:   row.OfferingID,
+				OfferingID:   row.OfferingID.Int64(),
 				SelectedDays: row.SelectedDays,
 			})
 		}
 		out.Children = append(out.Children, SubmitChild{
-			ID:                deref(c.ID),
+			ID:                deref(c.ID).Int64(),
 			FirstName:         c.FirstName,
 			LastName:          c.LastName,
 			DateOfBirth:       dob,
@@ -250,7 +251,7 @@ func buildServiceRequest(wireReq *SubmitEnrollmentRequest, tenantID int64, remot
 			TargetSchoolClass: c.TargetSchoolClass,
 			HolidayCareWish:   c.HolidayCareWish,
 			CustomData:        formValues(c.CustomData),
-			OfferingIDs:       c.OfferingIDs,
+			OfferingIDs:       ident.Int64s(c.OfferingIDs),
 			OfferingDays:      offeringDays,
 		})
 	}

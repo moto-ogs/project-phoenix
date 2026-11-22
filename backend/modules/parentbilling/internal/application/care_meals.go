@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // careMealHorizon is how many months back a run looks for released Mensa
@@ -68,13 +69,13 @@ func (c *CareBilling) SaveCareMealTariff(ctx context.Context, reviewer parentbil
 		(price.Mode != parentbilling.MealModeFlat && price.Mode != parentbilling.MealModePerMeal) {
 		return parentbilling.CareMealTariffs{}, parentbilling.ErrCareMealTariffInvalid
 	}
-	if own, err := c.ownSchool(ctx, reviewer.OrganizationID, price.SchoolID); err != nil || !own {
+	if own, err := c.ownSchool(ctx, reviewer.OrganizationID, price.SchoolID.Int64()); err != nil || !own {
 		if err != nil {
 			return parentbilling.CareMealTariffs{}, err
 		}
 		return parentbilling.CareMealTariffs{}, parentbilling.ErrCareMealTariffInvalid
 	}
-	if err := c.keepBilledMeals(ctx, reviewer.OrganizationID, price.SchoolID, price.ValidFrom); err != nil {
+	if err := c.keepBilledMeals(ctx, reviewer.OrganizationID, price.SchoolID.Int64(), price.ValidFrom); err != nil {
 		return parentbilling.CareMealTariffs{}, err
 	}
 	if err := c.mealStore.ReplaceCareMealTariff(ctx, reviewer.OrganizationID, reviewer.AccountID, price); err != nil {
@@ -228,7 +229,7 @@ func (c *CareBilling) addMeals(ctx context.Context, organizationID int64, run pa
 	}
 	names := make(map[int64]string, len(schools))
 	for _, school := range schools {
-		names[school.ID] = school.Name
+		names[school.ID.Int64()] = school.Name
 	}
 	in := careMealInput{month: run.BillingMonth, today: c.today(), schools: names, tariffs: tariffs, releases: releases,
 		billed: billed, issued: issued, versions: versions, invoiced: invoiced, recipients: recipients, attendance: attendance,
@@ -281,7 +282,7 @@ func mealTariffOn(tariffs []parentbilling.CareMealTariff, schoolID int64, month 
 	var found parentbilling.CareMealTariff
 	ok := false
 	for _, tariff := range tariffs {
-		if tariff.SchoolID == schoolID && !tariff.ValidFrom.After(month) && (!ok || tariff.ValidFrom.After(found.ValidFrom)) {
+		if tariff.SchoolID == ident.ID(schoolID) && !tariff.ValidFrom.After(month) && (!ok || tariff.ValidFrom.After(found.ValidFrom)) {
 			found, ok = tariff, true
 		}
 	}
@@ -338,7 +339,7 @@ func addMealGap(month *careMonth, in careMealInput, school int64, m calendar.Dat
 		return
 	}
 	from, known := in.attendance[school]
-	month.mealGaps = append(month.mealGaps, parentbilling.CareMealGap{SchoolID: school, SchoolName: name, Month: m,
+	month.mealGaps = append(month.mealGaps, parentbilling.CareMealGap{SchoolID: ident.ID(school), SchoolName: name, Month: m,
 		Expired: known && m.Before(from)})
 }
 
@@ -370,7 +371,7 @@ func noteChangedMeals(month *careMonth, in careMealInput, tariff parentbilling.C
 		if key.SchoolID != release.SchoolID || key.Month != release.Month || billed.ReleaseVersion >= release.Version {
 			continue
 		}
-		changed := parentbilling.CareMealChanged{SchoolID: key.SchoolID, SchoolName: in.schools[key.SchoolID], StudentID: key.StudentID,
+		changed := parentbilling.CareMealChanged{SchoolID: ident.ID(key.SchoolID), SchoolName: in.schools[key.SchoolID], StudentID: ident.ID(key.StudentID),
 			ChildFirstName: billed.ChildFirstName, ChildLastName: billed.ChildLastName, Month: key.Month, InvoiceNumber: billed.InvoiceNumber,
 			BilledQuantity: billed.Quantity, BilledCents: billed.AmountCents}
 		if child, ok := released[key.StudentID]; ok {
@@ -404,8 +405,8 @@ func sortMealInvoices(month *careMonth) {
 func mealSchools(tariffs []parentbilling.CareMealTariff) []int64 {
 	schools := []int64{}
 	for _, tariff := range tariffs {
-		if !slices.Contains(schools, tariff.SchoolID) {
-			schools = append(schools, tariff.SchoolID)
+		if !slices.Contains(schools, tariff.SchoolID.Int64()) {
+			schools = append(schools, tariff.SchoolID.Int64())
 		}
 	}
 	slices.Sort(schools)
@@ -416,7 +417,7 @@ func mealSchools(tariffs []parentbilling.CareMealTariff) []int64 {
 // month at the price each, flat the price once. A month without a meal
 // bills nothing per meal.
 func mealPosition(tariff parentbilling.CareMealTariff, key CareMealKey, child parentbilling.CareMealChild) (parentbilling.CareMealPosition, bool) {
-	position := parentbilling.CareMealPosition{SchoolID: key.SchoolID, StudentID: key.StudentID, MealMonth: key.Month,
+	position := parentbilling.CareMealPosition{SchoolID: ident.ID(key.SchoolID), StudentID: ident.ID(key.StudentID), MealMonth: key.Month,
 		Mode: tariff.Mode, UnitCents: tariff.AmountCents}
 	switch tariff.Mode {
 	case parentbilling.MealModePerMeal:
@@ -436,8 +437,8 @@ func mealPosition(tariff parentbilling.CareMealTariff, key CareMealKey, child pa
 
 // placeMeal puts a position on the invoice of the child's contract.
 func placeMeal(month *careMonth, in careMealInput, position parentbilling.CareMealPosition, child parentbilling.CareMealChild, schoolName string) {
-	contracts := mealChildContracts(in, position.SchoolID, child)
-	unbilled := parentbilling.CareMealUnbilled{SchoolID: position.SchoolID, SchoolName: schoolName, StudentID: child.StudentID,
+	contracts := mealChildContracts(in, position.SchoolID.Int64(), child)
+	unbilled := parentbilling.CareMealUnbilled{SchoolID: position.SchoolID, SchoolName: schoolName, StudentID: ident.ID(child.StudentID),
 		ChildFirstName: child.FirstName, ChildLastName: child.LastName, Month: position.MealMonth, MealDays: child.MealDays,
 		Reason: parentbilling.MealUnbilledNoContract}
 	if len(contracts) == 0 {
@@ -456,7 +457,7 @@ func placeMeal(month *careMonth, in careMealInput, position parentbilling.CareMe
 	}
 	for _, contractID := range contracts {
 		for i := range month.invoices {
-			if month.invoices[i].ContractID == contractID {
+			if month.invoices[i].ContractID == ident.ID(contractID) {
 				month.invoices[i].MealPositions = append(month.invoices[i].MealPositions, position)
 				month.invoices[i].TotalCents += position.AmountCents
 				return
@@ -473,7 +474,7 @@ func placeMeal(month *careMonth, in careMealInput, position parentbilling.CareMe
 	head := versions[0]
 	recipient := in.recipients[head.ContractID]
 	month.invoices = append(month.invoices, parentbilling.CareInvoice{
-		ContractID: head.ContractID, Service: parentbilling.ServiceCare, SchoolID: head.SchoolID, SchoolName: head.SchoolName,
+		ContractID: ident.ID(head.ContractID), Service: parentbilling.ServiceCare, SchoolID: ident.ID(head.SchoolID), SchoolName: head.SchoolName,
 		ChildFirstName: head.ChildFirstName, ChildLastName: head.ChildLastName, StudentID: studentOf(versions), Recipient: recipient,
 		FamilyEmail: parentbilling.ContractFamilyKey(recipient.Email, head.ContractID), Reductions: []parentbilling.CareReduction{},
 		Positions: []parentbilling.CarePosition{}, MealPositions: []parentbilling.CareMealPosition{position}, TotalCents: position.AmountCents,
@@ -531,11 +532,11 @@ func mealChildName(first, last string) string {
 func heldOrUnpriced(month *careMonth) map[int64]bool {
 	skipped := map[int64]bool{}
 	for _, unpriced := range month.unpriced {
-		skipped[unpriced.ContractID] = true
+		skipped[unpriced.ContractID.Int64()] = true
 	}
 	for _, duplicate := range month.duplicates {
 		for _, contract := range duplicate.Contracts {
-			skipped[contract.ContractID] = true
+			skipped[contract.ContractID.Int64()] = true
 		}
 	}
 	return skipped
@@ -546,8 +547,8 @@ func heldOrUnpriced(month *careMonth) map[int64]bool {
 func shownMealChildren(detail parentbilling.CareRunDetail) []int64 {
 	ids := []int64{}
 	for _, unbilled := range detail.MealUnbilled {
-		if !slices.Contains(ids, unbilled.StudentID) {
-			ids = append(ids, unbilled.StudentID)
+		if !slices.Contains(ids, unbilled.StudentID.Int64()) {
+			ids = append(ids, unbilled.StudentID.Int64())
 		}
 	}
 	return ids

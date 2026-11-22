@@ -11,6 +11,8 @@ import {
   type TraegerListFile,
   type TraegerListFormat,
 } from "./traeger-list-export";
+import type * as traegerSchoolsContract from "./contract/traeger-schools.generated";
+import { requiredDay } from "./contract/required-day";
 import type { TraegerSchool } from "./traeger-api";
 
 interface ArrivalPickupCell {
@@ -57,31 +59,6 @@ export interface ArrivalPickupPeriod {
   readonly to: string;
 }
 
-interface BackendHeatmap {
-  weekdays?: {
-    weekday: number;
-    days: number;
-    slots?: { start_minute: number; arrivals: number; pickups: number }[];
-  }[];
-}
-
-interface BackendTimes {
-  from: string;
-  to: string;
-  slot_minutes: number;
-  first_minute: number;
-  last_minute: number;
-  all: BackendHeatmap;
-  schools?: (BackendHeatmap & {
-    id: number;
-    name: string;
-    slug: string;
-    subdomain: string;
-    city?: string;
-    first_day: string | null;
-  })[];
-}
-
 async function readJson(response: Response): Promise<unknown> {
   const text = await response.text();
   if (!text) return null;
@@ -96,7 +73,9 @@ function query(period: ArrivalPickupPeriod): string {
   return new URLSearchParams({ from: period.from, to: period.to }).toString();
 }
 
-function heatmapOf(heatmap: BackendHeatmap): ArrivalPickupHeatmap {
+function heatmapOf(heatmap: {
+  readonly weekdays: traegerSchoolsContract.ArrivalPickupWeekday[] | null;
+}): ArrivalPickupHeatmap {
   return {
     weekdays: (heatmap.weekdays ?? []).map((row) => ({
       weekday: row.weekday,
@@ -126,21 +105,22 @@ export async function fetchTraegerArrivalPickupTimes(
       data,
     );
   }
-  const times = (data as { data: BackendTimes }).data;
+  const times = (data as { data: traegerSchoolsContract.ArrivalPickupTimes })
+    .data;
   return {
-    from: times.from,
-    to: times.to,
+    from: requiredDay(times.from, "arrival_pickup_times.from"),
+    to: requiredDay(times.to, "arrival_pickup_times.to"),
     slotMinutes: times.slot_minutes,
     firstMinute: times.first_minute,
     lastMinute: times.last_minute,
     all: heatmapOf(times.all),
     schools: (times.schools ?? []).map((school) => ({
-      id: String(school.id),
+      id: school.id,
       name: school.name,
       slug: school.slug,
       subdomain: school.subdomain,
-      city: school.city ?? "",
-      firstDay: school.first_day ?? null,
+      city: school.city,
+      firstDay: school.first_day,
       ...heatmapOf(school),
     })),
   };

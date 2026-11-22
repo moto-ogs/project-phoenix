@@ -148,7 +148,7 @@ const DROPS: [string, Operation, string[]][] = [
     "rights change in this tab (scope reset)",
     ({ view }) => {
       mockUseSession.mockReturnValue(signedIn({ permissions: ["x"] }));
-      view.rerender(<SWRScopeBoundary expectedTenantId={1} />);
+      view.rerender(<SWRScopeBoundary expectedTenantId="1" />);
     },
     [],
   ],
@@ -156,7 +156,7 @@ const DROPS: [string, Operation, string[]][] = [
     "logout",
     ({ view }) => {
       mockUseSession.mockReturnValue({ data: null, status: "unauthenticated" });
-      view.rerender(<SWRScopeBoundary expectedTenantId={1} />);
+      view.rerender(<SWRScopeBoundary expectedTenantId="1" />);
     },
     [],
   ],
@@ -203,7 +203,7 @@ afterEach(() => {
 
 describe("no state survives a drop, in any location (#5006)", () => {
   it.each(DROPS)("%s", async (_name, operation, kept) => {
-    const view = render(<SWRScopeBoundary expectedTenantId={1} />);
+    const view = render(<SWRScopeBoundary expectedTenantId="1" />);
     const discard = renderHook(() => useDiscardRefusedEntity()).result.current;
     const matching = renderHook(() => useTenantMutateMatching(["student-7-"]))
       .result.current;

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 
+	studentpresence "github.com/moto-ogs/project-phoenix/modules/studentpresence"
+
 	classdayCompose "github.com/moto-ogs/project-phoenix/modules/classday/compose"
 	"github.com/moto-ogs/project-phoenix/modules/devicescan"
 	devicescanCompose "github.com/moto-ogs/project-phoenix/modules/devicescan/compose"
@@ -78,7 +80,12 @@ type deviceScanSettingsReader interface {
 }
 
 // DeviceScanSettings resolves the tenant settings the device scans read.
-type DeviceScanSettings struct{ Settings deviceScanSettingsReader }
+type DeviceScanSettings struct {
+	Settings deviceScanSettingsReader
+	// The per-child stop of room history and mood (#3844) answers
+	// MoodCaptureStopped.
+	studentpresence.RoomHistoryStopReads
+}
 
 func (s DeviceScanSettings) FeedbackEnabled(ctx context.Context) (bool, error) {
 	return s.Settings.ResolveBool(ctx, configModels.KeyFeedbackEnabled)
@@ -109,13 +116,16 @@ func (s DeviceScanSettings) DailyCheckoutFromAllRoomsEnabled(ctx context.Context
 	return s.Settings.ResolveBool(ctx, configModels.KeyCheckoutDailyFromAllRoomsEnabled)
 }
 
-// newDeviceScanSettings binds the scan settings; nil settings leave them
-// unbound.
-func newDeviceScanSettings(settings deviceScanSettingsReader) devicescanCompose.ScanSettings {
+// newDeviceScanSettings binds the scan settings and the child's mood stop;
+// nil settings leave them unbound, and the stop is required with them.
+func newDeviceScanSettings(settings deviceScanSettingsReader, stops studentpresence.RoomHistoryStopReads) devicescanCompose.ScanSettings {
 	if settings == nil {
 		return nil
 	}
-	return DeviceScanSettings{Settings: settings}
+	if stops == nil {
+		panic("device scan settings: the room history stop reads are required")
+	}
+	return DeviceScanSettings{Settings: settings, RoomHistoryStopReads: stops}
 }
 
 // deviceConfigurationResolver is the slice of the settings service the

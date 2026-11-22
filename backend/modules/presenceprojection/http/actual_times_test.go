@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func TestApplyActualTimesFromAttendance_NilGuards(t *testing.T) {
@@ -121,7 +122,7 @@ func TestApplyActualTimesFromSnapshot_LooksUpByResponseID(t *testing.T) {
 		},
 	}
 
-	response := &StudentResponse{ID: studentID}
+	response := &StudentResponse{ID: ident.ID(studentID)}
 	applyActualTimesFromSnapshot(response, snapshot)
 
 	if response.ActualArrivalTime == nil || *response.ActualArrivalTime != "08:30" {

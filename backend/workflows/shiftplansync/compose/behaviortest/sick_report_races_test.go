@@ -159,7 +159,7 @@ func (e *sickCascadeEnv) createSickReport(ctx context.Context, staffID int64, st
 	if err != nil {
 		return 0, err
 	}
-	return created.ID, nil
+	return created.ID.Int64(), nil
 }
 
 func (e *sickCascadeEnv) materializeIn(ctx context.Context, day calendar.Date) error {

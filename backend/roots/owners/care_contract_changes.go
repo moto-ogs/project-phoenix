@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // careContractChangeSettingReasonPolicy is the school's rule whether a
@@ -120,7 +121,7 @@ func careContractChangeRequest(request careplan.OfferingChangeRequest, diff, unc
 		return carecontract.ChangeRequest{}, fmt.Errorf("care contract changes: effective day of request %d: %w", request.ID, err)
 	}
 	result := carecontract.ChangeRequest{
-		ID: request.ID, Version: careplan.ParentRequestVersion(request.UpdatedAt), SubmittedAt: request.CreatedAt,
+		ID: ident.ID(request.ID), Version: careplan.ParentRequestVersion(request.UpdatedAt), SubmittedAt: request.CreatedAt,
 		EffectiveFrom: effectiveFrom, EndsAllCare: request.CompleteWithdrawalConfirmed, Lines: []carecontract.ChangeLine{},
 	}
 	if request.ParentNote != nil {
@@ -130,7 +131,7 @@ func careContractChangeRequest(request careplan.OfferingChangeRequest, diff, unc
 	for _, entry := range diff {
 		seen[entry.OfferingID] = true
 		result.Lines = append(result.Lines, carecontract.ChangeLine{
-			CareOfferingID: entry.OfferingID, ModuleName: entry.Label, State: careContractChangeState(entry),
+			CareOfferingID: ident.ID(entry.OfferingID), ModuleName: entry.Label, State: careContractChangeState(entry),
 			BeforeDays: nonNilDays(entry.OldDays), AfterDays: nonNilDays(entry.NewDays),
 		})
 	}
@@ -140,7 +141,7 @@ func careContractChangeRequest(request careplan.OfferingChangeRequest, diff, unc
 		}
 		seen[entry.OfferingID] = true
 		result.Lines = append(result.Lines, carecontract.ChangeLine{
-			CareOfferingID: entry.OfferingID, ModuleName: entry.Label, State: carecontract.ChangeModuleUnchanged,
+			CareOfferingID: ident.ID(entry.OfferingID), ModuleName: entry.Label, State: carecontract.ChangeModuleUnchanged,
 			BeforeDays: nonNilDays(entry.OldDays), AfterDays: nonNilDays(entry.NewDays),
 		})
 	}

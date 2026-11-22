@@ -77,20 +77,20 @@ func TestSchoolCalendarIntegration_SchultermineReachOGSAndChosenParents(t *testi
 
 	ogsEvents, err := testpkg.TenantQuery2(t, calendarContext(t, ogsAccount.ID), db, service.ListMyStaffEvents, portalDate(2026, 3, 2), portalDate(2026, 3, 8))
 	require.NoError(t, err)
-	ogsEvent := findAppointmentEvent(ogsEvents, detail.Appointment.ID)
+	ogsEvent := findAppointmentEvent(ogsEvents, detail.Appointment.ID.Int64())
 	require.NotNil(t, ogsEvent, "the OGS always sees a Schultermin")
 	require.NotNil(t, ogsEvent.SchoolEventType)
 	assert.False(t, ogsEvent.CanEdit, "the OGS cannot change a Schultermin")
 
 	view, err := testpkg.TenantQuery2(t, calendarContext(t, lehrkraftAccount.ID), db, service.ListSchoolCalendar, portalDate(2026, 3, 2), portalDate(2026, 3, 8))
 	require.NoError(t, err)
-	own := findAppointmentEvent(view.Events, detail.Appointment.ID)
+	own := findAppointmentEvent(view.Events, detail.Appointment.ID.Int64())
 	require.NotNil(t, own)
 	assert.True(t, own.CanEdit, "the Lehrkraft changes their own Schultermin")
 
 	parentEvents, err := service.ListMyParentEvents(testpkg.Ctx(t), parentChain.AccountID, portalDate(2026, 3, 2), portalDate(2026, 3, 8))
 	require.NoError(t, err)
-	assert.NotNil(t, findAppointmentEvent(parentEvents, detail.Appointment.ID))
+	assert.NotNil(t, findAppointmentEvent(parentEvents, detail.Appointment.ID.Int64()))
 }
 
 func TestSchoolCalendarIntegration_WithoutParentsTheFamiliesDoNotSeeIt(t *testing.T) {
@@ -107,7 +107,7 @@ func TestSchoolCalendarIntegration_WithoutParentsTheFamiliesDoNotSeeIt(t *testin
 
 	parentEvents, err := service.ListMyParentEvents(testpkg.Ctx(t), parentChain.AccountID, portalDate(2026, 3, 2), portalDate(2026, 3, 8))
 	require.NoError(t, err)
-	assert.Nil(t, findAppointmentEvent(parentEvents, detail.Appointment.ID))
+	assert.Nil(t, findAppointmentEvent(parentEvents, detail.Appointment.ID.Int64()))
 }
 
 func TestSchoolCalendarIntegration_ParentsOnlyOfOwnClasses(t *testing.T) {
@@ -143,27 +143,27 @@ func TestSchoolCalendarIntegration_LehrkraftChangesOnlyOwnSchultermine(t *testin
 
 	view, err := testpkg.TenantQuery2(t, calendarContext(t, otherAccount.ID), db, service.ListSchoolCalendar, portalDate(2026, 3, 2), portalDate(2026, 3, 8))
 	require.NoError(t, err)
-	seen := findAppointmentEvent(view.Events, detail.Appointment.ID)
+	seen := findAppointmentEvent(view.Events, detail.Appointment.ID.Int64())
 	require.NotNil(t, seen, "every Lehrkraft sees a Schultermin")
 	assert.False(t, seen.CanEdit)
 
 	changed := schoolTrip("Wandertag verschoben", calendarSvc.SchoolParentsNone)
-	_, err = testpkg.TenantQuery2(t, calendarContext(t, otherAccount.ID), db, service.UpdateSchoolAppointment, detail.Appointment.ID, changed)
+	_, err = testpkg.TenantQuery2(t, calendarContext(t, otherAccount.ID), db, service.UpdateSchoolAppointment, detail.Appointment.ID.Int64(), changed)
 	require.ErrorIs(t, err, calendarSvc.ErrForbidden)
-	err = testpkg.TenantCommand1(t, calendarContext(t, otherAccount.ID), db, service.DeleteSchoolAppointment, detail.Appointment.ID)
+	err = testpkg.TenantCommand1(t, calendarContext(t, otherAccount.ID), db, service.DeleteSchoolAppointment, detail.Appointment.ID.Int64())
 	require.ErrorIs(t, err, calendarSvc.ErrForbidden)
 
 	changed.EventType = appointments.SchoolEventTypeLessonsEnd
-	updated, err := testpkg.TenantQuery2(t, calendarContext(t, ownerAccount.ID), db, service.UpdateSchoolAppointment, detail.Appointment.ID, changed)
+	updated, err := testpkg.TenantQuery2(t, calendarContext(t, ownerAccount.ID), db, service.UpdateSchoolAppointment, detail.Appointment.ID.Int64(), changed)
 	require.NoError(t, err)
 	assert.Equal(t, "Wandertag verschoben", updated.Appointment.Title)
 	require.NotNil(t, updated.Appointment.SchoolEventType)
 	assert.Equal(t, appointments.SchoolEventTypeLessonsEnd, *updated.Appointment.SchoolEventType)
 
-	require.NoError(t, testpkg.TenantCommand1(t, calendarContext(t, ownerAccount.ID), db, service.DeleteSchoolAppointment, detail.Appointment.ID))
+	require.NoError(t, testpkg.TenantCommand1(t, calendarContext(t, ownerAccount.ID), db, service.DeleteSchoolAppointment, detail.Appointment.ID.Int64()))
 	view, err = testpkg.TenantQuery2(t, calendarContext(t, otherAccount.ID), db, service.ListSchoolCalendar, portalDate(2026, 3, 2), portalDate(2026, 3, 8))
 	require.NoError(t, err)
-	assert.Nil(t, findAppointmentEvent(view.Events, detail.Appointment.ID))
+	assert.Nil(t, findAppointmentEvent(view.Events, detail.Appointment.ID.Int64()))
 }
 
 func TestSchoolCalendarIntegration_OGSAppointmentStaysOutOfReachOfMotoSchule(t *testing.T) {
@@ -186,11 +186,11 @@ func TestSchoolCalendarIntegration_OGSAppointmentStaysOutOfReachOfMotoSchule(t *
 	})
 	require.NoError(t, err)
 
-	_, err = testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateSchoolAppointment, detail.Appointment.ID, schoolTrip("Umgedeutet", calendarSvc.SchoolParentsNone))
+	_, err = testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateSchoolAppointment, detail.Appointment.ID.Int64(), schoolTrip("Umgedeutet", calendarSvc.SchoolParentsNone))
 	require.ErrorIs(t, err, calendarSvc.ErrForbidden)
 	view, err := testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.ListSchoolCalendar, portalDate(2026, 3, 2), portalDate(2026, 3, 8))
 	require.NoError(t, err)
-	event := findAppointmentEvent(view.Events, detail.Appointment.ID)
+	event := findAppointmentEvent(view.Events, detail.Appointment.ID.Int64())
 	require.NotNil(t, event)
 	assert.False(t, event.CanEdit, "moto schule edits Schultermine only")
 }
@@ -228,17 +228,17 @@ func TestSchoolCalendarIntegration_OGSChoosesLehrkraefte(t *testing.T) {
 
 	view, err := testpkg.TenantQuery2(t, calendarContext(t, lehrkraftAccount.ID), db, service.ListSchoolCalendar, portalDate(2026, 3, 2), portalDate(2026, 3, 8))
 	require.NoError(t, err)
-	invited := findAppointmentEvent(view.Events, withTeachers.Appointment.ID)
+	invited := findAppointmentEvent(view.Events, withTeachers.Appointment.ID.Int64())
 	require.NotNil(t, invited, "the Lehrkraft sees what the OGS shows to Lehrkräfte")
 	assert.True(t, invited.CanRespond)
 	assert.False(t, invited.CanEdit)
-	assert.Nil(t, findAppointmentEvent(view.Events, staffOnly.Appointment.ID), "all_staff does not reach the Lehrkräfte")
+	assert.Nil(t, findAppointmentEvent(view.Events, staffOnly.Appointment.ID.Int64()), "all_staff does not reach the Lehrkräfte")
 
 	require.NoError(t, testpkg.TenantCommand2(t, calendarContext(t, lehrkraftAccount.ID), db, service.RespondToSchoolInvitation, recipientID, calendarSvc.InvitationAnswer{Status: appointments.ResponseStatusAccepted}))
 
 	colleagueEvents, err := testpkg.TenantQuery2(t, calendarContext(t, colleagueAccount.ID), db, service.ListMyStaffEvents, portalDate(2026, 3, 2), portalDate(2026, 3, 8))
 	require.NoError(t, err)
-	assert.Nil(t, findAppointmentEvent(colleagueEvents, withTeachers.Appointment.ID))
+	assert.Nil(t, findAppointmentEvent(colleagueEvents, withTeachers.Appointment.ID.Int64()))
 }
 
 func TestSchoolCalendarIntegration_ShowsClosingDaysAndHolidays(t *testing.T) {

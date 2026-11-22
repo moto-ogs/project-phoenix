@@ -65,7 +65,7 @@ func seededExportRecipients(client *Client, auth AuthRef) (map[string]int64, err
 	var envelope struct {
 		Data struct {
 			Recipients []struct {
-				ID   int64  `json:"id"`
+				ID   apiID  `json:"id"`
 				Name string `json:"name"`
 			} `json:"recipients"`
 		} `json:"data"`
@@ -75,7 +75,7 @@ func seededExportRecipients(client *Client, auth AuthRef) (map[string]int64, err
 	}
 	existing := make(map[string]int64, len(envelope.Data.Recipients))
 	for _, recipient := range envelope.Data.Recipients {
-		existing[recipient.Name] = recipient.ID
+		existing[recipient.Name] = int64(recipient.ID)
 	}
 	return existing, nil
 }
@@ -102,11 +102,11 @@ func seedExportRecipient(client *Client, auth AuthRef, existing map[string]int64
 	}
 	var envelope struct {
 		Data struct {
-			ID int64 `json:"id"`
+			ID apiID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil || envelope.Data.ID <= 0 {
 		return 0, fmt.Errorf("read the recipient %s: %w", name, err)
 	}
-	return envelope.Data.ID, nil
+	return int64(envelope.Data.ID), nil
 }

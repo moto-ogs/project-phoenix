@@ -64,7 +64,13 @@ function absenceList(overrides: Partial<AbsenceList> = {}): AbsenceList {
 }
 
 function classes(list: string[]): ClassDayClasses {
-  return { classes: list, can_write_arrival_exception: false };
+  return {
+    classes: list,
+    can_write_arrival_exception: false,
+    can_report_class_trip: false,
+    weekend_follows_friday: false,
+    can_view_school_day: false,
+  };
 }
 
 function renderPage() {

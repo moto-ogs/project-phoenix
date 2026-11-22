@@ -42,8 +42,12 @@ func NewFeedbackTestModuleWithSettings(db transactionruntime.Database, unit tena
 	if err != nil {
 		return FeedbackTestModule{}, owners.SettingsTestModule{}, err
 	}
+	stops, err := owners.NewRoomHistoryStopReads(db)
+	if err != nil {
+		return FeedbackTestModule{}, owners.SettingsTestModule{}, err
+	}
 	feedback, err := feedbackCompose.New(feedbackCompose.Dependencies{
-		DB: db.Pool(), Settings: resolvers, Today: feedbackModule.TodayOf(time.Now), Observe: func(feedbackCompose.Observation) {},
+		DB: db.Pool(), Settings: resolvers, Stops: stops, Today: feedbackModule.TodayOf(time.Now), Observe: func(feedbackCompose.Observation) {},
 	})
 	if err != nil {
 		return FeedbackTestModule{}, owners.SettingsTestModule{}, err

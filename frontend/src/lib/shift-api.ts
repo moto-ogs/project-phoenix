@@ -4,15 +4,18 @@ import { ApiError, enrichApiError, problemDetail } from "./api-error";
 // (time_tracking:manage) and the catalog proxy. Staff read their own shifts
 // via /api/time-tracking/shifts (time_tracking:own).
 
-import type { SeriesDetailResponse } from "./contract/staff-shifts.generated";
+import type { ShiftResponse } from "./contract/shared.generated";
+import type {
+  OverviewResponse,
+  SeriesDetailResponse,
+  SeriesResponse,
+} from "./contract/staff-shifts.generated";
+import type { assignmentResponse } from "./contract/time-tracking.generated";
 import { sessionFetch } from "./session-cache";
 import {
   mapOwnAssignment,
   mapStaffScheduleOverview,
   mapStaffShift,
-  type BackendOwnAssignment,
-  type BackendStaffScheduleOverview,
-  type BackendStaffShift,
   type OwnAssignment,
   type StaffScheduleOverview,
   type StaffShift,
@@ -170,13 +173,6 @@ export interface SeriesResult {
   skippedNonWorkingDays: number;
 }
 
-interface BackendSeriesResult {
-  series_id: string;
-  created: number;
-  skipped_dates: string[] | null;
-  skipped_non_working_days?: number;
-}
-
 function mapSeriesRule(data: SeriesDetailResponse): SeriesRule {
   return {
     id: data.id,
@@ -254,7 +250,7 @@ async function readShiftList(response: Response): Promise<StaffShift[]> {
       "Schichten konnten nicht geladen werden",
     );
   }
-  const json = (await response.json()) as { data: BackendStaffShift[] | null };
+  const json = (await response.json()) as { data: ShiftResponse[] | null };
   return (json.data ?? []).map(mapStaffShift);
 }
 
@@ -265,7 +261,7 @@ async function readShift(response: Response): Promise<StaffShift> {
       "Schicht konnte nicht gespeichert werden",
     );
   }
-  const json = (await response.json()) as { data: BackendStaffShift };
+  const json = (await response.json()) as { data: ShiftResponse };
   return mapStaffShift(json.data);
 }
 
@@ -279,7 +275,7 @@ async function readOverview(
     );
   }
   const json = (await response.json()) as {
-    data: BackendStaffScheduleOverview;
+    data: OverviewResponse;
   };
   return mapStaffScheduleOverview(json.data);
 }
@@ -418,12 +414,12 @@ async function readSeriesResult(response: Response): Promise<SeriesResult> {
       "Schicht-Serie konnte nicht gespeichert werden",
     );
   }
-  const json = (await response.json()) as { data: BackendSeriesResult };
+  const json = (await response.json()) as { data: SeriesResponse };
   return {
     seriesId: json.data.series_id.toString(),
     created: json.data.created,
     skippedDates: json.data.skipped_dates ?? [],
-    skippedNonWorkingDays: json.data.skipped_non_working_days ?? 0,
+    skippedNonWorkingDays: json.data.skipped_non_working_days,
   };
 }
 
@@ -536,7 +532,7 @@ async function readAssignmentList(
     );
   }
   const json = (await response.json()) as {
-    data: BackendOwnAssignment[] | null;
+    data: assignmentResponse[] | null;
   };
   return (json.data ?? []).map(mapOwnAssignment);
 }

@@ -76,10 +76,16 @@ function report(overrides: Partial<ClassDayReport> = {}): ClassDayReport {
     weekday: "mon",
     school_day: true,
     enrollment_known: true,
+    can_write_day_hints: false,
+    can_record_morning_attendance: false,
+    can_write_homework: false,
+    can_read_shared_notes: false,
+    can_hand_over: false,
+    can_report_absences: false,
     totals: { students: 2, staying: 2, leaving: 0, absent: 0, list_entries: 0 },
     rows: [
       {
-        student_id: 1,
+        student_id: "1",
         first_name: "Klara",
         last_name: "Klassentag",
         registered: true,
@@ -87,7 +93,7 @@ function report(overrides: Partial<ClassDayReport> = {}): ClassDayReport {
         offerings: [],
       },
       {
-        student_id: 2,
+        student_id: "2",
         first_name: "Ida",
         last_name: "Hinweis",
         registered: true,
@@ -108,7 +114,13 @@ function report(overrides: Partial<ClassDayReport> = {}): ClassDayReport {
 }
 
 const classes = () =>
-  Promise.resolve({ classes: ["4a"], can_write_arrival_exception: false });
+  Promise.resolve({
+    classes: ["4a"],
+    can_write_arrival_exception: false,
+    can_report_class_trip: false,
+    weekend_follows_friday: false,
+    can_view_school_day: false,
+  });
 
 describe("ClassDayClass day hints", () => {
   beforeEach(() => {

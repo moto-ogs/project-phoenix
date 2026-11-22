@@ -12,6 +12,7 @@ import (
 	educationRepo "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // supervisionTeacherStaff maps every given live teacher to its staff member.
@@ -83,7 +84,7 @@ func (r groupSubstitutions) ListActiveSubstitutionBlockers(ctx context.Context, 
 	result := make([]peopleValues.BlockerSubstitution, 0, len(blockers))
 	for _, blocker := range blockers {
 		result = append(result, peopleValues.BlockerSubstitution{
-			ID: blocker.ID, GroupName: blocker.GroupName, StartDate: blocker.StartDate, EndDate: blocker.EndDate,
+			ID: ident.ID(blocker.ID), GroupName: blocker.GroupName, StartDate: blocker.StartDate, EndDate: blocker.EndDate,
 		})
 	}
 	return result, nil

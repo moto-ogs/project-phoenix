@@ -1,3 +1,5 @@
+import type * as wire from "~/lib/contract/birthdays.generated";
+import { knownEnum } from "~/lib/contract/known-enum";
 import { apiErrorFromResponse, unavailableApiError } from "./api-error";
 import { fetchWithAuth } from "./fetch-with-auth";
 import {
@@ -24,6 +26,7 @@ async function authFetch(url: string, init?: RequestInit): Promise<Response> {
  */
 
 type BirthdayKind = "student" | "staff";
+const BIRTHDAY_KINDS: readonly BirthdayKind[] = ["student", "staff"];
 
 export interface BirthdayCelebration {
   kind: BirthdayKind;
@@ -51,30 +54,8 @@ export interface BirthdayOverview {
   celebrations: BirthdayCelebration[];
 }
 
-interface BackendCelebration {
-  kind: BirthdayKind;
-  id: number | string;
-  name: string;
-  group_name?: string;
-  school_class?: string;
-  date: string;
-  age?: number;
-  is_today: boolean;
-}
-
-interface BackendOverview {
-  enabled: boolean;
-  include_staff: boolean;
-  today: string;
-  week_start: string;
-  week_end: string;
-  earliest_week_start: string;
-  latest_week_start: string;
-  celebrations: BackendCelebration[] | null;
-}
-
 export function mapBirthdayOverview(
-  response: BackendOverview,
+  response: wire.overviewResponse,
 ): BirthdayOverview {
   return {
     enabled: response.enabled,
@@ -84,16 +65,24 @@ export function mapBirthdayOverview(
     weekEnd: response.week_end,
     earliestWeekStart: response.earliest_week_start,
     latestWeekStart: response.latest_week_start,
-    celebrations: (response.celebrations ?? []).map((celebration) => ({
-      kind: celebration.kind,
-      id: celebration.id.toString(),
-      name: celebration.name,
-      groupName: celebration.group_name,
-      schoolClass: celebration.school_class,
-      date: celebration.date,
-      age: celebration.age,
-      isToday: celebration.is_today,
-    })),
+    // A kind this build does not know is left out rather than shown as a
+    // child or a staff member it may not be.
+    celebrations: (response.celebrations ?? []).flatMap((celebration) => {
+      const kind = knownEnum(BIRTHDAY_KINDS, celebration.kind);
+      if (!kind) return [];
+      return [
+        {
+          kind,
+          id: celebration.id,
+          name: celebration.name,
+          groupName: celebration.group_name,
+          schoolClass: celebration.school_class,
+          date: celebration.date,
+          age: celebration.age,
+          isToday: celebration.is_today,
+        },
+      ];
+    }),
   };
 }
 
@@ -114,7 +103,7 @@ export async function fetchBirthdayOverviewClient(
     );
   }
 
-  const json = (await response.json()) as { data: BackendOverview };
+  const json = (await response.json()) as { data: wire.overviewResponse };
   return mapBirthdayOverview(json.data);
 }
 

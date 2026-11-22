@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
@@ -269,8 +270,8 @@ func schoolSelect(db bun.IDB, model any) *bun.SelectQuery {
 
 func toSchoolDomain(row schoolRow) organizationtenancy.School {
 	return organizationtenancy.School{
-		ID: row.ID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
-		OrganizationID: row.OrganizationID, Name: row.Name, Slug: row.Slug, Subdomain: row.Subdomain,
+		ID: ident.ID(row.ID), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
+		OrganizationID: ident.ID(row.OrganizationID), Name: row.Name, Slug: row.Slug, Subdomain: row.Subdomain,
 		Active: row.Active, Hidden: row.Hidden, DeletedAt: row.DeletedAt, Settings: row.Settings,
 		Address: row.Address, City: row.City, Zip: row.Zip, Phone: row.Phone, Email: row.Email,
 		ChildQuotaBundles: row.ChildQuotaBundles, ChildQuotaBundleSize: row.ChildQuotaBundleSize,

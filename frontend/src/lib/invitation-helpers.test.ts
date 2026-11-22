@@ -1,6 +1,6 @@
 import type { SchoolInvitationResponse } from "./contract/auth-invitations.generated";
 import { describe, it, expect } from "vitest";
-import type { BackendInvitationValidation } from "./invitation-helpers";
+import type { InvitationValidationResponse } from "./contract/auth-invitations.generated";
 import {
   toCreateInvitationBody,
   mapInvitationValidationResponse,
@@ -10,13 +10,16 @@ import {
 describe("invitation-helpers", () => {
   describe("mapInvitationValidationResponse", () => {
     it("should map all fields from backend to frontend format", () => {
-      const backendData: BackendInvitationValidation = {
+      const backendData: InvitationValidationResponse = {
         email: "test@example.com",
         role_name: "Teacher",
         first_name: "John",
         last_name: "Doe",
         position: "Math Teacher",
         expires_at: "2024-12-31T23:59:59Z",
+        target_portal: "",
+        requires_account_login: false,
+        caregiver_enabled: false,
       };
 
       const result = mapInvitationValidationResponse(backendData);
@@ -28,39 +31,21 @@ describe("invitation-helpers", () => {
         lastName: "Doe",
         position: "Math Teacher",
         expiresAt: "2024-12-31T23:59:59Z",
+        requiresAccountLogin: false,
       });
     });
 
-    it("should handle optional fields as null", () => {
-      const backendData: BackendInvitationValidation = {
-        email: "test@example.com",
-        role_name: "Teacher",
-        first_name: null,
-        last_name: null,
-        position: null,
-        expires_at: "2024-12-31T23:59:59Z",
-      };
-
-      const result = mapInvitationValidationResponse(backendData);
-
-      expect(result).toEqual({
-        email: "test@example.com",
-        roleName: "Teacher",
-        firstName: null,
-        lastName: null,
-        position: null,
-        expiresAt: "2024-12-31T23:59:59Z",
-      });
-    });
-
-    it("should handle optional fields as undefined", () => {
-      const backendData: BackendInvitationValidation = {
+    it("leaves optional fields Go omits undefined", () => {
+      const backendData: InvitationValidationResponse = {
         email: "test@example.com",
         role_name: "Teacher",
         first_name: undefined,
         last_name: undefined,
         position: undefined,
         expires_at: "2024-12-31T23:59:59Z",
+        target_portal: "",
+        requires_account_login: false,
+        caregiver_enabled: false,
       };
 
       const result = mapInvitationValidationResponse(backendData);
@@ -72,17 +57,47 @@ describe("invitation-helpers", () => {
         lastName: undefined,
         position: undefined,
         expiresAt: "2024-12-31T23:59:59Z",
+        requiresAccountLogin: false,
+      });
+    });
+
+    it("should handle optional fields as undefined", () => {
+      const backendData: InvitationValidationResponse = {
+        email: "test@example.com",
+        role_name: "Teacher",
+        first_name: undefined,
+        last_name: undefined,
+        position: undefined,
+        expires_at: "2024-12-31T23:59:59Z",
+        target_portal: "",
+        requires_account_login: false,
+        caregiver_enabled: false,
+      };
+
+      const result = mapInvitationValidationResponse(backendData);
+
+      expect(result).toEqual({
+        email: "test@example.com",
+        roleName: "Teacher",
+        firstName: undefined,
+        lastName: undefined,
+        position: undefined,
+        expiresAt: "2024-12-31T23:59:59Z",
+        requiresAccountLogin: false,
       });
     });
 
     it("should handle mix of present and null optional fields", () => {
-      const backendData: BackendInvitationValidation = {
+      const backendData: InvitationValidationResponse = {
         email: "test@example.com",
         role_name: "Admin",
         first_name: "Jane",
-        last_name: null,
+        last_name: undefined,
         position: "System Administrator",
         expires_at: "2024-06-30T12:00:00Z",
+        target_portal: "",
+        requires_account_login: false,
+        caregiver_enabled: false,
       };
 
       const result = mapInvitationValidationResponse(backendData);
@@ -91,20 +106,24 @@ describe("invitation-helpers", () => {
         email: "test@example.com",
         roleName: "Admin",
         firstName: "Jane",
-        lastName: null,
+        lastName: undefined,
         position: "System Administrator",
         expiresAt: "2024-06-30T12:00:00Z",
+        requiresAccountLogin: false,
       });
     });
 
     it("should preserve special characters in fields", () => {
-      const backendData: BackendInvitationValidation = {
+      const backendData: InvitationValidationResponse = {
         email: "test+special@example.com",
         role_name: "Teacher (Primary)",
         first_name: "María",
         last_name: "O'Brien",
         position: "Math & Science",
         expires_at: "2024-12-31T23:59:59Z",
+        target_portal: "",
+        requires_account_login: false,
+        caregiver_enabled: false,
       };
 
       const result = mapInvitationValidationResponse(backendData);

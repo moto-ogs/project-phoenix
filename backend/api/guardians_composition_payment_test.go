@@ -65,7 +65,7 @@ func (c *guardianCompositionContext) assertPayer(t *testing.T, studentID int64, 
 	var payers []int64
 	for _, row := range c.studentGuardians(t, studentID) {
 		if row.IsPayer {
-			payers = append(payers, row.Guardian.ID)
+			payers = append(payers, int64(row.Guardian.ID))
 		}
 	}
 	if want == nil {
@@ -151,7 +151,7 @@ func TestGuardianComposition_RemovePayerNeedsFinancialPermission(t *testing.T) {
 	linked := ctx.studentGuardians(t, studentID)
 	require.Len(t, linked, 2, "a refused unlink must leave both relationships in place")
 	for _, row := range linked {
-		assert.Equal(t, row.Guardian.ID == payerID, row.IsPayer, "the payer mark must be untouched")
+		assert.Equal(t, int64(row.Guardian.ID) == payerID, row.IsPayer, "the payer mark must be untouched")
 	}
 
 	code, body = unlink(directoryClaims, otherID)

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Section is the part of the overview an entry belongs to: what concerns
@@ -26,10 +27,23 @@ const (
 type Source string
 
 const (
-	// SourceStaff is Personal: full-day absences and group substitutions.
+	// SourceStaff is Personal: full-day absences, group substitutions and
+	// the changed or cancelled shifts of the Dienstplan (#7661).
 	SourceStaff Source = "staff"
+	// SourceChildren is Kinder: sick or excused children, changed pickup
+	// times, children who go home alone and dated pickup notes (#7665).
+	SourceChildren Source = "children"
 	// SourceNotices is Hinweise der Leitung: the notices that apply today.
 	SourceNotices Source = "notices"
+	// SourceClosingDays is Schule: the closing days of the school and of its
+	// current Träger (#7664).
+	SourceClosingDays Source = "closing_days"
+	// SourceActivities is Stundenplan: cancelled, reinstated, moved and
+	// covered activity blocks (#7662).
+	SourceActivities Source = "activities"
+	// SourceClasses is Stundenplan der Klassen: a class whose
+	// Unterrichtsschluss changes today (#7681).
+	SourceClasses Source = "classes"
 	// SourceAppointments is Termine im Kalender: today's exceptions of the
 	// caller's calendar appointments (#7663).
 	SourceAppointments Source = "appointments"
@@ -58,14 +72,70 @@ const (
 	KindGroupSubstitution Kind = "group_substitution"
 	// KindGroupSubstitutionCount: how many further groups are covered today.
 	KindGroupSubstitutionCount Kind = "group_substitution_count"
+	// KindShiftChanged: a shift of a series runs differently today (other
+	// time or day). Never a reason.
+	KindShiftChanged Kind = "shift_changed"
+	// KindShiftCancelled: a shift does not take place today. A shift the
+	// plan cancelled for an absence is not one: the absence is the entry.
+	KindShiftCancelled Kind = "shift_cancelled"
+	// KindShiftReplacement: somebody covers (part of) a cancelled shift.
+	KindShiftReplacement Kind = "shift_replacement"
+	// KindBlockStaffAbsent: a staff member misses one block of the day
+	// (terminbezogene Abwesenheit, #7675) and nobody covers. Never a reason.
+	KindBlockStaffAbsent Kind = "block_staff_absent"
+	// KindBlockSubstitution: somebody covers one block of the day
+	// (Terminvertretung, #7675), for the absent supervisors it names.
+	KindBlockSubstitution Kind = "block_substitution"
+	// KindBlockChangeCount: on how many further blocks somebody is absent or
+	// covers, for a caller who may see the number but not the names.
+	KindBlockChangeCount Kind = "block_change_count"
+	// KindChildAbsent: a child is reported sick or excused today; Child
+	// carries the status, never a reason.
+	KindChildAbsent Kind = "child_absent"
+	// KindChildPickupChanged: a child leaves at another time today, or does
+	// not come (no pickup time).
+	KindChildPickupChanged Kind = "child_pickup_changed"
+	// KindChildGoesAlone: a child goes home alone today.
+	KindChildGoesAlone Kind = "child_goes_alone"
+	// KindChildPickupNote: a pickup note for today ("Oma holt ab").
+	KindChildPickupNote Kind = "child_pickup_note"
+	// KindChildSummary: the children of one group or class outside the
+	// caller's groups, with the numbers and the rows to unfold.
+	KindChildSummary Kind = "child_summary"
 	// KindStaffNotice: a Hinweis der Leitung applies today.
 	KindStaffNotice Kind = "staff_notice"
+	// KindClosingDay: the school is closed today, by its own closing day or
+	// one of its Träger (#7664).
+	KindClosingDay Kind = "closing_day"
+	// KindActivityCancelled: an activity block does not take place today.
+	KindActivityCancelled Kind = "activity_cancelled"
+	// KindActivityReinstated: its cancellation was taken back.
+	KindActivityReinstated Kind = "activity_reinstated"
+	// KindActivityRoomChanged: it lies in another room than its series plans.
+	KindActivityRoomChanged Kind = "activity_room_changed"
+	// KindActivityLeadChanged: somebody covers for a planned supervisor.
+	KindActivityLeadChanged Kind = "activity_lead_changed"
+	// KindClassTrip: children of a class are on a trip today (#7681), from
+	// the Kinder source. Class.Time is the return time of a day outing, nil
+	// for a trip over the whole day. Never a child's name or a reason.
+	KindClassTrip Kind = "class_trip"
+	// KindClassDismissalChanged: a class ends school at another time today
+	// (#7681); Class.Time is the new Unterrichtsschluss. Never a reason.
+	KindClassDismissalChanged Kind = "class_dismissal_changed"
 	// KindAppointmentCancelled: a calendar appointment of the caller does not
 	// take place today, as a single date of a series or as a whole (#7663).
 	KindAppointmentCancelled Kind = "appointment_cancelled"
 	// KindAppointmentChanged: today's date of a calendar appointment of the
 	// caller takes place at another location or another time (#7663).
 	KindAppointmentChanged Kind = "appointment_changed"
+)
+
+// ChildStatus is the status of an absent child, as on the detail page.
+type ChildStatus string
+
+const (
+	ChildSick    ChildStatus = "sick"
+	ChildExcused ChildStatus = "excused"
 )
 
 // PersonRole is what a person has to do with an entry.
@@ -75,6 +145,8 @@ const (
 	RoleAbsent     PersonRole = "absent"
 	RoleSubstitute PersonRole = "substitute"
 	RoleReplaced   PersonRole = "replaced"
+	// RoleOnDuty is the staff member whose shift changed or is cancelled.
+	RoleOnDuty PersonRole = "on_duty"
 )
 
 // LinkTarget names the page an entry leads to; the frontend builds the path.
@@ -91,15 +163,29 @@ const (
 	LinkStaffList LinkTarget = "staff_list"
 	// LinkGroupHandovers is the page of the group substitutions.
 	LinkGroupHandovers LinkTarget = "group_handovers"
+	// LinkOwnShiftPlan is the caller's own Dienstplan.
+	LinkOwnShiftPlan LinkTarget = "own_shift_plan"
+	// LinkShiftPlan is a staff member's week in the Dienstplan.
+	LinkShiftPlan LinkTarget = "shift_plan"
+	// LinkStudent is a child's detail page.
+	LinkStudent LinkTarget = "student"
 	// LinkStaffNotices is the page of the Hinweise der Leitung.
 	LinkStaffNotices LinkTarget = "staff_notices"
-	// LinkCalendar is the caller's own calendar ("Mein Kalender").
+	// LinkCalendarPeriods is the page of the school year with the closing
+	// days.
+	LinkCalendarPeriods LinkTarget = "calendar_periods"
+	// LinkDayPlan is the day plan of today, where the blocks stand.
+	LinkDayPlan LinkTarget = "day_plan"
+	// LinkSubstitutionPlan is the Vertretungsplan of the day with the block
+	// (Link.InstanceID) open (#7675).
+	LinkSubstitutionPlan LinkTarget = "substitution_plan"
+	// LinkCalendar is the caller's own calendar ("Mein Kalender", #7663).
 	LinkCalendar LinkTarget = "calendar"
 )
 
 // Person is somebody an entry names. The ID is the staff record.
 type Person struct {
-	StaffID int64      `json:"staff_id,string"`
+	StaffID ident.ID   `json:"staff_id"`
 	Name    string     `json:"name"`
 	Role    PersonRole `json:"role"`
 	// IsSelf marks the caller, so the frontend can say "du".
@@ -108,14 +194,54 @@ type Person struct {
 
 // Group is the group an entry concerns.
 type Group struct {
-	ID   int64  `json:"id,string"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
-// Link is the target of an entry; StaffID is set for the staff pages.
+// Link is the target of an entry; StaffID is set for the staff pages,
+// StudentID for a child's page, InstanceID for the block of the
+// Vertretungsplan.
 type Link struct {
-	Target  LinkTarget `json:"target"`
-	StaffID *int64     `json:"staff_id,string,omitempty"`
+	Target     LinkTarget `json:"target"`
+	StaffID    *ident.ID  `json:"staff_id,omitempty"`
+	StudentID  *ident.ID  `json:"student_id,omitempty"`
+	InstanceID *ident.ID  `json:"instance_id,omitempty"`
+}
+
+// Child is the child an entry concerns, with what is different today:
+// Status for child_absent, PickupTime ("15:04"; nil: the child does not
+// come) for child_pickup_changed, Note for child_pickup_note.
+type Child struct {
+	StudentID  ident.ID     `json:"student_id"`
+	FirstName  string       `json:"first_name"`
+	LastName   string       `json:"last_name"`
+	Status     *ChildStatus `json:"status"`
+	PickupTime *string      `json:"pickup_time"`
+	Note       *string      `json:"note"`
+}
+
+// ChildItem is one row of a child summary.
+type ChildItem struct {
+	Kind  Kind  `json:"kind"`
+	Child Child `json:"child"`
+	Link  *Link `json:"link"`
+}
+
+// ChildCounts are the numbers of a child summary, one per kind.
+type ChildCounts struct {
+	Sick          int `json:"sick"`
+	Excused       int `json:"excused"`
+	PickupChanged int `json:"pickup_changed"`
+	GoesAlone     int `json:"goes_alone"`
+	PickupNote    int `json:"pickup_note"`
+}
+
+// ChildSummary sums up the children of one group (Entry.Group) or, for
+// children without a group, of one school class.
+type ChildSummary struct {
+	SchoolClass string      `json:"school_class"`
+	Counts      ChildCounts `json:"counts"`
+	Items       []ChildItem `json:"items"`
 }
 
 // NoticePriority is how important a Hinweis der Leitung is.
@@ -130,7 +256,7 @@ const (
 // text. Acknowledged is the caller's own acknowledgement; the caller confirms
 // through the notices' existing write path, never through this read.
 type DayNotice struct {
-	ID                      int64          `json:"id,string"`
+	ID                      ident.ID       `json:"id"`
 	Title                   string         `json:"title"`
 	Body                    string         `json:"body"`
 	Priority                NoticePriority `json:"priority"`
@@ -138,12 +264,43 @@ type DayNotice struct {
 	Acknowledged            bool           `json:"acknowledged"`
 }
 
+// DayClosing is a closing day of the day. Name is the school's or the
+// Träger's own name for it ("Pädagogischer Tag"); Traeger marks one the
+// Träger planned.
+type DayClosing struct {
+	Name    string `json:"name"`
+	Traeger bool   `json:"traeger"`
+}
+
+// DayClass is the school class an entry concerns (#7681). Name is the class
+// as the school entered it; Time ("15:04", the school's wall clock) is the
+// return time of a day outing or the changed Unterrichtsschluss; Children
+// is the number of children on a class trip.
+type DayClass struct {
+	Name     string  `json:"name"`
+	Time     *string `json:"time"`
+	Children int     `json:"children"`
+}
+
+// BlockRoom is the room an entry names.
+type BlockRoom struct {
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
+}
+
+// BlockActivity is the activity block an entry concerns; its time of day
+// travels in StartsAt and EndsAt.
+type BlockActivity struct {
+	ID    ident.ID `json:"id"`
+	Title string   `json:"title"`
+}
+
 // DayAppointment is today's date of a calendar appointment of the caller
 // (#7663). Title and Location are the organizer's own text, as the date
 // takes place today. The new time travels in the entry's StartsAt and
 // EndsAt.
 type DayAppointment struct {
-	ID              int64         `json:"id,string"`
+	ID              ident.ID      `json:"id"`
 	OccurrenceDate  calendar.Date `json:"occurrence_date"`
 	Title           string        `json:"title"`
 	Location        *string       `json:"location"`
@@ -174,9 +331,22 @@ type SourceEntry struct {
 	Link     *Link
 	// Count is set on the summary kinds only.
 	Count *int
+	// Child is set on the child kinds, ChildSummary on child_summary.
+	Child        *Child
+	ChildSummary *ChildSummary
 	// Notice is set on KindStaffNotice only.
 	Notice *DayNotice
-	// Appointment is set on the appointment kinds only.
+	// Closing is set on KindClosingDay only.
+	Closing *DayClosing
+	// Activity is set on the activity kinds (#7662) and on the block kinds of
+	// the Personal source (#7675). Room is where the block
+	// takes place, PreviousRoom where its series plans it when it moved.
+	Activity     *BlockActivity
+	Room         *BlockRoom
+	PreviousRoom *BlockRoom
+	// Class is set on the class kinds (#7681).
+	Class *DayClass
+	// Appointment is set on the appointment kinds only (#7663).
 	Appointment *DayAppointment
 }
 
@@ -190,14 +360,25 @@ type Entry struct {
 	Since   *calendar.Date `json:"since"`
 	Until   *calendar.Date `json:"until"`
 	// StartsAt and EndsAt are instants; the frontend shows the school's wall
-	// clock and folds a change whose end has passed into "erledigt" (#7660).
-	StartsAt *time.Time `json:"starts_at"`
-	EndsAt   *time.Time `json:"ends_at"`
-	People   []Person   `json:"people"`
-	Group    *Group     `json:"group"`
-	Link     *Link      `json:"link"`
-	Count    *int       `json:"count"`
-	Notice   *DayNotice `json:"notice"`
+	// clock (a shift's time, #7661) and folds a change whose end has passed into
+	// "erledigt" (#7660).
+	StartsAt *time.Time  `json:"starts_at"`
+	EndsAt   *time.Time  `json:"ends_at"`
+	People   []Person    `json:"people"`
+	Group    *Group      `json:"group"`
+	Link     *Link       `json:"link"`
+	Count    *int        `json:"count"`
+	Notice   *DayNotice  `json:"notice"`
+	Closing  *DayClosing `json:"closing"`
+	// Child is set on the child kinds, ChildSummary on child_summary.
+	Child        *Child        `json:"child"`
+	ChildSummary *ChildSummary `json:"child_summary"`
+	// Activity, Room and PreviousRoom: see SourceEntry.
+	Activity     *BlockActivity `json:"activity"`
+	Room         *BlockRoom     `json:"room"`
+	PreviousRoom *BlockRoom     `json:"previous_room"`
+	// Class: see SourceEntry.
+	Class *DayClass `json:"class"`
 	// Appointment is set on the appointment kinds only (#7663).
 	Appointment *DayAppointment `json:"appointment"`
 }
@@ -216,11 +397,26 @@ type Overview struct {
 	Entries []Entry        `json:"entries"`
 }
 
-// StaffChanges is the Personal port: full-day absences and group
-// substitutions of the day as the caller may see them. It never carries a
+// StaffChanges is the Personal port: full-day absences, group substitutions,
+// changed or cancelled shifts and the absences and covers of single blocks
+// (#7675) of the day as the caller may see them. It never carries a
 // reason for an absence; the port has no field for one.
 type StaffChanges interface {
 	StaffChanges(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
+}
+
+// ChildChanges is the Kinder port: the children with something different
+// today as the caller may see them. A caller who may not see the status of
+// a child gets none, without a statement.
+type ChildChanges interface {
+	ChildChanges(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
+}
+
+// ActivityChanges is the Stundenplan port: the activity blocks of the day
+// that do not run as planned, as the caller may see them on the day plan.
+// It carries no reason for a cancellation or an absence.
+type ActivityChanges interface {
+	ActivityChanges(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
 }
 
 // StaffNotices is the Hinweise der Leitung port: the notices that apply on
@@ -228,6 +424,19 @@ type StaffChanges interface {
 // may not read the notices gets none.
 type StaffNotices interface {
 	StaffNotices(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
+}
+
+// ClosingDays is the Schule port for the closing days: those of the school
+// and of its current Träger that cover the day, as the caller may see them.
+type ClosingDays interface {
+	ClosingDays(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
+}
+
+// ClassChanges is the port of the Stundenplan der Klassen (#7681): the
+// classes whose Unterrichtsschluss changes on the day, as the caller may see
+// them, and whether the caller belongs to the staff of the class.
+type ClassChanges interface {
+	ClassChanges(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
 }
 
 // AppointmentChanges is the Termine port (#7663): today's cancelled and
@@ -256,11 +465,16 @@ type Dependencies struct {
 	Today     func() calendar.Date
 	Isolation Isolation
 	Staff     StaffChanges
+	Children  ChildChanges
 	Notices   StaffNotices
-	Logger    *slog.Logger
-
+	Closing   ClosingDays
+	// Activities is the Stundenplan source (#7662).
+	Activities ActivityChanges
+	// Classes is the Stundenplan der Klassen (#7681).
+	Classes ClassChanges
 	// Appointments is the Termine source (#7663).
 	Appointments AppointmentChanges
+	Logger       *slog.Logger
 }
 
 // Query reads the overview of the session's school.
@@ -285,7 +499,7 @@ type view struct {
 
 // New builds the projection.
 func New(deps Dependencies) (Query, error) {
-	if deps.Today == nil || deps.Isolation == nil || deps.Staff == nil || deps.Notices == nil || deps.Appointments == nil {
+	if deps.Today == nil || deps.Isolation == nil || deps.Staff == nil || deps.Children == nil || deps.Notices == nil || deps.Closing == nil || deps.Activities == nil || deps.Classes == nil || deps.Appointments == nil {
 		return nil, ErrDependencies
 	}
 	logger := deps.Logger
@@ -299,7 +513,11 @@ func New(deps Dependencies) (Query, error) {
 		// The order is the order of the statuses in the answer.
 		sources: []sourceRead{
 			{source: SourceStaff, read: deps.Staff.StaffChanges},
+			{source: SourceChildren, read: deps.Children.ChildChanges},
 			{source: SourceNotices, read: deps.Notices.StaffNotices},
+			{source: SourceClosingDays, read: deps.Closing.ClosingDays},
+			{source: SourceActivities, read: deps.Activities.ActivityChanges},
+			{source: SourceClasses, read: deps.Classes.ClassChanges},
 			{source: SourceAppointments, read: deps.Appointments.AppointmentChanges},
 		},
 	}, nil
@@ -347,8 +565,46 @@ func (v *view) Today(ctx context.Context) (Overview, error) {
 			overview.Entries = append(overview.Entries, toEntry(entry))
 		}
 	}
+	overview.Entries = foldCoveredBlocks(overview.Entries)
 	sortEntries(overview.Entries)
 	return overview, nil
+}
+
+// foldCoveredBlocks folds the Stundenplan's "andere Leitung" of a block into
+// the Personal source's absence or cover of the same block (#7675): both say
+// who takes over, the Personal entry under its own rule. The block's room
+// moves over. Without the Personal entry (another rule, a failed source) the
+// Stundenplan's line stays.
+func foldCoveredBlocks(entries []Entry) []Entry {
+	covering := map[int64]int{}
+	for i, entry := range entries {
+		if (entry.Kind == KindBlockSubstitution || entry.Kind == KindBlockStaffAbsent) && entry.Activity != nil {
+			covering[entry.Activity.ID.Int64()] = i
+		}
+	}
+	if len(covering) == 0 {
+		return entries
+	}
+	for _, entry := range entries {
+		if at, found := foldTarget(entry, covering); found && entries[at].Room == nil {
+			entries[at].Room = entry.Room
+		}
+	}
+	kept := make([]Entry, 0, len(entries))
+	for _, entry := range entries {
+		if _, found := foldTarget(entry, covering); !found {
+			kept = append(kept, entry)
+		}
+	}
+	return kept
+}
+
+func foldTarget(entry Entry, covering map[int64]int) (int, bool) {
+	if entry.Kind != KindActivityLeadChanged || entry.Activity == nil {
+		return 0, false
+	}
+	at, found := covering[entry.Activity.ID.Int64()]
+	return at, found
 }
 
 // readFrom reads the sources from start on inside one isolation until one
@@ -382,7 +638,9 @@ func toEntry(entry SourceEntry) Entry {
 		Kind: entry.Kind, Section: section, AllDay: entry.StartsAt == nil, HalfDay: entry.HalfDay,
 		Since: entry.Since, Until: entry.Until, StartsAt: entry.StartsAt, EndsAt: entry.EndsAt,
 		People: people, Group: entry.Group, Link: entry.Link, Count: entry.Count, Notice: entry.Notice,
-		Appointment: entry.Appointment,
+		Closing: entry.Closing, Child: entry.Child, ChildSummary: entry.ChildSummary,
+		Activity: entry.Activity, Room: entry.Room, PreviousRoom: entry.PreviousRoom,
+		Class: entry.Class, Appointment: entry.Appointment,
 	}
 }
 
@@ -416,9 +674,12 @@ func sortEntries(entries []Entry) {
 
 func rank(entry Entry) int {
 	switch {
+	// The school is closed: that stands above every other change (#7664).
+	case entry.Kind == KindClosingDay:
+		return -2
 	case entry.Notice != nil && entry.Notice.RequiresAcknowledgement && !entry.Notice.Acknowledged:
 		return -1
-	case entry.Count != nil:
+	case entry.Count != nil || entry.ChildSummary != nil:
 		return 3
 	case entry.Since != nil:
 		return 2
@@ -430,6 +691,9 @@ func rank(entry Entry) int {
 }
 
 func firstName(entry Entry) string {
+	if entry.Child != nil {
+		return entry.Child.FirstName + " " + entry.Child.LastName
+	}
 	if len(entry.People) == 0 {
 		return ""
 	}
@@ -437,6 +701,12 @@ func firstName(entry Entry) string {
 }
 
 func groupName(entry Entry) string {
+	if entry.Group == nil && entry.Class != nil {
+		return entry.Class.Name
+	}
+	if entry.Group == nil && entry.ChildSummary != nil {
+		return entry.ChildSummary.SchoolClass
+	}
 	if entry.Group == nil {
 		return ""
 	}

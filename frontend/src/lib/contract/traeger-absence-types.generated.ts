@@ -4,7 +4,7 @@ import {
   arr,
   bool,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   num,
   object,
@@ -29,7 +29,7 @@ export interface TraegerAbsenceTypeSchool {
 }
 
 export const TraegerAbsenceTypeSchoolSchema: z.ZodType<TraegerAbsenceTypeSchool, unknown> = object<TraegerAbsenceTypeSchool>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
   carried: bool,
   offered: bool,
@@ -50,7 +50,7 @@ export interface TraegerAbsenceType {
 }
 
 export const TraegerAbsenceTypeSchema: z.ZodType<TraegerAbsenceType, unknown> = object<TraegerAbsenceType>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   allowance_enabled: bool,
   standard_days: num,

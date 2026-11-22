@@ -79,6 +79,7 @@
   "request_not_found": "{object} wurde nicht gefunden. Bitte lade die Seite neu.",
   "request_not_open": "{object} ist nicht mehr geöffnet. Bitte frage deine Ansprechperson.",
   "request_sharing_invalid": "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
+  "room_history_stop_disabled": "{object} kannst du hier zurzeit nicht ändern. Bitte frage deine Ansprechperson.",
   "sick_note_disabled": "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
   "staff_managed_guardian_protected": "Für {object} fehlt dir die Berechtigung. Bitte frage die Schule.",
   "guardian_invite_unavailable": "Diese Einladung konnte gerade nicht gesendet werden. Bitte wende dich an die OGS."

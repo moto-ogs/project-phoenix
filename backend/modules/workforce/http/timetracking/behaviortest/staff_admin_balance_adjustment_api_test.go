@@ -179,11 +179,11 @@ func TestBalanceAdjustmentAPI(t *testing.T) {
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		var created struct {
 			Data struct {
-				ID int64 `json:"id"`
+				ID testpkg.ID `json:"id"`
 			} `json:"data"`
 		}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &created))
-		payoutID = created.Data.ID
+		payoutID = int64(created.Data.ID)
 
 		rec = do(http.MethodGet, listPath, "", token)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -265,7 +265,7 @@ func TestBalanceAdjustmentAPI(t *testing.T) {
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		var created struct {
 			Data struct {
-				ID int64 `json:"id"`
+				ID testpkg.ID `json:"id"`
 			} `json:"data"`
 		}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &created))

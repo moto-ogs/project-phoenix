@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ListSchoolPersons lists the persons of a school. A soft-deleted school
@@ -66,11 +67,11 @@ func (p *Provisioning) listPersons(ctx context.Context, schools []organizationte
 			continue
 		}
 		result = append(result, organizationtenancy.OperatorPerson{
-			ID: person.ID, FirstName: person.FirstName, LastName: person.LastName,
+			ID: ident.ID(person.ID), FirstName: person.FirstName, LastName: person.LastName,
 			HasAccount: person.HasAccount, AccountEmail: person.AccountEmail,
 			HasRFIDCard: person.HasRFIDCard, IsStaff: person.IsStaff, IsStudent: person.IsStudent,
-			SchoolID: school.ID, SchoolName: school.Name,
-			OrganizationID: school.OrganizationID, OrganizationName: school.OrganizationName,
+			SchoolID: ident.ID(school.ID), SchoolName: school.Name,
+			OrganizationID: ident.ID(school.OrganizationID), OrganizationName: school.OrganizationName,
 			CreatedAt: person.CreatedAt,
 		})
 	}

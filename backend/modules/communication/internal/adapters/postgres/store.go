@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 	"github.com/moto-ogs/project-phoenix/modules/communication/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/uptrace/bun"
 )
 
@@ -251,7 +252,7 @@ func (s *Store) ViewStats(ctx context.Context, announcementID int64) (communicat
 	if err != nil {
 		return communication.AnnouncementStats{}, domain.OperationStats{}, err
 	}
-	result := communication.AnnouncementStats{AnnouncementID: announcementID}
+	result := communication.AnnouncementStats{AnnouncementID: ident.ID(announcementID)}
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	err = db.NewRaw(`SELECT

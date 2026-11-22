@@ -88,7 +88,10 @@ type ActivityInstance struct {
 	TemplateType string `bun:"-" json:"-"`
 	// TemplateRequiredStaff is the template's Personalbedarf override, read
 	// along with TemplateType; a duty's gap rule needs it (#3822).
-	TemplateRequiredStaff *int            `bun:"-" json:"-"`
+	TemplateRequiredStaff *int `bun:"-" json:"-"`
+	// TemplatePlannedRoomID is the template's planned room, read along with
+	// TemplateType; "Heute anders" names a moved block with it (#7662).
+	TemplatePlannedRoomID *int64          `bun:"-" json:"-"`
 	StartedBy             *int64          `bun:"started_by" json:"started_by,omitempty"`
 	StartedAt             *time.Time      `bun:"started_at" json:"started_at,omitempty"`
 	CompletedAt           *time.Time      `bun:"completed_at" json:"completed_at,omitempty"`
@@ -111,7 +114,10 @@ func (i *ActivityInstance) MarkCompleted(completedAt, reopenUntil time.Time, com
 }
 
 type CompletionAttendanceSnapshot struct {
-	RowID              int64      `json:"row_id"`
+	RowID int64 `json:"row_id"`
+	// StudentID lets a reopen leave out the attendance of a child it does
+	// not bring back (#3844); zero in a snapshot from before.
+	StudentID          int64      `json:"student_id,omitempty"`
 	Status             string     `json:"status"`
 	Substatus          *string    `json:"substatus,omitempty"`
 	Note               *string    `json:"note,omitempty"`
@@ -133,8 +139,12 @@ type CompletionSupervisorVersion struct {
 }
 
 type ActivityCompletionSnapshot struct {
-	ActiveGroupID      int64                                 `json:"active_group_id"`
-	VisitIDs           []int64                               `json:"visit_ids"`
+	ActiveGroupID int64   `json:"active_group_id"`
+	VisitIDs      []int64 `json:"visit_ids"`
+	// VisitStudentIDs names the child of each visit in VisitIDs. A reopen
+	// leaves out a child whose visit is gone since (#3844); a snapshot from
+	// before carries none and refuses such a reopen.
+	VisitStudentIDs    []int64                               `json:"visit_student_ids,omitempty"`
 	SupervisorVersions map[int64]CompletionSupervisorVersion `json:"supervisor_versions,omitempty"`
 	SupervisorIDs      []int64                               `json:"supervisor_ids"`
 	Attendance         []CompletionAttendanceSnapshot        `json:"attendance"`

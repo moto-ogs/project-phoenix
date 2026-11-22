@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -19,12 +20,12 @@ func TestMonthSnapshotCarryChainAndTenantIsolation(t *testing.T) {
 	staff := testpkg.CreateTestStaff(t, db, "Month", "Snapshot")
 	capability := buildWorkforce(t, db)
 	input := workforce.StaffMonthBalanceSnapshot{
-		StaffID: staff.ID, Year: 2026, Month: 1, ClosingBalanceMinutes: 125,
-		ClosedBy: staff.ID, ClosedAt: time.Now(), Source: "admin",
+		StaffID: ident.ID(staff.ID), Year: 2026, Month: 1, ClosingBalanceMinutes: 125,
+		ClosedBy: ident.ID(staff.ID), ClosedAt: time.Now(), Source: "admin",
 	}
 	january, err := capability.RecordClosedMonth(ctx, input)
 	require.NoError(t, err)
-	require.Equal(t, testpkg.Tenant(t), january.TenantID)
+	require.Equal(t, ident.ID(testpkg.Tenant(t)), january.TenantID)
 	input.Month = 2
 	input.ClosingBalanceMinutes = 200
 	february, err := capability.RecordClosedMonth(ctx, input)
@@ -36,10 +37,10 @@ func TestMonthSnapshotCarryChainAndTenantIsolation(t *testing.T) {
 	latest, err = capability.LatestClosedMonth(other.Context(), staff.ID, 2026, 12)
 	require.NoError(t, err)
 	require.Nil(t, latest)
-	affected, err := capability.ReopenMonthSnapshot(other.Context(), february.ID, staff.ID, time.Now(), "foreign")
+	affected, err := capability.ReopenMonthSnapshot(other.Context(), february.ID.Int64(), staff.ID, time.Now(), "foreign")
 	require.NoError(t, err)
 	require.Zero(t, affected)
-	affected, err = capability.ReopenMonthSnapshot(ctx, february.ID, staff.ID, time.Now(), "correction")
+	affected, err = capability.ReopenMonthSnapshot(ctx, february.ID.Int64(), staff.ID, time.Now(), "correction")
 	require.NoError(t, err)
 	require.EqualValues(t, 1, affected)
 	latest, err = capability.LatestClosedMonth(ctx, staff.ID, 2026, 12)
@@ -58,8 +59,8 @@ func TestMonthSnapshotRollbackAndMissingTenant(t *testing.T) {
 	staff := testpkg.CreateTestStaff(t, db, "Rollback", "Snapshot")
 	capability := buildWorkforce(t, db)
 	input := workforce.StaffMonthBalanceSnapshot{
-		StaffID: staff.ID, Year: 2026, Month: 1, ClosingBalanceMinutes: 125,
-		ClosedBy: staff.ID, ClosedAt: time.Now(), Source: "admin",
+		StaffID: ident.ID(staff.ID), Year: 2026, Month: 1, ClosingBalanceMinutes: 125,
+		ClosedBy: ident.ID(staff.ID), ClosedAt: time.Now(), Source: "admin",
 	}
 	failure := errors.New("later workflow step failed")
 	err := testpkg.WithTenantTx(t, ctx, db, testpkg.Tenant(t), func(txCtx context.Context, _ bun.Tx) error {
@@ -78,7 +79,7 @@ func TestMonthSnapshotRollbackAndMissingTenant(t *testing.T) {
 	created, err := capability.RecordClosedMonth(ctx, input)
 	require.NoError(t, err)
 	err = testpkg.WithTenantTx(t, ctx, db, testpkg.Tenant(t), func(txCtx context.Context, _ bun.Tx) error {
-		affected, err := capability.ReopenMonthSnapshot(txCtx, created.ID, staff.ID, time.Now(), "rollback")
+		affected, err := capability.ReopenMonthSnapshot(txCtx, created.ID.Int64(), staff.ID, time.Now(), "rollback")
 		require.NoError(t, err)
 		require.EqualValues(t, 1, affected)
 		return failure
@@ -95,7 +96,7 @@ func TestMonthSnapshotRollbackAndMissingTenant(t *testing.T) {
 	require.Error(t, err)
 	_, err = capability.RecordClosedMonth(context.Background(), input)
 	require.Error(t, err)
-	_, err = capability.ReopenMonthSnapshot(context.Background(), created.ID, staff.ID, time.Now(), "unscoped")
+	_, err = capability.ReopenMonthSnapshot(context.Background(), created.ID.Int64(), staff.ID, time.Now(), "unscoped")
 	require.Error(t, err)
 	input.Month = 13
 	_, err = capability.RecordClosedMonth(ctx, input)

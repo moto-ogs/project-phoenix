@@ -1,10 +1,14 @@
 package studentpresence
 
-import "time"
+import (
+	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+)
 
 type StudentStatusDayResponse struct {
-	ID         int64      `json:"id"`
-	StudentID  int64      `json:"student_id"`
+	ID         ident.ID   `json:"id"`
+	StudentID  ident.ID   `json:"student_id"`
 	Date       string     `json:"date"`
 	Status     string     `json:"status"`
 	Label      string     `json:"label"`

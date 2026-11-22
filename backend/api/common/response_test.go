@@ -5,68 +5,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-// =============================================================================
-// Time.MarshalJSON Tests
-// =============================================================================
-
-func TestTime_MarshalJSON(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		time     time.Time
-		expected string
-	}{
-		{
-			name:     "standard time",
-			time:     time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC),
-			expected: `"2024-01-15T10:30:00Z"`,
-		},
-		{
-			name:     "time with timezone",
-			time:     time.Date(2024, 6, 20, 14, 45, 30, 0, time.FixedZone("CET", 3600)),
-			expected: `"2024-06-20T14:45:30+01:00"`,
-		},
-		{
-			name:     "midnight",
-			time:     time.Date(2024, 12, 31, 0, 0, 0, 0, time.UTC),
-			expected: `"2024-12-31T00:00:00Z"`,
-		},
-		{
-			name:     "end of day",
-			time:     time.Date(2024, 12, 31, 23, 59, 59, 0, time.UTC),
-			expected: `"2024-12-31T23:59:59Z"`,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			ct := common.Time(tc.time)
-			data, err := ct.MarshalJSON()
-
-			require.NoError(t, err)
-			assert.Equal(t, tc.expected, string(data))
-		})
-	}
-}
-
-func TestTime_MarshalJSON_ZeroTime(t *testing.T) {
-	t.Parallel()
-
-	ct := common.Time(time.Time{})
-	data, err := ct.MarshalJSON()
-
-	require.NoError(t, err)
-	// Zero time marshals to RFC3339 format
-	assert.Contains(t, string(data), "0001-01-01")
-}
 
 // =============================================================================
 // NewResponse Tests

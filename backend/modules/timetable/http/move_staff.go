@@ -31,19 +31,20 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // moveStaffRequest is the POST body.
 type moveStaffRequest struct {
-	StaffID          int64  `json:"staff_id"`
-	SourceInstanceID *int64 `json:"source_instance_id,omitempty"`
+	StaffID          common.ID  `json:"staff_id"`
+	SourceInstanceID *common.ID `json:"source_instance_id,omitempty"`
 }
 
 // MoveStaffResponse is the 200 body.
 type MoveStaffResponse struct {
-	TargetInstanceID int64  `json:"target_instance_id"`
-	SourceInstanceID *int64 `json:"source_instance_id,omitempty"`
-	Action           string `json:"action"`
+	TargetInstanceID common.ID  `json:"target_instance_id"`
+	SourceInstanceID *common.ID `json:"source_instance_id,omitempty"`
+	Action           string     `json:"action"`
 	// TimeConflicts lists the person's remaining same-day overlaps with the
 	// target window; CoverageWarnings the Dienstplan gaps for it (#1873).
 	// Both advisory — the writes have already landed in the request's tenant
@@ -72,8 +73,8 @@ func (rs *Resource) moveStaff(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, err := rs.InstanceService.MoveStaffBetweenBlocks(ctx, id, timetable.MoveStaffInput{
-		StaffID:          req.StaffID,
-		SourceInstanceID: req.SourceInstanceID,
+		StaffID:          req.StaffID.Int64(),
+		SourceInstanceID: (*int64)(req.SourceInstanceID),
 		ActorAccountID:   sessiontoken.ActorAccountIDFromCtx(ctx),
 	})
 	if err != nil {
@@ -89,11 +90,11 @@ func (rs *Resource) moveStaff(w http.ResponseWriter, r *http.Request) {
 	rs.broadcastStaffingIfChanged(ctx, appliedWrites > 0)
 	rs.getLogger().Info("staff moved between blocks",
 		slog.Int64("target_instance_id", id),
-		slog.Int64("staff_id", req.StaffID),
+		slog.Int64("staff_id", req.StaffID.Int64()),
 		slog.String("action", result.Action),
 	)
 
-	resp, err := moveStaffResponseOf(rs, ctx, result, req.StaffID)
+	resp, err := moveStaffResponseOf(rs, ctx, result, req.StaffID.Int64())
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
@@ -109,13 +110,13 @@ func (rs *Resource) moveStaff(w http.ResponseWriter, r *http.Request) {
 // instead of reporting a move that never lands.
 func moveStaffResponseOf(rs *Resource, ctx context.Context, result *timetable.MoveStaffResult, staffID int64) (MoveStaffResponse, error) {
 	resp := MoveStaffResponse{
-		TargetInstanceID: result.Target.ID,
+		TargetInstanceID: ident.ID(result.Target.ID),
 		Action:           result.Action,
 		TimeConflicts:    result.Warnings,
 		CoverageWarnings: []timetable.ShiftCoverageWarning{},
 	}
 	if result.Source != nil {
-		resp.SourceInstanceID = &result.Source.ID
+		resp.SourceInstanceID = (*ident.ID)(&result.Source.ID)
 	}
 	if rs.ConflictDetection == nil || result.Action == timetable.MoveStaffActionAlreadyApplied {
 		return resp, nil

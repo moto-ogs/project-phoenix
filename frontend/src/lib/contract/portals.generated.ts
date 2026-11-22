@@ -20,6 +20,7 @@ import { routes as authPermissions } from "./auth-permissions.generated";
 import { routes as authRegister } from "./auth-register.generated";
 import { routes as authRoles } from "./auth-roles.generated";
 import { routes as authStaffPreview } from "./auth-staff-preview.generated";
+import { routes as authTenant } from "./auth-tenant.generated";
 import { routes as authTenants } from "./auth-tenants.generated";
 import { routes as birthdays } from "./birthdays.generated";
 import { routes as calendar } from "./calendar.generated";
@@ -84,7 +85,6 @@ import { routes as publicRequestFeed } from "./public-request-feed.generated";
 import { routes as pwa } from "./pwa.generated";
 import { routes as reminders } from "./reminders.generated";
 import { routes as rooms } from "./rooms.generated";
-import { routes as schedules } from "./schedules.generated";
 import { routes as schoolAuth } from "./school-auth.generated";
 import { routes as schoolCalendar } from "./school-calendar.generated";
 import { routes as schoolClassDay } from "./school-class-day.generated";
@@ -575,6 +575,7 @@ export const portalRoutes = {
     parentMe["DELETE /parent/me/children/{studentId}/meal-participation/{date}"],
     parentMe["DELETE /parent/me/children/{studentId}/parent-conferences/{conferenceId}/booking"],
     parentMe["DELETE /parent/me/children/{studentId}/related-accounts/{guardianProfileId}"],
+    parentMe["DELETE /parent/me/children/{studentId}/room-history-stop"],
     parentMe["DELETE /parent/me/mfa/trusted-devices/{deviceId}"],
     parentMe["DELETE /parent/me/notification-preferences/"],
     parentMe["DELETE /parent/me/push/subscriptions"],
@@ -604,6 +605,7 @@ export const portalRoutes = {
     parentMe["GET /parent/me/children/{studentId}/request-sharing-options"],
     parentMe["GET /parent/me/children/{studentId}/request-sharing/{requestType}/{requestId}"],
     parentMe["GET /parent/me/children/{studentId}/requests/{requestType}/{requestId}/events"],
+    parentMe["GET /parent/me/children/{studentId}/room-history-stop"],
     parentMe["GET /parent/me/children/{studentId}/sick-note"],
     parentMe["GET /parent/me/children/{studentId}/today"],
     parentMe["GET /parent/me/documents"],
@@ -683,6 +685,7 @@ export const portalRoutes = {
     parentMe["PUT /parent/me/children/{studentId}/parent-conferences/{conferenceId}/booking"],
     parentMe["PUT /parent/me/children/{studentId}/pickup-change-requests/{requestId}"],
     parentMe["PUT /parent/me/children/{studentId}/request-sharing/{requestType}/{requestId}"],
+    parentMe["PUT /parent/me/children/{studentId}/room-history-stop"],
     parentMe["PUT /parent/me/documents/{organizationId}/contracts/{contractId}/family-children"],
     parentMe["PUT /parent/me/notification-preferences/{type}"],
     parentMe["PUT /parent/me/profile"],
@@ -814,6 +817,7 @@ export const portalRoutes = {
     authInvitations["GET /auth/invitations/{token}"],
     authPasswordReset["POST /auth/password-reset"],
     authPasswordReset["POST /auth/password-reset/confirm"],
+    authTenant["GET /auth/tenant/resolve"],
     authTenants["GET /auth/tenants"],
     catererAuth["POST /caterer/auth/password-reset"],
     catererAuth["POST /caterer/auth/password-reset/confirm"],
@@ -984,14 +988,14 @@ export const portalRoutes = {
     activities["GET /api/activities/categories"],
     activities["GET /api/activities/supervisors/available"],
     activities["GET /api/activities/{id}"],
-    activities["GET /api/activities/{id}/schedules"],
-    activities["GET /api/activities/{id}/schedules/{scheduleId}"],
+    activities["GET /api/activities/{id}/students"],
     activities["POST /api/activities/"],
     activities["POST /api/activities/categories"],
     activities["POST /api/activities/categories/{categoryId}/restore"],
     activities["POST /api/activities/quick-create"],
     activities["PUT /api/activities/categories/{categoryId}"],
     activities["PUT /api/activities/{id}"],
+    activities["PUT /api/activities/{id}/students"],
     admin["DELETE /api/admin/grade-transitions/{id}/"],
     admin["GET /api/admin/grade-transitions/"],
     admin["GET /api/admin/grade-transitions/classes"],
@@ -1033,7 +1037,6 @@ export const portalRoutes = {
     authPasskeys["POST /auth/passkeys/register/verify"],
     authPassword["POST /auth/password"],
     authPermissions["GET /auth/permissions/"],
-    authPermissions["GET /auth/permissions/{id}/"],
     authRegister["POST /auth/register"],
     authRoles["DELETE /auth/roles/{id}/"],
     authRoles["GET /auth/roles/"],
@@ -1112,7 +1115,6 @@ export const portalRoutes = {
     enrollment["GET /api/enrollment/schema/"],
     enrollment["GET /api/enrollment/schema/preview"],
     enrollment["GET /api/enrollment/schema/versions"],
-    enrollment["GET /api/enrollment/schema/{id}"],
     enrollment["PATCH /api/enrollment/schema/{id}"],
     enrollment["POST /api/enrollment/admin/change-requests/{id}/approve"],
     enrollment["POST /api/enrollment/admin/change-requests/{id}/question"],
@@ -1168,6 +1170,7 @@ export const portalRoutes = {
     guardians["GET /api/guardians/{id}/delete-preview"],
     guardians["GET /api/guardians/{id}/payment"],
     guardians["GET /api/guardians/{id}/phone-numbers/"],
+    guardians["POST /api/guardians/"],
     guardians["POST /api/guardians/bulk-invite"],
     guardians["POST /api/guardians/invitations/{invitationId}/approve"],
     guardians["POST /api/guardians/invitations/{invitationId}/reject"],
@@ -1176,6 +1179,7 @@ export const portalRoutes = {
     guardians["POST /api/guardians/students/{studentId}/guardians/batch"],
     guardians["POST /api/guardians/students/{studentId}/invite"],
     guardians["POST /api/guardians/{id}/email-stop"],
+    guardians["POST /api/guardians/{id}/invite"],
     guardians["POST /api/guardians/{id}/payment/reveal"],
     guardians["POST /api/guardians/{id}/phone-numbers/"],
     guardians["POST /api/guardians/{id}/phone-numbers/{phoneId}/set-primary"],
@@ -1318,7 +1322,6 @@ export const portalRoutes = {
     rooms["POST /api/rooms/"],
     rooms["POST /api/rooms/export"],
     rooms["PUT /api/rooms/{id}"],
-    schedules["GET /api/schedules/timeframes/"],
     schoolSetup["GET /api/school-setup/"],
     schoolSetup["POST /api/school-setup/complete"],
     schoolSetup["PUT /api/school-setup/dismissal"],
@@ -1490,6 +1493,7 @@ export const portalRoutes = {
     students["DELETE /api/students/{id}/pickup-exceptions/{exceptionId}"],
     students["DELETE /api/students/{id}/pickup-notes/{noteId}"],
     students["DELETE /api/students/{id}/purge"],
+    students["DELETE /api/students/{id}/room-history-stop"],
     students["DELETE /api/students/{id}/status-days/{statusDayId}"],
     students["GET /api/students/"],
     students["GET /api/students/arrival-settings"],
@@ -1536,6 +1540,7 @@ export const portalRoutes = {
     students["GET /api/students/{id}/photo/{filename}"],
     students["GET /api/students/{id}/pickup-schedules"],
     students["GET /api/students/{id}/privacy-consent"],
+    students["GET /api/students/{id}/room-history-stop"],
     students["GET /api/students/{id}/status-days"],
     students["POST /api/students/"],
     students["POST /api/students/arrival-schedules/bulk"],
@@ -1596,6 +1601,7 @@ export const portalRoutes = {
     students["PUT /api/students/{id}/pickup-notes/{noteId}"],
     students["PUT /api/students/{id}/pickup-schedules"],
     students["PUT /api/students/{id}/privacy-consent"],
+    students["PUT /api/students/{id}/room-history-stop"],
     substitutions["GET /api/substitutions/"],
     substitutions["POST /api/substitutions/"],
     substitutions["POST /api/substitutions/end"],

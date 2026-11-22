@@ -4,26 +4,10 @@
 // code path, so they cannot disagree.
 
 import { apiErrorFromResponse } from "./api-error";
+import type { DatevExportReport as DatevExportReportWire } from "./contract/staff.generated";
 import { sessionFetch } from "./session-cache";
 
 export type DatevFormat = "datev_lodas" | "datev_lug";
-
-interface BackendDatevSkippedStaff {
-  last_name: string;
-  first_name: string;
-  reason: string;
-}
-
-interface BackendDatevExportReport {
-  format: string;
-  year: number;
-  month: number;
-  line_count: number;
-  staff_exported: number;
-  staff_skipped: BackendDatevSkippedStaff[];
-  unconfigured_categories: string[];
-  open_month: boolean;
-}
 
 interface DatevSkippedStaff {
   lastName: string;
@@ -39,9 +23,7 @@ export interface DatevExportReport {
   openMonth: boolean;
 }
 
-function mapDatevExportReport(
-  data: BackendDatevExportReport,
-): DatevExportReport {
+function mapDatevExportReport(data: DatevExportReportWire): DatevExportReport {
   return {
     lineCount: data.line_count,
     staffExported: data.staff_exported,
@@ -74,6 +56,6 @@ export async function fetchDatevExportReport(
       `Failed to fetch DATEV report: ${response.statusText}`,
     );
   }
-  const json = (await response.json()) as { data: BackendDatevExportReport };
+  const json = (await response.json()) as { data: DatevExportReportWire };
   return mapDatevExportReport(json.data);
 }

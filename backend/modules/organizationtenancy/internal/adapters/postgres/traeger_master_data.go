@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -61,7 +62,7 @@ func (r traegerProfileRow) toDomain() organizationtenancy.TraegerProfile {
 }
 
 type traegerBankAccountRow struct {
-	ID            int64     `bun:"id"`
+	ID            ident.ID  `bun:"id"`
 	Label         string    `bun:"label"`
 	AccountHolder string    `bun:"account_holder"`
 	IBAN          string    `bun:"iban"`

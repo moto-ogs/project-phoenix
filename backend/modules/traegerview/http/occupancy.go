@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // occupancy answers GET /traeger/schools/occupancy: the children of every
@@ -111,7 +112,7 @@ func occupancyTable(occupancy traegerview.Occupancy, schoolName string) common.L
 // findSchool returns the entry of the school with the ID.
 func findSchool[T any](entries []T, schoolID int64, school func(T) traegerview.TraegerSchool) (T, bool) {
 	for _, entry := range entries {
-		if school(entry).ID == schoolID {
+		if school(entry).ID == ident.ID(schoolID) {
 			return entry, true
 		}
 	}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/appointments"
 	"github.com/moto-ogs/project-phoenix/modules/appointments/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 )
@@ -23,15 +24,15 @@ func TestPublicAppointmentContractPersistsNormalizedFieldsAndTargets(t *testing.
 	})
 	require.NoError(t, err)
 	require.Positive(t, created.ID)
-	require.Equal(t, testpkg.Tenant(t), created.TenantID)
+	require.Equal(t, ident.ID(testpkg.Tenant(t)), created.TenantID)
 	require.Equal(t, "Teamtreffen", created.Title)
 	require.Equal(t, day, created.StartDate)
 	require.Len(t, targets, 1)
 	require.Equal(t, created.ID, targets[0].AppointmentID)
-	found, err := module.FindAppointment(testpkg.Ctx(t), created.ID)
+	found, err := module.FindAppointment(testpkg.Ctx(t), created.ID.Int64())
 	require.NoError(t, err)
 	require.Equal(t, created, found)
-	actualTargets, err := module.FindAppointmentTargets(testpkg.Ctx(t), created.ID)
+	actualTargets, err := module.FindAppointmentTargets(testpkg.Ctx(t), created.ID.Int64())
 	require.NoError(t, err)
 	require.Equal(t, targets, actualTargets)
 }

@@ -1,14 +1,15 @@
 import "server-only";
 import { revalidateTag } from "next/cache";
+import { sendBackend } from "~/lib/backend-client.server";
 import type { TenantSettings } from "~/lib/tenant-api";
 
 /** The backend's answer to `/auth/tenant/resolve?slug=…` (snake_case). */
 export interface TenantResolveResponse {
-  tenant_id: number;
+  tenant_id: string;
   slug: string;
   name: string;
   subdomain: string;
-  organization_id: number;
+  organization_id: string;
   organization_name: string;
   traeger_name?: string;
   hidden?: boolean;
@@ -77,10 +78,11 @@ async function loadTenant(
   slug: string,
   forwardHeaders: Record<string, string>,
 ): Promise<TenantLookup> {
-  const { getServerApiUrl } = await import("~/lib/server-api-url");
-  const res = await fetch(
-    `${getServerApiUrl()}/auth/tenant/resolve?slug=${encodeURIComponent(slug)}`,
-    { headers: forwardHeaders, cache: "no-store" },
+  // The visitor who starts the lookup supplies the forwarding headers.
+  const res = await sendBackend(
+    `/auth/tenant/resolve?slug=${encodeURIComponent(slug)}`,
+    null,
+    { headers: forwardHeaders },
   );
   if (!res.ok) return { ok: false, status: res.status };
   const { data } = (await res.json()) as { data: TenantResolveResponse };

@@ -31,7 +31,7 @@ vi.mock("next-auth/react", () => ({
   }),
 }));
 
-const TENANT = { tenantId: 1, slug: "demo" } as TenantInfo;
+const TENANT = { tenantId: "1", slug: "demo" } as TenantInfo;
 
 function renderGate(title = "Zeiterfassung") {
   return render(

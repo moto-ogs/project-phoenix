@@ -354,17 +354,17 @@ func (p provisioningPeople) FindPerson(ctx context.Context, id int64) (organizat
 	if err != nil {
 		return organizationCompose.ProvisioningPerson{}, false, err
 	}
-	live, former, err := p.staffStanding(ctx, []int64{person.ID})
+	live, former, err := p.staffStanding(ctx, []int64{person.ID.Int64()})
 	if err != nil {
 		return organizationCompose.ProvisioningPerson{}, false, err
 	}
-	students, err := p.students(ctx, []int64{person.ID})
+	students, err := p.students(ctx, []int64{person.ID.Int64()})
 	if err != nil {
 		return organizationCompose.ProvisioningPerson{}, false, err
 	}
 	return organizationCompose.ProvisioningPerson{
-		ID: person.ID, TenantID: person.TenantID, AccountID: person.AccountID, HasRFIDCard: person.TagID != nil,
-		FormerStaff: former[person.ID], LiveStaff: live[person.ID], Student: students[person.ID],
+		ID: person.ID.Int64(), TenantID: person.TenantID.Int64(), AccountID: (*int64)(person.AccountID), HasRFIDCard: person.TagID != nil,
+		FormerStaff: former[person.ID.Int64()], LiveStaff: live[person.ID.Int64()], Student: students[person.ID.Int64()],
 	}, true, nil
 }
 
@@ -373,7 +373,7 @@ func (p provisioningPeople) FindStaff(ctx context.Context, personID int64) (orga
 	if err != nil || staff == nil {
 		return organizationCompose.StaffMember{}, false, err
 	}
-	return organizationCompose.StaffMember{ID: staff.ID, TenantID: staff.TenantID}, true, nil
+	return organizationCompose.StaffMember{ID: staff.ID.Int64(), TenantID: staff.TenantID.Int64()}, true, nil
 }
 
 func (p provisioningPeople) UnlinkRFIDCard(ctx context.Context, personID int64) error {

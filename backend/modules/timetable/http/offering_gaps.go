@@ -16,6 +16,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type offeringGapResponse struct {
@@ -137,7 +138,7 @@ func (rs *Resource) offeringGapTemplates(ctx context.Context, period schoolcalen
 	}
 	ids := make([]int64, 0, len(templates))
 	for _, template := range templates {
-		ids = append(ids, template.ID)
+		ids = append(ids, template.ID.Int64())
 	}
 	projection, err := rs.MaterializationService.ProjectOccurrences(ctx, ids, scope.From, scope.Until)
 	if err != nil {
@@ -146,8 +147,8 @@ func (rs *Resource) offeringGapTemplates(ctx context.Context, period schoolcalen
 	scope.ClosedDays = projection.ClosedDays
 	result := make([]timetable.OfferingGapTemplate, 0, len(templates))
 	for _, template := range templates {
-		gapTemplate := offeringGapTemplate(template, feeds[template.ID], projection.Dates[template.ID])
-		gapTemplate.Times = projection.Times[template.ID]
+		gapTemplate := offeringGapTemplate(template, feeds[template.ID.Int64()], projection.Dates[template.ID.Int64()])
+		gapTemplate.Times = projection.Times[template.ID.Int64()]
 		result = append(result, gapTemplate)
 	}
 	return result, rs.attachOfferingGapRosters(ctx, templates, result, allRosters)
@@ -157,9 +158,9 @@ func offeringGapFeedQueries(templates []templateResponse, periodID int64) []time
 	queries := make([]timetable.TemplateRosterMaintenanceQuery, 0, len(templates))
 	for _, template := range templates {
 		queries = append(queries, timetable.TemplateRosterMaintenanceQuery{
-			TemplateID:            template.ID,
+			TemplateID:            template.ID.Int64(),
 			CalendarPeriodID:      rosterMaintenanceCalendarPeriodID(template, &periodID),
-			SourceCareOfferingIDs: template.SourceCareOfferingIDs,
+			SourceCareOfferingIDs: ident.Int64s(template.SourceCareOfferingIDs),
 			SourceGradeLevels:     template.SourceGradeLevels,
 			SourceSchoolClasses:   template.SourceSchoolClasses,
 		})
@@ -186,7 +187,7 @@ func offeringGapTemplate(template templateResponse, feeds timetable.TemplateRost
 		gapTemplate.Occurrences[date] = true
 	}
 	for _, offering := range feeds.Offerings {
-		if slices.Contains(template.SourceCareOfferingIDs, offering.ID) {
+		if slices.Contains(template.SourceCareOfferingIDs, ident.ID(offering.ID)) {
 			gapTemplate.Sources.OfferingIDs = append(gapTemplate.Sources.OfferingIDs, offering.ID)
 		}
 	}
@@ -195,7 +196,7 @@ func offeringGapTemplate(template templateResponse, feeds timetable.TemplateRost
 
 func offeringGapResponseFrom(gap timetable.OfferingGap) offeringGapResponse {
 	return offeringGapResponse{
-		Offering:              templateRosterMaintenanceOfferingResponse{ID: gap.OfferingID, Name: gap.OfferingName},
+		Offering:              templateRosterMaintenanceOfferingResponse{ID: ident.ID(gap.OfferingID), Name: gap.OfferingName},
 		StudentCount:          gap.StudentCount,
 		SchoolClasses:         gap.SchoolClasses,
 		Weekdays:              gap.Weekdays,
@@ -207,8 +208,8 @@ func offeringGapResponseFrom(gap timetable.OfferingGap) offeringGapResponse {
 }
 
 type offeringGapAckRequest struct {
-	PeriodID     int64 `json:"period_id"`
-	Acknowledged *bool `json:"acknowledged"`
+	PeriodID     common.ID `json:"period_id"`
+	Acknowledged *bool     `json:"acknowledged"`
 }
 
 func (req *offeringGapAckRequest) Bind(*http.Request) error {
@@ -246,7 +247,7 @@ func (rs *Resource) setOfferingGapAck(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, bindErrorRenderer(err))
 		return
 	}
-	classes, err := rs.openOfferingGapClasses(r.Context(), req.PeriodID, offeringID)
+	classes, err := rs.openOfferingGapClasses(r.Context(), req.PeriodID.Int64(), offeringID)
 	if err != nil {
 		renderOfferingGapError(w, r, err)
 		return
@@ -254,7 +255,7 @@ func (rs *Resource) setOfferingGapAck(w http.ResponseWriter, r *http.Request) {
 	if !*req.Acknowledged {
 		classes = []string{}
 	}
-	if err := rs.OfferingGapDecisions.DecideOfferingTemplateGap(r.Context(), offeringID, req.PeriodID, classes); err != nil {
+	if err := rs.OfferingGapDecisions.DecideOfferingTemplateGap(r.Context(), offeringID, req.PeriodID.Int64(), classes); err != nil {
 		renderOfferingGapError(w, r, err)
 		return
 	}

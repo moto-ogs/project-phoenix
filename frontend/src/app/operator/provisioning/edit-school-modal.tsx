@@ -112,7 +112,7 @@ export function EditSchoolModal({
       const newSubdomain = schoolSubdomain.trim();
       try {
         await operatorProvisioningService.updateSchool(school.id, {
-          organization_id: parseInt(schoolOrgId, 10),
+          organization_id: schoolOrgId,
           name: schoolName.trim(),
           slug: schoolSlug.trim(),
           subdomain: newSubdomain,

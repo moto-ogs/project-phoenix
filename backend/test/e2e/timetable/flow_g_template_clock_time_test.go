@@ -40,10 +40,10 @@ func TestFlowG_TemplateClockTimesStayTimezoneFree(t *testing.T) {
 	require.Equal(t, http.StatusCreated, rr.Code, "create template body=%s", rr.Body.String())
 
 	var created struct {
-		TemplateID       int64   `json:"template_id"`
-		TimeframeID      int64   `json:"timeframe_id"`
-		ScheduleIDs      []int64 `json:"schedule_ids"`
-		InstancesCreated int     `json:"instances_created"`
+		TemplateID       testpkg.ID   `json:"template_id"`
+		TimeframeID      testpkg.ID   `json:"timeframe_id"`
+		ScheduleIDs      []testpkg.ID `json:"schedule_ids"`
+		InstancesCreated int          `json:"instances_created"`
 	}
 	decodeResponse(t, rr, &created)
 	require.NotZero(t, created.TemplateID)
@@ -56,7 +56,7 @@ func TestFlowG_TemplateClockTimesStayTimezoneFree(t *testing.T) {
 	require.Equal(t, http.StatusOK, rr.Code, "get template body=%s", rr.Body.String())
 
 	var templateResp struct {
-		ID        int64 `json:"id"`
+		ID        testpkg.ID `json:"id"`
 		Schedules []struct {
 			StartTime string `json:"start_time"`
 			EndTime   string `json:"end_time"`
@@ -72,10 +72,10 @@ func TestFlowG_TemplateClockTimesStayTimezoneFree(t *testing.T) {
 
 	var instancesResp struct {
 		Instances []struct {
-			ID              int64  `json:"id"`
-			ActivityGroupID int64  `json:"activity_group_id"`
-			StartTime       string `json:"start_time"`
-			EndTime         string `json:"end_time"`
+			ID              testpkg.ID `json:"id"`
+			ActivityGroupID testpkg.ID `json:"activity_group_id"`
+			StartTime       string     `json:"start_time"`
+			EndTime         string     `json:"end_time"`
 		} `json:"instances"`
 	}
 	decodeResponse(t, rr, &instancesResp)

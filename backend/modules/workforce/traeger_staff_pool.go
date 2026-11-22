@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Vertretungspool of the Träger (#4709, ADR 0089 section 9, ADR 0252):
@@ -74,8 +75,8 @@ const (
 // names only that school. Lifted marks a block of the reading school the
 // Personalverwaltung lifted.
 type PoolBlock struct {
-	ID         *int64        `json:"id,omitempty"`
-	SchoolID   int64         `json:"school_id"`
+	ID         *ident.ID     `json:"id,omitempty"`
+	SchoolID   ident.ID      `json:"school_id"`
 	SchoolName string        `json:"school_name"`
 	Own        bool          `json:"own"`
 	Date       calendar.Date `json:"date"`
@@ -87,7 +88,7 @@ type PoolBlock struct {
 // PoolSpringer is one Springer in a week: the days its pool contract
 // covers, the status of its Nachweise and its blocks of the week.
 type PoolSpringer struct {
-	RecordID  int64             `json:"staff_record_id"`
+	RecordID  ident.ID          `json:"staff_record_id"`
 	FirstName string            `json:"first_name"`
 	LastName  string            `json:"last_name"`
 	PoolFrom  calendar.Date     `json:"pool_from"`

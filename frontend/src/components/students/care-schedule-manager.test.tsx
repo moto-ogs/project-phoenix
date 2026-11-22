@@ -18,10 +18,8 @@ import { useInvalidateMatching } from "~/lib/swr";
 import { ApiError } from "~/lib/api-error";
 import { toISODate } from "~/lib/date-helpers";
 import type { ArrivalScheduleFormEntry } from "~/lib/arrival-schedule-helpers";
-import type {
-  ArrivalData,
-  ArrivalScheduleInput,
-} from "~/lib/student-arrival-api";
+import type { ArrivalData } from "~/lib/student-arrival-api";
+import type { ArrivalScheduleRequestItem } from "~/lib/contract/students.generated";
 import type { PickupData } from "~/lib/pickup-schedule-helpers";
 import type { StudentStatusDay } from "~/lib/student-status-days-api";
 
@@ -379,7 +377,6 @@ const statusDays: StudentStatusDay[] = [
     status: "excused",
     label: "Entschuldigt",
     reported_at: "2026-05-25T08:00:00Z",
-    cleared_at: null,
     source: "planned",
     created_at: "2026-05-25T08:00:00Z",
     updated_at: "2026-05-25T08:00:00Z",
@@ -391,7 +388,6 @@ const statusDays: StudentStatusDay[] = [
     status: "sick",
     label: "Krank",
     reported_at: "2026-05-25T08:00:00Z",
-    cleared_at: null,
     source: "planned",
     created_at: "2026-05-25T08:00:00Z",
     updated_at: "2026-05-25T08:00:00Z",
@@ -403,7 +399,6 @@ const statusDays: StudentStatusDay[] = [
     status: "class_trip",
     label: "Klassenfahrt",
     reported_at: "2026-05-25T08:00:00Z",
-    cleared_at: null,
     source: "planned",
     created_at: "2026-05-25T08:00:00Z",
     updated_at: "2026-05-25T08:00:00Z",
@@ -1109,15 +1104,15 @@ describe("CareScheduleManager", () => {
       Promise.resolve(savedArrivalData ?? bookedArrivalData),
     );
     mockUpdateArrivalSchedules.mockImplementation(
-      (_studentId: string, schedules: ArrivalScheduleInput[]) => {
+      (_studentId: string, schedules: ArrivalScheduleRequestItem[]) => {
         savedArrivalData = {
           ...bookedArrivalData,
           schedules: schedules.map((schedule, index) => ({
             id: String(index + 1),
             studentId: "42",
-            weekday: schedule.weekday,
+            weekday: schedule.weekday ?? 0,
             weekdayName: "Montag",
-            expectedArrival: schedule.expected_arrival,
+            expectedArrival: schedule.expected_arrival ?? "",
             notes: schedule.notes ?? null,
             source: "staff",
             createdBy: "1",
@@ -1196,6 +1191,43 @@ describe("CareScheduleManager", () => {
     ).toBe(mismatchMarkers.length);
     // Dienstag: dieselbe Zeit wie gebucht, nur die Herkunft, keine Warnung.
     expect(screen.getAllByText("von Hand").length).toBeGreaterThan(0);
+  });
+
+  // #7707: closing the banner in the Kinderakte loses nothing; every changed
+  // pickup day stands out here, also in a later week.
+  it("highlights a changed pickup day, also in a later week", async () => {
+    mockFetchStudentPickupData.mockResolvedValue({
+      ...pickupData,
+      exceptions: [
+        ...pickupData.exceptions,
+        {
+          ...pickupData.exceptions[0]!,
+          id: "21",
+          exceptionDate: "2026-06-01",
+          pickupTime: "13:00",
+        },
+      ],
+    });
+
+    render(<CareScheduleManager studentId="42" />);
+    await screen.findByText("Betreuungszeiten");
+
+    // Montag: 15:15 gilt statt der regulären 15:00.
+    expect(screen.getAllByText("15:15").length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText("15:00", { selector: "s" }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText("Ausnahme", { selector: "[data-status-pill]" })
+        .length,
+    ).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getAllByLabelText("Nächste Woche")[0]!);
+    // Next Monday: 13:00 replaces 15:00 and carries the warning in one line.
+    const later = await screen.findAllByText("13:00");
+    expect(later[0]!.parentElement).toHaveTextContent(
+      "13:00statt 15:00Ausnahme",
+    );
   });
 
   it("passes booking care days to the weekly editor", async () => {

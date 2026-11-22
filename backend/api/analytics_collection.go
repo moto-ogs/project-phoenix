@@ -28,7 +28,7 @@ func analyticsCollectionPolicy(demo bool, reader settings.TenantReader, parents 
 		},
 		PublicSchool: func(ctx context.Context, slug string) (int64, error) {
 			school, err := schools.FindSchoolBySubdomain(ctx, slug)
-			return school.ID, err
+			return school.ID.Int64(), err
 		},
 	}
 }

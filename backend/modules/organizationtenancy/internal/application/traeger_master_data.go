@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Master data of a Träger (#4653, ADR 0112). The service opens no
@@ -217,7 +218,7 @@ func (m *TraegerMasterData) CreateBankAccount(ctx context.Context, organizationI
 	if err != nil {
 		return organizationtenancy.TraegerBankAccount{}, err
 	}
-	if err := m.audit(ctx, organizationID, accountID, domain.TraegerAuditSubjectBankAccount, created.ID, domain.TraegerAuditActionCreate, nil, bankAccountAuditValue(&created)); err != nil {
+	if err := m.audit(ctx, organizationID, accountID, domain.TraegerAuditSubjectBankAccount, created.ID.Int64(), domain.TraegerAuditActionCreate, nil, bankAccountAuditValue(&created)); err != nil {
 		return organizationtenancy.TraegerBankAccount{}, err
 	}
 	return created, nil
@@ -304,7 +305,7 @@ func (m *TraegerMasterData) demoteDefault(ctx context.Context, organizationID, a
 	}
 	demoted := *current
 	demoted.IsDefault = false
-	return m.audit(ctx, organizationID, accountID, domain.TraegerAuditSubjectBankAccount, current.ID, domain.TraegerAuditActionUpdate,
+	return m.audit(ctx, organizationID, accountID, domain.TraegerAuditSubjectBankAccount, current.ID.Int64(), domain.TraegerAuditActionUpdate,
 		bankAccountAuditValue(current), bankAccountAuditValue(&demoted))
 }
 
@@ -313,20 +314,20 @@ func (m *TraegerMasterData) demoteDefault(ctx context.Context, organizationID, a
 func (m *TraegerMasterData) promoteOldestBankAccount(ctx context.Context, organizationID, accountID int64, existing []organizationtenancy.TraegerBankAccount, deletedID int64) error {
 	var next *organizationtenancy.TraegerBankAccount
 	for i := range existing {
-		if existing[i].ID != deletedID && (next == nil || existing[i].ID < next.ID) {
+		if existing[i].ID != ident.ID(deletedID) && (next == nil || existing[i].ID < next.ID) {
 			next = &existing[i]
 		}
 	}
 	if next == nil {
 		return nil
 	}
-	promoted, err := m.store.UpdateBankAccount(ctx, organizationID, accountID, next.ID, organizationtenancy.TraegerBankAccountInput{
+	promoted, err := m.store.UpdateBankAccount(ctx, organizationID, accountID, next.ID.Int64(), organizationtenancy.TraegerBankAccountInput{
 		Label: next.Label, AccountHolder: next.AccountHolder, IBAN: next.IBAN, BIC: next.BIC, BankName: next.BankName, IsDefault: true,
 	})
 	if err != nil {
 		return err
 	}
-	return m.audit(ctx, organizationID, accountID, domain.TraegerAuditSubjectBankAccount, next.ID, domain.TraegerAuditActionUpdate,
+	return m.audit(ctx, organizationID, accountID, domain.TraegerAuditSubjectBankAccount, next.ID.Int64(), domain.TraegerAuditActionUpdate,
 		bankAccountAuditValue(next), bankAccountAuditValue(&promoted))
 }
 
@@ -355,7 +356,7 @@ func (m *TraegerMasterData) audit(ctx context.Context, organizationID, accountID
 // label, compared without case like the unique index.
 func labelTaken(accounts []organizationtenancy.TraegerBankAccount, label string, exceptID int64) bool {
 	for _, account := range accounts {
-		if account.ID != exceptID && strings.EqualFold(account.Label, label) {
+		if account.ID != ident.ID(exceptID) && strings.EqualFold(account.Label, label) {
 			return true
 		}
 	}
@@ -364,7 +365,7 @@ func labelTaken(accounts []organizationtenancy.TraegerBankAccount, label string,
 
 func findBankAccount(accounts []organizationtenancy.TraegerBankAccount, id int64) *organizationtenancy.TraegerBankAccount {
 	for i := range accounts {
-		if accounts[i].ID == id {
+		if accounts[i].ID == ident.ID(id) {
 			return &accounts[i]
 		}
 	}

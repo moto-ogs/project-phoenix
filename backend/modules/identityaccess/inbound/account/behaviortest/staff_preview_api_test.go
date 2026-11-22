@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -68,13 +69,13 @@ func TestStaffPreviewEndpoints(t *testing.T) {
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 		var resp struct {
-			AccessToken     string `json:"access_token"`
-			ExpiresIn       int64  `json:"expires_in"`
-			TargetAccountID int64  `json:"target_account_id,string"`
-			TargetName      string `json:"target_name"`
+			AccessToken     string   `json:"access_token"`
+			ExpiresIn       int64    `json:"expires_in"`
+			TargetAccountID ident.ID `json:"target_account_id"`
+			TargetName      string   `json:"target_name"`
 		}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-		assert.Equal(t, target.ID, resp.TargetAccountID)
+		assert.Equal(t, ident.ID(target.ID), resp.TargetAccountID)
 		// The ID must reach the JS client as a string, never as a number.
 		assert.Contains(t, rec.Body.String(), fmt.Sprintf(`"target_account_id":"%d"`, target.ID))
 		assert.Equal(t, "Ziel Person", resp.TargetName)
@@ -172,15 +173,15 @@ func TestStaffPreviewEndpoints(t *testing.T) {
 
 		var resp struct {
 			Data []struct {
-				AccountID int64  `json:"account_id,string"`
-				FirstName string `json:"first_name"`
+				AccountID ident.ID `json:"account_id"`
+				FirstName string   `json:"first_name"`
 			} `json:"data"`
 		}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
 
 		ids := make(map[int64]bool, len(resp.Data))
 		for _, c := range resp.Data {
-			ids[c.AccountID] = true
+			ids[c.AccountID.Int64()] = true
 		}
 		assert.True(t, ids[target.ID], "staff target must be listed")
 		assert.False(t, ids[admin.ID], "caller must not be listed")

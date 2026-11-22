@@ -71,11 +71,11 @@ func (c DayChangesTestCalendar) Create(ctx context.Context, value DayChangesTest
 		})
 	}
 	if len(recipients) > 0 {
-		if _, _, err := c.owner.CreateAppointmentRecipients(ctx, created.ID, recipients); err != nil {
+		if _, _, err := c.owner.CreateAppointmentRecipients(ctx, created.ID.Int64(), recipients); err != nil {
 			return 0, err
 		}
 	}
-	return created.ID, nil
+	return created.ID.Int64(), nil
 }
 
 // DayChangesTestException is what happens to an appointment: the whole

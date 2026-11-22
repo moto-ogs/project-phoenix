@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The helpers below decode the generic repository's untyped arguments and
@@ -15,6 +16,9 @@ import (
 
 // legacyID narrows the untyped ID of the generic repository contract.
 func legacyID(id any) (int64, error) {
+	if typed, ok := id.(ident.ID); ok {
+		id = typed.Int64()
+	}
 	switch value := id.(type) {
 	case int64:
 		return value, nil
@@ -55,6 +59,9 @@ func writeError(op string, err error) error {
 }
 
 func conditionInt64(value any) (int64, bool) {
+	if typed, ok := value.(ident.ID); ok {
+		value = typed.Int64()
+	}
 	switch typed := value.(type) {
 	case int64:
 		return typed, true

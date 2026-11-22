@@ -5,7 +5,7 @@ import {
   calendarDate,
   fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   requestBody,
@@ -31,10 +31,10 @@ export interface CareEvidence {
 }
 
 export const CareEvidenceSchema: z.ZodType<CareEvidence, unknown> = object<CareEvidence>({
-  id: int64StringOrNumber,
-  contract_id: int64StringOrNumber,
+  id: int64String,
+  contract_id: int64String,
   kind: str,
-  rule_id: nullable(int64StringOrNumber),
+  rule_id: nullable(int64String),
   valid_from: nullable(calendarDate),
   valid_until: nullable(calendarDate),
   evidence: str,
@@ -53,8 +53,8 @@ export interface CareEvidenceContract {
 }
 
 export const CareEvidenceContractSchema: z.ZodType<CareEvidenceContract, unknown> = object<CareEvidenceContract>({
-  contract_id: int64StringOrNumber,
-  school_id: int64StringOrNumber,
+  contract_id: int64String,
+  school_id: int64String,
   school_name: str,
   child_first_name: str,
   child_last_name: str,
@@ -74,9 +74,9 @@ export const CareEvidenceSetSchema: z.ZodType<CareEvidenceSet, unknown> = object
 
 /** Go: parentbillinghttp.CareEvidenceRequest */
 export interface CareEvidenceRequest {
-  contract_id?: number;
+  contract_id?: string;
   kind?: string;
-  rule_id?: number | null;
+  rule_id?: string | null;
   valid_from?: string | null;
   valid_until?: string | null;
   evidence?: string;

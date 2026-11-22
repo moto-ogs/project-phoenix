@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	scheduleModels "github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain/schedulerecords"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // conflictFingerprintLength is the length of the persisted fingerprint: the
@@ -115,7 +116,7 @@ func (d *conflictDetection) appendPairStaffConflicts(out map[int64][]timetable.I
 			a.InstanceID, b.InstanceID, overlapStart, overlapEnd, roomA, roomB)
 		appendMirroredWarnings(out, a, b, timetable.InstanceConflictWarning{
 			Kind:        timetable.ConflictKindStaff,
-			ResourceID:  aRow.StaffID,
+			ResourceID:  ident.ID(aRow.StaffID),
 			CanOverride: true,
 			Fingerprint: fingerprint,
 		}, overlapStart, overlapEnd, "Personal ist von %s–%s auch bei „%s“ eingeplant (anderer Raum).")
@@ -143,7 +144,7 @@ func (d *conflictDetection) appendPairStudentConflicts(out map[int64][]timetable
 			a.InstanceID, b.InstanceID, overlapStart, overlapEnd, 0, 0)
 		appendMirroredWarnings(out, a, b, timetable.InstanceConflictWarning{
 			Kind:        timetable.ConflictKindStudent,
-			ResourceID:  aRow.StudentID,
+			ResourceID:  ident.ID(aRow.StudentID),
 			CanOverride: true,
 			Fingerprint: fingerprint,
 		}, overlapStart, overlapEnd, "Kind ist von %s–%s auch bei „%s“ eingeplant.")
@@ -170,13 +171,13 @@ func appendMirroredWarnings(
 	warning.OverlapEnd = endLabel
 
 	forA := warning
-	forA.ConflictingInstanceID = b.InstanceID
+	forA.ConflictingInstanceID = ident.ID(b.InstanceID)
 	forA.ConflictingTitle = b.Title
 	forA.Message = fmt.Sprintf(messageFormat, startLabel, endLabel, b.Title)
 	out[a.InstanceID] = append(out[a.InstanceID], forA)
 
 	forB := warning
-	forB.ConflictingInstanceID = a.InstanceID
+	forB.ConflictingInstanceID = ident.ID(a.InstanceID)
 	forB.ConflictingTitle = a.Title
 	forB.Message = fmt.Sprintf(messageFormat, startLabel, endLabel, a.Title)
 	out[b.InstanceID] = append(out[b.InstanceID], forB)

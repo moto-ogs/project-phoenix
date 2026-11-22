@@ -194,7 +194,7 @@ func TestLockReopenSnapshotStudents_EmptySnapshot(t *testing.T) {
 	t.Parallel()
 
 	svc := &InstanceLifecycleService{}
-	got, err := svc.lockReopenSnapshotStudents(context.Background(), scheduleModel.ActivityCompletionSnapshot{})
+	got, err := svc.lockReopenSnapshotStudents(context.Background(), &scheduleModel.ActivityCompletionSnapshot{})
 	require.NoError(t, err)
 	assert.Nil(t, got)
 }

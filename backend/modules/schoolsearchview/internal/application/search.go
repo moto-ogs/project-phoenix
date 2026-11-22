@@ -94,7 +94,7 @@ type detailHits struct {
 func newDetailHits(children []schoolsearchview.SearchChild) *detailHits {
 	found := make(map[int64]bool, len(children))
 	for _, child := range children {
-		found[child.ID] = true
+		found[child.ID.Int64()] = true
 	}
 	return &detailHits{found: found, hits: map[int64]*detailHit{}}
 }
@@ -171,7 +171,7 @@ func (d *detailHits) appendTo(children, rows []schoolsearchview.SearchChild) []s
 			if len(children) == schoolsearchview.ChildLimit {
 				return children
 			}
-			hit := d.hits[row.ID]
+			hit := d.hits[row.ID.Int64()]
 			if hit == nil || (hit.match.Field == schoolsearchview.MatchStudentNote) != notes {
 				continue
 			}
@@ -209,8 +209,8 @@ func (s *Search) findNotes(ctx context.Context, text string, notes *schoolsearch
 func (s *Search) resolveCareTeam(ctx context.Context, rows []schoolsearchview.SearchChild, hits map[int64]*detailHit, notes *schoolsearchview.NoteReader) error {
 	pending := make([]int64, 0)
 	for _, row := range rows {
-		if hit := hits[row.ID]; hit != nil && hit.careTeamOnly {
-			pending = append(pending, row.ID)
+		if hit := hits[row.ID.Int64()]; hit != nil && hit.careTeamOnly {
+			pending = append(pending, row.ID.Int64())
 		}
 	}
 	if len(pending) == 0 {
@@ -221,17 +221,17 @@ func (s *Search) resolveCareTeam(ctx context.Context, rows []schoolsearchview.Se
 		return fmt.Errorf("school search: activities of note children: %w", err)
 	}
 	for _, row := range rows {
-		hit := hits[row.ID]
+		hit := hits[row.ID.Int64()]
 		if hit == nil || !hit.careTeamOnly {
 			continue
 		}
-		child := schoolsearchview.NoteChild{GroupID: row.GroupID, SchoolClass: row.SchoolClass, ActivityGroupIDs: activities[row.ID]}
+		child := schoolsearchview.NoteChild{GroupID: row.GroupID, SchoolClass: row.SchoolClass, ActivityGroupIDs: activities[row.ID.Int64()]}
 		switch {
 		case notes.HasChildOf(child):
 		case hit.fallback != nil:
-			hits[row.ID] = &detailHit{match: *hit.fallback}
+			hits[row.ID.Int64()] = &detailHit{match: *hit.fallback}
 		default:
-			delete(hits, row.ID)
+			delete(hits, row.ID.Int64())
 		}
 	}
 	return nil

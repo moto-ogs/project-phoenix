@@ -261,7 +261,7 @@ let roomStudentsState: {
   isLoading?: boolean;
 };
 let activeGroupsState: { data: MockActiveGroup[] };
-let roomsState: { data: MockRoom[] };
+let roomsState: { data?: MockRoom[]; error?: unknown };
 let currentStaffState: { data?: { id: string }; error?: unknown };
 let activeSupervisionsState: { data: MockSupervisor[]; error?: unknown };
 let sourceVisitGroupIDs: Map<string, string> | undefined;
@@ -389,7 +389,7 @@ beforeEach(() => {
     if (key === "rooms-list-{}") {
       return {
         data: roomsState.data,
-        error: null,
+        error: roomsState.error ?? null,
         isLoading: false,
         mutate: mockRefreshMoveRooms,
       };
@@ -1105,6 +1105,33 @@ describe("StudentsInRoomSection", () => {
         ),
       ).toBeInTheDocument();
       expect(screen.getByLabelText("Zielraum")).toBeDisabled();
+    });
+
+    // #2353: without the room list no target looks available; the failure
+    // shows instead of "no other room", and moving waits for the targets.
+    it("shows a failed target list as an error instead of offering no room", async () => {
+      setSWR({ data: { students: [makeStudent({ id: "7" })] } });
+      setBulkData();
+      roomsState = {
+        error: new ApiError("rooms failed", 500, {
+          code: "general.server",
+          instance: "req-rooms",
+        }),
+      };
+
+      render(<StudentsInRoomSection roomId="42" roomName="OGS-Raum 1" />);
+
+      expect(
+        await screen.findByText(
+          catalogText("general.server", "die Liste der Zielräume"),
+        ),
+      ).toBeInTheDocument();
+      expect(screen.queryByLabelText("Zielraum")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/Zurzeit (läuft|hat|beaufsichtigst)/),
+      ).not.toBeInTheDocument();
+      // The children themselves stay listed.
+      expect(screen.getByTestId("compact-student-card-7")).toBeInTheDocument();
     });
 
     it("keeps all active target rooms visible for admins", () => {

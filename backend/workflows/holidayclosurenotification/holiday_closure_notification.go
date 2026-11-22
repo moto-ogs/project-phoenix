@@ -16,6 +16,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 var (
@@ -40,10 +41,10 @@ type Range struct {
 // a click and holds no name, contact or child (decision of 10.11.2026).
 type ClosureNotice struct {
 	Token        string     `json:"token"`
-	ID           int64      `json:"id"`
-	SchoolID     int64      `json:"school_id"`
+	ID           ident.ID   `json:"id"`
+	SchoolID     ident.ID   `json:"school_id"`
 	SchoolName   string     `json:"school_name,omitempty"`
-	ClosingDayID int64      `json:"closing_day_id"`
+	ClosingDayID ident.ID   `json:"closing_day_id"`
 	Reason       string     `json:"reason"`
 	Previous     *Range     `json:"previous"`
 	Current      *Range     `json:"current"`

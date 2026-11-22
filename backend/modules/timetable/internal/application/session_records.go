@@ -77,10 +77,10 @@ func listActiveSessionInstances(ctx context.Context, reads ports.LegacyInstanceR
 // spontaneous, active instance whatever the input says about either.
 func (r SessionRecords) CreateMirroredSessionInstance(ctx context.Context, input timetable.ScheduledInstance) (int64, error) {
 	row := &schedule.ActivityInstance{
-		Date: calendar.Date(input.Date), ActivityGroupID: input.ActivityGroupID, CalendarPeriodID: input.CalendarPeriodID, Title: input.Title, Description: input.Description,
-		RoomID: input.RoomID,
-		Status: schedule.InstanceStatusActive, ActiveGroupID: input.ActiveGroupID, IsSpontaneous: true,
-		CreatedBy: input.CreatedBy, StartedBy: input.StartedBy, StartedAt: input.StartedAt,
+		Date: calendar.Date(input.Date), ActivityGroupID: (*int64)(input.ActivityGroupID), CalendarPeriodID: (*int64)(input.CalendarPeriodID), Title: input.Title, Description: input.Description,
+		RoomID: input.RoomID.Int64(),
+		Status: schedule.InstanceStatusActive, ActiveGroupID: (*int64)(input.ActiveGroupID), IsSpontaneous: true,
+		CreatedBy: (*int64)(input.CreatedBy), StartedBy: (*int64)(input.StartedBy), StartedAt: input.StartedAt,
 		RequiredStaff: input.RequiredStaff, ListKind: input.ListKind, UnderstaffedAck: input.UnderstaffedAck,
 		UnderstaffedNote: input.UnderstaffedNote, CancelReason: input.CancelReason, Notes: input.Notes,
 	}

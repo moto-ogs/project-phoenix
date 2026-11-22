@@ -1,32 +1,48 @@
-import {
-  holidayAddressRequirement,
-  holidayHealthRequirement,
-  holidayLegalBlocks,
-  type HolidayLegalBlockWire,
-} from "~/lib/holiday-form-field";
 // Öffentliche Ferienanmeldung (#4661): der eine Link eines Ferienzeitraums
 // für alle Schulen des Trägers, ohne Elternkonto.
 
 import { unavailableApiError, type ApiError } from "~/lib/api-error";
+import { knownEnum } from "~/lib/contract/known-enum";
+import { requiredDay } from "~/lib/contract/required-day";
+import type { HolidayRegistrationFamilyResponse as WireHolidayRegistrationFamily } from "~/lib/contract/parent-holiday-registrations.generated";
 import type {
-  HolidayFormField,
-  HolidayFormVersion,
+  HolidayContribution as WireHolidayContribution,
+  HolidayQuoteRequest as WireHolidayQuoteRequest,
+} from "~/lib/contract/traeger-holiday-quotes.generated";
+import type {
+  HolidayRegistrationRequest as WireHolidayRegistrationRequest,
+  HolidayRegistrationSubmitResponse as WireHolidayRegistrationSubmitResponse,
+  PublicHolidayRegistrationOfferResponse as WireHolidayRegistrationOffer,
+} from "~/lib/contract/traeger-holiday-registrations.generated";
+import {
+  knownHolidayPlacement,
+  type HolidayPlacement,
+} from "~/lib/parent-holiday-registration-entries";
+import {
+  holidayFormVersionFromContract,
+  type HolidayFormVersion,
 } from "~/lib/holiday-form-field";
 import { readEnrollmentError } from "~/lib/enrollment-api-error";
 import {
-  type BackendContribution,
   contributionFromBackend,
   type HolidayContribution,
 } from "~/lib/holiday-contribution";
 import { type NewUploadValue, postUpload } from "~/lib/enrollment-uploads";
 import {
-  type BackendConsentTexts,
   consentTextsFromBackend,
   type HolidayConsentTexts,
 } from "~/lib/holiday-consent-texts";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "HolidayRegistrationApi" });
+
+// Go does not register these sets; the contract types them as string. A value
+// this build does not know stays undefined instead of passing as a known one.
+const BOOKING_UNIT_VALUES = ["week", "day"] as const;
+const ALLOCATION_MODE_VALUES = ["arrival", "criteria"] as const;
+const HOLIDAY_WISH_MODE_VALUES = ["off", "priority", "wish_only"] as const;
+const CRITERION_SCOPE_VALUES = ["family", "child"] as const;
+const HOLIDAY_WISH_VALUES = ["yes", "no"] as const;
 
 export interface HolidayRegistrationTimeModel {
   readonly id: string;
@@ -46,8 +62,11 @@ export interface HolidayRegistrationWeek {
   readonly endsOn: string;
   readonly hostSchoolName: string;
   readonly timeModels: readonly HolidayRegistrationTimeModel[];
-  /** "day": parents choose single days and prices are per day (#4701). */
-  readonly bookingUnit?: "week" | "day";
+  /**
+   * "day": parents choose single days and prices are per day (#4701).
+   * undefined (a unit this build does not know) books like a week.
+   */
+  readonly bookingUnit?: (typeof BOOKING_UNIT_VALUES)[number];
   /**
    * The days a week by days offers, Monday to Friday without the days
    * without care, "YYYY-MM-DD".
@@ -85,7 +104,7 @@ interface HolidayRegistrationSchool {
 interface HolidayRegistrationCriterion {
   readonly id: string;
   readonly question: string;
-  readonly scope: "family" | "child";
+  readonly scope: (typeof CRITERION_SCOPE_VALUES)[number];
 }
 
 /** The published holiday period behind a link. */
@@ -115,7 +134,7 @@ export interface HolidayRegistrationOffer {
    * "criteria": the office gives the places after the Träger's criteria;
    * nobody gets a place at once (#4700). Absent reads as arrival.
    */
-  readonly allocationMode?: "arrival" | "criteria";
+  readonly allocationMode?: (typeof ALLOCATION_MODE_VALUES)[number];
   /** The active criteria, only by criteria; empty otherwise. */
   readonly criteria?: readonly HolidayRegistrationCriterion[];
 }
@@ -124,63 +143,12 @@ export interface HolidayRegistrationOffer {
  * "off": the wish does not count; "priority": children without a wish wait
  * behind; "wish_only": only children with a wish can register (#4703).
  */
-type HolidayWishMode = "off" | "priority" | "wish_only";
-
-interface BackendOffer {
-  traeger_name: string;
-  name: string;
-  registration_opens_on: string;
-  registration_closes_on: string;
-  binding: boolean;
-  notes: string;
-  open: boolean;
-  weeks?:
-    | {
-        id: WireId;
-        starts_on: string;
-        ends_on: string;
-        host_school_name: string;
-        no_care_days?: { date: string; name: string }[] | null;
-        time_models?:
-          | {
-              id: WireId;
-              name: string;
-              starts_at: string;
-              ends_at: string;
-              price_cents: number;
-            }[]
-          | null;
-        booking_unit?: "week" | "day";
-        care_days?: string[] | null;
-        full_days?: string[] | null;
-        lunch_price_cents?: number | null;
-        lunch_days?: number;
-      }[]
-    | null;
-  max_days_per_child?: number | null;
-  schools?: { id: WireId; name: string }[] | null;
-  captcha_site_key: string;
-  form?: {
-    version: number;
-    fields?: HolidayFormField[] | null;
-    legal_blocks?: HolidayLegalBlockWire[] | null;
-    address_requirement?: string | null;
-    health_requirement?: string | null;
-  } | null;
-  consent_texts?: BackendConsentTexts | null;
-  holiday_wish_mode?: HolidayWishMode;
-  allocation_mode?: "arrival" | "criteria";
-  criteria?:
-    { id: WireId; question: string; scope: "family" | "child" }[] | null;
-}
+type HolidayWishMode = (typeof HOLIDAY_WISH_MODE_VALUES)[number];
 
 /**
- * An identifier of the offer as the backend sends it: a number, or a string
- * since the catalog proxy's contract decoder serves the link (#2352).
+ * The registration as the backend reads it; IDs travel as numbers. Its lists
+ * are mutable so the body satisfies the contract's request type.
  */
-type WireId = number | string;
-
-/** The registration as the backend reads it; IDs travel as numbers. */
 export interface HolidayRegistrationPayload {
   readonly guardian: {
     readonly first_name: string;
@@ -195,20 +163,20 @@ export interface HolidayRegistrationPayload {
     readonly postal_code: string;
     readonly city: string;
   };
-  readonly children: readonly {
+  readonly children: {
     readonly first_name: string;
     readonly last_name: string;
     readonly birth_date: string;
-    readonly home_school_id: number;
+    readonly home_school_id: string;
     readonly guest_school_name: string;
     readonly allergies: string;
     readonly medication: string;
     readonly health_notes: string;
-    readonly bookings: readonly {
-      readonly week_id: number;
-      readonly time_model_id: number;
+    readonly bookings: {
+      readonly week_id: string;
+      readonly time_model_id: string;
       /** The chosen days of a week by days (#4701). */
-      readonly days?: readonly string[];
+      readonly days?: string[];
     }[];
     /** Answers to the questions per child, by key (#5198). */
     readonly custom_data: Readonly<Record<string, unknown>>;
@@ -217,8 +185,8 @@ export interface HolidayRegistrationPayload {
     /** Answers to the criteria per child, by criterion ID (#4700). */
     readonly criteria?: Readonly<Record<string, boolean>>;
   }[];
-  readonly emergency_contacts: readonly HolidayContactPayload[];
-  readonly pickup_persons: readonly HolidayContactPayload[];
+  readonly emergency_contacts: HolidayContactPayload[];
+  readonly pickup_persons: HolidayContactPayload[];
   readonly privacy_consent: boolean;
   readonly health_consent: boolean;
   readonly binding_confirmed: boolean;
@@ -227,7 +195,7 @@ export interface HolidayRegistrationPayload {
   readonly declaration_name: string;
   readonly benefits_declared: boolean;
   /** Tokens of the uploaded proofs of benefits (#5238). */
-  readonly benefits_proof_tokens: readonly string[];
+  readonly benefits_proof_tokens: string[];
   readonly captcha_token: string;
   /** The form version the parent answered (#5198). */
   readonly legal_acceptances?: Readonly<Record<string, boolean>>;
@@ -261,64 +229,77 @@ export interface HolidayContactPayload {
   readonly relationship: string;
 }
 
-function offerFromBackend(offer: BackendOffer): HolidayRegistrationOffer {
+/** The days of a list the decoder may leave null, without the empty ones. */
+function presentDays(days: readonly (string | null)[] | null): string[] {
+  return (days ?? []).filter((day): day is string => day !== null);
+}
+
+function offerFromBackend(
+  offer: WireHolidayRegistrationOffer,
+): HolidayRegistrationOffer {
   return {
     traegerName: offer.traeger_name,
     name: offer.name,
-    registrationOpensOn: offer.registration_opens_on,
-    registrationClosesOn: offer.registration_closes_on,
+    registrationOpensOn: requiredDay(
+      offer.registration_opens_on,
+      "HolidayRegistrationOffer.registration_opens_on",
+    ),
+    registrationClosesOn: requiredDay(
+      offer.registration_closes_on,
+      "HolidayRegistrationOffer.registration_closes_on",
+    ),
     binding: offer.binding,
     notes: offer.notes,
     open: offer.open,
     weeks: (offer.weeks ?? []).map((week) => ({
-      id: String(week.id),
-      startsOn: week.starts_on,
-      endsOn: week.ends_on,
+      id: week.id,
+      startsOn: requiredDay(
+        week.starts_on,
+        "HolidayRegistrationWeek.starts_on",
+      ),
+      endsOn: requiredDay(week.ends_on, "HolidayRegistrationWeek.ends_on"),
       hostSchoolName: week.host_school_name,
       noCareDays: (week.no_care_days ?? []).map((day) => ({
-        date: day.date,
+        date: requiredDay(day.date, "HolidayNoCareDay.date"),
         name: day.name,
       })),
       timeModels: (week.time_models ?? []).map((model) => ({
-        id: String(model.id),
+        id: model.id,
         name: model.name,
         startsAt: model.starts_at,
         endsAt: model.ends_at,
         priceCents: model.price_cents,
       })),
-      bookingUnit: week.booking_unit ?? "week",
-      careDays: week.care_days ?? [],
-      fullDays: week.full_days ?? [],
-      lunchPriceCents: week.lunch_price_cents ?? null,
-      lunchDays: week.lunch_days ?? 0,
+      bookingUnit: knownEnum(BOOKING_UNIT_VALUES, week.booking_unit),
+      careDays: presentDays(week.care_days),
+      fullDays: presentDays(week.full_days),
+      lunchPriceCents: week.lunch_price_cents,
+      lunchDays: week.lunch_days,
     })),
-    maxDaysPerChild: offer.max_days_per_child ?? null,
+    maxDaysPerChild: offer.max_days_per_child,
     schools: (offer.schools ?? []).map((school) => ({
-      id: String(school.id),
+      id: school.id,
       name: school.name,
     })),
     captchaSiteKey: offer.captcha_site_key,
-    form: {
-      legalBlocks: holidayLegalBlocks(offer.form?.legal_blocks),
-      version: offer.form?.version ?? 0,
-      fields: offer.form?.fields ?? [],
-      addressRequirement: holidayAddressRequirement(
-        offer.form?.address_requirement,
-      ),
-      healthRequirement: holidayHealthRequirement(
-        offer.form?.health_requirement,
-      ),
-    },
+    // Read only, but a question, legal block or rule this build does not
+    // know fails the read too: leaving it out could hide a required answer
+    // or consent the backend then refuses when the registration arrives.
+    form: holidayFormVersionFromContract(offer.form, "HolidayRegistrationForm"),
     consentTexts: consentTextsFromBackend(offer.consent_texts),
-    holidayWishMode: offer.holiday_wish_mode ?? "off",
-    allocationMode: offer.allocation_mode ?? "arrival",
+    // Go itself answers "off" for a Träger without a choice; the backend
+    // checks every wish again when the registration arrives.
+    holidayWishMode:
+      knownEnum(HOLIDAY_WISH_MODE_VALUES, offer.holiday_wish_mode) ?? "off",
+    allocationMode: knownEnum(ALLOCATION_MODE_VALUES, offer.allocation_mode),
     criteria:
       offer.allocation_mode === "criteria"
-        ? (offer.criteria ?? []).map((criterion) => ({
-            id: String(criterion.id),
-            question: criterion.question,
-            scope: criterion.scope,
-          }))
+        ? (offer.criteria ?? []).flatMap((criterion) => {
+            const scope = knownEnum(CRITERION_SCOPE_VALUES, criterion.scope);
+            return scope === undefined
+              ? []
+              : [{ id: criterion.id, question: criterion.question, scope }];
+          })
         : [],
   };
 }
@@ -362,7 +343,9 @@ export async function fetchHolidayRegistrationOffer(
       "Ferienanmeldung konnte nicht geladen werden",
     );
   }
-  const body = (await response.json()) as { data: BackendOffer };
+  const body = (await response.json()) as {
+    data: WireHolidayRegistrationOffer;
+  };
   return offerFromBackend(body.data);
 }
 
@@ -389,12 +372,8 @@ export function uploadHolidayProof(
 export interface HolidayReceiptPlacement {
   readonly childPosition: number;
   readonly weekId: string;
-  readonly placement: "placed" | "waitlisted" | "pending";
-}
-
-function receiptPlacement(value: string): HolidayReceiptPlacement["placement"] {
-  if (value === "waitlisted" || value === "pending") return value;
-  return "placed";
+  /** undefined: a placement this build does not know. */
+  readonly placement: HolidayPlacement | undefined;
 }
 
 /**
@@ -414,7 +393,7 @@ export async function submitHolidayRegistration(
   const response = await request(registrationPath(token), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(payload satisfies WireHolidayRegistrationRequest),
   });
   if (!response.ok) {
     throw await readError(
@@ -423,27 +402,23 @@ export async function submitHolidayRegistration(
     );
   }
   const body = (await response.json().catch(() => null)) as {
-    data?: {
-      placements?:
-        { child_position: number; week_id: WireId; placement: string }[] | null;
-      status_token?: string | null;
-    };
+    data?: WireHolidayRegistrationSubmitResponse;
   } | null;
   return {
     placements: (body?.data?.placements ?? []).map((entry) => ({
       childPosition: entry.child_position,
-      weekId: String(entry.week_id),
-      placement: receiptPlacement(entry.placement),
+      weekId: entry.week_id,
+      placement: knownHolidayPlacement(entry.placement),
     })),
     statusToken: body?.data?.status_token ?? "",
   };
 }
 
 /** The bookings of one child of the form, for its contribution (#4664). */
-export type HolidayQuoteChild = readonly {
-  readonly week_id: number;
-  readonly time_model_id: number;
-  readonly days?: readonly string[];
+export type HolidayQuoteChild = {
+  readonly week_id: string;
+  readonly time_model_id: string;
+  readonly days?: string[];
   /** The child eats lunch on the care days of the booking (#5631). */
   readonly lunch?: boolean;
 }[];
@@ -470,7 +445,7 @@ export async function quoteHolidayContribution(
           age_rank: ageRanks[index] ?? 0,
         })),
         benefits_declared: benefitsDeclared,
-      }),
+      } satisfies WireHolidayQuoteRequest),
     },
   );
   if (!response.ok) {
@@ -479,7 +454,7 @@ export async function quoteHolidayContribution(
       "Beitrag der Ferienanmeldung konnte nicht berechnet werden",
     );
   }
-  const body = (await response.json()) as { data: BackendContribution };
+  const body = (await response.json()) as { data: WireHolidayContribution };
   return contributionFromBackend(body.data);
 }
 
@@ -547,41 +522,6 @@ export interface HolidayKnownFamily {
   readonly accountProof: string;
 }
 
-interface BackendKnownContact {
-  guardian_profile_id: string;
-  first_name: string;
-  last_name: string;
-  email?: string;
-  phone?: string;
-  relationship_type?: string;
-  full_guardian?: boolean;
-  emergency?: boolean;
-  pickup?: boolean;
-}
-
-interface BackendFamily {
-  guardian: {
-    first_name: string;
-    last_name: string;
-    email: string;
-    phone: string;
-    address?: { street: string; postal_code: string; city: string } | null;
-  };
-  children?:
-    | {
-        student_id: string;
-        school_id: string;
-        first_name: string;
-        last_name: string;
-        birth_date?: string;
-        holiday_wish?: "yes" | "no";
-        holiday_wish_proof?: string;
-        contacts?: BackendKnownContact[] | null;
-      }[]
-    | null;
-  account_proof?: string;
-}
-
 /**
  * Loads the prefill for a parent with an account: the children the parent
  * may register at the schools of the link's Träger, and the parent's contact
@@ -601,7 +541,9 @@ export async function fetchHolidayRegistrationFamily(
       "Bekannte Angaben konnten nicht geladen werden",
     );
   }
-  const { data } = (await response.json()) as { data: BackendFamily };
+  const { data } = (await response.json()) as {
+    data: WireHolidayRegistrationFamily;
+  };
   return {
     guardian: {
       firstName: data.guardian.first_name,
@@ -622,7 +564,7 @@ export async function fetchHolidayRegistrationFamily(
       firstName: child.first_name,
       lastName: child.last_name,
       birthDate: child.birth_date ?? "",
-      holidayWish: child.holiday_wish ?? "",
+      holidayWish: knownEnum(HOLIDAY_WISH_VALUES, child.holiday_wish) ?? "",
       holidayWishProof: child.holiday_wish_proof ?? "",
       contacts: (child.contacts ?? []).map((contact) => ({
         guardianProfileId: contact.guardian_profile_id,
@@ -630,12 +572,12 @@ export async function fetchHolidayRegistrationFamily(
         lastName: contact.last_name,
         email: contact.email ?? "",
         phone: contact.phone ?? "",
-        relationshipType: contact.relationship_type ?? "",
-        fullGuardian: contact.full_guardian ?? false,
-        emergency: contact.emergency ?? false,
-        pickup: contact.pickup ?? false,
+        relationshipType: contact.relationship_type,
+        fullGuardian: contact.full_guardian,
+        emergency: contact.emergency,
+        pickup: contact.pickup,
       })),
     })),
-    accountProof: data.account_proof ?? "",
+    accountProof: data.account_proof,
   };
 }

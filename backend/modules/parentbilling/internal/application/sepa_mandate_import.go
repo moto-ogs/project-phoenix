@@ -394,7 +394,7 @@ func (m *SEPAMandates) applyImport(ctx context.Context, reviewer parentbilling.H
 // its account and stores it with its last collection.
 func (m *SEPAMandates) storeImported(ctx context.Context, reviewer parentbilling.HolidayReviewer, candidate importCandidate) (parentbilling.SEPAMandate, error) {
 	row := candidate.row
-	mandate, iban, err := m.normalizeMandate(parentbilling.SEPAMandateInput{ContractID: row.ContractID, Reference: row.Reference,
+	mandate, iban, err := m.normalizeMandate(parentbilling.SEPAMandateInput{ContractID: row.ContractID.Int64(), Reference: row.Reference,
 		SignedOn: *row.SignedOn, Kind: parentbilling.MandateRecurring, Sequence: row.Sequence, AccountHolder: row.AccountHolder,
 		IBAN: candidate.iban, BIC: row.BIC, Source: parentbilling.MandateFromImport})
 	if err != nil {

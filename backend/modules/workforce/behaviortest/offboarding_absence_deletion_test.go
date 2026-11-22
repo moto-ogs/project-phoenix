@@ -8,12 +8,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func TestNewOffboardingAbsenceDeletionKeepsTheDeletedRowAsPayload(t *testing.T) {
 	t.Parallel()
 	staffID, absenceID, actorID := int64(41), int64(73), int64(29)
-	absence := workforce.StaffAbsence{ID: absenceID, StaffID: staffID, AbsenceType: "vacation", DateStart: "2026-10-12", DateEnd: "2026-10-16"}
+	absence := workforce.StaffAbsence{ID: ident.ID(absenceID), StaffID: ident.ID(staffID), AbsenceType: "vacation", DateStart: "2026-10-12", DateEnd: "2026-10-16"}
 
 	deletion, err := workforce.NewOffboardingAbsenceDeletion(absence, actorID)
 

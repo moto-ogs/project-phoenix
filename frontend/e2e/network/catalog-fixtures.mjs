@@ -24,7 +24,7 @@ export const catalogReads = new Map([
 
 // The shape of GET /api/me/profile in the contract.
 export const profile = {
-  id: 1,
+  id: "1",
   first_name: "Test",
   last_name: "Fixture",
   email: "fixture@example.invalid",

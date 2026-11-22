@@ -48,12 +48,6 @@ func newReq(t *testing.T, method, target string, body interface{}, claims testut
 	return testutil.NewAuthenticatedRequest(t, method, target, body, testutil.WithJWTBearer(token))
 }
 
-// inClassAllDay keeps "Im Unterricht" for the whole day, as a school without a
-// configured care day end does.
-type inClassAllDay struct{}
-
-func (inClassAllDay) InClassStillHolds(context.Context) (bool, error) { return true, nil }
-
 // testContext holds shared test resources
 type testContext struct {
 	db       *bun.DB
@@ -64,14 +58,9 @@ type testContext struct {
 func setupGroupsRoute(t *testing.T, publishers ...*testpkg.RecordingBroadcaster) *testContext {
 	t.Helper()
 
-	db, svc, presence, people, caller := setupGroupsModule(t, publishers...)
+	db, svc, people := setupGroupsModule(t, publishers...)
 
-	// Groups resource requires multiple services and repositories
-	resource := schoolstructurehttp.NewResource(
-		svc.Education,
-		presence.Active,
-		people.People,
-		caller, inClassAllDay{}, transactionFailures.IsConstraintViolation)
+	resource := schoolstructurehttp.NewResource(svc.Education, people.People, transactionFailures.IsConstraintViolation)
 
 	return &testContext{
 		db:       db,
@@ -98,7 +87,7 @@ func setupProtectedRouter(t *testing.T, publishers ...*testpkg.RecordingBroadcas
 // tests assert on.
 type groupListResponse struct {
 	Data []struct {
-		ID int64 `json:"id"`
+		ID testpkg.ID `json:"id"`
 	} `json:"data"`
 	Pagination struct {
 		PageSize     int `json:"page_size"`
@@ -117,7 +106,7 @@ func decodeGroupList(t *testing.T, rr *httptest.ResponseRecorder) groupListRespo
 func (l groupListResponse) ids() []int64 {
 	ids := make([]int64, 0, len(l.Data))
 	for _, group := range l.Data {
-		ids = append(ids, group.ID)
+		ids = append(ids, int64(group.ID))
 	}
 	return ids
 }
@@ -472,107 +461,12 @@ func TestDeleteGroup_WithoutPermission(t *testing.T) {
 }
 
 // =============================================================================
-// GET GROUP STUDENTS TESTS
-// =============================================================================
-
-func TestGetGroupStudents_Success(t *testing.T) {
-	t.Parallel()
-
-	tc, router := setupProtectedRouter(t)
-
-	// Create test group
-	group := testpkg.CreateTestEducationGroup(t, tc.db, "StudentsTest")
-
-	req := newReq(t, "GET", fmt.Sprintf("/groups/%d/students", group.ID), nil, testutil.DefaultTestClaims(), "groups:read")
-
-	rr := testutil.ExecuteRequest(router, req)
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-}
-
-func TestGetGroupStudents_NotFound(t *testing.T) {
-	t.Parallel()
-
-	_, router := setupProtectedRouter(t)
-
-	req := newReq(t, "GET", "/groups/999999/students", nil, testutil.DefaultTestClaims(), "groups:read")
-
-	rr := testutil.ExecuteRequest(router, req)
-	testutil.AssertNotFound(t, rr)
-}
-
-func TestGetGroupStudents_InvalidID(t *testing.T) {
-	t.Parallel()
-
-	_, router := setupProtectedRouter(t)
-
-	req := newReq(t, "GET", "/groups/invalid/students", nil, testutil.DefaultTestClaims(), "groups:read")
-
-	rr := testutil.ExecuteRequest(router, req)
-	testutil.AssertBadRequest(t, rr)
-}
-
-// =============================================================================
-// GET GROUP SUPERVISORS TESTS
-// =============================================================================
-
-func TestGetGroupSupervisors_Success(t *testing.T) {
-	t.Parallel()
-
-	tc, router := setupProtectedRouter(t)
-
-	// Create test group
-	group := testpkg.CreateTestEducationGroup(t, tc.db, "SupervisorsTest")
-
-	req := newReq(t, "GET", fmt.Sprintf("/groups/%d/supervisors", group.ID), nil, testutil.DefaultTestClaims(), "groups:read")
-
-	rr := testutil.ExecuteRequest(router, req)
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-}
-
-func TestGetGroupSupervisors_NotFound(t *testing.T) {
-	t.Parallel()
-
-	_, router := setupProtectedRouter(t)
-
-	req := newReq(t, "GET", "/groups/999999/supervisors", nil, testutil.DefaultTestClaims(), "groups:read")
-
-	rr := testutil.ExecuteRequest(router, req)
-	testutil.AssertNotFound(t, rr)
-}
-
-// =============================================================================
 // GET GROUP SUBSTITUTIONS TESTS
 // =============================================================================
 
 // =============================================================================
 // GROUP WITH STUDENTS TESTS
 // =============================================================================
-
-func TestGetGroupStudents_WithStudent(t *testing.T) {
-	t.Parallel()
-
-	tc, router := setupProtectedRouter(t)
-
-	// Create test group
-	group := testpkg.CreateTestEducationGroup(t, tc.db, "WithStudentTest")
-
-	// Create a student and assign to the group
-	student := testpkg.CreateTestStudent(t, tc.db, "GroupStudent", "Test", "1a")
-
-	// Assign student to group
-	_, err := tc.db.NewUpdate().
-		Model((*testpkg.Student)(nil)).
-		ModelTableExpr("users.student_school_memberships").
-		Set("group_id = ?", group.ID).
-		Where("student_profile_id = ? AND deleted_at IS NULL", student.ID).
-		Exec(context.Background())
-	require.NoError(t, err)
-
-	req := newReq(t, "GET", fmt.Sprintf("/groups/%d/students", group.ID), nil, testutil.DefaultTestClaims(), "groups:read")
-
-	rr := testutil.ExecuteRequest(router, req)
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-}
 
 // =============================================================================
 // CREATE GROUP ADDITIONAL TESTS
@@ -671,56 +565,8 @@ func TestListGroups_LargePageSize(t *testing.T) {
 }
 
 // =============================================================================
-// GET GROUP SUPERVISORS ADDITIONAL TESTS
-// =============================================================================
-
-func TestGetGroupSupervisors_InvalidID(t *testing.T) {
-	t.Parallel()
-
-	_, router := setupProtectedRouter(t)
-
-	req := newReq(t, "GET", "/groups/invalid/supervisors", nil, testutil.DefaultTestClaims(), "groups:read")
-
-	rr := testutil.ExecuteRequest(router, req)
-	testutil.AssertBadRequest(t, rr)
-}
-
-// =============================================================================
 // GET GROUP SUBSTITUTIONS ADDITIONAL TESTS
 // =============================================================================
-
-// =============================================================================
-// GET GROUP STUDENTS WITH FULL ACCESS TESTS
-// =============================================================================
-
-func TestGetGroupStudents_WithFullAccessAdmin(t *testing.T) {
-	t.Parallel()
-
-	tc, router := setupProtectedRouter(t)
-
-	// Create test group
-	group := testpkg.CreateTestEducationGroup(t, tc.db, "AdminStudentsTest")
-
-	// Create a student with guardian info
-	student := testpkg.CreateTestStudent(t, tc.db, "GuardianTest", "Student", "2a")
-
-	// Assign the group and link the guardian through their owner records.
-	guardian := testpkg.CreateTestGuardianProfileNamed(t, tc.db, "Test", "Guardian", "guardian@test.com")
-	testpkg.CreateTestStudentGuardianLink(t, tc.db, student.ID, guardian.ID, "parent")
-	_, err := tc.db.NewUpdate().
-		Model((*testpkg.Student)(nil)).
-		ModelTableExpr("users.student_school_memberships").
-		Set("group_id = ?", group.ID).
-		Where("student_profile_id = ? AND deleted_at IS NULL", student.ID).
-		Exec(context.Background())
-	require.NoError(t, err)
-
-	// Admin should see full details including guardian
-	req := newReq(t, "GET", fmt.Sprintf("/groups/%d/students", group.ID), nil, testutil.AdminTestClaims(1), "groups:read", "admin:*")
-
-	rr := testutil.ExecuteRequest(router, req)
-	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-}
 
 // =============================================================================
 // LIST GROUPS WITH ROOM FILTER TEST

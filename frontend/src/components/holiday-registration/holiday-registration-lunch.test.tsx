@@ -155,8 +155,8 @@ describe("lunch in the holiday registration", () => {
       false,
     ]);
     expect(quoteBookings(draft, offer)).toEqual([
-      { week_id: 11, time_model_id: 21, lunch: true },
-      { week_id: 13, time_model_id: 23 },
+      { week_id: "11", time_model_id: "21", lunch: true },
+      { week_id: "13", time_model_id: "23" },
     ]);
   });
 });

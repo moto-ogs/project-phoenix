@@ -334,7 +334,7 @@ const HOST_RULES: Record<HostedPortalKey, PortalHostRules> = {
       // invitations, enrollment status and its uploads, holiday registration,
       // contract signing, the demo entry and the school's login image.
       "/api/public/",
-      "/api/tenant/resolve",
+      "/api/auth/tenant/resolve",
       // The staff invitation's school picker (#7369); attaches no session.
       "/api/auth/tenants",
       // The invitation link through the staff proxy's public route (#2352);

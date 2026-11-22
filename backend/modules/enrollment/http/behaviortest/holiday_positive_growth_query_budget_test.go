@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -101,7 +102,7 @@ func newHolidayGrowthFixture(t *testing.T, db *bun.DB, n int) holidayGrowthFixtu
 	require.NoError(t, tenant.WithinTenant(tenant.WithUnitOfWork(t.Context(), unit), schoolID, func(ctx context.Context) error {
 		transfer, err := guests.AssignHolidayGuestGroup(ctx, enrollment.HolidayHost{SchoolID: school, AccountID: account.ID, Role: "admin"}, week, group)
 		if err == nil {
-			require.Equal(t, enrollment.HolidayGuestTransfer{WeekID: week, GroupID: group, Guests: n}, transfer)
+			require.Equal(t, enrollment.HolidayGuestTransfer{WeekID: ident.ID(week), GroupID: ident.ID(group), Guests: n}, transfer)
 		}
 		return err
 	}))
@@ -183,12 +184,12 @@ func TestHolidayPositiveGrowthQueryBudget(t *testing.T) {
 				} `json:"data"`
 			}
 			require.NoError(t, json.Unmarshal(dtoRec.Body.Bytes(), &dto))
-			require.Equal(t, f.week, dto.Data.Week.ID)
+			require.Equal(t, ident.ID(f.week), dto.Data.Week.ID)
 			require.Equal(t, n, dto.Data.Week.Participants)
 			require.Equal(t, n, dto.Data.Week.Guests)
 			require.Len(t, dto.Data.Participants, n)
 			for i, child := range dto.Data.Participants {
-				require.Equal(t, f.children[i], child.ChildID)
+				require.Equal(t, ident.ID(f.children[i]), child.ChildID)
 				require.Equal(t, fmt.Sprintf("HolidayChild%02d", i), child.FirstName)
 				require.Equal(t, "Growth", child.LastName)
 				require.Equal(t, "External school", child.GuestSchoolName)
@@ -203,8 +204,8 @@ func TestHolidayPositiveGrowthQueryBudget(t *testing.T) {
 			}
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
 			sheet := body.Data
-			require.Equal(t, f.students[0], sheet.StudentID)
-			require.Equal(t, f.week, sheet.WeekID)
+			require.Equal(t, ident.ID(f.students[0]), sheet.StudentID)
+			require.Equal(t, ident.ID(f.week), sheet.WeekID)
 			require.Equal(t, calendar.NewDate(2099, 7, 6), sheet.StartsOn)
 			require.Equal(t, calendar.NewDate(2099, 7, 10), sheet.EndsOn)
 			require.Equal(t, "Morning care", sheet.TimeModelName)
@@ -259,12 +260,12 @@ func TestHolidayPositiveGrowthQueryBudget(t *testing.T) {
 			var metadata string
 			require.NoError(t, f.db.NewRaw(`SELECT metadata::text FROM audit.data_access_log WHERE tenant_id=? AND resource_type='holiday_participants_export' ORDER BY id DESC LIMIT 1`, f.school).Scan(t.Context(), &metadata))
 			var audit struct {
-				Week         int64  `json:"week_id"`
-				Participants int    `json:"participants"`
-				Format       string `json:"format"`
+				Week         testpkg.ID `json:"week_id"`
+				Participants int        `json:"participants"`
+				Format       string     `json:"format"`
 			}
 			require.NoError(t, json.Unmarshal([]byte(metadata), &audit))
-			require.Equal(t, f.week, audit.Week)
+			require.Equal(t, f.week, int64(audit.Week))
 			require.Equal(t, n, audit.Participants)
 			require.Equal(t, "xlsx", audit.Format)
 			// Denied reads neither expose data nor append successful-read audit rows.
