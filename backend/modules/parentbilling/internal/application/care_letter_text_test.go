@@ -179,6 +179,14 @@ func TestCareLettersPrintTheReductionsOfTheInvoice(t *testing.T) {
 	storno := careLetterText(careCancellationLetter(content))
 	assert.Contains(t, storno, "Geschwister (2. Kind von 3, 50 % weniger; zuerst zählt das Kind mit dem höchsten Beitrag) = 27,01 €")
 	assert.Contains(t, storno, "Storno gesamt = -27,00 €")
+
+	// A reduction for the size of the family (#7765) names the family's
+	// children, not a rank it did not depend on.
+	content.cancellation = nil
+	content.invoice.Reductions[0].SiblingAllChildren = true
+	bySize := careLetterText(careInvoiceLetter(content))
+	assert.Contains(t, bySize, "Geschwister (3 Kinder in der Familie, 50 % weniger) = -27,01 €")
+	assert.NotContains(t, bySize, "2. Kind von 3")
 }
 
 // A letter lands in the parents inbox only when its invoice names the

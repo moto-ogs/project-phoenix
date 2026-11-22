@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Kostenträger-Anteile der Verträge (#4687): welcher Kostenträger (Bildung
 // und Teilhabe, Jugendamt, sonstiger Zuschuss) wie viel vom Monatsbeitrag
 // eines Kindes übernimmt, bis wann, und auf welchen Bescheid es sich stützt.
@@ -42,7 +44,10 @@ import {
   deleteCareCostShare,
   fetchCareCostShares,
 } from "~/lib/traeger-care-cost-shares-api";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 import { labelOf } from "~/lib/label-of";
 
@@ -282,7 +287,11 @@ export default function TraegerKostentraegerPage() {
 
   const exportItems = useTraegerListExportItems({
     download: (format) =>
-      downloadTraegerList("/api/traeger/care-cost-shares/export", format),
+      downloadTraegerList(
+        bffFile("org", "GET /traeger/care-cost-shares/export", {
+          query: listExportQuery(format),
+        }),
+      ),
     scope:
       "Alle Anteile, ohne Suche und Filter. Jeder Download wird protokolliert.",
     fallbackName: "kostentraeger-anteile",

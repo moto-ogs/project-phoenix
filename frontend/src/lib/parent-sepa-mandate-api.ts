@@ -3,14 +3,9 @@
 // es. Der Text des Mandats kommt vom Backend; bestätigt wird genau dieser
 // Text über seine Prüfsumme. Die volle IBAN geht nur hin, nie zurück.
 
-import { apiErrorFromResponse, transportFetch } from "./api-error";
+import { bffJson } from "./bff-fetch";
 import { knownEnum } from "./contract/known-enum";
-import type {
-  SEPAMandateInput as WireSepaMandateInput,
-  SEPAMandateSummary as WireSepaMandate,
-  SEPAMandateText as WireSepaMandateText,
-  SEPAMandateView as WireSepaMandateView,
-} from "./contract/parent-me.generated";
+import type * as parentMeContract from "./contract/parent-me.generated";
 import { requiredDay } from "./contract/required-day";
 
 // Go does not register this set; the contract types it as string. A value
@@ -87,26 +82,7 @@ export interface SepaMandateText {
   readonly accountToken: string;
 }
 
-const path = (organizationId: string, contractId: string) =>
-  `/api/parent/me/documents/${encodeURIComponent(organizationId)}/contracts/${encodeURIComponent(contractId)}/sepa-mandate`;
-
-async function request<T>(url: string, init: RequestInit): Promise<T> {
-  const response = await transportFetch(url, {
-    ...init,
-    cache: "no-store",
-    headers: { "Content-Type": "application/json" },
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `SEPA mandate failed: ${response.status}`,
-    );
-  }
-  const { data } = (await response.json()) as { data: T };
-  return data;
-}
-
-function mapMandate(mandate: WireSepaMandate): SepaMandate {
+function mapMandate(mandate: parentMeContract.SEPAMandateSummary): SepaMandate {
   return {
     id: mandate.id,
     collectionEligible: mandate.collection_eligible,
@@ -130,7 +106,7 @@ function mapMandate(mandate: WireSepaMandate): SepaMandate {
   };
 }
 
-function mapView(view: WireSepaMandateView): SepaMandateView {
+function mapView(view: parentMeContract.SEPAMandateView): SepaMandateView {
   return {
     enabled: view.enabled,
     canManage: view.can_manage,
@@ -154,7 +130,7 @@ function mapView(view: WireSepaMandateView): SepaMandateView {
   };
 }
 
-function inputBody(input: SepaMandateInput): WireSepaMandateInput {
+function inputBody(input: SepaMandateInput): parentMeContract.SEPAMandateInput {
   return {
     account_holder: input.accountHolder,
     iban: input.iban,
@@ -171,9 +147,11 @@ export async function fetchSepaMandate(
   contractId: string,
 ): Promise<SepaMandateView> {
   return mapView(
-    await request<WireSepaMandateView>(path(organizationId, contractId), {
-      method: "GET",
-    }),
+    await bffJson(
+      "parent",
+      "GET /parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate",
+      { params: { organizationId, contractId } },
+    ),
   );
 }
 
@@ -184,14 +162,12 @@ export async function previewSepaMandate(
   input: SepaMandateInput,
   reference?: string,
 ): Promise<SepaMandateText> {
-  const text = await request<WireSepaMandateText>(
-    `${path(organizationId, contractId)}/preview`,
+  const text = await bffJson(
+    "parent",
+    "POST /parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate/preview",
     {
-      method: "POST",
-      body: JSON.stringify({
-        ...inputBody(input),
-        reference: reference ?? "",
-      } satisfies WireSepaMandateInput),
+      params: { organizationId, contractId },
+      body: { ...inputBody(input), reference: reference ?? "" },
     },
   );
   return {
@@ -211,16 +187,20 @@ export async function grantSepaMandate(
   confirmed: Pick<SepaMandateText, "reference" | "textSha256" | "accountToken">,
 ): Promise<SepaMandateView> {
   return mapView(
-    await request<WireSepaMandateView>(path(organizationId, contractId), {
-      method: "POST",
-      body: JSON.stringify({
-        ...inputBody(input),
-        reference: confirmed.reference,
-        text_sha256: confirmed.textSha256,
-        account_token: confirmed.accountToken,
-        holder_confirmed: true,
-      } satisfies WireSepaMandateInput),
-    }),
+    await bffJson(
+      "parent",
+      "POST /parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate",
+      {
+        params: { organizationId, contractId },
+        body: {
+          ...inputBody(input),
+          reference: confirmed.reference,
+          text_sha256: confirmed.textSha256,
+          account_token: confirmed.accountToken,
+          holder_confirmed: true,
+        },
+      },
+    ),
   );
 }
 
@@ -230,12 +210,10 @@ export async function revokeSepaMandate(
   contractId: string,
 ): Promise<SepaMandateView> {
   return mapView(
-    await request<WireSepaMandateView>(
-      `${path(organizationId, contractId)}/revoke`,
-      {
-        method: "POST",
-        body: "{}",
-      },
+    await bffJson(
+      "parent",
+      "POST /parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate/revoke",
+      { params: { organizationId, contractId } },
     ),
   );
 }

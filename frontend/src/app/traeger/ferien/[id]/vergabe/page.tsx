@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Vergabe nach Kriterien (#4700): moto sortiert die offenen Anmeldungen jeder
 // Woche nach den Kriterien des Trägers vor, dann nach Eingang. Das ist nur
 // ein Vorschlag. Das Büro entscheidet jede Anmeldung einzeln oder übernimmt
@@ -53,7 +55,10 @@ import {
   type HolidayAllocationWeek,
   MAX_ALLOCATION_DECISIONS,
 } from "~/lib/traeger-holiday-allocation-api";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 
 const logger = createLogger({ component: "TraegerHolidayAllocationPage" });
@@ -205,8 +210,10 @@ export default function TraegerHolidayAllocationPage() {
   const exportItems = useTraegerListExportItems({
     download: (format) =>
       downloadTraegerList(
-        `/api/traeger/holiday-periods/${id}/allocation/export`,
-        format,
+        bffFile("org", "GET /traeger/holiday-periods/{id}/allocation/export", {
+          params: { id },
+          query: listExportQuery(format),
+        }),
       ),
     scope: traegerExportScope(),
     fallbackName: "vergabe",

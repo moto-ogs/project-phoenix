@@ -323,7 +323,8 @@ test("CI JSON classification uses the same fail-closed decision, including both 
     [["frontend/unknown.input", "frontend/src/lib/moved.ts"], "full"],
     [["backend/catalog.json"], "guards"],
     [[".github/workflows/lint.yml"], "guards"],
-    [["scripts/test-changed.sh"], "full"],
+    // The local wrapper only dispatches to this selector; its self-test covers it.
+    [["scripts/test-changed.sh"], "none"],
     [["frontend/src/test/config.ts"], "full"],
   ]) {
     const result = spawnSync(process.execPath, [join(f.root, "scripts/test-frontend-changed.mjs"), "--mode-files"], {
@@ -487,7 +488,6 @@ for (const input of [
   "frontend/src/test/fixtures/probe.ts", "frontend/src/test/setup-common.ts",
   "frontend/package.json", "frontend/pnpm-lock.yaml", "frontend/vitest.config.ts",
   "scripts/test-frontend-changed.mjs", "scripts/test-frontend-changed.test.mjs",
-  "scripts/test-changed.sh", "scripts/test-changed_test.sh",
   ".github/workflows/main.yml", ".github/workflows/test.yml",
 ]) {
   test(`quality exception does not absorb fallback control: ${input}`, t => {

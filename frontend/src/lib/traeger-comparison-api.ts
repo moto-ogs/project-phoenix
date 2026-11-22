@@ -1,4 +1,4 @@
-import { bffJson } from "~/lib/bff-fetch";
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the Träger's school comparison (#4715, ADR 0245): for a window
  * and a choice of schools, eight key figures per school, their average over
@@ -11,13 +11,12 @@ import {
   downloadTraegerList,
   type TraegerListFile,
   type TraegerListFormat,
+  listExportQuery,
 } from "./traeger-list-export";
 import type * as traegerSchoolsContract from "./contract/traeger-schools.generated";
 import { requiredDay } from "./contract/required-day";
 import type { TraegerSchool } from "./traeger-api";
 import type { UtilizationWindow } from "./traeger-utilization-api";
-
-const COMPARISON_PATH = "/api/traeger/schools/comparison";
 
 /** The figure keys, in the order the backend defines them. */
 export const COMPARISON_METRICS = [
@@ -119,10 +118,14 @@ export function downloadTraegerComparison(
   metrics: readonly ComparisonMetric[],
   format: TraegerListFormat,
 ): Promise<TraegerListFile> {
-  return downloadTraegerList(`${COMPARISON_PATH}/export`, format, {
-    from: query.from,
-    to: query.to,
-    schools: query.schoolIds.join(","),
-    metrics: metrics.join(","),
-  });
+  return downloadTraegerList(
+    bffFile("org", "GET /traeger/schools/comparison/export", {
+      query: listExportQuery(format, {
+        from: query.from,
+        to: query.to,
+        schools: query.schoolIds.join(","),
+        metrics: metrics.join(","),
+      }),
+    }),
+  );
 }

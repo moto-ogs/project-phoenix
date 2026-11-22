@@ -230,6 +230,25 @@ describe("guardian-api functions", () => {
       expect(body).toEqual({ first_name: "Johnny" });
     });
 
+    it("sends an emptied e-mail so the backend removes the address", async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({ status: "success", data: mockBackendGuardian }),
+      });
+
+      await updateGuardian("1", { firstName: "Johnny", email: "" });
+
+      const callArgs = vi.mocked(global.fetch).mock.calls[0] as [
+        string,
+        RequestInit,
+      ];
+      expect(JSON.parse(callArgs[1].body as string)).toEqual({
+        first_name: "Johnny",
+        email: "",
+      });
+    });
+
     it("throws the status class code on non-ok response", async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: false,

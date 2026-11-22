@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Ein Jahreslauf (#6219): die Vorschau aller Jahresbescheide nach dem
 // gültigen Vertrag und der Preisliste, und das Ausstellen, das jedem
 // Bescheid seine Nummer gibt. Danach ändern sich die Bescheide nicht mehr;
@@ -51,7 +53,10 @@ import {
   fetchCareNoticeRun,
   releaseCareNoticeRun,
 } from "~/lib/traeger-care-notices-api";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 import { labelOf } from "~/lib/label-of";
 const logger = createLogger({ component: "TraegerCareNoticeRunPage" });
@@ -233,8 +238,10 @@ export default function TraegerCareNoticeRunPage() {
   const exportItems = useTraegerListExportItems({
     download: (format) =>
       downloadTraegerList(
-        `/api/traeger/care-notice-runs/${runId}/export`,
-        format,
+        bffFile("org", "GET /traeger/care-notice-runs/{id}/export", {
+          params: { id: runId },
+          query: listExportQuery(format),
+        }),
       ),
     scope: traegerExportScope(),
     fallbackName: `jahresbescheide-${run?.year ?? ""}`,

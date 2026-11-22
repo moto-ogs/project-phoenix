@@ -13,6 +13,7 @@ import {
   changeTraegerMemberName,
   changeTraegerProfileName,
   fetchTraegerProfile,
+  fetchTraegerInvitation,
   createTraegerBankAccount,
   fetchTraegerMasterData,
   uploadTraegerLogo,
@@ -501,6 +502,36 @@ describe("traeger-api", () => {
     });
     expect(fetchMock.mock.calls[0]![0]).toBe("/api/traeger/accounts");
   });
+
+  it.each([
+    {
+      operation: "preview",
+      request: () => fetchTraegerInvitation("tok/en"),
+      message: "traeger invitation preview failed",
+    },
+    {
+      operation: "acceptance",
+      request: () =>
+        acceptTraegerInvitation("tok/en", {
+          name: "Eva Müller",
+          password: "pw",
+        }),
+      message: "traeger invitation acceptance failed",
+    },
+  ])(
+    "keeps the token out of invitation $operation errors",
+    async ({ request, message }) => {
+      fetchMock.mockResolvedValue(
+        jsonResponse(401, { code: "identity.invalid_credentials" }),
+      );
+
+      await expect(request()).rejects.toMatchObject({
+        message,
+        status: 401,
+        code: "identity.invalid_credentials",
+      });
+    },
+  );
 
   it("accepts an invitation with the password and returns the address", async () => {
     fetchMock.mockResolvedValue(

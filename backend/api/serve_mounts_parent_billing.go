@@ -126,7 +126,7 @@ func NewSEPAMandateHTTP(settings TraegerBrandingSettings, cipher parentbilling.B
 // the Träger still has to enter (#7177) to every member of the Träger and the
 // sources of details; now is the root's clock.
 func NewBillingTermsHTTP(settings TraegerBrandingSettings, details parentbilling.RequiredDetailSources, now func() time.Time) (*parentBillingHTTP.BillingTermsResource, *parentBillingHTTP.RequiredDetailsResource) {
-	contracts := parentBillingCareContracts{contracts: careContractCompose.NewContractVersions()}
+	contracts := parentBillingTermContracts{parentBillingCareContracts{contracts: careContractCompose.NewContractVersions()}}
 	terms, required := parentBillingCompose.NewBillingTerms(contracts, parentBillingSettings{settings: settings}, details, now)
 	requireBilling := common.RequiresPermission(identityaccess.TraegerRightBillingManage)
 	return parentBillingHTTP.NewBillingTermsResource(terms, requireBilling), parentBillingHTTP.NewRequiredDetailsResource(required)
@@ -249,6 +249,35 @@ func (c parentBillingCareContracts) Recipients(ctx context.Context, organization
 	}
 	recipients := make(map[int64]parentbilling.CareRecipient, len(parties))
 	for contractID, party := range parties {
+		recipients[contractID] = parentbilling.CareRecipient{FirstName: party.FirstName, LastName: party.LastName, Email: party.Email}
+	}
+	return recipients, nil
+}
+
+// parentBillingTermContracts are the contracts the deviation of a family may
+// hang on: a draft is none. It can be discarded, and the deviation goes with
+// the contract it was set from (#7770).
+type parentBillingTermContracts struct {
+	parentBillingCareContracts
+}
+
+// Recipients names the party of each contract that is no draft.
+func (c parentBillingTermContracts) Recipients(ctx context.Context, organizationID int64, contractIDs []int64) (map[int64]parentbilling.CareRecipient, error) {
+	return concludedRecipients(ctx, c.contracts, organizationID, contractIDs)
+}
+
+// concludedRecipients translates the invoice recipients and leaves out the
+// contracts that are still drafts.
+func concludedRecipients(ctx context.Context, contracts carecontract.ContractBilling, organizationID int64, contractIDs []int64) (map[int64]parentbilling.CareRecipient, error) {
+	parties, err := contracts.BillingRecipients(ctx, organizationID, contractIDs)
+	if err != nil {
+		return nil, err
+	}
+	recipients := make(map[int64]parentbilling.CareRecipient, len(parties))
+	for contractID, party := range parties {
+		if party.ContractDraft {
+			continue
+		}
 		recipients[contractID] = parentbilling.CareRecipient{FirstName: party.FirstName, LastName: party.LastName, Email: party.Email}
 	}
 	return recipients, nil

@@ -73,7 +73,10 @@ Punkt 7 (Familie `contract:<Vertrag>`).
    Fingerabdruck wie beim Mandatsimport, mit eigenen Fehlercodes
    `parent_billing.family_children_import_*`. Die Zahl gilt ab dem ersten Tag
    des Vertrags, frühestens ab Beginn dieses Fensters. Die Datei wird nie
-   gespeichert.
+   gespeichert. Nachtrag 22.11.2026: Den Beginn nennt jetzt das Büro, je
+   Zeile oder für die Datei, sonst gilt der Tag des Imports
+   ([ADR 0305](0305-geschwisterregel-nach-familiengroesse-und-belegter-beginn-der-kinderzahl.md)
+   Punkt 5).
 6. **Dieselben Regeln für beide Wege** (`decideImportedChildren`): Eine
    bestätigte Zahl, die noch gilt, wird nie überschrieben (`differs`),
    dieselbe Zahl ist `same`, Zeilen einer Familie mit verschiedenen Zahlen

@@ -224,7 +224,7 @@ func (e *careChainEntry) reduceBy(rule *parentbilling.ContributionRule, parts []
 	e.invoice.Reductions = append(e.invoice.Reductions, parentbilling.CareReduction{
 		Kind: rule.Kind, RuleID: rule.ID, Name: rule.Name, ChildRank: rank, FamilyChildren: children,
 		DiscountBasisPoints: rule.DiscountBasisPoints, DiscountCents: rule.DiscountCents, PriceCents: rule.PriceCents,
-		CapCents: rule.CapCents, TariffSiblingPrice: rule.TariffSiblingPrice,
+		CapCents: rule.CapCents, TariffSiblingPrice: rule.TariffSiblingPrice, SiblingAllChildren: rule.SiblingAllChildren,
 		CareOfferingIDs: slices.Clone(rule.CareOfferingIDs), AmountCents: -discount,
 	})
 }
@@ -317,17 +317,31 @@ func compareCareChildren(a, b *rankedCareChild) int {
 }
 
 // countingSchools are the schools whose children a sibling rule counts:
-// the chosen ones, else the rule's own schools.
+// the chosen ones, else the rule's own schools. A rule of the family's size
+// (#7765) counts its own schools with the chosen ones: it reduces every
+// child with a contract there once the family is large enough, so a child
+// at a school of the rule is never left out of its own family.
 func countingSchools(rule *parentbilling.ContributionRule) []int64 {
-	if len(rule.CountSchoolIDs) > 0 {
-		return ident.Int64s(rule.CountSchoolIDs)
+	if len(rule.CountSchoolIDs) == 0 {
+		return ident.Int64s(rule.SchoolIDs)
 	}
-	return ident.Int64s(rule.SchoolIDs)
+	counting := ident.Int64s(rule.CountSchoolIDs)
+	if !rule.SiblingAllChildren {
+		return counting
+	}
+	for _, school := range ident.Int64s(rule.SchoolIDs) {
+		if !slices.Contains(counting, school) {
+			counting = append(counting, school)
+		}
+	}
+	return counting
 }
 
 // applyCareSiblingRule ranks the children of every family that have a
 // position of the rule at a counting school and reduces the invoices at the
-// rule's schools of every child from the rule's rank on.
+// rule's schools of every child the rule chooses: the children from the
+// rule's rank on, or every child of a family of at least that size
+// (SiblingAllChildren, #7765).
 func applyCareSiblingRule(entries []*careChainEntry, rule *parentbilling.ContributionRule, in careChainInput) {
 	counting := countingSchools(rule)
 	counted := []*careChainEntry{}
@@ -342,7 +356,7 @@ func applyCareSiblingRule(entries []*careChainEntry, rule *parentbilling.Contrib
 		for index, child := range children {
 			rank := ahead + index + 1
 			switch {
-			case rank < *rule.SiblingFromChild:
+			case !siblingRuleReduces(rule, rank, total):
 			case rule.TariffSiblingPrice:
 				reduceToSiblingPricesChild(child, rule, rank, total)
 			default:
@@ -350,6 +364,18 @@ func applyCareSiblingRule(entries []*careChainEntry, rule *parentbilling.Contrib
 			}
 		}
 	}
+}
+
+// siblingRuleReduces tells whether a sibling rule reduces a child: by its
+// rank among the family's counted children or, for a rule of the family's
+// size, by that size alone, so the first child too (#7765). The size is the
+// one the rank reads: the confirmed number of a rule that counts the family,
+// else the children with a contract.
+func siblingRuleReduces(rule *parentbilling.ContributionRule, rank, familyChildren int) bool {
+	if rule.SiblingAllChildren {
+		return familyChildren >= *rule.SiblingFromChild
+	}
+	return rank >= *rule.SiblingFromChild
 }
 
 // familySize is how many children a sibling rule counts in a family and how
@@ -375,8 +401,16 @@ func applyCareSiblingRule(entries []*careChainEntry, rule *parentbilling.Contrib
 // with a contract are siblings without one.
 func familySize(children []*rankedCareChild, rule *parentbilling.ContributionRule, in careChainInput, others contractChildren) (total, ahead int) {
 	withContract := len(children)
+	// Without a confirmed number the rank reads the ranked children alone:
+	// a child with a contract but no base price ranks behind them anyway.
+	// The size of the family is no rank: such a child is one of the
+	// family's children with a contract and counts (#7765).
+	contracts := withContract
+	if rule.SiblingAllChildren {
+		contracts += others.unranked
+	}
 	if !rule.CountsFamilyChildren {
-		return withContract, 0
+		return contracts, 0
 	}
 	family := familyOf(children[0].entries[0])
 	stated, ok := in.familyChildren[family]
@@ -384,7 +418,7 @@ func familySize(children []*rankedCareChild, rule *parentbilling.ContributionRul
 		if in.uncounted != nil {
 			noteUncounted(in.uncounted, family, children, rule)
 		}
-		return withContract, 0
+		return contracts, 0
 	}
 	total = max(stated-others.elsewhere, withContract+others.unranked)
 	return total, total - withContract - others.unranked

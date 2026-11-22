@@ -208,6 +208,19 @@ type FamilyBillingInput struct {
 	DebtorNumber    string
 }
 
+// ContractFamilyBilling is the family of a care contract as the Abrechnung
+// sets its deviation without a run (#7770): the party its invoices go to,
+// the key of the family and the deviation it has, nil without one. A
+// contract names its family before the first invoice, so the payment method
+// of a family can be set as soon as its contract exists.
+type ContractFamilyBilling struct {
+	ContractID     ident.ID       `json:"contract_id"`
+	FamilyEmail    string         `json:"family_email"`
+	PartyFirstName string         `json:"party_first_name"`
+	PartyLastName  string         `json:"party_last_name"`
+	Family         *FamilyBilling `json:"family"`
+}
+
 // RunDueDates are the due dates of a run per payment method.
 type RunDueDates map[string]calendar.Date
 
@@ -351,6 +364,10 @@ type BillingTerms interface {
 	SaveServiceTerms(ctx context.Context, reviewer HolidayReviewer, terms ServiceTerms) ([]ServiceTerms, error)
 	// ListFamilyBilling lists the deviations of the families, by family.
 	ListFamilyBilling(ctx context.Context, reviewer HolidayReviewer) ([]FamilyBilling, error)
+	// FamilyBillingOfContract reads the family of a contract with the
+	// deviation it has (#7770). A contract that is none of the Träger is
+	// ErrFamilyUnknown.
+	FamilyBillingOfContract(ctx context.Context, reviewer HolidayReviewer, contractID int64) (ContractFamilyBilling, error)
 	// SaveFamilyBilling sets the deviation of the family of a contract; an
 	// applicant without payment deviation removes it.
 	SaveFamilyBilling(ctx context.Context, reviewer HolidayReviewer, input FamilyBillingInput) (*FamilyBilling, error)

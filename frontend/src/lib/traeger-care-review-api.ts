@@ -1,4 +1,4 @@
-import { bffJson } from "~/lib/bff-fetch";
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the review of a monthly run before its release (#5916): the
  * schools a new run may bill, the invoice date, the exclusion of single
@@ -14,8 +14,6 @@ import {
   detailFromBackend,
 } from "./traeger-care-billing-api";
 
-const RUNS_PATH = "/api/traeger/care-billing-runs";
-
 /** A school of the Träger for a new run, with the open run that bills it. */
 export interface CareRunSchool {
   readonly id: string;
@@ -25,10 +23,6 @@ export interface CareRunSchool {
 }
 
 export type CareReviewFormat = "pdf" | "xlsx" | "csv";
-
-function runPath(runId: string): string {
-  return `${RUNS_PATH}/${encodeURIComponent(runId)}`;
-}
 
 /** The schools a new run of `month` ("YYYY-MM-01") may bill. */
 export async function fetchCareRunSchools(
@@ -112,8 +106,10 @@ export async function downloadCareRunReview(
   format: CareReviewFormat,
 ): Promise<BillingFile> {
   return billingFile(
-    `${runPath(runId)}/review-export?format=${format}`,
-    {},
+    bffFile("org", "GET /traeger/care-billing-runs/{id}/review-export", {
+      params: { id: runId },
+      query: { format },
+    }),
     `pruefliste.${format}`,
   );
 }
