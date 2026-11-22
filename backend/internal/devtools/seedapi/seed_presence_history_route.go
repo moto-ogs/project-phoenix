@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // presenceHistoryRouteChunk is how many days one request carries. The route
@@ -14,17 +15,17 @@ import (
 const presenceHistoryRouteChunk = 500
 
 type presenceHistoryRouteDay struct {
-	StudentID apiID                      `json:"student_id"`
+	StudentID ident.ID                   `json:"student_id"`
 	Date      calendar.Date              `json:"date"`
-	DeviceID  apiID                      `json:"device_id"`
+	DeviceID  ident.ID                   `json:"device_id"`
 	CheckIn   time.Time                  `json:"check_in"`
 	CheckOut  time.Time                  `json:"check_out"`
 	Visit     *presenceHistoryRouteVisit `json:"visit,omitempty"`
 }
 
 type presenceHistoryRouteVisit struct {
-	ActivityGroupID apiID     `json:"activity_group_id"`
-	RoomID          apiID     `json:"room_id"`
+	ActivityGroupID ident.ID  `json:"activity_group_id"`
+	RoomID          ident.ID  `json:"room_id"`
 	SessionStart    time.Time `json:"session_start"`
 	SessionEnd      time.Time `json:"session_end"`
 	Entry           time.Time `json:"entry"`
@@ -74,12 +75,12 @@ func presenceHistoryRouteDays(days []PastPresenceDay) []presenceHistoryRouteDay 
 	result := make([]presenceHistoryRouteDay, 0, len(days))
 	for _, day := range days {
 		wire := presenceHistoryRouteDay{
-			StudentID: apiID(day.StudentID), Date: day.Date, DeviceID: apiID(day.DeviceID),
+			StudentID: ident.ID(day.StudentID), Date: day.Date, DeviceID: ident.ID(day.DeviceID),
 			CheckIn: day.CheckIn, CheckOut: day.CheckOut,
 		}
 		if visit := day.Visit; visit != nil {
 			wire.Visit = &presenceHistoryRouteVisit{
-				ActivityGroupID: apiID(visit.ActivityGroupID), RoomID: apiID(visit.RoomID),
+				ActivityGroupID: ident.ID(visit.ActivityGroupID), RoomID: ident.ID(visit.RoomID),
 				SessionStart: visit.SessionStart, SessionEnd: visit.SessionEnd,
 				Entry: visit.Entry, Exit: visit.Exit,
 			}

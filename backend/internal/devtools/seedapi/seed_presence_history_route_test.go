@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -61,7 +62,7 @@ func TestOperatorPresenceHistoryWriterPostsChunksAsOperator(t *testing.T) {
 	assert.Equal(t, []int{500, 500, 100}, sizes, "no request exceeds the route's limit")
 	assert.Equal(t, []string{"Bearer operator-token", "Bearer operator-token", "Bearer operator-token"}, auths)
 	assert.Equal(t, date, first.Date)
-	assert.Equal(t, apiID(deviceID), first.DeviceID)
+	assert.Equal(t, ident.ID(deviceID), first.DeviceID)
 	assert.True(t, first.CheckIn.Equal(checkIn))
 	require.NotNil(t, first.Visit)
 	visit := *first.Visit

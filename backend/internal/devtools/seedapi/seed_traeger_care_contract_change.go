@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedCareContractChange lets the parents of the first active contract
@@ -20,9 +22,9 @@ func seedCareContractChange(rt *Runtime, auth AuthRef) (bool, error) {
 	var list struct {
 		Data struct {
 			Contracts []struct {
-				ID         apiID  `json:"id"`
-				PartyEmail string `json:"party_email"`
-				StudentID  *apiID `json:"student_id"`
+				ID         ident.ID  `json:"id"`
+				PartyEmail string    `json:"party_email"`
+				StudentID  *ident.ID `json:"student_id"`
 			} `json:"contracts"`
 		} `json:"data"`
 	}

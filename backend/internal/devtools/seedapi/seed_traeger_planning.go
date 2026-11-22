@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Einsatzplanung of the demo Träger (#4708): next week every person with
@@ -31,13 +33,13 @@ var seedPlanningSkips = map[string]bool{
 }
 
 type seedPlanningPerson struct {
-	RecordID apiID `json:"staff_record_id"`
+	RecordID ident.ID `json:"staff_record_id"`
 	Sites    []struct {
-		SchoolID apiID `json:"school_id"`
+		SchoolID ident.ID `json:"school_id"`
 	} `json:"sites"`
 	Shifts []struct {
-		SchoolID         apiID `json:"school_id"`
-		PlannedByTraeger bool  `json:"planned_by_traeger"`
+		SchoolID         ident.ID `json:"school_id"`
+		PlannedByTraeger bool     `json:"planned_by_traeger"`
 	} `json:"shifts"`
 }
 

@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedTraegerStaffProofStep seeds the Nachweise of the Personalstamm
@@ -28,9 +29,9 @@ const (
 )
 
 type seedProofKind struct {
-	ID          apiID  `json:"id"`
-	StandardKey string `json:"standard_key"`
-	Name        string `json:"name"`
+	ID          ident.ID `json:"id"`
+	StandardKey string   `json:"standard_key"`
+	Name        string   `json:"name"`
 }
 
 // seedProofPlan is the proof mix of one record: days back from today for
@@ -116,7 +117,7 @@ func seedTraegerStaffRecordIDs(client *Client, auth AuthRef) ([]int64, error) {
 	var envelope struct {
 		Data struct {
 			Records []struct {
-				ID apiID `json:"id"`
+				ID ident.ID `json:"id"`
 			} `json:"records"`
 		} `json:"data"`
 	}
@@ -172,10 +173,10 @@ func seedMapSchoolProofKinds(client *Client, auth AuthRef, police int64) error {
 		return fmt.Errorf("read the school proof kinds: %w", err)
 	}
 	var schools []struct {
-		SchoolID apiID `json:"school_id"`
+		SchoolID ident.ID `json:"school_id"`
 		Kinds    []struct {
-			SchoolTypeID apiID  `json:"school_type_id"`
-			Name         string `json:"name"`
+			SchoolTypeID ident.ID `json:"school_type_id"`
+			Name         string   `json:"name"`
 		} `json:"kinds"`
 	}
 	if err := seedDataList(raw, &schools); err != nil {

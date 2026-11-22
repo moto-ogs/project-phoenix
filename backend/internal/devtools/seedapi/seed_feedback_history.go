@@ -6,16 +6,17 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // PastFeedback is one past rating of a child (#5029), as the kiosk records
 // one when the child leaves or after lunch.
 type PastFeedback struct {
-	Value           string `json:"value"`
-	Day             string `json:"day"`
-	Time            string `json:"time"`
-	StudentID       apiID  `json:"student_id"`
-	IsMensaFeedback bool   `json:"is_mensa_feedback"`
+	Value           string   `json:"value"`
+	Day             string   `json:"day"`
+	Time            string   `json:"time"`
+	StudentID       ident.ID `json:"student_id"`
+	IsMensaFeedback bool     `json:"is_mensa_feedback"`
 }
 
 // FeedbackHistoryWriter records the past ratings of one school. No regular
@@ -188,7 +189,7 @@ func PastFeedbackAt(day PastPresenceDay, at time.Time, valueRoll uint32, mensa b
 		Value:           feedbackHistoryValue(valueRoll % 100),
 		Day:             day.Date.String(),
 		Time:            at.In(seedBerlinLocation()).Format("15:04:05"),
-		StudentID:       apiID(day.StudentID),
+		StudentID:       ident.ID(day.StudentID),
 		IsMensaFeedback: mensa,
 	}
 }
