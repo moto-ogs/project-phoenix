@@ -21,15 +21,15 @@ const (
 // probe payload. Dates are explicit candidate weekdays; period + week_pattern
 // optionally reduce them to effective series occurrences.
 type ShiftCoverageRequest struct {
-	Dates                 []string    `json:"dates"`
-	StartTime             string      `json:"start_time"`
-	EndTime               string      `json:"end_time"`
-	StaffIDs              []common.ID `json:"staff_ids"`
-	ExcludeInstanceID     *common.ID  `json:"exclude_instance_id,omitempty"`
-	ConcreteInstanceDate  *string     `json:"concrete_instance_date,omitempty"`
-	ReplanActivityGroupID *common.ID  `json:"replan_activity_group_id,omitempty"`
-	CalendarPeriodID      *common.ID  `json:"calendar_period_id,omitempty"`
-	WeekPattern           *int        `json:"week_pattern,omitempty"`
+	Dates                 []string   `json:"dates"`
+	StartTime             string     `json:"start_time"`
+	EndTime               string     `json:"end_time"`
+	StaffIDs              []ident.ID `json:"staff_ids"`
+	ExcludeInstanceID     *ident.ID  `json:"exclude_instance_id,omitempty"`
+	ConcreteInstanceDate  *string    `json:"concrete_instance_date,omitempty"`
+	ReplanActivityGroupID *ident.ID  `json:"replan_activity_group_id,omitempty"`
+	CalendarPeriodID      *ident.ID  `json:"calendar_period_id,omitempty"`
+	WeekPattern           *int       `json:"week_pattern,omitempty"`
 }
 
 // ShiftCoverageResponse deliberately contains no shift rows; callers receive

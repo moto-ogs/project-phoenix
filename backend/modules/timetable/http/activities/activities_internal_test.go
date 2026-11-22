@@ -6,11 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/moto-ogs/project-phoenix/api/common"
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	httpadapter "github.com/moto-ogs/project-phoenix/modules/timetable/http/activities"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -111,7 +110,7 @@ func TestBatchEnrollmentRequest_Fields(t *testing.T) {
 	t.Parallel()
 
 	req := httpadapter.BatchEnrollmentRequest{
-		StudentIDs: []common.ID{1, 2, 3},
+		StudentIDs: []ident.ID{1, 2, 3},
 	}
 
 	assert.Len(t, req.StudentIDs, 3)
@@ -122,7 +121,7 @@ func TestBatchEnrollmentRequest_EmptyList(t *testing.T) {
 	t.Parallel()
 
 	req := httpadapter.BatchEnrollmentRequest{
-		StudentIDs: []common.ID{},
+		StudentIDs: []ident.ID{},
 	}
 
 	assert.Empty(t, req.StudentIDs)

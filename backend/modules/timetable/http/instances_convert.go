@@ -30,10 +30,10 @@ func (req *convertInstanceToSeriesRequest) Bind(r *http.Request) error {
 }
 
 type convertInstanceToSeriesResponse struct {
-	TemplateID       common.ID   `json:"template_id"`
-	TimeframeID      common.ID   `json:"timeframe_id"`
-	ScheduleIDs      []common.ID `json:"schedule_ids"`
-	LinkedInstanceID common.ID   `json:"linked_instance_id"`
+	TemplateID       ident.ID   `json:"template_id"`
+	TimeframeID      ident.ID   `json:"timeframe_id"`
+	ScheduleIDs      []ident.ID `json:"schedule_ids"`
+	LinkedInstanceID ident.ID   `json:"linked_instance_id"`
 }
 
 // convertInstanceToSeries handles POST /instances/{id}/convert-to-series.

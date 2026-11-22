@@ -7,7 +7,6 @@ import (
 	strings "strings"
 	time "time"
 
-	common "github.com/moto-ogs/project-phoenix/api/common"
 	careplan "github.com/moto-ogs/project-phoenix/modules/careplan"
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
@@ -15,44 +14,44 @@ import (
 
 // ArrivalScheduleResponse represents an arrival schedule in API responses
 type ArrivalScheduleResponse struct {
-	ID              common.ID `json:"id"`
-	StudentID       common.ID `json:"student_id"`
-	Weekday         int       `json:"weekday"`
-	WeekdayName     string    `json:"weekday_name"`
-	ExpectedArrival string    `json:"expected_arrival"` // HH:MM, empty when no time is known yet
-	Notes           *string   `json:"notes,omitempty"`
+	ID              ident.ID `json:"id"`
+	StudentID       ident.ID `json:"student_id"`
+	Weekday         int      `json:"weekday"`
+	WeekdayName     string   `json:"weekday_name"`
+	ExpectedArrival string   `json:"expected_arrival"` // HH:MM, empty when no time is known yet
+	Notes           *string  `json:"notes,omitempty"`
 	// Source says where ExpectedArrival comes from: "class_schedule" = the
 	// child's class timetable, "staff" = a deliberate per-child deviation.
 	// SourceClass names the class in the first case (#2414).
-	Source      string    `json:"source,omitempty"`
-	SourceClass string    `json:"source_class,omitempty"`
-	CreatedBy   common.ID `json:"created_by"`
-	CreatedAt   string    `json:"created_at"`
-	UpdatedAt   string    `json:"updated_at"`
+	Source      string   `json:"source,omitempty"`
+	SourceClass string   `json:"source_class,omitempty"`
+	CreatedBy   ident.ID `json:"created_by"`
+	CreatedAt   string   `json:"created_at"`
+	UpdatedAt   string   `json:"updated_at"`
 }
 
 // StudentArrivalExceptionResponse represents an arrival exception in API responses
 type StudentArrivalExceptionResponse struct {
-	ID              common.ID `json:"id"`
-	StudentID       common.ID `json:"student_id"`
-	ExceptionDate   string    `json:"exception_date"`             // YYYY-MM-DD format
-	ExpectedArrival *string   `json:"expected_arrival,omitempty"` // HH:MM or null
-	Reason          *string   `json:"reason,omitempty"`
-	Source          string    `json:"source"` // "staff" or "guardian" (parent-set)
-	CreatedBy       common.ID `json:"created_by"`
-	CreatedAt       string    `json:"created_at"`
-	UpdatedAt       string    `json:"updated_at"`
+	ID              ident.ID `json:"id"`
+	StudentID       ident.ID `json:"student_id"`
+	ExceptionDate   string   `json:"exception_date"`             // YYYY-MM-DD format
+	ExpectedArrival *string  `json:"expected_arrival,omitempty"` // HH:MM or null
+	Reason          *string  `json:"reason,omitempty"`
+	Source          string   `json:"source"` // "staff" or "guardian" (parent-set)
+	CreatedBy       ident.ID `json:"created_by"`
+	CreatedAt       string   `json:"created_at"`
+	UpdatedAt       string   `json:"updated_at"`
 }
 
 // ArrivalNoteResponse represents an arrival note in API responses
 type ArrivalNoteResponse struct {
-	ID        common.ID `json:"id"`
-	StudentID common.ID `json:"student_id"`
-	NoteDate  string    `json:"note_date"` // YYYY-MM-DD format
-	Content   string    `json:"content"`
-	CreatedBy common.ID `json:"created_by"`
-	CreatedAt string    `json:"created_at"`
-	UpdatedAt string    `json:"updated_at"`
+	ID        ident.ID `json:"id"`
+	StudentID ident.ID `json:"student_id"`
+	NoteDate  string   `json:"note_date"` // YYYY-MM-DD format
+	Content   string   `json:"content"`
+	CreatedBy ident.ID `json:"created_by"`
+	CreatedAt string   `json:"created_at"`
+	UpdatedAt string   `json:"updated_at"`
 }
 
 // ArrivalDataResponse represents combined arrival data
@@ -94,8 +93,8 @@ const maxArrivalScheduleDateRangeDays = 7
 // schedules for exactly one filtered student cohort.
 type BulkUpsertArrivalScheduleRequest struct {
 	SchoolClass string                          `json:"school_class"`
-	GroupID     common.ID                       `json:"group_id"`
-	StudentIDs  []common.ID                     `json:"student_ids"`
+	GroupID     ident.ID                        `json:"group_id"`
+	StudentIDs  []ident.ID                      `json:"student_ids"`
 	Schedules   []careplan.ArrivalScheduleInput `json:"schedules"`
 }
 

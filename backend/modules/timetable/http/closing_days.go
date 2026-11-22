@@ -50,12 +50,12 @@ func (req *ClosingDayRequest) Bind(_ *http.Request) error {
 
 // ClosingDayResponse represents a closing day in API responses
 type ClosingDayResponse struct {
-	ID        common.ID `json:"id"`
-	StartDate string    `json:"start_date"`
-	EndDate   string    `json:"end_date"`
-	Reason    string    `json:"reason"`
-	CreatedAt string    `json:"created_at"`
-	UpdatedAt string    `json:"updated_at"`
+	ID        ident.ID `json:"id"`
+	StartDate string   `json:"start_date"`
+	EndDate   string   `json:"end_date"`
+	Reason    string   `json:"reason"`
+	CreatedAt string   `json:"created_at"`
+	UpdatedAt string   `json:"updated_at"`
 	// Traeger marks a closing day the school's Träger planned (#4702): it
 	// counts like the school's own, but only the Träger-Büro changes it.
 	Traeger bool `json:"traeger"`

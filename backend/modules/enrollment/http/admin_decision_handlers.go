@@ -10,12 +10,12 @@ import (
 	"time"
 
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/go-chi/render"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // AdminRequestSummary is the wire shape for admin list-style responses.
@@ -124,7 +124,7 @@ type AdminRequestChild struct {
 	Status           string     `json:"status"`
 	StatusReason     *string    `json:"status_reason,omitempty"`
 	ReviewedAt       *time.Time `json:"reviewed_at,omitempty"`
-	ReviewedBy       *common.ID `json:"reviewed_by,omitempty"`
+	ReviewedBy       *ident.ID  `json:"reviewed_by,omitempty"`
 	ActivationMode   string     `json:"activation_mode"`
 	CreatedStudentID string     `json:"created_student_id,omitempty"`
 	// MatchedStudentID is the enrolled child the approval renews instead of

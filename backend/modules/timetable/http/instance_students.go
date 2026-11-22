@@ -320,13 +320,13 @@ func attendancePatchFieldErrors(errs []timetable.AttendanceFieldError) []fieldEr
 
 // AttendanceResponse is the on-wire shape of a schedule.instance_students row.
 type AttendanceResponse struct {
-	ID          common.ID `json:"id"`
-	InstanceID  common.ID `json:"instance_id"`
-	StudentID   common.ID `json:"student_id"`
-	Status      string    `json:"status"`
-	Substatus   *string   `json:"substatus"`
-	Note        *string   `json:"note"`
-	CheckedInAt *string   `json:"checked_in_at"`
+	ID          ident.ID `json:"id"`
+	InstanceID  ident.ID `json:"instance_id"`
+	StudentID   ident.ID `json:"student_id"`
+	Status      string   `json:"status"`
+	Substatus   *string  `json:"substatus"`
+	Note        *string  `json:"note"`
+	CheckedInAt *string  `json:"checked_in_at"`
 }
 
 func mapAttendanceToResponse(row *timetable.ScheduledParticipant) AttendanceResponse {

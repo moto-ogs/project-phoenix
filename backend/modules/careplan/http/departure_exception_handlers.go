@@ -44,13 +44,13 @@ func (req *DepartureExceptionRequest) Bind(_ *http.Request) error {
 
 // DepartureExceptionResponse is the Abholart of one child on one day.
 type DepartureExceptionResponse struct {
-	ID            common.ID  `json:"id"`
-	StudentID     common.ID  `json:"student_id"`
-	ExceptionDate string     `json:"exception_date"`
-	DepartureMode string     `json:"departure_mode"`
-	Reason        *string    `json:"reason,omitempty"`
-	CreatedBy     *common.ID `json:"created_by,omitempty"`
-	UpdatedAt     string     `json:"updated_at"`
+	ID            ident.ID  `json:"id"`
+	StudentID     ident.ID  `json:"student_id"`
+	ExceptionDate string    `json:"exception_date"`
+	DepartureMode string    `json:"departure_mode"`
+	Reason        *string   `json:"reason,omitempty"`
+	CreatedBy     *ident.ID `json:"created_by,omitempty"`
+	UpdatedAt     string    `json:"updated_at"`
 }
 
 func mapDepartureExceptionToResponse(value careplan.DepartureException) DepartureExceptionResponse {

@@ -36,15 +36,15 @@ import (
 
 // moveStaffRequest is the POST body.
 type moveStaffRequest struct {
-	StaffID          common.ID  `json:"staff_id"`
-	SourceInstanceID *common.ID `json:"source_instance_id,omitempty"`
+	StaffID          ident.ID  `json:"staff_id"`
+	SourceInstanceID *ident.ID `json:"source_instance_id,omitempty"`
 }
 
 // MoveStaffResponse is the 200 body.
 type MoveStaffResponse struct {
-	TargetInstanceID common.ID  `json:"target_instance_id"`
-	SourceInstanceID *common.ID `json:"source_instance_id,omitempty"`
-	Action           string     `json:"action"`
+	TargetInstanceID ident.ID  `json:"target_instance_id"`
+	SourceInstanceID *ident.ID `json:"source_instance_id,omitempty"`
+	Action           string    `json:"action"`
 	// TimeConflicts lists the person's remaining same-day overlaps with the
 	// target window; CoverageWarnings the Dienstplan gaps for it (#1873).
 	// Both advisory — the writes have already landed in the request's tenant

@@ -3,6 +3,7 @@ package timetablehttp
 import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // CancelInstanceRequest is the optional body of POST /instances/{id}/cancel
@@ -24,7 +25,7 @@ type SchoolVacationAcknowledgedResponse struct {
 
 // TemplateArchivedResponse names the template a delete archived.
 type TemplateArchivedResponse struct {
-	ID common.ID `json:"id"`
+	ID ident.ID `json:"id"`
 }
 
 // PlannedNowResponse lists the caller's blocks of the day.
