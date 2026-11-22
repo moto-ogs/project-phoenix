@@ -366,7 +366,7 @@ export function OgsConversation({
         optimistic: (current, { id }) => ({
           ...current,
           messages: [
-            ...current.messages,
+            ...(current.messages ?? []),
             {
               id,
               kind: "message",

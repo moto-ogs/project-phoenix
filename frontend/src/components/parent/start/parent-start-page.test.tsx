@@ -109,6 +109,7 @@ function announcement(
   overrides: Partial<ParentAnnouncement>,
 ): ParentAnnouncement {
   return {
+    delivery_mode: "informational",
     id: "announcement-1",
     title: "Information der OGS",
     body: "Inhalt",
