@@ -1,4 +1,2 @@
-GET /api/users/ -> basis
 GET /api/users/{id} -> basis
-POST /api/users/ -> basis
 PUT /api/users/{id} -> basis

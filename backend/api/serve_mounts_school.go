@@ -283,7 +283,7 @@ func mountSchoolRoutes(
 		Users: peopleCompose.NewRoomSnapshotPeople(users), Education: education,
 		ListExport: renderer, Now: now,
 	}, logger.With("handler", "rooms"), ProtectedTenantRoutes, transactionFailures.IsConstraintViolation).Router())
-	tenant.Mount("/groups", groupsHTTP.NewResource(education, active, peopleCompose.NewGroupRoutePeople(users), caller, newGroupStudentsInClassDay(settings, now), transactionFailures.IsConstraintViolation).Router(ProtectedTenantRoutes))
+	tenant.Mount("/groups", groupsHTTP.NewResource(education, peopleCompose.NewGroupRoutePeople(users), transactionFailures.IsConstraintViolation).Router(ProtectedTenantRoutes))
 	tenant.Mount("/activities", timetableHTTPAdapter.NewResource(activities, timetableOwner, NewTimetableSupervisorDirectory(users), caller, TimetableHTTPTransactions).Router(ProtectedTenantRoutes))
 	// Parent enrollment (PR 5+).
 	tenant.Mount(enrollmentMount, enrollment.Router(TenantSessionChain))

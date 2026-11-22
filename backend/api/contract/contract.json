@@ -13931,6 +13931,21 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/guardians/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "GuardianCreateRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "GuardianResponse"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/api/guardians/bulk-invite",
       "portals": [
         "tenant"
@@ -14017,6 +14032,17 @@
         "tenant"
       ],
       "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/guardians/{id}/invite",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "GuardianInvitationResponse"
+      }
     },
     {
       "method": "POST",
@@ -52996,6 +53022,81 @@
       ]
     },
     {
+      "name": "GuardianCreateRequest",
+      "go_type": "users.GuardianCreateRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "address_street",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "address_city",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "address_postal_code",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "preferred_contact_method",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "language_preference",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "GuardianDeletePreview",
       "go_type": "users.GuardianDeletePreview",
       "fields": [
@@ -53159,6 +53260,43 @@
         },
         {
           "name": "language_preference",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GuardianInvitationResponse",
+      "go_type": "users.GuardianInvitationResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "guardian_profile_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "expires_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "email_sent",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "token",
           "optional": true,
           "schema": {
             "kind": "string"

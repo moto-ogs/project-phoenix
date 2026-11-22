@@ -335,6 +335,33 @@
     "issue": 2353
   },
   {
+    "scenario": "api.groups.presence20.students.n3",
+    "route": "GET /api/groups/{id}/students",
+    "issue": 7808
+  },
+  {
+    "scenario": "api.groups.presence20.students.n8",
+    "route": "GET /api/groups/{id}/students",
+    "issue": 7808
+  },
+  {
+    "scenario": "api.groups.presence20.supervisors.n3",
+    "route": "GET /api/groups/{id}/supervisors",
+    "issue": 7808
+  },
+  {
+    "scenario": "api.groups.presence20.supervisors.n8",
+    "route": "GET /api/groups/{id}/supervisors",
+    "issue": 7808
+  },
+  {
+    "scenario": "api.guardians.students.http_positive_growth",
+    "route": "GET /api/guardians/{id}/students",
+    "issue": 7808
+  },
+  {
+    "scenario": "api.users.list.positive_growth",
+    "route": "GET /api/users/",
     "scenario": "api.activities.student_enrollments.complete",
     "route": "GET /api/activities/students/{studentId}",
     "issue": 7808

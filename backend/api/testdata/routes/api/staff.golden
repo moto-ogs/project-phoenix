@@ -36,7 +36,6 @@ GET /api/staff/{id}/absences
 GET /api/staff/{id}/avatar
 GET /api/staff/{id}/documents
 GET /api/staff/{id}/documents/{documentId}/download
-GET /api/staff/{id}/groups
 GET /api/staff/{id}/payroll-number
 GET /api/staff/{id}/qualifications
 GET /api/staff/{id}/schedule
