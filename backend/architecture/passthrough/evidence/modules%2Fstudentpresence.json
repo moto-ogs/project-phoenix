@@ -618,13 +618,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (p PresenceOperations) CrossTenantStudents(ctx context.Context, hostingTenantID int64) ([]studentpresence.CrossTenantStudent, error) {\n\trows, err := p.active.GetCrossTenantStudents(ctx, hostingTenantID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]studentpresence.CrossTenantStudent, 0, len(rows))\n\tfor _, row := range rows {\n\t\tresult = append(result, studentpresence.CrossTenantStudent{StudentID: row.StudentID, FirstName: row.FirstName, LastName: row.LastName, GroupName: row.GroupName, HomeTenant: row.HomeTenant})\n\t}\n\treturn result, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/studentpresence/internal/application/presence/PresenceOperations.CrossTenantStudents",
-      "owner": "modules/studentpresence"
-    },
-    {
-      "build": "production",
       "evidence": "func (p PresenceOperations) MoveStudentsToSession(ctx context.Context, studentIDs []int64, activeGroupID int64, auth studentpresence.StudentMoveAuthorization) (studentpresence.StudentMoveResult, error) {\n\tresult, err := p.active.MoveStudentsToActiveGroupAuthorized(ctx, studentIDs, activeGroupID, auth)\n\tif err != nil {\n\t\treturn studentpresence.StudentMoveResult{}, err\n\t}\n\treturn studentMoveResult(result), nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/studentpresence/internal/application/presence/PresenceOperations.MoveStudentsToSession",

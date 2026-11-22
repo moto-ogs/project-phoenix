@@ -42,23 +42,3 @@ func newClaimedSupervisionResponse(row studentpresence.ClaimedSupervision) claim
 		StaffID: ident.ID(row.StaffID), GroupID: ident.ID(row.GroupID), Role: row.Role, StartDate: row.StartDate,
 	}
 }
-
-// crossTenantStudentResponse keeps the wire shape of a hosted child.
-type crossTenantStudentResponse struct {
-	StudentID  int64  `json:"student_id"`
-	FirstName  string `json:"first_name"`
-	LastName   string `json:"last_name"`
-	GroupName  string `json:"group_name"`
-	HomeTenant string `json:"home_tenant"`
-}
-
-func newCrossTenantStudentResponses(rows []studentpresence.CrossTenantStudent) []crossTenantStudentResponse {
-	responses := make([]crossTenantStudentResponse, 0, len(rows))
-	for _, row := range rows {
-		responses = append(responses, crossTenantStudentResponse{
-			StudentID: row.StudentID, FirstName: row.FirstName, LastName: row.LastName,
-			GroupName: row.GroupName, HomeTenant: row.HomeTenant,
-		})
-	}
-	return responses
-}

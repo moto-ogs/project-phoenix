@@ -141,6 +141,5 @@ func (rs *Resource) registerAnalyticsRoutes(r chi.Router, withTx common.Middlewa
 	r.With(common.RequireActiveGroupRead(), withTx).Post("/tracking-indicators", rs.getTrackingIndicators)
 
 	// Cross-tenant students (Ferienbetreuung / holiday care)
-	r.With(common.RequireActiveGroupRead(), withTx).Get("/cross-tenant-students", rs.getCrossTenantStudents)
 
 }
