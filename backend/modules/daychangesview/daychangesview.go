@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Section is the part of the overview an entry belongs to: what concerns
@@ -173,7 +174,7 @@ const (
 
 // Person is somebody an entry names. The ID is the staff record.
 type Person struct {
-	StaffID int64      `json:"staff_id,string"`
+	StaffID ident.ID   `json:"staff_id"`
 	Name    string     `json:"name"`
 	Role    PersonRole `json:"role"`
 	// IsSelf marks the caller, so the frontend can say "du".
@@ -182,8 +183,8 @@ type Person struct {
 
 // Group is the group an entry concerns.
 type Group struct {
-	ID   int64  `json:"id,string"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 // Link is the target of an entry; StaffID is set for the staff pages,
@@ -191,16 +192,16 @@ type Group struct {
 // Vertretungsplan.
 type Link struct {
 	Target     LinkTarget `json:"target"`
-	StaffID    *int64     `json:"staff_id,string,omitempty"`
-	StudentID  *int64     `json:"student_id,string,omitempty"`
-	InstanceID *int64     `json:"instance_id,string,omitempty"`
+	StaffID    *ident.ID  `json:"staff_id,omitempty"`
+	StudentID  *ident.ID  `json:"student_id,omitempty"`
+	InstanceID *ident.ID  `json:"instance_id,omitempty"`
 }
 
 // Child is the child an entry concerns, with what is different today:
 // Status for child_absent, PickupTime ("15:04"; nil: the child does not
 // come) for child_pickup_changed, Note for child_pickup_note.
 type Child struct {
-	StudentID  int64        `json:"student_id,string"`
+	StudentID  ident.ID     `json:"student_id"`
 	FirstName  string       `json:"first_name"`
 	LastName   string       `json:"last_name"`
 	Status     *ChildStatus `json:"status"`
@@ -244,7 +245,7 @@ const (
 // text. Acknowledged is the caller's own acknowledgement; the caller confirms
 // through the notices' existing write path, never through this read.
 type DayNotice struct {
-	ID                      int64          `json:"id,string"`
+	ID                      ident.ID       `json:"id"`
 	Title                   string         `json:"title"`
 	Body                    string         `json:"body"`
 	Priority                NoticePriority `json:"priority"`
@@ -272,15 +273,15 @@ type DayClass struct {
 
 // BlockRoom is the room an entry names.
 type BlockRoom struct {
-	ID   int64  `json:"id,string"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 // BlockActivity is the activity block an entry concerns; its time of day
 // travels in StartsAt and EndsAt.
 type BlockActivity struct {
-	ID    int64  `json:"id,string"`
-	Title string `json:"title"`
+	ID    ident.ID `json:"id"`
+	Title string   `json:"title"`
 }
 
 // SourceEntry is what a source port returns: an entry without its section,
@@ -540,7 +541,7 @@ func foldCoveredBlocks(entries []Entry) []Entry {
 	covering := map[int64]int{}
 	for i, entry := range entries {
 		if (entry.Kind == KindBlockSubstitution || entry.Kind == KindBlockStaffAbsent) && entry.Activity != nil {
-			covering[entry.Activity.ID] = i
+			covering[entry.Activity.ID.Int64()] = i
 		}
 	}
 	if len(covering) == 0 {
@@ -564,7 +565,7 @@ func foldTarget(entry Entry, covering map[int64]int) (int, bool) {
 	if entry.Kind != KindActivityLeadChanged || entry.Activity == nil {
 		return 0, false
 	}
-	at, found := covering[entry.Activity.ID]
+	at, found := covering[entry.Activity.ID.Int64()]
 	return at, found
 }
 

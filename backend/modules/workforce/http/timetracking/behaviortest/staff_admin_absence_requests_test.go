@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,14 +34,14 @@ const (
 )
 
 type absenceRequestItem struct {
-	ID            int64  `json:"id,string"`
-	StaffID       int64  `json:"staff_id,string"`
-	AbsenceType   string `json:"absence_type"`
-	Status        string `json:"status"`
-	StaffName     string `json:"staff_name"`
-	DecidedByName string `json:"decided_by_name"`
-	ApprovedAt    string `json:"approved_at"`
-	DecisionNote  string `json:"decision_note"`
+	ID            ident.ID `json:"id"`
+	StaffID       ident.ID `json:"staff_id"`
+	AbsenceType   string   `json:"absence_type"`
+	Status        string   `json:"status"`
+	StaffName     string   `json:"staff_name"`
+	DecidedByName string   `json:"decided_by_name"`
+	ApprovedAt    string   `json:"approved_at"`
+	DecisionNote  string   `json:"decision_note"`
 }
 
 // insertAbsenceRow writes one active.staff_absences row in the test's tenant
@@ -105,7 +106,7 @@ func decodeAbsenceRequests(t *testing.T, rec *httptest.ResponseRecorder) []absen
 
 func findAbsenceRequest(items []absenceRequestItem, id int64) *absenceRequestItem {
 	for i := range items {
-		if items[i].ID == id {
+		if items[i].ID.Int64() == id {
 			return &items[i]
 		}
 	}

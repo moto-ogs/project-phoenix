@@ -3,6 +3,8 @@ package supervisiondashboard
 import (
 	"context"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Date is a calendar day (YYYY-MM-DD) without clock or zone, the same shape
@@ -233,8 +235,8 @@ type Arrival struct {
 // SupervisionTeacherHint is a Lehrkraft's hint for the OGS for today (#4795), written in
 // moto schule for the child or for its whole class.
 type SupervisionTeacherHint struct {
-	StudentID int64  `json:"student_id,string"`
-	Body      string `json:"body"`
+	StudentID ident.ID `json:"student_id"`
+	Body      string   `json:"body"`
 	// AuthorName is the Lehrkraft's name, empty when the person is gone.
 	AuthorName string `json:"author_name,omitempty"`
 	// SchoolClass is set when the hint is for the whole class.

@@ -1030,7 +1030,7 @@ func TestOffboardStaff_ExcludedFromListsAndPIN(t *testing.T) {
 	listed, err := sc.reposPeople.Staff.ListAllWithPerson(sc.ctx)
 	require.NoError(t, err)
 	for _, s := range listed {
-		assert.NotEqual(t, staff.ID, s.ID, "offboarded staff must not appear in the staff list")
+		assert.NotEqual(t, staff.ID, s.ID.Int64(), "offboarded staff must not appear in the staff list")
 	}
 
 	found, err := sc.reposPeople.Staff.FindByID(sc.ctx, staff.ID)

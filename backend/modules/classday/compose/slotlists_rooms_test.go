@@ -71,7 +71,7 @@ func TestSlotListsRoomEnrichmentPreservesSelectionAndMissingNames(t *testing.T) 
 	require.Len(t, result.Slots, 4, "unselected matching slots remain published")
 	assertSlotRoomNames(t, result.Slots, map[int64]string{firstID: room.Name, secondID: room.Name, missingID: ""})
 	for _, row := range result.Rows {
-		assert.Equal(t, f.instanceID, row.InstanceID)
+		assert.Equal(t, f.instanceID, row.InstanceID.Int64())
 	}
 	options, err := svc.ListOptions(ctx, classday.Date(listDate.String()))
 	require.NoError(t, err)
@@ -93,7 +93,7 @@ func assertSlotRoomNames(t *testing.T, slots []classday.Slot, want map[int64]str
 	t.Helper()
 	got := make(map[int64]string, len(slots))
 	for _, slot := range slots {
-		got[slot.InstanceID] = slot.RoomName
+		got[slot.InstanceID.Int64()] = slot.RoomName
 	}
 	for id, name := range want {
 		require.Contains(t, got, id)

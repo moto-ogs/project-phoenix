@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolsearchview/compose"
 	"github.com/moto-ogs/project-phoenix/modules/transactionruntime/protocol"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/require"
@@ -120,11 +121,11 @@ func TestPhoneQueryFindsTheFamilyInEveryFormat(t *testing.T) {
 		result := search(t, db, tenantID, nil, query, fullScope)
 		require.Len(t, result.Contacts, 1, query)
 		contact := result.Contacts[0]
-		require.Equal(t, mother.ID, contact.ID, query)
+		require.Equal(t, mother.ID, contact.ID.Int64(), query)
 		require.Equal(t, schoolsearchview.MatchPhone, contact.Match.Field)
 		require.Equal(t, "+49 170 1234567", contact.Match.Text)
 		require.Len(t, contact.Children, 1, "a phone hit shows the child")
-		require.Equal(t, child.ID, contact.Children[0].ID)
+		require.Equal(t, child.ID, contact.Children[0].ID.Int64())
 		require.Equal(t, "3a", contact.Children[0].SchoolClass)
 		require.Empty(t, result.Children, "a child has no number of its own")
 		require.Empty(t, result.Rooms)
@@ -154,7 +155,7 @@ func TestPhoneQueryFindsPastedAndExtendedNumbers(t *testing.T) {
 	found := func(query string) []int64 {
 		ids := []int64{}
 		for _, contact := range search(t, db, tenantID, nil, query, fullScope).Contacts {
-			ids = append(ids, contact.ID)
+			ids = append(ids, contact.ID.Int64())
 		}
 		return ids
 	}
@@ -183,7 +184,7 @@ func TestPhoneQueryKeepsStoredNumbersAsTyped(t *testing.T) {
 	for _, query := range []string{"04921 1234567", "4921 1234567", "04921/1234567"} {
 		result := search(t, db, tenantID, nil, query, fullScope)
 		require.Len(t, result.Contacts, 1, query)
-		require.Equal(t, emden.ID, result.Contacts[0].ID, query)
+		require.Equal(t, emden.ID, result.Contacts[0].ID.Int64(), query)
 	}
 }
 
@@ -212,7 +213,7 @@ func TestPhoneExtensionIsOnlyAFallback(t *testing.T) {
 	found := func(query string) []int64 {
 		ids := []int64{}
 		for _, contact := range search(t, db, tenantID, nil, query, fullScope).Contacts {
-			ids = append(ids, contact.ID)
+			ids = append(ids, contact.ID.Int64())
 		}
 		return ids
 	}
@@ -262,9 +263,9 @@ func TestChildDetailsFindParentNotesAndRegistrationAnswers(t *testing.T) {
 
 	notes := search(t, db, tenantID, answers, "oma", fullScope)
 	require.Len(t, notes.Children, 2)
-	require.Equal(t, noted.ID, notes.Children[0].ID)
+	require.Equal(t, noted.ID, notes.Children[0].ID.Int64())
 	require.Equal(t, schoolsearchview.SearchMatch{Field: schoolsearchview.MatchParentNote, Text: "Wird freitags von der Oma abgeholt"}, notes.Children[0].Match)
-	require.Equal(t, swimmer.ID, notes.Children[1].ID, "the answer hit follows the direct hits")
+	require.Equal(t, swimmer.ID, notes.Children[1].ID.Int64(), "the answer hit follows the direct hits")
 	require.Equal(t, schoolsearchview.SearchMatch{Field: schoolsearchview.MatchEnrollmentAnswer, Label: "Seepferdchen vorhanden", Text: "Ja"}, notes.Children[1].Match)
 
 	restricted := search(t, db, tenantID, answers, "oma", schoolsearchview.SearchScope{Children: true})
@@ -290,7 +291,7 @@ func TestAnswerHitsFillUpPastFormerPupils(t *testing.T) {
 
 	result := search(t, db, tenantID, &answerSearch{matches: matches}, "theater", fullScope)
 	require.Len(t, result.Children, 1)
-	require.Equal(t, live.ID, result.Children[0].ID)
+	require.Equal(t, live.ID, result.Children[0].ID.Int64())
 }
 
 // TestAnswerHitShowsTheMatchedPart bounds a long free-text registration
@@ -348,7 +349,7 @@ func TestSearchStaysInsideTheSchool(t *testing.T) {
 
 	result := search(t, db, tenantID, nil, "Quellental", fullScope)
 	require.Len(t, result.Children, 1)
-	require.Equal(t, own.ID, result.Children[0].ID)
+	require.Equal(t, own.ID, result.Children[0].ID.Int64())
 	require.Empty(t, result.Contacts)
 	require.Empty(t, result.Staff)
 	require.Empty(t, result.Rooms)
@@ -365,21 +366,21 @@ func TestStaffRoomsAndGroupsFollowTheirScope(t *testing.T) {
 	group := testpkg.CreateTestEducationGroup(t, db, "Wiesenthal-Füchse")
 
 	result := search(t, db, tenantID, nil, "wiesenthal", fullScope)
-	require.Equal(t, []schoolsearchview.SearchStaff{{ID: staff.ID, FirstName: "Greta", LastName: "Wiesenthal"}}, result.Staff)
+	require.Equal(t, []schoolsearchview.SearchStaff{{ID: ident.ID(staff.ID), FirstName: "Greta", LastName: "Wiesenthal"}}, result.Staff)
 	require.Len(t, result.Rooms, 1)
-	require.Equal(t, room.ID, result.Rooms[0].ID)
+	require.Equal(t, room.ID, result.Rooms[0].ID.Int64())
 	require.Len(t, result.Groups, 1)
-	require.Equal(t, group.ID, result.Groups[0].ID)
+	require.Equal(t, group.ID, result.Groups[0].ID.Int64())
 	reversed := search(t, db, tenantID, nil, "Wiesenthal Greta", fullScope)
 	require.Len(t, reversed.Staff, 1, "a name matches in either order")
-	require.Equal(t, staff.ID, reversed.Staff[0].ID)
+	require.Equal(t, staff.ID, reversed.Staff[0].ID.Int64())
 
 	// Eight digits: the fixtures suffix every room name with a nanosecond
 	// timestamp, which held a four-digit query by chance (#4724).
 	numbered := testpkg.CreateTestRoom(t, db, "Werkraum 47110815")
 	byDigits := search(t, db, tenantID, nil, "47110815", fullScope)
 	require.Len(t, byDigits.Rooms, 1, "digits that read like a phone number still find a room")
-	require.Equal(t, numbered.ID, byDigits.Rooms[0].ID)
+	require.Equal(t, numbered.ID, byDigits.Rooms[0].ID.Int64())
 
 	none := search(t, db, tenantID, nil, "wiesenthal", schoolsearchview.SearchScope{Children: true})
 	require.Empty(t, none.Staff)
@@ -401,7 +402,7 @@ func TestArchivedRoomsStayOutOfTheSearch(t *testing.T) {
 
 	result := search(t, db, tenantID, nil, "bastelkeller", fullScope)
 	require.Len(t, result.Rooms, 1)
-	require.Equal(t, kept.ID, result.Rooms[0].ID)
+	require.Equal(t, kept.ID, result.Rooms[0].ID.Int64())
 }
 
 // TestSearchQueryBudget keeps one search flat in the size of the school:
@@ -502,7 +503,7 @@ func TestNoteHitsFollowTheDirectHitsBeforeTheAnswers(t *testing.T) {
 	result := searchWith(t, db, tenantID, ports, "ausflug", fullScope)
 	ids := []int64{}
 	for _, child := range result.Children {
-		ids = append(ids, child.ID)
+		ids = append(ids, child.ID.Int64())
 	}
 	require.Equal(t, []int64{named.ID, noted.ID, answered.ID}, ids, "direct hit, then the note, then the answer")
 	require.Equal(t, schoolsearchview.MatchName, result.Children[0].Match.Field, "a direct hit keeps its own reason")
@@ -519,7 +520,7 @@ func TestNoteHitsFollowTheDirectHitsBeforeTheAnswers(t *testing.T) {
 	require.NotContains(t, func() []int64 {
 		out := []int64{}
 		for _, child := range searchWith(t, db, tenantID, ports, "ausflug", schoolsearchview.SearchScope{Children: true}).Children {
-			out = append(out, child.ID)
+			out = append(out, child.ID.Int64())
 		}
 		return out
 	}(), noted.ID)
@@ -560,14 +561,14 @@ func TestCareTeamNotesReachOnlyTheCareTeam(t *testing.T) {
 	result := searchWith(t, db, tenantID, ports, "zauber", fullScope)
 	matches := map[int64]schoolsearchview.MatchField{}
 	for _, child := range result.Children {
-		matches[child.ID] = child.Match.Field
+		matches[child.ID.Int64()] = child.Match.Field
 	}
 	require.Equal(t, map[int64]schoolsearchview.MatchField{
 		mine.ID:       schoolsearchview.MatchStudentNote,
 		byActivity.ID: schoolsearchview.MatchStudentNote,
 		answered.ID:   schoolsearchview.MatchEnrollmentAnswer,
 	}, matches, "the stranger's note stays hidden; the answer stays a reason")
-	require.Equal(t, answered.ID, result.Children[2].ID, "a note that fell back to its answer sorts with the answers")
+	require.Equal(t, answered.ID, result.Children[2].ID.Int64(), "a note that fell back to its answer sorts with the answers")
 	require.Len(t, ports.activities.asked, 1, "one activity read for all care team notes")
 	require.Equal(t, []calendar.Date{searchDay}, ports.activities.days, "the activities of the root's day")
 	require.ElementsMatch(t, []int64{mine.ID, byActivity.ID, stranger.ID, answered.ID}, ports.activities.asked[0])

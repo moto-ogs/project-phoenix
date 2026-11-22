@@ -238,7 +238,7 @@ func (s *Store) InsertSuspension(ctx context.Context, organizationID, operatorID
 		Responsible: input.Responsible, ReviewOn: input.ReviewOn, CreatedByOperatorID: optionalOperator(operatorID), CreatedAt: s.now(),
 	}
 	if input.BelegID > 0 {
-		row.BelegID = &input.BelegID
+		row.BelegID = (*int64)(&input.BelegID)
 	}
 	if _, err := db.NewInsert().Model(row).Returning("id, created_at").Exec(ctx); err != nil {
 		return parentbilling.RetentionSuspension{}, fmt.Errorf("parent billing postgres: insert retention suspension: %w", writeError(err))

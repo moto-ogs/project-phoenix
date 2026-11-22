@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const errPasswordsNotMatch = "passwords do not match"
@@ -342,9 +343,9 @@ type LinkedAccountResponse struct {
 // as strings is the project convention for int64 ids (backend int64 to frontend
 // string) and keeps the value intact end to end.
 type SchoolIdentityResponse struct {
-	PersonID  int64 `json:"person_id,string"`
-	StaffID   int64 `json:"staff_id,string"`
-	TeacherID int64 `json:"teacher_id,string,omitempty"`
+	PersonID  ident.ID `json:"person_id"`
+	StaffID   ident.ID `json:"staff_id"`
+	TeacherID ident.ID `json:"teacher_id,omitempty"`
 }
 
 // LinkToTenantRequest represents a request to link an existing account to the current tenant.
@@ -507,11 +508,11 @@ func validateBaseRole(br *string) error {
 
 // RoleResponse represents a role response
 type RoleResponse struct {
-	ID          int64   `json:"id,string"`
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	IsSystem    bool    `json:"is_system"`
-	BaseRole    *string `json:"base_role,omitempty"`
+	ID          ident.ID `json:"id"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	IsSystem    bool     `json:"is_system"`
+	BaseRole    *string  `json:"base_role,omitempty"`
 	// SchoolPortal marks a school role made from the Lehrkraft template: its
 	// accounts use moto schule like the Lehrkraft role (#4574).
 	SchoolPortal bool     `json:"school_portal"`
@@ -545,13 +546,13 @@ func (req *CreatePermissionRequest) Bind(_ *http.Request) error {
 
 // PermissionResponse represents a permission response
 type PermissionResponse struct {
-	ID          int64  `json:"id,string"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Resource    string `json:"resource"`
-	Action      string `json:"action"`
-	CreatedAt   string `json:"created_at"`
-	UpdatedAt   string `json:"updated_at"`
+	ID          ident.ID `json:"id"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Resource    string   `json:"resource"`
+	Action      string   `json:"action"`
+	CreatedAt   string   `json:"created_at"`
+	UpdatedAt   string   `json:"updated_at"`
 }
 
 // UpdateAccountRequest represents the update account request payload

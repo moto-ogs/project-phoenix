@@ -154,7 +154,7 @@ func TestOperatorProvisioningIntegration_ListSchoolPersons_ExcludesSoftDeleted(t
 	result, err := service.ListSchoolPersons(ctx, testpkg.Tenant(t))
 	require.NoError(t, err)
 	for _, p := range result {
-		assert.NotEqual(t, person.ID, p.ID, "soft-deleted person should not appear in list")
+		assert.NotEqual(t, person.ID, p.ID.Int64(), "soft-deleted person should not appear in list")
 	}
 }
 
@@ -628,7 +628,7 @@ func TestOperatorProvisioningIntegration_ListAllDevices_HidesDeletedOrgDevices(t
 	devices, err := service.ListAllDevices(ctx)
 	require.NoError(t, err)
 	for _, d := range devices {
-		assert.NotEqual(t, device.ID, d.ID,
+		assert.NotEqual(t, device.ID, d.ID.Int64(),
 			"device whose organization is soft-deleted must not appear in ListAllDevices")
 	}
 }

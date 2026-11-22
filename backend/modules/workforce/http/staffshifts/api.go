@@ -271,7 +271,7 @@ func (o *optionalString) UnmarshalJSON(data []byte) error {
 type ShiftResponse struct {
 	// IDs cross the JSON boundary as decimal strings. A JavaScript number cannot
 	// represent every PostgreSQL bigint value without rounding it.
-	ID           int64     `json:"id,string"`
+	ID           ident.ID  `json:"id"`
 	StaffID      ident.ID  `json:"staff_id"`
 	Date         string    `json:"date"`
 	StartTime    string    `json:"start_time"`
@@ -282,14 +282,14 @@ type ShiftResponse struct {
 	// member who cannot read the admin-only /api/shift-types endpoint still sees
 	// the label and color on their own shifts (#1844). Present only when the
 	// shift has a type and the service resolved it.
-	ShiftTypeName  *string `json:"shift_type_name,omitempty"`
-	ShiftTypeColor *string `json:"shift_type_color,omitempty"`
-	Notes          string  `json:"notes,omitempty"`
-	SeriesID       *int64  `json:"series_id,omitempty,string"`
-	Detached       bool    `json:"detached"`
-	Cancelled      bool    `json:"cancelled"`
-	ChangeReason   *string `json:"change_reason,omitempty"`
-	OriginShiftID  *int64  `json:"origin_shift_id,omitempty,string"`
+	ShiftTypeName  *string   `json:"shift_type_name,omitempty"`
+	ShiftTypeColor *string   `json:"shift_type_color,omitempty"`
+	Notes          string    `json:"notes,omitempty"`
+	SeriesID       *ident.ID `json:"series_id,omitempty"`
+	Detached       bool      `json:"detached"`
+	Cancelled      bool      `json:"cancelled"`
+	ChangeReason   *string   `json:"change_reason,omitempty"`
+	OriginShiftID  *ident.ID `json:"origin_shift_id,omitempty"`
 	// SeriesOccurrenceDate is the immutable recurrence slot. It lets clients
 	// apply a rule edit from a moved occurrence's source date, not its current
 	// display date.
@@ -303,7 +303,7 @@ type ShiftResponse struct {
 // time-tracking self endpoint, which serves the same shape.
 func ToShiftResponse(s workforce.PlannedShift) ShiftResponse {
 	resp := ShiftResponse{
-		ID:               s.ID,
+		ID:               ident.ID(s.ID),
 		StaffID:          ident.ID(s.StaffID),
 		Date:             s.Date,
 		StartTime:        FormatWallClock(s.StartTime),
@@ -311,11 +311,11 @@ func ToShiftResponse(s workforce.PlannedShift) ShiftResponse {
 		BreakMinutes:     s.BreakMinutes,
 		ShiftTypeID:      (*ident.ID)(s.ShiftTypeID),
 		Notes:            s.Notes,
-		SeriesID:         s.SeriesID,
+		SeriesID:         (*ident.ID)(s.SeriesID),
 		Detached:         s.Detached,
 		Cancelled:        s.Cancelled,
 		ChangeReason:     s.ChangeReason,
-		OriginShiftID:    s.OriginShiftID,
+		OriginShiftID:    (*ident.ID)(s.OriginShiftID),
 		PlannedByTraeger: s.PlannedByTraeger,
 	}
 	if s.SeriesOccurrenceDate != "" {
