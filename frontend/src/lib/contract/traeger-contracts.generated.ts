@@ -126,6 +126,7 @@ export interface Candidate {
   template_issue: string;
   modules_text: string;
   mail_block?: string;
+  imported_contract_id?: string;
 }
 
 export const CandidateSchema: z.ZodType<Candidate, unknown> = object<Candidate>({
@@ -144,6 +145,7 @@ export const CandidateSchema: z.ZodType<Candidate, unknown> = object<Candidate>(
   template_issue: str,
   modules_text: str,
   mail_block: optional(str),
+  imported_contract_id: optional(int64String),
 });
 
 /** Go: carecontract.SchoolConclusion */

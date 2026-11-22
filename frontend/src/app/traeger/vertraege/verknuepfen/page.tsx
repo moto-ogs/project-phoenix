@@ -55,11 +55,20 @@ const readChildLinks = (
 
 function doneDescription(done: ChildLinkResult): string {
   const { counts } = done;
-  const open = counts.conflict + counts.invalid;
+  // Ein Vertrag aus einer Anmeldung gehört schon zu seinem Kind: nichts offen.
+  const settled = done.rows.filter((row) =>
+    row.problems.some((problem) => problem.code === "not_imported"),
+  ).length;
+  const open = counts.conflict + counts.invalid - settled;
   const parts = [
     `${counts.linked} ${counts.linked === 1 ? "Vertrag war" : "Verträge waren"} schon verknüpft`,
     `${open} ${open === 1 ? "Zeile ist" : "Zeilen sind"} offen`,
   ];
+  if (settled > 0) {
+    parts.push(
+      `${settled} ${settled === 1 ? "Vertrag stammt" : "Verträge stammen"} aus einer Anmeldung und ${settled === 1 ? "braucht" : "brauchen"} keine Verknüpfung`,
+    );
+  }
   const next =
     open > 0
       ? " Die offenen Zeilen stehen unten mit dem Grund. Korrigiere die Datei und lade sie noch einmal, oder verknüpfe die Verträge einzeln auf ihrer Seite."

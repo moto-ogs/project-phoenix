@@ -90,7 +90,7 @@ func (in *Intake) Candidates(ctx context.Context, reviewer carecontract.Reviewer
 	}
 	var candidates []carecontract.Candidate
 	err = in.runtime.WithinTraeger(ctx, reviewer.OrganizationID, func(txCtx context.Context) error {
-		existing, err := in.contractedKeys(txCtx, reviewer.OrganizationID, reads)
+		existing, named, err := in.contractedKeys(txCtx, reviewer.OrganizationID, reads)
 		if err != nil {
 			return err
 		}
@@ -99,7 +99,8 @@ func (in *Intake) Candidates(ctx context.Context, reviewer carecontract.Reviewer
 			return err
 		}
 		templates, changed := indexTemplates(rows)
-		candidates = collectCandidates(reads, existing, templates, changed, in.today())
+		candidates = collectCandidates(reads, withoutNamed(existing, named), templates, changed, in.today())
+		markNamedByImport(candidates, named)
 		return in.markHeldMail(txCtx, reviewer.OrganizationID, candidates)
 	})
 	if err != nil {
@@ -272,7 +273,7 @@ func (in *Intake) lockedBasis(ctx context.Context, organizationID int64, reads [
 	if err != nil {
 		return nil, nil, err
 	}
-	existing, err := in.contractedKeys(ctx, organizationID, reads)
+	existing, _, err := in.contractedKeys(ctx, organizationID, reads)
 	if err != nil {
 		return nil, nil, err
 	}

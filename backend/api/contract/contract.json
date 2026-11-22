@@ -33258,6 +33258,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "imported_contract_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
         }
       ]
     },

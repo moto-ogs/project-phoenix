@@ -123,6 +123,7 @@ const CANDIDATE: ContractCandidate = {
   acceptanceIssue: null,
   renewal: false,
   mailBlock: null,
+  importedContractId: null,
 };
 
 function renderPage() {

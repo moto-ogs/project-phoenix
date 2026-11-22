@@ -440,7 +440,8 @@ func newLinkDecision(pairs []linkPair, schools []carecontract.School, contracts 
 		}
 		decision.byContract[pair.contractID] = append(decision.byContract[pair.contractID], pair)
 		if contract.ImportOrigin == "" {
-			// A row that links nothing contests no child record.
+			// A contract from an application is linked by no row, so its row
+			// contests no child record.
 			continue
 		}
 		key := [2]int64{contract.SchoolID, pair.studentID}

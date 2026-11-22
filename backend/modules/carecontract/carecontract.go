@@ -230,6 +230,9 @@ type Candidate struct {
 	// now (#4680): MailBlockStopped or MailBlockAddress. The contract then
 	// waits until the school corrects or clears the address.
 	MailBlock string `json:"mail_block,omitempty"`
+	// ImportedContractID is the imported contract that names the child
+	// (TemplateIssue SkipImportedContract).
+	ImportedContractID ident.ID `json:"imported_contract_id,omitempty"`
 }
 
 // CreateResult answers a creation of several drafts: the created contracts
@@ -256,6 +259,10 @@ const (
 	SkipConclusionAutomatic = "conclusion_automatic"
 	SkipAcceptanceMissing   = "acceptance_missing"
 	SkipAcceptanceChanged   = "acceptance_changed"
+	// SkipImportedContract: an imported contract that is linked to no child
+	// record names the child (#7760). Whether it is this child's is open
+	// until the office links it; until then no second contract is created.
+	SkipImportedContract = "imported_contract"
 )
 
 type ContractFilter struct {

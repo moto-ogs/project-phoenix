@@ -153,7 +153,7 @@ func (c *Conclusions) readContracts(ctx context.Context, organizationID int64, r
 		if rows, err = c.intake.store.Templates(txCtx, organizationID); err != nil {
 			return err
 		}
-		existing, err = c.intake.contractedKeys(txCtx, organizationID, reads)
+		existing, _, err = c.intake.contractedKeys(txCtx, organizationID, reads)
 		return err
 	})
 	if err != nil {

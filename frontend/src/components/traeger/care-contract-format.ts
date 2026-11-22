@@ -161,6 +161,7 @@ export const TEMPLATE_ISSUE_LABELS: Record<TemplateIssue, string> = {
   recipient_missing: "E-Mail-Adresse der Eltern fehlt",
   mail_blocked: "Mail-Adresse gesperrt",
   mail_stopped: "Mails gestoppt",
+  imported_contract: "Importierter Vertrag nennt das Kind",
   other: "Entwurf noch nicht möglich",
 };
 
@@ -274,3 +275,15 @@ export const TERMINATION_KIND_LABELS = {
   sonderkuendigung: "Sonderkündigung",
   ausserordentlich: "Außerordentlich, aus wichtigem Grund",
 } as const;
+
+/**
+ * Why a child an imported contract names gets no second contract yet, and
+ * what the office does: link the imported contract to its Kinderakte (#7760).
+ */
+export function importedContractReason(contractId: string | null): string {
+  const contract =
+    contractId === null
+      ? "Ein importierter Vertrag"
+      : `Der importierte Vertrag Nr. ${contractId}`;
+  return `${contract} nennt ein Kind mit diesem Namen. Verknüpfe ihn mit seiner Kinderakte. Ist es dieses Kind, hat es dann schon seinen Vertrag. Sonst kannst du hier einen erstellen.`;
+}

@@ -52,6 +52,7 @@ const TEMPLATE_ISSUE_VALUES = [
   "recipient_missing",
   "mail_blocked",
   "mail_stopped",
+  "imported_contract",
 ] as const;
 const ACCEPTANCE_ISSUE_VALUES = [
   "acceptance_missing",
@@ -214,6 +215,8 @@ export interface ContractCandidate extends CandidateKey {
    * conclusion at the acceptance could conclude (#4680); null otherwise.
    */
   readonly mailBlock: (typeof MAIL_BLOCK_VALUES)[number] | "other" | null;
+  /** The imported contract that names the child (issue imported_contract). */
+  readonly importedContractId: string | null;
 }
 
 /**
@@ -532,6 +535,7 @@ function candidateFromBackend(
     ),
     renewal: row.renewal,
     mailBlock: optionalReason(MAIL_BLOCK_VALUES, row.mail_block),
+    importedContractId: row.imported_contract_id ?? null,
   };
 }
 
