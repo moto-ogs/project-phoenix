@@ -18,7 +18,13 @@ export const roomsConfig = defineEntityConfig<Room>({
   backUrl: "/database",
 
   api: {
-    basePath: "/api/rooms",
+    routes: {
+      list: "GET /api/rooms/",
+      get: "GET /api/rooms/{id}",
+      create: "POST /api/rooms/",
+      update: "PUT /api/rooms/{id}",
+      delete: "DELETE /api/rooms/{id}",
+    },
     // Admin view keeps showing system rooms (Schulhof, WC) — they are
     // rendered greyed-out via isSystemRoom instead of hidden.
     listParams: { include_system: "true" },
