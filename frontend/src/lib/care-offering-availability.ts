@@ -1,5 +1,6 @@
 import { MAX_SUPPORTED_GRADE_LEVEL } from "~/lib/grade-level";
 import type { CareOfferingAvailabilityRule } from "~/lib/care-offering-api";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 
 export interface AvailabilityAwareOffering {
   availability_rule?: CareOfferingAvailabilityRule | null;
@@ -195,13 +196,15 @@ function lowercaseFirst(value: string): string {
   return value.charAt(0).toLowerCase() + value.slice(1);
 }
 
-/** Grade distribution of an offering's current bookings (backend aggregate). */
-export interface CareOfferingBookingGradeCounts {
-  /** Keyed by grade level as a string, because JSON object keys are strings. */
-  grade_levels: Record<string, number>;
-  /** Bookings whose child has no target grade level recorded. */
-  unknown_grade_count: number;
-}
+/**
+ * Grade distribution of an offering's current bookings (backend aggregate):
+ * counts keyed by grade level as a string, and the bookings whose child has
+ * no target grade level recorded.
+ */
+export type CareOfferingBookingGradeCounts = Pick<
+  enrollmentContract.CareOfferingBookingStatsResponse,
+  "grade_levels" | "unknown_grade_count"
+>;
 
 /**
  * Counts the existing bookings a rule would contradict. Nothing is blocked by
@@ -221,7 +224,7 @@ export function countCareOfferingRuleConflicts(
   if (!rule || rule.conditions.length === 0) return 0;
 
   let conflicts = counts.unknown_grade_count;
-  for (const [grade, count] of Object.entries(counts.grade_levels)) {
+  for (const [grade, count] of Object.entries(counts.grade_levels ?? {})) {
     if (!careOfferingIsAvailable({ availability_rule: rule }, grade)) {
       conflicts += count;
     }

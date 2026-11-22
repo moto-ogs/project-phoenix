@@ -205,7 +205,7 @@ export async function uploadEnrollmentFile(params: {
  * file. The proof of benefits of the holiday registration (#5238) uses the
  * same answer.
  */
-export async function postUpload(
+async function postUpload(
   url: string,
   body: FormData,
   file: File,

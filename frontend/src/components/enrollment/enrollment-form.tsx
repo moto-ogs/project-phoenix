@@ -119,7 +119,7 @@ import {
   careOfferingAvailabilityReason,
   careOfferingRuleExcludesNobody,
 } from "~/lib/care-offering-availability";
-import { type CareOfferingBookingStats } from "~/lib/care-offering-booking-stats";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import {
   OfferingOccupancyLine,
   OfferingRowShell,
@@ -245,7 +245,10 @@ interface PropsBase {
    * provided, each offering shows how full it is so a capacity rejection is
    * visible before the form is submitted rather than after.
    */
-  readonly offeringBookingStats?: Record<string, CareOfferingBookingStats>;
+  readonly offeringBookingStats?: Record<
+    string,
+    enrollmentContract.CareOfferingBookingStatsResponse
+  >;
   /**
    * Leaves the signature field out although the form requires one (#4786):
    * change requests and manual staff entries carry no parent signature.
@@ -2046,7 +2049,7 @@ function BlockedOfferingCard({
   offering: PublicCareOffering;
   gradeLevel: string;
   gradeLevelMax: number;
-  stats: CareOfferingBookingStats | undefined;
+  stats: enrollmentContract.CareOfferingBookingStatsResponse | undefined;
 }>) {
   const reason = careOfferingAvailabilityReason(
     offering,
@@ -2100,7 +2103,7 @@ function OfferingCard({
   readonly toggleLocked?: boolean;
   readonly dayError: boolean;
   /** Admin-only occupancy (#2186); undefined on the parent form. */
-  readonly stats?: CareOfferingBookingStats;
+  readonly stats?: enrollmentContract.CareOfferingBookingStatsResponse;
   readonly onToggle: () => void;
   readonly onToggleDay: (day: string) => void;
   readonly tr: EnrollmentFormTranslator;

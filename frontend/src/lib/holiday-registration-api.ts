@@ -1,19 +1,14 @@
 // Öffentliche Ferienanmeldung (#4661): der eine Link eines Ferienzeitraums
 // für alle Schulen des Trägers, ohne Elternkonto.
 
-import { unavailableApiError, type ApiError } from "~/lib/api-error";
+import { ApiError } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
 import { knownEnum } from "~/lib/contract/known-enum";
 import { requiredDay } from "~/lib/contract/required-day";
-import type { HolidayRegistrationFamilyResponse as WireHolidayRegistrationFamily } from "~/lib/contract/parent-holiday-registrations.generated";
-import type {
-  HolidayContribution as WireHolidayContribution,
-  HolidayQuoteRequest as WireHolidayQuoteRequest,
-} from "~/lib/contract/traeger-holiday-quotes.generated";
-import type {
-  HolidayRegistrationRequest as WireHolidayRegistrationRequest,
-  HolidayRegistrationSubmitResponse as WireHolidayRegistrationSubmitResponse,
-  PublicHolidayRegistrationOfferResponse as WireHolidayRegistrationOffer,
-} from "~/lib/contract/traeger-holiday-registrations.generated";
+import type * as parentHolidayRegistrationsContract from "~/lib/contract/parent-holiday-registrations.generated";
+import type * as sharedContract from "~/lib/contract/shared.generated";
+import type * as traegerHolidayQuotesContract from "~/lib/contract/traeger-holiday-quotes.generated";
+import type * as traegerHolidayRegistrationsContract from "~/lib/contract/traeger-holiday-registrations.generated";
 import {
   knownHolidayPlacement,
   type HolidayPlacement,
@@ -22,19 +17,14 @@ import {
   holidayFormVersionFromContract,
   type HolidayFormVersion,
 } from "~/lib/holiday-form-field";
-import { readEnrollmentError } from "~/lib/enrollment-api-error";
 import {
   contributionFromBackend,
   type HolidayContribution,
 } from "~/lib/holiday-contribution";
-import { type NewUploadValue, postUpload } from "~/lib/enrollment-uploads";
 import {
   consentTextsFromBackend,
   type HolidayConsentTexts,
 } from "~/lib/holiday-consent-texts";
-import { createLogger } from "~/lib/logger";
-
-const logger = createLogger({ component: "HolidayRegistrationApi" });
 
 // Go does not register these sets; the contract types them as string. A value
 // this build does not know stays undefined instead of passing as a known one.
@@ -145,97 +135,13 @@ export interface HolidayRegistrationOffer {
  */
 type HolidayWishMode = (typeof HOLIDAY_WISH_MODE_VALUES)[number];
 
-/**
- * The registration as the backend reads it; IDs travel as numbers. Its lists
- * are mutable so the body satisfies the contract's request type.
- */
-export interface HolidayRegistrationPayload {
-  readonly guardian: {
-    readonly first_name: string;
-    readonly last_name: string;
-    readonly email: string;
-    readonly phone: string;
-  };
-  readonly second_guardian?: HolidayRegistrationPayload["guardian"];
-  /** Only when the form asks for it and the parent filled it in (#5625). */
-  readonly guardian_address?: {
-    readonly street: string;
-    readonly postal_code: string;
-    readonly city: string;
-  };
-  readonly children: {
-    readonly first_name: string;
-    readonly last_name: string;
-    readonly birth_date: string;
-    readonly home_school_id: string;
-    readonly guest_school_name: string;
-    readonly allergies: string;
-    readonly medication: string;
-    readonly health_notes: string;
-    readonly bookings: {
-      readonly week_id: string;
-      readonly time_model_id: string;
-      /** The chosen days of a week by days (#4701). */
-      readonly days?: string[];
-    }[];
-    /** Answers to the questions per child, by key (#5198). */
-    readonly custom_data: Readonly<Record<string, unknown>>;
-    /** The sealed statement of the holiday care wish from the prefill (#4703). */
-    readonly wish_proof?: string;
-    /** Answers to the criteria per child, by criterion ID (#4700). */
-    readonly criteria?: Readonly<Record<string, boolean>>;
-  }[];
-  readonly emergency_contacts: HolidayContactPayload[];
-  readonly pickup_persons: HolidayContactPayload[];
-  readonly privacy_consent: boolean;
-  readonly health_consent: boolean;
-  readonly binding_confirmed: boolean;
-  /** The custody and the typed name of the declaration (#5626). */
-  readonly custody_confirmed: boolean;
-  readonly declaration_name: string;
-  readonly benefits_declared: boolean;
-  /** Tokens of the uploaded proofs of benefits (#5238). */
-  readonly benefits_proof_tokens: string[];
-  readonly captcha_token: string;
-  /** The form version the parent answered (#5198). */
-  readonly legal_acceptances?: Readonly<Record<string, boolean>>;
-  readonly form_version: number;
-  /**
-   * Version of the consent texts the parent agreed to (#4722): from 2 on the
-   * hosting OGS reads the health information, 3 adds the declaration (#5626).
-   */
-  readonly consent_version: number;
-  /** Days of retention the privacy text the parent agreed to names (#6691). */
-  readonly retention_days: number;
-  /** Answers to the questions per family, by key (#5198). */
-  readonly custom_data: Readonly<Record<string, unknown>>;
-  /** Answers to the criteria of the family, by criterion ID (#4700). */
-  readonly criteria?: Readonly<Record<string, boolean>>;
-  /**
-   * The parent asked for a parent account at the end of the form (#6673).
-   * Always false when the registration carries the account's proof.
-   */
-  readonly parent_account_requested: boolean;
-  /**
-   * The sealed proof of the signed-in parent's account from the prefill
-   * (#6673, ADR 0216); the backend links the registration to that account.
-   */
-  readonly parent_account_proof?: string;
-}
-
-export interface HolidayContactPayload {
-  readonly name: string;
-  readonly phone: string;
-  readonly relationship: string;
-}
-
 /** The days of a list the decoder may leave null, without the empty ones. */
 function presentDays(days: readonly (string | null)[] | null): string[] {
   return (days ?? []).filter((day): day is string => day !== null);
 }
 
 function offerFromBackend(
-  offer: WireHolidayRegistrationOffer,
+  offer: traegerHolidayRegistrationsContract.PublicHolidayRegistrationOfferResponse,
 ): HolidayRegistrationOffer {
   return {
     traegerName: offer.traeger_name,
@@ -304,49 +210,15 @@ function offerFromBackend(
   };
 }
 
-// The link, its summary and the proof upload run through the Träger
-// proxy's public routes (#2352).
-function registrationPath(token: string): string {
-  return `/api/traeger/holiday-registrations/${encodeURIComponent(token)}`;
-}
-
-function uploadPath(token: string): string {
-  return `${registrationPath(token)}/uploads`;
-}
-
-async function request(input: string, init?: RequestInit): Promise<Response> {
-  try {
-    return await fetch(input, init);
-  } catch (cause) {
-    throw unavailableApiError(cause);
-  }
-}
-
-function readError(response: Response, fallback: string): Promise<ApiError> {
-  return readEnrollmentError(
-    response,
-    fallback,
-    logger,
-    "holiday_registration_api_failed",
-  );
-}
-
 export async function fetchHolidayRegistrationOffer(
   token: string,
 ): Promise<HolidayRegistrationOffer> {
-  const response = await request(registrationPath(token), {
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Ferienanmeldung konnte nicht geladen werden",
-    );
-  }
-  const body = (await response.json()) as {
-    data: WireHolidayRegistrationOffer;
-  };
-  return offerFromBackend(body.data);
+  return offerFromBackend(
+    await bffJson("public", "GET /traeger/holiday-registrations/{token}", {
+      params: { token },
+      errorMessage: "Ferienanmeldung konnte nicht geladen werden",
+    }),
+  );
 }
 
 /**
@@ -358,10 +230,19 @@ export function uploadHolidayProof(
   token: string,
   file: File,
   signal?: AbortSignal,
-): Promise<NewUploadValue> {
+): Promise<sharedContract.UploadReceipt> {
   const body = new FormData();
   body.append("file", file);
-  return postUpload(uploadPath(token), body, file, signal);
+  return bffJson(
+    "public",
+    "POST /traeger/holiday-registrations/{token}/uploads",
+    {
+      params: { token },
+      body,
+      ...(signal && { signal }),
+      errorMessage: "Datei konnte nicht hochgeladen werden",
+    },
+  );
 }
 
 /**
@@ -388,74 +269,51 @@ export interface HolidayRegistrationReceipt {
 /** Sends the registration and answers with the place of every booking. */
 export async function submitHolidayRegistration(
   token: string,
-  payload: HolidayRegistrationPayload,
+  payload: traegerHolidayRegistrationsContract.HolidayRegistrationRequest,
 ): Promise<HolidayRegistrationReceipt> {
-  const response = await request(registrationPath(token), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload satisfies WireHolidayRegistrationRequest),
-  });
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Ferienanmeldung konnte nicht gesendet werden",
-    );
-  }
-  const body = (await response.json().catch(() => null)) as {
-    data?: WireHolidayRegistrationSubmitResponse;
-  } | null;
+  const receipt = await bffJson(
+    "public",
+    "POST /traeger/holiday-registrations/{token}",
+    {
+      params: { token },
+      body: payload,
+      errorMessage: "Ferienanmeldung konnte nicht gesendet werden",
+    },
+  );
   return {
-    placements: (body?.data?.placements ?? []).map((entry) => ({
+    placements: (receipt.placements ?? []).map((entry) => ({
       childPosition: entry.child_position,
       weekId: entry.week_id,
       placement: knownHolidayPlacement(entry.placement),
     })),
-    statusToken: body?.data?.status_token ?? "",
+    statusToken: receipt.status_token,
   };
 }
-
-/** The bookings of one child of the form, for its contribution (#4664). */
-export type HolidayQuoteChild = {
-  readonly week_id: string;
-  readonly time_model_id: string;
-  readonly days?: string[];
-  /** The child eats lunch on the care days of the booking (#5631). */
-  readonly lunch?: boolean;
-}[];
 
 /**
  * The contribution of the form before it is sent (#4664): computed by the
  * Träger's rules from the bookings and the order of the children by age,
- * stored nowhere.
+ * stored nowhere. Every child of the form is the list of its bookings.
  */
 export async function quoteHolidayContribution(
   token: string,
-  children: readonly HolidayQuoteChild[],
+  children: readonly traegerHolidayQuotesContract.holidayQuoteBookingRequest[][],
   benefitsDeclared: boolean,
   ageRanks: readonly number[] = [],
 ): Promise<HolidayContribution> {
-  const response = await request(
-    `/api/traeger/holiday-quotes/${encodeURIComponent(token)}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+  return contributionFromBackend(
+    await bffJson("public", "POST /traeger/holiday-quotes/{token}", {
+      params: { token },
+      body: {
         children: children.map((bookings, index) => ({
           bookings,
           age_rank: ageRanks[index] ?? 0,
         })),
         benefits_declared: benefitsDeclared,
-      } satisfies WireHolidayQuoteRequest),
-    },
+      },
+      errorMessage: "Beitrag der Ferienanmeldung konnte nicht berechnet werden",
+    }),
   );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Beitrag der Ferienanmeldung konnte nicht berechnet werden",
-    );
-  }
-  const body = (await response.json()) as { data: WireHolidayContribution };
-  return contributionFromBackend(body.data);
 }
 
 /** A child of the parent's account the registration can start from (#4662). */
@@ -530,20 +388,22 @@ export interface HolidayKnownFamily {
 export async function fetchHolidayRegistrationFamily(
   token: string,
 ): Promise<HolidayKnownFamily | null> {
-  const response = await request(
-    `/api/parent/holiday-registrations/${encodeURIComponent(token)}/family`,
-    { cache: "no-store" },
-  );
-  if (response.status === 401) return null;
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Bekannte Angaben konnten nicht geladen werden",
+  let data: parentHolidayRegistrationsContract.HolidayRegistrationFamilyResponse;
+  try {
+    data = await bffJson(
+      "parent",
+      "GET /parent/holiday-registrations/{token}/family",
+      {
+        params: { token },
+        // Without a parent session the form starts empty, on this page.
+        authRefusals: ["general.permission"],
+        errorMessage: "Bekannte Angaben konnten nicht geladen werden",
+      },
     );
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) return null;
+    throw error;
   }
-  const { data } = (await response.json()) as {
-    data: WireHolidayRegistrationFamily;
-  };
   return {
     guardian: {
       firstName: data.guardian.first_name,
