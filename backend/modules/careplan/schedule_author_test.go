@@ -18,7 +18,7 @@ func TestEnteredByTraeger(t *testing.T) {
 
 	plain := context.Background()
 	traeger := careplan.WithTraegerBueroAuthor(plain)
-	const staffID = int64(7)
+	const staffID int64 = 7
 
 	assert.False(t, careplan.EnteredByTraeger(plain, 0), "an ordinary request carries no mark")
 	assert.True(t, careplan.EnteredByTraeger(traeger, 0))
@@ -34,7 +34,7 @@ func TestEnteredByTraeger(t *testing.T) {
 func TestScheduleRowsNeedAStaffAuthorOrTheTraegerMark(t *testing.T) {
 	t.Parallel()
 
-	const studentID = int64(11)
+	const studentID int64 = 11
 	clock := time.Date(2000, 1, 1, 14, 0, 0, 0, time.UTC)
 	day := careplan.Date("2026-09-09")
 	rows := map[string]func(enteredByTraeger bool) error{
