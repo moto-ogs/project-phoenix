@@ -360,7 +360,7 @@ func (s *Service) DeleteArrivalExceptionsByStudent(ctx context.Context, id int64
 }
 
 func (s *Service) CreateArrivalNote(ctx context.Context, v careplan.ArrivalNote) (result careplan.ArrivalNote, err error) {
-	if !validateNote(v.StudentID, v.NoteDate, v.Content, v.CreatedBy) {
+	if !validateNote(v.StudentID, v.NoteDate, v.Content, v.CreatedBy > 0 || v.EnteredByTraeger) {
 		return careplan.ArrivalNote{}, scheduleInvalid()
 	}
 
@@ -376,7 +376,7 @@ func (s *Service) CreateArrivalNote(ctx context.Context, v careplan.ArrivalNote)
 }
 
 func (s *Service) UpdateArrivalNote(ctx context.Context, v careplan.ArrivalNote) error {
-	if v.ID <= 0 || !validateNote(v.StudentID, v.NoteDate, v.Content, v.CreatedBy) {
+	if v.ID <= 0 || !validateNote(v.StudentID, v.NoteDate, v.Content, v.CreatedBy > 0 || v.EnteredByTraeger) {
 		return scheduleInvalid()
 	}
 
@@ -600,7 +600,7 @@ func (s *Service) DeletePickupNote(ctx context.Context, id int64) error {
 }
 
 func (s *Service) ReplaceWeekdayPickupNotes(ctx context.Context, studentID, createdBy int64, notes map[int]string) error {
-	if studentID <= 0 || createdBy <= 0 || !validWeekdayPickupNotes(notes) {
+	if studentID <= 0 || !careplan.HasScheduleAuthor(ctx, createdBy) || !validWeekdayPickupNotes(notes) {
 		return scheduleInvalid()
 	}
 

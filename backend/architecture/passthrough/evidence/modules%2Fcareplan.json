@@ -1066,7 +1066,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) UpdateArrivalNote(ctx context.Context, v careplan.ArrivalNote) error {\n\tif v.ID \u003c= 0 || !validateNote(v.StudentID, v.NoteDate, v.Content, v.CreatedBy) {\n\t\treturn scheduleInvalid()\n\t}\n\treturn s.withinTenant(ctx, func(tx context.Context) error {\n\t\treturn s.run(tx, \"update_arrival_note\", func(ctx context.Context, stats *domain.OperationStats) error {\n\t\t\tq, err := s.store.UpdateArrivalNote(ctx, v)\n\t\t\tstats.Add(q)\n\t\t\treturn err\n\t\t})\n\t})\n}",
+      "evidence": "func (s *Service) UpdateArrivalNote(ctx context.Context, v careplan.ArrivalNote) error {\n\tif v.ID \u003c= 0 || !validateNote(v.StudentID, v.NoteDate, v.Content, v.CreatedBy \u003e 0 || v.EnteredByTraeger) {\n\t\treturn scheduleInvalid()\n\t}\n\treturn s.withinTenant(ctx, func(tx context.Context) error {\n\t\treturn s.run(tx, \"update_arrival_note\", func(ctx context.Context, stats *domain.OperationStats) error {\n\t\t\tq, err := s.store.UpdateArrivalNote(ctx, v)\n\t\t\tstats.Add(q)\n\t\t\treturn err\n\t\t})\n\t})\n}",
       "form": "unclassified-evidence",
       "id": "modules/careplan/internal/application/Service.UpdateArrivalNote",
       "owner": "modules/careplan"

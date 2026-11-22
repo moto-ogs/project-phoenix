@@ -84,6 +84,7 @@
   "request_not_decided": "{object} could not be changed. Please check its current status.",
   "request_not_past": "{object} could not be changed. Please check its current status.",
   "request_past": "{object} could not be changed. Please check its current status.",
+  "schedule_staff_profile_required": "Only someone with a staff profile can change care times. Your account does not have one at this school yet.",
   "sick_excused_conflict": "{object} could not be changed. Please check its current status.",
   "staff_profile_required": "The parents set this time. Only someone with a staff profile can change it.",
   "staff_value_invalid": "{object} could not be saved. Please check your entries.",

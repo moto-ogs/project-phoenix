@@ -222,7 +222,7 @@ func (s *arrivalScheduleService) patchArrivalWeek(ctx context.Context, student p
 	}
 	for _, input := range inputs {
 		clock := parsed[input.Weekday]
-		row := &careplan.ArrivalSchedule{StudentID: student.ID, Weekday: input.Weekday, ExpectedArrival: clock, CreatedBy: createdBy}
+		row := &careplan.ArrivalSchedule{StudentID: student.ID, Weekday: input.Weekday, ExpectedArrival: clock, CreatedBy: createdBy, EnteredByTraeger: careplan.EnteredByTraeger(ctx, createdBy)}
 		if previous := byDay[input.Weekday]; previous != nil {
 			row.Notes = previous.Notes
 			if previous.ExpectedArrival.Format("15:04") != clock.Format("15:04") {

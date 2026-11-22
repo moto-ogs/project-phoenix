@@ -410,3 +410,44 @@ Entscheidung:
 
 Nicht entschieden: ein Gerät für alle Schulen eines Kontos. Es bleibt bei
 einem Merken pro Schule und pro Portal.
+
+## Nachtrag 2026-11-22: Betreuungszeiten aus dem Absprung tragen den Vermerk des Träger-Büros (#7766)
+
+Abschnitt 5 gibt der Person die Admin-Rolle der Schule und legt für sie
+weder eine Mitgliedschaft noch einen Personal-Datensatz an. Jede Spalte
+`created_by` der Betreuungszeiten zeigt aber auf einen Personal-Datensatz
+der Schule. Das Speichern eines Wochenplans endete deshalb mit 403, obwohl
+die Sitzung alle Rechte zeigte.
+
+Entscheidung:
+
+1. **Kein künstlicher Personal-Datensatz.** Die Person bekommt an der Schule
+   weiterhin keinen. Er stünde in Personalliste, Dienstplan und Abrechnung,
+   und Abschnitt „Verworfene Optionen“ schließt nachgezogene Mitgliedschaften
+   aus.
+2. **Ein eigener Vermerk je Zeile.** Eine Zeile, die das Träger-Büro einträgt,
+   trägt `entered_by_traeger` (bei einer Teilabwesenheit `excused_by_traeger`)
+   und keinen Personal-Urheber. Das folgt `schedule.staff_shifts.planned_by_traeger`
+   (ADR 0089 Abschnitt 8). Betroffen sind Bring- und Abholzeiten der Woche,
+   ihre Tagesausnahmen, ihre Notizen und die Abholart eines Tages.
+3. **Die Datenbank hält die Regel.** Ohne Vermerk verlangt jede dieser
+   Zeilen weiter einen Personal-Urheber. Ein fehlender Urheber ist nur
+   zusammen mit dem Vermerk gültig.
+4. **Die Sitzung entscheidet, nicht der einzelne Aufruf.** Der Vermerk gilt
+   für eine Sitzung mit `via_traeger`, deren Konto an der Schule keinen
+   Personal-Datensatz hat. Hat die Person dort einen, steht sie wie bisher
+   als Personal in der Zeile.
+5. **Alle anderen bleiben ausgeschlossen.** Ein Konto ohne Personal-Datensatz
+   und ohne `via_traeger` bekommt weiter 403, jetzt mit dem eigenen Code
+   `students.schedule_staff_profile_required` statt der allgemeinen Meldung
+   zur fehlenden Berechtigung.
+
+Wer die Person ist, steht für den Wochenplan weiter im Änderungsverlauf des
+Kindes (Konto und Name aus der Sitzung) und für die Sitzung im
+Anmeldeprotokoll der Schule.
+
+Offen bleibt der Vermerk „Träger-Büro“ im Audit der Schule aus Abschnitt 5:
+Der Änderungsverlauf nennt die Person, aber noch nicht, dass sie über den
+Träger kam. Offen bleiben auch die Schreibwege anderer Bereiche, die einen
+Personal-Datensatz verlangen (Anmeldung freigeben, Dienstplan, Kalender,
+Schul-Check-in, Import, Angebote).
