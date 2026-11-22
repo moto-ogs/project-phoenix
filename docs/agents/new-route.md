@@ -21,7 +21,8 @@ Proxy rules, file flags and the session path in detail:
 
 Go is the source of every response shape. A type the frontend writes by hand
 for a registered route (`Backend*`) is a second, unchecked copy; import the
-generated type instead.
+generated type instead. `frontend/scripts/backend-wire-types.node-test.mjs`
+(part of `pnpm run check`) fails on one.
 
 ## Read route
 
@@ -43,9 +44,10 @@ Worked example: `GET /api/activities/categories`, staff portal.
    may call it (`common.PortalTenant`, `PortalParent`, `PortalSchool`,
    `PortalTraeger`, `PortalCaterer`, `PortalOperator`, `PortalPublic`). `Query`
    lists every parameter the handler reads; the proxy drops the others.
-   Identifiers are `common.ID`, days `calendar.Date`, closed value sets go in
-   `Enums`; the generator refuses a bare `int64` and an answer whose shape
-   depends on a query parameter.
+   Identifiers are `common.ID` (`ident.ID` outside `http` roles) and leave
+   Go as strings, days are `calendar.Date`, closed value sets go in `Enums`;
+   the generator refuses a bare `int64`, a numeric identifier in an answer
+   and an answer whose shape depends on a query parameter.
 3. **Mount.** A new `RouteContracts()` function gets one row in the matching
    `*ContractMounts()` list of `backend/api/route_contracts.go`, here
    `{"/api/activities", timetableActivitiesHTTP.RouteContracts()}`. The
@@ -151,7 +153,7 @@ backend fails `app/api/proxy-routes.test.ts`; a file whose backend paths
 the contract registers, all of them, fails `app/api/route-backend-paths.test.ts`,
 and a file in front of a registered path fails
 `app/api/catalog-route-selection.test.ts`. A new backend route without a
-contract and a new numeric identifier fail `scripts/check-contract-shrink.mjs`;
+contract fails `scripts/check-contract-shrink.mjs`;
 a route the contract cannot carry (a sign-in step, a device or webhook
 endpoint) needs a new ADR that names its catalog line. A named route builds its
 handlers from its portal's route wrapper (`frontend/src/lib/route-wrapper.server.ts`,

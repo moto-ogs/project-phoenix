@@ -92,7 +92,7 @@ export async function fetchStaffPreviewCandidates(): Promise<
       `Failed to load preview candidates: ${response.status}`,
     );
   }
-  // createGetHandler wraps GET responses in { status, data }.
+  // The catalog proxy passes the backend's envelope { status, data } through.
   const envelope = (await response.json()) as {
     data?: StaffPreviewCandidateWire[] | null;
   };
