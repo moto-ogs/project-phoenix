@@ -348,5 +348,15 @@
     "scenario": "api.activities.presence20.supervisors.n8",
     "route": "GET /api/activities/{id}/supervisors",
     "issue": 7808
+  },
+  {
+    "scenario": "api.active.cross_tenant_students.positive",
+    "route": "GET /api/active/cross-tenant-students",
+    "issue": 7808
+  },
+  {
+    "scenario": "workforce.workforce20.own_export",
+    "route": "GET /api/time-tracking/export",
+    "issue": 7808
   }
 ]

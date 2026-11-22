@@ -7,7 +7,6 @@ GET /api/time-tracking/breaks/{sessionId}
 GET /api/time-tracking/closing-days
 GET /api/time-tracking/config
 GET /api/time-tracking/current
-GET /api/time-tracking/export
 GET /api/time-tracking/history
 GET /api/time-tracking/holidays
 GET /api/time-tracking/month-summary

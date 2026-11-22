@@ -173,7 +173,6 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/api/messages/group-threads/{groupThreadId}/messages"}:                              createdEvent("parent_group_message_sent"),
 	{http.MethodPost, "/api/messages/mark-all-read"}:                                                       event("parent_messages_marked_all_read"),
 	{http.MethodPut, "/api/messages/count-scope"}:                                                          event("parent_message_count_scope_changed"),
-	{http.MethodPost, "/api/messages/threads"}:                                                             notCaptured,
 	{http.MethodPost, "/api/messages/threads/open"}:                                                        notCaptured,
 	{http.MethodPost, "/api/messages/threads/{threadId}"}:                                                  notCaptured,
 	// Ein Anhang ist noch keine Nachricht; gezählt wird das Senden (#6685).

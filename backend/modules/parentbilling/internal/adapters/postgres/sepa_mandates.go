@@ -221,33 +221,6 @@ func (s *Store) InsertSEPAMandate(ctx context.Context, organizationID, accountID
 	return row.mandate(), nil
 }
 
-// UpdateSEPAMandate stores the account of a mandate; a nil IBAN keeps the
-// sealed one.
-func (s *Store) UpdateSEPAMandate(ctx context.Context, organizationID, accountID int64, mandate parentbilling.SealedSEPAMandate) (parentbilling.SEPAMandate, error) {
-	db, err := traegerDB(ctx, organizationID)
-	if err != nil {
-		return parentbilling.SEPAMandate{}, err
-	}
-	m := mandate.Mandate
-	row := &sepaMandateRow{}
-	query := db.NewUpdate().Model(row).Where("organization_id = ?", organizationID).Where("id = ?", m.ID).
-		Set("bic = ?", m.BIC).Set("sequence = ?", m.Sequence).
-		Set("updated_by_account_id = ?", accountRef(accountID)).Set("updated_at = ?", s.now())
-	if mandate.IBAN != nil {
-		query = query.Set("iban_sealed = ?", mandate.IBAN).Set("iban_masked = ?", m.IBANMasked)
-	}
-	if mandate.Holder != nil {
-		query = query.Set("account_holder_sealed = ?", mandate.Holder)
-	}
-	if err := query.Returning(mandateReturning).Scan(ctx); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return parentbilling.SEPAMandate{}, parentbilling.ErrSEPAMandateNotFound
-		}
-		return parentbilling.SEPAMandate{}, fmt.Errorf("update SEPA mandate: %w", err)
-	}
-	return row.mandate(), nil
-}
-
 // RevokeSEPAMandate ends a mandate in force.
 func (s *Store) RevokeSEPAMandate(ctx context.Context, organizationID, accountID, id int64, revokedOn calendar.Date) (parentbilling.SEPAMandate, error) {
 	db, err := traegerDB(ctx, organizationID)

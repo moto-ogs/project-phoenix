@@ -7,7 +7,6 @@ GET /api/time-tracking/breaks/{sessionId} -> zeiterfassung
 GET /api/time-tracking/closing-days -> basis
 GET /api/time-tracking/config -> zeiterfassung
 GET /api/time-tracking/current -> zeiterfassung
-GET /api/time-tracking/export -> zeiterfassung
 GET /api/time-tracking/history -> zeiterfassung
 GET /api/time-tracking/holidays -> basis
 GET /api/time-tracking/month-summary -> zeiterfassung
