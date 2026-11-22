@@ -3,7 +3,6 @@ package presence
 import (
 	"time"
 
-	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
@@ -26,12 +25,12 @@ func newSessionRoomResponse(room studentpresence.SessionRoomSummary) *RoomSimple
 // claimedSupervisionResponse keeps the wire shape of the claimed supervision
 // record: the persisted row with its calendar start day.
 type claimedSupervisionResponse struct {
-	ID        common.ID `json:"id"`
+	ID        ident.ID  `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
-	TenantID  common.ID `json:"tenant_id"`
-	StaffID   common.ID `json:"staff_id"`
-	GroupID   common.ID `json:"group_id"`
+	TenantID  ident.ID  `json:"tenant_id"`
+	StaffID   ident.ID  `json:"staff_id"`
+	GroupID   ident.ID  `json:"group_id"`
 	Role      string    `json:"role"`
 	StartDate string    `json:"start_date"`
 }

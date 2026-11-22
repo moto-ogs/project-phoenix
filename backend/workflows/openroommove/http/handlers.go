@@ -32,8 +32,8 @@ func (rs *Resource) Register(r chi.Router, withTx common.Middleware) {
 }
 
 type moveStudentsToOpenRoomRequest struct {
-	StudentIDs   []common.ID `json:"student_ids"`
-	TargetRoomID common.ID   `json:"target_room_id"`
+	StudentIDs   []ident.ID `json:"student_ids"`
+	TargetRoomID ident.ID   `json:"target_room_id"`
 }
 
 // checkInStudentsToOpenRoomRequest adds keep_present: the check-in mode of

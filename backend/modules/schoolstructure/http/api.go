@@ -98,11 +98,11 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 
 // GroupResponse represents a group API response
 type GroupResponse struct {
-	ID               common.ID         `json:"id"`
+	ID               ident.ID          `json:"id"`
 	Name             string            `json:"name"`
-	RoomID           *common.ID        `json:"room_id,omitempty"`
+	RoomID           *ident.ID         `json:"room_id,omitempty"`
 	Room             *Room             `json:"room,omitempty"`
-	RepresentativeID *common.ID        `json:"representative_id,omitempty"`
+	RepresentativeID *ident.ID         `json:"representative_id,omitempty"`
 	Representative   *TeacherResponse  `json:"representative,omitempty"`
 	Teachers         []TeacherResponse `json:"teachers,omitempty"`
 	StudentCount     int               `json:"student_count"`
@@ -112,26 +112,26 @@ type GroupResponse struct {
 
 // TeacherResponse represents a teacher in API responses
 type TeacherResponse struct {
-	ID             common.ID `json:"id"`
-	StaffID        common.ID `json:"staff_id"`
-	FirstName      string    `json:"first_name"`
-	LastName       string    `json:"last_name"`
-	Specialization string    `json:"specialization"`
-	Role           string    `json:"role,omitempty"`
-	FullName       string    `json:"full_name"`
+	ID             ident.ID `json:"id"`
+	StaffID        ident.ID `json:"staff_id"`
+	FirstName      string   `json:"first_name"`
+	LastName       string   `json:"last_name"`
+	Specialization string   `json:"specialization"`
+	Role           string   `json:"role,omitempty"`
+	FullName       string   `json:"full_name"`
 }
 
 // Room represents a simplified room for inclusion in group responses
 type Room struct {
-	ID   common.ID `json:"id"`
-	Name string    `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 // GroupRequest represents a group creation/update request
 type GroupRequest struct {
-	Name       string      `json:"name"`
-	RoomID     *common.ID  `json:"room_id,omitempty"`
-	TeacherIDs []common.ID `json:"teacher_ids,omitempty"`
+	Name       string     `json:"name"`
+	RoomID     *ident.ID  `json:"room_id,omitempty"`
+	TeacherIDs []ident.ID `json:"teacher_ids,omitempty"`
 }
 
 // Bind validates the group request

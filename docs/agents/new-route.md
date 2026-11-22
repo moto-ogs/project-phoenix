@@ -52,8 +52,8 @@ Worked example, the same route from Go to the browser:
    may call it (`common.PortalTenant`, `PortalParent`, `PortalSchool`,
    `PortalTraeger`, `PortalCaterer`, `PortalOperator`, `PortalPublic`). `Query`
    lists every parameter the handler reads (`days` is `from`/`to` as
-   `QueryDate`); the proxy drops the others. Identifiers are `common.ID`
-   (`ident.ID` outside `http` roles), days are `calendar.Date`, closed value
+   `QueryDate`); the proxy drops the others. Identifiers are `ident.ID`
+   (`sharedkernel/ident`) in every role, days are `calendar.Date`, closed value
    sets go in `Enums`. A count is an `int`; an amount or a count kept as
    `int64` says so with `contract:"number"`. The generator refuses a bare
    `int64`, the json option `,string`, a number under an identifier's name

@@ -4,24 +4,23 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // PhoneNumberResponse is one guardian phone number on the wire.
 type PhoneNumberResponse struct {
-	ID          common.ID `json:"id"`
-	PhoneNumber string    `json:"phone_number"`
-	PhoneType   string    `json:"phone_type"`
-	Label       *string   `json:"label,omitempty"`
-	IsPrimary   bool      `json:"is_primary"`
-	Priority    int       `json:"priority"`
+	ID          ident.ID `json:"id"`
+	PhoneNumber string   `json:"phone_number"`
+	PhoneType   string   `json:"phone_type"`
+	Label       *string  `json:"label,omitempty"`
+	IsPrimary   bool     `json:"is_primary"`
+	Priority    int      `json:"priority"`
 }
 
 // GuardianResponse is the full guardian profile.
 type GuardianResponse struct {
-	ID                     common.ID              `json:"id"`
+	ID                     ident.ID               `json:"id"`
 	FirstName              string                 `json:"first_name"`
 	LastName               string                 `json:"last_name"`
 	Email                  *string                `json:"email,omitempty"`
@@ -33,18 +32,18 @@ type GuardianResponse struct {
 	LanguagePreference     string                 `json:"language_preference"`
 	Notes                  *string                `json:"notes,omitempty"`
 	HasAccount             bool                   `json:"has_account"`
-	AccountID              *common.ID             `json:"account_id,omitempty"`
+	AccountID              *ident.ID              `json:"account_id,omitempty"`
 }
 
 // GuardianPickerResponse is the minimal, GDPR-safe projection of the picker
 // search (#1513): only a COUNT of linked children, never their names, and
 // none of the address, notes or preference fields.
 type GuardianPickerResponse struct {
-	ID                  common.ID `json:"id"`
-	FirstName           string    `json:"first_name"`
-	LastName            string    `json:"last_name"`
-	Email               *string   `json:"email,omitempty"`
-	LinkedChildrenCount int       `json:"linked_children_count"`
+	ID                  ident.ID `json:"id"`
+	FirstName           string   `json:"first_name"`
+	LastName            string   `json:"last_name"`
+	Email               *string  `json:"email,omitempty"`
+	LinkedChildrenCount int      `json:"linked_children_count"`
 }
 
 // GuardianCreateRequest creates a profile; phone numbers are added through
@@ -81,14 +80,14 @@ func (req *GuardianUpdateRequest) Bind(_ *http.Request) error { return nil }
 
 // StudentGuardianLinkRequest links an existing guardian to a child.
 type StudentGuardianLinkRequest struct {
-	GuardianProfileID  common.ID `json:"guardian_profile_id"`
-	RelationshipType   string    `json:"relationship_type"`
-	GuardianRole       string    `json:"guardian_role,omitempty"`
-	IsPrimary          bool      `json:"is_primary"`
-	IsEmergencyContact bool      `json:"is_emergency_contact"`
-	CanPickup          bool      `json:"can_pickup"`
-	PickupNotes        *string   `json:"pickup_notes,omitempty"`
-	EmergencyPriority  int       `json:"emergency_priority"`
+	GuardianProfileID  ident.ID `json:"guardian_profile_id"`
+	RelationshipType   string   `json:"relationship_type"`
+	GuardianRole       string   `json:"guardian_role,omitempty"`
+	IsPrimary          bool     `json:"is_primary"`
+	IsEmergencyContact bool     `json:"is_emergency_contact"`
+	CanPickup          bool     `json:"can_pickup"`
+	PickupNotes        *string  `json:"pickup_notes,omitempty"`
+	EmergencyPriority  int      `json:"emergency_priority"`
 }
 
 func (req *StudentGuardianLinkRequest) Bind(_ *http.Request) error {
@@ -121,10 +120,10 @@ func (req *StudentGuardianUpdateRequest) Bind(_ *http.Request) error { return ni
 // GuardianLinkResponse is one student-guardian relationship on the wire. It keeps
 // the field names of the persisted row the link endpoint used to echo.
 type GuardianLinkResponse struct {
-	ID                 common.ID       `json:"id"`
-	TenantID           common.ID       `json:"tenant_id"`
-	StudentID          common.ID       `json:"student_id"`
-	GuardianProfileID  common.ID       `json:"guardian_profile_id"`
+	ID                 ident.ID        `json:"id"`
+	TenantID           ident.ID        `json:"tenant_id"`
+	StudentID          ident.ID        `json:"student_id"`
+	GuardianProfileID  ident.ID        `json:"guardian_profile_id"`
 	RelationshipType   string          `json:"relationship_type"`
 	GuardianRole       string          `json:"guardian_role"`
 	IsPrimary          bool            `json:"is_primary"`
@@ -198,7 +197,7 @@ type StudentWithRelationship struct {
 // or none.
 type GuardianWithRelationship struct {
 	Guardian           *GuardianResponse `json:"guardian"`
-	RelationshipID     common.ID         `json:"relationship_id"`
+	RelationshipID     ident.ID          `json:"relationship_id"`
 	RelationshipType   string            `json:"relationship_type"`
 	GuardianRole       string            `json:"guardian_role"`
 	IsPrimary          bool              `json:"is_primary"`

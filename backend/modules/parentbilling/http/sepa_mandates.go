@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -82,7 +83,7 @@ func (req *SEPACreditorRequest) Bind(*http.Request) error { return nil }
 // SEPAMandateRequest is the body of POST /traeger/sepa-mandates: the
 // mandate of the family of a contract of the Träger.
 type SEPAMandateRequest struct {
-	ContractID    common.ID     `json:"contract_id"`
+	ContractID    ident.ID      `json:"contract_id"`
 	Reference     string        `json:"reference"`
 	SignedOn      calendar.Date `json:"signed_on"`
 	Kind          string        `json:"kind"`

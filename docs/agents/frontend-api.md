@@ -72,8 +72,8 @@ or write a `Backend*` interface for a registered route.
   carries a day or a wall-clock time says so in its tag: `contract:"date"`
   (`YYYY-MM-DD`) or `contract:"clock"` (`HH:MM`); the decoder then rejects
   another form. Closed value sets are registered in `Enums`.
-- An identifier is a `common.ID` (`ident.ID` outside `http` roles), a count
-  an `int`; the generator rejects a bare `int64` and a response shape that
+- An identifier is an `ident.ID` in every role, a count an `int`; the
+  generator rejects a bare `int64` and a response shape that
   depends on a query parameter. Every answer sends identifiers as strings,
   and the generated decoder (`int64String`) takes nothing else (ADR 0300).
   The backend routes without a contract only shrink:

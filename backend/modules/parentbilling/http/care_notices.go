@@ -63,7 +63,7 @@ func (rs *CareNoticeResource) Router(protectedTraegerRoutes func(chi.Router, fun
 type CareNoticeRunRequest struct {
 	Year       int            `json:"year"`
 	FromMonth  calendar.Date  `json:"from_month"`
-	SchoolIDs  []common.ID    `json:"school_ids"`
+	SchoolIDs  []ident.ID     `json:"school_ids"`
 	NoticeDate *calendar.Date `json:"notice_date"`
 }
 
