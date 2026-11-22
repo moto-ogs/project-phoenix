@@ -46,7 +46,7 @@ func (c *CareReductions) ImportFamilyChildren(ctx context.Context, reviewer pare
 	if request.Mapping != nil {
 		result.Mapping = *request.Mapping
 	}
-	result.Mapping = settleFamilyImportMapping(result.Mapping, schools)
+	result.Mapping = settleFamilyImportMapping(result.Mapping, schools, c.today())
 	index, err := resolveFamilyImportMapping(table.headers, result.Mapping, schools)
 	if err != nil {
 		return parentbilling.FamilyChildrenImport{}, err
@@ -189,7 +189,7 @@ func familyImportRows(candidates []familyImportCandidate) (rows []importedChildr
 		}
 		for _, target := range candidate.targets {
 			rows = append(rows, importedChildren{family: target.family, witness: witness, number: parentbilling.ImportedFamilyChildren{
-				Line: candidate.row.Line, ContractID: target.contractID, Children: *candidate.row.Children, ValidFrom: target.firstDay}})
+				Line: candidate.row.Line, ContractID: target.contractID, Children: *candidate.row.Children, ValidFrom: candidate.validFrom}})
 			owner = append(owner, i)
 		}
 	}
@@ -320,13 +320,18 @@ func suggestFamilyImportMapping(headers []string) parentbilling.FamilyChildrenIm
 	return parentbilling.FamilyChildrenImportMapping{Columns: parentbilling.FamilyChildrenImportColumns{
 		ChildFirstName: found[parentbilling.FamilyImportFieldChildFirstName], ChildLastName: found[parentbilling.FamilyImportFieldChildLastName],
 		ChildBirthDate: found[parentbilling.FamilyImportFieldChildBirthDate], School: found[parentbilling.FamilyImportFieldSchool],
-		Children: found[parentbilling.FamilyImportFieldChildren],
+		Children: found[parentbilling.FamilyImportFieldChildren], ValidFrom: found[parentbilling.FamilyImportFieldValidFrom],
 	}}
 }
 
 // settleFamilyImportMapping completes a mapping with the one school of a
-// Träger that has one. A column always goes before the choice.
-func settleFamilyImportMapping(mapping parentbilling.FamilyChildrenImportMapping, schools []parentbilling.CareSchool) parentbilling.FamilyChildrenImportMapping {
+// Träger that has one, and with today as the day the numbers count from
+// when the office named none: the day of the import is the one day the
+// import itself proves (#7765). A column always goes before the choice.
+func settleFamilyImportMapping(mapping parentbilling.FamilyChildrenImportMapping, schools []parentbilling.CareSchool, today calendar.Date) parentbilling.FamilyChildrenImportMapping {
+	if mapping.ValidFrom == nil {
+		mapping.ValidFrom = &today
+	}
 	if mapping.Columns.School != "" {
 		mapping.SchoolID = 0
 	} else if mapping.SchoolID == 0 && len(schools) == 1 {

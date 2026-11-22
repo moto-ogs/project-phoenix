@@ -25,6 +25,7 @@ const FIELD_VALUES = [
   "child_birth_date",
   "school",
   "children",
+  "valid_from",
 ] as const;
 const ROW_STATUS_VALUES = [
   "ready",
@@ -46,6 +47,12 @@ export interface FamilyImportMapping {
   readonly columns: FamilyImportColumns;
   /** The school of every row of a file without a school column; "" with one. */
   readonly schoolId: string;
+  /**
+   * The day the numbers count from, "YYYY-MM-DD", for every row without a
+   * day of its own; "" lets the backend take today. An answer always names
+   * the day it used.
+   */
+  readonly validFrom: string;
 }
 
 interface FamilyImportProblem {
@@ -146,6 +153,7 @@ function mapImportResult(
     mapping: {
       columns: result.mapping.columns,
       schoolId: mappedSchoolId(result.mapping.school_id),
+      validFrom: result.mapping.valid_from ?? "",
     },
     unmapped: (result.unmapped ?? []).flatMap((field) => {
       const known = knownEnum(FIELD_VALUES, field);
@@ -175,6 +183,7 @@ async function postImport(
         columns: request.mapping.columns,
         // "0" leaves the school to the file.
         school_id: request.mapping.schoolId || "0",
+        valid_from: request.mapping.validFrom || null,
       } satisfies traegerFamilyChildrenContract.FamilyChildrenImportMapping),
     );
   }

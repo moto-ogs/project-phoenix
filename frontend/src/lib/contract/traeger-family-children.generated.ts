@@ -104,6 +104,7 @@ export interface FamilyChildrenImportColumns {
   child_birth_date: string;
   school: string;
   children: string;
+  valid_from: string;
 }
 
 export const FamilyChildrenImportColumnsSchema: z.ZodType<FamilyChildrenImportColumns, unknown> = object<FamilyChildrenImportColumns>({
@@ -112,17 +113,20 @@ export const FamilyChildrenImportColumnsSchema: z.ZodType<FamilyChildrenImportCo
   child_birth_date: str,
   school: str,
   children: str,
+  valid_from: str,
 });
 
 /** Go: parentbilling.FamilyChildrenImportMapping */
 export interface FamilyChildrenImportMapping {
   columns: FamilyChildrenImportColumns;
   school_id: string;
+  valid_from: string | null;
 }
 
 export const FamilyChildrenImportMappingSchema: z.ZodType<FamilyChildrenImportMapping, unknown> = object<FamilyChildrenImportMapping>({
   columns: FamilyChildrenImportColumnsSchema,
   school_id: int64String,
+  valid_from: nullable(calendarDate),
 });
 
 /** Go: parentbilling.FamilyChildrenImportCounts */

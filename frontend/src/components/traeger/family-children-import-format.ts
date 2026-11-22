@@ -19,6 +19,7 @@ export const FAMILY_IMPORT_FIELDS: readonly FamilyImportField[] = [
   "child_birth_date",
   "children",
   "school",
+  "valid_from",
 ];
 
 /** Felder, die jede Datei als Spalte braucht; die Schule auch als Wahl. */
@@ -31,6 +32,7 @@ export const FAMILY_IMPORT_FIELD_LABELS: Record<FamilyImportField, string> = {
   child_birth_date: "Geburtsdatum",
   school: "Schule",
   children: "Kinder in der Familie",
+  valid_from: "Gültig ab",
 };
 
 export const FAMILY_IMPORT_FIELD_HINTS: Partial<
@@ -39,6 +41,8 @@ export const FAMILY_IMPORT_FIELD_HINTS: Partial<
   child_birth_date: "Unterscheidet Kinder mit gleichem Namen.",
   children:
     "Alle Kinder der Familie, auch Geschwister ohne Vertrag. Eine ganze Zahl von 1 bis 20.",
+  valid_from:
+    "Freiwillig. Der Tag, ab dem die Zahl der Zeile gilt. Eine leere Zelle nimmt den Tag unter „Kinderzahl gilt ab“.",
 };
 
 const FAMILY_IMPORT_STATUS: Record<
@@ -75,6 +79,13 @@ const MISSING_TEXT: Record<FamilyImportField, string> = {
   child_birth_date: "Das Geburtsdatum fehlt.",
   school: "Die Schule fehlt.",
   children: "Die Kinderzahl fehlt.",
+  valid_from: "Der Tag in „Gültig ab“ fehlt.",
+};
+
+const INVALID_TEXT: Partial<Record<FamilyImportField, string>> = {
+  child_birth_date: "Das Geburtsdatum ist kein Datum. Beispiel: 03.05.2018.",
+  children: "Die Kinderzahl ist keine ganze Zahl von 1 bis 20.",
+  valid_from: "„Gültig ab“ ist kein Datum. Beispiel: 01.09.2026.",
 };
 
 /** Was eine Zeile aufhält, als ein Satz ohne den Wert aus der Datei. */
@@ -89,9 +100,7 @@ export function familyImportProblemText(
     case "missing":
       return MISSING_TEXT[field] ?? `${label} fehlt.`;
     case "invalid":
-      return problem.field === "children"
-        ? "Die Kinderzahl ist keine ganze Zahl von 1 bis 20."
-        : "Das Geburtsdatum ist kein Datum. Beispiel: 03.05.2018.";
+      return INVALID_TEXT[field] ?? `${label} prüfen.`;
     case "too_long":
       return `${label} ist zu lang.`;
     case "unknown":
@@ -167,7 +176,7 @@ export function numberCountLabel(count: number): string {
 
 /** Eine Beispieldatei mit den Spalten, die moto von selbst erkennt. */
 export const FAMILY_IMPORT_SAMPLE = [
-  "Vorname;Nachname;Geburtsdatum;Schule;Kinder in der Familie",
-  "Mia;Beispiel;03.05.2018;Grundschule Nord;2",
-  "Ben;Muster;11.11.2019;Grundschule Nord;1",
+  "Vorname;Nachname;Geburtsdatum;Schule;Kinder in der Familie;Gültig ab",
+  "Mia;Beispiel;03.05.2018;Grundschule Nord;2;01.09.2026",
+  "Ben;Muster;11.11.2019;Grundschule Nord;1;",
 ].join("\r\n");

@@ -25,7 +25,7 @@ const maxFamilyImportNameLength = 100
 // header away.
 var familyImportFields = []string{
 	parentbilling.FamilyImportFieldChildren, parentbilling.FamilyImportFieldChildFirstName, parentbilling.FamilyImportFieldChildLastName,
-	parentbilling.FamilyImportFieldChildBirthDate, parentbilling.FamilyImportFieldSchool,
+	parentbilling.FamilyImportFieldChildBirthDate, parentbilling.FamilyImportFieldSchool, parentbilling.FamilyImportFieldValidFrom,
 }
 
 // familyImportHeaderNames are the header names moto maps without help,
@@ -41,13 +41,17 @@ var familyImportHeaderNames = map[string][]string{
 	parentbilling.FamilyImportFieldChildBirthDate: {"geburtsdatum", "geburtsdatumkind", "geburtsdatumdeskindes", "geburtstag", "gebdatum",
 		"geborenam", "birthdate", "dateofbirth"},
 	parentbilling.FamilyImportFieldSchool: {"schule", "schulname", "einrichtung", "standort", "betreuungsort", "ogs", "school"},
+	parentbilling.FamilyImportFieldValidFrom: {"gueltigab", "giltab", "kinderzahlgueltigab", "kinderzahlgiltab", "gueltigseit",
+		"stichtag", "validfrom"},
 }
 
 // familyImportIndex is a mapping resolved against a file: the position of
-// each mapped column and the school of a file without that column.
+// each mapped column, the school of a file without that column and the day
+// the numbers count from where a row names none.
 type familyImportIndex struct {
-	fields   map[string]int
-	schoolID int64
+	fields    map[string]int
+	schoolID  int64
+	validFrom calendar.Date
 }
 
 func (index familyImportIndex) has(field string) bool {
@@ -88,9 +92,15 @@ func resolveFamilyImportMapping(headers []string, mapping parentbilling.FamilyCh
 		parentbilling.FamilyImportFieldChildBirthDate: mapping.Columns.ChildBirthDate,
 		parentbilling.FamilyImportFieldSchool:         mapping.Columns.School,
 		parentbilling.FamilyImportFieldChildren:       mapping.Columns.Children,
+		parentbilling.FamilyImportFieldValidFrom:      mapping.Columns.ValidFrom,
 	}
 	refused := validation.Errors{}
 	index := familyImportIndex{fields: map[string]int{}, schoolID: mapping.SchoolID.Int64()}
+	if mapping.ValidFrom == nil || !plausibleFamilyImportDay(*mapping.ValidFrom) {
+		refused[parentbilling.FamilyImportFieldValidFrom] = errors.New("is no day the numbers can count from")
+	} else {
+		index.validFrom = *mapping.ValidFrom
+	}
 	used := map[string]bool{}
 	for _, field := range familyImportFields {
 		header := columns[field]
@@ -114,6 +124,12 @@ func resolveFamilyImportMapping(headers []string, mapping parentbilling.FamilyCh
 		return familyImportIndex{}, refused
 	}
 	return index, nil
+}
+
+// plausibleFamilyImportDay keeps a mistyped year out: a number of children
+// under 18 counts from this century on and not beyond the next one.
+func plausibleFamilyImportDay(day calendar.Date) bool {
+	return !day.IsZero() && day.Year() >= 2000 && day.Year() < 2100
 }
 
 // familyImportContract is a contract a row can name: its child at its
@@ -155,19 +171,20 @@ func foldFamilyImportName(name string) string {
 }
 
 // familyImportTarget is a family a row's number goes to, by the contract
-// of the row's child.
+// of the row's child: the one that began first.
 type familyImportTarget struct {
 	family     string
 	contractID int64
 	firstDay   calendar.Date
 }
 
-// familyImportCandidate is a row with the families its number goes to and,
-// once decided, what happens per family.
+// familyImportCandidate is a row with the families its number goes to, the
+// day it counts from and, once decided, what happens per family.
 type familyImportCandidate struct {
-	row     parentbilling.FamilyChildrenImportRow
-	targets []familyImportTarget
-	decided []importedChildren
+	row       parentbilling.FamilyChildrenImportRow
+	targets   []familyImportTarget
+	validFrom calendar.Date
+	decided   []importedChildren
 }
 
 // familyImportCheck reads rows against the schools and contracts of the
@@ -199,13 +216,33 @@ func (c *familyImportCheck) candidate(cells []string, line int) familyImportCand
 		}
 	}
 	row.Children = c.children(row, cells)
+	candidate.validFrom = c.validFrom(row, cells)
 	schoolID, hasSchool := c.school(row, cells)
 	if len(row.Problems) > 0 || !hasSchool {
 		row.Status = parentbilling.FamilyImportInvalid
 		return candidate
 	}
 	candidate.targets = c.match(row, schoolID)
+	if len(candidate.targets) > 0 && row.RepeatsLine == 0 {
+		row.ValidFrom = &candidate.validFrom
+	}
 	return candidate
+}
+
+// validFrom reads the day the row's number counts from: its own column,
+// else the day of the file. A cell that is no day holds the row back, so a
+// number never counts from a day the office did not mean.
+func (c *familyImportCheck) validFrom(row *parentbilling.FamilyChildrenImportRow, cells []string) calendar.Date {
+	value := c.index.cell(cells, parentbilling.FamilyImportFieldValidFrom)
+	if value == "" {
+		return c.index.validFrom
+	}
+	day, ok := calendar.ParseFileDate(value)
+	if !ok || !plausibleFamilyImportDay(day) {
+		problemOf(row, parentbilling.FamilyImportFieldValidFrom, parentbilling.FamilyImportProblemInvalid)
+		return c.index.validFrom
+	}
+	return day
 }
 
 func (c *familyImportCheck) name(row *parentbilling.FamilyChildrenImportRow, cells []string, field string) string {
@@ -330,7 +367,7 @@ func (c *familyImportCheck) targets(row *parentbilling.FamilyChildrenImportRow, 
 		}
 	}
 	if !repeated {
-		row.ContractID, row.ValidFrom = ident.ID(targets[0].contractID), &targets[0].firstDay
+		row.ContractID = ident.ID(targets[0].contractID)
 	}
 	return targets
 }

@@ -129,6 +129,49 @@ describe("import uploads through the catalog proxy (#2352)", () => {
     expect(result.rows[0]?.contractId).toBe("11");
   });
 
+  // The office names the day the numbers count from (#7765); without one
+  // the backend takes today and its answer names that day.
+  it("sends and reads the day the family children count from", async () => {
+    const data = {
+      ...base,
+      mapping: { columns: {}, school_id: "0", valid_from: "2026-11-22" },
+      schools: [],
+      counts: {},
+      rows: [],
+    };
+    const first = answer(data);
+    const columns = {
+      child_first_name: "Vorname",
+      child_last_name: "Nachname",
+      child_birth_date: "",
+      school: "",
+      children: "Kinder",
+      valid_from: "Gültig ab",
+    };
+
+    const result = await previewFamilyChildrenImport({
+      file,
+      mapping: { columns, schoolId: "7", validFrom: "2026-09-01" },
+    });
+    const second = answer(data);
+    await previewFamilyChildrenImport({
+      file,
+      mapping: { columns, schoolId: "7", validFrom: "" },
+    });
+
+    const sent = (fetchMock: typeof first) => {
+      const body = fetchMock.mock.calls[0]?.[1]?.body as FormData;
+      return JSON.parse(String(body.get("mapping"))) as unknown;
+    };
+    expect(sent(first)).toEqual({
+      columns,
+      school_id: 7,
+      valid_from: "2026-09-01",
+    });
+    expect(sent(second)).toEqual({ columns, school_id: 7, valid_from: null });
+    expect(result.mapping.validFrom).toBe("2026-11-22");
+  });
+
   it("keeps the school the contract import mapped", async () => {
     answer({
       ...base,

@@ -21,7 +21,10 @@ const (
 )
 
 type familyImportBody struct {
-	Unmapped    []string       `json:"unmapped"`
+	Unmapped []string `json:"unmapped"`
+	Mapping  struct {
+		ValidFrom *string `json:"valid_from"`
+	} `json:"mapping"`
 	Applied     bool           `json:"applied"`
 	Fingerprint string         `json:"fingerprint"`
 	Counts      map[string]int `json:"counts"`
@@ -43,8 +46,9 @@ type familyImportBody struct {
 // contracts, as a list with the header of OGS Connect in Windows-1252. The
 // office adds them for contracts moto has: the preview answers every row,
 // the import takes over the confirmed preview only, never overwrites a
-// confirmed number and stores each number as confirmed from the first day
-// of the contract. The monthly run then bills the sibling price for a
+// confirmed number and stores each number as confirmed from the day the
+// office names for the file (#7765), never from the first day of the
+// contract by itself. The monthly run then bills the sibling price for a
 // contract without a mail address and without a second contract.
 func TestFamilyChildrenImportAddsTheNumbersOfAFile(t *testing.T) {
 	t.Parallel()
@@ -92,9 +96,14 @@ func TestFamilyChildrenImportAddsTheNumbersOfAFile(t *testing.T) {
 	// schools says which one a file without that column is for.
 	rec = importForm(t, f.traeger, f.office.token, familyImportPreviewPath, "kinderzahl.csv", content, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, []string{"school"}, decodeSchoolPortalData[familyImportBody](t, rec.Body.Bytes()).Unmapped)
+	suggested := decodeSchoolPortalData[familyImportBody](t, rec.Body.Bytes())
+	assert.Equal(t, []string{"school"}, suggested.Unmapped)
+	require.NotNil(t, suggested.Mapping.ValidFrom, "without a day from the office the answer names the day it would use")
+	assert.NotEqual(t, careReductionStart, *suggested.Mapping.ValidFrom, "moto never suggests the first day of the contract")
+	// The office names the day its source proves the numbers from.
+	const provenFrom = "2027-09-01"
 	fields := map[string]string{"mapping": fmt.Sprintf(`{"columns":{"child_first_name":"Vorname","child_last_name":"Nachname",
-		"children":"Anzahl der Kinder in der Familie unter 18 Jahren"},"school_id":%d}`, school)}
+		"children":"Anzahl der Kinder in der Familie unter 18 Jahren"},"school_id":%d,"valid_from":%q}`, school, provenFrom)}
 	rec = importForm(t, f.traeger, f.office.token, familyImportPreviewPath, "kinderzahl.csv", content, fields)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	preview := decodeSchoolPortalData[familyImportBody](t, rec.Body.Bytes())
@@ -113,7 +122,7 @@ func TestFamilyChildrenImportAddsTheNumbersOfAFile(t *testing.T) {
 		"child_last_name:repeated", "children:invalid", "children:rows_differ", "child_last_name:repeated", "children:rows_differ"}, problems)
 	assert.Equal(t, mia, int64(preview.Rows[0].ContractID))
 	require.NotNil(t, preview.Rows[0].ValidFrom)
-	assert.Equal(t, careReductionStart, *preview.Rows[0].ValidFrom, "the number counts from the first day of the contract")
+	assert.Equal(t, provenFrom, *preview.Rows[0].ValidFrom, "the number counts from the day the office named, not from the first day of the contract")
 	require.NotNil(t, preview.Rows[1].ConfirmedChildren)
 	assert.Equal(t, 2, *preview.Rows[1].ConfirmedChildren, "the row names the number the office confirmed")
 	assert.Equal(t, map[string]int{"ready": 1, "same": 1, "differs": 1, "conflict": 6, "invalid": 2, "imported": 0}, preview.Counts)
@@ -142,7 +151,7 @@ func TestFamilyChildrenImportAddsTheNumbersOfAFile(t *testing.T) {
 	require.Len(t, stored, 3, "Mia's number is new; Noah's and Lia's stay; the siblings that disagree get none")
 	assert.Equal(t, fmt.Sprintf("contract:%d", mia), stored[0].Family)
 	assert.Equal(t, 2, stored[0].Children)
-	assert.Equal(t, careReductionStart, stored[0].From)
+	assert.Equal(t, provenFrom, stored[0].From)
 	assert.Nil(t, stored[0].Until)
 	assert.NotNil(t, stored[0].Account, "the number is confirmed by the account that imported it")
 	assert.Equal(t, 2, stored[1].Children, "a confirmed number is never overwritten")
@@ -183,6 +192,11 @@ func TestFamilyChildrenImportIsCheckedAndNeedsTheRight(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	rec = importForm(t, f.traeger, f.office.token, familyImportPreviewPath, "kinderzahl.csv", file,
 		map[string]string{"mapping": `{"columns":{"child_first_name":"Vorname","child_last_name":"Gibt es nicht","children":"Kinderzahl"}}`})
+	assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
+	assert.Contains(t, rec.Body.String(), "parent_billing.family_children_import_mapping_invalid")
+	// A mistyped year is no day the numbers count from.
+	rec = importForm(t, f.traeger, f.office.token, familyImportPreviewPath, "kinderzahl.csv", file, map[string]string{"mapping": fmt.Sprintf(
+		`{"columns":{"child_first_name":"Vorname","child_last_name":"Nachname","children":"Kinderzahl"},"school_id":%d,"valid_from":"0026-12-01"}`, school)})
 	assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.family_children_import_mapping_invalid")
 	// A school of another Träger is no school of the file.

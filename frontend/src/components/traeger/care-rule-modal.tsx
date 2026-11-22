@@ -1,8 +1,9 @@
 "use client";
 
 // Eine Regel des Monatsbeitrags anlegen oder ändern (#4685): Name, Monate,
-// Schulen, Module und Wirkung. Eine Geschwisterregel nennt dazu, ab dem
-// wievielten Kind sie gilt und an welchen Schulen Geschwister zählen.
+// Schulen, Module und Wirkung. Eine Geschwisterregel nennt dazu, wer weniger
+// zahlt: die Kinder ab einem bestimmten Kind oder, ab einer Familiengröße,
+// alle Kinder (#7765), und an welchen Schulen Geschwister zählen.
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { CustomSelect } from "~/components/ui/custom-select";
@@ -63,6 +64,34 @@ const NAME_PLACEHOLDER: Record<CareRuleKind, string> = {
   cap: "z. B. Höchstbetrag je Familie",
 };
 
+type SiblingScope = "rank" | "family";
+
+const SIBLING_SCOPE_ITEMS: { value: SiblingScope; label: string }[] = [
+  { value: "rank", label: "Nur weitere Kinder" },
+  { value: "family", label: "Alle Kinder der Familie" },
+];
+
+/** In einem Satz, wen die Geschwisterregel mit diesen Angaben ermäßigt. */
+export function siblingScopeSentence(
+  scope: SiblingScope,
+  fromChild: number,
+  countsFamilyChildren: boolean,
+): string {
+  if (scope === "family") {
+    const size = `Hat eine Familie mindestens ${fromChild} Kinder, zahlt jedes ihrer Kinder mit Vertrag weniger, auch das erste.`;
+    return countsFamilyChildren
+      ? size
+      : `${size} Im Moment zählen nur Kinder mit Vertrag. Schalte unten „Geschwister ohne Vertrag mitzählen“ ein, wenn alle Kinder der Familie zählen sollen.`;
+  }
+  const full =
+    fromChild === 2
+      ? "Das 1. Kind zahlt"
+      : fromChild === 3
+        ? "Das 1. und 2. Kind zahlen"
+        : `Das 1. bis ${fromChild - 1}. Kind zahlen`;
+  return `${full} den vollen Beitrag. Ab dem ${fromChild}. Kind zahlt die Familie weniger. Zuerst zählt das Kind mit dem höchsten Beitrag.`;
+}
+
 interface Draft {
   name: string;
   validFrom: string;
@@ -71,6 +100,7 @@ interface Draft {
   moduleIds: string[];
   countSchoolIds: string[];
   fromChild: number;
+  siblingScope: SiblingScope;
   countsFamilyChildren: boolean;
   effect: Effect;
   value: string;
@@ -108,6 +138,7 @@ function draftOf(
       moduleIds: [...rule.careOfferingIds],
       countSchoolIds: [...rule.countSchoolIds],
       fromChild: rule.siblingFromChild ?? 2,
+      siblingScope: rule.siblingAllChildren ? "family" : "rank",
       countsFamilyChildren: rule.countsFamilyChildren,
       effect: effectOf(rule),
       value: valueOf(rule),
@@ -121,6 +152,7 @@ function draftOf(
     moduleIds: [],
     countSchoolIds: [],
     fromChild: 2,
+    siblingScope: "rank",
     countsFamilyChildren: false,
     effect: kind === "single_parent" ? "amount" : "share",
     value: "",
@@ -170,6 +202,7 @@ export function CareRuleModal({
   const schoolsLabel = useId();
   const modulesLabel = useId();
   const countLabel = useId();
+  const scopeHint = useId();
 
   useEffect(() => {
     if (!open) return;
@@ -265,6 +298,7 @@ export function CareRuleModal({
       countSchoolIds: kind === "sibling" ? draft.countSchoolIds : [],
       siblingFromChild: kind === "sibling" ? draft.fromChild : null,
       countsFamilyChildren: kind === "sibling" && draft.countsFamilyChildren,
+      siblingAllChildren: kind === "sibling" && draft.siblingScope === "family",
       discountBasisPoints: basisPoints,
       discountCents: kind !== "cap" && draft.effect === "amount" ? cents : null,
       priceCents: kind !== "cap" && draft.effect === "price" ? cents : null,
@@ -420,14 +454,36 @@ export function CareRuleModal({
           </p>
         </div>
         {kind === "sibling" ? (
+          <div className="space-y-3">
+            <FieldLabel>Wer zahlt weniger?</FieldLabel>
+            <SegmentedControl
+              ariaLabel="Wer zahlt weniger?"
+              fullWidth
+              items={SIBLING_SCOPE_ITEMS}
+              value={draft.siblingScope}
+              onChange={(siblingScope) => set({ siblingScope })}
+            />
+            <p id={scopeHint} className="text-sm text-gray-600">
+              {siblingScopeSentence(
+                draft.siblingScope,
+                draft.fromChild,
+                draft.countsFamilyChildren,
+              )}
+            </p>
+          </div>
+        ) : null}
+        {kind === "sibling" ? (
           <div className="grid gap-3 sm:grid-cols-[minmax(0,12rem)_1fr]">
             <div>
               <FieldLabel htmlFor="care-rule-child" required>
-                Ab dem Kind
+                {draft.siblingScope === "family"
+                  ? "Ab so vielen Kindern"
+                  : "Ab dem Kind"}
               </FieldLabel>
               <NumberStepper
                 id="care-rule-child"
                 name="sibling_from_child"
+                aria-describedby={scopeHint}
                 value={String(draft.fromChild)}
                 onChange={(event) => {
                   const next = Number(event.target.value);
@@ -488,9 +544,9 @@ export function CareRuleModal({
         ) : null}
         {kind === "sibling" && draft.effect === "tariff" ? (
           <p className="text-sm text-gray-600">
-            Jedes weitere Kind zahlt den Preis aus der Spalte „Jedes weitere
-            Kind“ der Preisliste, je Modul und Tag. Wo dort nichts steht, zahlt
-            es den Preis des 1. Kindes.
+            {draft.siblingScope === "family"
+              ? "Jedes Kind der Familie zahlt den Preis aus der Spalte „Jedes weitere Kind“ der Preisliste, auch das erste, je Modul und Tag. Wo dort nichts steht, zahlt es den Preis des 1. Kindes."
+              : "Jedes weitere Kind zahlt den Preis aus der Spalte „Jedes weitere Kind“ der Preisliste, je Modul und Tag. Wo dort nichts steht, zahlt es den Preis des 1. Kindes."}
           </p>
         ) : (
           <Input

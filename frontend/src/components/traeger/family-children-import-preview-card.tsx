@@ -55,7 +55,7 @@ function footerText(result: FamilyImportResult): string {
   if (left > 0) {
     return `${left === 1 ? "1 Zeile bleibt" : `${left} Zeilen bleiben`} draußen. Prüfe den Hinweis bei jeder offenen Zeile.`;
   }
-  return "Jede Zahl gilt als von dir bestätigt, ab dem ersten Tag des Vertrags.";
+  return "Jede Zahl gilt als von dir bestätigt, ab dem Tag in ihrer Zeile.";
 }
 
 export function FamilyChildrenImportPreviewCard({

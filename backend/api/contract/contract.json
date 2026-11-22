@@ -37311,6 +37311,12 @@
           }
         },
         {
+          "name": "sibling_all_children",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "care_offering_ids",
           "schema": {
             "kind": "array",
@@ -37833,6 +37839,13 @@
         },
         {
           "name": "counts_family_children",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "sibling_all_children",
           "optional": true,
           "schema": {
             "kind": "bool"
@@ -43670,6 +43683,12 @@
         },
         {
           "name": "counts_family_children",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "sibling_all_children",
           "schema": {
             "kind": "bool"
           }
@@ -50793,6 +50812,12 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "valid_from",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -50853,6 +50878,13 @@
           "name": "school_id",
           "schema": {
             "kind": "id"
+          }
+        },
+        {
+          "name": "valid_from",
+          "schema": {
+            "kind": "date",
+            "nullable": true
           }
         }
       ]

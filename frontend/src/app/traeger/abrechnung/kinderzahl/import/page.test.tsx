@@ -58,8 +58,10 @@ function preview(
         child_birth_date: "",
         school: "",
         children: "Anzahl Kinder",
+        valid_from: "",
       },
       schoolId: "1",
+      validFrom: "2026-08-01",
     },
     unmapped: [],
     schools: [

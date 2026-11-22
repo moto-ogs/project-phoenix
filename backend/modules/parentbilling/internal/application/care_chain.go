@@ -224,7 +224,7 @@ func (e *careChainEntry) reduceBy(rule *parentbilling.ContributionRule, parts []
 	e.invoice.Reductions = append(e.invoice.Reductions, parentbilling.CareReduction{
 		Kind: rule.Kind, RuleID: rule.ID, Name: rule.Name, ChildRank: rank, FamilyChildren: children,
 		DiscountBasisPoints: rule.DiscountBasisPoints, DiscountCents: rule.DiscountCents, PriceCents: rule.PriceCents,
-		CapCents: rule.CapCents, TariffSiblingPrice: rule.TariffSiblingPrice,
+		CapCents: rule.CapCents, TariffSiblingPrice: rule.TariffSiblingPrice, SiblingAllChildren: rule.SiblingAllChildren,
 		CareOfferingIDs: slices.Clone(rule.CareOfferingIDs), AmountCents: -discount,
 	})
 }
@@ -327,7 +327,9 @@ func countingSchools(rule *parentbilling.ContributionRule) []int64 {
 
 // applyCareSiblingRule ranks the children of every family that have a
 // position of the rule at a counting school and reduces the invoices at the
-// rule's schools of every child from the rule's rank on.
+// rule's schools of every child the rule chooses: the children from the
+// rule's rank on, or every child of a family of at least that size
+// (SiblingAllChildren, #7765).
 func applyCareSiblingRule(entries []*careChainEntry, rule *parentbilling.ContributionRule, in careChainInput) {
 	counting := countingSchools(rule)
 	counted := []*careChainEntry{}
@@ -342,7 +344,7 @@ func applyCareSiblingRule(entries []*careChainEntry, rule *parentbilling.Contrib
 		for index, child := range children {
 			rank := ahead + index + 1
 			switch {
-			case rank < *rule.SiblingFromChild:
+			case !siblingRuleReduces(rule, rank, total):
 			case rule.TariffSiblingPrice:
 				reduceToSiblingPricesChild(child, rule, rank, total)
 			default:
@@ -350,6 +352,18 @@ func applyCareSiblingRule(entries []*careChainEntry, rule *parentbilling.Contrib
 			}
 		}
 	}
+}
+
+// siblingRuleReduces tells whether a sibling rule reduces a child: by its
+// rank among the family's counted children or, for a rule of the family's
+// size, by that size alone, so the first child too (#7765). The size is the
+// one the rank reads: the confirmed number of a rule that counts the family,
+// else the children with a contract.
+func siblingRuleReduces(rule *parentbilling.ContributionRule, rank, familyChildren int) bool {
+	if rule.SiblingAllChildren {
+		return familyChildren >= *rule.SiblingFromChild
+	}
+	return rank >= *rule.SiblingFromChild
 }
 
 // familySize is how many children a sibling rule counts in a family and how

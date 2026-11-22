@@ -37,12 +37,14 @@ export function traegerCareReductionsTopic(): HelpTopic {
         description:
           "Geschwister sind Kinder mit derselben Rechnungsadresse. Das Kind mit dem höchsten Beitrag ist das 1. Kind. Bei gleichem Beitrag zählt das ältere Kind zuerst.",
         steps: [
-          "Wähle bei `Ab dem Kind`, ab welchem Kind die Ermäßigung gilt, zum Beispiel ab dem 2. Kind.",
+          "Wähle bei `Wer zahlt weniger?`, für welche Kinder die Regel gilt.",
+          "`Nur weitere Kinder` heißt: Die ersten Kinder zahlen den vollen Beitrag. Wähle bei `Ab dem Kind`, ab welchem Kind die Familie weniger zahlt, zum Beispiel ab dem 2. Kind.",
+          "`Alle Kinder der Familie` heißt: Ab einer Kinderzahl zahlt jedes Kind mit Vertrag weniger, auch das erste. Wähle bei `Ab so vielen Kindern` die Kinderzahl, zum Beispiel 2.",
           "Wähle bei `Geschwister zählen an` die Schulen, deren Kinder mitzählen. Lässt du das Feld leer, zählen nur die Schulen der Regel.",
           "`Fester Preis` heißt: Das Kind zahlt genau diesen Betrag. `Betrag weniger` zieht den Betrag vom Preis ab.",
-          "`Preis laut Preisliste` heißt: Jedes weitere Kind zahlt je Modul und Tag den Preis unter `Jedes weitere Kind` der Preisliste. Die Zahl trägst du dort ein, nicht in der Regel.",
+          "`Preis laut Preisliste` heißt: Jedes weitere Kind zahlt je Modul und Tag den Preis unter `Jedes weitere Kind` der Preisliste. Die Zahl trägst du dort ein, nicht in der Regel. Bei `Alle Kinder der Familie` zahlt auch das erste Kind diesen Preis.",
           "Sollen Geschwister an zwei Standorten getrennt zählen, lege je Standort eine eigene Regel an. Lass `Geschwister zählen an` leer.",
-          "Sollen auch Geschwister ohne Betreuungsvertrag zählen? Schalte `Geschwister ohne Vertrag mitzählen` ein.",
+          "Sollen auch Geschwister ohne Betreuungsvertrag zählen? Schalte `Geschwister ohne Vertrag mitzählen` ein. Bei `Alle Kinder der Familie` zählt sonst nur, wie viele Kinder einen Vertrag haben.",
         ],
       },
       {
@@ -68,6 +70,8 @@ export function traegerCareReductionsTopic(): HelpTopic {
           "Du kennst den Aufbau noch nicht? Wähle `Beispieldatei`.",
           "Ziehe die Datei in das Feld oder wähle `Datei wählen`.",
           "Prüfe unter `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt. Hat die Datei keine Spalte für die Schule, wähle `Schule für alle Zeilen`.",
+          "Wähle bei `Kinderzahl gilt ab` den Tag, ab dem die Zahlen der Datei belegt sind, zum Beispiel den Tag, an dem du die Liste erstellt hast. moto schlägt heute vor.",
+          "Nennt deine Datei den Tag je Kind? Ordne die Spalte `Gültig ab` zu. Eine Zeile ohne Tag bekommt den Tag aus `Kinderzahl gilt ab`.",
           "Prüfe die Zeilen unter `Prüfen und übernehmen`. `Bereit` übernimmt moto. Bei `Fehlerhaft` und `Widerspruch in der Datei` steht der Grund in der Spalte `Hinweis`.",
           "`Andere Zahl bestätigt` heißt: Für die Familie gilt schon eine andere Zahl. moto ändert sie nicht. Ändere sie in der Liste über `Kinderzahl ändern`.",
           "`Verschiedene Angaben` heißt: Für die Familie sind verschiedene Kinderzahlen bestätigt. Bestätige die Kinderzahl in der Familienliste. Die Datei löst diesen Widerspruch nicht.",
@@ -109,7 +113,7 @@ export function traegerCareReductionsTopic(): HelpTopic {
       },
     ],
     result:
-      "Der nächste Monatslauf rechnet die Ermäßigungen aus. Jede Rechnung zeigt jede Ermäßigung mit Namen und Betrag. Bei Geschwistern steht dabei, das wievielte Kind es ist, zum Beispiel `2. Kind von 3`.",
+      "Der nächste Monatslauf rechnet die Ermäßigungen aus. Jede Rechnung zeigt jede Ermäßigung mit Namen und Betrag. Bei Geschwistern steht dabei, das wievielte Kind es ist, zum Beispiel `2. Kind von 3`. Gilt die Regel für alle Kinder der Familie, steht dort die Kinderzahl, zum Beispiel `2 Kinder in der Familie`.",
     differences: [
       "Geschwister erkennt moto an derselben E-Mail-Adresse der Rechnung. Haben zwei Familien dieselbe Adresse, zählen ihre Kinder zusammen. Hat eine Familie zwei Adressen, zählen ihre Kinder nicht als Geschwister. Gleiche die Adresse dann im Vertrag an.",
       "Gilt ein Nachweis erst ab Mitte des Monats, zählt er für den ganzen Monat.",
@@ -117,7 +121,7 @@ export function traegerCareReductionsTopic(): HelpTopic {
       "Geschwister zählen je Schule getrennt. Ein Kind mit Vertrag an einer anderen Schule zählt bei der Kinderzahl nur mit, wenn die Regel unter `Geschwister zählen an` auch diese Schule nennt. Geschwister ohne Vertrag zählen an jeder Schule mit.",
       "Eine Angabe der Eltern, die du noch nicht bestätigt hast, zählt nicht. Ist die Zahl abgelaufen, zählen nur die Kinder mit Vertrag. Der Monatslauf nennt diese Kinder dann unter `Kinderzahl der Familie fehlt`.",
       "Ein Vertrag ohne E-Mail-Adresse der Eltern ist eine eigene Familie, zum Beispiel nach einem Import. Die Liste nennt sie nach dem Kind und zeigt `Vertrag Nr.`. Sie bekommt ihre eigene Kinderzahl.",
-      "Aus einer Datei kommt die Zahl ab dem ersten Tag des Vertrags, frühestens ab drei Monaten zurück. Einen anderen Beginn wählst du über `Kinderzahl ändern`.",
+      "Aus einer Datei gilt die Zahl ab dem Tag, den du beim Nachtragen wählst. moto setzt den Beginn nie von selbst auf den Vertragsbeginn zurück. Liegt der Tag in einem Monat, zählt die Zahl für den ganzen Monat. Einen anderen Beginn wählst du später über `Kinderzahl ändern`.",
       "Steht bei einer Familie `Verschiedene Angaben`? Die Verträge der Familie nennen verschiedene Zahlen. Bestätige eine Zahl für die Familie. Oder wähle im Menü `Kinderzahl entfernen`. moto fragt vorher nach. Bis dahin zählen nur die Kinder mit Vertrag.",
       "Eine Rechnung, die schon ausgestellt ist, bleibt, wie sie ist. Eine geänderte Regel gilt ab dem nächsten Monatslauf.",
     ],
