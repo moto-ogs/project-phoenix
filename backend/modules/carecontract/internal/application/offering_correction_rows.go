@@ -327,9 +327,14 @@ func (e *correctionEval) move(row correctionRow, day string, taken []bool) (corr
 		return correctionMove{}, false
 	}
 	e.seen[key] = true
-	move := correctionMove{row: row, day: day, at: e.source(day, row.current, taken)}
-	if move.at >= 0 {
-		taken[move.at] = true
+	at, code := e.source(day, row.current, taken)
+	if code != "" {
+		e.problem(row.line, carecontract.OfferingCorrectionFieldCurrent, code)
+		return correctionMove{}, false
+	}
+	move := correctionMove{row: row, day: day, at: at}
+	if at >= 0 {
+		taken[at] = true
 	}
 	if row.target != "" {
 		move.target, move.code = e.target(row.target, day)
@@ -339,15 +344,27 @@ func (e *correctionEval) move(row correctionRow, day string, taken []bool) (corr
 
 // source finds the booking of the weekday a row names: by the name the
 // contract keeps for its module, or by the name the module has today, so a
-// module the Träger renamed since the import is still found.
-func (e *correctionEval) source(day, name string, taken []bool) int {
+// module the Träger renamed since the import is still found. A name two
+// bookings of the weekday carry is ambiguous; a booking another row names
+// already, under either name, is repeated.
+func (e *correctionEval) source(day, name string, taken []bool) (int, string) {
 	key := textnorm.HeaderKey(name)
-	return e.find(day, func(n int, s carecontract.Service) bool {
-		if taken[n] {
-			return false
+	at, found := -1, 0
+	for n, service := range e.services {
+		if service.Weekday != day {
+			continue
 		}
-		return textnorm.HeaderKey(s.ModuleName) == key || textnorm.HeaderKey(e.offeringName(s.CareOfferingID.Int64())) == key
-	})
+		if textnorm.HeaderKey(service.ModuleName) == key || textnorm.HeaderKey(e.offeringName(service.CareOfferingID.Int64())) == key {
+			at, found = n, found+1
+		}
+	}
+	switch {
+	case found > 1:
+		return -1, carecontract.OfferingCorrectionProblemAmbiguous
+	case found == 1 && taken[at]:
+		return -1, carecontract.OfferingCorrectionProblemRepeated
+	}
+	return at, ""
 }
 
 func (e *correctionEval) offeringName(id int64) string {
@@ -371,11 +388,20 @@ func (e *correctionEval) overlapping(move correctionMove, moves []correctionMove
 		if other.at >= 0 && e.original[other.at] == move.target.ID {
 			return true
 		}
+		// A row whose module the contract does not book has no booking to
+		// compare: its names decide.
+		if sameModuleName(other.row.current, move.row.target) || sameModuleName(move.row.current, other.row.target) {
+			return true
+		}
 		if move.at >= 0 && other.row.target != "" && other.code == "" && e.original[move.at] == other.target.ID {
 			return true
 		}
 	}
 	return false
+}
+
+func sameModuleName(a, b string) bool {
+	return b != "" && textnorm.HeaderKey(a) == textnorm.HeaderKey(b)
 }
 
 // decide settles one move, knowing every move of the contract.
