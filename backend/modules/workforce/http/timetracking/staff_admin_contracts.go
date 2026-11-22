@@ -1,8 +1,12 @@
 package timetracking
 
 import (
+	"errors"
+	"net/http"
+	"slices"
 	"time"
 
+	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
@@ -68,14 +72,30 @@ type PayrollNumberBody struct {
 	Note            string  `json:"note"`
 }
 
-// RebookAbsencesBody describes the body workforce.RebookAbsencesRequest
-// reads: the identifiers as JSON numbers or decimal strings.
+// RebookAbsencesBody is the body of a rebooking; decodeRebookAbsences turns
+// it into workforce.RebookAbsencesRequest.
 type RebookAbsencesBody struct {
 	AbsenceIDs    []ident.ID `json:"absence_ids"`
 	AbsenceType   string     `json:"absence_type"`
 	AbsenceTypeID *ident.ID  `json:"absence_type_id"`
 	Reason        string     `json:"reason"`
 	DryRun        bool       `json:"dry_run"`
+}
+
+// decodeRebookAbsences reads a rebooking body. Every listed absence names
+// its id.
+func decodeRebookAbsences(r *http.Request) (workforce.RebookAbsencesRequest, error) {
+	var body RebookAbsencesBody
+	if err := render.DecodeJSON(r.Body, &body); err != nil {
+		return workforce.RebookAbsencesRequest{}, err
+	}
+	if slices.Contains(body.AbsenceIDs, 0) {
+		return workforce.RebookAbsencesRequest{}, errors.New("invalid absence_ids: id is required")
+	}
+	return workforce.RebookAbsencesRequest{
+		AbsenceIDs: ident.Int64s(body.AbsenceIDs), AbsenceType: body.AbsenceType,
+		AbsenceTypeID: (*int64)(body.AbsenceTypeID), Reason: body.Reason, DryRun: body.DryRun,
+	}, nil
 }
 
 // StaffAdminRouteContracts registers the typed contract of the workforce

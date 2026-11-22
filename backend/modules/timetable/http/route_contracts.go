@@ -66,7 +66,7 @@ func RouteContracts() []common.RouteContract {
 	routes = append(routes, templateRouteContracts()...)
 	routes = append(routes, planningTrackRouteContracts()...)
 	// The printable Betreuungsplan week answers a file (#2079, #2352).
-	return append(routes, common.RouteContract{Method: "POST", Pattern: "/betreuungsplan/export", Portals: tenantPortal, File: true})
+	return append(routes, common.RouteContract{Method: "POST", Pattern: "/betreuungsplan/export", Portals: tenantPortal, Request: betreuungsplanExportRequest{}, File: true})
 }
 
 var tenantPortal = []common.PortalScope{common.PortalTenant}

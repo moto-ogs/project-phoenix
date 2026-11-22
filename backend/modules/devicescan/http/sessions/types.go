@@ -9,11 +9,14 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/devicescan"
 )
 
+// The identifiers of the kiosk device API stay JSON numbers and say so with
+// contract:"number": PyrePortal v1.11.5 reads them as numbers (#7808).
+
 // SessionStartRequest represents a request to start an activity session
 type SessionStartRequest struct {
-	ActivityID    int64   `json:"activity_id"`
-	RoomID        *int64  `json:"room_id,omitempty"`        // Optional: Override the activity's planned room
-	SupervisorIDs []int64 `json:"supervisor_ids,omitempty"` // Multiple supervisors support
+	ActivityID    int64   `json:"activity_id" contract:"number"`
+	RoomID        *int64  `json:"room_id,omitempty" contract:"number"`        // Optional: Override the activity's planned room
+	SupervisorIDs []int64 `json:"supervisor_ids,omitempty" contract:"number"` // Multiple supervisors support
 	Force         bool    `json:"force,omitempty"`
 }
 
@@ -62,7 +65,7 @@ type SessionCurrentResponse = devicescan.SessionCurrentResponse
 
 // UpdateSupervisorsRequest represents a request to update supervisors for an active session
 type UpdateSupervisorsRequest struct {
-	SupervisorIDs []int64 `json:"supervisor_ids"`
+	SupervisorIDs []int64 `json:"supervisor_ids" contract:"number"`
 }
 
 // Bind validates the update supervisors request

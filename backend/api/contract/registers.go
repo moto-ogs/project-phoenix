@@ -13,13 +13,11 @@ type Options struct {
 	// selects, as "METHOD /pattern". It only shrinks: GET /api/students/ is
 	// the one named debt of ADR 0270 point 3, and no route joins it.
 	QueryVariants []string
-	// Identifiers maps the Go identifier types to KindID or KindLaxID. The
-	// root names them, so this package stays free of the HTTP packages. A
-	// KindLaxID type reads a number or a string and may only appear in a
-	// request.
+	// Identifiers maps the Go identifier types to KindID. The root names
+	// them, so this package stays free of the HTTP packages.
 	Identifiers map[reflect.Type]string
 	// Readers says what the own UnmarshalJSON of a request type reads:
-	// ReadsFields or ReadsLaxIDs. A request type with its own UnmarshalJSON
+	// ReadsFields or ReadsValue. A request type with its own UnmarshalJSON
 	// and no entry stops the generator; the root names them like the
 	// identifier types.
 	Readers map[reflect.Type]string
@@ -34,9 +32,6 @@ type Options struct {
 const (
 	// ReadsFields: the reader takes the fields as encoding/json would.
 	ReadsFields = "fields"
-	// ReadsLaxIDs: as ReadsFields, and every int64 field takes a JSON number
-	// or a decimal string. Only a request type may name it.
-	ReadsLaxIDs = "lax_ids"
 	// ReadsValue: the type is a wrapper that reads one JSON value, null
 	// included, into its field Value and notes that the key was present.
 	ReadsValue = "value"

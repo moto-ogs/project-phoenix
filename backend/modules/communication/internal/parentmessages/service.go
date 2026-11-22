@@ -376,8 +376,8 @@ func (s *Service) buildDetailFromMessages(ctx context.Context, thread *ParentMes
 // side so the two portals can't drift.
 // markReadAndBuild also reports whether the staff reader's cursor ADVANCED, so the
 // pure-read callers (GetThread, OpenThread) can fire a read-receipt SSE wake-up to
-// the guardian's open chat only on a real move. The send callers (StartThread,
-// PostMessage) ignore it — their new-message broadcast already refreshes receipts.
+// the guardian's open chat only on a real move. The send caller (PostMessage)
+// ignores it — its new-message broadcast already refreshes receipts.
 func (s *Service) markReadAndBuild(ctx context.Context, thread *ParentMessageThread) (*ThreadDetail, bool, error) {
 	messages, err := s.MessageRepo.ListByThread(ctx, thread.ID, 0)
 	if err != nil {
@@ -488,66 +488,6 @@ func requireHandledBoundary(visibleMessages []*ParentMessage, handledUpToMessage
 		}
 	}
 	return nil
-}
-
-// StartThread sends the OGS's first message to a guardian about a child. The
-// conversation is get-or-create: if one already exists for the (student,
-// guardian) pair the message is appended to it instead of opening a second.
-func (s *Service) StartThread(ctx context.Context, studentID, guardianAccountID int64, body, audience string) (*ThreadDetail, error) {
-	body = strings.TrimSpace(body)
-	if body == "" && !deliveryPorts.HasMessageAttachments(ctx) {
-		return nil, ErrEmptyBody
-	}
-	if utf8.RuneCountInString(body) > maxMessageLen {
-		return nil, ErrBodyTooLong
-	}
-	if err := s.authorizeThreadParticipants(ctx, studentID, guardianAccountID); err != nil {
-		return nil, err
-	}
-
-	accountID := s.accountID(ctx)
-	thread, err := s.conversationForWrite(ctx, studentID, guardianAccountID, audience)
-	if err != nil {
-		return nil, err
-	}
-	message, err := s.appendStaffMessage(ctx, thread, accountID, body)
-	if err != nil {
-		return nil, err
-	}
-	if message.SendReplayed {
-		detail, _, readErr := s.markReadAndBuild(ctx, thread)
-		return detail, readErr
-	}
-	if err := s.notifyGuardianEmail(ctx, thread, message.ID); err != nil {
-		return nil, err
-	}
-	messages, err := s.MessageRepo.ListByThread(ctx, thread.ID, 0)
-	if err != nil {
-		return nil, fmt.Errorf("messaging: list messages: %w", err)
-	}
-	s.broadcastAfterCommit(ctx, thread)
-	s.notifyGuardianDevice(ctx, thread, message.ID)
-	s.Logger.Info("staff sent parent message",
-		slog.Int64("account_id", accountID),
-		slog.Int64("student_id", studentID),
-		slog.Int64("guardian_account_id", guardianAccountID),
-		slog.Int64("tenant_id", thread.TenantID),
-	)
-	// Mark the returned snapshot read, exactly as PostMessage/OpenThread do. When
-	// this hits an already-existing conversation with unread guardian messages, the
-	// detail we hand back has just shown them to the staffer; advancing the cursor
-	// here keeps the inbox/sidebar unread count from staying lit after the SSE
-	// refetch. Snapshot-bounded (never NOW()) via markReadAndBuild. The advance flag
-	// is ignored: this is a SEND path, and broadcastAfterCommit above already wakes
-	// the guardian with the new message (which refreshes receipts too).
-	if _, err := MarkReadToNewest(ctx, s.ReadRepo, thread.TenantID, thread.ID, accountID, true, messages); err != nil {
-		return nil, fmt.Errorf("messaging: mark read: %w", err)
-	}
-	if err := s.clearStaffUnreadMark(ctx, thread); err != nil {
-		return nil, err
-	}
-	detail, err := s.buildDetailFromMessages(ctx, thread, messages)
-	return detail, err
 }
 
 // OpenThread get-or-creates the (student, guardian) conversation and returns

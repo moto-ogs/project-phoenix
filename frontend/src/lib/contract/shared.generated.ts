@@ -26,6 +26,9 @@ export type GuardianPhoneType = (typeof GUARDIAN_PHONE_TYPE_VALUES)[number];
 export const GUARDIAN_RELATIONSHIP_TYPE_VALUES = ["guardian", "other", "parent", "relative"] as const;
 export type GuardianRelationshipType = (typeof GUARDIAN_RELATIONSHIP_TYPE_VALUES)[number];
 
+export const LIST_FORMAT_VALUES = ["csv", "docx", "pdf", "xlsx"] as const;
+export type ListFormat = (typeof LIST_FORMAT_VALUES)[number];
+
 /** Go: absencetypes.AllowanceCarryResponse */
 export interface AllowanceCarryResponse {
   year: number;
@@ -1000,6 +1003,66 @@ export interface SubmitSignatureRequest {
   method?: string;
   image_png?: string;
   typed_name?: string;
+}
+
+/** Go: enrollment.FormAttachment */
+export interface FormAttachmentInput {
+  document_id?: string;
+  label?: string;
+  document_url?: string;
+}
+
+/** Go: enrollment.TranslatedText */
+export interface TranslatedTextInput {
+  text?: string;
+  source?: string;
+}
+
+/** Go: enrollment.FormFieldOption */
+export interface FormFieldOptionInput {
+  label?: string;
+  value?: string;
+  translations?: Record<string, Record<string, TranslatedTextInput> | null> | null;
+}
+
+/** Go: enrollment.FormFieldValidation */
+export interface FormFieldValidationInput {
+  min?: number | null;
+  max?: number | null;
+  pattern?: string | null;
+}
+
+/** Go: enrollment.FormFileOptions */
+export interface FormFileOptionsInput {
+  allowed_types?: string[] | null;
+  max_size_mb?: number;
+  multiple?: boolean;
+}
+
+/** Go: enrollment.VisibilityCondition */
+export interface VisibilityConditionInput {
+  source?: string;
+  field?: string;
+  operator?: string;
+  value?: unknown | null;
+}
+
+/** Go: enrollment.FormLegalBlock */
+export interface FormLegalBlockInput {
+  attachments?: FormAttachmentInput[] | null;
+  key?: string;
+  kind?: string;
+  title?: string;
+  label?: string;
+  text?: string;
+  required?: boolean;
+  enabled?: boolean;
+  sort_order?: number;
+  source?: string;
+  display_mode?: string;
+  document_url?: string;
+  translations?: Record<string, Record<string, TranslatedTextInput> | null> | null;
+  guardian_agreement?: boolean;
 }
 
 /** Go: enrollmenthttp.SubmitEnrollmentRequest */
