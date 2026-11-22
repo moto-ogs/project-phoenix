@@ -6,10 +6,7 @@
  */
 
 import { knownEnum } from "./contract/known-enum";
-import type {
-  DocumentKindOverview as WireOverview,
-  DocumentKindRequest,
-} from "./contract/traeger-billing-document-kinds.generated";
+import type * as traegerBillingDocumentKindsContract from "./contract/traeger-billing-document-kinds.generated";
 import { traegerRequest } from "./traeger-api";
 
 // Go does not register these sets; the contract types them as string.
@@ -54,7 +51,9 @@ export const BILLING_SERVICE_LABEL: Readonly<Record<BillingService, string>> = {
 
 // A service this build does not know has no card and is left out; a choice
 // it does not know is left out of the choices.
-function overviewFromBackend(body: WireOverview): DocumentKindOverview {
+function overviewFromBackend(
+  body: traegerBillingDocumentKindsContract.DocumentKindOverview,
+): DocumentKindOverview {
   return {
     services: (body.services ?? []).flatMap((entry) => {
       const service = knownEnum(SERVICE_VALUES, entry.service);
@@ -77,7 +76,11 @@ function overviewFromBackend(body: WireOverview): DocumentKindOverview {
 }
 
 export async function fetchDocumentKinds(): Promise<DocumentKindOverview> {
-  return overviewFromBackend(await traegerRequest<WireOverview>(PATH));
+  return overviewFromBackend(
+    await traegerRequest<traegerBillingDocumentKindsContract.DocumentKindOverview>(
+      PATH,
+    ),
+  );
 }
 
 export async function saveDocumentKind(
@@ -85,11 +88,13 @@ export async function saveDocumentKind(
   documentKind: DocumentKind,
 ): Promise<DocumentKindOverview> {
   return overviewFromBackend(
-    await traegerRequest<WireOverview>(
+    await traegerRequest<traegerBillingDocumentKindsContract.DocumentKindOverview>(
       `${PATH}/${encodeURIComponent(service)}`,
       {
         method: "PUT",
-        body: { document_kind: documentKind } satisfies DocumentKindRequest,
+        body: {
+          document_kind: documentKind,
+        } satisfies traegerBillingDocumentKindsContract.DocumentKindRequest,
       },
     ),
   );

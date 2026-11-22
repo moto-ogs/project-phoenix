@@ -10,17 +10,8 @@
 
 import { apiErrorFromBody, transportFetch } from "./api-error";
 import { filenameFromDisposition } from "./file-download";
-import type {
-  KeyDateCareForm as WireCareForm,
-  KeyDateDistrict as WireDistrict,
-  KeyDateFigures as WireFigures,
-  KeyDateReport as WireReport,
-  KeyDateTotal as WireTotal,
-} from "./contract/traeger-reports.generated";
-import type {
-  ReportTemplateRequest,
-  TraegerReportTemplate as WireTemplate,
-} from "./contract/traeger-report-templates.generated";
+import type * as traegerReportsContract from "./contract/traeger-reports.generated";
+import type * as traegerReportTemplatesContract from "./contract/traeger-report-templates.generated";
 import { requiredDay } from "./contract/required-day";
 import { traegerRequest } from "./traeger-api";
 
@@ -137,7 +128,9 @@ export function sectionsOf(values: readonly string[]): ReportSection[] {
   return REPORT_SECTIONS.filter((section) => known.has(section));
 }
 
-function figuresFromBackend(figures: WireFigures): ReportFigures {
+function figuresFromBackend(
+  figures: traegerReportsContract.KeyDateFigures,
+): ReportFigures {
   return {
     children: figures.children,
     withoutCareForm: figures.without_care_form,
@@ -157,7 +150,9 @@ function figuresFromBackend(figures: WireFigures): ReportFigures {
   };
 }
 
-function careFormsFromBackend(forms: WireCareForm[] | null): ReportCareForm[] {
+function careFormsFromBackend(
+  forms: traegerReportsContract.KeyDateCareForm[] | null,
+): ReportCareForm[] {
   return (forms ?? []).map((form) => ({
     name: form.name,
     children: form.children,
@@ -167,7 +162,9 @@ function careFormsFromBackend(forms: WireCareForm[] | null): ReportCareForm[] {
 }
 
 function groupFromBackend(
-  group: WireDistrict | WireTotal,
+  group:
+    | traegerReportsContract.KeyDateDistrict
+    | traegerReportsContract.KeyDateTotal,
   name: string,
 ): ReportGroup {
   return {
@@ -178,7 +175,9 @@ function groupFromBackend(
   };
 }
 
-function reportFromBackend(body: WireReport): KeyDateReport {
+function reportFromBackend(
+  body: traegerReportsContract.KeyDateReport,
+): KeyDateReport {
   const window = body.absence_window;
   return {
     keyDate: requiredDay(body.key_date, "key_date_report.key_date"),
@@ -208,7 +207,9 @@ function reportFromBackend(body: WireReport): KeyDateReport {
   };
 }
 
-function templateFromBackend(template: WireTemplate): ReportTemplate {
+function templateFromBackend(
+  template: traegerReportTemplatesContract.TraegerReportTemplate,
+): ReportTemplate {
   return {
     id: template.id,
     name: template.name,
@@ -223,7 +224,9 @@ function templateFromBackend(template: WireTemplate): ReportTemplate {
   };
 }
 
-function templateToBackend(input: ReportTemplateInput): ReportTemplateRequest {
+function templateToBackend(
+  input: ReportTemplateInput,
+): traegerReportTemplatesContract.ReportTemplateRequest {
   return {
     name: input.name.trim(),
     sections: sectionsOf(input.sections),
@@ -250,7 +253,7 @@ export async function fetchKeyDateReport(
   templateId: string | null,
 ): Promise<KeyDateReport> {
   return reportFromBackend(
-    await traegerRequest<WireReport>(
+    await traegerRequest<traegerReportsContract.KeyDateReport>(
       `${REPORT_PATH}?${reportQuery(keyDate, templateId)}`,
     ),
   );
@@ -291,7 +294,10 @@ export async function downloadKeyDateReport(
 
 /** Die Vorlagen des Trägers, nach Namen. */
 export async function fetchReportTemplates(): Promise<ReportTemplate[]> {
-  const body = await traegerRequest<WireTemplate[]>(TEMPLATES_PATH);
+  const body =
+    await traegerRequest<
+      traegerReportTemplatesContract.TraegerReportTemplate[]
+    >(TEMPLATES_PATH);
   return body.map(templateFromBackend);
 }
 
@@ -299,10 +305,13 @@ export async function createReportTemplate(
   input: ReportTemplateInput,
 ): Promise<ReportTemplate> {
   return templateFromBackend(
-    await traegerRequest<WireTemplate>(TEMPLATES_PATH, {
-      method: "POST",
-      body: templateToBackend(input),
-    }),
+    await traegerRequest<traegerReportTemplatesContract.TraegerReportTemplate>(
+      TEMPLATES_PATH,
+      {
+        method: "POST",
+        body: templateToBackend(input),
+      },
+    ),
   );
 }
 
@@ -311,7 +320,7 @@ export async function updateReportTemplate(
   input: ReportTemplateInput,
 ): Promise<ReportTemplate> {
   return templateFromBackend(
-    await traegerRequest<WireTemplate>(
+    await traegerRequest<traegerReportTemplatesContract.TraegerReportTemplate>(
       `${TEMPLATES_PATH}/${encodeURIComponent(id)}`,
       { method: "PUT", body: templateToBackend(input) },
     ),

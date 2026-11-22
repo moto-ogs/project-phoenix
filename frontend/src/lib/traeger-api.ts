@@ -8,36 +8,16 @@
 import { ApiError, apiErrorFromBody, transportFetch } from "./api-error";
 import { knownEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
-import type { HolidayNoCareDay as WireNoCareDay } from "./contract/shared.generated";
-import type {
-  AccessLogPage as WireAccessLogPage,
-  AccessLogPerson as WireAccessLogPerson,
-} from "./contract/traeger-access-log.generated";
-import type {
-  TraegerAccountsResponse,
-  TraegerHistoryResponse,
-  TraegerInvitationResponse as WireInvitation,
-  TraegerMemberResponse as WireMember,
-} from "./contract/traeger-accounts.generated";
-import type {
-  HolidayPeriod as WireHolidayPeriod,
-  HolidayPeriodRequest,
-} from "./contract/traeger-holiday-periods.generated";
-import type { InvitationPreviewResponse } from "./contract/traeger-invitations.generated";
-import type {
-  BankAccountRequest,
-  TraegerBankAccount as WireBankAccount,
-  TraegerLogo as WireLogo,
-  TraegerProfile as WireMasterData,
-} from "./contract/traeger-master-data.generated";
-import type { TraegerFrame } from "./contract/traeger-organization.generated";
-import type { TraegerProfileResponse } from "./contract/traeger-profile.generated";
-import type {
-  SchoolFigures as WireSchoolFigures,
-  SchoolsAlerts as WireSchoolsAlerts,
-  SchoolView as WireSchoolView,
-  TraegerSchool as WireSchool,
-} from "./contract/traeger-schools.generated";
+import type * as sharedContract from "./contract/shared.generated";
+import type * as traegerAccessLogContract from "./contract/traeger-access-log.generated";
+import type * as traegerAccountsContract from "./contract/traeger-accounts.generated";
+import type * as traegerHolidayPeriodsContract from "./contract/traeger-holiday-periods.generated";
+import type * as traegerInvitationsContract from "./contract/traeger-invitations.generated";
+import type * as traegerMasterDataContract from "./contract/traeger-master-data.generated";
+import type * as traegerOrganizationContract from "./contract/traeger-organization.generated";
+import type * as traegerProfileContract from "./contract/traeger-profile.generated";
+import type * as traegerSchoolSessionsContract from "./contract/traeger-school-sessions.generated";
+import type * as traegerSchoolsContract from "./contract/traeger-schools.generated";
 import type { SettingsSchema } from "./settings-api";
 import { filenameFromDisposition } from "./file-download";
 import { portalAuthPath } from "./portal-paths";
@@ -199,11 +179,14 @@ export async function fetchTraegerSchools(): Promise<TraegerSchool[]> {
       data,
     );
   }
-  const schools = (data as { data: WireSchool[] }).data;
+  const schools = (data as { data: traegerSchoolsContract.TraegerSchool[] })
+    .data;
   return schools.map(toTraegerSchool);
 }
 
-function toTraegerSchool(school: WireSchool): TraegerSchool {
+function toTraegerSchool(
+  school: traegerSchoolsContract.TraegerSchool,
+): TraegerSchool {
   return {
     id: school.id,
     name: school.name,
@@ -213,7 +196,9 @@ function toTraegerSchool(school: WireSchool): TraegerSchool {
   };
 }
 
-function toSchoolFigures(figures: WireSchoolFigures): TraegerSchoolFigures {
+function toSchoolFigures(
+  figures: traegerSchoolsContract.SchoolFigures,
+): TraegerSchoolFigures {
   return {
     childrenTotal: figures.children_total,
     childrenPresent: figures.children_present,
@@ -242,7 +227,7 @@ export async function fetchTraegerSchoolsAlerts(): Promise<TraegerSchoolsAlerts>
       data,
     );
   }
-  const alerts = (data as { data: WireSchoolsAlerts }).data;
+  const alerts = (data as { data: traegerSchoolsContract.SchoolsAlerts }).data;
   return {
     thresholds: {
       childrenPerStaff: alerts.thresholds.children_per_staff,
@@ -278,7 +263,7 @@ export async function fetchTraegerSchool(
       data,
     );
   }
-  const school = (data as { data: WireSchoolView }).data;
+  const school = (data as { data: traegerSchoolsContract.SchoolView }).data;
   return {
     ...toTraegerSchool(school),
     address: school.address,
@@ -300,7 +285,9 @@ export async function startTraegerSchoolSession(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ school_id: schoolId }),
+    body: JSON.stringify({
+      school_id: schoolId,
+    } satisfies traegerSchoolSessionsContract.SchoolSessionRequest),
   });
   const data = await readJson(response);
   if (!response.ok) {
@@ -464,7 +451,7 @@ export interface HolidayPeriod extends HolidayPeriodInput {
 }
 
 function noCareDaysFromBackend(
-  days: readonly WireNoCareDay[] | null,
+  days: readonly sharedContract.HolidayNoCareDay[] | null,
 ): HolidayNoCareDay[] {
   return (days ?? []).map((day) => ({
     date: requiredDay(day.date, "holiday_no_care_day.date"),
@@ -473,7 +460,9 @@ function noCareDaysFromBackend(
   }));
 }
 
-function holidayPeriodFromBackend(period: WireHolidayPeriod): HolidayPeriod {
+function holidayPeriodFromBackend(
+  period: traegerHolidayPeriodsContract.HolidayPeriod,
+): HolidayPeriod {
   return {
     id: period.id,
     name: period.name,
@@ -525,7 +514,7 @@ function holidayPeriodFromBackend(period: WireHolidayPeriod): HolidayPeriod {
 
 function holidayPeriodToBackend(
   input: HolidayPeriodInput,
-): HolidayPeriodRequest {
+): traegerHolidayPeriodsContract.HolidayPeriodRequest {
   return {
     name: input.name,
     registration_opens_on: input.registrationOpensOn,
@@ -622,7 +611,9 @@ export async function traegerRequest<T>(
   return (data as { data?: T } | null)?.data as T;
 }
 
-function mapInvitation(invitation: WireInvitation): TraegerInvitation {
+function mapInvitation(
+  invitation: traegerAccountsContract.TraegerInvitationResponse,
+): TraegerInvitation {
   return {
     id: invitation.id,
     email: invitation.email,
@@ -631,7 +622,9 @@ function mapInvitation(invitation: WireInvitation): TraegerInvitation {
   };
 }
 
-function mapMember(member: WireMember): TraegerMember {
+function mapMember(
+  member: traegerAccountsContract.TraegerMemberResponse,
+): TraegerMember {
   return {
     accountId: member.account_id,
     email: member.email,
@@ -642,9 +635,10 @@ function mapMember(member: WireMember): TraegerMember {
 
 /** The people and the open invitations of the Träger-Büro. */
 export async function fetchTraegerBuero(): Promise<TraegerBuero> {
-  const data = await traegerRequest<TraegerAccountsResponse>(
-    "/api/traeger/accounts",
-  );
+  const data =
+    await traegerRequest<traegerAccountsContract.TraegerAccountsResponse>(
+      "/api/traeger/accounts",
+    );
   return {
     members: (data.members ?? []).map(mapMember),
     invitations: (data.invitations ?? []).map(mapInvitation),
@@ -684,9 +678,10 @@ export async function fetchTraegerAccountHistory(
   before?: string,
 ): Promise<TraegerAccountHistoryPage> {
   const query = before ? `?${new URLSearchParams({ before }).toString()}` : "";
-  const data = await traegerRequest<TraegerHistoryResponse>(
-    `/api/traeger/accounts/history${query}`,
-  );
+  const data =
+    await traegerRequest<traegerAccountsContract.TraegerHistoryResponse>(
+      `/api/traeger/accounts/history${query}`,
+    );
   return {
     entries: (data.entries ?? []).map((entry) => ({
       id: entry.id,
@@ -739,7 +734,7 @@ export async function changeTraegerMemberName(
   name: string,
 ): Promise<TraegerMember> {
   return mapMember(
-    await traegerRequest<WireMember>(
+    await traegerRequest<traegerAccountsContract.TraegerMemberResponse>(
       `/api/traeger/accounts/${encodeURIComponent(accountId)}/name`,
       { method: "PUT", body: { name } },
     ),
@@ -759,9 +754,10 @@ export async function removeTraegerMember(accountId: string): Promise<void> {
 export async function fetchTraegerInvitation(
   token: string,
 ): Promise<TraegerInvitationPreview> {
-  const data = await traegerRequest<InvitationPreviewResponse>(
-    `/api/traeger/invitations/${encodeURIComponent(token)}`,
-  );
+  const data =
+    await traegerRequest<traegerInvitationsContract.InvitationPreviewResponse>(
+      `/api/traeger/invitations/${encodeURIComponent(token)}`,
+    );
   return {
     organizationName: data.organization_name,
     email: data.email,
@@ -803,7 +799,9 @@ export interface TraegerProfile {
   readonly name: string;
 }
 
-function mapProfile(profile: TraegerProfileResponse): TraegerProfile {
+function mapProfile(
+  profile: traegerProfileContract.TraegerProfileResponse,
+): TraegerProfile {
   return {
     accountId: profile.account_id,
     email: profile.email,
@@ -814,7 +812,9 @@ function mapProfile(profile: TraegerProfileResponse): TraegerProfile {
 /** The own account of the signed-in person (#4693); needs no extra right. */
 export async function fetchTraegerProfile(): Promise<TraegerProfile> {
   return mapProfile(
-    await traegerRequest<TraegerProfileResponse>("/api/traeger/profile"),
+    await traegerRequest<traegerProfileContract.TraegerProfileResponse>(
+      "/api/traeger/profile",
+    ),
   );
 }
 
@@ -823,10 +823,13 @@ export async function changeTraegerProfileName(
   name: string,
 ): Promise<TraegerProfile> {
   return mapProfile(
-    await traegerRequest<TraegerProfileResponse>("/api/traeger/profile/name", {
-      method: "PUT",
-      body: { name },
-    }),
+    await traegerRequest<traegerProfileContract.TraegerProfileResponse>(
+      "/api/traeger/profile/name",
+      {
+        method: "PUT",
+        body: { name },
+      },
+    ),
   );
 }
 
@@ -835,14 +838,16 @@ const holidayPeriodsPath = "/api/traeger/holiday-periods";
 /** Every holiday period of the signed-in person's Träger, newest first. */
 export async function fetchHolidayPeriods(): Promise<HolidayPeriod[]> {
   const periods =
-    (await traegerRequest<WireHolidayPeriod[]>(holidayPeriodsPath)) ?? [];
+    (await traegerRequest<traegerHolidayPeriodsContract.HolidayPeriod[]>(
+      holidayPeriodsPath,
+    )) ?? [];
   return periods.map(holidayPeriodFromBackend);
 }
 
 /** One holiday period of the Träger. */
 export async function fetchHolidayPeriod(id: string): Promise<HolidayPeriod> {
   return holidayPeriodFromBackend(
-    await traegerRequest<WireHolidayPeriod>(
+    await traegerRequest<traegerHolidayPeriodsContract.HolidayPeriod>(
       `${holidayPeriodsPath}/${encodeURIComponent(id)}`,
     ),
   );
@@ -853,10 +858,13 @@ export async function createHolidayPeriod(
   input: HolidayPeriodInput,
 ): Promise<HolidayPeriod> {
   return holidayPeriodFromBackend(
-    await traegerRequest<WireHolidayPeriod>(holidayPeriodsPath, {
-      method: "POST",
-      body: holidayPeriodToBackend(input),
-    }),
+    await traegerRequest<traegerHolidayPeriodsContract.HolidayPeriod>(
+      holidayPeriodsPath,
+      {
+        method: "POST",
+        body: holidayPeriodToBackend(input),
+      },
+    ),
   );
 }
 
@@ -866,7 +874,7 @@ export async function updateHolidayPeriod(
   input: HolidayPeriodInput,
 ): Promise<HolidayPeriod> {
   return holidayPeriodFromBackend(
-    await traegerRequest<WireHolidayPeriod>(
+    await traegerRequest<traegerHolidayPeriodsContract.HolidayPeriod>(
       `${holidayPeriodsPath}/${encodeURIComponent(id)}`,
       { method: "PUT", body: holidayPeriodToBackend(input) },
     ),
@@ -876,7 +884,7 @@ export async function updateHolidayPeriod(
 /** Publishes a complete period for registration. */
 export async function publishHolidayPeriod(id: string): Promise<HolidayPeriod> {
   return holidayPeriodFromBackend(
-    await traegerRequest<WireHolidayPeriod>(
+    await traegerRequest<traegerHolidayPeriodsContract.HolidayPeriod>(
       `${holidayPeriodsPath}/${encodeURIComponent(id)}/publish`,
       { method: "POST" },
     ),
@@ -953,7 +961,7 @@ export async function fetchTraegerAccessLog(
   page: number,
   asOf?: string,
 ): Promise<TraegerAccessLogPage> {
-  const data = await traegerRequest<WireAccessLogPage>(
+  const data = await traegerRequest<traegerAccessLogContract.AccessLogPage>(
     `/api/traeger/access-log?${traegerAccessLogQuery(filter, page, asOf)}`,
   );
   return {
@@ -978,7 +986,7 @@ export async function fetchTraegerAccessLogPeople(
   to: string,
 ): Promise<TraegerAccessLogPerson[]> {
   const query = new URLSearchParams({ from, to }).toString();
-  const data = await traegerRequest<WireAccessLogPerson[]>(
+  const data = await traegerRequest<traegerAccessLogContract.AccessLogPerson[]>(
     `/api/traeger/access-log/people?${query}`,
   );
   return data.map((person) => ({
@@ -1059,9 +1067,10 @@ export interface TraegerOrganization {
 
 /** The Träger of the signed-in person's session. */
 export async function fetchTraegerOrganization(): Promise<TraegerOrganization> {
-  const organization = await traegerRequest<TraegerFrame | null>(
-    "/api/traeger/organization",
-  );
+  const organization =
+    await traegerRequest<traegerOrganizationContract.TraegerFrame | null>(
+      "/api/traeger/organization",
+    );
   if (!organization) {
     throw apiErrorFromBody("Träger response without data", 502, organization);
   }
@@ -1124,7 +1133,9 @@ export interface TraegerMasterData {
   readonly bankAccounts: readonly TraegerBankAccount[];
 }
 
-function mapTraegerLogo(logo: WireLogo): TraegerLogo {
+function mapTraegerLogo(
+  logo: traegerMasterDataContract.TraegerLogo,
+): TraegerLogo {
   return {
     contentType: logo.content_type,
     width: logo.width,
@@ -1134,7 +1145,9 @@ function mapTraegerLogo(logo: WireLogo): TraegerLogo {
   };
 }
 
-function mapTraegerBankAccount(account: WireBankAccount): TraegerBankAccount {
+function mapTraegerBankAccount(
+  account: traegerMasterDataContract.TraegerBankAccount,
+): TraegerBankAccount {
   return {
     id: account.id,
     label: account.label,
@@ -1148,7 +1161,7 @@ function mapTraegerBankAccount(account: WireBankAccount): TraegerBankAccount {
 
 function backendBankAccount(
   input: TraegerBankAccountInput,
-): BankAccountRequest {
+): traegerMasterDataContract.BankAccountRequest {
   return {
     label: input.label,
     account_holder: input.accountHolder,
@@ -1170,7 +1183,10 @@ export function traegerLogoSrc(logo: TraegerLogo): string {
 
 /** Reads the master data of the Träger. The read is logged. */
 export async function fetchTraegerMasterData(): Promise<TraegerMasterData> {
-  const data = await traegerRequest<WireMasterData>(masterDataPath);
+  const data =
+    await traegerRequest<traegerMasterDataContract.TraegerProfile>(
+      masterDataPath,
+    );
   return {
     contact: { ...data.contact },
     withdrawal: { ...data.withdrawal },
@@ -1232,7 +1248,8 @@ export async function uploadTraegerLogo(file: File): Promise<TraegerLogo> {
       data,
     );
   }
-  const logo = (data as { data?: WireLogo } | null)?.data;
+  const logo = (data as { data?: traegerMasterDataContract.TraegerLogo } | null)
+    ?.data;
   if (!logo) {
     throw apiErrorFromBody("Logo response without data", 502, data);
   }
@@ -1249,10 +1266,13 @@ export async function createTraegerBankAccount(
   input: TraegerBankAccountInput,
 ): Promise<TraegerBankAccount> {
   return mapTraegerBankAccount(
-    await traegerRequest<WireBankAccount>(`${masterDataPath}/bank-accounts`, {
-      method: "POST",
-      body: backendBankAccount(input),
-    }),
+    await traegerRequest<traegerMasterDataContract.TraegerBankAccount>(
+      `${masterDataPath}/bank-accounts`,
+      {
+        method: "POST",
+        body: backendBankAccount(input),
+      },
+    ),
   );
 }
 
@@ -1262,10 +1282,13 @@ export async function updateTraegerBankAccount(
   input: TraegerBankAccountInput,
 ): Promise<TraegerBankAccount> {
   return mapTraegerBankAccount(
-    await traegerRequest<WireBankAccount>(bankAccountPath(id), {
-      method: "PUT",
-      body: backendBankAccount(input),
-    }),
+    await traegerRequest<traegerMasterDataContract.TraegerBankAccount>(
+      bankAccountPath(id),
+      {
+        method: "PUT",
+        body: backendBankAccount(input),
+      },
+    ),
   );
 }
 

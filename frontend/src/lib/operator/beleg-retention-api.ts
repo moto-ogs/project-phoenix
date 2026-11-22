@@ -1,3 +1,4 @@
+import type * as operatorOrganizationsContract from "~/lib/contract/operator-organizations.generated";
 import { operatorFetch } from "./api-helpers";
 
 /** Belegarten des Trägers (#4720, ADR 0184), in Anzeigereihenfolge. */
@@ -160,118 +161,83 @@ export interface BelegRetentionOverview {
   readonly evaluatedOn: string | null;
 }
 
-export interface RecordInstructionRequest {
-  readonly beleg_type: string;
-  readonly trigger_event: string;
-  readonly period: number;
-  readonly basis: string;
-  readonly legal_basis: string;
-  readonly basis_justification: string;
-  readonly instructed_by: string;
-  readonly instructed_on: string;
-  readonly instruction_reference: string;
-  readonly statutes_not_applicable_confirmed: boolean;
-}
-
-export interface RecordSuspensionRequest {
-  readonly beleg_type: string;
-  readonly reason: string;
-  readonly scope: string;
-  readonly responsible: string;
-  readonly review_on: string;
-}
-
-export interface RecordClarificationReviewRequest {
-  readonly beleg_type: string;
-  readonly reason: string;
-  readonly note: string;
-  readonly escalated: boolean;
-  readonly escalation_reason: string;
-  readonly next_review_on: string;
-}
-
-type Wire = Record<string, unknown>;
-
-const text = (value: unknown): string =>
-  typeof value === "string" ? value : "";
-const num = (value: unknown): number => (typeof value === "number" ? value : 0);
-const list = (value: unknown): Wire[] =>
-  Array.isArray(value)
-    ? value.filter((v): v is Wire => typeof v === "object" && v !== null)
-    : [];
-const id = (value: unknown): string =>
-  typeof value === "number" || typeof value === "string" ? String(value) : "";
+export type RecordInstructionRequest =
+  operatorOrganizationsContract.instructionRequest;
+export type RecordSuspensionRequest =
+  operatorOrganizationsContract.suspensionRequest;
+export type RecordClarificationReviewRequest =
+  operatorOrganizationsContract.clarificationReviewRequest;
 
 export function mapBelegRetentionOverview(
-  data: unknown,
+  wire: operatorOrganizationsContract.BelegRetentionOverview,
 ): BelegRetentionOverview {
-  const wire = (typeof data === "object" && data !== null ? data : {}) as Wire;
   return {
-    instructions: list(wire.instructions).map((row) => ({
-      id: id(row.id),
-      belegType: text(row.beleg_type),
-      triggerEvent: text(row.trigger_event),
-      period: num(row.period),
-      basis: text(row.basis),
-      legalBasis: text(row.legal_basis),
-      basisJustification: text(row.basis_justification),
-      instructedBy: text(row.instructed_by),
-      instructedOn: text(row.instructed_on),
-      instructionReference: text(row.instruction_reference),
-      statutesNotApplicableConfirmed:
-        row.statutes_not_applicable_confirmed === true,
-      confirmedAt: text(row.confirmed_at) || null,
-      recordedAt: text(row.recorded_at),
+    instructions: (wire.instructions ?? []).map((row) => ({
+      id: row.id,
+      belegType: row.beleg_type,
+      triggerEvent: row.trigger_event,
+      period: row.period,
+      basis: row.basis,
+      legalBasis: row.legal_basis,
+      basisJustification: row.basis_justification ?? "",
+      instructedBy: row.instructed_by,
+      instructedOn: row.instructed_on ?? "",
+      instructionReference: row.instruction_reference,
+      statutesNotApplicableConfirmed: row.statutes_not_applicable_confirmed,
+      confirmedAt: row.confirmed_at || null,
+      recordedAt: row.recorded_at,
     })),
-    suspensions: list(wire.suspensions).map(mapSuspension),
-    summary: list(wire.summary).map((row) => ({
-      belegType: text(row.beleg_type),
-      scheduled: num(row.scheduled),
-      running: num(row.running),
-      clarification: num(row.clarification),
-      suspended: num(row.suspended),
-      nextEnd: text(row.next_end) || null,
+    suspensions: (wire.suspensions ?? []).map(mapSuspension),
+    summary: (wire.summary ?? []).map((row) => ({
+      belegType: row.beleg_type,
+      scheduled: row.scheduled,
+      running: row.running,
+      clarification: row.clarification,
+      suspended: row.suspended,
+      nextEnd: row.next_end || null,
     })),
-    clarifications: list(wire.clarifications).map((row) => ({
-      belegType: text(row.beleg_type),
-      reason: text(row.reason),
-      count: num(row.count),
-      overdue: num(row.overdue),
-      listedOn: text(row.listed_on),
-      reviewOn: text(row.review_on),
-      responsible: text(row.responsible),
-      lastReview: mapReview(row.last_review),
+    clarifications: (wire.clarifications ?? []).map((row) => ({
+      belegType: row.beleg_type,
+      reason: row.reason,
+      count: row.count,
+      overdue: row.overdue,
+      listedOn: row.listed_on ?? "",
+      reviewOn: row.review_on ?? "",
+      responsible: row.responsible,
+      lastReview: row.last_review ? mapReview(row.last_review) : null,
     })),
-    deletions: list(wire.deletions).map((row) => ({
-      belegType: text(row.beleg_type),
-      deletedOn: text(row.deleted_on),
-      count: num(row.count),
+    deletions: (wire.deletions ?? []).map((row) => ({
+      belegType: row.beleg_type,
+      deletedOn: row.deleted_on ?? "",
+      count: row.count,
     })),
-    evaluatedOn: text(wire.evaluated_on) || null,
+    evaluatedOn: wire.evaluated_on || null,
   };
 }
 
-function mapReview(value: unknown): BelegClarificationReview | null {
-  if (typeof value !== "object" || value === null) return null;
-  const row = value as Wire;
+function mapReview(
+  row: operatorOrganizationsContract.BelegClarificationReview,
+): BelegClarificationReview {
   return {
-    note: text(row.note),
-    escalated: row.escalated === true,
-    escalationReason: text(row.escalation_reason),
-    reviewedOn: text(row.reviewed_on),
-    nextReviewOn: text(row.next_review_on),
+    note: row.note,
+    escalated: row.escalated,
+    escalationReason: row.escalation_reason ?? "",
+    reviewedOn: row.reviewed_on ?? "",
+    nextReviewOn: row.next_review_on ?? "",
   };
 }
 
-function mapSuspension(row: Wire): RetentionSuspension {
+function mapSuspension(
+  row: operatorOrganizationsContract.RetentionSuspension,
+): RetentionSuspension {
   return {
-    id: id(row.id),
-    belegType: text(row.beleg_type),
-    belegId: row.beleg_id ? id(row.beleg_id) : null,
-    reason: text(row.reason),
-    scope: text(row.scope),
-    responsible: text(row.responsible),
-    reviewOn: text(row.review_on),
+    id: row.id,
+    belegType: row.beleg_type,
+    belegId: row.beleg_id || null,
+    reason: row.reason,
+    scope: row.scope,
+    responsible: row.responsible,
+    reviewOn: row.review_on ?? "",
   };
 }
 
@@ -280,7 +246,11 @@ const base = (orgId: string) =>
 
 export const belegRetentionService = {
   async getOverview(orgId: string): Promise<BelegRetentionOverview> {
-    return mapBelegRetentionOverview(await operatorFetch<unknown>(base(orgId)));
+    return mapBelegRetentionOverview(
+      await operatorFetch<operatorOrganizationsContract.BelegRetentionOverview>(
+        base(orgId),
+      ),
+    );
   },
   async recordInstruction(
     orgId: string,

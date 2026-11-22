@@ -45,6 +45,17 @@ describe("traeger-api", () => {
     vi.unstubAllGlobals();
   });
 
+  it("names the school of the Absprung as a string", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, { status: "success", data: { handoff_token: "t" } }),
+    );
+
+    await expect(startTraegerSchoolSession("12")).resolves.toBe("t");
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({
+      school_id: "12",
+    });
+  });
+
   // The DATEV states of the export page (#6433): one request per page of
   // runs, the Jahresbescheide never asked, the backend IDs as strings.
   it("reads the DATEV states of the runs one page at a time", async () => {

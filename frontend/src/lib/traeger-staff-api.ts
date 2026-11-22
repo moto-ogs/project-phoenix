@@ -8,25 +8,7 @@
  * und Steuerdaten. Personendaten werden nie zwischengespeichert; jede Anfrage
  * steht im Zugriffsprotokoll der Schulen. Backend-IDs werden hier zu Strings.
  */
-import type {
-  ContractSollRequest,
-  CreateContractRequest,
-  HireRequest,
-  HolidayWeeksRequest,
-  PersonnelNumberRequest,
-  PersonRequest,
-  SiteSollPayload,
-  StaffFinancialRequest,
-  StaffLinkRequest,
-  TraegerStaffCandidate as WireCandidate,
-  TraegerStaffContract as WireContract,
-  TraegerStaffFinancial as WireFinancial,
-  TraegerStaffLinkPreview as WirePreview,
-  TraegerStaffOverview as WireOverview,
-  TraegerStaffRecordDetail as WireDetail,
-  TraegerStaffRecordSummary as WireSummary,
-  UpdateContractRequest,
-} from "~/lib/contract/traeger-staff-records.generated";
+import type * as traegerStaffRecordsContract from "~/lib/contract/traeger-staff-records.generated";
 import { knownEnum } from "~/lib/contract/known-enum";
 import { requiredDay } from "~/lib/contract/required-day";
 import {
@@ -285,7 +267,9 @@ export interface StaffLinkInput {
   readonly choices: Readonly<Partial<Record<StaffRecordField, string>>>;
 }
 
-function mapSummary(record: WireSummary): StaffRecordSummary {
+function mapSummary(
+  record: traegerStaffRecordsContract.TraegerStaffRecordSummary,
+): StaffRecordSummary {
   return {
     id: record.id,
     firstName: record.first_name,
@@ -303,7 +287,9 @@ function mapSummary(record: WireSummary): StaffRecordSummary {
   };
 }
 
-function mapCandidate(candidate: WireCandidate): StaffCandidate {
+function mapCandidate(
+  candidate: traegerStaffRecordsContract.TraegerStaffCandidate,
+): StaffCandidate {
   return {
     schoolId: candidate.school_id,
     schoolName: candidate.school_name,
@@ -316,7 +302,9 @@ function mapCandidate(candidate: WireCandidate): StaffCandidate {
   };
 }
 
-function mapFinancial(financial: WireFinancial): StaffFinancial {
+function mapFinancial(
+  financial: traegerStaffRecordsContract.TraegerStaffFinancial,
+): StaffFinancial {
   return {
     iban: financial.iban,
     taxId: financial.tax_id,
@@ -324,7 +312,9 @@ function mapFinancial(financial: WireFinancial): StaffFinancial {
   };
 }
 
-function mapDetail(record: WireDetail): StaffRecordDetail {
+function mapDetail(
+  record: traegerStaffRecordsContract.TraegerStaffRecordDetail,
+): StaffRecordDetail {
   return {
     ...mapSummary(record),
     financial: mapFinancial(record.financial),
@@ -341,7 +331,9 @@ function mapDetail(record: WireDetail): StaffRecordDetail {
   };
 }
 
-function mapContract(contract: WireContract): StaffContract {
+function mapContract(
+  contract: traegerStaffRecordsContract.TraegerStaffContract,
+): StaffContract {
   return {
     id: contract.id,
     kind: knownEnum(STAFF_CONTRACT_KIND_VALUES, contract.kind),
@@ -377,13 +369,17 @@ function mapContract(contract: WireContract): StaffContract {
   };
 }
 
-const siteBody = (site: StaffContractSiteInput): SiteSollPayload => ({
+const siteBody = (
+  site: StaffContractSiteInput,
+): traegerStaffRecordsContract.SiteSollPayload => ({
   school_id: site.schoolId,
   staff_id: site.staffId,
   weekday_minutes: [...site.weekdayMinutes],
 });
 
-function mapStaffOverview(data: WireOverview): StaffOverview {
+function mapStaffOverview(
+  data: traegerStaffRecordsContract.TraegerStaffOverview,
+): StaffOverview {
   return {
     release: data.release
       ? {
@@ -407,7 +403,9 @@ function mapStaffOverview(data: WireOverview): StaffOverview {
   };
 }
 
-function linkBody(input: StaffLinkInput): StaffLinkRequest {
+function linkBody(
+  input: StaffLinkInput,
+): traegerStaffRecordsContract.StaffLinkRequest {
   return {
     staff_record_id: input.recordId === null ? null : input.recordId,
     members: input.members.map((member) => ({
@@ -422,7 +420,11 @@ const recordPath = (id: string, suffix = "") =>
   `${BASE}/${encodeURIComponent(id)}${suffix}`;
 
 export async function fetchStaffOverview(): Promise<StaffOverview> {
-  return mapStaffOverview(await traegerRequest<WireOverview>(`${BASE}`));
+  return mapStaffOverview(
+    await traegerRequest<traegerStaffRecordsContract.TraegerStaffOverview>(
+      `${BASE}`,
+    ),
+  );
 }
 
 /** Die Liste der Akten als Datei; der Download steht im Zugriffsprotokoll. */
@@ -433,16 +435,24 @@ export function downloadStaffRecordList(
 }
 
 export async function fetchStaffRecord(id: string): Promise<StaffRecordDetail> {
-  return mapDetail(await traegerRequest<WireDetail>(recordPath(id)));
+  return mapDetail(
+    await traegerRequest<traegerStaffRecordsContract.TraegerStaffRecordDetail>(
+      recordPath(id),
+    ),
+  );
 }
 
 export async function previewStaffLink(
   input: StaffLinkInput,
 ): Promise<StaffLinkPreview> {
-  const data = await traegerRequest<WirePreview>(`${BASE}/link-preview`, {
-    method: "POST",
-    body: linkBody(input),
-  });
+  const data =
+    await traegerRequest<traegerStaffRecordsContract.TraegerStaffLinkPreview>(
+      `${BASE}/link-preview`,
+      {
+        method: "POST",
+        body: linkBody(input),
+      },
+    );
   return {
     record: data.record ? mapSummary(data.record) : null,
     members: (data.members ?? []).map(mapCandidate),
@@ -469,10 +479,13 @@ export async function linkStaff(
   input: StaffLinkInput,
 ): Promise<StaffRecordDetail> {
   return mapDetail(
-    await traegerRequest<WireDetail>(`${BASE}`, {
-      method: "POST",
-      body: linkBody(input),
-    }),
+    await traegerRequest<traegerStaffRecordsContract.TraegerStaffRecordDetail>(
+      `${BASE}`,
+      {
+        method: "POST",
+        body: linkBody(input),
+      },
+    ),
   );
 }
 
@@ -481,10 +494,15 @@ export async function updateStaffPersonnelNumber(
   value: string | null,
 ): Promise<StaffRecordDetail> {
   return mapDetail(
-    await traegerRequest<WireDetail>(recordPath(id, "/personnel-number"), {
-      method: "PUT",
-      body: { personnel_number: value } satisfies PersonnelNumberRequest,
-    }),
+    await traegerRequest<traegerStaffRecordsContract.TraegerStaffRecordDetail>(
+      recordPath(id, "/personnel-number"),
+      {
+        method: "PUT",
+        body: {
+          personnel_number: value,
+        } satisfies traegerStaffRecordsContract.PersonnelNumberRequest,
+      },
+    ),
   );
 }
 
@@ -506,7 +524,7 @@ export async function updateStaffPerson(
   id: string,
   input: StaffPersonInput,
 ): Promise<void> {
-  const body: PersonRequest = {
+  const body: traegerStaffRecordsContract.PersonRequest = {
     first_name: input.firstName,
     last_name: input.lastName,
     birthday: input.birthday === "" ? null : input.birthday,
@@ -521,9 +539,12 @@ export async function revealStaffFinancial(
   id: string,
 ): Promise<StaffFinancial> {
   return mapFinancial(
-    await traegerRequest<WireFinancial>(recordPath(id, "/financial/reveal"), {
-      method: "POST",
-    }),
+    await traegerRequest<traegerStaffRecordsContract.TraegerStaffFinancial>(
+      recordPath(id, "/financial/reveal"),
+      {
+        method: "POST",
+      },
+    ),
   );
 }
 
@@ -537,7 +558,7 @@ export async function updateStaffFinancial(
       iban: values.iban,
       tax_id: values.taxId,
       social_security_number: values.socialSecurityNumber,
-    } satisfies StaffFinancialRequest,
+    } satisfies traegerStaffRecordsContract.StaffFinancialRequest,
   });
 }
 
@@ -550,16 +571,19 @@ export async function createStaffContract(
   input: StaffContractInput,
 ): Promise<StaffRecordDetail> {
   return mapDetail(
-    await traegerRequest<WireDetail>(recordPath(recordId, "/contracts"), {
-      method: "POST",
-      body: {
-        kind: input.kind,
-        starts_on: input.startsOn,
-        ends_on: input.endsOn,
-        pool: input.pool,
-        sites: input.sites.map(siteBody),
-      } satisfies CreateContractRequest,
-    }),
+    await traegerRequest<traegerStaffRecordsContract.TraegerStaffRecordDetail>(
+      recordPath(recordId, "/contracts"),
+      {
+        method: "POST",
+        body: {
+          kind: input.kind,
+          starts_on: input.startsOn,
+          ends_on: input.endsOn,
+          pool: input.pool,
+          sites: input.sites.map(siteBody),
+        } satisfies traegerStaffRecordsContract.CreateContractRequest,
+      },
+    ),
   );
 }
 
@@ -574,14 +598,17 @@ export async function updateStaffContract(
   },
 ): Promise<StaffRecordDetail> {
   return mapDetail(
-    await traegerRequest<WireDetail>(contractPath(recordId, contractId), {
-      method: "PUT",
-      body: {
-        kind: input.kind,
-        ends_on: input.endsOn,
-        pool: input.pool,
-      } satisfies UpdateContractRequest,
-    }),
+    await traegerRequest<traegerStaffRecordsContract.TraegerStaffRecordDetail>(
+      contractPath(recordId, contractId),
+      {
+        method: "PUT",
+        body: {
+          kind: input.kind,
+          ends_on: input.endsOn,
+          pool: input.pool,
+        } satisfies traegerStaffRecordsContract.UpdateContractRequest,
+      },
+    ),
   );
 }
 
@@ -593,14 +620,14 @@ export async function changeStaffContractSoll(
   sites: readonly StaffContractSiteInput[],
 ): Promise<StaffRecordDetail> {
   return mapDetail(
-    await traegerRequest<WireDetail>(
+    await traegerRequest<traegerStaffRecordsContract.TraegerStaffRecordDetail>(
       contractPath(recordId, contractId, "/soll"),
       {
         method: "POST",
         body: {
           valid_from: validFrom,
           sites: sites.map(siteBody),
-        } satisfies ContractSollRequest,
+        } satisfies traegerStaffRecordsContract.ContractSollRequest,
       },
     ),
   );
@@ -613,7 +640,7 @@ export async function addStaffHolidayWeeks(
   input: StaffHolidayWeeksInput,
 ): Promise<StaffRecordDetail> {
   return mapDetail(
-    await traegerRequest<WireDetail>(
+    await traegerRequest<traegerStaffRecordsContract.TraegerStaffRecordDetail>(
       contractPath(recordId, contractId, "/holiday-weeks"),
       {
         method: "POST",
@@ -623,7 +650,7 @@ export async function addStaffHolidayWeeks(
           from_week: input.fromWeek,
           to_week: input.toWeek,
           weekday_minutes: [...input.weekdayMinutes],
-        } satisfies HolidayWeeksRequest,
+        } satisfies traegerStaffRecordsContract.HolidayWeeksRequest,
       },
     ),
   );
@@ -637,7 +664,7 @@ export async function deleteStaffHolidayWeek(
   weekStart: string,
 ): Promise<StaffRecordDetail> {
   return mapDetail(
-    await traegerRequest<WireDetail>(
+    await traegerRequest<traegerStaffRecordsContract.TraegerStaffRecordDetail>(
       contractPath(
         recordId,
         contractId,
@@ -654,9 +681,12 @@ export async function deleteStaffContract(
   contractId: string,
 ): Promise<StaffRecordDetail> {
   return mapDetail(
-    await traegerRequest<WireDetail>(contractPath(recordId, contractId), {
-      method: "DELETE",
-    }),
+    await traegerRequest<traegerStaffRecordsContract.TraegerStaffRecordDetail>(
+      contractPath(recordId, contractId),
+      {
+        method: "DELETE",
+      },
+    ),
   );
 }
 
@@ -845,26 +875,29 @@ export async function hireStaff(
   input: StaffHireInput,
 ): Promise<StaffRecordDetail> {
   return mapDetail(
-    await traegerRequest<WireDetail>(`${BASE}/hire`, {
-      method: "POST",
-      body: {
-        first_name: input.firstName,
-        last_name: input.lastName,
-        birthday: input.birthday,
-        email: input.email || null,
-        phone: input.phone || null,
-        personnel_number: input.personnelNumber || null,
-        contract: {
-          kind: input.kind,
-          starts_on: input.startsOn,
-          ends_on: input.endsOn,
-        },
-        sites: input.sites.map((site) => ({
-          school_id: site.schoolId,
-          weekday_minutes: [...site.weekdayMinutes],
-        })),
-        confirm_duplicate: input.confirmDuplicate,
-      } satisfies HireRequest,
-    }),
+    await traegerRequest<traegerStaffRecordsContract.TraegerStaffRecordDetail>(
+      `${BASE}/hire`,
+      {
+        method: "POST",
+        body: {
+          first_name: input.firstName,
+          last_name: input.lastName,
+          birthday: input.birthday,
+          email: input.email || null,
+          phone: input.phone || null,
+          personnel_number: input.personnelNumber || null,
+          contract: {
+            kind: input.kind,
+            starts_on: input.startsOn,
+            ends_on: input.endsOn,
+          },
+          sites: input.sites.map((site) => ({
+            school_id: site.schoolId,
+            weekday_minutes: [...site.weekdayMinutes],
+          })),
+          confirm_duplicate: input.confirmDuplicate,
+        } satisfies traegerStaffRecordsContract.HireRequest,
+      },
+    ),
   );
 }

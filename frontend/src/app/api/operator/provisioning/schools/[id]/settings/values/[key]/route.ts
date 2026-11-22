@@ -16,17 +16,13 @@ import {
 import { TENANT_RESOLVE_AFFECTING_KEYS } from "~/lib/settings-keys";
 import { bffError } from "~/lib/api-response-error.server";
 import { unwrapEnvelope } from "~/lib/backend-client.server";
-import type { SchoolSummary } from "~/lib/contract/shared.generated";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 
 const logger = createLogger({
   component: "OperatorSchoolSettingsValuesRoute",
 });
 
 const VALID_KEY_PATTERN = /^[a-z0-9_.]{1,255}$/;
-
-interface SchoolSummariesEnvelope {
-  data?: SchoolSummary[];
-}
 
 async function resolveSchoolSlug(
   schoolId: string,
@@ -37,10 +33,11 @@ async function resolveSchoolSlug(
     // cheapest server-side path that returns the slug for an operator. List
     // size is bounded (one entry per school in the platform) so a single
     // server-to-server call per write is acceptable for an admin action.
-    const resp = await operatorApiGet<
-      SchoolSummariesEnvelope | SchoolSummary[]
-    >("/operator/schools/summaries", token);
-    const summaries = Array.isArray(resp) ? resp : (resp.data ?? []);
+    // Identifiers arrive as strings (ADR 0300).
+    const summaries = await operatorApiGet<sharedContract.SchoolSummary[]>(
+      "/operator/schools/summaries",
+      token,
+    );
     const match = summaries.find((s) => s.id === schoolId);
     return match?.slug ?? null;
   } catch (error) {

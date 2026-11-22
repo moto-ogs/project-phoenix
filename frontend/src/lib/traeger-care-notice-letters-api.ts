@@ -10,11 +10,8 @@ import {
   knownMailOutcome,
   knownMailProviderBlock,
 } from "~/lib/email-delivery-status";
-import type { BillingLetterSeries } from "./contract/shared.generated";
-import type {
-  CareNoticeLetters as WireLetters,
-  CareNoticeMailing as WireMailing,
-} from "./contract/traeger-care-notice-runs.generated";
+import type * as sharedContract from "./contract/shared.generated";
+import type * as traegerCareNoticeRunsContract from "./contract/traeger-care-notice-runs.generated";
 import {
   type BillingFile,
   type LetterMailStatus,
@@ -82,7 +79,9 @@ export interface CareNoticeSeries {
   readonly recipientChanged: number;
 }
 
-function mailingFromBackend(mailing: WireMailing): CareNoticeMailing {
+function mailingFromBackend(
+  mailing: traegerCareNoticeRunsContract.CareNoticeMailing,
+): CareNoticeMailing {
   return {
     noticeId: mailing.notice_id,
     contractId: mailing.contract_id,
@@ -110,7 +109,9 @@ function mailingFromBackend(mailing: WireMailing): CareNoticeMailing {
   };
 }
 
-function lettersFromBackend(letters: WireLetters): CareNoticeLetters {
+function lettersFromBackend(
+  letters: traegerCareNoticeRunsContract.CareNoticeLetters,
+): CareNoticeLetters {
   const { summary } = letters;
   return {
     notices: (letters.notices ?? []).map(mailingFromBackend),
@@ -140,7 +141,9 @@ export async function fetchCareNoticeLetters(
   runId: string,
 ): Promise<CareNoticeLetters> {
   return lettersFromBackend(
-    await traegerRequest<WireLetters>(lettersPath(runId)),
+    await traegerRequest<traegerCareNoticeRunsContract.CareNoticeLetters>(
+      lettersPath(runId),
+    ),
   );
 }
 
@@ -149,9 +152,12 @@ export async function createCareNoticeLetters(
   runId: string,
 ): Promise<CareNoticeLetters> {
   return lettersFromBackend(
-    await traegerRequest<WireLetters>(lettersPath(runId), {
-      method: "POST",
-    }),
+    await traegerRequest<traegerCareNoticeRunsContract.CareNoticeLetters>(
+      lettersPath(runId),
+      {
+        method: "POST",
+      },
+    ),
   );
 }
 
@@ -159,7 +165,7 @@ export async function createCareNoticeLetters(
 export async function mailCareNoticeLetters(
   runId: string,
 ): Promise<CareNoticeSeries> {
-  const series = await traegerRequest<BillingLetterSeries>(
+  const series = await traegerRequest<sharedContract.BillingLetterSeries>(
     `${lettersPath(runId)}/mail`,
     { method: "POST" },
   );
@@ -177,9 +183,12 @@ export async function mailCareNoticeLetter(
   contractId: string,
 ): Promise<CareNoticeMailing> {
   return mailingFromBackend(
-    await traegerRequest<WireMailing>(`${noticePath(runId, contractId)}/mail`, {
-      method: "POST",
-    }),
+    await traegerRequest<traegerCareNoticeRunsContract.CareNoticeMailing>(
+      `${noticePath(runId, contractId)}/mail`,
+      {
+        method: "POST",
+      },
+    ),
   );
 }
 

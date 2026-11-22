@@ -4,9 +4,7 @@ import apiCommon "github.com/moto-ogs/project-phoenix/api/common"
 
 // RouteContracts registers the typed contract of the activity routes the
 // staff portal reaches through its proxy (ADR 0270, #7563), with patterns
-// relative to /api/activities. The enrolled-student list and the batch
-// enrollment stay with their own route file until a Go view replaces the
-// calls it bundles.
+// relative to /api/activities.
 func RouteContracts() []apiCommon.RouteContract {
 	portals := []apiCommon.PortalScope{apiCommon.PortalTenant}
 	categoryFlags := []apiCommon.QueryParam{
@@ -35,6 +33,8 @@ func RouteContracts() []apiCommon.RouteContract {
 		{Method: "DELETE", Pattern: "/{id}/supervisors/{supervisorId}", Portals: portals, Query: []apiCommon.QueryParam{
 			{Name: "replacement_staff_id", Kind: apiCommon.QueryID},
 		}, NoData: true},
+		{Method: "GET", Pattern: "/{id}/students", Portals: portals, Response: []EnrolledStudentResponse{}},
+		{Method: "PUT", Pattern: "/{id}/students", Portals: portals, Request: BatchEnrollmentRequest{}, Response: EnrollmentUpdateResponse{}},
 		{Method: "DELETE", Pattern: "/{id}/students/{studentId}", Portals: portals, NoData: true},
 	}
 }
