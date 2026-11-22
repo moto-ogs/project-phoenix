@@ -13,6 +13,7 @@ import (
 	schoolStructureCompose "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -37,7 +38,7 @@ func TestSubstitutionResponseIDsSerializeAsStrings(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			payload, err := json.Marshal(response)
+			payload, err := wire.Marshal(response)
 			require.NoError(t, err)
 			require.NotContains(t, string(payload), `:9007199254740993`)
 			require.Contains(t, string(payload), `:"9007199254740993"`)

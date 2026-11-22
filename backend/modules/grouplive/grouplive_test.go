@@ -13,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 const today Date = "2026-08-21"
@@ -1071,7 +1072,7 @@ func TestProjectionSerializesAllIDsAsStrings(t *testing.T) {
 		Transfers: []Transfer{{ID: ident.ID(id), GroupID: ident.ID(id), SubstituteStaffID: ident.ID(id)}},
 	}
 
-	body, err := json.Marshal(projection)
+	body, err := wire.Marshal(projection)
 	require.NoError(t, err)
 
 	var wire struct {
@@ -1140,7 +1141,7 @@ func TestProjectionWireGolden(t *testing.T) {
 		Transfers:          []Transfer{{ID: 5, GroupID: 1, SubstituteStaffID: 9, SubstituteName: "Vera Vertretung", EndDate: "2026-08-28"}},
 	}
 
-	body, err := json.Marshal(projection)
+	body, err := wire.Marshal(projection)
 	require.NoError(t, err)
 
 	const want = `{"groups":[{"id":"1","name":"Äpfel","room_id":"31","room_name":"Raum A","via_substitution":false,"is_personal":true}],` +
@@ -1159,7 +1160,7 @@ func TestProjectionWireGolden(t *testing.T) {
 	assert.JSONEq(t, want, string(body))
 	assert.Equal(t, want, string(body), "field order is part of the pinned document")
 
-	empty, err := json.Marshal(EmptyProjection())
+	empty, err := wire.Marshal(EmptyProjection())
 	require.NoError(t, err)
 	assert.Equal(t, `{"groups":[],"students":[],"room_status":{},"pickup_times":[],"tracking_indicators":{"labels":[],"results":{}},"transfers":[]}`, string(empty))
 }

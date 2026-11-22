@@ -1,12 +1,12 @@
 package compose_test
 
 import (
-	"encoding/json"
 	"testing"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/classday"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -58,7 +58,7 @@ func TestDayReportKeepsTheWireShape(t *testing.T) {
 		CanReportAbsences:  true,
 	}
 
-	got, err := json.Marshal(report)
+	got, err := wire.Marshal(report)
 	require.NoError(t, err)
 	assert.JSONEq(t, `{
 		"school_class": "4a", "date": "2026-08-05", "weekday": "wed", "school_day": true,
@@ -89,7 +89,7 @@ func TestDayReportKeepsTheWireShape(t *testing.T) {
 	}`, string(got))
 
 	// The optionals stay omitted.
-	bare, err := json.Marshal(classday.DayReport{SchoolClass: "1b", Date: classday.Date("2026-08-08"), Rows: []classday.DayRow{}})
+	bare, err := wire.Marshal(classday.DayReport{SchoolClass: "1b", Date: classday.Date("2026-08-08"), Rows: []classday.DayRow{}})
 	require.NoError(t, err)
 	assert.NotContains(t, string(bare), "class_arrival_exception")
 	assert.NotContains(t, string(bare), "phase_name")

@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/stretchr/testify/require"
 )
 
@@ -18,7 +19,7 @@ func TestHistoryWirePreservesLargeIDsAndCalculatedFields(t *testing.T) {
 		BreakMinutes: 30, NetMinutes: 450, EditCount: 2, AuditCount: 3,
 		Breaks: []*workforce.WorkSessionBreak{{ID: ident.ID(largeID), TenantID: ident.ID(largeID), SessionID: ident.ID(largeID)}},
 	}}}
-	raw, err := json.Marshal(response)
+	raw, err := wire.Marshal(response)
 	require.NoError(t, err)
 	var decoded struct {
 		Sessions []map[string]json.RawMessage `json:"sessions"`
@@ -40,10 +41,10 @@ func TestHistoryWirePreservesLargeIDsAndCalculatedFields(t *testing.T) {
 	require.JSONEq(t, "2", string(row["edit_count"]))
 	require.JSONEq(t, "3", string(row["audit_count"]))
 	response.Sessions[0].UpdatedBy = nil
-	raw, err = json.Marshal(response.Sessions[0])
+	raw, err = wire.Marshal(response.Sessions[0])
 	require.NoError(t, err)
 	require.NotContains(t, string(raw), "updated_by")
-	raw, err = json.Marshal(workforce.SessionResponse{NetMinutes: 7})
+	raw, err = wire.Marshal(workforce.SessionResponse{NetMinutes: 7})
 	require.NoError(t, err)
 	require.Contains(t, string(raw), `"net_minutes":7`)
 	require.NotContains(t, string(raw), `"id"`)
