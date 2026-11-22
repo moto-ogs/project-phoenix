@@ -12,7 +12,6 @@ import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import type { ClassDayReport } from "~/lib/class-day-api";
-import type { SchoolDayReport } from "~/lib/school-class-day-api";
 import { setTestClock } from "~/test/clock";
 import { ClassDayOverview } from "./class-day-overview";
 
@@ -44,6 +43,7 @@ vi.unmock("swr");
 import { SWRConfig } from "~/lib/swr/testing";
 import { ToastProvider } from "~/contexts/ToastContext";
 import type { ReactElement } from "react";
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 
 function render(ui: ReactElement) {
   const cache = new Map();
@@ -153,7 +153,7 @@ const schoolTotals = {
   changes: 0,
 };
 
-function schoolDay(date: string): SchoolDayReport {
+function schoolDay(date: string): schoolClassDayContract.SchoolDayReport {
   return {
     date,
     weekday: "wed",
@@ -389,7 +389,7 @@ describe("ClassDayOverview: Meldung nachtragen", () => {
     date: string,
     reported: "sick" | null,
     canReport = true,
-  ): SchoolDayReport {
+  ): schoolClassDayContract.SchoolDayReport {
     const child = reported
       ? {
           student_id: "5",
@@ -513,7 +513,7 @@ describe("ClassDayOverview: Meldung nachtragen", () => {
     const refused = new ApiError("not missing", 409, {
       code: "general.business_rejection",
     });
-    const recovery = deferred<SchoolDayReport>();
+    const recovery = deferred<schoolClassDayContract.SchoolDayReport>();
     const fetchSchoolDay = vi
       .fn()
       .mockResolvedValueOnce(unreportedDay("2026-09-09", null))

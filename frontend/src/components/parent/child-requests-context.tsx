@@ -2,12 +2,11 @@
 
 import { createContext, useContext, type ReactNode } from "react";
 
-import type { Child } from "~/lib/parent-api";
-
 import {
   useParentChildren,
   useParentFeatures,
 } from "~/lib/hooks/use-parent-resources";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 const SharedFeaturesContext = createContext<ReturnType<
   typeof useParentFeatures
@@ -18,7 +17,7 @@ export function SharedParentFeaturesProvider({
   linkedChildren,
 }: Readonly<{
   children: ReactNode;
-  linkedChildren: readonly Child[] | undefined;
+  linkedChildren: readonly parentMeContract.ChildResponse[] | undefined;
 }>) {
   const resource = useParentFeatures(linkedChildren);
   return (

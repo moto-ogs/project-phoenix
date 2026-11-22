@@ -49,11 +49,7 @@ import { rolesConfig } from "~/components/database/configs/roles.config";
 import { getRoleDisplayName } from "~/lib/auth-helpers";
 import { useSWRAuth } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
-import type {
-  StaffImportError,
-  StaffImportResult,
-  ValidationError,
-} from "~/lib/contract/import.generated";
+import type * as importContract from "~/lib/contract/import.generated";
 import { createLogger } from "~/lib/logger";
 
 /** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
@@ -62,11 +58,6 @@ const PERSONAL_IMPORT_INFO =
 
 const logger = createLogger({ component: "StaffImportPage" });
 
-// Vertragsformat des Imports (ADR 0270, #2352).
-type ImportError = ValidationError;
-type ImportRowResult = StaffImportError;
-type ImportResult = StaffImportResult;
-
 type RowStatus = "new" | "existing" | "error" | "warning";
 
 interface DisplayStaff {
@@ -74,14 +65,16 @@ interface DisplayStaff {
   status: RowStatus;
   errors: string[];
   notes: string[];
-  first_name: string;
-  last_name: string;
+  firstName: string;
+  lastName: string;
   email: string;
-  role_name: string;
+  roleName: string;
   position: string;
 }
 
-function rowStatusFor(findings: readonly ImportError[] | null): RowStatus {
+function rowStatusFor(
+  findings: readonly importContract.ValidationError[] | null,
+): RowStatus {
   const errors = findings ?? [];
   const isExisting = errors.some(
     (e) => e.code === "already_exists" || e.code === "will_update",
@@ -92,7 +85,7 @@ function rowStatusFor(findings: readonly ImportError[] | null): RowStatus {
   return "new";
 }
 
-function toDisplayStaff(row: ImportRowResult): DisplayStaff {
+function toDisplayStaff(row: importContract.StaffImportError): DisplayStaff {
   return {
     row: row.row_number,
     status: rowStatusFor(row.errors),
@@ -102,10 +95,10 @@ function toDisplayStaff(row: ImportRowResult): DisplayStaff {
     notes: (row.errors ?? [])
       .filter((e) => e.severity === "info")
       .map((e) => e.message),
-    first_name: row.data.first_name,
-    last_name: row.data.last_name,
+    firstName: row.data.first_name,
+    lastName: row.data.last_name,
     email: row.data.email ?? "",
-    role_name: row.data.role_name,
+    roleName: row.data.role_name,
     position: row.data.position ?? "",
   };
 }
@@ -118,7 +111,8 @@ export default function StaffImportPage() {
   const [isImporting, setIsImporting] = useState(false);
   const [importComplete, setImportComplete] = useState(false);
   const [importInterrupted, setImportInterrupted] = useState(false);
-  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [importResult, setImportResult] =
+    useState<importContract.StaffImportResult | null>(null);
   // Fehler der Datei und des Imports stehen im Kasten über der Vorlage,
   // mit Wiederholen (#2517). Ein angehaltener Stapel steht dort auch, mit
   // oder ohne gespeicherte Zeilen: der Import als Ganzes ist gescheitert.
@@ -224,7 +218,7 @@ export default function StaffImportPage() {
           throw importResponseError(response, "Staff import preview failed");
         }
 
-        const importData = result.data as ImportResult;
+        const importData = result.data as importContract.StaffImportResult;
         const displayData: DisplayStaff[] = (importData.errors ?? []).map(
           toDisplayStaff,
         );
@@ -237,10 +231,10 @@ export default function StaffImportPage() {
             status: "new",
             errors: [],
             notes: [],
-            first_name: `${importData.total_rows} Mitarbeitende`,
-            last_name: "bereit zum Import",
+            firstName: `${importData.total_rows} Mitarbeitende`,
+            lastName: "bereit zum Import",
             email: "",
-            role_name: "",
+            roleName: "",
             position: "",
           });
         }
@@ -295,9 +289,10 @@ export default function StaffImportPage() {
       const result = response.body;
 
       if (!response.ok) {
-        const interrupted = readImportBatchFailure<ImportRowResult>(result);
+        const interrupted =
+          readImportBatchFailure<importContract.StaffImportError>(result);
         if (interrupted) {
-          setImportResult(interrupted as ImportResult);
+          setImportResult(interrupted as importContract.StaffImportResult);
           setImportInterrupted(true);
           setPreviewData((interrupted.errors ?? []).map(toDisplayStaff));
           setBatchNotice(importBatchFailureMessage(interrupted));
@@ -311,7 +306,7 @@ export default function StaffImportPage() {
         throw importResponseError(response, "Staff import failed");
       }
 
-      const importData = result.data as ImportResult;
+      const importData = result.data as importContract.StaffImportResult;
       setImportResult(importData);
       setImportInterrupted(false);
 
@@ -561,9 +556,9 @@ export default function StaffImportPage() {
                       status: staff.status,
                       errors: staff.errors,
                       notes: staff.notes,
-                      first_name: staff.first_name,
-                      last_name: staff.last_name,
-                      meta: [staff.email, staff.role_name, staff.position],
+                      firstName: staff.firstName,
+                      lastName: staff.lastName,
+                      meta: [staff.email, staff.roleName, staff.position],
                     }}
                     index={idx}
                   />

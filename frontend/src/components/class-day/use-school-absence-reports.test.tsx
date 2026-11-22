@@ -3,17 +3,19 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { SchoolDayChild } from "~/lib/school-class-day-api";
 import { deferred } from "~/test/helpers/form-modal-pending";
 
 import {
   useSchoolAbsenceReports,
   type AbsenceReportTarget,
 } from "./use-school-absence-reports";
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 
 const target = (studentId: string): AbsenceReportTarget => ({
   schoolClass: "2a",
-  child: { student_id: studentId } as unknown as SchoolDayChild,
+  child: {
+    student_id: studentId,
+  } as unknown as schoolClassDayContract.SchoolDayChild,
 });
 
 describe("useSchoolAbsenceReports withdraw", () => {

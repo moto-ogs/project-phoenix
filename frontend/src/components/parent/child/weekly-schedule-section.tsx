@@ -13,10 +13,7 @@ import { Button } from "~/components/ui/button";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { formatDate } from "~/lib/date-helpers";
 import type * as parentMeContract from "~/lib/contract/parent-me.generated";
-import {
-  submitCareScheduleRequest,
-  type ChildCareSchedule,
-} from "~/lib/parent-api";
+import { submitCareScheduleRequest } from "~/lib/parent-api";
 import { calendarConcept } from "~/lib/concepts/calendar";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
 
@@ -28,14 +25,16 @@ const DAY_KEYS: Record<number, "mon" | "tue" | "wed" | "thu" | "fri"> = {
   4: "thu",
   5: "fri",
 };
-type PendingRequest = NonNullable<ChildCareSchedule["pending_request"]>;
+type PendingRequest = NonNullable<
+  parentMeContract.CareScheduleResponse["pending_request"]
+>;
 
 interface ScheduleProps {
   studentId: string;
-  schedule: ChildCareSchedule;
+  schedule: parentMeContract.CareScheduleResponse;
   childFirstName: string;
   careEnded: boolean;
-  onScheduleChange: (schedule: ChildCareSchedule) => void;
+  onScheduleChange: (schedule: parentMeContract.CareScheduleResponse) => void;
 }
 
 export function WeeklyScheduleSection(props: Readonly<ScheduleProps>) {
@@ -112,7 +111,7 @@ function ScheduleDays({
   schedule,
   childFirstName,
 }: Readonly<{
-  schedule: ChildCareSchedule;
+  schedule: parentMeContract.CareScheduleResponse;
   childFirstName: string;
 }>) {
   const days = new Map(
@@ -141,7 +140,7 @@ function ScheduleDay({
   childFirstName,
 }: Readonly<{
   weekday: number;
-  day?: NonNullable<ChildCareSchedule["weekdays"]>[number];
+  day?: NonNullable<parentMeContract.CareScheduleResponse["weekdays"]>[number];
   childFirstName: string;
 }>) {
   const t = useCareTermTranslations("parentMasterData");

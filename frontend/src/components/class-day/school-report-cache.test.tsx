@@ -15,7 +15,6 @@ import { SWRScopeBoundary } from "~/lib/swr/scope-boundary";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import type { ClassDayReport } from "~/lib/class-day-api";
-import type { SchoolDayReport } from "~/lib/school-class-day-api";
 import { ClassDayOverview } from "./class-day-overview";
 import { ClassDayClass } from "./class-day-class";
 
@@ -132,7 +131,7 @@ describe("school report cache", () => {
         class_trip: 0,
         changes: 0,
       };
-      const schoolDay: SchoolDayReport = {
+      const schoolDay: schoolClassDayContract.SchoolDayReport = {
         date: report.date,
         weekday: "wed",
         school_day: true,
@@ -513,7 +512,7 @@ describe("school report cache", () => {
         class_trip: 0,
         changes: 0,
       };
-      const schoolDay: SchoolDayReport = {
+      const schoolDay: schoolClassDayContract.SchoolDayReport = {
         date: "2026-09-09",
         weekday: "wed",
         school_day: true,
@@ -695,4 +694,5 @@ describe("school report cache", () => {
 });
 
 import { resumeSWRSession } from "~/lib/swr/scope";
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 afterEach(() => resumeSWRSession());

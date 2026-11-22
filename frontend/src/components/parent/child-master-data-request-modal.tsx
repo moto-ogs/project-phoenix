@@ -14,8 +14,9 @@ import { RequestSharingSelector } from "~/components/parent/request-sharing-cont
 import { useApiFormError } from "~/contexts/ToastContext";
 import { todayISO } from "~/lib/date-helpers";
 import { useLocalizedDatePicker } from "~/lib/hooks/use-localized-date-picker";
-import type { ChildMasterData, MasterDataChangeInput } from "~/lib/parent-api";
+import type { MasterDataChangeInput } from "~/lib/parent-api";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 type IdentityField = "first_name" | "last_name" | "birthday" | "school_class";
 
@@ -27,7 +28,7 @@ export function ChildMasterDataRequestModal({
   onSubmit,
 }: Readonly<{
   studentId: string;
-  data: ChildMasterData;
+  data: parentMeContract.MasterDataResponse;
   pendingFields: ReadonlySet<string>;
   onClose: () => void;
   onSubmit: (

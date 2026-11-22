@@ -15,16 +15,14 @@ import { useState } from "react";
 import { useApiFormError } from "~/contexts/ToastContext";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
-import type {
-  AbsenceReportStatus,
-  SchoolDayChild,
-} from "~/lib/school-class-day-api";
+import type { AbsenceReportStatus } from "~/lib/school-class-day-api";
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 
 const logger = createLogger({ component: "SchoolAbsenceReports" });
 
 export interface AbsenceReportTarget {
   readonly schoolClass: string;
-  readonly child: SchoolDayChild;
+  readonly child: schoolClassDayContract.SchoolDayChild;
 }
 
 interface Options {

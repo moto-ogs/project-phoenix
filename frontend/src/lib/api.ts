@@ -9,11 +9,12 @@ import { createLogger } from "~/lib/logger";
 import { fetchWithRetry } from "./api-helpers";
 import { mapGroupsResponse } from "./group-helpers";
 
-import type { GroupWire, Group as ImportedGroup } from "./group-helpers";
+import type { Group as ImportedGroup } from "./group-helpers";
 import { mapRoomsResponse } from "./room-helpers";
 
 import type { RoomResponse } from "./contract/rooms.generated";
 import { handleAuthFailure } from "./auth-failure";
+import type * as groupsContract from "~/lib/contract/groups.generated";
 
 // Logger instance for API client
 const logger = createLogger({ component: "ApiClient" });
@@ -159,7 +160,9 @@ export const groupService = {
         throw accessDeniedApiError(accessDeniedStatus, accessDeniedBody);
       }
 
-      return mapGroupsResponse(parseListResponse<GroupWire>(data, "groups"));
+      return mapGroupsResponse(
+        parseListResponse<groupsContract.GroupResponse>(data, "groups"),
+      );
     } catch (error) {
       logger.error("failed to fetch groups", {
         error: error instanceof Error ? error.message : String(error),

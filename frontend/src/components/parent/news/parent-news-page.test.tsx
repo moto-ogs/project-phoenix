@@ -1,10 +1,11 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { listAnnouncements, type ParentAnnouncement } from "~/lib/parent-api";
+import { listAnnouncements } from "~/lib/parent-api";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 import { ParentNewsPage } from "./parent-news-page";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 vi.unmock("swr");
 
@@ -39,8 +40,8 @@ function renderPage() {
 }
 
 function announcement(
-  overrides: Partial<ParentAnnouncement> = {},
-): ParentAnnouncement {
+  overrides: Partial<parentMeContract.AnnouncementResponse> = {},
+): parentMeContract.AnnouncementResponse {
   return {
     id: "a1",
     title: "Sommerfest",
@@ -53,7 +54,7 @@ function announcement(
     acknowledged: false,
     response_type: "none",
     ...overrides,
-  } as ParentAnnouncement;
+  } as parentMeContract.AnnouncementResponse;
 }
 
 beforeEach(() => {

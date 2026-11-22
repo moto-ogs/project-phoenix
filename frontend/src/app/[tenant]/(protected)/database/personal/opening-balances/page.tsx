@@ -51,11 +51,7 @@ import {
 } from "~/lib/import-batch-result";
 import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
-import type {
-  OpeningBalanceImportError,
-  OpeningBalanceImportResult,
-  ValidationError,
-} from "~/lib/contract/import.generated";
+import type * as importContract from "~/lib/contract/import.generated";
 import { createLogger } from "~/lib/logger";
 
 /** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
@@ -66,13 +62,6 @@ const OPENING_BALANCES_DESCRIPTION =
   "Übernimmt die Stände aus dem Altsystem: Stundenkonto-Saldo, Urlaubsanspruch samt Vorjahresübertrag und den Resturlaub zum Stichtag. Aus dem Resturlaub errechnet moto die vor der Einführung genommenen Urlaubstage. Pro Person ist nur eine Übernahme möglich.";
 
 const logger = createLogger({ component: "OpeningBalanceImportPage" });
-
-// Vertragsformat der Übernahme (ADR 0270, #2352). Zeilen ohne Befund
-// tauchen NICHT in `errors` auf, nur fehlerhafte und mit Hinweisen
-// versehene Zeilen.
-type ImportValidationError = ValidationError;
-type ImportRowResult = OpeningBalanceImportError;
-type ImportResult = OpeningBalanceImportResult;
 
 type RowStatus = "ok" | "warning" | "error";
 
@@ -94,7 +83,7 @@ const STATUS_TONE = {
 } as const;
 
 function rowStatusFor(
-  findings: readonly ImportValidationError[] | null,
+  findings: readonly importContract.ValidationError[] | null,
 ): RowStatus {
   const errors = findings ?? [];
   if (errors.some((e) => e.severity === "error")) return "error";
@@ -108,7 +97,9 @@ function cellValue(raw: string | undefined): string {
   return trimmed === "" ? "–" : trimmed;
 }
 
-function toDisplayRow(row: ImportRowResult): DisplayRow {
+function toDisplayRow(
+  row: importContract.OpeningBalanceImportError,
+): DisplayRow {
   const data = row.data ?? {};
   const name = `${data.first_name ?? ""} ${data.last_name ?? ""}`.trim();
   return {
@@ -146,7 +137,9 @@ function summaryRow(count: number): DisplayRow {
   };
 }
 
-function buildDisplayRows(result: ImportResult): DisplayRow[] {
+function buildDisplayRows(
+  result: importContract.OpeningBalanceImportResult,
+): DisplayRow[] {
   const listed = (result.errors ?? []).map(toDisplayRow);
   const untouched = result.total_rows - listed.length;
   return untouched > 0 ? [...listed, summaryRow(untouched)] : listed;
@@ -226,9 +219,11 @@ function OpeningBalanceImportPageContent() {
   const [note, setNote] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [previewRows, setPreviewRows] = useState<DisplayRow[]>([]);
-  const [previewResult, setPreviewResult] = useState<ImportResult | null>(null);
+  const [previewResult, setPreviewResult] =
+    useState<importContract.OpeningBalanceImportResult | null>(null);
   const [previewStale, setPreviewStale] = useState(false);
-  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [importResult, setImportResult] =
+    useState<importContract.OpeningBalanceImportResult | null>(null);
   const [importInterrupted, setImportInterrupted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -320,7 +315,8 @@ function OpeningBalanceImportPageContent() {
           throw importResponseError(response, "Opening balance preview failed");
         }
 
-        const result = payload.data as ImportResult;
+        const result =
+          payload.data as importContract.OpeningBalanceImportResult;
         if (requestVersion !== previewRequestVersion.current) return;
         setPreviewResult(result);
         setPreviewRows(buildDisplayRows(result));
@@ -397,9 +393,14 @@ function OpeningBalanceImportPageContent() {
       );
       const payload = response.body;
       if (!response.ok) {
-        const interrupted = readImportBatchFailure<ImportRowResult>(payload);
+        const interrupted =
+          readImportBatchFailure<importContract.OpeningBalanceImportError>(
+            payload,
+          );
         if (interrupted) {
-          setImportResult(interrupted as ImportResult);
+          setImportResult(
+            interrupted as importContract.OpeningBalanceImportResult,
+          );
           setImportInterrupted(true);
           setPreviewResult(null);
           setPreviewRows((interrupted.errors ?? []).map(toDisplayRow));
@@ -414,7 +415,7 @@ function OpeningBalanceImportPageContent() {
         throw importResponseError(response, "Opening balance import failed");
       }
 
-      const result = payload.data as ImportResult;
+      const result = payload.data as importContract.OpeningBalanceImportResult;
       setImportResult(result);
       setImportInterrupted(false);
       setPreviewResult(null);

@@ -24,15 +24,12 @@ import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { formatDate } from "~/lib/date-helpers";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
-import {
-  fetchSharedNotesSchool,
-  type SharedNote,
-  type StudentSharedNotes,
-} from "~/lib/school-class-day-api";
+import { fetchSharedNotesSchool } from "~/lib/school-class-day-api";
 import { schoolClassLabel } from "~/lib/school-class-label";
 import { schoolPath } from "~/lib/school-url";
 import { IsolatedSWRCache, useSWRAuth } from "~/lib/swr";
 import { schoolPortalKeys } from "~/lib/swr/portal-keys";
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 
 // Erklärung der Seite für neue Lehrkräfte (#7567), im Laden wie in der
 // fertigen Seite.
@@ -40,7 +37,7 @@ const SHARED_NOTES_INFO =
   "Hier liest du, was die OGS über dieses Kind notiert hat. Die neueste Notiz steht oben. Fragen dazu klärst du direkt mit der OGS.";
 
 /** Wann und von wem: der beschriebene Tag oder „Dauerhafter Hinweis“. */
-function noteMeta(note: SharedNote): string {
+function noteMeta(note: schoolClassDayContract.SharedNote): string {
   const parts = [
     note.subject_date ? formatDate(note.subject_date) : "Dauerhafter Hinweis",
   ];
@@ -84,7 +81,7 @@ function SharedNotes({
     error,
     isLoading,
     mutate,
-  } = useSWRAuth<StudentSharedNotes>(
+  } = useSWRAuth<schoolClassDayContract.StudentSharedNotes>(
     session && schoolClass && studentId
       ? schoolPortalKeys.sharedNotes(schoolClass, studentId)
       : null,

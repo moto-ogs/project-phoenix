@@ -33,11 +33,11 @@ import {
   declarationProofAttachmentDownloadUrl,
   downloadDeclarationProofPdf,
   fetchDeclarationProof,
-  type ParentDeclarationProof,
 } from "~/lib/parent-api";
 import { parentPath } from "~/lib/parent-url";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
 import { useParentCareTerms } from "~/lib/parent-care-term";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 const logger = createLogger({ component: "ParentDeclarationProof" });
 
@@ -147,7 +147,7 @@ function ProofDocument({
   studentId,
 }: Readonly<{
   announcementId: string;
-  proof: ParentDeclarationProof;
+  proof: parentMeContract.declarationProofResponse;
   studentId: string;
 }>) {
   // Der Nachweis gehört zu einer Schule; der Hinweis nennt ihre Betreuung.

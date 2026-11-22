@@ -2,8 +2,8 @@ import { render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { describe, expect, it, vi } from "vitest";
 import deMessages from "~/i18n/messages/de.generated";
-import type { ChildFeatures, ChildToday } from "~/lib/parent-api";
 import { ChildDayCard, type ChildDayCardChild } from "./child-day-card";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 vi.mock("~/lib/parent-url", () => ({
   parentPath: (path: string) => path,
@@ -24,17 +24,17 @@ const allFeatures = {
   sick_note_enabled: true,
   pickup_change_enabled: true,
   notes_enabled: true,
-} as unknown as ChildFeatures;
+} as unknown as parentMeContract.ChildFeaturesResponse;
 
 const noFeatures = {
   sick_note_enabled: false,
   pickup_change_enabled: false,
   notes_enabled: false,
-} as unknown as ChildFeatures;
+} as unknown as parentMeContract.ChildFeaturesResponse;
 
 function renderCard(
-  today: ChildToday,
-  features: ChildFeatures = allFeatures,
+  today: parentMeContract.TodayStatusResponse,
+  features: parentMeContract.ChildFeaturesResponse = allFeatures,
   loading = false,
 ) {
   return render(
@@ -120,7 +120,9 @@ describe("ChildDayCard", () => {
   });
 
   describe("Ebene 2 erklaert den Zustand", () => {
-    const cases: ReadonlyArray<readonly [ChildToday, string]> = [
+    const cases: ReadonlyArray<
+      readonly [parentMeContract.TodayStatusResponse, string]
+    > = [
       [{ at_ogs: true, state: "present", since: "12:38" }, "Seit 12:38 Uhr da"],
       [
         { at_ogs: false, state: "left", until: "15:12" },

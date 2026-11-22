@@ -2,12 +2,8 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { storyNow } from "~storybook/clock";
 import { installStorybookFetch, jsonResponse } from "~storybook/mocks/fetch";
 import { ParentMealPlanPage } from "./parent-meal-plan-page";
-import type {
-  Child,
-  ChildFeatures,
-  MealParticipation,
-  MealPlanEntry,
-} from "~/lib/parent-api";
+import type { MealParticipation, MealPlanEntry } from "~/lib/parent-api";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 const baseFeatures = {
   conference_book_allowed: false,
@@ -38,9 +34,9 @@ const baseFeatures = {
   meal_registration_enabled: false,
   has_open_change_request: false,
   parent_news_enabled: true,
-} satisfies ChildFeatures;
+} satisfies parentMeContract.ChildFeaturesResponse;
 
-const childrenWithMealPlans: Child[] = [
+const childrenWithMealPlans: parentMeContract.ChildResponse[] = [
   {
     care_ended: false,
     student_id: "child-1",
@@ -172,7 +168,7 @@ function mockParentMealPlan({
   entriesByStudent = {},
   shouldFail = false,
 }: {
-  childrenData: Child[];
+  childrenData: parentMeContract.ChildResponse[];
   enabledStudentIds?: ReadonlySet<string>;
   registrationEnabledStudentIds?: ReadonlySet<string>;
   entriesByStudent?: Record<string, MealPlanEntry[]>;
@@ -254,7 +250,7 @@ export const Populated: Story = {
 
 export const WithRegistration: Story = {
   beforeEach: () => {
-    const felix: Child = {
+    const felix: parentMeContract.ChildResponse = {
       ...childrenWithMealPlans[0]!,
       first_name: "Felix",
       last_name: "Schneider",

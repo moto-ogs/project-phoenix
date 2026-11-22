@@ -51,8 +51,6 @@ import { ApiError } from "~/lib/api-error";
 import type {
   AbsenceReportStatus,
   ClassDayClasses,
-  SchoolDayChild,
-  SchoolDayReport,
 } from "~/lib/school-class-day-api";
 import { schoolPath } from "~/lib/school-url";
 import { useSWRAuth } from "~/lib/swr";
@@ -72,6 +70,7 @@ import { useClassDayRefresh } from "./use-class-day-refresh";
 import { useSchoolReportRefusal } from "./use-school-report-refusal";
 import { useSchoolAbsenceReports } from "./use-school-absence-reports";
 import { InsetPanel } from "~/components/ui/inset-panel";
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 
 // Die Ansicht bleibt bei Übergaben lange offen — sie muss sich selbst
 // aktualisieren, damit z. B. eine um 11:30 gemeldete Krankmeldung nicht
@@ -115,7 +114,9 @@ function reportLine(report: ClassDayReport): ClassLine {
   };
 }
 
-function schoolDayLines(report: SchoolDayReport): Record<string, ClassLine> {
+function schoolDayLines(
+  report: schoolClassDayContract.SchoolDayReport,
+): Record<string, ClassLine> {
   const lines: Record<string, ClassLine> = {};
   for (const klass of report.classes ?? []) {
     lines[klass.school_class] = {
@@ -344,7 +345,7 @@ function ClassReports({
  * „Fehlen“ der Tagesstatus, in „Kinder“ das Kind ohne Betreuung.
  */
 function childNote(
-  child: SchoolDayChild,
+  child: schoolClassDayContract.SchoolDayChild,
   list: SchoolDayListKey,
 ): string | null {
   // Eine Meldung, die die Schulverwaltung nachgetragen hat (#4791), sagt
@@ -362,7 +363,7 @@ function childNote(
 
 /** Die Aktion, die ein Kind der Liste für die Schulverwaltung trägt (#4791). */
 function absenceReportMenu(
-  child: SchoolDayChild,
+  child: schoolClassDayContract.SchoolDayChild,
   canReport: boolean,
   onEnter: (status: AbsenceReportStatus) => void,
   onWithdraw: () => void,
@@ -411,7 +412,9 @@ export interface ClassDayOverviewProps {
    * Tagesübersicht der ganzen Schule (#4802). Darf die Person sie sehen,
    * lädt die Startseite sie einmal statt einen Report je Klasse.
    */
-  readonly fetchSchoolDay?: (date: string) => Promise<SchoolDayReport>;
+  readonly fetchSchoolDay?: (
+    date: string,
+  ) => Promise<schoolClassDayContract.SchoolDayReport>;
   /** Meldung nachtragen (#4791), nur für die Schulverwaltung. */
   readonly reportAbsence?: (
     schoolClass: string,
