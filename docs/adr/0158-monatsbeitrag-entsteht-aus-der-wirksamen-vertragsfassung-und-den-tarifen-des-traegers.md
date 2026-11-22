@@ -267,7 +267,9 @@ Das zusammengelegte Kind ist für E2 bis E4 und die Geschwisterregel ein
 Kind: Bei „voller Monat“ rechnet der Vertrag, der am 1. gilt, den Monat ab,
 der Vertrag an der neuen Schule nichts; er zählt das Kind an seiner Schule
 (ADR 0305, Nachtrag #7863). Unter „anteilig“ rechnet jeder Vertrag seine
-Tage ab. Verträge, die nur eine ausgestellte Rechnung des Monats in die Kette
+Tage ab. Ist der Monat an der alten Schule beitragsfrei (#6196), zahlt das
+Kind im Monat des Wechsels bei „voller Monat“ nichts, wie beim Wechsel mit
+einem Datensatz. Verträge, die nur eine ausgestellte Rechnung des Monats in die Kette
 bringen (#7863), legen nichts zusammen und verhindern nichts: Sie kommen erst
 nach der Gruppierung der laufenden Verträge dazu, wie E1 sie mit ihnen
 gruppiert hätte: zum Kind ihres Datensatzes, dem sie auch ihre Schreibweise

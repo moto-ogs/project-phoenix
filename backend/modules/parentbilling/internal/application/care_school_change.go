@@ -181,7 +181,9 @@ func bucketJoins(bucket []int, parts []schoolChangePart, children [][]int64, byC
 // schoolChangeName spells a name so that two schools that wrote it
 // differently still match: composed (a name pasted in decomposed form),
 // umlauts written out and accents dropped (textnorm.ASCII), without case
-// and with the spaces collapsed.
+// and with the spaces collapsed. It is not E1's normalizedName, which only
+// ignores case; two spellings within one child stop a join, they never
+// cause one.
 func schoolChangeName(name string) string {
 	return strings.Join(strings.Fields(strings.ToLower(textnorm.ASCII(name))), " ")
 }

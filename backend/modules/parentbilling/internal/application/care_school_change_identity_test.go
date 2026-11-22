@@ -65,6 +65,8 @@ func TestCareMonthCountsAChildWithARecordAtEachSchoolOnce(t *testing.T) {
 		// family size the rule reduces from, 2 without one.
 		countBoth bool
 		from      int
+		// freeAt is a school whose price list makes January free.
+		freeAt int64
 		// children is the size of the family Mia's sibling reduction names,
 		// zero when she gets none.
 		children int
@@ -99,6 +101,14 @@ func TestCareMonthCountsAChildWithARecordAtEachSchoolOnce(t *testing.T) {
 			name: "both schools count, pro rata: the child is not a second sibling", monthRule: parentbilling.MonthRuleProRata,
 			contracts: []identityContract{mia, leaves, enters}, countBoth: true, from: 3,
 			totals: map[int64]int64{contractMia: 8000, contractNoah: 2032, contractLea: 3290}, joined: true,
+		},
+		{
+			// January is free at Birkenfeld. Under the full month the
+			// contract that holds on the 1st bills the month (E2): Noah pays
+			// nothing in January, as with one record. His contract at
+			// Ispringen still counts him there: Mia pays 40,00 €.
+			name: "a free month at the old school frees the child's month", contracts: []identityContract{mia, leaves, enters},
+			freeAt: schoolBirkenfeld, totals: map[int64]int64{contractMia: 4000}, children: 2, joined: true,
 		},
 		{
 			// The names differ in spelling only: an umlaut written out at
@@ -220,6 +230,9 @@ func TestCareMonthCountsAChildWithARecordAtEachSchoolOnce(t *testing.T) {
 			in := careMonthInput{month: day(t, billingMonth), rule: monthRule, tariffs: chainTariffs(t),
 				invoiced: map[int64]parentbilling.CareInvoice{}, recipients: map[int64]parentbilling.CareRecipient{},
 				rules: identityRules(t, tc.from, tc.countBoth)}
+			if tc.freeAt != 0 {
+				in.lists = []parentbilling.CarePriceListHead{{SchoolID: ident.ID(tc.freeAt), ValidFrom: day(t, "2026-09-01"), FreeMonths: []int{1}}}
+			}
 			for _, contract := range tc.contracts {
 				version := sjrVersion(t, contract.contract, contract.school, 1, contract.from, contract.until, contract.booked...)
 				version.StudentID = nil

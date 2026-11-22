@@ -293,6 +293,9 @@ func (m *weeklyProfileAPIMock) serve(t *testing.T, w seedHTTPResponseWriter, r *
 		require.Equal(t, true, body["counts_as_care"])
 		require.Len(t, body["pickup_times"], 5)
 		m.offeringID = m.nextID
+	case path == "/api/enrollment/phases" && r.Method == "GET":
+		// The school change step (#7874) looks for its phase.
+		data = []any{}
 	case path == "/api/enrollment/phases":
 		m.phase = body
 	case strings.HasPrefix(path, "/api/enrollment/phases/"):
