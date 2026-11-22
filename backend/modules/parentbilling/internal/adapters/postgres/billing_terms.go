@@ -188,10 +188,7 @@ func (s *Store) SaveFamilyBilling(ctx context.Context, organizationID, accountID
 	}
 	if err := db.NewInsert().Model(row).
 		On("CONFLICT (organization_id, family_email) DO UPDATE").
-		// The row goes with the contract it was set from. A save through
-		// another contract of the family keeps that contract: moved to a
-		// draft, the deviation would go when the draft is discarded (#7770).
-		Set("care_contract_id = COALESCE(family_billing_row.care_contract_id, EXCLUDED.care_contract_id)").Set("recipient_kind = EXCLUDED.recipient_kind").
+		Set("care_contract_id = EXCLUDED.care_contract_id").Set("recipient_kind = EXCLUDED.recipient_kind").
 		Set("second_first_name = EXCLUDED.second_first_name").Set("second_last_name = EXCLUDED.second_last_name").
 		Set("payer_first_name = EXCLUDED.payer_first_name").Set("payer_last_name = EXCLUDED.payer_last_name").
 		Set("payer_email = EXCLUDED.payer_email").Set("payer_street = EXCLUDED.payer_street").

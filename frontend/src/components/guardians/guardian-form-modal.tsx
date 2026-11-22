@@ -460,7 +460,7 @@ export default function GuardianFormModal({
       // Kontaktmöglichkeit bleibt deshalb auch bei „Nur Abholung“ stehen.
       const keepsStoredContact =
         mode === "edit" &&
-        Boolean(initialData?.email ?? initialData?.phoneNumbers.length);
+        Boolean(initialData?.email || initialData?.phoneNumbers.length);
       if (
         !hasEmail &&
         !hasPhone &&

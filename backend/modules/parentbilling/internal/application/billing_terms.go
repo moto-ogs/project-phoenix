@@ -178,7 +178,9 @@ func (t *BillingTerms) ListFamilyBilling(ctx context.Context, reviewer parentbil
 
 // familyOfContract names the party a contract's invoice goes to and the key
 // of its family. A contract of another Träger is not among the recipients
-// and names no family: ErrFamilyUnknown.
+// and names no family: ErrFamilyUnknown. Neither is a draft (the root
+// leaves it out): it can be discarded, and a deviation set through it would
+// go with it.
 func (t *BillingTerms) familyOfContract(ctx context.Context, organizationID, contractID int64) (parentbilling.CareRecipient, string, error) {
 	if contractID <= 0 {
 		return parentbilling.CareRecipient{}, "", parentbilling.ErrFamilyUnknown
