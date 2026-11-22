@@ -14,8 +14,11 @@ Punkt 5 den Satz zum Beginn der Zahl.
 
 - Birkenfeld ermäßigt nach der Zahl der Familienkinder unter 18 Jahren: Hat
   die Familie mindestens zwei, zahlt jedes betreute Kind den ermäßigten
-  Beitrag, auch das erste. Die allgemeine fachliche Bestätigung steht noch
-  aus.
+  Beitrag, auch das erste. Das ist eine bestätigte Anforderung. Offen sind
+  drei Fragen an den Träger, von denen dieser Vorschlag nicht abhängt: ob die
+  Regel an allen drei Birkenfelder Schulen gilt, wie die Quellangabe „5 oder
+  mehr“ Kinder zu erfassen ist und ab welchem Tag eine erst im November
+  belegte Kinderzahl gilt.
 - Die Geschwisterregel wählt bisher nur nach dem Rang (`sibling_from_child`):
   Kinder ab dem n-ten zahlen weniger. Geschwister ohne Vertrag stehen in der
   Reihe vorn. Damit rechnet sie alle Birkenfelder Fälle richtig, bis auf
@@ -80,8 +83,10 @@ Punkt 5 den Satz zum Beginn der Zahl.
 
 ## Folgen
 
-- Die produktive Regel für Birkenfeld legt die Abrechnung an, sobald die
-  fachliche Bestätigung vorliegt. Dieser Vorschlag aktiviert nichts.
+- Die produktive Regel für Birkenfeld ist Konfiguration: Die Abrechnung legt
+  sie mit ihren Schulen an. Dieser Vorschlag aktiviert nichts.
+- „5 oder mehr“ ist keine ganze Zahl; die Datei hält eine solche Zeile als
+  fehlerhaft zurück. moto erfindet keine Zahl.
 - Eine Zahl aus einer Datei zählt für den Monat, in dem ihr Tag liegt, und
   danach (ADR 0164 Punkt 6). Frühere Monate rechnet moto erst zum
   Geschwisterpreis, wenn das Büro einen früheren Tag nennt.

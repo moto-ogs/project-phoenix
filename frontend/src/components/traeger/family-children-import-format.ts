@@ -42,7 +42,7 @@ export const FAMILY_IMPORT_FIELD_HINTS: Partial<
   children:
     "Alle Kinder der Familie, auch Geschwister ohne Vertrag. Eine ganze Zahl von 1 bis 20.",
   valid_from:
-    "Freiwillig. Der Tag, ab dem die Zahl der Zeile gilt. Eine leere Zelle nimmt den Tag unter „Kinderzahl gilt ab“.",
+    "Nur wenn deine Datei den Tag je Kind nennt. Eine leere Zelle bekommt den Tag aus „Kinderzahl gilt ab“.",
 };
 
 const FAMILY_IMPORT_STATUS: Record<

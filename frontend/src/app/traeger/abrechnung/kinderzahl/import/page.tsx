@@ -14,6 +14,7 @@ import {
   numberCountLabel,
 } from "~/components/traeger/family-children-import-format";
 import { FamilyChildrenImportMappingCard } from "~/components/traeger/family-children-import-mapping-card";
+import { FamilyChildrenImportValidFromCard } from "~/components/traeger/family-children-import-valid-from-card";
 import { FamilyChildrenImportPreviewCard } from "~/components/traeger/family-children-import-preview-card";
 import { importFormatLabel } from "~/components/traeger/sepa-import-format";
 import { Alert } from "~/components/ui/alert";
@@ -273,6 +274,13 @@ export default function TraegerKinderzahlImportPage() {
               mapping={result.mapping}
               unmapped={result.unmapped}
               schools={result.schools}
+              disabled={applying}
+              onChange={remap}
+            />
+          ) : null}
+          {result && result.unmapped.length === 0 ? (
+            <FamilyChildrenImportValidFromCard
+              mapping={result.mapping}
               disabled={applying}
               onChange={remap}
             />

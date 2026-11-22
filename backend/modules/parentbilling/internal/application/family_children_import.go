@@ -236,6 +236,11 @@ func (c *familyImportCandidate) settle() {
 	default:
 		c.row.Status, c.row.ConfirmedChildren = parentbilling.FamilyImportSame, confirmed(parentbilling.ImportedChildrenSame)
 	}
+	// Only a number the import takes over counts from the row's day: a
+	// confirmed one keeps its own validity, which the row does not name.
+	if c.row.Status != parentbilling.FamilyImportReady {
+		c.row.ValidFrom = nil
+	}
 }
 
 // applyFamilyImport stores the numbers of the ready rows and marks them.

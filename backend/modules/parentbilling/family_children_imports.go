@@ -142,7 +142,8 @@ type FamilyChildrenImportRow struct {
 	Children *int `json:"children"`
 	// ContractID is the contract of the child the number goes to and
 	// ValidFrom the day the number counts from: the row's own, else the
-	// file's; later when it renews a confirmation that ran out.
+	// file's; later when it renews a confirmation that ran out. Only a row
+	// the import takes over names it.
 	ContractID ident.ID       `json:"contract_id,omitempty"`
 	ValidFrom  *calendar.Date `json:"valid_from"`
 	// ConfirmedChildren is the number the Abrechnung confirmed before, for
