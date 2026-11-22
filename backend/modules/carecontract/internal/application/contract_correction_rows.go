@@ -7,6 +7,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"golang.org/x/text/unicode/norm"
+
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -90,7 +92,8 @@ func (i correctionIndex) cell(cells []string, field string) string {
 	if !ok || position >= len(cells) {
 		return ""
 	}
-	return strings.TrimSpace(cells[position])
+	// Composed letters: "u" with a combining diaeresis is the letter "ü".
+	return strings.TrimSpace(norm.NFC.String(cells[position]))
 }
 
 // correctionEntry is one row as the file writes it: the contract it names
@@ -181,23 +184,36 @@ func (e *correctionEntry) readParties(value string) {
 }
 
 // namesPartyTwice tells whether the row names a person more often than the
-// contract has parties of that name: the same words in any order, without
-// case and with umlauts written out. Stored, the further name would be one
-// person twice in the contract.
-func namesPartyTwice(written, stored []ports.CorrectionParty) bool {
+// contract carries it. Two names are one person when they have the same
+// words in any order, without case and with umlauts written out. The
+// contract carries the person as often as it has parties one of those names
+// writes, in the list's form or in full, in any case; two parties that only
+// share their words are not each other. Stored, a further name would be one
+// person twice in the contract, or the name of one party on another.
+func namesPartyTwice(entry correctionEntry, stored []ports.CorrectionParty) bool {
 	key := func(party ports.CorrectionParty) string {
 		words := nameWords(party.FirstName + " " + party.LastName)
 		slices.Sort(words)
 		return strings.Join(words, " ")
 	}
-	have := map[string]int{}
-	for _, party := range stored {
-		have[key(party)]++
+	full := func(party ports.CorrectionParty) string {
+		return fullName(joinWords(party.FirstName), joinWords(party.LastName))
 	}
-	named := map[string]int{}
-	for _, party := range written {
+	named, carried := map[string]int{}, map[string]int{}
+	for _, party := range entry.parties {
 		named[key(party)]++
-		if named[key(party)] > max(1, have[key(party)]) {
+	}
+	for _, party := range stored {
+		cell := joinWords(correctionPartyCell([]ports.CorrectionParty{party}))
+		for n, written := range entry.parties {
+			if strings.EqualFold(cell, entry.partyNames[n]) || strings.EqualFold(full(party), full(written)) {
+				carried[key(written)]++
+				break
+			}
+		}
+	}
+	for person, times := range named {
+		if times > max(1, carried[person]) {
 			return true
 		}
 	}
@@ -349,17 +365,18 @@ func (c *contractCorrectionCheck) subject(entry *correctionEntry) (ports.Correct
 	return subject, true
 }
 
-// namesChild tells whether a row names the child, without case. "Nachname,
-// Vorname" names the last name before its last comma; without a comma the
-// first and the last name stand in either order. The words of each keep
-// their order, so "Anna Marie Weber" is not "Marie Anna Weber", and "Martin,
-// Paul" is not the child Martin Paul.
+// namesChild tells whether a row names the child, without case: "Vorname
+// Nachname" as the list to download writes it, commas of the names
+// included, or "Nachname, Vorname" with the last name before the last
+// comma. No other order names it: "Martin Paul" is not the child Paul
+// Martin, and "Anna Marie Weber" is not "Marie Anna Weber".
 func namesChild(written, first, last string) bool {
 	fold := func(name string) string { return joinWords(strings.ToLower(name)) }
-	if at := strings.LastIndex(written, ","); at >= 0 {
-		return fold(written[:at]) == fold(last) && fold(written[at+1:]) == fold(first)
+	if fold(written) == fold(first+" "+last) {
+		return true
 	}
-	return fold(written) == fold(first+" "+last) || fold(written) == fold(last+" "+first)
+	at := strings.LastIndex(written, ",")
+	return at >= 0 && fold(written[:at]) == fold(last) && fold(written[at+1:]) == fold(first)
 }
 
 // planConclusion plans the method and the day of the conclusion.
@@ -393,7 +410,7 @@ func planParties(entry correctionEntry, subject ports.CorrectionSubject, plan *c
 	if !entry.hasParties || joinWords(entry.partyCell) == joinWords(correctionPartyCell(subject.Parties)) {
 		return
 	}
-	if namesPartyTwice(entry.parties, subject.Parties) {
+	if namesPartyTwice(entry, subject.Parties) {
 		plan.problem(carecontract.ContractCorrectionFieldParties, carecontract.ContractCorrectionProblemPartyRepeated)
 		return
 	}

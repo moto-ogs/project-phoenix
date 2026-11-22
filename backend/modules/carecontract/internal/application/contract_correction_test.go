@@ -131,8 +131,24 @@ func TestCorrectionAddsPartiesAndNeverRemovesOne(t *testing.T) {
 	assert.False(t, namesChild("Marie Anna Weber", "Anna Marie", "Weber"), "the row names a sibling")
 	assert.False(t, namesChild("Martin, Paul", "Martin", "Paul"), "the comma names the last name")
 	assert.True(t, namesChild("paul, martin", "Martin", "Paul"))
+	assert.False(t, namesChild("Martin Paul", "Paul", "Martin"), "without a comma the first name stands first")
+	assert.True(t, namesChild("Lia Schmidt, geb. Müller", "Lia", "Schmidt, geb. Müller"), "the list reads back a last name with a comma")
+	assert.True(t, namesChild("Schmidt, geb. Müller, Lia", "Lia", "Schmidt, geb. Müller"))
 	doubled := planCorrection(t, correctionSubject(), "7", "Lia Beispiel", "Beispiel, Eva | eva beispiel", "", "", "vertrag.pdf")
 	assert.Equal(t, map[string]string{"parties": "party_repeated"}, correctionProblemCodes(doubled.row), "one person is never two parties")
+	// Two parties that only share their words are not each other: a name
+	// written twice never lands on the other party.
+	bags := correctionSubject()
+	bags.Parties = []ports.CorrectionParty{{ID: 96, FirstName: "Anna", LastName: "Schmidt, Eva Maria"}, {ID: 97, FirstName: "Eva", LastName: "Maria, Anna Schmidt"}}
+	for _, cell := range []string{"MARIA, ANNA SCHMIDT, Eva | Maria, Anna Schmidt, EVA", "Maria, Anna Schmidt, Eva | Maria, Anna Schmidt, Eva,"} {
+		twiceNamed := planCorrection(t, bags, "7", "Lia Beispiel", cell, "", "", "vertrag.pdf")
+		assert.Equal(t, map[string]string{"parties": "party_repeated"}, correctionProblemCodes(twiceNamed.row), cell)
+	}
+	// A letter written with a combining mark is the same letter.
+	composed := planCorrection(t, correctionSubject(), "7", "Lia Beispiel", "Beispiel, Eva | Beispiel, E\u0301va", "", "", "vertrag.pdf")
+	decomposed := planCorrection(t, correctionSubject(), "7", "Lia Beispiel", "Beispiel, Éva | Beispiel, E\u0301va", "", "", "vertrag.pdf")
+	assert.Equal(t, carecontract.ContractCorrectionChange, composed.row.Status, "Éva is a further party")
+	assert.Equal(t, map[string]string{"parties": "party_repeated"}, correctionProblemCodes(decomposed.row))
 	either := planCorrection(t, old, "7", "Lia Beispiel", "Müller, Tom | Müller, Jan", "", "", "vertrag.pdf")
 	assert.Equal(t, map[string]string{"parties": "party_unclear"}, correctionProblemCodes(either.row), "two names for one party")
 }
