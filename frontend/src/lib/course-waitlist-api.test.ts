@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 const { mockBffJson } = vi.hoisted(() => ({ mockBffJson: vi.fn() }));
-vi.mock("~/lib/bff-fetch", () => ({ legacyBffJson: mockBffJson }));
+vi.mock("~/lib/bff-fetch", () => ({ bffJson: mockBffJson }));
 
 import { fetchCourseWaitlists } from "./course-waitlist-api";
 
@@ -22,7 +22,9 @@ describe("fetchCourseWaitlists", () => {
     const waitlists = await fetchCourseWaitlists("7");
 
     expect(mockBffJson).toHaveBeenCalledWith(
-      "/api/students/offering-change-requests/course-waitlists?activity_group_id=7",
+      "tenant",
+      "GET /api/students/offering-change-requests/course-waitlists",
+      { query: { activity_group_id: "7" } },
     );
     expect(waitlists).toEqual([
       {
@@ -37,9 +39,14 @@ describe("fetchCourseWaitlists", () => {
     ]);
   });
 
-  it("reads a missing list as no waiting lists", async () => {
-    mockBffJson.mockResolvedValueOnce(null);
+  it("asks for every AG without a filter", async () => {
+    mockBffJson.mockResolvedValueOnce([]);
 
     await expect(fetchCourseWaitlists()).resolves.toEqual([]);
+    expect(mockBffJson).toHaveBeenLastCalledWith(
+      "tenant",
+      "GET /api/students/offering-change-requests/course-waitlists",
+      { query: { activity_group_id: undefined } },
+    );
   });
 });

@@ -34,15 +34,6 @@ const INSTANCE_STATUSES: readonly ActivityInstanceStatus[] = [
   "cancelled",
 ];
 
-// Wire types: the decoded response of the catalog proxy (#2353).
-export type AttendanceHistoryWire = attendanceHistoryResponse;
-type AttendanceHistoryDayWire = attendanceHistoryDay;
-type AttendanceRecordWire = attendanceDayRecord;
-type AttendanceSessionWire = attendanceSessionRecord;
-type AttendanceSlotWire = attendanceSlotEntry;
-type AttendanceVisitWire = attendanceVisitEntry;
-type AttendanceStatusEntryWire = attendanceStatusEntry;
-
 // --- UI-friendly shapes ---
 
 export interface AttendanceHistory {
@@ -120,7 +111,7 @@ interface AttendanceStatusEntry {
 }
 
 export function mapAttendanceHistoryResponse(
-  raw: AttendanceHistoryWire,
+  raw: attendanceHistoryResponse,
 ): AttendanceHistory {
   return {
     studentId: raw.student_id,
@@ -138,7 +129,7 @@ export function mapAttendanceHistoryResponse(
 }
 
 function mapAttendanceHistoryDay(
-  day: AttendanceHistoryDayWire,
+  day: attendanceHistoryDay,
 ): AttendanceHistoryDay {
   return {
     date: day.date,
@@ -150,7 +141,7 @@ function mapAttendanceHistoryDay(
   };
 }
 
-function mapAttendanceRecord(rec: AttendanceRecordWire): AttendanceRecord {
+function mapAttendanceRecord(rec: attendanceDayRecord): AttendanceRecord {
   const sessions = (rec.sessions ?? [rec]).map(mapAttendanceSession);
   const notes = sessions
     .map((session) => session.checkOutNote)
@@ -175,7 +166,7 @@ function mapAttendanceRecord(rec: AttendanceRecordWire): AttendanceRecord {
 }
 
 function mapAttendanceSession(
-  session: AttendanceSessionWire,
+  session: attendanceSessionRecord,
 ): AttendanceSession {
   return {
     checkInTime: new Date(session.check_in_time),
@@ -187,7 +178,7 @@ function mapAttendanceSession(
   };
 }
 
-function mapAttendanceSlot(slot: AttendanceSlotWire): AttendanceSlot {
+function mapAttendanceSlot(slot: attendanceSlotEntry): AttendanceSlot {
   return {
     instanceId: slot.instance_id,
     instanceStatus: knownEnum(INSTANCE_STATUSES, slot.instance_status) ?? null,
@@ -203,7 +194,7 @@ function mapAttendanceSlot(slot: AttendanceSlotWire): AttendanceSlot {
   };
 }
 
-function mapAttendanceVisit(v: AttendanceVisitWire): AttendanceVisit {
+function mapAttendanceVisit(v: attendanceVisitEntry): AttendanceVisit {
   return {
     roomId: v.room_id ?? null,
     roomName: v.room_name ?? "",
@@ -214,7 +205,7 @@ function mapAttendanceVisit(v: AttendanceVisitWire): AttendanceVisit {
 }
 
 function mapAttendanceStatusEntry(
-  entry: AttendanceStatusEntryWire,
+  entry: attendanceStatusEntry,
 ): AttendanceStatusEntry {
   return {
     status: entry.status,
