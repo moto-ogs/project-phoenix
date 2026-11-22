@@ -533,3 +533,59 @@ func TestFamilyImportRejectedRenewalStillContradictsSibling(t *testing.T) {
 	assert.Equal(t, []parentbilling.FamilyChildrenImportProblem{{Field: parentbilling.FamilyImportFieldChildren,
 		Code: parentbilling.FamilyImportProblemRowsDiffer}}, result.Rows[1].Problems)
 }
+
+// A child that left speaks only for the days it belonged to the family
+// (#7863). Its row neither blocks a sibling's row for a later day nor speaks
+// for a day before it joined; Noah's number is taken over.
+func TestFamilyImportWitnessSpeaksOnlyWhileTheChildBelonged(t *testing.T) {
+	t.Parallel()
+	today := calendar.NewDate(2026, 11, 22)
+	expired := []parentbilling.FamilyChildCount{{ID: 5, ContractID: ident.ID(contractNoah), FamilyEmail: "family@example.org",
+		ConfirmedChildren: ptr(4), ValidFrom: ptr(calendar.NewDate(2026, 8, 1)), ValidUntil: ptr(calendar.NewDate(2026, 11, 15))}}
+	for _, tc := range []struct {
+		name     string
+		miaFrom  string
+		miaUntil string
+		lines    string
+		wantFrom calendar.Date
+	}{
+		{"a sibling's row for a day after the child left", "2026-09-01", "2026-10-31",
+			"Mia;Beispiel;3;01.10.2026\nNoah;Beispiel;2;20.11.2026\n", calendar.NewDate(2026, 11, 20)},
+		{"a row for a day before the child joined", "2026-11-01", "2026-11-10",
+			"Mia;Beispiel;3;01.10.2026\nNoah;Beispiel;2;01.10.2026\n", calendar.NewDate(2026, 11, 16)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			mia := sjrVersion(t, contractMia, schoolIspringen, 1, tc.miaFrom, tc.miaUntil)
+			noah := sjrVersion(t, contractNoah, schoolIspringen, 2, "2026-09-01", "2027-06-30")
+			noah.ChildFirstName = "Noah"
+			stored := importSiblingRows(t, today, []parentbilling.CareContractVersion{mia, noah}, expired, tc.lines)
+			require.Len(t, stored, 1)
+			assert.Equal(t, 2, stored[0].Children)
+			assert.Equal(t, tc.wantFrom, stored[0].ValidFrom)
+		})
+	}
+}
+
+// importSiblingRows previews and applies the lines for one family and
+// returns the numbers stored.
+func importSiblingRows(t *testing.T, today calendar.Date, versions []parentbilling.CareContractVersion,
+	counts []parentbilling.FamilyChildCount, lines string,
+) []parentbilling.ImportedFamilyChildren {
+	t.Helper()
+	contracts := familySourceContracts{versions: versions, recipients: map[int64]parentbilling.CareRecipient{
+		contractMia: {Email: "family@example.org"}, contractNoah: {Email: "family@example.org"},
+	}}
+	store := &siblingFamilyImportStore{familySourceStore: familySourceStore{counts: counts}}
+	clock := func() calendar.Date { return today }
+	imports := CareReductions{FamilyNumbers: NewFamilyChildren(store, contracts, clock), contracts: contracts,
+		schools: traegerSchools{{ID: ident.ID(schoolIspringen), Name: "Grundschule Nord"}}, today: clock}
+	reviewer := parentbilling.HolidayReviewer{OrganizationID: 9, AccountID: 8}
+	request := parentbilling.FamilyChildrenImportRequest{Content: []byte("Vorname;Nachname;Kinderzahl;Kinderzahl gilt ab\n" + lines)}
+	preview, err := imports.ImportFamilyChildren(context.Background(), reviewer, request)
+	require.NoError(t, err)
+	request.Apply, request.Fingerprint = true, preview.Fingerprint
+	_, err = imports.ImportFamilyChildren(context.Background(), reviewer, request)
+	require.NoError(t, err)
+	return store.stored
+}

@@ -328,3 +328,39 @@ func TestCarePreviewsRankAChildByTheBirthDateOfAnyEntry(t *testing.T) {
 		assert.Equal(t, map[ident.ID]int64{ident.ID(contractMia): 4000, ident.ID(contractNoah): 4000}, totals, name)
 	}
 }
+
+// A child ranks by the birth date an entry at any school knows (#7863):
+// Ben's issued invoice is at Birkenfeld, which the rule does not count, and
+// still tells that Ben is older. Both pay 40,00 € at Ispringen; Mia, the
+// younger, is the second child and pays half.
+func TestCarePreviewsRankByABirthDateFromAnotherSchool(t *testing.T) {
+	t.Parallel()
+	mia := sjrVersion(t, contractMia, schoolIspringen, 1, billingMonth, "2027-01-31", mon1400)
+	mia.ChildBirthDate = ptr(day(t, "2019-05-01"))
+	ben := sjrVersion(t, contractNoah, schoolIspringen, 2, billingMonth, "2027-01-31", mon1400)
+	ben.ChildFirstName, ben.ChildBirthDate = "Ben", nil
+	const issuedContract = contractLea + 1
+	in := careMonthInput{
+		month: day(t, billingMonth), rule: parentbilling.MonthRuleVersionOnFirst,
+		versions: []parentbilling.CareContractVersion{mia, ben}, tariffs: chainTariffs(t), rules: familySiblingRule(false)(t),
+		recipients: map[int64]parentbilling.CareRecipient{contractMia: {Email: familyEva}, contractNoah: {Email: familyEva}},
+		issuedChildren: map[int64]parentbilling.CareContractChild{issuedContract: {StudentID: ben.StudentID,
+			FirstName: "Ben", LastName: "Beispiel", BirthDate: ptr(day(t, "2016-03-01"))}},
+		invoiced: map[int64]parentbilling.CareInvoice{issuedContract: {
+			ContractID: ident.ID(issuedContract), SchoolID: ident.ID(schoolBirkenfeld), FamilyEmail: familyEva,
+			Positions: []parentbilling.CarePosition{{CareOfferingID: ident.ID(moduleUntil1630), AmountCents: 4500, PayableCents: 4500}},
+		}},
+	}
+	schools := []int64{schoolIspringen}
+	monthly, err := buildCareMonth(in)
+	require.NoError(t, err)
+	_, notice, err := computeNoticeMonth(in, in.invoiced, nil, schools)
+	require.NoError(t, err)
+	for name, preview := range map[string]careMonth{"monthly run": narrowMonth(monthly, schools, nil).careMonth, "fee notice": notice} {
+		totals := map[ident.ID]int64{}
+		for _, invoice := range preview.invoices {
+			totals[invoice.ContractID] = invoice.TotalCents
+		}
+		assert.Equal(t, map[ident.ID]int64{ident.ID(contractMia): 2000, ident.ID(contractNoah): 4000}, totals, name)
+	}
+}
