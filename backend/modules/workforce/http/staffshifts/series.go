@@ -75,8 +75,8 @@ type SeriesRequest struct {
 type SeriesResponse struct {
 	// Keep bigint identifiers as strings on the wire. The frontend needs to
 	// carry them through a subsequent split request without JavaScript rounding.
-	SeriesID     int64    `json:"series_id,string"`
-	OldSeriesID  int64    `json:"old_series_id,omitempty,string"`
+	SeriesID     ident.ID `json:"series_id"`
+	OldSeriesID  ident.ID `json:"old_series_id,omitempty"`
 	Created      int      `json:"created"`
 	Deleted      int      `json:"deleted"`
 	SkippedDates []string `json:"skipped_dates"`
@@ -91,8 +91,8 @@ func toSeriesResponse(result workforce.StaffShiftSeriesResult) SeriesResponse {
 		skipped = []string{}
 	}
 	return SeriesResponse{
-		SeriesID:              result.SeriesID,
-		OldSeriesID:           result.OldSeriesID,
+		SeriesID:              ident.ID(result.SeriesID),
+		OldSeriesID:           ident.ID(result.OldSeriesID),
 		Created:               result.Created,
 		Deleted:               int(result.Deleted),
 		SkippedDates:          skipped,
@@ -120,7 +120,7 @@ func toWeekdays(values []int) ([]int, error) {
 // wall-clock, dates "YYYY-MM-DD"; valid_until is exclusive, as everywhere in
 // the series API.
 type SeriesDetailResponse struct {
-	ID               int64     `json:"id,string"`
+	ID               ident.ID  `json:"id"`
 	StaffID          ident.ID  `json:"staff_id"`
 	Weekdays         []int     `json:"weekdays"`
 	StartTime        string    `json:"start_time"`
@@ -141,7 +141,7 @@ func toSeriesDetailResponse(series workforce.StaffShiftSeries) SeriesDetailRespo
 	weekdays := make([]int, 0, len(series.Weekdays))
 	weekdays = append(weekdays, series.Weekdays...)
 	resp := SeriesDetailResponse{
-		ID:                  series.ID,
+		ID:                  ident.ID(series.ID),
 		StaffID:             ident.ID(series.StaffID),
 		Weekdays:            weekdays,
 		StartTime:           FormatWallClock(series.StartTime),

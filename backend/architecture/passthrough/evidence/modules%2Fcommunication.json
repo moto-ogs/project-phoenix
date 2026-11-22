@@ -772,13 +772,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (m *parentMessaging[I, T, M, G]) StartParentMessageThread(ctx context.Context, studentID, guardianAccountID int64, body, audience string) (*communication.ParentMessageThread, error) {\n\treturn observeMessageResult(ctx, m.observe, \"parent_messages.start_thread\", func(runCtx context.Context) (*communication.ParentMessageThread, error) {\n\t\tthread, err := m.service.StartThread(runCtx, studentID, guardianAccountID, body, audience)\n\t\tif err != nil {\n\t\t\treturn nil, m.mapError(err)\n\t\t}\n\t\treturn mapNativeParentThread(thread, m.rows.Thread, m.rows.Message)\n\t})\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/communication/internal/application/parentMessaging[I, T, M, G].StartParentMessageThread",
-      "owner": "modules/communication"
-    },
-    {
-      "build": "production",
       "evidence": "func (e *Emitter) BroadcastChildUpdateToGuardians(tenantID, studentID int64) {\n\tif e == nil || e.events == nil {\n\t\treturn\n\t}\n\tif tenantID \u003c= 0 || studentID \u003c= 0 {\n\t\treturn\n\t}\n\te.events.WakeChildGuardians(tenantID, studentID)\n}",
       "form": "unclassified-evidence",
       "id": "modules/communication/internal/application/parentmessaging/Emitter.BroadcastChildUpdateToGuardians",

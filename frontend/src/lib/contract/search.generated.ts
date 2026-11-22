@@ -167,6 +167,7 @@ export const routes = {
     method: "POST",
     pattern: "/api/search/",
     portals: ["tenant"],
+    noCommit: "a search reads; the query travels in the body",
     request: requestBody<SchoolSearchRequest>(),
     response: success(SearchResultSchema),
   },

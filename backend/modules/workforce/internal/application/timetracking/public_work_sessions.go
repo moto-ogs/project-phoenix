@@ -44,7 +44,7 @@ func publicWorkSessionBreak(entity *WorkSessionBreak) *workforce.WorkSessionBrea
 		return nil
 	}
 	return &workforce.WorkSessionBreak{
-		ID: entity.ID, TenantID: entity.TenantID, SessionID: entity.SessionID, StartedAt: entity.StartedAt, EndedAt: entity.EndedAt,
+		ID: ident.ID(entity.ID), TenantID: ident.ID(entity.TenantID), SessionID: ident.ID(entity.SessionID), StartedAt: entity.StartedAt, EndedAt: entity.EndedAt,
 		DurationMinutes: entity.DurationMinutes, PlannedEndTime: entity.PlannedEndTime, CreatedAt: entity.CreatedAt, UpdatedAt: entity.UpdatedAt,
 	}
 }

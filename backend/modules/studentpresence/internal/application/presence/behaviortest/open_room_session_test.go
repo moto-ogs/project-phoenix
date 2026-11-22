@@ -77,7 +77,7 @@ func TestEnsureOpenRoomSessionRunsBesideAnActivitySession(t *testing.T) {
 
 	first, err := presence.EnsureOpenRoomSession(ctx, gym.ID, roomActivity.ID)
 	require.NoError(t, err, "a running activity must not block the room session")
-	assert.NotEqual(t, footballSession.ID, first.ID, "the room session is not the activity session")
+	assert.NotEqual(t, footballSession.ID, first.ID.Int64(), "the room session is not the activity session")
 	assert.Nil(t, first.DeviceID)
 	require.NotNil(t, first.GroupID)
 	assert.Equal(t, ident.ID(roomActivity.ID), *first.GroupID)

@@ -102,7 +102,10 @@ describe("MFAChallengeForm", () => {
   // #6955: the person decides with one of two answers. A complete code
   // alone sends nothing, so no device is remembered without a choice.
   it("waits for a choice once the code is complete", async () => {
-    global.fetch = mockOk({ status: "authenticated" });
+    global.fetch = mockOk({
+      status: "success",
+      data: { status: "authenticated" },
+    });
 
     render(<MFAChallengeForm {...defaultProps} onSuccess={vi.fn()} />);
 
@@ -153,7 +156,10 @@ describe("MFAChallengeForm", () => {
   );
 
   it("confirms without remembering the device on „Nein, nur anmelden“", async () => {
-    global.fetch = mockOk({ status: "authenticated" });
+    global.fetch = mockOk({
+      status: "success",
+      data: { status: "authenticated" },
+    });
     const onSuccess = vi.fn();
 
     render(<MFAChallengeForm {...defaultProps} onSuccess={onSuccess} />);
@@ -180,7 +186,10 @@ describe("MFAChallengeForm", () => {
   });
 
   it("remembers the device only on the button that says so", async () => {
-    global.fetch = mockOk({ status: "authenticated" });
+    global.fetch = mockOk({
+      status: "success",
+      data: { status: "authenticated" },
+    });
 
     render(<MFAChallengeForm {...defaultProps} onSuccess={vi.fn()} />);
     await enterCode("987654");
@@ -246,7 +255,10 @@ describe("MFAChallengeForm", () => {
   // A school that switched remembered devices off has nothing to choose:
   // the code is checked as soon as it is complete, and never remembered.
   it("checks the code right away where devices cannot be remembered", async () => {
-    global.fetch = mockOk({ status: "authenticated" });
+    global.fetch = mockOk({
+      status: "success",
+      data: { status: "authenticated" },
+    });
     const onSuccess = vi.fn();
 
     render(

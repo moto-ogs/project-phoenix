@@ -158,7 +158,7 @@ func TestStaffPersonMergeAndOffboardingDoNotDeadlock(t *testing.T) {
 		return err
 	}))
 	require.Len(t, candidates, 1)
-	require.Equal(t, keeper.PersonID, candidates[0].Keeper.Person.ID)
+	require.Equal(t, keeper.PersonID, candidates[0].Keeper.Person.ID.Int64())
 	offboard := mergeRaceOffboarding(t, db, actor.ID)
 
 	locked, release := make(chan struct{}), make(chan struct{})

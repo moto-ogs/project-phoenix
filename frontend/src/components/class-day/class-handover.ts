@@ -14,9 +14,7 @@ import {
 
 /** Die Kinder, die heute aus der Klasse in die OGS gehen. */
 export function handoverRows(rows: readonly ClassDayRow[]): ClassDayRow[] {
-  return rows.filter(
-    (row) => row.stays_today && !row.list_entry && row.student_id > 0,
-  );
+  return rows.filter((row) => row.stays_today && !row.list_entry);
 }
 
 /**
@@ -28,8 +26,8 @@ export function initialAbsentIds(
   rows: readonly ClassDayRow[],
   handedOver: boolean,
   draft: MorningAttendanceDraft = {},
-): ReadonlySet<number> {
-  const absent = new Set<number>();
+): ReadonlySet<string> {
+  const absent = new Set<string>();
   for (const row of handoverRows(rows)) {
     const marked = handedOver
       ? row.handover_absent === true

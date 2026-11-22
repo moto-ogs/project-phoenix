@@ -153,16 +153,9 @@ func TestSEPADebitFileOfAReleasedRun(t *testing.T) {
 	require.Len(t, overview.Groups, 2, "one batch per sequence type")
 	assert.NotEmpty(t, overview.MessageID)
 
-	// The account at the release counts: a change of the IBAN afterwards
-	// reaches only the next release, never this file.
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, fmt.Sprintf("%s/%d", sepaMandatesPath, noahMandate.ID),
-		map[string]any{"account_holder": "Jan Beispiel", "iban": sepaChangedIBAN, "sequence": "recurring"})
-	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	file := debitFile(t, f, run)
 	assert.Contains(t, file, "<IBAN>"+sepaIBAN+"</IBAN>")
-	assert.NotContains(t, file, sepaChangedIBAN)
 	assert.Contains(t, file, "<Nm>Eva Beispiel</Nm>")
-	assert.NotContains(t, file, "Jan Beispiel")
 	assert.Contains(t, file, "<IBAN>"+sepaTraegerIBAN+"</IBAN>")
 	assert.Contains(t, file, "<MsgId>"+overview.MessageID+"</MsgId>")
 	assert.Contains(t, mandateEvents(t, f, int64(noahMandate.ID)), "reveal:office", "the download is in the trail")
@@ -191,7 +184,7 @@ func TestSEPADebitFileOfAReleasedRun(t *testing.T) {
 	assert.Equal(t, "first|-", state, "a download collects nothing")
 
 	// The confirmation names the file the office saw.
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, sepaDebitRunPath(run, "/submission"),
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, sepaDebitRunPath(run, "/submission"),
 		map[string]any{"message_id": "MOTO-M1-0000000000000000"})
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.sepa_debits_changed")

@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -199,14 +200,14 @@ func TestAssignmentResponseNamesItsShape(t *testing.T) {
 		created   *workforce.SubstitutionAssignmentResult
 		want      string
 	}{
-		{workforce.TargetScheduleSubstitution, schedule, `{"type":"schedule_substitution","schedule_substitution":{"instance_id":7,"cancelled":false,"understaffed_ack":false,"affected_instances":null,"warnings":null,"total_affected":0}}`},
+		{workforce.TargetScheduleSubstitution, schedule, `{"type":"schedule_substitution","schedule_substitution":{"instance_id":"7","cancelled":false,"understaffed_ack":false,"affected_instances":null,"warnings":null,"total_affected":0}}`},
 		{workforce.TargetGroupHandover, handover, `{"type":"group_handover","group_handover":{"id":"8","type":"group_handover","target":{"id":"0","full_name":""}}}`},
 		{workforce.TargetAdditionalSupervision, supervision, `{"type":"additional_supervision","additional_supervision":{"id":"9","type":"additional_supervision","active_group_id":"3","target":{"id":"0","full_name":""}}}`},
 	}
 	for _, tc := range cases {
 		answer, message := assignmentResponseOf(tc.requested, tc.created)
 		assert.NotEmpty(t, message)
-		body, err := json.Marshal(answer)
+		body, err := wire.Marshal(answer)
 		require.NoError(t, err)
 		assert.JSONEq(t, tc.want, string(body))
 	}

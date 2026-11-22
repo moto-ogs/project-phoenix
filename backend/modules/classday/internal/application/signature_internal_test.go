@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/moto-ogs/project-phoenix/modules/classday"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // TestListSignature guards the #1565 review-pass-2 atomic export drift guard:
@@ -24,7 +25,7 @@ func TestListSignature(t *testing.T) {
 			Provenance: "Plan",
 			Counters:   classday.Counters{Planned: 2, Present: 1},
 			Rows: []classday.SlotListRow{
-				{StudentID: 1, Name: "Anna", SchoolClass: "1a", GroupName: "Rot", GroupID: &gid, InstanceID: 5, Slot: "AG", StatusLabel: "Anwesend", Planned: true, Present: true},
+				{StudentID: 1, Name: "Anna", SchoolClass: "1a", GroupName: "Rot", GroupID: (*ident.ID)(&gid), InstanceID: 5, Slot: "AG", StatusLabel: "Anwesend", Planned: true, Present: true},
 				{StudentID: 2, Name: "Ben", SchoolClass: "1b", GroupName: "Blau", Slot: "AG", StatusLabel: "Fehlt", Planned: true},
 			},
 		}

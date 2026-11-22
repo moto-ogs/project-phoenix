@@ -166,13 +166,13 @@ type SubstitutionCaller struct {
 }
 
 type GroupRef struct {
-	ID   int64  `json:"id,string"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 type StaffRef struct {
-	ID       int64  `json:"id,string"`
-	FullName string `json:"full_name"`
+	ID       ident.ID `json:"id"`
+	FullName string   `json:"full_name"`
 	// IsExternal marks an external caregiver, with or without a moto account
 	// (#3823, #4573), and ExternalAccountStatus is then "account" |
 	// "invitation_pending" | "none", ExternalOrganization the organization
@@ -190,7 +190,7 @@ type Period struct {
 }
 
 type GroupHandover struct {
-	ID     int64                  `json:"id,string"`
+	ID     ident.ID               `json:"id"`
 	Type   SubstitutionTargetType `json:"type"`
 	Group  GroupRef               `json:"group"`
 	Target StaffRef               `json:"target"`
@@ -199,7 +199,7 @@ type GroupHandover struct {
 }
 
 type RunningSupervision struct {
-	ID                       int64                  `json:"id,string"`
+	ID                       ident.ID               `json:"id"`
 	Type                     SubstitutionTargetType `json:"type"`
 	Name                     string                 `json:"name"`
 	RoomName                 string                 `json:"room_name,omitempty"`
@@ -364,10 +364,10 @@ type SubstitutionAssignment struct {
 }
 
 type SubstitutionAssignmentResult struct {
-	ID                   int64                       `json:"id,string"`
+	ID                   ident.ID                    `json:"id"`
 	Type                 SubstitutionTargetType      `json:"type"`
 	Group                *GroupRef                   `json:"group,omitempty"`
-	ActiveGroupID        int64                       `json:"active_group_id,string,omitempty"`
+	ActiveGroupID        ident.ID                    `json:"active_group_id,omitempty"`
 	Target               StaffRef                    `json:"target"`
 	Period               *Period                     `json:"period,omitempty"`
 	CanEnd               bool                        `json:"can_end,omitempty"`

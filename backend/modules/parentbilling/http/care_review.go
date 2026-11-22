@@ -33,7 +33,7 @@ func (rs *CareBillingResource) mountReview(billing chi.Router) {
 // the count, the sum and the fingerprint of the preview.
 type CareReleaseRequest struct {
 	DocumentCount int    `json:"document_count"`
-	TotalCents    int64  `json:"total_cents"`
+	TotalCents    int64  `json:"total_cents" contract:"number"`
 	Fingerprint   string `json:"fingerprint"`
 }
 

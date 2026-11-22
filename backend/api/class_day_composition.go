@@ -162,7 +162,7 @@ func classDayRoster(roster *enrollmentOwner.ClassRosterDay) *classdayCompose.Day
 	for _, row := range roster.Rows {
 		out.Rows = append(out.Rows, classdayCompose.DayRosterRow{
 			StudentID: row.StudentID, SchoolClass: row.SchoolClass, FirstName: row.FirstName, LastName: row.LastName,
-			ListEntry: row.ListEntry, ListEntryID: row.ListEntryID, WithoutCarePlace: row.WithoutCarePlace,
+			ListEntry: row.ListEntry, ListEntryID: row.ListEntryID.Int64(), WithoutCarePlace: row.WithoutCarePlace,
 			GroupName: row.GroupName, Registered: row.Registered,
 			OfferingsByDay: row.OfferingsByDay, ArrivalByDay: row.ArrivalByDay, PickupByDay: row.PickupByDay,
 		})

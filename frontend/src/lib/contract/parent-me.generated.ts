@@ -3240,6 +3240,7 @@ export const routes = {
     method: "POST",
     pattern: "/parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate/preview",
     portals: ["parent"],
+    noCommit: "renders the mandate text and grants no mandate",
     request: requestBody<SEPAMandateInput>(),
     response: success(SEPAMandateTextSchema),
   },

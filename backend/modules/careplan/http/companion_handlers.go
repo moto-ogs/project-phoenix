@@ -14,15 +14,16 @@ import (
 	sessiontoken "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	departure "github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // CompanionResponse is one child this child walks home with, plus the weekdays
 // they walk together.
 type CompanionResponse struct {
-	CompanionStudentID common.ID `json:"companion_student_id"`
-	FirstName          string    `json:"first_name,omitempty"`
-	LastName           string    `json:"last_name,omitempty"`
-	Weekdays           []string  `json:"weekdays"`
+	CompanionStudentID ident.ID `json:"companion_student_id"`
+	FirstName          string   `json:"first_name,omitempty"`
+	LastName           string   `json:"last_name,omitempty"`
+	Weekdays           []string `json:"weekdays"`
 }
 
 // companionPlanErrorRenderer maps the companion sentinels that a departure-plan

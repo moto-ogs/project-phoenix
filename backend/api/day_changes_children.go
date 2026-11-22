@@ -23,6 +23,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // dayChangesCarePlan is the Care Plan read of the children's day values.
@@ -83,7 +84,7 @@ func (s dayChangesChildren) ChildChanges(ctx context.Context, day calendar.Date)
 	}
 	ids := make(map[int64]bool, len(changes)+len(trips))
 	for _, change := range changes {
-		ids[change.child.StudentID] = true
+		ids[change.child.StudentID.Int64()] = true
 	}
 	for _, trip := range trips {
 		ids[trip.studentID] = true
@@ -141,7 +142,7 @@ func (s dayChangesChildren) changes(ctx context.Context, day calendar.Date) ([]c
 	changes = append(changes, pickupChanges(exceptions, absent)...)
 	for _, departure := range departures {
 		if departure.DepartureMode == careplan.DepartureModeAlone {
-			changes = append(changes, childChange{kind: daychangesview.KindChildGoesAlone, child: daychangesview.Child{StudentID: departure.StudentID}})
+			changes = append(changes, childChange{kind: daychangesview.KindChildGoesAlone, child: daychangesview.Child{StudentID: ident.ID(departure.StudentID)}})
 		}
 	}
 	for _, note := range notes {
@@ -149,7 +150,7 @@ func (s dayChangesChildren) changes(ctx context.Context, day calendar.Date) ([]c
 		// apply on this day. The latter have no NoteDate.
 		if (note.NoteDate == date || note.Weekday != 0) && note.Content != "" {
 			content := note.Content
-			changes = append(changes, childChange{kind: daychangesview.KindChildPickupNote, child: daychangesview.Child{StudentID: note.StudentID, Note: &content}})
+			changes = append(changes, childChange{kind: daychangesview.KindChildPickupNote, child: daychangesview.Child{StudentID: ident.ID(note.StudentID), Note: &content}})
 		}
 	}
 	return changes, classTripChildren(statusDays, arrivals), nil
@@ -183,7 +184,7 @@ func absentChildren(days []careplan.StudentStatusDay, absent map[int64]bool) []c
 	for _, id := range order {
 		value := status[id]
 		absent[id] = true
-		changes = append(changes, childChange{kind: daychangesview.KindChildAbsent, child: daychangesview.Child{StudentID: id, Status: &value}})
+		changes = append(changes, childChange{kind: daychangesview.KindChildAbsent, child: daychangesview.Child{StudentID: ident.ID(id), Status: &value}})
 	}
 	return changes
 }
@@ -197,7 +198,7 @@ func pickupChanges(exceptions []careplan.PickupException, absent map[int64]bool)
 		if exception.PickupTime == nil && absent[exception.StudentID] {
 			continue
 		}
-		child := daychangesview.Child{StudentID: exception.StudentID}
+		child := daychangesview.Child{StudentID: ident.ID(exception.StudentID)}
 		if exception.PickupTime != nil {
 			// The TIME column holds the wall clock itself; no zone applies.
 			at := exception.PickupTime.Format("15:04")
@@ -255,7 +256,7 @@ func newChildEntryBuilder(children map[int64]childRecord, ownGroups map[int64]bo
 }
 
 func (b *childEntryBuilder) add(change childChange) {
-	record, known := b.children[change.child.StudentID]
+	record, known := b.children[change.child.StudentID.Int64()]
 	if !known || record.personDeleted {
 		return
 	}
@@ -268,7 +269,7 @@ func (b *childEntryBuilder) add(change childChange) {
 		if b.ownGroups[*record.groupID] {
 			b.own = append(b.own, daychangesview.SourceEntry{
 				Kind: change.kind, Involved: true, Child: &child, Link: link,
-				Group: &daychangesview.Group{ID: *record.groupID},
+				Group: &daychangesview.Group{ID: ident.ID(*record.groupID)},
 			})
 			return
 		}
@@ -317,7 +318,7 @@ func (b *childEntryBuilder) finish(ctx context.Context, groups dayChangesGroups)
 	}
 	entries := b.own
 	for i := range entries {
-		entries[i].Group.Name = names[entries[i].Group.ID]
+		entries[i].Group.Name = names[entries[i].Group.ID.Int64()]
 	}
 	for key, summary := range b.summaries {
 		sort.SliceStable(summary.Items, func(i, j int) bool {
@@ -325,7 +326,7 @@ func (b *childEntryBuilder) finish(ctx context.Context, groups dayChangesGroups)
 		})
 		entry := daychangesview.SourceEntry{Kind: daychangesview.KindChildSummary, ChildSummary: summary}
 		if key.groupID != 0 {
-			entry.Group = &daychangesview.Group{ID: key.groupID, Name: names[key.groupID]}
+			entry.Group = &daychangesview.Group{ID: ident.ID(key.groupID), Name: names[key.groupID]}
 		}
 		entries = append(entries, entry)
 	}

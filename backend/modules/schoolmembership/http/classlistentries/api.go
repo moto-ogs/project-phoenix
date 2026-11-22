@@ -19,6 +19,7 @@ import (
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Middleware is the chi middleware shape the root hands in.
@@ -117,7 +118,7 @@ func (req *ClassListEntryRequest) fields() schoolmembership.ClassListEntryFields
 // the Next.js proxy round JSON numbers beyond 2^53, so 64-bit IDs must travel
 // as strings to stay lossless.
 type ClassListAssignRequest struct {
-	StudentID int64 `json:"student_id,string"`
+	StudentID ident.ID `json:"student_id"`
 }
 
 // Bind validates the payload.
@@ -133,7 +134,7 @@ func (req *ClassListAssignRequest) Bind(_ *http.Request) error {
 // "Zuordnen" resolution, never an automatic merge. All IDs are serialized as
 // JSON strings for the same reason ClassListAssignRequest binds with `,string`.
 type ClassListEntryResponse struct {
-	ID                 int64     `json:"id,string"`
+	ID                 ident.ID  `json:"id"`
 	FirstName          string    `json:"first_name"`
 	LastName           string    `json:"last_name"`
 	SchoolClass        string    `json:"school_class"`
@@ -147,7 +148,7 @@ func classListEntryResponse(entry schoolmembership.ClassListEntry, matches []int
 		matchIDs = append(matchIDs, strconv.FormatInt(id, 10))
 	}
 	return ClassListEntryResponse{
-		ID:                 entry.ID,
+		ID:                 ident.ID(entry.ID),
 		FirstName:          entry.FirstName,
 		LastName:           entry.LastName,
 		SchoolClass:        entry.SchoolClass,
@@ -245,7 +246,7 @@ func (rs *Resource) assignEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	err := rs.entries.ResolveClassListEntry(r.Context(), schoolmembership.ResolveClassListEntry{
-		ID: id, StudentID: req.StudentID, ChangedBy: rs.runtime.CurrentAccountID(r.Context()),
+		ID: id, StudentID: req.StudentID.Int64(), ChangedBy: rs.runtime.CurrentAccountID(r.Context()),
 	})
 	if err != nil {
 		rs.writeFailure(w, r, err)

@@ -3,7 +3,6 @@ package timetablehttp
 import (
 	"time"
 
-	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
@@ -45,19 +44,19 @@ type AttendanceDayResponse struct {
 // InstanceDayResponse is one scheduled instance as it appears in a student's
 // day view. active_group_id is nil for planned/cancelled instances.
 type InstanceDayResponse struct {
-	ID            common.ID             `json:"id"`
+	ID            ident.ID              `json:"id"`
 	Title         string                `json:"title"`
 	StartTime     string                `json:"start_time"`
 	EndTime       string                `json:"end_time"`
-	RoomID        common.ID             `json:"room_id"`
+	RoomID        ident.ID              `json:"room_id"`
 	Status        string                `json:"status"`
-	ActiveGroupID *common.ID            `json:"active_group_id"`
+	ActiveGroupID *ident.ID             `json:"active_group_id"`
 	Attendance    AttendanceDayResponse `json:"attendance"`
 }
 
 // StudentDayResponse is the body returned by GET /student/{id}/day.
 type StudentDayResponse struct {
-	StudentID common.ID             `json:"student_id"`
+	StudentID ident.ID              `json:"student_id"`
 	Date      string                `json:"date"`
 	Weekday   int                   `json:"weekday"`
 	Arrival   SlotResponse          `json:"arrival"`
@@ -69,7 +68,7 @@ type StudentDayResponse struct {
 // is always inclusive-inclusive across the requested range, one entry per
 // date (including dates with no instances).
 type StudentWeekResponse struct {
-	StudentID common.ID            `json:"student_id"`
+	StudentID ident.ID             `json:"student_id"`
 	From      string               `json:"from"`
 	To        string               `json:"to"`
 	Days      []StudentDayResponse `json:"days"`

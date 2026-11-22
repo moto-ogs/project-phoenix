@@ -32,7 +32,7 @@ func (req *planningTrackRequest) Bind(_ *http.Request) error {
 }
 
 type planningTrackOrderRequest struct {
-	IDs []common.ID `json:"ids"`
+	IDs []ident.ID `json:"ids"`
 }
 
 func (req *planningTrackOrderRequest) Bind(_ *http.Request) error {

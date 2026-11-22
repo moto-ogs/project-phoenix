@@ -94,7 +94,9 @@ describe("caterer second factor (#4497)", () => {
   it("uses the caterer MFA and trusted-device routes", async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(Response.json({ status: "authenticated" }))
+      .mockResolvedValueOnce(
+        Response.json({ status: "success", data: { status: "authenticated" } }),
+      )
       .mockResolvedValueOnce(Response.json({ challenge_token: "renewed" }))
       .mockResolvedValueOnce(Response.json([]))
       .mockResolvedValueOnce(new Response(null, { status: 204 }));

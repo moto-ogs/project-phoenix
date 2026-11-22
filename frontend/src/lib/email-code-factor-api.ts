@@ -60,7 +60,7 @@ export function emailCodeFactorApi(base: string): EmailCodeFactorApi {
       };
     },
     async confirm(challengeToken, code) {
-      const data = await authFetch<{ session_renewed: boolean }>(
+      const { data } = await authFetch<{ data: { session_renewed: boolean } }>(
         `${base}/confirm`,
         { method: "POST", body: { challenge_token: challengeToken, code } },
       );

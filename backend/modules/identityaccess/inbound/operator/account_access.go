@@ -22,10 +22,10 @@ import (
 // AccountTenantRole is one role an account holds at one school. IDs stay
 // decimal strings in JSON so the frontend never loses int64 precision.
 type AccountTenantRole struct {
-	ID       int64   `json:"id,string"`
-	Name     string  `json:"name"`
-	IsSystem bool    `json:"is_system"`
-	BaseRole *string `json:"base_role,omitempty"`
+	ID       ident.ID `json:"id"`
+	Name     string   `json:"name"`
+	IsSystem bool     `json:"is_system"`
+	BaseRole *string  `json:"base_role,omitempty"`
 	// SchoolPortal marks a school role made from the Lehrkraft template (#4574).
 	SchoolPortal bool `json:"school_portal"`
 }
@@ -33,11 +33,11 @@ type AccountTenantRole struct {
 // AccountTenantAccessEntry is one school an account has (or had) access to,
 // including the roles it holds there.
 type AccountTenantAccessEntry struct {
-	TenantID         common.ID           `json:"tenant_id"`
+	TenantID         ident.ID            `json:"tenant_id"`
 	SchoolName       string              `json:"school_name"`
 	SchoolSlug       string              `json:"school_slug"`
 	SchoolActive     bool                `json:"school_active"`
-	OrganizationID   common.ID           `json:"organization_id"`
+	OrganizationID   ident.ID            `json:"organization_id"`
 	OrganizationName string              `json:"organization_name"`
 	Status           string              `json:"status"`
 	ActivatedAt      *time.Time          `json:"activated_at,omitempty"`
@@ -49,19 +49,19 @@ type AccountTenantAccessEntry struct {
 
 // RoleOption is the role projection the operator role picker renders.
 type RoleOption struct {
-	ID       int64  `json:"id,string"`
-	Name     string `json:"name"`
-	IsSystem bool   `json:"is_system"`
+	ID       ident.ID `json:"id"`
+	Name     string   `json:"name"`
+	IsSystem bool     `json:"is_system"`
 	// SchoolPortal marks a school role made from the Lehrkraft template (#4574).
 	SchoolPortal bool `json:"school_portal"`
 }
 
 type grantAccountTenantAccessRequest struct {
-	SchoolID  common.ID `json:"school_id"`
-	RoleID    common.ID `json:"role_id"`
-	FirstName string    `json:"first_name,omitempty"`
-	LastName  string    `json:"last_name,omitempty"`
-	Position  string    `json:"position,omitempty"`
+	SchoolID  ident.ID `json:"school_id"`
+	RoleID    ident.ID `json:"role_id"`
+	FirstName string   `json:"first_name,omitempty"`
+	LastName  string   `json:"last_name,omitempty"`
+	Position  string   `json:"position,omitempty"`
 }
 
 func (req *grantAccountTenantAccessRequest) Bind(_ *http.Request) error {
@@ -78,7 +78,7 @@ func (req *grantAccountTenantAccessRequest) Bind(_ *http.Request) error {
 }
 
 type updateAccountTenantRoleRequest struct {
-	RoleID common.ID `json:"role_id"`
+	RoleID ident.ID `json:"role_id"`
 }
 
 func (req *updateAccountTenantRoleRequest) Bind(_ *http.Request) error {
@@ -115,7 +115,7 @@ func (rs *Resource) ListAssignableSchoolRoles(w http.ResponseWriter, r *http.Req
 	}
 	options := make([]RoleOption, 0, len(roles))
 	for _, role := range roles {
-		options = append(options, RoleOption{ID: role.ID, Name: role.Name, IsSystem: role.IsSystem, SchoolPortal: role.SchoolPortal})
+		options = append(options, RoleOption{ID: ident.ID(role.ID), Name: role.Name, IsSystem: role.IsSystem, SchoolPortal: role.SchoolPortal})
 	}
 	common.Respond(w, r, http.StatusOK, options, "Assignable school roles retrieved successfully")
 }
@@ -183,7 +183,7 @@ func accessEntries(entries []identityaccess.AccountTenantAccess) []AccountTenant
 	for _, entry := range entries {
 		roles := make([]AccountTenantRole, 0, len(entry.Roles))
 		for _, role := range entry.Roles {
-			roles = append(roles, AccountTenantRole{ID: role.ID, Name: role.Name, IsSystem: role.IsSystem, BaseRole: role.BaseRole, SchoolPortal: role.SchoolPortal})
+			roles = append(roles, AccountTenantRole{ID: ident.ID(role.ID), Name: role.Name, IsSystem: role.IsSystem, BaseRole: role.BaseRole, SchoolPortal: role.SchoolPortal})
 		}
 		result = append(result, AccountTenantAccessEntry{
 			TenantID: ident.ID(entry.TenantID), SchoolName: entry.SchoolName, SchoolSlug: entry.SchoolSlug, SchoolActive: entry.SchoolActive,

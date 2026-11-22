@@ -6,15 +6,8 @@
 import { authFetch } from "./api-helpers";
 import { apiErrorFromResponse, transportFetch } from "./api-error";
 import { knownEnum } from "./contract/known-enum";
-import type {
-  acceptRequest,
-  PreviewResponse,
-} from "./contract/caterer-invitations.generated";
-import type {
-  OrderChildResponse,
-  SchoolOrdersResponse,
-  SchoolsResponse,
-} from "./contract/caterer-schools.generated";
+import type * as catererInvitationsContract from "./contract/caterer-invitations.generated";
+import type * as catererSchoolsContract from "./contract/caterer-schools.generated";
 import { downloadBlob, filenameFromDisposition } from "./file-download";
 import type { ApiResponse } from "./api-envelope";
 
@@ -89,7 +82,9 @@ export interface CatererInvitationPreview {
   addressTaken: boolean;
 }
 
-function mapChild(child: OrderChildResponse): CatererOrderChild {
+function mapChild(
+  child: catererSchoolsContract.OrderChildResponse,
+): CatererOrderChild {
   return {
     firstName: child.first_name ?? "",
     lastName: child.last_name ?? "",
@@ -97,7 +92,9 @@ function mapChild(child: OrderChildResponse): CatererOrderChild {
   };
 }
 
-function mapCatererOrders(data: SchoolOrdersResponse): CatererOrders {
+function mapCatererOrders(
+  data: catererSchoolsContract.SchoolOrdersResponse,
+): CatererOrders {
   return {
     school: data.school,
     deliveryAddress: data.delivery_address,
@@ -127,9 +124,9 @@ function mapCatererOrders(data: SchoolOrdersResponse): CatererOrders {
 }
 
 export async function fetchCatererSchools(): Promise<CatererSchools> {
-  const response = await authFetch<ApiResponse<SchoolsResponse>>(
-    "/api/caterer/schools",
-  );
+  const response = await authFetch<
+    ApiResponse<catererSchoolsContract.SchoolsResponse>
+  >("/api/caterer/schools");
   return {
     catererName: response.data.caterer_name,
     schools: response.data.schools ?? [],
@@ -142,7 +139,9 @@ export async function fetchCatererOrders(
   to: string,
 ): Promise<CatererOrders> {
   const params = new URLSearchParams({ from, to });
-  const response = await authFetch<ApiResponse<SchoolOrdersResponse>>(
+  const response = await authFetch<
+    ApiResponse<catererSchoolsContract.SchoolOrdersResponse>
+  >(
     `/api/caterer/schools/${encodeURIComponent(schoolId)}/orders?${params.toString()}`,
   );
   return mapCatererOrders(response.data);
@@ -166,9 +165,9 @@ export async function fetchCatererInvitation(
   schoolId: string,
   token: string,
 ): Promise<CatererInvitationPreview> {
-  const response = await authFetch<ApiResponse<PreviewResponse>>(
-    invitationUrl(schoolId, token),
-  );
+  const response = await authFetch<
+    ApiResponse<catererInvitationsContract.PreviewResponse>
+  >(invitationUrl(schoolId, token));
   return {
     email: response.data.email,
     catererName: response.data.caterer_name,
@@ -190,7 +189,7 @@ export async function acceptCatererInvitation(
     body: {
       password,
       confirm_password: confirmPassword,
-    } satisfies acceptRequest,
+    } satisfies catererInvitationsContract.acceptRequest,
   });
 }
 

@@ -87,7 +87,7 @@ type CareRunReviewState struct {
 	// ExcludedCount and ExcludedCents sum the invoices left out; the
 	// preview count and sum leave them out.
 	ExcludedCount int   `json:"excluded_count"`
-	ExcludedCents int64 `json:"excluded_cents"`
+	ExcludedCents int64 `json:"excluded_cents" contract:"number"`
 	// Fingerprint names the reviewed state; the release sends it back.
 	Fingerprint string `json:"fingerprint"`
 	// Amendable says which changes of an invoice the Träger allows (#6197);

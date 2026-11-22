@@ -6,7 +6,6 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	DELETE /parent/me/children/{studentId}/room-history-stop
 	GET /parent/me/children/{studentId}/parent-conferences
 	GET /parent/me/children/{studentId}/pickup-permission-requests
-	GET /parent/me/children/{studentId}/pickup-requests/{requestId}/proof
 	GET /parent/me/children/{studentId}/pickup-requests/{requestId}/proof/pdf
 	GET /parent/me/children/{studentId}/room-history-stop
 	POST /parent/me/children/{studentId}/guardians/{guardianProfileId}/pickup-permission-requests

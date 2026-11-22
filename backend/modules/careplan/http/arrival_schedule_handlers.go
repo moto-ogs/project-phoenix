@@ -496,7 +496,7 @@ func (rs *Resource) bulkUpsertArrivalSchedules(w http.ResponseWriter, r *http.Re
 }
 
 type ArrivalScheduleStatusResponse struct {
-	StudentIDs []common.ID `json:"student_ids"`
+	StudentIDs []ident.ID `json:"student_ids"`
 }
 
 // getBulkArrivalScheduleStatus returns the selected children that have their

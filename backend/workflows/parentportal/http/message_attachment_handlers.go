@@ -52,7 +52,7 @@ func (rs *Resource) uploadChildMessageAttachment(w http.ResponseWriter, r *http.
 		return
 	}
 	if _, err := files.Save(r.Context(), stored.TenantID, stored.StoredName, parsed.Content); err != nil {
-		if discardErr := rs.ParentService.DiscardChildMessageAttachment(r.Context(), accountID, studentID, stored.Attachment.ID); discardErr != nil {
+		if discardErr := rs.ParentService.DiscardChildMessageAttachment(r.Context(), accountID, studentID, stored.Attachment.ID.Int64()); discardErr != nil {
 			err = errors.Join(err, discardErr)
 		}
 		common.RenderError(w, r, common.ErrorInternalServer(fmt.Errorf("write message attachment: %w", err)))

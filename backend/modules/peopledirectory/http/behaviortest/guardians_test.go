@@ -207,7 +207,7 @@ func TestGuardianRoutesAreGatedByPermission(t *testing.T) {
 	t.Parallel()
 	h := newGuardianHarness(t, &fakeGuardianDirectory{})
 
-	assert.Equal(t, http.StatusForbidden, h.do(t, http.MethodGet, "/guardians/", nil).Code)
+	assert.Equal(t, http.StatusForbidden, h.do(t, http.MethodGet, "/guardians/search?q=Muster", nil).Code)
 	assert.Equal(t, http.StatusForbidden, h.do(t, http.MethodGet, "/guardians/payment-overview", nil).Code)
 	h.permitted["users:read"] = true
 	assert.Equal(t, http.StatusBadRequest, h.do(t, http.MethodGet, "/guardians/abc", nil).Code)

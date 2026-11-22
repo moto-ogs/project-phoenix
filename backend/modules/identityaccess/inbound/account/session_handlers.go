@@ -146,7 +146,7 @@ func (rs *Resource) linkToTenant(w http.ResponseWriter, r *http.Request) {
 	// Return ONLY id, email and what was provisioned at THIS school — never leak
 	// roles, username, or active status from other tenants
 	common.Respond(w, r, http.StatusOK, LinkedAccountResponse{
-		ID:             common.ID(provisioned.Account.ID),
+		ID:             ident.ID(provisioned.Account.ID),
 		Email:          provisioned.Account.Email,
 		SchoolIdentity: buildSchoolIdentityResponse(provisioned.Identity),
 	}, "Account linked to tenant successfully")
@@ -270,9 +270,9 @@ func buildSchoolIdentityResponse(identity *identityaccess.SchoolIdentity) *Schoo
 		return nil
 	}
 	return &SchoolIdentityResponse{
-		PersonID:  identity.PersonID,
-		StaffID:   identity.StaffID,
-		TeacherID: identity.TeacherID,
+		PersonID:  ident.ID(identity.PersonID),
+		StaffID:   ident.ID(identity.StaffID),
+		TeacherID: ident.ID(identity.TeacherID),
 	}
 }
 

@@ -71,7 +71,7 @@ func TestStaffPreviewEndpoints(t *testing.T) {
 		var resp struct {
 			AccessToken     string   `json:"access_token"`
 			ExpiresIn       int64    `json:"expires_in"`
-			TargetAccountID ident.ID `json:"target_account_id,string"`
+			TargetAccountID ident.ID `json:"target_account_id"`
 			TargetName      string   `json:"target_name"`
 		}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
@@ -173,7 +173,7 @@ func TestStaffPreviewEndpoints(t *testing.T) {
 
 		var resp struct {
 			Data []struct {
-				AccountID ident.ID `json:"account_id,string"`
+				AccountID ident.ID `json:"account_id"`
 				FirstName string   `json:"first_name"`
 			} `json:"data"`
 		}

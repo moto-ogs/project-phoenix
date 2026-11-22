@@ -35,32 +35,32 @@ import (
 // deviationAbsence marks one staff member absent. An omitted instance_ids keeps
 // the established day-wide contract; a present list targets exact appointments.
 type deviationAbsence struct {
-	StaffID     common.ID    `json:"staff_id"`
-	Reason      *string      `json:"reason,omitempty"`
-	InstanceIDs *[]common.ID `json:"instance_ids,omitempty"`
+	StaffID     ident.ID    `json:"staff_id"`
+	Reason      *string     `json:"reason,omitempty"`
+	InstanceIDs *[]ident.ID `json:"instance_ids,omitempty"`
 }
 
 // deviationSubstitution assigns substituteStaffID to cover absentStaffID. An
 // omitted instance_ids keeps the established day-wide contract; a present list
 // targets exactly those same-day appointments.
 type deviationSubstitution struct {
-	AbsentStaffID     common.ID    `json:"absent_staff_id"`
-	SubstituteStaffID common.ID    `json:"substitute_staff_id"`
-	Reason            *string      `json:"reason,omitempty"`
-	InstanceIDs       *[]common.ID `json:"instance_ids,omitempty"`
+	AbsentStaffID     ident.ID    `json:"absent_staff_id"`
+	SubstituteStaffID ident.ID    `json:"substitute_staff_id"`
+	Reason            *string     `json:"reason,omitempty"`
+	InstanceIDs       *[]ident.ID `json:"instance_ids,omitempty"`
 }
 
 // DeviationPresence clears an absence in an optional appointment scope. Its
 // decoder accepts the former numeric staff id so an already-open frontend from
 // before this change keeps its established day-wide correction behavior.
 type DeviationPresence struct {
-	StaffID     common.ID    `json:"staff_id"`
-	InstanceIDs *[]common.ID `json:"instance_ids,omitempty"`
+	StaffID     ident.ID    `json:"staff_id"`
+	InstanceIDs *[]ident.ID `json:"instance_ids,omitempty"`
 }
 
 type deviationSubstitutionRemoval struct {
-	StaffID     common.ID    `json:"staff_id"`
-	InstanceIDs *[]common.ID `json:"instance_ids,omitempty"`
+	StaffID     ident.ID    `json:"staff_id"`
+	InstanceIDs *[]ident.ID `json:"instance_ids,omitempty"`
 }
 
 func (p *DeviationPresence) UnmarshalJSON(data []byte) error {
@@ -101,7 +101,7 @@ type applyDeviationsRequest struct {
 
 // ApplyDeviationsResponse is the 200 body.
 type ApplyDeviationsResponse struct {
-	InstanceID        common.ID                          `json:"instance_id"`
+	InstanceID        ident.ID                           `json:"instance_id"`
 	Cancelled         bool                               `json:"cancelled"`
 	UnderstaffedAck   bool                               `json:"understaffed_ack"`
 	AffectedInstances []AffectedInstance                 `json:"affected_instances"`

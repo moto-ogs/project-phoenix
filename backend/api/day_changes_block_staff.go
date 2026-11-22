@@ -16,6 +16,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/daychangesview"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // dayChangesBlockStaff is Timetable's read of the day's blocks with an
@@ -96,7 +97,7 @@ func (b *staffEntryBuilder) block(change timetable.BlockStaffChange, absentToday
 	}
 	involved := staff.own
 	for _, person := range people {
-		involved = involved || b.viewer.team[person.StaffID]
+		involved = involved || b.viewer.team[person.StaffID.Int64()]
 	}
 	if !involved && !b.viewer.lead {
 		if b.viewer.counts {
@@ -105,11 +106,11 @@ func (b *staffEntryBuilder) block(change timetable.BlockStaffChange, absentToday
 		return
 	}
 	for _, person := range people {
-		b.staffIDs[person.StaffID] = true
+		b.staffIDs[person.StaffID.Int64()] = true
 	}
 	entry := daychangesview.SourceEntry{
 		Kind: kind, Involved: involved, People: people,
-		Activity: &daychangesview.BlockActivity{ID: change.InstanceID, Title: change.Title},
+		Activity: &daychangesview.BlockActivity{ID: ident.ID(change.InstanceID), Title: change.Title},
 		Link:     b.blockLink(change.InstanceID),
 	}
 	entry.StartsAt, entry.EndsAt = wallClockInstants(b.day, change.StartTime, change.EndTime)
@@ -120,10 +121,10 @@ func (b *staffEntryBuilder) block(change timetable.BlockStaffChange, absentToday
 func blockPeople(substitutes, replaced []int64, selfID int64) []daychangesview.Person {
 	people := make([]daychangesview.Person, 0, len(substitutes)+len(replaced))
 	for _, id := range substitutes {
-		people = append(people, daychangesview.Person{StaffID: id, Role: daychangesview.RoleSubstitute, IsSelf: selfID != 0 && id == selfID})
+		people = append(people, daychangesview.Person{StaffID: ident.ID(id), Role: daychangesview.RoleSubstitute, IsSelf: selfID != 0 && id == selfID})
 	}
 	for _, id := range replaced {
-		people = append(people, daychangesview.Person{StaffID: id, Role: daychangesview.RoleReplaced, IsSelf: selfID != 0 && id == selfID})
+		people = append(people, daychangesview.Person{StaffID: ident.ID(id), Role: daychangesview.RoleReplaced, IsSelf: selfID != 0 && id == selfID})
 	}
 	return people
 }
@@ -133,7 +134,7 @@ func blockPeople(substitutes, replaced []int64, selfID int64) []daychangesview.P
 func (b *staffEntryBuilder) blockLink(instanceID int64) *daychangesview.Link {
 	switch {
 	case b.viewer.substitutionPlan:
-		return &daychangesview.Link{Target: daychangesview.LinkSubstitutionPlan, InstanceID: &instanceID}
+		return &daychangesview.Link{Target: daychangesview.LinkSubstitutionPlan, InstanceID: (*ident.ID)(&instanceID)}
 	case b.viewer.dayPlan:
 		return &daychangesview.Link{Target: daychangesview.LinkDayPlan}
 	default:

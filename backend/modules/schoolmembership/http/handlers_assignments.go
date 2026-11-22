@@ -9,32 +9,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
-// getStaffGroups lists the groups a Betreuungskraft is assigned to. A staff
-// member without a teacher profile has none, which is a 200 with an empty
-// list — the group screens rely on that.
-func (rs *Resource) getStaffGroups(w http.ResponseWriter, r *http.Request) {
-	staff, ok := rs.parseAndFindStaff(w, r)
-	if !ok {
-		return
-	}
-	ctx := r.Context()
-	teacher := rs.teacherByStaff(ctx, staff.ID)
-	if teacher == nil {
-		rs.respond(w, r, http.StatusOK, []GroupResponse{}, "Staff member is not a teacher and has no assigned groups")
-		return
-	}
-	groups, err := rs.runtime.TeacherGroups(ctx, teacher.ID)
-	if err != nil {
-		rs.internal(w, r, err)
-		return
-	}
-	responses := make([]GroupResponse, 0, len(groups))
-	for _, group := range groups {
-		responses = append(responses, GroupResponse(group))
-	}
-	rs.respond(w, r, http.StatusOK, responses, "Teacher groups retrieved successfully")
-}
-
 // getStaffSchoolClasses returns the school classes assigned to a staff member
 // (#1772).
 func (rs *Resource) getStaffSchoolClasses(w http.ResponseWriter, r *http.Request) {
