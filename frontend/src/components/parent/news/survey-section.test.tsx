@@ -41,6 +41,7 @@ function surveyItem(
   survey: Partial<NonNullable<ParentAnnouncement["survey"]>> = {},
 ): ParentAnnouncement {
   return {
+    delivery_mode: "informational",
     id: "42",
     title: "Wie zufrieden sind Sie mit der OGS?",
     body: "Ihre Meinung hilft uns.",

@@ -257,6 +257,9 @@ describe("TraegerVertraegePage", () => {
     expect(
       screen.getByRole("menuitem", { name: /Verträge importieren/ }),
     ).toHaveAttribute("href", "/vertraege/import");
+    expect(
+      screen.getByRole("menuitem", { name: /Module neu zuordnen/ }),
+    ).toHaveAttribute("href", "/vertraege/module-zuordnen");
     expect(screen.getByRole("menuitem", { name: /CSV/ })).toBeInTheDocument();
   });
 

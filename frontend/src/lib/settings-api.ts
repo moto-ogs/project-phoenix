@@ -220,7 +220,7 @@ export function applyOptimisticSchemaUpdate(
  * value sets of a setting (type, policy, levels, source) are the registry's,
  * which the backend renders verbatim; this build narrows them as before.
  */
-export function toSettingsSchema(schema: wire.SettingsSchema): SettingsSchema {
+function toSettingsSchema(schema: wire.SettingsSchema): SettingsSchema {
   return {
     tabs: (schema.tabs ?? []).flatMap((tab) =>
       tab

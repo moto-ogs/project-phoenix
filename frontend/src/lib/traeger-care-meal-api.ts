@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the Mensa of the monthly run (#4686): how the Träger bills the
  * Mensa of each school (flat per child and month or per meal) and the Mensa
@@ -10,7 +11,6 @@ import { knownEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
 import type * as traegerCareBillingRunsContract from "./contract/traeger-care-billing-runs.generated";
 import type * as traegerCareMealTariffsContract from "./contract/traeger-care-meal-tariffs.generated";
-import { traegerRequest } from "./traeger-api";
 
 // Go does not register these sets; the contract types them as string. A value
 // this build does not know stays undefined instead of passing as a known one.
@@ -106,8 +106,6 @@ export interface CareMealUnbilled {
   readonly reason: (typeof UNBILLED_REASON_VALUES)[number] | undefined;
 }
 
-const MEAL_TARIFFS_PATH = "/api/traeger/care-meal-tariffs";
-
 /** An ID of the contract; "0" is none. */
 function id(value: string): string {
   return value === "0" ? "" : value;
@@ -181,9 +179,7 @@ function mealTariffsFromBackend(
 
 export async function fetchCareMealTariffs(): Promise<CareMealTariffs> {
   return mealTariffsFromBackend(
-    await traegerRequest<traegerCareMealTariffsContract.CareMealTariffs>(
-      MEAL_TARIFFS_PATH,
-    ),
+    await bffJson("org", "GET /traeger/care-meal-tariffs/"),
   );
 }
 
@@ -195,18 +191,14 @@ export async function saveCareMealTariff(input: {
   readonly amountCents: number;
 }): Promise<CareMealTariffs> {
   return mealTariffsFromBackend(
-    await traegerRequest<traegerCareMealTariffsContract.CareMealTariffs>(
-      MEAL_TARIFFS_PATH,
-      {
-        method: "PUT",
-        body: {
-          school_id: input.schoolId,
-          valid_from: input.validFrom,
-          mode: input.mode,
-          amount_cents: input.amountCents,
-        } satisfies traegerCareMealTariffsContract.CareMealPriceRequest,
-      },
-    ),
+    await bffJson("org", "PUT /traeger/care-meal-tariffs/", {
+      body: {
+        school_id: input.schoolId,
+        valid_from: input.validFrom,
+        mode: input.mode,
+        amount_cents: input.amountCents,
+      } satisfies traegerCareMealTariffsContract.CareMealPriceRequest,
+    }),
   );
 }
 
@@ -216,9 +208,10 @@ export async function deleteCareMealTariff(
   validFrom: string,
 ): Promise<CareMealTariffs> {
   return mealTariffsFromBackend(
-    await traegerRequest<traegerCareMealTariffsContract.CareMealTariffs>(
-      `${MEAL_TARIFFS_PATH}/${encodeURIComponent(schoolId)}/${encodeURIComponent(validFrom)}`,
-      { method: "DELETE" },
+    await bffJson(
+      "org",
+      "DELETE /traeger/care-meal-tariffs/{schoolID}/{validFrom}",
+      { params: { schoolID: schoolId, validFrom } },
     ),
   );
 }

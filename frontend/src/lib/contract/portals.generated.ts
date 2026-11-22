@@ -330,6 +330,8 @@ export const portalRoutes = {
     traegerContractChanges["POST /traeger/contract-changes/{id}/requests/{requestId}/decide"],
     traegerContractImports["GET /traeger/contract-imports/"],
     traegerContractImports["POST /traeger/contract-imports/"],
+    traegerContractImports["POST /traeger/contract-imports/offering-corrections"],
+    traegerContractImports["POST /traeger/contract-imports/offering-corrections/preview"],
     traegerContractImports["POST /traeger/contract-imports/preview"],
     traegerContractNotices["GET /traeger/contract-notices/{id}"],
     traegerContractNotices["POST /traeger/contract-notices/{id}"],

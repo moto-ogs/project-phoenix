@@ -91,7 +91,7 @@ func (s *PickupAutoExcusalSyncer) syncDerivedAbsence(ctx context.Context, row *c
 		row.ExcusedAuto = false
 	}
 	row.ExcusedReason = nil
-	row.ExcusedCreatedBy = nil
+	row.ExcusedCreatedBy, row.ExcusedByTraeger = nil, false
 	row.ExcusedOwnsPickupTime = false
 	// Re-anchor scanned TIME values before the full-row update — the driver
 	// scans them onto year 0, which bun would bind back out of range.
@@ -169,7 +169,7 @@ func (s *PickupAutoExcusalSyncer) DetachRow(ctx context.Context, row *careplan.P
 	}
 	row.ExcusedFrom = nil
 	row.ExcusedReason = nil
-	row.ExcusedCreatedBy = nil
+	row.ExcusedCreatedBy, row.ExcusedByTraeger = nil, false
 	row.ExcusedOwnsPickupTime = false
 	row.ExcusedAuto = false
 	row.NormalizeWallClockTimes()

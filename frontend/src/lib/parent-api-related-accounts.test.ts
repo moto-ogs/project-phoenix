@@ -69,9 +69,7 @@ describe("parent-api related accounts", () => {
 
     it("throws on a non-ok response", async () => {
       mockFetch(async () => jsonResponse({ detail: "boom" }, { status: 500 }));
-      await expect(listRelatedAccounts("3")).rejects.toThrow(
-        "Request failed (500)",
-      );
+      await expect(listRelatedAccounts("3")).rejects.toThrow("failed (500)");
     });
   });
 
@@ -115,7 +113,7 @@ describe("parent-api related accounts", () => {
         jsonResponse({ detail: "Einladen deaktiviert" }, { status: 403 }),
       );
       await expect(inviteRelatedAccount("3", "x@x.de")).rejects.toThrow(
-        "Request failed (403)",
+        "failed (403)",
       );
     });
 
@@ -171,14 +169,14 @@ describe("parent-api related accounts", () => {
         jsonResponse({ detail: "Primär geschützt" }, { status: 403 }),
       );
       await expect(removeRelatedAccount("3", "10")).rejects.toThrow(
-        "Request failed (403)",
+        "failed (403)",
       );
     });
 
     it("falls back to a generic message when the error body is unshaped", async () => {
       mockFetch(async () => new Response("not json", { status: 500 }));
       await expect(removeRelatedAccount("3", "10")).rejects.toThrow(
-        /Request failed \(500\)/,
+        /failed \(500\)/,
       );
     });
 

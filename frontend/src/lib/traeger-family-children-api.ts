@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the children of the families (#5918): how many children a
  * family has for the sibling rule, siblings without a care contract
@@ -8,7 +9,6 @@
  */
 import { knownEnum } from "./contract/known-enum";
 import type * as traegerFamilyChildrenContract from "./contract/traeger-family-children.generated";
-import { traegerRequest } from "./traeger-api";
 import type { CareRule } from "./traeger-care-reductions-api";
 
 // Go does not register the set; the contract types it as string.
@@ -75,8 +75,6 @@ export interface FamilyChildrenInput {
   readonly validUntil: string | null;
 }
 
-const PATH = "/api/traeger/family-children";
-
 function countFromBackend(
   count: traegerFamilyChildrenContract.FamilyChildCount,
 ): FamilyChildCount {
@@ -119,7 +117,7 @@ function familyChildrenSetFromBackend(
 
 export async function fetchFamilyChildren(): Promise<FamilyChildrenSet> {
   return familyChildrenSetFromBackend(
-    await traegerRequest<traegerFamilyChildrenContract.FamilyChildrenSet>(PATH),
+    await bffJson("org", "GET /traeger/family-children/"),
   );
 }
 
@@ -128,20 +126,16 @@ export async function confirmFamilyChildren(
   input: FamilyChildrenInput,
 ): Promise<FamilyChildrenSet> {
   return familyChildrenSetFromBackend(
-    // traegerRequest writes the JSON itself: a string here went out as a
+    // bffJson writes the JSON itself: a string here went out as a
     // JSON string, and Go refused it (parent_billing.family_children_invalid).
-    await traegerRequest<traegerFamilyChildrenContract.FamilyChildrenSet>(
-      PATH,
-      {
-        method: "PUT",
-        body: {
-          contract_id: input.contractId,
-          children: input.children,
-          valid_from: input.validFrom,
-          valid_until: input.validUntil,
-        } satisfies traegerFamilyChildrenContract.FamilyChildrenRequest,
-      },
-    ),
+    await bffJson("org", "PUT /traeger/family-children/", {
+      body: {
+        contract_id: input.contractId,
+        children: input.children,
+        valid_from: input.validFrom,
+        valid_until: input.validUntil,
+      } satisfies traegerFamilyChildrenContract.FamilyChildrenRequest,
+    }),
   );
 }
 
@@ -152,8 +146,8 @@ export async function confirmFamilyChildren(
 export async function removeFamilyChildren(
   contractId: string,
 ): Promise<FamilyChildrenSet> {
-  await traegerRequest<void>(`${PATH}/${encodeURIComponent(contractId)}`, {
-    method: "DELETE",
+  await bffJson("org", "DELETE /traeger/family-children/{contractId}", {
+    params: { contractId },
   });
   return fetchFamilyChildren();
 }
