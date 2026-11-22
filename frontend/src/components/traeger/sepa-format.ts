@@ -117,7 +117,7 @@ export function mandateKindLabel(kind: MandateKind | undefined): string {
 
 /** What the next collection of a mandate is. */
 export function nextDebitLabel(mandate: SepaMandate): string {
-  if (mandate.revokedOn) return "–";
+  if (mandate.revokedOn || mandateUsedUp(mandate)) return "–";
   if (mandate.kind === "one_off") return "Einmalige Lastschrift";
   if (mandate.kind === undefined || mandate.sequence === undefined) return "–";
   return MANDATE_SEQUENCE_LABELS[mandate.sequence];

@@ -131,7 +131,11 @@ function FamilyPaymentContent() {
         </SectionCard>
       ) : null}
       {loaded ? (
-        <SepaMandateStatusView contractId={contractId} read={mandate} />
+        <SepaMandateStatusView
+          contractId={contractId}
+          read={mandate}
+          plainFallback
+        />
       ) : null}
     </TenantPage>
   );

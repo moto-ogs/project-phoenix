@@ -67,7 +67,17 @@ export function SepaMandateStatusCard({
 export function SepaMandateStatusView({
   contractId,
   read: { mandates, failure, inForce, collectable },
-}: Readonly<{ contractId: string; read: SepaMandateStatusRead }>) {
+  plainFallback = false,
+}: Readonly<{
+  contractId: string;
+  read: SepaMandateStatusRead;
+  /**
+   * Says only that nothing is collected without a mandate. Where staff
+   * choose the payment method, the card must not promise a transfer
+   * invoice: a Träger can block the run instead (#7770).
+   */
+  plainFallback?: boolean;
+}>) {
   if (failure instanceof ApiError && failure.status === 403) return null;
   const failed = mandates === null && Boolean(failure);
   // In force for the current creditor and still no proof for a collection:
@@ -94,10 +104,14 @@ export function SepaMandateStatusView({
           : spent
             ? "Mit diesem Mandat kann nicht mehr abgebucht werden: Es ist verfallen oder galt nur für eine Abbuchung. Widerrufe es und erfasse ein neues."
             : inForce && !inForce.creditorCurrent
-              ? "Das Mandat gilt für deine frühere Gläubiger-ID. Bis ein neues da ist, bekommt die Familie eine Rechnung zum Überweisen."
+              ? plainFallback
+                ? "Das Mandat gilt für deine frühere Gläubiger-ID. Bis ein neues da ist, wird nicht abgebucht."
+                : "Das Mandat gilt für deine frühere Gläubiger-ID. Bis ein neues da ist, bekommt die Familie eine Rechnung zum Überweisen."
               : inForce
                 ? `Mandatsreferenz ${inForce.reference} · Konto ${inForce.ibanMasked}`
-                : "Ohne Mandat bekommt die Familie eine Rechnung zum Überweisen."
+                : plainFallback
+                  ? "Ohne gültiges Mandat wird nicht abgebucht."
+                  : "Ohne Mandat bekommt die Familie eine Rechnung zum Überweisen."
       }
       loading={mandates === null && !failed}
       actions={

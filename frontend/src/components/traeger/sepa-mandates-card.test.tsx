@@ -13,7 +13,11 @@ import { ApiError } from "~/lib/api-error";
 import type { SepaMandate } from "~/lib/traeger-sepa-api";
 import { deferred } from "~/test/helpers/form-modal-pending";
 import { testClockDay } from "~/test/clock";
-import { SepaMandateStatusCard } from "./sepa-mandate-status-card";
+import {
+  SepaMandateStatusCard,
+  SepaMandateStatusView,
+  useSepaMandateStatus,
+} from "./sepa-mandate-status-card";
 import TraegerSepaMandatePage from "~/app/traeger/abrechnung/lastschrift/[contractId]/page";
 import { SepaMandatesCard } from "./sepa-mandates-card";
 
@@ -155,7 +159,33 @@ describe("SepaMandatesCard (#4695)", () => {
     expect(
       screen.getByText(/Das Mandat galt für eine Abbuchung/),
     ).toBeVisible();
+    // No next debit for a mandate that authorizes none.
+    expect(screen.queryByText("Einmalige Lastschrift")).not.toBeInTheDocument();
     expect(screen.queryByText("Gültig")).not.toBeInTheDocument();
+  });
+
+  it("promises no transfer invoice where staff choose the payment method", async () => {
+    api.fetchSepaMandates.mockResolvedValue([]);
+    function Card() {
+      return (
+        <SepaMandateStatusView
+          contractId="42"
+          read={useSepaMandateStatus("42")}
+          plainFallback
+        />
+      );
+    }
+    render(
+      <TraegerResourceTestProvider>
+        <Card />
+      </TraegerResourceTestProvider>,
+    );
+    expect(
+      await screen.findByText("Ohne gültiges Mandat wird nicht abgebucht."),
+    ).toBeVisible();
+    expect(
+      screen.queryByText(/Rechnung zum Überweisen/),
+    ).not.toBeInTheDocument();
   });
 
   it("calls a mandate valid until the day before it expires", async () => {
