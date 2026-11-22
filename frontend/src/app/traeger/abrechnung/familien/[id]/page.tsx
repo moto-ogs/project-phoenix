@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Eine Familie in der Abrechnung (#4691): ihre Summen ausgestellt,
 // storniert, gutgeschrieben und die offene Forderung vor Zahlungseingang
 // (#6348), wer ihre Rechnungen zahlt, und jedes
@@ -42,7 +44,10 @@ import {
   type BillingFamilyDocument,
   fetchBillingFamily,
 } from "~/lib/traeger-billing-families-api";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { labelOf } from "~/lib/label-of";
@@ -323,8 +328,14 @@ export default function TraegerBillingFamilyPage() {
               <TraegerListExportMenu
                 download={(format) =>
                   downloadTraegerList(
-                    `/api/traeger/billing-families/${encodeURIComponent(familyId)}/export`,
-                    format,
+                    bffFile(
+                      "org",
+                      "GET /traeger/billing-families/{id}/export",
+                      {
+                        params: { id: familyId },
+                        query: listExportQuery(format),
+                      },
+                    ),
                   )
                 }
                 scope="Alle Dokumente der Familie"

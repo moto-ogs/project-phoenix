@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the correction of the modules imported contracts book (#7764):
  * the preview of a CSV file that names, per contract, weekday and booked
@@ -7,15 +8,8 @@
  * Backend int64 IDs leave here as strings; calendar dates stay "YYYY-MM-DD".
  */
 
-import { apiErrorFromResponse, transportFetch } from "./api-error";
 import { knownEnum } from "./contract/known-enum";
-import type {
-  OfferingCorrection as WireResult,
-  OfferingCorrectionContract as WireContract,
-} from "./contract/traeger-contract-imports.generated";
-import { readJson } from "./traeger-api";
-
-const CORRECTIONS_PATH = "/api/traeger/contract-imports/offering-corrections";
+import type * as traegerContractImportsContract from "./contract/traeger-contract-imports.generated";
 
 /** Largest file the backend reads, in bytes (same limit as the import). */
 export const MAX_OFFERING_CORRECTION_FILE_BYTES = 2 * 1024 * 1024;
@@ -107,7 +101,9 @@ export interface OfferingCorrectionRequest {
   readonly fingerprint?: string;
 }
 
-function mapContract(contract: WireContract): OfferingCorrectionContract {
+function mapContract(
+  contract: traegerContractImportsContract.OfferingCorrectionContract,
+): OfferingCorrectionContract {
   return {
     reference: contract.reference,
     line: contract.line,
@@ -133,7 +129,7 @@ function mapContract(contract: WireContract): OfferingCorrectionContract {
 }
 
 function mapResult(
-  result: WireResult,
+  result: traegerContractImportsContract.OfferingCorrection,
   requested: string,
 ): OfferingCorrectionResult {
   return {
@@ -160,7 +156,7 @@ function mapResult(
 }
 
 async function postCorrection(
-  path: string,
+  preview: boolean,
   request: OfferingCorrectionRequest,
 ): Promise<OfferingCorrectionResult> {
   const form = new FormData();
@@ -169,32 +165,28 @@ async function postCorrection(
   if (request.fingerprint) {
     form.append("fingerprint", request.fingerprint);
   }
-  const response = await transportFetch(path, {
-    method: "POST",
-    credentials: "include",
-    cache: "no-store",
-    body: form,
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Request failed (${response.status})`,
-    );
-  }
-  const data = await readJson(response);
-  return mapResult((data as { data: WireResult }).data, request.effectiveFrom);
+  const data = await (preview
+    ? bffJson(
+        "org",
+        "POST /traeger/contract-imports/offering-corrections/preview",
+        { body: form },
+      )
+    : bffJson("org", "POST /traeger/contract-imports/offering-corrections", {
+        body: form,
+      }));
+  return mapResult(data, request.effectiveFrom);
 }
 
 /** Reads the file and answers every contract it names; stores nothing. */
 export function previewOfferingCorrection(
   request: OfferingCorrectionRequest,
 ): Promise<OfferingCorrectionResult> {
-  return postCorrection(`${CORRECTIONS_PATH}/preview`, request);
+  return postCorrection(true, request);
 }
 
 /** Gives every ready contract a new version with the target modules. */
 export function applyOfferingCorrection(
   request: OfferingCorrectionRequest,
 ): Promise<OfferingCorrectionResult> {
-  return postCorrection(CORRECTIONS_PATH, request);
+  return postCorrection(false, request);
 }
