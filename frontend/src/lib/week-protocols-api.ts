@@ -3,13 +3,12 @@
 // Woche ab Freitagabend zum Entwurf und schließt ihn nach der Folgewoche
 // selbst ab. Wer welches Protokoll sieht, entscheidet das Backend.
 
-import { apiErrorFromResponse } from "./api-error";
+import { bffJson } from "./bff-fetch";
 import { knownEnum } from "./contract/known-enum";
 import type {
   weekProtocolDayResponse,
   weekProtocolResponse,
 } from "./contract/week-protocols.generated";
-import { sessionFetch } from "./session-cache";
 
 export type WeekProtocolStatus = "collecting" | "draft" | "closed";
 type WeekProtocolDayKind = "care" | "holiday" | "closing";
@@ -140,17 +139,6 @@ export interface WeekProtocolNotes {
   days: Record<string, string>;
 }
 
-async function protocolOf(
-  response: Response,
-  fallback: string,
-): Promise<WeekProtocol> {
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, fallback);
-  }
-  const json = (await response.json()) as { data: weekProtocolResponse };
-  return mapWeekProtocol(json.data);
-}
-
 /** The page of the weekly protocols, optionally of one group. */
 export function weekProtocolsPath(groupId?: string | null): string {
   return groupId
@@ -165,23 +153,19 @@ export function weekProtocolPath(protocolId: string): string {
 
 class WeekProtocolsService {
   async list(groupId?: string | null): Promise<WeekProtocol[]> {
-    const query = groupId ? `?group_id=${encodeURIComponent(groupId)}` : "";
-    const response = await sessionFetch(`/api/week-protocols${query}`);
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        "Die Wochenprotokolle konnten nicht geladen werden.",
-      );
-    }
-    const json = (await response.json()) as { data: weekProtocolResponse[] };
-    return json.data.map(mapWeekProtocol);
+    const protocols = await bffJson("tenant", "GET /api/week-protocols/", {
+      query: { group_id: groupId || undefined },
+      errorMessage: "Die Wochenprotokolle konnten nicht geladen werden.",
+    });
+    return protocols.map(mapWeekProtocol);
   }
 
   async get(protocolId: string): Promise<WeekProtocol> {
-    const response = await sessionFetch(`/api/week-protocols/${protocolId}`);
-    return protocolOf(
-      response,
-      "Das Wochenprotokoll konnte nicht geladen werden.",
+    return mapWeekProtocol(
+      await bffJson("tenant", "GET /api/week-protocols/{protocolId}", {
+        params: { protocolId },
+        errorMessage: "Das Wochenprotokoll konnte nicht geladen werden.",
+      }),
     );
   }
 
@@ -189,33 +173,27 @@ class WeekProtocolsService {
     protocolId: string,
     notes: WeekProtocolNotes,
   ): Promise<WeekProtocol> {
-    const response = await sessionFetch(
-      `/api/week-protocols/${protocolId}/notes`,
-      {
-        method: "PUT",
-        body: JSON.stringify({
+    return mapWeekProtocol(
+      await bffJson("tenant", "PUT /api/week-protocols/{protocolId}/notes", {
+        params: { protocolId },
+        body: {
           week_note: notes.weekNote,
           days: Object.entries(notes.days).map(([date, note]) => ({
             date,
             note,
           })),
-        }),
-      },
-    );
-    return protocolOf(
-      response,
-      "Die Ergänzungen konnten nicht gespeichert werden.",
+        },
+        errorMessage: "Die Ergänzungen konnten nicht gespeichert werden.",
+      }),
     );
   }
 
   async close(protocolId: string): Promise<WeekProtocol> {
-    const response = await sessionFetch(
-      `/api/week-protocols/${protocolId}/close`,
-      { method: "POST" },
-    );
-    return protocolOf(
-      response,
-      "Das Wochenprotokoll konnte nicht abgeschlossen werden.",
+    return mapWeekProtocol(
+      await bffJson("tenant", "POST /api/week-protocols/{protocolId}/close", {
+        params: { protocolId },
+        errorMessage: "Das Wochenprotokoll konnte nicht abgeschlossen werden.",
+      }),
     );
   }
 

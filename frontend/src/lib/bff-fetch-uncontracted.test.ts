@@ -7,6 +7,8 @@ import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const UNCONTRACTED_CALLERS: Readonly<Record<string, string>> = {
+  "lib/payroll-api.ts":
+    "PUT settings/values/[key]: the route purges the cached tenant lookup",
   "lib/settings-api.ts":
     "PUT/DELETE settings/values/[key]: the route purges the cached tenant lookup",
 };

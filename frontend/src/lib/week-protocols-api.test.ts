@@ -75,7 +75,9 @@ describe("weekProtocolsService", () => {
   it("maps a protocol with its days", async () => {
     mockSessionFetch.mockResolvedValue(ok(backendProtocol));
     const protocol = await weekProtocolsService.get("41");
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/week-protocols/41");
+    expect(mockSessionFetch).toHaveBeenCalledWith("/api/week-protocols/41", {
+      method: "GET",
+    });
     expect(protocol).toMatchObject({
       groupId: "7",
       groupName: "Bären",
@@ -103,6 +105,7 @@ describe("weekProtocolsService", () => {
     const list = await weekProtocolsService.list("7");
     expect(mockSessionFetch).toHaveBeenCalledWith(
       "/api/week-protocols?group_id=7",
+      { method: "GET" },
     );
     expect(list).toHaveLength(1);
   });
