@@ -1,16 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type {
-  FormLegalBlock as WireFormLegalBlock,
-  HolidayFormField as WireHolidayFormField,
-} from "./contract/shared.generated";
-import type { HolidayFormEditor as WireHolidayFormEditor } from "./contract/traeger-holiday-periods.generated";
+import type * as sharedContract from "./contract/shared.generated";
+import type * as traegerHolidayPeriodsContract from "./contract/traeger-holiday-periods.generated";
 import { fetchHolidayForm } from "./traeger-holiday-form-api";
 
 // The editor saves the whole form back as a new version (#2353): every
 // value this build does not know must fail the read, never turn into a
 // guess the next save writes.
 
-const FIELD: WireHolidayFormField = {
+const FIELD: sharedContract.HolidayFormField = {
   key: "tetanus",
   label: "Tetanus-Impfschutz",
   type: "select",
@@ -27,7 +24,7 @@ const FIELD: WireHolidayFormField = {
   share_with_host: true,
 };
 
-const CONDITIONAL: WireHolidayFormField = {
+const CONDITIONAL: sharedContract.HolidayFormField = {
   key: "impfpass",
   label: "Impfpass liegt bei",
   type: "boolean",
@@ -42,7 +39,7 @@ const CONDITIONAL: WireHolidayFormField = {
   share_with_host: false,
 };
 
-const BLOCK: WireFormLegalBlock = {
+const BLOCK: sharedContract.FormLegalBlock = {
   key: "agb",
   kind: "terms",
   title: "AGB",
@@ -58,8 +55,8 @@ const BLOCK: WireFormLegalBlock = {
 };
 
 function editor(
-  overrides: Partial<WireHolidayFormEditor> = {},
-): WireHolidayFormEditor {
+  overrides: Partial<traegerHolidayPeriodsContract.HolidayFormEditor> = {},
+): traegerHolidayPeriodsContract.HolidayFormEditor {
   return {
     legal_blocks: [BLOCK],
     version: 3,
@@ -72,7 +69,9 @@ function editor(
   };
 }
 
-function answerWith(form: WireHolidayFormEditor): void {
+function answerWith(
+  form: traegerHolidayPeriodsContract.HolidayFormEditor,
+): void {
   vi.stubGlobal(
     "fetch",
     vi.fn().mockResolvedValue(
@@ -192,7 +191,10 @@ describe("fetchHolidayForm (#2353)", () => {
     ["an address requirement", { address_requirement: "sometimes" }],
     ["a health requirement", { health_requirement: "strict" }],
     ["a template field type", { template: [{ ...FIELD, type: "rating" }] }],
-  ] satisfies [string, Partial<WireHolidayFormEditor>][])(
+  ] satisfies [
+    string,
+    Partial<traegerHolidayPeriodsContract.HolidayFormEditor>,
+  ][])(
     "fails the read on %s this build does not know",
     async (_name, overrides) => {
       answerWith(editor(overrides));

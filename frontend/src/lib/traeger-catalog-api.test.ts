@@ -1,10 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type {
-  TraegerOffering as OfferingWire,
-  PhaseDetail,
-  Preview,
-  Rollout,
-} from "./contract/traeger-catalog.generated";
+import type * as traegerCatalogContract from "./contract/traeger-catalog.generated";
 import {
   createTraegerOffering,
   fetchTraegerPhase,
@@ -19,7 +14,7 @@ vi.mock("./traeger-api", () => ({ traegerRequest: request }));
 afterEach(() => request.mockReset());
 
 // The decoded answer of the proxy: string IDs, every field Go always sends.
-const offeringWire: OfferingWire = {
+const offeringWire: traegerCatalogContract.TraegerOffering = {
   id: "31",
   organization_id: "2",
   traeger_phase_id: "7",
@@ -65,7 +60,7 @@ const offeringWire: OfferingWire = {
   schools: [{ school_id: "11", applied_version: 1, outcome: "applied" }],
 };
 
-const backendPhase: PhaseDetail = {
+const backendPhase: traegerCatalogContract.PhaseDetail = {
   id: "7",
   organization_id: "2",
   draft: {
@@ -301,7 +296,7 @@ describe("Träger catalog requests (#4704)", () => {
           ],
         },
       ],
-    } satisfies Preview);
+    } satisfies traegerCatalogContract.Preview);
     const preview = await previewTraegerPhase("7");
     expect(preview.schools[0]).toMatchObject({
       schoolId: "11",
@@ -319,7 +314,7 @@ describe("Träger catalog requests (#4704)", () => {
       traeger_phase_id: "7",
       version: 3,
       schools: [{ school_id: "11", outcome: "stale", care_beyond_end: 0 }],
-    } satisfies Rollout);
+    } satisfies traegerCatalogContract.Rollout);
     const rollout = await rolloutTraegerPhase("7", preview.fingerprint);
     expect(request).toHaveBeenLastCalledWith(
       "/api/traeger/catalog/phases/7/rollout",
@@ -334,7 +329,11 @@ describe("Träger catalog requests (#4704)", () => {
   });
 });
 
-function phaseWith(patch: (phase: PhaseDetail) => PhaseDetail): PhaseDetail {
+function phaseWith(
+  patch: (
+    phase: traegerCatalogContract.PhaseDetail,
+  ) => traegerCatalogContract.PhaseDetail,
+): traegerCatalogContract.PhaseDetail {
   return patch(structuredClone(backendPhase));
 }
 
@@ -463,7 +462,7 @@ describe("Träger catalog round trip (#2353)", () => {
           offerings: null,
         },
       ],
-    } satisfies Preview);
+    } satisfies traegerCatalogContract.Preview);
     const preview = await previewTraegerPhase("7");
     expect(preview.schools[0]).toMatchObject({
       action: undefined,

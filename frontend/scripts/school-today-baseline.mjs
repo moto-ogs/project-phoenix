@@ -30,7 +30,6 @@ export default {
   "src/lib/client-log-ingest.server.ts": [
     "api_timestamp: new Date().toISOString(),",
   ],
-  "src/lib/activity-helpers.ts": [": new Date(),", ": new Date(),"],
   "src/lib/hooks/use-reminders.ts": ["const now = new Date();"],
   "src/components/ui/calendar-shell.tsx": [
     "const thisYear = new Date().getFullYear();",

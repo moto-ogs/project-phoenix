@@ -7,11 +7,8 @@
  * "YYYY-MM-DD".
  */
 
-import type { SEPADebit } from "./contract/shared.generated";
-import type {
-  SEPADebitRun,
-  SEPADebitSubmissionRequest,
-} from "./contract/traeger-sepa-debits.generated";
+import type * as sharedContract from "./contract/shared.generated";
+import type * as traegerSepaDebitsContract from "./contract/traeger-sepa-debits.generated";
 import { knownEnum } from "./contract/known-enum";
 import { traegerRequest } from "./traeger-api";
 import { type BillingFile, billingFile } from "./traeger-billing-api";
@@ -94,7 +91,7 @@ function debitLeft(left: string | undefined): SepaDebitLeft | null {
   return knownEnum(DEBIT_LEFT_VALUES, left) ?? "other";
 }
 
-function debitFromBackend(debit: SEPADebit): SepaDebit {
+function debitFromBackend(debit: sharedContract.SEPADebit): SepaDebit {
   return {
     id: debit.id,
     mandateId: debit.mandate_id,
@@ -114,7 +111,9 @@ function debitFromBackend(debit: SEPADebit): SepaDebit {
   };
 }
 
-function debitRunFromBackend(run: SEPADebitRun): SepaDebitRun {
+function debitRunFromBackend(
+  run: traegerSepaDebitsContract.SEPADebitRun,
+): SepaDebitRun {
   return {
     creditorId: run.creditor_id,
     creditorName: run.creditor_name,
@@ -147,7 +146,9 @@ export async function fetchSepaDebitRun(
   runId: string,
 ): Promise<SepaDebitRun> {
   return debitRunFromBackend(
-    await traegerRequest<SEPADebitRun>(runPath(kind, runId)),
+    await traegerRequest<traegerSepaDebitsContract.SEPADebitRun>(
+      runPath(kind, runId),
+    ),
   );
 }
 
@@ -174,10 +175,15 @@ export async function submitSepaDebits(
   messageId: string,
 ): Promise<SepaDebitRun> {
   return debitRunFromBackend(
-    await traegerRequest<SEPADebitRun>(`${runPath(kind, runId)}/submission`, {
-      method: "POST",
-      body: { message_id: messageId } satisfies SEPADebitSubmissionRequest,
-    }),
+    await traegerRequest<traegerSepaDebitsContract.SEPADebitRun>(
+      `${runPath(kind, runId)}/submission`,
+      {
+        method: "POST",
+        body: {
+          message_id: messageId,
+        } satisfies traegerSepaDebitsContract.SEPADebitSubmissionRequest,
+      },
+    ),
   );
 }
 
@@ -185,7 +191,7 @@ export async function submitSepaDebits(
 export async function fetchSepaMandateCollections(
   mandateId: string,
 ): Promise<SepaDebit[]> {
-  const debits = await traegerRequest<SEPADebit[]>(
+  const debits = await traegerRequest<sharedContract.SEPADebit[]>(
     `/api/traeger/sepa-mandates/${encodeURIComponent(mandateId)}/collections`,
   );
   return debits.map(debitFromBackend);

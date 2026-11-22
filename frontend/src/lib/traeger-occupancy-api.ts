@@ -10,7 +10,7 @@ import {
   type TraegerListFile,
   type TraegerListFormat,
 } from "./traeger-list-export";
-import type { Occupancy as WireOccupancy } from "./contract/traeger-schools.generated";
+import type * as traegerSchoolsContract from "./contract/traeger-schools.generated";
 import { requiredDay } from "./contract/required-day";
 import type { TraegerSchool } from "./traeger-api";
 
@@ -70,7 +70,7 @@ export async function fetchTraegerOccupancy(): Promise<TraegerOccupancy> {
       data,
     );
   }
-  const occupancy = (data as { data: WireOccupancy }).data;
+  const occupancy = (data as { data: traegerSchoolsContract.Occupancy }).data;
   return {
     day: requiredDay(occupancy.day, "occupancy.day"),
     asOf: occupancy.as_of,

@@ -6,16 +6,8 @@
  * Backend int64 IDs leave here as strings; calendar dates stay "YYYY-MM-DD".
  */
 
-import type {
-  SEPACreditor,
-  SEPACreditorRequest,
-} from "./contract/traeger-sepa-creditor.generated";
-import type {
-  SEPAMandate,
-  SEPAMandateEvent,
-  SEPAMandateRequest,
-  SEPAMandateRevokeRequest,
-} from "./contract/traeger-sepa-mandates.generated";
+import type * as traegerSepaCreditorContract from "./contract/traeger-sepa-creditor.generated";
+import type * as traegerSepaMandatesContract from "./contract/traeger-sepa-mandates.generated";
 import { knownEnum } from "./contract/known-enum";
 import { traegerRequest } from "./traeger-api";
 
@@ -115,7 +107,9 @@ export interface SepaMandateEvent {
   readonly importLine: number | null;
 }
 
-function creditorFromBackend(creditor: SEPACreditor): SepaCreditor {
+function creditorFromBackend(
+  creditor: traegerSepaCreditorContract.SEPACreditor,
+): SepaCreditor {
   return {
     creditorId: creditor.creditor_id,
     prenotificationDays: creditor.prenotification_days,
@@ -124,7 +118,9 @@ function creditorFromBackend(creditor: SEPACreditor): SepaCreditor {
   };
 }
 
-function mandateFromBackend(mandate: SEPAMandate): SepaMandate {
+function mandateFromBackend(
+  mandate: traegerSepaMandatesContract.SEPAMandate,
+): SepaMandate {
   return {
     id: mandate.id,
     contractId: mandate.contract_id,
@@ -153,7 +149,11 @@ const MANDATES_PATH = "/api/traeger/sepa-mandates";
 
 /** The creditor of the Träger, the defaults where it set nothing. */
 export async function fetchSepaCreditor(): Promise<SepaCreditor> {
-  return creditorFromBackend(await traegerRequest<SEPACreditor>(CREDITOR_PATH));
+  return creditorFromBackend(
+    await traegerRequest<traegerSepaCreditorContract.SEPACreditor>(
+      CREDITOR_PATH,
+    ),
+  );
 }
 
 export async function saveSepaCreditor(creditor: {
@@ -161,13 +161,16 @@ export async function saveSepaCreditor(creditor: {
   readonly prenotificationDays: number;
   readonly missingMandate: MissingMandate;
 }): Promise<SepaCreditor> {
-  const body: SEPACreditorRequest = {
+  const body: traegerSepaCreditorContract.SEPACreditorRequest = {
     creditor_id: creditor.creditorId.trim(),
     prenotification_days: creditor.prenotificationDays,
     missing_mandate: creditor.missingMandate,
   };
   return creditorFromBackend(
-    await traegerRequest<SEPACreditor>(CREDITOR_PATH, { method: "PUT", body }),
+    await traegerRequest<traegerSepaCreditorContract.SEPACreditor>(
+      CREDITOR_PATH,
+      { method: "PUT", body },
+    ),
   );
 }
 
@@ -178,14 +181,16 @@ export async function fetchSepaMandates(
   const query = contractId
     ? `?contract_id=${encodeURIComponent(contractId)}`
     : "";
-  const mandates = await traegerRequest<SEPAMandate[]>(
-    `${MANDATES_PATH}${query}`,
-  );
+  const mandates = await traegerRequest<
+    traegerSepaMandatesContract.SEPAMandate[]
+  >(`${MANDATES_PATH}${query}`);
   return mandates.map(mandateFromBackend);
 }
 
 /** The request body of a new mandate. */
-function sepaMandateBody(input: SepaMandateInput): SEPAMandateRequest {
+function sepaMandateBody(
+  input: SepaMandateInput,
+): traegerSepaMandatesContract.SEPAMandateRequest {
   return {
     contract_id: input.contractId,
     reference: input.reference.trim(),
@@ -202,10 +207,13 @@ export async function createSepaMandate(
   input: SepaMandateInput,
 ): Promise<SepaMandate> {
   return mandateFromBackend(
-    await traegerRequest<SEPAMandate>(MANDATES_PATH, {
-      method: "POST",
-      body: sepaMandateBody(input),
-    }),
+    await traegerRequest<traegerSepaMandatesContract.SEPAMandate>(
+      MANDATES_PATH,
+      {
+        method: "POST",
+        body: sepaMandateBody(input),
+      },
+    ),
   );
 }
 
@@ -215,11 +223,13 @@ export async function revokeSepaMandate(
   revokedOn: string,
 ): Promise<SepaMandate> {
   return mandateFromBackend(
-    await traegerRequest<SEPAMandate>(
+    await traegerRequest<traegerSepaMandatesContract.SEPAMandate>(
       `${MANDATES_PATH}/${encodeURIComponent(id)}/revoke`,
       {
         method: "POST",
-        body: { revoked_on: revokedOn } satisfies SEPAMandateRevokeRequest,
+        body: {
+          revoked_on: revokedOn,
+        } satisfies traegerSepaMandatesContract.SEPAMandateRevokeRequest,
       },
     ),
   );
@@ -229,9 +239,9 @@ export async function revokeSepaMandate(
 export async function fetchSepaMandateHistory(
   id: string,
 ): Promise<SepaMandateEvent[]> {
-  const events = await traegerRequest<SEPAMandateEvent[]>(
-    `${MANDATES_PATH}/${encodeURIComponent(id)}/history`,
-  );
+  const events = await traegerRequest<
+    traegerSepaMandatesContract.SEPAMandateEvent[]
+  >(`${MANDATES_PATH}/${encodeURIComponent(id)}/history`);
   return events.map((event) => ({
     id: event.id,
     action: knownEnum(MANDATE_ACTION_VALUES, event.action),

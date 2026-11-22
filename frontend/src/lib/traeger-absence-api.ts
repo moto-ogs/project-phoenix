@@ -9,16 +9,8 @@
  * Schulen. Kontingente sind Personendaten: jede Anfrage steht im
  * Zugriffsprotokoll der Schulen, nichts wird zwischengespeichert.
  */
-import type {
-  AbsenceTypeRequest,
-  TraegerAbsenceType as WireType,
-  TraegerAbsenceTypeList as WireTypeList,
-} from "~/lib/contract/traeger-absence-types.generated";
-import type {
-  AbsenceAllowanceRequest,
-  TraegerAbsenceAccount as WireAccount,
-  TraegerAbsenceAccounts as WireAccounts,
-} from "~/lib/contract/traeger-staff-records.generated";
+import type * as traegerAbsenceTypesContract from "~/lib/contract/traeger-absence-types.generated";
+import type * as traegerStaffRecordsContract from "~/lib/contract/traeger-staff-records.generated";
 import { traegerRequest } from "~/lib/traeger-api";
 
 const TYPES = "/api/traeger/absence-types";
@@ -96,7 +88,9 @@ export interface TraegerAbsenceAccount {
   readonly schools: readonly TraegerAbsenceSchoolUse[];
 }
 
-function mapType(data: WireType): TraegerAbsenceType {
+function mapType(
+  data: traegerAbsenceTypesContract.TraegerAbsenceType,
+): TraegerAbsenceType {
   return {
     id: data.id,
     name: data.name,
@@ -115,7 +109,9 @@ function mapType(data: WireType): TraegerAbsenceType {
   };
 }
 
-function mapAccount(data: WireAccount): TraegerAbsenceAccount {
+function mapAccount(
+  data: traegerStaffRecordsContract.TraegerAbsenceAccount,
+): TraegerAbsenceAccount {
   return {
     absenceTypeId: data.absence_type_id,
     absenceTypeName: data.absence_type_name,
@@ -147,7 +143,9 @@ function mapAccount(data: WireAccount): TraegerAbsenceAccount {
   };
 }
 
-function typeBody(input: TraegerAbsenceTypeInput): AbsenceTypeRequest {
+function typeBody(
+  input: TraegerAbsenceTypeInput,
+): traegerAbsenceTypesContract.AbsenceTypeRequest {
   return {
     name: input.name.trim(),
     allowance_enabled: input.allowanceEnabled,
@@ -159,7 +157,10 @@ function typeBody(input: TraegerAbsenceTypeInput): AbsenceTypeRequest {
 }
 
 export async function fetchTraegerAbsenceTypes(): Promise<TraegerAbsenceTypeList> {
-  const data = await traegerRequest<WireTypeList>(TYPES);
+  const data =
+    await traegerRequest<traegerAbsenceTypesContract.TraegerAbsenceTypeList>(
+      TYPES,
+    );
   return {
     released: data.release !== null,
     schoolCount: (data.schools ?? []).length,
@@ -171,10 +172,13 @@ export async function createTraegerAbsenceType(
   input: TraegerAbsenceTypeInput,
 ): Promise<TraegerAbsenceType> {
   return mapType(
-    await traegerRequest<WireType>(TYPES, {
-      method: "POST",
-      body: typeBody(input),
-    }),
+    await traegerRequest<traegerAbsenceTypesContract.TraegerAbsenceType>(
+      TYPES,
+      {
+        method: "POST",
+        body: typeBody(input),
+      },
+    ),
   );
 }
 
@@ -183,10 +187,13 @@ export async function updateTraegerAbsenceType(
   input: TraegerAbsenceTypeInput,
 ): Promise<TraegerAbsenceType> {
   return mapType(
-    await traegerRequest<WireType>(`${TYPES}/${encodeURIComponent(id)}`, {
-      method: "PUT",
-      body: typeBody(input),
-    }),
+    await traegerRequest<traegerAbsenceTypesContract.TraegerAbsenceType>(
+      `${TYPES}/${encodeURIComponent(id)}`,
+      {
+        method: "PUT",
+        body: typeBody(input),
+      },
+    ),
   );
 }
 
@@ -194,9 +201,10 @@ export async function fetchTraegerAbsenceAccounts(
   recordId: string,
   year: number,
 ): Promise<readonly TraegerAbsenceAccount[]> {
-  const data = await traegerRequest<WireAccounts>(
-    `${RECORDS}/${encodeURIComponent(recordId)}/absence-accounts?year=${year}`,
-  );
+  const data =
+    await traegerRequest<traegerStaffRecordsContract.TraegerAbsenceAccounts>(
+      `${RECORDS}/${encodeURIComponent(recordId)}/absence-accounts?year=${year}`,
+    );
   return (data.accounts ?? []).map(mapAccount);
 }
 
@@ -213,7 +221,7 @@ export async function setTraegerAbsenceAllowance(
         year: input.year,
         entitled_days: input.entitledDays,
         reason: input.reason.trim(),
-      } satisfies AbsenceAllowanceRequest,
+      } satisfies traegerStaffRecordsContract.AbsenceAllowanceRequest,
     },
   );
 }
