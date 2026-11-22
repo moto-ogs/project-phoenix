@@ -903,8 +903,12 @@ describe("HomePage (Login)", () => {
           },
         }),
       )
+      // The enrollment start route answers the BFF's `{ status, data }`.
       .mockResolvedValueOnce(
-        Response.json({ challenge_token: "challenge-abc" }),
+        Response.json({
+          status: "success",
+          data: { challenge_token: "challenge-abc" },
+        }),
       )
       .mockResolvedValueOnce(
         Response.json({ status: "success", data: { status: "authenticated" } }),

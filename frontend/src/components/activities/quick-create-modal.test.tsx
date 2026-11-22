@@ -552,7 +552,9 @@ describe("QuickCreateActivityModal", () => {
       fireEvent.click(submitButton);
       fireEvent.click(submitButton);
 
-      // Should only call fetch once (second click blocked by isSubmitting)
+      // Should only call fetch once (second click blocked by isSubmitting).
+      // The staff portal sends after its session gate, a microtask later.
+      await waitFor(() => expect(global.fetch).toHaveBeenCalled());
       expect(global.fetch).toHaveBeenCalledTimes(1);
 
       // Clean up

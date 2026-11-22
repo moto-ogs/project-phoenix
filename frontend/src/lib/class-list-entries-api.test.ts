@@ -11,6 +11,8 @@ import {
   updateClassListEntry,
 } from "./class-list-entries-api";
 
+import { plainFetch } from "~/test/mocks/plain-session-fetch";
+
 vi.mock(
   "~/lib/session-cache",
   () => import("~/test/mocks/plain-session-fetch"),
@@ -38,7 +40,7 @@ const wireEntry = {
 
 beforeEach(() => {
   mockFetch.mockReset();
-  vi.stubGlobal("fetch", mockFetch);
+  vi.stubGlobal("fetch", vi.fn(plainFetch(mockFetch)));
 });
 
 describe("fetchClassListEntries", () => {
