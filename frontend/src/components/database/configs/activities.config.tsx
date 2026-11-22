@@ -7,10 +7,7 @@ import {
   type Activity,
   type ActivitySupervisor,
 } from "@/lib/activity-helpers";
-import type {
-  ActivityResponse,
-  ActivitySupervisorResponse,
-} from "~/lib/contract/activities.generated";
+import type { ActivityResponse } from "~/lib/contract/activities.generated";
 import { bffJson } from "~/lib/bff-fetch";
 import { activitiesConcept } from "~/lib/concepts/activities";
 import { staffConcept } from "~/lib/concepts/staff";
