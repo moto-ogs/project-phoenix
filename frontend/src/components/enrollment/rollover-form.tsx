@@ -459,4 +459,5 @@ export function RolloverForm({
 const PREVIEW_REVIEW_REASON_LABELS: Record<string, string> = {
   grade_above_max: "Klassenstufe über der Höchstgrenze",
   no_grade_level: "Keine Klassenstufe hinterlegt",
+  no_guardian: "Keine Erziehungsberechtigten hinterlegt",
 };

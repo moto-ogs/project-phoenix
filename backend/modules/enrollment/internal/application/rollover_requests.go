@@ -61,8 +61,9 @@ func (s *Rollovers) rollOneRequest(ctx context.Context, input rolloverRequestInp
 		return err
 	}
 	childNames := make([]string, 0, len(sourceChildren))
+	unanswerable := renewalWithoutParent(sourceRequest)
 	for _, sourceChild := range sourceChildren {
-		childName, err := s.rollSourceChild(ctx, input, newRequest, sourceChild)
+		childName, err := s.rollSourceChild(ctx, input, newRequest, sourceChild, unanswerable)
 		if err != nil {
 			return err
 		}
@@ -99,6 +100,7 @@ func (s *Rollovers) createRolloverRequest(ctx context.Context, input rolloverReq
 		GuardianEmail:      sourceRequest.GuardianEmail,
 		GuardianPhone:      sourceRequest.GuardianPhone,
 		GuardianAccountID:  sourceRequest.GuardianAccountID,
+		SubmissionSource:   renewalSource(sourceRequest),
 		CustomData:         sourceRequest.CustomData.Clone(),
 		StatusToken:        statusToken,
 		StatusTokenExpires: &expiresAt,
@@ -111,8 +113,31 @@ func (s *Rollovers) createRolloverRequest(ctx context.Context, input rolloverReq
 	return request, nil
 }
 
-func (s *Rollovers) rollSourceChild(ctx context.Context, input rolloverRequestInput, newRequest *enrollmentNative.Request, source *enrollmentNative.RequestChild) (string, error) {
-	attributes := rolloverAttributesForSource(input, source)
+// renewalSource is the source the renewal of a request carries. The
+// enrollment of a child of an imported care contract (ADR 0309) stays one:
+// the renewal names no guardian either, and every reader of the source
+// treats it as entered by the office. Every other renewal keeps the store's
+// default, as before.
+func renewalSource(sourceRequest *enrollmentNative.Request) string {
+	if enrollmentNative.NormalizedSubmissionSource(sourceRequest.SubmissionSource) == enrollmentNative.RequestSourceContractImport {
+		return enrollmentNative.RequestSourceContractImport
+	}
+	return ""
+}
+
+// renewalWithoutParent tells whether no parent can answer the renewal of
+// the request (#7760, ADR 0309): it is the enrollment of a child of an
+// imported care contract, or it names neither a guardian address nor an
+// account. Such a renewal gets no mail and nobody opens its status page, so
+// waiting for the parents would withdraw it at the deadline (opt-in) or
+// renew it without anyone having looked (opt-out). It goes to the school's
+// review instead.
+func renewalWithoutParent(sourceRequest *enrollmentNative.Request) bool {
+	return renewalSource(sourceRequest) != "" || (sourceRequest.GuardianEmail == "" && sourceRequest.GuardianAccountID == nil)
+}
+
+func (s *Rollovers) rollSourceChild(ctx context.Context, input rolloverRequestInput, newRequest *enrollmentNative.Request, source *enrollmentNative.RequestChild, unanswerable bool) (string, error) {
+	attributes := rolloverAttributesForSource(input, source, unanswerable)
 	sourceID := source.ID
 	child := &enrollmentNative.RequestChild{
 		RequestID:             newRequest.ID,
@@ -142,12 +167,13 @@ func (s *Rollovers) rollSourceChild(ctx context.Context, input rolloverRequestIn
 	return fmt.Sprintf("%s %s", source.FirstName, source.LastName), nil
 }
 
-func rolloverAttributesForSource(input rolloverRequestInput, source *enrollmentNative.RequestChild) rolloverChildAttributes {
-	grade, reviewReason := classifyRolloverGrade(
+func rolloverAttributesForSource(input rolloverRequestInput, source *enrollmentNative.RequestChild, unanswerable bool) rolloverChildAttributes {
+	grade, reviewReason := classifyRollover(
 		source.TargetGradeLevel,
 		input.newPhase.RolloverBumpsGrade,
 		input.collectGradeLevel,
 		input.maxGrade,
+		unanswerable,
 	)
 	attributes := rolloverChildAttributes{targetGradeLevel: grade}
 	if reviewReason == "" {

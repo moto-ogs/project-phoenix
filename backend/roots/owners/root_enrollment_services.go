@@ -112,7 +112,7 @@ func BuildEnrollmentDecisions(
 		PickupSchedules:   arrivalTimetable.NewEnrollmentPickupSchedules(careRows.PickupSchedules),
 		ArrivalSchedules:  arrivalTimetable.NewEnrollmentArrivalSchedules(careRows.ArrivalSchedules),
 		// The enrollment of the children of imported contracts (ADR 0309).
-		ContractRecords: records, CareBookings: enrollment.CareBookings,
+		ContractStudents: EnrollmentContractStudents{People: persons}, CareBookings: enrollment.CareBookings,
 		Bookings: offerings.Bookings, GuardianAccess: identity, GuardianInvitations: identity, GuardianAuthorizer: people.StudentGuardians,
 		GuardianHold:           NewEnrollmentGuardianHold(db, people.StudentGuardians, people.Students, people.GuardianProfiles, nil),
 		StudentAudit:           EnrollmentDecisionStudentAudit(services.StudentAudit),

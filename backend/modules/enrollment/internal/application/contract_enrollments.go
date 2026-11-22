@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"slices"
 	"strings"
+	"time"
 
 	enrollmentNative "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	offeringContract "github.com/moto-ogs/project-phoenix/modules/enrollment/offeringcontract"
@@ -24,18 +24,22 @@ import (
 // linkAdditionalGuardians), the targeted form fields, the weekly plan, the
 // activation plan, and the announcement of the pickup projection, which
 // reaches the guardians in the parents portal.
+//
+// This file reads and checks; contract_enrollment_run.go writes.
 
 // contractEnrollmentReason is the reason an approved child of an imported
 // contract carries; the office reads it at the enrollment.
 const contractEnrollmentReason = "Aus importiertem Vertrag"
 
-// ContractEnrollmentRecords writes the request of a contract enrollment, its
-// child and the submitted choices. The root binds the Enrollment owner on
-// its clock, as for Requests and Children.
-type ContractEnrollmentRecords interface {
-	InsertRequest(ctx context.Context, request *enrollmentNative.Request) error
-	InsertChild(ctx context.Context, child *enrollmentNative.RequestChild) error
-	RecordSubmittedOfferingChoices(ctx context.Context, childID int64, choices []enrollmentNative.SubmittedOfferingChoice) error
+// contractStale is the booking reason of a phase or an offering that is no
+// longer what the plan read; the child is answered as changed.
+const contractStale = "stale"
+
+// ContractStudents reads the child records of a run with their persons in
+// a fixed number of statements. A child record the school does not have is
+// not in the answer. The root binds People Directory.
+type ContractStudents interface {
+	ContractEnrollmentStudents(ctx context.Context, studentIDs []int64) (map[int64]enrollmentNative.ContractStudent, error)
 }
 
 var _ enrollmentNative.ContractEnrollments = (*Decisions)(nil)
@@ -53,64 +57,43 @@ func (d *Decisions) CheckContractChildren(ctx context.Context, enrollments []enr
 	if err != nil {
 		return nil, fmt.Errorf("contract enrollment: load phases: %w", err)
 	}
-	phases := make(map[int64]*contractPhase, len(rows))
+	run := &contractRun{phases: make(map[int64]*contractPhase, len(rows))}
 	for _, row := range rows {
 		if row == nil {
 			continue
 		}
-		if phases[row.ID], err = d.readContractPhase(ctx, row, students[row.ID]); err != nil {
+		if run.phases[row.ID], err = d.readContractPhase(ctx, row, students[row.ID]); err != nil {
 			return nil, err
 		}
 	}
-	for i, input := range enrollments {
-		if _, err := d.checkContractChild(ctx, input, phases[input.PhaseID], &results[i]); err != nil {
-			return nil, err
-		}
-	}
-	return results, nil
-}
-
-// EnrollContractChildren enrolls each child that can be enrolled. It takes
-// the approval gates first, then the match lock of each phase in ascending
-// order, before any row lock (ADR 0162).
-func (d *Decisions) EnrollContractChildren(ctx context.Context, enrollments []enrollmentNative.ContractEnrollment) (publicResult []enrollmentNative.ContractEnrollmentResult, publicErr error) {
-	defer func() { publicErr = PublicError(publicErr) }()
-	results := make([]enrollmentNative.ContractEnrollmentResult, len(enrollments))
-	if err := d.requireContractEnrollments(enrollments); err != nil || len(enrollments) == 0 {
-		return results, err
-	}
-	phases, err := d.lockContractPhases(ctx, enrollments)
-	if err != nil {
+	if err := d.readContractStudents(ctx, run, enrollments); err != nil {
 		return nil, err
 	}
 	for i, input := range enrollments {
-		phase := phases[input.PhaseID]
-		subject, err := d.checkContractChild(ctx, input, phase, &results[i])
-		if err != nil {
-			return nil, err
-		}
-		if subject == nil {
-			continue
-		}
-		if err := d.enrollContractChild(ctx, input, phase, subject, &results[i]); err != nil {
-			return nil, fmt.Errorf("contract enrollment: student %d: %w", input.StudentID, err)
-		}
-		// A second row of the same student in this run finds the enrollment
-		// the first one made.
-		phase.holders[input.StudentID] = append(phase.holders[input.StudentID], enrollmentNative.ContractEnrollmentHolder{
-			StudentID: input.StudentID, RequestID: results[i].RequestID, RequestChildID: results[i].RequestChildID,
-			Status: enrollmentNative.ChildStatusApproved, SubmissionSource: enrollmentNative.RequestSourceContractImport, Created: true})
+		run.check(i, input, &results[i])
 	}
 	return results, nil
 }
 
+// contractRun is one call: its phases, the child records it names, and the
+// children it is going to enroll.
+type contractRun struct {
+	phases   map[int64]*contractPhase
+	students map[int64]enrollmentNative.ContractStudent
+	pending  []*contractSubject
+}
+
 // contractPhase is one phase of a run with what its children are checked
-// against: the phase, its offerings and the request children that hold the
-// students.
+// against: the phase, its offerings, the request children that hold the
+// students and the bookings of the enrollments of this source among them.
 type contractPhase struct {
 	phase     *enrollmentNative.Phase
 	offerings map[int64]*offeringContract.CareOfferingRecord
 	holders   map[int64][]enrollmentNative.ContractEnrollmentHolder
+	stored    map[int64][]*enrollmentNative.RequestChildOffering
+	// enrolling are the children this call enrolls, by child record: a
+	// second row of a child record finds the first one.
+	enrolling map[int64]*contractSubject
 }
 
 // window is the booking window of the phase: its first day of care and the
@@ -135,9 +118,9 @@ func contractPhaseStudents(enrollments []enrollmentNative.ContractEnrollment) ([
 }
 
 func (d *Decisions) requireContractEnrollments(enrollments []enrollmentNative.ContractEnrollment) error {
-	if d.deps.ContractRecords == nil || d.deps.PhaseHolders == nil || d.deps.CareBookings == nil || d.deps.StudentEnrollment == nil ||
-		d.deps.People.Persons == nil || d.deps.Offerings == nil || d.deps.Phases == nil || d.deps.Children == nil || d.deps.Requests == nil {
-		return errors.New("contract enrollment: the records, the bookings, the student and person reads, the offerings and the phases are required")
+	if d.deps.ContractStudents == nil || d.deps.PhaseHolders == nil || d.deps.CareBookings == nil ||
+		d.deps.Offerings == nil || d.deps.Phases == nil || d.deps.Children == nil || d.deps.Requests == nil {
+		return errors.New("contract enrollment: the records, the bookings, the child records, the offerings and the phases are required")
 	}
 	for _, input := range enrollments {
 		if input.StudentID <= 0 || input.PhaseID <= 0 || input.ContractID <= 0 || input.ActorAccountID <= 0 {
@@ -175,8 +158,9 @@ func (d *Decisions) lockContractPhases(ctx context.Context, enrollments []enroll
 	return phases, nil
 }
 
-// readContractPhase reads the offerings of a phase and the request children
-// that hold the students.
+// readContractPhase reads the offerings of a phase, the request children
+// that hold the students and, in one read, the bookings of those of them
+// that are enrollments of this source.
 func (d *Decisions) readContractPhase(ctx context.Context, row *enrollmentNative.Phase, students []int64) (*contractPhase, error) {
 	offerings, err := d.deps.Offerings.ListByPhase(ctx, row.ID)
 	if err != nil {
@@ -187,72 +171,124 @@ func (d *Decisions) readContractPhase(ctx context.Context, row *enrollmentNative
 		return nil, fmt.Errorf("contract enrollment: read applications of phase %d: %w", row.ID, err)
 	}
 	phase := &contractPhase{phase: row, offerings: make(map[int64]*offeringContract.CareOfferingRecord, len(offerings)),
-		holders: map[int64][]enrollmentNative.ContractEnrollmentHolder{}}
+		holders: map[int64][]enrollmentNative.ContractEnrollmentHolder{}, stored: map[int64][]*enrollmentNative.RequestChildOffering{},
+		enrolling: map[int64]*contractSubject{}}
 	for _, offering := range offerings {
 		if offering != nil {
 			phase.offerings[offering.ID] = offering
 		}
 	}
+	own := []int64{}
 	for _, holder := range holders {
 		phase.holders[holder.StudentID] = append(phase.holders[holder.StudentID], holder)
+		if ownContractEnrollment(holder) {
+			own = append(own, holder.RequestChildID)
+		}
+	}
+	if len(own) == 0 {
+		return phase, nil
+	}
+	start, _ := phase.window()
+	stored, err := d.deps.Children.RequestChildOfferingsForChildrenAtDate(ctx, own, enrollmentNative.Date(start))
+	if err != nil {
+		return nil, fmt.Errorf("contract enrollment: read bookings of phase %d: %w", row.ID, err)
+	}
+	for _, booking := range stored {
+		if booking != nil {
+			phase.stored[booking.RequestChildID] = append(phase.stored[booking.RequestChildID], booking)
+		}
 	}
 	return phase, nil
 }
 
-// contractSubject is a child that can be enrolled: its person and the
-// bookings as they are stored.
-type contractSubject struct {
-	person   *Person
-	bookings []enrollmentNative.CareBookingInput
+// readContractStudents reads the child records of the run with their
+// persons: two reads, however many children.
+func (d *Decisions) readContractStudents(ctx context.Context, run *contractRun, enrollments []enrollmentNative.ContractEnrollment) error {
+	ids := make([]int64, 0, len(enrollments))
+	for _, input := range enrollments {
+		if !slices.Contains(ids, input.StudentID) {
+			ids = append(ids, input.StudentID)
+		}
+	}
+	students, err := d.deps.ContractStudents.ContractEnrollmentStudents(ctx, ids)
+	if err != nil {
+		return fmt.Errorf("contract enrollment: read child records: %w", err)
+	}
+	run.students = students
+	return nil
 }
 
-// checkContractChild answers one child into result. It returns the subject
-// of a child to enroll, nil for every other answer.
-func (d *Decisions) checkContractChild(ctx context.Context, input enrollmentNative.ContractEnrollment, phase *contractPhase,
-	result *enrollmentNative.ContractEnrollmentResult) (*contractSubject, error) {
+// contractSubject is a child the call enrolls: its input, its child record
+// and the bookings as they are stored, then the rows written for it.
+type contractSubject struct {
+	index    int
+	input    enrollmentNative.ContractEnrollment
+	phase    *contractPhase
+	student  enrollmentNative.ContractStudent
+	bookings []enrollmentNative.CareBookingInput
+	// repeats are the later rows of the same child record with the same
+	// bookings: they are answered with the enrollment of this one.
+	repeats []int
+	write   enrollmentNative.ContractEnrollmentWrite
+}
+
+// check answers one child into result, from what the run read: it reads
+// nothing itself. A child to enroll is added to the pending ones.
+func (r *contractRun) check(index int, input enrollmentNative.ContractEnrollment, result *enrollmentNative.ContractEnrollmentResult) {
 	*result = enrollmentNative.ContractEnrollmentResult{ContractID: input.ContractID, StudentID: input.StudentID,
 		Status: enrollmentNative.ContractEnrollmentRefused}
+	phase := r.phases[input.PhaseID]
 	if phase == nil {
 		result.Reason = enrollmentNative.ContractEnrollmentPhaseMissing
-		return nil, nil
+		return
 	}
-	student, err := d.readEnrollmentStudent(ctx, input.StudentID, "")
-	if err != nil && !d.deps.Runtime.NotFound(err) {
-		return nil, fmt.Errorf("contract enrollment: read student %d: %w", input.StudentID, err)
-	}
-	bookings, reason := contractBookings(phase, input.Bookings)
+	bookings, reason := contractBookings(phase, input)
 	// An application of the phase answers first: it names what the child
 	// has, whatever the child record says by now.
 	if holder, held := contractHolder(phase.holders[input.StudentID]); held {
-		return nil, d.answerContractHolder(ctx, holder, phase, bookings, reason, result)
+		answerContractHolder(holder, phase, bookings, reason, result)
+		return
 	}
-	if refusal := contractStudentRefusal(student); refusal != "" {
+	if first := phase.enrolling[input.StudentID]; first != nil {
+		answerContractRepeat(first, index, bookings, reason, result)
+		return
+	}
+	student, known := r.students[input.StudentID]
+	if refusal := contractStudentRefusal(student, known); refusal != "" {
 		reason = refusal
 	}
 	if reason == "" && len(input.Changes) > 0 {
 		reason = enrollmentNative.ContractEnrollmentPlannedChange
 	}
+	if reason == "" && (student.Birthday == nil || student.Birthday.IsZero()) {
+		reason = enrollmentNative.ContractEnrollmentBirthDateMissing
+	}
 	if reason != "" {
-		result.Reason = reason
-		return nil, nil
-	}
-	person, err := d.deps.People.Persons.PersonByID(ctx, student.PersonID)
-	if err != nil {
-		return nil, fmt.Errorf("contract enrollment: read person of student %d: %w", input.StudentID, err)
-	}
-	if person == nil || person.Birthday == nil || person.Birthday.IsZero() {
-		result.Reason = enrollmentNative.ContractEnrollmentBirthDateMissing
-		return nil, nil
+		refuseContractChild(reason, result)
+		return
 	}
 	result.Status = enrollmentNative.ContractEnrollmentEnrolled
-	return &contractSubject{person: person, bookings: bookings}, nil
+	subject := &contractSubject{index: index, input: input, phase: phase, student: student, bookings: bookings}
+	phase.enrolling[input.StudentID] = subject
+	r.pending = append(r.pending, subject)
+}
+
+// refuseContractChild answers a child that is not enrolled: as changed when
+// its phase or an offering is no longer what the plan read, else refused
+// with the reason.
+func refuseContractChild(reason string, result *enrollmentNative.ContractEnrollmentResult) {
+	if reason == contractStale {
+		result.Status = enrollmentNative.ContractEnrollmentChanged
+		return
+	}
+	result.Status, result.Reason = enrollmentNative.ContractEnrollmentRefused, reason
 }
 
 // contractStudentRefusal tells why a child record gets no enrollment: it is
 // gone, not active, or has no OGS place, which an enrollment would grant.
-func contractStudentRefusal(student *Student) string {
+func contractStudentRefusal(student enrollmentNative.ContractStudent, known bool) string {
 	switch {
-	case student == nil:
+	case !known:
 		return enrollmentNative.ContractEnrollmentStudentMissing
 	case student.Status != studentStatusActive:
 		return enrollmentNative.ContractEnrollmentStudentInactive
@@ -287,42 +323,60 @@ func ownContractEnrollment(holder enrollmentNative.ContractEnrollmentHolder) boo
 // holds: its own enrollment with the bookings given is the answer of a
 // repeated call, with other bookings it is refused, and any other
 // application is named.
-func (d *Decisions) answerContractHolder(ctx context.Context, holder enrollmentNative.ContractEnrollmentHolder, phase *contractPhase,
-	bookings []enrollmentNative.CareBookingInput, reason string, result *enrollmentNative.ContractEnrollmentResult) error {
+func answerContractHolder(holder enrollmentNative.ContractEnrollmentHolder, phase *contractPhase,
+	bookings []enrollmentNative.CareBookingInput, reason string, result *enrollmentNative.ContractEnrollmentResult) {
 	result.RequestID, result.RequestChildID = holder.RequestID, holder.RequestChildID
-	if !ownContractEnrollment(holder) {
+	switch {
+	case !ownContractEnrollment(holder):
 		result.Status = enrollmentNative.ContractEnrollmentHasApplication
-		return nil
-	}
-	start, _ := phase.window()
-	stored, err := d.deps.Children.RequestChildOfferingsAtDate(ctx, holder.RequestChildID, enrollmentNative.Date(start))
-	if err != nil {
-		return fmt.Errorf("contract enrollment: read bookings of child %d: %w", holder.RequestChildID, err)
-	}
-	if reason != "" || !sameContractBookings(stored, bookings) {
+	case reason == contractStale:
+		result.Status = enrollmentNative.ContractEnrollmentChanged
+	case reason != "" || !sameContractBookings(phase.stored[holder.RequestChildID], bookings):
 		result.Reason = enrollmentNative.ContractEnrollmentBookingsDiffer
-		return nil
+	default:
+		result.Status = enrollmentNative.ContractEnrollmentExisting
 	}
-	result.Status = enrollmentNative.ContractEnrollmentExisting
-	return nil
+}
+
+// answerContractRepeat answers a later row of a child record the call
+// enrolls already: with the same bookings it gets the enrollment of the
+// first row, with others it is refused.
+func answerContractRepeat(first *contractSubject, index int, bookings []enrollmentNative.CareBookingInput, reason string,
+	result *enrollmentNative.ContractEnrollmentResult) {
+	switch {
+	case reason == contractStale:
+		result.Status = enrollmentNative.ContractEnrollmentChanged
+	case reason != "" || !sameBookingInputs(first.bookings, bookings):
+		result.Reason = enrollmentNative.ContractEnrollmentBookingsDiffer
+	default:
+		result.Status = enrollmentNative.ContractEnrollmentExisting
+		first.repeats = append(first.repeats, index)
+	}
 }
 
 // contractBookings checks the bookings against the phase and answers them
-// as they are stored: each offering is one of the phase and booked once, on
-// weekdays it offers, from the service start of the phase to a day within
-// it. An offering with fixed weekdays is booked on all of them and stores
-// none, like a submission.
-func contractBookings(phase *contractPhase, bookings []enrollmentNative.ContractBooking) ([]enrollmentNative.CareBookingInput, string) {
+// as they are stored. First the phase and each offering must still be what
+// the plan read (contractStale otherwise). Then each offering is one of the
+// phase and booked once, on weekdays it offers, from the service start of
+// the phase to a day within it. An offering with fixed weekdays is booked
+// on all of them and stores none, like a submission.
+func contractBookings(phase *contractPhase, input enrollmentNative.ContractEnrollment) ([]enrollmentNative.CareBookingInput, string) {
 	start, until := phase.window()
-	if len(bookings) == 0 {
+	if input.ServiceStart != start || input.ServiceEnd.IsZero() || input.ServiceEnd.AddDays(1) != until {
+		return nil, contractStale
+	}
+	if len(input.Bookings) == 0 {
 		return nil, enrollmentNative.ContractEnrollmentOfferingPhase
 	}
-	inputs := make([]enrollmentNative.CareBookingInput, 0, len(bookings))
+	inputs := make([]enrollmentNative.CareBookingInput, 0, len(input.Bookings))
 	seen := map[int64]bool{}
-	for _, booking := range bookings {
+	for _, booking := range input.Bookings {
 		offering := phase.offerings[booking.CareOfferingID]
 		if offering == nil {
 			return nil, enrollmentNative.ContractEnrollmentOfferingPhase
+		}
+		if !offeringAsPlanned(offering, booking) {
+			return nil, contractStale
 		}
 		days, ok := contractBookingDays(offering, booking.Days)
 		if !ok {
@@ -338,13 +392,56 @@ func contractBookings(phase *contractPhase, bookings []enrollmentNative.Contract
 	return inputs, ""
 }
 
+// offeringAsPlanned tells whether the offering is still what the plan read
+// and proved the booking on: the same weekday mode, the same weekdays on
+// offer and, on each booked weekday, the same end time.
+func offeringAsPlanned(offering *offeringContract.CareOfferingRecord, booking enrollmentNative.ContractBooking) bool {
+	if offering.DaysOfWeekMode != booking.DaysOfWeekMode || !sameWeekdays(offering.AvailableDays, booking.AvailableDays) {
+		return false
+	}
+	for _, day := range booking.Days {
+		day = normalizedWeekday(day)
+		if plannedEndTime(offering.PickupTimes[day]) != booking.EndTimes[day] {
+			return false
+		}
+	}
+	return true
+}
+
+// plannedEndTime is the end time of an offering as the plan of the Träger
+// reads it (Care Plan's contract offerings): a clock time as "HH:MM",
+// anything else no end time.
+func plannedEndTime(stored string) string {
+	for _, layout := range []string{"15:04", "15:04:05"} {
+		if clock, err := time.Parse(layout, strings.TrimSpace(stored)); err == nil {
+			return clock.Format("15:04")
+		}
+	}
+	return ""
+}
+
+func normalizedWeekday(day string) string { return strings.ToLower(strings.TrimSpace(day)) }
+
+// sameWeekdays compares two lists of weekdays as sets.
+func sameWeekdays(a, b []string) bool {
+	set := func(days []string) []string {
+		normalized := make([]string, 0, len(days))
+		for _, day := range days {
+			normalized = append(normalized, normalizedWeekday(day))
+		}
+		slices.Sort(normalized)
+		return slices.Compact(normalized)
+	}
+	return slices.Equal(set(a), set(b))
+}
+
 // contractBookingDays are the weekdays a booking stores, lower-cased and in
 // the order given; false for a weekday the offering does not offer, no
 // weekday, or a subset of fixed weekdays.
 func contractBookingDays(offering *offeringContract.CareOfferingRecord, days []string) ([]string, bool) {
 	normalized := make([]string, 0, len(days))
 	for _, day := range days {
-		day = strings.ToLower(strings.TrimSpace(day))
+		day = normalizedWeekday(day)
 		if !slices.Contains(offering.AvailableDays, day) || slices.Contains(normalized, day) {
 			return nil, false
 		}
@@ -356,27 +453,37 @@ func contractBookingDays(offering *offeringContract.CareOfferingRecord, days []s
 	return normalized, len(normalized) > 0
 }
 
+func contractBookingKey(offeringID int64, days []string, from, until *calendar.Date) string {
+	sorted := slices.Clone(days)
+	slices.Sort(sorted)
+	return fmt.Sprint(offeringID, sorted, contractDay(from), contractDay(until))
+}
+
+func bookingInputKeys(bookings []enrollmentNative.CareBookingInput) []string {
+	keys := make([]string, 0, len(bookings))
+	for _, booking := range bookings {
+		keys = append(keys, contractBookingKey(booking.CareOfferingID, booking.ManualSelectedDays, booking.ValidFrom, booking.ValidUntil))
+	}
+	slices.Sort(keys)
+	return keys
+}
+
 // sameContractBookings compares the stored bookings of a child with the
 // ones given: the same offerings, weekdays and times.
 func sameContractBookings(stored []*enrollmentNative.RequestChildOffering, bookings []enrollmentNative.CareBookingInput) bool {
-	key := func(offeringID int64, days []string, from, until *calendar.Date) string {
-		sorted := slices.Clone(days)
-		slices.Sort(sorted)
-		return fmt.Sprint(offeringID, sorted, contractDay(from), contractDay(until))
-	}
 	have := make([]string, 0, len(stored))
 	for _, row := range stored {
 		if row != nil {
-			have = append(have, key(row.CareOfferingID, row.ManualSelectedDays, (*calendar.Date)(row.ValidFrom), (*calendar.Date)(row.ValidUntil)))
+			have = append(have, contractBookingKey(row.CareOfferingID, row.ManualSelectedDays, (*calendar.Date)(row.ValidFrom), (*calendar.Date)(row.ValidUntil)))
 		}
 	}
-	want := make([]string, 0, len(bookings))
-	for _, booking := range bookings {
-		want = append(want, key(booking.CareOfferingID, booking.ManualSelectedDays, booking.ValidFrom, booking.ValidUntil))
-	}
 	slices.Sort(have)
-	slices.Sort(want)
-	return slices.Equal(have, want)
+	return slices.Equal(have, bookingInputKeys(bookings))
+}
+
+// sameBookingInputs compares the bookings of two rows of one call.
+func sameBookingInputs(a, b []enrollmentNative.CareBookingInput) bool {
+	return slices.Equal(bookingInputKeys(a), bookingInputKeys(b))
 }
 
 func contractDay(day *calendar.Date) string {
@@ -384,92 +491,4 @@ func contractDay(day *calendar.Date) string {
 		return ""
 	}
 	return day.String()
-}
-
-// enrollContractChild writes the request, its approved child and the care
-// derived from the bookings, in the order of an approval: the request and
-// the child, the submitted choices and the bookings, the link to the child
-// record, the rosters, the approval, the multi-source rosters and the
-// pickup effects of the staff.
-func (d *Decisions) enrollContractChild(ctx context.Context, input enrollmentNative.ContractEnrollment, phase *contractPhase,
-	subject *contractSubject, result *enrollmentNative.ContractEnrollmentResult) error {
-	request, child, err := d.insertContractRequest(ctx, input, phase.phase, subject.person)
-	if err != nil {
-		return err
-	}
-	choices := make([]enrollmentNative.SubmittedOfferingChoice, len(subject.bookings))
-	for i, booking := range subject.bookings {
-		choices[i] = enrollmentNative.SubmittedOfferingChoice{CareOfferingID: booking.CareOfferingID, SelectedDays: booking.ManualSelectedDays,
-			Terms: submittedOfferingTerms(phase.offerings[booking.CareOfferingID])}
-	}
-	if err := d.deps.ContractRecords.RecordSubmittedOfferingChoices(ctx, child.ID, choices); err != nil {
-		return fmt.Errorf("record offering choices: %w", err)
-	}
-	if err := d.deps.CareBookings.RecordCareBookings(ctx, child.ID, subject.bookings); err != nil {
-		return fmt.Errorf("record care bookings: %w", err)
-	}
-	// Linked before the rosters: the roster resync resolves the child's
-	// student through created_student_id.
-	if err := d.deps.Children.LinkCreatedStudent(ctx, child.ID, input.StudentID); err != nil {
-		return fmt.Errorf("link student: %w", err)
-	}
-	if err := d.materializeApprovedOfferings(ctx, child.ID, input.StudentID, phase.phase); err != nil {
-		return err
-	}
-	reason := contractEnrollmentReason
-	if err := d.deps.Children.UpdateChildStatus(ctx, child.ID, enrollmentNative.ChildStatusApproved, &reason, input.ActorAccountID); err != nil {
-		return fmt.Errorf("approve child: %w", err)
-	}
-	if err := d.resyncMultiSourceTemplatesForChild(ctx, child.ID, phase.phase); err != nil {
-		return fmt.Errorf("resync multi-source templates: %w", err)
-	}
-	// The pickup auto excusals of the staff follow the bookings. The
-	// announcement of the pickup projection is left out: it reaches the
-	// child's guardians in the parents portal.
-	if d.deps.Pickups.ResyncExcusal != nil {
-		if err := d.deps.Pickups.ResyncExcusal(ctx, []int64{input.StudentID}); err != nil {
-			return fmt.Errorf("resync pickup auto excusals: %w", err)
-		}
-	}
-	result.RequestID, result.RequestChildID = request.ID, child.ID
-	d.logger().Info("contract enrollment created",
-		slog.Int64("request_id", request.ID),
-		slog.Int64("request_child_id", child.ID),
-		slog.Int64("student_id", input.StudentID),
-		slog.Int64("contract_id", input.ContractID),
-		slog.Int64("reviewed_by", input.ActorAccountID),
-	)
-	return nil
-}
-
-// insertContractRequest stores the request and its child. The request names
-// no guardian, no address and no account, so no parent finds it in the
-// parents portal, and it carries no consent and no legal evidence: no parent
-// declared anything. Its status token expires at once: nobody is given it.
-func (d *Decisions) insertContractRequest(ctx context.Context, input enrollmentNative.ContractEnrollment, phase *enrollmentNative.Phase,
-	person *Person) (*enrollmentNative.Request, *enrollmentNative.RequestChild, error) {
-	if d.deps.Random == nil {
-		return nil, nil, errors.New("the random source of the status token is required")
-	}
-	token, err := enrollmentNative.NewStatusToken(d.deps.Random)
-	if err != nil {
-		return nil, nil, fmt.Errorf("generate status token: %w", err)
-	}
-	now := d.deps.Now()
-	request := &enrollmentNative.Request{
-		PhaseID: phase.ID, SchemaID: phase.FormSchemaID, SubmissionSource: enrollmentNative.RequestSourceContractImport,
-		SourceMetadata: formValues(map[string]any{"contract_id": input.ContractID}),
-		StatusToken:    token, StatusTokenExpires: &now, SubmittedAt: now,
-	}
-	request.TenantID = d.deps.Runtime.TenantID(ctx)
-	if err := d.deps.ContractRecords.InsertRequest(ctx, request); err != nil {
-		return nil, nil, fmt.Errorf("create request: %w", err)
-	}
-	child := &enrollmentNative.RequestChild{RequestID: request.ID, FirstName: person.FirstName, LastName: person.LastName,
-		DateOfBirth: *person.Birthday, Status: enrollmentNative.ChildStatusSubmitted}
-	child.TenantID = request.TenantID
-	if err := d.deps.ContractRecords.InsertChild(ctx, child); err != nil {
-		return nil, nil, fmt.Errorf("create request child: %w", err)
-	}
-	return request, child, nil
 }

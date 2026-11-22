@@ -11,9 +11,11 @@ import (
 	enrollmentAPI "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
 	offeringContract "github.com/moto-ogs/project-phoenix/modules/enrollment/offeringcontract"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
+	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
+	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -74,13 +76,21 @@ func (e *contractEnrollmentEnv) student(t *testing.T, firstName string) *testpkg
 	return student
 }
 
+// booking is a booking of the offering over the service of the phase, with
+// what a plan read of the offering: its end times, weekdays and mode.
 func (e *contractEnrollmentEnv) booking(days ...string) capability.ContractBooking {
+	ends := map[string]string{}
+	for _, day := range days {
+		ends[day] = e.offering.PickupTimes[day]
+	}
 	return capability.ContractBooking{CareOfferingID: e.offering.ID, Days: days,
-		ValidFrom: calendar.Date(e.sourcePhase.ServiceStartDate), ValidUntil: calendar.Date(e.sourcePhase.ServiceEndDate).AddDays(1)}
+		ValidFrom: calendar.Date(e.sourcePhase.ServiceStartDate), ValidUntil: calendar.Date(e.sourcePhase.ServiceEndDate).AddDays(1),
+		EndTimes: ends, AvailableDays: e.offering.AvailableDays, DaysOfWeekMode: e.offering.DaysOfWeekMode}
 }
 
 func (e *contractEnrollmentEnv) input(studentID int64, bookings ...capability.ContractBooking) capability.ContractEnrollment {
 	return capability.ContractEnrollment{StudentID: studentID, PhaseID: e.sourcePhase.ID, ContractID: e.contract,
+		ServiceStart: calendar.Date(e.sourcePhase.ServiceStartDate), ServiceEnd: calendar.Date(e.sourcePhase.ServiceEndDate),
 		Bookings: bookings, ActorAccountID: e.creatorID}
 }
 
@@ -152,10 +162,7 @@ func TestContractEnrollmentEnrollsAnExistingChildSilently(t *testing.T) {
 	assert.Zero(t, e.count(t, `SELECT COUNT(*) FROM enrollment.requests WHERE tenant_id = ? AND submission_source = ?`,
 		testpkg.Tenant(t), capability.RequestSourceContractImport), "a check writes nothing")
 
-	counter := testpkg.CaptureQueriesForContext(t, e.db)
-	results, err := testpkg.TenantQuery1(t, counter.Context(ctx), e.db, e.owner.EnrollContractChildren, []capability.ContractEnrollment{input})
-	require.NoError(t, err)
-	t.Logf("contract enrollment: %d statements for one child", len(counter.Queries()))
+	results := e.enroll(t, input)
 	require.Len(t, results, 1)
 	result := results[0]
 	require.Equal(t, capability.ContractEnrollmentEnrolled, result.Status)
@@ -241,17 +248,6 @@ func TestContractEnrollmentEnrollsAnExistingChildSilently(t *testing.T) {
 	assert.Equal(t, capability.ContractEnrollmentBookingsDiffer, differs[0].Reason)
 	assert.Equal(t, result.RequestChildID, differs[0].RequestChildID)
 
-	// Each further child of a call costs the same statements: the phase, its
-	// offerings and the applications of all children are read once.
-	pair := testpkg.CaptureQueriesForContext(t, e.db)
-	two, err := testpkg.TenantQuery1(t, pair.Context(ctx), e.db, e.owner.EnrollContractChildren, []capability.ContractEnrollment{
-		e.input(e.student(t, "Mia").ID, e.booking("mon")), e.input(e.student(t, "Ben").ID, e.booking("tue"))})
-	require.NoError(t, err)
-	require.Equal(t, capability.ContractEnrollmentEnrolled, two[1].Status)
-	perChild := len(pair.Queries()) - len(counter.Queries())
-	t.Logf("contract enrollment: %d statements for two children, %d per further child", len(pair.Queries()), perChild)
-	assert.Less(t, perChild, len(counter.Queries()), "a further child repeats no read of the phase")
-
 	// The office changes the bookings of this child as of any other.
 	update, err := testpkg.TenantQuery1(t, ctx, e.db, e.owner.UpdateChildOfferings, enrollmentAPI.UpdateChildOfferingsInput{
 		RequestID: result.RequestID, ChildID: result.RequestChildID, ActorAccountID: e.creatorID, ActorRole: "admin",
@@ -289,7 +285,7 @@ func TestContractEnrollmentRefusesWhatItCannotEnroll(t *testing.T) {
 	otherPhase.TenantID = testpkg.Tenant(t)
 	require.NoError(t, InsertOwnerPhaseForTest(ctx, e.repos.Enrollment(), otherPhase))
 	foreign := e.input(valid.ID, e.booking("mon"))
-	foreign.PhaseID = otherPhase.ID
+	foreign.PhaseID, foreign.ServiceStart, foreign.ServiceEnd = otherPhase.ID, calendar.NewDate(2027, 9, 1), calendar.NewDate(2028, 7, 31)
 	foreign.Bookings[0].ValidFrom, foreign.Bookings[0].ValidUntil = calendar.NewDate(2027, 9, 1), calendar.NewDate(2028, 8, 1)
 	unknownPhase := e.input(valid.ID, e.booking("mon"))
 	unknownPhase.PhaseID = testpkg.UniqueTestTenantID(t)
@@ -333,9 +329,217 @@ func TestContractEnrollmentRefusesWhatItCannotEnroll(t *testing.T) {
 	assert.Equal(t, before, e.snapshot(t))
 	assert.Zero(t, e.bookings.adjustments, "a planned change is held back, never written as an adjustment")
 
-	// Two rows of one child in one call enroll it once.
-	twice := e.enroll(t, e.input(valid.ID, e.booking("mon")), e.input(valid.ID, e.booking("mon")))
+	// Two rows of one child in one call enroll it once; a third row with
+	// other bookings is refused like a repeated call with other bookings.
+	twice := e.enroll(t, e.input(valid.ID, e.booking("mon")), e.input(valid.ID, e.booking("mon")), e.input(valid.ID, e.booking("tue")))
 	assert.Equal(t, capability.ContractEnrollmentEnrolled, twice[0].Status)
 	assert.Equal(t, capability.ContractEnrollmentExisting, twice[1].Status)
 	assert.Equal(t, twice[0].RequestChildID, twice[1].RequestChildID)
+	assert.NotZero(t, twice[0].RequestChildID)
+	assert.Equal(t, capability.ContractEnrollmentBookingsDiffer, twice[2].Reason)
+	assert.Equal(t, 1, e.count(t, `SELECT COUNT(*) FROM enrollment.requests WHERE tenant_id = ? AND submission_source = ?`,
+		testpkg.Tenant(t), capability.RequestSourceContractImport))
+}
+
+// What the plan read of the school is compared again under the locks of the
+// enrollment. An offering whose end time, weekdays or weekday mode changed
+// since, or a phase whose service moved, answers the child as changed and
+// writes nothing: the bookings were proved against a school that is no
+// longer there.
+func TestContractEnrollmentRefusesAPlanTheSchoolOutgrew(t *testing.T) {
+	t.Parallel()
+	e := setupContractEnrollment(t)
+	ctx := testpkg.Ctx(t)
+	student := e.student(t, "Lina")
+	planned := e.input(student.ID, e.booking("mon", "wed"))
+	require.NotEmpty(t, planned.Bookings[0].EndTimes["mon"], "the offering has an end time on Monday")
+
+	// Between the plan and the enrollment the school moves the end time of
+	// the offering on Monday.
+	_, err := e.db.ExecContext(ctx, `UPDATE enrollment.care_offerings SET pickup_times = jsonb_set(pickup_times, '{mon}', '"17:45"')
+		WHERE tenant_id = ? AND id = ?`, testpkg.Tenant(t), e.offering.ID)
+	require.NoError(t, err)
+	before := e.snapshot(t)
+	want := []capability.ContractEnrollmentResult{{ContractID: e.contract, StudentID: student.ID, Status: capability.ContractEnrollmentChanged}}
+	assert.Equal(t, want, e.check(t, planned))
+	assert.Equal(t, want, e.enroll(t, planned))
+	rows := `SELECT (SELECT COUNT(*) FROM enrollment.requests WHERE tenant_id = ? AND submission_source = 'contract_import')
+		+ (SELECT COUNT(*) FROM activities.student_enrollments WHERE tenant_id = ? AND student_id = ?)`
+	assert.Zero(t, e.count(t, rows, testpkg.Tenant(t), testpkg.Tenant(t), student.ID), "no request, no child, no roster")
+	assert.Equal(t, before, e.snapshot(t))
+
+	// A weekday of the offering the booking does not use changes nothing for
+	// the child; a plan made on the new end time is enrolled.
+	fresh := e.input(student.ID, e.booking("wed"))
+	assert.Equal(t, capability.ContractEnrollmentEnrolled, e.check(t, fresh)[0].Status)
+	current := planned
+	current.Bookings = []capability.ContractBooking{e.booking("mon", "wed")}
+	current.Bookings[0].EndTimes["mon"] = "17:45"
+	assert.Equal(t, capability.ContractEnrollmentEnrolled, e.check(t, current)[0].Status)
+
+	// Other weekdays on offer, another weekday mode and a moved service of
+	// the phase are the same answer.
+	days := e.input(student.ID, e.booking("wed"))
+	days.Bookings[0].AvailableDays = []string{"mon", "tue", "wed"}
+	mode := e.input(student.ID, e.booking("wed"))
+	mode.Bookings[0].DaysOfWeekMode = offeringContract.DaysOfWeekModeFixed
+	moved := e.input(student.ID, e.booking("wed"))
+	moved.ServiceEnd = moved.ServiceEnd.AddDays(-1)
+	unplanned := e.input(student.ID, e.booking("wed"))
+	unplanned.ServiceStart, unplanned.ServiceEnd = "", ""
+	for name, input := range map[string]capability.ContractEnrollment{"weekdays": days, "mode": mode, "phase": moved, "no phase": unplanned} {
+		assert.Equal(t, capability.ContractEnrollmentChanged, e.enroll(t, input)[0].Status, name)
+	}
+	assert.Zero(t, e.count(t, rows, testpkg.Tenant(t), testpkg.Tenant(t), student.ID))
+
+	// An enrollment of this source that exists is answered as changed too,
+	// not as existing, when its offering changed since the plan.
+	stored := e.enroll(t, current)
+	require.Equal(t, capability.ContractEnrollmentEnrolled, stored[0].Status)
+	assert.Equal(t, capability.ContractEnrollmentExisting, e.enroll(t, current)[0].Status)
+	again := e.enroll(t, planned)
+	assert.Equal(t, capability.ContractEnrollmentChanged, again[0].Status)
+	assert.Equal(t, stored[0].RequestChildID, again[0].RequestChildID)
+}
+
+// The statements of an enrollment run. What Enrollment owns is read and
+// written in sets: the gates, the phase with its offerings and
+// applications, the child records with their persons, the requests, the
+// children, the choices and the approvals cost the same for one child and
+// for three. Care Plan writes the care of each child with the building
+// blocks of an approval, one child at a time: its bookings, its rosters and
+// its multi-source rosters. That residual is asserted exactly, so a further
+// statement per child fails here.
+func TestContractEnrollmentQueryBudget(t *testing.T) {
+	t.Parallel()
+	e := setupContractEnrollment(t)
+	ctx := testpkg.Ctx(t)
+	// perChildCarePlan is Care Plan's share of one child with one offering
+	// that feeds one roster: 3 statements to record the bookings, 9 to
+	// derive the rosters, 3 to reconcile the multi-source rosters.
+	const perChildCarePlan = 15
+	run := func(names ...string) testpkg.QueryMeasurement {
+		inputs := make([]capability.ContractEnrollment, len(names))
+		for i, name := range names {
+			inputs[i] = e.input(e.student(t, name).ID, e.booking("mon", "wed"))
+		}
+		counter := testpkg.CaptureQueriesForContext(t, e.db)
+		results, err := testpkg.TenantQuery1(t, counter.Context(ctx), e.db, e.owner.EnrollContractChildren, inputs)
+		require.NoError(t, err)
+		for _, result := range results {
+			require.Equal(t, capability.ContractEnrollmentEnrolled, result.Status)
+		}
+		return counter.Measurement(counter.Queries())
+	}
+	one := run("Ada")
+	three := run("Bea", "Cem", "Dua")
+	t.Logf("contract enrollment: %d statements for one child, %d for three", len(one.Statements), len(three.Statements))
+	assert.Equal(t, 2*perChildCarePlan, len(three.Statements)-len(one.Statements),
+		"two further children cost only Care Plan's per-child statements")
+	querybudgets.AssertQueryBudget(t, "services.enrollment.contract_enrollments.enroll", one)
+}
+
+// A booking that ends before its phase ends the child's roster row with it
+// (#7760). The offering names its roster through the direct link to a
+// template (ActivityGroupID): the child is on the roster and on the
+// occurrences up to the last day of the booking, and on none after it.
+// Before, such a row ran to the end of the phase whatever the booking said.
+func TestContractEnrollmentEndsTheRosterWithTheBooking(t *testing.T) {
+	t.Parallel()
+	e := setupContractEnrollment(t)
+	ctx := testpkg.Ctx(t)
+	category := testpkg.CreateTestActivityCategory(t, e.db, "Contract-Roster-End")
+	room := testpkg.CreateTestRoom(t, e.db, "Contract-Roster-End")
+	template := &careTemplateGroup{Name: "Vertrag Roster-Ende", Type: timetable.GroupTypeCare, CategoryID: category.ID,
+		MaxParticipants: 20, IsOpen: true, IsTemplate: true, PlannedRoomID: &room.ID}
+	template.SetTenantID(testpkg.Tenant(t))
+	require.NoError(t, createCareTemplateGroupRow(ctx, e.db, template))
+	period := createCareOfferingTestPeriod(t, e.db, "contract-roster-end", calendar.NewDate(2026, 8, 1), calendar.NewDate(2027, 8, 31))
+	createCareOfferingTemplateSchedule(t, e.db, template.ID, timetable.WeekdayTuesday, &period.ID)
+	offering := createAdjustmentCareOfferingWith(t, e.decisionTestEnv, "Ganztag bis Februar "+t.Name(), func(o *offeringContract.CareOfferingRecord) {
+		o.ActivityGroupID, o.CountsAsCare, o.PickupTimes = &template.ID, true, carePickupTimes("mon", "tue", "wed", "thu", "fri")
+	})
+	// The booking ends with February; one occurrence lies in it, one after.
+	last := calendar.NewDate(2027, 2, 28)
+	within := nextWeekday(calendar.NewDate(2027, 2, 1), time.Tuesday)
+	after := nextWeekday(calendar.NewDate(2027, 3, 1), time.Tuesday)
+	for _, day := range []calendar.Date{within, after} {
+		testpkg.CreateTestActivityInstance(t, e.db, day, room.ID, testpkg.ActivityInstanceOpts{ActivityGroupID: &template.ID, CalendarPeriodID: &period.ID})
+	}
+	student := e.student(t, "Lina")
+	booking := capability.ContractBooking{CareOfferingID: offering.ID, Days: []string{"tue"},
+		ValidFrom: calendar.Date(e.sourcePhase.ServiceStartDate), ValidUntil: last.AddDays(1),
+		EndTimes: map[string]string{"tue": offering.PickupTimes["tue"]}, AvailableDays: offering.AvailableDays, DaysOfWeekMode: offering.DaysOfWeekMode}
+	result := e.enroll(t, e.input(student.ID, booking))
+	require.Equal(t, capability.ContractEnrollmentEnrolled, result[0].Status)
+
+	var until calendar.Date
+	require.NoError(t, e.db.NewRaw(`SELECT valid_until FROM activities.student_enrollments WHERE tenant_id = ? AND student_id = ?
+		AND activity_group_id = ?`, testpkg.Tenant(t), student.ID, template.ID).Scan(ctx, &until))
+	assert.Equal(t, last.AddDays(1), until, "the roster row ends with the booking, exclusive")
+	onOccurrence := `SELECT COUNT(*) FROM schedule.instance_students AS s JOIN schedule.activity_instances AS i
+		ON i.id = s.instance_id AND i.tenant_id = s.tenant_id
+		WHERE s.tenant_id = ? AND s.student_id = ? AND i.activity_group_id = ? AND i.date = ?`
+	assert.Equal(t, 1, e.count(t, onOccurrence, testpkg.Tenant(t), student.ID, template.ID, within), "on the occurrence within the booking")
+	assert.Zero(t, e.count(t, onOccurrence, testpkg.Tenant(t), student.ID, template.ID, after), "on no occurrence after the booking ended")
+}
+
+// The rollover of a school year carries the child of a contract enrollment
+// into the school's review, in both modes (ADR 0309): its request names no
+// guardian, so no parent gets the renewal mail or opens the status page.
+// Waiting for the parents would withdraw the child at the deadline (opt-in)
+// or renew it unseen (opt-out). The renewal keeps the source, sends nothing
+// and is left alone by the deadline.
+func TestRolloverSendsAContractEnrollmentToReviewOptIn(t *testing.T) {
+	t.Parallel()
+	rolloverOfAContractEnrollment(t, capability.PhaseRolloverModeOptIn)
+}
+
+func TestRolloverSendsAContractEnrollmentToReviewOptOut(t *testing.T) {
+	t.Parallel()
+	rolloverOfAContractEnrollment(t, capability.PhaseRolloverModeOptOut)
+}
+
+func rolloverOfAContractEnrollment(t *testing.T, mode string) {
+	t.Helper()
+	e := setupContractEnrollment(t)
+	ctx := testpkg.Ctx(t)
+	enrolled := e.enroll(t, e.input(e.student(t, "Lina").ID, e.booking("mon", "wed")))
+	require.Equal(t, capability.ContractEnrollmentEnrolled, enrolled[0].Status)
+	mails := len(e.outbox.entries)
+
+	preview, err := e.rolloverSvc.PreviewPhaseFromSource(ctx, e.sourcePhase.ID, true)
+	require.NoError(t, err)
+	assert.Equal(t, 1, preview.ReviewByReason[capability.ReviewReasonNoGuardian], "the preview names what the rollover does")
+	assert.Zero(t, preview.CarriedCount)
+
+	request := validRolloverRequest(e.rolloverTestEnv, mode, true)
+	result, err := e.rolloverSvc.CreatePhaseFromSource(ctx, request)
+	require.NoError(t, err)
+	assert.Equal(t, map[string]int{capability.ReviewReasonNoGuardian: 1}, result.ReviewByReason)
+	assert.Equal(t, 1, result.ReviewCount)
+	assert.Zero(t, result.RolledCount, "the child waits for no parent")
+	assert.Zero(t, result.EnqueuedEmails)
+
+	renewal := func() (status, reason, source, email string) {
+		require.NoError(t, e.db.NewRaw(`SELECT rc.status, COALESCE(rc.review_reason, ''), req.submission_source, req.guardian_email
+			FROM enrollment.request_children AS rc JOIN enrollment.requests AS req ON req.id = rc.request_id AND req.tenant_id = rc.tenant_id
+			WHERE rc.tenant_id = ? AND rc.rollover_source_child_id = ?`, testpkg.Tenant(t), enrolled[0].RequestChildID).
+			Scan(ctx, &status, &reason, &source, &email))
+		return status, reason, source, email
+	}
+	status, reason, source, email := renewal()
+	assert.Equal(t, capability.ChildStatusPendingAdminReview, status)
+	assert.Equal(t, capability.ReviewReasonNoGuardian, reason)
+	assert.Equal(t, capability.RequestSourceContractImport, source, "the renewal carries the source")
+	assert.Empty(t, email)
+
+	// The deadline passes: the child is neither withdrawn nor renewed.
+	summary, err := e.rolloverSvc.RunDeadlineWorker(ctx, request.RolloverDeadline.AddDate(0, 0, 2))
+	require.NoError(t, err)
+	assert.Zero(t, summary.PendingRenewalToWithdrawn+summary.AutoRenewedToSubmitted+summary.AutoRenewedToApproved)
+	status, reason, _, _ = renewal()
+	assert.Equal(t, capability.ChildStatusPendingAdminReview, status, "the deadline leaves the review alone")
+	assert.Equal(t, capability.ReviewReasonNoGuardian, reason)
+	assert.Len(t, e.outbox.entries, mails, "no renewal mail")
 }

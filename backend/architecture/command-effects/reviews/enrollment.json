@@ -6476,6 +6476,46 @@
       "target_owner": "people-directory"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.EnrollmentContractStudents.ContractEnrollmentStudents",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ContractStudents.ContractEnrollmentStudents",
+      "reason": "Read on the supplied People Directory contract: modules/peopledirectory.Capability.ListPersonsByID. No mutation or locking read at this terminal; the silent enrollment of the children of imported care contracts (#7760, ADR 0309) reads the persons of the child records of a run by id set, to refuse a child that is gone, inactive or without a care place and to name the request child, and changes none of them.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsByID",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.EnrollmentContractStudents.ContractEnrollmentStudents",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ContractStudents.ContractEnrollmentStudents",
+      "reason": "Read on the supplied People Directory contract: modules/peopledirectory.Capability.ListStudentsByID. No mutation or locking read at this terminal; the silent enrollment of the children of imported care contracts (#7760, ADR 0309) reads the child records of a run by id set, to refuse a child that is gone, inactive or without a care place and to name the request child, and changes none of them.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsByID",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.EnrollmentContractStudents.ContractEnrollmentStudents",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ContractStudents.ContractEnrollmentStudents",
+      "reason": "Read on the supplied People Directory contract: modules/peopledirectory.Owner.ListPersonsByID. No mutation or locking read at this terminal; the silent enrollment of the children of imported care contracts (#7760, ADR 0309) reads the persons of the child records of a run by id set, to refuse a child that is gone, inactive or without a care place and to name the request child, and changes none of them.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListPersonsByID",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.EnrollmentContractStudents.ContractEnrollmentStudents",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ContractStudents.ContractEnrollmentStudents",
+      "reason": "Read on the supplied People Directory contract: modules/peopledirectory.Owner.ListStudentsByID. No mutation or locking read at this terminal; the silent enrollment of the children of imported care contracts (#7760, ADR 0309) reads the child records of a run by id set, to refuse a child that is gone, inactive or without a care place and to name the request child, and changes none of them.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentsByID",
+      "target_owner": "people-directory"
+    },
+    {
       "adr": "0067",
       "approval_adr": "0083",
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.AdjustOfferings",
@@ -8753,7 +8793,7 @@
     },
     {
       "adr": "0067",
-      "approval_adr": "0309",
+      "approval_adr": "0308",
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.EnrollmentArrivalSchedules.CreateArrivalSchedule",
       "classification": "E1",
       "effect": "mutation",
@@ -8789,7 +8829,7 @@
     },
     {
       "adr": "0067",
-      "approval_adr": "0309",
+      "approval_adr": "0308",
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.EnrollmentPickupSchedules.UpsertPickupSchedule",
       "classification": "E1",
       "effect": "mutation",

@@ -4865,6 +4865,38 @@
       "target_owner": "people-directory"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.EnrollmentContractStudents.ContractEnrollmentStudents",
+      "binding_digest": "db26a26e57a7f79729dd1c72df846385",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ContractStudents.ContractEnrollmentStudents",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsByID",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.EnrollmentContractStudents.ContractEnrollmentStudents",
+      "binding_digest": "f49265186311718427f062d375e4bc9f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ContractStudents.ContractEnrollmentStudents",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsByID",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.EnrollmentContractStudents.ContractEnrollmentStudents",
+      "binding_digest": "68456721b29b76a32d1ea714dfb733a4",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ContractStudents.ContractEnrollmentStudents",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListPersonsByID",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.EnrollmentContractStudents.ContractEnrollmentStudents",
+      "binding_digest": "4ea58b8b01a6d7608be173f729fd3046",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ContractStudents.ContractEnrollmentStudents",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentsByID",
+      "target_owner": "people-directory"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.BookingMaterializationCapability.AdjustOfferings",
       "binding_digest": "b55cfcc976c400e7415256e4d2c9ab9d",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.DecisionBookings.AdjustOfferings",

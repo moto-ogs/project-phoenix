@@ -2,6 +2,7 @@ package enrollment
 
 import (
 	"context"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
@@ -24,9 +25,26 @@ import (
 //   - A repeated call writes nothing twice: a child that has the enrollment
 //     of this source in the phase is answered with it.
 //   - A child with any other application in the phase gets none; the answer
-//     names that application.
+//     names that application. Any other means every request child of the
+//     phase that holds the child record and is neither rejected nor
+//     withdrawn: one that waits for a decision, one the office matched to
+//     the child record, an approved one. This answer is the authoritative
+//     one. The plan of the Träger (carecontract.ContractEnrollments) reads
+//     only accepted applications a contract may come from, so a row it
+//     calls ready may be answered has_application here; no contract is
+//     bound to such an application.
+//   - What the plan read of the school is compared again under the locks:
+//     the service of the phase and, per booking, the end times, the
+//     weekdays and the weekday mode of the offering. A child whose phase or
+//     offering changed since the plan is answered as changed and gets no
+//     enrollment.
 //   - A row that cannot be enrolled is refused with its reason and writes
 //     nothing; the other rows go on.
+//   - The statements of the capability itself do not grow with the number
+//     of children: it reads and writes its rows in sets. The care a child's
+//     bookings derive (the bookings, the rosters and the multi-source
+//     rosters) is written by Care Plan's building blocks of an approval,
+//     one child at a time (ADR 0309).
 
 // What the enrollment did with a child.
 const (
@@ -37,8 +55,14 @@ const (
 	// source in the phase already, with the bookings given.
 	ContractEnrollmentExisting = "existing"
 	// ContractEnrollmentHasApplication is a child with another application
-	// in the phase; RequestID names it, RequestChildID its child.
+	// in the phase; RequestID names it, RequestChildID its child. A contract
+	// is never bound to it.
 	ContractEnrollmentHasApplication = "has_application"
+	// ContractEnrollmentChanged is a child whose phase or offering is no
+	// longer what the plan read: the service of the phase moved, or an
+	// offering has other end times, weekdays or another weekday mode. It
+	// writes nothing; the caller plans again.
+	ContractEnrollmentChanged = "changed"
 	// ContractEnrollmentRefused is a child that is not enrolled; Reason
 	// says why.
 	ContractEnrollmentRefused = "refused"
@@ -84,12 +108,18 @@ const (
 )
 
 // ContractBooking is one booking of an offering: its weekdays and the
-// half-open time it holds, ValidUntil exclusive.
+// half-open time it holds, ValidUntil exclusive. EndTimes, AvailableDays and
+// DaysOfWeekMode are what the plan read of the offering: its end time on
+// each booked weekday ("mon" to "HH:MM", empty without one), the weekdays it
+// offers and whether they are fixed.
 type ContractBooking struct {
 	CareOfferingID int64
 	Days           []string
 	ValidFrom      calendar.Date
 	ValidUntil     calendar.Date
+	EndTimes       map[string]string
+	AvailableDays  []string
+	DaysOfWeekMode string
 }
 
 // ContractBookingChange is a planned change of the bookings from
@@ -102,10 +132,14 @@ type ContractBookingChange struct {
 // ContractEnrollment asks for the enrollment of one child record in a phase:
 // the bookings that hold from the service start of the phase, the planned
 // changes after it, the contract they come from and the account that acts.
+// ServiceStart and ServiceEnd are the first and the last day of the service
+// of the phase as the plan read them.
 type ContractEnrollment struct {
 	StudentID      int64
 	PhaseID        int64
 	ContractID     int64
+	ServiceStart   calendar.Date
+	ServiceEnd     calendar.Date
 	Bookings       []ContractBooking
 	Changes        []ContractBookingChange
 	ActorAccountID int64
@@ -134,6 +168,42 @@ type ContractEnrollmentHolder struct {
 	// Created tells that the child is linked to the student as the one it
 	// created (created_student_id), not only matched to it.
 	Created bool
+}
+
+// ContractEnrollmentWrite is the request of one contract enrollment with its
+// child and the submitted choices of that child, as the store writes them in
+// sets. The store fills in the ids.
+type ContractEnrollmentWrite struct {
+	Request *Request
+	Child   *RequestChild
+	Choices []SubmittedOfferingChoice
+}
+
+// ContractChildApproval approves the child of one contract enrollment for
+// the account that acted.
+type ContractChildApproval struct {
+	RequestChildID int64
+	ReviewedBy     int64
+}
+
+// ContractEnrollmentStamp is the instant and the reason the store stamps on
+// the rows of one run.
+type ContractEnrollmentStamp struct {
+	At     time.Time
+	Reason string
+}
+
+// ContractStudent is a child record with its person as the enrollment of
+// the children of imported contracts reads it.
+type ContractStudent struct {
+	ID               int64
+	Status           string
+	WithoutCarePlace bool
+	FirstName        string
+	LastName         string
+	// Birthday is nil for a person without a date of birth, and for a child
+	// record without a person.
+	Birthday *calendar.Date
 }
 
 // ContractEnrollments enrolls the children of imported care contracts in the
