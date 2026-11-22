@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the import of children and their existing care contracts
  * (#4723): the preview of a CSV file with its column mapping, the import of
@@ -9,7 +10,7 @@
 import { apiErrorFromResponse, transportFetch } from "./api-error";
 import { knownEnum } from "./contract/known-enum";
 import type * as traegerContractImportsContract from "./contract/traeger-contract-imports.generated";
-import { readJson, traegerRequest } from "./traeger-api";
+import { readJson } from "./traeger-api";
 
 const IMPORTS_PATH = "/api/traeger/contract-imports";
 
@@ -328,10 +329,7 @@ export function applyContractImport(
 export async function fetchContractImportLog(): Promise<
   ContractImportLogEntry[]
 > {
-  const entries =
-    await traegerRequest<traegerContractImportsContract.ContractImportEntry[]>(
-      IMPORTS_PATH,
-    );
+  const entries = await bffJson("org", "GET /traeger/contract-imports/");
   return entries.map((entry) => ({
     file: entry.file,
     accountId: entry.account_id,

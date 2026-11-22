@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the Personal-Import of the Träger (#4724, ADR 0089 section 5):
  * the preview of a CSV file with its column mapping, the import of the new
@@ -11,7 +12,7 @@
 import { apiErrorFromResponse, transportFetch } from "./api-error";
 import type * as traegerStaffRecordImportsContract from "./contract/traeger-staff-record-imports.generated";
 import { knownEnum } from "./contract/known-enum";
-import { readJson, traegerRequest } from "./traeger-api";
+import { readJson } from "./traeger-api";
 
 const IMPORTS_PATH = "/api/traeger/staff-record-imports";
 
@@ -221,10 +222,7 @@ export function applyStaffImport(
 
 /** The imports of the Träger, newest first. */
 export async function fetchStaffImportLog(): Promise<StaffImportLogEntry[]> {
-  const entries =
-    await traegerRequest<traegerStaffRecordImportsContract.StaffImportEntry[]>(
-      IMPORTS_PATH,
-    );
+  const entries = await bffJson("org", "GET /traeger/staff-record-imports/");
   return entries.map((entry) => ({
     file: entry.file,
     accountId: entry.account_id,

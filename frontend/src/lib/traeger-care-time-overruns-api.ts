@@ -1,12 +1,10 @@
+import { bffJson } from "~/lib/bff-fetch";
 // Länger als gebucht (#4683, ADR 0156): wie oft Kinder an den Schulen des
 // Trägers länger da waren, als ihr Vertrag bucht. Ohne Namen braucht die
 // Auswertung das Recht „Berichte lesen“, mit Namen „Verträge verwalten“.
 
 import { requiredDay } from "./contract/required-day";
 import type * as traegerCareTimeOverrunsContract from "./contract/traeger-care-time-overruns.generated";
-import { traegerRequest } from "./traeger-api";
-
-const OVERRUNS_PATH = "/api/traeger/care-time-overruns";
 
 /** Das Recht, das die Kinder mit Namen öffnet. */
 export const OVERRUN_NAMES_RIGHT = "traeger_contracts:manage";
@@ -101,10 +99,12 @@ export interface OverrunWindow {
   readonly schoolId?: string;
 }
 
-function overrunQuery(window: OverrunWindow): string {
-  const query = new URLSearchParams({ from: window.from, to: window.to });
-  if (window.schoolId) query.set("school_id", window.schoolId);
-  return query.toString();
+function overrunQuery(window: OverrunWindow) {
+  return {
+    from: window.from,
+    to: window.to,
+    school_id: window.schoolId || undefined,
+  };
 }
 
 /** Die Zahlen je Schule, ohne Namen. */
@@ -112,9 +112,9 @@ export async function fetchOverrunSummary(
   window: OverrunWindow,
 ): Promise<OverrunEvaluation> {
   return evaluationFromBackend(
-    await traegerRequest<traegerCareTimeOverrunsContract.OverrunEvaluation>(
-      `${OVERRUNS_PATH}?${overrunQuery(window)}`,
-    ),
+    await bffJson("org", "GET /traeger/care-time-overruns/", {
+      query: overrunQuery(window),
+    }),
   );
 }
 
@@ -123,9 +123,9 @@ export async function fetchOverrunChildren(
   window: OverrunWindow,
 ): Promise<OverrunEvaluation> {
   return evaluationFromBackend(
-    await traegerRequest<traegerCareTimeOverrunsContract.OverrunEvaluation>(
-      `${OVERRUNS_PATH}/children?${overrunQuery(window)}`,
-    ),
+    await bffJson("org", "GET /traeger/care-time-overruns/children", {
+      query: overrunQuery(window),
+    }),
   );
 }
 

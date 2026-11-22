@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the changes of a single invoice in the review of a monthly run
  * (#6197): amount, recipient, address and positions, each with a reason,
@@ -5,7 +6,6 @@
  */
 
 import type * as traegerCareBillingRunsContract from "./contract/traeger-care-billing-runs.generated";
-import { traegerRequest } from "./traeger-api";
 import type { PostalAddress } from "./traeger-billing-terms-api";
 import {
   type CareAmendmentKind,
@@ -95,9 +95,9 @@ export async function amendCareInvoice(
   input: CareAmendmentInput,
 ): Promise<CareRunDetail> {
   return detailFromBackend(
-    await traegerRequest<traegerCareBillingRunsContract.CareRunDetail>(
-      `/api/traeger/care-billing-runs/${encodeURIComponent(runId)}/amendments`,
-      { method: "POST", body: amendmentBody(input) },
-    ),
+    await bffJson("org", "POST /traeger/care-billing-runs/{id}/amendments", {
+      params: { id: runId },
+      body: amendmentBody(input),
+    }),
   );
 }
