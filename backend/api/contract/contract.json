@@ -34575,6 +34575,35 @@
       ]
     },
     {
+      "name": "CareJoinedChild",
+      "go_type": "parentbilling.CareJoinedChild",
+      "fields": [
+        {
+          "name": "child_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contracts",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "CareDuplicateContract"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "CareLetterMailing",
       "go_type": "parentbilling.CareLetterMailing",
       "fields": [
@@ -38110,6 +38139,17 @@
             "elem": {
               "kind": "ref",
               "ref": "CareDuplicate"
+            }
+          }
+        },
+        {
+          "name": "joined_children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "CareJoinedChild"
             }
           }
         },

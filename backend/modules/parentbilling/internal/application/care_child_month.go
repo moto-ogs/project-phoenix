@@ -24,11 +24,13 @@ import (
 // same calendar day (E3). A child with a duplicate is held with all its
 // contracts (E4). It returns one entry per doubly billed module and
 // weekday, each naming every contract of its child, and the held contracts.
-func childMonthHolds(month calendar.Date, rule string, byContract map[int64][]parentbilling.CareContractVersion, order []int64) ([]parentbilling.CareDuplicate, map[int64]bool) {
+func childMonthHolds(month calendar.Date, rule string, byContract map[int64][]parentbilling.CareContractVersion, order []int64,
+	families map[int64]string,
+) ([]parentbilling.CareDuplicate, map[int64]bool) {
 	duplicates := []parentbilling.CareDuplicate{}
 	held := map[int64]bool{}
-	entries := monthEntries(month, byContract, order)
-	for _, child := range childrenOf(byContract, order) {
+	entries := monthEntries(month, byContract, order, families)
+	for _, child := range childrenOf(byContract, order, families) {
 		doubled := doublyBilled(month, rule, child, byContract, entries)
 		if len(doubled) == 0 {
 			continue
@@ -91,8 +93,11 @@ func holdView(holds []parentbilling.CareRunHold) []parentbilling.CareDuplicate {
 // contracts: by the child record, without one by the normalized name and
 // date of birth. A contract without a record joins the child whose record's
 // contracts carry the same name and date of birth when exactly one does.
-func childrenOf(byContract map[int64][]parentbilling.CareContractVersion, order []int64) [][]int64 {
-	return groupCareChildren(contractChildrenOf(byContract), order)
+// Records at two schools of a child that changed its school are one child
+// (joinSchoolChanges).
+func childrenOf(byContract map[int64][]parentbilling.CareContractVersion, order []int64, families map[int64]string) [][]int64 {
+	children, _ := joinSchoolChanges(groupCareChildren(contractChildrenOf(byContract), order), byContract, families)
+	return children
 }
 
 func contractChildrenOf(byContract map[int64][]parentbilling.CareContractVersion) map[int64]parentbilling.CareContractChild {
@@ -133,7 +138,9 @@ func groupCareChildren(identities map[int64]parentbilling.CareContractChild, ord
 // childKeys groups the contracts in force and any issued contracts with
 // retained identities together (ADR 0158 E1). Issued contracts outside the
 // month only take part in the sibling chain, not the billed days (E2).
-func childKeys(byContract map[int64][]parentbilling.CareContractVersion, order []int64, issued map[int64]parentbilling.CareContractChild) map[int64]string {
+func childKeys(byContract map[int64][]parentbilling.CareContractVersion, order []int64, issued map[int64]parentbilling.CareContractChild,
+	families map[int64]string,
+) map[int64]string {
 	identities := contractChildrenOf(byContract)
 	order = slices.Clone(order)
 	for _, id := range slices.Sorted(maps.Keys(issued)) {
@@ -143,7 +150,8 @@ func childKeys(byContract map[int64][]parentbilling.CareContractVersion, order [
 		}
 	}
 	keys := map[int64]string{}
-	for i, child := range groupCareChildren(identities, order) {
+	children, _ := joinSchoolChanges(groupCareChildren(identities, order), byContract, families)
+	for i, child := range children {
 		key := "child:" + strconv.Itoa(i)
 		if _, inForce := byContract[child[0]]; !inForce {
 			key = "contract:" + strconv.FormatInt(child[0], 10)
@@ -245,9 +253,11 @@ func billedSlots(month calendar.Date, rule string, versions []parentbilling.Care
 // contract that begins later bills nothing that month, and a child with a
 // contract on the first has no entry. On the same start day the earlier
 // contract of the order is the entry.
-func monthEntries(month calendar.Date, byContract map[int64][]parentbilling.CareContractVersion, order []int64) map[int64]bool {
+func monthEntries(month calendar.Date, byContract map[int64][]parentbilling.CareContractVersion, order []int64,
+	families map[int64]string,
+) map[int64]bool {
 	entries := map[int64]bool{}
-	for _, child := range childrenOf(byContract, order) {
+	for _, child := range childrenOf(byContract, order, families) {
 		entry := int64(0)
 		for _, contractID := range child {
 			versions := byContract[contractID]

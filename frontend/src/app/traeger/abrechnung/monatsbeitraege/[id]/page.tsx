@@ -25,6 +25,7 @@ import {
   CareDuplicatesCard,
   CareUnpricedCard,
 } from "~/components/traeger/care-run-invoices";
+import { CareJoinedChildrenCard } from "~/components/traeger/care-joined-children-card";
 import { CareUncountedCard } from "~/components/traeger/care-uncounted-card";
 import {
   careDebitItems,
@@ -849,6 +850,9 @@ export default function TraegerCareRunPage() {
             />
           ) : null}
           <CareDuplicatesCard duplicates={run.duplicates} released={!preview} />
+          {preview ? (
+            <CareJoinedChildrenCard childrenJoined={run.joinedChildren ?? []} />
+          ) : null}
           {preview ? <CareUnpricedCard unpriced={run.unpriced} /> : null}
           {preview ? (
             <CareRunMealsCard

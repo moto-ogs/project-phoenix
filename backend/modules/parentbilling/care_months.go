@@ -339,6 +339,18 @@ type CareDuplicateContract struct {
 	SchoolName string   `json:"school_name"`
 }
 
+// CareJoinedChild is a child the run bills as one although its contracts
+// name a record at each of several schools (ADR 0158, Nachtrag
+// Schulwechsel, #7874): the same family, name and date of birth on
+// contracts that run one after the other. A record belongs to one school,
+// so here the name joins and not a record; the review shows each such
+// child with its contracts.
+type CareJoinedChild struct {
+	ChildFirstName string                  `json:"child_first_name"`
+	ChildLastName  string                  `json:"child_last_name"`
+	Contracts      []CareDuplicateContract `json:"contracts"`
+}
+
 // CareDuplicate is a child the run holds back (ADR 0158, Nachtrag
 // Kind-Monat): in a preview one entry per module and weekday two of its
 // contracts bill on the same day, naming every contract of the child; in a
@@ -397,6 +409,10 @@ type CareRunDetail struct {
 	Invoices   []CareInvoice   `json:"invoices"`
 	Unpriced   []CareUnpriced  `json:"unpriced"`
 	Duplicates []CareDuplicate `json:"duplicates"`
+	// JoinedChildren are the children of a calculated run with a record at
+	// each of several schools the run bills as one (ADR 0158, Nachtrag
+	// Schulwechsel): the office sees where the name joined them.
+	JoinedChildren []CareJoinedChild `json:"joined_children"`
 	// DuplicateChildren counts the children of Duplicates: the run, and its
 	// release, bills none of them.
 	DuplicateChildren int `json:"duplicate_children"`

@@ -632,7 +632,8 @@ func (c *CareBilling) issuedCareChildren(ctx context.Context, organizationID int
 // range the release uses.
 func (c *CareBilling) detail(ctx context.Context, reviewer parentbilling.HolidayReviewer, run parentbilling.CareRun) (parentbilling.CareRunDetail, error) {
 	detail := parentbilling.CareRunDetail{CareRun: run, Unpriced: []parentbilling.CareUnpriced{}, Duplicates: []parentbilling.CareDuplicate{},
-		MealGaps: []parentbilling.CareMealGap{}, MealUnbilled: []parentbilling.CareMealUnbilled{}, MealChanged: []parentbilling.CareMealChanged{}}
+		JoinedChildren: []parentbilling.CareJoinedChild{},
+		MealGaps:       []parentbilling.CareMealGap{}, MealUnbilled: []parentbilling.CareMealUnbilled{}, MealChanged: []parentbilling.CareMealChanged{}}
 	if run.Status == parentbilling.RunDiscarded {
 		return c.discardedDetail(ctx, reviewer.OrganizationID, detail)
 	}

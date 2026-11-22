@@ -221,3 +221,75 @@ offenen Lauf. Die Freigabe stellt das Rechnungsdatum des Laufs aus. Details im
 Register: Migration `1.15.819`; `policy/parent-billing.json` mit
 `parent_billing.care_price_lists`; Datenlebenszyklus und Aufbewahrung je ein
 Eintrag (keine Personendaten).
+
+## Nachtrag 2026-11-22: Schulwechsel mit zwei Schülerdatensätzen (#7874)
+
+Ergänzt E1. Entschieden von Product Owner Yannick Wenger (#7874).
+
+**Kontext.** Ein Schülerdatensatz (die Kinderakte) gehört zu genau einer
+Schule: Person, Schülerprofil und Datensatz tragen die `tenant_id` der
+Schule, und ein Vertrag zeigt auf den Datensatz seiner eigenen Schule
+(ADR 0307 Punkt 1). Eine schulübergreifende Kennung des Kindes gibt es
+nicht. Wechselt ein Kind mitten im Monat an eine andere Schule des Trägers
+und hat dort einen eigenen Datensatz, sah E1 zwei Kinder: Bei „voller Monat“
+war der Vertrag an der neuen Schule ein Eintritt (E2) und bekam eine eigene
+Rechnung, und die Geschwisterregel zählte das Kind zweimal, wenn beide Schulen
+zählen.
+
+**Entscheidung.** Nach E1 legt moto Kinder an verschiedenen Schulen zu einem
+Kind zusammen, wenn alle Bedingungen gelten:
+
+1. Die Verträge nennen dieselbe Familie (`ContractFamilyKey`: die
+   Mail-Adresse des Rechnungsempfängers). Eine Familie, die moto nur über
+   ihren Vertrag kennt, legt nichts zusammen.
+2. Vorname, Nachname und Geburtsdatum stimmen überein. Namen vergleicht moto
+   zusammengesetzt (NFC), mit ausgeschriebenen Umlauten und ohne Akzente
+   (`textnorm.ASCII`), ohne Groß- und Kleinschreibung und mit
+   zusammengefassten Leerzeichen: „Müller“, „Mueller“ und ein zerlegt
+   eingefügtes „Müller“ sind derselbe Name. Ohne Geburtsdatum legt moto
+   nichts zusammen.
+3. Die Kinder liegen an verschiedenen Schulen. Innerhalb einer Schule
+   entscheidet weiter der Datensatz: Zwei Datensätze dort sind zwei Kinder.
+4. Die Verträge laufen nacheinander: An keinem Tag laufen Verträge zweier
+   dieser Kinder zugleich. Zwillinge gleichen Namens an zwei Schulen haben
+   gleichzeitig laufende Verträge und bleiben zwei Kinder.
+5. Alles oder nichts: Erfüllen nicht alle Kinder mit derselben Familie, demselben
+   Namen und demselben Geburtsdatum die Punkte 3 und 4 untereinander, legt moto keines davon
+   zusammen. Das Ergebnis hängt nicht von der Reihenfolge ab, und eine
+   unklare Lage rechnet wie vor diesem Nachtrag.
+
+Das zusammengelegte Kind ist für E2 bis E4 und die Geschwisterregel ein
+Kind: Bei „voller Monat“ rechnet der Vertrag, der am 1. gilt, den Monat ab,
+der Vertrag an der neuen Schule nichts; er zählt das Kind an seiner Schule
+(ADR 0305, Nachtrag #7863). Unter „anteilig“ rechnet jeder Vertrag seine
+Tage ab. Verträge, die nur eine ausgestellte Rechnung des Monats in die Kette
+bringen (#7863), legen nichts zusammen und verhindern nichts; sie bleiben beim
+Kind ihres Datensatzes. Dieselbe Gruppierung zählt die Kinder einer Familie
+in der Kinderzahl-Übersicht.
+
+**Sichtbar.** Hier entscheidet der Name, nicht eine Kinderakte. Die Prüfung
+eines berechneten Laufs zeigt jedes so zusammengelegte Kind unter „Ein Kind
+an zwei Schulen“ mit seinen Verträgen und Schulen in der Reihenfolge ihres
+Beginns (`CareRunDetail.joined_children`), für jeden Lauf mit einer dieser
+Schulen. Der Fingerabdruck der Prüfung enthält die Liste, wenn sie nicht leer
+ist; eine Änderung macht die Freigabe ungültig wie jede andere. Ein
+freigegebener Lauf zeigt die Liste nicht (E5 speichert sie nicht): Dort
+stehen nur seine Rechnungen.
+
+**Risiko.** Ein falsches Zusammenlegen bedeutet eine Rechnung zu wenig.
+Dafür müssten zwei Kinder einer Familie denselben Vor- und Nachnamen und
+dasselbe Geburtsdatum haben und ihre Verträge an verschiedenen Schulen
+nacheinander laufen. Die Prüfung nennt jeden solchen Fall vor der Freigabe.
+
+**Verworfen.**
+
+- **Verknüpfung über eine gemeinsame Kinderakte.** Es gibt keine
+  schulübergreifende Akte; jede Schule führt ihre eigene. Die Regel „verschiedene
+  Akten sind verschiedene Kinder“ ließe genau diesen Fall offen.
+- **Zusammenlegen auch bei gleichzeitig laufenden Verträgen.** Fängt einen
+  vergessenen alten Vertrag ab, legt aber Zwillinge gleichen Namens an zwei
+  Schulen zusammen.
+- **Eine vom Büro bestätigte Verknüpfung zweier Datensätze.** Ohne Risiko,
+  braucht aber Tabelle, Maske und Protokoll; bis zur Bestätigung bliebe die
+  zusätzliche Rechnung. Ein eigenes Issue, wenn der Namensvergleich nicht
+  reicht.

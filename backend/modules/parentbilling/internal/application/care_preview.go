@@ -50,10 +50,13 @@ type careMonth struct {
 	// mandates are the SEPA mandates the invoices took (#4695).
 	mandates []parentbilling.SEPAMandate
 	// childNumbers are the numbers of children the invoices took (#7007).
-	childNumbers   []parentbilling.ChildDebtorNumber
-	invoices       []parentbilling.CareInvoice
-	unpriced       []parentbilling.CareUnpriced
-	duplicates     []parentbilling.CareDuplicate
+	childNumbers []parentbilling.ChildDebtorNumber
+	invoices     []parentbilling.CareInvoice
+	unpriced     []parentbilling.CareUnpriced
+	duplicates   []parentbilling.CareDuplicate
+	// joined are the children with a record at each of several schools
+	// the month bills as one (ADR 0158, Nachtrag Schulwechsel).
+	joined         []parentbilling.CareJoinedChild
 	billed         int
 	billedBySchool map[int64]int
 	// feeNoticesBySchool names per school the Jahresbescheide that assess
@@ -131,15 +134,17 @@ func buildCareMonth(in careMonthInput) (careMonth, error) {
 	if err := checkVersions(byContract, order); err != nil {
 		return careMonth{}, err
 	}
-	duplicates, held := childMonthHolds(in.month, in.rule, byContract, order)
-	entries := monthEntries(in.month, byContract, order)
+	families := contractFamilies(byContract, in.recipients)
+	duplicates, held := childMonthHolds(in.month, in.rule, byContract, order, families)
+	entries := monthEntries(in.month, byContract, order, families)
 	prices := newPriceBook(in.tariffs)
 	free := newFreeMonths(in.lists)
+	children, joined := joinSchoolChanges(groupCareChildren(contractChildrenOf(byContract), order), byContract, families)
 	result := careMonth{invoices: []parentbilling.CareInvoice{}, unpriced: []parentbilling.CareUnpriced{}, duplicates: duplicates,
-		freeBySchool: map[int64]int{}}
+		joined: joinedChildren(children, joined, byContract), freeBySchool: map[int64]int{}}
 	var chained []*careChainEntry
 	var unbilled []careContractPlace
-	childOf := childKeys(byContract, order, in.issuedChildIdentities())
+	childOf := childKeys(byContract, order, in.issuedChildIdentities(), families)
 	for _, contractID := range order {
 		if _, issued := in.invoiced[contractID]; issued {
 			continue
