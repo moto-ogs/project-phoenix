@@ -1,17 +1,19 @@
 "use client";
 
-import {
-  useEffect,
-  useRef,
-  type PointerEvent as ReactPointerEvent,
-  type ReactNode,
-  type RefObject,
-} from "react";
+import { useEffect, useRef, type ReactNode, type RefObject } from "react";
+import dynamic from "next/dynamic";
 
 import { BELOW_SM, useMediaQuery } from "~/lib/hooks/use-media-query";
-import { Drawer, DrawerContent, DrawerTitle } from "./drawer";
-import { FOCUSABLE_SELECTOR } from "./hooks/useScrollRegion";
-import { SCROLL_AREA_PROPS, useOverlay } from "./overlay-stack";
+import { useOverlay } from "./overlay-stack";
+
+// Der Vaul-Zweig gehört nur auf das Telefon. Desktop-Popover laden ihn nicht.
+const ResponsivePanelSheet = dynamic(
+  () =>
+    import("./responsive-panel-sheet").then(
+      (module) => module.ResponsivePanelSheet,
+    ),
+  { ssr: false },
+);
 
 /**
  * Ob ein Panel am Auslöser gerade als Blatt von unten erscheint: unter `sm`
@@ -49,11 +51,6 @@ interface ResponsivePanelProps {
    */
   readonly children: (asSheet: boolean) => ReactNode;
 }
-
-// Ein Zug im Blatt gehört nur ihm. React reicht Zeigerereignisse durch das
-// Portal an Vorfahren weiter; ein Slide-over darunter würde sonst mitgezogen.
-const keepPointerInSheet = (event: ReactPointerEvent) =>
-  event.stopPropagation();
 
 /**
  * Popover oder Blatt (ADR 0149, #7797): ab `sm` rendert der Baustein das
@@ -102,59 +99,17 @@ export function ResponsivePanel({
     <>
       {trigger}
       {asSheet ? (
-        <Drawer
+        <ResponsivePanelSheet
           open={sheetOpen}
           onOpenChange={onOpenChange}
-          shouldScaleBackground={false}
+          label={label}
+          returnFocusRef={returnFocusRef}
+          initialFocus={initialFocus}
+          sheetRef={sheetRef}
+          isTopmost={isTopmost}
         >
-          <DrawerContent
-            ref={sheetRef}
-            layer="popover"
-            // Name aus dem Titel, keine Beschreibung.
-            aria-describedby={undefined}
-            className="pb-[env(safe-area-inset-bottom)]"
-            onPointerDown={keepPointerInSheet}
-            onPointerMove={keepPointerInSheet}
-            onPointerUp={keepPointerInSheet}
-            onOpenAutoFocus={(event: Event) => {
-              event.preventDefault();
-              const sheet = sheetRef.current;
-              if (sheet === null) return;
-              const target =
-                initialFocus?.(sheet) ??
-                sheet.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
-              (target ?? sheet).focus({ preventScroll: true });
-            }}
-            onCloseAutoFocus={(event: Event) => {
-              // Ohne Radix-Auslöser gäbe Radix den Fokus nirgends zurück.
-              event.preventDefault();
-              const active = document.activeElement;
-              const focusLost =
-                active === null ||
-                active === document.body ||
-                sheetRef.current?.contains(active) === true;
-              if (focusLost) returnFocusRef.current?.focus();
-            }}
-            onEscapeKeyDown={(event: KeyboardEvent) => {
-              // Liegt etwas über dem Blatt, nimmt das die Taste.
-              if (!isTopmost()) {
-                event.preventDefault();
-                return;
-              }
-              // Radix hört in der Capture-Phase am Dokument. Ohne diesen Halt
-              // schlösse ein Modal darunter mit derselben Taste.
-              event.stopPropagation();
-            }}
-          >
-            <DrawerTitle className="sr-only">{label}</DrawerTitle>
-            <div
-              {...SCROLL_AREA_PROPS}
-              className="min-h-0 overflow-y-auto overscroll-contain px-2 pt-2 pb-4"
-            >
-              {children(true)}
-            </div>
-          </DrawerContent>
-        </Drawer>
+          {children(true)}
+        </ResponsivePanelSheet>
       ) : open ? (
         children(false)
       ) : null}
