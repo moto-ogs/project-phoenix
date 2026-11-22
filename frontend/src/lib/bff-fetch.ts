@@ -3,13 +3,16 @@
 // the path parameters, the query, the body and the answer. Decisions:
 // docs/agents/frontend-api.md#browser-calls.
 import type { z } from "zod";
-import { ApiError, apiErrorFromResponse, transportFetch } from "./api-error";
+import {
+  ApiError,
+  apiErrorFromResponse,
+  unavailableApiError,
+} from "./api-error";
 import type { portalRoutes } from "./contract/portals.generated";
 import type { RequestBody } from "./contract/runtime";
 import type { ErrorCode } from "./error-codes.generated";
-import { sessionFetch } from "./session-cache";
+import { renewTenantSession, requireTenantSession } from "./session-cache";
 
-/** A portal by the scope of its session token (`portalRoutes`). */
 /**
  * A portal by the scope of its session token (`portalRoutes`); `public` are
  * the routes without a session (links, password reset, invitations).
@@ -170,8 +173,63 @@ interface PortalRow {
   ) => Promise<Response>;
 }
 
+/**
+ * The one `fetch` of the helper. A request that never reached the BFF
+ * (offline, DNS) becomes `general.unavailable` instead of a raw TypeError
+ * like "Failed to fetch"; a cancellation stays an AbortError, because
+ * callers use AbortSignal to supersede stale work.
+ */
+async function transport(url: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch (error) {
+    if (isAbort(error)) throw error;
+    throw unavailableApiError(error);
+  }
+}
+
+function isAbort(error: unknown): boolean {
+  return (
+    error !== null &&
+    typeof error === "object" &&
+    "name" in error &&
+    error.name === "AbortError"
+  );
+}
+
+/** Whether a 401 is one of the call's operation-specific refusals. */
+async function isAuthRefusal(
+  response: Response,
+  authRefusals: readonly ErrorCode[] | undefined,
+): Promise<boolean> {
+  if (!authRefusals?.length) return false;
+  const refusal = await apiErrorFromResponse(
+    response.clone(),
+    "Request refused",
+  );
+  return refusal.code !== undefined && authRefusals.includes(refusal.code);
+}
+
 const sendPlain = (url: string, init: RequestInit) =>
-  transportFetch(url, { ...init, credentials: "include", cache: "no-store" });
+  transport(url, { ...init, credentials: "include", cache: "no-store" });
+
+/**
+ * Staff: the session gate before the request, then on a 401 one renewal and
+ * one retry. An operation-specific refusal (`authRefusals`) leaves the
+ * session as it is and reaches the caller as its ApiError.
+ */
+async function sendTenant(
+  url: string,
+  init: RequestInit,
+  { authRefusals }: CallOptions,
+): Promise<Response> {
+  await requireTenantSession();
+  const response = await transport(url, init);
+  if (response.status !== 401) return response;
+  if (await isAuthRefusal(response, authRefusals)) return response;
+  await renewTenantSession();
+  return transport(url, init);
+}
 
 function onLoginPage(path: string): boolean {
   return window.location.pathname.startsWith(path);
@@ -180,35 +238,21 @@ function onLoginPage(path: string): boolean {
 /**
  * Where the portals differ, and nowhere else. A 401 has reached the browser
  * after the BFF renewed the session once:
- * - tenant: the session gate and one renewal with a retry (`sessionFetch`),
+ * - tenant: the session gate and one renewal with a retry (`sendTenant`),
  *   then a sign-out;
  * - operator (`platform`) and parents: a switch to the portal's login
  *   (parents keep operation-specific `authRefusals` on the page);
  * - Träger (`org`), moto schule and caterer: the ApiError, as before.
  */
 const PORTALS: Readonly<Record<Portal, PortalRow>> = {
-  tenant: {
-    mount: "/api",
-    bff: "/api",
-    send: (url, init, { authRefusals }) =>
-      authRefusals
-        ? sessionFetch(url, init, { authRefusals })
-        : sessionFetch(url, init),
-  },
+  tenant: { mount: "/api", bff: "/api", send: sendTenant },
   parent: {
     mount: "/parent",
     bff: "/api/parent",
     send: async (url, init, { authRefusals }) => {
       const response = await sendPlain(url, init);
       if (response.status === 401 && typeof window !== "undefined") {
-        if (authRefusals?.length) {
-          const refusal = await apiErrorFromResponse(
-            response.clone(),
-            "Request refused",
-          );
-          if (refusal.code && authRefusals.includes(refusal.code))
-            return response;
-        }
+        if (await isAuthRefusal(response, authRefusals)) return response;
         window.location.assign("/parents/login");
       }
       return response;
@@ -324,14 +368,7 @@ async function call<T>(
   try {
     answer = await response.json();
   } catch (error) {
-    if (
-      error !== null &&
-      typeof error === "object" &&
-      "name" in error &&
-      error.name === "AbortError"
-    ) {
-      throw error;
-    }
+    if (isAbort(error)) throw error;
     answer = undefined;
   }
   if (answer === null || typeof answer !== "object" || !("data" in answer)) {

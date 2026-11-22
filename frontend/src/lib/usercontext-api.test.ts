@@ -11,6 +11,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { plainResponse } from "~/test/mocks/plain-session-fetch";
 
 // Mock dependencies
 vi.mock("next-auth/react", () => ({
@@ -62,10 +63,12 @@ describe("userContextService", () => {
         },
       ];
 
-      fetchWithAuthMock.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ status: "success", data: backendData }),
-      } as Response);
+      fetchWithAuthMock.mockImplementationOnce(() =>
+        plainResponse({
+          ok: true,
+          json: () => Promise.resolve({ status: "success", data: backendData }),
+        } as Response),
+      );
 
       const result = await userContextService.getMyEducationalGroups();
 
@@ -76,11 +79,13 @@ describe("userContextService", () => {
     });
 
     it("throws error on fetch failure", async () => {
-      fetchWithAuthMock.mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        text: () => Promise.resolve("Server error"),
-      } as Response);
+      fetchWithAuthMock.mockImplementationOnce(() =>
+        plainResponse({
+          ok: false,
+          status: 500,
+          text: () => Promise.resolve("Server error"),
+        } as Response),
+      );
 
       await expect(
         userContextService.getMyEducationalGroups(),
@@ -89,10 +94,12 @@ describe("userContextService", () => {
 
     // The BFF reads the session cookie; the browser holds no token (#5005).
     it("sends no Authorization header", async () => {
-      fetchWithAuthMock.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ status: "success", data: [] }),
-      } as Response);
+      fetchWithAuthMock.mockImplementationOnce(() =>
+        plainResponse({
+          ok: true,
+          json: () => Promise.resolve({ status: "success", data: [] }),
+        } as Response),
+      );
 
       await userContextService.getMyEducationalGroups();
 
@@ -112,10 +119,12 @@ describe("userContextService", () => {
         },
       ];
 
-      fetchWithAuthMock.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ status: "success", data: backendData }),
-      } as Response);
+      fetchWithAuthMock.mockImplementationOnce(() =>
+        plainResponse({
+          ok: true,
+          json: () => Promise.resolve({ status: "success", data: backendData }),
+        } as Response),
+      );
 
       const result = await userContextService.getMySupervisedGroups();
 
@@ -132,10 +141,12 @@ describe("userContextService", () => {
         person_id: "100",
       };
 
-      fetchWithAuthMock.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ status: "success", data: backendData }),
-      } as Response);
+      fetchWithAuthMock.mockImplementationOnce(() =>
+        plainResponse({
+          ok: true,
+          json: () => Promise.resolve({ status: "success", data: backendData }),
+        } as Response),
+      );
 
       const result = await userContextService.getCurrentStaff();
 
@@ -148,11 +159,13 @@ describe("userContextService", () => {
         .spyOn(console, "error")
         .mockImplementation(() => undefined);
 
-      fetchWithAuthMock.mockResolvedValueOnce({
-        ok: false,
-        status: 404,
-        text: () => Promise.resolve("Not found"),
-      } as Response);
+      fetchWithAuthMock.mockImplementationOnce(() =>
+        plainResponse({
+          ok: false,
+          status: 404,
+          text: () => Promise.resolve("Not found"),
+        } as Response),
+      );
 
       await expect(userContextService.getCurrentStaff()).rejects.toMatchObject({
         status: 404,

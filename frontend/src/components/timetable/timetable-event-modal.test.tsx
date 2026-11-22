@@ -9,7 +9,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { pagedJson } from "~/test/mocks/plain-session-fetch";
+import { pagedJson, plainFetch } from "~/test/mocks/plain-session-fetch";
 vi.mock(
   "~/lib/session-cache",
   () => import("~/test/mocks/plain-session-fetch"),
@@ -341,22 +341,24 @@ function stubReferenceFetch({
 } = {}) {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (input: unknown) => {
-      const url = String(input);
-      if (url.includes("/api/rooms")) {
-        return {
-          json: async () =>
-            pagedJson([{ id: "3", name: "Mensa", building: "Haus A" }]),
-        };
-      }
-      if (url.includes("/api/activities/categories")) {
-        return { json: async () => ({ data: categories }) };
-      }
-      if (url.includes("/api/groups")) {
-        return { json: async () => pagedJson(groups) };
-      }
-      return { json: async () => ({ data: [] }) };
-    }),
+    vi.fn(
+      plainFetch(async (input: unknown) => {
+        const url = String(input);
+        if (url.includes("/api/rooms")) {
+          return {
+            json: async () =>
+              pagedJson([{ id: "3", name: "Mensa", building: "Haus A" }]),
+          };
+        }
+        if (url.includes("/api/activities/categories")) {
+          return { json: async () => ({ data: categories }) };
+        }
+        if (url.includes("/api/groups")) {
+          return { json: async () => pagedJson(groups) };
+        }
+        return { json: async () => ({ data: [] }) };
+      }),
+    ),
   );
 }
 
@@ -4543,21 +4545,23 @@ describe("TimetableEventModal", () => {
   it("shows a failed room and category load in the panel instead of empty pickers (#2516)", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input: unknown) => {
-        const url = String(input);
-        if (url.includes("/api/rooms")) {
-          return { ok: false, status: 503, json: async () => ({}) };
-        }
-        if (url.includes("/api/activities/categories")) {
-          return { json: async () => ({ data: [{ id: "2", name: "AG" }] }) };
-        }
-        if (url.includes("/api/groups")) {
-          return {
-            json: async () => pagedJson([{ id: "31", name: "Klasse 1a" }]),
-          };
-        }
-        return { json: async () => ({ data: [] }) };
-      }),
+      vi.fn(
+        plainFetch(async (input: unknown) => {
+          const url = String(input);
+          if (url.includes("/api/rooms")) {
+            return { ok: false, status: 503, json: async () => ({}) };
+          }
+          if (url.includes("/api/activities/categories")) {
+            return { json: async () => ({ data: [{ id: "2", name: "AG" }] }) };
+          }
+          if (url.includes("/api/groups")) {
+            return {
+              json: async () => pagedJson([{ id: "31", name: "Klasse 1a" }]),
+            };
+          }
+          return { json: async () => ({ data: [] }) };
+        }),
+      ),
     );
     renderModal();
 
