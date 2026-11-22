@@ -43,22 +43,23 @@ func init() {
 //     Träger-Büro entered; excused_created_by is NULL for it.
 //
 // A staff-authored row still needs its staff member: the checks only accept
-// a missing author together with the mark.
+// a missing author together with the mark, and never the mark beside a staff
+// author.
 const traegerCarePlanAuthorUpSQL = `
 ALTER TABLE schedule.student_arrival_schedules
 	ADD COLUMN entered_by_traeger BOOLEAN NOT NULL DEFAULT false,
 	ALTER COLUMN created_by DROP NOT NULL,
-	ADD CONSTRAINT chk_student_arrival_schedules_author CHECK (created_by IS NOT NULL OR entered_by_traeger);
+	ADD CONSTRAINT chk_student_arrival_schedules_author CHECK ((created_by IS NOT NULL) <> entered_by_traeger);
 
 ALTER TABLE schedule.student_arrival_notes
 	ADD COLUMN entered_by_traeger BOOLEAN NOT NULL DEFAULT false,
 	ALTER COLUMN created_by DROP NOT NULL,
-	ADD CONSTRAINT chk_student_arrival_notes_author CHECK (created_by IS NOT NULL OR entered_by_traeger);
+	ADD CONSTRAINT chk_student_arrival_notes_author CHECK ((created_by IS NOT NULL) <> entered_by_traeger);
 
 ALTER TABLE schedule.student_pickup_notes
 	ADD COLUMN entered_by_traeger BOOLEAN NOT NULL DEFAULT false,
 	ALTER COLUMN created_by DROP NOT NULL,
-	ADD CONSTRAINT chk_student_pickup_notes_author CHECK (created_by IS NOT NULL OR entered_by_traeger);
+	ADD CONSTRAINT chk_student_pickup_notes_author CHECK ((created_by IS NOT NULL) <> entered_by_traeger);
 
 ALTER TABLE schedule.student_pickup_schedules
 	ADD COLUMN entered_by_traeger BOOLEAN NOT NULL DEFAULT false,
@@ -66,15 +67,17 @@ ALTER TABLE schedule.student_pickup_schedules
 	ADD CONSTRAINT student_pickup_schedules_source_check CHECK (
 		source IN ('staff', 'care_offering')
 		AND (source = 'care_offering' OR created_by IS NOT NULL OR entered_by_traeger)
+		AND NOT (created_by IS NOT NULL AND entered_by_traeger)
 	);
 
 ALTER TABLE schedule.student_arrival_exceptions
 	ADD COLUMN entered_by_traeger BOOLEAN NOT NULL DEFAULT false,
 	DROP CONSTRAINT IF EXISTS chk_exception_author,
 	ADD CONSTRAINT chk_exception_author CHECK (
-		(source = 'staff' AND (created_by IS NOT NULL OR entered_by_traeger))
-		OR source = 'guardian'
-		OR source = 'holiday_booking'
+		((source = 'staff' AND (created_by IS NOT NULL OR entered_by_traeger))
+			OR source = 'guardian'
+			OR source = 'holiday_booking')
+		AND NOT (created_by IS NOT NULL AND entered_by_traeger)
 	);
 
 ALTER TABLE schedule.student_pickup_exceptions
@@ -82,19 +85,21 @@ ALTER TABLE schedule.student_pickup_exceptions
 	ADD COLUMN excused_by_traeger BOOLEAN NOT NULL DEFAULT false,
 	DROP CONSTRAINT IF EXISTS chk_exception_author,
 	ADD CONSTRAINT chk_exception_author CHECK (
-		(source = 'staff' AND (created_by IS NOT NULL OR entered_by_traeger))
-		OR source = 'guardian'
-		OR source = 'holiday_booking'
+		((source = 'staff' AND (created_by IS NOT NULL OR entered_by_traeger))
+			OR source = 'guardian'
+			OR source = 'holiday_booking')
+		AND NOT (created_by IS NOT NULL AND entered_by_traeger)
 	),
 	DROP CONSTRAINT IF EXISTS chk_pickup_exception_partial_absence,
 	ADD CONSTRAINT chk_pickup_exception_partial_absence CHECK (
 		(excused_from IS NULL AND excused_reason IS NULL AND excused_created_by IS NULL AND NOT excused_by_traeger AND NOT excused_owns_pickup_time AND NOT excused_auto)
 		OR (excused_from IS NOT NULL AND excused_auto AND excused_created_by IS NULL AND NOT excused_by_traeger AND NOT excused_owns_pickup_time AND pickup_time IS NOT NULL)
-		OR (excused_from IS NOT NULL AND NOT excused_auto AND (excused_created_by IS NOT NULL OR excused_by_traeger) AND (NOT excused_owns_pickup_time OR pickup_time IS NOT NULL))
+		OR (excused_from IS NOT NULL AND NOT excused_auto AND (excused_created_by IS NOT NULL) <> excused_by_traeger AND (NOT excused_owns_pickup_time OR pickup_time IS NOT NULL))
 	);
 
 ALTER TABLE schedule.student_departure_exceptions
-	ADD COLUMN entered_by_traeger BOOLEAN NOT NULL DEFAULT false;
+	ADD COLUMN entered_by_traeger BOOLEAN NOT NULL DEFAULT false,
+	ADD CONSTRAINT chk_departure_exception_author CHECK (NOT (created_by IS NOT NULL AND entered_by_traeger));
 
 ` + traegerCarePlanAuthorSnapshotsSQL + `
 COMMENT ON COLUMN schedule.student_arrival_schedules.entered_by_traeger IS
@@ -133,31 +138,32 @@ UPDATE users.student_care_exit_source_removals
 		AND NOT snapshot ? 'excused_by_traeger';
 `
 
-// The shapes before this migration cannot hold a row without a staff author:
-// the down migration deletes what the Träger-Büro entered, live and archived
-// by a care exit, as the down migrations of 1.15.297 and 20261115180000
-// delete their author-less rows.
-const traegerCarePlanAuthorDownSQL = `
-DELETE FROM users.student_care_exit_source_removals
-	WHERE kind IN ('pickup_schedule', 'arrival_schedule', 'pickup_exception', 'arrival_exception', 'departure_exception')
-		AND jsonb_typeof(snapshot) = 'object'
-		AND snapshot ->> 'entered_by_traeger' = 'true';
-UPDATE users.student_care_exit_source_removals
-	SET snapshot = snapshot || '{"excused_from": null, "excused_reason": null, "excused_owns_pickup_time": false, "excused_by_traeger": false}'::jsonb
-	WHERE kind = 'pickup_exception'
-		AND jsonb_typeof(snapshot) = 'object'
-		AND snapshot ->> 'excused_by_traeger' = 'true';
-DELETE FROM schedule.student_arrival_schedules WHERE created_by IS NULL;
-DELETE FROM schedule.student_arrival_notes WHERE created_by IS NULL;
-DELETE FROM schedule.student_pickup_notes WHERE created_by IS NULL;
-DELETE FROM schedule.student_pickup_schedules WHERE created_by IS NULL AND source = 'staff';
-DELETE FROM schedule.student_arrival_exceptions WHERE created_by IS NULL AND source = 'staff';
-DELETE FROM schedule.student_pickup_exceptions WHERE created_by IS NULL AND source = 'staff';
-UPDATE schedule.student_pickup_exceptions
-	SET excused_from = NULL, excused_reason = NULL, excused_owns_pickup_time = false, excused_by_traeger = false
-	WHERE excused_by_traeger;
+// traegerCarePlanAuthorEntriesSQL counts what the Träger-Büro entered, live
+// and archived by a care exit.
+const traegerCarePlanAuthorEntriesSQL = `
+SELECT
+	(SELECT COUNT(*) FROM schedule.student_arrival_schedules WHERE entered_by_traeger)
+	+ (SELECT COUNT(*) FROM schedule.student_arrival_notes WHERE entered_by_traeger)
+	+ (SELECT COUNT(*) FROM schedule.student_pickup_notes WHERE entered_by_traeger)
+	+ (SELECT COUNT(*) FROM schedule.student_pickup_schedules WHERE entered_by_traeger)
+	+ (SELECT COUNT(*) FROM schedule.student_arrival_exceptions WHERE entered_by_traeger)
+	+ (SELECT COUNT(*) FROM schedule.student_pickup_exceptions WHERE entered_by_traeger OR excused_by_traeger)
+	+ (SELECT COUNT(*) FROM schedule.student_departure_exceptions WHERE entered_by_traeger)
+	+ (SELECT COUNT(*) FROM users.student_care_exit_source_removals
+		WHERE jsonb_typeof(snapshot) = 'object'
+			AND (snapshot ->> 'entered_by_traeger' = 'true' OR snapshot ->> 'excused_by_traeger' = 'true'))
+`
 
+// The shapes before this migration cannot hold a row without a staff author.
+// Deleting such rows would take care data with them that the Träger-Büro did
+// not enter (a partial absence a staff member added to the same day) and
+// leave attendance that was excused through them without its reason, so the
+// down migration only runs while no such entry exists. The marks a care-exit
+// snapshot got in the up migration stay: restoring a row ignores a key
+// without a column.
+const traegerCarePlanAuthorDownSQL = `
 ALTER TABLE schedule.student_departure_exceptions
+	DROP CONSTRAINT IF EXISTS chk_departure_exception_author,
 	DROP COLUMN IF EXISTS entered_by_traeger;
 
 ALTER TABLE schedule.student_pickup_exceptions
@@ -220,6 +226,13 @@ func traegerCarePlanAuthorUp(ctx context.Context, db *bun.DB) error {
 
 func traegerCarePlanAuthorDown(ctx context.Context, db *bun.DB) error {
 	return db.RunInTx(ctx, &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
+		var entries int
+		if err := tx.NewRaw(traegerCarePlanAuthorEntriesSQL).Scan(ctx, &entries); err != nil {
+			return fmt.Errorf("count the Betreuungszeiten the Träger-Büro entered: %w", err)
+		}
+		if entries > 0 {
+			return fmt.Errorf("migration %s cannot be rolled back while %d Betreuungszeiten entries of the Träger-Büro exist; restore the release database backup and matching images", traegerCarePlanAuthorVersion, entries)
+		}
 		if _, err := tx.ExecContext(ctx, traegerCarePlanAuthorDownSQL); err != nil {
 			return fmt.Errorf("drop the Träger-Büro author of Betreuungszeiten: %w", err)
 		}

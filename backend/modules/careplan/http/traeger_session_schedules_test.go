@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
@@ -470,4 +471,44 @@ func TestTraegerSchoolSessionApprovesParentWeeklyRequest(t *testing.T) {
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 
 	assertTraegerAuthored(t, tc, "student_pickup_schedules", chain.StudentID, onWeekday(3))
+}
+
+// A day a parent set from the parents portal is taken over by the next staff
+// write. The Träger-Büro takes it over the same way: the row becomes a staff
+// entry without a staff author and with the mark, on a create over the day
+// and on an update of the row.
+func TestTraegerSchoolSessionTakesOverParentDay(t *testing.T) {
+	t.Parallel()
+
+	tc := setupStudentsRoute(t, fixedCalendarClock)
+	chain := testpkg.CreateTestParentGuardianChain(t, tc.db)
+	claims := traegerSchoolClaims(t, tc)
+	base := fmt.Sprintf("/%d", chain.StudentID)
+	createDay, updateDay := studentsTestToday.AddDays(1), studentsTestToday.AddDays(2)
+	reason := "Von den Eltern"
+
+	parentDay := func(date calendar.Date) int64 {
+		return testpkg.InsertStudentPickupExceptionRow(t, tc.db, testpkg.StudentPickupExceptionRow{
+			TenantID: chain.TenantID, StudentID: chain.StudentID, ExceptionDate: date,
+			Reason: &reason, Source: careplan.ExceptionSourceGuardian, CreatedByGuardian: &chain.AccountID,
+		}).ID
+	}
+	assertTakenOver := func(date calendar.Date) {
+		assertTraegerAuthored(t, tc, "student_pickup_exceptions", chain.StudentID, onDate("exception_date", date))
+		var sources []string
+		require.NoError(t, tc.db.NewSelect().TableExpr("schedule.student_pickup_exceptions").ColumnExpr("source").
+			Where("student_id = ?", chain.StudentID).Where("exception_date = ?", date).Scan(context.Background(), &sources))
+		require.Equal(t, []string{careplan.ExceptionSourceStaff}, sources)
+	}
+
+	parentDay(createDay)
+	requireTraegerWrite(t, tc, claims, http.MethodPost, base+"/pickup-exceptions", map[string]any{
+		"exception_date": createDay.String(), "pickup_time": "13:45", "reason": "Vom Träger-Büro",
+	}, http.StatusCreated)
+	assertTakenOver(createDay)
+
+	requireTraegerWrite(t, tc, claims, http.MethodPut, fmt.Sprintf("%s/pickup-exceptions/%d", base, parentDay(updateDay)), map[string]any{
+		"exception_date": updateDay.String(), "pickup_time": "14:15", "reason": "Vom Träger-Büro",
+	}, http.StatusOK)
+	assertTakenOver(updateDay)
 }

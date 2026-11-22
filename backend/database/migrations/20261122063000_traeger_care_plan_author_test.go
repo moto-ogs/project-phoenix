@@ -1,6 +1,7 @@
 package migrations
 
 import (
+	"strings"
 	"testing"
 
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -45,6 +46,9 @@ func TestTraegerCarePlanAuthorConstraints(t *testing.T) {
 		require.ErrorContains(t, err, insert.constraint, "%s without author and without mark", insert.name)
 		_, err = db.ExecContext(ctx, insert.sql, tenantID, student.ID, true)
 		require.NoError(t, err, "%s entered by the Träger-Büro", insert.name)
+		table := strings.Fields(insert.sql)[2]
+		_, err = db.ExecContext(ctx, "UPDATE "+table+" SET created_by = 1 WHERE tenant_id = ? AND student_id = ?", tenantID, student.ID)
+		require.ErrorContains(t, err, insert.constraint, "%s with a staff author beside the mark", insert.name)
 	}
 
 	// A manual partial absence needs its staff member or the mark of the
@@ -101,4 +105,45 @@ func TestTraegerCarePlanAuthorBackfillsCareExitSnapshots(t *testing.T) {
 	require.JSONEq(t, `{"reason": "vor der Migration", "entered_by_traeger": false, "excused_by_traeger": false}`, snapshots["pickup_exception"])
 	require.JSONEq(t, `{"entered_by_traeger": true}`, snapshots["arrival_schedule"], "a mark the snapshot already has wins")
 	require.JSONEq(t, `{}`, snapshots["source_booking"], "a booking has no author")
+
+	// What resuming care does with the snapshot: both marks come back set.
+	var restored struct {
+		Entered *bool `bun:"entered"`
+		Excused *bool `bun:"excused"`
+	}
+	require.NoError(t, db.NewRaw(`
+		SELECT (r).entered_by_traeger AS entered, (r).excused_by_traeger AS excused
+		FROM (
+			SELECT jsonb_populate_record(NULL::schedule.student_pickup_exceptions, snapshot) AS r
+			FROM users.student_care_exit_source_removals
+			WHERE tenant_id = ? AND student_id = ? AND kind = 'pickup_exception'
+		) restored`, tenantID, student.ID).Scan(ctx, &restored))
+	require.NotNil(t, restored.Entered)
+	require.NotNil(t, restored.Excused)
+	require.False(t, *restored.Entered)
+	require.False(t, *restored.Excused)
+}
+
+// The shapes before the migration cannot hold what the Träger-Büro entered.
+// Rolling back while such an entry exists would have to delete care data, so
+// the down migration refuses and leaves every row as it is.
+func TestTraegerCarePlanAuthorDownRefusesWhileTraegerEntriesExist(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	ctx := testpkg.Ctx(t)
+	tenantID := testpkg.Tenant(t)
+	student := testpkg.CreateTestStudent(t, db, "Lena", "Rueckweg", "1c")
+
+	_, err := db.ExecContext(ctx, `
+		INSERT INTO schedule.student_pickup_schedules (tenant_id, student_id, weekday, pickup_time, entered_by_traeger)
+		VALUES (?, ?, 2, '15:00', TRUE)`, tenantID, student.ID)
+	require.NoError(t, err)
+
+	require.ErrorContains(t, traegerCarePlanAuthorDown(ctx, db), "cannot be rolled back")
+
+	var kept int
+	require.NoError(t, db.NewRaw(`
+		SELECT COUNT(*) FROM schedule.student_pickup_schedules
+		WHERE tenant_id = ? AND student_id = ? AND entered_by_traeger`, tenantID, student.ID).Scan(ctx, &kept))
+	require.Equal(t, 1, kept)
 }
