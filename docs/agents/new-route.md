@@ -213,7 +213,7 @@ and a file in front of a registered path fails
 ## Routes outside the contract
 
 Every route of the catalog registers a contract, or
-`routesOutsideContract` (`backend/api/routes_outside_contract.go`) names it
+`routesOutsideContract` (`backend/api/routes_outside_contract_registry_test.go`) names it
 with one reason of a closed set and a sentence why:
 
 | Reason | Applies to |
