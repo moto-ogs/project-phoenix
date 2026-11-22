@@ -6,7 +6,7 @@ import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { DESKTOP_WIDTH, setViewportWidth } from "~/test/helpers/viewport";
 import type { BillingFamily } from "~/lib/traeger-billing-families-api";
 
-const { api, mockPush } = vi.hoisted(() => ({
+const { api, mockPush, mockReplace, nav } = vi.hoisted(() => ({
   api: {
     fetchBillingFamilies: vi.fn(),
     setFamilyDebtorNumber: vi.fn(),
@@ -15,6 +15,8 @@ const { api, mockPush } = vi.hoisted(() => ({
     setChildDebtorNumber: vi.fn(),
   },
   mockPush: vi.fn(),
+  mockReplace: vi.fn(),
+  nav: { search: "" },
 }));
 
 vi.mock("~/lib/traeger-billing-families-api", async (importOriginal) => ({
@@ -27,9 +29,9 @@ vi.mock("~/lib/traeger-url", () => ({
   traegerPath: (path: string) => path.replace(/^\/traeger/, "") || "/",
 }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: mockPush, replace: vi.fn() }),
+  useRouter: () => ({ push: mockPush, replace: mockReplace }),
   usePathname: () => "/abrechnung/familien",
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => new URLSearchParams(nav.search),
 }));
 
 import TraegerBillingFamiliesPage from "./page";
@@ -103,6 +105,8 @@ describe("TraegerBillingFamiliesPage", () => {
     api.fetchBillingFamilies.mockReset();
     api.setFamilyDebtorNumber.mockReset();
     mockPush.mockReset();
+    mockReplace.mockReset();
+    nav.search = "";
     api.fetchBillingFamilies.mockResolvedValue([SCHNEIDER, BERGER]);
     api.fetchDebtorNumberSettings.mockReset();
     api.fetchDebtorNumberSettings.mockResolvedValue({
@@ -110,6 +114,8 @@ describe("TraegerBillingFamiliesPage", () => {
       scope: "payer",
     });
     api.fetchFamilyChildren.mockReset();
+    // The list always reads the families with a contract (#7770).
+    api.fetchFamilyChildren.mockResolvedValue([]);
     api.setChildDebtorNumber.mockReset();
   });
 
@@ -155,6 +161,15 @@ describe("TraegerBillingFamiliesPage", () => {
     expect(screen.getAllByText("107,50 €").length).toBeGreaterThan(0);
   });
 
+  it("asks for no child and no number when the Träger keeps one per payer (#7770)", async () => {
+    renderPage();
+    expect(
+      (await screen.findAllByText("Sabine Schneider"))[0],
+    ).toBeInTheDocument();
+    expect(api.fetchFamilyChildren).toHaveBeenCalledWith(false);
+    expect(api.fetchFamilyChildren).not.toHaveBeenCalledWith(true);
+  });
+
   it("names the open sum a claim before payment", async () => {
     // #6348: moto sees no incoming payment. The open sum is what the
     // invoices still ask for, never a checked arrear.
@@ -198,7 +213,8 @@ describe("TraegerBillingFamiliesPage", () => {
 
   it("says when no family is known yet", async () => {
     // #6692: a family stands here from the confirmed holiday registration
-    // on, not only from the first released run.
+    // on, not only from the first released run; since #7770 also from its
+    // contract on.
     api.fetchBillingFamilies.mockResolvedValue([]);
     renderPage();
 
@@ -207,7 +223,7 @@ describe("TraegerBillingFamiliesPage", () => {
     ).toBeInTheDocument();
     expect(
       screen.getAllByText(
-        "Eine Familie steht hier, sobald du eine Ferienanmeldung bestätigst oder eine Rechnung freigibst.",
+        "Eine Familie steht hier, sobald sie einen Vertrag hat, du eine Ferienanmeldung bestätigst oder eine Rechnung freigibst.",
       )[0],
     ).toBeInTheDocument();
   });
@@ -505,6 +521,172 @@ describe("TraegerBillingFamiliesPage", () => {
       "sabine@example.org",
       expect.objectContaining({ firstName: "Mia" }),
       "",
+    );
+  });
+});
+
+describe("TraegerBillingFamiliesPage: payment method of a family (#7770)", () => {
+  const DEBIT: BillingFamily = {
+    ...MAIER,
+    id: "0",
+    recipientFirstName: "Anna",
+    recipientLastName: "Muster",
+    recipientEmail: "anna@example.org",
+    familyEmail: "anna@example.org",
+    familyDebtorNumber: "",
+    holidayOnly: false,
+    paymentMethods: [],
+    familyPaymentMethod: "direct_debit",
+    contractId: "42",
+  };
+
+  beforeEach(() => {
+    api.fetchBillingFamilies.mockReset();
+    mockPush.mockReset();
+    mockReplace.mockReset();
+    nav.search = "";
+    api.fetchDebtorNumberSettings.mockReset();
+    api.fetchDebtorNumberSettings.mockResolvedValue({
+      format: { digitsOnly: false, minDigits: 0, maxDigits: 0 },
+      scope: "payer",
+    });
+    api.fetchFamilyChildren.mockReset();
+    // The list always reads the families with a contract (#7770).
+    api.fetchFamilyChildren.mockResolvedValue([]);
+  });
+
+  it("shows the payment method set for a family before its first invoice", async () => {
+    api.fetchBillingFamilies.mockResolvedValue([DEBIT]);
+    renderPage();
+
+    await screen.findAllByText("Anna Muster");
+    expect(screen.getAllByText("Festgelegt:")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("Lastschrift")[0]).toBeInTheDocument();
+  });
+
+  it("lists a family with only a contract when the Träger keeps the number per payer", async () => {
+    api.fetchBillingFamilies.mockResolvedValue([DEBIT]);
+    api.fetchFamilyChildren.mockResolvedValue([
+      {
+        contractId: "77",
+        familyEmail: "neu@example.org",
+        recipientFirstName: "Nora",
+        recipientLastName: "Neu",
+        children: [
+          {
+            firstName: "Nils",
+            lastName: "Neu",
+            birthDate: null,
+            debtorNumber: "",
+          },
+        ],
+      },
+    ]);
+    renderPage();
+
+    // Anker: the family known only by its contract stands in the list.
+    await screen.findAllByText("Nora Neu");
+    // The number stays the family's: no child numbers in payer scope.
+    expect(screen.queryByText("Nils")).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Aktionen für Nora Neu" })[0]!,
+    );
+    expect(
+      await screen.findByRole("menuitem", {
+        name: /Empfänger und Zahlung ändern/,
+      }),
+    ).toHaveAttribute(
+      "href",
+      expect.stringMatching(/\/abrechnung\/familien\/zahlung\/77$/),
+    );
+    // The number dialog needs a row this family does not have yet: its
+    // number is set on the payment page.
+    expect(
+      screen.queryByRole("menuitem", { name: /Debitorennummer eintragen/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("names the invoices' method when it differs from the one set", async () => {
+    api.fetchBillingFamilies.mockResolvedValue([
+      {
+        ...SCHNEIDER,
+        paymentMethods: ["transfer"],
+        familyPaymentMethod: "direct_debit",
+      },
+    ]);
+    renderPage();
+
+    await screen.findAllByText("Sabine Schneider");
+    expect(screen.getAllByText("Lastschrift")[0]).toBeInTheDocument();
+    expect(
+      screen.getAllByText("Auf Rechnungen: Überweisung")[0],
+    ).toBeInTheDocument();
+  });
+
+  it("opens recipient and payment from the row menu under the active filter", async () => {
+    nav.search = "zahlung=lastschrift";
+    api.fetchBillingFamilies.mockResolvedValue([DEBIT]);
+    renderPage();
+
+    await screen.findAllByText("Anna Muster");
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Aktionen für Anna Muster" })[0]!,
+    );
+    expect(
+      screen.getByRole("menuitem", { name: /Empfänger und Zahlung ändern/ }),
+    ).toHaveAttribute(
+      "href",
+      "/abrechnung/familien/zahlung/42?zahlung=lastschrift",
+    );
+  });
+
+  it("offers no payment entry for a family without a contract", async () => {
+    api.fetchBillingFamilies.mockResolvedValue([{ ...DEBIT, contractId: "" }]);
+    renderPage();
+
+    await screen.findAllByText("Anna Muster");
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Aktionen für Anna Muster" })[0]!,
+    );
+    // Anker: the row menu of the family is open.
+    expect(
+      screen.getByRole("menuitem", { name: /Debitorennummer eintragen/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("menuitem", { name: /Empfänger und Zahlung ändern/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows only families without a set method under „?zahlung=ohne“", async () => {
+    nav.search = "zahlung=ohne";
+    api.fetchBillingFamilies.mockResolvedValue([SCHNEIDER, DEBIT]);
+    renderPage();
+
+    // Anker: the family without a method stays, with the filter as a chip.
+    expect(
+      (await screen.findAllByText("Sabine Schneider"))[0],
+    ).toBeInTheDocument();
+    const chip = screen.getAllByRole("button", {
+      name: "Filter Zahlungsweg nicht festgelegt entfernen",
+    })[0]!;
+    expect(chip).toBeInTheDocument();
+    expect(screen.queryByText("Anna Muster")).not.toBeInTheDocument();
+    fireEvent.click(chip);
+    expect(mockReplace).toHaveBeenCalledWith("/abrechnung/familien", {
+      scroll: false,
+    });
+  });
+
+  it("puts the chosen payment filter into the address", async () => {
+    api.fetchBillingFamilies.mockResolvedValue([SCHNEIDER, DEBIT]);
+    renderPage();
+
+    await screen.findAllByText("Anna Muster");
+    fireEvent.click(screen.getAllByText("Alle Zahlungswege")[0]!);
+    fireEvent.click((await screen.findAllByText("Lastschrift festgelegt"))[0]!);
+    expect(mockReplace).toHaveBeenCalledWith(
+      "/abrechnung/familien?zahlung=lastschrift",
+      { scroll: false },
     );
   });
 });

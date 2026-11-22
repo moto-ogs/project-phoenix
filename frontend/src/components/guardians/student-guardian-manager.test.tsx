@@ -238,6 +238,36 @@ vi.mock("./guardian-form-modal", () => ({
         >
           Submit Form
         </button>
+        <button
+          type="button"
+          onClick={() =>
+            onSubmit(
+              [
+                {
+                  id: "test-id",
+                  // "" deletes the stored e-mail address.
+                  guardianData: {
+                    firstName: "Test",
+                    lastName: "Guardian",
+                    email: "",
+                  },
+                  relationshipData: { guardianRole: "legal_guardian" },
+                  phoneNumbers: [
+                    {
+                      phoneNumber: "+49 123 456",
+                      phoneType: "mobile",
+                      isPrimary: true,
+                    },
+                  ],
+                },
+              ],
+              undefined,
+            ).catch(() => undefined)
+          }
+          data-testid="submit-cleared-email"
+        >
+          Submit Cleared Email
+        </button>
         {mode === "edit" && onDelete && (
           <button
             type="button"
@@ -747,6 +777,23 @@ describe("StudentGuardianManager", () => {
           "Die Angaben von Test Guardian sind gespeichert.",
         );
       });
+    });
+
+    it("keeps the e-mail address when the new phone number is refused", async () => {
+      mockAddGuardianPhoneNumber.mockRejectedValue(new Error("refused"));
+
+      render(<StudentGuardianManager studentId="student-123" />);
+      fireEvent.click(await screen.findByTestId("edit-guardian-1"));
+      fireEvent.click(screen.getByTestId("submit-cleared-email"));
+
+      await waitFor(() => {
+        expect(mockAddGuardianPhoneNumber).toHaveBeenCalledWith(
+          "guardian-1",
+          expect.objectContaining({ phoneNumber: "+49 123 456" }),
+        );
+      });
+      // The address goes only after the number is saved (#7770).
+      expect(mockUpdateGuardian).not.toHaveBeenCalled();
     });
 
     it("does not show edit buttons when readOnly", async () => {

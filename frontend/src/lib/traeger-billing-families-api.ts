@@ -78,6 +78,23 @@ export interface BillingFamily extends BillingAmounts {
   /** The family has an issued document, so it opens a page of its own. */
   readonly hasDocuments: boolean;
   /**
+   * The payment method the office set for the family (#7770): what its next
+   * invoice takes. "" or absent while the Abrechnungsvorgaben decide, also
+   * for one this build does not know.
+   */
+  readonly familyPaymentMethod?: PaymentMethod | "";
+  /**
+   * A contract of the family, absent or "" without one: it opens the
+   * family's recipient and payment.
+   */
+  readonly contractId?: string;
+  /**
+   * The family is known by its contract alone: no document, no number and
+   * no deviation yet. Its number is set with its recipient and payment,
+   * which create its row; the number dialog of the list needs that row.
+   */
+  readonly contractOnly?: boolean;
+  /**
    * The children and their own numbers when the Träger keeps a number per
    * child (#7007); absent when it keeps one per payer.
    */
@@ -98,6 +115,8 @@ export interface FamilyChild {
 
 /** A family with its children as the list of children answers it. */
 export interface FamilyChildNumbers {
+  /** A contract of the family, absent for a family known only by a number. */
+  readonly contractId?: string;
   readonly familyEmail: string;
   readonly recipientFirstName: string;
   readonly recipientLastName: string;
@@ -163,6 +182,11 @@ function knownPaymentMethods(
   });
 }
 
+/** A wire ID as the pages use it: "" where the backend sends 0 for none. */
+function idOrNone(id: string): string {
+  return id === "0" ? "" : id;
+}
+
 function familyFromBackend(
   family: traegerBillingFamiliesContract.BillingFamily,
 ): BillingFamily {
@@ -182,6 +206,8 @@ function familyFromBackend(
     familyDebtorNumber: family.family_debtor_number,
     holidayOnly: family.holiday_only,
     hasDocuments: family.id !== "0",
+    familyPaymentMethod: knownPaymentMethod(family.family_payment_method) ?? "",
+    contractId: idOrNone(family.contract_id),
     issuedCents: family.issued_cents,
     cancelledCents: family.cancelled_cents,
     creditedCents: family.credited_cents,
@@ -292,12 +318,18 @@ function childFromBackend(
  * Every family with a care contract or a child's number, with its children
  * and their own numbers (#7007).
  */
-export async function fetchFamilyChildren(): Promise<FamilyChildNumbers[]> {
+export async function fetchFamilyChildren(
+  numbers = true,
+): Promise<FamilyChildNumbers[]> {
+  // Without numbers the backend names the families with a contract only:
+  // no child, no number, no entry in a number's trail (#7770).
   const families = await bffJson(
     "org",
     "GET /traeger/billing-families/children",
+    { query: { numbers: numbers ? undefined : false } },
   );
   return families.map((family) => ({
+    contractId: idOrNone(family.contract_id),
     familyEmail: family.family_email,
     recipientFirstName: family.recipient_first_name,
     recipientLastName: family.recipient_last_name,
@@ -333,22 +365,36 @@ export async function setChildDebtorNumber(
 /**
  * The families of the list with their children (#7007): each family takes
  * its children by its address, and a family with a contract or a child's
- * number but no document and no number of its own joins the list.
+ * number but no document and no number of its own joins the list. A Träger
+ * that keeps the number per payer (`perChild` false) gets the same families
+ * and their contract without the children (#7770): a family with a contract
+ * stands in the list before its first invoice, so its payment can be set.
  */
 export function withFamilyChildren(
   families: readonly BillingFamily[],
   children: readonly FamilyChildNumbers[],
+  perChild = true,
 ): BillingFamily[] {
   const byEmail = new Map(
     children.map((family) => [family.familyEmail, family]),
   );
-  const listed = families.map((family) => ({
-    ...family,
-    children: byEmail.get(family.familyEmail)?.children ?? [],
-  }));
+  const listed = families.map((family) => {
+    const known = byEmail.get(family.familyEmail);
+    return {
+      ...family,
+      // The family's longest-running contract wins: what is saved goes with
+      // the contract it was saved through. A family without a contract in
+      // force keeps the contract of its deviation.
+      contractId: known?.contractId || family.contractId || "",
+      ...(perChild ? { children: known?.children ?? [] } : {}),
+    };
+  });
   const known = new Set(families.map((family) => family.familyEmail));
   for (const family of children) {
     if (known.has(family.familyEmail)) continue;
+    // Known only by a child's number: without the children it has nothing
+    // to show and no contract to open, so it joins only a per-child list.
+    if (!perChild && !family.contractId) continue;
     listed.push({
       id: "0",
       recipientFirstName: family.recipientFirstName,
@@ -365,7 +411,10 @@ export function withFamilyChildren(
       familyDebtorNumber: "",
       holidayOnly: false,
       hasDocuments: false,
-      children: family.children,
+      familyPaymentMethod: "",
+      contractId: family.contractId ?? "",
+      contractOnly: Boolean(family.contractId),
+      ...(perChild ? { children: family.children } : {}),
       issuedCents: 0,
       cancelledCents: 0,
       creditedCents: 0,

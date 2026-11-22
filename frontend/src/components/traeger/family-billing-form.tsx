@@ -10,6 +10,7 @@
 // des Trägers (#6675).
 
 import { useRef, useState } from "react";
+import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { CustomSelect } from "~/components/ui/custom-select";
@@ -49,6 +50,11 @@ export interface FamilyBillingTarget {
   readonly childName: string;
   /** The invoice is issued: the change reaches only the next run. */
   readonly issued: boolean;
+  /**
+   * The form was opened for the family itself, not from an invoice of a
+   * run (#7770): no invoice exists yet or none is in view.
+   */
+  readonly withoutRun?: boolean;
 }
 
 export interface FamilyBillingDraft {
@@ -198,6 +204,16 @@ export function familyBillingInput(
   };
 }
 
+/** Which invoices the saved choice reaches, said above the fields. */
+function scopeText(target: FamilyBillingTarget): string {
+  if (target.withoutRun) {
+    return "Gilt für alle neuen Rechnungen dieser Familie, auch für Geschwister. Speichern erstellt keine Rechnung und bucht nichts ab.";
+  }
+  return target.issued
+    ? "Gilt für alle Rechnungen dieser Familie ab dem nächsten Lauf. Diese Rechnung ist schon ausgestellt und bleibt, wie sie ist."
+    : "Gilt für alle Rechnungen dieser Familie, auch für Geschwister. Die Vorschau zeigt die Änderung gleich.";
+}
+
 const RECIPIENT_ITEMS: readonly { value: RecipientKind; label: string }[] = [
   { value: "applicant", label: "Person im Vertrag" },
   { value: "both", label: "Beide Eltern" },
@@ -217,6 +233,8 @@ export function FamilyBillingForm({
   target,
   existing,
   runDueText,
+  termsText,
+  mandateInForce,
   format = NO_DEBTOR_NUMBER_FORMAT,
   onCancel,
   onSaved,
@@ -232,6 +250,17 @@ export function FamilyBillingForm({
    * so „Wie im Lauf“ says which dates it takes. Missing outside a run.
    */
   runDueText?: string | null;
+  /**
+   * What „Wie in den Abrechnungsvorgaben“ takes today, e.g. „Überweisung“
+   * (#7770); missing where the page does not read the Vorgaben.
+   */
+  termsText?: string | null;
+  /**
+   * Whether the family has a SEPA mandate in force for the creditor of
+   * today; null or missing while unknown. The choice „Lastschrift“ names a
+   * missing mandate where the person makes it.
+   */
+  mandateInForce?: boolean | null;
   onCancel: () => void;
   onSaved: (family: FamilyBilling | null) => void;
 }>) {
@@ -294,11 +323,7 @@ export function FamilyBillingForm({
         void submit();
       }}
     >
-      <p className="text-sm text-gray-600">
-        {target.issued
-          ? "Gilt für alle Rechnungen dieser Familie ab dem nächsten Lauf. Diese Rechnung ist schon ausgestellt und bleibt, wie sie ist."
-          : "Gilt für alle Rechnungen dieser Familie, auch für Geschwister. Die Vorschau zeigt die Änderung gleich."}
-      </p>
+      <p className="text-sm text-gray-600">{scopeText(target)}</p>
       <div className="space-y-2">
         <FieldLabel id={id("recipient-label")}>Rechnung an</FieldLabel>
         <div
@@ -459,11 +484,25 @@ export function FamilyBillingForm({
             </ChoiceTile>
           ))}
         </div>
+        {/* What the first choice takes today, right under the choices. */}
+        {termsText ? (
+          <p className="text-sm text-gray-600">
+            In den Abrechnungsvorgaben steht: {termsText}.
+          </p>
+        ) : null}
         {/* The precondition where the person chooses the debit. */}
         <p className="text-sm text-gray-600">
-          Lastschrift geht nur mit gültigem Mandat. Den Stand siehst du unten
-          unter „SEPA-Lastschriftmandat“.
+          Lastschrift geht nur mit gültigem Mandat. Ein Mandat allein ändert den
+          Zahlungsweg nicht. Den Stand siehst du unten unter
+          „SEPA-Lastschriftmandat“.
         </p>
+        {draft.paymentMethod === "direct_debit" && mandateInForce === false ? (
+          <Alert
+            type="warning"
+            size="compact"
+            message="Diese Familie hat kein gültiges Mandat. Abgebucht wird erst, wenn du unten eins erfasst."
+          />
+        ) : null}
       </div>
       <CustomSelect
         id={id("due-day")}
