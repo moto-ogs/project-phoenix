@@ -159,6 +159,12 @@ func TestCorrectionSheetReadsBackAsUnchanged(t *testing.T) {
 	assert.Empty(t, extended.correction.Renames)
 	assert.Equal(t, []ports.CorrectionParty{{FirstName: "Anna", LastName: "Neu"}}, extended.correction.Adds)
 
+	// In another order and case the written name still is its own party:
+	// its e-mail address never moves under another person's name.
+	recased := planCorrection(t, comma, "10", "Lia Beispiel", "Neu, Anna | ROTH, geb. Klein | Schmidt, geb. Müller, Eva", "", "", "vertrag.pdf")
+	assert.Equal(t, []ports.CorrectionParty{{ID: 91, LastName: "ROTH, geb. Klein"}}, recased.correction.Renames)
+	assert.Equal(t, []ports.CorrectionParty{{FirstName: "Anna", LastName: "Neu"}}, recased.correction.Adds)
+
 	index, missing := resolveCorrectionColumns(sheet.Headers)
 	require.Empty(t, missing)
 	check := newCorrectionCheck([]ports.CorrectionSubject{subject, unknown, comma})

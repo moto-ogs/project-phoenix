@@ -392,19 +392,30 @@ func planParties(entry correctionEntry, subject ports.CorrectionSubject, plan *c
 }
 
 // writtenCorrectionParties are the parties of the row, each name the list to
-// download wrote for a party of the contract read as that party: a stored
-// last name may carry a comma, which no other reading would keep.
+// download wrote for a party of the contract read with that party's own
+// boundary between last and first name: a stored last name may carry a
+// comma, which no other reading would keep. A name written as the list
+// writes it is that party; one that differs only in case keeps its new
+// spelling and the party's boundary, so it pairs with its own party.
 func writtenCorrectionParties(entry correctionEntry, stored []ports.CorrectionParty) []ports.CorrectionParty {
 	wanted, free := slices.Clone(entry.parties), slices.Clone(stored)
-	for n, name := range entry.partyNames {
-		at := slices.IndexFunc(free, func(party ports.CorrectionParty) bool {
-			return joinWords(correctionPartyCell([]ports.CorrectionParty{party})) == name
-		})
-		if at < 0 {
-			continue
+	claimed := make([]bool, len(wanted))
+	for _, same := range []func(a, b string) bool{func(a, b string) bool { return a == b }, strings.EqualFold} {
+		for n, name := range entry.partyNames {
+			if claimed[n] {
+				continue
+			}
+			at := slices.IndexFunc(free, func(party ports.CorrectionParty) bool {
+				return same(joinWords(correctionPartyCell([]ports.CorrectionParty{party})), name)
+			})
+			if at < 0 {
+				continue
+			}
+			if free[at].FirstName == "" {
+				wanted[n] = ports.CorrectionParty{LastName: name}
+			}
+			claimed[n], free = true, slices.Delete(free, at, at+1)
 		}
-		wanted[n] = ports.CorrectionParty{FirstName: free[at].FirstName, LastName: free[at].LastName}
-		free = slices.Delete(free, at, at+1)
 	}
 	return wanted
 }
