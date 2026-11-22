@@ -11,6 +11,7 @@
 // Design follows the Anmeldungen/Planung surface language: one calm content
 // surface inside `TenantPage`, gray-50 stat blocks, no colored dashboards.
 
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 import { SectionLabel } from "~/components/ui/section-label";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -70,7 +71,6 @@ import { useClassDayRefresh } from "./use-class-day-refresh";
 import { useSchoolReportRefusal } from "./use-school-report-refusal";
 import { useSchoolAbsenceReports } from "./use-school-absence-reports";
 import { InsetPanel } from "~/components/ui/inset-panel";
-import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 
 // Die Ansicht bleibt bei Übergaben lange offen — sie muss sich selbst
 // aktualisieren, damit z. B. eine um 11:30 gemeldete Krankmeldung nicht

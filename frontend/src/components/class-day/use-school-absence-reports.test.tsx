@@ -1,5 +1,6 @@
 // #6594: Eine späte Antwort auf „Meldung zurücknehmen“ schließt nur ihre
 // eigene Rückfrage, nicht die inzwischen für ein anderes Kind geöffnete.
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -9,7 +10,6 @@ import {
   useSchoolAbsenceReports,
   type AbsenceReportTarget,
 } from "./use-school-absence-reports";
-import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 
 const target = (studentId: string): AbsenceReportTarget => ({
   schoolClass: "2a",

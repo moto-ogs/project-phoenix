@@ -1,3 +1,4 @@
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 import {
   act,
   fireEvent,
@@ -694,5 +695,4 @@ describe("school report cache", () => {
 });
 
 import { resumeSWRSession } from "~/lib/swr/scope";
-import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 afterEach(() => resumeSWRSession());

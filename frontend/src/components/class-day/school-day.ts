@@ -7,8 +7,8 @@
 //
 // Diese Datei enthält nur die Regeln, kein React, kein Fetch.
 
-import { classDayOverviewPath, classDayPath } from "./routes";
 import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
+import { classDayOverviewPath, classDayPath } from "./routes";
 
 /** Query-Parameter, unter dem die geöffnete Liste in der Adresse steht. */
 const SCHOOL_DAY_LIST_PARAM = "liste";

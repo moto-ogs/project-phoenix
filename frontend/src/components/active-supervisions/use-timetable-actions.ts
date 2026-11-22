@@ -358,15 +358,15 @@ export function useTimetableActions(
         setIsStartingInstance(instance.id);
         const result = await timetableOperationsApi.start(instance.id);
         const startedRoom = allRooms.find(
-          (room) => room.room_id === instance.roomId,
+          (room) => room.roomId === instance.roomId,
         );
         router.push(
           adoptSession(result.activeGroupId, instance.id, instance.roomId),
         );
         memory.write("supervision-last-session", result.activeGroupId);
         memory.write("sidebar-last-room", instance.roomId);
-        if (startedRoom?.room_name) {
-          memory.write("sidebar-last-room-name", startedRoom.room_name);
+        if (startedRoom?.roomName) {
+          memory.write("sidebar-last-room-name", startedRoom.roomName);
         } else {
           memory.remove("sidebar-last-room-name");
         }

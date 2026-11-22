@@ -7,6 +7,7 @@
 // Kind und Tag stehen als Query-Parameter in der Adresse, wie auf der
 // Klassenseite (`CLASS_DAY_CLASS_PARAM`).
 
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -29,7 +30,6 @@ import { schoolClassLabel } from "~/lib/school-class-label";
 import { schoolPath } from "~/lib/school-url";
 import { IsolatedSWRCache, useSWRAuth } from "~/lib/swr";
 import { schoolPortalKeys } from "~/lib/swr/portal-keys";
-import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 
 // Erklärung der Seite für neue Lehrkräfte (#7567), im Laden wie in der
 // fertigen Seite.

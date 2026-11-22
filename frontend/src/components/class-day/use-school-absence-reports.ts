@@ -11,12 +11,12 @@
 // bei der Anwesenheit am Vormittag). Die Liste lädt danach neu; das Kind
 // verschwindet sichtbar aus „Fehlen ohne Meldung“.
 
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 import { useState } from "react";
 import { useApiFormError } from "~/contexts/ToastContext";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import type { AbsenceReportStatus } from "~/lib/school-class-day-api";
-import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 
 const logger = createLogger({ component: "SchoolAbsenceReports" });
 

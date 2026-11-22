@@ -21,6 +21,11 @@ const { activityForm } = vi.hoisted(() => ({
     validateForm: () => null,
   },
 }));
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 vi.mock("~/hooks/useActivityForm", () => ({
   parseParticipantLimit: (value: string) =>
     value ? Number.parseInt(value, 10) : null,

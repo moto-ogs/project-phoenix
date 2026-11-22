@@ -32,11 +32,8 @@ import {
 } from "~/contexts/ToastContext";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { InsetPanel } from "~/components/ui/inset-panel";
-import {
-  ApiError,
-  apiErrorFromResponse,
-  transportFetch,
-} from "~/lib/api-error";
+import { ApiError } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { ActionHint } from "~/components/ui/action-hint";
@@ -2119,22 +2116,11 @@ async function uploadEnrollmentLegalAGBDocument(file: File): Promise<string> {
   const formData = new FormData();
   formData.append("document", file);
 
-  const response = await transportFetch(
-    "/api/settings/enrollment/legal-agb-document",
-    { method: "POST", body: formData },
+  const { document_url: documentURL } = await bffJson(
+    "tenant",
+    "POST /api/settings/enrollment/legal-agb-document",
+    { body: formData, errorMessage: "AGB document upload failed" },
   );
-
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `AGB document upload failed (${response.status})`,
-    );
-  }
-
-  const result = (await response.json()) as {
-    data?: { document_url?: string };
-  };
-  const documentURL = result.data?.document_url;
   if (!documentURL) {
     throw new ApiError("AGB document upload returned no URL", 502);
   }
@@ -2142,17 +2128,13 @@ async function uploadEnrollmentLegalAGBDocument(file: File): Promise<string> {
 }
 
 async function deleteEnrollmentLegalAGBDocument(): Promise<void> {
-  const response = await transportFetch(
-    "/api/settings/enrollment/legal-agb-document",
-    { method: "DELETE" },
+  await bffJson(
+    "tenant",
+    "DELETE /api/settings/enrollment/legal-agb-document",
+    {
+      errorMessage: "AGB document delete failed",
+    },
   );
-
-  if (!response.ok && response.status !== 204) {
-    throw await apiErrorFromResponse(
-      response,
-      `AGB document delete failed (${response.status})`,
-    );
-  }
 }
 
 type SaveOutcome = { readonly ok: true } | SaveFailure;

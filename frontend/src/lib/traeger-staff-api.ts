@@ -747,27 +747,19 @@ export type StaffHireMatch =
       readonly staffId: string;
     });
 
-/**
- * One entry of `details.matches` of the hire refusal. It travels in the error
- * envelope, which no contract decoder reads, so its IDs may still be numbers.
- */
-interface HireMatchDetails {
-  kind?: unknown;
-  staff_record_id?: unknown;
-  school_id?: unknown;
-  school_name?: unknown;
-  staff_id?: unknown;
-  first_name?: unknown;
-  last_name?: unknown;
-  reasons?: unknown;
-}
-
 function hireMatchReasons(raw: unknown): StaffHireMatchReason[] {
   if (!Array.isArray(raw)) return [];
   return HIRE_MATCH_REASONS.filter((reason) => raw.includes(reason));
 }
 
-function hireMatch(match: HireMatchDetails): StaffHireMatch | null {
+/**
+ * One entry of `details.matches` of the hire refusal. It travels in the error
+ * envelope, which no contract decoder reads; Go writes its IDs as JSON
+ * numbers (`workforce.HireMatch`, #7808).
+ */
+function hireMatch(
+  match: Readonly<Record<string, unknown>>,
+): StaffHireMatch | null {
   const common = {
     firstName: typeof match.first_name === "string" ? match.first_name : "",
     lastName: typeof match.last_name === "string" ? match.last_name : "",
@@ -809,7 +801,7 @@ export function staffHireMatches(
   const matches: StaffHireMatch[] = [];
   for (const entry of raw as unknown[]) {
     if (typeof entry !== "object" || entry === null) continue;
-    const match = hireMatch(entry as HireMatchDetails);
+    const match = hireMatch(entry as Record<string, unknown>);
     if (match) matches.push(match);
   }
   return matches;

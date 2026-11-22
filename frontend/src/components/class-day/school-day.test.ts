@@ -1,3 +1,4 @@
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 import { describe, expect, it } from "vitest";
 import {
   schoolDayChildrenByClass,
@@ -6,7 +7,6 @@ import {
   schoolDayListPath,
   visibleSchoolDayLists,
 } from "./school-day";
-import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 
 const zero: schoolClassDayContract.SchoolDayTotals = {
   students: 0,

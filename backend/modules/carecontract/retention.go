@@ -27,7 +27,7 @@ const (
 
 // ContractRetention lets the Elternabrechnung keep the retention record of
 // each contract and delete a contract after the period the Träger
-// instructed (ADR 0184). Both calls join the caller's administrative
+// instructed (ADR 0184). Every call joins the caller's administrative
 // transaction; the Elternabrechnung decides when a contract is due.
 type ContractRetention interface {
 	// RetentionFacts lists the contracts past their draft of one Träger
@@ -42,4 +42,14 @@ type ContractRetention interface {
 	// the delete. A draft, a contract in force on today and a contract
 	// without a day of its event are never deleted.
 	DeleteEndedContracts(ctx context.Context, organizationID int64, contractIDs []int64, today calendar.Date, event string, lastEventOn calendar.Date) ([]int64, error)
+	// DeletableContracts answers which of the given contracts
+	// DeleteEndedContracts would delete as they stand now, by the same
+	// condition, without deleting them (#7862).
+	DeletableContracts(ctx context.Context, organizationID int64, contractIDs []int64, today calendar.Date, event string, lastEventOn calendar.Date) ([]int64, error)
+	// RecipientEmails names per given contract of the Träger past its draft
+	// the e-mail address its invoices go to: the first party with one, as
+	// ContractBilling.BillingRecipients picks it. A contract without such a
+	// party is left out. The Elternabrechnung finds the family of a contract
+	// by it before the contract is deleted (#7862).
+	RecipientEmails(ctx context.Context, organizationID int64, contractIDs []int64) (map[int64]string, error)
 }

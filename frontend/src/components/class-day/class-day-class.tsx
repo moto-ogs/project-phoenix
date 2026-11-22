@@ -1,4 +1,5 @@
 "use client";
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 
 // Eine Klasse an einem Tag ("moto schule", #1772/#2294).
@@ -80,7 +81,6 @@ import { classDayChildPath, classDayDateParam, isWeekendISO } from "./routes";
 import { schoolDayListParam, schoolDayListPath } from "./school-day";
 import { Section, type StudentRowMorning } from "./student-row";
 import { type ClassHomeworkApi, useClassHomework } from "./use-class-homework";
-import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 
 const logger = createLogger({ component: "ClassDayClass" });
 

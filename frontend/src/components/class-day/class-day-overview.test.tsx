@@ -1,3 +1,4 @@
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 import {
   act,
   fireEvent,
@@ -43,7 +44,6 @@ vi.unmock("swr");
 import { SWRConfig } from "~/lib/swr/testing";
 import { ToastProvider } from "~/contexts/ToastContext";
 import type { ReactElement } from "react";
-import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 
 function render(ui: ReactElement) {
   const cache = new Map();
