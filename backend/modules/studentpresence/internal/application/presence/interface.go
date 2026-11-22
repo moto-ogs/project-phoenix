@@ -115,9 +115,6 @@ type Service interface {
 	GetUnclaimedActiveGroups(ctx context.Context) ([]*ports.ActiveGroup, error)
 	ClaimActiveGroup(ctx context.Context, groupID, staffID int64, role string) (*ports.GroupSupervisor, error)
 
-	// Cross-tenant student visibility (Ferienbetreuung / holiday care)
-	GetCrossTenantStudents(ctx context.Context, hostingTenantID int64) ([]ports.CrossTenantStudent, error)
-
 	// Tracking indicators — returns per-student match results for the given labels.
 	// Each student gets a []bool aligned with the labels slice.
 	GetTrackingIndicators(ctx context.Context, studentIDs []int64, labels []string) (map[int64][]bool, error)
