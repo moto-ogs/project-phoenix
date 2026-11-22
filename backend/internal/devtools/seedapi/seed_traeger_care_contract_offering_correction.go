@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedTraegerCareContractOfferingCorrectionStep moves the bookings of one
@@ -109,9 +110,9 @@ func seedCorrectableContract(client *Client, auth AuthRef, school int64) (int64,
 	var list struct {
 		Data struct {
 			Contracts []struct {
-				ID             apiID  `json:"id"`
-				ChildFirstName string `json:"child_first_name"`
-				ChildLastName  string `json:"child_last_name"`
+				ID             ident.ID `json:"id"`
+				ChildFirstName string   `json:"child_first_name"`
+				ChildLastName  string   `json:"child_last_name"`
 			} `json:"contracts"`
 		} `json:"data"`
 	}
@@ -166,9 +167,9 @@ func seedSchoolModules(client *Client, auth AuthRef, school int64) ([]string, er
 	}
 	var templates struct {
 		Data []struct {
-			SchoolID     apiID  `json:"school_id"`
-			OfferingName string `json:"offering_name"`
-			Active       bool   `json:"active"`
+			SchoolID     ident.ID `json:"school_id"`
+			OfferingName string   `json:"offering_name"`
+			Active       bool     `json:"active"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &templates); err != nil {
