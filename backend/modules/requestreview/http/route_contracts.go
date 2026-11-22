@@ -1,6 +1,8 @@
 package requestreviewhttp
 
 import (
+	"slices"
+
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	requestreview "github.com/moto-ogs/project-phoenix/modules/requestreview"
 )
@@ -15,17 +17,24 @@ type ChangeRequestPendingCountResponse struct {
 func StudentRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalTenant}
 	text := func(name string) common.QueryParam { return common.QueryParam{Name: name, Kind: common.QueryString} }
-	list := []common.QueryParam{
-		{Name: "view", Kind: common.QueryString, Values: []string{"open", "history"}},
+	page := []common.QueryParam{
 		text("search"),
 		{Name: "student_id", Kind: common.QueryID},
-		text("types"), text("status"),
-		{Name: "from", Kind: common.QueryDate}, {Name: "to", Kind: common.QueryDate},
+		text("types"),
 		text("cursor"),
 		{Name: "limit", Kind: common.QueryInt},
 	}
+	history := append(slices.Clone(page),
+		text("status"), common.QueryParam{Name: "from", Kind: common.QueryDate}, common.QueryParam{Name: "to", Kind: common.QueryDate})
+	// The open list still answers ?view=history and the old data member for
+	// one release: a tab of the previous frontend reads them (#7808).
+	legacy := append(slices.Clone(history), common.QueryParam{Name: "view", Kind: common.QueryString, Values: []string{"open", "history"}})
 	return []common.RouteContract{
-		{Method: "GET", Pattern: "/change-requests", Portals: portals, Query: list, Response: requestreview.Page{}},
+		{
+			Method: "GET", Pattern: "/change-requests", Portals: portals, Query: legacy, Response: requestreview.Page{},
+			DeprecatedFields: []string{"Item.data", "Item.can_correct"},
+		},
+		{Method: "GET", Pattern: "/change-requests/history", Portals: portals, Query: history, Response: requestreview.HistoryPage{}},
 		{Method: "GET", Pattern: "/change-requests/pending-count", Portals: portals, Response: ChangeRequestPendingCountResponse{}},
 		{
 			Method: "GET", Pattern: "/change-requests/access", Portals: portals,

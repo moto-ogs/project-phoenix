@@ -36,8 +36,8 @@ func TestCorrectionLogPreservesCursorBeforeVisibilityAndAccess(t *testing.T) {
 	require.Len(t, rows, 1)
 	require.Equal(t, first, rows[0].ID)
 	require.Equal(t, "Visible Correction", rows[0].StudentName)
-	response, ok := rows[0].Data.(requestreview.DirectCorrectionResponse)
-	require.True(t, ok)
+	response := rows[0].Payload.DirectCorrection
+	require.NotNil(t, response)
 	require.Equal(t, "Unbekannt", response.ChangedByName)
 	require.Empty(t, response.Diff)
 	allowed = false

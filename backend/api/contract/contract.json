@@ -5777,6 +5777,51 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/students/change-requests/history",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "cursor",
+          "kind": "string"
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "limit",
+          "kind": "int"
+        },
+        {
+          "name": "search",
+          "kind": "string"
+        },
+        {
+          "name": "status",
+          "kind": "string"
+        },
+        {
+          "name": "student_id",
+          "kind": "id"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        },
+        {
+          "name": "types",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "HistoryPage"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/students/change-requests/pending-count",
       "portals": [
         "tenant"
@@ -37669,6 +37714,103 @@
       ]
     },
     {
+      "name": "CareRequestHistoryResponse",
+      "go_type": "requestreview.CareRequestHistoryResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "request_kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "requested",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "CareRequestDiffResponse"
+            }
+          }
+        },
+        {
+          "name": "diff",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "CareRequestDiffResponse"
+            }
+          }
+        },
+        {
+          "name": "decision_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "decided_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "decided_by_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "signed",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "CareRequestPickupChangeResponse",
       "go_type": "requestreviewhttp.CareRequestPickupChangeResponse",
       "fields": [
@@ -48614,6 +48756,59 @@
       ]
     },
     {
+      "name": "DirectCorrectionResponse",
+      "go_type": "requestreview.DirectCorrectionResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "changed_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "changed_by_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "diff",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OfferingRequestDiffResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "DirectoryPersonRequest",
       "go_type": "users.DirectoryPersonRequest",
       "request": true,
@@ -55189,6 +55384,140 @@
             "elem": {
               "kind": "int"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "HistoryItem",
+      "go_type": "requestreview.HistoryItem",
+      "fields": [
+        {
+          "name": "request_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "occurred_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "can_correct",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "family_protected",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "submitted_by_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "submitted_by_relationship",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "master_data",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "MasterDataChangeRequestHistoryResponse"
+          }
+        },
+        {
+          "name": "care_schedule",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "CareRequestHistoryResponse"
+          }
+        },
+        {
+          "name": "offering",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "OfferingRequestHistoryResponse"
+          }
+        },
+        {
+          "name": "excused",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "StaffExcusedRequestHistoryResponse"
+          }
+        },
+        {
+          "name": "direct_correction",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "DirectCorrectionResponse"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HistoryPage",
+      "go_type": "requestreview.HistoryPage",
+      "fields": [
+        {
+          "name": "items",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HistoryItem"
+            }
+          }
+        },
+        {
+          "name": "next_cursor",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -62707,6 +63036,7 @@
         {
           "name": "can_correct",
           "optional": true,
+          "deprecated": true,
           "schema": {
             "kind": "bool"
           }
@@ -62733,9 +63063,42 @@
         },
         {
           "name": "data",
+          "deprecated": true,
           "schema": {
             "kind": "json",
             "nullable": true
+          }
+        },
+        {
+          "name": "master_data",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "MasterDataChangeRequestResponse"
+          }
+        },
+        {
+          "name": "care_schedule",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "CareRequestResponse"
+          }
+        },
+        {
+          "name": "offering",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "OfferingRequestResponse"
+          }
+        },
+        {
+          "name": "excused",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "StaffExcusedRequestResponse"
           }
         }
       ]
@@ -63744,6 +64107,102 @@
             "elem": {
               "kind": "string"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "MasterDataChangeRequestHistoryResponse",
+      "go_type": "requestreview.MasterDataChangeRequestHistoryResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "field_key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "old_value",
+          "optional": true,
+          "schema": {
+            "kind": "json",
+            "nullable": true
+          }
+        },
+        {
+          "name": "new_value",
+          "schema": {
+            "kind": "json",
+            "nullable": true
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "reviewed_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "decided_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "decided_by_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "review_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -66853,6 +67312,235 @@
       ]
     },
     {
+      "name": "OfferingRequestDiffResponse",
+      "go_type": "requestreview.OfferingRequestDiffResponse",
+      "fields": [
+        {
+          "name": "offering_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "old",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "new",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "automatic",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "automatic_days",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "rule_days",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "new_when_excluded",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "trigger_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "trigger_names",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "optoutable",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_course",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OfferingRequestHistoryResponse",
+      "go_type": "requestreview.OfferingRequestHistoryResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "effective_from",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "earliest_effective_from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "latest_effective_from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "requested_effective_from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "diff",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OfferingRequestDiffResponse"
+            }
+          }
+        },
+        {
+          "name": "unchanged",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "OfferingRequestUnchangedResponse"
+            }
+          }
+        },
+        {
+          "name": "full_withdrawal",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "reviewed_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "decided_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "decided_by_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "requested",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "OfferingRequestRequestedResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "OfferingRequestPreviewResponse",
       "go_type": "careplanhttp.OfferingRequestPreviewResponse",
       "fields": [
@@ -66907,6 +67595,167 @@
           "optional": true,
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OfferingRequestRequestedResponse",
+      "go_type": "requestreview.OfferingRequestRequestedResponse",
+      "fields": [
+        {
+          "name": "offering_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "new",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OfferingRequestResponse",
+      "go_type": "requestreview.OfferingRequestResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "effective_from",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "earliest_effective_from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "latest_effective_from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "requested_effective_from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "diff",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OfferingRequestDiffResponse"
+            }
+          }
+        },
+        {
+          "name": "unchanged",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "OfferingRequestUnchangedResponse"
+            }
+          }
+        },
+        {
+          "name": "full_withdrawal",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "reviewed_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OfferingRequestUnchangedResponse",
+      "go_type": "requestreview.OfferingRequestUnchangedResponse",
+      "fields": [
+        {
+          "name": "offering_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "days",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -88008,6 +88857,97 @@
           "optional": true,
           "schema": {
             "kind": "date"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffExcusedRequestHistoryResponse",
+      "go_type": "requestreview.StaffExcusedRequestHistoryResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "absence_status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "dates",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "note",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "reviewed_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "decided_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "decided_by_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
