@@ -194,7 +194,7 @@ describe("resolveDayDeviation", () => {
     const result = resolveDayDeviation("2026-07-20", [
       statusDay("2026-07-20", "sick"),
     ]);
-    expect(result).toEqual({ kind: "sick", label: "Krank", note: null });
+    expect(result).toEqual({ kind: "sick", label: "Krank" });
   });
 
   it("ignores a cleared status-day row", () => {
@@ -226,7 +226,6 @@ describe("resolveDayDeviation", () => {
     expect(result).toEqual({
       kind: "class_trip",
       label: "Entschuldigt",
-      note: null,
     });
   });
 
