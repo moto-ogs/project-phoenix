@@ -73,17 +73,19 @@ type BillingTerms struct {
 	store     TermsStore
 	contracts parentbilling.CareContracts
 	formats   parentbilling.DebtorNumberFormats
+	// today is the Berlin day a contract still runs on.
+	today func() calendar.Date
 }
 
 var _ parentbilling.BillingTerms = (*BillingTerms)(nil)
 
 // NewBillingTerms builds the terms; a family's debtor number has the
 // format of the Träger (#6675).
-func NewBillingTerms(store TermsStore, contracts parentbilling.CareContracts, formats parentbilling.DebtorNumberFormats) *BillingTerms {
-	if store == nil || contracts == nil || formats == nil {
-		panic("parent billing: the store, the care contracts and the debtor number format are required")
+func NewBillingTerms(store TermsStore, contracts parentbilling.CareContracts, formats parentbilling.DebtorNumberFormats, today func() calendar.Date) *BillingTerms {
+	if store == nil || contracts == nil || formats == nil || today == nil {
+		panic("parent billing: the store, the care contracts, the debtor number format and the day clock are required")
 	}
-	return &BillingTerms{store: store, contracts: contracts, formats: formats}
+	return &BillingTerms{store: store, contracts: contracts, formats: formats, today: today}
 }
 
 // ServiceTerms answers the terms of every service, the defaults where the
@@ -252,7 +254,11 @@ func (t *BillingTerms) SaveFamilyBilling(ctx context.Context, reviewer parentbil
 	if err != nil {
 		return nil, err
 	}
-	family.FamilyEmail, family.ContractID = key, ident.ID(input.ContractID)
+	binding, err := t.bindingContract(ctx, reviewer.OrganizationID, key, input.ContractID, stored)
+	if err != nil {
+		return nil, err
+	}
+	family.FamilyEmail, family.ContractID = key, ident.ID(binding)
 	if !deviates(family) && (stored == nil || stored.LastUsedOn == nil) {
 		return nil, t.removeFamilyBilling(ctx, reviewer, key)
 	}
@@ -265,6 +271,61 @@ func (t *BillingTerms) SaveFamilyBilling(ctx context.Context, reviewer parentbil
 		return nil, fmt.Errorf("parent billing: record the family billing: %w", err)
 	}
 	return &saved, nil
+}
+
+// familyContract is a contract of a family in force around today.
+type familyContract struct {
+	id    int64
+	until calendar.Date
+}
+
+// bindingContract answers the contract the deviation of the family hangs
+// on. The row goes when that contract is deleted (#6692), so it is the
+// family's contract that runs longest, whichever contract the office saved
+// through (#7770).
+func (t *BillingTerms) bindingContract(ctx context.Context, organizationID int64, family string, saved int64, stored *parentbilling.FamilyBilling) (int64, error) {
+	versions, err := contractVersionsAround(ctx, t.contracts, organizationID, t.today())
+	if err != nil {
+		return 0, err
+	}
+	_, until, ids := contractSpans(versions)
+	recipients, err := t.contracts.Recipients(ctx, organizationID, ids)
+	if err != nil {
+		return 0, fmt.Errorf("parent billing: read the contract parties: %w", err)
+	}
+	var contracts []familyContract
+	for _, id := range ids {
+		if parentbilling.ContractFamilyKey(recipients[id].Email, id) == family {
+			contracts = append(contracts, familyContract{id: id, until: until[id]})
+		}
+	}
+	held := int64(0)
+	if stored != nil {
+		held = stored.ContractID.Int64()
+	}
+	return bindingContractOf(contracts, saved, held, t.today()), nil
+}
+
+// bindingContractOf picks the contract of the family that still runs and
+// ends last. Without one: the contract saved through when it is not in
+// force yet (sent, it will run), else the contract the deviation hangs on,
+// else the one saved through.
+func bindingContractOf(contracts []familyContract, saved, held int64, today calendar.Date) int64 {
+	best, last, savedInForce := int64(0), calendar.Date(""), false
+	for _, contract := range contracts {
+		savedInForce = savedInForce || contract.id == saved
+		if !contract.until.Before(today) && contract.until.After(last) {
+			best, last = contract.id, contract.until
+		}
+	}
+	switch {
+	case best != 0:
+		return best
+	case !savedInForce || held == 0:
+		return saved
+	default:
+		return held
+	}
 }
 
 // removeFamilyBilling removes the row of a family that deviates in nothing
