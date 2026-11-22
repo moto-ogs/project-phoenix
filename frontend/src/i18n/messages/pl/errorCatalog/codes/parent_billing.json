@@ -100,6 +100,7 @@
   "sepa_mandate_invalid": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "sepa_mandate_not_found": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "sepa_mandate_in_force": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
+  "sepa_mandate_contract_draft": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "sepa_mandate_reference_taken": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "sepa_mandate_revoked": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "direct_debit_without_mandate": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",

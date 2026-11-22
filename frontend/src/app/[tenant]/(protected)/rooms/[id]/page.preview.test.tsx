@@ -13,6 +13,10 @@ import { ToastProvider } from "~/contexts/ToastContext";
 import RoomDetailPage from "./page";
 
 vi.unmock("swr");
+vi.mock("~/lib/session-cache", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/session-cache")>()),
+  sessionFetch: (await import("~/test/mocks/plain-session-fetch")).sessionFetch,
+}));
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
     data: {

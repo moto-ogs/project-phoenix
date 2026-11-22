@@ -1,5 +1,5 @@
 export interface RoomOption {
-  id: number;
+  id: string;
   name: string;
   building?: string;
 }

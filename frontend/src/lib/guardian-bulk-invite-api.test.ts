@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { bulkInviteGuardians } from "./guardian-bulk-invite-api";
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 function mockFetch(status: number, body: unknown) {
   const fetchMock = vi.fn().mockResolvedValue({
     ok: status >= 200 && status < 300,
@@ -14,7 +19,7 @@ function mockFetch(status: number, body: unknown) {
 describe("bulkInviteGuardians", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("sends numeric student IDs and maps the counts to camelCase", async () => {
+  it("sends the student IDs as strings and maps the counts to camelCase", async () => {
     const fetchMock = mockFetch(200, {
       status: "success",
       data: {
@@ -46,7 +51,7 @@ describe("bulkInviteGuardians", () => {
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({
-          student_ids: [4, 9],
+          student_ids: ["4", "9"],
           dry_run: true,
           resend_open: true,
         }),
@@ -82,6 +87,9 @@ describe("bulkInviteGuardians", () => {
     mockFetch(200, { status: "success" });
     await expect(
       bulkInviteGuardians(["4"], { dryRun: false, resendOpen: false }),
-    ).rejects.toMatchObject({ status: 500, code: "general.server" });
+    ).rejects.toMatchObject({
+      status: 502,
+      code: "general.write_answer_unreadable",
+    });
   });
 });

@@ -1,7 +1,7 @@
 import { SWRConfig } from "~/lib/swr/testing";
 vi.unmock("swr");
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetSWRScope } from "~/lib/swr/scope";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
@@ -164,6 +164,11 @@ function renderPage() {
 }
 
 describe("TraegerDailyAttendancePage", () => {
+  beforeAll(async () => {
+    // Assert error handling independently of the lazy catalog's load time.
+    await import("~/lib/error-presentation");
+  });
+
   beforeEach(() => {
     resetSWRScope({ revalidate: false });
     mockFetch.mockReset();

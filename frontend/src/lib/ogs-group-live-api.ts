@@ -3,77 +3,19 @@
 // GET /api/students/ogs-group-live returns everything the OGS-Gruppen page renders for
 // one supervised group in a single backend request. The wire DTO is minimal by
 // contract — it must never grow personal fields the page does not display.
-import type { ClassHandover } from "~/lib/class-handover";
-import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
+import { ApiError } from "~/lib/api-error";
 import type { TrackingIndicatorsResponse } from "~/lib/active-helpers";
+import { bffJson } from "~/lib/bff-fetch";
+import { knownEnum } from "~/lib/contract/known-enum";
+import type * as studentsContract from "~/lib/contract/students.generated";
 import type { DepartureMode } from "~/lib/departure-plan";
-import type { PlannedActivity, TeacherHint } from "~/lib/student-helpers";
-import type { ApiResponse } from "./api-envelope";
 
-// Wire types (Go DTOs from backend/api/students/ogs_group_live_handlers.go)
-
-interface OgsLiveWireGroup {
-  id: string;
-  name: string;
-  room_id?: string;
-  room_name?: string;
-  via_substitution: boolean;
-  is_personal?: boolean;
-}
-
-export interface OgsLiveWireStudent {
-  id: string;
-  first_name: string;
-  last_name: string;
-  school_class: string;
-  current_location: string;
-  location_since?: string;
-  current_room_color?: string | null;
-  sick: boolean;
-  sick_since?: string;
-  excused: boolean;
-  excused_since?: string;
-  class_trip: boolean;
-  class_trip_since?: string;
-  day_planning_status?: "comes_today" | "not_coming_today";
-  day_planning_reason?: string;
-  day_planning_label?: string;
-  pending_excused_note?: string;
-  teacher_hints?: TeacherHint[];
-  // Heutige Angebote (#6487), nur mit eingeschalteter Schuleinstellung.
-  planned_activities?: PlannedActivity[];
-  // Übergabe nach dem Unterricht (#4794): heute mit der Klasse an die OGS
-  // übergeben, „da“ oder „nicht da“.
-  class_handover?: ClassHandover;
-  arrival_time?: string;
-  arrival_is_exception?: boolean;
-  arrival_notes?: string;
-  actual_arrival_time?: string;
-  actual_pickup_time?: string;
-  photo_url?: string;
-}
-
-interface OgsLiveWireRoomStatus {
-  in_group_room: boolean;
-  current_room_id?: string;
-}
-
-interface OgsLiveWirePickupTime {
-  student_id: string;
-  pickup_time?: string;
-  is_exception: boolean;
-  day_departure_mode?: DepartureMode;
-  notes?: string;
-  day_notes?: Array<{ id: string; content: string }>;
-}
-
-interface OgsLiveWireTransfer {
-  id: string;
-  group_id: string;
-  substitute_staff_id: string;
-  substitute_name?: string;
-  end_date: string;
-}
+const DEPARTURE_MODES: readonly DepartureMode[] = [
+  "alone",
+  "bus",
+  "pickup",
+  "accompanied",
+];
 
 export interface GroupTransfer {
   substitutionId: string;
@@ -81,16 +23,6 @@ export interface GroupTransfer {
   targetStaffId: string;
   targetName: string;
   validUntil: string;
-}
-
-export interface OgsGroupLiveWireResponse {
-  groups: OgsLiveWireGroup[];
-  group_id?: string;
-  students: OgsLiveWireStudent[];
-  room_status: Record<string, OgsLiveWireRoomStatus>;
-  pickup_times: OgsLiveWirePickupTime[];
-  tracking_indicators: TrackingIndicatorsResponse;
-  transfers: OgsLiveWireTransfer[];
 }
 
 // View model consumed by the OGS-Gruppen page
@@ -119,14 +51,26 @@ export interface OgsLiveViewData {
   /** The group the live sections below belong to; null when the caller
    *  supervises no groups at all. */
   groupId: string | null;
-  students: OgsLiveWireStudent[];
-  roomStatus: Record<
-    string,
-    { in_group_room: boolean; current_room_id?: string }
-  >;
+  students: studentsContract.Student[];
+  roomStatus: Record<string, studentsContract.RoomStatus>;
   pickupTimes: Map<string, OgsPickupInfo>;
   trackingIndicators: TrackingIndicatorsResponse;
   transfers: GroupTransfer[];
+}
+
+/** Go writes an empty list as `null`; the cards read empty lists. */
+function mapTrackingIndicators(
+  wire: studentsContract.TrackingIndicators,
+): TrackingIndicatorsResponse {
+  return {
+    labels: wire.labels ?? [],
+    results: Object.fromEntries(
+      Object.entries(wire.results ?? {}).map(([studentId, matched]) => [
+        studentId,
+        matched ?? [],
+      ]),
+    ),
+  };
 }
 
 const MAX_INT64 = 9_223_372_036_854_775_807n;
@@ -140,14 +84,15 @@ function isValidGroupId(groupId: string | null): groupId is string {
 }
 
 export function mapOgsGroupLiveResponse(
-  wire: OgsGroupLiveWireResponse,
+  wire: studentsContract.Projection,
 ): OgsLiveViewData {
   const pickupTimes = new Map<string, OgsPickupInfo>();
   for (const pt of wire.pickup_times ?? []) {
     pickupTimes.set(pt.student_id, {
       pickupTime: pt.pickup_time,
       isException: pt.is_exception,
-      dayDepartureMode: pt.day_departure_mode,
+      // An Abholart this build does not know reads as the weekly plan's.
+      dayDepartureMode: knownEnum(DEPARTURE_MODES, pt.day_departure_mode),
       notes: pt.notes,
       dayNotes: (pt.day_notes ?? []).map((note) => ({
         id: note.id,
@@ -163,16 +108,13 @@ export function mapOgsGroupLiveResponse(
       roomId: group.room_id,
       roomName: group.room_name,
       viaSubstitution: group.via_substitution,
-      isPersonal: group.is_personal ?? true,
+      isPersonal: group.is_personal,
     })),
     groupId: wire.group_id ?? null,
     students: wire.students ?? [],
     roomStatus: wire.room_status ?? {},
     pickupTimes,
-    trackingIndicators: wire.tracking_indicators ?? {
-      labels: [],
-      results: {},
-    },
+    trackingIndicators: mapTrackingIndicators(wire.tracking_indicators),
     transfers: (wire.transfers ?? []).map((transfer) => ({
       substitutionId: transfer.id,
       groupId: transfer.group_id,
@@ -193,28 +135,25 @@ export function mapOgsGroupLiveResponse(
 export async function fetchOgsGroupLive(
   groupId: string | null,
 ): Promise<OgsLiveViewData> {
-  const load = async (withGroupId: string | null) => {
-    const query = withGroupId
-      ? `?group_id=${encodeURIComponent(withGroupId)}`
-      : "";
-    // The route reads the session cookie; the browser holds no token (#5005).
-    return transportFetch(`/api/students/ogs-group-live${query}`, {
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
+  // The route reads the session cookie; the browser holds no token (#5005).
+  const load = (withGroupId: string | null) =>
+    bffJson("tenant", "GET /api/students/ogs-group-live", {
+      query: { group_id: withGroupId ?? undefined },
+      errorMessage: "API error",
     });
-  };
 
   const requestedGroupId = isValidGroupId(groupId) ? groupId : null;
-  let response = await load(requestedGroupId);
-  if (response.status === 403 && requestedGroupId) {
-    response = await load(null);
+  let data;
+  try {
+    data = await load(requestedGroupId);
+  } catch (error) {
+    if (!(
+      error instanceof ApiError &&
+      error.status === 403 &&
+      requestedGroupId
+    ))
+      throw error;
+    data = await load(null);
   }
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, `API error: ${response.status}`);
-  }
-
-  const json = (await response.json()) as ApiResponse<OgsGroupLiveWireResponse>;
-  return mapOgsGroupLiveResponse(json.data);
+  return mapOgsGroupLiveResponse(data);
 }

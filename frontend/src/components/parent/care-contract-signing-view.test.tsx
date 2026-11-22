@@ -15,11 +15,8 @@ vi.mock("~/lib/care-contract-signing-api", () => ({
   fetchSigningView: mocks.fetch,
   signContract: mocks.sign,
   signingDocumentUrl: () => "/contract.pdf",
-}));
-vi.mock("~/lib/api-error", async (original) => ({
-  ...(await original<typeof import("~/lib/api-error")>()),
   // The PDF is not part of these cases: its request never answers.
-  transportFetch: () => new Promise(() => undefined),
+  fetchSigningDocument: () => new Promise(() => undefined),
 }));
 vi.mock("./parent-family-children-card", () => ({
   ParentFamilyChildrenCard: () => null,
