@@ -45,9 +45,11 @@ type BelegRetentionStore interface {
 	// FamiliesOnContracts lists the deviations of families that hang on
 	// one of the contracts.
 	FamiliesOnContracts(ctx context.Context, organizationID int64, contractIDs []int64) ([]parentbilling.FamilyOnContract, error)
-	// MoveFamilies hangs each deviation with its trail onto its new
-	// contract, where it still hangs on the old one.
-	MoveFamilies(ctx context.Context, organizationID int64, moves []parentbilling.FamilyMove) error
+	// MoveFamilies hangs each deviation onto its new contract, where it
+	// still hangs on the old one, and then every trail entry of a
+	// deviation on a surviving contract that still names a going
+	// contract onto the deviation's contract.
+	MoveFamilies(ctx context.Context, organizationID int64, going []int64, moves []parentbilling.FamilyMove) error
 	DeleteExpiredBelegDeletions(ctx context.Context, years int) (int, error)
 	// DeleteExpiredFamilies deletes the families without a care contract
 	// whose own period ended and no document of which is kept (#6692).
@@ -312,7 +314,7 @@ func (r *BelegRetention) deleteDueContracts(ctx context.Context, today calendar.
 	total := 0
 	for _, organizationID := range order {
 		ids, rule := byTraeger[organizationID], cutoff[organizationID]
-		if err := r.keepFamilies(ctx, organizationID, ids); err != nil {
+		if err := r.keepFamilies(ctx, organizationID, ids, rule.TriggerEvent); err != nil {
 			return 0, err
 		}
 		deleted, err := r.contracts.DeleteEndedContracts(ctx, organizationID, ids, today, rule.TriggerEvent, rule.LastEventOn)

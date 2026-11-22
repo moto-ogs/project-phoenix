@@ -28,11 +28,21 @@ func TestFamilyMovesToTheContractOfTheFamilyThatStaysLongest(t *testing.T) {
 	}
 	emails := map[int64]string{10: "a@example.org", 11: " A@example.org", 12: "a@example.org", 13: "a@example.org",
 		20: "b@example.org", 21: "b@example.org", 22: "b@example.org", 30: "c@example.org"}
+	concluded := func(id int64, on *calendar.Date, ends *calendar.Date) parentbilling.ContractRetentionFact {
+		return parentbilling.ContractRetentionFact{ContractID: id, Ended: true, ConcludedOn: on, EndedOn: ends}
+	}
 	cases := map[string]struct {
 		remaining []parentbilling.ContractRetentionFact
 		family    parentbilling.FamilyOnContract
+		event     string
 		want      []parentbilling.FamilyMove
 	}{
+		"a Weisung from the conclusion keeps the later concluded contract longer": {
+			remaining: []parentbilling.ContractRetentionFact{concluded(20, day(time.January), day(time.December)), concluded(21, day(time.June), day(time.July))},
+			family:    family(2, "b@example.org"),
+			event:     parentbilling.TriggerContractConcluded,
+			want:      []parentbilling.FamilyMove{{FamilyBillingID: 2, From: 1, To: 21}},
+		},
 		"in force wins over a later end": {
 			remaining: []parentbilling.ContractRetentionFact{ended(10, day(time.December)), running(11), ended(12, nil)},
 			family:    family(1, "a@example.org"),
@@ -57,7 +67,11 @@ func TestFamilyMovesToTheContractOfTheFamilyThatStaysLongest(t *testing.T) {
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			assert.Equal(t, tc.want, familyMoves([]parentbilling.FamilyOnContract{tc.family}, tc.remaining, emails))
+			event := tc.event
+			if event == "" {
+				event = parentbilling.TriggerContractEnded
+			}
+			assert.Equal(t, tc.want, familyMoves([]parentbilling.FamilyOnContract{tc.family}, tc.remaining, emails, event))
 		})
 	}
 }

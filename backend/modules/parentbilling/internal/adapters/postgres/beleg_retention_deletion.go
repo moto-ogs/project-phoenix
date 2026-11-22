@@ -134,29 +134,39 @@ func (s *Store) FamiliesOnContracts(ctx context.Context, organizationID int64, c
 	return families, nil
 }
 
-// MoveFamilies hangs each deviation and its trail onto its new contract in
-// one statement each, only where it still hangs on the old one (#7862).
-func (s *Store) MoveFamilies(ctx context.Context, organizationID int64, moves []parentbilling.FamilyMove) error {
-	if len(moves) == 0 {
+// MoveFamilies hangs each deviation onto its new contract where it still
+// hangs on the old one, then moves every trail entry that names a going
+// contract onto the contract its deviation hangs on now, when that one
+// stays (#7862). An office save may have moved a deviation before, leaving
+// older entries on an older contract of the family; a deviation without a
+// contract or on a going one keeps the rule of its trail.
+func (s *Store) MoveFamilies(ctx context.Context, organizationID int64, going []int64, moves []parentbilling.FamilyMove) error {
+	if len(going) == 0 {
 		return nil
 	}
 	db, err := adminDB(ctx)
 	if err != nil {
 		return err
 	}
-	ids, from, to := make([]int64, len(moves)), make([]int64, len(moves)), make([]int64, len(moves))
-	for i, move := range moves {
-		ids[i], from[i], to[i] = move.FamilyBillingID, move.From, move.To
+	if len(moves) > 0 {
+		ids, from, to := make([]int64, len(moves)), make([]int64, len(moves)), make([]int64, len(moves))
+		for i, move := range moves {
+			ids[i], from[i], to[i] = move.FamilyBillingID, move.From, move.To
+		}
+		if _, err := db.NewRaw(`UPDATE parent_billing.family_billing AS family SET care_contract_id = move.to_id
+			FROM unnest(?1::bigint[], ?2::bigint[], ?3::bigint[]) AS move(id, from_id, to_id)
+			WHERE family.organization_id = ?0 AND family.id = move.id AND family.care_contract_id = move.from_id`,
+			organizationID, pgdialect.Array(ids), pgdialect.Array(from), pgdialect.Array(to)).Exec(ctx); err != nil {
+			return fmt.Errorf("parent billing postgres: move the families of deleted contracts: %w", err)
+		}
 	}
-	if _, err := db.NewRaw(`WITH move AS (SELECT * FROM unnest(?1::bigint[], ?2::bigint[], ?3::bigint[]) AS m(id, from_id, to_id)),
-		moved AS (
-			UPDATE parent_billing.family_billing AS family SET care_contract_id = move.to_id
-			FROM move WHERE family.organization_id = ?0 AND family.id = move.id AND family.care_contract_id = move.from_id
-			RETURNING family.id, move.from_id, move.to_id)
-		UPDATE parent_billing.family_billing_events AS event SET care_contract_id = moved.to_id
-		FROM moved WHERE event.organization_id = ?0 AND event.family_billing_id = moved.id AND event.care_contract_id = moved.from_id`,
-		organizationID, pgdialect.Array(ids), pgdialect.Array(from), pgdialect.Array(to)).Exec(ctx); err != nil {
-		return fmt.Errorf("parent billing postgres: move the families of deleted contracts: %w", err)
+	if _, err := db.NewRaw(`UPDATE parent_billing.family_billing_events AS event SET care_contract_id = family.care_contract_id
+		FROM parent_billing.family_billing AS family
+		WHERE event.organization_id = ?0 AND event.care_contract_id = ANY(?1)
+			AND family.organization_id = event.organization_id AND family.id = event.family_billing_id
+			AND family.care_contract_id IS NOT NULL AND NOT family.care_contract_id = ANY(?1)`,
+		organizationID, pgdialect.Array(going)).Exec(ctx); err != nil {
+		return fmt.Errorf("parent billing postgres: move the trails of the families of deleted contracts: %w", err)
 	}
 	return nil
 }

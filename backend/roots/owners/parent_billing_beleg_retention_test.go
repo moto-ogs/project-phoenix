@@ -333,6 +333,7 @@ func TestFamilyBillingOutlivesADeletedContractOfItsFamily(t *testing.T) {
 		require.NoError(t, err)
 		return id
 	}
+	older := contract("gekuendigt", "familie.a@example.org", "2027-07-31")
 	ended := contract("gekuendigt", "Familie.A@example.org", "2027-07-31")
 	sibling := contract("aktiv", " familie.a@example.org ", nil)
 	alone := contract("gekuendigt", "familie.b@example.org", "2027-07-31")
@@ -348,6 +349,11 @@ func TestFamilyBillingOutlivesADeletedContractOfItsFamily(t *testing.T) {
 		return id
 	}
 	kept := deviation("familie.a@example.org", ended)
+	// An office save moved the deviation from the older contract before and
+	// left its earlier trail there.
+	_, err := db.ExecContext(ctx, `INSERT INTO parent_billing.family_billing_events (organization_id, family_billing_id, care_contract_id, action)
+		VALUES (?, ?, ?, 'read')`, organization, kept, older)
+	require.NoError(t, err)
 	lost := deviation("familie.b@example.org", alone)
 
 	today := calendar.NewDate(2026, time.November, 9)
@@ -368,7 +374,7 @@ func TestFamilyBillingOutlivesADeletedContractOfItsFamily(t *testing.T) {
 
 	var contracts []int64
 	require.NoError(t, db.NewRaw(`SELECT id FROM care_contract.contracts WHERE organization_id = ? ORDER BY id`, organization).Scan(ctx, &contracts))
-	require.Equal(t, []int64{sibling}, contracts, "both contracts ended in 2027 go after six years")
+	require.Equal(t, []int64{sibling}, contracts, "the three contracts ended in 2027 go after six years")
 
 	var row struct {
 		Contract      *int64 `bun:"care_contract_id"`
@@ -384,7 +390,7 @@ func TestFamilyBillingOutlivesADeletedContractOfItsFamily(t *testing.T) {
 	assert.Equal(t, "direct_debit", row.PaymentMethod, "the payment method survives")
 	require.NotNil(t, row.DueDay)
 	assert.Equal(t, 15, *row.DueDay)
-	assert.Equal(t, 1, row.Events, "its trail moves with it")
+	assert.Equal(t, 2, row.Events, "its whole trail moves with it, also the entry an earlier save left on the older contract")
 
 	var gone bool
 	require.NoError(t, db.NewRaw(`SELECT NOT EXISTS (SELECT 1 FROM parent_billing.family_billing WHERE id = ?)`, lost).Scan(ctx, &gone))

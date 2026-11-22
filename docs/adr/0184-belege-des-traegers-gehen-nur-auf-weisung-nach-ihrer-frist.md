@@ -223,8 +223,11 @@ zurück. Die Auswahl beim Speichern (#7770) machte das nur seltener.
    Contract die fälligen Verträge eines Trägers löscht, hängt die
    Elternabrechnung im selben Lauf jede Abweichung, die an einem davon
    hängt, samt ihrer Spur auf den Vertrag derselben Familie um, der am
-   längsten bleibt: ein Vertrag in Kraft, dann ein beendeter ohne letzten
-   Tag, dann das späteste Ende. Ein Entwurf zählt nicht. Die Familie ist der
+   längsten bleibt: ein Vertrag in Kraft, dann ein beendeter ohne den Tag
+   des Ereignisses der Weisung (Ende oder Abschluss), dann der späteste
+   solche Tag. Ein Entwurf zählt nicht. Auch Einträge der Spur, die ein
+   früheres Speichern auf einem älteren Vertrag der Familie hinterließ,
+   gehen auf den Vertrag der Abweichung über. Die Familie ist der
    Empfänger der Rechnung (`ContractFamilyKey`); Care Contract nennt dafür
    über `ContractRetention.RecipientEmails` die Adresse je Vertrag in der
    Admin-Transaktion, sonst keine Partei. Ohne weiteren Vertrag geht die
