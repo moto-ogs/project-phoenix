@@ -1,40 +1,14 @@
 package staffshifts
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/go-chi/render"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
-
-// occurrenceShiftID accepts legacy JSON numbers as well as the lossless
-// decimal-string representation used by the frontend. JavaScript numbers
-// cannot faithfully represent every valid PostgreSQL bigint ID.
-type occurrenceShiftID int64
-
-func (id *occurrenceShiftID) UnmarshalJSON(data []byte) error {
-	var encoded string
-	if err := json.Unmarshal(data, &encoded); err == nil {
-		parsed, err := strconv.ParseInt(encoded, 10, 64)
-		if err != nil {
-			return errors.New("occurrence_shift_id must be an int64")
-		}
-		*id = occurrenceShiftID(parsed)
-		return nil
-	}
-
-	var parsed int64
-	if err := json.Unmarshal(data, &parsed); err != nil {
-		return errors.New("occurrence_shift_id must be an int64")
-	}
-	*id = occurrenceShiftID(parsed)
-	return nil
-}
 
 // SeriesRequest is the create payload for a recurring shift series (#1889).
 // Weekdays are ISO (1=Monday … 7=Sunday); week_pattern is 0 = every week,
@@ -45,24 +19,24 @@ func (id *occurrenceShiftID) UnmarshalJSON(data []byte) error {
 type SeriesRequest struct {
 	// WorkingTimeRequest confirms the working-time warnings (#4708).
 	WorkingTimeRequest
-	StaffID          int64      `json:"staff_id"`
+	StaffID          ident.ID   `json:"staff_id"`
 	Weekdays         []int      `json:"weekdays"` // omitted on split = keep predecessor weekdays
-	StartTime        string     `json:"start_time"`
-	EndTime          string     `json:"end_time"`
+	StartTime        string     `json:"start_time" contract:"clock"`
+	EndTime          string     `json:"end_time" contract:"clock"`
 	BreakMinutes     int        `json:"break_minutes"`
-	ShiftTypeID      optionalID `json:"shift_type_id"`
+	ShiftTypeID      OptionalID `json:"shift_type_id"`
 	Notes            *string    `json:"notes"`
-	CalendarPeriodID int64      `json:"calendar_period_id"`
+	CalendarPeriodID ident.ID   `json:"calendar_period_id"`
 	WeekPattern      *int       `json:"week_pattern"` // omitted: create = every week, split = keep predecessor
-	ValidFrom        string     `json:"valid_from"`
+	ValidFrom        string     `json:"valid_from" contract:"date"`
 	// ValidUntil is presence-aware on split (#2028): an omitted key keeps the
 	// predecessor's end, an explicit null lets the series run to the period end.
-	ValidUntil    optionalString `json:"valid_until"`
-	EffectiveDate string         `json:"effective_date"`
+	ValidUntil    OptionalString `json:"valid_until"`
+	EffectiveDate string         `json:"effective_date" contract:"date"`
 	// OccurrenceShiftID is the concrete row opened by the planner. For a
 	// permanent edit effective today it is updated in place before the series
 	// is re-planned from tomorrow.
-	OccurrenceShiftID occurrenceShiftID `json:"occurrence_shift_id"`
+	OccurrenceShiftID ident.ID `json:"occurrence_shift_id"`
 	// IncludeSchoolBreaks also plans the series in the Ferien and on closing
 	// days (#3820); statutory holidays stay free. Omitted: create = false,
 	// split = keep the predecessor's choice.
@@ -165,7 +139,7 @@ func toSeriesDetailResponse(series workforce.StaffShiftSeries) SeriesDetailRespo
 // An absent key and an explicit null both mean "no end date" here; the split
 // handler additionally reads Present to tell "clear the end" from "keep the
 // predecessor's end".
-func parseOptionalValidUntil(raw optionalString) (string, error) {
+func parseOptionalValidUntil(raw OptionalString) (string, error) {
 	if raw.Value == nil || *raw.Value == "" {
 		return "", nil
 	}
@@ -202,14 +176,14 @@ func buildSeries(req SeriesRequest) (workforce.StaffShiftSeriesInput, error) {
 		return workforce.StaffShiftSeriesInput{}, err
 	}
 	return workforce.StaffShiftSeriesInput{
-		StaffID:             req.StaffID,
+		StaffID:             req.StaffID.Int64(),
 		Weekdays:            weekdays,
 		StartTime:           start,
 		EndTime:             end,
 		BreakMinutes:        req.BreakMinutes,
-		ShiftTypeID:         req.ShiftTypeID.Value,
+		ShiftTypeID:         (*int64)(req.ShiftTypeID.Value),
 		Notes:               notes,
-		CalendarPeriodID:    req.CalendarPeriodID,
+		CalendarPeriodID:    req.CalendarPeriodID.Int64(),
 		WeekPattern:         weekPattern,
 		ValidFrom:           validFrom,
 		ValidUntil:          validUntil,
@@ -237,12 +211,12 @@ func buildSplit(id int64, req SeriesRequest) (workforce.SplitStaffShiftSeries, e
 	return workforce.SplitStaffShiftSeries{
 		SeriesID:            id,
 		EffectiveDate:       effective,
-		OccurrenceShiftID:   int64(req.OccurrenceShiftID),
+		OccurrenceShiftID:   req.OccurrenceShiftID.Int64(),
 		Weekdays:            weekdays,
 		StartTime:           start,
 		EndTime:             end,
 		BreakMinutes:        req.BreakMinutes,
-		ShiftTypeID:         req.ShiftTypeID.Value,
+		ShiftTypeID:         (*int64)(req.ShiftTypeID.Value),
 		ShiftTypeIDSet:      req.ShiftTypeID.Present,
 		Notes:               req.Notes,
 		ValidUntil:          validUntil,

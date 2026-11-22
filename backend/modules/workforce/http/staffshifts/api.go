@@ -147,71 +147,57 @@ func (rs *Resource) Router() chi.Router {
 type ShiftRequest struct {
 	// WorkingTimeRequest confirms the working-time warnings (#4708).
 	WorkingTimeRequest
-	StaffID      int64      `json:"staff_id"`
-	Date         string     `json:"date"`
-	StartTime    string     `json:"start_time"`
-	EndTime      string     `json:"end_time"`
+	StaffID      ident.ID   `json:"staff_id"`
+	Date         string     `json:"date" contract:"date"`
+	StartTime    string     `json:"start_time" contract:"clock"`
+	EndTime      string     `json:"end_time" contract:"clock"`
 	BreakMinutes int        `json:"break_minutes"`
-	ShiftTypeID  optionalID `json:"shift_type_id"`
+	ShiftTypeID  OptionalID `json:"shift_type_id"`
 	Notes        *string    `json:"notes"`
 	// Cancelled marks a shift that does not take place (staff absent / gap left
 	// open, #1841). Honoured only on create (defaults to false). A plain update
 	// always preserves the stored flag and ignores this field — flipping the
 	// cancellation state must go through PUT /{id}/cancellation so the
 	// replacement set is maintained atomically.
-	Cancelled optionalBool `json:"cancelled"`
+	Cancelled OptionalBool `json:"cancelled"`
 	// ChangeReason is the optional "why" for a flexible daily change.
 	// Presence-aware: an omitted key preserves the stored reason on update, an
 	// explicit null clears it, a string replaces it.
-	ChangeReason optionalString `json:"change_reason"`
+	ChangeReason OptionalString `json:"change_reason"`
 	// OriginShiftID marks this shift as a replacement covering another shift
 	// (#1841). Only honoured on create; a plain edit never re-points it.
-	OriginShiftID optionalID `json:"origin_shift_id"`
+	OriginShiftID OptionalID `json:"origin_shift_id"`
 }
 
-// optionalID captures whether a nullable ID field was present in the JSON
+// OptionalID captures whether a nullable ID field was present in the JSON
 // payload, so an omitted shift_type_id (preserve the existing value on update)
 // is distinguishable from an explicit null (clear the type). encoding/json only
 // invokes UnmarshalJSON when the key is present, so Present stays false when the
 // field is absent — the case a stale client or third-party consumer produces.
-type optionalID struct {
+type OptionalID struct {
 	Present bool
-	Value   *int64
+	Value   *ident.ID
 }
 
-func (o *optionalID) UnmarshalJSON(data []byte) error {
+func (o *OptionalID) UnmarshalJSON(data []byte) error {
 	o.Present = true
 	if string(data) == "null" {
 		o.Value = nil
 		return nil
 	}
-	var decimal string
-	if err := json.Unmarshal(data, &decimal); err == nil {
-		v, err := strconv.ParseInt(decimal, 10, 64)
-		if err != nil {
-			return fmt.Errorf("ID must be a signed 64-bit integer: %w", err)
-		}
-		o.Value = &v
-		return nil
-	}
-	var v int64
-	if err := json.Unmarshal(data, &v); err != nil {
-		return err
-	}
-	o.Value = &v
-	return nil
+	return json.Unmarshal(data, &o.Value)
 }
 
-// optionalBool captures whether a bool field was present in the JSON payload so
+// OptionalBool captures whether a bool field was present in the JSON payload so
 // an omitted cancelled key (preserve the stored flag on update) is
 // distinguishable from an explicit false (reactivate). Same presence trick as
-// optionalID: UnmarshalJSON only runs when the key is present.
-type optionalBool struct {
+// OptionalID: UnmarshalJSON only runs when the key is present.
+type OptionalBool struct {
 	Present bool
 	Value   bool
 }
 
-func (o *optionalBool) UnmarshalJSON(data []byte) error {
+func (o *OptionalBool) UnmarshalJSON(data []byte) error {
 	o.Present = true
 	// A JSON null must not be read as an explicit false: encoding/json leaves the
 	// bool at its zero value (false) for "null" and produces no error, which on
@@ -224,17 +210,17 @@ func (o *optionalBool) UnmarshalJSON(data []byte) error {
 	return json.Unmarshal(data, &o.Value)
 }
 
-// optionalInt captures whether an int field was present in the JSON payload so an
+// OptionalInt captures whether an int field was present in the JSON payload so an
 // omitted break_minutes is distinguishable from an explicit 0. The cancellation
 // endpoint refuses a partial origin edit rather than silently zeroing the stored
 // break, so it must know whether the client actually sent the field. Same presence
-// trick as optionalID: UnmarshalJSON only runs when the key is present.
-type optionalInt struct {
+// trick as OptionalID: UnmarshalJSON only runs when the key is present.
+type OptionalInt struct {
 	Present bool
 	Value   int
 }
 
-func (o *optionalInt) UnmarshalJSON(data []byte) error {
+func (o *OptionalInt) UnmarshalJSON(data []byte) error {
 	o.Present = true
 	// A JSON null is not a valid break length; reject it rather than reading it as
 	// an ambiguous 0 that a partial-payload guard could not distinguish from omitted.
@@ -244,16 +230,16 @@ func (o *optionalInt) UnmarshalJSON(data []byte) error {
 	return json.Unmarshal(data, &o.Value)
 }
 
-// optionalString captures whether a nullable string field was present in the
+// OptionalString captures whether a nullable string field was present in the
 // JSON payload, distinguishing an omitted change_reason (preserve the stored
 // value) from an explicit null (clear it) from a string (replace it). A plain
 // *string cannot: encoding/json leaves it nil for both omitted and null.
-type optionalString struct {
+type OptionalString struct {
 	Present bool
 	Value   *string
 }
 
-func (o *optionalString) UnmarshalJSON(data []byte) error {
+func (o *OptionalString) UnmarshalJSON(data []byte) error {
 	o.Present = true
 	if string(data) == "null" {
 		o.Value = nil
@@ -387,16 +373,16 @@ func buildShift(req ShiftRequest) (workforce.StaffShiftInput, error) {
 		notes = *req.Notes
 	}
 	return workforce.StaffShiftInput{
-		StaffID:       req.StaffID,
+		StaffID:       req.StaffID.Int64(),
 		Date:          date,
 		StartTime:     start,
 		EndTime:       end,
 		BreakMinutes:  req.BreakMinutes,
-		ShiftTypeID:   req.ShiftTypeID.Value,
+		ShiftTypeID:   (*int64)(req.ShiftTypeID.Value),
 		Notes:         notes,
 		Cancelled:     req.Cancelled.Value,
 		ChangeReason:  req.ChangeReason.Value,
-		OriginShiftID: req.OriginShiftID.Value,
+		OriginShiftID: (*int64)(req.OriginShiftID.Value),
 	}, nil
 }
 
@@ -569,13 +555,13 @@ func (rs *Resource) update(w http.ResponseWriter, r *http.Request) {
 type MoveShiftRequest struct {
 	// WorkingTimeRequest confirms the working-time warnings (#4708).
 	WorkingTimeRequest
-	SourceStaffID int64      `json:"source_staff_id"`
-	TargetStaffID int64      `json:"target_staff_id"`
-	Date          string     `json:"date"`
-	StartTime     string     `json:"start_time"`
-	EndTime       string     `json:"end_time"`
+	SourceStaffID ident.ID   `json:"source_staff_id"`
+	TargetStaffID ident.ID   `json:"target_staff_id"`
+	Date          string     `json:"date" contract:"date"`
+	StartTime     string     `json:"start_time" contract:"clock"`
+	EndTime       string     `json:"end_time" contract:"clock"`
 	BreakMinutes  int        `json:"break_minutes"`
-	ShiftTypeID   optionalID `json:"shift_type_id"`
+	ShiftTypeID   OptionalID `json:"shift_type_id"`
 }
 
 func (rs *Resource) move(w http.ResponseWriter, r *http.Request) {
@@ -628,13 +614,13 @@ func buildMove(id int64, req MoveShiftRequest) (workforce.MoveStaffShift, error)
 	}
 	return workforce.MoveStaffShift{
 		ShiftID:       id,
-		SourceStaffID: req.SourceStaffID,
-		TargetStaffID: req.TargetStaffID,
+		SourceStaffID: req.SourceStaffID.Int64(),
+		TargetStaffID: req.TargetStaffID.Int64(),
 		Date:          date,
 		StartTime:     start,
 		EndTime:       end,
 		BreakMinutes:  req.BreakMinutes,
-		ShiftTypeID:   req.ShiftTypeID.Value,
+		ShiftTypeID:   (*int64)(req.ShiftTypeID.Value),
 	}, nil
 }
 
@@ -649,7 +635,7 @@ type CancellationRequest struct {
 	// reactivation deletes every replacement), so an omitted key is rejected
 	// rather than defaulting to false and silently reactivating a shift a stale
 	// or malformed client only meant to tweak.
-	Cancelled    optionalBool `json:"cancelled"`
+	Cancelled    OptionalBool `json:"cancelled"`
 	ChangeReason *string      `json:"change_reason"`
 	// StartTime/EndTime/BreakMinutes/ShiftTypeID are the origin shift's own values
 	// as the admin sees them. An origin edit is all-or-nothing: applying it
@@ -658,20 +644,20 @@ type CancellationRequest struct {
 	// fields to 0/null. break_minutes and shift_type_id are therefore presence-tracked
 	// and the handler requires the complete set whenever any origin field is present;
 	// omitting all four preserves the stored window/type/break (#1841).
-	StartTime    string               `json:"start_time"`
-	EndTime      string               `json:"end_time"`
-	BreakMinutes optionalInt          `json:"break_minutes"`
-	ShiftTypeID  optionalID           `json:"shift_type_id"`
+	StartTime    string               `json:"start_time" contract:"clock"`
+	EndTime      string               `json:"end_time" contract:"clock"`
+	BreakMinutes OptionalInt          `json:"break_minutes"`
+	ShiftTypeID  OptionalID           `json:"shift_type_id"`
 	Replacements []ReplacementRequest `json:"replacements"`
 }
 
 // ReplacementRequest is one person covering part of a cancelled shift's gap.
 type ReplacementRequest struct {
-	StaffID      int64  `json:"staff_id"`
-	StartTime    string `json:"start_time"`
-	EndTime      string `json:"end_time"`
-	BreakMinutes int    `json:"break_minutes"`
-	ShiftTypeID  *int64 `json:"shift_type_id"`
+	StaffID      ident.ID  `json:"staff_id"`
+	StartTime    string    `json:"start_time" contract:"clock"`
+	EndTime      string    `json:"end_time" contract:"clock"`
+	BreakMinutes int       `json:"break_minutes"`
+	ShiftTypeID  *ident.ID `json:"shift_type_id"`
 }
 
 // ShiftDeletedResponse names the shift a delete removed.
@@ -765,7 +751,7 @@ func buildCancellation(id int64, req CancellationRequest) (workforce.CancelStaff
 		input.StartTime = start
 		input.EndTime = end
 		input.BreakMinutes = req.BreakMinutes.Value
-		input.ShiftTypeID = req.ShiftTypeID.Value
+		input.ShiftTypeID = (*int64)(req.ShiftTypeID.Value)
 	}
 	for _, rep := range req.Replacements {
 		start, end, err := parseShiftTimes(rep.StartTime, rep.EndTime)
@@ -773,11 +759,11 @@ func buildCancellation(id int64, req CancellationRequest) (workforce.CancelStaff
 			return workforce.CancelStaffShift{}, err
 		}
 		input.Replacements = append(input.Replacements, workforce.ShiftReplacement{
-			StaffID:      rep.StaffID,
+			StaffID:      rep.StaffID.Int64(),
 			StartTime:    start,
 			EndTime:      end,
 			BreakMinutes: rep.BreakMinutes,
-			ShiftTypeID:  rep.ShiftTypeID,
+			ShiftTypeID:  (*int64)(rep.ShiftTypeID),
 		})
 	}
 	return input, nil
