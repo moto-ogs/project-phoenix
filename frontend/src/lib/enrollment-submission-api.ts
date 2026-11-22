@@ -1,4 +1,4 @@
-import type { SignatureRequestBody } from "~/lib/signature";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import { createLogger } from "~/lib/logger";
 import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
 import type {
@@ -123,7 +123,7 @@ export interface SubmitEnrollmentPayload {
   captcha_token?: string;
   late_invite_token?: string;
   /** The parent's signature when the form requires one (#4786). */
-  signature?: SignatureRequestBody;
+  signature?: sharedContract.SubmitSignatureRequest;
 }
 
 export interface SubmitEnrollmentResult {

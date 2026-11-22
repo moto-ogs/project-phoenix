@@ -47,10 +47,10 @@ import {
   gradeNoun,
 } from "~/lib/care-offering-availability";
 import {
-  type CareOfferingBookingStats,
   fetchCareOfferingBookingStats,
   totalFreePlaces,
 } from "~/lib/care-offering-booking-stats";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import {
   offeringCapacityColumn,
   offeringOccupancyColumn,
@@ -118,7 +118,10 @@ const NO_PHASES: Phase[] = [];
 const NO_OFFERINGS: CareOffering[] = [];
 const NO_TEMPLATES: TimetableTemplate[] = [];
 const NO_PERIODS: CalendarPeriod[] = [];
-const NO_STATS: Record<string, CareOfferingBookingStats> = {};
+const NO_STATS: Record<
+  string,
+  enrollmentContract.CareOfferingBookingStatsResponse
+> = {};
 
 const KIND_LABELS: Record<Phase["kind"], string> = {
   school_year: "Schuljahr",
@@ -159,7 +162,7 @@ function missingPickupTimesMessage(days: string[]): string {
 type PlannerMetadataStatus = "loading" | "ready" | "unavailable";
 type TemplateCompatibility = "compatible" | "incompatible" | "unknown";
 
-function blankInput(phaseId: number): CareOfferingInput {
+function blankInput(phaseId: string): CareOfferingInput {
   return {
     phase_id: phaseId,
     activity_group_id: null,
@@ -189,10 +192,8 @@ function blankInput(phaseId: number): CareOfferingInput {
 
 function offeringToInput(offering: CareOffering): CareOfferingInput {
   return {
-    phase_id: Number(offering.phase_id),
-    activity_group_id: offering.activity_group_id
-      ? Number(offering.activity_group_id)
-      : null,
+    phase_id: offering.phase_id,
+    activity_group_id: offering.activity_group_id || null,
     name: offering.name,
     description: offering.description ?? "",
     days_of_week_mode: offering.days_of_week_mode,
@@ -278,9 +279,9 @@ function draftTemplateCompatibility(
 ): TemplateCompatibility {
   if (!draft.activity_group_id) return "compatible";
   if (metadataStatus !== "ready") return "unknown";
-  const phase = phases.find((item) => item.id === String(draft.phase_id));
+  const phase = phases.find((item) => item.id === draft.phase_id);
   const template = templates.find(
-    (item) => item.id === String(draft.activity_group_id),
+    (item) => item.id === draft.activity_group_id,
   );
   if (!phase || !template) return "unknown";
   return templatePhaseCompatibility(template, phase, periods, draft.is_active);
@@ -300,7 +301,7 @@ function draftUsesInactiveTemplatePeriod(
     return false;
   }
   const template = templates.find(
-    (item) => item.id === String(draft.activity_group_id),
+    (item) => item.id === draft.activity_group_id,
   );
   if (!template) return false;
   const periodID = singleTemplatePeriodID(template);
@@ -315,7 +316,7 @@ function linkedTemplateWeekdayError(
 ): string | null {
   if (!draft.activity_group_id || metadataStatus !== "ready") return null;
   const template = templates.find(
-    (item) => item.id === draft.activity_group_id?.toString(),
+    (item) => item.id === draft.activity_group_id,
   );
   if (!template) return null;
 
@@ -367,7 +368,7 @@ function hasUnverifiableTemplateChange(
   if (metadataStatus === "ready" || draft.activity_group_id == null) {
     return false;
   }
-  return String(draft.activity_group_id) !== originalActivityGroupID;
+  return draft.activity_group_id !== originalActivityGroupID;
 }
 
 function linkedTemplateWarnings(
@@ -376,7 +377,7 @@ function linkedTemplateWarnings(
 ): string[] {
   if (!draft.activity_group_id) return [];
   const template = templates.find(
-    (item) => item.id === draft.activity_group_id?.toString(),
+    (item) => item.id === draft.activity_group_id,
   );
   if (!template)
     return ["Der ausgewählte Regeltermin konnte nicht geladen werden."];
@@ -676,7 +677,7 @@ export function CareOfferingsEditor({
 
   const beginCreate = () => {
     if (!selectedPhaseId) return;
-    setDraft(blankInput(Number(selectedPhaseId)));
+    setDraft(blankInput(selectedPhaseId));
     setEditingId("new");
     setCloneSource(null);
     clearFormErrors();
@@ -822,7 +823,7 @@ export function CareOfferingsEditor({
       formErrors.clear();
       try {
         const cloned = await cloneCareOffering(cloneSource.id, {
-          target_phase_id: Number(targetPhaseId),
+          target_phase_id: targetPhaseId,
         });
         toast.success(`Das Betreuungsangebot „${cloned.name}“ ist dupliziert.`);
         if (targetPhaseId !== selectedPhaseId) {
@@ -1389,7 +1390,10 @@ interface CareOfferingFormProps {
    * Only used to warn about bookings a tightened availability rule would
    * contradict; absent for a new offering, which has none.
    */
-  readonly bookingStats: Record<string, CareOfferingBookingStats>;
+  readonly bookingStats: Record<
+    string,
+    enrollmentContract.CareOfferingBookingStatsResponse
+  >;
   /** The booking stats failed to load: conflicts are unknown, not zero. */
   readonly bookingStatsUnavailable: boolean;
   /** Hint for a field the last save rejected. */
@@ -1412,7 +1416,7 @@ function phaseChangePatch({
   metadataStatus,
 }: Readonly<{
   draft: CareOfferingInput;
-  phaseID: number;
+  phaseID: string;
   editingID: string | null;
   phases: Phase[];
   offerings: CareOffering[];
@@ -1420,9 +1424,9 @@ function phaseChangePatch({
   periods: CalendarPeriod[];
   metadataStatus: PlannerMetadataStatus;
 }>): { patch: Partial<CareOfferingInput>; templateUnlinked: boolean } {
-  const nextPhase = phases.find((phase) => phase.id === String(phaseID));
+  const nextPhase = phases.find((phase) => phase.id === phaseID);
   const linkedTemplate = templates.find(
-    (template) => template.id === String(draft.activity_group_id),
+    (template) => template.id === draft.activity_group_id,
   );
   const compatibility =
     metadataStatus === "ready" && nextPhase && linkedTemplate
@@ -1439,7 +1443,7 @@ function phaseChangePatch({
     offerings
       .filter(
         (offering) =>
-          offering.phase_id === String(phaseID) && offering.id !== editingID,
+          offering.phase_id === phaseID && offering.id !== editingID,
       )
       .map((offering) => offering.id),
   );
@@ -1504,9 +1508,7 @@ function CareOfferingTemplateField({
   unverifiableChange: boolean;
   onChange: (patch: Partial<CareOfferingInput>) => void;
 }>) {
-  const selectedPhase = phases.find(
-    (phase) => phase.id === String(draft.phase_id),
-  );
+  const selectedPhase = phases.find((phase) => phase.id === draft.phase_id);
   const compatibleTemplates =
     metadataStatus === "ready" && selectedPhase
       ? templates.filter(
@@ -1519,7 +1521,7 @@ function CareOfferingTemplateField({
             ) === "compatible",
         )
       : [];
-  const linkedTemplateID = draft.activity_group_id?.toString() ?? "";
+  const linkedTemplateID = draft.activity_group_id ?? "";
   const linkedTemplate = templates.find(
     (template) => template.id === linkedTemplateID,
   );
@@ -1596,9 +1598,7 @@ function CareOfferingTemplateField({
         id="care-offering-template"
         label="Regeltermin"
         value={linkedTemplateID}
-        onChange={(value) =>
-          onChange({ activity_group_id: value ? Number(value) : null })
-        }
+        onChange={(value) => onChange({ activity_group_id: value || null })}
         disabled={selectorDisabled}
         error={templateError}
         errorLive
@@ -1767,7 +1767,7 @@ function CareOfferingAutomationFields({
 }>) {
   const triggerOptions = offerings.filter(
     (offering) =>
-      offering.phase_id === String(draft.phase_id) && offering.id !== editingID,
+      offering.phase_id === draft.phase_id && offering.id !== editingID,
   );
   const toggleTriggerOffering = (offeringID: string) => {
     const next = toggleSetValue(
@@ -2444,9 +2444,9 @@ function CareOfferingForm({
           <CustomSelect
             id="care-offering-form-phase"
             ariaLabel="Anmeldephase"
-            value={draft.phase_id?.toString() ?? ""}
+            value={draft.phase_id}
             onChange={(value) => {
-              const phaseID = value ? Number(value) : 0;
+              const phaseID = value;
               const result = phaseChangePatch({
                 draft,
                 phaseID,

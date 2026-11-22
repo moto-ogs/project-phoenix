@@ -1,3 +1,5 @@
+import type * as parentMeContract from "./contract/parent-me.generated";
+
 /**
  * The value of the signature field (#4785), shared by every flow that asks
  * for a signature: Einverständnisse, the enrollment (#4786) and the pickup
@@ -9,20 +11,15 @@ export interface SignatureValue {
   readonly typedName?: string;
 }
 
-/** The request body shape every signing endpoint accepts. */
-export interface SignatureRequestBody {
-  readonly method: "drawn" | "typed";
-  readonly image_png: string;
-  readonly typed_name?: string;
-  /** Exact server-generated statement displayed when this signature was made. */
-  readonly statement?: string;
-}
-
-/** Maps the field value to the request body. */
+/**
+ * Maps the field value to the request body every signing endpoint accepts;
+ * `statement` is the exact server-generated text the signature was made
+ * under. The declaration's request type is the widest of those bodies.
+ */
 export function signatureRequestBody(
   value: SignatureValue,
   statement?: string,
-): SignatureRequestBody {
+): parentMeContract.declarationSignatureRequest {
   return {
     method: value.method,
     image_png: value.imagePngBase64,
