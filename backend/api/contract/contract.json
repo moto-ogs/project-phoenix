@@ -1305,6 +1305,20 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/traeger/contract-child-links/{contractId}",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "student_id",
+          "kind": "id"
+        }
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/traeger/contracts/{id}",
       "portals": [
         "org"
@@ -18901,6 +18915,51 @@
     },
     {
       "method": "POST",
+      "pattern": "/traeger/contract-child-links/",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ChildLinking"
+      },
+      "max_body_bytes": 2359296,
+      "multipart": true,
+      "too_large_code": "care_contract.import_file_too_large"
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/contract-child-links/preview",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ChildLinking"
+      },
+      "max_body_bytes": 2359296,
+      "no_commit": "a link preview checks the file and links no contract",
+      "multipart": true,
+      "too_large_code": "care_contract.import_file_too_large"
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/contract-child-links/{contractId}/preview",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ChildLinkPreviewRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ChildLinkRow"
+      },
+      "no_commit": "a link preview compares the contract with the child record and links nothing"
+    },
+    {
+      "method": "POST",
       "pattern": "/traeger/contract-corrections/",
       "portals": [
         "org"
@@ -22180,6 +22239,21 @@
       "response": {
         "kind": "ref",
         "ref": "ClosingDay"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/traeger/contract-child-links/{contractId}",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ChildLinkRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ChildLinkRow"
       }
     },
     {
@@ -33258,6 +33332,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "imported_contract_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
         }
       ]
     },
@@ -40499,6 +40580,304 @@
       ]
     },
     {
+      "name": "ChildLinkColumns",
+      "go_type": "carecontract.ChildLinkColumns",
+      "fields": [
+        {
+          "name": "contract",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildLinkCounts",
+      "go_type": "carecontract.ChildLinkCounts",
+      "fields": [
+        {
+          "name": "ready",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "linked",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "stored",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "conflict",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "invalid",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildLinkPreviewRequest",
+      "go_type": "carecontracthttp.ChildLinkPreviewRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "student_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildLinkProblem",
+      "go_type": "carecontract.ChildLinkProblem",
+      "fields": [
+        {
+          "name": "field",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "code",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildLinkRequest",
+      "go_type": "carecontracthttp.ChildLinkRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "student_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "accept_difference",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildLinkRow",
+      "go_type": "carecontract.ChildLinkRow",
+      "fields": [
+        {
+          "name": "line",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contract_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "student_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contract_child_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contract_child_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contract_child_birth_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "student_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_birth_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "problems",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ChildLinkProblem"
+            }
+          }
+        },
+        {
+          "name": "repeats_line",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "other_contract_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildLinking",
+      "go_type": "carecontract.ChildLinking",
+      "fields": [
+        {
+          "name": "encoding",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "delimiter",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "headers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "columns",
+          "schema": {
+            "kind": "ref",
+            "ref": "ChildLinkColumns"
+          }
+        },
+        {
+          "name": "unmapped",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "applied",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "counts",
+          "schema": {
+            "kind": "ref",
+            "ref": "ChildLinkCounts"
+          }
+        },
+        {
+          "name": "rows",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ChildLinkRow"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "ChildParticipationResponse",
       "go_type": "mealplan.ChildParticipationResponse",
       "fields": [
@@ -42534,6 +42913,12 @@
           }
         },
         {
+          "name": "imported",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "version",
           "schema": {
             "kind": "ref",
@@ -43790,6 +44175,12 @@
           "schema": {
             "kind": "date",
             "nullable": true
+          }
+        },
+        {
+          "name": "imported",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]

@@ -34,6 +34,8 @@ import (
 //   - The file itself is never stored.
 //   - The import links no child of a school: a name and a date of birth do
 //     not prove who a child is (ADR 0214). The contract keeps its own copy.
+//     Linking it to a child record is a step of its own, in which the office
+//     names both by their identifiers (#7760, contract_child_links.go).
 
 // Fields of a contract a column of the file can be mapped to.
 const (

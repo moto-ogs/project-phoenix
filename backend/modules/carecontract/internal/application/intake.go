@@ -90,7 +90,7 @@ func (in *Intake) Candidates(ctx context.Context, reviewer carecontract.Reviewer
 	}
 	var candidates []carecontract.Candidate
 	err = in.runtime.WithinTraeger(ctx, reviewer.OrganizationID, func(txCtx context.Context) error {
-		existing, err := in.store.ContractKeys(txCtx, reviewer.OrganizationID, schoolIDs(schools))
+		existing, named, err := in.contractedKeys(txCtx, reviewer.OrganizationID, reads)
 		if err != nil {
 			return err
 		}
@@ -99,7 +99,8 @@ func (in *Intake) Candidates(ctx context.Context, reviewer carecontract.Reviewer
 			return err
 		}
 		templates, changed := indexTemplates(rows)
-		candidates = collectCandidates(reads, existing, templates, changed, in.today())
+		candidates = collectCandidates(reads, withoutNamed(existing, named), templates, changed, in.today())
+		markNamedByImport(candidates, named)
 		return in.markHeldMail(txCtx, reviewer.OrganizationID, candidates)
 	})
 	if err != nil {
@@ -225,11 +226,7 @@ func (in *Intake) CreateContracts(ctx context.Context, reviewer carecontract.Rev
 
 func (in *Intake) create(ctx context.Context, reviewer carecontract.Reviewer, keys []carecontract.CandidateKey, reads []schoolRead) (carecontract.CreateResult, error) {
 	result := carecontract.CreateResult{Created: []carecontract.ContractSummary{}, Skipped: []carecontract.CreateSkip{}}
-	templates, err := in.templateIndex(ctx, reviewer.OrganizationID)
-	if err != nil {
-		return result, err
-	}
-	existing, err := in.store.ContractKeys(ctx, reviewer.OrganizationID, readSchoolIDs(reads))
+	templates, existing, err := in.lockedBasis(ctx, reviewer.OrganizationID, reads)
 	if err != nil {
 		return result, err
 	}
@@ -262,6 +259,25 @@ func (in *Intake) create(ctx context.Context, reviewer carecontract.Reviewer, ke
 		result.Created = append(result.Created, record.Summary)
 	}
 	return result, nil
+}
+
+// lockedBasis takes the lock of the Träger's links and reads under it the
+// templates and the keys with a contract: a link run of the Träger waits
+// until the drafts are written, or they wait for it, so what an imported
+// contract covers is decided under the lock (#7760).
+func (in *Intake) lockedBasis(ctx context.Context, organizationID int64, reads []schoolRead) (templateIndex, map[ContractKey]bool, error) {
+	if err := in.store.LockChildLinks(ctx, organizationID); err != nil {
+		return nil, nil, err
+	}
+	templates, err := in.templateIndex(ctx, organizationID)
+	if err != nil {
+		return nil, nil, err
+	}
+	existing, _, err := in.contractedKeys(ctx, organizationID, reads)
+	if err != nil {
+		return nil, nil, err
+	}
+	return templates, existing, nil
 }
 
 // draft builds the draft of one key over every module the child books, or

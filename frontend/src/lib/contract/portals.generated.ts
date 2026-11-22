@@ -130,6 +130,7 @@ import { routes as traegerCareTimeOverruns } from "./traeger-care-time-overruns.
 import { routes as traegerCatalog } from "./traeger-catalog.generated";
 import { routes as traegerClosingDays } from "./traeger-closing-days.generated";
 import { routes as traegerContractChanges } from "./traeger-contract-changes.generated";
+import { routes as traegerContractChildLinks } from "./traeger-contract-child-links.generated";
 import { routes as traegerContractCorrections } from "./traeger-contract-corrections.generated";
 import { routes as traegerContractImports } from "./traeger-contract-imports.generated";
 import { routes as traegerContractNotices } from "./traeger-contract-notices.generated";
@@ -329,6 +330,11 @@ export const portalRoutes = {
     traegerClosingDays["PUT /traeger/closing-days/{id}"],
     traegerContractChanges["GET /traeger/contract-changes/{id}"],
     traegerContractChanges["POST /traeger/contract-changes/{id}/requests/{requestId}/decide"],
+    traegerContractChildLinks["DELETE /traeger/contract-child-links/{contractId}"],
+    traegerContractChildLinks["POST /traeger/contract-child-links/"],
+    traegerContractChildLinks["POST /traeger/contract-child-links/preview"],
+    traegerContractChildLinks["POST /traeger/contract-child-links/{contractId}/preview"],
+    traegerContractChildLinks["PUT /traeger/contract-child-links/{contractId}"],
     traegerContractCorrections["GET /traeger/contract-corrections/"],
     traegerContractCorrections["GET /traeger/contract-corrections/list"],
     traegerContractCorrections["POST /traeger/contract-corrections/"],

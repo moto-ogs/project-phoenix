@@ -9,7 +9,14 @@ import { bffFile } from "~/lib/bff-fetch";
 // nicht: ihr Vertrag entsteht von selbst und ist sofort aktiv. Nur die Rolle
 // mit dem Recht „Verträge verwalten“ sieht die Seite.
 
-import { FilePenLine, Plus, Repeat, Send, Upload } from "lucide-react";
+import {
+  FilePenLine,
+  Link2,
+  Plus,
+  Repeat,
+  Send,
+  Upload,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type MouseEvent, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
@@ -169,6 +176,16 @@ const COLUMNS: DataTableColumn<CareContractSummary>[] = [
         >
           {childName(contract)}
         </NavigationLink>
+        {contract.imported && !contract.studentId ? (
+          // An imported contract knows its child only by name until the
+          // office links it to the child record (#7760).
+          <StatusBadge
+            tone="gray"
+            size="xs"
+            label="Ohne Kinderakte"
+            className="ml-1.5 align-middle"
+          />
+        ) : null}
         <span className="block text-sm text-gray-500">
           {contract.modulesText || "–"}
           <span className="sm:hidden">
@@ -570,10 +587,13 @@ export default function TraegerVertraegePage() {
 
   // The count names the children waiting for a contract; the dialog lists
   // each of them, with the reason where a draft cannot be made yet.
+  // A child an imported contract covers has its contract: the dialog shows
+  // it with the reason, but it waits for nothing (#7760).
+  const waiting = candidates.filter(
+    (candidate) => candidate.templateIssue !== "imported_contract",
+  ).length;
   const createLabel =
-    candidates.length > 0
-      ? `Verträge erstellen (${candidates.length})`
-      : "Verträge erstellen";
+    waiting > 0 ? `Verträge erstellen (${waiting})` : "Verträge erstellen";
 
   return (
     <TenantPage
@@ -581,14 +601,14 @@ export default function TraegerVertraegePage() {
       info="Hier siehst du die Betreuungsverträge aus den angenommenen Anmeldungen deiner Schulen und die Verträge, die du aus einem anderen Programm importiert hast. moto übernimmt Kind, Eltern, Beginn und die gebuchten Module je Wochentag. Gilt der Vertrag bei der Annahme, entsteht er von selbst, wenn die Eltern im Anmeldeformular den Vertragsbedingungen zugestimmt haben. Sonst prüfst du den Entwurf und sendest ihn per Mail und in die Eltern-App."
       tabs={careContractTabs("vertraege")}
       stats={
-        total > 0 || candidates.length > 0 ? (
+        total > 0 || waiting > 0 ? (
           <TenantPageStats
             items={statusFigures(
               total,
               drafts,
               sentCount,
               activeCount,
-              candidates.length,
+              waiting,
             )}
           />
         ) : null
@@ -622,6 +642,14 @@ export default function TraegerVertraegePage() {
             "Öffnet die neue Zuordnung der Module importierter Verträge aus einer CSV-Datei.",
           icon: <Repeat className="h-4 w-4" aria-hidden />,
           href: traegerPath("/traeger/vertraege/module-zuordnen"),
+          onClick: () => undefined,
+        },
+        {
+          label: "Mit Kinderakten verknüpfen",
+          description:
+            "Öffnet das Verknüpfen importierter Verträge mit der Kinderakte, per CSV-Datei.",
+          icon: <Link2 className="h-4 w-4" aria-hidden />,
+          href: traegerPath("/traeger/vertraege/verknuepfen"),
           onClick: () => undefined,
         },
         {
@@ -792,7 +820,7 @@ export default function TraegerVertraegePage() {
               }
               {...emptyText(
                 total,
-                candidates.length,
+                waiting,
                 data.modes.length > 0 &&
                   data.modes.every((school) => school.mode === "bei_annahme"),
                 emptySearchText(
