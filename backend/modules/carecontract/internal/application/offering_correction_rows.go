@@ -150,10 +150,10 @@ type correctionEval struct {
 	// target; 0 for a service no row changed.
 	replaced []int
 	seen     map[string]bool
-	// sources and targets name, per weekday, the modules the rows move a
-	// booking from and to.
-	sources map[string]bool
-	targets map[string]bool
+	// original is the module of each service before the file; sources
+	// tells per service that a row names it as its booking.
+	original []int64
+	sources  []bool
 	// claimed tells per service that a row found it at its target already.
 	claimed []bool
 	// lastDay is the last day the version and the contract hold; nil when
@@ -196,15 +196,16 @@ func (c correctionCheck) candidate(group correctionGroup) correctionCandidate {
 	for _, row := range group.rows {
 		candidate.lines = append(candidate.lines, row.line)
 	}
-	eval := &correctionEval{check: c, result: &result, seen: map[string]bool{}, sources: map[string]bool{}, targets: map[string]bool{}}
+	eval := &correctionEval{check: c, result: &result, seen: map[string]bool{}}
 	contract, ok := eval.contract(group)
 	var base carecontract.Version
 	if ok {
 		base, ok = eval.base(contract)
 	}
 	if ok {
-		for _, row := range group.rows {
-			eval.row(row)
+		moves := eval.moves(group.rows)
+		for _, move := range moves {
+			eval.decide(move, moves)
 		}
 		eval.doubleBooked()
 		candidate.version = eval.settle(contract, base)
@@ -270,85 +271,146 @@ func (e *correctionEval) base(contract ports.CorrectableContract) (carecontract.
 	}
 	e.services = slices.Clone(promised(base, e.day))
 	e.replaced, e.claimed = make([]int, len(e.services)), make([]bool, len(e.services))
+	e.original = make([]int64, len(e.services))
+	for n, service := range e.services {
+		e.original[n] = service.CareOfferingID.Int64()
+	}
 	e.lastDay = earlierDay(base.EndsOn, contract.EndsOn)
 	return base, true
 }
 
-// row reads one row: every weekday it names moves the booking of its module
-// to the target.
-func (e *correctionEval) row(row correctionRow) {
-	if !row.daysOK {
-		e.problem(row.line, carecontract.OfferingCorrectionFieldWeekday, carecontract.OfferingCorrectionProblemInvalid)
-	}
-	if row.current == "" {
-		e.problem(row.line, carecontract.OfferingCorrectionFieldCurrent, carecontract.OfferingCorrectionProblemMissing)
-	}
-	if !row.daysOK || row.current == "" {
-		return
-	}
-	for _, day := range row.days {
-		e.booking(row, day)
-	}
+// correctionMove is one weekday of one row: the booking it names, found
+// among the bookings the contract has before the file, and its target.
+type correctionMove struct {
+	row correctionRow
+	day string
+	// at is the booking the row names; -1 when the contract books no such
+	// module on the weekday.
+	at     int
+	target carecontract.Offering
+	// code is why the booking cannot go to the target; empty when it can.
+	code string
 }
 
-// booking moves the booking of one weekday.
-func (e *correctionEval) booking(row correctionRow, day string) {
+// moves reads every weekday of every row against the bookings the contract
+// has before the file. No row sees what another row does: a booking is the
+// source of at most one row.
+func (e *correctionEval) moves(rows []correctionRow) []correctionMove {
+	moves := []correctionMove{}
+	taken := make([]bool, len(e.services))
+	for _, row := range rows {
+		if !row.daysOK {
+			e.problem(row.line, carecontract.OfferingCorrectionFieldWeekday, carecontract.OfferingCorrectionProblemInvalid)
+		}
+		if row.current == "" {
+			e.problem(row.line, carecontract.OfferingCorrectionFieldCurrent, carecontract.OfferingCorrectionProblemMissing)
+		}
+		if !row.daysOK || row.current == "" {
+			continue
+		}
+		for _, day := range row.days {
+			if move, ok := e.move(row, day, taken); ok {
+				moves = append(moves, move)
+			}
+		}
+	}
+	e.sources = taken
+	return moves
+}
+
+// move reads one weekday of a row; false for a booking another row names
+// already.
+func (e *correctionEval) move(row correctionRow, day string, taken []bool) (correctionMove, bool) {
 	key := day + "\x1f" + textnorm.HeaderKey(row.current)
 	if e.seen[key] {
 		e.problem(row.line, carecontract.OfferingCorrectionFieldCurrent, carecontract.OfferingCorrectionProblemRepeated)
-		return
+		return correctionMove{}, false
 	}
 	e.seen[key] = true
-	if e.overlaps(row, day) {
-		e.problem(row.line, carecontract.OfferingCorrectionFieldTarget, carecontract.OfferingCorrectionProblemOverlapping)
-		return
+	move := correctionMove{row: row, day: day, at: e.source(day, row.current, taken)}
+	if move.at >= 0 {
+		taken[move.at] = true
 	}
-	at := e.find(day, func(n int, s carecontract.Service) bool {
-		return e.replaced[n] == 0 && textnorm.HeaderKey(s.ModuleName) == textnorm.HeaderKey(row.current)
+	if row.target != "" {
+		move.target, move.code = e.target(row.target, day)
+	}
+	return move, true
+}
+
+// source finds the booking of the weekday a row names: by the name the
+// contract keeps for its module, or by the name the module has today, so a
+// module the Träger renamed since the import is still found.
+func (e *correctionEval) source(day, name string, taken []bool) int {
+	key := textnorm.HeaderKey(name)
+	return e.find(day, func(n int, s carecontract.Service) bool {
+		if taken[n] {
+			return false
+		}
+		return textnorm.HeaderKey(s.ModuleName) == key || textnorm.HeaderKey(e.offeringName(s.CareOfferingID.Int64())) == key
 	})
+}
+
+func (e *correctionEval) offeringName(id int64) string {
+	for _, offering := range e.school.offerings {
+		if offering.ID == id {
+			return offering.Name
+		}
+	}
+	return ""
+}
+
+// overlapping tells that the move hands a module on or swaps two: its
+// target is the module of a booking another row moves, or its own booking
+// has the module another row moves a booking to. A repeated run would move
+// such bookings again, so the file is refused in any order of its rows.
+func (e *correctionEval) overlapping(move correctionMove, moves []correctionMove) bool {
+	for _, other := range moves {
+		if other.row.line == move.row.line && other.day == move.day || other.day != move.day {
+			continue
+		}
+		if other.at >= 0 && e.original[other.at] == move.target.ID {
+			return true
+		}
+		if move.at >= 0 && other.row.target != "" && other.code == "" && e.original[move.at] == other.target.ID {
+			return true
+		}
+	}
+	return false
+}
+
+// decide settles one move, knowing every move of the contract.
+func (e *correctionEval) decide(move correctionMove, moves []correctionMove) {
+	row, day, at := move.row, move.day, move.at
 	if row.target == "" {
 		e.heldBooking(row, day, at)
 		return
 	}
-	target, code := e.target(row.target, day)
-	if code != "" {
-		e.problem(row.line, carecontract.OfferingCorrectionFieldTarget, code)
+	if move.code != "" {
+		e.problem(row.line, carecontract.OfferingCorrectionFieldTarget, move.code)
+		return
+	}
+	if e.overlapping(move, moves) {
+		e.problem(row.line, carecontract.OfferingCorrectionFieldTarget, carecontract.OfferingCorrectionProblemOverlapping)
 		return
 	}
 	if at < 0 {
-		e.alreadyMoved(row, day, target)
+		e.alreadyMoved(row, day, move.target)
 		return
 	}
 	service := e.services[at]
-	if service.CareOfferingID.Int64() == target.ID {
+	if service.CareOfferingID.Int64() == move.target.ID {
 		return
 	}
-	if !e.covers(target, service) {
+	if !e.covers(move.target, service) {
 		e.problem(row.line, carecontract.OfferingCorrectionFieldTarget, carecontract.OfferingCorrectionProblemOutsidePhase)
 		return
 	}
-	if end := target.EndTimes[day]; end != "" && service.EndsAt != "" && end != service.EndsAt {
+	if end := move.target.EndTimes[day]; end != "" && service.EndsAt != "" && end != service.EndsAt {
 		e.hint(carecontract.OfferingCorrectionHintEndTimeDiffers)
 	}
-	e.change(day, service.ModuleName, target.Name)
-	e.services[at].CareOfferingID, e.services[at].ModuleName = ident.ID(target.ID), target.Name
+	e.change(day, service.ModuleName, move.target.Name)
+	e.services[at].CareOfferingID, e.services[at].ModuleName = ident.ID(move.target.ID), move.target.Name
 	e.replaced[at] = row.line
-}
-
-// overlaps tells that the row names, on the weekday, a module another row
-// moves a booking to as its current one, or the other way round, and notes
-// what the row names. Such rows would move a booking twice (A to B, B to C)
-// or swap two bookings, and a repeated run would swap them back.
-func (e *correctionEval) overlaps(row correctionRow, day string) bool {
-	current := day + "\x1f" + textnorm.HeaderKey(row.current)
-	target := day + "\x1f" + textnorm.HeaderKey(row.target)
-	if row.target == "" || current == target {
-		e.sources[current] = true
-		return e.targets[current]
-	}
-	overlap := e.targets[current] || e.sources[target]
-	e.sources[current], e.targets[target] = true, true
-	return overlap
 }
 
 // find is the first service of the weekday the test holds for; -1 without
@@ -364,17 +426,27 @@ func (e *correctionEval) find(day string, test func(n int, s carecontract.Servic
 
 // alreadyMoved settles a row whose module the contract does not book on the
 // weekday: a booking that names the target already is done, so a repeated
-// run changes nothing. Only a booking the contract had before the rows, and
-// that no other row counted, is such a booking.
+// run changes nothing. Only a booking the contract had before the file,
+// that no row names as its own and no other row counted, is such a booking.
 func (e *correctionEval) alreadyMoved(row correctionRow, day string, target carecontract.Offering) {
-	at := e.find(day, func(n int, s carecontract.Service) bool {
-		return e.replaced[n] == 0 && !e.claimed[n] && s.CareOfferingID.Int64() == target.ID
+	at := e.find(day, func(n int, _ carecontract.Service) bool {
+		return !e.sources[n] && !e.claimed[n] && e.original[n] == target.ID
 	})
 	if at < 0 {
 		e.problem(row.line, carecontract.OfferingCorrectionFieldCurrent, carecontract.OfferingCorrectionProblemNotBooked)
 		return
 	}
 	e.claimed[at] = true
+}
+
+// heldBooking is a booking the office has not decided yet.
+func (e *correctionEval) heldBooking(row correctionRow, day string, at int) {
+	if at < 0 {
+		e.problem(row.line, carecontract.OfferingCorrectionFieldCurrent, carecontract.OfferingCorrectionProblemNotBooked)
+		return
+	}
+	e.held = true
+	e.change(day, e.services[at].ModuleName, "")
 }
 
 // covers tells that the phase of the target runs as long as the booking
@@ -394,16 +466,6 @@ func earlierDay(a, b *calendar.Date) *calendar.Date {
 		return b
 	}
 	return a
-}
-
-// heldBooking is a booking the office has not decided yet.
-func (e *correctionEval) heldBooking(row correctionRow, day string, at int) {
-	if at < 0 {
-		e.problem(row.line, carecontract.OfferingCorrectionFieldCurrent, carecontract.OfferingCorrectionProblemNotBooked)
-		return
-	}
-	e.held = true
-	e.change(day, e.services[at].ModuleName, "")
 }
 
 // target finds the module of a name at the school of the contract and tells

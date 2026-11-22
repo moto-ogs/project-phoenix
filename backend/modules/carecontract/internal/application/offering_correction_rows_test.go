@@ -177,6 +177,29 @@ func TestOfferingCorrectionRefusesRowsThatOverlap(t *testing.T) {
 	assert.Contains(t, problemCodes(unbooked), carecontract.OfferingCorrectionProblemNotBooked)
 }
 
+// A contract keeps the name its module had at the import. A row finds the
+// booking under the name the module has today too, and rows that hand a
+// module on are refused by the module, not by its name.
+func TestOfferingCorrectionKnowsARenamedModule(t *testing.T) {
+	t.Parallel()
+	renamed := func(id int64) ports.CorrectableContract {
+		return correctionContract(id, correctionService("mon", 12, "Kurz alt", "14:00"), correctionService("mon", 13, "Lang alt", "16:00"))
+	}
+	found := correctionRows(t, renamed(8), [3]string{"Mo", "OGS Kurz", "OGS Mo-Mi"})
+	require.NotNil(t, found.version, found.contract.Problems)
+	assert.Equal(t, int64(10), found.version.Version.Services[0].CareOfferingID.Int64())
+
+	for name, rows := range map[string][][3]string{
+		"a booking under its old name is no finished move": {{"Mo", "OGS Mo-Mi", "OGS Lang"}, {"Mo", "Lang alt", "OGS Do-Fr"}},
+		"the same rows the other way round":                {{"Mo", "Lang alt", "OGS Do-Fr"}, {"Mo", "OGS Mo-Mi", "OGS Lang"}},
+		"a swap under the old names":                       {{"Mo", "Kurz alt", "OGS Lang"}, {"Mo", "Lang alt", "OGS Kurz"}},
+	} {
+		candidate := correctionRows(t, renamed(9), rows...)
+		assert.Nil(t, candidate.version, name)
+		assert.Contains(t, problemCodes(candidate), carecontract.OfferingCorrectionProblemOverlapping, name)
+	}
+}
+
 // The booking keeps its last day, so a target whose phase ends earlier
 // cannot take it.
 func TestOfferingCorrectionRefusesATargetThatEndsBeforeTheBooking(t *testing.T) {

@@ -120,7 +120,7 @@ function problemSentence(problem: OfferingCorrectionProblem): string {
     case "inactive":
       return "Das neue Modul ist ausgeschaltet.";
     case "outside_phase":
-      return "Das neue Modul läuft nicht so lange wie die Buchung. Sein Schuljahr passt nicht.";
+      return "Das neue Modul läuft nicht in der ganzen Zeit der Buchung. Sein Schuljahr passt nicht.";
     case "not_offered":
       return "Das neue Modul läuft an diesem Wochentag nicht.";
     case "double_booked":
