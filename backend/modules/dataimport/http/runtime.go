@@ -2,12 +2,23 @@ package importapi
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/moto-ogs/project-phoenix/modules/dataimport"
 )
 
 type Middleware = func(http.Handler) http.Handler
+
+// ErrStaffProfileRequired is what Runtime.StaffID wraps when the account has
+// no staff record at the school and the session is not one the Träger-Büro
+// opened (#7818). The import names its author, so such an account is refused
+// rather than treated as unauthenticated.
+var ErrStaffProfileRequired = errors.New("data import: account has no staff profile at this school")
+
+// codeImportStaffProfileRequired is the registered code of that refusal
+// (error-registry/import.json).
+const codeImportStaffProfileRequired = "import.staff_profile_required"
 
 // Failure preserves the response envelope without coupling import handlers to
 // the common renderer or its implementation types.

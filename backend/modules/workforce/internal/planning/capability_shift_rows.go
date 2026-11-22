@@ -78,7 +78,8 @@ func seriesRowToCapability(series *StaffShiftSeries) workforce.StaffShiftSeries 
 		ShiftTypeID: series.ShiftTypeID, Notes: series.Notes, CalendarPeriodID: series.CalendarPeriodID,
 		WeekPattern: series.WeekPattern, ValidFrom: series.ValidFrom.String(), SeriesRootID: series.SeriesRootID,
 		RetainedOccurrenceShiftID: series.RetainedOccurrenceShiftID, IncludeSchoolBreaks: series.IncludeSchoolBreaks,
-		CreatedBy: series.CreatedBy, UpdatedBy: series.UpdatedBy, CreatedAt: series.CreatedAt, UpdatedAt: series.UpdatedAt,
+		CreatedBy: series.CreatedBy, UpdatedBy: series.UpdatedBy, PlannedByTraeger: series.PlannedByTraeger,
+		CreatedAt: series.CreatedAt, UpdatedAt: series.UpdatedAt,
 	}
 	if series.ValidUntil != nil {
 		value.ValidUntil = series.ValidUntil.String()
@@ -121,6 +122,7 @@ func applySeriesToRow(series *StaffShiftSeries, value workforce.StaffShiftSeries
 	series.IncludeSchoolBreaks = value.IncludeSchoolBreaks
 	series.CreatedBy = value.CreatedBy
 	series.UpdatedBy = value.UpdatedBy
+	series.PlannedByTraeger = value.PlannedByTraeger
 }
 
 func shiftTypeRowToCapability(shiftType *workforce.ShiftTypeRecord) workforce.ShiftType {

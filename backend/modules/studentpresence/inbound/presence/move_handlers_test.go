@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
@@ -21,16 +23,77 @@ import (
 
 type moveAuthPersonService struct {
 	People
-	person *PersonIdentity
-	staff  *StaffIdentity
+	person    *PersonIdentity
+	staff     *StaffIdentity
+	lookupErr error
 }
 
 func (s moveAuthPersonService) FindByAccountID(_ context.Context, _ int64) (*PersonIdentity, error) {
-	return s.person, nil
+	return s.person, s.lookupErr
 }
 
 func (s moveAuthPersonService) GetStaffByPersonID(_ context.Context, _ int64) (*StaffIdentity, error) {
 	return s.staff, nil
+}
+
+// staffResolutionCases are the callers whose staff record cannot be named:
+// a valid session without a person or without a staff record is refused
+// (403, never 401), a failed lookup is the server's (#7818).
+var staffResolutionCases = []struct {
+	name   string
+	people moveAuthPersonService
+	status int
+}{
+	{name: "no person", people: moveAuthPersonService{}, status: testutil.StatusForbidden},
+	{name: "person without staff", people: moveAuthPersonService{person: &PersonIdentity{ID: 10}}, status: testutil.StatusForbidden},
+	{name: "lookup failure", people: moveAuthPersonService{lookupErr: errors.New("database unavailable")}, status: testutil.StatusInternalServerError},
+}
+
+// TestCheckInMoveActorRefusesAccountWithoutStaffRecord pins that checking
+// children in stays with the school's staff, for administrators and a
+// Träger-Büro session too, and answers with the check-in's own code.
+func TestCheckInMoveActorRefusesAccountWithoutStaffRecord(t *testing.T) {
+	t.Parallel()
+	for _, tc := range staffResolutionCases {
+		for name, withContext := range map[string]func(*testutil.Request) *testutil.Request{"admin": withAdminMoveContext, "staff": withStaffMoveContext} {
+			t.Run(tc.name+"/"+name, func(t *testing.T) {
+				t.Parallel()
+				rs := resourceForTest(Resource{PersonService: tc.people})
+				rr := httptest.NewRecorder()
+
+				staffID, auth, ok := rs.CheckInMoveActor(rr, withContext(httptest.NewRequest(testutil.MethodPost, "/visits/check-in-to-group", nil)))
+
+				require.False(t, ok)
+				assert.Zero(t, staffID)
+				assert.Nil(t, auth)
+				require.Equal(t, tc.status, rr.Code, rr.Body.String())
+				if tc.status == testutil.StatusForbidden {
+					assert.Contains(t, rr.Body.String(), `"code":"`+common.CodeAttendanceCheckinStaffProfileRequired+`"`)
+				}
+			})
+		}
+	}
+}
+
+// TestClaimGroupRefusesAccountWithoutStaffRecord pins that taking over a
+// supervision stays personal to staff, refused with 403 instead of 401.
+func TestClaimGroupRefusesAccountWithoutStaffRecord(t *testing.T) {
+	t.Parallel()
+	for _, tc := range staffResolutionCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			rs := resourceForTest(Resource{PersonService: tc.people, Operations: &stubPresenceOperations{}})
+			routeCtx := chi.NewRouteContext()
+			routeCtx.URLParams.Add("id", "99")
+			req := withAdminMoveContext(httptest.NewRequest(testutil.MethodPost, "/groups/99/claim", nil))
+			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx))
+			rr := httptest.NewRecorder()
+
+			rs.claimGroup(rr, req)
+
+			require.Equal(t, tc.status, rr.Code, rr.Body.String())
+		})
+	}
 }
 
 func withAdminMoveContext(req *testutil.Request) *testutil.Request {

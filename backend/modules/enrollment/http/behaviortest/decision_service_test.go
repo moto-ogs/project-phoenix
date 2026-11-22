@@ -2943,6 +2943,56 @@ func TestDecisionService_Decide_ScheduleTargetWithoutReviewerStaffRollsBackAppro
 	assert.Nil(t, child.CreatedStudentID)
 }
 
+// A person of the Träger-Büro approves in a school session opened through the
+// Absprung: no staff record there, and the request carries the mark of the
+// Träger-Büro (#7818). The weekly rows name no staff member and carry the
+// mark instead. A reviewer with a staff record in the same kind of session
+// still writes as that staff member.
+func TestDecisionService_Decide_TraegerSessionWithoutStaffWritesWeeklyRowsAsTraeger(t *testing.T) {
+	t.Parallel()
+
+	env := setupDecisionTest(t)
+	ctx := testpkg.Ctx(t)
+	schema, err := NewTestFormSchemas(env.repos.Enrollment()).CreateSchema(ctx, "Testformular Träger", []enrollmentNative.FormField{
+		{Key: "pickup_times", Label: "Abholzeiten", Type: enrollmentNative.FormFieldWeekdaySchedule, AppliesToCh: true,
+			Target: enrollmentNative.TargetSchedulePickup, AllowedTimes: []string{"14:45"}, SortOrder: 0},
+		{Key: "arrival_times", Label: "Betreuungstage", Type: enrollmentNative.FormFieldWeekdaySchedule, AppliesToCh: true,
+			Target: enrollmentNative.TargetScheduleArrival, SortOrder: 1},
+	}, env.creatorID)
+	require.NoError(t, err)
+	env.sourcePhase.FormSchemaID = &schema.ID
+	require.NoError(t, testpkg.TenantCommand1(t, ctx, env.db, env.repos.Enrollment().UpdatePhase, OwnerPhaseForTest(env.sourcePhase)))
+	traegerCtx := enrollmentNative.WithTraegerBueroReviewer(ctx)
+	weekly := map[string]any{"pickup_times": map[string]any{"mon": "14:45"}, "arrival_times": map[string]any{"mon": "07:45"}}
+
+	approve := func(email, lastName string, reviewer int64) int64 {
+		reqID, childID := submitOneChildWithCustomData(t, env, email, "Anna", lastName, weekly)
+		outcome, decideErr := testpkg.TenantQuery1(t, traegerCtx, env.db, env.decision.Decide, enrollmentAPI.DecideInput{
+			RequestID: reqID, ChildID: childID, Status: enrollmentNative.DecisionApproved, ReviewedBy: reviewer,
+		})
+		require.NoError(t, decideErr)
+		require.NotNil(t, outcome.Child.CreatedStudentID)
+		return *outcome.Child.CreatedStudentID
+	}
+	countRows := func(studentID int64, where string) (count int) {
+		require.NoError(t, env.db.NewRaw(`
+			SELECT (SELECT COUNT(*) FROM schedule.student_pickup_schedules WHERE tenant_id = ? AND student_id = ? AND `+where+`)
+				+ (SELECT COUNT(*) FROM schedule.student_arrival_schedules WHERE tenant_id = ? AND student_id = ? AND `+where+`)`,
+			testpkg.Tenant(t), studentID, testpkg.Tenant(t), studentID).Scan(ctx, &count))
+		return count
+	}
+
+	traegerAccount := testpkg.CreateTestAccount(t, env.db, "traeger-buero-reviewer")
+	byTraeger := approve("pickup-traeger@example.com", "Traeger", traegerAccount.ID)
+	assert.Equal(t, 2, countRows(byTraeger, "created_by IS NULL AND entered_by_traeger"),
+		"the pickup and the arrival row carry the mark of the Träger-Büro instead of a staff author")
+
+	staff, staffAccountID := createReviewerStaffWithDistinctAccount(t, env)
+	byStaff := approve("pickup-traeger-staff@example.com", "TraegerStaff", staffAccountID)
+	assert.Equal(t, 2, countRows(byStaff, fmt.Sprintf("created_by = %d AND NOT entered_by_traeger", staff.ID)),
+		"a reviewer with a staff record writes as that staff member, also in a Träger session")
+}
+
 // TestDecisionService_Decide_ExistingStudentScheduleReplacementFailureRollsBack
 // locks in the #1663 fix. The existing-student re-enrollment path runs
 // applyTargetedFields with ReplaceSchedules, which DELETES the matched

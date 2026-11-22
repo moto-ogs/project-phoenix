@@ -448,6 +448,33 @@ Anmeldeprotokoll der Schule.
 
 Offen bleibt der Vermerk „Träger-Büro“ im Audit der Schule aus Abschnitt 5:
 Der Änderungsverlauf nennt die Person, aber noch nicht, dass sie über den
-Träger kam. Offen bleiben auch die Schreibwege anderer Bereiche, die einen
-Personal-Datensatz verlangen (Anmeldung freigeben, Dienstplan, Kalender,
-Schul-Check-in, Import, Angebote).
+Träger kam. Die Schreibwege anderer Bereiche, die einen Personal-Datensatz
+verlangen, entscheidet der folgende Nachtrag.
+
+## Nachtrag 2026-11-22 (2): Weitere Schreibwege aus dem Absprung (#7818)
+
+Der erste Nachtrag gilt für die Betreuungszeiten. Dieselbe Frage stellt sich
+überall, wo ein Schreibweg einen Personal-Datensatz der Schule verlangt. Die
+Regel bleibt: kein künstlicher Personal-Datensatz, ein Vermerk je Zeile, den
+die Datenbank absichert, und wer an der Schule Personal ist, schreibt als
+Personal. Je Bereich gilt:
+
+| Bereich | Entscheidung |
+| --- | --- |
+| Anmeldung freigeben mit Bring- oder Abholzeiten, auch Nachmeldung, Änderungsantrag und Datenkorrektur | Offen für das Träger-Büro. Die Zeiten sind Betreuungszeiten und tragen `entered_by_traeger`. Ein Wochenplan, der erst zum Betreuungsbeginn gilt, merkt sich das in `enrollment.request_children.weekly_plan_by_traeger`. |
+| Import von Kindern | Offen. Importierte Bring- und Abholzeiten tragen `entered_by_traeger`. |
+| Dienstplan: Schichten, Vertretungen, Serien | Offen. Einzelne Schichten nutzen weiter `planned_by_traeger` („geplant oder zuletzt geändert“). Serien und ihre Ausnahmen bekommen denselben Vermerk, dort gilt Urheber oder Vermerk, nie beides. |
+| Angebot anlegen, auch schnell anlegen | Offen. `activities.groups.created_by` bleibt leer; die Spalte ist dort schon freiwillig. Beim schnellen Anlegen wird niemand als Leitung eingetragen. |
+| Schul-Check-in, Check-in in Raum oder Gruppe, Aufsicht übernehmen | Bleibt dem Personal der Schule vorbehalten. Der Eintrag sagt, wer vor Ort für das Kind verantwortlich war; das Träger-Büro betreut keine Kinder (ADR 0089). |
+| Angebot spontan starten | Bleibt Personal vorbehalten. Wer startet, wird Aufsicht der laufenden Einheit. |
+| Kalender: eigene Termine, Einladungen, Kalender-Abo | Bleibt Personal vorbehalten. Alles dort ist persönlich oder hängt an der Person, die einlädt. |
+| Fehlzeiten-Kontingente und Anfangssalden | Bleiben Personal vorbehalten. Sie wirken auf die Abrechnung und nennen, wer entschieden hat. |
+
+Wo ein Weg Personal vorbehalten bleibt, sagt die Antwort das: 403 mit einem
+eigenen Code (`attendance.checkin_staff_profile_required`,
+`import.staff_profile_required`, `workforce.no_staff_profile`,
+`timetable.no_staff_profile`, `calendar.no_staff_profile`). Eine gültige
+Sitzung bekommt dafür kein 401 mehr, und ein fehlgeschlagener Abruf des
+Personal-Datensatzes ist ein Serverfehler, keine fehlende Berechtigung.
+
+Offen bleibt der Vermerk „Träger-Büro“ im Audit der Schule aus Abschnitt 5.

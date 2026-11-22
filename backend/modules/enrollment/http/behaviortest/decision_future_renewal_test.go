@@ -642,6 +642,43 @@ func TestDecisionService_ApplyDueWeeklyPlans_ResolvesMissingAuthorFromReviewer(t
 	assert.Equal(t, r.reviewerStaffID, rows[0].CreatedBy)
 }
 
+// The Träger-Büro approves a renewal before its care starts, in a school
+// session without a staff record (#7818). The tick runs months later without
+// that session; the plan keeps the Träger-Büro as its author, so the start
+// writes the weekly rows with the mark instead of failing every day.
+func TestDecisionService_ApplyDueWeeklyPlans_AppliesTraegerPlanWithMark(t *testing.T) {
+	t.Parallel()
+
+	r := setupFutureRenewal(t)
+	ctx := testpkg.Ctx(t)
+	traegerAccount := testpkg.CreateTestAccount(t, r.env.db, "traeger-buero-renewal")
+	_, err := testpkg.TenantQuery1(t, enrollmentNative.WithTraegerBueroReviewer(ctx), testpkg.SetupTestDB(t), r.env.decision.Decide, enrollmentAPI.DecideInput{
+		RequestID: r.requestID, ChildID: r.childID, Status: enrollmentNative.DecisionApproved, ReviewedBy: traegerAccount.ID,
+	})
+	require.NoError(t, err)
+	r.assertRunningPlan(t, "after the approval")
+
+	var stored struct {
+		Author    *int64 `bun:"weekly_plan_author"`
+		ByTraeger bool   `bun:"weekly_plan_by_traeger"`
+	}
+	require.NoError(t, r.env.db.NewRaw(`
+		SELECT weekly_plan_author, weekly_plan_by_traeger FROM enrollment.request_children
+		WHERE tenant_id = ? AND id = ?`, testpkg.Tenant(t), r.childID).Scan(ctx, &stored))
+	assert.Nil(t, stored.Author)
+	assert.True(t, stored.ByTraeger, "the plan stores the Träger-Büro as the author of its weekly rows")
+
+	assert.Equal(t, 1, r.applyDue(t, r.start))
+	assert.Equal(t, map[int]string{timetable.WeekdayMonday: "15:10"}, r.pickups(t))
+	assert.Equal(t, []int{timetable.WeekdayMonday}, r.careDays(t))
+	var marked int
+	require.NoError(t, r.env.db.NewRaw(`
+		SELECT (SELECT COUNT(*) FROM schedule.student_pickup_schedules WHERE tenant_id = ? AND student_id = ? AND created_by IS NULL AND entered_by_traeger)
+			+ (SELECT COUNT(*) FROM schedule.student_arrival_schedules WHERE tenant_id = ? AND student_id = ? AND created_by IS NULL AND entered_by_traeger)`,
+		testpkg.Tenant(t), r.studentID, testpkg.Tenant(t), r.studentID).Scan(ctx, &marked))
+	assert.Equal(t, 2, marked, "the start writes the weekly rows as the Träger-Büro")
+}
+
 // revokedFutureRenewal approves an account-bound open-phase renewal of a
 // child in care whose weekly plan and class switch (2a → 3) wait for the
 // start, then removes the parent's relationship to the child (#6053).

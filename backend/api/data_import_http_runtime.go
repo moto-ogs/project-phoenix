@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/dataimport"
 	importapi "github.com/moto-ogs/project-phoenix/modules/dataimport/http"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
@@ -33,7 +34,7 @@ func dataImportHTTPRuntime(people peopledirectory.Capability, membership schoolm
 		return staff.ID, nil
 	}
 	runtime := importapi.Runtime{
-		Middleware:           append(SessionChain(tokenprimitives.TenantClaims), common.TenantOperationMiddleware),
+		Middleware:           append(SessionChain(tokenprimitives.TenantClaims), common.TenantOperationMiddleware, markDataImportTraegerAuthor),
 		RequireAnyPermission: common.RequiresAnyPermission,
 		TemplateTransaction:  common.TenantTxMiddleware,
 		WithinTenant:         tenant.WithinCurrentTenant,
@@ -45,7 +46,8 @@ func dataImportHTTPRuntime(people peopledirectory.Capability, membership schoolm
 			if err != nil {
 				return 0, err
 			}
-			return staffForAccount(ctx, id)
+			staffID, err := staffForAccount(ctx, id)
+			return dataImportStaffID(ctx, staffID, err)
 		},
 		OpeningDecider: staffForAccount,
 		ChildQuota: func(ctx context.Context) (importapi.ChildQuota, bool, error) {
@@ -66,6 +68,33 @@ func dataImportHTTPRuntime(people peopledirectory.Capability, membership schoolm
 		runtime.OpeningImport = opening.ForUpload
 	}
 	return runtime
+}
+
+// markDataImportTraegerAuthor marks the request of a school session the
+// Träger-Büro opened through the Absprung (ADR 0084 section 5, #7818). Its
+// person holds the school's admin role without a staff record there; the
+// weekly times an import writes carry the mark instead of a staff author.
+func markDataImportTraegerAuthor(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if sessiontoken.ClaimsFromCtx(r.Context()).ViaTraeger {
+			r = r.WithContext(careplan.WithTraegerBueroAuthor(r.Context()))
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// dataImportStaffID names the import's author. A staff member always imports
+// as staff; the marked Träger-Büro without a staff record imports without one
+// (0); any other account without a staff record is refused (#7818). A
+// failed lookup stays an error of its own.
+func dataImportStaffID(ctx context.Context, staffID int64, err error) (int64, error) {
+	if !errors.Is(err, peopledirectory.ErrPersonNotFound) && !errors.Is(err, schoolmembership.ErrStaffNotFound) {
+		return staffID, err
+	}
+	if careplan.EnteredByTraeger(ctx, 0) {
+		return 0, nil
+	}
+	return 0, fmt.Errorf("%w: %w", importapi.ErrStaffProfileRequired, err)
 }
 
 var errDataImportChildQuotaReaderUnbound = errors.New("data import: child quota reader is not bound")

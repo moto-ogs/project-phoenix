@@ -268,6 +268,7 @@ func (rs *Resource) createSeries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	input.ActorStaffID = actor.StaffID
+	input.TraegerAccountID = actor.traegerAccountID()
 	input.WorkingTime = req.Confirmation()
 
 	result, err := rs.planning.CreateSeries(r.Context(), workforce.CreateStaffShiftSeries{StaffShiftSeriesInput: input})
@@ -299,6 +300,7 @@ func (rs *Resource) splitSeries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	input.ActorStaffID = actor.StaffID
+	input.TraegerAccountID = actor.traegerAccountID()
 	input.WorkingTime = req.Confirmation()
 	result, err := rs.planning.SplitSeries(r.Context(), input)
 	if err != nil {

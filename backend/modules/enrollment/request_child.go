@@ -158,6 +158,10 @@ type WeeklyPlan struct {
 	// Resolved when the plan is stored, so the start does not depend on that
 	// account still existing. 0 when it could not be resolved.
 	AuthorStaffID int64
+	// ByTraeger: the plan was stored in a session of the Träger-Büro by a
+	// person without a staff record of the school, so the start writes the
+	// weekly rows as the Träger-Büro (#7818). Never set beside AuthorStaffID.
+	ByTraeger bool
 }
 
 // DueClassSwitch is a planned class switch whose day has come, with the

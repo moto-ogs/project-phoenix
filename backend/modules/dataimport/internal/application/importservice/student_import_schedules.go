@@ -34,6 +34,7 @@ func (c *StudentImportConfig) createArrivalSchedules(ctx context.Context, studen
 		if _, err := c.Schedules.CreateArrivalSchedule(ctx, ports.ArrivalSchedule{
 			StudentID: studentID, Weekday: sched.Weekday, ExpectedArrival: arrival,
 			Notes: importModels.OptionalCell(sched.Notes), CreatedBy: ImporterIDFromContext(ctx),
+			EnteredByTraeger: ports.EnteredByTraeger(ctx, ImporterIDFromContext(ctx)),
 		}); err != nil {
 			return fmt.Errorf("create arrival schedule (weekday %d): %w", sched.Weekday, err)
 		}
@@ -54,6 +55,7 @@ func (c *StudentImportConfig) createPickupSchedules(ctx context.Context, student
 		if _, err := c.Schedules.CreatePickupSchedule(ctx, ports.PickupSchedule{
 			StudentID: studentID, Weekday: sched.Weekday, PickupTime: pickup,
 			Notes: importModels.OptionalCell(sched.Notes), CreatedBy: ImporterIDFromContext(ctx), Source: ports.ScheduleSourceStaff,
+			EnteredByTraeger: ports.EnteredByTraeger(ctx, ImporterIDFromContext(ctx)),
 		}); err != nil {
 			return fmt.Errorf("create pickup schedule (weekday %d): %w", sched.Weekday, err)
 		}

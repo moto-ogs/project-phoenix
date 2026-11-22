@@ -70,6 +70,9 @@ type SplitSeriesInput struct {
 	// closing days (#3820).
 	IncludeSchoolBreaks *bool
 	ActorStaffID        int64
+	// TraegerAccountID is the Träger-Büro account behind a split without a
+	// staff member (#7818): the successor carries the mark.
+	TraegerAccountID int64
 	// WorkingTime confirms the working-time warnings of the occurrences
 	// (#4708).
 	WorkingTime workforce.WorkingTimeConfirmation
@@ -240,6 +243,11 @@ func (s *staffShiftSeriesService) updateTodayOccurrence(
 	if input.ActorStaffID > 0 {
 		updated.UpdatedBy = &input.ActorStaffID
 	}
+	// The Träger-Büro marks the row it changes, keeping its author (#7818).
+	if account := input.TraegerAccountID; account > 0 {
+		updated.PlannedByTraeger = true
+		updated.TraegerAccountID = &account
+	}
 	if _, err := s.shiftService.UpdateShiftWithOptions(ctx, &updated, StaffShiftUpdateOptions{
 		SuppressTimeTrackingBroadcast: true,
 	}); err != nil {
@@ -378,7 +386,7 @@ func (s *staffShiftSeriesService) writeSeriesCandidates(ctx context.Context, ser
 		return 0, shiftWriteError("bulk create staff shifts", err)
 	}
 	if override != nil {
-		if err := s.guard.recordSeries(ctx, override, shiftsToRows(written), series.CreatedBy); err != nil {
+		if err := s.guard.recordSeries(ctx, override, shiftsToRows(written), series.TraegerAccountID, series.CreatedBy); err != nil {
 			return 0, err
 		}
 	}
@@ -447,6 +455,7 @@ func seriesCandidate(series *StaffShiftSeries, d calendar.Date, stamp absenceSta
 		SeriesID:             &seriesID,
 		SeriesOccurrenceDate: &occurrenceDate,
 		CreatedBy:            series.CreatedBy,
+		PlannedByTraeger:     series.PlannedByTraeger,
 	}
 	if stamp.absenceID > 0 {
 		applySickReport(candidate, stamp)
