@@ -1,3 +1,4 @@
+import { bffJson, bffPath } from "~/lib/bff-fetch";
 /**
  * Berichte des Trägers nach Vorlage (#4716, Spec #4611 Stories 115 und 116).
  *
@@ -13,13 +14,9 @@ import { filenameFromDisposition } from "./file-download";
 import type * as traegerReportsContract from "./contract/traeger-reports.generated";
 import type * as traegerReportTemplatesContract from "./contract/traeger-report-templates.generated";
 import { requiredDay } from "./contract/required-day";
-import { traegerRequest } from "./traeger-api";
 
 /** Das Recht, das Vorlagen anlegen, ändern und löschen lässt. */
 export const REPORT_TEMPLATES_MANAGE_RIGHT = "traeger_settings:manage";
-
-const REPORT_PATH = "/api/traeger/reports/key-date";
-const TEMPLATES_PATH = "/api/traeger/report-templates";
 
 /** Die Abschnitte eines Berichts, in der Reihenfolge des Berichts. */
 export const REPORT_SECTIONS = [
@@ -241,10 +238,8 @@ function templateToBackend(
   };
 }
 
-function reportQuery(keyDate: string, templateId: string | null): string {
-  const params = new URLSearchParams({ key_date: keyDate });
-  if (templateId) params.set("template", templateId);
-  return params.toString();
+function reportQuery(keyDate: string, templateId: string | null) {
+  return { key_date: keyDate, template: templateId || undefined };
 }
 
 /** Der Bericht zum Stichtag, mit oder ohne Vorlage. */
@@ -253,9 +248,9 @@ export async function fetchKeyDateReport(
   templateId: string | null,
 ): Promise<KeyDateReport> {
   return reportFromBackend(
-    await traegerRequest<traegerReportsContract.KeyDateReport>(
-      `${REPORT_PATH}?${reportQuery(keyDate, templateId)}`,
-    ),
+    await bffJson("org", "GET /traeger/reports/key-date", {
+      query: reportQuery(keyDate, templateId),
+    }),
   );
 }
 
@@ -276,7 +271,15 @@ export async function downloadKeyDateReport(
   format: ReportExportFormat,
 ): Promise<{ readonly blob: Blob; readonly filename: string | null }> {
   const response = await transportFetch(
-    `${REPORT_PATH}/export?${reportQuery(keyDate, templateId)}&format=${format}`,
+    bffPath(
+      "org",
+      "/traeger/reports/key-date/export",
+      {},
+      {
+        ...reportQuery(keyDate, templateId),
+        format,
+      },
+    ),
     { credentials: "include", cache: "no-store" },
   );
   if (!response.ok) {
@@ -294,10 +297,7 @@ export async function downloadKeyDateReport(
 
 /** Die Vorlagen des Trägers, nach Namen. */
 export async function fetchReportTemplates(): Promise<ReportTemplate[]> {
-  const body =
-    await traegerRequest<
-      traegerReportTemplatesContract.TraegerReportTemplate[]
-    >(TEMPLATES_PATH);
+  const body = await bffJson("org", "GET /traeger/report-templates/");
   return body.map(templateFromBackend);
 }
 
@@ -305,13 +305,9 @@ export async function createReportTemplate(
   input: ReportTemplateInput,
 ): Promise<ReportTemplate> {
   return templateFromBackend(
-    await traegerRequest<traegerReportTemplatesContract.TraegerReportTemplate>(
-      TEMPLATES_PATH,
-      {
-        method: "POST",
-        body: templateToBackend(input),
-      },
-    ),
+    await bffJson("org", "POST /traeger/report-templates/", {
+      body: templateToBackend(input),
+    }),
   );
 }
 
@@ -320,15 +316,15 @@ export async function updateReportTemplate(
   input: ReportTemplateInput,
 ): Promise<ReportTemplate> {
   return templateFromBackend(
-    await traegerRequest<traegerReportTemplatesContract.TraegerReportTemplate>(
-      `${TEMPLATES_PATH}/${encodeURIComponent(id)}`,
-      { method: "PUT", body: templateToBackend(input) },
-    ),
+    await bffJson("org", "PUT /traeger/report-templates/{id}", {
+      params: { id },
+      body: templateToBackend(input),
+    }),
   );
 }
 
 export async function deleteReportTemplate(id: string): Promise<void> {
-  await traegerRequest<unknown>(`${TEMPLATES_PATH}/${encodeURIComponent(id)}`, {
-    method: "DELETE",
+  await bffJson("org", "DELETE /traeger/report-templates/{id}", {
+    params: { id },
   });
 }

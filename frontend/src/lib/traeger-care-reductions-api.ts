@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the rule chain of the monthly contribution (#4685): the care
  * rules of the Träger (income levels, siblings, single parents, cap) and
@@ -11,7 +12,6 @@ import { requiredDay } from "./contract/required-day";
 import type * as sharedContract from "./contract/shared.generated";
 import type * as traegerCareEvidencesContract from "./contract/traeger-care-evidences.generated";
 import type * as traegerCareRulesContract from "./contract/traeger-care-rules.generated";
-import { traegerRequest } from "./traeger-api";
 import {
   type CareModule,
   moduleFromBackend,
@@ -95,9 +95,6 @@ export interface CareEvidenceSet {
   readonly contracts: readonly CareEvidenceContract[];
   readonly levels: readonly CareRule[];
 }
-
-const RULES_PATH = "/api/traeger/care-rules";
-const EVIDENCES_PATH = "/api/traeger/care-evidences";
 
 const ids = (values: readonly string[] | null): string[] => [...(values ?? [])];
 
@@ -221,9 +218,7 @@ function evidenceBody(
 }
 
 export async function fetchCareRules(): Promise<CareRuleSet> {
-  return ruleSetFromBackend(
-    await traegerRequest<traegerCareRulesContract.CareRuleSet>(RULES_PATH),
-  );
+  return ruleSetFromBackend(await bffJson("org", "GET /traeger/care-rules/"));
 }
 
 /** Creates a rule without `ruleId`, changes that one otherwise. */
@@ -232,30 +227,27 @@ export async function saveCareRule(
   input: CareRuleInput,
 ): Promise<CareRuleSet> {
   return ruleSetFromBackend(
-    await traegerRequest<traegerCareRulesContract.CareRuleSet>(
-      ruleId ? `${RULES_PATH}/${ruleId}` : RULES_PATH,
-      { method: ruleId ? "PUT" : "POST", body: ruleBody(input) },
-    ),
+    await (ruleId
+      ? bffJson("org", "PUT /traeger/care-rules/{id}", {
+          params: { id: ruleId },
+          body: ruleBody(input),
+        })
+      : bffJson("org", "POST /traeger/care-rules/", { body: ruleBody(input) })),
   );
 }
 
 export async function deleteCareRule(ruleId: string): Promise<CareRuleSet> {
   return ruleSetFromBackend(
-    await traegerRequest<traegerCareRulesContract.CareRuleSet>(
-      `${RULES_PATH}/${ruleId}`,
-      {
-        method: "DELETE",
-      },
-    ),
+    await bffJson("org", "DELETE /traeger/care-rules/{id}", {
+      params: { id: ruleId },
+    }),
   );
 }
 
 /** Reads the evidences; the backend records the read per contract. */
 export async function fetchCareEvidences(): Promise<CareEvidenceSet> {
   return evidenceSetFromBackend(
-    await traegerRequest<traegerCareEvidencesContract.CareEvidenceSet>(
-      EVIDENCES_PATH,
-    ),
+    await bffJson("org", "GET /traeger/care-evidences/"),
   );
 }
 
@@ -264,10 +256,14 @@ export async function saveCareEvidence(
   input: CareEvidenceInput,
 ): Promise<CareEvidenceSet> {
   return evidenceSetFromBackend(
-    await traegerRequest<traegerCareEvidencesContract.CareEvidenceSet>(
-      evidenceId ? `${EVIDENCES_PATH}/${evidenceId}` : EVIDENCES_PATH,
-      { method: evidenceId ? "PUT" : "POST", body: evidenceBody(input) },
-    ),
+    await (evidenceId
+      ? bffJson("org", "PUT /traeger/care-evidences/{id}", {
+          params: { id: evidenceId },
+          body: evidenceBody(input),
+        })
+      : bffJson("org", "POST /traeger/care-evidences/", {
+          body: evidenceBody(input),
+        })),
   );
 }
 
@@ -275,11 +271,8 @@ export async function deleteCareEvidence(
   evidenceId: string,
 ): Promise<CareEvidenceSet> {
   return evidenceSetFromBackend(
-    await traegerRequest<traegerCareEvidencesContract.CareEvidenceSet>(
-      `${EVIDENCES_PATH}/${evidenceId}`,
-      {
-        method: "DELETE",
-      },
-    ),
+    await bffJson("org", "DELETE /traeger/care-evidences/{id}", {
+      params: { id: evidenceId },
+    }),
   );
 }

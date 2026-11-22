@@ -25,6 +25,11 @@ vi.mock("~/lib/traeger-api", () => ({
   fetchHolidayPeriod: period,
   fetchTraegerSchools: schools,
 }));
+// Side reads of the page that these tests do not set up fail at once, as
+// they did while traeger-api was mocked without its request helper.
+vi.mock("~/lib/bff-fetch", () => ({
+  bffJson: () => Promise.reject(new Error("bffJson is not mocked here")),
+}));
 vi.mock("~/lib/traeger-holiday-registrations-api", async (original) => ({
   ...(await original<
     typeof import("~/lib/traeger-holiday-registrations-api")
