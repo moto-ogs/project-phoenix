@@ -1,67 +1,50 @@
 package api
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/api/common/contractmodel"
 )
 
-var outsideReasons = map[outsideReason]bool{
-	outsideDevice: true, outsideWebDAV: true, outsideMetrics: true, outsideProbe: true, outsideSession: true,
-	outsideStream: true, outsidePublicAPI: true, outsideWebhook: true, outsideBrowserRoute: true,
-}
-
-// matches reports whether an entry names a catalog route.
-func (r outsideRoute) matches(method, pattern string) bool {
-	if r.prefix {
-		return strings.HasPrefix(pattern, r.line)
-	}
-	return r.line == method+" "+pattern
-}
-
-// TestEveryCatalogRouteHasAContractOrAReason holds the catalog to one
-// pattern: a route registers a contract, or routesOutsideContract names
-// why it cannot (#7808).
+// TestEveryCatalogRouteHasAContractOrAReason holds the catalog to one way
+// (#7808): every line is a route the portals' catalog proxy serves, a route
+// a portal's own route file serves (RouteFile), or a line outside the
+// contract with a reason of the closed set (Outside), and exactly one of
+// them. Each marker sits on the line's common.RouteContract.
 func TestEveryCatalogRouteHasAContractOrAReason(t *testing.T) {
 	t.Parallel()
 	catalog, err := RouteCatalog()
 	require.NoError(t, err)
-	registrations, err := contractRegistrations()
+	doc, err := ContractDocument()
 	require.NoError(t, err)
-	registered := map[string]bool{}
-	for _, registration := range registrations {
-		registered[registration.Method+" "+registration.Pattern] = true
-	}
-	isRegistered := func(method, pattern string) bool {
-		return registered[method+" "+pattern] || registered[method+" "+strings.ReplaceAll(pattern, "/*/", "/")]
-	}
 
-	entries := routesOutsideContract()
-	used := make([]int, len(entries))
+	kinds := map[string][]string{}
+	for _, route := range doc.Routes {
+		kind := "proxied contract"
+		if route.RouteFile != "" {
+			kind = "route file contract"
+			assert.NotEmpty(t, strings.TrimSpace(route.RouteFile), "%s: say why its route file serves it", route.Key())
+		}
+		kinds[route.Key()] = append(kinds[route.Key()], kind)
+	}
+	for _, line := range doc.Outside {
+		kinds[line.Key()] = append(kinds[line.Key()], "outside")
+		assert.Contains(t, contractmodel.OutsideReasons, line.Reason, "%s: unknown reason", line.Key())
+		assert.NotEmpty(t, strings.TrimSpace(line.Why), "%s: say why the contract cannot carry it", line.Key())
+	}
 	for _, route := range catalog {
 		line := route.Method + " " + route.Pattern
-		if isRegistered(route.Method, route.Pattern) {
-			// A prefix covers only the routes without a contract below it.
-			for _, entry := range entries {
-				assert.False(t, !entry.prefix && entry.matches(route.Method, route.Pattern),
-					"%s registers a contract; remove it from routesOutsideContract", line)
-			}
-			continue
+		// A router mounted at "/" shows as "/*/" in the catalog; a
+		// registration names the pattern without it.
+		found := slices.Concat(kinds[line], kinds[strings.ReplaceAll(line, "/*/", "/")])
+		if line == strings.ReplaceAll(line, "/*/", "/") {
+			found = kinds[line]
 		}
-		var hits []string
-		for i, entry := range entries {
-			if entry.matches(route.Method, route.Pattern) {
-				used[i]++
-				hits = append(hits, entry.line)
-			}
-		}
-		assert.Len(t, hits, 1, "%s: register a common.RouteContract (docs/agents/new-route.md), or name exactly one reason in routesOutsideContract", line)
-	}
-	for i, entry := range entries {
-		assert.Positive(t, used[i], "%q names no route of the catalog; remove it", entry.line)
-		assert.True(t, outsideReasons[entry.reason], "%q: unknown reason %q", entry.line, entry.reason)
-		assert.NotEmpty(t, strings.TrimSpace(entry.why), "%q: say why the contract cannot carry it", entry.line)
+		assert.Len(t, found, 1, "%s: register a common.RouteContract beside its handler (docs/agents/new-route.md): a proxied contract, a RouteFile contract, or Outside with its reason; found %v", line, found)
 	}
 }

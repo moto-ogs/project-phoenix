@@ -143,6 +143,27 @@ export const InvitationResendResponseSchema: z.ZodType<InvitationResendResponse,
   message: str,
 });
 
+/** Go: account.AcceptInvitationRequest */
+export interface AcceptInvitationRequest {
+  first_name?: string;
+  last_name?: string;
+  password?: string;
+  confirm_password?: string;
+}
+
+/** Go: account.AcceptInvitationResponse */
+export interface AcceptInvitationResponse {
+  account_id: string;
+  email: string;
+  tenant_subdomain?: string;
+}
+
+export const AcceptInvitationResponseSchema: z.ZodType<AcceptInvitationResponse, unknown> = object<AcceptInvitationResponse>({
+  account_id: int64String,
+  email: str,
+  tenant_subdomain: optional(str),
+});
+
 export const routes = {
   "DELETE /auth/invitations/{id}/": {
     method: "DELETE",
@@ -181,5 +202,13 @@ export const routes = {
     pattern: "/auth/invitations/{id}/resend",
     portals: ["tenant"],
     response: success(InvitationResendResponseSchema),
+  },
+  "POST /auth/invitations/{token}/accept": {
+    method: "POST",
+    pattern: "/auth/invitations/{token}/accept",
+    portals: ["tenant"],
+    routeFile: "the route file attaches the signed-in owner's session to the accept",
+    request: requestBody<AcceptInvitationRequest>(),
+    response: success(AcceptInvitationResponseSchema),
   },
 } as const;

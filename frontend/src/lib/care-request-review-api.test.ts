@@ -1,8 +1,22 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
+const { mockDownloadBlob } = vi.hoisted(() => ({ mockDownloadBlob: vi.fn() }));
+vi.mock("~/lib/file-download", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/file-download")>()),
+  downloadBlob: mockDownloadBlob,
+}));
+
 import { ApiError } from "./api-error";
 
 import {
   decideCareScheduleChangeRequest,
+  downloadCareRequestProofPdf,
+  fetchCareScheduleChangeRequest,
   type StaffCareRequest,
 } from "./care-request-review-api";
 import type * as studentsContract from "~/lib/contract/students.generated";
@@ -176,5 +190,78 @@ describe("decideCareScheduleChangeRequest", () => {
     expect((err as ApiError).message).toBe(
       "Entscheidung konnte nicht gespeichert werden",
     );
+  });
+});
+
+describe("fetchCareScheduleChangeRequest", () => {
+  it("reads one request by its encoded id", async () => {
+    let seenURL = "";
+    const detail = {
+      id: "r/1",
+      student_id: "42",
+      first_name: "Max",
+      last_name: "M.",
+      status: "pending",
+      request_kind: "pickup_change",
+      requested: [],
+      created_at: "2026-07-01T10:00:00Z",
+    };
+    mockFetch(async (input) => {
+      seenURL = typeof input === "string" ? input : input.toString();
+      return jsonResponse({ data: detail });
+    });
+
+    await expect(fetchCareScheduleChangeRequest("r/1")).resolves.toEqual(
+      detail,
+    );
+    expect(seenURL).toBe("/api/students/care-schedule-change-requests/r%2F1");
+  });
+
+  it("keeps the status and code of a refused read", async () => {
+    mockFetch(async () =>
+      jsonResponse({ code: "care.request_not_found" }, 404),
+    );
+
+    await expect(fetchCareScheduleChangeRequest("r1")).rejects.toMatchObject({
+      status: 404,
+      code: "care.request_not_found",
+      message: "Anfrage konnte nicht geladen werden",
+    });
+  });
+});
+
+describe("downloadCareRequestProofPdf", () => {
+  it("saves the proof under the name the backend gives", async () => {
+    mockFetch(
+      async () =>
+        new Response("%PDF", {
+          status: 200,
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": 'attachment; filename="nachweis-r1.pdf"',
+          },
+        }),
+    );
+
+    await downloadCareRequestProofPdf("r1");
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      "/api/students/care-schedule-change-requests/r1/proof",
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(mockDownloadBlob).toHaveBeenCalledWith(
+      expect.any(Blob),
+      "nachweis-r1.pdf",
+    );
+  });
+
+  it("names the failed proof in the error", async () => {
+    mockFetch(async () => new Response("", { status: 500 }));
+
+    await expect(downloadCareRequestProofPdf("r1")).rejects.toMatchObject({
+      status: 500,
+      message: "Nachweis konnte nicht geladen werden",
+    });
+    expect(mockDownloadBlob).not.toHaveBeenCalled();
   });
 });

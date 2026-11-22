@@ -41,8 +41,8 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
-// Organization is a Träger the person may choose at sign-in.
-type Organization struct {
+// LoginOrganization is a Träger the person may choose at sign-in.
+type LoginOrganization struct {
 	ID   ident.ID `json:"id"`
 	Name string   `json:"name"`
 }
@@ -179,16 +179,16 @@ func (rs *Resource) RouterWithAuthRateLimiter(authRateLimiter func(http.Handler)
 	return r
 }
 
-// LoginRequest is the body of POST /traeger/auth/login. OrganizationID is the
+// TraegerLoginRequest is the body of POST /traeger/auth/login. OrganizationID is the
 // Träger a member of several chose; zero lets the backend decide or ask.
-type LoginRequest struct {
+type TraegerLoginRequest struct {
 	Email          string   `json:"email"`
 	Password       string   `json:"password"`
 	OrganizationID ident.ID `json:"organization_id,omitempty"`
 }
 
 // Bind normalizes and validates the request.
-func (req *LoginRequest) Bind(_ *http.Request) error {
+func (req *TraegerLoginRequest) Bind(_ *http.Request) error {
 	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
 	return validation.ValidateStruct(req,
 		validation.Field(&req.Email, validation.Required, is.Email),
@@ -197,25 +197,25 @@ func (req *LoginRequest) Bind(_ *http.Request) error {
 	)
 }
 
-// LoginResponse is the login answer of the other portals with the Träger
+// TraegerLoginResponse is the login answer of the other portals with the Träger
 // the sign-in resolved or offers. mfa_required carries the remember-device
 // offer as portalauth.LoginResponse does (#6955).
-type LoginResponse struct {
-	Status                string         `json:"status"`
-	AccessToken           string         `json:"access_token,omitempty"`
-	RefreshToken          string         `json:"refresh_token,omitempty"`
-	ChallengeToken        string         `json:"challenge_token,omitempty"`
-	MaskedEmail           string         `json:"masked_email,omitempty"`
-	MFAEnrollmentRequired bool           `json:"mfa_enrollment_required,omitempty"`
-	TrustedDeviceEnabled  *bool          `json:"trusted_device_enabled,omitempty"`
-	TrustedDeviceDays     *int           `json:"trusted_device_days,omitempty"`
-	OrganizationID        ident.ID       `json:"organization_id,omitempty"`
-	Organizations         []Organization `json:"organizations,omitempty"`
+type TraegerLoginResponse struct {
+	Status                string              `json:"status"`
+	AccessToken           string              `json:"access_token,omitempty"`
+	RefreshToken          string              `json:"refresh_token,omitempty"`
+	ChallengeToken        string              `json:"challenge_token,omitempty"`
+	MaskedEmail           string              `json:"masked_email,omitempty"`
+	MFAEnrollmentRequired bool                `json:"mfa_enrollment_required,omitempty"`
+	TrustedDeviceEnabled  *bool               `json:"trusted_device_enabled,omitempty"`
+	TrustedDeviceDays     *int                `json:"trusted_device_days,omitempty"`
+	OrganizationID        ident.ID            `json:"organization_id,omitempty"`
+	Organizations         []LoginOrganization `json:"organizations,omitempty"`
 }
 
 // login signs a person in to the Träger-Portal.
 func (rs *Resource) login(w http.ResponseWriter, r *http.Request) {
-	req := &LoginRequest{}
+	req := &TraegerLoginRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -232,12 +232,12 @@ func (rs *Resource) login(w http.ResponseWriter, r *http.Request) {
 	common.RenderJSON(w, r, loginResponse(result))
 }
 
-func loginResponse(result *identityaccess.TraegerLoginResult) LoginResponse {
-	organizations := make([]Organization, 0, len(result.Organizations))
+func loginResponse(result *identityaccess.TraegerLoginResult) TraegerLoginResponse {
+	organizations := make([]LoginOrganization, 0, len(result.Organizations))
 	for _, organization := range result.Organizations {
-		organizations = append(organizations, Organization{ID: ident.ID(organization.ID), Name: organization.Name})
+		organizations = append(organizations, LoginOrganization{ID: ident.ID(organization.ID), Name: organization.Name})
 	}
-	response := LoginResponse{
+	response := TraegerLoginResponse{
 		Status: string(result.Status), AccessToken: result.AccessToken, RefreshToken: result.RefreshToken,
 		ChallengeToken: result.ChallengeToken, MaskedEmail: result.MaskedEmail,
 		MFAEnrollmentRequired: result.Status == identityaccess.TraegerLoginMFAEnrollmentRequired,

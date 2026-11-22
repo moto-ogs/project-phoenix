@@ -39,3 +39,25 @@ func SecondFactorRouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/auth/passkeys/register/verify", Portals: portals, Request: common.PasskeyRegisterVerifyRequest{}, Response: identityaccess.PasskeyCredentialSummary{}},
 	}
 }
+
+// SessionRouteContracts registers the caterer's sign-in, second factor,
+// passkey sign-in and the confirmation that switches the factor on (#7808),
+// relative to /caterer. Each answer carries tokens, so only the portal's
+// route file reads it and no proxy allowlist names the route.
+func SessionRouteContracts() []common.RouteContract {
+	portals := []common.PortalScope{common.PortalCaterer}
+	step := func(pattern string, request, response any, plain bool) common.RouteContract {
+		return common.RouteContract{
+			Method: "POST", Pattern: pattern, Portals: portals, RouteFile: common.RouteFileSession,
+			Request: request, Response: response, Plain: plain,
+		}
+	}
+	return []common.RouteContract{
+		step("/auth/login", catererLoginRequest{}, CatererLoginResponse{}, false),
+		step("/auth/mfa/verify", common.MFAVerifyRequest{}, portalauth.TokenResponse{}, true),
+		step("/auth/mfa/resend", common.MFAResendRequest{}, common.MFAResendResponse{}, true),
+		step("/auth/passkeys/login/options", nil, identityaccess.PasskeyCeremonyOptions{}, true),
+		step("/auth/passkeys/login/verify", common.PasskeyVerifyRequest{}, CatererLoginResponse{}, true),
+		step("/account/mfa/confirm", confirmMFARequest{}, portalauth.TokenResponse{}, true),
+	}
+}

@@ -353,6 +353,24 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/settings/login-image",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true,
+      "route_file": "the route file purges the cached tenant lookup after the write, so the login page shows the change"
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/settings/values/{key}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true,
+      "route_file": "the route file purges the cached tenant lookup after the write, so the login page shows the change"
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/shift-types/{id}",
       "portals": [
         "tenant"
@@ -988,6 +1006,18 @@
         "ref": "MFAAdminResetRequest"
       },
       "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/operator/schools/{id}/settings/values/{key}",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "schoolSettingMutationResponse"
+      },
+      "route_file": "the operator's route file purges the school's cached tenant lookup"
     },
     {
       "method": "DELETE",
@@ -2145,6 +2175,19 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/display/dashboard",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "DashboardResponse"
+      },
+      "route_file": "the wall display sends its display token in a header, no session; its route file forwards it",
+      "plain": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/enrollment/admin/change-requests/",
       "portals": [
         "tenant"
@@ -2471,6 +2514,24 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "late_invite",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PublicEnrollmentFormBootstrapResponse"
+      },
+      "route_file": "the route file adds the signed-in staff member's profile to the public form"
+    },
+    {
+      "method": "GET",
       "pattern": "/api/enrollment/legal/{tenantSlug}",
       "portals": [
         "public"
@@ -2502,6 +2563,18 @@
         "kind": "ref",
         "ref": "PublicLegalTextsResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/me/profile",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "GuardianProfileResponse"
+      },
+      "route_file": "read only by the form bootstrap's route file"
     },
     {
       "method": "GET",
@@ -4141,6 +4214,18 @@
         "kind": "ref",
         "ref": "HomeLayoutResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/settings/login-image",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "loginImageResponse"
+      },
+      "route_file": "served by the same route file as its writes"
     },
     {
       "method": "GET",
@@ -14738,6 +14823,21 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/settings/login-image",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "loginImageUploadResponse"
+      },
+      "max_body_bytes": 2098176,
+      "multipart": true,
+      "too_large_code": "files.file_too_large",
+      "route_file": "the route file purges the cached tenant lookup after the write, so the login page shows the change"
+    },
+    {
+      "method": "POST",
       "pattern": "/api/shift-types/",
       "portals": [
         "tenant"
@@ -16800,6 +16900,22 @@
     },
     {
       "method": "POST",
+      "pattern": "/auth/invitations/{token}/accept",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "AcceptInvitationRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "AcceptInvitationResponse"
+      },
+      "route_file": "the route file attaches the signed-in owner's session to the accept"
+    },
+    {
+      "method": "POST",
       "pattern": "/auth/link-to-tenant",
       "portals": [
         "tenant"
@@ -16815,6 +16931,96 @@
     },
     {
       "method": "POST",
+      "pattern": "/auth/login",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "LoginRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "LoginResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/logout",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true,
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/mfa/enroll/confirm",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/mfa/enroll/start",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "EnrollStartResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/mfa/resend",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAResendRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "MFAResendResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/mfa/verify",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
       "pattern": "/auth/passkeys/enrollment/challenge",
       "portals": [
         "tenant"
@@ -16824,6 +17030,40 @@
         "ref": "PasskeyEnrollmentChallenge"
       },
       "no_retry_after_renewal": "a renewed session would mail the code twice"
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/passkeys/login/options",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "passkeyLoginOptionsRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "PasskeyCeremonyOptions"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/passkeys/login/verify",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PasskeyVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "LoginResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
     },
     {
       "method": "POST",
@@ -16897,6 +17137,19 @@
     },
     {
       "method": "POST",
+      "pattern": "/auth/refresh",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
       "pattern": "/auth/register",
       "portals": [
         "tenant"
@@ -16924,6 +17177,87 @@
         "kind": "ref",
         "ref": "RoleResponse"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/session/validate",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SessionValidationRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "SessionClaimsResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/staff-preview",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "StaffPreviewStartRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "StaffPreviewStartResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/staff-preview/end",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "StaffPreviewEndRequest"
+      },
+      "no_data": true,
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/switch-tenant",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SwitchTenantRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/caterer/account/mfa/confirm",
+      "portals": [
+        "caterer"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "confirmMFARequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
     },
     {
       "method": "POST",
@@ -16965,6 +17299,56 @@
     },
     {
       "method": "POST",
+      "pattern": "/caterer/auth/login",
+      "portals": [
+        "caterer"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "catererLoginRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "CatererLoginResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+    },
+    {
+      "method": "POST",
+      "pattern": "/caterer/auth/mfa/resend",
+      "portals": [
+        "caterer"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAResendRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "MFAResendResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/caterer/auth/mfa/verify",
+      "portals": [
+        "caterer"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
       "pattern": "/caterer/auth/passkeys/enrollment/challenge",
       "portals": [
         "caterer"
@@ -16974,6 +17358,36 @@
         "ref": "PasskeyEnrollmentChallenge"
       },
       "no_retry_after_renewal": "a renewed session would mail the code twice"
+    },
+    {
+      "method": "POST",
+      "pattern": "/caterer/auth/passkeys/login/options",
+      "portals": [
+        "caterer"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PasskeyCeremonyOptions"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/caterer/auth/passkeys/login/verify",
+      "portals": [
+        "caterer"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PasskeyVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "CatererLoginResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
     },
     {
       "method": "POST",
@@ -17131,6 +17545,121 @@
     },
     {
       "method": "POST",
+      "pattern": "/operator/auth/invitations/accept",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "OperatorAcceptInvitationRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "OperatorResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/auth/invitations/validate",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ValidateInvitationRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "OperatorInvitationValidationResponse"
+      },
+      "route_file": "the route file reads the invitation token from the flow cookie, never from the URL"
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/auth/login",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "OperatorLoginRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "OperatorLoginResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/auth/logout",
+      "portals": [
+        "platform"
+      ],
+      "no_data": true,
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/auth/mfa/enroll/confirm",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAEnrollConfirmRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/auth/mfa/enroll/start",
+      "portals": [
+        "platform"
+      ],
+      "no_data": true,
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/auth/mfa/resend",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAResendRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "MFAResendResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/auth/mfa/verify",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+    },
+    {
+      "method": "POST",
       "pattern": "/operator/auth/passkeys/enrollment/challenge",
       "portals": [
         "platform"
@@ -17140,6 +17669,36 @@
         "ref": "PasskeyEnrollmentChallenge"
       },
       "no_retry_after_renewal": "a renewed session would mail the code twice"
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/auth/passkeys/login/options",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PasskeyCeremonyOptions"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/auth/passkeys/login/verify",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PasskeyVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "LoginResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
     },
     {
       "method": "POST",
@@ -17171,6 +17730,18 @@
         "kind": "ref",
         "ref": "PasskeyCredentialSummary"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/auth/refresh",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
     },
     {
       "method": "POST",
@@ -17562,6 +18133,56 @@
     },
     {
       "method": "POST",
+      "pattern": "/parent/auth/login",
+      "portals": [
+        "parent"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "parentLoginRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "LoginResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+    },
+    {
+      "method": "POST",
+      "pattern": "/parent/auth/mfa/resend",
+      "portals": [
+        "parent"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAResendRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "MFAResendResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/parent/auth/mfa/verify",
+      "portals": [
+        "parent"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
       "pattern": "/parent/auth/password-reset",
       "portals": [
         "public"
@@ -17914,6 +18535,23 @@
     },
     {
       "method": "POST",
+      "pattern": "/parent/me/mfa/confirm",
+      "portals": [
+        "parent"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
       "pattern": "/parent/me/mfa/disable",
       "portals": [
         "parent"
@@ -18093,6 +18731,87 @@
       "max_body_bytes": 10489856,
       "multipart": true,
       "too_large_code": "files.file_too_large"
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/auth/login",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SchoolLoginRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "LoginResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/auth/mfa/enroll/confirm",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/auth/mfa/enroll/start",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "EnrollStartResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/auth/mfa/resend",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAResendRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "MFAResendResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/auth/mfa/verify",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
     },
     {
       "method": "POST",
@@ -18449,6 +19168,70 @@
     },
     {
       "method": "POST",
+      "pattern": "/traeger/auth/login",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "TraegerLoginRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerLoginResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/auth/mfa/enroll/confirm",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "TraegerMFAVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/auth/mfa/enroll/start",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "EnrollStartResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/auth/mfa/resend",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAResendRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "MFAResendResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
       "pattern": "/traeger/auth/mfa/step-up",
       "portals": [
         "org"
@@ -18458,6 +19241,40 @@
         "ref": "StepUpStartResponse"
       },
       "no_retry_after_renewal": "a renewed session would mail the code twice"
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/auth/mfa/step-up/verify",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/auth/mfa/verify",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "TraegerMFAVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
     },
     {
       "method": "POST",
@@ -20562,6 +21379,19 @@
     },
     {
       "method": "PUT",
+      "pattern": "/api/settings/values/{key}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "setValueRequest"
+      },
+      "no_data": true,
+      "route_file": "the route file purges the cached tenant lookup after the write, so the login page shows the change"
+    },
+    {
+      "method": "PUT",
       "pattern": "/api/shift-types/{id}",
       "portals": [
         "tenant"
@@ -21661,6 +22491,31 @@
         "ref": "deviceSlotsRequest"
       },
       "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/operator/schools/{id}/settings/values/{key}",
+      "portals": [
+        "platform"
+      ],
+      "query": [
+        {
+          "name": "force",
+          "kind": "string",
+          "values": [
+            "true"
+          ]
+        }
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "setSchoolSettingRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "schoolSettingMutationResponse"
+      },
+      "route_file": "the operator's route file purges the school's cached tenant lookup"
     },
     {
       "method": "PUT",
@@ -22969,6 +23824,464 @@
       }
     }
   ],
+  "outside": [
+    {
+      "method": "CONNECT",
+      "pattern": "/.well-known/caldav",
+      "reason": "webdav",
+      "why": "RFC 6764 discovery redirects every method"
+    },
+    {
+      "method": "CONNECT",
+      "pattern": "/api/caldav",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "CONNECT",
+      "pattern": "/api/caldav/*",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "CONNECT",
+      "pattern": "/internal/metrics",
+      "reason": "metrics",
+      "why": "Prometheus text exposition"
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/.well-known/caldav",
+      "reason": "webdav",
+      "why": "RFC 6764 discovery redirects every method"
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/caldav",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/caldav/*",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/iot/staff/{staffId}/rfid",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/students/{id}/rfid",
+      "reason": "device",
+      "why": "PyrePortal assigns and removes a tag with the device key and reads numeric IDs"
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/internal/metrics",
+      "reason": "metrics",
+      "why": "Prometheus text exposition"
+    },
+    {
+      "method": "GET",
+      "pattern": "/",
+      "reason": "probe",
+      "why": "the bare host answers a probe"
+    },
+    {
+      "method": "GET",
+      "pattern": "/.well-known/caldav",
+      "reason": "webdav",
+      "why": "RFC 6764 discovery redirects every method"
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/caldav",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/caldav/*",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/iot/activities",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/iot/config",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/iot/rfid/{tagId}",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/iot/rooms/available",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/iot/school-name",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/iot/session/current",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/iot/students",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/iot/teachers/",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/sse/events",
+      "reason": "stream",
+      "why": "event stream of the staff portal"
+    },
+    {
+      "method": "GET",
+      "pattern": "/health",
+      "reason": "probe",
+      "why": "liveness probe"
+    },
+    {
+      "method": "GET",
+      "pattern": "/internal/metrics",
+      "reason": "metrics",
+      "why": "Prometheus text exposition"
+    },
+    {
+      "method": "GET",
+      "pattern": "/parent-sse/events",
+      "reason": "stream",
+      "why": "event stream of the parents portal"
+    },
+    {
+      "method": "GET",
+      "pattern": "/public/data-return/openapi.json",
+      "reason": "public-api",
+      "why": "data return to the school authority, described by its own OpenAPI document"
+    },
+    {
+      "method": "GET",
+      "pattern": "/public/data-return/package",
+      "reason": "public-api",
+      "why": "data return to the school authority, described by its own OpenAPI document"
+    },
+    {
+      "method": "GET",
+      "pattern": "/public/data-return/package/archive",
+      "reason": "public-api",
+      "why": "data return to the school authority, described by its own OpenAPI document"
+    },
+    {
+      "method": "GET",
+      "pattern": "/public/data-return/register",
+      "reason": "public-api",
+      "why": "data return to the school authority, described by its own OpenAPI document"
+    },
+    {
+      "method": "GET",
+      "pattern": "/ready",
+      "reason": "probe",
+      "why": "readiness probe"
+    },
+    {
+      "method": "GET",
+      "pattern": "/school-sse/events",
+      "reason": "stream",
+      "why": "event stream of moto schule"
+    },
+    {
+      "method": "HEAD",
+      "pattern": "/.well-known/caldav",
+      "reason": "webdav",
+      "why": "RFC 6764 discovery redirects every method"
+    },
+    {
+      "method": "HEAD",
+      "pattern": "/api/caldav",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "HEAD",
+      "pattern": "/api/caldav/*",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "HEAD",
+      "pattern": "/internal/metrics",
+      "reason": "metrics",
+      "why": "Prometheus text exposition"
+    },
+    {
+      "method": "OPTIONS",
+      "pattern": "/.well-known/caldav",
+      "reason": "webdav",
+      "why": "RFC 6764 discovery redirects every method"
+    },
+    {
+      "method": "OPTIONS",
+      "pattern": "/api/caldav",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "OPTIONS",
+      "pattern": "/api/caldav/*",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "OPTIONS",
+      "pattern": "/internal/metrics",
+      "reason": "metrics",
+      "why": "Prometheus text exposition"
+    },
+    {
+      "method": "PATCH",
+      "pattern": "/.well-known/caldav",
+      "reason": "webdav",
+      "why": "RFC 6764 discovery redirects every method"
+    },
+    {
+      "method": "PATCH",
+      "pattern": "/api/caldav",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "PATCH",
+      "pattern": "/api/caldav/*",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "PATCH",
+      "pattern": "/internal/metrics",
+      "reason": "metrics",
+      "why": "Prometheus text exposition"
+    },
+    {
+      "method": "POST",
+      "pattern": "/.well-known/caldav",
+      "reason": "webdav",
+      "why": "RFC 6764 discovery redirects every method"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/caldav",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/caldav/*",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/iot/attendance/toggle",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/iot/checkin",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/iot/error-reports",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/iot/feedback",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/iot/move-to-room",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/iot/pickup-query",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/iot/ping",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/iot/session/activity",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/iot/session/end",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/iot/session/start",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/iot/staff-clock",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/iot/staff-clock/state",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/iot/staff/{staffId}/rfid",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/students/{id}/rfid",
+      "reason": "device",
+      "why": "PyrePortal assigns and removes a tag with the device key and reads numeric IDs"
+    },
+    {
+      "method": "POST",
+      "pattern": "/internal/metrics",
+      "reason": "metrics",
+      "why": "Prometheus text exposition"
+    },
+    {
+      "method": "POST",
+      "pattern": "/webhooks/email/delivery/{provider}",
+      "reason": "webhook",
+      "why": "the mail provider posts delivery events, signed per provider"
+    },
+    {
+      "method": "PUT",
+      "pattern": "/.well-known/caldav",
+      "reason": "webdav",
+      "why": "RFC 6764 discovery redirects every method"
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/caldav",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/caldav/*",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/iot/session/{sessionId}/supervisors",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "PUT",
+      "pattern": "/internal/metrics",
+      "reason": "metrics",
+      "why": "Prometheus text exposition"
+    },
+    {
+      "method": "QUERY",
+      "pattern": "/.well-known/caldav",
+      "reason": "webdav",
+      "why": "RFC 6764 discovery redirects every method"
+    },
+    {
+      "method": "QUERY",
+      "pattern": "/api/caldav",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "QUERY",
+      "pattern": "/api/caldav/*",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "QUERY",
+      "pattern": "/internal/metrics",
+      "reason": "metrics",
+      "why": "Prometheus text exposition"
+    },
+    {
+      "method": "TRACE",
+      "pattern": "/.well-known/caldav",
+      "reason": "webdav",
+      "why": "RFC 6764 discovery redirects every method"
+    },
+    {
+      "method": "TRACE",
+      "pattern": "/api/caldav",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "TRACE",
+      "pattern": "/api/caldav/*",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "TRACE",
+      "pattern": "/internal/metrics",
+      "reason": "metrics",
+      "why": "Prometheus text exposition"
+    }
+  ],
   "enums": [
     {
       "name": "ApplicationContractConclusionMethod",
@@ -23780,6 +25093,66 @@
         },
         {
           "name": "tenant_slug",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AcceptInvitationRequest",
+      "go_type": "account.AcceptInvitationRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "confirm_password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AcceptInvitationResponse",
+      "go_type": "account.AcceptInvitationResponse",
+      "fields": [
+        {
+          "name": "account_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "tenant_subdomain",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -39489,6 +40862,60 @@
       ]
     },
     {
+      "name": "CatererLoginResponse",
+      "go_type": "catererauth.CatererLoginResponse",
+      "fields": [
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "access_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "refresh_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "challenge_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "masked_email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "trusted_device_enabled",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "trusted_device_days",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "CatererMFAChallengeResponse",
       "go_type": "catererauth.CatererMFAChallengeResponse",
       "fields": [
@@ -47149,6 +48576,93 @@
       ]
     },
     {
+      "name": "DashboardResponse",
+      "go_type": "display.DashboardResponse",
+      "fields": [
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "display_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "server_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_occupancy",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "RoomOccupancy"
+            }
+          }
+        },
+        {
+          "name": "running_activities",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "RunningActivity"
+            }
+          }
+        },
+        {
+          "name": "upcoming_activities",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "UpcomingActivity"
+            }
+          }
+        },
+        {
+          "name": "pickup_times",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "PickupBucket"
+            }
+          }
+        },
+        {
+          "name": "totals",
+          "schema": {
+            "kind": "ref",
+            "ref": "DashboardTotals"
+          }
+        }
+      ]
+    },
+    {
       "name": "DashboardSummary",
       "go_type": "workforce.DashboardSummary",
       "fields": [
@@ -47197,6 +48711,30 @@
         },
         {
           "name": "pending_requests_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DashboardTotals",
+      "go_type": "display.DashboardTotals",
+      "fields": [
+        {
+          "name": "students_present",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "rooms_occupied",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "activities_running",
           "schema": {
             "kind": "int"
           }
@@ -49917,6 +51455,18 @@
         {
           "name": "position",
           "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "EnrollStartResponse",
+      "go_type": "portalauth.EnrollStartResponse",
+      "fields": [
+        {
+          "name": "challenge_token",
           "schema": {
             "kind": "string"
           }
@@ -64666,6 +66216,113 @@
       ]
     },
     {
+      "name": "LoginOrganization",
+      "go_type": "traegerportal.LoginOrganization",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "LoginRequest",
+      "go_type": "account.LoginRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "tenant_slug",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "LoginResponse",
+      "go_type": "portalauth.LoginResponse",
+      "fields": [
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "access_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "refresh_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "challenge_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "masked_email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "mfa_enrollment_required",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "trusted_device_enabled",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "trusted_device_days",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "MFAAdminOverrideRequest",
       "go_type": "account.MFAAdminOverrideRequest",
       "request": true,
@@ -64733,6 +66390,27 @@
       ]
     },
     {
+      "name": "MFAEnrollConfirmRequest",
+      "go_type": "common.MFAEnrollConfirmRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "code",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "remember_device",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "MFAGlobalOverrideStateResponse",
       "go_type": "operator.MFAGlobalOverrideStateResponse",
       "fields": [
@@ -64746,6 +66424,60 @@
           "name": "override",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "MFAResendRequest",
+      "go_type": "common.MFAResendRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "challenge_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "MFAResendResponse",
+      "go_type": "common.MFAResendResponse",
+      "fields": [
+        {
+          "name": "challenge_token",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "MFAVerifyRequest",
+      "go_type": "common.MFAVerifyRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "challenge_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "code",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "remember_device",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -70039,6 +71771,41 @@
       ]
     },
     {
+      "name": "OperatorAcceptInvitationRequest",
+      "go_type": "operator.OperatorAcceptInvitationRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "display_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "confirm_password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "OperatorAnnouncementResponse",
       "go_type": "operatorannouncements.OperatorAnnouncementResponse",
       "fields": [
@@ -70255,6 +72022,31 @@
       ]
     },
     {
+      "name": "OperatorInvitationValidationResponse",
+      "go_type": "operator.OperatorInvitationValidationResponse",
+      "fields": [
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "display_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expires_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
       "name": "OperatorListItem",
       "go_type": "operator.OperatorListItem",
       "fields": [
@@ -70313,6 +72105,96 @@
           "name": "is_self",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OperatorLoginRequest",
+      "go_type": "operator.OperatorLoginRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OperatorLoginResponse",
+      "go_type": "operator.OperatorLoginResponse",
+      "fields": [
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "access_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "refresh_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "challenge_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "masked_email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "mfa_enrollment_required",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "trusted_device_enabled",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "trusted_device_days",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "operator",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "OperatorResponse"
           }
         }
       ]
@@ -73011,6 +74893,28 @@
       ]
     },
     {
+      "name": "PasskeyVerifyRequest",
+      "go_type": "common.PasskeyVerifyRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "session_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "response",
+          "optional": true,
+          "schema": {
+            "kind": "json",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "PasswordResetConfirmRequest",
       "go_type": "common.PasswordResetConfirmRequest",
       "request": true,
@@ -75288,6 +77192,24 @@
           "schema": {
             "kind": "int",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "PickupBucket",
+      "go_type": "display.PickupBucket",
+      "fields": [
+        {
+          "name": "time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "count",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -80495,6 +82417,51 @@
       ]
     },
     {
+      "name": "RoomOccupancy",
+      "go_type": "display.RoomOccupancy",
+      "fields": [
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "category_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "capacity",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "is_occupied",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "RoomReferencesResponse",
       "go_type": "httpadapter.RoomReferencesResponse",
       "fields": [
@@ -81143,6 +83110,49 @@
               "kind": "ref",
               "ref": "RunDueDate"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "RunningActivity",
+      "go_type": "display.RunningActivity",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "category",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "participants",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_capacity",
+          "optional": true,
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -84850,6 +86860,34 @@
       ]
     },
     {
+      "name": "SchoolLoginRequest",
+      "go_type": "schoolportal.SchoolLoginRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "tenant_slug",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "SchoolOccupancy",
       "go_type": "traegerview.SchoolOccupancy",
       "fields": [
@@ -87271,6 +89309,137 @@
       ]
     },
     {
+      "name": "SessionClaimsResponse",
+      "go_type": "account.SessionClaimsResponse",
+      "fields": [
+        {
+          "name": "id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "sub",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "username",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "roles",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "permissions",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "is_admin",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "scope",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "org_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "family_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "read_only",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "acting_admin_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "preview_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "via_traeger",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "exp",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "SessionDevice",
       "go_type": "ports.SessionDevice",
       "fields": [
@@ -87736,6 +89905,34 @@
               "kind": "ref",
               "ref": "BreakDurationUpdate"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SessionValidationRequest",
+      "go_type": "account.SessionValidationRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "access_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "refresh_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "portal",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -91412,6 +93609,71 @@
             "elem": {
               "kind": "string"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffPreviewEndRequest",
+      "go_type": "account.StaffPreviewEndRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "preview_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffPreviewStartRequest",
+      "go_type": "account.StaffPreviewStartRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "account_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "previous_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffPreviewStartResponse",
+      "go_type": "account.StaffPreviewStartResponse",
+      "fields": [
+        {
+          "name": "access_token",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expires_in",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "target_account_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "target_name",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -96966,6 +99228,20 @@
       ]
     },
     {
+      "name": "SwitchTenantRequest",
+      "go_type": "account.SwitchTenantRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "tenant_slug",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "SystemRole",
       "go_type": "organizationtenancy.SystemRole",
       "fields": [
@@ -97987,6 +100263,24 @@
         {
           "name": "pickup_time",
           "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TokenResponse",
+      "go_type": "portalauth.TokenResponse",
+      "fields": [
+        {
+          "name": "access_token",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "refresh_token",
           "schema": {
             "kind": "string"
           }
@@ -99520,6 +101814,113 @@
       ]
     },
     {
+      "name": "TraegerLoginRequest",
+      "go_type": "traegerportal.TraegerLoginRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "organization_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerLoginResponse",
+      "go_type": "traegerportal.TraegerLoginResponse",
+      "fields": [
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "access_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "refresh_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "challenge_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "masked_email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "mfa_enrollment_required",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "trusted_device_enabled",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "trusted_device_days",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "organization_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "organizations",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "LoginOrganization"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "TraegerLogo",
       "go_type": "organizationtenancy.TraegerLogo",
       "fields": [
@@ -99551,6 +101952,41 @@
           "name": "updated_at",
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerMFAVerifyRequest",
+      "go_type": "traegerportal.TraegerMFAVerifyRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "challenge_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "code",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "organization_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "remember_device",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -103072,6 +105508,42 @@
       ]
     },
     {
+      "name": "UpcomingActivity",
+      "go_type": "display.UpcomingActivity",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "category",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "UpdateAbsenceRequest",
       "go_type": "workforce.UpdateAbsenceRequest",
       "request": true,
@@ -104028,6 +106500,20 @@
           "schema": {
             "kind": "ref",
             "ref": "StaffVacationOpening"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ValidateInvitationRequest",
+      "go_type": "operator.ValidateInvitationRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -108216,6 +110702,27 @@
       ]
     },
     {
+      "name": "catererLoginRequest",
+      "go_type": "catererauth.catererLoginRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "celebrationResponse",
       "go_type": "birthdays.celebrationResponse",
       "fields": [
@@ -108863,6 +111370,27 @@
         },
         {
           "name": "school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "confirmMFARequest",
+      "go_type": "catererauth.confirmMFARequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "challenge_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "code",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -114090,6 +116618,37 @@
       ]
     },
     {
+      "name": "loginImageResponse",
+      "go_type": "settingshttp.loginImageResponse",
+      "fields": [
+        {
+          "name": "login_image_url",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "can_edit",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "loginImageUploadResponse",
+      "go_type": "settingshttp.loginImageUploadResponse",
+      "fields": [
+        {
+          "name": "login_image_url",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "manualRosterRequest",
       "go_type": "timetablehttp.manualRosterRequest",
       "request": true,
@@ -115969,6 +118528,27 @@
       ]
     },
     {
+      "name": "parentLoginRequest",
+      "go_type": "parentauth.parentLoginRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "parentPreferenceRequest",
       "go_type": "parent.parentPreferenceRequest",
       "request": true,
@@ -116254,6 +118834,20 @@
           "name": "deleted",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "passkeyLoginOptionsRequest",
+      "go_type": "account.passkeyLoginOptionsRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "tenant_slug",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -119458,6 +122052,19 @@
         },
         {
           "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "schoolSettingMutationResponse",
+      "go_type": "operator.schoolSettingMutationResponse",
+      "fields": [
+        {
+          "name": "school_slug",
+          "optional": true,
           "schema": {
             "kind": "string"
           }

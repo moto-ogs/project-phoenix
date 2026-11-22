@@ -1,86 +1,74 @@
-import { apiErrorFromResponse, transportFetch } from "./api-error";
-// Tagesauswertung (#1456): client for GET /api/students/day-log.
-// The proxy route forwards to the Go backend, which enforces the
-// gdpr.attendance_log_enabled gate and group scope.
-
+// Tagesauswertung (#1456): client for GET /api/students/day-log and its
+// export. The Go backend enforces the gdpr.attendance_log_enabled gate and
+// the group scope.
+import { bffFile, bffJson } from "~/lib/bff-fetch";
+import type * as studentsContract from "~/lib/contract/students.generated";
+import { requiredEnum } from "~/lib/contract/known-enum";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 
-export type DayLogStatus =
-  "present" | "sick" | "class_trip" | "excused" | "absent" | "not_scheduled";
+const DAY_LOG_STATUSES = [
+  "present",
+  "sick",
+  "class_trip",
+  "excused",
+  "absent",
+  "not_scheduled",
+] as const;
 
-interface DayLogCounters {
-  present: number;
-  sick: number;
-  class_trip: number;
-  excused: number;
-  absent: number;
-  not_scheduled: number;
-  total: number;
-}
+export type DayLogStatus = (typeof DAY_LOG_STATUSES)[number];
 
-export interface DayLogStudent {
-  student_id: string;
-  first_name: string;
-  last_name: string;
-  school_class: string;
+/**
+ * One child of the day; `check_out_note` says why it went home early
+ * (#3324), `class_periods` are the times in class between the stays (#5656).
+ */
+export type DayLogStudent = Omit<studentsContract.dayLogStudent, "status"> & {
   status: DayLogStatus;
-  label: string;
-  check_in_time?: string;
-  check_out_time?: string;
-  /** Why the child went home early (#3324). */
-  check_out_note?: string;
-  /** Times in class between the day's stays (#5656); no `until`: no return. */
-  class_periods?: { from: string; until?: string }[];
-  reported_at?: string;
-  source?: string;
-  hint?: string;
-}
+};
 
-export interface DayLogGroup {
-  group_id: string;
-  name: string;
+export type DayLogGroup = Omit<studentsContract.dayLogGroup, "students"> & {
   students: DayLogStudent[];
-  counters: DayLogCounters;
-}
+};
 
-export interface DayLogResponse {
-  date: string;
+export type DayLogResponse = Omit<studentsContract.dayLogResponse, "groups"> & {
   groups: DayLogGroup[];
-  counters: DayLogCounters;
+};
+
+function dayLogGroup(group: studentsContract.dayLogGroup): DayLogGroup {
+  return {
+    ...group,
+    students: (group.students ?? []).map((student) => ({
+      ...student,
+      // The status section and its colour need a status this build knows.
+      status: requiredEnum(DAY_LOG_STATUSES, student.status, "day log status"),
+    })),
+  };
 }
 
 export async function fetchDayLog(
   dateISO: string,
   groupId?: string,
 ): Promise<DayLogResponse> {
-  const params = new URLSearchParams({ date: dateISO });
-  if (groupId) params.set("group_id", groupId);
-
-  const response = await transportFetch(
-    `/api/students/day-log?${params.toString()}`,
-    { cache: "no-store" },
-  );
-  if (!response.ok) {
-    // Ausgeschaltet oder ohne sichtbare Gruppe erkennt die Seite am Code
-    // (students.day_log_disabled, students.day_log_no_groups), nie am Text.
-    throw await apiErrorFromResponse(
-      response,
-      `day log request failed (${response.status})`,
-    );
-  }
-
-  const body = (await response.json()) as { data: DayLogResponse };
-  return body.data;
+  // Ausgeschaltet oder ohne sichtbare Gruppe erkennt die Seite am Code
+  // (students.day_log_disabled, students.day_log_no_groups), nie am Text.
+  const log = await bffJson("tenant", "GET /api/students/day-log", {
+    query: { date: dateISO, group_id: groupId },
+    errorMessage: "day log request failed",
+  });
+  return { ...log, groups: (log.groups ?? []).map(dayLogGroup) };
 }
 
-export function dayLogExportUrl(
+export type DayLogExportFormat = "pdf" | "docx" | "xlsx";
+
+/** The export file of the day or one group; the caller reads body and name. */
+export function fetchDayLogExport(
   dateISO: string,
-  format: "pdf" | "docx" | "xlsx",
+  format: DayLogExportFormat,
   groupId?: string,
-): string {
-  const params = new URLSearchParams({ date: dateISO, format });
-  if (groupId) params.set("group_id", groupId);
-  return `/api/students/day-log/export?${params.toString()}`;
+): Promise<Response> {
+  return bffFile("tenant", "GET /api/students/day-log/export", {
+    query: { date: dateISO, format, group_id: groupId },
+    errorMessage: "day log export failed",
+  });
 }
 
 /** Display order of the status sections: explained absences in the middle,

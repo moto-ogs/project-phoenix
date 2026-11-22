@@ -19,6 +19,8 @@ import {
   holidayGuestLabel,
 } from "./holiday-host-api";
 
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
+
 const { downloadBlobMock } = vi.hoisted(() => ({ downloadBlobMock: vi.fn() }));
 
 vi.mock("~/lib/file-download", async (importOriginal) => ({

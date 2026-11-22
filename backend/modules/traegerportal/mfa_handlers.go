@@ -68,12 +68,12 @@ var (
 	errDevicesNotComposed   = errors.New("the Träger remembered devices are not composed")
 )
 
-// MFAVerifyRequest is the body of POST /traeger/auth/mfa/verify and
+// TraegerMFAVerifyRequest is the body of POST /traeger/auth/mfa/verify and
 // /traeger/auth/mfa/enroll/confirm. OrganizationID is the Träger the login
 // answered with; zero lets the backend take the only Träger of the account.
 // RememberDevice asks to remember the browser at that Träger (#6955); the
 // enrollment confirm ignores it.
-type MFAVerifyRequest struct {
+type TraegerMFAVerifyRequest struct {
 	ChallengeToken string   `json:"challenge_token"`
 	Code           string   `json:"code"`
 	OrganizationID ident.ID `json:"organization_id,omitempty"`
@@ -81,7 +81,7 @@ type MFAVerifyRequest struct {
 }
 
 // Bind validates the request like the other portals' verify body.
-func (req *MFAVerifyRequest) Bind(r *http.Request) error {
+func (req *TraegerMFAVerifyRequest) Bind(r *http.Request) error {
 	shared := common.MFAVerifyRequest{ChallengeToken: req.ChallengeToken, Code: req.Code}
 	if err := shared.Bind(r); err != nil {
 		return err
@@ -97,7 +97,7 @@ func (rs *Resource) mfaVerify(w http.ResponseWriter, r *http.Request) {
 	if !rs.requireMFA(w, r) {
 		return
 	}
-	req := &MFAVerifyRequest{}
+	req := &TraegerMFAVerifyRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -162,7 +162,7 @@ func (rs *Resource) mfaEnrollConfirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	accountID := claims.AccountID
-	req := &MFAVerifyRequest{}
+	req := &TraegerMFAVerifyRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return

@@ -1,15 +1,14 @@
-import type { DepartureMode } from "~/lib/departure-plan";
-import { ApiError, apiErrorFromBody, transportFetch } from "./api-error";
 /**
  * Staff client for the parent care-schedule change-request review queue
- * (#1803). Calls the Next.js proxy routes under
- * /api/students/care-schedule-change-requests which forward (with the tenant
- * session token) to the backend.
+ * (#1803): the registered routes under
+ * /api/students/care-schedule-change-requests, through the tenant BFF.
  */
 
+import { ApiError } from "./api-error";
+import { bffFile, bffJson } from "./bff-fetch";
+import type * as studentsContract from "./contract/students.generated";
 import { createLogger } from "~/lib/logger";
 import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
-import type * as studentsContract from "~/lib/contract/students.generated";
 
 const logger = createLogger({ component: "CareRequestReviewAPI" });
 
@@ -34,84 +33,52 @@ export interface StaffCareRequest {
   readonly decision_reason?: string;
   readonly created_at: string;
   readonly reviewed_at?: string;
-  readonly affected_blocks: readonly AffectedCareBlock[];
+  readonly affected_blocks: readonly studentsContract.AffectedCareBlock[];
   readonly impact_available: boolean;
   readonly impact_token: string;
   /** Die Eltern haben die Anfrage unterschrieben (#4780). */
   readonly signed?: boolean;
 }
 
-interface AffectedCareBlock {
-  readonly id: string;
-  readonly title: string;
-  readonly start_time: string;
-  readonly end_time: string;
-}
-
-interface Envelope<T> {
-  readonly data?: T;
-}
-
-function unwrap<T>(json: Envelope<T>): T {
-  if (json && typeof json === "object" && "data" in json) {
-    return json.data as T;
-  }
-  return json as unknown as T;
-}
-
 /**
- * Turns a failed response into an ApiError. The backend's stable 409 `code`
- * (e.g. "students.guardian_access_revoked", "students.change_request_not_pending")
- * lets the review UI name the concrete recovery action, and `status` tells
- * "gone" from "no access"; `detail` stays diagnostics for the log.
+ * Logs a failed call. The backend's stable 409 `code` (e.g.
+ * "students.guardian_access_revoked", "students.change_request_not_pending")
+ * travels on the ApiError and lets the review UI name the concrete recovery
+ * action; `status` tells "gone" from "no access".
  */
-async function readError(
-  response: Response,
-  fallback: string,
-): Promise<ApiError> {
-  let payload: unknown;
-  try {
-    payload = await response.json();
-  } catch {
-    // not JSON
+function logFailure(error: unknown): never {
+  if (error instanceof ApiError) {
+    logger.error("care_request_review_request_failed", {
+      status: error.status,
+      message: error.message,
+      ...(error.code ? { code: error.code } : {}),
+    });
   }
-  const error = apiErrorFromBody(fallback, response.status, payload);
-  logger.error("care_request_review_request_failed", {
-    status: response.status,
-    message: error.message,
-    ...(error.code ? { code: error.code } : {}),
-  });
-  return error;
+  throw error;
 }
 
 /** Approves (applies the weekly plan) or rejects one care-schedule request. */
-export async function decideCareScheduleChangeRequest(
+export function decideCareScheduleChangeRequest(
   requestId: string,
   approve: boolean,
   reason: string | undefined,
   impactToken: string,
   expectedVersion?: string,
-): Promise<StaffCareRequest> {
-  const response = await transportFetch(
-    `/api/students/care-schedule-change-requests/${encodeURIComponent(requestId)}/decide`,
+): Promise<studentsContract.CareRequestResponse> {
+  return bffJson(
+    "tenant",
+    "POST /api/students/care-schedule-change-requests/{requestId}/decide",
     {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+      params: { requestId },
+      body: {
         approve,
         reason: reason ?? "",
         impact_token: impactToken,
         ...(expectedVersion ? { expected_version: expectedVersion } : {}),
-      }),
+      },
+      errorMessage: "Entscheidung konnte nicht gespeichert werden",
     },
-  );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Entscheidung konnte nicht gespeichert werden",
-    );
-  }
-  return unwrap((await response.json()) as Envelope<StaffCareRequest>);
+  ).catch(logFailure);
 }
 
 /**
@@ -139,61 +106,21 @@ export interface StaffCareRequestHistoryEntry {
 }
 
 /**
- * One care-schedule request of ANY status, read from a message-thread pill
- * (#3135). Mirrors api/students.CareRequestDetailResponse: the history
- * projection plus the guardian's reason; a pending row carries no decision.
- */
-export interface StaffCareRequestDetail {
-  readonly id: string;
-  readonly student_id: string;
-  readonly first_name: string;
-  readonly last_name: string;
-  readonly status: CareRequestStatus;
-  readonly request_kind: CareRequestKind;
-  readonly requested: readonly studentsContract.CareRequestDiffResponse[];
-  /** Frozen decision-time diff; absent without a snapshot. */
-  readonly diff?: readonly studentsContract.CareRequestDiffResponse[];
-  readonly request_reason?: string;
-  readonly decision_reason?: string;
-  readonly created_at: string;
-  /** Absent while the request is still pending. */
-  readonly decided_at?: string;
-  readonly decided_by_name?: string;
-  /**
-   * The stored ask of a pickup-change row: calendar day ("YYYY-MM-DD"),
-   * requested time ("HH:MM") and the time recorded at submission, if any.
-   * Absent for weekly-plan rows.
-   */
-  readonly pickup_change?: {
-    readonly date: string;
-    /** Absent when the request leaves the Gehzeit of the day (#3945). */
-    readonly pickup_time?: string;
-    readonly previous_pickup_time?: string;
-    /** The Abholart asked for the day, absent when it stays (#3945). */
-    readonly departure_mode?: DepartureMode;
-    readonly previous_departure_modes?: readonly DepartureMode[];
-    /** Die Kontaktperson, die an diesem Tag abholt (#4780). */
-    readonly pickup_person?: string;
-  };
-  /** Die Eltern haben die Anfrage unterschrieben (#4780). */
-  readonly signed?: boolean;
-}
-
-/**
  * Loads one care-schedule request by its row id, whatever its status. The
  * backend answers 404 for a removed or foreign row and 403 for a child the
  * reader may not review; both arrive as ApiError with `status`.
  */
-export async function fetchCareScheduleChangeRequest(
+export function fetchCareScheduleChangeRequest(
   requestId: string,
-): Promise<StaffCareRequestDetail> {
-  const response = await transportFetch(
-    `/api/students/care-schedule-change-requests/${encodeURIComponent(requestId)}`,
-  );
-  if (!response.ok) {
-    throw await readError(response, "Anfrage konnte nicht geladen werden");
-  }
-  return unwrap((await response.json()) as Envelope<StaffCareRequestDetail>);
+): Promise<studentsContract.CareRequestDetailResponse> {
+  return bffJson(
+    "tenant",
+    "GET /api/students/care-schedule-change-requests/{requestId}",
+    {
+      params: { requestId },
+      errorMessage: "Anfrage konnte nicht geladen werden",
+    },
+  ).catch(logFailure);
 }
 
 /**
@@ -202,13 +129,14 @@ export async function fetchCareScheduleChangeRequest(
 export async function downloadCareRequestProofPdf(
   requestId: string,
 ): Promise<void> {
-  const response = await transportFetch(
-    `/api/students/care-schedule-change-requests/${encodeURIComponent(requestId)}/proof`,
-    { method: "GET" },
-  );
-  if (!response.ok) {
-    throw await readError(response, "Nachweis konnte nicht geladen werden");
-  }
+  const response = await bffFile(
+    "tenant",
+    "GET /api/students/care-schedule-change-requests/{requestId}/proof",
+    {
+      params: { requestId },
+      errorMessage: "Nachweis konnte nicht geladen werden",
+    },
+  ).catch(logFailure);
   downloadBlob(
     await response.blob(),
     filenameFromDisposition(response) ?? "nachweis-elternanfrage.pdf",
