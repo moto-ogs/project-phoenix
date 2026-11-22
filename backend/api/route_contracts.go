@@ -509,6 +509,7 @@ func guardianRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/search", Portals: portals, Query: search, Paginated: true, Response: types.Pickers},
 		{Method: "GET", Pattern: "/{id}", Portals: portals, Response: types.Guardian},
+		{Method: "POST", Pattern: "/", Portals: portals, Request: types.GuardianCreate, Response: types.Guardian},
 		{Method: "PUT", Pattern: "/{id}", Portals: portals, Request: types.GuardianUpdate, Response: types.Guardian},
 		// Without force a guardian still linked to children is refused; the
 		// expected links pin the confirmed state of the full delete.
@@ -518,6 +519,7 @@ func guardianRouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/payment-overview/export", Portals: portals, File: true},
 		{Method: "DELETE", Pattern: "/{id}/email-stop", Portals: portals, NoData: true},
 		{Method: "DELETE", Pattern: "/{id}/email-block", Portals: portals, NoData: true},
+		{Method: "POST", Pattern: "/{id}/invite", Portals: portals, Response: types.Invitation},
 		{Method: "GET", Pattern: "/{id}/payment", Portals: portals, Response: types.PaymentMasked},
 		{Method: "PUT", Pattern: "/{id}/payment", Portals: portals, Request: types.PaymentRequest, NoData: true},
 		{Method: "POST", Pattern: "/{id}/payment/reveal", Portals: portals, Response: types.PaymentReveal},

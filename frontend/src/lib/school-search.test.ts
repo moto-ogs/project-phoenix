@@ -94,8 +94,7 @@ describe("searchSchool", () => {
     });
     const controller = new AbortController();
     const result = await searchSchool("0170 1234567", controller.signal);
-    expect(mockBffJson).toHaveBeenCalledWith("/api/search", {
-      method: "POST",
+    expect(mockBffJson).toHaveBeenCalledWith("tenant", "POST /api/search/", {
       body: { query: "0170 1234567" },
       signal: controller.signal,
     });

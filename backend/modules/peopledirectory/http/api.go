@@ -78,9 +78,7 @@ func (rs *Resource) Router() chi.Router {
 	router := chi.NewRouter()
 	router.Use(render.SetContentType(render.ContentTypeJSON))
 	rs.runtime.Protected(router, func(protected chi.Router, withTx Middleware) {
-		protected.With(rs.runtime.Permission(permissions.UsersRead), withTx).Get("/", rs.listPersons)
 		protected.With(rs.runtime.Permission(permissions.UsersRead), withTx).Get("/{id}", rs.getPerson)
-		protected.With(rs.runtime.Permission(permissions.UsersCreate), withTx).Post("/", rs.createPerson)
 		protected.With(rs.runtime.Permission(permissions.UsersUpdate), withTx).Put("/{id}", rs.updatePerson)
 	})
 	return router
@@ -122,30 +120,6 @@ func (request *DirectoryPersonRequest) Bind(*http.Request) error {
 	return missing
 }
 
-func (rs *Resource) listPersons(w http.ResponseWriter, r *http.Request) {
-	page, pageSize := rs.runtime.ParsePagination(r)
-	pageSize = min(pageSize, peopledirectory.MaxPageSize)
-	filter := peopledirectory.PersonFilter{
-		FirstNamePrefix: r.URL.Query().Get("first_name"),
-		LastNamePrefix:  r.URL.Query().Get("last_name"),
-		TagID:           r.URL.Query().Get("tag_id"),
-		Page:            page,
-		PageSize:        pageSize,
-	}
-	persons, err := rs.directory.SearchPersons(r.Context(), filter)
-	if err != nil {
-		rs.moduleFailure(w, r, err)
-		return
-	}
-	responses, err := rs.personResponses(r.Context(), persons)
-	if err != nil {
-		rs.failure(w, r, FailureInternal, err, "internal_error")
-		return
-	}
-	rs.runtime.SuccessPaginated(w, r, http.StatusOK, responses, Pagination{Page: page, PageSize: pageSize, Total: len(responses)}, "Persons retrieved successfully")
-	rs.runtime.ObserveResponse(http.StatusOK, "none")
-}
-
 func (rs *Resource) getPerson(w http.ResponseWriter, r *http.Request) {
 	id, ok := rs.parseID(w, r)
 	if !ok {
@@ -157,30 +131,6 @@ func (rs *Resource) getPerson(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rs.respondPerson(w, r, http.StatusOK, person, "Person retrieved successfully")
-}
-
-func (rs *Resource) createPerson(w http.ResponseWriter, r *http.Request) {
-	request := &DirectoryPersonRequest{}
-	if err := render.Bind(r, request); err != nil {
-		rs.failure(w, r, FailureInvalidRequest, err, "invalid_request")
-		return
-	}
-	input := peopledirectory.CreatePerson{FirstName: request.FirstName, LastName: request.LastName}
-	if request.TagID != "" {
-		input.TagID = &request.TagID
-	}
-	if request.AccountID != 0 {
-		input.AccountID = (*int64)(&request.AccountID)
-	}
-	if !rs.referencesExist(w, r, input.TagID, input.AccountID) {
-		return
-	}
-	person, err := rs.directory.CreatePerson(r.Context(), input)
-	if err != nil {
-		rs.moduleFailure(w, r, err)
-		return
-	}
-	rs.respondPerson(w, r, http.StatusCreated, person, "Person created successfully")
 }
 
 func (rs *Resource) updatePerson(w http.ResponseWriter, r *http.Request) {

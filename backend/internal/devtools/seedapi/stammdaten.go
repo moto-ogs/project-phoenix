@@ -194,12 +194,7 @@ func (s *FixedSeeder) Seed(ctx context.Context) (*FixedResult, error) {
 		return nil, fmt.Errorf("failed to seed activities: %w", err)
 	}
 
-	// 12. Assign supervisors to activities
-	if err := s.assignSupervisors(ctx); err != nil {
-		return nil, fmt.Errorf("failed to assign supervisors: %w", err)
-	}
-
-	// 13. Enroll students in activities
+	// 12. Enroll students in activities
 	if err := s.enrollStudents(ctx); err != nil {
 		return nil, fmt.Errorf("failed to enroll students: %w", err)
 	}
@@ -1164,31 +1159,29 @@ func (s *FixedSeeder) seedActivities(_ context.Context, result *FixedResult) err
 			}
 		}
 
+		supervisorID, err := s.activitySupervisorID()
+		if err != nil {
+			return err
+		}
+
+		// The first staff member supervises every activity; the first
+		// supervisor of the list becomes the primary one.
 		body := map[string]any{
 			"name":             activity.Name,
 			"max_participants": 20,
 			"is_open":          true,
 			"category_id":      categoryID,
 			"planned_room_id":  roomID,
+			"supervisor_ids":   []int64{supervisorID},
 		}
 
-		respBody, err := s.client.Post("/api/activities", body)
+		activityID, err := s.postDemoActivity(activity.Name, body)
 		if err != nil {
-			return fmt.Errorf("failed to create activity %s: %w", activity.Name, err)
+			return err
 		}
 
-		var resp struct {
-			Status string `json:"status"`
-			Data   struct {
-				ID apiID `json:"id"`
-			} `json:"data"`
-		}
-		if err := json.Unmarshal(respBody, &resp); err != nil {
-			return fmt.Errorf("failed to parse activity response: %w", err)
-		}
-
-		s.activityIDs[activity.Name] = int64(resp.Data.ID)
-		s.activityRoomIDs[int64(resp.Data.ID)] = roomID // Store activity → room mapping for runtime seeder
+		s.activityIDs[activity.Name] = activityID
+		s.activityRoomIDs[activityID] = roomID // Store activity → room mapping for runtime seeder
 		result.ActivityCount++
 	}
 
@@ -1198,46 +1191,46 @@ func (s *FixedSeeder) seedActivities(_ context.Context, result *FixedResult) err
 	return nil
 }
 
-func (s *FixedSeeder) assignSupervisors(_ context.Context) error {
-	// Assign first staff member as supervisor to each activity
+// postDemoActivity creates one demo activity and returns its ID.
+func (s *FixedSeeder) postDemoActivity(name string, body map[string]any) (int64, error) {
+	respBody, err := s.client.Post("/api/activities", body)
+	if err != nil {
+		return 0, fmt.Errorf("failed to create activity %s: %w", name, err)
+	}
+	var resp struct {
+		Data struct {
+			ID apiID `json:"id"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(respBody, &resp); err != nil {
+		return 0, fmt.Errorf("failed to parse activity response: %w", err)
+	}
+	return int64(resp.Data.ID), nil
+}
+
+// activitySupervisorID is the staff member who supervises every demo
+// activity: the first demo staff member.
+func (s *FixedSeeder) activitySupervisorID() (int64, error) {
 	if len(DemoStaff) == 0 || len(s.staffIDs) == 0 {
-		return fmt.Errorf("no staff available for supervisor assignment")
+		return 0, fmt.Errorf("no staff available for supervisor assignment")
 	}
-
-	// Get first staff ID
-	var firstStaffID int64
 	firstStaffKey := fmt.Sprintf("%s %s", DemoStaff[0].FirstName, DemoStaff[0].LastName)
-	firstStaffID = s.staffIDs[firstStaffKey]
-
-	// Assign to each activity
-	for activityName, activityID := range s.activityIDs {
-		path := fmt.Sprintf("/api/activities/%d/supervisors", activityID)
-		body := map[string]any{
-			"staff_id":   firstStaffID,
-			"is_primary": true,
-		}
-
-		_, err := s.client.Post(path, body)
-		if err != nil {
-			return fmt.Errorf("failed to assign supervisor to activity %s: %w", activityName, err)
-		}
+	staffID, ok := s.staffIDs[firstStaffKey]
+	if !ok {
+		return 0, fmt.Errorf("staff ID not found for %s", firstStaffKey)
 	}
-
-	if s.verbose {
-		fmt.Printf("  ✓ Supervisors assigned to activities\n")
-	}
-	return nil
+	return staffID, nil
 }
 
 func (s *FixedSeeder) enrollStudents(_ context.Context) error {
-	// Enroll first 5 students in each activity
+	// Enroll the first 5 students in each activity, one roster per activity.
 	maxEnrollmentsPerActivity := 5
 	studentCount := 0
 
 	for activityName, activityID := range s.activityIDs {
-		enrolled := 0
+		studentIDs := make([]int64, 0, maxEnrollmentsPerActivity)
 		for _, student := range DemoStudents {
-			if enrolled >= maxEnrollmentsPerActivity {
+			if len(studentIDs) >= maxEnrollmentsPerActivity {
 				break
 			}
 
@@ -1246,16 +1239,14 @@ func (s *FixedSeeder) enrollStudents(_ context.Context) error {
 			if !ok {
 				return fmt.Errorf("student ID not found for %s", studentKey)
 			}
-
-			path := fmt.Sprintf("/api/activities/%d/students/%d", activityID, studentID)
-			_, err := s.client.Post(path, nil)
-			if err != nil {
-				return fmt.Errorf("enroll student %d in %s: %w", studentID, activityName, err)
-			}
-
-			enrolled++
-			studentCount++
+			studentIDs = append(studentIDs, studentID)
 		}
+
+		path := fmt.Sprintf("/api/activities/%d/students", activityID)
+		if _, err := s.client.Put(path, map[string]any{"student_ids": studentIDs}); err != nil {
+			return fmt.Errorf("enroll students in %s: %w", activityName, err)
+		}
+		studentCount += len(studentIDs)
 	}
 
 	if s.verbose {

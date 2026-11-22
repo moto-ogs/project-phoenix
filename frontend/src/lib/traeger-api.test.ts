@@ -21,6 +21,7 @@ import {
   fetchTraegerSchools,
   fetchTraegerSchoolsAlerts,
   publishHolidayPeriod,
+  startTraegerSchoolSession,
   traegerLogin,
   updateHolidayPeriod,
 } from "./traeger-api";
@@ -42,6 +43,17 @@ describe("traeger-api", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it("names the school of the Absprung as a string", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, { status: "success", data: { handoff_token: "t" } }),
+    );
+
+    await expect(startTraegerSchoolSession("12")).resolves.toBe("t");
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({
+      school_id: "12",
+    });
   });
 
   // The DATEV states of the export page (#6433): one request per page of
@@ -237,7 +249,10 @@ describe("traeger-api", () => {
   it("sends the chosen Träger as a number and returns only session status", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse(200, {
-        status: "authenticated",
+        status: "success",
+        data: {
+          status: "authenticated",
+        },
       }),
     );
 
@@ -258,8 +273,11 @@ describe("traeger-api", () => {
   it("maps the choice of Träger with string IDs", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse(200, {
-        status: "organization_selection_required",
-        organizations: [{ id: 7, name: "Träger Nord" }],
+        status: "success",
+        data: {
+          status: "organization_selection_required",
+          organizations: [{ id: 7, name: "Träger Nord" }],
+        },
       }),
     );
 
@@ -278,12 +296,15 @@ describe("traeger-api", () => {
   it("maps the second factor the login asks for", async () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse(200, {
-        status: "mfa_required",
-        challenge_token: "challenge",
-        masked_email: "a***@b.de",
-        organization_id: 7,
-        trusted_device_enabled: true,
-        trusted_device_days: 90,
+        status: "success",
+        data: {
+          status: "mfa_required",
+          challenge_token: "challenge",
+          masked_email: "a***@b.de",
+          organization_id: 7,
+          trusted_device_enabled: true,
+          trusted_device_days: 90,
+        },
       }),
     );
     await expect(
@@ -300,10 +321,13 @@ describe("traeger-api", () => {
     // An answer without the fields offers nothing to remember (#6955).
     fetchMock.mockResolvedValueOnce(
       jsonResponse(200, {
-        status: "mfa_required",
-        challenge_token: "challenge",
-        masked_email: "a***@b.de",
-        organization_id: 7,
+        status: "success",
+        data: {
+          status: "mfa_required",
+          challenge_token: "challenge",
+          masked_email: "a***@b.de",
+          organization_id: 7,
+        },
       }),
     );
     await expect(
@@ -315,11 +339,14 @@ describe("traeger-api", () => {
 
     fetchMock.mockResolvedValueOnce(
       jsonResponse(200, {
-        status: "mfa_enrollment_required",
-        access_token: "enrollment",
-        masked_email: "a***@b.de",
-        mfa_enrollment_required: true,
-        organization_id: 7,
+        status: "success",
+        data: {
+          status: "mfa_enrollment_required",
+          access_token: "enrollment",
+          masked_email: "a***@b.de",
+          mfa_enrollment_required: true,
+          organization_id: 7,
+        },
       }),
     );
     await expect(
@@ -347,6 +374,21 @@ describe("traeger-api", () => {
     expect(error).toBeInstanceOf(ApiError);
     expect((error as ApiError).code).toBe("traeger.no_membership");
     expect((error as ApiError).status).toBe(403);
+  });
+
+  it("preserves a large school ID when starting a school session", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, { data: { handoff_token: "handoff" } }),
+    );
+
+    await expect(startTraegerSchoolSession("9007199254740993")).resolves.toBe(
+      "handoff",
+    );
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe("/api/traeger/school-sessions");
+    expect(JSON.parse(init?.body as string)).toEqual({
+      school_id: "9007199254740993",
+    });
   });
 
   it("maps the schools of the Träger with string IDs", async () => {

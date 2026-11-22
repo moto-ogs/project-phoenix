@@ -8,11 +8,7 @@
  */
 import { apiErrorFromBody, transportFetch } from "./api-error";
 import { filenameFromDisposition } from "./file-download";
-import type {
-  TraegerExportPerson as WirePerson,
-  TraegerPayrollReport as WirePayrollReport,
-  TraegerTimeReport as WireTimeReport,
-} from "./contract/traeger-staff-exports.generated";
+import type * as traegerStaffExportsContract from "./contract/traeger-staff-exports.generated";
 import { knownEnum } from "./contract/known-enum";
 import { readJson, traegerRequest } from "./traeger-api";
 
@@ -101,13 +97,17 @@ export interface TimeReport {
   readonly withoutNumber: readonly ExportPerson[];
 }
 
-const mapPerson = (person: WirePerson): ExportPerson => ({
+const mapPerson = (
+  person: traegerStaffExportsContract.TraegerExportPerson,
+): ExportPerson => ({
   recordId: person.record_id,
   firstName: person.first_name,
   lastName: person.last_name,
 });
 
-function mapPayrollReport(data: WirePayrollReport): PayrollReport {
+function mapPayrollReport(
+  data: traegerStaffExportsContract.TraegerPayrollReport,
+): PayrollReport {
   return {
     year: data.year,
     month: data.month,
@@ -132,7 +132,9 @@ function mapPayrollReport(data: WirePayrollReport): PayrollReport {
   };
 }
 
-function mapTimeReport(data: WireTimeReport): TimeReport {
+function mapTimeReport(
+  data: traegerStaffExportsContract.TraegerTimeReport,
+): TimeReport {
   return {
     year: data.year,
     month: data.month,
@@ -152,7 +154,7 @@ export async function fetchPayrollReport(
   format: PayrollFormat,
 ): Promise<PayrollReport> {
   return mapPayrollReport(
-    await traegerRequest<WirePayrollReport>(
+    await traegerRequest<traegerStaffExportsContract.TraegerPayrollReport>(
       `${BASE}/payroll?${monthQuery(year, month)}&format=${format}`,
     ),
   );
@@ -163,7 +165,7 @@ export async function fetchTimeReport(
   month: number,
 ): Promise<TimeReport> {
   return mapTimeReport(
-    await traegerRequest<WireTimeReport>(
+    await traegerRequest<traegerStaffExportsContract.TraegerTimeReport>(
       `${BASE}/times?${monthQuery(year, month)}`,
     ),
   );

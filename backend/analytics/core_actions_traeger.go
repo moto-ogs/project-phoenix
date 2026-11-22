@@ -180,7 +180,6 @@ var traegerCoreActions = map[RouteKey]CoreAction{
 	// the Träger, no school to count them for.
 	{http.MethodPut, "/traeger/sepa-creditor/"}:                      notCaptured,
 	{http.MethodPost, "/traeger/sepa-mandates/"}:                     notCaptured,
-	{http.MethodPut, "/traeger/sepa-mandates/{id}"}:                  notCaptured,
 	{http.MethodPost, "/traeger/sepa-mandates/{id}/revoke"}:          notCaptured,
 	{http.MethodPost, "/traeger/sepa-debits/{kind}/{id}/submission"}: notCaptured,
 	// The field mapping of the Sollstellung and the start of the file

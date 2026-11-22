@@ -7,11 +7,7 @@
  * "YYYY-MM-DD".
  */
 import { knownEnum } from "./contract/known-enum";
-import type {
-  FamilyChildCount as WireCount,
-  FamilyChildrenRequest,
-  FamilyChildrenSet as WireSet,
-} from "./contract/traeger-family-children.generated";
+import type * as traegerFamilyChildrenContract from "./contract/traeger-family-children.generated";
 import { traegerRequest } from "./traeger-api";
 import type { CareRule } from "./traeger-care-reductions-api";
 
@@ -81,7 +77,9 @@ export interface FamilyChildrenInput {
 
 const PATH = "/api/traeger/family-children";
 
-function countFromBackend(count: WireCount): FamilyChildCount {
+function countFromBackend(
+  count: traegerFamilyChildrenContract.FamilyChildCount,
+): FamilyChildCount {
   return {
     id: count.id,
     contractId: count.contract_id,
@@ -94,7 +92,9 @@ function countFromBackend(count: WireCount): FamilyChildCount {
   };
 }
 
-function familyChildrenSetFromBackend(body: WireSet): FamilyChildrenSet {
+function familyChildrenSetFromBackend(
+  body: traegerFamilyChildrenContract.FamilyChildrenSet,
+): FamilyChildrenSet {
   return {
     families: (body.families ?? []).map((family) => ({
       contractId: family.contract_id,
@@ -118,7 +118,9 @@ function familyChildrenSetFromBackend(body: WireSet): FamilyChildrenSet {
 }
 
 export async function fetchFamilyChildren(): Promise<FamilyChildrenSet> {
-  return familyChildrenSetFromBackend(await traegerRequest<WireSet>(PATH));
+  return familyChildrenSetFromBackend(
+    await traegerRequest<traegerFamilyChildrenContract.FamilyChildrenSet>(PATH),
+  );
 }
 
 /** Confirms or changes the number of the family of a contract. */
@@ -128,15 +130,18 @@ export async function confirmFamilyChildren(
   return familyChildrenSetFromBackend(
     // traegerRequest writes the JSON itself: a string here went out as a
     // JSON string, and Go refused it (parent_billing.family_children_invalid).
-    await traegerRequest<WireSet>(PATH, {
-      method: "PUT",
-      body: {
-        contract_id: input.contractId,
-        children: input.children,
-        valid_from: input.validFrom,
-        valid_until: input.validUntil,
-      } satisfies FamilyChildrenRequest,
-    }),
+    await traegerRequest<traegerFamilyChildrenContract.FamilyChildrenSet>(
+      PATH,
+      {
+        method: "PUT",
+        body: {
+          contract_id: input.contractId,
+          children: input.children,
+          valid_from: input.validFrom,
+          valid_until: input.validUntil,
+        } satisfies traegerFamilyChildrenContract.FamilyChildrenRequest,
+      },
+    ),
   );
 }
 

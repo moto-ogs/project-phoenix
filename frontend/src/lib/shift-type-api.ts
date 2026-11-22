@@ -1,14 +1,9 @@
-import { apiErrorFromResponse, type ApiError } from "./api-error";
 // API client for tenant-defined shift types (Schichtarten, #1836).
 // Admin CRUD goes through /api/shift-types (time_tracking:manage), served by
-// the portal's catalog proxy; update and delete left /api/staff/shift-types
-// in #7563.
+// the portal's catalog proxy.
 
-import type {
-  ShiftTypeDeleteResponse,
-  ShiftTypeResponse,
-} from "./contract/shift-types.generated";
-import { sessionFetch } from "./session-cache";
+import { bffJson } from "./bff-fetch";
+import type { ShiftTypeRequest } from "./contract/shift-types.generated";
 import {
   mapShiftType,
   type ShiftType,
@@ -36,7 +31,7 @@ interface ShiftTypePayload {
   categoryIds?: string[];
 }
 
-function toBackendBody(payload: ShiftTypePayload) {
+function toBackendBody(payload: ShiftTypePayload): ShiftTypeRequest {
   return {
     name: payload.name,
     color: payload.color,
@@ -44,66 +39,44 @@ function toBackendBody(payload: ShiftTypePayload) {
     is_active: payload.isActive,
     // Only send category_ids when the caller manages the mapping; omitting it
     // leaves the existing Kategorie↔Schichtart links untouched server-side.
-    ...(payload.categoryIds !== undefined
-      ? { category_ids: payload.categoryIds.map(Number) }
-      : {}),
+    ...(payload.categoryIds !== undefined && {
+      category_ids: payload.categoryIds,
+    }),
   };
-}
-
-function readError(response: Response, fallback: string): Promise<ApiError> {
-  return apiErrorFromResponse(response, fallback);
-}
-
-async function readList(response: Response): Promise<ShiftType[]> {
-  if (!response.ok) {
-    throw await readError(response, "Dienstarten konnten nicht geladen werden");
-  }
-  const json = (await response.json()) as { data: ShiftTypeResponse[] | null };
-  return (json.data ?? []).map(mapShiftType);
-}
-
-async function readOne(response: Response): Promise<ShiftType> {
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Dienstart konnte nicht gespeichert werden",
-    );
-  }
-  const json = (await response.json()) as { data: ShiftTypeResponse };
-  return mapShiftType(json.data);
 }
 
 class ShiftTypeService {
   async getShiftTypes(
     options: ShiftTypeListOptions = {},
   ): Promise<ShiftType[]> {
-    const query = new URLSearchParams();
-    if (options.includeArchived) query.set("include_archived", "true");
-    if (options.withUsage) query.set("with_usage", "true");
-    const suffix = query.size > 0 ? `?${query.toString()}` : "";
-    const response = await sessionFetch(`/api/shift-types${suffix}`);
-    return readList(response);
+    const types = await bffJson("tenant", "GET /api/shift-types/", {
+      query: {
+        include_archived: options.includeArchived || undefined,
+        with_usage: options.withUsage || undefined,
+      },
+      errorMessage: "Dienstarten konnten nicht geladen werden",
+    });
+    return types.map(mapShiftType);
   }
 
   async createShiftType(payload: ShiftTypePayload): Promise<ShiftType> {
-    const response = await sessionFetch("/api/shift-types", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(toBackendBody(payload)),
+    const type = await bffJson("tenant", "POST /api/shift-types/", {
+      body: toBackendBody(payload),
+      errorMessage: "Dienstart konnte nicht gespeichert werden",
     });
-    return readOne(response);
+    return mapShiftType(type);
   }
 
   async updateShiftType(
     id: string,
     payload: ShiftTypePayload,
   ): Promise<ShiftType> {
-    const response = await sessionFetch(`/api/shift-types/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(toBackendBody(payload)),
+    const type = await bffJson("tenant", "PUT /api/shift-types/{id}", {
+      params: { id },
+      body: toBackendBody(payload),
+      errorMessage: "Dienstart konnte nicht gespeichert werden",
     });
-    return readOne(response);
+    return mapShiftType(type);
   }
 
   /**
@@ -111,25 +84,19 @@ class ShiftTypeService {
    * archived instead of deleted, so they keep it (#6845).
    */
   async deleteShiftType(id: string): Promise<ShiftTypeRemoval> {
-    const response = await sessionFetch(`/api/shift-types/${id}`, {
-      method: "DELETE",
+    const removal = await bffJson("tenant", "DELETE /api/shift-types/{id}", {
+      params: { id },
+      errorMessage: "Dienstart konnte nicht gelöscht werden",
     });
-    if (!response.ok) {
-      throw await readError(response, "Dienstart konnte nicht gelöscht werden");
-    }
-    if (response.status === 204) return "deleted";
-    const json = (await response.json()) as {
-      data?: ShiftTypeDeleteResponse | null;
-    };
-    return json.data?.outcome === "archived" ? "archived" : "deleted";
+    return removal.outcome === "archived" ? "archived" : "deleted";
   }
 
   /** Seeds the example shift types (idempotent) and returns the full list. */
   async createDefaults(): Promise<ShiftType[]> {
-    const response = await sessionFetch("/api/shift-types/defaults", {
-      method: "POST",
+    const types = await bffJson("tenant", "POST /api/shift-types/defaults", {
+      errorMessage: "Dienstarten konnten nicht geladen werden",
     });
-    return readList(response);
+    return types.map(mapShiftType);
   }
 }
 

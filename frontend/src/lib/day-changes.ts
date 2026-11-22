@@ -238,5 +238,5 @@ function mapDayChanges(overview: Overview): DayChangesOverview {
 
 /** Liest die Übersicht der Sitzung über den Proxy des Staff-Portals. */
 export async function fetchDayChanges(): Promise<DayChangesOverview> {
-  return mapDayChanges(await bffJson<Overview>("/api/day-changes/today"));
+  return mapDayChanges(await bffJson("tenant", "GET /api/day-changes/today"));
 }

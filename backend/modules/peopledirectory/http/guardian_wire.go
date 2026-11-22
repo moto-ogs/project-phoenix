@@ -3,6 +3,7 @@ package users
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
@@ -244,6 +245,17 @@ func (req *CreateStudentGuardiansRequest) Bind(_ *http.Request) error {
 	return nil
 }
 
+// GuardianInvitationResponse answers POST /guardians/{id}/invite. The raw
+// token is present only for the dev seeder, which asks for it with its seed
+// header; every other caller gets the invitation without it.
+type GuardianInvitationResponse struct {
+	ID                ident.ID  `json:"id"`
+	GuardianProfileID ident.ID  `json:"guardian_profile_id"`
+	ExpiresAt         time.Time `json:"expires_at"`
+	EmailSent         bool      `json:"email_sent"`
+	Token             string    `json:"token,omitempty"`
+}
+
 // GuardianDeletePreview backs GET /guardians/{id}/delete-preview. Link IDs
 // travel as strings so JavaScript never rounds them.
 type GuardianDeletePreview struct {
@@ -267,14 +279,6 @@ func newGuardianResponse(guardian peopledirectory.Guardian) *GuardianResponse {
 		}
 	}
 	return response
-}
-
-func newGuardianResponses(guardians []peopledirectory.Guardian) []*GuardianResponse {
-	responses := make([]*GuardianResponse, 0, len(guardians))
-	for _, guardian := range guardians {
-		responses = append(responses, newGuardianResponse(guardian))
-	}
-	return responses
 }
 
 func newPhoneNumberResponse(phone peopledirectory.GuardianPhone) *PhoneNumberResponse {

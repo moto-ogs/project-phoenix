@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
@@ -16,60 +15,37 @@ import (
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
-	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	education "github.com/moto-ogs/project-phoenix/modules/schoolstructure/contract"
-	"github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/domain"
-	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
-	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
-// CallerGroups resolves the educational groups of the request's caller.
-type CallerGroups interface {
-	GetMyGroups(ctx context.Context) ([]*domain.Group, error)
-}
-
 // GroupPeople is the People Directory side of the group routes: the children
-// of a group and the persons behind them. The root binds it to the retained
-// person service.
+// of a group. The root binds it to the retained person service.
 type GroupPeople interface {
 	// GroupStudents returns the children of a group.
 	GroupStudents(ctx context.Context, groupID int64) ([]peopledirectory.StudentRecord, error)
 	// CountByGroupIDs counts the children of each group.
 	CountByGroupIDs(ctx context.Context, groupIDs []int64) (map[int64]int, error)
-	// FindPerson returns one person.
-	FindPerson(ctx context.Context, personID int64) (peopledirectory.Person, error)
-	// ListPersonsByID returns the persons keyed by ID; an unknown ID is absent.
-	ListPersonsByID(ctx context.Context, personIDs []int64) (map[int64]peopledirectory.Person, error)
 }
 
 // Resource defines the group API resource
 type Resource struct {
 	ConstraintViolation func(error) bool
 	EducationService    GroupService
-	ActiveService       studentpresence.Presence
 	People              GroupPeople
-	UserContextService  CallerGroups
-	InClass             InClassDay
 }
 
 // NewResource creates a new groups resource
-func NewResource(educationService GroupService, activeService studentpresence.Presence, people GroupPeople, userContextService CallerGroups, inClass InClassDay, constraintViolation func(error) bool) *Resource {
+func NewResource(educationService GroupService, people GroupPeople, constraintViolation func(error) bool) *Resource {
 	if constraintViolation == nil {
 		panic("group resource: database failure classifier is required")
 	}
-	if inClass == nil {
-		panic("group resource: care day rule for children in class is required")
-	}
 	return &Resource{
-		InClass:             inClass,
 		ConstraintViolation: constraintViolation,
 		EducationService:    educationService,
-		ActiveService:       activeService,
 		People:              people,
-		UserContextService:  userContextService,
 	}
 }
 
@@ -84,8 +60,6 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 		// Read operations only require groups:read permission
 		r.With(common.RequiresPermission(permissions.GroupsRead), withTx).Get("/", rs.listGroups)
 		r.With(common.RequiresPermission(permissions.GroupsRead), withTx).Get("/{id}", rs.getGroup)
-		r.With(common.RequiresPermission(permissions.GroupsRead), withTx).Get("/{id}/students", rs.getGroupStudents)
-		r.With(common.RequiresPermission(permissions.GroupsRead), withTx).Get("/{id}/supervisors", rs.getGroupSupervisors)
 
 		// Write operations require groups:create, groups:update, or groups:delete permission
 		r.With(common.RequiresPermission(permissions.GroupsCreate), withTx).Post("/", rs.createGroup)
@@ -199,46 +173,6 @@ func newGroupResponse(group *education.Group, teachers []*education.Teacher, stu
 // =============================================================================
 // HELPER METHODS - Reduce code duplication for common parsing/validation
 // =============================================================================
-
-// parseAndGetGroup parses group ID from URL and returns the group if it exists.
-// Returns nil and false if parsing fails or group doesn't exist (error already rendered).
-func (rs *Resource) parseAndGetGroup(w http.ResponseWriter, r *http.Request) (*education.Group, bool) {
-	id, err := common.ParseID(r)
-	if err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New(common.MsgInvalidGroupID)))
-		return nil, false
-	}
-
-	group, err := rs.EducationService.GetGroup(r.Context(), id)
-	if err != nil {
-		common.RenderError(w, r, common.ErrorNotFound(errors.New(common.MsgGroupNotFound)))
-		return nil, false
-	}
-
-	return group, true
-}
-
-// userHasGroupAccess checks if the current user has access to the specified group.
-// Returns true if user is admin or supervises the group.
-func (rs *Resource) userHasGroupAccess(r *http.Request, groupID int64) bool {
-	userPermissions := sessiontoken.PermissionsFromCtx(r.Context())
-	if securityruntime.HasAdminWildcard(userPermissions) {
-		return true
-	}
-
-	myGroups, err := rs.UserContextService.GetMyGroups(r.Context())
-	if err != nil {
-		slog.Default().Error("failed to get user groups", slog.String("error", err.Error()))
-		return false
-	}
-
-	for _, myGroup := range myGroups {
-		if myGroup.ID == ident.ID(groupID) {
-			return true
-		}
-	}
-	return false
-}
 
 // =============================================================================
 // GROUP HANDLERS
@@ -474,48 +408,4 @@ func (rs *Resource) deleteGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	common.Respond(w, r, http.StatusOK, nil, "Group deleted successfully")
-}
-
-// getGroupSupervisors gets all supervisors (teachers) for a specific group
-func (rs *Resource) getGroupSupervisors(w http.ResponseWriter, r *http.Request) {
-	// Parse and get group
-	group, ok := rs.parseAndGetGroup(w, r)
-	if !ok {
-		return
-	}
-
-	// Get teachers/supervisors for this group
-	teachers, err := rs.EducationService.GetGroupTeachers(r.Context(), group.ID)
-	if err != nil {
-		common.RenderError(w, r, ErrorRenderer(err))
-		return
-	}
-
-	// Map to response objects
-	type TeacherResponse struct {
-		ID             int64     `json:"id"`
-		StaffID        int64     `json:"staff_id"`
-		Specialization string    `json:"specialization"`
-		Role           string    `json:"role,omitempty"`
-		Qualifications string    `json:"qualifications,omitempty"`
-		FullName       string    `json:"full_name"`
-		CreatedAt      time.Time `json:"created_at"`
-		UpdatedAt      time.Time `json:"updated_at"`
-	}
-
-	responses := make([]TeacherResponse, 0, len(teachers))
-	for _, teacher := range teachers {
-		responses = append(responses, TeacherResponse{
-			ID:             teacher.ID,
-			StaffID:        teacher.StaffID,
-			Specialization: teacher.Specialization,
-			Role:           teacher.Role,
-			Qualifications: teacher.Qualifications,
-			FullName:       teacher.FullName(),
-			CreatedAt:      teacher.CreatedAt,
-			UpdatedAt:      teacher.UpdatedAt,
-		})
-	}
-
-	common.Respond(w, r, http.StatusOK, responses, "Group supervisors retrieved successfully")
 }

@@ -2,7 +2,6 @@ import { bffJson } from "~/lib/bff-fetch";
 import {
   mapCourseWaitlists,
   type CourseWaitlist,
-  type CourseWaitlistWire,
 } from "~/lib/course-waitlist-helpers";
 
 /**
@@ -14,11 +13,10 @@ import {
 export async function fetchCourseWaitlists(
   activityGroupId?: string,
 ): Promise<CourseWaitlist[]> {
-  const query = activityGroupId
-    ? `?activity_group_id=${encodeURIComponent(activityGroupId)}`
-    : "";
-  const waitlists = await bffJson<CourseWaitlistWire[] | null>(
-    `/api/students/offering-change-requests/course-waitlists${query}`,
+  const waitlists = await bffJson(
+    "tenant",
+    "GET /api/students/offering-change-requests/course-waitlists",
+    { query: { activity_group_id: activityGroupId || undefined } },
   );
-  return mapCourseWaitlists(waitlists ?? []);
+  return mapCourseWaitlists(waitlists);
 }

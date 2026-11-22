@@ -1,8 +1,5 @@
 import { operatorFetch } from "./api-helpers";
-import type {
-  CreateInvitationRequest,
-  InvitationsListResponse,
-} from "~/lib/contract/operator-invitations.generated";
+import type * as operatorInvitationsContract from "~/lib/contract/operator-invitations.generated";
 import type {
   InvitationValidationBody,
   CreateOperatorInvitationRequest,
@@ -17,6 +14,7 @@ import {
   mapInvitationValidation,
 } from "./operator-invitation-helpers";
 import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
+import type { ApiResponse } from "~/lib/api-envelope";
 import { createLogger } from "~/lib/logger";
 import { OPERATOR_INVITATION_FLOW_HEADER } from "./operator-invitation-flow";
 
@@ -38,14 +36,15 @@ export async function createOperatorInvitation(
     body: {
       email: data.email,
       display_name: data.displayName,
-    } satisfies CreateInvitationRequest,
+    } satisfies operatorInvitationsContract.CreateInvitationRequest,
   });
 }
 
 export async function listOperatorInvitations(): Promise<OperatorInvitationsData> {
-  const raw = await operatorFetch<InvitationsListResponse>(
-    "/api/operator/invitations",
-  );
+  const raw =
+    await operatorFetch<operatorInvitationsContract.InvitationsListResponse>(
+      "/api/operator/invitations",
+    );
   // Go lists pointers; the contract types an entry nullable.
   return {
     invitations: (raw.invitations ?? [])
@@ -104,17 +103,8 @@ export async function establishOperatorInvitationSession(
       `Invitation session failed (${response.status})`,
     );
   }
-  const body: unknown = await response.json();
-  if (
-    typeof body !== "object" ||
-    body === null ||
-    !("flow_id" in body) ||
-    typeof body.flow_id !== "string" ||
-    body.flow_id === ""
-  ) {
-    throw new Error("Einladungssitzung ist ungültig");
-  }
-  return body.flow_id;
+  const { data } = (await response.json()) as ApiResponse<{ flow_id: string }>;
+  return data.flow_id;
 }
 
 export async function validateOperatorInvitation(
@@ -140,9 +130,8 @@ export async function validateOperatorInvitation(
     );
   }
 
-  const json: unknown = await response.json();
-  const data = unwrapResponse<InvitationValidationBody>(json);
-  return mapInvitationValidation(data);
+  const json = (await response.json()) as ApiResponse<InvitationValidationBody>;
+  return mapInvitationValidation(json.data);
 }
 
 export async function acceptOperatorInvitation(
@@ -177,16 +166,4 @@ export async function acceptOperatorInvitation(
     });
     throw error;
   }
-}
-
-function unwrapResponse<T>(json: unknown): T {
-  if (
-    typeof json === "object" &&
-    json !== null &&
-    "data" in json &&
-    "status" in json
-  ) {
-    return (json as { data: T }).data;
-  }
-  return json as T;
 }

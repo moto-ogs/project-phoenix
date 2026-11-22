@@ -64,11 +64,14 @@ Worked example, the same route from Go to the browser:
    `{"/api/activities", timetableActivitiesHTTP.RouteContracts()}`. This
    route's function is mounted there under `/api/students` already. The
    generator refuses a contract the route catalog does not know.
-4. **Catalog and contract.** From `backend/`:
+4. **Catalog and contract.** A writing route needs its analytics
+   classification first (below); without it the golden run writes nothing.
+   Then, from `backend/`, in this order and once:
 
    ```bash
-   ../scripts/run-go-toolchain.sh go test ./api/ -run TestFullProductionRouterGolden -update-goldens
+   ../scripts/run-go-toolchain.sh go test -tags=testhooks ./api/ -run TestFullProductionRouterGolden -update-goldens
    ../scripts/run-go-toolchain.sh go run . gencontract
+   ../scripts/run-go-toolchain.sh go test -tags=testhooks ./api/ ./cmd/ -run 'TestFullProductionRouterGolden|TestTheCommittedContractIsCurrent'
    ```
 
    This writes the catalog line (`backend/api/testdata/routes/api/students.golden`),
@@ -81,20 +84,23 @@ Worked example, the same route from Go to the browser:
    (`backend/modules/careplan/http/partial_absence_replace_test.go`). CI's
    `TestEveryRegisteredRouteIsAnsweredInATest` (`backend/api`) fails on a
    registered JSON route no test answers.
-6. **Browser call.** The domain client calls the BFF path with `bffJson`
-   (`frontend/src/lib/bff-fetch.ts`) and types the answer with the generated
-   type (`frontend/src/lib/student-partial-absences-api.ts`):
+6. **Browser call.** The domain client calls `bffJson` (`frontend/src/lib/bff-fetch.ts`)
+   with the portal and the route's catalog key; the generated entry types the
+   path parameters, the query, the body and the answer
+   (`frontend/src/lib/student-partial-absences-api.ts`):
 
    ```ts
-   const rows = await bffJson<PartialAbsenceResponse[]>(
-     `${partialAbsencesPath(studentId)}?from=${from}&to=${to}`,
-   );
+   const rows = await bffJson("tenant", "GET /api/students/{id}/partial-absences", {
+     params: { id: studentId },
+     query: { from, to },
+   });
    return rows.map(mapPartialAbsence);
    ```
 
    `mapPartialAbsence` maps to the view type. A failure throws an `ApiError`
-   for the shared error path. Older clients read `sessionFetch` or `authFetch`
-   and unwrap `data` by hand; their move to `bffJson` is #7806.
+   for the shared error path; `errorMessage` keeps a client's own text.
+   The other portals and the rules for 204, 401 and a missing `data`:
+   [Browser calls](frontend-api.md#browser-calls).
    Components load through `useSWRAuth` and a key factory of `~/lib/swr`.
 7. **No route file.** The staff portal's catch-all `app/api/[...path]/route.ts`
    serves the path. Other portals call `/api/<portal>/…` for the backend's
@@ -124,12 +130,46 @@ Same steps; the contract names the body type, and the client sends it typed
 - A POST that commits nothing its caller asked for (a preview, a search)
   names why in `NoCommit`. When its answer does not match the contract, the
   proxy then offers a retry; every other write asks to reload.
-- Classify the writing route for analytics (`.claude/rules/usage-analytics.md`).
 - After the write, the component refreshes its SWR family with
   `useInvalidateFamily`.
 - Renaming or removing a registered field or route takes one release marked
   `Deprecated` / `DeprecatedFields`; `scripts/check-contract-compat.mjs` fails
   otherwise.
+
+### Registers a write route touches
+
+Checked on a copy of `POST /api/students/{id}/partial-absences` (#7811).
+Each register fails a named check when the entry is missing; none of them
+takes an exception for a new route.
+
+| Register | Entry for the example | Check that fails without it |
+|---|---|---|
+| Analytics classification, `backend/analytics/core_actions.go` | `{http.MethodPost, "/api/students/{id}/partial-absences"}: event("absence_reported")`; a write no one counts says `notCaptured` | `TestFullProductionRouterGolden` (“writing routes without a core-action classification”); rule: `.claude/rules/usage-analytics.md` |
+| Module rule, `backend/api/module_routes.go` | none: `{"/api/students", moduleRouteBasis}` covers it; a new path prefix needs a rule and, if borderline, a reason in `docs/reference/modulschalter.md` | `TestFullProductionRouterGolden` (“these routes belong to no module”) |
+| Facade budget, `backend/test/module_facade_width_ratchet_test.go` and `module_facade_method_set_ratchet_test.go` | none: the handler calls the existing `PartialAbsenceService.CreatePartialAbsence` | `TestModuleFacadeWidthRatchet`, `TestModuleFacadeMethodSetRatchet` |
+| Pass-through register, `backend/architecture/passthrough/` (ADR 0075, 0090) | none for a handler with branching; a new one-call method is a new entry | `scripts/backend-architecture.sh check` (“unregistered method”, “changed method evidence”) |
+| Command effects, `backend/architecture/command-effects/` | none unless a port's call path changes | `scripts/backend-architecture.sh check` (“binding changed”) |
+
+- **Facade budget.** An exported interface of a module's public package has
+  at most 12 methods; adding one to a wider facade (`ActivityService` has 34)
+  needs an ADR. Declare instead a narrow port with the one method in the
+  consuming `http` package and let the root bind the capability to it
+  (`.claude/rules/backend-conventions.md`, Rule 16).
+- **Pass-through.** The scanner (`backend/internal/passthrough/predicate.go`)
+  counts an exported method with a named receiver, at most 14 body lines and
+  exactly one call through a field of the receiver: `rs.Service.Create(…)`,
+  and also a getter `return x.ID.Int64()`. A conversion `int64(x.ID)` is no
+  call. Changing the body of a registered method updates its evidence text;
+  a new one needs a decision (ADR 0075).
+- **Command effects.** Renaming, adding or removing a function on a port's
+  call path changes its digest. Regenerate with
+  `scripts/backend-architecture.sh effects`; a binding that is a named
+  exception needs an ADR, the others a changed `reason`.
+- **Permission and module of a write into another area.** The route takes
+  the permission of the data it writes (`backend/auth/authorize/permissions`),
+  not of the page that calls it, and its module follows its path prefix. The
+  write itself goes through the owning module's capability or a workflow
+  (ADR 0067), never through the calling module's store.
 
 ## File and upload route
 
@@ -160,12 +200,11 @@ Only for what belongs to the browser and cannot live in Go:
   purges the cached tenant lookup, `demo/access/sessions` sets the demo cookie;
 - a hand-off for a registered path that Next would give to a neighbouring
   route file (`catalogProxyUnder`); `app/api/catalog-route-selection.test.ts`
-  fails when one is missing;
-- an aggregation of several backend reads that has no Go view yet
-  (`activities/[id]/students`). A new one is a Go view instead (#5018).
+  fails when one is missing.
 
 A reshaping, an ID or format check or a second backend call for the same
-screen moves into the Go handler. A file whose only code forwards to the
+screen moves into the Go handler; an aggregation of several reads is a Go
+view (#5018). A file whose only code forwards to the
 backend fails `app/api/proxy-routes.test.ts`; a file whose backend paths
 the contract registers, all of them, fails `app/api/route-backend-paths.test.ts`,
 and a file in front of a registered path fails

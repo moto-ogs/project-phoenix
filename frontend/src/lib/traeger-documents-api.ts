@@ -10,13 +10,7 @@ import { apiErrorFromBody, transportFetch } from "~/lib/api-error";
 import { filenameFromDisposition } from "~/lib/file-download";
 import { readJson, traegerRequest } from "~/lib/traeger-api";
 import { knownEnum } from "./contract/known-enum";
-import type {
-  ReleaseRequest,
-  SharedDocument as WireSharedDocument,
-  TraegerDocument as WireDocument,
-  TraegerDocumentRelease as WireRelease,
-  TraegerDocumentSchool as WireSchool,
-} from "./contract/traeger-documents.generated";
+import type * as traegerDocumentsContract from "./contract/traeger-documents.generated";
 
 // Go does not register the set; the contract types it as string.
 const AUDIENCE_VALUES = ["parents", "schools"] as const;
@@ -86,7 +80,7 @@ export interface TraegerDocumentReleaseInput {
  * has no row to show and is left out.
  */
 function releasesFromBackend(
-  releases: readonly WireRelease[] | null,
+  releases: readonly traegerDocumentsContract.TraegerDocumentRelease[] | null,
 ): TraegerDocumentRelease[] {
   return (releases ?? []).flatMap((release) => {
     const mapped = mapTraegerDocumentRelease(release);
@@ -95,7 +89,7 @@ function releasesFromBackend(
 }
 
 function mapTraegerDocumentRelease(
-  release: WireRelease,
+  release: traegerDocumentsContract.TraegerDocumentRelease,
 ): TraegerDocumentRelease | null {
   const audience = knownEnum(AUDIENCE_VALUES, release.audience);
   if (!audience) return null;
@@ -109,7 +103,9 @@ function mapTraegerDocumentRelease(
   };
 }
 
-function mapDocument(document: WireDocument): TraegerDocument {
+function mapDocument(
+  document: traegerDocumentsContract.TraegerDocument,
+): TraegerDocument {
   return {
     id: document.id,
     title: document.title,
@@ -123,7 +119,7 @@ function mapDocument(document: WireDocument): TraegerDocument {
 }
 
 function mapSharedDocument(
-  document: WireSharedDocument,
+  document: traegerDocumentsContract.SharedDocument,
 ): SharedTraegerDocument {
   return {
     id: document.id,
@@ -140,7 +136,10 @@ const traegerDocumentsPath = "/api/traeger/documents";
 
 /** Die Dokumente des Trägers, das neueste zuerst. */
 export async function fetchTraegerDocuments(): Promise<TraegerDocument[]> {
-  const documents = await traegerRequest<WireDocument[]>(traegerDocumentsPath);
+  const documents =
+    await traegerRequest<traegerDocumentsContract.TraegerDocument[]>(
+      traegerDocumentsPath,
+    );
   return documents.map(mapDocument);
 }
 
@@ -148,9 +147,9 @@ export async function fetchTraegerDocuments(): Promise<TraegerDocument[]> {
 export async function fetchTraegerDocumentAudiences(): Promise<
   TraegerDocumentSchool[]
 > {
-  const schools = await traegerRequest<WireSchool[]>(
-    `${traegerDocumentsPath}/audiences`,
-  );
+  const schools = await traegerRequest<
+    traegerDocumentsContract.TraegerDocumentSchool[]
+  >(`${traegerDocumentsPath}/audiences`);
   return schools.map((school) => ({
     id: school.id,
     name: school.name,
@@ -183,7 +182,9 @@ export async function uploadTraegerDocument(
       data,
     );
   }
-  const document = (data as { data?: WireDocument } | null)?.data;
+  const document = (
+    data as { data?: traegerDocumentsContract.TraegerDocument } | null
+  )?.data;
   if (!document) {
     throw apiErrorFromBody("Document response without data", 502, data);
   }
@@ -195,17 +196,18 @@ export async function releaseTraegerDocument(
   documentId: string,
   input: TraegerDocumentReleaseInput,
 ): Promise<TraegerDocumentRelease> {
-  const release = await traegerRequest<WireRelease>(
-    `${traegerDocumentsPath}/${encodeURIComponent(documentId)}/releases`,
-    {
-      method: "POST",
-      body: {
-        audience: input.audience,
-        school_id: input.schoolId === null ? null : input.schoolId,
-        group_id: input.groupId === null ? null : input.groupId,
-      } satisfies ReleaseRequest,
-    },
-  );
+  const release =
+    await traegerRequest<traegerDocumentsContract.TraegerDocumentRelease>(
+      `${traegerDocumentsPath}/${encodeURIComponent(documentId)}/releases`,
+      {
+        method: "POST",
+        body: {
+          audience: input.audience,
+          school_id: input.schoolId === null ? null : input.schoolId,
+          group_id: input.groupId === null ? null : input.groupId,
+        } satisfies traegerDocumentsContract.ReleaseRequest,
+      },
+    );
   const mapped = mapTraegerDocumentRelease(release);
   if (!mapped) {
     throw apiErrorFromBody("Release with an unknown audience", 502, release);
@@ -280,7 +282,9 @@ export async function fetchSchoolTraegerDocuments(): Promise<
       data,
     );
   }
-  const documents = (data as { data: WireSharedDocument[] }).data;
+  const documents = (
+    data as { data: traegerDocumentsContract.SharedDocument[] }
+  ).data;
   return documents.map(mapSharedDocument);
 }
 

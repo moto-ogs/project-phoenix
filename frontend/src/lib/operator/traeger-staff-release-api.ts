@@ -4,10 +4,7 @@
  * Erklärungen; das moto-Team hält sie mit der Freigabe fest.
  */
 import { knownEnum } from "~/lib/contract/known-enum";
-import type {
-  TraegerStaffReleaseState as WireState,
-  grantRequest,
-} from "~/lib/contract/operator-organizations.generated";
+import type * as operatorOrganizationsContract from "~/lib/contract/operator-organizations.generated";
 import { operatorFetch } from "./api-helpers";
 
 // Go does not register the set; the contract types it as string.
@@ -30,7 +27,10 @@ const base = (orgId: string) =>
 
 export const traegerStaffReleaseService = {
   async getState(orgId: string): Promise<TraegerStaffReleaseState> {
-    const data = await operatorFetch<WireState>(base(orgId));
+    const data =
+      await operatorFetch<operatorOrganizationsContract.TraegerStaffReleaseState>(
+        base(orgId),
+      );
     return {
       release: data.release
         ? {
@@ -50,7 +50,9 @@ export const traegerStaffReleaseService = {
   ): Promise<void> {
     await operatorFetch<unknown>(base(orgId), {
       method: "POST",
-      body: { representation } satisfies grantRequest,
+      body: {
+        representation,
+      } satisfies operatorOrganizationsContract.grantRequest,
     });
   },
   async withdraw(orgId: string): Promise<void> {

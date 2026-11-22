@@ -11,11 +11,7 @@ import {
   type TraegerListFile,
   type TraegerListFormat,
 } from "./traeger-list-export";
-import type {
-  DailyAttendance as WireReport,
-  DailyAttendanceDay as WireDay,
-  DailyAttendanceSummary as WireSummary,
-} from "./contract/traeger-schools.generated";
+import type * as traegerSchoolsContract from "./contract/traeger-schools.generated";
 import { requiredDay } from "./contract/required-day";
 import type { TraegerSchool } from "./traeger-api";
 
@@ -86,7 +82,11 @@ function query(period: DailyAttendancePeriod): string {
   return new URLSearchParams({ from: period.from, to: period.to }).toString();
 }
 
-function figuresOf(figures: WireDay | WireSummary): DailyAttendanceFigures {
+function figuresOf(
+  figures:
+    | traegerSchoolsContract.DailyAttendanceDay
+    | traegerSchoolsContract.DailyAttendanceSummary,
+): DailyAttendanceFigures {
   return {
     present: figures.present,
     sick: figures.sick,
@@ -100,7 +100,9 @@ function figuresOf(figures: WireDay | WireSummary): DailyAttendanceFigures {
   };
 }
 
-function summaryOf(summary: WireSummary): DailyAttendanceSummary {
+function summaryOf(
+  summary: traegerSchoolsContract.DailyAttendanceSummary,
+): DailyAttendanceSummary {
   return {
     ...figuresOf(summary),
     daysWithChildren: summary.days_with_children,
@@ -108,7 +110,9 @@ function summaryOf(summary: WireSummary): DailyAttendanceSummary {
   };
 }
 
-function daysOf(days: WireDay[] | null): DailyAttendanceDay[] {
+function daysOf(
+  days: traegerSchoolsContract.DailyAttendanceDay[] | null,
+): DailyAttendanceDay[] {
   return (days ?? []).map((day) => ({
     date: requiredDay(day.date, "daily_attendance_day.date"),
     ...figuresOf(day),
@@ -131,7 +135,8 @@ export async function fetchTraegerDailyAttendance(
       data,
     );
   }
-  const report = (data as { data: WireReport }).data;
+  const report = (data as { data: traegerSchoolsContract.DailyAttendance })
+    .data;
   return {
     from: requiredDay(report.from, "daily_attendance.from"),
     to: requiredDay(report.to, "daily_attendance.to"),

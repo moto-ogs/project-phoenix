@@ -117,10 +117,16 @@ function report(overrides: Partial<ClassDayReport> = {}): ClassDayReport {
     weekday: "mon",
     school_day: true,
     enrollment_known: true,
+    can_write_day_hints: false,
+    can_record_morning_attendance: false,
+    can_write_homework: false,
+    can_read_shared_notes: false,
+    can_hand_over: false,
+    can_report_absences: false,
     totals: { students: 1, staying: 1, leaving: 0, absent: 0, list_entries: 0 },
     rows: [
       {
-        student_id: 1,
+        student_id: "1",
         first_name: "Klara",
         last_name: "Klassentag",
         registered: true,
@@ -232,6 +238,8 @@ describe("ClassDayClass", () => {
         fetchClasses={() =>
           Promise.resolve({
             classes: ["4a"],
+            can_report_class_trip: false,
+            can_view_school_day: false,
             can_write_arrival_exception: false,
             weekend_follows_friday: true,
           })
@@ -253,7 +261,7 @@ describe("ClassDayClass", () => {
         report({
           rows: [
             {
-              student_id: 1,
+              student_id: "1",
               first_name: "Klara",
               last_name: "Klassentag",
               registered: true,
@@ -298,6 +306,9 @@ describe("ClassDayClass", () => {
         fetchClasses={() =>
           Promise.resolve({
             classes: ["4a"],
+            can_report_class_trip: false,
+            weekend_follows_friday: false,
+            can_view_school_day: false,
             can_write_arrival_exception: false,
           })
         }
@@ -322,6 +333,9 @@ describe("ClassDayClass", () => {
         fetchClasses={() =>
           Promise.resolve({
             classes: ["4a"],
+            can_report_class_trip: false,
+            weekend_follows_friday: false,
+            can_view_school_day: false,
             can_write_arrival_exception: true,
           })
         }
@@ -350,6 +364,9 @@ describe("ClassDayClass", () => {
         fetchClasses={() =>
           Promise.resolve({
             classes: ["4a"],
+            can_report_class_trip: false,
+            weekend_follows_friday: false,
+            can_view_school_day: false,
             can_write_arrival_exception: true,
           })
         }
@@ -371,6 +388,9 @@ describe("ClassDayClass", () => {
         fetchClasses={() =>
           Promise.resolve({
             classes: ["3b"],
+            can_report_class_trip: false,
+            weekend_follows_friday: false,
+            can_view_school_day: false,
             can_write_arrival_exception: true,
           })
         }
@@ -392,6 +412,9 @@ describe("ClassDayClass", () => {
         fetchClasses={() =>
           Promise.resolve({
             classes: [" 4a"],
+            can_report_class_trip: false,
+            weekend_follows_friday: false,
+            can_view_school_day: false,
             can_write_arrival_exception: true,
           })
         }
@@ -430,7 +453,7 @@ describe("ClassDayClass", () => {
         },
         rows: [
           {
-            student_id: 1,
+            student_id: "1",
             first_name: "Klara",
             last_name: "Klassentag",
             registered: true,
@@ -438,7 +461,7 @@ describe("ClassDayClass", () => {
             offerings: ["Ganztag"],
           },
           {
-            student_id: 2,
+            student_id: "2",
             first_name: "Nico",
             last_name: "Krank",
             registered: true,
@@ -448,7 +471,7 @@ describe("ClassDayClass", () => {
             morning_attendance: { status: "absent", source: "report" },
           },
           {
-            student_id: 0,
+            student_id: "0",
             list_entry: true,
             list_entry_id: "9007199254740993",
             first_name: "Lisa",
@@ -525,7 +548,7 @@ describe("ClassDayClass", () => {
     it("lists children without a care place neutrally and saves attendance by student ID", async () => {
       const record = vi.fn(() => Promise.resolve());
       const noCareRow = {
-        student_id: 3,
+        student_id: "3",
         first_name: "Mila",
         last_name: "Schule",
         without_care_place: true,
@@ -545,7 +568,7 @@ describe("ClassDayClass", () => {
         rows: [
           ...report().rows,
           noCareRow,
-          { ...noCareRow, student_id: 4, first_name: "Nico", status: "sick" },
+          { ...noCareRow, student_id: "4", first_name: "Nico", status: "sick" },
         ],
       });
       render(
@@ -756,7 +779,7 @@ describe("ClassDayClass", () => {
         },
         rows: [
           {
-            student_id: 1,
+            student_id: "1",
             first_name: "Klara",
             last_name: "Klassentag",
             registered: true,
@@ -764,7 +787,7 @@ describe("ClassDayClass", () => {
             offerings: ["Ganztag"],
           },
           {
-            student_id: 2,
+            student_id: "2",
             first_name: "Mia",
             last_name: "Morgenfehlt",
             registered: true,
@@ -773,7 +796,7 @@ describe("ClassDayClass", () => {
             morning_attendance: { status: "absent", source: "teacher" },
           },
           {
-            student_id: 3,
+            student_id: "3",
             first_name: "Hugo",
             last_name: "Heimgeher",
             registered: true,
@@ -1040,7 +1063,7 @@ describe("ClassDayClass homework (#4796)", () => {
       ],
       rows: [
         {
-          student_id: 1,
+          student_id: "1",
           first_name: "Klara",
           last_name: "Klassentag",
           registered: true,
@@ -1295,7 +1318,7 @@ describe("ClassDayClass class trips (#4799)", () => {
       rows: [
         ...report().rows,
         {
-          student_id: 2,
+          student_id: "2",
           without_care_place: true,
           first_name: "Mila",
           last_name: "Schule",
@@ -1304,7 +1327,7 @@ describe("ClassDayClass class trips (#4799)", () => {
           offerings: [],
         },
         {
-          student_id: 0,
+          student_id: "0",
           list_entry: true,
           list_entry_id: "77",
           first_name: "Lena",
@@ -1329,6 +1352,8 @@ describe("ClassDayClass class trips (#4799)", () => {
         fetchClasses={() =>
           Promise.resolve({
             classes: ["4a"],
+            weekend_follows_friday: false,
+            can_view_school_day: false,
             can_write_arrival_exception: false,
             can_report_class_trip: true,
           })
@@ -1372,6 +1397,8 @@ describe("ClassDayClass class trips (#4799)", () => {
         fetchClasses={() =>
           Promise.resolve({
             classes: ["4a"],
+            weekend_follows_friday: false,
+            can_view_school_day: false,
             can_write_arrival_exception: true,
             can_report_class_trip: false,
           })
@@ -1413,6 +1440,9 @@ describe("ClassDayClass class trips (#4799)", () => {
           fetchClasses={() =>
             Promise.resolve({
               classes: ["4a"],
+              can_report_class_trip: false,
+              weekend_follows_friday: false,
+              can_view_school_day: false,
               can_write_arrival_exception: false,
             })
           }

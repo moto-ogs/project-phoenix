@@ -2,11 +2,8 @@
 // Comprehensive tests for activity API service
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type {
-  StudentEnrollmentBody,
-  Activity,
-  UpdateActivityRequest,
-} from "./activity-helpers";
+import type { Activity } from "./activity-helpers";
+import type { ActivityRequest } from "./contract/activities.generated";
 import { mapActivityResponse } from "./activity-helpers";
 import { buildBackendActivity } from "~/test/fixtures/activities";
 
@@ -80,14 +77,6 @@ const sampleBackendActivity = buildBackendActivity({
   enrollment_count: 15,
 });
 
-const sampleBackendEnrollment: StudentEnrollmentBody = {
-  id: 1,
-  first_name: "Jane",
-  last_name: "Smith",
-  school_class: "5a",
-  current_location: "room_101",
-};
-
 describe("activity-api", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -151,12 +140,12 @@ describe("activity-api", () => {
   });
 
   describe("updateActivity", () => {
-    const updateRequest: UpdateActivityRequest = {
+    const updateRequest: ActivityRequest = {
       name: "Updated Activity",
       max_participants: 25,
       is_open: false,
-      category_id: 2,
-      supervisor_ids: [11],
+      category_id: "2",
+      supervisor_ids: ["11"],
     };
 
     it("updates activity in browser context", async () => {
@@ -219,8 +208,10 @@ describe("activity-api", () => {
         expires: "2099-01-01",
       });
 
-      const mockResponse = { ok: true };
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(mockResponse));
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce(new Response(null, { status: 204 })),
+      );
 
       await activityApi.deleteActivity("1");
 
@@ -290,8 +281,32 @@ describe("activity-api", () => {
       expect(result[0]?.id).toBe("7");
       expect(result[0]?.shiftTypeId).toBe("99");
     });
+  });
 
-    it("returns empty array for non-array response", async () => {
+  describe("getEnrolledStudents", () => {
+    it("reads the contract's roster and maps it to the view", async () => {
+      vi.stubGlobal("window", {});
+      mockedGetSession.mockResolvedValueOnce({
+        user: { id: "1" },
+        expires: "2099-01-01",
+      });
+      const fetchMock = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          status: "success",
+          data: [{ id: "42", first_name: "Jane", last_name: "Smith" }],
+        }),
+      });
+      vi.stubGlobal("fetch", fetchMock);
+
+      const result = await activityApi.getEnrolledStudents("1");
+
+      expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/activities/1/students");
+      expect(result).toEqual([{ id: "42", name: "Jane Smith" }]);
+    });
+
+    it("throws the API error of a failed read", async () => {
       vi.stubGlobal("window", {});
       mockedGetSession.mockResolvedValueOnce({
         user: { id: "1" },
@@ -299,68 +314,24 @@ describe("activity-api", () => {
       });
       vi.stubGlobal(
         "fetch",
-        vi.fn().mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ data: null }),
-        }),
+        vi.fn().mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              status: 403,
+              code: "general.forbidden",
+              detail: "no",
+            }),
+            {
+              status: 403,
+              headers: { "Content-Type": "application/problem+json" },
+            },
+          ),
+        ),
       );
 
-      const result = await activityApi.getCategories();
-
-      expect(result).toEqual([]);
-    });
-  });
-
-  describe("getEnrolledStudents", () => {
-    it("fetches enrolled students in browser context", async () => {
-      vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
+      await expect(activityApi.getEnrolledStudents("1")).rejects.toMatchObject({
+        status: 403,
       });
-
-      const mockResponse = {
-        ok: true,
-        json: async () => ({
-          data: [
-            {
-              id: "42",
-              student_id: "42",
-              name: "Jane Smith",
-              school_class: "3A",
-              current_location: null,
-              activity_id: "1",
-              created_at: "2024-01-15T08:00:00Z",
-              updated_at: "2024-01-15T08:00:00Z",
-            },
-          ],
-        }),
-      };
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(mockResponse));
-
-      const result = await activityApi.getEnrolledStudents("1");
-
-      expect(result).toHaveLength(1);
-      expect(result[0]?.student_id).toBe("42");
-      expect(result[0]?.name).toBe("Jane Smith");
-    });
-
-    it("handles direct array response", async () => {
-      vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
-      });
-
-      const mockResponse = {
-        ok: true,
-        json: async () => [sampleBackendEnrollment],
-      };
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(mockResponse));
-
-      const result = await activityApi.getEnrolledStudents("1");
-
-      expect(result).toHaveLength(1);
     });
   });
 });

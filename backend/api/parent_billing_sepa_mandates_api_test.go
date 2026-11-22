@@ -211,16 +211,6 @@ func TestSEPAMandateReachesTheInvoiceAsPrenotification(t *testing.T) {
 		WHERE invoice.run_id = ? AND invoice.care_contract_id = ?`, run.ID, contract).Scan(context.Background(), &snapshot))
 	require.True(t, snapshot.Same, "the release keeps the sealed account holder")
 	require.NotEmpty(t, snapshot.Holder)
-	original := snapshot.Holder
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, fmt.Sprintf("%s/%d", sepaMandatesPath, mandate.ID),
-		map[string]any{"account_holder": "Jan Muster", "sequence": "recurring"})
-	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	require.NoError(t, f.db.NewRaw(`SELECT invoice.account_holder_sealed, invoice.account_holder_sealed = mandate.account_holder_sealed AS same
-		FROM parent_billing.care_invoices invoice JOIN parent_billing.sepa_mandates mandate
-			ON mandate.organization_id = invoice.organization_id AND mandate.id = invoice.mandate_id
-		WHERE invoice.run_id = ? AND invoice.care_contract_id = ?`, run.ID, contract).Scan(context.Background(), &snapshot))
-	assert.False(t, snapshot.Same, "the mandate now holds the corrected name")
-	assert.Equal(t, original, snapshot.Holder, "the correction leaves the invoice copy alone")
 
 	brandCareTraeger(t, f)
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/letters/preview"), careLettersInput())
@@ -242,10 +232,6 @@ func TestSEPAMandateReachesTheInvoiceAsPrenotification(t *testing.T) {
 		map[string]any{"revoked_on": "2026-10-15"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), `"revoked_on":"2026-10-15"`)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, fmt.Sprintf("%s/%d", sepaMandatesPath, mandate.ID),
-		map[string]any{"account_holder": "Jan Beispiel", "sequence": "recurring"})
-	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
-	assert.Contains(t, rec.Body.String(), "parent_billing.sepa_mandate_revoked")
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, fmt.Sprintf("%s?contract_id=%d", sepaMandatesPath, contract), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	listed := decodeSchoolPortalData[[]sepaMandateBody](t, rec.Body.Bytes())
@@ -255,22 +241,10 @@ func TestSEPAMandateReachesTheInvoiceAsPrenotification(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	// The list after the revocation and the trail itself are reads of the
 	// bank data, each with its own entry.
-	assert.Equal(t, []string{"create:office", "read:run", "update:office", "revoke:office", "read:office", "read:office"}, mandateEvents(t, f, int64(mandate.ID)))
+	assert.Equal(t, []string{"create:office", "read:run", "revoke:office", "read:office", "read:office"}, mandateEvents(t, f, int64(mandate.ID)))
 	require.NoError(t, f.db.NewRaw(`SELECT mandate_reference FROM parent_billing.care_invoices WHERE run_id = ? AND care_contract_id = ?`,
 		run.ID, contract).Scan(context.Background(), &copied))
 	assert.Equal(t, "SJR-2026-0001", copied)
-
-	// A new mandate after the revocation; a change of its account is
-	// recorded with the fields, never the values.
-	next := createMandate(t, f, mandateBody(contract, "SJR-2026-0003"))
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, fmt.Sprintf("%s/%d", sepaMandatesPath, next.ID),
-		map[string]any{"account_holder": "Jan Beispiel", "iban": "AT611904300234573201", "sequence": "recurring"})
-	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Contains(t, rec.Body.String(), `"iban_masked":"AT•• •••• •••• •••• 3201"`)
-	var fieldsChanged string
-	require.NoError(t, f.db.NewRaw(`SELECT array_to_string(fields, ',') FROM parent_billing.sepa_mandate_events
-		WHERE mandate_id = ? AND action = 'update'`, next.ID).Scan(context.Background(), &fieldsChanged))
-	assert.Equal(t, "account_holder,iban", fieldsChanged)
 }
 
 // Without a mandate the Träger's choice decides: by default the invoice
@@ -329,7 +303,6 @@ func TestSEPAMandatesNeedTheRightAndStayWithTheirTraeger(t *testing.T) {
 		{http.MethodGet, sepaMandatesPath, nil},
 		{http.MethodGet, sepaMandatesPath + "/export", nil},
 		{http.MethodPost, sepaMandatesPath, mandateBody(contract, "SJR-G-2")},
-		{http.MethodPut, item, map[string]any{"account_holder": "X", "sequence": "first"}},
 		{http.MethodPost, item + "/revoke", map[string]any{"revoked_on": "2026-10-01"}},
 		{http.MethodGet, item + "/history", nil},
 	} {
@@ -355,7 +328,6 @@ func TestSEPAMandatesNeedTheRightAndStayWithTheirTraeger(t *testing.T) {
 		method, path string
 		body         any
 	}{
-		{http.MethodPut, item, map[string]any{"account_holder": "Fremd", "sequence": "first"}},
 		{http.MethodPost, item + "/revoke", map[string]any{"revoked_on": "2026-10-01"}},
 		{http.MethodGet, item + "/history", nil},
 	} {
@@ -415,31 +387,6 @@ func TestSEPAMandateReplacementGetsANewAutomaticReference(t *testing.T) {
 	assert.Contains(t, rec.Body.String(), "parent_billing.sepa_mandate_reference_taken")
 }
 
-func TestSEPAMandateChangeKeepsTheBICRequiredByTheStoredIBAN(t *testing.T) {
-	t.Parallel()
-	f := newCareBillingFixture(t, "Träger BIC")
-	saveCreditor(t, f, map[string]any{"creditor_id": sepaCreditorID, "prenotification_days": 14, "missing_mandate": "transfer"})
-	contract := careContract(t, f.db, f.office.organization, f.office.schools[0], "Lia", careMonth, sjrServices()...)
-	body := mandateBody(contract, "CH-1")
-	body["iban"], body["bic"] = "CH9300762011623852957", "POFICHBEXXX"
-	mandate := createMandate(t, f, body)
-	path := fmt.Sprintf("%s/%d", sepaMandatesPath, mandate.ID)
-	change := map[string]any{"account_holder": "Eva Beispiel", "iban": "", "bic": "", "sequence": "recurring"}
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, path, change)
-	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
-	code, fields := registrationRefusalOf(t, rec)
-	assert.Equal(t, "parent_billing.sepa_mandate_invalid", code)
-	assert.Equal(t, []string{"bic"}, fields)
-	change["bic"] = "POFICHBEXXX"
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, path, change)
-	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, mandate.IBANMasked, decodeSchoolPortalData[sepaMandateBody](t, rec.Body.Bytes()).IBANMasked)
-	// Switching to an EEA account permits clearing the old BIC.
-	change["iban"], change["bic"] = sepaIBAN, ""
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, path, change)
-	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-}
-
 // A mandate is bound to the creditor identifier it was given to (ADR 0171).
 // After the Träger changes its identifier, the mandate stays as it was, is no
 // proof for the new creditor and the invoice goes as a transfer with the hint;
@@ -481,25 +428,21 @@ func TestSEPAMandateStaysBoundToItsCreditor(t *testing.T) {
 		"no direct debit with a mandate of the earlier creditor")
 }
 
-// Every read of a mandate's bank data is in its trail: a change that changes
-// nothing still shows the account, and so does the trail itself.
+// Every read of a mandate's bank data is in its trail, the trail itself
+// included.
 func TestSEPAMandateReadsWithoutChangeAreAudited(t *testing.T) {
 	t.Parallel()
 	f := newCareBillingFixture(t, "Träger Mandat lesen")
 	contract := careContract(t, f.db, f.office.organization, f.office.schools[0], "Lia", careMonth, sjrServices()...)
 	saveCreditor(t, f, map[string]any{"creditor_id": sepaCreditorID, "prenotification_days": 14, "missing_mandate": "transfer"})
 	mandate := createMandate(t, f, mandateBody(contract, "SJR-R-1"))
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, fmt.Sprintf("%s/%d", sepaMandatesPath, mandate.ID),
-		map[string]any{"account_holder": "Eva Beispiel", "iban": "", "bic": "", "sequence": "recurring"})
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, fmt.Sprintf("%s/%d/history", sepaMandatesPath, mandate.ID), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, []string{"create:office", "read:office"}, mandateEvents(t, f, int64(mandate.ID)), "an unchanged account is a read")
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, fmt.Sprintf("%s/%d/history", sepaMandatesPath, mandate.ID), nil)
-	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, []string{"create:office", "read:office", "read:office"}, mandateEvents(t, f, int64(mandate.ID)), "the trail is a read too")
+	assert.Equal(t, []string{"create:office", "read:office"}, mandateEvents(t, f, int64(mandate.ID)), "the trail is a read too")
 	var actors int
 	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.sepa_mandate_events WHERE mandate_id = ? AND actor_account_id IS NOT NULL`,
 		mandate.ID).Scan(context.Background(), &actors))
-	assert.Equal(t, 3, actors, "every entry names the account")
+	assert.Equal(t, 2, actors, "every entry names the account")
 
 	// #4718: the mandates as a file, with the masked IBAN of the list. Each
 	// download is a read in the trail of the mandate.
@@ -509,6 +452,6 @@ func TestSEPAMandateReadsWithoutChangeAreAudited(t *testing.T) {
 	assert.Contains(t, lines[1], ";SJR-R-1;Dauermandat;"+mandate.IBANMasked+";Eva Beispiel;")
 	assert.NotContains(t, lines[1], "DE89370400440532013000", "the file never names the whole IBAN")
 	assertTraegerListFormats(t, f.traeger, f.office.token, sepaMandatesPath+"/export", "sepa-mandate")
-	assert.Equal(t, []string{"create:office", "read:office", "read:office", "read:office", "read:office", "read:office"},
+	assert.Equal(t, []string{"create:office", "read:office", "read:office", "read:office", "read:office"},
 		mandateEvents(t, f, int64(mandate.ID)), "every download is a read")
 }

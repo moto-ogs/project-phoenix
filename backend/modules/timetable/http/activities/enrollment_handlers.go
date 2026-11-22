@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	authorize "github.com/moto-ogs/project-phoenix/modules/securityruntime"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -42,15 +43,15 @@ func (rs *Resource) getActivityStudents(w http.ResponseWriter, r *http.Request) 
 
 	// Build simplified student responses
 	callerPermissions := sessiontoken.PermissionsFromCtx(r.Context())
-	responses := make([]StudentResponse, 0, len(students))
+	responses := make([]EnrolledStudentResponse, 0, len(students))
 	for _, student := range students {
 		if !authorize.CanReadStudent(r.Context(), callerPermissions, student, rs.UserContextService) {
 			continue
 		}
 
 		// Create a basic response with the ID
-		studentResp := StudentResponse{
-			ID: student.ID,
+		studentResp := EnrolledStudentResponse{
+			ID: ident.ID(student.ID),
 			// Default name values if no person data
 			FirstName: "Student",
 			LastName:  fmt.Sprintf("%d", student.ID),
@@ -68,39 +69,6 @@ func (rs *Resource) getActivityStudents(w http.ResponseWriter, r *http.Request) 
 
 	common.Respond(w, r, http.StatusOK, responses, fmt.Sprintf("Students enrolled in activity '%s' retrieved successfully", activity.Name))
 }
-
-// getStudentEnrollments handles getting activities that a student is enrolled in
-func (rs *Resource) getStudentEnrollments(w http.ResponseWriter, r *http.Request) {
-	studentID, ok := rs.parseStudentID(w, r)
-	if !ok {
-		return
-	}
-
-	// Get activities that student is enrolled in
-	enrolledGroups, err := rs.ActivityService.GetStudentEnrollments(r.Context(), studentID)
-	if err != nil {
-		common.RenderError(w, r, ErrorRenderer(err))
-		return
-	}
-
-	// Build activity responses
-	counts, err := rs.ActivityService.GetEnrollmentCounts(r.Context(), activityGroupIDs(enrolledGroups))
-	if err != nil {
-		common.RenderError(w, r, ErrorRenderer(err))
-		return
-	}
-	responses := make([]ActivityResponse, 0, len(enrolledGroups))
-	for _, group := range enrolledGroups {
-		if group == nil {
-			continue // Skip nil groups to prevent panic
-		}
-		responses = append(responses, newActivityResponse(group, counts[group.ID]))
-	}
-
-	common.Respond(w, r, http.StatusOK, responses, fmt.Sprintf("Activities for student ID %d retrieved successfully", studentID))
-}
-
-// We already have the enrollStudent method, no need to modify it since it follows the standard
 
 // unenrollStudent handles removing a student from an activity
 func (rs *Resource) unenrollStudent(w http.ResponseWriter, r *http.Request) {
@@ -162,37 +130,13 @@ func (rs *Resource) updateGroupEnrollments(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	response := map[string]interface{}{
-		"activity_id":       activity.ID,
-		"activity_name":     activity.Name,
-		"enrollment_count":  enrollmentCount,
-		"max_participants":  activity.ParticipantLimit(),
-		"students_enrolled": req.StudentIDs,
+	response := EnrollmentUpdateResponse{
+		ActivityID:       ident.ID(activity.ID),
+		ActivityName:     activity.Name,
+		EnrollmentCount:  enrollmentCount,
+		MaxParticipants:  activity.ParticipantLimit(),
+		StudentsEnrolled: req.StudentIDs,
 	}
 
 	common.Respond(w, r, http.StatusOK, response, fmt.Sprintf("Enrollments for activity '%s' updated successfully", activity.Name))
-}
-
-// enrollStudent handles enrolling a student in an activity
-func (rs *Resource) enrollStudent(w http.ResponseWriter, r *http.Request) {
-	activity, ok := rs.parseAndGetActivity(w, r)
-	if !ok {
-		return
-	}
-
-	studentID, ok := rs.parseStudentID(w, r)
-	if !ok {
-		return
-	}
-
-	// Enroll student
-	tenantID := tenant.FromContext(r.Context())
-	if err := rs.transactions.WithinTenant(r.Context(), tenantID, func(ctx context.Context) error {
-		return rs.ActivityService.EnrollStudent(ctx, activity.ID, studentID)
-	}); err != nil {
-		common.RenderError(w, r, ErrorRenderer(err))
-		return
-	}
-
-	common.Respond(w, r, http.StatusOK, nil, "Student enrolled successfully")
 }

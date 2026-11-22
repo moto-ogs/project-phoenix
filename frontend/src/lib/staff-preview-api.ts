@@ -8,6 +8,7 @@
  * preview restores the parked admin state.
  */
 
+import type { ApiResponse } from "~/lib/api-envelope";
 import { signOut } from "next-auth/react";
 
 import { apiErrorFromResponse } from "~/lib/api-error";
@@ -119,7 +120,8 @@ async function startStaffPreview(
       `Failed to start preview: ${response.status}`,
     );
   }
-  const data = (await response.json()) as StaffPreviewStartBody;
+  const { data } =
+    (await response.json()) as ApiResponse<StaffPreviewStartBody>;
   return {
     expiresIn: data.expires_in,
     targetAccountId: data.target_account_id,

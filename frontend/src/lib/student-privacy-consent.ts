@@ -6,7 +6,6 @@
 import { ApiError } from "./api-error";
 import { bffJson } from "./bff-fetch";
 import { createLogger } from "./logger";
-import type { PrivacyConsentResponse } from "./contract/students.generated";
 
 const logger = createLogger({ component: "StudentPrivacyConsent" });
 
@@ -53,17 +52,15 @@ export async function writeStudentConsent(
   studentId: string,
   pair: ConsentPair,
 ): Promise<void> {
-  await bffJson<unknown>(
-    `/api/students/${encodeURIComponent(studentId)}/privacy-consent`,
-    {
-      method: "PUT",
-      body: {
-        policy_version: POLICY_VERSION,
-        accepted: pair.privacy_consent_accepted,
-        data_retention_days: pair.data_retention_days,
-      },
+  await bffJson("tenant", "PUT /api/students/{id}/privacy-consent", {
+    params: { id: studentId },
+    body: {
+      policy_version: POLICY_VERSION,
+      accepted: pair.privacy_consent_accepted,
+      // Go reads null and an absent key alike and refuses the empty value.
+      data_retention_days: pair.data_retention_days ?? undefined,
     },
-  );
+  });
 }
 
 /**
@@ -74,8 +71,10 @@ async function readStudentConsent(
   studentId: string,
 ): Promise<ConsentPair | null> {
   try {
-    const consent = await bffJson<PrivacyConsentResponse>(
-      `/api/students/${encodeURIComponent(studentId)}/privacy-consent`,
+    const consent = await bffJson(
+      "tenant",
+      "GET /api/students/{id}/privacy-consent",
+      { params: { id: studentId } },
     );
     return {
       privacy_consent_accepted: consent.accepted,

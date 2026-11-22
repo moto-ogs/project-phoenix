@@ -18,10 +18,8 @@ import { useInvalidateMatching } from "~/lib/swr";
 import { ApiError } from "~/lib/api-error";
 import { toISODate } from "~/lib/date-helpers";
 import type { ArrivalScheduleFormEntry } from "~/lib/arrival-schedule-helpers";
-import type {
-  ArrivalData,
-  ArrivalScheduleInput,
-} from "~/lib/student-arrival-api";
+import type { ArrivalData } from "~/lib/student-arrival-api";
+import type { ArrivalScheduleRequestItem } from "~/lib/contract/students.generated";
 import type { PickupData } from "~/lib/pickup-schedule-helpers";
 import type { StudentStatusDay } from "~/lib/student-status-days-api";
 
@@ -379,7 +377,6 @@ const statusDays: StudentStatusDay[] = [
     status: "excused",
     label: "Entschuldigt",
     reported_at: "2026-05-25T08:00:00Z",
-    cleared_at: null,
     source: "planned",
     created_at: "2026-05-25T08:00:00Z",
     updated_at: "2026-05-25T08:00:00Z",
@@ -391,7 +388,6 @@ const statusDays: StudentStatusDay[] = [
     status: "sick",
     label: "Krank",
     reported_at: "2026-05-25T08:00:00Z",
-    cleared_at: null,
     source: "planned",
     created_at: "2026-05-25T08:00:00Z",
     updated_at: "2026-05-25T08:00:00Z",
@@ -403,7 +399,6 @@ const statusDays: StudentStatusDay[] = [
     status: "class_trip",
     label: "Klassenfahrt",
     reported_at: "2026-05-25T08:00:00Z",
-    cleared_at: null,
     source: "planned",
     created_at: "2026-05-25T08:00:00Z",
     updated_at: "2026-05-25T08:00:00Z",
@@ -1109,15 +1104,15 @@ describe("CareScheduleManager", () => {
       Promise.resolve(savedArrivalData ?? bookedArrivalData),
     );
     mockUpdateArrivalSchedules.mockImplementation(
-      (_studentId: string, schedules: ArrivalScheduleInput[]) => {
+      (_studentId: string, schedules: ArrivalScheduleRequestItem[]) => {
         savedArrivalData = {
           ...bookedArrivalData,
           schedules: schedules.map((schedule, index) => ({
             id: String(index + 1),
             studentId: "42",
-            weekday: schedule.weekday,
+            weekday: schedule.weekday ?? 0,
             weekdayName: "Montag",
-            expectedArrival: schedule.expected_arrival,
+            expectedArrival: schedule.expected_arrival ?? "",
             notes: schedule.notes ?? null,
             source: "staff",
             createdBy: "1",

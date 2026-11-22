@@ -8,11 +8,7 @@
  * Jedes Laden steht im Zugriffsprotokoll jeder Schule; nichts wird
  * zwischengespeichert.
  */
-import type {
-  TimeAccountMonthRequest,
-  TraegerTimeAccount as WireAccount,
-  TraegerTimeAccountSchool as WireSchool,
-} from "~/lib/contract/traeger-staff-records.generated";
+import type * as traegerStaffRecordsContract from "~/lib/contract/traeger-staff-records.generated";
 import { knownEnum } from "~/lib/contract/known-enum";
 import { traegerRequest } from "~/lib/traeger-api";
 
@@ -64,7 +60,11 @@ export interface TraegerTimeAccount extends TraegerTimeAccountMinutes {
   readonly schools: readonly TraegerTimeAccountSchool[];
 }
 
-function mapMinutes(data: WireAccount | WireSchool): TraegerTimeAccountMinutes {
+function mapMinutes(
+  data:
+    | traegerStaffRecordsContract.TraegerTimeAccount
+    | traegerStaffRecordsContract.TraegerTimeAccountSchool,
+): TraegerTimeAccountMinutes {
   return {
     targetMinutes: data.target_minutes,
     actualMinutes: data.actual_minutes,
@@ -76,7 +76,9 @@ function mapMinutes(data: WireAccount | WireSchool): TraegerTimeAccountMinutes {
   };
 }
 
-function mapTraegerTimeAccount(data: WireAccount): TraegerTimeAccount {
+function mapTraegerTimeAccount(
+  data: traegerStaffRecordsContract.TraegerTimeAccount,
+): TraegerTimeAccount {
   return {
     ...mapMinutes(data),
     year: data.year,
@@ -108,7 +110,7 @@ export async function fetchTraegerTimeAccount(
   month: number,
 ): Promise<TraegerTimeAccount> {
   return mapTraegerTimeAccount(
-    await traegerRequest<WireAccount>(
+    await traegerRequest<traegerStaffRecordsContract.TraegerTimeAccount>(
       `${accountPath(recordId)}?year=${year}&month=${month}`,
     ),
   );
@@ -120,14 +122,17 @@ async function changeMonth(
   input: { year: number; month: number; reason: string },
 ): Promise<TraegerTimeAccount> {
   return mapTraegerTimeAccount(
-    await traegerRequest<WireAccount>(`${accountPath(recordId)}/${action}`, {
-      method: "POST",
-      body: {
-        year: input.year,
-        month: input.month,
-        reason: input.reason.trim(),
-      } satisfies TimeAccountMonthRequest,
-    }),
+    await traegerRequest<traegerStaffRecordsContract.TraegerTimeAccount>(
+      `${accountPath(recordId)}/${action}`,
+      {
+        method: "POST",
+        body: {
+          year: input.year,
+          month: input.month,
+          reason: input.reason.trim(),
+        } satisfies traegerStaffRecordsContract.TimeAccountMonthRequest,
+      },
+    ),
   );
 }
 

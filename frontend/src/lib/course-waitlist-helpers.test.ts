@@ -1,13 +1,13 @@
+import type { CourseWaitlistResponse } from "~/lib/contract/students.generated";
 import { describe, expect, it } from "vitest";
 
 import {
   mapCourseWaitlists,
   waitlistPlacesByRequest,
   waitlistsWithFreeSlot,
-  type CourseWaitlistWire,
 } from "./course-waitlist-helpers";
 
-const theater: CourseWaitlistWire = {
+const theater: CourseWaitlistResponse = {
   activity_group_id: "70",
   name: "Theater-AG",
   participant_limit: 8,
@@ -32,7 +32,7 @@ const theater: CourseWaitlistWire = {
   ],
 };
 
-const football: CourseWaitlistWire = {
+const football: CourseWaitlistResponse = {
   activity_group_id: "71",
   name: "Fußball-AG",
   participant_limit: 12,

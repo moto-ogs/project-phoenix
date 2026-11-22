@@ -112,7 +112,7 @@ func measureRuntimeCheckpoint(t *testing.T, production *Runtime) {
 		{"facilities.update", "PUT", fmt.Sprintf("/api/rooms/%d", writeRoom.ID), 200, true, `{"name":"Checkpoint Updated Room","capacity":40}`},
 		{"facilities.list", "GET", "/api/rooms/", 200, true, ""},
 		{"school-structure.list", "GET", "/api/groups/", 200, true, ""},
-		{"people-directory.guardians", "GET", "/api/guardians/", 200, true, ""},
+		{"people-directory.guardians", "GET", "/api/guardians/search?q=Checkpoint", 200, true, ""},
 		{"timetable.activities", "GET", "/api/activities/", 200, true, ""},
 		{"timetable.categories", "GET", "/api/activities/categories", 200, true, ""},
 		{"school-calendar.periods", "GET", "/api/timetable/periods/", 200, true, ""},
