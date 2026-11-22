@@ -1,12 +1,14 @@
 import { ApiError } from "./api-error";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
+  mockHandleAuthFailure,
   mockBrowserSupportsWebAuthn,
   mockGetSession,
   mockStartAuthentication,
   mockStartRegistration,
 } = vi.hoisted(() => ({
+  mockHandleAuthFailure: vi.fn(),
   mockBrowserSupportsWebAuthn: vi.fn(),
   mockGetSession: vi.fn(),
   mockStartAuthentication: vi.fn(),
@@ -23,6 +25,10 @@ vi.mock("next-auth/react", () => ({
   getSession: mockGetSession,
 }));
 
+vi.mock("./auth-failure", () => ({
+  handleAuthFailure: mockHandleAuthFailure,
+}));
+
 import {
   isPasskeySupported,
   isPasskeyCeremonyIncompleteError,
@@ -32,6 +38,7 @@ import {
   revokePasskey,
   startPasskeyEnrollment,
 } from "./passkey-api";
+import { clearSessionCache } from "./session-cache";
 
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -58,8 +65,14 @@ function mockAuthenticatedSession() {
 describe("passkey-api", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    clearSessionCache();
     global.fetch = vi.fn();
     mockBrowserSupportsWebAuthn.mockReturnValue(true);
+    mockHandleAuthFailure.mockResolvedValue(true);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("reports browser WebAuthn support", () => {
@@ -226,6 +239,39 @@ describe("passkey-api", () => {
       expect.objectContaining({ method: "POST" }),
     );
   });
+
+  it.each(["tenant", "operator"] as const)(
+    "returns an incorrect enrollment code in %s without renewal, retry, or navigation",
+    async (scope) => {
+      mockAuthenticatedSession();
+      const path = scope === "tenant" ? "/settings" : "/operator/settings";
+      const location = { pathname: path, href: path };
+      vi.stubGlobal("window", { location });
+      vi.mocked(global.fetch).mockImplementation(async () =>
+        jsonResponse(401, { code: "identity.mfa_code_invalid" }),
+      );
+
+      await expect(
+        registerPasskey(scope, { code: "000000", name: "Laptop" }),
+      ).rejects.toMatchObject({
+        status: 401,
+        code: "identity.mfa_code_invalid",
+      });
+
+      expect(global.fetch).toHaveBeenCalledExactlyOnceWith(
+        scope === "tenant"
+          ? "/api/auth/passkeys/register/options"
+          : "/api/operator/auth/passkeys/register/options",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ code: "000000", name: "Laptop" }),
+        }),
+      );
+      expect(location.href).toBe(path);
+      expect(mockHandleAuthFailure).not.toHaveBeenCalled();
+      expect(mockStartRegistration).not.toHaveBeenCalled();
+    },
+  );
 
   it("runs registration through options, WebAuthn, and verify", async () => {
     mockAuthenticatedSession();

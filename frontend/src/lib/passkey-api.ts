@@ -151,7 +151,11 @@ function registerOptions(
   scope: PasskeyScope,
   body: sharedContract.PasskeyRegisterOptionsRequest,
 ): Promise<sharedContract.PasskeyCeremonyOptions> {
-  const options = { body, errorMessage: PASSKEY_ERROR };
+  const options = {
+    body,
+    errorMessage: PASSKEY_ERROR,
+    authRefusals: ["identity.mfa_code_invalid"] as const,
+  };
   switch (scope) {
     case "tenant":
       return bffJson("tenant", "POST /auth/passkeys/register/options", options);
