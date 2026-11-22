@@ -7,6 +7,7 @@
 // auf. Eine schon bestätigte Zahl überschreibt die Datei nie.
 
 import { CheckCircle, Download } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useCallback, useRef, useState } from "react";
 import {
   FAMILY_IMPORT_SAMPLE,
@@ -38,12 +39,25 @@ import {
 } from "~/lib/traeger-family-children-import-api";
 import { traegerPath } from "~/lib/traeger-url";
 
+// Die Karte mit dem Tag (#7765) bringt die Datumsauswahl mit. Sie lädt erst
+// nach, wenn eine Datei gelesen ist, damit die Seite selbst klein bleibt.
+const FamilyChildrenImportValidFromCard = dynamic(
+  () =>
+    import("~/components/traeger/family-children-import-valid-from-card").then(
+      (module) => module.FamilyChildrenImportValidFromCard,
+    ),
+  {
+    ssr: false,
+    loading: () => <SectionCard title="Ab wann gelten die Zahlen?" loading />,
+  },
+);
+
 const logger = createLogger({ component: "TraegerKinderzahlImportPage" });
 
 const STEPS = ["Datei wählen", "Spalten zuordnen", "Prüfen und übernehmen"];
 
 const INFO =
-  "Hier trägst du die Kinderzahl vieler Familien auf einmal nach. Jede Zeile nennt ein Kind mit Vertrag und wie viele Kinder seine Familie hat. Die Zahl gilt als von dir bestätigt. Eine schon bestätigte Zahl ändert moto nicht. Die Datei bewahrt moto nicht auf.";
+  "Hier trägst du die Kinderzahl vieler Familien auf einmal nach. Jede Zeile nennt ein Kind mit Vertrag und wie viele Kinder seine Familie hat. Die Zahl gilt als von dir bestätigt, ab dem Tag, den du wählst. Eine schon bestätigte Zahl ändert moto nicht. Die Datei bewahrt moto nicht auf.";
 
 const KINDERZAHL = "/traeger/abrechnung/kinderzahl";
 
@@ -53,7 +67,7 @@ function errorText(err: unknown): string {
 
 function doneDescription(done: FamilyImportResult): string {
   const { counts } = done;
-  return `${counts.same} schon bestätigt, ${familyImportOpenRows(counts)} nicht übernommen. Die Zahlen stehen unter Kinderzahl mit dem Stand „Bestätigt“. Neue Monatsläufe rechnen damit.`;
+  return `${counts.same} schon bestätigt, ${familyImportOpenRows(counts)} nicht übernommen. Die Zahlen stehen unter Kinderzahl mit dem Stand „Bestätigt“. Beginnt eine Zahl erst später, steht dort bis dahin ein anderer Stand, zum Beispiel „Gilt später“ oder „Abgelaufen“. Neue Monatsläufe rechnen damit.`;
 }
 
 export default function TraegerKinderzahlImportPage() {
@@ -273,6 +287,13 @@ export default function TraegerKinderzahlImportPage() {
               mapping={result.mapping}
               unmapped={result.unmapped}
               schools={result.schools}
+              disabled={applying}
+              onChange={remap}
+            />
+          ) : null}
+          {result && result.unmapped.length === 0 ? (
+            <FamilyChildrenImportValidFromCard
+              mapping={result.mapping}
               disabled={applying}
               onChange={remap}
             />

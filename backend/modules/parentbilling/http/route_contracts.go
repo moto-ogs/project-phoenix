@@ -47,7 +47,8 @@ const letterPreviewBodyBytes = 64 * 1024
 func billingFamilyListRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: []capability.BillingFamily{}},
-		{Method: "GET", Pattern: "/children", Portals: traegerPortal, Response: []capability.FamilyChildNumbers{}},
+		{Method: "GET", Pattern: "/children", Portals: traegerPortal, Query: []common.QueryParam{{Name: "numbers", Kind: common.QueryBool}},
+			Response: []capability.FamilyChildNumbers{}},
 		{Method: "GET", Pattern: "/export", Portals: traegerPortal, Query: listExport, File: true},
 		{Method: "GET", Pattern: "/{id}", Portals: traegerPortal, Response: capability.BillingFamilyDetail{}},
 		{Method: "GET", Pattern: "/{id}/export", Portals: traegerPortal, Query: listExport, File: true},
@@ -266,6 +267,7 @@ func BillingTermsRouteContracts() []common.RouteContract {
 func FamilyBillingRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: []capability.FamilyBilling{}},
+		{Method: "GET", Pattern: "/contracts/{id}", Portals: traegerPortal, Response: capability.ContractFamilyBilling{}},
 		{Method: "PUT", Pattern: "/", Portals: traegerPortal, Request: FamilyBillingRequest{}, Response: FamilyBillingResponse{}},
 	}
 }

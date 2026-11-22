@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchBillingFamily } from "./traeger-billing-families-api";
+import {
+  type BillingFamily,
+  type FamilyChildNumbers,
+  fetchBillingFamilies,
+  fetchBillingFamily,
+  withFamilyChildren,
+} from "./traeger-billing-families-api";
 import { fetchContributionRules } from "./traeger-contributions-api";
 
 const request = vi.hoisted(() => vi.fn());
@@ -95,5 +101,135 @@ describe("billing families", () => {
     ]);
     const rules = await fetchContributionRules();
     expect(rules.map((entry) => entry.id)).toEqual(["1"]);
+  });
+});
+
+describe("the family's own payment method and contract (#7770)", () => {
+  it('maps a known method, keeps "" and drops an unknown one', async () => {
+    request.mockResolvedValue([
+      { ...FAMILY, family_payment_method: "direct_debit", contract_id: "42" },
+      { ...FAMILY, id: "42", family_payment_method: "", contract_id: "0" },
+      { ...FAMILY, id: "43", family_payment_method: "cash", contract_id: "7" },
+    ]);
+    const families = await fetchBillingFamilies();
+    expect(
+      families.map((family) => [family.familyPaymentMethod, family.contractId]),
+    ).toEqual([
+      ["direct_debit", "42"],
+      ["", ""],
+      ["", "7"],
+    ]);
+  });
+
+  const LISTED: BillingFamily = {
+    id: "41",
+    recipientFirstName: "Anna",
+    recipientLastName: "Muster",
+    recipientEmail: "anna@example.org",
+    debtorNumbers: [],
+    payments: [],
+    paymentMethods: [],
+    invoiceCount: 1,
+    openInvoiceCount: 0,
+    documentCount: 1,
+    lastIssuedOn: "",
+    familyEmail: "anna@example.org",
+    familyDebtorNumber: "",
+    holidayOnly: false,
+    hasDocuments: true,
+    familyPaymentMethod: "transfer",
+    contractId: "",
+    issuedCents: 0,
+    cancelledCents: 0,
+    creditedCents: 0,
+    openCents: 0,
+  };
+  const CHILDREN: FamilyChildNumbers = {
+    contractId: "9",
+    familyEmail: "anna@example.org",
+    recipientFirstName: "Anna",
+    recipientLastName: "Muster",
+    children: [
+      {
+        firstName: "Mia",
+        lastName: "Muster",
+        birthDate: null,
+        debtorNumber: "",
+      },
+    ],
+  };
+
+  it("opens a family by its longest-running contract, not the one of its deviation", () => {
+    // What is saved goes with the contract it was saved through; the
+    // deviation's own contract may be over (#7770).
+    const [family] = withFamilyChildren(
+      [{ ...LISTED, contractId: "42" }],
+      [CHILDREN],
+    );
+    expect(family).toMatchObject({
+      contractId: "9",
+      children: CHILDREN.children,
+    });
+    const [withoutContractInForce] = withFamilyChildren(
+      [{ ...LISTED, contractId: "42" }],
+      [],
+    );
+    expect(withoutContractInForce?.contractId).toBe("42");
+  });
+
+  it("takes the contract of the children entry when the family has none", () => {
+    const [family] = withFamilyChildren([LISTED], [CHILDREN]);
+    expect(family).toMatchObject({
+      contractId: "9",
+      familyPaymentMethod: "transfer",
+    });
+    const [withoutAny] = withFamilyChildren(
+      [{ ...LISTED, contractId: undefined }],
+      [{ ...CHILDREN, contractId: undefined }],
+    );
+    expect(withoutAny?.contractId).toBe("");
+  });
+
+  it("gives a family only the children list knows its contract and no method", () => {
+    const families = withFamilyChildren(
+      [LISTED],
+      [
+        CHILDREN,
+        {
+          ...CHILDREN,
+          contractId: "11",
+          familyEmail: "ben@example.org",
+          recipientFirstName: "Ben",
+        },
+      ],
+    );
+    expect(families).toHaveLength(2);
+    expect(families[1]).toMatchObject({
+      id: "0",
+      familyEmail: "ben@example.org",
+      contractId: "11",
+      familyPaymentMethod: "",
+      hasDocuments: false,
+    });
+  });
+  it("keeps contract families and drops number-only families per payer", () => {
+    const families = withFamilyChildren(
+      [LISTED],
+      [
+        { ...CHILDREN, contractId: "11", familyEmail: "ben@example.org" },
+        { ...CHILDREN, contractId: undefined, familyEmail: "nur@example.org" },
+      ],
+      false,
+    );
+    // The family with a contract joins without children and is marked as
+    // known by its contract alone; the one known only by a child's number
+    // has nothing to show per payer.
+    expect(families.map((family) => family.familyEmail)).toEqual([
+      LISTED.familyEmail,
+      "ben@example.org",
+    ]);
+    expect(families[1]).toMatchObject({ contractId: "11", contractOnly: true });
+    expect(families[1]?.children).toBeUndefined();
+    expect(families[0]?.children).toBeUndefined();
   });
 });

@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Abrechnung des Trägers (#4668): Abrechnungsläufe der Ferienbetreuung. Das
 // Muster der Rechnungsnummern liegt in den Abrechnungsvorgaben (#5685). Ein Lauf rechnet einen Ferienzeitraum im Voraus ab; nach
 // der Prüfung gibt die Abrechnung ihn frei. Nur die Rolle mit dem Recht
@@ -55,7 +57,10 @@ import {
   fetchBillingPeriods,
   fetchBillingRuns,
 } from "~/lib/traeger-billing-api";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 import { labelOf } from "~/lib/label-of";
 
@@ -300,9 +305,13 @@ function BillingRunsPage() {
 
   const exportItems = useTraegerListExportItems({
     download: (format) =>
-      downloadTraegerList("/api/traeger/billing-runs/export", format, {
-        holiday_period_id: periodFilter,
-      }),
+      downloadTraegerList(
+        bffFile("org", "GET /traeger/billing-runs/export", {
+          query: listExportQuery(format, {
+            holiday_period_id: periodFilter,
+          }),
+        }),
+      ),
     scope: periodFilter
       ? `Nur ${filterName ?? "der gewählte Ferienzeitraum"}`
       : traegerExportScope(),

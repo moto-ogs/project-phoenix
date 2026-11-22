@@ -48,7 +48,9 @@ const contractEndDay = `CASE c.status
 			END`
 
 // RetentionFacts lists the contracts past their draft with the day they
-// were concluded and, once ended, their last day.
+// were concluded and, once ended, their last day. A contract from an import
+// whose day of conclusion no proof names (#7767) has none: a period that
+// counts from the conclusion never starts for it.
 func (ContractRetention) RetentionFacts(ctx context.Context, organizationID int64) ([]carecontract.RetentionFact, error) {
 	db, err := retentionDB(ctx)
 	if err != nil {
@@ -61,7 +63,8 @@ func (ContractRetention) RetentionFacts(ctx context.Context, organizationID int6
 		Ended          bool           `bun:"ended"`
 		EndsOn         *calendar.Date `bun:"ends_on,type:date"`
 	}
-	if err := db.NewRaw(`SELECT c.organization_id, c.id, (c.concluded_at AT TIME ZONE 'Europe/Berlin')::date AS concluded_on,
+	if err := db.NewRaw(`SELECT c.organization_id, c.id,
+			CASE WHEN NOT c.conclusion_date_unknown THEN (c.concluded_at AT TIME ZONE 'Europe/Berlin')::date END AS concluded_on,
 			c.status IN `+endedContractStatuses+` AS ended, `+contractEndDay+` AS ends_on
 		FROM care_contract.contracts c WHERE c.status <> 'entwurf' AND (?0 = 0 OR c.organization_id = ?0)
 		ORDER BY c.organization_id, c.id`, organizationID).Scan(ctx, &rows); err != nil {
@@ -97,7 +100,8 @@ func (ContractRetention) DeleteEndedContracts(ctx context.Context, organizationI
 			DELETE FROM care_contract.contracts c
 			WHERE c.organization_id = ?0 AND c.id = ANY(?1) AND c.status IN `+endedContractStatuses+`
 				AND (c.status <> 'gekuendigt' OR c.ends_on <= ?2::date)
-				AND CASE ?4 WHEN 'contract_concluded' THEN (c.concluded_at AT TIME ZONE 'Europe/Berlin')::date
+				AND CASE ?4 WHEN 'contract_concluded' THEN
+					CASE WHEN NOT c.conclusion_date_unknown THEN (c.concluded_at AT TIME ZONE 'Europe/Berlin')::date END
 					ELSE `+contractEndDay+` END <= ?3::date
 			RETURNING c.id),
 		trail AS (

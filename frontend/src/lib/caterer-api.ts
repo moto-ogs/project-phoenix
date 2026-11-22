@@ -3,14 +3,10 @@
 // session to the backend's /caterer/* routes. The invitation and the
 // password reset need no session: the mailed link is the proof.
 
-import { authFetch } from "./api-helpers";
-import { bffJson } from "./bff-fetch";
-import { apiErrorFromResponse, transportFetch } from "./api-error";
+import { bffFile, bffJson } from "./bff-fetch";
 import { knownEnum } from "./contract/known-enum";
-import type * as catererInvitationsContract from "./contract/caterer-invitations.generated";
 import type * as catererSchoolsContract from "./contract/caterer-schools.generated";
 import { downloadBlob, filenameFromDisposition } from "./file-download";
-import type { ApiResponse } from "./api-envelope";
 
 // Go does not register these sets; the contract types them as string. A value
 // this build does not know stays undefined instead of passing as a known one.
@@ -159,24 +155,23 @@ export async function confirmCatererOrder(
   );
 }
 
-function invitationUrl(schoolId: string, token: string): string {
-  return `/api/caterer/invitations/${encodeURIComponent(schoolId)}/${encodeURIComponent(token)}`;
-}
-
 export async function fetchCatererInvitation(
   schoolId: string,
   token: string,
 ): Promise<CatererInvitationPreview> {
-  const response = await authFetch<
-    ApiResponse<catererInvitationsContract.PreviewResponse>
-  >(invitationUrl(schoolId, token));
+  const data = await bffJson(
+    "public",
+    "GET /caterer/invitations/{schoolId}/{token}",
+    // The token is a credential: the message names the step, not the path.
+    { params: { schoolId, token }, errorMessage: "caterer invitation failed" },
+  );
   return {
-    email: response.data.email,
-    catererName: response.data.caterer_name,
-    schoolName: response.data.school_name,
-    expiresAt: response.data.expires_at,
-    hasCatererAccount: response.data.has_caterer_account,
-    addressTaken: response.data.address_taken,
+    email: data.email,
+    catererName: data.caterer_name,
+    schoolName: data.school_name,
+    expiresAt: data.expires_at,
+    hasCatererAccount: data.has_caterer_account,
+    addressTaken: data.address_taken,
   };
 }
 
@@ -186,13 +181,15 @@ export async function acceptCatererInvitation(
   password: string,
   confirmPassword: string,
 ): Promise<void> {
-  await authFetch<unknown>(`${invitationUrl(schoolId, token)}/accept`, {
-    method: "POST",
-    body: {
-      password,
-      confirm_password: confirmPassword,
-    } satisfies catererInvitationsContract.acceptRequest,
-  });
+  await bffJson(
+    "public",
+    "POST /caterer/invitations/{schoolId}/{token}/accept",
+    {
+      params: { schoolId, token },
+      body: { password, confirm_password: confirmPassword },
+      errorMessage: "caterer invitation acceptance failed",
+    },
+  );
 }
 
 export type DeliveryExportFormat = "pdf" | "xlsx" | "csv";
@@ -206,17 +203,10 @@ export async function downloadCatererDeliveries(
   to: string,
   format: DeliveryExportFormat,
 ): Promise<void> {
-  const params = new URLSearchParams({ from, to, format });
-  const response = await transportFetch(
-    `/api/caterer/orders/export?${params.toString()}`,
-    { credentials: "include" },
-  );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      "caterer delivery export failed",
-    );
-  }
+  const response = await bffFile("caterer", "GET /caterer/orders/export", {
+    query: { from, to, format },
+    errorMessage: "caterer delivery export failed",
+  });
   downloadBlob(
     await response.blob(),
     filenameFromDisposition(response) ??

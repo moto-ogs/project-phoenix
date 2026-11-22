@@ -5,9 +5,11 @@
 // Überschriften vor; jede Änderung liest die Datei neu. Sind alle
 // Pflichtfelder zugeordnet, klappt die Karte zu, damit die Zeilen direkt
 // unter der Datei stehen. Hat die Datei keine Spalte für die Schule, wählt
-// das Büro sie einmal für alle Zeilen.
+// das Büro sie einmal für alle Zeilen. Den Tag, ab dem die Zahlen gelten,
+// wählt das Büro in der Karte darunter (#7765); hier steht nur die
+// freiwillige Spalte für einen Tag je Zeile.
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { SectionCard } from "~/components/ui/section-card";
 import type {
@@ -49,6 +51,7 @@ export function FamilyChildrenImportMappingCard({
   const missing = new Set(unmapped);
   const setColumn = (field: FamilyImportField, header: string) =>
     onChange({
+      ...mapping,
       columns: { ...mapping.columns, [field]: header },
       // A column goes before the choice for all rows.
       schoolId: field === "school" && header !== "" ? "" : mapping.schoolId,
@@ -76,46 +79,47 @@ export function FamilyChildrenImportMappingCard({
     >
       <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
         {FAMILY_IMPORT_FIELDS.map((field) => (
-          <CustomSelect
-            key={field}
-            id={`family-import-${field}`}
-            label={FAMILY_IMPORT_FIELD_LABELS[field]}
-            required={REQUIRED_FAMILY_IMPORT_FIELDS.has(field)}
-            value={mapping.columns[field]}
-            options={columnOptions}
-            onChange={(header) => setColumn(field, header)}
-            disabled={disabled}
-            hint={FAMILY_IMPORT_FIELD_HINTS[field]}
-            error={
-              missing.has(field) && field !== "school"
-                ? "Bitte eine Spalte wählen."
-                : null
-            }
-          />
+          <Fragment key={field}>
+            <CustomSelect
+              id={`family-import-${field}`}
+              label={FAMILY_IMPORT_FIELD_LABELS[field]}
+              required={REQUIRED_FAMILY_IMPORT_FIELDS.has(field)}
+              value={mapping.columns[field]}
+              options={columnOptions}
+              onChange={(header) => setColumn(field, header)}
+              disabled={disabled}
+              hint={FAMILY_IMPORT_FIELD_HINTS[field]}
+              error={
+                missing.has(field) && field !== "school"
+                  ? "Bitte eine Spalte wählen."
+                  : null
+              }
+            />
+            {field === "school" && schoolForAll ? (
+              <CustomSelect
+                id="family-import-school-for-all"
+                label="Schule für alle Zeilen"
+                required
+                value={mapping.schoolId}
+                options={[
+                  { value: "", label: "Bitte wählen" },
+                  ...schools.map((school) => ({
+                    value: school.id,
+                    label: school.name,
+                  })),
+                ]}
+                onChange={(schoolId) => onChange({ ...mapping, schoolId })}
+                disabled={disabled}
+                hint="Deine Datei hat keine Spalte für die Schule. Dann gilt eine Schule für alle Kinder."
+                error={
+                  missing.has("school")
+                    ? "Bitte eine Spalte oder eine Schule wählen."
+                    : null
+                }
+              />
+            ) : null}
+          </Fragment>
         ))}
-        {schoolForAll ? (
-          <CustomSelect
-            id="family-import-school-for-all"
-            label="Schule für alle Zeilen"
-            required
-            value={mapping.schoolId}
-            options={[
-              { value: "", label: "Bitte wählen" },
-              ...schools.map((school) => ({
-                value: school.id,
-                label: school.name,
-              })),
-            ]}
-            onChange={(schoolId) => onChange({ ...mapping, schoolId })}
-            disabled={disabled}
-            hint="Deine Datei hat keine Spalte für die Schule. Dann gilt eine Schule für alle Kinder."
-            error={
-              missing.has("school")
-                ? "Bitte eine Spalte oder eine Schule wählen."
-                : null
-            }
-          />
-        ) : null}
       </div>
     </SectionCard>
   );

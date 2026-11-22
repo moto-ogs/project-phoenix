@@ -11,13 +11,8 @@ import type * as parentMeContract from "./contract/parent-me.generated";
 import type * as sharedContract from "./contract/shared.generated";
 import { knownEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
-import { bffJson } from "./bff-fetch";
-import {
-  ApiError,
-  transportFetch as fetchTransport,
-  unavailableApiError,
-  apiErrorFromBody,
-} from "./api-error";
+import { bffFile, bffJson } from "./bff-fetch";
+import { ApiError, unavailableApiError } from "./api-error";
 /**
  * Parent-portal client API. Symmetric to the operator-api / tenant
  * api-helpers split. Every call goes through a Next.js proxy route
@@ -64,24 +59,6 @@ import {
   isParentAccessRefusal,
   PARENT_ACCESS_REFUSED_EVENT,
 } from "~/lib/parent-access-refusal";
-
-// Capture the originating account before awaiting the cookie-bound request.
-const responseOrigins = new WeakMap<
-  Response,
-  { account: string | null; method: string }
->();
-async function transportFetch(
-  input: RequestInfo | URL,
-  init?: RequestInit,
-): Promise<Response> {
-  const account = boundSessionAccount();
-  const response = await fetchTransport(input, init);
-  responseOrigins.set(response, {
-    account,
-    method: (init?.method ?? "GET").toUpperCase(),
-  });
-  return response;
-}
 
 const logger = createLogger({ component: "ParentAPI" });
 
@@ -273,33 +250,6 @@ function noteParentFailure(
   } else {
     logger.error("parent_api_request_failed", context);
   }
-}
-
-/**
- * Throws the ApiError of a failed file download and bounces a 401 to the
- * parents login; JSON calls go through parentJson.
- */
-async function throwResponseError(response: Response): Promise<never> {
-  let body: unknown;
-  try {
-    body = await response.json();
-  } catch {
-    // Body was not JSON; the status still classifies.
-  }
-  const error = apiErrorFromBody(
-    `Request failed (${response.status})`,
-    response.status,
-    body,
-  );
-  noteParentFailure(
-    error,
-    responseOrigins.get(response) ?? { account: null, method: "GET" },
-    false,
-  );
-  if (response.status === 401 && typeof window !== "undefined") {
-    window.location.assign("/parents/login");
-  }
-  throw error;
 }
 
 /**
@@ -678,7 +628,7 @@ export const UNKNOWN_CHILD_TODAY: ChildToday = {
  * Faellt auf `unknown` zurueck, statt zu werfen: der Endpunkt kann fehlen
  * (404, waehrend das Backend nachzieht) oder der Zugriff auf das Kind ist
  * entzogen (403). Beides ist "wir wissen es nicht", kein Fehlerzustand, den ein
- * Elternteil sehen muesste. 401 laesst throwResponseError weiterhin zur
+ * Elternteil sehen muesste. 401 laesst bffJson weiterhin zur
  * Anmeldung umleiten.
  *
  * Genau diese zwei Codes, nicht "ab 403": ein 500er oder ein ausgefallener
@@ -1220,9 +1170,13 @@ export async function downloadDeclarationProofPdf(
   announcementId: string,
   studentId: string,
 ): Promise<void> {
-  const url = `/api/parent/me/news/${encodeURIComponent(announcementId)}/declaration/proof/pdf?student_id=${encodeURIComponent(studentId)}`;
-  const response = await transportFetch(url, { method: "GET" });
-  if (!response.ok) await throwResponseError(response);
+  const response = await parentCall(
+    bffFile(
+      "parent",
+      "GET /parent/me/news/{announcementId}/declaration/proof/pdf",
+      { params: { announcementId }, query: { student_id: studentId } },
+    ),
+  );
   const blob = await response.blob();
   downloadBlob(
     blob,
@@ -1619,9 +1573,13 @@ export async function downloadPickupRequestProofPdf(
   studentId: string,
   requestId: string,
 ): Promise<void> {
-  const url = `/api/parent/me/children/${encodeURIComponent(studentId)}/pickup-requests/${encodeURIComponent(requestId)}/proof/pdf`;
-  const response = await transportFetch(url, { method: "GET" });
-  if (!response.ok) await throwResponseError(response);
+  const response = await parentCall(
+    bffFile(
+      "parent",
+      "GET /parent/me/children/{studentId}/pickup-requests/{requestId}/proof/pdf",
+      { params: { studentId, requestId } },
+    ),
+  );
   const blob = await response.blob();
   downloadBlob(
     blob,
@@ -2166,12 +2124,13 @@ export async function removeRelatedAccount(
   studentId: string,
   guardianProfileId: string,
 ): Promise<void> {
-  const response = await transportFetch(
-    `/api/parent/me/children/${encodeURIComponent(studentId)}/related-accounts/${encodeURIComponent(guardianProfileId)}`,
-    { method: "DELETE" },
+  await parentCall(
+    bffJson(
+      "parent",
+      "DELETE /parent/me/children/{studentId}/related-accounts/{guardianProfileId}",
+      { params: { studentId, guardianProfileId } },
+    ),
   );
-  // Logged under a fixed label; the path carries the other guardian's ID.
-  if (!response.ok) await throwResponseError(response);
 }
 
 // ── Dokumente (#4671) ──────────────────────────────────────────────────────
@@ -2263,9 +2222,18 @@ export async function listMyDocuments(): Promise<ParentDocumentInbox> {
 export async function downloadMySharedDocument(
   document: Pick<ParentSharedDocument, "id" | "organization_id" | "file_name">,
 ): Promise<void> {
-  const url = `/api/parent/me/documents/${encodeURIComponent(document.organization_id)}/shared/${encodeURIComponent(document.id)}/file`;
-  const response = await transportFetch(url, { method: "GET" });
-  if (!response.ok) await throwResponseError(response);
+  const response = await parentCall(
+    bffFile(
+      "parent",
+      "GET /parent/me/documents/{organizationId}/shared/{documentId}/file",
+      {
+        params: {
+          organizationId: document.organization_id,
+          documentId: document.id,
+        },
+      },
+    ),
+  );
   const blob = await response.blob();
   downloadBlob(blob, filenameFromDisposition(response) ?? document.file_name);
 }
@@ -2278,14 +2246,29 @@ export async function downloadMySharedDocument(
 export async function downloadMyDocument(
   document: Pick<ParentDocument, "id" | "organization_id" | "number" | "kind">,
 ): Promise<void> {
-  const organization = encodeURIComponent(document.organization_id);
-  const id = encodeURIComponent(document.id);
-  const url =
+  const response = await parentCall(
     document.kind === "care_contract"
-      ? `/api/parent/me/documents/${organization}/contracts/${id}/pdf`
-      : `/api/parent/me/documents/${organization}/${id}/pdf`;
-  const response = await transportFetch(url, { method: "GET" });
-  if (!response.ok) await throwResponseError(response);
+      ? bffFile(
+          "parent",
+          "GET /parent/me/documents/{organizationId}/contracts/{contractId}/pdf",
+          {
+            params: {
+              organizationId: document.organization_id,
+              contractId: document.id,
+            },
+          },
+        )
+      : bffFile(
+          "parent",
+          "GET /parent/me/documents/{organizationId}/{documentId}/pdf",
+          {
+            params: {
+              organizationId: document.organization_id,
+              documentId: document.id,
+            },
+          },
+        ),
+  );
   const blob = await response.blob();
   downloadBlob(
     blob,

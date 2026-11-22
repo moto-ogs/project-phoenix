@@ -130,6 +130,7 @@ import { routes as traegerCareTimeOverruns } from "./traeger-care-time-overruns.
 import { routes as traegerCatalog } from "./traeger-catalog.generated";
 import { routes as traegerClosingDays } from "./traeger-closing-days.generated";
 import { routes as traegerContractChanges } from "./traeger-contract-changes.generated";
+import { routes as traegerContractCorrections } from "./traeger-contract-corrections.generated";
 import { routes as traegerContractImports } from "./traeger-contract-imports.generated";
 import { routes as traegerContractNotices } from "./traeger-contract-notices.generated";
 import { routes as traegerContractTemplates } from "./traeger-contract-templates.generated";
@@ -328,6 +329,10 @@ export const portalRoutes = {
     traegerClosingDays["PUT /traeger/closing-days/{id}"],
     traegerContractChanges["GET /traeger/contract-changes/{id}"],
     traegerContractChanges["POST /traeger/contract-changes/{id}/requests/{requestId}/decide"],
+    traegerContractCorrections["GET /traeger/contract-corrections/"],
+    traegerContractCorrections["GET /traeger/contract-corrections/list"],
+    traegerContractCorrections["POST /traeger/contract-corrections/"],
+    traegerContractCorrections["POST /traeger/contract-corrections/preview"],
     traegerContractImports["GET /traeger/contract-imports/"],
     traegerContractImports["POST /traeger/contract-imports/"],
     traegerContractImports["POST /traeger/contract-imports/offering-corrections"],
@@ -374,6 +379,7 @@ export const portalRoutes = {
     traegerExportRecipient["PUT /traeger/export-recipient/formats"],
     traegerExportRecipient["PUT /traeger/export-recipient/{id}"],
     traegerFamilyBilling["GET /traeger/family-billing/"],
+    traegerFamilyBilling["GET /traeger/family-billing/contracts/{id}"],
     traegerFamilyBilling["PUT /traeger/family-billing/"],
     traegerFamilyChildren["DELETE /traeger/family-children/{contractId}"],
     traegerFamilyChildren["GET /traeger/family-children/"],

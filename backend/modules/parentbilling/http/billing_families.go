@@ -65,13 +65,14 @@ func (rs *BillingFamilyResource) list(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusOK, families, "Billing families retrieved successfully")
 }
 
-// children lists the families with their children and numbers (#7007).
+// children lists the families with their children and numbers (#7007);
+// numbers=false keeps the families with a contract and names no child.
 func (rs *BillingFamilyResource) children(w http.ResponseWriter, r *http.Request) {
 	reviewer, ok := reviewerOf(w, r)
 	if !ok {
 		return
 	}
-	families, err := rs.families.FamilyChildren(r.Context(), reviewer)
+	families, err := rs.families.FamilyChildren(r.Context(), reviewer, r.URL.Query().Get("numbers") != "false")
 	if err != nil {
 		renderFamilyError(w, r, err)
 		return

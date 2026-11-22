@@ -110,25 +110,103 @@ func seedCareContractImport(client *Client, auth AuthRef, school, module, start 
 	if err != nil {
 		return 0, false, fmt.Errorf("preview the import of care contracts: %w", err)
 	}
-	var preview struct {
-		Data struct {
-			Fingerprint string `json:"fingerprint"`
-			Counts      struct {
-				Ready     int `json:"ready"`
-				Duplicate int `json:"duplicate"`
-			} `json:"counts"`
-		} `json:"data"`
-	}
+	var preview seedContractImportAnswer
 	if err := json.Unmarshal(raw, &preview); err != nil {
 		return 0, false, fmt.Errorf("read the preview of the contract import: %w", err)
 	}
 	if preview.Data.Counts.Ready == 0 {
 		// A repeated seed finds the children again: nothing is left to do.
+		// Their corrections belong to the run that took them over, so a
+		// contract somebody changed by hand since stays as it is.
 		return 0, preview.Data.Counts.Duplicate > 0, nil
 	}
-	if _, err := client.PostFileWithAuthFields(auth, "/traeger/contract-imports/", "file", file, csv,
-		map[string]string{"fingerprint": preview.Data.Fingerprint}); err != nil {
+	raw, err = client.PostFileWithAuthFields(auth, "/traeger/contract-imports/", "file", file, csv,
+		map[string]string{"fingerprint": preview.Data.Fingerprint})
+	if err != nil {
 		return 0, false, fmt.Errorf("import the care contracts: %w", err)
 	}
-	return preview.Data.Counts.Ready, true, nil
+	var imported seedContractImportAnswer
+	if err := json.Unmarshal(raw, &imported); err != nil {
+		return 0, false, fmt.Errorf("read the import of the care contracts: %w", err)
+	}
+	return preview.Data.Counts.Ready, true, seedCareContractCorrections(client, auth, imported)
+}
+
+// seedContractImportAnswer is what the seed reads of a look at an import
+// file: the fingerprint, the counts and the contract of every row.
+type seedContractImportAnswer struct {
+	Data struct {
+		Fingerprint string `json:"fingerprint"`
+		Counts      struct {
+			Ready     int `json:"ready"`
+			Duplicate int `json:"duplicate"`
+		} `json:"counts"`
+		Rows []struct {
+			Status         string   `json:"status"`
+			ChildFirstName string   `json:"child_first_name"`
+			ChildLastName  string   `json:"child_last_name"`
+			ContractID     ident.ID `json:"contract_id"`
+		} `json:"rows"`
+	} `json:"data"`
+}
+
+// seedCorrections are what the original documents of the imported contracts
+// prove (#7767), by the first name of the child: the parties, whether the
+// contract was concluded online or on paper, the day of the conclusion and
+// the document. Emil has none, so his contract stays as the import left it:
+// on paper, the day unknown.
+var seedCorrections = map[string][4]string{
+	"Jonte": {"Petersen, Maren | Petersen, Nils", "online", "14.05.2026", "Vertrag Petersen vom 14.05.2026 (PDF)"},
+	"Malia": {"", "online", "unbekannt", "Online-Anmeldung Okafor, ohne Datum"},
+	"Ida":   {"Brandt, Katrin", "papier", "02.06.2026", "Papiervertrag Brandt, Ordner 2026"},
+}
+
+// seedCareContractCorrections completes the imported contracts from their
+// original documents like the office: it previews the correction file and
+// stores what the preview showed, so the demo shows a contract concluded
+// online, one whose day nobody knows and the trail of a correction.
+func seedCareContractCorrections(client *Client, auth AuthRef, imported seedContractImportAnswer) error {
+	rows := []string{"Vertrag-ID;Kind;Vertragsparteien;Abschlussart;Abschlussdatum;Beleg"}
+	for _, row := range imported.Data.Rows {
+		correction, ok := seedCorrections[row.ChildFirstName]
+		// Only a contract this run took over: one an earlier run stored may
+		// carry corrections somebody made by hand since.
+		if !ok || row.ContractID == 0 || row.Status != "imported" {
+			continue
+		}
+		rows = append(rows, strings.Join([]string{fmt.Sprint(int64(row.ContractID)), row.ChildFirstName + " " + row.ChildLastName,
+			correction[0], correction[1], correction[2], correction[3]}, ";"))
+	}
+	if len(rows) == 1 {
+		return nil
+	}
+	csv := []byte(strings.Join(rows, "\r\n") + "\r\n")
+	const file = "vertragsangaben-nachpflegen.csv"
+	raw, err := client.PostFileWithAuthFields(auth, "/traeger/contract-corrections/preview", "file", file, csv, nil)
+	if err != nil {
+		return fmt.Errorf("preview the correction of the imported contracts: %w", err)
+	}
+	var preview struct {
+		Data struct {
+			Fingerprint string `json:"fingerprint"`
+			Counts      struct {
+				Change  int `json:"change"`
+				Invalid int `json:"invalid"`
+			} `json:"counts"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(raw, &preview); err != nil {
+		return fmt.Errorf("read the preview of the contract correction: %w", err)
+	}
+	if preview.Data.Counts.Invalid > 0 {
+		return fmt.Errorf("the correction of the imported contracts has %d invalid rows", preview.Data.Counts.Invalid)
+	}
+	if preview.Data.Counts.Change == 0 {
+		return nil
+	}
+	if _, err := client.PostFileWithAuthFields(auth, "/traeger/contract-corrections/", "file", file, csv,
+		map[string]string{"fingerprint": preview.Data.Fingerprint}); err != nil {
+		return fmt.Errorf("correct the imported contracts: %w", err)
+	}
+	return nil
 }

@@ -1,4 +1,4 @@
-import { bffJson } from "~/lib/bff-fetch";
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the care contracts in the Träger portal (#4678, ADR 0153): the
  * contract template of every offering, the drafts from the accepted
@@ -11,7 +11,6 @@ import {
   type MailOutcome,
   knownMailOutcome,
 } from "~/lib/email-delivery-status";
-import { apiErrorFromResponse, transportFetch } from "./api-error";
 import {
   type CareContractStatus,
   knownContractStatus,
@@ -21,8 +20,12 @@ import { requiredDay } from "./contract/required-day";
 import type * as traegerContractTemplatesContract from "./contract/traeger-contract-templates.generated";
 import type * as traegerContractsContract from "./contract/traeger-contracts.generated";
 import { filenameFromDisposition } from "./file-download";
-
-const CONTRACTS_PATH = "/api/traeger/contracts";
+import {
+  type ContractCorrectionChange,
+  type ContractCorrectionValues,
+  correctionChangesFromBackend,
+  correctionValuesFromBackend,
+} from "./traeger-contract-correction-api";
 
 export type { CareContractStatus } from "./care-contract-status";
 
@@ -222,7 +225,19 @@ export type ConclusionMethod = (typeof CONCLUSION_METHOD_VALUES)[number];
 export interface ContractConclusion {
   /** undefined: a method this build does not know. */
   readonly method: ConclusionMethod | undefined;
+  /**
+   * When it was concluded. For a contract with `dateUnknown` only a stand-in
+   * the backend needs: never show it as the day of the conclusion.
+   */
   readonly at: string;
+  /**
+   * The contract came from an import (#4723): it was concluded before moto,
+   * online in the previous program or on paper. Absent: a view that does not
+   * carry it (the school's application view), read as false.
+   */
+  readonly takenOver?: boolean;
+  /** The office does not know the day of the conclusion (#7767). */
+  readonly dateUnknown?: boolean;
 }
 
 /**
@@ -331,6 +346,21 @@ export interface CareContractDetail extends CareContractSummary {
   readonly termText: string;
   readonly noticeText: string;
   readonly feeText: string;
+  /**
+   * Values the office completed from the original documents after the
+   * import (#7767), in the order the backend lists them.
+   */
+  readonly corrections: readonly ContractCorrectionRecord[];
+}
+
+/** One completion of an imported contract: what changed, and the proof. */
+export interface ContractCorrectionRecord {
+  readonly correctedAt: string;
+  readonly file: string;
+  readonly evidence: string;
+  readonly changes: readonly ContractCorrectionChange[];
+  readonly before: ContractCorrectionValues;
+  readonly after: ContractCorrectionValues;
 }
 
 export interface ContractSignature {
@@ -522,6 +552,8 @@ function summaryFromBackend(
       ? {
           method: knownEnum(CONCLUSION_METHOD_VALUES, row.concluded.method),
           at: row.concluded.at,
+          takenOver: row.concluded.taken_over,
+          dateUnknown: row.concluded.date_unknown,
         }
       : null,
     endsOn: row.ends_on,
@@ -600,6 +632,14 @@ function detailFromBackend(
     termText: row.term_text,
     noticeText: row.notice_text,
     feeText: row.fee_text,
+    corrections: (row.corrections ?? []).map((correction) => ({
+      correctedAt: correction.corrected_at,
+      file: correction.file,
+      evidence: correction.evidence,
+      changes: correctionChangesFromBackend(correction.changes),
+      before: correctionValuesFromBackend(correction.before),
+      after: correctionValuesFromBackend(correction.after),
+    })),
   };
 }
 
@@ -608,10 +648,6 @@ function keyToBackend(key: CandidateKey) {
     school_id: key.schoolId,
     request_child_id: key.requestChildId,
   };
-}
-
-function contractPath(id: string): string {
-  return `${CONTRACTS_PATH}/${encodeURIComponent(id)}`;
 }
 
 export async function fetchCareContracts(
@@ -755,7 +791,9 @@ export async function discardCareContract(id: string): Promise<void> {
 
 /** The PDF: a preview of a draft, the stored document once sent. */
 export async function downloadCareContract(id: string): Promise<ContractFile> {
-  return downloadContractFile(`${contractPath(id)}/document`);
+  return downloadContractFile(
+    bffFile("org", "GET /traeger/contracts/{id}/document", { params: { id } }),
+  );
 }
 
 /**
@@ -767,24 +805,17 @@ export async function downloadCareContractVersion(
   number: number,
 ): Promise<ContractFile> {
   return downloadContractFile(
-    `${contractPath(id)}/versions/${encodeURIComponent(String(number))}/document`,
+    bffFile("org", "GET /traeger/contracts/{id}/versions/{number}/document", {
+      params: { id, number: String(number) },
+    }),
   );
 }
 
 async function downloadContractFile(
-  path: string,
+  file: Promise<Response>,
   fallbackFilename = "betreuungsvertrag.pdf",
 ): Promise<ContractFile> {
-  const response = await transportFetch(path, {
-    credentials: "include",
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Request failed (${response.status})`,
-    );
-  }
+  const response = await file;
   return {
     blob: await response.blob(),
     filename: filenameFromDisposition(response) ?? fallbackFilename,
@@ -826,25 +857,19 @@ export async function recordPaperSignature(
   form.append("file", input.file);
   form.append("signer_name", input.signerName);
   form.append("signed_on", input.signedOn);
-  const response = await transportFetch(`${contractPath(id)}/paper-signature`, {
-    method: "POST",
-    credentials: "include",
-    cache: "no-store",
+  await bffJson("org", "POST /traeger/contracts/{id}/paper-signature", {
+    params: { id },
     body: form,
   });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Request failed (${response.status})`,
-    );
-  }
 }
 
 export async function downloadPaperSignature(
   id: string,
 ): Promise<ContractFile> {
   return downloadContractFile(
-    `${contractPath(id)}/paper-signature`,
+    bffFile("org", "GET /traeger/contracts/{id}/paper-signature", {
+      params: { id },
+    }),
     "vertrag-papier.pdf",
   );
 }

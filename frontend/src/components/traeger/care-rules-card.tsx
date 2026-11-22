@@ -95,7 +95,11 @@ function RuleDetails({
   ];
   if (rule.kind === "sibling") {
     lines.push(
-      `Ab dem ${rule.siblingFromChild ?? 2}. Kind · ${
+      `${
+        rule.siblingAllChildren
+          ? `Alle Kinder ab ${rule.siblingFromChild ?? 2} Kindern in der Familie`
+          : `Ab dem ${rule.siblingFromChild ?? 2}. Kind`
+      } · ${
         rule.countSchoolIds.length > 0
           ? `Geschwister zählen auch an: ${names(rule.countSchoolIds, data)}`
           : "Geschwister zählen nur an diesen Schulen"

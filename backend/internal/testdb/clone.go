@@ -181,11 +181,12 @@ func (h *CloneHandle) refreshKeeper(stop <-chan struct{}) bool {
 // SHARED lock — so the ~93 package binaries of a run clone concurrently
 // instead of queueing — and pins it with a keeper connection.
 //
-// It opens and closes a maintenance connection of its own. A test binary
-// holds one Maintenance for its whole life instead (#6962).
+// It opens and closes a maintenance connection of its own, so the clone's
+// slot ends with the call: this is for the lifecycle's own tests. A test
+// binary holds one Maintenance for its whole life instead (#6962).
 func CreateClone(ctx context.Context, cfg *Config, runID string) (*CloneHandle, error) {
 	maint := OpenMaintenance(cfg)
-	defer func() { _ = maint.db.Close() }()
+	defer func() { _ = maint.close() }()
 	if err := maint.CollectDeadRuns(ctx, cfg, runID); err != nil {
 		return nil, err
 	}
@@ -202,13 +203,14 @@ func CreateClone(ctx context.Context, cfg *Config, runID string) (*CloneHandle, 
 // It carries no template: callers pass the Config to clone from, because
 // tests swap the package's Config to provoke a missing template.
 type Maintenance struct {
-	db *sql.DB
+	db    *sql.DB
+	slots cloneSlots
 }
 
 // maintenancePoolSize covers the concurrent lifecycle steps of one binary:
 // its two isolated database slots each hold a lock connection while they
-// clone, and a drop may run beside them.
-const maintenancePoolSize = 3
+// clone, a drop may run beside them, and the slot session stays open.
+const maintenancePoolSize = 4
 
 // OpenMaintenance opens the lasting maintenance pool. Connections are opened
 // lazily and kept until Close.
@@ -218,7 +220,14 @@ func OpenMaintenance(cfg *Config) *Maintenance {
 	db.SetMaxIdleConns(maintenancePoolSize)
 	db.SetConnMaxLifetime(0)
 	db.SetConnMaxIdleTime(0)
-	return &Maintenance{db: db}
+	return &Maintenance{db: db, slots: cloneSlots{class: cloneSlotLockClass}}
+}
+
+// close ends the slot session before the pool: a checked-out connection
+// outlives sql.DB.Close and would keep its slots.
+func (m *Maintenance) close() error {
+	m.slots.close()
+	return m.db.Close()
 }
 
 // CollectDeadRuns runs the generation GC once if the exclusive lifecycle lock
@@ -230,14 +239,37 @@ func (m *Maintenance) CollectDeadRuns(ctx context.Context, cfg *Config, runID st
 
 // CreateClone creates a clone of cfg's template for runID and the package in
 // the current working directory, without a GC pass, and pins it with a
-// keeper connection.
+// keeper connection. It is for clones that live as long as the binary; it
+// waits for a clone slot outside the reserve (see cloneSlots).
 func (m *Maintenance) CreateClone(ctx context.Context, cfg *Config, runID string) (*CloneHandle, error) {
+	return m.createClone(ctx, cfg, runID, true)
+}
+
+// CreateShortLivedClone is CreateClone for a clone that one test holds and
+// drops again: its slot may come from the reserve.
+func (m *Maintenance) CreateShortLivedClone(ctx context.Context, cfg *Config, runID string) (*CloneHandle, error) {
+	return m.createClone(ctx, cfg, runID, false)
+}
+
+func (m *Maintenance) createClone(ctx context.Context, cfg *Config, runID string, lasting bool) (*CloneHandle, error) {
 	wd, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("determine package working directory: %w", err)
 	}
 	name := CloneName(runID, wd)
+	if err := m.slots.acquire(ctx, m.db, name, lasting); err != nil {
+		return nil, err
+	}
+	handle, err := m.retryAfterDiskFull(ctx, cfg, func() (*CloneHandle, error) {
+		return m.cloneTemplate(ctx, cfg, name, wd)
+	})
+	if err != nil {
+		releaseCloneSlot(&m.slots, name)
+	}
+	return handle, err
+}
 
+func (m *Maintenance) cloneTemplate(ctx context.Context, cfg *Config, name, wd string) (*CloneHandle, error) {
 	// Shared, not exclusive: two cloners never write the same database (the
 	// name carries run ID and package), and CREATE DATABASE ... TEMPLATE only
 	// needs the template to sit still, which is exactly what the exclusive
@@ -268,7 +300,19 @@ func (m *Maintenance) CreateCloneOf(ctx context.Context, cfg *Config, source *Cl
 		return nil, fmt.Errorf("determine package working directory: %w", err)
 	}
 	name := CloneName(runID, wd)
+	if err := m.slots.acquire(ctx, m.db, name, false); err != nil {
+		return nil, err
+	}
+	handle, err := m.retryAfterDiskFull(ctx, cfg, func() (*CloneHandle, error) {
+		return m.cloneSource(ctx, cfg, source, name, wd)
+	})
+	if err != nil {
+		releaseCloneSlot(&m.slots, name)
+	}
+	return handle, err
+}
 
+func (m *Maintenance) cloneSource(ctx context.Context, cfg *Config, source *CloneHandle, name, wd string) (*CloneHandle, error) {
 	source.copying.Lock()
 	defer source.copying.Unlock()
 	conn, unlock, err := acquireLifecycleLockShared(ctx, m.db)
@@ -296,13 +340,19 @@ func (m *Maintenance) CreateCloneOf(ctx context.Context, cfg *Config, source *Cl
 // DropClone drops one clone by name on the maintenance session; see the
 // package-level DropClone.
 func (m *Maintenance) DropClone(ctx context.Context, name string) error {
-	return dropDatabase(ctx, m.db, name)
+	// A clone that could not be dropped still fills the server: its slot
+	// stays taken until this binary ends.
+	err := dropDatabase(ctx, m.db, name)
+	if err == nil {
+		releaseCloneSlot(&m.slots, name)
+	}
+	return err
 }
 
 // ReleaseMaintenance is the last lifecycle step of a test binary: it drops
 // the binary's own package clone and closes the maintenance session.
 func ReleaseMaintenance(ctx context.Context, m *Maintenance, packageClone string) error {
-	return errors.Join(dropDatabase(ctx, m.db, packageClone), m.db.Close())
+	return errors.Join(dropDatabase(ctx, m.db, packageClone), m.close())
 }
 
 func createCloneDatabase(ctx context.Context, conn sqlExecutor, cfg *Config, name, label string) error {
@@ -371,7 +421,7 @@ func (h *CloneHandle) pin(ctx context.Context) error {
 // a moment ago simply finds it gone.
 func DropClone(ctx context.Context, cfg *Config, name string) error {
 	maint := OpenMaintenance(cfg)
-	defer func() { _ = maint.db.Close() }()
+	defer func() { _ = maint.close() }()
 	return maint.DropClone(ctx, name)
 }
 

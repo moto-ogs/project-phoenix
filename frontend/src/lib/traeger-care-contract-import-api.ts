@@ -7,12 +7,8 @@ import { bffJson } from "~/lib/bff-fetch";
  * Backend int64 IDs leave here as strings; calendar dates stay "YYYY-MM-DD".
  */
 
-import { apiErrorFromResponse, transportFetch } from "./api-error";
 import { knownEnum } from "./contract/known-enum";
 import type * as traegerContractImportsContract from "./contract/traeger-contract-imports.generated";
-import { readJson } from "./traeger-api";
-
-const IMPORTS_PATH = "/api/traeger/contract-imports";
 
 /** Largest file the backend reads, in bytes. */
 export const MAX_CONTRACT_IMPORT_FILE_BYTES = 2 * 1024 * 1024;
@@ -282,7 +278,7 @@ function mapImportResult(
 }
 
 async function postImport(
-  path: string,
+  preview: boolean,
   request: ContractImportRequest,
 ): Promise<ContractImportResult> {
   const form = new FormData();
@@ -293,36 +289,24 @@ async function postImport(
   if (request.fingerprint) {
     form.append("fingerprint", request.fingerprint);
   }
-  const response = await transportFetch(path, {
-    method: "POST",
-    credentials: "include",
-    cache: "no-store",
-    body: form,
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Request failed (${response.status})`,
-    );
-  }
-  const data = await readJson(response);
-  return mapImportResult(
-    (data as { data: traegerContractImportsContract.ContractImport }).data,
-  );
+  const data = await (preview
+    ? bffJson("org", "POST /traeger/contract-imports/preview", { body: form })
+    : bffJson("org", "POST /traeger/contract-imports/", { body: form }));
+  return mapImportResult(data);
 }
 
 /** Reads the file and answers every row; stores nothing. */
 export function previewContractImport(
   request: ContractImportRequest,
 ): Promise<ContractImportResult> {
-  return postImport(`${IMPORTS_PATH}/preview`, request);
+  return postImport(true, request);
 }
 
 /** Takes over the ready rows. */
 export function applyContractImport(
   request: ContractImportRequest,
 ): Promise<ContractImportResult> {
-  return postImport(IMPORTS_PATH, request);
+  return postImport(false, request);
 }
 
 /** The imports of the Träger, newest first. */

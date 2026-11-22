@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Dokumente des Trägers für Eltern und Schulen (#4692): Übersicht aller
 // hochgeladenen Dokumente mit ihren Freigaben. Von hier aus hochladen und ein
 // Dokument öffnen, um es freizugeben.
@@ -31,7 +33,10 @@ import { useToast } from "~/contexts/ToastContext";
 import { hasPermission } from "~/lib/auth-utils";
 import { formatBerlinDate } from "~/lib/date-helpers";
 import type { TraegerDocument } from "~/lib/traeger-documents-api";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 
 /** Das Recht, das Hochladen und Freigeben öffnet (Rolle Dokumente, #5992). */
@@ -131,7 +136,11 @@ export default function TraegerDocumentsPage() {
   // the page menu under „Herunterladen“.
   const exportItems = useTraegerListExportItems({
     download: (format) =>
-      downloadTraegerList("/api/traeger/documents/export", format),
+      downloadTraegerList(
+        bffFile("org", "GET /traeger/documents/export", {
+          query: listExportQuery(format),
+        }),
+      ),
     scope: traegerExportScope(),
     fallbackName: "dokumente",
     errorObject: "die Liste der Dokumente",

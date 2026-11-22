@@ -12,6 +12,7 @@ import {
   getGuardianFullName,
   getRelationshipTypeLabel,
   getLanguageLabel,
+  isFullGuardianRole,
   PHONE_TYPE_LABELS,
 } from "@/lib/guardian-helpers";
 import {
@@ -142,10 +143,13 @@ function inviteNeedsEmail(
   guardian: GuardianWithRelationship,
   onInvite: GuardianListProps["onInvite"],
 ) {
+  // Nur wer mit der Rolle Zugang zur Eltern-App bekommt, soll eingeladen
+  // werden; einer Abholperson fehlt ohne E-Mail nichts. Ohne Rolle wie
+  // canInviteGuardian: einladbar.
   return Boolean(
     onInvite &&
+    (!guardian.guardianRole || isFullGuardianRole(guardian.guardianRole)) &&
     guardian.accountStatus !== "active" &&
-    guardian.guardianRole !== "social_worker" &&
     !(guardian.accountStatus === "pending" && guardian.hasAccount) &&
     !guardian.email,
   );

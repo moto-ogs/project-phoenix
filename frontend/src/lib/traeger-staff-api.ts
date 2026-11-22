@@ -1,4 +1,4 @@
-import { bffJson } from "~/lib/bff-fetch";
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Personalakte des Trägers über alle Schulen (#4705, ADR 0089, ADR 0233).
  *
@@ -16,10 +16,9 @@ import {
   downloadTraegerList,
   type TraegerListFile,
   type TraegerListFormat,
+  listExportQuery,
 } from "./traeger-list-export";
 import { mapStaffProof, type StaffProof } from "~/lib/traeger-staff-proofs-api";
-
-const BASE = "/api/traeger/staff-records";
 
 // Go does not register these sets; the contract types them as string. A value
 // this build does not know stays undefined and shows as „–“.
@@ -424,7 +423,11 @@ export async function fetchStaffOverview(): Promise<StaffOverview> {
 export function downloadStaffRecordList(
   format: TraegerListFormat,
 ): Promise<TraegerListFile> {
-  return downloadTraegerList(`${BASE}/export`, format);
+  return downloadTraegerList(
+    bffFile("org", "GET /traeger/staff-records/export", {
+      query: listExportQuery(format),
+    }),
+  );
 }
 
 export async function fetchStaffRecord(id: string): Promise<StaffRecordDetail> {

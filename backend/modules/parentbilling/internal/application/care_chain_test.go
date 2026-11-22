@@ -754,6 +754,207 @@ func TestCareMonthRuleChainTable(t *testing.T) {
 			totals:       map[int64]int64{contractNoah: 3000},
 			lines:        map[int64][]reductionOf{contractNoah: {{parentbilling.RuleSibling, -3000, 3}}},
 		},
+		{
+			// A rule of the family's size (#7765): one child in the family
+			// is below two, Mia pays the regular 80,00 €.
+			name: "family size: one child pays the regular price",
+			children: []careChainChild{
+				{contractMia, schoolIspringen, familyEva, "2017-03-01", []parentbilling.CareContractService{mon1400, tue1400}},
+			},
+			rules:    familySizeRule(true, 2),
+			families: confirmedFamily(familyEva, 1, "2026-09-01", nil),
+			totals:   map[int64]int64{contractMia: 8000},
+		},
+		{
+			// Two children in the family, only Mia with a contract: 40,00 €.
+			name: "family size: two children, one with a contract, is reduced",
+			children: []careChainChild{
+				{contractMia, schoolIspringen, familyEva, "2017-03-01", []parentbilling.CareContractService{mon1400, tue1400}},
+			},
+			rules:    familySizeRule(true, 2),
+			families: confirmedFamily(familyEva, 2, "2026-09-01", nil),
+			totals:   map[int64]int64{contractMia: 4000},
+			lines:    map[int64][]reductionOf{contractMia: {{parentbilling.RuleSibling, -4000, 2}}},
+		},
+		{
+			// Two children in the family, both with a contract: both are
+			// reduced, the first too. The rank rule above reduces only Noah
+			// ("a number below the contract children counts the contracts").
+			name: "family size: two children, both with a contract, are both reduced",
+			children: []careChainChild{
+				{contractMia, schoolIspringen, familyEva, "2017-03-01", []parentbilling.CareContractService{mon1400, tue1400}},
+				{contractNoah, schoolIspringen, familyEva, "2015-03-01", []parentbilling.CareContractService{mon1630}},
+			},
+			rules:    familySizeRule(true, 2),
+			families: confirmedFamily(familyEva, 2, "2026-09-01", nil),
+			totals:   map[int64]int64{contractMia: 4000, contractNoah: 3000},
+			lines: map[int64][]reductionOf{
+				contractMia:  {{parentbilling.RuleSibling, -4000, 1}},
+				contractNoah: {{parentbilling.RuleSibling, -3000, 2}},
+			},
+		},
+		{
+			// Three children in the family, two with a contract: the sibling
+			// without one counts, both contract children are reduced.
+			name: "family size: a sibling without a contract counts",
+			children: []careChainChild{
+				{contractMia, schoolIspringen, familyEva, "2017-03-01", []parentbilling.CareContractService{mon1400, tue1400}},
+				{contractNoah, schoolIspringen, familyEva, "2015-03-01", []parentbilling.CareContractService{mon1630}},
+			},
+			rules:    familySizeRule(true, 3),
+			families: confirmedFamily(familyEva, 3, "2026-09-01", nil),
+			totals:   map[int64]int64{contractMia: 4000, contractNoah: 3000},
+		},
+		{
+			// Noah's Tuesday Frühbetreuung costs 0 €: he has no base price
+			// to rank by, but he is one of the family's two children with a
+			// contract. Mia (40,00 €) pays 20,00 €.
+			name: "family size: a child whose contract costs nothing counts",
+			children: []careChainChild{
+				{contractMia, schoolIspringen, familyEva, "2017-03-01", []parentbilling.CareContractService{mon1400}},
+				{contractNoah, schoolIspringen, familyEva, "2015-03-01", []parentbilling.CareContractService{tueEarly}},
+			},
+			rules:  familySizeRule(false, 2),
+			totals: map[int64]int64{contractMia: 2000, contractNoah: 0},
+		},
+		{
+			// The same family under a rule that counts the family's number,
+			// which nobody confirmed: the two contracts still make a family
+			// of two, and the family is noted as uncounted.
+			name: "family size: a child at no cost counts without a confirmed number",
+			children: []careChainChild{
+				{contractMia, schoolIspringen, familyEva, "2017-03-01", []parentbilling.CareContractService{mon1400}},
+				{contractNoah, schoolIspringen, familyEva, "2015-03-01", []parentbilling.CareContractService{tueEarly}},
+			},
+			rules:     familySizeRule(true, 2),
+			uncounted: 1,
+			totals:    map[int64]int64{contractMia: 2000, contractNoah: 0},
+		},
+		{
+			// Noah books Tuesday at Birkenfeld, which has no price there: his
+			// contract gets no draft but is a contract at a school the rule
+			// counts. With Mia the family has two: Mia pays 20,00 €.
+			name: "family size: a child whose contract bills nothing yet counts",
+			children: []careChainChild{
+				{contractMia, schoolIspringen, familyEva, "2017-03-01", []parentbilling.CareContractService{mon1400}},
+				{contractNoah, schoolBirkenfeld, familyEva, "2015-03-01", []parentbilling.CareContractService{tue1400}},
+			},
+			rules: func(t *testing.T) []parentbilling.ContributionRule {
+				rules := familySizeRule(false, 2)(t)
+				rules[0].SchoolIDs = []ident.ID{ident.ID(schoolIspringen), ident.ID(schoolBirkenfeld)}
+				return rules
+			},
+			totals: map[int64]int64{contractMia: 2000},
+		},
+		{
+			// The rule applies at Ispringen and names only Birkenfeld under
+			// „Geschwister zählen an“. Its own school counts with it: Mia at
+			// Ispringen (80,00 €) and Noah at Birkenfeld are a family of
+			// two, Mia pays 40,00 €. Noah's school is none of the rule's.
+			name: "family size: the rule's own schools count with the chosen ones",
+			children: []careChainChild{
+				{contractMia, schoolIspringen, familyEva, "2017-03-01", []parentbilling.CareContractService{mon1400, tue1400}},
+				{contractNoah, schoolBirkenfeld, familyEva, "2015-03-01", []parentbilling.CareContractService{mon1400}},
+			},
+			rules: func(t *testing.T) []parentbilling.ContributionRule {
+				rules := familySizeRule(false, 2)(t)
+				rules[0].CountSchoolIDs = []ident.ID{ident.ID(schoolBirkenfeld)}
+				return rules
+			},
+			totals: map[int64]int64{contractMia: 4000, contractNoah: 4500},
+		},
+		{
+			// Only the afternoon module (102) is reduced. Mia books none,
+			// but she has a contract at the school: with Noah (60,00 € and
+			// Tue 40,00 €) the family has two, Noah's 102 costs 30,00 €.
+			name: "family size: a child with another module counts",
+			children: []careChainChild{
+				{contractMia, schoolIspringen, familyEva, "2014-03-01", []parentbilling.CareContractService{mon1400, tue1400}},
+				{contractNoah, schoolIspringen, familyEva, "2016-03-01", []parentbilling.CareContractService{mon1630, tue1400}},
+			},
+			rules: func(t *testing.T) []parentbilling.ContributionRule {
+				rules := familySizeRule(false, 2)(t)
+				rules[0].CareOfferingIDs = []ident.ID{ident.ID(moduleUntil1630)}
+				return rules
+			},
+			totals: map[int64]int64{contractMia: 8000, contractNoah: 7000},
+		},
+		{
+			// A size of three: a family of two stays at the regular price.
+			name: "family size: a family below the size is not reduced",
+			children: []careChainChild{
+				{contractMia, schoolIspringen, familyEva, "2017-03-01", []parentbilling.CareContractService{mon1400, tue1400}},
+				{contractNoah, schoolIspringen, familyEva, "2015-03-01", []parentbilling.CareContractService{mon1630}},
+			},
+			rules:    familySizeRule(true, 3),
+			families: confirmedFamily(familyEva, 2, "2026-09-01", nil),
+			totals:   map[int64]int64{contractMia: 8000, contractNoah: 6000},
+		},
+		{
+			// Without the family's number the size is the children with a
+			// contract: two of them are both reduced.
+			name: "family size: a rule without the family's number counts the contracts",
+			children: []careChainChild{
+				{contractMia, schoolIspringen, familyEva, "2017-03-01", []parentbilling.CareContractService{mon1400, tue1400}},
+				{contractNoah, schoolIspringen, familyEva, "2015-03-01", []parentbilling.CareContractService{mon1630}},
+			},
+			rules:  familySizeRule(false, 2),
+			totals: map[int64]int64{contractMia: 4000, contractNoah: 3000},
+		},
+		{
+			// Siblings at two schools of one rule: Mia at Ispringen (80,00 €)
+			// and Noah at Birkenfeld (45,00 €) are the family's two children,
+			// both are reduced.
+			name: "family size: siblings at two schools of the rule are both reduced",
+			children: []careChainChild{
+				{contractMia, schoolIspringen, familyEva, "2017-03-01", []parentbilling.CareContractService{mon1400, tue1400}},
+				{contractNoah, schoolBirkenfeld, familyEva, "2015-03-01", []parentbilling.CareContractService{mon1400}},
+			},
+			rules: func(t *testing.T) []parentbilling.ContributionRule {
+				rules := familySizeRule(true, 2)(t)
+				rules[0].SchoolIDs = []ident.ID{ident.ID(schoolIspringen), ident.ID(schoolBirkenfeld)}
+				return rules
+			},
+			families: confirmedFamily(familyEva, 2, "2026-09-01", nil),
+			totals:   map[int64]int64{contractMia: 4000, contractNoah: 2250},
+		},
+		{
+			// A rule of Ispringen alone counts each location apart, as the
+			// rank rule does: Noah's contract at Birkenfeld comes off the
+			// family's two, Mia is a family of one here and pays 80,00 €.
+			name: "family size: a sibling at a school the rule does not count is no sibling",
+			children: []careChainChild{
+				{contractMia, schoolIspringen, familyEva, "2017-03-01", []parentbilling.CareContractService{mon1400, tue1400}},
+				{contractNoah, schoolBirkenfeld, familyEva, "2015-03-01", []parentbilling.CareContractService{mon1400}},
+			},
+			rules:    familySizeRule(true, 2),
+			families: confirmedFamily(familyEva, 2, "2026-09-01", nil),
+			totals:   map[int64]int64{contractMia: 8000, contractNoah: 4500},
+		},
+		{
+			// The confirmation ended in December: in January Mia counts
+			// alone, pays the regular price and the family is uncounted.
+			name: "family size: an expired number no longer reduces",
+			children: []careChainChild{
+				{contractMia, schoolIspringen, familyEva, "2017-03-01", []parentbilling.CareContractService{mon1400, tue1400}},
+			},
+			rules:     familySizeRule(true, 2),
+			families:  confirmedFamily(familyEva, 2, "2026-09-01", ptr(calendar.NewDate(2026, 12, 31))),
+			uncounted: 1,
+			totals:    map[int64]int64{contractMia: 8000},
+		},
+		{
+			// A confirmation that starts in February does not reach back
+			// into January: Mia pays the regular price.
+			name: "family size: a number confirmed from a later month does not reach back",
+			children: []careChainChild{
+				{contractMia, schoolIspringen, familyEva, "2017-03-01", []parentbilling.CareContractService{mon1400, tue1400}},
+			},
+			rules:     familySizeRule(true, 2),
+			families:  confirmedFamily(familyEva, 2, "2027-02-01", nil),
+			uncounted: 1,
+			totals:    map[int64]int64{contractMia: 8000},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1007,6 +1208,18 @@ func familySiblingRule(counts bool) func(t *testing.T) []parentbilling.Contribut
 	return func(t *testing.T) []parentbilling.ContributionRule {
 		return []parentbilling.ContributionRule{careRule(t, ruleSiblingIspringen, parentbilling.RuleSibling, []int64{schoolIspringen},
 			func(rule *parentbilling.ContributionRule) { halfFromSecond(rule); rule.CountsFamilyChildren = counts })}
+	}
+}
+
+// familySizeRule is half for every child of a family of at least size
+// children at Ispringen (#7765), counting the family's number or not.
+func familySizeRule(counts bool, size int) func(t *testing.T) []parentbilling.ContributionRule {
+	return func(t *testing.T) []parentbilling.ContributionRule {
+		return []parentbilling.ContributionRule{careRule(t, ruleSiblingIspringen, parentbilling.RuleSibling, []int64{schoolIspringen},
+			func(rule *parentbilling.ContributionRule) {
+				halfFromSecond(rule)
+				rule.SiblingFromChild, rule.CountsFamilyChildren, rule.SiblingAllChildren = ptr(size), counts, true
+			})}
 	}
 }
 

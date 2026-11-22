@@ -1,4 +1,4 @@
-import { bffJson } from "~/lib/bff-fetch";
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the SEPA direct debit file (#4697): the debits of an issued
  * monthly or holiday run, the PAIN.008 file the office submits to its bank,
@@ -136,10 +136,6 @@ function debitRunFromBackend(
   };
 }
 
-function runPath(kind: SepaDebitRunKind, runId: string): string {
-  return `/api/traeger/sepa-debits/${kind}/${encodeURIComponent(runId)}`;
-}
-
 /** The debit file of an issued run, without bank data of a family. */
 export async function fetchSepaDebitRun(
   kind: SepaDebitRunKind,
@@ -157,7 +153,12 @@ export async function downloadSepaDebitFile(
   kind: SepaDebitRunKind,
   runId: string,
 ): Promise<BillingFile> {
-  return billingFile(`${runPath(kind, runId)}/file`, {}, "lastschrift.xml");
+  return billingFile(
+    bffFile("org", "GET /traeger/sepa-debits/{kind}/{id}/file", {
+      params: { kind, id: runId },
+    }),
+    "lastschrift.xml",
+  );
 }
 
 /**

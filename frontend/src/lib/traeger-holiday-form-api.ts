@@ -1,4 +1,4 @@
-import { bffJson } from "~/lib/bff-fetch";
+import { bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
 /**
  * Client of the registration form of a holiday period (#5198): the
  * Träger-Büro builds the questions with the form builder of the online
@@ -17,7 +17,6 @@ import {
   type HolidayHealthRequirement,
   type HolidayFormField,
 } from "./holiday-form-field";
-import { traegerRequest } from "./traeger-api";
 
 export {
   HOLIDAY_FORM_FIELD_TYPES,
@@ -80,12 +79,13 @@ export async function saveHolidayForm(
   healthRequirement: HolidayHealthRequirement = "optional",
 ): Promise<HolidayForm> {
   return formFromBackend(
-    // The contract leaves the editor's body undescribed; this call moves to
-    // bffJsonUncontracted once #7850 is merged.
-    await traegerRequest<traegerHolidayPeriodsContract.HolidayFormEditor>(
+    // The contract leaves the editor's own body undescribed
+    // (traeger_route_contracts.go); bff-fetch-uncontracted.test.ts names it.
+    await bffJsonUncontracted<traegerHolidayPeriodsContract.HolidayFormEditor>(
+      "org",
+      "PUT",
       `/api/traeger/holiday-periods/${encodeURIComponent(periodId)}/form`,
       {
-        method: "PUT",
         body: {
           fields,
           address_requirement: addressRequirement,
@@ -115,14 +115,16 @@ export async function uploadHolidayDocument(
 ): Promise<string> {
   const body = new FormData();
   body.append("document", file);
-  const response = await transportFetch(holidayDocumentPath(periodId), {
-    method: "POST",
-    body,
-  });
-  if (!response.ok)
-    throw await apiErrorFromResponse(response, "Holiday PDF request failed");
-  const result = (await response.json()) as { data: { id: string } };
-  return String(result.data.id);
+  const result = await bffJson(
+    "org",
+    "POST /traeger/holiday-periods/{id}/form/documents",
+    {
+      params: { id: periodId },
+      body,
+      errorMessage: "Holiday PDF request failed",
+    },
+  );
+  return result.id;
 }
 export async function deleteHolidayDocument(
   periodId: string,

@@ -23,13 +23,15 @@ func (Store) PartiesOf(ctx context.Context, organizationID int64, contractIDs []
 		LastName   string `bun:"last_name"`
 		Email      string `bun:"email"`
 		HasAccount bool   `bun:"has_account"`
+		Draft      bool   `bun:"draft"`
 	}
 	if err := db.NewRaw(`SELECT c.id AS contract_id, p.id AS party_id, COALESCE(p.first_name, '') AS first_name,
-			COALESCE(p.last_name, '') AS last_name, COALESCE(p.email, '') AS email, p.account_id IS NOT NULL AS has_account
+			COALESCE(p.last_name, '') AS last_name, COALESCE(p.email, '') AS email, p.account_id IS NOT NULL AS has_account,
+			c.status = ? AS draft
 		FROM care_contract.contracts AS c
 		LEFT JOIN care_contract.contract_parties AS p ON p.organization_id = c.organization_id AND p.contract_id = c.id
 		WHERE c.organization_id = ? AND c.id = ANY(?)
-		ORDER BY c.id, p.id`, organizationID, pgdialect.Array(contractIDs)).Scan(ctx, &rows); err != nil {
+		ORDER BY c.id, p.id`, carecontract.StatusDraft, organizationID, pgdialect.Array(contractIDs)).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("care contract postgres: read contract parties: %w", err)
 	}
 	parties := make(map[int64][]carecontract.Party, len(contractIDs))
@@ -42,6 +44,7 @@ func (Store) PartiesOf(ctx context.Context, organizationID int64, contractIDs []
 		}
 		parties[row.ContractID] = append(parties[row.ContractID], carecontract.Party{
 			FirstName: row.FirstName, LastName: row.LastName, Email: row.Email, HasAccount: row.HasAccount,
+			ContractDraft: row.Draft,
 		})
 	}
 	return parties, nil

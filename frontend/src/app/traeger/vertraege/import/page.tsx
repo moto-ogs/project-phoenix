@@ -54,6 +54,7 @@ const INFO =
 
 const VERTRAEGE = "/traeger/vertraege";
 const BEDINGUNGEN = "/traeger/vertraege/bedingungen";
+const NACHPFLEGE = "/traeger/vertraege/nachpflege";
 
 function errorText(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
@@ -379,7 +380,23 @@ export default function TraegerContractImportPage() {
       {logError ? (
         <LoadErrorAlert error={logError} />
       ) : log ? (
-        <CareContractImportLogCard entries={log} />
+        <CareContractImportLogCard
+          entries={log}
+          // Imported contracts know only what the file had; the originals
+          // complete them (#7767).
+          action={
+            log.length > 0 ? (
+              <ButtonLink
+                href={traegerPath(NACHPFLEGE)}
+                variant="outline"
+                size="md"
+                tooltip="Öffnet die Seite, um Parteien, Abschlussart und Abschlussdatum zu ergänzen."
+              >
+                Vertragsangaben nachpflegen
+              </ButtonLink>
+            ) : undefined
+          }
+        />
       ) : null}
     </TenantPage>
   );

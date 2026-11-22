@@ -1,4 +1,4 @@
-import { bffJson, bffPath } from "~/lib/bff-fetch";
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Berichte des Trägers nach Vorlage (#4716, Spec #4611 Stories 115 und 116).
  *
@@ -9,7 +9,6 @@ import { bffJson, bffPath } from "~/lib/bff-fetch";
  * von Kindern oder Personal. Backend-IDs werden zu Strings.
  */
 
-import { apiErrorFromBody, transportFetch } from "./api-error";
 import { filenameFromDisposition } from "./file-download";
 import type * as traegerReportsContract from "./contract/traeger-reports.generated";
 import type * as traegerReportTemplatesContract from "./contract/traeger-report-templates.generated";
@@ -254,41 +253,19 @@ export async function fetchKeyDateReport(
   );
 }
 
-async function readJson(response: Response): Promise<unknown> {
-  const text = await response.text();
-  if (!text) return null;
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    return null;
-  }
-}
-
 /** Der Bericht als PDF, Excel oder CSV. */
 export async function downloadKeyDateReport(
   keyDate: string,
   templateId: string | null,
   format: ReportExportFormat,
 ): Promise<{ readonly blob: Blob; readonly filename: string | null }> {
-  const response = await transportFetch(
-    bffPath(
-      "org",
-      "/traeger/reports/key-date/export",
-      {},
-      {
-        ...reportQuery(keyDate, templateId),
-        format,
-      },
-    ),
-    { credentials: "include", cache: "no-store" },
+  const response = await bffFile(
+    "org",
+    "GET /traeger/reports/key-date/export",
+    {
+      query: { ...reportQuery(keyDate, templateId), format },
+    },
   );
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      await readJson(response),
-    );
-  }
   return {
     blob: await response.blob(),
     filename: filenameFromDisposition(response),

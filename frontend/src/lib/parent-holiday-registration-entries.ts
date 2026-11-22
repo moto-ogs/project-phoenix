@@ -4,10 +4,7 @@
 
 import { knownEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
-import type {
-  HolidayRegistrationEntriesResponse as WireHolidayRegistrationEntries,
-  HolidayRegistrationEntryResponse as WireHolidayRegistrationEntry,
-} from "./contract/parent-me.generated";
+import type * as parentMeContract from "./contract/parent-me.generated";
 
 // Go does not register this set; the contract types it as string. A value
 // this build does not know stays undefined instead of passing as a known one.
@@ -69,7 +66,7 @@ export function entryStatus(value: string): HolidayRegistrationEntryStatus {
 }
 
 function holidayRegistrationEntryFromBackend(
-  entry: WireHolidayRegistrationEntry,
+  entry: parentMeContract.HolidayRegistrationEntryResponse,
 ): HolidayRegistrationEntry {
   return {
     id: entry.id,
@@ -100,7 +97,7 @@ function holidayRegistrationEntryFromBackend(
 
 /** The entries of the answer in the backend's order, newest first. */
 export function holidayRegistrationEntriesFromBackend(
-  body: WireHolidayRegistrationEntries,
+  body: parentMeContract.HolidayRegistrationEntriesResponse,
 ): HolidayRegistrationEntry[] {
   return (body.registrations ?? []).map(holidayRegistrationEntryFromBackend);
 }

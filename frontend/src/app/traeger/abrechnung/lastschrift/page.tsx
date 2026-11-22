@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Die SEPA-Lastschriftmandate aller Familien (#4695): Referenz, Konto nur
 // verdeckt, Datum der Unterschrift, nächste Abbuchung und Stand, mit Verlauf
 // und Widerruf. Ein neues Mandat entsteht beim Vertrag der Familie, wo auch
@@ -22,7 +24,10 @@ import type { FilterConfig } from "~/components/ui/page-header/types";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { ListSkeleton } from "~/components/ui/page-skeletons";
 import { hasPermission } from "~/lib/auth-utils";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 
 type Show = "in_force" | "revoked" | "all";
@@ -87,7 +92,11 @@ export default function TraegerLastschriftPage() {
 
   const exportItems = useTraegerListExportItems({
     download: (format) =>
-      downloadTraegerList("/api/traeger/sepa-mandates/export", format),
+      downloadTraegerList(
+        bffFile("org", "GET /traeger/sepa-mandates/export", {
+          query: listExportQuery(format),
+        }),
+      ),
     scope:
       "Alle Mandate, ohne Suche und Filter. Jeder Download wird protokolliert.",
     fallbackName: "sepa-mandate",

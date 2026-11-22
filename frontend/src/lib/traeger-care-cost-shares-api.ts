@@ -1,4 +1,4 @@
-import { bffJson } from "~/lib/bff-fetch";
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the cost bearer shares of the monthly contribution (#4687): which
  * cost bearer (Bildung und Teilhabe, Jugendamt, another subsidy) pays which
@@ -176,8 +176,11 @@ export async function downloadCareCostShareList(
   format: CareCostShareExportFormat,
 ): Promise<BillingFile> {
   return billingFile(
-    `/api/traeger/care-billing-runs/${encodeURIComponent(runId)}/cost-shares/${encodeURIComponent(costBearerId)}/export?format=${format}`,
-    {},
+    bffFile(
+      "org",
+      "GET /traeger/care-billing-runs/{id}/cost-shares/{costBearerID}/export",
+      { params: { id: runId, costBearerID: costBearerId }, query: { format } },
+    ),
     `kostentraeger.${format}`,
   );
 }

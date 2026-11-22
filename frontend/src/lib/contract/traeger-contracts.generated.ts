@@ -18,16 +18,24 @@ import {
   str,
   success,
 } from "./runtime";
+import {
+  ContractCorrectionValuesSchema,
+  type ContractCorrectionValues,
+} from "./shared.generated";
 
 /** Go: carecontract.Concluded */
 export interface Concluded {
   method: string;
   at: string;
+  date_unknown: boolean;
+  taken_over: boolean;
 }
 
 export const ConcludedSchema: z.ZodType<Concluded, unknown> = object<Concluded>({
   method: str,
   at: instant,
+  date_unknown: bool,
+  taken_over: bool,
 });
 
 /** Go: carecontract.ContractSummary */
@@ -295,6 +303,25 @@ export const ReminderSchema: z.ZodType<Reminder, unknown> = object<Reminder>({
   sent_at: instant,
 });
 
+/** Go: carecontract.ContractCorrection */
+export interface ContractCorrection {
+  corrected_at: string;
+  file: string;
+  evidence: string;
+  changes: string[] | null;
+  before: ContractCorrectionValues;
+  after: ContractCorrectionValues;
+}
+
+export const ContractCorrectionSchema: z.ZodType<ContractCorrection, unknown> = object<ContractCorrection>({
+  corrected_at: instant,
+  file: str,
+  evidence: str,
+  changes: nullable(arr(str)),
+  before: ContractCorrectionValuesSchema,
+  after: ContractCorrectionValuesSchema,
+});
+
 /** Go: carecontract.ContractDetail */
 export interface ContractDetail {
   student_id: string | null;
@@ -323,6 +350,7 @@ export interface ContractDetail {
   term_text: string;
   notice_text: string;
   fee_text: string;
+  corrections: ContractCorrection[] | null;
 }
 
 export const ContractDetailSchema: z.ZodType<ContractDetail, unknown> = object<ContractDetail>({
@@ -352,6 +380,7 @@ export const ContractDetailSchema: z.ZodType<ContractDetail, unknown> = object<C
   term_text: str,
   notice_text: str,
   fee_text: str,
+  corrections: nullable(arr(ContractCorrectionSchema)),
 });
 
 /** Go: carecontract.CandidateKey */
