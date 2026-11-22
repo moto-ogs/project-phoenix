@@ -116,8 +116,8 @@ case "$*" in
       echo "go test: expected GOGC=$PHX_FIXTURE_EXPECT_GOGC, got ${GOGC-unset}" >&2
       exit 1
     fi
-    if [ "${GOMAXPROCS-unset}" != 1 ]; then
-      echo "go test: expected GOMAXPROCS=1, got ${GOMAXPROCS-unset}" >&2
+    if [ "${GOMAXPROCS-unset}" != "${PHX_FIXTURE_EXPECT_GOMAXPROCS:-1}" ]; then
+      echo "go test: expected GOMAXPROCS=${PHX_FIXTURE_EXPECT_GOMAXPROCS:-1}, got ${GOMAXPROCS-unset}" >&2
       exit 1
     fi
     if [ "${PHX_TEST_TEMPLATE:-}" != phoenix_test_template_regression ]; then
@@ -279,7 +279,10 @@ while read -r os cpus ram workers; do
     if [ "$wrapper" = test-backend.sh ]; then
       run_wrapper "$wrapper" 0 ./probe
     else
+      # The changed-test wrapper gives each Go process four cores off macOS.
+      if [ "$os" = Linux ]; then export PHX_FIXTURE_EXPECT_GOMAXPROCS=4; fi
       run_wrapper "$wrapper" 0 origin/development
+      unset PHX_FIXTURE_EXPECT_GOMAXPROCS
     fi
     expected=$'resolve-dsn\nbootstrap\n'"$(go_test_call "$wrapper" "$workers" ./probe)"
     if [ "$wrapper" = test-changed.sh ]; then expected+=$'\n'"$frontend_calls"; fi
