@@ -78,11 +78,11 @@ type FeedbackStudentResponse struct {
 }
 
 type FeedbackRequest struct {
-	Value           string `json:"value"`
-	Day             string `json:"day"`
-	Time            string `json:"time"`
-	StudentID       int64  `json:"student_id"`
-	IsMensaFeedback bool   `json:"is_mensa_feedback"`
+	Value           string   `json:"value"`
+	Day             string   `json:"day"`
+	Time            string   `json:"time"`
+	StudentID       ident.ID `json:"student_id"`
+	IsMensaFeedback bool     `json:"is_mensa_feedback"`
 }
 
 func (request *FeedbackRequest) Bind(*http.Request) error {
@@ -140,7 +140,7 @@ func (rs *Resource) getStudentFeedback(w http.ResponseWriter, r *http.Request) {
 func (request FeedbackRequest) toInput() feedbackModule.CreateEntry {
 	return feedbackModule.CreateEntry{
 		Value: request.Value, Day: feedbackModule.Date(request.Day), Time: request.Time,
-		StudentID: request.StudentID, IsMensaFeedback: request.IsMensaFeedback,
+		StudentID: request.StudentID.Int64(), IsMensaFeedback: request.IsMensaFeedback,
 	}
 }
 

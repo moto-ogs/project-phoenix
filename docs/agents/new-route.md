@@ -58,7 +58,14 @@ Worked example, the same route from Go to the browser:
    `int64` says so with `contract:"number"`. The generator refuses a bare
    `int64`, the json option `,string`, a number under an identifier's name
    (`id`, `*_id`, `*_ids`), a numeric identifier in an answer and an answer
-   whose shape depends on a query parameter.
+   whose shape depends on a query parameter. Outside the contract,
+   `TestNoNumericIdentifierRatchet` (`backend/test`) refuses a numeric
+   identifier in any struct of `api/` and of every `http` and `inbound`
+   role; only the kiosk device API (`/api/iot/*`, `/api/students/{id}/rfid`)
+   keeps numbers and tags them `contract:"number"`, because PyrePortal
+   v1.11.5 reads them. `ident.ID` still reads a JSON number in a request:
+   that is the one-release compatibility for browser tabs of the previous
+   frontend and goes after the next release (`backend/sharedkernel/ident/id.go`).
 3. **Mount.** A new contracts function gets one row in the matching
    `*ContractMounts()` list of `backend/api/route_contracts.go`, e.g.
    `{"/api/activities", timetableActivitiesHTTP.RouteContracts()}`. This
