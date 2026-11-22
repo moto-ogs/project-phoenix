@@ -947,6 +947,20 @@ describe("OverflowMenu am Handy", () => {
     expect(onRemove).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
+    // Ein Name für den Auslöser selbst nennt kein Objekt und entfällt.
+    const { unmount } = render(
+      <OverflowMenu
+        ariaLabel="Menü öffnen"
+        items={[
+          { label: "Exportieren", noDescription: "Test", onClick: vi.fn() },
+        ]}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: "Exportieren" }),
+    ).toBeInTheDocument();
+    unmount();
+
     // Zwei Aktionen, eine Auswahl oder ein eigener Auslöser bleiben Menü.
     const { rerender } = render(
       <OverflowMenu

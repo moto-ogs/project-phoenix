@@ -507,12 +507,14 @@ export function OverflowMenu({
       >
         <SoleActionButton
           item={soleItem}
-          // Ein eigener Name des Menüs nennt meist das Objekt der Zeile
-          // („Aktionen für Mia“); er folgt der Beschriftung als verborgener
-          // Text, wie am Auslöser mit Inhalt (WCAG 2.5.3).
+          // Nennt der Name des Menüs das Objekt der Zeile („Aktionen für
+          // Mia“, „Weitere Aktionen: OGS Nord“), folgt er der Beschriftung
+          // als verborgener Text, wie am Auslöser mit Inhalt (WCAG 2.5.3).
+          // Ein Name für den Auslöser selbst („Menü öffnen“) passt nicht.
           context={
-            ariaLabelProp !== undefined && ariaLabelProp !== "Weitere Aktionen"
-              ? ariaLabelProp
+            ariaLabel !== "Weitere Aktionen" &&
+            /^(Weitere )?Aktionen\b/.test(ariaLabel)
+              ? ariaLabel
               : undefined
           }
           disabled={disabled}
