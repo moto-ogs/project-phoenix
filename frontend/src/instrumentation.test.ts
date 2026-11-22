@@ -93,7 +93,6 @@ function stubValidRuntimeEnv() {
   vi.stubEnv("NEXTAUTH_URL", "https://moto-app.de");
   vi.stubEnv("NEXTAUTH_SECRET", "test-nextauth-secret");
   vi.stubEnv("TENANT_DOMAIN", "moto-app.de");
-  vi.stubEnv("NEXT_PUBLIC_API_URL", "https://api.moto-app.de");
   vi.stubEnv("NEXT_PUBLIC_LOG_LEVEL", "info");
   vi.stubEnv("NEXT_PUBLIC_TENANT_DOMAIN", "moto-app.de");
   vi.stubEnv("NEXT_PUBLIC_OPERATOR_HOSTNAME", "operator.moto-app.de");

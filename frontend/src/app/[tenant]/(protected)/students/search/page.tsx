@@ -392,6 +392,14 @@ function readFilterParam(
 }
 
 const STUDENT_SEARCH_FILTER_STORAGE_PREFIX = "student-search:last-filters";
+// This view shows every match at once — it has no pagination control, and the
+// grouping modes, the counts and the export selection all read the rendered
+// list. The backend caps a page of the child list at 1000 rows
+// (studentListMaxPageSize), so a selection larger than one page has to be
+// walked here; otherwise every child past the first page is unreachable
+// (#2218 review). The bound stops a bad total from looping forever: 20 pages
+// are 20.000 Kinder, far beyond any OGS, and hitting it is logged rather than
+// silently truncating.
 
 // The card skeleton has no end of its own: a request that never answers (weak
 // school Wi-Fi) or a session without a token keeps it up for good, with nothing

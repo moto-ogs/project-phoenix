@@ -69,7 +69,6 @@ if (args[0] === "exec") {
     const keys = [
       "NEXT_PUBLIC_APP_ENV",
       "API_URL",
-      "NEXT_PUBLIC_API_URL",
       "NEXT_PUBLIC_OPERATOR_HOSTNAME",
       "NEXT_PUBLIC_PARENTS_HOSTNAME",
       "NEXT_PUBLIC_SCHOOL_HOSTNAME",

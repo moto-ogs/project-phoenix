@@ -86,8 +86,8 @@ export async function fetchPickupExtensions(
       credentials: "include",
     },
   );
-  // The catalog proxy answers the backend's envelope with the decoded data:
-  // { status, data: { tasks }, message } (#3776).
+  // The catalog proxy passes the backend's envelope through:
+  // { status, data: { tasks } } (#3776).
   const responseData = await readData<{
     data: wire.pickupExtensionsResponse;
   }>(response);

@@ -18,35 +18,31 @@ counts alone do not establish correct command effects or runtime protocols.
 
 ---
 
-## 1. Layer Discipline — Handler → Service → Repository → Database
+## 1. Handlers Call Capabilities, Never Persistence
 
-**RULE: Handlers in `api/` MUST NOT access repositories directly.** Not as struct fields, not via service `.Repository()` getters, not via direct package import.
+**RULE: A handler (`api/`, `modules/*/http`, `modules/*/inbound`, `workflows/*/http`) depends on its owner's capability or a consumer-owned port, never on a store, a repository or a query.**
 
 ### Forbidden
 
 ```go
-// FORBIDDEN — repo as a handler struct field
+// FORBIDDEN — persistence as a handler struct field
 type Resource struct {
-    StaffRepo users.StaffRepository
+    store postgres.Store // an owner adapter
 }
 
-// FORBIDDEN — handler reaching through service to grab the repo
-staff, err := rs.UsersService.StaffRepository().FindByPersonID(ctx, personID)
-
-// FORBIDDEN — direct import of repositories from api/ files (except base.go + testutil)
-import "github.com/moto-ogs/project-phoenix/database/repositories/..."
+// FORBIDDEN — a query built in the handler
+err := db.NewSelect().Model(&rows).Where("person_id = ?", id).Scan(ctx)
 ```
 
 ### Required
 
 ```go
-// CORRECT — handler depends on a service interface
+// CORRECT — the handler holds the capability its owner exposes
+// (modules/timetable/http/activities/http.go)
 type Resource struct {
-    UsersService users.Service
+    ActivityService activityContract.ActivityService
+    UserService     SupervisorDirectory // consumer-owned port
 }
-
-// CORRECT — service exposes a business operation
-staff, err := rs.UsersService.GetStaffByPersonID(ctx, personID)
 ```
 
 ### Enforcement — CI ratchet, currently at ZERO violations
@@ -413,9 +409,6 @@ cd backend
 
 # Rule 16 — source gates are backend-wide; other ratchets keep their named scopes
 ../scripts/run-go-toolchain.sh go test -tags=testhooks ./test/ -run 'TestModule' -count=1
-
-# Rule 1 — manual sweep (should be zero)
-rg --type go -g '!*_test.go' '^\s+\w+\s+[\w\.]*Repository\b|\.\w+Repository\(\)' api/
 
 # Rule 3 — review unnecessary getters in owner-private implementations
 rg --type go -c 'func \([^)]+\) GetID\(\)' modules/ workflows/ | awk -F: '{s+=$2} END {print s}'

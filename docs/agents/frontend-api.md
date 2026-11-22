@@ -66,7 +66,7 @@ or write a `Backend*` interface for a registered route.
   contract.
 - A portal other than `tenant` uses its own route wrapper with the same
   helpers; the route entry names its portals.
-- Identifiers leave the decoder as strings. A registered enum is typed as its
+- A registered enum is typed as its
   known values but decodes any string; narrow it with `knownEnum`.
 - A day is a `calendar.Date`, an instant a `time.Time`. A string field that
   carries a day or a wall-clock time says so in its tag: `contract:"date"`
@@ -198,8 +198,8 @@ session, renews it once on a backend 401 and answers errors through
 `forwardToBackend`, `runWithRenewal`) throw outside that wrapper;
 `src/app/api/route-session-coverage.test.ts` runs every route and fails on a
 session read outside it. Success answers the backend's envelope
-`{ status: "success", data }` (`successResponse`, type `ApiResponse` in
-`lib/api-envelope.ts`), a DELETE without a result answers 204, and a handler
+`{ status: "success", data }` (`successResponse` in
+`lib/route-wrapper-utils.server.ts`, type `ApiResponse` in `lib/api-envelope.ts`), a DELETE without a result answers 204, and a handler
 may return a Response as it is. No BFF route invents another success
 envelope (#2353). Public JSON routes use `createPublicJsonProxy`
 (`lib/backend-proxy-route.server.ts`), login steps before a session

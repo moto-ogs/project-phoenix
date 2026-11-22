@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { fetchPickupExtensions } from "./pickup-extension-api";
 
-// Shape the catalog proxy sends: the backend's envelope around the decoded
-// data (#3776). An earlier fixture without this envelope hid that the browser
+// Shape the catalog proxy sends: the backend's envelope around { tasks }
+// (#3776). An earlier fixture without this envelope hid that the browser
 // always read no tasks.
 function bffResponse(tasks: unknown[]): Response {
   return new Response(JSON.stringify({ status: "success", data: { tasks } }));
