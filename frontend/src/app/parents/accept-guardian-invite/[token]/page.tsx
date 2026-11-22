@@ -12,11 +12,11 @@ import {
 import { LanguageSwitcher } from "~/components/parent/language-switcher";
 import {
   mapValidation,
-  type GuardianInvitationValidationBody,
   type GuardianInvitationValidation,
 } from "~/lib/guardian-invitation-api";
+import { routes as invitationRoutes } from "~/lib/contract/auth-guardian-invitations.generated";
+import { contractGet } from "~/lib/contract/client.server";
 import { loginImageSrc } from "~/lib/tenant-api";
-import { sendBackend } from "~/lib/backend-client.server";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "AcceptGuardianInvitePage" });
@@ -34,64 +34,41 @@ interface ValidationOutcome {
  * The failure as code and status for the shared error path (#2518). An
  * uncoded 410 or 404 from this endpoint still means the invitation.
  */
-async function readFailure(
-  response: Response,
-): Promise<GuardianInvitationLoadFailure> {
-  let body: { code?: unknown; instance?: unknown } | undefined;
-  try {
-    body = (await response.json()) as typeof body;
-  } catch {
-    // No JSON envelope: status alone decides.
-    body = undefined;
-  }
-  const wireCode =
-    typeof body?.code === "string" && body.code ? body.code : undefined;
+function invitationFailure(
+  status: number,
+  wireCode: GuardianInvitationLoadFailure["code"],
+  requestId: string | undefined,
+): GuardianInvitationLoadFailure {
   const code =
     wireCode ??
-    (response.status === 410
+    (status === 410
       ? "identity.invitation_expired"
-      : response.status === 404
+      : status === 404
         ? "identity.invitation_not_found"
         : undefined);
-  return {
-    status: response.status,
-    code,
-    requestId: typeof body?.instance === "string" ? body.instance : undefined,
-  };
+  return { status, code, requestId };
 }
 
+/** The invitation behind the link, read through the contract's decoder. */
 async function fetchInvitationServer(
   token: string,
 ): Promise<ValidationOutcome> {
+  const route = invitationRoutes["GET /auth/guardian-invitations/{token}"];
   try {
-    const response = await sendBackend(
+    const result = await contractGet(
+      `${route.method} ${route.pattern}`,
+      route.response,
       `/auth/guardian-invitations/${encodeURIComponent(token)}`,
-      null,
+      "",
     );
-    if (!response.ok) {
-      return { invitation: null, failure: await readFailure(response) };
-    }
-
-    const raw = (await response.json()) as GuardianInvitationValidationBody & {
-      data?: GuardianInvitationValidationBody;
-    };
-
-    const payload = raw.data ?? raw;
-    if (!payload?.email || !payload?.expires_at) {
-      logger.error("guardian_invitation_validation_incomplete", {
-        has_email: Boolean(payload?.email),
-        has_expiry: Boolean(payload?.expires_at),
-      });
+    if (!result.ok) {
+      const { status, code, requestId } = result.error;
       return {
         invitation: null,
-        failure: { status: 500, code: "general.server" },
+        failure: invitationFailure(status, code, requestId),
       };
     }
-
-    return {
-      invitation: mapValidation(payload),
-      failure: null,
-    };
+    return { invitation: mapValidation(result.value.data), failure: null };
   } catch (error) {
     logger.error("guardian_invitation_validation_failed_server", {
       error: error instanceof Error ? error.message : String(error),

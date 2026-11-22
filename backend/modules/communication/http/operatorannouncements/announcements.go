@@ -34,35 +34,35 @@ func NewAnnouncementsResource(announcementService communication.Capability, now 
 
 // OperatorAnnouncementResponse represents an announcement in the response
 type OperatorAnnouncementResponse struct {
-	ID              common.ID   `json:"id"`
-	Title           string      `json:"title"`
-	Content         string      `json:"content"`
-	Type            string      `json:"type"`
-	Severity        string      `json:"severity"`
-	Version         *string     `json:"version,omitempty"`
-	Active          bool        `json:"active"`
-	PublishedAt     *string     `json:"published_at,omitempty"`
-	ExpiresAt       *string     `json:"expires_at,omitempty"`
-	TargetRoles     []string    `json:"target_roles"`
-	TargetOrgIDs    []common.ID `json:"target_org_ids"`
-	TargetTenantIDs []common.ID `json:"target_tenant_ids"`
-	CreatedBy       common.ID   `json:"created_by"`
-	CreatedAt       string      `json:"created_at"`
-	UpdatedAt       string      `json:"updated_at"`
-	Status          string      `json:"status"` // draft, published, expired
+	ID              ident.ID   `json:"id"`
+	Title           string     `json:"title"`
+	Content         string     `json:"content"`
+	Type            string     `json:"type"`
+	Severity        string     `json:"severity"`
+	Version         *string    `json:"version,omitempty"`
+	Active          bool       `json:"active"`
+	PublishedAt     *string    `json:"published_at,omitempty"`
+	ExpiresAt       *string    `json:"expires_at,omitempty"`
+	TargetRoles     []string   `json:"target_roles"`
+	TargetOrgIDs    []ident.ID `json:"target_org_ids"`
+	TargetTenantIDs []ident.ID `json:"target_tenant_ids"`
+	CreatedBy       ident.ID   `json:"created_by"`
+	CreatedAt       string     `json:"created_at"`
+	UpdatedAt       string     `json:"updated_at"`
+	Status          string     `json:"status"` // draft, published, expired
 }
 
 // CreateAnnouncementRequest represents the create announcement request body
 type CreateAnnouncementRequest struct {
-	Title           string      `json:"title"`
-	Content         string      `json:"content"`
-	Type            string      `json:"type"`
-	Severity        string      `json:"severity"`
-	Version         *string     `json:"version,omitempty"`
-	ExpiresAt       *string     `json:"expires_at,omitempty"`
-	TargetRoles     []string    `json:"target_roles,omitempty"`
-	TargetOrgIDs    []common.ID `json:"target_org_ids,omitempty"`
-	TargetTenantIDs []common.ID `json:"target_tenant_ids,omitempty"`
+	Title           string     `json:"title"`
+	Content         string     `json:"content"`
+	Type            string     `json:"type"`
+	Severity        string     `json:"severity"`
+	Version         *string    `json:"version,omitempty"`
+	ExpiresAt       *string    `json:"expires_at,omitempty"`
+	TargetRoles     []string   `json:"target_roles,omitempty"`
+	TargetOrgIDs    []ident.ID `json:"target_org_ids,omitempty"`
+	TargetTenantIDs []ident.ID `json:"target_tenant_ids,omitempty"`
 }
 
 // Bind validates the create announcement request
@@ -81,16 +81,16 @@ func (req *CreateAnnouncementRequest) Bind(r *http.Request) error {
 
 // UpdateAnnouncementRequest represents the update announcement request body
 type UpdateAnnouncementRequest struct {
-	Title           string      `json:"title"`
-	Content         string      `json:"content"`
-	Type            string      `json:"type"`
-	Severity        string      `json:"severity"`
-	Version         *string     `json:"version,omitempty"`
-	Active          *bool       `json:"active,omitempty"`
-	ExpiresAt       *string     `json:"expires_at,omitempty"`
-	TargetRoles     []string    `json:"target_roles,omitempty"`
-	TargetOrgIDs    []common.ID `json:"target_org_ids,omitempty"`
-	TargetTenantIDs []common.ID `json:"target_tenant_ids,omitempty"`
+	Title           string     `json:"title"`
+	Content         string     `json:"content"`
+	Type            string     `json:"type"`
+	Severity        string     `json:"severity"`
+	Version         *string    `json:"version,omitempty"`
+	Active          *bool      `json:"active,omitempty"`
+	ExpiresAt       *string    `json:"expires_at,omitempty"`
+	TargetRoles     []string   `json:"target_roles,omitempty"`
+	TargetOrgIDs    []ident.ID `json:"target_org_ids,omitempty"`
+	TargetTenantIDs []ident.ID `json:"target_tenant_ids,omitempty"`
 }
 
 // Bind validates the update announcement request
@@ -278,12 +278,12 @@ func (rs *AnnouncementsResource) GetStats(w http.ResponseWriter, r *http.Request
 
 // AnnouncementViewDetailResponse represents a view detail in the response
 type AnnouncementViewDetailResponse struct {
-	UserID      common.ID `json:"user_id"`
-	UserName    string    `json:"user_name"`
-	SeenAt      string    `json:"seen_at"`
-	ShownAt     *string   `json:"shown_at"`
-	DismissedAt *string   `json:"dismissed_at"`
-	Dismissed   bool      `json:"dismissed"`
+	UserID      ident.ID `json:"user_id"`
+	UserName    string   `json:"user_name"`
+	SeenAt      string   `json:"seen_at"`
+	ShownAt     *string  `json:"shown_at"`
+	DismissedAt *string  `json:"dismissed_at"`
+	Dismissed   bool     `json:"dismissed"`
 }
 
 // GetViewDetails handles getting detailed view information for an announcement

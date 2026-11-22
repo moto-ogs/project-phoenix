@@ -327,8 +327,8 @@ func TestARequestBodyHasOnlyOptionalFields(t *testing.T) {
 }
 
 // A request field of the strict identifier type is a string in the client
-// and has no decoder: Go reads it (common.ID reads a string or a number), so
-// a legacy request field moves to common.ID without a generator change.
+// and has no decoder: Go reads it (ident.ID reads a string or a number), so
+// a legacy request field moves to ident.ID without a generator change.
 func TestARequestIdentifierIsAStringWithoutDecoder(t *testing.T) {
 	t.Parallel()
 	doc, err := Build([]Registration{post(body{})}, Options{Identifiers: identifiers})

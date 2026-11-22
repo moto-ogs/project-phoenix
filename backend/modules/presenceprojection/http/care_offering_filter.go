@@ -52,8 +52,8 @@ func (rs *Resource) resolveCareOfferingFilter(ctx context.Context, params *stude
 // CareOfferingOptionResponse is one entry of the care_offering_id filter's
 // selection field.
 type CareOfferingOptionResponse struct {
-	ID   common.ID `json:"id"`
-	Name string    `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 // listCareOfferingOptions answers the active care offerings that count as

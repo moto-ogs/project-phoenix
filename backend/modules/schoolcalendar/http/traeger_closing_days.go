@@ -67,7 +67,7 @@ type TraegerClosingDayRequest struct {
 	StartDate calendar.Date `json:"start_date"`
 	EndDate   calendar.Date `json:"end_date"`
 	Reason    string        `json:"reason"`
-	SchoolIDs []common.ID   `json:"school_ids"`
+	SchoolIDs []ident.ID    `json:"school_ids"`
 	// HolidayBookingsToken confirms the preview of the affected holiday
 	// bookings (#6434), empty when the preview showed none.
 	HolidayBookingsToken string `json:"holiday_bookings_token"`

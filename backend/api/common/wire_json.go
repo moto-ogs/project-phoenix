@@ -26,7 +26,7 @@ func respondWire(w http.ResponseWriter, r *http.Request, v any) {
 	RenderJSON(w, r, v)
 }
 
-// RenderJSON writes v as render.JSON does, with every ident.ID (common.ID)
+// RenderJSON writes v as render.JSON does, with every ident.ID
 // as a JSON string. Use it instead of render.JSON for an answer to a client.
 func RenderJSON(w http.ResponseWriter, r *http.Request, v any) {
 	body, err := wire.Marshal(v)
