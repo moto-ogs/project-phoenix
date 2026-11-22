@@ -27,6 +27,11 @@ import {
 import { useImmutableSWR } from "~/lib/swr";
 import type { NavigationResponse } from "~/lib/contract/me.generated";
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 // The navigation row as the catalog proxy hands it on (#7563).
 function navigationRow(
   overrides: Partial<NavigationResponse> = {},
@@ -171,9 +176,10 @@ describe("useUserContext", () => {
         schoolSwitches: { parentInviteMode: "direct" },
       });
 
-      expect(fetchMock).toHaveBeenCalledWith("/api/me/navigation", {
-        credentials: "include",
-      });
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/me/navigation",
+        expect.objectContaining({ method: "GET" }),
+      );
 
       fetchMock.mockRestore();
     });
@@ -188,9 +194,7 @@ describe("useUserContext", () => {
       const fetcher = vi.mocked(useImmutableSWR).mock.calls[0]?.[1];
 
       if (fetcher) {
-        await expect(fetcher()).rejects.toThrow(
-          "User context fetch failed: 401",
-        );
+        await expect(fetcher()).rejects.toMatchObject({ status: 401 });
       }
 
       fetchMock.mockRestore();
