@@ -258,7 +258,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingCareContracts.Recipients",
-      "binding_digest": "07058974f2251c1c4ab9ac133ce07606",
+      "binding_digest": "505ff39d2c92b92ea5a412573b0c3703",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.Recipients",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",
@@ -394,7 +394,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.parentMandateParties.Recipients",
-      "binding_digest": "2746650c3b49c19b1e9b9ad455d67f2e",
+      "binding_digest": "f69ffb6388cf02fbf0b9b291f2824e37",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.ContractParties.Recipients",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",
@@ -761,6 +761,14 @@
       "target_owner": "care-contract"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.retainedContracts.RecipientEmails",
+      "binding_digest": "bdd8cb93b071a18c8066ba8a51d90f2a",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.RetainedContracts.RecipientEmails",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractRetention.RecipientEmails",
+      "target_owner": "care-contract"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/cmd.traegerCreditorAccounts.CreditorAccount",
       "binding_digest": "1b7b02fd535cf1b15f06a556341a4d53",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.SEPACreditorAccounts.CreditorAccount",
@@ -818,7 +826,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.Recipients",
-      "binding_digest": "5e68355a47f522b9f22affe8d5241e5d",
+      "binding_digest": "608bfc018d5b7dbd06bc0e2fc3eb9e5c",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling/internal/application.CareLetterRecipients.Recipients",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",

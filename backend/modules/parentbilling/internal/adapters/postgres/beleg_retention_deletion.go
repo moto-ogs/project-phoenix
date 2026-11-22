@@ -150,7 +150,7 @@ func (s *Store) MoveFamilies(ctx context.Context, organizationID int64, moves []
 	}
 	if _, err := db.NewRaw(`WITH move AS (SELECT * FROM unnest(?1::bigint[], ?2::bigint[], ?3::bigint[]) AS m(id, from_id, to_id)),
 		moved AS (
-			UPDATE parent_billing.family_billing AS family SET care_contract_id = move.to_id, updated_at = CURRENT_TIMESTAMP
+			UPDATE parent_billing.family_billing AS family SET care_contract_id = move.to_id
 			FROM move WHERE family.organization_id = ?0 AND family.id = move.id AND family.care_contract_id = move.from_id
 			RETURNING family.id, move.from_id, move.to_id)
 		UPDATE parent_billing.family_billing_events AS event SET care_contract_id = moved.to_id

@@ -1,7 +1,6 @@
 package application
 
 import (
-	"cmp"
 	"context"
 	"fmt"
 	"slices"
@@ -86,8 +85,8 @@ func staysLonger(a, b parentbilling.ContractRetentionFact) bool {
 			return 0
 		}
 	}
-	if order := cmp.Compare(rank(a), rank(b)); order != 0 {
-		return order > 0
+	if rank(a) != rank(b) {
+		return rank(a) > rank(b)
 	}
 	if a.EndedOn != nil && b.EndedOn != nil && *a.EndedOn != *b.EndedOn {
 		return a.EndedOn.After(*b.EndedOn)
