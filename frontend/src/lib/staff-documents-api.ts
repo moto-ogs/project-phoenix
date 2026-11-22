@@ -4,18 +4,9 @@
 // staff:financial, rest → staff:documents, #2906) and returns only what the caller
 // may see plus the caller's visible categories.
 
-import {
-  ApiError,
-  apiErrorFromResponse,
-  unavailableApiError,
-} from "./api-error";
+import { bffJson } from "./bff-fetch";
 import { knownEnum } from "./contract/known-enum";
-import type {
-  StaffDocumentListResponse,
-  StaffDocumentResponse,
-} from "./contract/staff.generated";
-import { hasSessionAccess } from "./session-access";
-import { getCachedSession, sessionFetch } from "./session-cache";
+import type { StaffDocumentResponse } from "./contract/staff.generated";
 
 export type StaffDocumentCategory =
   | "arbeitsvertrag"
@@ -81,19 +72,12 @@ function mapDocument(data: StaffDocumentResponse): StaffDocument {
 
 class StaffDocumentsService {
   async list(staffId: string): Promise<StaffDocumentList> {
-    const response = await sessionFetch(`/api/staff/${staffId}/documents`);
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `Failed to fetch staff documents: ${response.statusText}`,
-      );
-    }
-    const json = (await response.json()) as {
-      data: StaffDocumentListResponse;
-    };
+    const list = await bffJson("tenant", "GET /api/staff/{id}/documents", {
+      params: { id: staffId },
+    });
     return {
-      documents: (json.data.documents ?? []).map(mapDocument),
-      visibleCategories: (json.data.visible_categories ?? []).flatMap(
+      documents: (list.documents ?? []).map(mapDocument),
+      visibleCategories: (list.visible_categories ?? []).flatMap(
         (value) => knownEnum(CATEGORIES, value) ?? [],
       ),
     };
@@ -108,48 +92,18 @@ class StaffDocumentsService {
     formData.append("file", file);
     formData.append("category", category);
 
-    const session = await getCachedSession().catch((error: unknown) => {
-      if (error instanceof ApiError) throw error;
-      throw unavailableApiError(error);
+    await bffJson("tenant", "POST /api/staff/{id}/documents", {
+      params: { id: staffId },
+      body: formData,
+      errorMessage: "Failed to upload staff document",
     });
-    if (!hasSessionAccess(session)) {
-      throw new ApiError("Authentication required", 401, {
-        code: "general.permission",
-      });
-    }
-
-    // Raw fetch on purpose — sessionFetch forces Content-Type
-    // application/json, which would clobber the multipart boundary the
-    // browser sets for FormData bodies (same pattern as the student photo
-    // upload).
-    let response: Response;
-    try {
-      response = await fetch(`/api/staff/${staffId}/documents`, {
-        method: "POST",
-        body: formData,
-      });
-    } catch (error) {
-      throw unavailableApiError(error);
-    }
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        "Failed to upload staff document",
-      );
-    }
   }
 
   async delete(staffId: string, documentId: string): Promise<void> {
-    const response = await sessionFetch(
-      `/api/staff/${staffId}/documents/${documentId}`,
-      { method: "DELETE" },
-    );
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        "Failed to delete staff document",
-      );
-    }
+    await bffJson("tenant", "DELETE /api/staff/{id}/documents/{documentId}", {
+      params: { id: staffId, documentId },
+      errorMessage: "Failed to delete staff document",
+    });
   }
 
   /** Same-origin proxy URL for the authenticated download. */
