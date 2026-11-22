@@ -80,6 +80,7 @@ describe("AcceptGuardianInvitePage", () => {
   it("loads a token through the bounded backend request path", async () => {
     const fetch = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       Response.json({
+        status: "success",
         data: {
           email: "eltern@example.test",
           expires_at: "2026-11-11T12:00:00Z",
@@ -152,6 +153,7 @@ describe("AcceptGuardianInvitePage", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response(
         JSON.stringify({
+          status: "success",
           data: {
             email: "eltern@example.test",
             expires_at: "2026-11-11T12:00:00Z",

@@ -3,8 +3,8 @@ package presenceprojectionhttp
 import (
 	time "time"
 
-	common "github.com/moto-ogs/project-phoenix/api/common"
 	departure "github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // TeacherHint is a Lehrkraft's hint for the OGS for today (#4795), written in
@@ -19,8 +19,8 @@ type TeacherHint struct {
 
 // StudentResponse represents a student response
 type StudentResponse struct {
-	ID                 common.ID            `json:"id"`
-	PersonID           common.ID            `json:"person_id"`
+	ID                 ident.ID             `json:"id"`
+	PersonID           ident.ID             `json:"person_id"`
 	FirstName          string               `json:"first_name"`
 	LastName           string               `json:"last_name"`
 	TagID              string               `json:"tag_id,omitempty"`
@@ -29,7 +29,7 @@ type StudentResponse struct {
 	Location           string               `json:"current_location"`
 	LocationSince      *time.Time           `json:"location_since,omitempty"`     // When student entered current location
 	RoomColor          *string              `json:"current_room_color,omitempty"` // Hex of the current room when set; nil for status-only locations or rooms without override
-	GroupID            common.ID            `json:"group_id,omitempty"`
+	GroupID            ident.ID             `json:"group_id,omitempty"`
 	GroupName          string               `json:"group_name,omitempty"`
 	AddressStreet      string               `json:"address_street,omitempty"`
 	AddressCity        string               `json:"address_city,omitempty"`
@@ -71,7 +71,7 @@ type StudentResponse struct {
 	// the ends of a chain still groups them together. Only populated when the
 	// caller passes include_companions=true and has full access to the child. The
 	// Kindersuche buckets by these ids client-side.
-	CompanionStudentIDs []common.ID `json:"companion_student_ids,omitempty"`
+	CompanionStudentIDs []ident.ID `json:"companion_student_ids,omitempty"`
 	// DepartureCompanions are this child's own "läuft mit" links, with the
 	// companion's name and weekdays. Server-side only (json:"-"): it exists for
 	// the offline lists, which must print WHO the child walks home with — a
@@ -132,7 +132,7 @@ type StudentResponse struct {
 	PhotoURL            string     `json:"photo_url,omitempty"`
 	PhotoConsentGiven   *bool      `json:"photo_consent_given,omitempty"`
 	PhotoConsentGivenAt *time.Time `json:"photo_consent_given_at,omitempty"`
-	PhotoConsentGivenBy *common.ID `json:"photo_consent_given_by,omitempty"`
+	PhotoConsentGivenBy *ident.ID  `json:"photo_consent_given_by,omitempty"`
 
 	// Other consents stamped on the student row by the enrollment
 	// decision service from request.consent_flags. Read-only here —
@@ -173,11 +173,11 @@ const SupervisorRoleTeacher = "teacher"
 
 // SupervisorContact represents contact information for a group supervisor
 type SupervisorContact struct {
-	ID        common.ID `json:"id"`
-	FirstName string    `json:"first_name"`
-	LastName  string    `json:"last_name"`
-	Email     string    `json:"email,omitempty"`
-	Role      string    `json:"role"` // SupervisorRoleTeacher
+	ID        ident.ID `json:"id"`
+	FirstName string   `json:"first_name"`
+	LastName  string   `json:"last_name"`
+	Email     string   `json:"email,omitempty"`
+	Role      string   `json:"role"` // SupervisorRoleTeacher
 }
 
 // StudentPrivacyConsentResponse is the optional retention-consent projection.

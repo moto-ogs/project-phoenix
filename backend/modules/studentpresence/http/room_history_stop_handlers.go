@@ -9,6 +9,7 @@ import (
 	sessiontoken "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	studentpresence "github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // errRoomHistoryStopsUnavailable is the bare-Resource outcome: without the
@@ -19,7 +20,7 @@ var errRoomHistoryStopsUnavailable = errors.New("room history stop capability is
 // capture of a child are stopped (#3844). DeletedVisits counts the completed
 // visits a new stop deleted; it is zero on every other answer.
 type RoomHistoryStopResponse struct {
-	StudentID     common.ID  `json:"student_id"`
+	StudentID     ident.ID   `json:"student_id"`
 	Stopped       bool       `json:"stopped"`
 	StoppedAt     *time.Time `json:"stopped_at,omitempty"`
 	DeletedVisits int        `json:"deleted_visits"`
@@ -36,7 +37,7 @@ func (rs *Resource) getRoomHistoryStop(w http.ResponseWriter, r *http.Request) {
 		renderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
-	response := RoomHistoryStopResponse{StudentID: common.ID(student)}
+	response := RoomHistoryStopResponse{StudentID: ident.ID(student)}
 	if since, found := stops[student]; found {
 		response.Stopped, response.StoppedAt = true, &since
 	}
@@ -57,7 +58,7 @@ func (rs *Resource) stopRoomHistory(w http.ResponseWriter, r *http.Request) {
 	}
 	stoppedAt := result.StoppedAt
 	common.Respond(w, r, http.StatusOK, RoomHistoryStopResponse{
-		StudentID: common.ID(student), Stopped: true, StoppedAt: &stoppedAt, DeletedVisits: int(result.DeletedVisits),
+		StudentID: ident.ID(student), Stopped: true, StoppedAt: &stoppedAt, DeletedVisits: int(result.DeletedVisits),
 	}, "Room history stopped successfully")
 }
 
@@ -71,7 +72,7 @@ func (rs *Resource) resumeRoomHistory(w http.ResponseWriter, r *http.Request) {
 		renderRoomHistoryStopError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, RoomHistoryStopResponse{StudentID: common.ID(student)}, "Room history resumed successfully")
+	common.Respond(w, r, http.StatusOK, RoomHistoryStopResponse{StudentID: ident.ID(student)}, "Room history resumed successfully")
 }
 
 // roomHistoryStopTarget resolves the child and checks the caller's access to

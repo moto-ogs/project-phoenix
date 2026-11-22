@@ -16,7 +16,7 @@ import (
 // TestNoJSONStringOptionRatchet holds the one identifier type of ADR 0300:
 // an identifier is an ident.ID, which reads a JSON string or a number and
 // goes out as a string in every answer. The json option ,string reads only a
-// string, does not reach a list, and was the third spelling beside common.ID
+// string, does not reach a list, and was the third spelling beside ident.ID
 // and ident.ID (#7808). No Go file of the backend, tests included, uses it;
 // there is no exception list. The generator rejects it on a registered type
 // as well (api/contract).

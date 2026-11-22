@@ -1,16 +1,16 @@
 package account_test
 
 import (
-	"context"
-	"fmt"
+	"encoding/json"
 	"net/http"
-	"time"
-
+	"net/url"
 	"testing"
 
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 
 	rootAPI "github.com/moto-ogs/project-phoenix/api"
 	transactionFailures "github.com/moto-ogs/project-phoenix/modules/transactionruntime"
@@ -45,6 +45,32 @@ func TestValidateGuardianInvitation_NotFound(t *testing.T) {
 	rr := testutil.ExecuteRequest(router, req)
 
 	testutil.AssertNotFound(t, rr)
+}
+
+// A valid link answers the invitation through the public route, the answer
+// the parents' accept page reads through the contract (#7808).
+func TestValidateGuardianInvitation_AnswersTheInvitation(t *testing.T) {
+	t.Parallel()
+	db, authRoute := setupAuthDependenciesRoute(t)
+	resource := authAPI.NewResource(authRoute.AuthService, authRoute.Invitations, nil, authRoute.Sessions, identityaccessCompose.TenantUnitOfWork{}, transactionFailures.IsConstraintViolation, authRoute.SettingsService)
+	router := testutil.NewTenantRouter(db)
+	router.Mount("/auth", resource.Router(rootAPI.TenantSessionChain))
+
+	profile := testpkg.CreateTestGuardianProfile(t, db, "validate-route")
+	invitation, err := authRoute.GuardianInvitations.CreateGuardianInvitation(testpkg.Ctx(t), identityaccess.GuardianInvitationRequest{
+		GuardianProfileID: profile.ID, CreatedBy: testpkg.CreateTestAccount(t, db, "validate-route-inviter").ID,
+	})
+	require.NoError(t, err)
+
+	rr := testutil.ExecuteRequest(router, testutil.NewJSONRequest(t, http.MethodGet, "/auth/guardian-invitations/"+url.PathEscape(invitation.Token), nil))
+
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	var body struct {
+		Data authAPI.GuardianInvitationValidateResponse `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
+	assert.Equal(t, *profile.Email, body.Data.Email)
+	assert.False(t, body.Data.ExpiresAt.IsZero())
 }
 
 func TestAcceptGuardianInvitation_NotFound(t *testing.T) {
@@ -103,15 +129,14 @@ func TestAcceptGuardianInvitation_CreatesTheAccount(t *testing.T) {
 	router := testutil.NewTenantRouter(db)
 	router.Mount("/auth", resource.Router(rootAPI.TenantSessionChain))
 
-	inviter := testpkg.CreateTestAccount(t, db, "guardian-accept-route")
 	profile := testpkg.CreateTestGuardianProfile(t, db, "guardian-accept-route")
-	token := fmt.Sprintf("guardian-accept-route-%d", testpkg.UniqueTestTenantID(t))
-	_, err := db.ExecContext(context.Background(), `INSERT INTO auth.guardian_invitations (tenant_id, token, guardian_profile_id, created_by, expires_at, email)
-		VALUES (?, ?, ?, ?, ?, LOWER(BTRIM(?)))`, testpkg.Tenant(t), testpkg.TokenHash(t, db, token), profile.ID, inviter.ID, testpkg.DatabaseNow(t, db).Add(48*time.Hour), *profile.Email)
+	invitation, err := authRoute.GuardianInvitations.CreateGuardianInvitation(testpkg.Ctx(t), identityaccess.GuardianInvitationRequest{
+		GuardianProfileID: profile.ID, CreatedBy: testpkg.CreateTestAccount(t, db, "guardian-accept-route-inviter").ID,
+	})
 	require.NoError(t, err)
 
 	password := testpkg.NewTestPassword()
-	rr := testutil.ExecuteRequest(router, testutil.NewJSONRequest(t, http.MethodPost, "/auth/guardian-invitations/"+token+"/accept", map[string]any{
+	rr := testutil.ExecuteRequest(router, testutil.NewJSONRequest(t, http.MethodPost, "/auth/guardian-invitations/"+url.PathEscape(invitation.Token)+"/accept", map[string]any{
 		"password": password, "confirm_password": password,
 	}))
 	require.Equal(t, http.StatusCreated, rr.Code, rr.Body.String())

@@ -76,20 +76,20 @@ func (rs *CareBillingResource) RunRouter(protectedTraegerRoutes func(chi.Router,
 // weekday or, with days_per_week, a scale step, with the price for every
 // further child and the meal note of the module (#6196).
 type CarePriceRequest struct {
-	CareOfferingID common.ID `json:"care_offering_id"`
-	ModuleName     string    `json:"module_name"`
-	Weekday        string    `json:"weekday"`
-	DaysPerWeek    *int      `json:"days_per_week"`
-	MonthlyCents   int64     `json:"monthly_cents" contract:"number"`
-	SiblingCents   *int64    `json:"sibling_cents" contract:"number"`
-	MealExtra      bool      `json:"meal_extra"`
+	CareOfferingID ident.ID `json:"care_offering_id"`
+	ModuleName     string   `json:"module_name"`
+	Weekday        string   `json:"weekday"`
+	DaysPerWeek    *int     `json:"days_per_week"`
+	MonthlyCents   int64    `json:"monthly_cents" contract:"number"`
+	SiblingCents   *int64   `json:"sibling_cents" contract:"number"`
+	MealExtra      bool     `json:"meal_extra"`
 }
 
 // CarePriceListRequest is the body of PUT /traeger/care-tariffs: the
 // prices of one school from the first day of a month on and the months of
 // the year it bills nothing for.
 type CarePriceListRequest struct {
-	SchoolID   common.ID          `json:"school_id"`
+	SchoolID   ident.ID           `json:"school_id"`
 	ValidFrom  calendar.Date      `json:"valid_from"`
 	FreeMonths []int              `json:"free_months"`
 	Prices     []CarePriceRequest `json:"prices"`
@@ -112,7 +112,7 @@ func (req *CarePriceListRequest) list() capability.CarePriceList {
 // open run of the month) and an optional invoice date (#5916).
 type CareRunRequest struct {
 	BillingMonth calendar.Date  `json:"billing_month"`
-	SchoolIDs    []common.ID    `json:"school_ids"`
+	SchoolIDs    []ident.ID     `json:"school_ids"`
 	InvoiceDate  *calendar.Date `json:"invoice_date"`
 }
 

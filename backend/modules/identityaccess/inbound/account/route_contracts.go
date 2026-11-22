@@ -109,6 +109,7 @@ func PublicRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalPublic}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/invitations/{token}", Portals: portals, Response: InvitationValidationResponse{}},
+		{Method: "GET", Pattern: "/guardian-invitations/{token}", Portals: portals, Response: GuardianInvitationValidateResponse{}},
 		{Method: "POST", Pattern: "/guardian-invitations/{token}/accept", Portals: portals, Request: AcceptGuardianInvitationRequest{}, Response: AcceptGuardianInvitationResponse{}, MaxBodyBytes: publicLinkBodyBytes},
 		{Method: "GET", Pattern: "/holiday-parent-setups/{token}", Portals: portals, Response: HolidayParentSetupResponse{}},
 		{Method: "POST", Pattern: "/holiday-parent-setups/{token}", Portals: portals, Request: CompleteHolidayParentSetupRequest{}, Response: CompleteHolidayParentSetupResponse{}, MaxBodyBytes: publicLinkBodyBytes},
