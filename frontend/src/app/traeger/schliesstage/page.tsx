@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Schließtage und Feiertage des Trägers (#4702). Das Träger-Büro plant
 // Schließtage wie Brückentage für einige oder alle Schulen und sieht die
 // gesetzlichen Feiertage aus dem Bundesland jeder Schule. Das Bundesland
@@ -58,7 +60,10 @@ import {
   fetchTraegerCalendar,
   type TraegerClosingDay,
 } from "~/lib/traeger-closing-days";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 
 const logger = createLogger({ component: "TraegerClosingDaysPage" });
 
@@ -277,10 +282,14 @@ export default function TraegerClosingDaysPage() {
   ];
   const exportItems = useTraegerListExportItems({
     download: (format) =>
-      downloadTraegerList("/api/traeger/closing-days/export", format, {
-        from,
-        to,
-      }),
+      downloadTraegerList(
+        bffFile("org", "GET /traeger/closing-days/export", {
+          query: listExportQuery(format, {
+            from,
+            to,
+          }),
+        }),
+      ),
     scope: traegerExportScope(),
     fallbackName: `schliesstage-${year}`,
     errorObject: "die Schließtage",

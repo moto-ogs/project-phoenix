@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Betreuungsverträge des Trägers (#4678, ADR 0153): alle Verträge mit Status,
 // gefiltert nach Status, Schule und Name. „Verträge erstellen“ legt Entwürfe
 // aus angenommenen Anmeldungen an; ausgewählte Entwürfe gehen per Mail und in
@@ -75,7 +77,10 @@ import {
   sendCareContracts,
 } from "~/lib/traeger-care-contracts-api";
 import type { TraegerSchool } from "~/lib/traeger-api";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import { useDebounce } from "~/lib/use-debounce";
 import { traegerPath } from "~/lib/traeger-url";
 import { labelOf } from "~/lib/label-of";
@@ -542,11 +547,15 @@ export default function TraegerVertraegePage() {
   // and the export („Herunterladen“) sit in the page menu.
   const exportItems = useTraegerListExportItems({
     download: (format) =>
-      downloadTraegerList("/api/traeger/contracts/export", format, {
-        status: status === "all" ? undefined : status,
-        school_id: schoolId,
-        search: debouncedSearch,
-      }),
+      downloadTraegerList(
+        bffFile("org", "GET /traeger/contracts/export", {
+          query: listExportQuery(format, {
+            status: status === "all" ? undefined : status,
+            school_id: schoolId,
+            search: debouncedSearch,
+          }),
+        }),
+      ),
     scope: traegerExportScope(
       schools.find((school) => school.value === schoolId)?.label,
     ),

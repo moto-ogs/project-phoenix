@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Rechnungen und Beträge je Familie (#4691): je Familie die Zahl der
 // Rechnungen, wer zahlt und die Summen ausgestellt, storniert,
 // gutgeschrieben und die offene Forderung. Eine Familie sind alle Schreiben
@@ -68,7 +70,10 @@ import {
   fetchFamilyChildren,
   withFamilyChildren,
 } from "~/lib/traeger-billing-families-api";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 import { labelOf } from "~/lib/label-of";
 
@@ -547,7 +552,11 @@ export default function TraegerBillingFamiliesPage() {
 
   const exportItems = useTraegerListExportItems({
     download: (format) =>
-      downloadTraegerList("/api/traeger/billing-families/export", format),
+      downloadTraegerList(
+        bffFile("org", "GET /traeger/billing-families/export", {
+          query: listExportQuery(format),
+        }),
+      ),
     scope:
       "Alle Familien, ohne Suche und Filter. Jeder Download wird protokolliert.",
     fallbackName: "familien",

@@ -1,4 +1,4 @@
-import { bffJson, bffPath } from "~/lib/bff-fetch";
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the Träger portal ("moto träger", #4649). Talks to the BFF
  * routes under /api/traeger, which forward to the backend with the Träger
@@ -16,7 +16,6 @@ import type * as traegerHolidayPeriodsContract from "./contract/traeger-holiday-
 import type * as traegerInvitationsContract from "./contract/traeger-invitations.generated";
 import type * as traegerMasterDataContract from "./contract/traeger-master-data.generated";
 import type * as traegerProfileContract from "./contract/traeger-profile.generated";
-import type * as traegerSchoolSessionsContract from "./contract/traeger-school-sessions.generated";
 import type * as traegerSchoolsContract from "./contract/traeger-schools.generated";
 import type { SettingsSchema } from "./settings-api";
 import { filenameFromDisposition } from "./file-download";
@@ -167,21 +166,8 @@ export async function traegerLogin(input: {
 
 /** The schools of the signed-in person's Träger. */
 export async function fetchTraegerSchools(): Promise<TraegerSchool[]> {
-  const response = await transportFetch("/api/traeger/schools", {
-    credentials: "include",
-    cache: "no-store",
-  });
-  const data = await readJson(response);
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      data,
-    );
-  }
-  const schools = (data as { data: traegerSchoolsContract.TraegerSchool[] })
-    .data;
-  return schools.map(toTraegerSchool);
+  const schools = await bffJson("org", "GET /traeger/schools/");
+  return (schools ?? []).map(toTraegerSchool);
 }
 
 function toTraegerSchool(
@@ -215,19 +201,7 @@ function toSchoolFigures(
  * (#4675): numbers only, no names.
  */
 export async function fetchTraegerSchoolsAlerts(): Promise<TraegerSchoolsAlerts> {
-  const response = await transportFetch("/api/traeger/schools/alerts", {
-    credentials: "include",
-    cache: "no-store",
-  });
-  const data = await readJson(response);
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      data,
-    );
-  }
-  const alerts = (data as { data: traegerSchoolsContract.SchoolsAlerts }).data;
+  const alerts = await bffJson("org", "GET /traeger/schools/alerts");
   return {
     thresholds: {
       childrenPerStaff: alerts.thresholds.children_per_staff,
@@ -251,19 +225,9 @@ export async function fetchTraegerSchoolsAlerts(): Promise<TraegerSchoolsAlerts>
 export async function fetchTraegerSchool(
   id: string,
 ): Promise<TraegerSchoolView> {
-  const response = await transportFetch(
-    `/api/traeger/schools/${encodeURIComponent(id)}`,
-    { credentials: "include", cache: "no-store" },
-  );
-  const data = await readJson(response);
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      data,
-    );
-  }
-  const school = (data as { data: traegerSchoolsContract.SchoolView }).data;
+  const school = await bffJson("org", "GET /traeger/schools/{id}", {
+    params: { id },
+  });
   return {
     ...toTraegerSchool(school),
     address: school.address,
@@ -281,28 +245,13 @@ export async function fetchTraegerSchool(
 export async function startTraegerSchoolSession(
   schoolId: string,
 ): Promise<string> {
-  const response = await transportFetch("/api/traeger/school-sessions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({
-      school_id: schoolId,
-    } satisfies traegerSchoolSessionsContract.SchoolSessionRequest),
+  const data = await bffJson("org", "POST /traeger/school-sessions/", {
+    body: { school_id: schoolId },
   });
-  const data = await readJson(response);
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      data,
-    );
+  if (!data.handoff_token) {
+    throw new ApiError("School session without hand-off", 502);
   }
-  const token = (data as { data?: { handoff_token?: string } } | null)?.data
-    ?.handoff_token;
-  if (!token) {
-    throw apiErrorFromBody("School session without hand-off", 502, data);
-  }
-  return token;
+  return data.handoff_token;
 }
 
 /** The mailed code of a step in the running Träger session (#7068). */
@@ -968,25 +917,9 @@ export async function downloadTraegerAccessLog(
   filter: TraegerAccessLogFilter,
   format: TraegerListFormat,
 ): Promise<{ readonly blob: Blob; readonly filename: string | null }> {
-  const response = await transportFetch(
-    bffPath(
-      "org",
-      "/traeger/access-log/export",
-      {},
-      {
-        ...traegerAccessLogQuery(filter),
-        format,
-      },
-    ),
-    { credentials: "include", cache: "no-store" },
-  );
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      await readJson(response),
-    );
-  }
+  const response = await bffFile("org", "GET /traeger/access-log/export", {
+    query: { ...traegerAccessLogQuery(filter), format },
+  });
   return {
     blob: await response.blob(),
     filename: filenameFromDisposition(response),
@@ -1200,26 +1133,9 @@ export async function saveTraegerWithdrawalContact(
 export async function uploadTraegerLogo(file: File): Promise<TraegerLogo> {
   const form = new FormData();
   form.append("logo", file);
-  const response = await transportFetch(`${masterDataPath}/logo`, {
-    method: "PUT",
-    credentials: "include",
-    cache: "no-store",
-    body: form,
-  });
-  const data = await readJson(response);
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      data,
-    );
-  }
-  const logo = (data as { data?: traegerMasterDataContract.TraegerLogo } | null)
-    ?.data;
-  if (!logo) {
-    throw apiErrorFromBody("Logo response without data", 502, data);
-  }
-  return mapTraegerLogo(logo);
+  return mapTraegerLogo(
+    await bffJson("org", "PUT /traeger/master-data/logo", { body: form }),
+  );
 }
 
 /** Removes the logo. Throws an ApiError on failure. */

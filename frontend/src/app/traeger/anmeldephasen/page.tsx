@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Anmeldephasen des Trägers (#4704): eine Anmeldephase mit Angeboten für
 // mehrere Schulen. Von hier aus anlegen und öffnen.
 
@@ -22,7 +24,10 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage } from "~/components/ui/tenant-page";
 import type { TraegerPhase } from "~/lib/traeger-catalog-api";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 
 /** „Alle Schulen“ or the number of chosen schools. */
@@ -53,7 +58,11 @@ export default function TraegerCatalogPhasesPage() {
   const allSchoolIds = (schools ?? []).map((school) => school.id);
   const exportItems = useTraegerListExportItems({
     download: (format) =>
-      downloadTraegerList("/api/traeger/catalog/phases/export", format),
+      downloadTraegerList(
+        bffFile("org", "GET /traeger/catalog/phases/export", {
+          query: listExportQuery(format),
+        }),
+      ),
     scope: traegerExportScope(),
     fallbackName: "anmeldephasen",
     errorObject: "die Anmeldephasen",

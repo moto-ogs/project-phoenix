@@ -1,4 +1,4 @@
-import { bffJson } from "~/lib/bff-fetch";
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the stored originals of the Jahresbescheide (#6347): the office
  * stores the PDF of every issued notice once, then sends it by mail and to
@@ -22,8 +22,6 @@ import {
   type CareNoticeKind,
   knownNoticeKind,
 } from "./traeger-care-notices-api";
-
-const RUNS_PATH = "/api/traeger/care-notice-runs";
 
 export interface CareNoticeMailing {
   readonly noticeId: string;
@@ -127,14 +125,6 @@ function lettersFromBackend(
   };
 }
 
-function lettersPath(runId: string): string {
-  return `${RUNS_PATH}/${encodeURIComponent(runId)}/letters`;
-}
-
-function noticePath(runId: string, contractId: string): string {
-  return `${RUNS_PATH}/${encodeURIComponent(runId)}/notices/${encodeURIComponent(contractId)}`;
-}
-
 /** The originals of a released run with the state of every mail. */
 export async function fetchCareNoticeLetters(
   runId: string,
@@ -194,8 +184,13 @@ export async function downloadCareNoticePDF(
   contractId: string,
 ): Promise<BillingFile> {
   return billingFile(
-    `${noticePath(runId, contractId)}/pdf`,
-    {},
+    bffFile(
+      "org",
+      "GET /traeger/care-notice-runs/{id}/notices/{contractID}/pdf",
+      {
+        params: { id: runId, contractID: contractId },
+      },
+    ),
     "gebuehrenbescheid.pdf",
   );
 }
@@ -206,8 +201,10 @@ export async function printCareNoticeLetters(
   withoutEmailOnly = false,
 ): Promise<BillingFile> {
   return billingFile(
-    `${lettersPath(runId)}/print${withoutEmailOnly ? "?only=without_email" : ""}`,
-    {},
+    bffFile("org", "GET /traeger/care-notice-runs/{id}/letters/print", {
+      params: { id: runId },
+      query: { only: withoutEmailOnly ? "without_email" : undefined },
+    }),
     "jahresbescheide.pdf",
   );
 }
