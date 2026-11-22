@@ -7,21 +7,12 @@ import { Modal } from "~/components/ui/modal";
 import type { Student } from "~/lib/student-helpers";
 import {
   checkoutConfirmationRoom,
-  type CheckinBulkAction,
   type useSchoolCheckinMode,
 } from "~/lib/hooks/use-school-checkin-mode";
-import { pullCandidates } from "~/components/students/school-checkin-bulk-target";
 import type {
   SchoolCheckinAction,
   SchoolCheckoutReason,
 } from "~/lib/student-api";
-
-/** „angemeldet“, „abgemeldet“, „geholt“: the word a dialog uses for a run. */
-const DONE_WORD: Record<CheckinBulkAction, string> = {
-  in: "angemeldet",
-  out: "abgemeldet",
-  pull: "geholt",
-};
 
 /**
  * Snapshot of one student a bulk action operates on (#2359): the id for the
@@ -47,14 +38,10 @@ function toBulkStudentRef(student: Student): BulkStudentRef {
 type SchoolCheckin = ReturnType<typeof useSchoolCheckinMode>;
 
 interface BulkCheckinActions {
-  /**
-   * Runs Anmelden/Abmelden/Holen for the visible selection, asking first
-   * where needed. „Holen“ takes only the marked children who are present
-   * outside the target.
-   */
-  readonly handleBulkAction: (action: CheckinBulkAction) => void;
+  /** Runs Anmelden/Abmelden for the visible selection, asking first where needed. */
+  readonly handleBulkAction: (action: SchoolCheckinAction) => void;
   /** The action currently running, so only its button shows a spinner. */
-  readonly runningBulkAction: CheckinBulkAction | null;
+  readonly runningBulkAction: SchoolCheckinAction | null;
   /** Confirmation and failure dialogs; render them in the page's overlays. */
   readonly dialogs: ReactNode;
 }
@@ -74,8 +61,6 @@ export function useBulkCheckinActions(
    * page then points at the children who are still missing (#4762).
    */
   onRunProcessed?: (action: SchoolCheckinAction) => void,
-  /** The room chosen under „Anmelden in“; „Holen“ needs it. */
-  targetRoomName?: string | null,
 ): BulkCheckinActions {
   // Checking a child out of a room ends the running visit, so a batch with
   // children in rooms asks once (#2359). The dialog holds a SNAPSHOT of the
@@ -91,20 +76,20 @@ export function useBulkCheckinActions(
   // retry reachable even when a scope change hid the retained marks
   // (review #2372).
   const [bulkFailures, setBulkFailures] = useState<{
-    action: CheckinBulkAction;
+    action: SchoolCheckinAction;
     reason?: SchoolCheckoutReason;
     succeeded: number;
     students: BulkStudentRef[];
   } | null>(null);
   const [runningBulkAction, setRunningBulkAction] =
-    useState<CheckinBulkAction | null>(null);
+    useState<SchoolCheckinAction | null>(null);
 
   // Runs the bulk action for an explicit snapshot list. runBulk executes the
   // snapshot exactly as given — deliberately NOT intersected with the live
   // selection, so a dialog always executes what it displayed (review #2372).
   const executeBulk = useCallback(
     async (
-      action: CheckinBulkAction,
+      action: SchoolCheckinAction,
       targets: readonly BulkStudentRef[],
       reason?: SchoolCheckoutReason,
     ) => {
@@ -127,7 +112,7 @@ export function useBulkCheckinActions(
         // Keep the callback from the render in which this run began. A page
         // can change its filters while the request is pending; a completion
         // must then not report the result against that newer list.
-        if (action !== "pull") onRunProcessed?.(action);
+        onRunProcessed?.(action);
         if (outcome.failed === 0) return;
 
         setBulkFailures({
@@ -150,15 +135,8 @@ export function useBulkCheckinActions(
   );
 
   const handleBulkAction = useCallback(
-    (action: CheckinBulkAction) => {
+    (action: SchoolCheckinAction) => {
       if (selectedStudents.length === 0) return;
-      if (action === "pull") {
-        if (!targetRoomName) return;
-        const present = pullCandidates(selectedStudents, targetRoomName);
-        if (present.length === 0) return;
-        void executeBulk(action, present.map(toBulkStudentRef));
-        return;
-      }
       if (action === "out") {
         // Same rule as the single tap (#2220): checking a child out of a room
         // ends the running visit, so that asks first — once per batch.
@@ -176,7 +154,7 @@ export function useBulkCheckinActions(
       }
       void executeBulk(action, selectedStudents.map(toBulkStudentRef));
     },
-    [selectedStudents, executeBulk, targetRoomName],
+    [selectedStudents, executeBulk],
   );
 
   const confirmBulkCheckout = (reason?: SchoolCheckoutReason) => {
@@ -256,9 +234,9 @@ export function useBulkCheckinActions(
         isOpen={bulkFailures !== null}
         onClose={() => setBulkFailures(null)}
         title={
-          bulkFailures
-            ? `Nicht alle Kinder ${DONE_WORD[bulkFailures.action]}`
-            : ""
+          bulkFailures?.action === "in"
+            ? "Nicht alle Kinder angemeldet"
+            : "Nicht alle Kinder abgemeldet"
         }
       >
         <div className="space-y-3">
@@ -266,7 +244,7 @@ export function useBulkCheckinActions(
             {bulkFailures?.succeeded === 1
               ? "1 Kind wurde"
               : `${bulkFailures?.succeeded} Kinder wurden`}{" "}
-            {bulkFailures ? DONE_WORD[bulkFailures.action] : ""}. Bei
+            {bulkFailures?.action === "in" ? "angemeldet" : "abgemeldet"}. Bei
             {bulkFailures?.students.length === 1
               ? " diesem Kind"
               : ` diesen ${bulkFailures?.students.length} Kindern`}{" "}
@@ -307,11 +285,9 @@ export function useBulkCheckinActions(
                 void executeBulk(action, failedStudents, reason);
               }}
               tooltip={
-                bulkFailures?.action === "pull"
-                  ? "Holt die übrigen Kinder sofort noch einmal in den Raum."
-                  : bulkFailures?.action === "in"
-                    ? "Meldet die übrigen Kinder sofort noch einmal an."
-                    : "Meldet die übrigen Kinder sofort noch einmal ab."
+                bulkFailures?.action === "in"
+                  ? "Meldet die übrigen Kinder sofort noch einmal an."
+                  : "Meldet die übrigen Kinder sofort noch einmal ab."
               }
             >
               Erneut versuchen

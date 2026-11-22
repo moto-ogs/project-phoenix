@@ -116,40 +116,6 @@ describe("useSchoolCheckinMode with a check-in target", () => {
     expect(matcher("search-students-gall--")).toBe(true);
   });
 
-  it("pulls present children into the target under the move rules", async () => {
-    mocks.toRoom.mockResolvedValue({
-      moved: [1, 2],
-      unchanged: [3],
-      skipped: [],
-    });
-    const { result } = renderHook(() => useSchoolCheckinMode({ target: yard }));
-
-    let outcome: Awaited<ReturnType<typeof result.current.runBulk>> = null;
-    await act(async () => {
-      outcome = await result.current.runBulk("pull", ["1", "2", "3"]);
-    });
-
-    // keepPresent false: the children move instead of staying where they are.
-    expect(mocks.toRoom).toHaveBeenCalledWith(["1", "2", "3"], "9", false);
-    expect(outcome).toMatchObject({ succeeded: 3, failed: 0 });
-    expect(mocks.success).toHaveBeenCalledWith(
-      "2 Kinder sind jetzt in Schulhof. 1 war schon dort.",
-    );
-  });
-
-  it("pulls nothing without a target", async () => {
-    const { result } = renderHook(() => useSchoolCheckinMode());
-
-    let outcome: Awaited<ReturnType<typeof result.current.runBulk>> = null;
-    await act(async () => {
-      outcome = await result.current.runBulk("pull", ["1"]);
-    });
-
-    expect(outcome).toBeNull();
-    expect(mocks.batch).not.toHaveBeenCalled();
-    expect(mocks.toRoom).not.toHaveBeenCalled();
-  });
-
   it("says when a tapped child was not placed", async () => {
     mocks.toGroup.mockResolvedValue({
       moved: [],

@@ -53,33 +53,4 @@ describe("useBulkCheckinActions", () => {
     expect(firstScopeProcessed).toHaveBeenCalledWith("in");
     expect(secondScopeProcessed).not.toHaveBeenCalled();
   });
-
-  it("pulls only the marked children who are present outside the target", async () => {
-    const runBulk = vi.fn(() =>
-      Promise.resolve({ action: "in", results: [], succeeded: 1, failed: 0 }),
-    );
-    const onRunProcessed = vi.fn();
-    const schoolCheckin = {
-      runBulk,
-    } as unknown as Parameters<typeof useBulkCheckinActions>[0];
-    const students = [
-      selectedStudent,
-      { ...selectedStudent, id: "2", current_location: "Unterwegs" },
-      { ...selectedStudent, id: "3", current_location: "Schulhof" },
-    ] as Student[];
-    const { result } = renderHook(() =>
-      useBulkCheckinActions(
-        schoolCheckin,
-        students,
-        onRunProcessed,
-        "Schulhof",
-      ),
-    );
-
-    await act(async () => result.current.handleBulkAction("pull"));
-
-    expect(runBulk).toHaveBeenCalledWith("pull", ["2"]);
-    // The hint for children still missing belongs to a check-in.
-    expect(onRunProcessed).not.toHaveBeenCalled();
-  });
 });

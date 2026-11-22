@@ -160,7 +160,6 @@ import { KIND_PARAM } from "~/components/announcements/announcement-meta";
 import { SchoolCheckinSelectionBar } from "~/components/students/school-checkin-selection-bar";
 import { SchoolCheckinTargetPicker } from "~/components/students/school-checkin-target-picker";
 import { useCheckinTarget } from "~/lib/hooks/use-checkin-target";
-import { checkinBulkTarget } from "~/components/students/school-checkin-bulk-target";
 import type { SchoolCheckinAction } from "~/lib/student-api";
 import {
   SchoolCheckinMissingHint,
@@ -3151,24 +3150,8 @@ function SearchPageContent() {
     schoolCheckin,
     selectedStudentsForBulk,
     handleBulkRunProcessed,
-    checkinTarget.target?.roomName ?? null,
   );
   const { handleBulkAction, runningBulkAction } = bulkCheckin;
-  // What „Anmelden“ and „Holen“ can do with the marked children while a
-  // target is chosen; null keeps the plain check-in.
-  const checkinTargetRoomName = checkinTarget.target?.roomName ?? null;
-  const checkinCanPullPresent = checkinTarget.canPullPresent;
-  const bulkTarget = useMemo(
-    () =>
-      checkinTargetRoomName
-        ? checkinBulkTarget(
-            selectedStudentsForBulk,
-            checkinTargetRoomName,
-            checkinCanPullPresent,
-          )
-        : null,
-    [checkinCanPullPresent, checkinTargetRoomName, selectedStudentsForBulk],
-  );
 
   const groupedStudents = useMemo(
     () => groupStudents(sortedStudents, effectiveGroupMode),
@@ -3717,7 +3700,6 @@ function SearchPageContent() {
                 runningAction={runningBulkAction}
                 selectAll={checkinSelectAll}
                 disabled={schoolCheckin.isBulkRunning}
-                bulkTarget={bulkTarget}
                 targetPicker={
                   checkinTarget.available ? (
                     <SchoolCheckinTargetPicker
@@ -3745,7 +3727,7 @@ function SearchPageContent() {
               isRunning={schoolCheckin.isBulkRunning}
               runningAction={runningBulkAction}
               selectAll={checkinSelectAll}
-              bulkTarget={bulkTarget}
+              targetRoomName={checkinTarget.target?.roomName ?? null}
               targetPicker={
                 checkinTarget.available ? (
                   <SchoolCheckinTargetPicker
@@ -3774,14 +3756,9 @@ function SearchPageContent() {
               checkinModeAvailable
                 ? schoolCheckin.isActive
                   ? schoolCheckin.selectionActive
-                    ? // „In … holen“ adds a row of 50 px to the phone bar.
-                      bulkTarget?.pullCount !== undefined
-                      ? selectAllPlan.leftOutCount > 0
-                        ? "pb-64 md:pb-24 lg:pb-0"
-                        : "pb-56 md:pb-24 lg:pb-0"
-                      : selectAllPlan.leftOutCount > 0
-                        ? "pb-52 md:pb-24 lg:pb-0"
-                        : "pb-44 md:pb-24 lg:pb-0"
+                    ? selectAllPlan.leftOutCount > 0
+                      ? "pb-52 md:pb-24 lg:pb-0"
+                      : "pb-44 md:pb-24 lg:pb-0"
                     : "pb-36 md:pb-24 lg:pb-0"
                   : "pb-24 lg:pb-0"
                 : undefined

@@ -138,29 +138,6 @@ export function placementOutcome(
   };
 }
 
-/**
- * What a bulk run does with the marked children. „pull“ brings children who
- * are already present into the chosen target; it is its own labelled step, so
- * „Alle auswählen“ plus „Anmelden“ never moves a whole school into one room.
- */
-export type CheckinBulkAction = SchoolCheckinAction | "pull";
-
-/** „3 Kinder sind jetzt in Mensa. 1 war schon dort.“ */
-export function pullMessage(
-  moved: number,
-  alreadyThere: number,
-  roomName: string,
-): string {
-  if (moved === 0) {
-    return alreadyThere === 1
-      ? `Das Kind ist schon in ${roomName}.`
-      : `Die Kinder sind schon in ${roomName}.`;
-  }
-  const head = `${moved} ${moved === 1 ? "Kind ist" : "Kinder sind"} jetzt in ${roomName}.`;
-  if (alreadyThere === 0) return head;
-  return `${head} ${alreadyThere} ${alreadyThere === 1 ? "war" : "waren"} schon dort.`;
-}
-
 /** „5 Kinder in Mensa angemeldet. 2 waren schon da und bleiben, wo sie sind.“ */
 export function placementMessage(
   placed: number,
@@ -330,11 +307,10 @@ interface UseSchoolCheckinModeResult {
    * any students marked mid-flight) stay selected where possible, so a
    * retry is one tap. The presence caches are revalidated once, bundled.
    * Returns null when nothing was selected, a run is already in flight, or
-   * the whole request failed (the hook has toasted the error then). „pull“
-   * needs a chosen target and returns null without one.
+   * the whole request failed (the hook has toasted the error then).
    */
   runBulk: (
-    action: CheckinBulkAction,
+    action: SchoolCheckinAction,
     onlyIds?: readonly string[],
     checkoutReason?: SchoolCheckoutReason,
   ) => Promise<SchoolCheckinBatchOutcome | null>;
@@ -554,13 +530,12 @@ export function useSchoolCheckinMode(
 
   const runBulk = useCallback(
     async (
-      action: CheckinBulkAction,
+      action: SchoolCheckinAction,
       onlyIds?: readonly string[],
       checkoutReason?: SchoolCheckoutReason,
     ): Promise<SchoolCheckinBatchOutcome | null> => {
       if (isBulkRunningRef.current) return null;
-      const target = action === "out" ? null : targetRef.current;
-      if (action === "pull" && !target) return null;
+      const target = action === "in" ? targetRef.current : null;
 
       // An explicit id list is a dialog's displayed snapshot and runs
       // exactly as displayed — no intersection with the live selection (see
@@ -582,17 +557,14 @@ export function useSchoolCheckinMode(
       let failedRunIds: ReadonlySet<string> = new Set(ids);
 
       try {
-        // „Anmelden“ into a room keeps present children where they are: it
-        // places only the children it checks in, so „Alle auswählen“ never
-        // pulls a whole school into one room (#6953). „Holen“ is the step
-        // that moves present children, under the ordinary move rules.
+        // A run into a room keeps present children where they are: the
+        // check-in mode places only the children it checks in, so „Alle
+        // auswählen“ never pulls a whole school into one room (#6953).
         let outcome: SchoolCheckinBatchOutcome;
         let placement: StudentMoveResult | null = null;
         if (target) {
-          placement = await checkInToTarget(ids, target, action === "in");
+          placement = await checkInToTarget(ids, target, true);
           outcome = placementOutcome(ids, placement);
-        } else if (action === "pull") {
-          return null;
         } else {
           outcome = await (checkoutReason
             ? schoolCheckinStudentsBatch(ids, action, checkoutReason)
@@ -605,15 +577,7 @@ export function useSchoolCheckinMode(
         // Clean run → summary toast right here (counts only, no names). A
         // partial failure is the caller's job: naming the failed children
         // needs the student list, which this hook does not hold.
-        if (outcome.failed === 0 && target && placement && action === "pull") {
-          toast.success(
-            pullMessage(
-              placement.moved.length,
-              placement.unchanged.length,
-              target.roomName,
-            ),
-          );
-        } else if (outcome.failed === 0 && target && placement) {
+        if (outcome.failed === 0 && target && placement) {
           toast.success(
             placementMessage(
               placement.moved.length,

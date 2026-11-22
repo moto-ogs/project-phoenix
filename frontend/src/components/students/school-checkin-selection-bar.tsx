@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { ArrowRightLeft, LogIn, LogOut } from "lucide-react";
+import { LogIn, LogOut } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import { SelectionBar } from "~/components/ui/selection-bar";
@@ -14,14 +14,6 @@ import {
   type SelectAllControl,
 } from "~/components/students/school-checkin-select-all";
 import { SpinnerIcon } from "~/components/ui/icons";
-import {
-  checkInBlockedReason,
-  directModeHint,
-  pullBlockedReason,
-  pullHint,
-  type CheckinBulkTarget,
-} from "~/components/students/school-checkin-bulk-target";
-import type { CheckinBulkAction } from "~/lib/hooks/use-school-checkin-mode";
 
 interface SchoolCheckinSelectionBarProps {
   /** Whether the selection sub-mode is on ("Mehrere") vs. immediate taps ("Direkt"). */
@@ -31,22 +23,18 @@ interface SchoolCheckinSelectionBarProps {
   readonly selectedCount: number;
   readonly onClearSelection: () => void;
   /** Fires the bulk action for all marked students. */
-  readonly onBulkAction: (action: CheckinBulkAction) => void;
+  readonly onBulkAction: (action: "in" | "out") => void;
   readonly onFinish: () => void;
   /** True while a bulk API call is in flight — actions are locked then. */
   readonly isRunning: boolean;
   /** The action currently running, so only its button shows a spinner. */
-  readonly runningAction?: CheckinBulkAction | null;
+  readonly runningAction?: "in" | "out" | null;
   /** „Alle N auswählen“ for the children on screen (#4762). */
   readonly selectAll?: SelectAllControl;
   /** „Anmelden in“ (#6953): where a check-in puts the children. */
   readonly targetPicker?: ReactNode;
-  /**
-   * The chosen target and what the marked children allow there: the Anmelden
-   * button names the room and is off when no marked child can be checked in,
-   * and „Holen“ brings present children into it.
-   */
-  readonly bulkTarget?: CheckinBulkTarget | null;
+  /** The chosen target's room, so the Anmelden button names it. */
+  readonly targetRoomName?: string | null;
 }
 
 /**
@@ -72,11 +60,10 @@ export function SchoolCheckinSelectionBar({
   runningAction = null,
   selectAll,
   targetPicker,
-  bulkTarget = null,
+  targetRoomName = null,
 }: SchoolCheckinSelectionBarProps) {
   const noneSelected = selectedCount === 0;
   const leftOut = selectAll ? leftOutLabel(selectAll.leftOutCount) : null;
-  const checkInBlocked = checkInBlockedReason(bulkTarget, selectedCount);
 
   const segmentedControl = (
     <SegmentedControl
@@ -148,7 +135,7 @@ export function SchoolCheckinSelectionBar({
           <>
             {segmentedControl}
             <span className="min-w-0 flex-1 text-xs text-gray-500">
-              {directModeHint(bulkTarget)}
+              Jeder Tipp meldet sofort an oder ab.
             </span>
           </>
         )
@@ -161,12 +148,10 @@ export function SchoolCheckinSelectionBar({
               variant="success"
               size="compact"
               onClick={() => onBulkAction("in")}
-              disabled={
-                noneSelected || isRunning || checkInBlocked !== undefined
-              }
+              disabled={noneSelected || isRunning}
               tooltip={CHECKIN_HINTS.checkIn}
               disabledReason={
-                noneSelected ? CHECKIN_HINTS.noneSelected : checkInBlocked
+                noneSelected ? CHECKIN_HINTS.noneSelected : undefined
               }
             >
               {runningAction === "in" ? (
@@ -174,26 +159,8 @@ export function SchoolCheckinSelectionBar({
               ) : (
                 <LogIn className="h-3.5 w-3.5" aria-hidden />
               )}
-              {bulkTarget ? `In ${bulkTarget.roomName} anmelden` : "Anmelden"}
+              {targetRoomName ? `In ${targetRoomName} anmelden` : "Anmelden"}
             </Button>
-            {bulkTarget?.pullCount !== undefined ? (
-              <Button
-                type="button"
-                variant="surface"
-                size="compact"
-                onClick={() => onBulkAction("pull")}
-                disabled={bulkTarget.pullCount === 0 || isRunning}
-                tooltip={pullHint(bulkTarget.roomName)}
-                disabledReason={pullBlockedReason(bulkTarget, selectedCount)}
-              >
-                {runningAction === "pull" ? (
-                  <SpinnerIcon className="h-3.5 w-3.5" />
-                ) : (
-                  <ArrowRightLeft className="h-3.5 w-3.5" aria-hidden />
-                )}
-                In {bulkTarget.roomName} holen
-              </Button>
-            ) : null}
             <Button
               type="button"
               variant="danger"

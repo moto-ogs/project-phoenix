@@ -216,41 +216,4 @@ describe("SchoolCheckinSelectionBar", () => {
       ).not.toBeInTheDocument();
     });
   });
-
-  it("turns Anmelden off and says why when only present children are marked", () => {
-    const props = renderBar({
-      selectionActive: true,
-      selectedCount: 2,
-      bulkTarget: { roomName: "Schulhof", absentCount: 0, pullCount: 2 },
-    });
-
-    // A kit button with a reason stays focusable: `aria-disabled`, no click.
-    const checkIn = screen.getByRole("button", {
-      name: /In Schulhof anmelden/,
-    });
-    expect(checkIn).toHaveAttribute("aria-disabled", "true");
-    fireEvent.click(checkIn);
-    expect(props.onBulkAction).not.toHaveBeenCalled();
-    expect(
-      screen.getByText(
-        "Die ausgewählten Kinder sind schon angemeldet. Mit „Holen“ kommen sie in Schulhof.",
-      ),
-    ).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: /In Schulhof holen/ }));
-    expect(props.onBulkAction).toHaveBeenCalledExactlyOnceWith("pull");
-  });
-
-  it("offers Holen only to someone who may move present children", () => {
-    renderBar({
-      selectionActive: true,
-      selectedCount: 1,
-      bulkTarget: { roomName: "Schulhof", absentCount: 1 },
-    });
-
-    expect(
-      screen.getByRole("button", { name: /In Schulhof anmelden/ }),
-    ).toBeEnabled();
-    expect(screen.queryByText("In Schulhof holen")).not.toBeInTheDocument();
-  });
 });

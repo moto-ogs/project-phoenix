@@ -26,7 +26,6 @@ function state(
     loading: false,
     loadError: undefined,
     target: null,
-    canPullPresent: false,
     setTargetValue: vi.fn(),
     lostTargetName: null,
     refresh: vi.fn(async () => undefined),
