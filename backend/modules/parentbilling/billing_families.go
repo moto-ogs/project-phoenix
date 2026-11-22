@@ -190,8 +190,10 @@ type BillingFamilies interface {
 	// FamilyChildren lists every family with a contract or a number of a
 	// child, with its children and their numbers (#7007), whatever the
 	// Träger's scope, so numbers can be prepared before it changes. The read
-	// of every number is recorded in its trail.
-	FamilyChildren(ctx context.Context, reviewer HolidayReviewer) ([]FamilyChildNumbers, error)
+	// of every number is recorded in its trail. Without numbers it lists the
+	// families with a contract only, names no child and records no read: a
+	// list that shows one number per payer needs no more (#7770).
+	FamilyChildren(ctx context.Context, reviewer HolidayReviewer, numbers bool) ([]FamilyChildNumbers, error)
 	// SetChildDebtorNumber sets the number of a child of a family when the
 	// Träger keeps one per child (#7007); empty removes it. A child that is
 	// no child of a contract of the family and has no number is

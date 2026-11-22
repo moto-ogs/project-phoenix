@@ -584,16 +584,22 @@ function BillingFamiliesContent() {
   );
   // The families with a contract come with a read of their own: they stand
   // in the list before their first invoice, so the office can set how they
-  // pay (#7770). With a number per child they bring the children's numbers.
+  // pay (#7770). With a number per child they bring the children's numbers;
+  // with a number per payer the read asks for no child and no number.
+  const perChildScope = scope === "child";
   const children = useTraegerResource(
-    scope ? traegerBillingKeys.familyChildren() : null,
-    fetchFamilyChildren,
+    scope
+      ? perChildScope
+        ? traegerBillingKeys.familyChildren()
+        : traegerBillingKeys.familyContracts()
+      : null,
+    () => fetchFamilyChildren(perChildScope),
     "die Liste der Familien",
   );
   const families = useMemo(() => {
     if (!scope || !listed.data || !children.data) return null;
-    return withFamilyChildren(listed.data, children.data, scope === "child");
-  }, [scope, listed.data, children.data]);
+    return withFamilyChildren(listed.data, children.data, perChildScope);
+  }, [scope, perChildScope, listed.data, children.data]);
   const loadError = listed.error ?? children.error ?? settingsLoad;
   const invalidate = useInvalidateFamily();
   // A changed number shows in the list and on the family's page.

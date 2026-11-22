@@ -249,6 +249,11 @@ export const FamilyDebtorNumberSchema: z.ZodType<FamilyDebtorNumber, unknown> = 
   debtor_number: str,
 });
 
+/** Query of GET /traeger/billing-families/children */
+export interface GetTraegerBillingFamiliesChildrenQuery {
+  numbers?: boolean;
+}
+
 /** Query of GET /traeger/billing-families/export */
 export interface GetTraegerBillingFamiliesExportQuery {
   format?: "csv" | "pdf" | "xlsx";
@@ -270,6 +275,7 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/billing-families/children",
     portals: ["org"],
+    query: ["numbers"],
     response: success(z.array(FamilyChildNumbersSchema)),
   },
   "GET /traeger/billing-families/debtor-number-format": {

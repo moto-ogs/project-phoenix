@@ -161,6 +161,15 @@ describe("TraegerBillingFamiliesPage", () => {
     expect(screen.getAllByText("107,50 €").length).toBeGreaterThan(0);
   });
 
+  it("asks for no child and no number when the Träger keeps one per payer (#7770)", async () => {
+    renderPage();
+    expect(
+      (await screen.findAllByText("Sabine Schneider"))[0],
+    ).toBeInTheDocument();
+    expect(api.fetchFamilyChildren).toHaveBeenCalledWith(false);
+    expect(api.fetchFamilyChildren).not.toHaveBeenCalledWith(true);
+  });
+
   it("names the open sum a claim before payment", async () => {
     // #6348: moto sees no incoming payment. The open sum is what the
     // invoices still ask for, never a checked arrear.

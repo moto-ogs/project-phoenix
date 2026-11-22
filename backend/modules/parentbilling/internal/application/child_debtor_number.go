@@ -171,8 +171,9 @@ func familyChildNumbers(contracts []contractChild, numbers []parentbilling.Child
 // FamilyChildren lists the families with their children and numbers, and
 // records the read of every number it shows. The office can prepare the
 // numbers before the Träger keeps them per child; the list of families asks
-// for them only then.
-func (f *BillingFamilies) FamilyChildren(ctx context.Context, reviewer parentbilling.HolidayReviewer) ([]parentbilling.FamilyChildNumbers, error) {
+// for them only then. Without numbers it answers the families with a
+// contract alone: no child, no number and so no read to record (#7770).
+func (f *BillingFamilies) FamilyChildren(ctx context.Context, reviewer parentbilling.HolidayReviewer, numbers bool) ([]parentbilling.FamilyChildNumbers, error) {
 	if err := validReviewer(reviewer); err != nil {
 		return nil, err
 	}
@@ -180,11 +181,18 @@ func (f *BillingFamilies) FamilyChildren(ctx context.Context, reviewer parentbil
 	if err != nil {
 		return nil, err
 	}
-	numbers, err := f.store.ChildDebtorNumbers(ctx, reviewer.OrganizationID)
+	if !numbers {
+		families, _ := familyChildNumbers(contracts, nil)
+		for i := range families {
+			families[i].Children = []parentbilling.FamilyChild{}
+		}
+		return families, nil
+	}
+	stored, err := f.store.ChildDebtorNumbers(ctx, reviewer.OrganizationID)
 	if err != nil {
 		return nil, err
 	}
-	families, read := familyChildNumbers(contracts, numbers)
+	families, read := familyChildNumbers(contracts, stored)
 	if err := f.store.InsertChildDebtorNumberEvents(ctx, reviewer.OrganizationID, reviewer.AccountID, familyBillingRead, read); err != nil {
 		return nil, fmt.Errorf("parent billing: record the read of the children's numbers: %w", err)
 	}

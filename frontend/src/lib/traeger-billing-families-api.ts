@@ -318,10 +318,15 @@ function childFromBackend(
  * Every family with a care contract or a child's number, with its children
  * and their own numbers (#7007).
  */
-export async function fetchFamilyChildren(): Promise<FamilyChildNumbers[]> {
+export async function fetchFamilyChildren(
+  numbers = true,
+): Promise<FamilyChildNumbers[]> {
+  // Without numbers the backend names the families with a contract only:
+  // no child, no number, no entry in a number's trail (#7770).
   const families = await bffJson(
     "org",
     "GET /traeger/billing-families/children",
+    { query: { numbers: numbers ? undefined : false } },
   );
   return families.map((family) => ({
     contractId: idOrNone(family.contract_id),

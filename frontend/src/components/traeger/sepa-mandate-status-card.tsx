@@ -9,8 +9,9 @@ import { ButtonLink } from "~/components/ui/button";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { ApiError } from "~/lib/api-error";
+import { berlinTodayISO } from "~/lib/date-helpers";
 import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
-import { fetchSepaMandates } from "~/lib/traeger-sepa-api";
+import { fetchSepaMandates, type SepaMandate } from "~/lib/traeger-sepa-api";
 import { traegerPath } from "~/lib/traeger-url";
 import { useFreshTraegerResource } from "./use-traeger-resource";
 
@@ -19,6 +20,17 @@ function sepaMandatePath(contractId: string): string {
   return traegerPath(
     `/traeger/abrechnung/lastschrift/${encodeURIComponent(contractId)}`,
   );
+}
+
+/**
+ * Whether the mandate authorizes a collection today, as the billing checks
+ * it: in force for the current creditor, not expired, and a one-off mandate
+ * not used yet.
+ */
+function collectableToday(mandate: SepaMandate | undefined): boolean {
+  if (!mandate?.creditorCurrent) return false;
+  if (mandate.expiresOn && mandate.expiresOn <= berlinTodayISO()) return false;
+  return !(mandate.kind === "one_off" && mandate.lastCollectedOn);
 }
 
 /** The mandates of a contract's family as the status card reads them. */
@@ -45,7 +57,7 @@ export function useSepaMandateStatus(contractId: string) {
      * Whether a direct debit can be collected today: a mandate in force
      * for the current creditor. null while loading or after a failed read.
      */
-    collectable: mandates ? Boolean(inForce?.creditorCurrent) : null,
+    collectable: mandates ? collectableToday(inForce) : null,
   };
 }
 
@@ -62,17 +74,20 @@ export function SepaMandateStatusCard({
 
 export function SepaMandateStatusView({
   contractId,
-  read: { mandates, failure, inForce },
+  read: { mandates, failure, inForce, collectable },
 }: Readonly<{ contractId: string; read: SepaMandateStatusRead }>) {
   if (failure instanceof ApiError && failure.status === 403) return null;
   const failed = mandates === null && Boolean(failure);
+  // In force for the current creditor and still no proof for a collection:
+  // expired, or a one-off mandate already used.
+  const spent = Boolean(inForce?.creditorCurrent) && collectable === false;
 
   return (
     <SectionCard
       title="SEPA-Lastschriftmandat"
       titleBadge={
         mandates ? (
-          inForce?.creditorCurrent ? (
+          collectable ? (
             <StatusBadge tone="green" label="Gültig" />
           ) : inForce ? (
             <StatusBadge tone="warning" label="Neues Mandat nötig" />
@@ -84,11 +99,13 @@ export function SepaMandateStatusView({
       description={
         failed
           ? "Der Stand des Mandats konnte nicht geladen werden."
-          : inForce && !inForce.creditorCurrent
-            ? "Das Mandat gilt für deine frühere Gläubiger-ID. Bis ein neues da ist, bekommt die Familie eine Rechnung zum Überweisen."
-            : inForce
-              ? `Mandatsreferenz ${inForce.reference} · Konto ${inForce.ibanMasked}`
-              : "Ohne Mandat bekommt die Familie eine Rechnung zum Überweisen."
+          : spent
+            ? "Mit diesem Mandat kann nicht mehr abgebucht werden: Es ist abgelaufen oder war nur für eine Abbuchung. Erfasse ein neues."
+            : inForce && !inForce.creditorCurrent
+              ? "Das Mandat gilt für deine frühere Gläubiger-ID. Bis ein neues da ist, bekommt die Familie eine Rechnung zum Überweisen."
+              : inForce
+                ? `Mandatsreferenz ${inForce.reference} · Konto ${inForce.ibanMasked}`
+                : "Ohne Mandat bekommt die Familie eine Rechnung zum Überweisen."
       }
       loading={mandates === null && !failed}
       actions={

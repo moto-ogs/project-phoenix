@@ -391,6 +391,8 @@ describe("TraegerVertragPage", () => {
     expect(
       screen.getByText(/Die Eltern sehen den Vertrag erst/),
     ).toBeInTheDocument();
+    // A discarded draft would take the family's choice with it (#7770).
+    expect(screen.queryByText("Empfänger und Zahlung")).not.toBeInTheDocument();
 
     showTab("Kündigung");
     expect(
@@ -688,6 +690,10 @@ describe("TraegerVertragPage", () => {
     ).toBeEnabled();
     expect(
       screen.getByText(/Die Mail ging an erika@example.org/),
+    ).toBeInTheDocument();
+    // A sent contract cannot be discarded: its family sets how it pays.
+    expect(
+      await screen.findByText("Empfänger und Zahlung"),
     ).toBeInTheDocument();
     showTab("Unterschrift und Versand");
     expect(screen.getByText("Gesendet")).toBeInTheDocument();

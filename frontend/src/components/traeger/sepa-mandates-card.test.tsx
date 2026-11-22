@@ -12,6 +12,7 @@ import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type { SepaMandate } from "~/lib/traeger-sepa-api";
 import { deferred } from "~/test/helpers/form-modal-pending";
+import { testClockDay } from "~/test/clock";
 import { SepaMandateStatusCard } from "./sepa-mandate-status-card";
 import TraegerSepaMandatePage from "~/app/traeger/abrechnung/lastschrift/[contractId]/page";
 import { SepaMandatesCard } from "./sepa-mandates-card";
@@ -119,6 +120,41 @@ describe("SepaMandatesCard (#4695)", () => {
       ).toBeVisible();
     },
   );
+
+  it.each([
+    ["an expired mandate", { expiresOn: testClockDay() }],
+    [
+      "a one-off mandate already collected",
+      { kind: "one_off", lastCollectedOn: testClockDay(-30) },
+    ],
+  ] as const)(
+    "does not call %s valid: the billing refuses it (#7770)",
+    async (_name, spent) => {
+      api.fetchSepaMandates.mockResolvedValue([{ ...MANDATE, ...spent }]);
+      render(
+        <TraegerResourceTestProvider>
+          <SepaMandateStatusCard contractId="42" />
+        </TraegerResourceTestProvider>,
+      );
+      expect(await screen.findByText("Neues Mandat nötig")).toBeVisible();
+      expect(
+        screen.getByText(/Mit diesem Mandat kann nicht mehr abgebucht werden/),
+      ).toBeVisible();
+      expect(screen.queryByText("Gültig")).not.toBeInTheDocument();
+    },
+  );
+
+  it("calls a mandate valid until the day before it expires", async () => {
+    api.fetchSepaMandates.mockResolvedValue([
+      { ...MANDATE, expiresOn: testClockDay(1) },
+    ]);
+    render(
+      <TraegerResourceTestProvider>
+        <SepaMandateStatusCard contractId="42" />
+      </TraegerResourceTestProvider>,
+    );
+    expect(await screen.findByText("Gültig")).toBeVisible();
+  });
 
   it("reads the mandate history on every reopening", async () => {
     api.fetchSepaMandates.mockResolvedValue([MANDATE]);
