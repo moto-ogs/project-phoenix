@@ -25,6 +25,7 @@ const FIELD_VALUES = [
   "child_birth_date",
   "school",
   "children",
+  "valid_from",
 ] as const;
 const ROW_STATUS_VALUES = [
   "ready",
@@ -46,6 +47,12 @@ export interface FamilyImportMapping {
   readonly columns: FamilyImportColumns;
   /** The school of every row of a file without a school column; "" with one. */
   readonly schoolId: string;
+  /**
+   * The day the numbers count from, "YYYY-MM-DD", for every row without a
+   * day of its own; "" lets the backend take today. An answer always names
+   * the day it used.
+   */
+  readonly validFrom: string;
 }
 
 interface FamilyImportProblem {
@@ -68,6 +75,11 @@ export interface FamilyImportRow {
   readonly contractId: string | null;
   /** The first day the number counts from. */
   readonly validFrom: string | null;
+  /**
+   * Every later day: the child's contracts belong to several families and
+   * the number counts from a later day for some of them. Else empty.
+   */
+  readonly laterValidFrom: readonly string[];
   /** The number the Abrechnung confirmed before, for "same" and "differs". */
   readonly confirmedChildren: number | null;
   readonly problems: readonly FamilyImportProblem[];
@@ -124,6 +136,9 @@ function mapRow(
     children: row.children,
     contractId: row.contract_id || null,
     validFrom: row.valid_from,
+    laterValidFrom: (row.later_valid_from ?? []).filter(
+      (day): day is string => day !== null,
+    ),
     confirmedChildren: row.confirmed_children,
     problems: (row.problems ?? []).map((problem) => ({
       field: knownEnum(FIELD_VALUES, problem.field),
@@ -146,6 +161,7 @@ function mapImportResult(
     mapping: {
       columns: result.mapping.columns,
       schoolId: mappedSchoolId(result.mapping.school_id),
+      validFrom: result.mapping.valid_from ?? "",
     },
     unmapped: (result.unmapped ?? []).flatMap((field) => {
       const known = knownEnum(FIELD_VALUES, field);
@@ -175,6 +191,7 @@ async function postImport(
         columns: request.mapping.columns,
         // "0" leaves the school to the file.
         school_id: request.mapping.schoolId || "0",
+        valid_from: request.mapping.validFrom || null,
       } satisfies traegerFamilyChildrenContract.FamilyChildrenImportMapping),
     );
   }

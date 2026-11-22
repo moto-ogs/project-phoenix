@@ -842,6 +842,8 @@ Schulen des Trägers. Geschwister ohne Vertrag kennt moto nur als Teil der
 bestätigten Kinderzahl, nie als Person oder Vertragspartner. Eine
 Geschwisterregel zählt die Kinder mit Vertrag; nutzt sie die Kinderzahl,
 zählt sie diese, mindestens aber die Kinder mit Vertrag.
+Sie ermäßigt entweder die Kinder ab einem Rang („ab dem 2. Kind“) oder, ab
+einer **Familiengröße**, jedes Kind mit Vertrag, auch das erste (ADR 0305).
 _Vermeiden_: Kinder ohne Vertrag als Personen anlegen.
 
 ## Mensa-Monatsfreigabe
