@@ -21,26 +21,26 @@ import {
  */
 export async function fetchPendingChangeRequestCount(): Promise<number> {
   try {
-    const { pending_count } = await bffJson(
+    const counts = await bffJson(
       "tenant",
       "GET /api/students/change-requests/pending-count",
     );
-    return pending_count;
+    return counts?.pending_count ?? 0;
   } catch {
-    // The badge stays empty; the sidebar must not break on it.
     return 0;
   }
 }
 
 export async function fetchChangeRequestAccess(): Promise<ParentRequestReviewAccess> {
-  const { review_access } = await bffJson(
+  const answer = await bffJson(
     "tenant",
     "GET /api/students/change-requests/access",
   );
-  if (!isParentRequestReviewAccess(review_access)) {
+  const access = answer?.review_access;
+  if (!isParentRequestReviewAccess(access)) {
     throw new ApiError("Change request access response is invalid", 500);
   }
-  return review_access;
+  return access;
 }
 
 /**
@@ -51,16 +51,17 @@ export async function fetchChangeRequestAccess(): Promise<ParentRequestReviewAcc
 export async function fetchStudentRequestReviewCoverage(
   studentId: string,
 ): Promise<StudentRequestReviewCoverage> {
-  const { student } = await bffJson(
+  const answer = await bffJson(
     "tenant",
     "GET /api/students/change-requests/access",
     { query: { student_id: studentId } },
   );
-  if (!isStudentRequestReviewCoverage(student)) {
+  const coverage = answer?.student;
+  if (!isStudentRequestReviewCoverage(coverage)) {
     throw new ApiError(
       "Student request review coverage response is invalid",
       500,
     );
   }
-  return student;
+  return coverage;
 }

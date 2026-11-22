@@ -48,6 +48,9 @@ type requestChildRow struct {
 	WeeklyPlanOn       *calendar.Date `bun:"weekly_plan_on,type:date"`
 	WeeklyPlanReplaces bool           `bun:"weekly_plan_replaces,notnull,default:false"`
 	WeeklyPlanAuthor   *int64         `bun:"weekly_plan_author"`
+	// The Träger-Büro authors the planned weekly rows (#7818); never set
+	// beside WeeklyPlanAuthor.
+	WeeklyPlanByTraeger bool `bun:"weekly_plan_by_traeger,notnull,default:false"`
 }
 
 // value decodes the row into the owner's request child. Its answers decode

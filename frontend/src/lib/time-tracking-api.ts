@@ -1,7 +1,6 @@
 // Time tracking API service for check-in/out and history management
 
 import type * as shared from "~/lib/contract/shared.generated";
-import type * as tt from "~/lib/contract/time-tracking.generated";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import {
   knownMailOutcome,
@@ -57,34 +56,65 @@ export interface UpdateSessionRequest {
   breaks?: Array<{ id: string; durationMinutes: number }>;
 }
 
+/**
+ * Create absence request body
+ */
+export interface CreateAbsenceRequest {
+  absence_type: string;
+  /**
+   * School-defined Abwesenheitsart (#2403). When set, the backend takes the
+   * canonical absence_type from the art itself, so the pair can never disagree.
+   */
+  absence_type_id?: string | null;
+  date_start: string;
+  date_end: string;
+  half_day?: boolean;
+  note?: string;
+}
+
+/**
+ * Update absence request body
+ */
+export interface UpdateAbsenceRequest {
+  absence_type?: string;
+  /** Re-points the school-defined Abwesenheitsart; `null` clears it (#2403). */
+  absence_type_id?: string | null;
+  date_start?: string;
+  date_end?: string;
+  half_day?: boolean;
+  note?: string;
+}
+
 interface TimeTrackingConfig {
   accountStartDate: string;
 }
 
 /**
- * Service class for time tracking API operations. The BFF routes read the
- * session cookie; the browser holds no token (#5005).
+ * Service class for time tracking API operations
  */
 class TimeTrackingService {
   async checkIn(
     status: "present" | "home_office",
     reason?: string,
   ): Promise<WorkSession> {
-    return mapWorkSessionResponse(
-      await bffJson("tenant", "POST /api/time-tracking/check-in", {
+    const session = await bffJson(
+      "tenant",
+      "POST /api/time-tracking/check-in",
+      {
         body: reason ? { status, reason } : { status },
         errorMessage: "Failed to check in",
-      }),
+      },
     );
+    return mapWorkSessionResponse(session);
   }
 
   async checkOut(reason?: string): Promise<WorkSession> {
-    return mapWorkSessionResponse(
-      await bffJson("tenant", "POST /api/time-tracking/check-out", {
-        body: reason ? { reason } : {},
-        errorMessage: "Failed to check out",
-      }),
+    const session = await bffJson(
+      "tenant",
+      "POST /api/time-tracking/check-out",
+      { body: reason ? { reason } : {}, errorMessage: "Failed to check out" },
     );
+    return mapWorkSessionResponse(session);
   }
 
   async getCurrentSession(): Promise<WorkSession | null> {
@@ -171,47 +201,50 @@ class TimeTrackingService {
     id: string,
     updates: UpdateSessionRequest,
   ): Promise<WorkSession> {
-    return mapWorkSessionResponse(
-      await bffJson("tenant", "PUT /api/time-tracking/{id}", {
-        params: { id },
-        body: {
-          date: updates.date,
-          check_in_time: updates.checkInTime,
-          check_out_time: updates.checkOutTime,
-          break_minutes: updates.breakMinutes,
-          status: updates.status,
-          notes: updates.notes,
-          ...(updates.breaks && updates.breaks.length > 0
-            ? {
-                breaks: updates.breaks.map((b) => ({
-                  id: b.id,
-                  duration_minutes: b.durationMinutes,
-                })),
-              }
-            : {}),
-        },
-        errorMessage: "Failed to update session",
-      }),
-    );
+    const session = await bffJson("tenant", "PUT /api/time-tracking/{id}", {
+      params: { id },
+      body: {
+        date: updates.date,
+        check_in_time: updates.checkInTime,
+        check_out_time: updates.checkOutTime,
+        break_minutes: updates.breakMinutes,
+        status: updates.status,
+        notes: updates.notes,
+        ...(updates.breaks && updates.breaks.length > 0
+          ? {
+              breaks: updates.breaks.map((b) => ({
+                id: b.id,
+                duration_minutes: b.durationMinutes,
+              })),
+            }
+          : {}),
+      },
+      errorMessage: "Failed to update session",
+    });
+    return mapWorkSessionResponse(session);
   }
 
   async startBreak(durationMinutes?: number): Promise<WorkSessionBreak> {
-    return mapWorkSessionBreakResponse(
-      await bffJson("tenant", "POST /api/time-tracking/break/start", {
+    const started = await bffJson(
+      "tenant",
+      "POST /api/time-tracking/break/start",
+      {
         body: durationMinutes
           ? { planned_duration_minutes: durationMinutes }
           : {},
         errorMessage: "Failed to start break",
-      }),
+      },
     );
+    return mapWorkSessionBreakResponse(started);
   }
 
   async endBreak(): Promise<WorkSession> {
-    return mapWorkSessionResponse(
-      await bffJson("tenant", "POST /api/time-tracking/break/end", {
-        errorMessage: "Failed to end break",
-      }),
+    const session = await bffJson(
+      "tenant",
+      "POST /api/time-tracking/break/end",
+      { errorMessage: "Failed to end break" },
     );
+    return mapWorkSessionResponse(session);
   }
 
   async getSessionBreaks(sessionId: string): Promise<WorkSessionBreak[]> {
@@ -235,10 +268,7 @@ class TimeTrackingService {
     const absences = await bffJson(
       "tenant",
       "GET /api/time-tracking/absences",
-      {
-        query: { from, to },
-        errorMessage: "Failed to get absences",
-      },
+      { query: { from, to }, errorMessage: "Failed to get absences" },
     );
     return (absences ?? []).map(mapStaffAbsenceResponse);
   }
@@ -266,39 +296,39 @@ class TimeTrackingService {
       "GET /api/time-tracking/absences/mails",
       { errorMessage: "Failed to get absence request mails" },
     );
-    const counts: Record<string, MailOutcomeCounts> = {};
-    for (const [id, byOutcome] of Object.entries(mails.absences ?? {})) {
-      if (!byOutcome) continue;
+    // Counts per outcome; an outcome this build does not know is left out.
+    const byAbsence: Record<string, MailOutcomeCounts> = {};
+    for (const [id, counts] of Object.entries(mails?.absences ?? {})) {
+      if (!counts) continue;
       const known: Partial<Record<MailOutcome, number>> = {};
-      for (const [outcome, count] of Object.entries(byOutcome)) {
-        const mailOutcome = knownMailOutcome(outcome);
-        if (mailOutcome) known[mailOutcome] = count;
+      for (const [key, count] of Object.entries(counts)) {
+        const outcome = knownMailOutcome(key);
+        if (outcome) known[outcome] = count;
       }
-      counts[id] = known;
+      byAbsence[id] = known;
     }
-    return counts;
+    return byAbsence;
   }
 
-  async createAbsence(req: shared.CreateAbsenceRequest): Promise<StaffAbsence> {
-    return mapStaffAbsenceResponse(
-      await bffJson("tenant", "POST /api/time-tracking/absences", {
-        body: req,
-        errorMessage: "Failed to create absence",
-      }),
+  async createAbsence(req: CreateAbsenceRequest): Promise<StaffAbsence> {
+    const absence = await bffJson(
+      "tenant",
+      "POST /api/time-tracking/absences",
+      { body: req, errorMessage: "Failed to create absence" },
     );
+    return mapStaffAbsenceResponse(absence);
   }
 
   async updateAbsence(
     id: string,
-    req: tt.UpdateAbsenceRequest,
+    req: UpdateAbsenceRequest,
   ): Promise<StaffAbsence> {
-    return mapStaffAbsenceResponse(
-      await bffJson("tenant", "PUT /api/time-tracking/absences/{id}", {
-        params: { id },
-        body: req,
-        errorMessage: "Failed to update absence",
-      }),
+    const absence = await bffJson(
+      "tenant",
+      "PUT /api/time-tracking/absences/{id}",
+      { params: { id }, body: req, errorMessage: "Failed to update absence" },
     );
+    return mapStaffAbsenceResponse(absence);
   }
 
   async deleteAbsence(id: string): Promise<void> {
@@ -308,13 +338,16 @@ class TimeTrackingService {
     });
   }
 
-  async requestVacation(req: tt.RequestVacationRequest): Promise<StaffAbsence> {
-    return mapStaffAbsenceResponse(
-      await bffJson("tenant", "POST /api/time-tracking/vacation/request", {
+  async requestVacation(req: VacationRequestPayload): Promise<StaffAbsence> {
+    const absence = await bffJson(
+      "tenant",
+      "POST /api/time-tracking/vacation/request",
+      {
         body: req,
         errorMessage: "Urlaubsantrag konnte nicht erstellt werden",
-      }),
+      },
     );
+    return mapStaffAbsenceResponse(absence);
   }
 
   async cancelAbsence(id: string): Promise<void> {
@@ -363,6 +396,15 @@ class TimeTrackingService {
 export interface OwnAbsenceAllowance {
   readonly name: string;
   readonly summary: AbsenceTypeAllowanceSummary;
+}
+
+interface VacationRequestPayload {
+  date_start: string;
+  date_end: string;
+  start_half_day: boolean;
+  end_half_day: boolean;
+  note?: string;
+  substitute_staff_id?: string;
 }
 
 export const timeTrackingService = new TimeTrackingService();

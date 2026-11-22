@@ -36,9 +36,12 @@ type targetedFieldSyncOptions struct {
 	Scope targetedFieldScope
 	// ScheduleAuthorStaffID names the author of the weekly rows the dispatch
 	// writes; 0 resolves the reviewing account's staff membership instead.
-	ScheduleAuthorStaffID  int64
-	PreviousSnapshot       map[string]any
-	KeepGuardianProfileIDs map[int64]bool
+	ScheduleAuthorStaffID int64
+	// ScheduleAuthorByTraeger writes the weekly rows as the Träger-Büro
+	// without a staff author: a weekly plan a Träger session stored (#7818).
+	ScheduleAuthorByTraeger bool
+	PreviousSnapshot        map[string]any
+	KeepGuardianProfileIDs  map[int64]bool
 }
 
 // targetedFieldSync is one run of applyTargetedFields.
@@ -378,7 +381,7 @@ func (r *targetedFieldSync) applyContactsField(field enrollment.FormField, raw a
 
 // scheduleAuthor names who the weekly rows of this dispatch are written for.
 func (r *targetedFieldSync) scheduleAuthor() scheduleAuthor {
-	return scheduleAuthor{staffID: r.options.ScheduleAuthorStaffID, reviewerAccountID: r.reviewedBy}
+	return scheduleAuthor{staffID: r.options.ScheduleAuthorStaffID, byTraeger: r.options.ScheduleAuthorByTraeger, reviewerAccountID: r.reviewedBy}
 }
 
 // replaceSchedules: Replace implies schedule replacement; ReplaceSchedules

@@ -3,8 +3,10 @@
 package common
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -54,6 +56,27 @@ func TestAnswersOfRegisteredRoutesAreHeldAgainstTheContract(t *testing.T) {
 	assert.Equal(t, http.StatusNoContent, serve(router, http.MethodDelete, "/school/class-day/homework/1a/7").Code)
 	assert.Equal(t, http.StatusOK, serve(router, http.MethodGet, "/not-registered/7/roster").Code)
 	assert.Equal(t, http.StatusOK, serve(relative, http.MethodGet, "/7/roster").Code)
+}
+
+// A handler that reads a body its contract does not type is refused: no
+// typed client could send it (#7808). A body the handler leaves unread is a
+// test sending more than the route takes.
+func TestAHandlerReadingAnUntypedBodyIsRefused(t *testing.T) {
+	t.Parallel()
+	serve := func(read bool) int {
+		router := chi.NewRouter()
+		router.Delete("/school/class-day/homework/{schoolClass}/{homeworkId}", func(w http.ResponseWriter, r *http.Request) {
+			if read {
+				_, _ = io.ReadAll(r.Body)
+			}
+			RespondNoContent(w, r)
+		})
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, httptest.NewRequest(http.MethodDelete, "/school/class-day/homework/1a/7", strings.NewReader(`{"reason":"x"}`)))
+		return recorder.Code
+	}
+	assert.Equal(t, http.StatusInternalServerError, serve(true))
+	assert.Equal(t, http.StatusNoContent, serve(false))
 }
 
 func TestAnswerCoverageRequiresAnUnambiguousRoute(t *testing.T) {

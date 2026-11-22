@@ -431,7 +431,7 @@ func (s *Service) CapStaffShiftSeriesForStaff(ctx context.Context, staffID int64
 func (s *Service) RecordSeriesException(ctx context.Context, exception workforce.StaffShiftSeriesException) error {
 	storedException := domain.StaffShiftSeriesException{
 		ID: exception.ID, TenantID: exception.TenantID, SeriesID: exception.SeriesID,
-		Date: exception.Date, CreatedBy: exception.CreatedBy, CreatedAt: exception.CreatedAt,
+		Date: exception.Date, CreatedBy: exception.CreatedBy, PlannedByTraeger: exception.PlannedByTraeger, CreatedAt: exception.CreatedAt,
 	}
 	if validationErr := domain.ValidateStaffShiftSeriesException(storedException); validationErr != nil {
 		return mapShiftError(validationErr)

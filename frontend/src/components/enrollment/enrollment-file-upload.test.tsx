@@ -64,7 +64,7 @@ function Harness({
   previewMode = false,
   lateInviteToken,
   statusToken,
-  uploadEndpoint,
+  viaParentPortal,
   initial = NO_FILES,
 }: Readonly<{
   field?: FormField;
@@ -72,7 +72,7 @@ function Harness({
   previewMode?: boolean;
   lateInviteToken?: string;
   statusToken?: string;
-  uploadEndpoint?: string;
+  viaParentPortal?: boolean;
   initial?: UploadValue[];
 }>) {
   const [value, setValue] = useState<UploadValue[]>(initial);
@@ -81,7 +81,7 @@ function Harness({
     phaseId,
     lateInviteToken,
     statusToken,
-    uploadEndpoint,
+    viaParentPortal,
     locale: "de",
     previewMode,
   });
@@ -272,7 +272,7 @@ describe("FileUploadInput", () => {
     expect((init.body as FormData).get("status_token")).toBe("status-token");
   });
 
-  it("uses the parent upload endpoint when the form provides one", async () => {
+  it("uses the parent upload endpoint when the form asks for it", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValue(
@@ -282,9 +282,7 @@ describe("FileUploadInput", () => {
         ),
       );
     vi.stubGlobal("fetch", fetchMock);
-    const { container } = render(
-      <Harness uploadEndpoint="/api/parent/enrollments/school-a/uploads" />,
-    );
+    const { container } = render(<Harness viaParentPortal />);
 
     pick(container, [new File(["%PDF-1.7"], "bescheid.pdf")]);
 

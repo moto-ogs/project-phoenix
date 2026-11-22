@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-vi.mock(
-  "~/lib/session-cache",
-  () => import("~/test/mocks/plain-session-fetch"),
-);
-
 import {
   fetchChangeRequestAccess,
   fetchPendingChangeRequestCount,
   fetchStudentRequestReviewCoverage,
 } from "./change-requests-api";
+
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 
 const originalFetch = globalThis.fetch;
 
@@ -55,6 +55,11 @@ describe("fetchPendingChangeRequestCount", () => {
   it("returns the count from the {data} envelope", async () => {
     mockFetch(async () => jsonResponse({ data: { pending_count: 12 } }));
     expect(await fetchPendingChangeRequestCount()).toBe(12);
+  });
+
+  it("returns 0 when pending_count is absent from data", async () => {
+    mockFetch(async () => jsonResponse({ data: {} }));
+    expect(await fetchPendingChangeRequestCount()).toBe(0);
   });
 
   it("returns 0 when the envelope has no data key", async () => {

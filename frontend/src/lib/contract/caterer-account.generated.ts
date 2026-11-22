@@ -9,6 +9,7 @@ import {
   success,
 } from "./runtime";
 import {
+  TokenResponseSchema,
   type SwitchOffRequest,
 } from "./shared.generated";
 
@@ -22,6 +23,12 @@ export const CatererMFAStatusResponseSchema: z.ZodType<CatererMFAStatusResponse,
   enabled: bool,
   masked_email: str,
 });
+
+/** Go: catererauth.confirmMFARequest */
+export interface confirmMFARequest {
+  challenge_token?: string;
+  code?: string;
+}
 
 /** Go: catererauth.CatererMFAChallengeResponse */
 export interface CatererMFAChallengeResponse {
@@ -47,6 +54,15 @@ export const routes = {
     pattern: "/caterer/account/mfa",
     portals: ["caterer"],
     response: success(CatererMFAStatusResponseSchema),
+  },
+  "POST /caterer/account/mfa/confirm": {
+    method: "POST",
+    pattern: "/caterer/account/mfa/confirm",
+    portals: ["caterer"],
+    routeFile: "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+    plain: true,
+    request: requestBody<confirmMFARequest>(),
+    response: TokenResponseSchema,
   },
   "POST /caterer/account/mfa/disable": {
     method: "POST",

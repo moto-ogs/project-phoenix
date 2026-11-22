@@ -23,6 +23,7 @@ import (
 func publicContractMounts() []contractMount {
 	return []contractMount{
 		{"/api/enrollment", enrollmentHTTP.PublicRouteContracts()},
+		{"/api/enrollment", enrollmentHTTP.RouteFileContracts()},
 		{"/caterer", catererPortalHTTP.PublicRouteContracts()},
 		{"/traeger/invitations", traegerPortalHTTP.InvitationRouteContracts()},
 		{holidayRegistrationPath, enrollmentHTTP.PublicHolidayRegistrationRouteContracts()},
@@ -78,6 +79,7 @@ func staffPortalInvitationContractMounts() []contractMount {
 		{"/auth/invitations", accountHTTP.InvitationRouteContracts()},
 		{"/auth", accountHTTP.AdminRouteContracts(peopledirectory.CaregiverCapabilityState{})},
 		{"/auth", accountHTTP.SelfServiceRouteContracts()},
+		{"/auth", accountHTTP.SessionRouteContracts()},
 	}
 }
 
@@ -87,7 +89,10 @@ func staffPortalInvitationContractMounts() []contractMount {
 func secondFactorContractMounts() []contractMount {
 	return []contractMount{
 		{"/caterer", catererAuthHTTP.SecondFactorRouteContracts()},
+		{"/caterer", catererAuthHTTP.SessionRouteContracts()},
 		{"/parent", parentAuthHTTP.SecondFactorRouteContracts()},
+		{"/parent", parentAuthHTTP.SessionRouteContracts()},
 		{"/school/auth", schoolPortalHTTP.AuthRouteContracts()},
+		{"/school/auth", schoolPortalHTTP.SessionRouteContracts()},
 	}
 }

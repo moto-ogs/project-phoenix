@@ -2,19 +2,21 @@ import { afterEach, describe, it, expect, vi, beforeEach } from "vitest";
 import { getSession } from "next-auth/react";
 import { ApiError } from "./api-error";
 import { timeTrackingService } from "./time-tracking-api";
-import type { UpdateSessionRequest } from "./time-tracking-api";
-import type * as shared from "~/lib/contract/shared.generated";
-import type * as tt from "~/lib/contract/time-tracking.generated";
-
-vi.mock(
-  "~/lib/session-cache",
-  () => import("~/test/mocks/plain-session-fetch"),
-);
+import type {
+  CreateAbsenceRequest,
+  UpdateAbsenceRequest,
+  UpdateSessionRequest,
+} from "./time-tracking-api";
 
 // Mock next-auth/react
 vi.mock("next-auth/react", () => ({
   getSession: vi.fn(),
 }));
+
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 
 const mockGetSession = vi.mocked(getSession);
 
@@ -321,7 +323,7 @@ describe("TimeTrackingService", () => {
     });
 
     it("returns an empty account start date when backend config is unset", async () => {
-      // Go writes the unset date as its zero value, an empty string.
+      // Go sends the unset date as an empty string; the contract decodes it.
       global.fetch = mockFetchResponse({
         status: "success",
         data: { account_start_date: "" },
@@ -651,7 +653,7 @@ describe("TimeTrackingService", () => {
         data: backendAbsence,
       });
 
-      const req: shared.CreateAbsenceRequest = {
+      const req: CreateAbsenceRequest = {
         absence_type: "sick",
         date_start: "2025-06-20",
         date_end: "2025-06-21",
@@ -679,7 +681,7 @@ describe("TimeTrackingService", () => {
         data: { ...backendAbsence, note: "Severe flu" },
       });
 
-      const req: tt.UpdateAbsenceRequest = { note: "Severe flu" };
+      const req: UpdateAbsenceRequest = { note: "Severe flu" };
       const result = await timeTrackingService.updateAbsence("7", req);
 
       expect(global.fetch).toHaveBeenCalledWith(
@@ -922,8 +924,8 @@ describe("TimeTrackingService", () => {
 
       const callArgs = (global.fetch as ReturnType<typeof vi.fn>).mock
         .calls[0] as [string, RequestInit];
-      const headers = (callArgs[1].headers ?? {}) as Record<string, string>;
-      expect(headers.Authorization).toBeUndefined();
+      const headers = new Headers(callArgs[1].headers);
+      expect(headers.get("Authorization")).toBeNull();
     });
 
     it("sends request without auth header when session has no token", async () => {
@@ -940,8 +942,8 @@ describe("TimeTrackingService", () => {
 
       const callArgs = (global.fetch as ReturnType<typeof vi.fn>).mock
         .calls[0] as [string, RequestInit];
-      const headers = (callArgs[1].headers ?? {}) as Record<string, string>;
-      expect(headers.Authorization).toBeUndefined();
+      const headers = new Headers(callArgs[1].headers);
+      expect(headers.get("Authorization")).toBeNull();
     });
   });
 
@@ -956,8 +958,8 @@ describe("TimeTrackingService", () => {
 
       const callArgs = (global.fetch as ReturnType<typeof vi.fn>).mock
         .calls[0] as [string, RequestInit];
-      const headers = (callArgs[1].headers ?? {}) as Record<string, string>;
-      expect(headers["Content-Type"]).toBe("application/json");
+      const headers = new Headers(callArgs[1].headers);
+      expect(headers.get("Content-Type")).toBe("application/json");
     });
 
     it("omits Content-Type for GET requests", async () => {
@@ -970,8 +972,8 @@ describe("TimeTrackingService", () => {
 
       const callArgs = (global.fetch as ReturnType<typeof vi.fn>).mock
         .calls[0] as [string, RequestInit];
-      const headers = (callArgs[1].headers ?? {}) as Record<string, string>;
-      expect(headers["Content-Type"]).toBeUndefined();
+      const headers = new Headers(callArgs[1].headers);
+      expect(headers.get("Content-Type")).toBeNull();
     });
   });
 });

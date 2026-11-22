@@ -63,9 +63,7 @@ export function useUserContext(enabled = true): UseUserContextReturn {
     enabled ? shellResourceKeys.userContext() : null,
     async () => {
       const userContext = mapUserContext(
-        await bffJson("tenant", "GET /api/me/navigation", {
-          errorMessage: "User context fetch failed",
-        }),
+        await bffJson("tenant", "GET /api/me/navigation"),
       );
       if (userContext.incomplete) {
         throw new IncompleteUserContextError(userContext);

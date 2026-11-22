@@ -141,15 +141,6 @@ func (s *Service) ListPersonsByID(ctx context.Context, ids []int64) (result []pe
 	return nonNilPersons(result), err
 }
 
-func (s *Service) ListPersonsAcrossTenantsByID(ctx context.Context, ids []int64) ([]peopledirectory.Person, error) {
-	ids = peopledirectory.PositiveIDs(ids)
-	if len(ids) == 0 {
-		return []peopledirectory.Person{}, nil
-	}
-	values, err := s.ListAcrossTenantsByIDs(ctx, ids)
-	return nonNilPersons(values), err
-}
-
 func (s *Service) ListPersonsByTenantIDs(ctx context.Context, tenantIDs []int64) (result []peopledirectory.Person, err error) {
 	tenantIDs = peopledirectory.PositiveIDs(tenantIDs)
 	if len(tenantIDs) == 0 {

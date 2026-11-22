@@ -14,6 +14,8 @@ import {
   canReadSupervisionData,
   hasEffectiveAdminScope,
 } from "~/lib/auth-utils";
+import { ApiError } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
 import { createLogger } from "~/lib/logger";
 import { useLatest } from "~/lib/hooks/use-latest";
 import {
@@ -26,14 +28,30 @@ import {
   sameSupervision,
   sortNavigationGroups,
   type DerivedSupervision,
+  type OpenRoomPayload,
   type SupervisedGroupPayload,
   type SupervisedRoom,
   type SupervisionSnapshot,
 } from "~/lib/supervision-derive";
 import type { NavigationEducationalGroup } from "~/lib/usercontext-helpers";
-import { bffJson } from "./bff-fetch";
 
 const logger = createLogger({ component: "SupervisionContext" });
+
+/**
+ * The list of an answered request, `null` when the server refused it. A
+ * request that never reached the server still fails, as before the switch
+ * to bffJson: the caller then clears the supervision state.
+ */
+async function answeredOrNull<T>(
+  request: Promise<T[] | null>,
+): Promise<T[] | null> {
+  try {
+    return (await request) ?? [];
+  } catch (error) {
+    if (error instanceof ApiError && !error.noResponse) return null;
+    throw error;
+  }
+}
 
 const RESYNC_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -300,30 +318,22 @@ export function SupervisionProvider({
 
     try {
       // Try the school-wide overview endpoint first for every caller who may
-      // read groups at all. On any failure (403 = this school keeps the
-      // caller on their own supervisions; 5xx/network = transient), fall
-      // back to the regular staff endpoint so the user at least keeps their
-      // own supervisions instead of an empty sidebar.
+      // read groups at all. On any refused answer (403 = this school keeps
+      // the caller on their own supervisions; 5xx = transient), fall back to
+      // the regular staff endpoint so the user at least keeps their own
+      // supervisions instead of an empty sidebar.
       // The endpoint is gated on `groups:read`, so accounts without it skip
       // straight to the permission-less /me endpoint.
-      // A failed load stays null rather than becoming an empty list: an
-      // empty navigation must not be indistinguishable from a load error.
-      const orNull = <T,>(load: Promise<T>): Promise<T | null> =>
-        load.catch(() => null);
-      const ownSupervisedGroups = () =>
-        orNull(
-          bffJson("tenant", "GET /api/me/groups/supervised").then(
-            (rows) => rows ?? [],
-          ),
-        );
+      const fetchOwnSupervisedGroups = () =>
+        answeredOrNull(bffJson("tenant", "GET /api/me/groups/supervised"));
 
-      const supervisedGroups = async (): Promise<{
+      const fetchSupervisedGroups = async (): Promise<{
         supervised: SupervisedGroupPayload[] | null;
         ownSupervised: SupervisedGroupPayload[] | null;
       }> => {
         if (!canReadGroupsRef.current || !mayHaveOverviewRef.current) {
           return {
-            supervised: await ownSupervisedGroups(),
+            supervised: await fetchOwnSupervisedGroups(),
             ownSupervised: null,
           };
         }
@@ -332,16 +342,10 @@ export function SupervisionProvider({
         // aber nicht kennzeichnen. Die eigene Abfrage läuft parallel und
         // liefert ausschließlich das Signal für „Aufsicht fortsetzen“.
         const [overview, own] = await Promise.all([
-          orNull(
-            bffJson("tenant", "GET /api/active/supervisors/all").then(
-              (rows) => rows ?? [],
-            ),
-          ),
-          ownSupervisedGroups(),
+          answeredOrNull(bffJson("tenant", "GET /api/active/supervisors/all")),
+          fetchOwnSupervisedGroups().catch(() => null),
         ]);
-        if (overview === null) {
-          return { supervised: own, ownSupervised: null };
-        }
+        if (overview === null) return { supervised: own, ownSupervised: null };
         overviewOk = true;
         return { supervised: overview, ownSupervised: own };
       };
@@ -349,12 +353,15 @@ export function SupervisionProvider({
       // Own supervisions and the permanently released rooms in parallel. The
       // room list needs rooms:read, which every caregiver already holds for
       // the rest of the navigation, so there is no extra permission gate.
+      // A failed room load stays null rather than becoming "no open rooms":
+      // an empty navigation must not be indistinguishable from a load error.
       const [{ supervised, ownSupervised }, openRooms] = await Promise.all([
-        supervisedGroups(),
-        orNull(
-          bffJson("tenant", "GET /api/rooms/", {
-            query: { is_open_room: true },
-          }).then(({ data }) => data ?? []),
+        fetchSupervisedGroups(),
+        bffJson("tenant", "GET /api/rooms/", {
+          query: { is_open_room: true },
+        }).then(
+          (rooms): OpenRoomPayload[] => rooms.data ?? [],
+          () => null,
         ),
       ]);
 

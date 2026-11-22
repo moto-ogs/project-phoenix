@@ -721,8 +721,8 @@ func (rs *StaffAdminResource) adminRebookStaffAbsences(w http.ResponseWriter, r 
 		common.RenderError(w, r, common.ErrorUnauthorized(errors.New("invalid token")))
 		return
 	}
-	var req workforce.RebookAbsencesRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	req, err := decodeRebookAbsences(r)
+	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}

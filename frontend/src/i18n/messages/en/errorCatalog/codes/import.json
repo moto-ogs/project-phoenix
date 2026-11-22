@@ -9,5 +9,6 @@
   "import_batch_failed": "{object} could not be processed. Please try again later.",
   "mode_forbidden": "You cannot access {object}. Please contact the school.",
   "not_test_traeger": "{object} could not be changed. Please check its current status.",
+  "staff_profile_required": "Only someone with a staff profile can import children. Your account does not have one at this school yet. Please ask the school's administration to create one for you.",
   "test_traeger_inactive": "{object} could not be changed. Please check its current status."
 }

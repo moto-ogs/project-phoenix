@@ -10,11 +10,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook } from "@testing-library/react";
 
 // Mock useImmutableSWR
-vi.mock(
-  "~/lib/session-cache",
-  () => import("~/test/mocks/plain-session-fetch"),
-);
-
 vi.mock("~/lib/swr", () => ({
   useImmutableSWR: vi.fn(() => ({
     data: undefined,
@@ -31,6 +26,11 @@ import {
 } from "../use-user-context";
 import { useImmutableSWR } from "~/lib/swr";
 import type { NavigationResponse } from "~/lib/contract/me.generated";
+
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 
 // The navigation row as the catalog proxy hands it on (#7563).
 function navigationRow(
@@ -194,10 +194,7 @@ describe("useUserContext", () => {
       const fetcher = vi.mocked(useImmutableSWR).mock.calls[0]?.[1];
 
       if (fetcher) {
-        await expect(fetcher()).rejects.toMatchObject({
-          message: "User context fetch failed",
-          status: 401,
-        });
+        await expect(fetcher()).rejects.toMatchObject({ status: 401 });
       }
 
       fetchMock.mockRestore();

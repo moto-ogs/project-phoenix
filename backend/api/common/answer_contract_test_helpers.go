@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 
@@ -81,6 +82,7 @@ func (loaded *answerContract) observe(r *http.Request, status int, data any, env
 	}
 	pattern := routeContext.RoutePattern()
 	routes, whole := loaded.candidates(r.Method, pattern, data)
+	routes, envelope = plainCandidates(routes, envelope)
 	if len(routes) == 0 {
 		return nil
 	}
@@ -92,6 +94,9 @@ func (loaded *answerContract) observe(r *http.Request, status int, data any, env
 		}
 	}
 	var reports []string
+	if whole && readsAnUntypedBody(r, routes[0]) {
+		return fmt.Errorf("%s read a request body, but its contract registers no Request type, so no typed client can send it. Name the body type in the route's common.RouteContract and run gencontract", routes[0].Key())
+	}
 	for _, route := range routes {
 		violations := loaded.doc.Violations(route, contractmodel.Answer{Status: status, Body: body, Variant: variantOf(r, route)})
 		if len(violations) == 0 {
@@ -112,6 +117,30 @@ func (loaded *answerContract) observe(r *http.Request, status int, data any, env
 		scope = "the whole router"
 	}
 	return fmt.Errorf("the answer of %s %s (%s) leaves the contract in api/contract/contract.json; the BFF would answer 502. Fix the handler, or the registration and run gencontract.\n%s", r.Method, pattern, scope, strings.Join(reports, "\n"))
+}
+
+// plainCandidates keeps the routes an answer of RenderJSON may belong to:
+// it writes many answers outside the contract, and only a route registered
+// as Plain reads one as its data (#7808). The body to check is the value
+// itself.
+func plainCandidates(routes []contractmodel.Route, envelope any) ([]contractmodel.Route, any) {
+	plain, isPlain := envelope.(PlainAnswer)
+	if !isPlain {
+		return routes, envelope
+	}
+	return slices.DeleteFunc(routes, func(route contractmodel.Route) bool { return !route.Plain }), plain.Value
+}
+
+// readsAnUntypedBody tells whether the handler read a body the route's
+// contract does not type (#7808). A body the handler left unread is a test
+// sending more than the route takes, not a gap of the contract.
+func readsAnUntypedBody(r *http.Request, route contractmodel.Route) bool {
+	if route.Request != nil || route.Multipart || r.ContentLength <= 0 || r.Body == nil {
+		return false
+	}
+	var next [1]byte
+	n, _ := r.Body.Read(next[:])
+	return n == 0
 }
 
 // candidates are the registered routes this answer may belong to: the one

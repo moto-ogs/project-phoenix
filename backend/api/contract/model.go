@@ -11,7 +11,6 @@ const (
 	KindInt     = contractmodel.KindInt
 	KindNumber  = contractmodel.KindNumber
 	KindID      = contractmodel.KindID
-	KindLaxID   = contractmodel.KindLaxID
 	KindDate    = contractmodel.KindDate
 	KindInstant = contractmodel.KindInstant
 	KindClock   = contractmodel.KindClock
@@ -34,4 +33,5 @@ type (
 	Route      = contractmodel.Route
 	Document   = contractmodel.Document
 	Answer     = contractmodel.Answer
+	Outside    = contractmodel.OutsideRoute
 )

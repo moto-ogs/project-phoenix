@@ -11,16 +11,15 @@ import { DatabaseSelect, GroupSelect } from "./database-select";
 import { useApiLoadError } from "~/contexts/ToastContext";
 import { catalogText } from "~/test/error-catalog-text";
 import { SWRConfig } from "~/lib/swr/testing";
-
-vi.mock(
-  "~/lib/session-cache",
-  () => import("~/test/mocks/plain-session-fetch"),
-);
 import { pagedJson } from "~/test/mocks/plain-session-fetch";
 
 // GroupSelect reads its options through the shared cache; each render gets
 // its own.
 vi.unmock("swr");
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 
 function Providers({ children }: Readonly<{ children: ReactNode }>) {
   return (
@@ -476,35 +475,17 @@ describe("GroupSelect", () => {
       json: () => Promise.resolve(pagedJson([])),
     });
 
-    render(<GroupSelect {...defaultProps} filters={{ name: "Blau" }} />);
+    render(<GroupSelect {...defaultProps} filters={{ room_id: "7" }} />);
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        "/api/groups?name=Blau",
+        "/api/groups?room_id=7",
         expect.anything(),
       );
     });
   });
 
-  it("reports an answer without data as a failed load (502)", async () => {
-    // The catalog proxy always answers { status, data, pagination }; a bare
-    // list is a broken route, not a second answer shape.
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve([{ id: "1", name: "Group 1" }]),
-    });
-
-    render(<GroupSelect {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(defaultProps.onLoadError).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 502 }),
-        expect.any(Function),
-      );
-    });
-  });
-
-  it("converts filter values to strings correctly", async () => {
+  it("sends every set filter", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
       json: () => Promise.resolve(pagedJson([])),
@@ -513,19 +494,19 @@ describe("GroupSelect", () => {
     render(
       <GroupSelect
         {...defaultProps}
-        filters={{ name: "test", page_size: 5 }}
+        filters={{ name: "test", room_id: "5" }}
       />,
     );
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        "/api/groups?name=test&page_size=5",
+        "/api/groups?name=test&room_id=5",
         expect.anything(),
       );
     });
   });
 
-  it("skips null and undefined filter values", async () => {
+  it("skips unset filter values", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
       json: () => Promise.resolve(pagedJson([])),

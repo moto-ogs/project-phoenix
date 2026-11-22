@@ -475,6 +475,54 @@ func TestStaffShiftSeries_SplitTodayUpdatesOccurrenceAndReplansTomorrow(t *testi
 	assert.Equal(t, "10:00", calendar.NormalizeWallClock(todayRows[0].StartTime).Format("15:04"))
 }
 
+// A same-day split by the Träger-Büro (#7818) changes today's occurrence of a
+// staff series in place: the occurrence keeps its staff author, is marked as
+// last changed by the Träger, and no longer names the staff member who edited
+// it before.
+func TestStaffShiftSeries_TraegerSplitTodayClearsTheLastStaffEditor(t *testing.T) {
+	t.Parallel()
+
+	env := setupSeriesTest(t)
+	today := calendar.NewDate(2026, 8, 24)
+	periodID := env.createPeriod(t, today.AddDays(-7), today.AddDays(14), 1, nil)
+	series := env.buildSeries(t, periodID, today.AddDays(-7), nil, planning.WeekPatternEvery)
+	env.inTx(t, func(ctx context.Context) error {
+		_, err := env.series.CreateSeries(ctx, series)
+		return err
+	})
+
+	seriesID := series.ID
+	occurrenceDate := calendar.Date(today)
+	editor := env.staff.ID
+	todayShift := &workforce.ShiftRecord{
+		StaffID: env.staff.ID, Date: occurrenceDate, StartTime: series.StartTime, EndTime: series.EndTime,
+		BreakMinutes: series.BreakMinutes, SeriesID: &seriesID, SeriesOccurrenceDate: &occurrenceDate,
+		CreatedBy: env.staff.ID, UpdatedBy: &editor,
+	}
+	todayShift.TenantID = env.scope.TenantID
+	env.inTx(t, func(ctx context.Context) error {
+		return env.shiftRows.Create(ctx, todayShift)
+	})
+
+	traegerAccount := testpkg.CreateTestAccount(t, env.db, "traeger-buero-split").ID
+	env.inTx(t, func(ctx context.Context) error {
+		_, err := env.series.SplitSeries(ctx, planning.SplitSeriesInput{
+			SeriesID: series.ID, EffectiveDate: today, OccurrenceShiftID: todayShift.ID,
+			StartTime: seriesClock(t, "09:00"), EndTime: seriesClock(t, "15:00"), BreakMinutes: 30,
+			TraegerAccountID: traegerAccount,
+		})
+		return err
+	})
+
+	todayRows := env.shiftsInRange(t, today, today)
+	require.Len(t, todayRows, 1)
+	assert.Equal(t, todayShift.ID, todayRows[0].ID)
+	assert.Equal(t, "09:00", calendar.NormalizeWallClock(todayRows[0].StartTime).Format("15:04"))
+	assert.Equal(t, env.staff.ID, todayRows[0].CreatedBy, "the occurrence keeps its staff author")
+	assert.True(t, todayRows[0].PlannedByTraeger, "the occurrence is marked as last changed by the Träger")
+	assert.Nil(t, todayRows[0].UpdatedBy, "no earlier staff editor stays named after the Träger-Büro's change")
+}
+
 func TestStaffShiftSeries_MoveConsumesOriginalDateBeforeRematerialization(t *testing.T) {
 	t.Parallel()
 

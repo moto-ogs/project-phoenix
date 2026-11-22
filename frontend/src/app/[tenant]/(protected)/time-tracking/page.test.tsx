@@ -907,8 +907,8 @@ function setupDefaultMocks(overrides?: {
     year: today.getFullYear(),
     entitled_days: 30,
     carryover_days: 0,
-    taken_before_days: 0,
     taken_days: 0,
+    taken_before_days: 0,
     reserved_days: 0,
     remaining_days: 30,
   });

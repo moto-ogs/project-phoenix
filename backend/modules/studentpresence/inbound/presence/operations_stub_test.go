@@ -18,7 +18,6 @@ type stubPresenceOperations struct {
 	checkInStudentsToSession func(context.Context, []int64, int64, int64, studentpresence.StudentMoveAuthorization, bool) (*studentpresence.StudentMoveResult, error)
 	sessionRooms             func(context.Context, []int64) ([]studentpresence.SessionRoomSummary, error)
 	dashboardAnalytics       func(context.Context) (studentpresence.DashboardAnalytics, error)
-	crossTenantStudents      func(context.Context, int64) ([]studentpresence.CrossTenantStudent, error)
 	trackingIndicators       func(context.Context, []int64, []string) (map[int64][]bool, error)
 }
 
@@ -89,11 +88,4 @@ func (s *stubPresenceOperations) CheckInStudentsToSessionAuthorized(ctx context.
 		return s.checkInStudentsToSession(ctx, studentIDs, activeGroupID, staffID, auth, keepPresent)
 	}
 	return &studentpresence.StudentMoveResult{}, nil
-}
-
-func (s *stubPresenceOperations) CrossTenantStudents(ctx context.Context, hostingTenantID int64) ([]studentpresence.CrossTenantStudent, error) {
-	if s.crossTenantStudents != nil {
-		return s.crossTenantStudents(ctx, hostingTenantID)
-	}
-	return nil, nil
 }

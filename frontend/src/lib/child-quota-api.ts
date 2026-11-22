@@ -14,10 +14,10 @@ export interface ChildQuota {
 
 /** Wandelt die Backend-Antwort; ohne Kinderkontingent null. */
 function mapChildQuota(
-  response: studentsContract.childQuotaResponse,
+  response: studentsContract.childQuotaResponse | null,
 ): ChildQuota | null {
   if (
-    response.limited !== true ||
+    response?.limited !== true ||
     typeof response.booked_places !== "number" ||
     typeof response.occupied_places !== "number"
   ) {
